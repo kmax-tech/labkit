@@ -167,10 +167,12 @@ When a check stops you, `labkit-audit <area> --findings` shows readable
 open findings, evidence problems and complete recovery commands without a
 model call. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
-REPORT.md` command. This generates an unresolved report and records
-remaining evidence and loss; it permits no result or audit approval.
-Review an existing report before adding `--force` to replace it. Stage
-the protocol, report, handover record and remaining evidence together.
+REPORT.md` command. It withdraws the protocol's result, keeps an
+immutable handover record of the remaining evidence, losses and the
+findings left open or deferred, and writes the record's handover block
+into the report — one block per protocol, replaced in place, beside any
+other text or block. It permits no result or audit approval. Stage the
+protocol, report, handover record and remaining evidence together.
 
 ### Longer measurements
 

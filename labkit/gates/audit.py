@@ -1586,7 +1586,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
         print(f"  unresolved exit (no model call): {handover_command(chosen)}")
     if selected:
         print(
-            "  decide readable open BLOCKERs first; handover records damaged evidence but approves no result. An existing report needs --force after review."
+            "  decide readable open BLOCKERs first; the handover records damaged evidence but approves no result"
         )
     if not records and not errors:
         console.refuse(

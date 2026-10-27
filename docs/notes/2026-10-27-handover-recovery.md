@@ -25,15 +25,17 @@ findings in recovery inspection; naming errors are additional data.
 
 `protocol-fill PROTOCOL --handover --why TEXT --tried TEXT --into REPORT`
 creates an immutable schema-1 JSON record in `audits/handovers/`, withdraws
-the protocol's result declaration and generates a whole unresolved report.
-An existing report needs `--force` after reviewing what will be replaced.
-Reports cannot overwrite protocols or evidence. Reasons and attempted
+the protocol's result declaration and writes the record's handover block
+into the report: one block per protocol, replaced in place, the rest of
+the report kept. The block names the findings left open or deferred by
+record file and number, never their text. Reports cannot be protocols or
+evidence. Reasons and attempted
 steps name the protocol, not run ids: a run cited in a report remains
 subject to the result/discussion contract.
 
-The handover record binds the protocol projection, generated report,
-available audit paths and blob ids, known expected paths and explicit
-evidence errors. Raw evidence, including a malformed journal, is kept;
+The handover record binds the protocol projection, the report it names,
+available audit paths and blob ids, known expected paths, the unsettled
+findings and explicit evidence errors. Raw evidence, including a malformed journal, is kept;
 the handover does not append invented events to that journal. The format
 has one home in `formats/handovers.py`. `attempts` keeps its normal loss
 checks and also retains expected lost paths from handover records, so a
@@ -41,16 +43,24 @@ loss does not disappear when the handover commit becomes HEAD.
 
 Only the stop/undecided commit check can acknowledge those exact integrity
 gaps. It still checks every readable open BLOCKER. All protocols in the
-area must declare no result, and the report and evidence must match the
-handover in the state checked: tree at stop, index at commit. Missing
-staging, a changed report or additional evidence invalidates the
-acknowledgement. A new handover can document the new state; older records
+area must declare no result, and the handover block and evidence must
+match the handover in the state checked: tree at stop, index at commit. Missing
+staging, a changed block or additional evidence invalidates the
+acknowledgement; prose beside the block does not. A new handover can document the new state; older records
 remain. Interrupted publication grants nothing before all files match.
 
 Normal audits and result release use the original integrity checks, never
 the terminal acknowledgement. Acknowledged loss is not restoration, an
 upheld audit or provenance proof. Restoring evidence actually repairs the
 gap; a handover does not. Free prose is still not mechanically proven true.
+
+Same day, after the second audit
+([register](../audit-2026-10-27-handover.md), H3): the first form wrote a
+whole report and compared it byte for byte, and every printed command
+named the same `REPORT.md`. A second area handed over there, or a
+discussion block added later, voided the first acknowledgement, and the
+report could not name the findings left open. The block form follows the
+result and discussion blocks of `report_blocks`.
 
 ## Verification scope
 

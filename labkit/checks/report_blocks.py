@@ -40,6 +40,10 @@ here states, and no more:
   adoption (sixth haiku round, 2026-10-23, t3 and t18: `--from-run`
   refused, REPORT.md written from metrics.json by hand, the hook warned and
   let it pass).
+- A protocol handed over unresolved stands in a handover block, written
+  by `protocol-fill <PROTOCOL> --handover`; its format and its check live
+  in `handovers` (the stop and the commit read it), here its lines count
+  as generated (`generated_lines`).
 - `numbers_beside_discussed` (static evidence, never blocks): the numbers
   in a discussion block and the paragraphs around it — a discussed run's
   number in a report is a reported number unless the sentence says what
@@ -65,7 +69,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.checks.result_render import Rendering
-from labkit.formats import runs
+from labkit.formats import handovers, runs
 from labkit.formats.protocol_block import toml_string
 
 #: the block's opening and closing lines, each a line of its own
@@ -510,11 +514,15 @@ def numbers_beside_discussed(
 
 
 def generated_lines(text: str) -> set[int]:
-    """The line numbers of TEXT inside a result block or a discussion block,
-    the opening and closing lines included. Raises ReportBlockError on a
-    block that does not read."""
+    """The line numbers of TEXT inside a result block, a discussion block or
+    a handover block (`handovers.blocks`), the opening and closing lines
+    included. Raises ReportBlockError on a block that does not read."""
     spans = [(b.first, b.last) for b in blocks(text)]
     spans += [(d.first, d.last) for d in discussions(text)]
+    try:
+        spans += [(h.first, h.last) for h in handovers.handover_blocks(text)]
+    except handovers.HandoverError as exc:
+        raise ReportBlockError(str(exc)) from exc
     return {n for first, last in spans for n in range(first, last + 1)}
 
 

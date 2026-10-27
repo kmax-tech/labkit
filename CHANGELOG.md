@@ -1195,10 +1195,12 @@ pins (`requirements.txt` / `requirements.lock`).
   evidence errors, decision commands and each protocol's handover command.
   Readable unresolved BLOCKERs require an explicit `deferred` decision.
   `protocol-fill PROTOCOL --handover --why TEXT --tried TEXT --into REPORT`
-  then withdraws `[result]`, generates an unresolved report and preserves a
-  schema-1 JSON handover under `audits/handovers/`. An existing report needs
-  `--force`; protocols and evidence cannot be overwritten. Only an exact
-  current handover lets stop/commit acknowledge damaged evidence, with all
+  then withdraws `[result]`, preserves a schema-1 JSON handover record under
+  `audits/handovers/` and writes its handover block into the report (one
+  per protocol, replaced in place, the rest kept; the findings left open
+  or deferred by record and number); protocols and evidence are never a
+  destination. Only an unchanged block and state let stop/commit
+  acknowledge damaged evidence, with all
   audit evidence staged together. Normal audit and result release still
   refuse the loss, including after the handover is committed. Guide:
   `docs/notes/2026-10-27-handover-recovery.md`.

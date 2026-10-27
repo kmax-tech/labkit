@@ -17,6 +17,14 @@ from labkit.formats import attempts, findings, handovers, protocol_block
 from labkit.gates import audit, claude_hooks
 from labkit.tools import protocol_fill
 
+#: a simulated analysis answer holding one BLOCKER
+BLOCKED = (
+    cases.SIMULATED
+    + "BLOCKER · scripts/01_measure.py:82 · unresolved source · cannot judge C1 · "
+    "LAB-038 What the prompt demands · inspect source\n"
+    "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
+)
+
 
 class HandoverRecovery(cases._Chain):
     """Each test gets a fresh, registered judge; every model is simulated."""
@@ -106,12 +114,7 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(attempts.area_gaps(self.area).blockers, [])
 
     def test_broken_journal_does_not_hide_an_older_open_blocker(self):
-        rc, out = self.audit(
-            cases.SIMULATED
-            + "BLOCKER · scripts/01_measure.py:82 · unresolved source · cannot judge C1 · "
-            "LAB-038 What the prompt demands · inspect source\n"
-            "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
-        )
+        rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
         (record,) = findings.area_records(self.area)
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
@@ -133,8 +136,13 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.lab.stop_hook()[0], 0)
         self.staged_release()
-        # The report is part of the exact acknowledgement, including at the index.
-        self.report.write_text(self.report.read_text() + "changed\n")
+        # Its block is part of the exact acknowledgement, including at the
+        # index; prose beside the block is free.
+        self.report.write_text(self.report.read_text() + "\nA sentence by hand.\n")
+        self.assertTrue(handovers.valid(self.area))
+        self.report.write_text(
+            self.report.read_text().replace("Tried: ", "Tried: also ")
+        )
         self.assertFalse(handovers.valid(self.area))
         self.assertTrue(handovers.valid(self.area, staged=True))
         self.lab.git("add", "-A")
@@ -159,20 +167,27 @@ class HandoverRecovery(cases._Chain):
         self.assertFalse(handovers.valid(self.area))
         self.assertEqual(self.lab.stop_hook()[0], 2)
 
-    def test_existing_report_requires_explicit_force_and_result_is_withdrawn(self):
+    def test_an_existing_report_keeps_its_text_and_the_result_is_withdrawn(self):
         text = self.protocol.read_text()
         text = protocol_fill.fill_result_run(text, self.run_id, force=True)
         self.protocol.write_text(text)
-        self.report.write_text("# Earlier report\n")
+        self.report.write_text("# Earlier report\n\nWhat we looked at.\n")
+        with self.assertRaises(SystemExit):  # the block is written in place
+            self.handover("--force")
         rc, out = self.handover()
-        self.assertEqual(rc, 2, out)
-        self.assertIn("--force", out)
-        self.assertEqual(self.report.read_text(), "# Earlier report\n")
-        self.assertEqual(self.protocol.read_text(), text)
-        rc, out = self.handover("--force")
         self.assertEqual(rc, 0, out)
+        self.assertTrue(
+            self.report.read_text().startswith(
+                "# Earlier report\n\nWhat we looked at.\n"
+            )
+        )
         self.assertIsNone(protocol_block.declared_run(self.protocol.read_text()))
         self.assertNotIn(self.run_id, self.report.read_text())
+        self.assertTrue(handovers.valid(self.area))
+        # A second handover of the same protocol replaces its block in place.
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 1)
         self.assertTrue(handovers.valid(self.area))
 
     def test_malformed_record_never_grants_permission(self):
@@ -196,7 +211,7 @@ class HandoverRecovery(cases._Chain):
                 original = target.read_bytes()
                 previous = self.report
                 self.report = target
-                rc, out = self.handover("--force")
+                rc, out = self.handover()
                 self.report = previous
                 self.assertEqual(rc, 2, out)
                 self.assertIn("must not replace", out)
@@ -204,12 +219,7 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(handovers.record_paths(self.area), [])
 
     def test_a_bad_record_name_does_not_hide_its_readable_blocker(self):
-        rc, out = self.audit(
-            cases.SIMULATED
-            + "BLOCKER · scripts/01_measure.py:82 · unresolved source · cannot judge C1 · "
-            "LAB-038 What the prompt demands · inspect source\n"
-            "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
-        )
+        rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
         (record,) = findings.area_records(self.area)
         renamed = record.path.with_name("renamed-analysis.toml")
@@ -262,6 +272,55 @@ class HandoverRecovery(cases._Chain):
         self.lab.git("add", "-A")
         (error,) = findings.record_status(self.area, staged=True).errors
         self.assertIn(record.path.name, error)
+
+    def test_two_areas_and_a_discussion_share_one_report(self):
+        # Every handover went into one whole-file REPORT.md, so the second
+        # area's voided the first's (audit 2026-10-27, H3).
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        other_area, other = e2e.judge_area(self.lab, "other-question")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = protocol_fill.main(
+                [
+                    str(other),
+                    "--handover",
+                    "--why",
+                    "no data yet",
+                    "--tried",
+                    "asked for the corpus",
+                    "--into",
+                    str(self.report),
+                ]
+            )
+            self.assertEqual(rc, 0, out.getvalue())
+            rc = protocol_fill.main(
+                [
+                    str(self.protocol),
+                    "--discuss",
+                    self.run_id,
+                    "--why",
+                    "measured before the evidence was lost",
+                    "--into",
+                    str(self.report),
+                ]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 2)
+        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.valid(other_area))
+
+    def test_the_block_names_each_unsettled_finding_by_record_and_number(self):
+        rc, out = self.audit(BLOCKED)
+        self.assertEqual(rc, 1, out)
+        (record,) = findings.area_records(self.area)
+        self.decide(record.path, "deferred", "the source cannot be read here")
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        named = f"{record.path.name} #1 (BLOCKER, deferred)"
+        self.assertIn(named, self.report.read_text())
+        (path,) = handovers.record_paths(self.area)
+        self.assertEqual(handovers.read_handover(path).remaining, [named])
 
 
 if __name__ == "__main__":

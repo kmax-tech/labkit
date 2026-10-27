@@ -271,11 +271,13 @@ first: it reads all open BLOCKER records and evidence errors without a
 model call and prints complete commands. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
-REPORT.md` command. It withdraws the result declaration and writes the
-report plus an immutable evidence-state record in `audits/handovers/`.
-Only the exact unresolved report and state can finish despite documented
-integrity loss; a changed report or evidence needs a new handover. The
-commit requires the same files staged together. Normal audit/adoption
+REPORT.md` command. It withdraws the result declaration, keeps an
+immutable handover record in `audits/handovers/` and writes its handover
+block into the report (one per protocol, replaced in place; the rest of
+the report stays). Only an unchanged block, protocol and audit state can
+finish despite documented integrity loss; a changed block or new evidence
+needs a new handover, prose beside the block does not. The commit
+requires the same files staged together. Normal audit/adoption
 still holds missing evidence. See [recovery contract](notes/2026-10-27-handover-recovery.md).
 
 ```

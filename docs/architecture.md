@@ -82,11 +82,13 @@ second auditor's verdicts on those decisions (`labkit-audit --review`):
 which record, what it saw, and per decision upheld, rejected or
 insufficient — bound to the decision as it stood.
 
-`handovers` holds immutable unresolved-handover records and their generated
-reports. Only stop/commit may acknowledge the bound evidence loss, with no
-result declared and no readable BLOCKER left open. Normal audit and result
-release keep the integrity refusal. `attempts` retains expected lost paths
-from those records across commits. Contract and limits:
+`handovers` holds the immutable handover records, the handover block a
+report carries for each (one per protocol, written from the record) and
+the check whether a record still acknowledges its area
+(`handovers.acknowledgement`). Only stop/commit may acknowledge the bound
+evidence loss, with no result declared and no readable BLOCKER left
+open. Normal audit and result release keep the integrity refusal.
+`attempts` retains expected lost paths from those records across commits. Contract and limits:
 [handover recovery](notes/2026-10-27-handover-recovery.md).
 
 The remaining helpers have narrow responsibilities. `files.write_atomic`

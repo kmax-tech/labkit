@@ -242,13 +242,13 @@ prints these same recovery choices with each decision list:
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the
   printed `protocol-fill <PROTOCOL> --handover --why "<what blocks>"
-  --tried "<what you tried>" --into REPORT.md` command. It leaves no `[result]` table
-  in the protocol, writes an unresolved report and records remaining
-  evidence and losses; the report names the protocol, not its runs. Use
-  no run ids in the reason or attempted steps. If REPORT.md already
-  exists, review it before adding `--force` to replace it. Stage the
-  report, protocol, new handover record and remaining audit evidence
-  together. New evidence or report changes require a new handover.
+  --tried "<what you tried>" --into REPORT.md` command. It leaves no
+  `[result]` table in the protocol, records the remaining evidence, losses
+  and the findings left open or deferred, and writes a handover block into
+  REPORT.md; the report names the protocol, not its runs, and the rest of
+  REPORT.md stays. Use no run ids in the reason or attempted steps. Stage
+  the report, protocol, new handover record and remaining audit evidence
+  together. New evidence or a changed block requires a new handover.
   This permits only the unresolved stop/commit, never a number or audit
   approval; damaged evidence is acknowledged, not repaired.
 

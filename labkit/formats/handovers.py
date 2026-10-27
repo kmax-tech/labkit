@@ -1,10 +1,27 @@
 """Write and validate a terminal handover, never an approval of evidence.
 
-Each immutable JSON record in audits/handovers binds one unresolved report,
-its protocol without a result, and every available audit file by blob id.
-Only the stop/commit's integrity refusal may use this acknowledgement.
-Normal audits and result release continue to hold missing evidence.
-Rationale: docs/notes/2026-10-27-handover-recovery.md.
+Each immutable JSON record in audits/handovers binds one unresolved end:
+its protocol without a result, the findings left open or deferred, and
+every available audit file by blob id. The report carries the record's
+projection as a handover block, one per protocol, beside any other prose
+or block:
+
+    <!-- labkit handover
+    protocol = "experiments/01-x/PROTOCOL-x.md"
+    record = "experiments/01-x/audits/handovers/handover-….json"
+    -->
+    Unresolved: `experiments/01-x/PROTOCOL-x.md` — no result is reported; …
+
+    - Why: …
+    - Tried: …
+    - Findings left open or deferred (in `experiments/01-x/audits`): …
+    - Evidence and recorded losses: [handover record](<…>)
+    <!-- /labkit handover -->
+
+Only the stop/commit's integrity refusal may use this acknowledgement, and
+only while the block, the protocol and the audit files match the record
+(`acknowledgement`). Normal audits and result release continue to hold
+missing evidence. Rationale: docs/notes/2026-10-27-handover-recovery.md.
 """
 
 from __future__ import annotations
@@ -12,6 +29,8 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import tomllib
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
@@ -29,6 +48,13 @@ from labkit.formats.repo import (
 DIRECTORY = "handovers"
 SCHEMA = 1
 
+OPEN = "<!-- labkit handover"
+HEAD_END = "-->"
+CLOSE = "<!-- /labkit handover -->"
+HEAD_KEYS = ("protocol", "record")
+#: the decisions a handover lists as left over: nothing settled them
+UNSETTLED = ("open", "deferred")
+
 
 class HandoverError(ValueError):
     """A handover's fields or referenced state do not establish an unresolved end."""
@@ -36,7 +62,9 @@ class HandoverError(ValueError):
 
 @dataclass(frozen=True)
 class Handover:
-    """One unresolved end and its exact evidence state; no finding is resolved."""
+    """One unresolved end and its exact evidence state; no finding is resolved.
+    REMAINING names each finding left open or deferred as `<record file>
+    #<n> (<grade>, <status>)`."""
 
     schema: int
     protocol: str
@@ -46,6 +74,7 @@ class Handover:
     tried: str
     evidence: dict[str, str]
     expected: list[str]
+    remaining: list[str]
     problems: list[str]
 
 
@@ -84,6 +113,51 @@ def evidence(
     }
 
 
+def remaining(records: Iterable[findings.Record]) -> list[str]:
+    """Every finding of RECORDS no decision settled (`UNSETTLED`), by
+    record file and number — never its text, which may cite a run."""
+    return [
+        f"{r.path.name} #{n} ({f.grade}, {f.status})"
+        for r in records
+        for n, f in enumerate(r.findings, 1)
+        if f.status in UNSETTLED
+    ]
+
+
+def build(
+    root: Path,
+    protocol: Path,
+    protocol_text: str,
+    report: Path,
+    path: Path,
+    *,
+    why: str,
+    tried: str,
+    records: list[findings.Record],
+    expected: Iterable[str],
+    problems: Iterable[str],
+) -> Handover:
+    """The record a handover at PATH writes: PROTOCOL as PROTOCOL_TEXT
+    will stand (no result), REPORT, WHY and TRIED, the findings RECORDS
+    leave unsettled, the area's audit files as the tree holds them now,
+    the EXPECTED paths and the PROBLEMS found. Raises HandoverError on a
+    field the record cannot hold (`read_handover`)."""
+    record = Handover(
+        SCHEMA,
+        protocol.relative_to(root).as_posix(),
+        protocol_fingerprint(protocol_text),
+        report.relative_to(root).as_posix(),
+        why.strip(),
+        tried.strip(),
+        evidence(protocol.parent, omit=path),
+        sorted(expected),
+        remaining(records),
+        list(dict.fromkeys(problems)),
+    )
+    read_handover(path, _json(record))
+    return record
+
+
 def _relative(value: object, field: str) -> str:
     """Validate a nonempty normalized relative path, raising HandoverError."""
     if not isinstance(value, str) or not value or "\\" in value:
@@ -120,6 +194,7 @@ def read_handover(path: Path, text: str | None = None) -> Handover:
             _relative(v, "expected evidence")
             for v in _strings(raw["expected"], "expected")
         ],
+        _strings(raw["remaining"], "remaining"),
         _strings(raw["problems"], "problems"),
     )
 
@@ -178,7 +253,7 @@ def _evidence_table(value: object) -> dict[str, str]:
 def report_destination(root: Path, path: Path) -> Path:
     """A regular Markdown report inside ROOT, never an evidence file.
 
-    Raise HandoverError rather than overwrite protocols or files in the
+    Raise HandoverError rather than write into a protocol or a file in the
     repository's excluded evidence/environment directories.
     """
     from labkit.formats.repo import PROTOCOL_NAME, SKIP_DIRS
@@ -200,24 +275,153 @@ def report_destination(root: Path, path: Path) -> Path:
     return report
 
 
-def report_text(record: Handover, root: Path, path: Path) -> str:
-    """Render the unresolved report; raw evidence details stay in the linked record."""
-    report = root / record.report
-    protocol = Path(os.path.relpath(root / record.protocol, report.parent)).as_posix()
-    link = Path(os.path.relpath(path, report.parent)).as_posix()
-    return (
-        f"# Unresolved experiment\n\nProtocol: `{protocol}`.\n\n"
-        f"Reason: {record.why}\n\nTried: {record.tried}\n\n"
-        f"Evidence and recorded losses: [handover record](<{link}>).\n\n"
-        "No result is reported. Open questions are handed over for review.\n"
-    )
+@dataclass(frozen=True)
+class HandoverBlock:
+    """One handover block of a report: the PROTOCOL and the RECORD its head
+    names (paths relative to the report, as written), where it stands
+    (FIRST the opening line, LAST the closing one, 1-based) and its LINES
+    from opening to closing."""
+
+    protocol: str
+    record: str
+    first: int
+    last: int
+    lines: list[str]
+
+
+def _shown(record: Handover, root: Path, path: Path) -> tuple[str, str, str]:
+    """(protocol, record file, audits folder) of RECORD kept at PATH, each
+    relative to RECORD's report — as its block names them."""
+    base = (root / record.report).parent
+
+    def rel(target: Path) -> str:
+        return Path(os.path.relpath(target, base)).as_posix()
+
+    return rel(root / record.protocol), rel(path), rel(path.parents[1])
+
+
+def handover_lines(record: Handover, root: Path, path: Path) -> list[str]:
+    """The handover block of RECORD (kept at PATH) as its report shows it:
+    the head names protocol and record relative to the report, the body is
+    written from the record alone. Raises HandoverError on a path no TOML
+    string holds."""
+    protocol, link, audits = _shown(record, root, path)
+    try:
+        head = [
+            f"{k} = {protocol_block.toml_string(v)}"
+            for k, v in (("protocol", protocol), ("record", link))
+        ]
+    except ValueError as exc:
+        raise HandoverError(f"handover block head: {exc}") from exc
+    left = "; ".join(record.remaining) or "none"
+    return [
+        OPEN,
+        *head,
+        HEAD_END,
+        f"Unresolved: `{protocol}` — no result is reported; its open questions "
+        "are handed over for review.",
+        "",
+        f"- Why: {record.why}",
+        f"- Tried: {record.tried}",
+        f"- Findings left open or deferred (in `{audits}`): {left}",
+        f"- Evidence and recorded losses: [handover record](<{link}>)",
+        CLOSE,
+    ]
+
+
+def handover_blocks(text: str) -> list[HandoverBlock]:
+    """Every handover block of TEXT in order. Raises HandoverError naming
+    the line on a block that does not read: never closed, closed without
+    opening, nested, or a head that is not protocol and record."""
+    out: list[HandoverBlock] = []
+    lines = text.split("\n")
+    n = 0
+    while n < len(lines):
+        line = lines[n].strip()
+        n += 1
+        if line == CLOSE:
+            raise HandoverError(f"line {n}: {CLOSE} closes no handover block")
+        if line != OPEN:
+            continue
+        first = n
+        while n < len(lines) and lines[n].strip() not in (HEAD_END, OPEN, CLOSE):
+            n += 1
+        if n >= len(lines) or lines[n].strip() != HEAD_END:
+            raise HandoverError(
+                f"line {first}: the handover block's head is never closed "
+                f"({HEAD_END} on a line of its own)"
+            )
+        head = _block_head(lines[first:n], first)
+        while n < len(lines) and lines[n].strip() != CLOSE:
+            if lines[n].strip() == OPEN:
+                raise HandoverError(
+                    f"line {n + 1}: a handover block opens inside the one opened "
+                    f"at line {first}"
+                )
+            n += 1
+        if n >= len(lines):
+            raise HandoverError(
+                f"line {first}: the handover block is never closed ({CLOSE})"
+            )
+        n += 1
+        out.append(HandoverBlock(*head, first, n, lines[first - 1 : n]))
+    return out
+
+
+def _block_head(head: list[str], at: int) -> tuple[str, str]:
+    """(protocol, record) of the TOML HEAD of the block opened at line AT.
+    Raises HandoverError on TOML that does not read or other keys than
+    protocol and record, each a string."""
+    try:
+        data = tomllib.loads("\n".join(head))
+    except tomllib.TOMLDecodeError as exc:
+        raise HandoverError(
+            f"line {at}: the handover block's head is not TOML: {exc}"
+        ) from exc
+    if sorted(data) != sorted(HEAD_KEYS) or not all(
+        isinstance(data[k], str) for k in HEAD_KEYS
+    ):
+        raise HandoverError(
+            f"line {at}: the handover block's head holds protocol and record, "
+            "each a string"
+        )
+    return data["protocol"], data["record"]
+
+
+def write_handover_block(text: str, record: Handover, root: Path, path: Path) -> str:
+    """TEXT with RECORD's handover block: the one block of its protocol
+    replaced in place, or one appended at the end; everything else stays.
+    Raises HandoverError on a block that does not read or on two blocks of
+    the same protocol."""
+    new = handover_lines(record, root, path)
+    protocol = _shown(record, root, path)[0]
+    same = [b for b in handover_blocks(text) if b.protocol == protocol]
+    if len(same) > 1:
+        raise HandoverError(
+            f"{protocol} is handed over in {len(same)} blocks (lines "
+            f"{', '.join(str(b.first) for b in same)}) — remove all but one, "
+            "then write it again"
+        )
+    lines = text.split("\n")
+    if not same:
+        while lines and lines[-1] == "":
+            lines.pop()
+        return "\n".join([*lines, "", *new, ""] if lines else [*new, ""])
+    (b,) = same
+    lines[b.first - 1 : b.last] = new
+    return "\n".join(lines)
+
+
+def _json(record: Handover) -> str:
+    """RECORD as the file holds it."""
+    return json.dumps(asdict(record), ensure_ascii=False, indent=2) + "\n"
 
 
 def write_record(path: Path, record: Handover) -> None:
     """Create PATH atomically; refuse an existing record instead of replacing evidence."""
     if path.exists():
         raise HandoverError(f"{path}: a handover record already exists")
-    text = json.dumps(asdict(record), ensure_ascii=False, indent=2) + "\n"
+    text = _json(record)
     read_handover(path, text)
     path.parent.mkdir(parents=True, exist_ok=True)
     files.write_atomic(path, text)
@@ -261,49 +465,105 @@ def missing_evidence(
     ]
 
 
-def valid(area: Path, *, staged: bool = False) -> bool:
-    """Whether an exact, current handover permits an unresolved stop/commit.
+def _protocols(area: Path, root: Path, *, staged: bool) -> list[Path]:
+    """AREA's protocols in the tree or, STAGED, the index."""
+    if staged:
+        return [p for p in indexed_protocols(root) if p.parent == area]
+    return area_protocols(area)
 
-    Every protocol in the area must declare no result. The chosen protocol,
-    the complete audit snapshot and generated report must match the same
-    state. Open readable findings remain a separate hook obligation.
-    Invalid candidates give no permission; normal checks report the errors.
-    """
+
+def declared_results(area: Path, root: Path, *, staged: bool = False) -> list[Path]:
+    """The protocols of AREA, in the tree or STAGED the index, that declare
+    a result: none may, while the area is handed over. Raises HandoverError
+    on a protocol that does not read."""
+    out = []
+    for p in _protocols(area.resolve(), root, staged=staged):
+        try:
+            text = state_text(root, p, staged=staged)
+            if text is not None and protocol_block.declared_run(text) is not None:
+                out.append(p)
+        except (UnicodeError, protocol_block.BlockError) as exc:
+            raise HandoverError(f"{p}: the protocol does not read: {exc}") from exc
+    return out
+
+
+def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:
+    """Why the handover record at PATH does not acknowledge AREA as the tree
+    or, STAGED, the index holds it — the first condition that fails, one
+    sentence — or None when it does: its protocol unchanged since, no
+    protocol of the area declaring a result, its block in the report as
+    written, the audit files as bound (at the commit also the tree's equal
+    to the index's, so unstaged evidence cannot borrow it)."""
+    state = _state(staged)
+    try:
+        record = read_record(root, path, staged=staged)
+        protocol = root / record.protocol
+        if (
+            protocol not in _protocols(area, root, staged=staged)
+            or protocol.is_symlink()
+        ):
+            return f"its protocol {record.protocol} is not a protocol of the area in the {state}"
+        text = state_text(root, protocol, staged=staged)
+        if text is None or protocol_fingerprint(text) != record.protocol_sha:
+            return f"{record.protocol} changed since the handover"
+        declaring = declared_results(area, root, staged=staged)
+        if declaring:
+            return f"{declaring[0].relative_to(root).as_posix()} declares a result"
+        report = report_destination(root, root / record.report)
+        written = state_text(root, report, staged=staged)
+        if written is None:
+            return f"its report {record.report} is not in the {state}"
+        wanted = handover_lines(record, root, path)
+        link = _shown(record, root, path)[1]
+        found = [b for b in handover_blocks(written) if b.record == link]
+        if not found:
+            return f"{record.report} holds no handover block of this record"
+        if [b.lines for b in found] != [wanted]:
+            return (
+                f"its block in {record.report} differs from the record — write it "
+                "again with protocol-fill --handover (prose outside the block is free)"
+            )
+        current = evidence(area, staged=staged, omit=path)
+        if staged and evidence(area, omit=path) != current:
+            return "the tree's audits/ differs from the index's — stage all of it"
+        if current != record.evidence:
+            return (
+                "audits/ changed since the handover (a file added, changed or "
+                "removed) — a new handover binds the new state"
+            )
+    except (HandoverError, OSError, UnicodeError, protocol_block.BlockError) as exc:
+        return str(exc)
+    return None
+
+
+@dataclass(frozen=True)
+class Acknowledgement:
+    """Whether a handover acknowledges an area's integrity gaps (VALID),
+    and for each record that does not, why (RECORD file name → sentence)."""
+
+    valid: bool
+    refused: dict[str, str]
+
+
+def acknowledgement(area: Path, *, staged: bool = False) -> Acknowledgement:
+    """Whether an exact, current handover permits an unresolved stop/commit
+    of AREA (`mismatch` names each condition), and why each other record
+    does not. Every protocol in the area must declare no result. Open
+    readable findings remain a separate hook obligation."""
     area = area.resolve()
     root = git_root(area)
     if root is None:
-        return False
-    protocols = (
-        [p for p in indexed_protocols(root) if p.parent == area]
-        if staged
-        else area_protocols(area)
-    )
+        return Acknowledgement(False, {})
+    refused: dict[str, str] = {}
     for path in record_paths(area, staged=staged):
-        try:
-            record = read_record(root, path, staged=staged)
-            protocol = root / record.protocol
-            report = report_destination(root, root / record.report)
-            if protocol not in protocols or protocol.is_symlink():
-                continue
-            protocol_text = state_text(root, protocol, staged=staged)
-            report_value = state_text(root, report, staged=staged)
-            if (
-                protocol_text is None
-                or protocol_fingerprint(protocol_text) != record.protocol_sha
-            ):
-                continue
-            texts = [state_text(root, p, staged=staged) for p in protocols]
-            if any(
-                t is None or protocol_block.declared_run(t) is not None for t in texts
-            ):
-                continue
-            if report_value != report_text(record, root, path):
-                continue
-            current = evidence(area, staged=staged, omit=path)
-            if staged and evidence(area, omit=path) != current:
-                continue  # a commit must not leave new or changed audit evidence behind
-            if current == record.evidence:
-                return True
-        except (HandoverError, OSError, UnicodeError, protocol_block.BlockError):
-            continue
-    return False
+        why = mismatch(area, root, path, staged=staged)
+        if why is None:
+            return Acknowledgement(True, {})
+        refused[path.name] = why
+    return Acknowledgement(False, refused)
+
+
+def valid(area: Path, *, staged: bool = False) -> bool:
+    """Whether an exact, current handover permits an unresolved stop/commit
+    of AREA (`acknowledgement`)."""
+    return acknowledgement(area, staged=staged).valid
