@@ -53,6 +53,18 @@ traceable? Core. Does the lab only work differently? Doctrine.
 crossings that stand today listed by name (`KNOWN_CROSSINGS`) until they
 are moved (2026-10-15). The list is not extended in passing.
 
+One crossing was added on purpose since, and stands on these terms:
+`start_check` → `protocol_history` (2026-10-27,
+`protocol_history.registration_in_commit`). The run's start refuses a
+first measurement at `low` whose registration HEAD does not hold — the
+same rule report-check holds that commit to; without it the run started
+and could never be adopted. It is the doctrine `start_check` already
+crosses for (`protocol_check.low_registration_missing`), not a new kind.
+It goes when the doctrine checks at a run's start leave `start_check` as a
+whole (a doctrine-side start gate the run writer calls); removing this one
+import alone would buy a second mechanism for nothing. It grants no
+permission for further crossings.
+
 **Not the house.** Doctrine ships in labkit to every lab. The house is what
 holds only for this author's lab — the `LOCAL` rules, the dotfiles, the
 German notes — and lives outside the package ([Where what
