@@ -259,6 +259,21 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     return r.stdout if r.returncode == 0 else None
 
 
+def added_in(repo: Path, path: Path) -> str | None:
+    """The newest commit under REPO that added PATH (`git log
+    --diff-filter=A`; a rename counts as an addition at its new path), or
+    None: before the first commit, or PATH never committed. PATH must lie
+    under REPO. Raises RuntimeError when git fails."""
+    if not head_sha(repo):
+        return None
+    rel = path.resolve().relative_to(repo.resolve()).as_posix()
+    args = ["log", "-1", "--no-renames", "--diff-filter=A", "--format=%H", "--", rel]
+    r = git_run(args, repo)
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {r.stderr.strip()}")
+    return r.stdout.strip() or None
+
+
 def find_area(
     path: Path, stop: Path | None = None, protocols: list[Path] | None = None
 ) -> Path | None:

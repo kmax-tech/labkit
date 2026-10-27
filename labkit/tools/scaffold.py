@@ -47,14 +47,18 @@ from labkit.formats import promises, protocol_block, protocol_check, standard_co
 from labkit.formats.runs import runs_path
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
+    added_in,
     adopt_command,
     AREA_NAME,
     area_protocols,
+    git_root,
     git_run,
     lab_root,
+    requirement_lines,
     split_area_name,
+    text_at,
 )
-from labkit.tools.repo_check import PYPROJECT_VERSION_RE
+from labkit.tools.repo_check import PIN_FILES, PYPROJECT_VERSION_RE
 from labkit.tools.protocol_cuts import (
     CUT_MARK,
     ProtocolBlocks,
@@ -527,6 +531,10 @@ class KindChange:
         text: The new protocol: same id, the written fields carried.
         held: Why the change would lose work — empty when it may go ahead.
         next_steps: The new kind's next steps, to print after the change.
+        earlier: The files (the protocol: its promise block) that differ
+            from this labkit's stamp of the old kind but are unchanged
+            since a commit under an earlier pin (`earlier_pin_text`): path
+            to that commit, which the log names.
     """
 
     old_kind: str
@@ -536,6 +544,7 @@ class KindChange:
     text: str
     held: list[str]
     next_steps: str
+    earlier: dict[Path, str]
 
 
 def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
@@ -615,11 +624,14 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
     since the old kind's stamp; a file of the author's where the new kind
     stamps; a promise block that differs from the old stamp's; a written
     `[model]` claim a non-compute kind does not carry; a written field the
-    new protocol has no place for, or one over several lines. The protocol
+    new protocol has no place for, or one over several lines. "Edited" and
+    "differs" are measured against this labkit's stamp, unless git shows
+    the file (the block) unchanged since a commit under an earlier pin
+    (`earlier_pin_text`, `KindChange.earlier`). The protocol
     keeps its id, `type`, model alias and report fields; a written field is
-    carried when it differs from the old stamp's own value. Reads files,
-    writes nothing. Raises `console.Refused` for a protocol without kind
-    or id, or already of KIND."""
+    carried when it differs from the old stamp's own value. Reads files
+    and git, writes nothing. Raises `console.Refused` for a protocol
+    without kind or id, or already of KIND."""
     nn = split_area_name(area.name)[0] or ""
     protocol = area / f"PROTOCOL-{slug}.md"
     old = protocol.read_text(encoding="utf-8")
@@ -644,21 +656,22 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
     rc = head.repeat_cost
     before = stamp_files(root, area, nn, slug, rc, head.kind, model)
     after = stamp_files(root, area, nn, slug, rc, kind, model)
-    held = [
-        f"{path}: edited since the {head.kind} stamp"
-        for path, stamped in before.items()
-        if path.is_file() and path.read_text(encoding="utf-8") != stamped
-    ] + [
+    held, earlier = edited_stamps(root, before, head.kind)
+    held += [
         f"{path}: a file of yours where the {kind} stamp writes"
         for path in after
         if path not in before and path.exists()
     ]
     fresh_old = protocol_stamp(root, slug, rc, head.kind, model, report, head.id)
     if promises.block_stamp(old) != promises.block_stamp(fresh_old):
-        held.append(
-            f"{protocol.name}: the promise block differs from the {head.kind} stamp "
-            f"— the {kind} stamp would replace it"
-        )
+        found = earlier_pin_text(root, protocol)
+        if found is not None and same_promises(found[1], old):
+            earlier[protocol] = found[0]
+        else:
+            held.append(
+                f"{protocol.name}: the promise block differs from the {head.kind} "
+                f"stamp — the {kind} stamp would replace it"
+            )
     if (
         declared is not None
         and kind != standard_contract.COMPUTE_KIND
@@ -675,7 +688,75 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
     if head.type is not None:
         text = fill_head(text, "type", head.type)
     steps = next_steps(area.relative_to(root), slug, nn, rc, kind, bool(model))
-    return KindChange(head.kind, before, after, protocol, text, held, steps)
+    return KindChange(head.kind, before, after, protocol, text, held, steps, earlier)
+
+
+def edited_stamps(
+    root: Path, stamps: dict[Path, str], kind: str
+) -> tuple[list[str], dict[Path, str]]:
+    """Of the stamp files STAMPS (path to this labkit's stamp of KIND)
+    that exist and differ from it: the ones edited since the stamp, as
+    held lines, and the ones git shows unchanged since a commit under an
+    earlier pin (`earlier_pin_text`), path to that commit — this labkit's
+    stamp measures an edit only of a file it stamped. Reads files and git,
+    writes nothing."""
+    held: list[str] = []
+    earlier: dict[Path, str] = {}
+    for path, stamped in stamps.items():
+        if not path.is_file():
+            continue
+        now = path.read_text(encoding="utf-8")
+        if now == stamped:
+            continue
+        found = earlier_pin_text(root, path)
+        if found is not None and found[1] == now:
+            earlier[path] = found[0]
+        else:
+            held.append(f"{path}: edited since the {kind} stamp")
+    return held, earlier
+
+
+def earlier_pin_text(root: Path, path: Path) -> tuple[str, str] | None:
+    """(commit, text): PATH as the newest commit that added it holds it,
+    when a pin file under ROOT (`repo_check.PIN_FILES`) names another
+    labkit then than now (its `labkit` lines): the evidence that this
+    labkit's templates are not the ones PATH was stamped from, so a
+    difference from today's stamp shows no edit. None without that
+    evidence: outside a git repo, PATH never committed, or no pin file
+    with a labkit line both then and now that differs. Limit: an edit
+    committed together with the stamp, under the earlier pin, reads as
+    that pin's stamp — the commit keeps it. Reads git and the pin files,
+    writes nothing; raises RuntimeError when git fails."""
+    repo = git_root(root)
+    if repo is None:
+        return None
+    commit = added_in(repo, path)
+    if commit is None:
+        return None
+    for name in PIN_FILES:
+        pins = root / name
+        then = requirement_lines(text_at(repo, pins, commit) or "", "labkit")
+        now = (
+            requirement_lines(pins.read_text(encoding="utf-8"), "labkit")
+            if pins.is_file()
+            else []
+        )
+        if then and now and then != now:
+            text = text_at(repo, path, commit)
+            return None if text is None else (commit, text)
+    return None
+
+
+def same_promises(then: str, now: str) -> bool:
+    """Do the protocol texts THEN and NOW declare the same promise block
+    (`promises.block_stamp`)? A block in THEN this labkit cannot read is
+    not NOW's; one in NOW raises PromiseError."""
+    want = promises.block_stamp(now)
+    try:
+        got = promises.block_stamp(then)
+    except promises.PromiseError:
+        return False
+    return got == want
 
 
 def stamp_files(
@@ -719,21 +800,42 @@ def carried_fields(old: str, old_stamp: str, new: str) -> tuple[str, list[str]]:
 def write_kind_change(area: Path, plan: KindChange) -> list[str]:
     """Write PLAN: remove the old kind's stamp files the new kind does not
     stamp, write the new kind's (scripts executable), write the protocol.
-    Returns the log lines."""
+    Returns the log lines; one replaced on the evidence of an earlier pin
+    names the commit that keeps it (`KindChange.earlier`)."""
+
+    def earlier(path: Path) -> str:
+        """` of an earlier pin, as committed in <commit>` for a PATH
+        replaced on that evidence, else ""."""
+        commit = plan.earlier.get(path)
+        return f" of an earlier pin, as committed in {commit[:12]}" if commit else ""
+
     log: list[str] = []
     for path in plan.before:
         if path.is_file() and path not in plan.after:
             path.unlink()
-            log.append(f"  removed        {path} (the {plan.old_kind} stamp)")
+            log.append(
+                f"  removed        {path} (the {plan.old_kind} stamp{earlier(path)})"
+            )
     for path, text in plan.after.items():
         replaced = path.exists()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
         if path.parent == area / "scripts":
             path.chmod(0o755)  # a shebang nobody can run is a lint finding
-        log.append(f"  {'replaced' if replaced else 'created':<14} {path}")
+        log.append(
+            f"  {'replaced' if replaced else 'created':<14} {path}"
+            + (f" (the stamp{earlier(path)})" if path in plan.earlier else "")
+        )
     plan.protocol.write_text(plan.text, encoding="utf-8")
-    log.append(f"  restamped      {plan.protocol} (same id, written fields kept)")
+    log.append(
+        f"  restamped      {plan.protocol} (same id, written fields kept"
+        + (
+            f"; the promise block{earlier(plan.protocol)} replaced"
+            if plan.protocol in plan.earlier
+            else ""
+        )
+        + ")"
+    )
     return log
 
 

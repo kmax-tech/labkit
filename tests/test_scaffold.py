@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from labkit.checks import readme_check
 from labkit.tools import scaffold, protocol_cuts
@@ -594,6 +595,121 @@ class Exp(unittest.TestCase):
         self.assertIn("has measured", str(caught.exception))
         self.assertIn("a new registration", str(caught.exception))
         self.assertEqual(snapshot(), before)
+
+    def _git(self, *args: str) -> None:
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+        )
+
+    def _stamped_by_an_earlier_labkit(
+        self, kind: str, tmpl: str, old: str, new: str
+    ) -> Path:
+        """`foo-bar` stamped as KIND at low cost by an earlier labkit — the
+        template TMPL then read OLD where it reads NEW now — and committed
+        under that labkit's pin; then the pin raised and committed. Nothing
+        of the stamp is edited. Returns the area."""
+        real = scaffold.template
+
+        def earlier(name: str) -> str:
+            text = real(name)
+            if name != tmpl:
+                return text
+            self.assertEqual(text.count(new), 1, new)
+            return text.replace(new, old)
+
+        with mock.patch.object(scaffold, "template", earlier):
+            quiet(scaffold.stamp_area, self.root, "foo-bar", "low", kind=kind)
+        self._git("init", "-q")
+        self._git("add", "-A")
+        self._git("commit", "-qm", "stamp under the earlier pin")
+        req = self.root / "requirements.txt"
+        raised = re.sub(r"labkit\.git@\S+", "labkit.git@v99.0.0", req.read_text())
+        self.assertNotEqual(raised, req.read_text())
+        req.write_text(raised, encoding="utf-8")
+        self._git("commit", "-qam", "raise the pin")
+        return self.area()
+
+    def test_a_template_upgrade_is_no_edit_of_the_stamp(self) -> None:
+        """ "Edited since the stamp" compared the area with the INSTALLED
+        labkit's templates: after a pin raise an unedited stamp read as the
+        user's edit, and `--change-kind` held for nothing (audit 2026-10-27,
+        C13). Unchanged since the commit that added it, under another pin,
+        it is the earlier labkit's stamp: replaced, the commit named. The
+        twin: an edit since that commit still holds."""
+        measure = dict(
+            (dest, tmpl) for tmpl, dest in standard_contract.COMPUTE.scripts
+        )["01_measure.py"]
+        area = self._stamped_by_an_earlier_labkit(
+            "compute",
+            measure,
+            "#!/usr/bin/env python3\n# an earlier labkit's line\n",
+            "#!/usr/bin/env python3\n",
+        )
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text(encoding="utf-8") + "# mine\n")
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.change_kind(self.root, "foo-bar", "fit")
+        self.assertIn(
+            "01_measure.py: edited since the compute stamp", str(caught.exception)
+        )
+        self._git("checkout", "--", str(script))
+        _, report = scaffold.change_kind(self.root, "foo-bar", "fit")
+        self.assertRegex(
+            report, r"replaced\s+\S*01_measure\.py \(the stamp of an earlier pin, "
+        )
+        self.assertEqual(
+            protocol_block.head(
+                (area / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
+            ).kind,
+            "fit",
+        )
+
+    def test_a_template_upgrade_is_no_edit_of_the_promise_block(self) -> None:
+        """The promise block, as the stamp files: the earlier labkit's block
+        unchanged since its commit is replaced; written since, it holds."""
+        area = self._stamped_by_an_earlier_labkit(
+            "fit",
+            scaffold.PROTOCOL_TEMPLATE.name,
+            "constants = { margin = 0.2 }",
+            "constants = { margin = 0.25 }",
+        )
+        proto = area / "PROTOCOL-foo-bar.md"
+        committed = proto.read_text(encoding="utf-8")
+        proto.write_text(committed.replace("margin = 0.2 ", "margin = 0.3 "))
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.change_kind(self.root, "foo-bar", "compute")
+        self.assertIn("the promise block differs", str(caught.exception))
+        proto.write_text(committed, encoding="utf-8")
+        _, report = scaffold.change_kind(self.root, "foo-bar", "compute")
+        self.assertIn("the promise block of an earlier pin", report)
+
+    def test_an_edit_committed_with_the_stamp_still_holds(self) -> None:
+        """Without a pin raise this labkit's templates are the ones the area
+        was stamped from: a difference committed with the stamp is an edit
+        and holds, as before — also when a lock file appears later, which
+        names no other labkit than the pin it had."""
+        area, _, _ = self._compute_area_with_work()
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text(encoding="utf-8") + "# mine\n")
+        self._git("init", "-q")
+        self._git("add", "-A")
+        self._git("commit", "-qm", "stamp with an edit")
+        for step in ("stamped", "locked"):
+            if step == "locked":
+                (self.root / "requirements.lock").write_text(
+                    "labkit @ git+https://github.com/kmax-tech/labkit.git@0123abc\n",
+                    encoding="utf-8",
+                )
+                self._git("add", "requirements.lock")
+                self._git("commit", "-qm", "lock")
+            with self.subTest(step=step), self.assertRaises(console.Refused) as caught:
+                scaffold.change_kind(self.root, "foo-bar", "fit")
+            self.assertIn(
+                "01_measure.py: edited since the compute stamp", str(caught.exception)
+            )
 
     def test_change_kind_with_explore_is_refused_before_anything_is_written(
         self,
