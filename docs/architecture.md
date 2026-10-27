@@ -404,6 +404,11 @@ id in the record is noted in `TODO.md`, not planned.
 
 ## Run and hook enforcement
 
+The Claude Code hooks load only in a session started in the repository
+root: Claude Code reads a project's hooks from `.claude/` of the directory
+it starts in, with no fallback to a parent; `labkit-hooks install` says so,
+and the git pre-commit holds a commit wherever the session started.
+
 `standard_contract.lane` supplies the obligations for a protocol's cost
 tier. At `low` there is no freeze or preflight audit; release of a
 result still requires a full run, a clean finalize, a decided analysis

@@ -1102,12 +1102,9 @@ Entschieden 2026-10-27 (Autor), umgesetzt:
 4. 2.2 schützt die Registrierung, nicht jede Laufauswahl — Grenze in
    CHANGELOG und Note genannt.
 
-Offen, Entscheidung des Autors:
-
-5. Eine Sitzung, die unter dem Repo-Root startet, lädt laut Claude-Code-Doku
-   keine Projekt-Hooks aus der `.claude/settings.json` des Roots. Nur
-   dokumentieren („Claude Code im Repo-Root starten“) oder anders
-   installieren. Empfehlung: dokumentieren.
+5. Eine Sitzung, die unter dem Repo-Root startet, lädt keine Projekt-Hooks
+   des Roots: dokumentiert (README, architecture, Ausgabe von
+   `labkit-hooks install`), nicht anders installiert.
 
 Als Nächstes: der Reparaturfall (Phase 0.3) vor jedem weiteren
 Härtungspaket; Tests und Reviews ersetzen die Ausführungsprobe nicht.

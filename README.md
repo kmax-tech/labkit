@@ -200,6 +200,9 @@ perform that review.
 The run writer and git hooks enforce checks independently of an agent.
 Claude Code's live hooks add feedback during a session. Install the pinned
 hooks with `labkit-hooks install`, and repeat that after raising the pin.
+Start Claude Code in the repository root: a session started in a directory
+below it loads none of the hooks the root's `.claude/settings.json` holds
+(the pre-commit still holds every commit).
 
 ## Command reference
 

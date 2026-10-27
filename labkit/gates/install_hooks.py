@@ -224,6 +224,16 @@ def _settings(repo: Path) -> tuple[Path, dict]:
         )
 
 
+#: where a Claude Code session must start for the hooks to load: Claude Code
+#: reads a project's hooks from `.claude/` of the directory it starts in,
+#: with no fallback to a parent (docs/notes/2026-10-19-hooks-and-report-check.md)
+START_IN_ROOT = (
+    "start Claude Code in the repository root ({root}) — a session started "
+    "in a directory below it loads none of the claude-hook entries of "
+    "{root}/.claude/settings.json; the pre-commit holds a commit either way"
+)
+
+
 def install(repo: Path) -> list[str]:
     """Write the hooks; returns what was done."""
     done = []
@@ -317,6 +327,7 @@ def main(argv: list[str]) -> int:
     if cmd == "install":
         for line in install(repo):
             print(f"labkit-hooks: {line}")
+        print(f"labkit-hooks: {START_IN_ROOT.format(root=repo)}")
         return 0
     if cmd == "check":
         gaps = check(repo)
