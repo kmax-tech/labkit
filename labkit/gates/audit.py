@@ -1318,21 +1318,54 @@ READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
 #: (`report_check.registration_gaps`), not their values — a bar lowered
 #: after it and measured again is not held yet (TODO, with the fresh
 #: attempt that keeps its predecessor)
+#: the ways out of a BLOCKER, by its cause: (name, what to do). Printed with
+#: every decision list (BLOCKER_ROUTES) and stated in the stamped AGENTS.md
+#: ("When you are stuck"); tests/test_ways_out.py holds both to the same
+#: names and every command to a real one. The repair case (2026-10-27)
+#: took the invalid-registration route for a missed criterion and moved
+#: its bars inside it: the miss comes first, a new registration declares
+#: what it changes (K1–K3, docs/notes/2026-10-27-new-registration-contracts.md).
+WAYS_OUT = (
+    (
+        "an implementation error",
+        "the code does not do what the registration says: fix the code, measure "
+        "again under the unchanged registration, audit the new run; `fixed` names "
+        "the change",
+    ),
+    (
+        "a missed criterion",
+        "the code does what it says and the criterion is missed: that is the "
+        "result — report the miss first (LAB-042 Log the outcome — failures "
+        "too); a bar set after a result is seen answers no registered question, "
+        "and report-check holds a registration changed after the first measurement",
+    ),
+    (
+        "an unjudged promise",
+        "a fault you cannot fix leaves a promise unjudged: decide it accepted "
+        'with `--effect "<ID> not assessable"`; the criterion then reads not '
+        "assessable — report the measured numbers as description, no verdict",
+    ),
+    (
+        "an invalid registration",
+        "the registration cannot be answered as written: it is not repaired in "
+        "place. Register anew: a new protocol (`labkit-init exp <new-name> --kind "
+        '…`), `type = "exploratory"`, committed before its own first run, naming '
+        'the earlier one in `[replaces] protocol = "<id>"` with one '
+        "`[[replaces.change]]` (what, from, to, why) per change; decide the "
+        "earlier protocol's open BLOCKERs `deferred`, naming the new one. The "
+        "earlier verdict is rendered first; a new approach never turns an "
+        "earlier miss into a pass",
+    ),
+    (
+        "none of these",
+        "stop: say in the report what stands in the way and what you tried; no "
+        "number is reported — never delete or rewrite `runs/` or `audits/`, never "
+        "`--no-verify`",
+    ),
+)
 BLOCKER_ROUTES = (
     "  before deciding a BLOCKER, name which of these it is:",
-    "    the code does not do what the registration says (an implementation "
-    "error): fix the code, run again, audit the new run; `fixed` names the change",
-    "    the code does what it says and the criterion is missed: that is the "
-    "result — report the miss (LAB-042 Log the outcome — failures too); a bar "
-    "moved after the number is seen fixes nothing",
-    "    the registration cannot be answered as written (an invalid "
-    "registration): it is not repaired in place — what stood before the first "
-    "measurement stays what it was (report-check holds a field the kind owes "
-    "that was not written by then, and a kind changed since). Register anew: a "
-    "new protocol (`labkit-init exp <new-name> "
-    "--kind …`) committed before its own first run, whose Context names the "
-    "earlier protocol and why it was replaced; the earlier protocol, its runs "
-    "and their verdict stay, and the report names both",
+    *(f"    {name}: {what}" for name, what in WAYS_OUT),
 )
 #: how long a finding's text stands in the decision list
 DECISION_TEXT_WIDTH = 160

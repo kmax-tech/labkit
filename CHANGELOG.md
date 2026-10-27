@@ -905,6 +905,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The ways out of a BLOCKER put the miss first and bind a new
+  registration.** The printed routes offered "register anew" for an invalid
+  registration with the earlier protocol named in its Context; the repair
+  case (2026-10-27) read a missed criterion as one and moved its bars in the
+  new protocol. The ways are now data (`audit.WAYS_OUT`: an implementation
+  error, a missed criterion, an unjudged promise, an invalid registration,
+  none of these), printed with every decision list and stated in the
+  stamped AGENTS.md's new section "When you are stuck — both lanes": bars
+  are set before results are seen; a miss is reported first; `not
+  assessable` means no verdict; register anew only when the registration
+  cannot be answered as written — `type = "exploratory"`, `[replaces]` with
+  its changes, the earlier BLOCKERs deferred — and a new approach never
+  turns an earlier miss into a pass; else stop and say what stands in the
+  way. `tests/test_ways_out.py` holds both texts to the same causes, every
+  command to a real one. The stamped AGENTS.md changes: an intervention for
+  a measured lab (labkit-paper area 09).
 - **Numbers about the inputs come from the run.** The estimator skeleton's
   `evaluate_rows` stores `scored_class_counts` for accuracy and auc: the
   items per gold value in the scored rows (not the class distribution of

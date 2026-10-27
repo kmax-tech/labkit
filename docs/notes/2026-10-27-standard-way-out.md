@@ -1,5 +1,10 @@
 # A standard way out for an agent that is stuck
 
+> Built 2026-10-27 after the repair case: `audit.WAYS_OUT` and the stamped
+> AGENTS.md section "When you are stuck" (contracts:
+> [new-registration contracts](2026-10-27-new-registration-contracts.md)); the
+> handover command below is still to build (plan 2.3).
+
 *2026-10-27, proposal, not decided. Sources: the round reports of areas
 09 rounds 6–9 (`docs/usability/`), the check-and-exit matrix
 (`2026-10-26-escape-routes-checks-and-exits.md`), the audit register

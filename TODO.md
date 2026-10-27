@@ -693,7 +693,9 @@ K2 gebaut (`fe8e440`). K1 gebaut (dieser Stand: `[replaces]`,
 `replacement_gaps`, Vorgänger-Urteil im Ergebnis, Hinweis beim
 Berichtswechsel); offen aus K1: der Hinweis „neues Protokoll nach einer nicht
 freigegebenen Messung ohne `replaces`“ und sich widersprechende erste
-Messungen als Blocker (jetzt Warnung). Als Nächstes: Anleitung, dann Replay.
+Messungen als Blocker (jetzt Warnung). Anleitung gebaut (`audit.WAYS_OUT`,
+AGENTS.md „When you are stuck“; Eingriff für Bereich 09). Als Nächstes:
+Replay des gespeicherten Versuchs mit Gegenfällen.
 Reihenfolge (bestätigt 2026-10-27): K4 → K3 → K2 → K1 → Anleitung →
 Replay des gespeicherten Versuchs mit Gegenfällen; jeder Vertrag mit seinen
 Tests, der Replay prüft das Zusammenspiel. K3 wird erst aktiv, wenn jede

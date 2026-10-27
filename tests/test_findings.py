@@ -691,7 +691,7 @@ class DecisionList(unittest.TestCase):
         self.assertNotRegex(text, r"\n  3 · ")
         self.assertIn("reading hints — not recorded, nothing to decide", text)
         self.assertIn("READ · PROTOCOL-x.md:5", text)
-        # a BLOCKER is named as one of three, each with what closes it
+        # a BLOCKER is named by its cause (`audit.WAYS_OUT`), each with what closes it
         # (ninth haiku round, t5: the bar moved to the score after the audit)
         self.assertIn("before deciding a BLOCKER, name which of these it is", text)
         self.assertIn("an implementation error", text)
@@ -699,7 +699,8 @@ class DecisionList(unittest.TestCase):
         self.assertIn("LAB-042 Log the outcome — failures too", text)
         self.assertIn("an invalid registration", text)
         self.assertIn("it is not repaired in place", text)
-        self.assertIn("names the earlier protocol and why it was replaced", text)
+        self.assertIn('naming the earlier one in `[replaces] protocol = "<id>"`', text)
+        self.assertIn("a new approach never turns an earlier miss into a pass", text)
         commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
         self.assertEqual(len(commands), 2, text)
         for cmd, status in zip(commands, ("fixed", "dismissed")):

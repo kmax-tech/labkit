@@ -22,6 +22,35 @@ including `audits/attempts.jsonl` and report-review records, together:
 the commit requires the review record in the index, bound to the staged
 report and sources.
 
+## When you are stuck — both lanes
+
+A refusal is a finding about the work, not an obstacle; an honest
+unresolved report is an admissible end, a number past a gate is not. Bars
+are set before results are seen. Name the cause, then take its way out —
+`labkit-audit` prints the same ways with every BLOCKER:
+
+- **an implementation error** — fix the code, measure again under the
+  unchanged registration, audit the new run; `fixed` names the change.
+- **a missed criterion** — that is the result: report the miss first. A
+  criterion, admissibility condition or constant changed after you have
+  seen a run answers no registered question; report-check holds it.
+- **an unjudged promise** — a fault you cannot fix: decide it accepted with
+  `--effect "<ID> not assessable"`; the criterion reads not assessable,
+  the numbers stand as description, no verdict.
+- **an invalid registration** — only when the registration cannot be
+  answered as written, never because a criterion was missed: register
+  anew (`labkit-init exp <new-name> --kind …`), `type = "exploratory"`,
+  `[replaces] protocol = "<id>"` with one `[[replaces.change]]` (what,
+  from, to, why) per change, the earlier protocol's open BLOCKERs decided
+  `deferred`. Its verdict is rendered first; a new approach never turns an
+  earlier miss into a pass.
+- **none of these** — stop and say in the report what stands in the way
+  and what you tried; no number is reported.
+
+Evidence is never removed or rewritten: `runs/`, `audits/`, the committed
+protocol and the history stay as they are, and no commit uses
+`--no-verify`.
+
 ## Lane `low` — one number in minutes
 
 Applies when the protocol head says `repeat_cost = "low"`: a run that can be
