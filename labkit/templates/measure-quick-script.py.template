@@ -6,8 +6,9 @@
     ../../.venv/bin/python scripts/02_analyze.py --check    # recompute from the kept rows; hold metrics.json and the protocol to it
 
 The protocol head's repeat_cost sets the lane (LAB-017 The number of audits follows the cost tier):
-at "low" no freeze and no audit before the run, the one analysis audit when
-the number is promoted or steers a decision; at "high" `preflight`, the
+at "low" no freeze and no audit before the run, the one analysis audit after
+it, decided before the number is adopted (`protocol-fill --from-run`, its
+promotion) or steers a decision; at "high" `preflight`, the
 preflight audit and the freeze before the run, which starts detached, and
 the analysis audit after it. At both the run itself is the instrument check:
 this skeleton has no --show and no --probe. The number is produced here, never
@@ -29,7 +30,7 @@ import argparse
 import json
 from pathlib import Path
 
-from labkit.formats.repo import adopt_command
+from labkit.formats.repo import next_after_run
 from labkit.run import runlog
 
 AREA = Path(__file__).resolve().parent.parent
@@ -118,8 +119,7 @@ def main() -> None:
         metrics = evaluate_rows(items, ids)
         run.metrics(**metrics)
         print(json.dumps(metrics, indent=1))
-        print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
-              f"(writes Recorded results, [result] run and the run entry from metrics.json)")
+        print(f"run: {run.run_id}\n" + next_after_run(PROTOCOL, run.run_id))
 
 
 if __name__ == "__main__":

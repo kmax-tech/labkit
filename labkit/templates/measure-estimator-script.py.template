@@ -94,7 +94,7 @@ REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
 from labkit.formats import promises, protocol_block, standard_contract
-from labkit.formats.repo import adopt_command
+from labkit.formats.repo import next_after_run
 
 KIND = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).kind
 
@@ -563,8 +563,7 @@ def main() -> None:
         measure(cfg, items, out, prov={"run": run.run_id})
         evaluate(out, cfg, items, run)
         if run.draw is None:
-            print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
-                  f"(writes Recorded results, [result] run and the run entry from metrics.json)")
+            print(f"run: {run.run_id}\n" + next_after_run(PROTOCOL, run.run_id))
         else:
             print(f"run: {run.run_id}  draw {run.draw} of {args.repeat_of}, seed {cfg.seed} — "
                   f"supporting evidence, never the answer: `scripts/02_analyze.py --draws`")

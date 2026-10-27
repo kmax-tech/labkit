@@ -1080,6 +1080,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The instructions after a run and before the first audit say one
+  thing.** Every skeleton printed the adoption as the next step after a
+  run and finalize said adoption followed "once this finalize is clean";
+  adoption then refused for the missing analysis audit. One line,
+  `repo.next_after_run`, names finalize, the analysis audit, its
+  decisions, the Conclusion and then the adoption; finalize's hint names
+  the audit first. The low audit has one reading: decided before the
+  number is adopted (skeleton, protocol template, standard, field guide).
+  AGENTS.md names the next step with no audit yet and that a handover
+  works before any audit; the exploration's next step names
+  `--repeat-cost` (without it the stamp took the high form). Audit
+  2026-10-27 (third), I2, I3, I4, I8.
 - **A deferred finding handed over reads apart from one set aside.**
   `deferred` is the decision on a finding, a handover what happens to its
   area; both hold at once. `preflight` listed every deferred finding of

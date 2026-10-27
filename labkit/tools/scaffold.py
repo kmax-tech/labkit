@@ -401,16 +401,20 @@ def explore_next(slug: str) -> str:
     """What `--explore` prints next: the area's stamp as one complete
     command per kind and the questions that choose among them
     (`KIND_QUESTIONS`) — the kind is not known while exploring, and `exp`
-    without `--kind` is refused (`asked_kind`)."""
+    without `--kind` is refused (`asked_kind`); the repeat cost named too,
+    since without it the stamp took the high form with a placeholder cost
+    (audit 2026-10-27, third, I8)."""
     commands = "\n".join(
-        f"  labkit-init exp {slug} --kind {kind}" for kind in protocol_block.KINDS
+        f"  labkit-init exp {slug} --kind {kind} --repeat-cost low"
+        for kind in protocol_block.KINDS
     )
     return (
         "\nNext: fill the cells, read the render, look at real output; when it "
         "holds, stamp the area under the kind its kept number asserts — one of\n"
         f"{commands}\n"
-        f"{KIND_QUESTIONS}. With a model answering in the area add --model ALIAS "
-        "(the explore file's MODEL)."
+        f"{KIND_QUESTIONS}. --repeat-cost high instead when a repeat of the run "
+        "is expensive (preflight audit and freeze before it). With a model "
+        "answering in the area add --model ALIAS (the explore file's MODEL)."
     )
 
 

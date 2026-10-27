@@ -1517,7 +1517,10 @@ class Exp(unittest.TestCase):
         printed = re.findall(r"^\s*(labkit-init exp .*)$", out.getvalue(), re.M)
         self.assertEqual(
             printed,
-            [f"labkit-init exp foo-bar --kind {k}" for k in protocol_block.KINDS],
+            [
+                f"labkit-init exp foo-bar --kind {k} --repeat-cost low"
+                for k in protocol_block.KINDS
+            ],
         )
         self.assertIn(scaffold.KIND_QUESTIONS, out.getvalue())
         explore = self.root / "experiments" / "explore" / "foo-bar.py"

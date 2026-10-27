@@ -1607,7 +1607,8 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
         console.refuse(
             "labkit-audit",
             f"{area}: no audit record yet — nothing to decide; the area's "
-            "README and the repo's AGENTS.md name the next step",
+            "README, `protocol-check <PROTOCOL> --contract` and the repo's "
+            "AGENTS.md name the next step",
         )
         return 2
     for error in dict.fromkeys(errors):

@@ -78,6 +78,7 @@ from labkit.formats.repo import (
     AmbiguousArea,
     ProtocolChoiceError,
     adopt_command,
+    audit_command,
     area_path,
     layout_root,
     no_such_area,
@@ -154,8 +155,11 @@ def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | Non
     if protocol_block.declared_run(text) is not None:
         return None
     return (
-        f"no [result] declared yet — `{adopt_command(protocol, answering_run.name)}` "
-        f"declares the run and writes the number once this finalize is clean"
+        f"no [result] declared yet — after the analysis audit "
+        f"(`{audit_command(protocol.parent, '--mode', 'analysis', protocol=protocol)}`), "
+        f"its decisions and the Conclusion, "
+        f"`{adopt_command(protocol, answering_run.name)}` declares the run and "
+        f"writes the number"
     )
 
 

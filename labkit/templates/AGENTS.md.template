@@ -22,8 +22,12 @@ readable open BLOCKERs, evidence problems and complete decision/handover
 commands. If the first audit failed, it names the failed calls and offers
 the handover, exit 2; there are no findings to decide. Use those paths and
 prerequisites rather than inventing flags or editing records. With no audit
-attempt yet, follow the area's printed workflow. labkit supplies mechanical next steps; deciding the cause and
-whether a claim is scientifically justified remains your responsibility.
+attempt yet, the area's README and `protocol-check <PROTOCOL> --contract`
+name the next step; an area that cannot be finished ends without a result
+through `protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried
+"<what you tried>" --into REPORT.md` at any point, an audit or not. labkit
+supplies mechanical next steps; deciding the cause and whether a claim is
+scientifically justified remains your responsibility.
 
 ## Choose the experiment: three separate decisions
 

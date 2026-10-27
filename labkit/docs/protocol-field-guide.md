@@ -233,8 +233,8 @@ cross-validation.
 and the gates know two values and nothing in between. `low`: a deterministic
 computation, or a handful of model calls that finish in a minute for cents —
 rerunnable at will, so no agent audit per run; `finalize` checks provenance,
-the independent audit comes when the number is promoted into a note or paper
-or steers a decision. `high`: a model pass you would not casually redo, and
+the independent audit comes before the number is adopted (`protocol-fill
+--from-run`, its promotion into a note or paper) or steers a decision. `high`: a model pass you would not casually redo, and
 anything expensive or irreversible — the preflight audit before freezing and
 the analysis audit after. Until labkit 0.103.0 the head said `seconds |
 minutes | hours`; `minutes` and `hours` owed the same, and the time words
@@ -390,8 +390,9 @@ scattered in output files nobody can interpret.
 - **Caps/drops †:** what was omitted or limited.
 - **Analysis audit †:** date · scope sha · N findings — the audit of the
   EVALUATION against the frozen criterion, before the number leaves. Not
-  stamped at `repeat_cost = "low"`: there the audit comes when the number is
-  promoted or steers a decision, and the field is added then — an open
+  stamped at `repeat_cost = "low"`: there the audit comes before the number
+  is adopted (`protocol-fill --from-run`) or steers a decision, and the field
+  is added then — an open
   placeholder was what readers stumbled over (2026-10-07).
 
 - **`[result] run` (TOML head, not a prose field):** the run the protocol

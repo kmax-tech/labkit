@@ -7,7 +7,7 @@
 # The entry point before an area exists (lab standard, LAB-046 Notebooks: explore yes, report never): items, the
 # rendered prompt, a handful of real calls, the real evaluation, a verdict —
 # in one file. Nothing here is reported: the moment a number is kept,
-# `labkit-init exp <name> --kind compute|fit|apply` (which kind: the questions
+# `labkit-init exp <name> --kind compute|fit|apply --repeat-cost low|high` (which kind: the questions
 # under --kind in `labkit-init exp -h`; add --model ALIAS when MODEL answers in
 # the area) stamps the area, moves this file into its `explore/`, and
 # the code below moves into `scripts/`. Open it as a notebook through

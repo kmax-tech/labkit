@@ -117,6 +117,22 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
 
 
+def next_after_run(protocol: Path, run_id: str) -> str:
+    """The steps after a measurement of PROTOCOL, in the order the gates
+    accept them: finalize, the analysis audit and its decisions, the
+    Conclusion, then the adoption of RUN_ID — what every skeleton prints
+    at the end of a run. Printing the adoption alone sent agents into its
+    refusal (audit 2026-10-27, third, I3)."""
+    area = protocol.parent
+    return (
+        f"next: finalize {shlex.quote(shown(area, Path.cwd()))} · "
+        f"{audit_command(area, '--mode', 'analysis', protocol=protocol)}, then "
+        f"decide its findings · write the Conclusion · then "
+        f"{adopt_command(protocol, run_id)} (writes Recorded results, [result] run "
+        f"and the run entry from metrics.json)"
+    )
+
+
 def into_command(protocol: Path, report: Path) -> str:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them

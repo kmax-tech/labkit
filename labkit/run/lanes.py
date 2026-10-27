@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from labkit.formats import protocol_block, runs, standard_contract
-from labkit.formats.repo import adopt_command
+from labkit.formats.repo import next_after_run
 from labkit.run import batch, llm, runlog
 
 #: calls per batch handed to `llm.complete_many` (four workers); each batch
@@ -306,8 +306,9 @@ class Lanes:
             )
             self.evaluate(out, cfg, jobs, run)
             if repeat is None:
-                print(f"run: {run.run_id}  → {adopt_command(self.protocol, run.run_id)}  "
-                      f"(writes Recorded results, [result] run and the run entry from metrics.json)")  # fmt: skip
+                print(
+                    f"run: {run.run_id}\n" + next_after_run(self.protocol, run.run_id)
+                )
             else:
                 print(
                     f"repeat of {repeat}: {run.run_id} → scripts/02_analyze.py --draws"

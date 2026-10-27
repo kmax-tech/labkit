@@ -30,6 +30,27 @@ class WorkflowOrientation(unittest.TestCase):
                 positions = [route.index(stage) for stage in stages]
                 self.assertEqual(positions, sorted(positions), route)
 
+    def test_the_step_after_a_run_goes_through_the_audit(self):
+        # every skeleton printed only the adoption, which then refused for
+        # the missing audit (audit 2026-10-27, third, I3)
+        from labkit.formats import repo
+
+        protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
+        line = repo.next_after_run(protocol, "2026-10-27T10-00-00_ab12")
+        stages = ("finalize", "--mode analysis", "decide", "Conclusion", "--from-run")
+        positions = [line.index(stage) for stage in stages]
+        self.assertEqual(positions, sorted(positions), line)
+        for template in (
+            "measure-quick-script.py.template",
+            "measure-estimator-script.py.template",
+        ):
+            text = (
+                Path(scaffold.__file__).parents[1] / "templates" / template
+            ).read_text()
+            with self.subTest(template=template):
+                self.assertIn("next_after_run(PROTOCOL, run.run_id)", text)
+                self.assertNotIn("adopt_command(PROTOCOL, run.run_id)", text)
+
     def test_the_area_route_names_the_area_from_the_root(self):
         # `runlog .` from the root, as AGENTS.md asks, read the repo as an
         # area (audit 2026-10-27, third, I10)
