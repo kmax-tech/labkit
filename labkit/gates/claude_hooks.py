@@ -12,6 +12,13 @@ Claude Code expects: `pre-run` and `stop` block with exit 2 (the stderr
 text goes back to the agent), `post-change` is `additionalContext` on
 stdout and exit 0.
 
+The repository the hooks hold is the one the project directory
+(`CLAUDE_PROJECT_DIR`, else the event's cwd) lies in, its root found from
+a subdirectory too (`session_repo`). Outside every repository the stop
+cannot tell what changed: it says so and holds, once per turn; post-change
+checks only the tool's own file. `undecided` reads its paths against the
+repository of the current directory, where git runs the pre-commit.
+
 A rule the agent has to remember is the weak layer; these hooks are the
 layer that does not depend on remembering. Why each rule holds:
 docs/notes/2026-10-19-hooks-and-report-check.md.
@@ -130,6 +137,7 @@ from labkit.formats.repo import (
     find_area,
     fork_point,
     git_dir_path,
+    git_root,
     head_sha,
     paths_committed_since,
     shown,
@@ -164,6 +172,21 @@ def _read_event() -> dict:
     if not raw.strip():
         return {}
     return json.loads(raw)
+
+
+def _project_dir(event: dict | None = None) -> Path:
+    """The directory Claude Code was started in (`CLAUDE_PROJECT_DIR`),
+    else the event's cwd, else the process's."""
+    project = os.environ.get("CLAUDE_PROJECT_DIR")
+    return Path(project or (event or {}).get("cwd") or os.getcwd())
+
+
+def session_repo(event: dict | None = None) -> Path | None:
+    """The repository the hooks hold: the git root (`repo.git_root`) of the
+    project directory (`_project_dir`), found from a subdirectory too — a
+    session started below the repo root has no `.git` of its own there.
+    None outside every repository."""
+    return git_root(_project_dir(event))
 
 
 def _context(event_name: str, text: str) -> None:
@@ -265,8 +288,9 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """PreToolUse hook on Bash: the session's stop base is kept before its first command (`keep_stop_base`); a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
     if event.get("tool_name", "Bash") != "Bash":
         return 0
-    project = os.environ.get("CLAUDE_PROJECT_DIR")
-    keep_stop_base(Path(project or event.get("cwd") or os.getcwd()), event)
+    repo = session_repo(event)
+    if repo is not None:
+        keep_stop_base(repo, event)
     command = (event.get("tool_input") or {}).get("command") or ""
     if not command:
         return 0
@@ -282,8 +306,11 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
         )
         return 0
 
+    # the walk to an area ends at the repo root, not at the project
+    # directory: a session started in `<area>/scripts` must still find the
+    # area above its script
     project = os.environ.get("CLAUDE_PROJECT_DIR")
-    stop = Path(project) if project else None
+    stop = repo if repo is not None else (Path(project) if project else None)
     blocked: list[str] = []
     notes: list[str] = []
     for script in scripts:
@@ -401,10 +428,12 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
 
 def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that discusses a run gets the report review's command (`report_review.review_hint`), once per text; the findings go back as context."""
-    project = os.environ.get("CLAUDE_PROJECT_DIR")
-    repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
+    found = session_repo(event)
+    # outside git only the tool's own file is checked, shown against the
+    # project directory
+    repo = found if found is not None else _project_dir(event)
     candidates: list[Path] = []
-    if (repo / ".git").exists():
+    if found is not None:
         candidates.extend(_git_changed(repo))
     fp = (event.get("tool_input") or {}).get("file_path")
     if fp:
@@ -533,7 +562,7 @@ def sessions(argv: list[str]) -> int:
         console.refuse("claude-hook sessions", "--run needs a RUN_ID")
         return 2
     run = argv[argv.index("--run") + 1] if "--run" in argv else None
-    repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    repo = _project_dir()
     log = session_log(repo)
     if log is None or not log.is_file():
         console.refuse(
@@ -618,10 +647,18 @@ def committed_in_session(repo: Path, event: dict) -> tuple[list[Path], str]:
 
 def stop(event: dict) -> int:
     """Stop hook: a number written back or committed in this session gets report-check; blockers send the agent back (exit 2), once per turn."""
-    project = os.environ.get("CLAUDE_PROJECT_DIR")
-    repo = Path(project) if project else Path(event.get("cwd") or os.getcwd())
-    if not (repo / ".git").exists():
-        return 0
+    repo = session_repo(event)
+    if repo is None:
+        # nothing tells the stop what the session changed or committed: a
+        # check that cannot run holds, once per turn
+        print(
+            f"claude-hook stop: {_project_dir(event)} lies in no git repository — "
+            "the stop cannot tell what this session changed or committed and "
+            "checks nothing; work inside the lab repo (`labkit-hooks install` "
+            "set these hooks up in one)",
+            file=sys.stderr,
+        )
+        return 0 if event.get("stop_hook_active") else 2
     record_session(repo, event)
     # deletions and rename sources too: a script or result removed under a
     # reported number reopens it as an edit does; and what the session
@@ -723,11 +760,21 @@ def undecided_blockers(
 
 def undecided(argv: list[str]) -> int:
     """`claude-hook undecided <paths…>`: the pre-commit's gate — exit 1 and the
-    findings on stdout when an area a path touches holds an undecided BLOCKER."""
+    findings on stdout when an area a path touches holds an undecided BLOCKER.
+    PATHS are git's, relative to the root of the repository the current
+    directory lies in — where git runs the pre-commit —, never to the
+    session's project directory, which may lie below that root."""
     if not argv:
         console.refuse("claude-hook undecided", "name the paths (the staged files)")
         return 2
-    repo = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
+    repo = git_root(Path.cwd())
+    if repo is None:
+        console.refuse(
+            "claude-hook undecided",
+            f"{Path.cwd()} lies in no git repository — run it in the repo whose "
+            "index is committed, as the pre-commit does",
+        )
+        return 2
     lines = undecided_blockers(repo, [repo / p for p in argv], staged=True)
     if not lines:
         return 0

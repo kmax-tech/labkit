@@ -270,10 +270,8 @@ class Hook(unittest.TestCase):
         line = "\n".join(claude_hooks.undecided_blockers(root, [failed], staged=True))
         self.assertIn("is committed and gone from the index", line)
         out = io.StringIO()
-        with (
-            contextlib.redirect_stdout(out),
-            mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(root)}),
-        ):
+        # the pre-commit's paths are read at the repo git runs it in
+        with contextlib.redirect_stdout(out), contextlib.chdir(root):
             rc = claude_hooks.undecided([str(failed.relative_to(root))])
         self.assertEqual(rc, 1)
         self.assertIn("an audit record is gone", out.getvalue())

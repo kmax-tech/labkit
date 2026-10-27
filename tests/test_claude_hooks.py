@@ -134,6 +134,30 @@ class PreRun(unittest.TestCase):
         self.assertIn("BLOCKED", err)
         self.assertIn("preflight", err)
 
+    def test_a_session_started_below_the_area_finds_it(self):
+        """Claude Code started in `<area>/scripts`: the walk to the area
+        ended at the project directory, and the run read as unbound. The
+        twin: a throwaway stage from there stays free."""
+        root = _repo(True)
+        scripts = root / "experiments/01-x/scripts"
+        (scripts / "01_measure.py").write_text(
+            'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
+            encoding="utf-8",
+        )
+        os.environ["CLAUDE_PROJECT_DIR"] = str(scripts)
+        try:
+            rc, _, err = _run(
+                claude_hooks.pre_run, _bash(scripts, "python 01_measure.py")
+            )
+            self.assertEqual(rc, 2, err)
+            self.assertIn("BLOCKED", err)
+            rc, out, err = _run(
+                claude_hooks.pre_run, _bash(scripts, "python 01_measure.py --probe 3")
+            )
+            self.assertEqual((rc, out, err), (0, "", ""))
+        finally:
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+
     def test_a_cd_or_a_compound_line_does_not_pass_the_gate(self):
         """`cd AREA && python scripts/01_measure.py` resolved the script
         against the event's cwd and found nothing; one `--probe` anywhere in
@@ -406,6 +430,30 @@ class PostChange(unittest.TestCase):
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("PROTOCOL-x.md", ctx)
+        self.assertIn("MISSING (must): Null condition / anchors", ctx)
+
+    def test_a_session_started_in_a_subdirectory_checks_the_repo(self):
+        """The project directory below the repo root has no `.git` of its
+        own: git status was never read, and a protocol written by a heredoc
+        went unchecked. The twin: nothing changed, nothing said."""
+        sub = self.root / "experiments"
+        os.environ["CLAUDE_PROJECT_DIR"] = str(sub)
+        ev = _bash(sub, "cat > 01-x/PROTOCOL-x.md <<EOF ... EOF")
+        ev["session_id"] = "s-" + os.urandom(4).hex()
+        self.assertEqual(_run(claude_hooks.post_change, ev), (0, "", ""))
+        p = self.root / "experiments/01-x/PROTOCOL-x.md"
+        p.write_text(
+            _protocol(False).replace(
+                "- **Null condition / anchors (in the same run):** [A2] shuffled labels "
+                "stay at chance\n",
+                "",
+            ),
+            encoding="utf-8",
+        )
+        rc, out, _ = _run(claude_hooks.post_change, ev)
+        self.assertEqual(rc, 0)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("experiments/01-x/PROTOCOL-x.md", ctx)
         self.assertIn("MISSING (must): Null condition / anchors", ctx)
 
     def test_same_content_is_reported_once_per_session(self):

@@ -34,6 +34,20 @@ commit are the two it cannot choose.
 `cleanupPeriodDays`; the log keeps the link from a run to the session it
 came from.
 
+**The repository from a subdirectory (audit 2026-10-27, C8).** Every hook
+took the project directory for the repository and asked it for a `.git`
+of its own. A session started below the root (Claude Code in
+`experiments/`) skipped the stop and post-change's git status in silence,
+the pre-run's walk to an area ended at the project directory, and the
+pre-commit — git runs it at the root, with the session's
+`CLAUDE_PROJECT_DIR` inherited — read the staged paths against the
+subdirectory and found no area. Reproduced through the entry point
+(`python -m labkit.gates.claude_hooks stop`, an open BLOCKER untracked):
+`project=<tmp>/experiments rc=0 stderr='<empty>'`, where the root gave rc 2.
+The hooks now hold the git root of the project directory, `undecided` that
+of its current directory. Outside every repository the stop holds once per
+turn and says why: a check that cannot run blocks (decided 2026-10-17).
+
 ## `report_check`: the gate after the last step
 
 **Trigger.** `finalize` holds the run before the number is written back;

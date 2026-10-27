@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import claude_hooks  # noqa: E402
-from labkit.formats import findings  # noqa: E402
+from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import registration_of, head  # noqa: E402
 from test_claude_hooks import _git, _run  # noqa: E402
 
@@ -150,8 +150,7 @@ class Undecided(unittest.TestCase):
 
     def test_the_pre_commit_command_holds_the_staged_paths(self):
         path = self._record(self.area, [BLOCKER])
-        os.environ["CLAUDE_PROJECT_DIR"] = str(self.root)
-        try:
+        with contextlib.chdir(self.root):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 rc = claude_hooks.main(
@@ -169,8 +168,65 @@ class Undecided(unittest.TestCase):
                 self.assertEqual(claude_hooks.main(["undecided", "README.md"]), 0)
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(claude_hooks.main(["undecided"]), 2)
+
+    def test_a_session_started_in_a_subdirectory_is_held_too(self):
+        """The project directory below the repo root has no `.git` of its
+        own: the stop returned 0 in silence, and the pre-commit — git runs
+        it at the root, the session's CLAUDE_PROJECT_DIR inherited — read
+        the staged paths against the subdirectory and found no area. The
+        twins: an area the session did not touch stays silent from there."""
+        path = self._record(self.area, [BLOCKER])
+        sub = self.root / "experiments"
+        os.environ["CLAUDE_PROJECT_DIR"] = str(sub)
+        try:
+            rc, _, err = _run(
+                claude_hooks.stop,
+                {"session_id": "s1", "cwd": str(sub), "stop_hook_active": False},
+            )
+            self.assertEqual(rc, 2, err)
+            self.assertIn(f"experiments/01-x: {path.name}", err)
+            with contextlib.chdir(self.root):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    rc = claude_hooks.main(
+                        ["undecided", "experiments/01-x/scripts/01_measure.py"]
+                    )
+                self.assertEqual(rc, 1)
+                self.assertIn(path.name, out.getvalue())
+                with contextlib.redirect_stdout(io.StringIO()):
+                    rc = claude_hooks.main(
+                        ["undecided", "experiments/02-y/scripts/01_measure.py"]
+                    )
+                self.assertEqual(rc, 0)
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", "audit")
+            self._touch(self.other)
+            rc, _, err = _run(
+                claude_hooks.stop,
+                {"session_id": "s1", "cwd": str(sub), "stop_hook_active": False},
+            )
+            self.assertEqual(rc, 0, err)
         finally:
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
+
+    def test_outside_every_repository_the_stop_says_so_and_holds_once(self):
+        """No repository: the stop cannot tell what changed. It returned 0
+        in silence; it holds once per turn and says why."""
+        d = Path(tempfile.mkdtemp()).resolve()
+        if repo.git_root(d) is not None:
+            self.skipTest(f"the temp directory {d} lies inside a git repository")
+        rc, _, err = _run(
+            claude_hooks.stop,
+            {"session_id": "s1", "cwd": str(d), "stop_hook_active": False},
+        )
+        self.assertEqual(rc, 2)
+        self.assertIn("lies in no git repository", err)
+        rc, _, err = _run(
+            claude_hooks.stop,
+            {"session_id": "s1", "cwd": str(d), "stop_hook_active": True},
+        )
+        self.assertEqual(rc, 0)
+        self.assertIn("lies in no git repository", err)
 
     def test_the_stamped_pre_commit_runs_it(self):
         from labkit.gates import install_hooks
