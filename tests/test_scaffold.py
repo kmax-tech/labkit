@@ -917,6 +917,47 @@ class Exp(unittest.TestCase):
         self.assertTrue((self.area() / "explore" / "foo-bar.py").is_file())
         self.assertFalse(f.exists())
 
+    def test_the_step_after_explore_is_a_command_that_runs(self) -> None:
+        """After `--explore` the printed next step was `labkit-init exp
+        foo-bar`, which is refused without `--kind` (audit 2026-10-27, B4).
+        It prints one complete command per kind with the questions that
+        choose; each runs from the lab and takes the explore file along."""
+        import os
+        import shlex
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            scaffold.main(["exp", "foo-bar", "--explore", "--repo", str(self.root)])
+        printed = re.findall(r"^\s*(labkit-init exp .*)$", out.getvalue(), re.M)
+        self.assertEqual(
+            printed,
+            [f"labkit-init exp foo-bar --kind {k}" for k in protocol_block.KINDS],
+        )
+        self.assertIn(scaffold.KIND_QUESTIONS, out.getvalue())
+        explore = self.root / "experiments" / "explore" / "foo-bar.py"
+        # the explore file's own text names the step with its kind too
+        self.assertEqual(
+            re.findall(r"labkit-init exp foo-bar(?! --kind)", explore.read_text()), []
+        )
+        for cmd in printed:
+            with self.subTest(cmd=cmd):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp) / "lab"
+                    scaffold.stamp_lab(root, "lab")
+                    (root / "experiments" / "explore").mkdir()
+                    (root / "experiments" / "explore" / "foo-bar.py").write_text(
+                        explore.read_text(encoding="utf-8"), encoding="utf-8"
+                    )
+                    cwd = os.getcwd()
+                    try:
+                        os.chdir(root)
+                        rc = quiet(scaffold.main, shlex.split(cmd)[1:])
+                    finally:
+                        os.chdir(cwd)
+                    self.assertEqual(rc, 0)
+                    (area,) = (root / "experiments").glob("[0-9]*-foo-bar")
+                    self.assertTrue((area / "explore" / "foo-bar.py").is_file())
+
     def test_a_repo_without_the_lab_layout_is_refused(self) -> None:
         bare = Path(self.tmp.name) / "bare"
         bare.mkdir()

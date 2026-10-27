@@ -305,6 +305,23 @@ def stamp_explore(experiments: Path, slug: str) -> list[str]:
     return log
 
 
+def explore_next(slug: str) -> str:
+    """What `--explore` prints next: the area's stamp as one complete
+    command per kind and the questions that choose among them
+    (`KIND_QUESTIONS`) — the kind is not known while exploring, and `exp`
+    without `--kind` is refused (`asked_kind`)."""
+    commands = "\n".join(
+        f"  labkit-init exp {slug} --kind {kind}" for kind in protocol_block.KINDS
+    )
+    return (
+        "\nNext: fill the cells, read the render, look at real output; when it "
+        "holds, stamp the area under the kind its kept number asserts — one of\n"
+        f"{commands}\n"
+        f"{KIND_QUESTIONS}. With a model answering in the area add --model ALIAS "
+        "(the explore file's MODEL)."
+    )
+
+
 def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     """Fill the report-grade fields into an existing area's protocols."""
     protos = area_protocols(area)
@@ -1051,9 +1068,7 @@ def main(argv: list[str]) -> int:
     )
     if a.explore:
         print("\n".join(stamp_explore(root / "experiments", area_slug(a.name))))
-        print(
-            f"\nNext: fill the cells, read the render, look at real output; when it holds, `labkit-init exp {area_slug(a.name)}`."
-        )
+        print(explore_next(area_slug(a.name)))
         return 0
     if a.change_kind:
         if a.repeat_cost or a.model or a.report or a.explore:

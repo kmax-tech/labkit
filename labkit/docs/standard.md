@@ -807,7 +807,7 @@ evidence file under the same ID (top of this document).*
   The entry point before the area: `labkit-init exp <name> --explore` creates
   `experiments/explore/<name>.py` (cells: question · items · render · check ·
   real `evaluate()` · verdict; helpers via import, never as a copy); the later
-  `labkit-init exp <name>` moves the file into the area. Reason: protocol-check,
+  `labkit-init exp <name> --kind …` moves the file into the area. Reason: protocol-check,
   runlog, commit-before-run and the layering rule rely on diffable
   plain text with a fixed
   execution order; a kernel with cell state cannot

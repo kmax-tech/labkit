@@ -7,7 +7,9 @@
 # The entry point before an area exists (lab standard, LAB-046 Notebooks: explore yes, report never): items, the
 # rendered prompt, a handful of real calls, the real evaluation, a verdict —
 # in one file. Nothing here is reported: the moment a number is kept,
-# `labkit-init exp <name>` stamps the area, moves this file into its `explore/`, and
+# `labkit-init exp <name> --kind compute|fit|apply` (which kind: the questions
+# under --kind in `labkit-init exp -h`; add --model ALIAS when MODEL answers in
+# the area) stamps the area, moves this file into its `explore/`, and
 # the code below moves into `scripts/`. Open it as a notebook through
 # jupytext (percent format); never save it as .ipynb — cell state cannot be
 # frozen, and outputs in JSON cannot be read in a diff.
@@ -89,5 +91,5 @@ def evaluate(items: list[dict], answers: list[str]) -> dict:
 #
 # **Verdict:** <carries | dead — one sentence, what the raw answers showed>
 #
-# **Consequence:** <`labkit-init exp <name>` with the prompt above as the Prompt field
+# **Consequence:** <`labkit-init exp <name> --kind …` with the prompt above as the Prompt field
 # and the items as the pilot subset | drop, because …>
