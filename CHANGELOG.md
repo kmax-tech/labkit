@@ -187,6 +187,118 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **After `labkit-init exp NAME --explore` the next step is a command that
+  runs.** It printed `labkit-init exp NAME`, which is refused without
+  `--kind`, so the one step offered was a dead end (audit 2026-10-27, B4).
+  It now prints one complete `labkit-init exp NAME --kind <kind>` per kind,
+  then the questions that choose the kind (`scaffold.KIND_QUESTIONS`), and
+  `--model ALIAS` when the explore file's model answers in the area. The
+  explore template and LAB-046 name the step with `--kind` too.
+- **`labkit-init exp --explore --change-kind` is refused.** The explore
+  branch returned before the `--change-kind` guard, so the pair stamped the
+  explore file and exited 0 (audit 2026-10-27, C13). The guard now runs
+  first, and nothing is written.
+- **`--change-kind` no longer reads a labkit upgrade as an edit.** "Edited
+  since the stamp" and "the promise block differs" were measured against
+  the installed labkit's templates, so after a pin raise an unedited stamp
+  held the change for nothing (audit 2026-10-27, C13). Such a difference
+  now passes when git shows the file (or the promise block) unchanged since
+  the commit that added it, and a pin file names another labkit then than
+  now (`scaffold.earlier_pin_text`). That is the earlier labkit's stamp: it
+  is replaced, and the log names the commit that keeps it. An edit since
+  that commit, an untracked file, or a difference committed under the same
+  pin still holds. Limit: an edit committed together with the stamp under
+  the earlier pin reads as that pin's stamp. New: `repo.added_in`, the
+  commit that added a path.
+- **The pre-run hook runs preflight before an LLM measurement.** The prompt
+  skeleton opens its run inside `lanes.Lanes.main`, so its own text names
+  no `runlog.run(`; the hook's recognition (`claude_hooks.OPENS_RUN`) never
+  matched, and every LLM measurement passed without preflight — only
+  runlog's start gate held (audit 2026-10-27, C5). `OPENS_RUN` now matches
+  `lanes.Lanes(` too. What follows is unchanged: preflight on the area,
+  frozen with blockers held, unfrozen told, low repeat cost only the
+  registration.
+- **`labkit-audit` shows the preflight auditor's refusal.** The auditor
+  answers an unfilled protocol with one `refused: protocol not filled …`
+  line; `parse` found no verdict line, and the person read only "no
+  readable `verdict:` line" (audit 2026-10-27, C16). `parse` now quotes the
+  auditor's line (`audit.REFUSED`). Still exit 2 with nothing recorded, and
+  no second model call; a malformed answer that is no refusal reads as
+  before.
+- **A discussion block's head reads back whatever `--why` holds.**
+  `protocol-fill --discuss` wrote the block's TOML head with its own
+  `json.dumps` beside the one TOML string writer (audit 2026-10-27, C15). A
+  DEL in `--why` stayed raw, which TOML forbids, so the next `--discuss`
+  and report-check refused the report ("the discussion block's head is not
+  TOML"); a lone surrogate (an argument not decoded as UTF-8) ended in a
+  `UnicodeEncodeError` traceback while the report was written. The head's
+  strings now go through `protocol_block.toml_string`: every control
+  character reads back. A lone surrogate in the why, the protocol path or
+  the run id is refused before anything is written, naming the field
+  (exit 2).
+- **A carriage return in `--why` is a second line.** A lone `\r` passed the
+  one-line check, and a report read in text mode turned it into a line
+  break: the line differed from its head, and `--discuss` with the same
+  why wrote the same split line again. `--discuss` refuses `\r` as it
+  refuses `\n`.
+- **`labkit-init exp --report` and `--change-kind` rewrite a protocol whole
+  or not at all.** Both wrote the protocol, and the kind change its stamp
+  files, in place with `Path.write_text`, which truncates first; a write
+  stopped halfway left 3847 of 5391 characters of the registration (audit
+  2026-10-27). They now write through `files.write_atomic`, as every other
+  protocol writer did. The kind change as a whole is still several steps:
+  a failure after the scripts leaves them of the new kind beside the old
+  protocol.
+- **A bare area name is read by the area-name grammar.** `repo.area_path`
+  (the area argument of runlog, code-check, preflight, finalize,
+  labkit-audit, report-check and labkit-params) matched the glob
+  `[0-9]*-<name>`, whose `*` runs over dashes: `runlog docs` beside
+  `01-docs` and `02-count-docs` was refused as "matches 2 areas", and `*`
+  matched every numbered area (audit 2026-10-27). `repo.areas_named` holds
+  the one rule: the directory called NAME and every `NN-<NAME>`
+  (`repo.AREA_NAME`). A name two areas carry is still refused, naming both.
+- **labkit-init no longer picks an area for a name it does not determine.**
+  `--report` and `--change-kind` took the first area of the slug in
+  directory order without a word — beside `01-x` and its copy `02-x`,
+  `labkit-init exp x --report` filled `02-x` — and dropped a typed number
+  for an existing area, so `exp 02-y --change-kind` beside `01-y` alone
+  restamped `01-y` (audit 2026-10-27). They now find the area through
+  `repo.areas_named` (`scaffold.existing_area`): a unique slug resolves as
+  before; a typed number picks `NN-<slug>` or is refused, naming the areas
+  of that slug; several areas without a number are refused, naming each
+  and the command that picks one. "experiment already exists" names every
+  area of the slug; a new area still drops a typed number.
+- **A rule reference whose name runs on past its start is caught.**
+  `rules.names_rule` accepted any reference whose first two words matched
+  the title, and `check_refs` read one line at a time: LAB-017 cited as
+  "The number of audits follows" wrapped before "the repeat cost" passed
+  `rules refs`, `labkit-check` and the living-reference test, though the
+  ledger title ends "… the cost tier" (audit 2026-10-27; three such
+  citations shipped, one more in the standard). A start of the title
+  (identifier rule 5: two words or the first clause) now counts only when
+  punctuation or the end of the text breaks it off; words running on are
+  read as part of the name and must match, and a name broken at a line's
+  end is read on into the next line. A lab's `labkit-check` may now name
+  references it passed before; each one names no rule as written.
+- **Help texts, next steps, templates and docs say what the contract
+  holds** (audit 2026-10-27, C2–C4, C10–C12 and the drift list).
+  `labkit-init exp` no longer tells a high computation to fill
+  `00_prepare.py`, run `--show`/`--probe` or write a criterion; it names
+  the data profile whenever a model is named. The detached run it prints,
+  `.venv/bin/runlog start <area> -- .venv/bin/python
+  <area>/scripts/01_measure.py`, works from the repo root; the old form
+  worked from no directory. The area README names `--probe` only where the
+  lane allows one; the stamped AGENTS.md's high lane says what a
+  computation skips and which fields follow the kind and which the model.
+  runlog's low-tier refusal no longer ties criterion and admissibility
+  condition to the model. `protocol-fill --from-run` and `02_analyze.py
+  --check` name the answering run, not the newest. `code-check` no longer
+  points to a code-check agent labkit does not ship. The stamped
+  launch.json loses its `--derive` entry, which no script accepts, and
+  pyrightconfig.json cites no file a lab repo lacks. LAB-017 is cited by
+  its ledger name everywhere; smaller corrections in
+  protocol-run-binding.md, architecture.md, AGENTS.md (`usability stage`
+  installs the staging labkit) and the audit and code-clarity agent specs.
 - **A decision is written through `--decide` only, and `--decide` writes
   every one a record holds.** The record's head invited setting status and
   reason by hand, and `--decide` refused a value written as a multi-line
