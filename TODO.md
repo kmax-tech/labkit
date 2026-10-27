@@ -649,6 +649,14 @@ Phase 3 — genaue Anleitung auf den geprüften Befehlen aufbauen:
    Erlaubte Entscheidungen ändern den Record über `--decide`; die Anleitung
    darf deshalb nicht pauschal jede Änderung unter `audits/` verbieten.
    Die Wege der Vorlage und `audit.BLOCKER_ROUTES` hält ein Test gleich.
+   Überarbeitet 2026-10-27: Versuchstyp, Wiederholungskosten und
+   Erkenntnisanspruch getrennt; ein gemeinsamer Ablauf mit Zusatzschritten
+   für `high`, konkrete Fehlerbeispiele und erlaubte Aktualisierungen über
+   die Werkzeuge. Leseprobe mit zwölf Fällen, Vertragsreview mit vier
+   behobenen Befunden und gezielte Nachlektüre:
+   [Beleg](docs/usability/2026-10-27-common-workflow-reading-probe.md).
+   Das belegt Verständlichkeit in diesen Situationen, keinen Erfolg einer
+   neuen Ausführungsrunde; historische Stände und externe Pins bleiben.
 4. **Stolperdrähte:** Heuristische Erkennung von Shell-/Edit-/Write-Aktionen
    ist statische Evidenz und warnt, niemals BLOCKER. Keine Sperre auf
    Schlüsselwörter wie `reset`, `--amend` oder `audits/`; sie träfe auch

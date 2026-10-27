@@ -1,0 +1,309 @@
+# AGENTS.md — <project>
+
+Entry file for any coding agent in this lab repo (`CLAUDE.md` may be a
+symlink to it). The rules behind every step are the lab standard that ships
+with the pinned labkit: `python -m labkit.formats.rules show LAB-nnn` prints one;
+a gate message names the rule it enforces by id and name.
+
+## Before delivery — both lanes
+
+The external task still defines the required deliverables: check their paths,
+file formats and contents before delivery. A clean labkit gate establishes
+its documented checks; it does not establish an external requirement that
+was never encoded in those checks.
+
+A report with a discussion block needs a review of its finished state:
+`labkit-audit <area> --report-review REPORT.md` (one model call, started
+explicitly). It writes `audits/report-reviews/<minute>-review.toml`. A claim
+holds the report until you correct the report or a source the reviewer read
+and review that new state. A later clean draw on the unchanged state does
+not overrule a claim. Stage the report, its protocol and the audit records,
+including `audits/attempts.jsonl` and report-review records, together:
+the commit requires the review record in the index, bound to the staged
+report and sources.
+
+## When you are stuck — both lanes
+
+A refusal is a finding about the work, not an obstacle; an honest
+unresolved report is an admissible end, a number past a gate is not. Bars
+are set before results are seen. Name the cause, then take its way out —
+`labkit-audit` prints the same ways with every BLOCKER:
+
+- **an implementation error** — fix the code, measure again under the
+  unchanged registration, audit the new run; `fixed` names the change.
+- **a missed criterion** — that is the result: report the miss first. A
+  criterion, admissibility condition or constant changed after you have
+  seen a run answers no registered question; report-check holds it.
+- **an unjudged promise** — a fault you cannot fix: decide it accepted with
+  `--effect "<ID> not assessable"`; the criterion reads not assessable,
+  the numbers stand as description, no verdict.
+- **an invalid registration** — only when the registration cannot be
+  answered as written, never because a criterion was missed: register
+  anew (`labkit-init exp <new-name> --kind …`), `type = "exploratory"`,
+  `[replaces] protocol = "<id>"` with one `[[replaces.change]]` (what,
+  from, to, why) per change, the earlier protocol's open BLOCKERs decided
+  `deferred`. Its verdict is rendered first; a new approach never turns an
+  earlier miss into a pass.
+- **none of these** — stop and say in the report what stands in the way
+  and what you tried; no number is reported.
+
+Evidence is never removed or rewritten: `runs/`, `audits/`, the committed
+protocol and the history stay as they are, and no commit uses
+`--no-verify`.
+
+## Lane `low` — one number in minutes
+
+Applies when the protocol head says `repeat_cost = "low"`: a run that can be
+repeated at will (a script over local data, a model fitted in seconds, a handful
+of model calls for a minute and a cent), LAB-017 The number of audits follows
+the cost tier. The repeat cost does not decide the kind: a fit that takes
+seconds is a fit.
+
+1. `labkit-init exp <name> --repeat-cost low --kind compute|fit|apply` — the kind
+   says what the kept number asserts: `compute` judges no prediction, `fit`
+   judges a model trained or adjusted here (a RandomForest, a regression,
+   a fine-tune), `apply` judges a model used unchanged (an LLM as judge, a
+   trained classifier on labelled data). Two questions decide it, in this
+   order: does this area train, adjust or select a model or procedure? yes →
+   `fit`, also when the deliverable is predictions on unlabelled rows (the
+   kept number is then the model's score on held-out labelled rows);
+   otherwise, does the number judge how well a model predicts? yes →
+   `apply`, no → `compute`.
+   `--model <alias>` when the model answers through `models.toml` (it
+   writes `[model] alias` into the TOML head). The command stamps the low cut of the protocol and the
+   skeleton the kind calls for; without `--kind` it stamps nothing. A kind
+   chosen wrong is corrected before the first measurement with
+   `labkit-init exp <name> --kind <kind> --change-kind` (never by deleting
+   the area); after it, the measured protocol stays and a new one registers
+   the other kind.
+2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
+   open field, the TOML head's `type` and, for a fit or an apply, each promise's
+   `<id> sentence` first (`repeat_cost = "low"` is stamped); the fields
+   written after the run stand apart at the end — leave them now.
+   A computation owes question · data · exclusions · unit; a fit or an apply also
+   the success criterion, the admissibility condition and the null
+   condition — the bar, what must hold before it is read, and the
+   reference computed in the same run; with a model also the prompt and
+   the data profile (step 3; the full run waits for it). Every coinage of your own — a constant such as a margin, arms,
+   item ids, the model alias — gets half a sentence under "Terms of this
+   protocol" — a computation with no coinage writes "n/a — no coinage". Fill by
+   label, all in one call: `protocol-fill <PROTOCOL> "type=exploratory"
+   "C1 sentence=<value>" "<Label>=<value>" ...` (one quoted word per
+   field); the prompt block from
+   the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
+3. Fill the skeleton (the prompt and the estimator skeleton: read `--show 2`
+   first; a computation's has no `--show`), run `code-check <area>` after
+   every code change.
+   With a model, before the run: judge the data — could a surface
+   feature answer the question without the model? — and write the
+   judgement into the protocol's Data profile field. The prompt
+   skeleton's `00_prepare.py --audit` prints an aid (items and words per
+   class, and the cue words you list in `MARKERS`, optional); the other
+   skeletons stamp none. Its counts are a hint, not proof either way.
+   Running `--audit` is not the judgement.
+4. Commit, then the run — in the foreground; it is the instrument check too.
+5. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
+   analysis`) and decide its findings — it lists each recorded one with
+   its number and the `labkit-audit … --decide N STATUS "REASON" --record …`
+   that decides it, last in its output; `labkit-audit <area> --findings`
+   shows that list again without a new audit. READ lines are hints,
+   nothing to decide. A finding is `fixed` only after the named fault has
+   been fully corrected and the requested diagnostic has been run and
+   assessed; a status and reason record your decision, not proof of a fix.
+   The next analysis audit, of a new run, judges every earlier decided
+   BLOCKER; until it finds one `resolved`, `report-check` holds it, and one
+   it does not find resolved comes back as an open carried finding in the
+   new record, to decide there (a limit you keep is decided there too).
+   If measurement code changes, repeat steps 3–5: commit the corrected code,
+   measure again, finalize and audit the new code and run. The old run is
+   not repaired by editing its script. Keep earlier audit and failed-attempt
+   records; an unsuccessful audit supplies no analysis coverage.
+   An accepted BLOCKER also owes its effect, and an
+   accepted WARNING that limits what the result allows names one too:
+   `--effect stands` when the verdicts still hold, read within it, or
+   `--effect "C1 not assessable"` when the fault leaves the run unable
+   to judge C1 — the number may still be reported, the verdict not.
+   Which one follows from what C1's sentence claims — a threshold on
+   these items, or a capability the fault leaves unshown — not from
+   the grade. Before adoption, write the Summary's **Conclusion** with
+   `protocol-fill <PROTOCOL> "Conclusion=…"`: answer the question in at most
+   two plain sentences within the limits, rather than repeat the metric
+   keys. A BLOCKER accepted with `stands` then owes a decision review —
+   `labkit-audit <area> --review`:
+   a second auditor reads the finding, your reason, the Conclusion, the
+   result as it will render and the run, and says whether the claim
+   stands within that limit; `report-check` blocks the number until one
+   upholds it, and a rejection means deciding again (limit the
+   Conclusion, change the effect, or fix the fault), not drawing again.
+   Changing the Conclusion or decision makes its review stale. If the
+   current decision requires a review for release, obtain one for the changed
+   claim or decision before reporting. An accepted `not assessable` effect limits
+   the claim and does not itself require a decision review. A Conclusion-only
+   change does not by itself require a new measurement. A BLOCKER closed as
+   `fixed`, `dismissed` or `deferred` after a review did not uphold it needs an
+   upholding review of that new decision before release; a WARNING remains
+   a warning. The analysis audit is due before
+   reporting a result, including in REPORT.md; an exploration may end
+   without adopting or reporting a result.
+6. `protocol-fill PROTOCOL-<name>.md --from-run <run_id>` adopts the run
+   as the result: it writes the Recorded results line and the run line from
+   metrics.json — never retype them — then runs `report-check` on the
+   written protocol and puts the
+   file back if it refuses: a full run (no probe), the decided analysis
+   audit of code, promises and that run, `scripts/02_analyze.py --check`
+   passing (stamped with every skeleton; the compute skeleton's recomputes from the
+   kept rows). Each finding with an effect lands below Recorded results as its
+   `Limit (audit <record> #N)` line, and Recorded results counts them in one
+   note ("subject to N recorded limitations"). It opens with each promise's
+   verdict: an admissibility condition not assessable or not met leaves
+   every criterion "not assessable" — a criterion then never reads as met,
+   whatever its own key says; the measured values stand after it as
+   description. Both are labkit's rendering, held exactly — a changed
+   decision is written again with `--render`.
+   The Conclusion is yours and must already be written (step 5); with a
+   model, also fill Raw output: one real prompt+answer pair per finding,
+   read from the run's output file it names. `protocol-check` holds the
+   after-run fields after a measure run.
+   `[result] run` in the TOML head, written by `--from-run`, declares the
+   result reported; the stop hook and the pre-commit hold it to the same
+   check. An exploration that reports nothing declares no result and may
+   end; its number stays a
+   sketch in `runs/`. A report outside the protocol (`REPORT.md`, a
+   results note) shows the result as a generated block:
+   `protocol-fill <PROTOCOL> --into REPORT.md` writes Recorded results and the
+   Limit lines there, and after a new run is adopted the same command
+   replaces the block. Write the report's explanation yourself, consistent
+   with the Conclusion: the generated block contains only Recorded results
+   and Limit lines. Every changed file that cites a run is held at the
+   stop and the commit — the block exactly, every cited run id a run of
+   the repo; any other number there is named as having no assigned
+   source: compute it in the run and report it from there, or say where
+   it comes from. A number about the inputs — records per split, class
+   sizes, a median or threshold the code derives — has one source: the
+   measuring code computes it into metrics.json (`evaluate_rows`, kept
+   rows that hold what it needs), and the report shows it in the block;
+   never a count by hand, in a heredoc, or from a file read once. When the adoption is refused and you cannot clear
+   it, do not write the run's numbers into a report as the result — the
+   gate holds a report citing the area's answering run while the
+   protocol declares none. A refusal is a finding to report, not an
+   obstacle to route around: `protocol-fill <PROTOCOL> --discuss <run_id>
+   --why "<what refused the adoption, what you found>" --into REPORT.md`
+   writes the discussion block. Say that the question stays open; a
+   discussion is not a success claim. Run the report review described
+   above before delivery. Commit `output/` and `runs/` with the protocol —
+   `finalize <area>` checks the provenance and wants both in git; the run
+   index `runs.tsv` is a local view, git-ignored (`runlog reindex <area>`
+   rebuilds it from `runs/`).
+
+Nothing more is owed on this lane: no freeze, no probe before the run, no †
+fields, no reading of labkit's source.
+
+> **End of lane `low`.** For a number at `repeat_cost = "low"` stop here;
+> read the area's `README.md` and nothing else of this file.
+
+## Lane `high`
+
+1. `labkit-init exp <name> --repeat-cost high --kind compute|fit|apply` —
+   never `mkdir`; the kind is decided as on the low lane, and without
+   `--kind` the command stamps nothing. Stamps the protocol and the
+   skeleton the kind calls for (`protocol-check --contract` names its
+   scripts): `scripts/00_prepare.py · 01_measure.py · 02_analyze.py` for a
+   fit or an apply; a computation's has no `00_prepare.py`, no `--show` and
+   no `--probe` — its run is the instrument check, so steps 3 and 5 do not
+   apply to it.
+2. Read `protocol-check --contract`, then fill the TOML head (`type`, `repeat_cost`)
+   and the Intent before the first call: the hypothesis; for a fit or an
+   apply also success criterion · admissibility condition · null condition;
+   with a model the prompt verbatim and the data profile (judged as in
+   step 3 of the low lane); an id `[C]/[A]/[B]` on every
+   promise to the code (LAB-003 No run without an intent paragraph,
+   LAB-004 Identifiers make the intent addressable).
+3. `01_measure.py --show 3` — render check: read prompts (the estimator:
+   config and feature rows) on real data, no call (LAB-007 Render check
+   before the instrument check).
+4. After every code change `code-check <area>`
+   (LAB-018 Routine check after every implementation).
+5. `--probe` — instrument check in the real pipeline; it may change the
+   instrument, never the hypothesis or the criteria; its numbers are never
+   reported (LAB-008 Instrument check before freezing).
+6. Resolution check as a test: fill `tests/test_<NN>_<name>.py`
+   (LAB-016 Resolution check before freezing); a computation has no
+   criterion to resolve, its test holds the counting function.
+7. `preflight <area>`, then the preflight audit (`labkit-audit <area> --mode
+   preflight`); decide the findings, the record's file name into the head
+   (`preflight_audit = "<minute>-preflight.toml"`, LAB-015 Preflight audit
+   before freezing). A fix changes the stamp: audit the fixed code again
+   before freezing — the named record's `scope_sha` must be the stamp of the
+   code that is frozen. An audit takes minutes, longer
+   than many harnesses let a foreground command run: start it with your
+   harness's background mechanism and wait for that task to end — not a
+   `pgrep` loop, which finds its own command line and never ends.
+8. `labkit-init exp <name> --report`, fill the † fields, only now
+   `frozen = true` (LAB-011 Required-field check).
+9. Commit first, then pilot → run, always through `runlog`, the run
+   detached from the repo root: `.venv/bin/runlog start <area> --
+   .venv/bin/python <area>/scripts/01_measure.py`; resume = the same
+   command; state: `.venv/bin/runlog <area>` (LAB-010 Commit before the run,
+   LAB-043 Runs go through `runlog`).
+10. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
+    analysis`) against the frozen criterion
+    (LAB-050 Analysis audit before reporting). A number a model gave, or a
+    fit with its seed, is one draw: `scripts/01_measure.py --repeat-of
+    <run_id>` draws it again (a run of its own, never the answer; a fit's
+    repeat gets a seed labkit derives), `scripts/02_analyze.py --draws`
+    shows how far it moves.
+11. Adopt the result into the protocol (`protocol-fill --from-run`): it
+    writes the lines and runs `report-check <area>` on them — frozen,
+    finalize clean, an analysis audit of the code as it is, the check
+    (`scripts/02_analyze.py --check`) holding the note to the run — and
+    keeps them only when it passes (LAB-041 Generate numbers, don't retype
+    them). Recorded results and the Limit lines are labkit's rendering of the run
+    and the records and are held to it exactly: never retype them, and
+    after a changed decision write them again (`protocol-fill <PROTOCOL>
+    --render`). The stop hook and the pre-commit run the same check on every
+    protocol whose head declares a result (`[result] run`).
+    A report outside the protocol (`REPORT.md`, a results note) shows the
+    result as a generated block: `protocol-fill <PROTOCOL> --into
+    REPORT.md` writes Recorded results and the Limit lines there (after a new
+    run is adopted it replaces the block), and every changed file that
+    cites a run is held to it at the stop and the commit — the block exactly, every cited run id a run of the repo.
+    Any other number in that file is named as having no assigned source:
+    compute it in the run and report it from there, or say where it
+    comes from. A number about the inputs — records per split, class
+    sizes, a median or threshold the code derives — has one source: the
+    measuring code computes it into metrics.json (`evaluate_rows`, kept
+    rows that hold what it needs), and the report shows it in the block;
+    never a count by hand, in a heredoc, or from a file read once. When the adoption is refused and you cannot clear it, do
+    not write the run's numbers into a report as the result — the gate
+    holds a report citing the area's answering run while the protocol
+    declares none. A refusal is a finding to report, not an obstacle to
+    route around: discuss the run — `protocol-fill <PROTOCOL> --discuss
+    <run_id> --why "<what refused the adoption, what you found>" --into
+    REPORT.md` writes the block — and say that the question stays open.
+    Run the report review and stage its records as described under
+    "Before delivery — both lanes".
+
+## Setup
+
+- One interpreter: `.venv/bin/python`; versions in `requirements.lock`,
+  refrozen after every install. The editor uses the same
+  (`.vscode/settings.json`).
+- `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt &&
+  .venv/bin/labkit-hooks install` — the hooks come with the pinned labkit.
+- Tests: `.venv/bin/python -m pytest -q`.
+- If your harness kills a foreground shell command after N seconds, set
+  `LABKIT_FOREGROUND_TIMEOUT_S=N` in its configuration, so every command it
+  spawns has it (Codex: `[shell_environment_policy] set = {
+  LABKIT_FOREGROUND_TIMEOUT_S = "N" }` in `.codex/config.toml`; Claude Code
+  is recognised without it). A long run then refuses the foreground and
+  asks for `runlog start <area> -- <cmd>` instead of dying mid-run.
+
+## Layout
+
+- `experiments/NN-<name>/` — one area per question, numbered by creation.
+- `data/raw/` → `data/prepared/` — materialized steps, read-only once written.
+- `lib/` — repo-local helpers; shared helpers come as the pinned labkit
+  package (`from labkit.run import runlog`), never as copies.
+- `notes/` — `theorie/` (what holds independent of our runs), `messung/`
+  (how we measure: instruments, protocols), `results/` (what a run showed).
+- `models.toml` — the one place for model backends; code names an alias.
