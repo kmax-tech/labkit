@@ -709,10 +709,13 @@ beide Registrierungen freigegeben; die Zwillinge (zitierte Run-ID,
 von Bereich 12: K3 hält schon den Start — `null_band` 0.1 → 0.15
 (`40e862b`, Haiku in Runde 8) und `[A3]` hinzugefügt (`7eb2d50`, unser
 Fallbau „pilot 2 case A“), beides nach der ersten Messung `ad0d`; eine
-Reparatur „wie registriert“ nähme dort die Leckregel heraus. Offen: (1)
-Startzustand für eine neue Runde neu bauen (`[A3]` vor der ersten Messung
-registriert) oder den Neuansatz mit `replaces` als richtigen Weg des Falls
-registrieren — Entscheidung des Autors; (2) der K1-Hinweis „neues Protokoll
+Reparatur „wie registriert“ nähme dort die Leckregel heraus. Entschieden
+2026-10-27: Der Startzustand bleibt unverändert als Beleg des Versuchs; die
+Leckregel für einen grünen Gegenfall zu entfernen, wäre fachlich falsch.
+Die synthetischen Gegenfälle belegen den mechanischen Weg, keinen realen
+Reparaturfall (labkit-paper `1589a05`, Note des Reparaturfalls). Offen: (1)
+ein korrekt registrierter realer Reparaturfall (`[A3]` vor der ersten
+Messung registriert) als eigener Fall; (2) der K1-Hinweis „neues Protokoll
 nach nicht freigegebener Messung“ bleibt zurückgestellt (erst ein engerer
 Auslöser und Gegenproben mit unabhängigen Fragen, Review 2026-10-27); (3)
 gemeinsame Abnahme, danach Release.
