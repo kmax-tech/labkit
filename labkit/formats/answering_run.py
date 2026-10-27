@@ -390,6 +390,23 @@ def first_measurements(area: Path, pid: str, repo: Path | None) -> list[RunDir]:
     The rejected orders and the limits:
     docs/notes/2026-10-27-first-measurement-order.md. Raises RuntimeError
     when git fails."""
+    return sorted(
+        (group[0] for group in first_measurement_groups(area, pid, repo)),
+        key=lambda rd: rd.dir.name,
+    )
+
+
+def first_measurement_groups(
+    area: Path, pid: str, repo: Path | None
+) -> list[list[RunDir]]:
+    """Every measurement at each first position `first_measurements` names
+    one run for: all runs at each earliest commit, each run whose commit
+    cannot be placed on its own — each group sorted by name, the groups by
+    their first run's name. Runs at one commit share a committed protocol,
+    not necessarily a promise block (the tree may have differed between
+    them), so a reader of the registration they recorded reads every one;
+    a run id does not choose among them. Raises RuntimeError when git
+    fails."""
     measured = [
         (rd, cfg)
         for rd in run_dirs(area)
@@ -399,19 +416,20 @@ def first_measurements(area: Path, pid: str, repo: Path | None) -> list[RunDir]:
         and cfg.run_kind == "measurement"
     ]
     if repo is None:
-        return [rd for rd, _ in measured]
-    first: list[RunDir] = []
-    at: dict[str, RunDir] = {}  # each recorded commit: its earliest run by name
+        return [[rd] for rd, _ in sorted(measured, key=lambda m: m[0].dir.name)]
+    groups: list[list[RunDir]] = []
+    at: dict[str, list[RunDir]] = {}  # each recorded commit: its runs
     for rd, cfg in measured:
         commit = recorded_commit(cfg)
         if commit is None:
-            first.append(rd)
+            groups.append([rd])
         else:
-            at.setdefault(commit, rd)
+            at.setdefault(commit, []).append(rd)
     known = [c for c in at if commit_known(repo, c)]
-    first += [rd for c, rd in at.items() if c not in known]
-    first += [at[c] for c in earliest_commits(repo, known)]
-    return sorted(first, key=lambda rd: rd.dir.name)
+    groups += [at[c] for c in at if c not in known]
+    groups += [at[c] for c in earliest_commits(repo, known)]
+    groups = [sorted(g, key=lambda rd: rd.dir.name) for g in groups]
+    return sorted(groups, key=lambda g: g[0].dir.name)
 
 
 def newest_with_intent_keys(

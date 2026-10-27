@@ -103,6 +103,35 @@ DIGEST_FORMAT = "promises-normalized-json"
 NO_BLOCK = "none"
 
 
+def snapshot_changes(was: dict, now: dict) -> list[str]:
+    """What differs between two promise snapshots runs recorded (`snapshot`):
+    one phrase per change of the registration — an id added or dropped, its
+    key, a constant (`[A2] null_band 0.1 → 0.15`), its declared scope. Not
+    the declared-scope digests: changed code under an unchanged declaration
+    is a repair, no change of the registration. [] for the same block
+    (`block_sha`); a block that differs in nothing the snapshot holds
+    differs in a sentence, which the snapshot does not keep in clear text:
+    `a promise's sentence`. Pure."""
+    if was.get("block_sha") == now.get("block_sha"):
+        return []
+    old, new = was.get("ids") or {}, now.get("ids") or {}
+    out = [f"[{i}] added" for i in sorted(set(new) - set(old))]
+    out += [f"[{i}] dropped" for i in sorted(set(old) - set(new))]
+    for i in sorted(set(old) & set(new)):
+        a, b = old[i], new[i]
+        if a.get("key") != b.get("key"):
+            out.append(f"[{i}] key {a.get('key')} → {b.get('key')}")
+        ca, cb = a.get("constants") or {}, b.get("constants") or {}
+        for name in sorted(set(ca) | set(cb)):
+            if ca.get(name) != cb.get(name):
+                out.append(
+                    f"[{i}] {name} {ca.get(name, '(none)')} → {cb.get(name, '(none)')}"
+                )
+        if sorted(a.get("scope") or []) != sorted(b.get("scope") or []):
+            out.append(f"[{i}] scope {a.get('scope')} → {b.get('scope')}")
+    return out or ["a promise's sentence"]
+
+
 def block_stamp(text: str) -> str:
     """The protocol's promise block as an audit record names it: the digest
     of its [[promise]] tables (`PromiseTables.sha`), or NO_BLOCK when it

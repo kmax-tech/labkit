@@ -107,12 +107,13 @@ from pathlib import Path
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import RunDir, run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
-from labkit.formats.answering_run import first_measurements
+from labkit.formats.answering_run import first_measurement_groups, first_measurements
 from labkit.formats.protocol_history import registration_in_commit
 from labkit.formats import (
     console,
     findings,
     followup,
+    promises,
     protocol_block,
     report_reviews,
     reviews,
@@ -291,6 +292,83 @@ def freeze_gaps(ctx: Checked) -> list[str]:
     # protocol-check and preflight refused it (audit 2026-10-15)
     gaps += [f"line {n}: {label} still a placeholder" for n, label in report.must_holes]
     return [f"{ctx.protocol.name}: {g}" for g in gaps]
+
+
+def registration_changes(ctx: Checked) -> list[GateFinding]:
+    """The answering run holds the registration its protocol's first
+    measurement recorded (K3, docs/notes/2026-10-27-new-registration-contracts.md):
+    the promise block in each run's record (`promises.snapshot`: ids, keys,
+    sentences through the block's digest, scopes, constants — not the code
+    the scopes name, so a repair measured again under the same promises
+    passes). A run whose block differs from the first measurement's is held,
+    each change named (`promises.snapshot_changes`), with the way out:
+    restore what was registered and measure again, or register anew. Every
+    lane: a bar moved after a result was seen answers no registered
+    question at any repeat cost. The first measurements are every run at
+    each first position (`answering_run.first_measurement_groups`), not one
+    chosen by name; when they recorded different blocks, which one stood
+    cannot be told, and that is a warning until a new registration can name
+    its predecessor (plan step 2.4). Empty without an answering run, a
+    stamped id, or a block in the records (another station names those)."""
+    if ctx.head.id is None or ctx.run is None:
+        return []
+    cfg = read_run_config(ctx.run)
+    now = cfg.promises if cfg is not None else None
+    if now is None:
+        return []
+    groups = first_measurement_groups(ctx.area, ctx.head.id, git_root(ctx.protocol))
+    registered: dict[str, tuple[RunDir, dict]] = {}
+    for rd in (rd for group in groups for rd in group):
+        snap = rd.config.promises if rd.config is not None else None
+        if snap is not None:
+            registered.setdefault(snap["block_sha"], (rd, snap))
+    if len(registered) > 1:
+        named = ", ".join(
+            f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
+        )
+        return [
+            GateFinding(
+                WARNING,
+                f"the first measurements recorded different registrations: {named} — "
+                f"which one stood before the number cannot be told; held to none of them",
+                evidence_kind=GUARANTEED,
+            )
+        ]
+    if not registered:
+        return []
+    ((sha, (first, snap)),) = registered.items()
+    if now["block_sha"] == sha:
+        return []
+    changes = promises.snapshot_changes(snap, now)
+    restore = [c for c in changes if " → " in c]
+    commit = recorded_commit(first.config) if first.config is not None else None
+    root = git_root(ctx.protocol)
+    shown_then = (
+        f"`git show {commit[:12]}:"
+        f"{ctx.protocol.resolve().relative_to(root.resolve()).as_posix()}` shows the "
+        f"protocol as committed then; "
+        if commit and root is not None
+        else ""
+    )
+    return [
+        GateFinding(
+            BLOCKER,
+            f"the registration changed after the first measurement {first.dir.name}: "
+            f"{'; '.join(changes)} (recorded by the answering run {ctx.run.name}) — a "
+            f"bar set after a result was seen does not answer the registered "
+            f"question. Restore what {first.dir.name} registered "
+            + (
+                f"({'; '.join(c.split(' → ')[0] + ' back' for c in restore)}) "
+                if restore
+                else ""
+            )
+            + f"and measure again, then audit that run ({shown_then}the earlier runs "
+            f"stay); or, when the registration cannot be answered as written, "
+            f"register anew (`labkit-init exp <new-name> --kind …`) — the earlier "
+            f"protocol, its runs and their verdict stay",
+            evidence_kind=GUARANTEED,
+        )
+    ]
 
 
 def registration_gaps(ctx: Checked) -> list[GateFinding]:
@@ -772,6 +850,8 @@ def report_check(
         )
         if ln.registration:
             findings.take_all(registration_gaps(ctx))
+    # the registration as at the first measurement — every lane (K3)
+    findings.take_all(registration_changes(ctx))
 
     # 3. finalize — always, with its blockers named
     findings.take_all(

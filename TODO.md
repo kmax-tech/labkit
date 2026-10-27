@@ -686,6 +686,9 @@ Anleitung („When you are stuck“, `BLOCKER_ROUTES`) nach den Verträgen in
 drei Punkten (Schranken vor den Ergebnissen; ehrliches Verfehlen und
 Code-Reparatur zuerst, geänderte Anschlussfrage separat und offengelegt;
 not assessable heißt kein Urteil), durch Lese- und Verhaltenstests geprüft.
+Stand: K4 gebaut (labkit-paper `f383411`; nachträgliche Diagnose von Bereich
+12: `escaped`, Standard von 2c7dfe6 erfüllt, `c85e4e9`). K3 gebaut (dieser
+Stand); sich widersprechende erste Messungen sind bis K1 eine Warnung.
 Reihenfolge (bestätigt 2026-10-27): K4 → K3 → K2 → K1 → Anleitung →
 Replay des gespeicherten Versuchs mit Gegenfällen; jeder Vertrag mit seinen
 Tests, der Replay prüft das Zusammenspiel. K3 wird erst aktiv, wenn jede

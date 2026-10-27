@@ -272,6 +272,105 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertIsNone(runs.recorded_commit(cfg(runs.NO_GIT, "")))
 
 
+def _block(null_band: float, sentence: str = "the null lane stays near chance") -> str:
+    """A promise block whose [A2] carries NULL_BAND, as the repair case's did."""
+    return (
+        '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "the criterion holds"\n'
+        'scope = ["scripts/01_measure.py"]\n\n'
+        '[[promise]]\nid = "A1"\nkey = "a1_pass"\nsentence = "the yield suffices"\n'
+        'scope = ["scripts/01_measure.py"]\n\n'
+        f'[[promise]]\nid = "A2"\nkey = "a2_pass"\nsentence = "{sentence}"\n'
+        f'scope = ["scripts/01_measure.py"]\nconstants = {{ null_band = {null_band} }}\n'
+    )
+
+
+class RegistrationAsFirstMeasured(_Repository):
+    """K3 (docs/notes/2026-10-27-new-registration-contracts.md): the
+    answering run holds the registration its protocol's first measurement
+    recorded. The repair case (2026-10-27): run 98dd failed [A2] at
+    null_band 0.1, the band became 0.15 "to accommodate observed null
+    score", and the next run passed."""
+
+    # named before RUN: the answering run is still the newest by name
+    FIRST = "2026-10-07T09-25-31_98dd"
+
+    def _register(self, block: str) -> str:
+        self.proto.write_text(
+            head(repeat_cost="low", result=RUN, promises=block) + REGISTRATION,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        return _git(self.root, "rev-parse", "HEAD")
+
+    def _changes(self) -> list[str]:
+        ctx = report_check.checked(self.area, self.proto)
+        return [f.line for f in report_check.registration_changes(ctx)]
+
+    def test_a_bar_moved_after_the_first_measurement_is_held_with_its_way_back(self):
+        first = self._register(_block(0.1))
+        self._run(first, self.FIRST)
+        later = self._register(_block(0.15))
+        self._run(later, RUN)
+        (line,) = self._changes()
+        self.assertIn(
+            f"the registration changed after the first measurement {self.FIRST}", line
+        )
+        self.assertIn("[A2] null_band 0.1 → 0.15", line)
+        self.assertIn("Restore what", line)
+        self.assertIn("[A2] null_band 0.1 back", line)
+        self.assertIn(f"git show {first[:12]}:experiments/01-x/PROTOCOL-x.md", line)
+        self.assertIn("register anew", line)
+        code, out = _report_check(self.area)
+        self.assertEqual(code, 1, out)
+
+    def test_the_twin_a_repair_under_the_same_registration_passes(self):
+        """The code changed and measured again under unchanged promises: the
+        declared scope's digest moves, the registration does not."""
+        first = self._register(_block(0.1))
+        self._run(first, self.FIRST)
+        script = self.area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text(encoding="utf-8") + "# repaired\n")
+        _git(self.root, "commit", "-qam", "repair")
+        self._run(_git(self.root, "rev-parse", "HEAD"), RUN)
+        self.assertEqual(self._changes(), [])
+
+    def test_one_measurement_has_nothing_to_compare(self):
+        self._run(self._register(_block(0.1)), RUN)
+        self.assertEqual(self._changes(), [])
+
+    def test_a_changed_sentence_is_named_though_its_old_text_is_not_kept(self):
+        first = self._register(_block(0.1))
+        self._run(first, self.FIRST)
+        self._run(self._register(_block(0.1, "the null lane stays somewhere")), RUN)
+        (line,) = self._changes()
+        self.assertIn("a promise's sentence", line)
+        self.assertIn("git show", line)
+
+    def test_first_measurements_that_disagree_are_named_not_chosen_by_name(self):
+        """Two runs at one commit with different blocks (the tree differed):
+        which registration stood cannot be told, and a run id does not
+        settle it — a warning until a new registration can name its
+        predecessor."""
+        sha = self._register(_block(0.1))
+        early = self._run(sha, "2026-10-07T08-00-00_aaaa")
+        self.proto.write_text(
+            head(repeat_cost="low", result=RUN, promises=_block(0.15)) + REGISTRATION,
+            encoding="utf-8",
+        )  # not committed: the second run at the same commit saw another block
+        later = self._run(sha, "2026-10-07T09-00-00_bbbb")
+        self._run(sha, RUN)
+        (finding,) = report_check.registration_changes(
+            report_check.checked(self.area, self.proto)
+        )
+        self.assertEqual(finding.grade, report_check.WARNING)
+        self.assertIn(
+            "the first measurements recorded different registrations", finding.line
+        )
+        self.assertIn(early.name, finding.line)
+        self.assertIn(later.name, finding.line)
+
+
 class FirstMeasurementInGitOrder(_Repository):
     """Git's history orders the measurements, a run id only those at one
     commit (A11, audit 2026-10-27)."""

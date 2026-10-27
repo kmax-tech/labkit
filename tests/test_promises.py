@@ -607,3 +607,65 @@ class KeyKind(unittest.TestCase):
         self.assertEqual(promises.key_kind("b10_branch"), "branch")
         for key in ("f1", "p1_x", "criterion_pass", "ac1_pass", "k1_pass"):
             self.assertIsNone(promises.key_kind(key), key)
+
+
+class SnapshotChanges(unittest.TestCase):
+    """What differs between two recorded registrations (K3): named per id;
+    the declared-scope digest — the code — is no change of the registration."""
+
+    def snap(self, sha: str, **ids: dict) -> dict:
+        return {"block_sha": sha, "ids": ids}
+
+    def test_each_change_of_the_registration_is_named(self):
+        a2 = {
+            "key": "a2_pass",
+            "constants": {"null_band": 0.1},
+            "scope": ["s.py"],
+            "declared_scope_sha": "x",
+        }
+        was = self.snap(
+            "aaa", A2=a2, A3={"key": "a3_pass", "constants": {}, "scope": ["s.py"]}
+        )
+        now = self.snap(
+            "bbb",
+            A2={**a2, "constants": {"null_band": 0.15}, "scope": ["s.py", "t.py"]},
+            C2={"key": "c2_pass", "constants": {}, "scope": []},
+        )
+        self.assertEqual(
+            promises.snapshot_changes(was, now),
+            [
+                "[C2] added",
+                "[A3] dropped",
+                "[A2] null_band 0.1 → 0.15",
+                "[A2] scope ['s.py'] → ['s.py', 't.py']",
+            ],
+        )
+
+    def test_the_same_block_and_a_repaired_code_name_nothing(self):
+        a2 = {
+            "key": "a2_pass",
+            "constants": {"null_band": 0.1},
+            "scope": ["s.py"],
+            "declared_scope_sha": "x",
+        }
+        self.assertEqual(
+            promises.snapshot_changes(self.snap("aaa", A2=a2), self.snap("aaa", A2=a2)),
+            [],
+        )
+        moved = {
+            **a2,
+            "declared_scope_sha": "y",
+        }  # the block digest would not move either
+        self.assertEqual(
+            promises.snapshot_changes(
+                self.snap("aaa", A2=a2), self.snap("aaa", A2=moved)
+            ),
+            [],
+        )
+
+    def test_a_block_that_differs_in_nothing_kept_differs_in_a_sentence(self):
+        a2 = {"key": "a2_pass", "constants": {}, "scope": ["s.py"]}
+        self.assertEqual(
+            promises.snapshot_changes(self.snap("aaa", A2=a2), self.snap("bbb", A2=a2)),
+            ["a promise's sentence"],
+        )

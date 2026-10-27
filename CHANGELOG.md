@@ -9,6 +9,25 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **report-check holds a run whose registration changed after the first
+  measurement.** Nothing compared the promise block a protocol's first
+  measurement recorded with the answering run's: in the repair case
+  (labkit-paper area 12, 2026-10-27) run 98dd failed [A2] at `null_band`
+  0.1, the band was raised to 0.15 "to accommodate observed null score",
+  the next run passed and the report was released. Every lane now holds
+  an answering run whose recorded block differs from its first
+  measurements' (`report_check.registration_changes`): each change is
+  named per id and constant (`promises.snapshot_changes`, `[A2] null_band
+  0.1 → 0.15`; a sentence through the block digest, whose old text the run
+  record does not keep — `git show <commit>:<protocol>` shows it), with the
+  way back: restore what was registered and measure again, or register
+  anew. The code the scopes name is not compared: a repair measured again
+  under unchanged promises passes. The first measurements are every run at
+  each first position (`answering_run.first_measurement_groups`), not one
+  chosen by name; when they recorded different blocks it is a warning —
+  which one stood cannot be told — until a new registration can name its
+  predecessor. Contract: `docs/notes/2026-10-27-new-registration-contracts.md`
+  (K3). 0.103.0 is the last version that lets such a run through.
 - **An `--again` decision review releases nothing, and `--review` exits
   with the state.** `labkit-audit --review --again` skipped the contested
   check, so on a decision never reviewed its `upheld` released the
