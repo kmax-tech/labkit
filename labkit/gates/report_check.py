@@ -89,7 +89,7 @@ reopens nothing.
 
 `--staged` is the pre-commit's form. The commit holds the index, the
 stations read the working tree: so the declaration is read from the index
-(`index_text` — an answer only the tree carries is not in the commit), and
+(`repo.state_text` — an answer only the tree carries is not in the commit), and
 an area whose tree differs from the index (`tree_differs`: a file modified
 and not staged, or untracked) is a blocker before any station runs, since
 the check would judge a state the commit does not hold.

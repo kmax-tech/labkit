@@ -274,9 +274,9 @@ an exploration's run is looked at.
 
 To end a protocol without a result (a handover), use `labkit-audit <AREA> --findings`
 first: it reads all open BLOCKER records and evidence errors without a
-model call and prints complete commands. When the first audit failed, it
-names the failed calls and their errors and offers the handover, exit 2;
-there are no findings to decide. Explicitly decide readable
+model call and prints complete commands. For a failed audit call that no completed audit of the same mode, code and promises covers, it names the
+call and its error and offers the handover, exit 2; that call left no
+findings to decide. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
 REPORT.md` command. It withdraws the result declaration, keeps an

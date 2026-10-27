@@ -257,6 +257,8 @@ def print_contract(protocol: Path | None = None) -> None:
         (standard_contract.LOW, standard_contract.COMPUTE_KIND, False),
         (standard_contract.LOW, standard_contract.FIT_KIND, False),
         (standard_contract.LOW, standard_contract.APPLY_KIND, True),
+        (standard_contract.LOW, standard_contract.APPLY_KIND, False),
+        (standard_contract.HIGH, standard_contract.COMPUTE_KIND, False),
         (standard_contract.HIGH, standard_contract.FIT_KIND, False),
         (standard_contract.HIGH, standard_contract.APPLY_KIND, True),
     ]

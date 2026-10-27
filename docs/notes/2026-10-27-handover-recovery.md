@@ -17,8 +17,10 @@ journal/record errors, complete decision commands and the protocol-specific
 handover command. It does not choose a scientific interpretation for the
 author. With no audit yet it refuses: there is nothing to decide, and the area's
 README and the repo's AGENTS.md name the next step. It offers the
-handover only where an open BLOCKER or an evidence problem stands; it is
-not a second workflow engine.
+handover only where an open BLOCKER, an evidence problem or a failed
+audit call no completed audit covers stands (`0667f0a`); it is not a
+second workflow engine. The handover itself works at any point, an
+audit or not.
 
 An unresolved readable BLOCKER is explicitly decided `deferred`, with the
 reason, before handover. `deferred` is the decision on the finding; the

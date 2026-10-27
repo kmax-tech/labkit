@@ -967,8 +967,8 @@ def _render_file(protocol: Path, text: str) -> int:
 
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the mode ARGS name (--handover, --list, --prompts,
-    --render, --into, --from-run), or None when they name none: a field
-    fill."""
+    --render, --discuss, --into, --from-run), or None when they name none:
+    a field fill."""
     if args.handover:
         return _handover_file(args, text)
     if args.list:

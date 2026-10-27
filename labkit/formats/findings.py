@@ -91,7 +91,7 @@ an accepted BLOCKER owes its effect, an accepted WARNING may name one
 reaches the result. Which effect follows from what the promise's sentence
 claims — a threshold on these items, or a capability — not from the
 grade. The protocol carries each as a `Limit (audit <record> #N)` line
-and a note in the Answer (`protocol-fill --from-run` writes both from the
+and a note in Recorded results (`protocol-fill --from-run` writes both from the
 record), and report-check holds them to it (`limit_line`, `answer_note`). Whether the
 named limit is enough stays the audit's question, not this check's
 (judge probe, 2026-10-21: a prompt broader than the gold, accepted, and

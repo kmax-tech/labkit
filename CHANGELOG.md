@@ -419,7 +419,8 @@ pins (`requirements.txt` / `requirements.lock`).
   before its own refusal, in an area never audited. Now an area without a
   record is refused first (nothing to decide; the README and AGENTS.md
   name the next step); the way to end unresolved is printed only beside an
-  open BLOCKER or an evidence problem, as two numbered steps — decide each
+  open BLOCKER, an evidence problem or (since the workflow review) a
+  failed audit call no completed audit covers, as two numbered steps — decide each
   open BLOCKER `deferred` with `<why it stays unresolved>` in place of a
   ready-made reason, then the handover command; readable records left out
   are counted. Its `--help` says what it shows and when it exits 2. Audit
@@ -759,7 +760,7 @@ pins (`requirements.txt` / `requirements.lock`).
   `--report-review` reads the state back after every draw and says what
   holds it — each claim with its record, line, kind and why, or that only
   a review without `--again` releases it, with that command
-  (`report_review.after_draw`, `held_by`, `review_command`, the one home
+  (`report_review.held_by`, `review_command`, the one home
   of the command report-check also prints). The decision-review blockers
   print the whole `labkit-audit AREA --review --record FILE` and, while
   the Conclusion is a placeholder, to write it first
@@ -1080,6 +1081,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Drift after the day's changes.** The architecture names
+  `handovers.acknowledgement` (not `valid`), eight links (not six) and
+  the evidence the commit gate holds beside BLOCKERs; the README lists
+  `protocol-fill --handover` and `protocol-check [PROTOCOL] --contract`
+  and defines the estimator for a local apply too; README, workflow,
+  AGENTS.md, the handover note and `--findings`' help describe a failed
+  audit call by the condition the code checks (no completed audit of its
+  mode, code and promises) instead of "the first audit"; `--contract`
+  without a protocol also prints a high computation and a local apply;
+  docstrings, usage lines and the `runlog` epilog follow their code
+  (`report_check`, `findings`, `audit._check_args`, `audit` usage,
+  `protocol_fill._run_mode`, `runlog start`); this changelog no longer
+  names the removed `report_review.after_draw`. Audit 2026-10-27
+  (third), D1–D8, K10.
 - **The full form owes model and criterion fields only with a model and
   a criterion.** A high computation without a model was refused at the
   freeze for its Data profile, Model I/O, Prompt, Instrument check,

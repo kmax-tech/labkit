@@ -175,9 +175,8 @@ without a result → `--handover` (below).
 
 When a check stops you, `labkit-audit <area> --findings` shows readable
 open findings, evidence problems and complete recovery commands without a
-model call. If the first audit failed, it names the failed calls and their
-errors and offers the handover without inventing findings; it still exits
-2 because no audit completed. Decide unresolved readable BLOCKERs explicitly before using
+model call. For a failed audit call that no completed audit of the same mode, code and promises covers, it names the call and its error and offers the
+handover without inventing findings; it exits 2 then. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
 immutable handover record of the remaining evidence, losses and the
@@ -243,10 +242,11 @@ labkit-init lab [DIR]               # create a lab repo
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--explore]
 labkit-init exp NAME --kind KIND --change-kind # another kind before the first measurement, written fields kept
 protocol-check PROTOCOL             # check required fields and promise tables
-protocol-check --contract | --guide # field contract or field-guide path
+protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: its own row) or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
 protocol-fill PROTOCOL --into REPORT.md # the declared result as a generated block in a report
+protocol-fill PROTOCOL --handover --why "…" --tried "…" --into REPORT.md # end without a result: [result] withdrawn, a handover record, its block in the report
 protocol-fill PROTOCOL --discuss RUN_ID --why "…" --into REPORT.md # a run the report looks at without reporting it, as a discussion block
 code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
 intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
@@ -326,7 +326,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |
 | **scope hash** | Per-promise hash of its declared code scope, recorded with the run and checked by finalize. |
 | **stamp** | Area audit fingerprint of selected source files, declared scopes and the package pin. |
-| **estimator** | Instrument fitted to data; the stamped estimator skeleton compares true-label and permuted-label lanes. |
+| **estimator** | The instrument of the estimator skeleton: at `fit` trained on the data, at a local `apply` the unchanged predictor; both compare a registered lane with a null lane on permuted labels. |
 
 The protocol's recorded results and a report result block present the
 same bound sources. The report block includes the full Limit lines so its

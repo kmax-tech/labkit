@@ -19,8 +19,9 @@ owes, and the stamped area README names its scripts.
 When an audit or gate stops you, run `labkit-audit <area> --findings`
 (add `--protocol <PROTOCOL>` if needed). It makes no model call: it shows
 readable open BLOCKERs, evidence problems and complete decision/handover
-commands. If the first audit failed, it names the failed calls and offers
-the handover, exit 2; there are no findings to decide. Use those paths and
+commands. For an audit call that failed and that no completed audit of the
+same mode covers, it names the call and offers the handover, exit 2; that
+call left no findings to decide. Use those paths and
 prerequisites rather than inventing flags or editing records (audit and run
 records; the protocol is yours to edit — its freeze, `preflight_audit` and
 `frozen`, is set by hand in the TOML head). With no audit

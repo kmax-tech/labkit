@@ -279,12 +279,14 @@ def _start(argv: list[str]) -> int:
     if cmd is None:
         ap.parse_args(argv)  # --help prints and exits; a bad flag is named
         ap.error(
-            "no command given — usage: runlog start AREA [--log FILE] -- <cmd ...>"
+            "no command given — usage: runlog start AREA [--log FILE] "
+            "[--max-seconds S] -- <cmd ...>"
         )
     args = ap.parse_args(words)
     if not cmd:
         ap.error(
-            "no command given — usage: runlog start AREA [--log FILE] -- <cmd ...>"
+            "no command given — usage: runlog start AREA [--log FILE] "
+            "[--max-seconds S] -- <cmd ...>"
         )
     area: Path = args.area
     if not area.is_dir():
@@ -343,7 +345,8 @@ def main(argv: list[str]) -> int:
         "crashed (exit 2) or --max-seconds passed (exit 3); "
         "`--follow` prints a status line per interval until idle; "
         "`runlog start <area> -- <cmd>` detaches a run (own session, "
-        "log file) and returns. "
+        "log file) and returns once its run directory exists (exit 0; 2 the "
+        "command failed first, 3 still starting after --max-seconds). "
         "`runlog reindex <area>` appends rows for completed "
         "runs the index missed.",
     )

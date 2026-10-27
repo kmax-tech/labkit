@@ -4,8 +4,9 @@
                  [--model ALIAS] [--timeout S] [--out FILE]
     labkit-audit <AREA> --decide N STATUS REASON [--effect E] [--record FILE]
     labkit-audit <AREA> --findings [--record FILE]
-    labkit-audit <AREA> --review [--record FILE]      (`gates/decision_review`)
-    labkit-audit <AREA> --report-review REPORT        (`gates/report_review`)
+    labkit-audit <AREA> --review [--record FILE] [--again]   (`gates/decision_review`)
+    labkit-audit <AREA> --report-review REPORT [--again] [--protocol FILE]
+                                                     (`gates/report_review`)
 
 The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
 (analysis, before a number leaves) as one command — the only runner since
@@ -1082,9 +1083,10 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="show what there is to decide: every record with an open BLOCKER and "
         "the newest, the evidence problems, and where a BLOCKER or a problem "
-        "stands the --decide and handover commands; a failed first audit names "
-        "its errors and the handover; no audit runs; exit 2 when evidence does "
-        "not read or no completed audit record exists",
+        "stands the --decide and handover commands; a failed audit call no "
+        "completed audit of its mode, code and promises covers is named with "
+        "its error and the handover; no audit runs; exit 2 on such a call, on "
+        "evidence that does not read, or with no record at all",
     )
     ap.add_argument(
         "--review",
@@ -1463,8 +1465,9 @@ def decision_lines(
 
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Exactly one of --mode (audit), --decide (store a decision), --findings
-    (show what there is to decide) and --review (a second auditor on the
-    decisions); --record never with --mode. A usage error exits 2 through
+    (show what there is to decide), --review (a second auditor on the
+    decisions) and --report-review (a cold reader on a report); --record
+    never with --mode or --report-review. A usage error exits 2 through
     argparse."""
     chosen = [
         args.mode is not None,
@@ -1590,16 +1593,21 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
 
 def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
     """`--findings`: what there is to decide, without a model call or a
-    write. With no record and no evidence error there is nothing to decide:
-    refused (exit 2), the next step is the area's. Failed calls without a
-    completed audit of their mode, code and promises are named with their
-    backend errors and the no-model handover, exit 2. Otherwise the evidence
-    errors, then each shown record's decisions (`decision_lines`), the
-    readable records left out counted. Only where an open BLOCKER or an
-    evidence error or uncovered failed call stands, the way to end the area unresolved: decide each
-    open BLOCKER `deferred` with why (step 1), then the handover command
-    per protocol (step 2). Exit 2 on an evidence error, else 0; a partial
-    failure hides no readable finding. READ hints are not stored."""
+    write. Shown: the evidence errors of the area, each failed audit call
+    no completed audit of its mode, code and promises covers, then each
+    shown record's decisions (`decision_lines`) — RECORD alone, else every
+    record with an open BLOCKER and the newest, the others counted. Where
+    an open BLOCKER, an evidence error or such a failed call stands, the
+    way to end the area unresolved follows: decide each open BLOCKER
+    `deferred` with why (step 1), then the handover command per protocol
+    (step 2). A partial failure hides no readable finding; READ hints are
+    not stored.
+
+        exit 0   nothing failed: the decisions shown are all there is
+        exit 2   no audit record and no attempt (refused, nothing to
+                 decide); an evidence error of the area (also with
+                 RECORD); a failed call no completed audit covers
+    """
     listing = _recovery_records(area, record)
     records, errors = listing.records, listing.errors
     failed = listing.failed
