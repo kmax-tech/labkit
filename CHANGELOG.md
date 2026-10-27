@@ -294,6 +294,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-audit --findings` offers the handover only where something
+  stands.** It printed the handover command in a clean area (exit 0) and,
+  before its own refusal, in an area never audited. Now an area without a
+  record is refused first (nothing to decide; the README and AGENTS.md
+  name the next step); the way to end unresolved is printed only beside an
+  open BLOCKER or an evidence problem, as two numbered steps — decide each
+  open BLOCKER `deferred` with `<why it stays unresolved>` in place of a
+  ready-made reason, then the handover command; readable records left out
+  are counted. Its `--help` says what it shows and when it exits 2. Audit
+  2026-10-27 (second), H1.
 - **A handover that no longer counts says why, and the stop and the commit
   name the handover.** When a handover's block, protocol or audit files
   changed after it was written, the stop held with the original loss and

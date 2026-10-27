@@ -15,8 +15,10 @@ reference. On a gate refusal, `labkit-audit AREA --findings` is the
 read-only, no-model recovery entry: readable open BLOCKERs, explicit
 journal/record errors, complete decision commands and the protocol-specific
 handover command. It does not choose a scientific interpretation for the
-author. With no audit yet, it directs the caller to the area workflow and
-`protocol-check --contract`; it is not a second workflow engine.
+author. With no audit yet it refuses: there is nothing to decide, and the area's
+README and the repo's AGENTS.md name the next step. It offers the
+handover only where an open BLOCKER or an evidence problem stands; it is
+not a second workflow engine.
 
 An unresolved readable BLOCKER is explicitly decided `deferred`, with the
 reason, before handover. No command automatically decides or resolves a

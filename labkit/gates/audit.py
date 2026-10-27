@@ -73,6 +73,7 @@ import re
 import shlex
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Callable
 from typing import NamedTuple
@@ -1079,7 +1080,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--findings",
         action="store_true",
-        help="show the newest record's findings with their --decide commands; no audit runs",
+        help="show what there is to decide: every record with an open BLOCKER and "
+        "the newest, the evidence problems, and where a BLOCKER or a problem "
+        "stands the --decide and handover commands; no audit runs; exit 2 "
+        "when evidence does not read or no record exists",
     )
     ap.add_argument(
         "--review",
@@ -1536,64 +1540,87 @@ def _newest_record(area: Path) -> Path:
     return records[-1].path
 
 
-def _recovery_records(area: Path, record: Path | None) -> findings.RecordStatus:
-    """Readable records needing decisions, plus explicit evidence/read errors."""
+@dataclass(frozen=True)
+class _Listing:
+    """What `--findings` shows: the RECORDS, the evidence ERRORS, and how
+    many readable records it leaves out (HIDDEN)."""
+
+    records: list[findings.Record]
+    errors: list[str]
+    hidden: int
+
+
+def _recovery_records(area: Path, record: Path | None) -> _Listing:
+    """RECORD alone; else every readable record with an open BLOCKER and
+    the newest one, the others counted. Evidence and read errors of the
+    area are kept beside them (`attempts.area_integrity`)."""
     state = attempts.area_integrity(area)
     errors = list(state.problems)
     if record is not None:
         try:
-            records = [findings.read(record_path(area, record))]
+            return _Listing([findings.read(record_path(area, record))], errors, 0)
         except findings.FindingsError as exc:
-            records = []
-            errors.append(str(exc))
-    else:
-        opened = {u.record.path for u in findings.open_blockers(state.records)}
-        records = [r for r in state.records if r.path in opened]
-        if state.records and state.records[-1] not in records:
-            records.append(state.records[-1])
-    return findings.RecordStatus(records, errors)
+            return _Listing([], [*errors, str(exc)], 0)
+    opened = {u.record.path for u in findings.open_blockers(state.records)}
+    records = [r for r in state.records if r.path in opened]
+    if state.records and state.records[-1] not in records:
+        records.append(state.records[-1])
+    return _Listing(records, errors, len(state.records) - len(records))
 
 
 def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
-    """Show decisions and recovery commands without a model call or writes.
-
-    With RECORD show it; otherwise show every readable record with open
-    BLOCKERs and the newest record. Keep journal/read errors visible and
-    return 2 on any evidence error or no record, 0 otherwise. Partial
-    failure never hides other readable findings. READ hints are not stored.
-    """
-    status = _recovery_records(area, record)
-    records, errors = status.records, status.errors
-    for error in dict.fromkeys(errors):
-        print(f"audit evidence incomplete: {error}")
-    for rec in records:
-        for line in decision_lines(rec, area, "", protocol):
-            print(line)
-        for u in findings.open_blockers([rec]):
-            cmd = audit_command(
-                area,
-                "--decide",
-                str(rec.findings.index(u.finding) + 1),
-                "deferred",
-                "unresolved; handed over without a result",
-                "--record",
-                rec.path.name,
-                protocol=protocol,
-            )
-            print(f"  if handing this unresolved finding over: {cmd}")
-    selected = [protocol.resolve()] if protocol is not None else area_protocols(area)
-    for chosen in selected:
-        print(f"  unresolved exit (no model call): {handover_command(chosen)}")
-    if selected:
-        print(
-            "  decide readable open BLOCKERs first; the handover records damaged evidence but approves no result"
-        )
+    """`--findings`: what there is to decide, without a model call or a
+    write. With no record and no evidence error there is nothing to decide:
+    refused (exit 2), the next step is the area's. Otherwise the evidence
+    errors, then each shown record's decisions (`decision_lines`), the
+    readable records left out counted. Only where an open BLOCKER or an
+    evidence error stands, the way to end the area unresolved: decide each
+    open BLOCKER `deferred` with why (step 1), then the handover command
+    per protocol (step 2). Exit 2 on an evidence error, else 0; a partial
+    failure hides no readable finding. READ hints are not stored."""
+    listing = _recovery_records(area, record)
+    records, errors = listing.records, listing.errors
     if not records and not errors:
         console.refuse(
             "labkit-audit",
-            f"{area}: no findings record — follow protocol-check --contract and the area's printed steps before requesting an audit",
+            f"{area}: no audit record yet — nothing to decide; the area's "
+            "README and the repo's AGENTS.md name the next step",
         )
         return 2
+    for error in dict.fromkeys(errors):
+        print(f"audit evidence incomplete: {error}")
+    blockers: list[findings.OpenFinding] = []
+    for rec in records:
+        for line in decision_lines(rec, area, "", protocol):
+            print(line)
+        blockers += findings.open_blockers([rec])
+    if listing.hidden:
+        print(
+            f"  {listing.hidden} earlier record(s) without an open BLOCKER not "
+            "shown — `--record FILE` shows one"
+        )
+    if not blockers and not errors:
+        return 0
+    print(
+        "if the area cannot be finished, hand it over unresolved (no model call; "
+        "it records the loss and approves no result):"
+    )
+    for u in blockers:
+        cmd = audit_command(
+            area,
+            "--decide",
+            str(u.record.findings.index(u.finding) + 1),
+            "deferred",
+            "<why it stays unresolved>",
+            "--record",
+            u.record.path.name,
+            protocol=protocol,
+        )
+        print(f"  1. decide it: {cmd}")
+    selected = [protocol.resolve()] if protocol is not None else area_protocols(area)
+    step = "2. " if blockers else ""
+    for chosen in selected:
+        print(f"  {step}hand over: {handover_command(chosen)}")
     return 2 if errors else 0
 
 

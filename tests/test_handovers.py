@@ -80,6 +80,34 @@ class HandoverRecovery(cases._Chain):
             [],
         )
 
+    def findings_listing(self) -> tuple[int, str]:
+        """`labkit-audit AREA --findings`, its output captured."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = audit.main([str(self.area), "--findings"])
+        return rc, out.getvalue()
+
+    def test_findings_offer_the_handover_only_where_something_stands(self):
+        # It printed the handover command in a clean area and, before its
+        # own refusal, in an area never audited (audit 2026-10-27, H1).
+        rc, out = self.findings_listing()
+        self.assertEqual(rc, 2, out)
+        self.assertIn("no audit record yet", out)
+        self.assertNotIn("--handover", out)
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.findings_listing()
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("--handover", out)
+        rc, out = self.audit(BLOCKED)
+        self.assertEqual(rc, 1, out)
+        rc, out = self.findings_listing()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("1. decide it:", out)
+        self.assertIn("<why it stays unresolved>", out)
+        self.assertIn("2. hand over: protocol-fill", out)
+        self.assertIn("1 earlier record(s) without an open BLOCKER not shown", out)
+
     def test_a_handover_that_no_longer_matches_says_why(self):
         # The stop held with the original loss and named no handover, so the
         # agent wrote another (audit 2026-10-27, H2).
