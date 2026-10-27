@@ -1582,6 +1582,24 @@ class Report(unittest.TestCase):
         self.assertNotIn("auto-filled", self.stamped("haiku"))
 
 
+class NextStepFields(unittest.TestCase):
+    """The first next step names what every kind fills (question, unit,
+    data, exclusions — AGENTS.md's "every kind"), at both costs, and the
+    title says repeat_cost, not "lane" (audit 2026-10-27, third, I12)."""
+
+    def test_every_kind_names_question_unit_data_exclusions(self):
+        for cost in ("low", "high"):
+            for kind in ("compute", "fit", "apply"):
+                for model in (False, True):
+                    with self.subTest(cost=cost, kind=kind, model=model):
+                        out = scaffold.next_steps(
+                            Path("experiments/01-x"), "x", "01", cost, kind, model
+                        )
+                        self.assertIn("question, unit, data, exclusions", out)
+                        self.assertNotIn("lane high", out)
+                        self.assertNotIn("into the protocol's raw output", out)
+
+
 class OwedCut(unittest.TestCase):
     """The full form stamps only the fields its kind and model owe — the
     rule the checker applies (`protocol_check.not_owed`); a high

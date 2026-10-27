@@ -1137,21 +1137,26 @@ def check_stamped_head(
 
 
 def step_fields(sk: standard_contract.Skeleton, kind: str, model: bool) -> str:
-    """The protocol fields the first next step names after question and unit:
-    the bar by KIND (`standard_contract.has_bar`), the prompt and the data
-    profile whenever a model is named — the low cut's marks
-    (`protocol_check.in_cut`). Only the prompt skeleton's `00_prepare.py
-    --audit` prints a data-profile aid; elsewhere the step names none."""
+    """The protocol fields the first next step names: what every kind
+    fills (question, unit, data, exclusions — AGENTS.md's "every kind";
+    the high steps of a fit or an apply named neither unit nor data, audit
+    2026-10-27, third, I12), then the bar by KIND
+    (`standard_contract.has_bar`), the prompt and the data profile whenever
+    a model is named — the low cut's marks (`protocol_check.in_cut`). Only
+    the prompt skeleton's `00_prepare.py --audit` prints a data-profile
+    aid; elsewhere the step names none."""
+    every = "question, unit, data, exclusions"
     if not standard_contract.has_bar(kind):
         bar = (
-            "data, exclusions — no criterion, no promise table: a computation "
+            f"{every} — no criterion, no promise table: a computation "
             "judges no prediction, so it has no bar to clear"
         )
     elif sk is standard_contract.MODEL:
-        bar = "criterion, admissibility condition, prompt, null condition"
+        bar = f"{every}, criterion, admissibility condition, prompt, null condition"
     else:
         bar = (
-            f"criterion, admissibility condition, null condition — kind = {kind!r}: "
+            f"{every}, criterion, admissibility condition, null condition — "
+            f"kind = {kind!r}: "
             "the number judges a prediction, so it has a bar and its reference"
         )
     if sk is standard_contract.MODEL:
@@ -1211,19 +1216,21 @@ def next_steps(
                 else "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
             )
         steps = [
-            f"{protocol}: fill the low cut — `type` in the head, then question, unit,\n"
+            f"{protocol}: fill the low cut — `type` in the head, then\n"
             f"     {fields}; `protocol-check --contract` names the labels.",
             f"scripts/01_measure.py: {fill}; {code_check}.",
         ]
     elif sk is standard_contract.COMPUTE:
         test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
+        # repeat_cost, not "lane": a lane is a scored lane of the run
+        # (registered, null) everywhere else (audit 2026-10-27, third, I12)
         title = (
-            f"lane {ln.repeat_cost}: light pilot, heavy report — a computation, "
-            "the run is the instrument check"
+            f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report — a '
+            "computation, the run is the instrument check"
         )
         steps = [
-            f"{protocol}: fill the pilot part (head: type, repeat_cost; question, "
-            f"unit, {fields}); `protocol-check --contract` names the labels.",
+            f"{protocol}: fill the pilot part (head: type, repeat_cost; "
+            f"{fields}); `protocol-check --contract` names the labels.",
             f"scripts/01_measure.py: expected_ids(), rows(), evaluate_rows(); {code_check}.",
             f"{test}: the counting function at two edges — no criterion, so no "
             "resolution check.",
@@ -1231,13 +1238,13 @@ def next_steps(
     else:
         test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
         estimator = sk is standard_contract.ESTIMATOR
-        title = f"lane {ln.repeat_cost}: light pilot, heavy report" + (
+        title = f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report' + (
             " — the instrument is an estimator" + ("" if model else ", no model call")
             if estimator
             else ""
         )
         steps = [
-            f"{protocol}: fill the pilot part (head: type, repeat_cost; question, "
+            f"{protocol}: fill the pilot part (head: type, repeat_cost; "
             f"{fields}"
             + ("; the estimator in Model / tool" if estimator else "")
             + "); `protocol-check --contract` names the labels.",
@@ -1259,10 +1266,10 @@ def next_steps(
                     if kind == standard_contract.APPLY_KIND
                     else "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
                 )
-                + "both lanes, throwaway; the rows into the protocol's raw output"
+                + "both lanes, throwaway; scores read, never reported"
                 if estimator
                 else "scripts/01_measure.py --probe 4   instrument check in the real "
-                f"pipeline; raw answers into {test}"
+                f"pipeline; its answers as parser cases into {test}"
             )
             + f"; {code_check}.",
             f"{test}: the resolution check as a test (LAB-016 Resolution check before freezing).",

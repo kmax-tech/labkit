@@ -306,6 +306,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The printed next steps name what every kind fills and call the cost
+  by its key.** The high steps of a fit or an apply named neither unit nor
+  data nor exclusions, which AGENTS.md owes of every kind; the titles said
+  "lane high", where a lane is a scored lane of the run everywhere else
+  (now `repeat_cost = "high"`); the estimator's probe step sent its
+  throwaway rows "into the protocol's raw output" (now: scores read, never
+  reported), and the model's probe step names its answers as parser cases.
+  Audit 2026-10-27 (third), I12.
 - **preflight's area-test blocker carries pytest's counts, as finalize's
   does.** The two gates rendered the area-test run each on their own, and
   the fix that lets the counts travel with the blocker (audit 2026-10-23,
