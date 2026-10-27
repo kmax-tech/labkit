@@ -694,8 +694,15 @@ K2 gebaut (`fe8e440`). K1 gebaut (dieser Stand: `[replaces]`,
 Berichtswechsel); offen aus K1: der Hinweis „neues Protokoll nach einer nicht
 freigegebenen Messung ohne `replaces`“ und sich widersprechende erste
 Messungen als Blocker (jetzt Warnung). Anleitung gebaut (`audit.WAYS_OUT`,
-AGENTS.md „When you are stuck“; Eingriff für Bereich 09). Als Nächstes:
-Replay des gespeicherten Versuchs mit Gegenfällen.
+AGENTS.md „When you are stuck“; Eingriff für Bereich 09). Replay
+durchgeführt (labkit-paper `be59d5d`, Lauf `2026-10-27T16-41-54_ea77`,
+labkit `4e921b1`): der abgegebene Stand wird von K3 (`null_band 0.1 → 0.15`
+nach `98dd`) und K2 (erzeugte Zeile, Ergebnisblock) gehalten, K1 gibt den
+Hinweis zum Zitatwechsel. Offen: die Gegenfälle in labkit-paper (Start wie
+registriert repariert, ehrliches Verfehlen) — sie brauchen ein Folgeaudit
+ohne Modell, also eine konstruierte Auditantwort (Entscheidung des Autors);
+der K1-Hinweis „neues Protokoll nach nicht freigegebener Messung“; ob
+widersprüchliche erste Messungen mit K1 als Ausweg zum Blocker werden.
 Reihenfolge (bestätigt 2026-10-27): K4 → K3 → K2 → K1 → Anleitung →
 Replay des gespeicherten Versuchs mit Gegenfällen; jeder Vertrag mit seinen
 Tests, der Replay prüft das Zusammenspiel. K3 wird erst aktiv, wenn jede
