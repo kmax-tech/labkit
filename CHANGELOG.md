@@ -38,8 +38,10 @@ pins (`requirements.txt` / `requirements.lock`).
   named per id and constant (`promises.snapshot_changes`, `[A2] null_band
   0.1 → 0.15`; a sentence through the block digest, whose old text the run
   record does not keep — `git show <commit>:<protocol>` shows it), with the
-  way back: restore what was registered and measure again, or register
-  anew. The code the scopes name is not compared: a repair measured again
+  way back: restore the `[[promise]]` tables as the first measurement
+  registered them — each change undone by name (a value back, an added
+  promise out, a dropped one back in, the sentences as then) — and measure
+  again, or register anew (`audit.register_anew`, the one wording). The code the scopes name is not compared: a repair measured again
   under unchanged promises passes. The first measurements are every run at
   each first position (`answering_run.first_registrations`), not one
   chosen by name; when they recorded different blocks, which one stood

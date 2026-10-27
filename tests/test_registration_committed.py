@@ -317,12 +317,33 @@ class RegistrationAsFirstMeasured(_Repository):
             f"the registration changed after the first measurement {self.FIRST}", line
         )
         self.assertIn("[A2] null_band 0.1 → 0.15", line)
-        self.assertIn("Restore what", line)
+        self.assertIn(
+            f"Restore the [[promise]] tables as {self.FIRST} registered", line
+        )
         self.assertIn("[A2] null_band 0.1 back", line)
         self.assertIn(f"git show {first[:12]}:experiments/01-x/PROTOCOL-x.md", line)
         self.assertIn("register anew", line)
         code, out = _report_check(self.area)
         self.assertEqual(code, 1, out)
+
+    def test_the_way_back_undoes_every_change_and_then_passes(self):
+        """The start state of the repair case: [A3] added and the band raised
+        after the first measurement. The way back names both, and taken, it
+        releases the protocol — a restore that named only the band left
+        [A3] and was held again."""
+        first = self._register(_block(0.1))
+        self._run(first, self.FIRST)
+        a3 = (
+            '\n[[promise]]\nid = "A3"\nkey = "a3_pass"\nsentence = "no leak"\n'
+            'scope = ["scripts/01_measure.py"]\n'
+        )
+        self._run(self._register(_block(0.15) + a3), RUN)
+        (line,) = self._changes()
+        self.assertIn("[A3] added; [A2] null_band 0.1 → 0.15", line)
+        self.assertIn("([A3] out; [A2] null_band 0.1 back)", line)
+        self.assertIn('[replaces] protocol = "', line)
+        self._run(self._register(_block(0.1)), "2026-10-07T11-00-00_cd34")
+        self.assertEqual(self._changes(), [])
 
     def test_the_twin_a_repair_under_the_same_registration_passes(self):
         """The code changed and measured again under unchanged promises: the

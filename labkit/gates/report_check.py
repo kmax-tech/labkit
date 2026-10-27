@@ -105,7 +105,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
-from labkit.formats.runs import RunDir, run_dirs, run_path
+from labkit.formats.runs import RunDir, patch_path, run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurements, first_registrations
 from labkit.formats.protocol_history import (
@@ -332,12 +332,13 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
                 BLOCKER,
                 f"the first measurements recorded different registrations: {named} — "
                 f"which one stood before the number cannot be told, so no run of "
-                f"this protocol answers a registered question. Register anew: a new "
-                f'protocol, type = "exploratory", with `[replaces] protocol = '
-                f'"{ctx.head.id}"` and one [[replaces.change]] per change against '
-                f"each of these registrations (report-check of the new protocol "
-                f"lists them), committed before its own first run; or "
-                f"{audit.HANDOVER}",
+                f"this protocol answers a registered question. Either "
+                + audit.register_anew(
+                    str(ctx.head.id),
+                    "per change against each of these registrations (report-check "
+                    "of the new protocol lists them)",
+                )
+                + f"; or {audit.HANDOVER}",
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -347,35 +348,47 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
     if now["block_sha"] == sha:
         return []
     changes = promises.snapshot_changes(snap, now)
-    restore = [c for c in changes if " → " in c]
     commit = recorded_commit(first.config) if first.config is not None else None
     root = git_root(ctx.protocol)
-    shown_then = (
-        f"`git show {commit[:12]}:"
-        f"{ctx.protocol.resolve().relative_to(root.resolve()).as_posix()}` shows the "
-        f"protocol as committed then; "
-        if commit and root is not None
-        else ""
-    )
+    shown_then = ""
+    if commit and root is not None:
+        rel = ctx.protocol.resolve().relative_to(root.resolve()).as_posix()
+        shown_then = (
+            f" — `git show {commit[:12]}:{rel}` shows them as committed then"
+            + (
+                f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
+                if patch_path(first.dir).is_file()
+                else ""
+            )
+        )
     return [
         GateFinding(
             BLOCKER,
             f"the registration changed after the first measurement {first.dir.name}: "
             f"{'; '.join(changes)} (recorded by the answering run {ctx.run.name}) — a "
             f"bar set after a result was seen does not answer the registered "
-            f"question. Restore what {first.dir.name} registered "
-            + (
-                f"({'; '.join(c.split(' → ')[0] + ' back' for c in restore)}) "
-                if restore
-                else ""
-            )
-            + f"and measure again, then audit that run ({shown_then}the earlier runs "
-            f"stay); or, when the registration cannot be answered as written, "
-            f"register anew (`labkit-init exp <new-name> --kind …`) — the earlier "
-            f"protocol, its runs and their verdict stay",
+            f"question. Restore the [[promise]] tables as {first.dir.name} "
+            f"registered them ({'; '.join(_restored(c) for c in changes)}){shown_then}, "
+            f"and measure again, then audit that run (the earlier runs stay); or, "
+            f"when the registration cannot be answered as written, "
+            + audit.register_anew(str(ctx.head.id))
+            + " — the earlier protocol, its runs and their verdict stay",
             evidence_kind=GUARANTEED,
         )
     ]
+
+
+def _restored(change: str) -> str:
+    """What undoes CHANGE, a phrase of `promises.snapshot_changes`: a value
+    back, an added promise out, a dropped one back in, the sentences as then
+    (the snapshot keeps them only through the block's digest)."""
+    if " → " in change:
+        return change.split(" → ")[0] + " back"
+    if change.endswith(" added"):
+        return change.removesuffix(" added") + " out"
+    if change.endswith(" dropped"):
+        return change.removesuffix(" dropped") + " back in"
+    return "every sentence as then"
 
 
 def replacement_gaps(ctx: Checked) -> list[GateFinding]:

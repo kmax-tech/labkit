@@ -1335,6 +1335,21 @@ HANDOVER = (
     "protocol, not its runs (a cited run id reads as a reported number), says "
     "what stands in the way and what was tried; no number"
 )
+
+
+def register_anew(pid: str = "<id>", per: str = "per change") -> str:
+    """The way out of a registration that cannot be answered as written
+    (K1): a new exploratory protocol naming the earlier one PID, its
+    changes declared PER what the caller names — the one wording the ways
+    out and report-check's holds (K3) print."""
+    return (
+        "register anew: a new protocol (`labkit-init exp <new-name> --kind …`), "
+        '`type = "exploratory"`, committed before its own first run, naming the '
+        f'earlier one in `[replaces] protocol = "{pid}"` with one '
+        f"`[[replaces.change]]` (what, from, to, why) {per}"
+    )
+
+
 WAYS_OUT = (
     (
         "an implementation error",
@@ -1358,10 +1373,7 @@ WAYS_OUT = (
     (
         "an invalid registration",
         "the registration cannot be answered as written: it is not repaired in "
-        "place. Register anew: a new protocol (`labkit-init exp <new-name> --kind "
-        '…`), `type = "exploratory"`, committed before its own first run, naming '
-        'the earlier one in `[replaces] protocol = "<id>"` with one '
-        "`[[replaces.change]]` (what, from, to, why) per change; decide the "
+        f"place — {register_anew()}; decide the "
         "earlier protocol's open BLOCKERs `deferred`, naming the new one. The "
         "earlier verdict is rendered first; a new approach never turns an "
         "earlier miss into a pass",
