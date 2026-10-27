@@ -73,7 +73,11 @@ and should fields filled" once these stand; the Conclusion is not among
 them — it is owed after the run (step 7), and `--list` keeps it under
 "after the run — yours". The commit matters: the release
 holds the registration to the commit of the first measurement, not to the
-tree at the time of the run (`report-check` stage 2, the registration): the
+tree at the time of the run (`report-check` stage 2, the registration).
+Which measurement is first, git's history says — the commit each run
+recorded —, not the run id, which is local time; after a rebase or an
+amend the first of each branch is held, and so is a run whose commit the
+clone does not hold. The
 fields the kind owes must stand in that commit — the kind included: that
 commit is judged by the kind the protocol declares today, so a kind changed
 after the measurement holds the report. A field's value changed after that

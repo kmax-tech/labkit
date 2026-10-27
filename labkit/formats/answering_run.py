@@ -5,7 +5,8 @@ and whether they are comparable (`repeats_of`, `repeat_mismatch`,
 `next_draw`), the bound runs of a protocol and the newest one, a tie
 within one second refused rather than guessed (`same_second_rival`),
 the answering run with the reasons the others were excluded
-(`bound_answering_run`), and the run that recorded the model behind a
+(`bound_answering_run`), the first measurements in git's order
+(`first_measurements`), and the run that recorded the model behind a
 derived run's rows (`model_provenance_run`) along the validated
 `derived_from` chain (`lineage`). intent-check, finalize,
 recheck and labkit-params read the choice here. Read-only.
@@ -20,6 +21,7 @@ from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises
+from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.scope_sha import digest
 from labkit.formats.runs import (
     as_stored,
@@ -37,6 +39,7 @@ from labkit.formats.runs import (
     completed_runs,
     read_metrics,
     read_run_config,
+    recorded_commit,
     run_dirs,
     run_state,
 )
@@ -360,24 +363,55 @@ def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
     return taken, left
 
 
-def first_measurement(area: Path, pid: str) -> Path | None:
-    """The oldest run of AREA bound to PID that declared itself a
-    measurement (`run_kind="measurement"`, no repeat) — the first time the
-    registered question met the data under this protocol, finished or not
-    — or None. The registration is held to the commit this run recorded
-    (`report_check.registration_gaps`): what stood before the number is
-    what that commit holds, not what the tree says now."""
-    for rd in run_dirs(area):
-        cfg = rd.config
-        if cfg is None or rd.error is not None:
-            continue
-        if (
-            cfg.protocol.id == pid
-            and cfg.repeat_of is None
-            and cfg.run_kind == "measurement"
-        ):
-            return rd.dir
-    return None
+def first_measurements(area: Path, pid: str, repo: Path | None) -> list[RunDir]:
+    """The first measurements of PID in AREA — where the registered
+    question first met the data —, sorted by name; [] when PID has none. A
+    measurement is a run bound to PID that declared itself one
+    (`run_kind="measurement"`, no repeat), finished or not; a run whose
+    config.json cannot be read is not among them. The registration is held
+    to the commit each of them recorded (`report_check.registration_gaps`):
+    what stood before the number is what that commit holds.
+
+    Git's history orders the measurements, not the clock: one precedes
+    another when the commit it recorded (`runs.recorded_commit`) is an
+    ancestor of the other's (`repo.earliest_commits` in REPO, the
+    repository the area lies in). A run id is local time — a run started
+    under another `TZ` sorts hours away — so it orders only runs at one
+    commit, which share their verdict: the earliest by name stands for
+    them. Every measurement no other one provably preceded is first:
+
+    - on a linear history, the one at the oldest commit;
+    - on diverged history (a rebase, an amend, a side branch: neither
+      commit is an ancestor of the other), one per branch;
+    - a run whose commit cannot be placed — none recorded, one REPO does
+      not hold (`repo.commit_known`), or REPO None (no repository) — is
+      first as well: nothing shows that another came before it.
+
+    The rejected orders and the limits:
+    docs/notes/2026-10-27-first-measurement-order.md. Raises RuntimeError
+    when git fails."""
+    measured = [
+        (rd, cfg)
+        for rd in run_dirs(area)
+        if (cfg := rd.config) is not None
+        and cfg.protocol.id == pid
+        and cfg.repeat_of is None
+        and cfg.run_kind == "measurement"
+    ]
+    if repo is None:
+        return [rd for rd, _ in measured]
+    first: list[RunDir] = []
+    at: dict[str, RunDir] = {}  # each recorded commit: its earliest run by name
+    for rd, cfg in measured:
+        commit = recorded_commit(cfg)
+        if commit is None:
+            first.append(rd)
+        else:
+            at.setdefault(commit, rd)
+    known = [c for c in at if commit_known(repo, c)]
+    first += [rd for c, rd in at.items() if c not in known]
+    first += [at[c] for c in earliest_commits(repo, known)]
+    return sorted(first, key=lambda rd: rd.dir.name)
 
 
 def newest_with_intent_keys(

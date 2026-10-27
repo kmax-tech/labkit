@@ -585,7 +585,6 @@ class Adopt(unittest.TestCase):
             C1_BLOCK,
             C1_PROSE,
             completed_run,
-            head_commit,
             scope_file,
             started_at,
         )
@@ -624,7 +623,7 @@ class Adopt(unittest.TestCase):
         run = completed_run(
             area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
         )
-        started_at(run, head_commit(root))
+        started_at(run, root)
         cfg = run / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
         data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}

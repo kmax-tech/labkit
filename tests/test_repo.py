@@ -268,6 +268,81 @@ class CommittedSince(unittest.TestCase):
         self.assertIsNone(repo.fork_point(make_repo(), "0" * 40))
 
 
+class CommitOrder(unittest.TestCase):
+    """`commit_known`, `is_ancestor`, `earliest_commits`: the order git's
+    history gives the commits runs recorded — the first measurement is
+    ordered by it, not by a run id's local time (A11, audit 2026-10-27)."""
+
+    def _commit(self, d: Path, msg: str) -> str:
+        (d / "f.txt").write_text(msg)
+        subprocess.run(["git", "add", "-A"], cwd=d, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", msg],
+            cwd=d,
+            check=True,
+        )
+        return repo.head_sha(d)
+
+    def _diverged(self) -> tuple[Path, str, str, str]:
+        """A base and two branches from it: (repo, base, x, y)."""
+        d = make_repo()
+        base = repo.head_sha(d)
+        x = self._commit(d, "left")
+        subprocess.run(["git", "checkout", "-q", base], cwd=d, check=True)
+        y = self._commit(d, "right")
+        return d, base, x, y
+
+    def test_a_linear_history_has_one_earliest(self):
+        d = make_repo()
+        a = repo.head_sha(d)
+        b = self._commit(d, "b")
+        c = self._commit(d, "c")
+        self.assertTrue(repo.is_ancestor(d, a, c))
+        self.assertFalse(repo.is_ancestor(d, c, a))
+        self.assertTrue(repo.is_ancestor(d, b, b))
+        self.assertEqual(repo.earliest_commits(d, [c, a, b, a]), [a])
+        self.assertEqual(repo.earliest_commits(d, [c]), [c])
+        self.assertEqual(repo.earliest_commits(d, []), [])
+
+    def test_diverged_history_has_one_earliest_per_branch(self):
+        d, base, x, y = self._diverged()
+        self.assertFalse(repo.is_ancestor(d, x, y))
+        self.assertFalse(repo.is_ancestor(d, y, x))
+        self.assertEqual(repo.earliest_commits(d, [y, x]), [y, x])
+        # the shared base precedes both
+        self.assertEqual(repo.earliest_commits(d, [y, x, base]), [base])
+
+    def test_an_amended_commit_and_its_replacement_are_not_ordered(self):
+        d = make_repo()
+        first = self._commit(d, "first")
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q"]
+            + ["--amend", "-m", "amended"],
+            cwd=d,
+            check=True,
+        )
+        amended = repo.head_sha(d)
+        self.assertEqual(repo.earliest_commits(d, [first, amended]), [first, amended])
+
+    def test_only_a_full_sha_the_repository_holds_is_known(self):
+        d = make_repo()
+        head = repo.head_sha(d)
+        self.assertTrue(repo.commit_known(d, head))
+        self.assertFalse(repo.commit_known(d, "0" * 40))  # never fetched or pruned
+        self.assertFalse(
+            repo.commit_known(d, head[:7])
+        )  # resolves to what it names now
+        branch = repo.git(["branch", "--show-current"], d) or "?"
+        self.assertFalse(repo.commit_known(d, branch))
+        self.assertFalse(repo.commit_known(d, "HEAD"))
+        tree = repo.git(["rev-parse", "HEAD^{tree}"], d) or "?"
+        self.assertFalse(repo.commit_known(d, tree))  # an object, not a commit
+
+    def test_a_failing_git_is_loud(self):
+        with self.assertRaises(RuntimeError):
+            repo.is_ancestor(make_repo(), "0" * 40, "HEAD")
+
+
 class GitHomes(unittest.TestCase):
     """The git questions asked in one place (audit 2026-10-27, D): HEAD, a
     dirty tree, a path in the git directory, the files a state holds."""

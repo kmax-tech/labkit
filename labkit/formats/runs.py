@@ -523,21 +523,24 @@ def unreportable(cfg: RunConfig) -> list[str]:
     return marks
 
 
-#: what a run records as its `git` when it started outside a repository
-#: (`provenance.git_state` writes it; `recorded_commit` reads it)
+#: what a run records as its `git` when it started outside a repository or
+#: before the first commit (`provenance.git_state` writes it; its
+#: `git_full` is "" then, which `recorded_commit` reads)
 NO_GIT: Final = "no-git"
 #: the mark `git_state` appends when the tree differed from the commit
 DIRTY_MARK: Final = "+dirty"
 
 
 def recorded_commit(cfg: RunConfig) -> str | None:
-    """The commit CFG's run started at (HEAD's short sha as recorded, the
-    `+dirty` mark stripped), or None when it started outside a repository
-    (NO_GIT). Whether the tree was dirty is `cfg.git.endswith(DIRTY_MARK)`:
-    the commit says what stood committed, the mark that more stood in the
-    tree."""
-    commit = cfg.git.removesuffix(DIRTY_MARK)
-    return None if commit in ("", NO_GIT) else commit
+    """The commit CFG's run started at — HEAD's full sha as the record names
+    it (`git_full`) —, or None when it started outside a repository or
+    before the first commit (`git_full` "", `git` NO_GIT). The one commit
+    of a run: what its measurement is ordered by
+    (`answering_run.first_measurements`) and what the registration is held
+    to. `git` carries the short form and whether the tree was dirty
+    (`cfg.git.endswith(DIRTY_MARK)`): the commit says what stood committed,
+    the mark that more stood in the tree."""
+    return cfg.git_full or None
 
 
 def completion_state(run_dir: Path) -> RunState:

@@ -37,7 +37,6 @@ from protocol_fixture import (
     C1_PROSE,
     completed_run,
     head,
-    head_commit,
     scope_file,
     started_at,
 )
@@ -535,7 +534,7 @@ class IfReported(unittest.TestCase):
             area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
         )
         if git:
-            started_at(run, head_commit(area.parent.parent))
+            started_at(run, area.parent.parent)
         # at low repeat cost finalize holds the provenance: the source frozen in the run
         src = area / "data.jsonl"
         src.write_text('{"id": 1}\n', encoding="utf-8")

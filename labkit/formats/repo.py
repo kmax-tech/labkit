@@ -532,6 +532,56 @@ def fork_point(repo: Path, base: str) -> str | None:
     return r.stdout.strip() or None
 
 
+#: a commit as a record names it: the full sha, SHA-1 or SHA-256
+FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+
+def commit_known(repo: Path, commit: str) -> bool:
+    """Does REPO hold COMMIT, a full sha, as a commit (`rev-parse --verify
+    -q COMMIT^{commit}`)? False for a sha this clone never fetched or has
+    pruned (a rewritten history, a shallow clone's cut), and for anything
+    that is not a full sha: a branch name or a short sha would resolve to
+    what it names now, not to what was recorded. Raises GitError only when
+    git cannot run."""
+    if FULL_SHA.fullmatch(commit) is None:
+        return False
+    return (
+        git_run(
+            ["rev-parse", "--verify", "-q", f"{commit}^{{commit}}"], repo
+        ).returncode
+        == 0
+    )
+
+
+def is_ancestor(repo: Path, older: str, newer: str) -> bool:
+    """Is OLDER an ancestor of NEWER under REPO, or the same commit (`git
+    merge-base --is-ancestor`)? Both must be commits REPO holds
+    (`commit_known`). Raises RuntimeError when git fails."""
+    args = ["merge-base", "--is-ancestor", older, newer]
+    r = git_run(args, repo)
+    if r.returncode not in (0, 1):
+        raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {r.stderr.strip()}")
+    return r.returncode == 0
+
+
+def earliest_commits(repo: Path, commits: list[str]) -> list[str]:
+    """The commits of COMMITS that no other of them precedes — none of the
+    others is an ancestor of it (`is_ancestor`) — in COMMITS' order, each
+    once. One on a linear history; one per branch where the history
+    diverged (a rebase, an amend, a side branch), since git cannot say
+    which of two commits came first when neither is an ancestor of the
+    other. Every commit must be one REPO holds (`commit_known`). Raises
+    RuntimeError when git fails."""
+    distinct = list(dict.fromkeys(commits))
+    earliest: list[str] = []  # the earliest of the commits seen so far
+    for commit in distinct:
+        if any(is_ancestor(repo, e, commit) for e in earliest):
+            continue
+        earliest = [e for e in earliest if not is_ancestor(repo, commit, e)]
+        earliest.append(commit)
+    return [c for c in distinct if c in earliest]
+
+
 def paths_committed_since(repo: Path, base: str) -> list[Path]:
     """Every path a commit after BASE up to HEAD touched, under REPO:
     added, modified, deleted, and both sides of a rename (`--no-renames`

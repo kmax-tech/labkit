@@ -245,23 +245,25 @@ def head(
     return body + "```\n"
 
 
-def head_commit(root: Path) -> str:
-    """HEAD's short sha of the repository at ROOT — what runlog records as a
-    run's `git` when the tree is clean (`provenance.git_state`)."""
-    return subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"],
+def head_commit(root: Path) -> dict[str, str]:
+    """A run record's `git` and `git_full` for a run started at HEAD of the
+    repository at ROOT with a clean tree — what runlog records
+    (`provenance.record_provenance`): the short form and the full sha."""
+    full = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
         cwd=root,
         capture_output=True,
         text=True,
         check=True,
     ).stdout.strip()
+    return {"git": full[:7], "git_full": full}
 
 
-def started_at(run: Path, commit: str) -> None:
-    """Record RUN as started at COMMIT (its config.json `git`), as a run in
-    a repository records it: report-check holds the low registration
-    to the commit of the first measurement."""
+def started_at(run: Path, root: Path) -> None:
+    """Record RUN as started at HEAD of ROOT (`head_commit`), as a run in a
+    repository records it: report-check holds the low registration to the
+    commit of the first measurement."""
     cfg = run / "config.json"
     data = json.loads(cfg.read_text(encoding="utf-8"))
-    data["git"] = commit
+    data.update(head_commit(root))
     cfg.write_text(json.dumps(data), encoding="utf-8")

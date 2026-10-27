@@ -99,9 +99,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
-from labkit.formats.runs import run_dirs, run_path
+from labkit.formats.runs import RunDir, run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
-from labkit.formats.answering_run import first_measurement
+from labkit.formats.answering_run import first_measurements
 from labkit.formats.protocol_history import registration_in_commit
 from labkit.formats import (
     console,
@@ -130,6 +130,7 @@ from labkit.formats.repo import (
     area_path,
     area_protocols,
     choose_protocol,
+    commit_known,
     git_root,
     under_root,
     indexed_files,
@@ -287,51 +288,71 @@ def freeze_gaps(ctx: Checked) -> list[str]:
 def registration_gaps(ctx: Checked) -> list[GateFinding]:
     """The committed registration where the lane owes it instead of the freeze
     (seconds): the registration stood in the protocol as committed at the
-    first measurement — the oldest full run bound to this protocol
-    (`answering_run.first_measurement`) and the commit its record names
-    (`runs.recorded_commit`). Blockers: the run recorded no commit, the
+    first measurement — the commit its record names (`runs.recorded_commit`)
+    — at each run `answering_run.first_measurements` names: git's history
+    orders the measurements, a run id (local time) only those at one
+    commit; on diverged history, or for a run whose commit cannot be
+    placed, more than one is first and each is held. Blockers per run: it
+    recorded no commit, the repository does not hold that commit, the
     commit does not hold the protocol (nothing stood before the number),
     the fields the lane owes were not written there
     (`protocol_history.registration_in_commit`). runlog's start gate reads
     the tree, which a line written a minute before the run passes; what
     stood before the number is what the commit holds. Outside a repository
     a warning, as the provenance station's (`run_record_check.provenance_findings`).
-    Empty without a first measurement (finalize names the missing run) and
+    Empty without a measurement (finalize names the missing run) and
     without a stamped id. Why (labkit-paper area 09, fifth haiku round,
     2026-10-22): none of the three labkit agents had committed criterion
     and admissibility condition before the first measurement."""
     if ctx.head.id is None:
         return []
-    first = first_measurement(ctx.area, ctx.head.id)
-    if first is None:
+    root = git_root(ctx.protocol)
+    first = first_measurements(ctx.area, ctx.head.id, root)
+    if not first:
         return []
-    cfg = read_run_config(first)
-    if cfg is None:
-        return [
-            GateFinding(
-                BLOCKER,
-                f"{first.name}: no config.json — not a run",
-                evidence_kind=GUARANTEED,
-            )
-        ]
-    at = f"the first measurement {first.name}"
-    if git_root(ctx.protocol) is None:
+    if root is None:
         return [
             GateFinding(
                 WARNING,
-                f"not a git repository — the registration cannot be held to the "
-                f"commit of {at}",
+                "not a git repository — the registration cannot be held to the "
+                "commit of the first measurement",
                 evidence_kind=GUARANTEED,
             )
         ]
+    return [gap for rd in first for gap in _registration_at(ctx, root, rd, len(first))]
+
+
+def _registration_at(
+    ctx: Checked, root: Path, rd: RunDir, held: int
+) -> list[GateFinding]:
+    """`registration_gaps` for RD, one of HELD first measurements, in the
+    repository ROOT."""
+    cfg = rd.config
+    assert cfg is not None, "first_measurements names read runs only"
+    at = f"the first measurement {rd.dir.name}"
+    # several are first on diverged history or beside a run git cannot
+    # place: without the why, a reader takes the second blocker for a bug
+    among = "" if held == 1 else f"; one of {held} that git's history does not order"
     commit = recorded_commit(cfg)
     if commit is None:
         return [
             GateFinding(
                 BLOCKER,
-                f"{at} recorded no commit ({cfg.git!r}) — the registration cannot be "
-                f"held to what stood before the number (LAB-003 No run without an "
-                f"intent paragraph)",
+                f"{at} recorded no commit ({cfg.git!r}{among}) — the registration "
+                f"cannot be held to what stood before the number (LAB-003 No run "
+                f"without an intent paragraph)",
+                evidence_kind=GUARANTEED,
+            )
+        ]
+    if not commit_known(root, commit):
+        return [
+            GateFinding(
+                BLOCKER,
+                f"{at} ({commit}{among}) recorded a commit this repository does not "
+                f"hold (a rewritten history, a shallow clone) — neither its place "
+                f"among the measurements nor the registration it stood on can be "
+                f"read; fetch that commit from a clone that has it (LAB-003 No run "
+                f"without an intent paragraph)",
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -340,10 +361,10 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
         return [
             GateFinding(
                 BLOCKER,
-                f"{ctx.protocol.name} was not committed at {at} ({commit}) — nothing "
-                f"stood before the number; the registration is what the commit of "
-                f"the first measurement holds (LAB-003 No run without an intent "
-                f"paragraph)",
+                f"{ctx.protocol.name} was not committed at {at} ({commit[:12]}{among}) "
+                f"— nothing stood before the number; the registration is what the "
+                f"commit of the first measurement holds (LAB-003 No run without an "
+                f"intent paragraph)",
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -351,7 +372,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
         return [
             GateFinding(
                 BLOCKER,
-                f"the registration as committed at {at} ({commit}) lacks "
+                f"the registration as committed at {at} ({commit[:12]}{among}) lacks "
                 f"{', '.join(missing)} — the registration is what the commit of "
                 f"the first measurement holds, not what the tree says now "
                 f"(LAB-003 No run without an intent paragraph)",

@@ -545,7 +545,7 @@ class Stop(unittest.TestCase):
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,
                         "script_sha": script_sha_of(scope_file(self.area)),
-                        "git": head_commit(self.root),
+                        **head_commit(self.root),
                         "data": {
                             "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
                         },
