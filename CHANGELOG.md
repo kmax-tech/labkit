@@ -320,7 +320,8 @@ pins (`requirements.txt` / `requirements.lock`).
   trains on true and permuted labels. No null method is invented for the
   author. Declared `PREDICTOR_FILES` are hashed into the config, output
   fingerprint and run provenance, and a changed artifact refuses resume
-  or an unchanged repeat. `provenance.BinaryInput(path)` explicitly records
+  or an unchanged repeat. They are read when `main()` runs, never at import:
+  the area's test imports the script. `provenance.BinaryInput(path)` explicitly records
   binary dependencies without decoding them as text datasets; ordinary
   dataset decoding and leakage checks remain required.
 - **Handover withdraws its result blocks in the chosen report.** An

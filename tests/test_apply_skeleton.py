@@ -41,6 +41,34 @@ class ApplySkeleton(unittest.TestCase):
         spec.loader.exec_module(module)
         return area, module
 
+    def test_importing_the_script_reads_no_predictor_file(self):
+        # CONFIG hashed PREDICTOR_FILES at import, so the area's test, which
+        # imports the script, read the model files (workflow review
+        # 2026-10-27, TODO 8 (4)); main() binds them
+        with contextlib.redirect_stdout(io.StringIO()):
+            area, _ = scaffold.stamp_area(
+                self.root, "late", repeat_cost="low", kind="apply"
+            )
+        script = area / "scripts" / "01_measure.py"
+        text = script.read_text(encoding="utf-8")
+        script.write_text(
+            text.replace(
+                "PREDICTOR_FILES: dict[str, Path] = {}",
+                'PREDICTOR_FILES: dict[str, Path] = {"primary": AREA / "absent.model"}',
+            ),
+            encoding="utf-8",
+        )
+        name = f"late_{id(self)}"
+        spec = importlib.util.spec_from_file_location(name, script)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        self.addCleanup(sys.modules.pop, name, None)
+        spec.loader.exec_module(module)  # no FileNotFoundError at import
+        self.assertEqual(module.CONFIG.predictor_sha, {})
+        with self.assertRaises(FileNotFoundError):
+            module.predictor_digests()
+
     @staticmethod
     def items():
         return [

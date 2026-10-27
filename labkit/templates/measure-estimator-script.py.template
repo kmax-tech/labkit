@@ -193,7 +193,9 @@ class MeasureConfig:
     # the instrument's version: the estimator line, so a changed parameter is
     # a different config even when every threshold stays
     estimator_sha: str = hashlib.sha256(ESTIMATOR.encode()).hexdigest()[:12]
-    predictor_sha: dict[str, str] = field(default_factory=predictor_digests)
+    # the declared predictor files' digests, set by main() from the files as
+    # they are then — never at import: the area's test imports this file
+    predictor_sha: dict[str, str] = field(default_factory=dict)
 
 
 # The registered execution: thresholds from the protocol, nothing copied;
