@@ -135,6 +135,17 @@ class Discussions(unittest.TestCase):
             with self.assertRaises(ValueError):
                 report_blocks.discussion_lines(P, RUN, why)
 
+    def test_a_carriage_return_in_the_why_is_a_second_line(self):
+        """A text-mode read turns a lone `\\r` into a line break: the block's
+        line came back split, differed from its head, and writing it again
+        wrote the same split line (audit 2026-10-27, step 1.4). It is
+        refused as more than one line; the twin, every other control
+        character, reads back (`test_control_characters_…`)."""
+        for why in ("carriage\rreturn", "trailing\r inside"):
+            with self.subTest(why=why):
+                with self.assertRaisesRegex(ValueError, "one line"):
+                    report_blocks.discussion_lines(P, RUN, why)
+
     def test_control_characters_in_the_why_read_back_from_the_file(self):
         """The head's strings are written by `protocol_block.toml_string`,
         the one TOML string writer: json.dumps here left DEL raw, a head

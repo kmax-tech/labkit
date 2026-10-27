@@ -315,14 +315,16 @@ def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
     """The block discussing RUN_ID of PROTOCOL with WHY, line by line; the
     head's strings written by `protocol_block.toml_string`. Raises
     ValueError on a why that cannot stand in the block: empty, more than
-    one line, holding `-->` (it would close the comment), or a lone
-    surrogate (no TOML string holds one)."""
+    one line (`\\n` or `\\r`), holding `-->` (it would close the comment),
+    or a lone surrogate (no TOML string holds one)."""
     why = why.strip()
     if not why:
         raise ValueError(
             "--why is empty — say what refused the adoption and what was found"
         )
-    if "\n" in why or DISCUSS_HEAD_END in why:
+    # the why stands raw in the block's line; a report read in text mode
+    # turns a lone \r into a line break, and the line no longer equals its head
+    if "\n" in why or "\r" in why or DISCUSS_HEAD_END in why:
         raise ValueError(
             f"--why {why!r}: one line, without {DISCUSS_HEAD_END!r} (it closes the "
             f"block's head)"
