@@ -78,6 +78,7 @@ from labkit.tools.protocol_cuts import (
     insert_report_fields,
     name_promise_ids,
     new_protocol_id,
+    owed_cut,
     pilot_and_report,
     quick_block,
     low_cut,
@@ -607,6 +608,8 @@ def protocol_stamp(
     ):
         clean = estimator_placeholders(clean, kind=kind)
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
+    if not quick:
+        stamped = owed_cut(stamped)  # the full form owes by kind and model too
     stamped = name_promise_ids(stamped, kind)
     check_stamped_head(stamped, repeat_cost, kind, bool(model))
     return stamped

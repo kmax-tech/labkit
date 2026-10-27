@@ -140,6 +140,47 @@ def bar_cut(tmpl: str, kind: str) -> str:
     return without_promise_tables("\n".join(out).rstrip() + "\n")
 
 
+#: template items the checker does not hold as fields, owed only with
+#: what they check: a render check needs an instrument to render (a model's
+#: prompt, an estimator's `--show`), parser cases a model's text to parse
+STAMP_ONLY_NEEDS = {"render check": "instrument", "parser cases harvested": "model"}
+#: a template item's bold label, wrapped lines included
+_ITEM_LABEL = re.compile(r"^- \*\*(.+?):\*\*", re.S)
+
+
+def owed_cut(text: str) -> str:
+    """TEXT, a full-form protocol, without the field items its kind and
+    model do not owe (`protocol_check.not_owed`, the rule the checker
+    applies) and the template-only items whose instrument it lacks
+    (`STAMP_ONLY_NEEDS`). A high computation without a model was stamped
+    a data profile, a prompt, a render, instrument and resolution check
+    and parser cases it could not have (audit 2026-10-27, third, I9)."""
+    from labkit.formats.protocol_check import field_name, model_named, not_owed
+
+    head = protocol_block.head(text)
+    model = model_named(text)
+    has_bar_ = head.kind is None or has_bar(head.kind)
+    spared = {field_name(label) for label in not_owed(text)}
+    spared |= {
+        name
+        for name, needs in STAMP_ONLY_NEEDS.items()
+        if (needs == "model" and not model)
+        or (needs == "instrument" and not (model or has_bar_))
+    }
+    if not spared:
+        return text
+    out: list[str] = []
+    for heading, body in _segments(text):
+        if heading:
+            out.append(heading)
+        for item in _items(body):
+            m = _ITEM_LABEL.match("\n".join(item))
+            if m and field_name(" ".join(m.group(1).split())) in spared:
+                continue
+            out.extend(item)
+    return "\n".join(out).rstrip() + "\n"
+
+
 def quick_block(tmpl: str, kind: str) -> str:
     """The promise tables of the low cut. A number with a bar (KIND fit
     or apply) keeps them: the measure skeletons read `margin`, `max_empty`

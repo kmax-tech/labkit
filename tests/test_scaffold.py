@@ -1332,9 +1332,11 @@ class Exp(unittest.TestCase):
         self.assertIn("**Model / tool:** n/a — no model call", proto)
         model_line = next(ln for ln in proto.splitlines() if "**Model / tool:**" in ln)
         self.assertNotIn("<", model_line)  # an n/a with a `<…>` tail read as filled
-        self.assertIn("**Prompt (verbatim, per variant):** n/a — no prompt", proto)
+        # not owed without a model, so not stamped at all (audit 2026-10-27,
+        # third, I9): an "n/a" answered a field nobody asks for
+        self.assertNotIn("**Prompt (verbatim, per variant):**", proto)
         self.assertNotIn("```text", proto)  # the prompt's example block is gone
-        self.assertIn("**Parser cases harvested:** n/a — no model text", proto)
+        self.assertNotIn("**Parser cases harvested:**", proto)  # no model text to parse
         self.assertFalse(protocol_check.model_named(proto))
         block = promises.parse_block(proto)
         assert block is not None
@@ -1571,13 +1573,35 @@ class Report(unittest.TestCase):
         """2026-10-17: a seeded estimator owes its randomness fields; --report
         no longer writes "no seed, spread 0" into them (Sonnet v2 t5)."""
         text = self.stamped(False)
-        self.assertIn("**Parser cases harvested:** n/a — no model", text)
+        self.assertNotIn("**Parser cases harvested:**", text)  # no model text to parse
         self.assertNotIn("n/a — deterministic", text)
         self.assertRegex(text, r"\*\*Randomness controls †:\*\* <")
         self.assertRegex(text, r"\*\*Noise ceiling → threshold †:\*\* <")
 
     def test_a_model_leaves_them_open(self) -> None:
         self.assertNotIn("auto-filled", self.stamped("haiku"))
+
+
+class OwedCut(unittest.TestCase):
+    """The full form stamps only the fields its kind and model owe — the
+    rule the checker applies (`protocol_check.not_owed`); a high
+    computation without a model was stamped a data profile, a prompt and
+    instrument checks (audit 2026-10-27, third, I9)."""
+
+    def test_a_high_computation_is_stamped_without_model_and_criterion_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "lab"
+            scaffold.stamp_lab(root, "lab")
+            compute = scaffold.protocol_stamp(root, "c", "high", "compute", False, True)
+            apply_model = scaffold.protocol_stamp(
+                root, "a", "high", "apply", "haiku", True
+            )
+        for label in ("Data profile", "Prompt (verbatim", "Model I/O", "Instrument check",
+                      "Resolution check", "Noise ceiling", "Render check", "Parser cases"):  # fmt: skip
+            with self.subTest(label=label):
+                self.assertNotIn(f"**{label}", compute)
+                self.assertIn(f"**{label}", apply_model)
+        self.assertIn("**Question / hypothesis:**", compute)
 
 
 class Cli(unittest.TestCase):

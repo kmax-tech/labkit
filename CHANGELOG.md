@@ -1081,6 +1081,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The full-form stamp carries only what the protocol owes.** The
+  checker stopped asking a high computation without a model for a data
+  profile, prompt, instrument and resolution checks (`5e47136`), but the
+  stamp still wrote them as placeholders to fill. `protocol_cuts.owed_cut`
+  drops the field items `protocol_check.not_owed` names — the checker's
+  rule — and the template-only render check and parser cases where their
+  instrument is missing; an estimator area no longer gets "n/a" for a
+  prompt or a parser. Audit 2026-10-27 (third), I9, stamp side.
 - **`report_check` split at its seam.** Its 2000 lines held two
   responsibilities that shared only format imports: the protocol's
   release stations, and finding the reports a change reaches and what
