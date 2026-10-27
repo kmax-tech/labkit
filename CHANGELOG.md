@@ -294,6 +294,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A handover that no longer counts says why, and the stop and the commit
+  name the handover.** When a handover's block, protocol or audit files
+  changed after it was written, the stop held with the original loss and
+  named no handover; its texts offered only restoring, and the pre-commit
+  called every hold "an audit BLOCKER nobody decided". Now each record of
+  the area that does not count gets a line saying which condition failed
+  (`handovers.mismatch`, `handovers.acknowledgement`), only where the
+  gaps stand; the stop and `claude-hook undecided` share one way-out
+  sentence (`claude_hooks.UNDECIDED_WAY`) naming deciding, restoring and
+  the `protocol-fill --handover` command `--findings` prints, and that
+  `fixed` owes no reason; a loss a handover recorded says audits and
+  adoption stay refused until it is restored. Audit 2026-10-27 (second),
+  H2.
 - **Bytes that are not UTF-8 are a sentence naming the file, in the tree
   and in the index.** A staged handover record that did not decode made
   the pre-commit's `claude-hook undecided` end in a `UnicodeDecodeError`

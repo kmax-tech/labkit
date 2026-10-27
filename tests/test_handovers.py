@@ -80,6 +80,28 @@ class HandoverRecovery(cases._Chain):
             [],
         )
 
+    def test_a_handover_that_no_longer_matches_says_why(self):
+        # The stop held with the original loss and named no handover, so the
+        # agent wrote another (audit 2026-10-27, H2).
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        record.path.unlink()
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        (path,) = handovers.record_paths(self.area)
+        rc, out = self.lab.stop_hook()
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("no longer acknowledges", out)
+        self.report.write_text(
+            self.report.read_text().replace("- Why: ", "- Why: plainly ")
+        )
+        rc, out = self.lab.stop_hook()
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"the handover {path.name} no longer acknowledges this", out)
+        self.assertIn("differs from the record", out)
+        self.assertIn("--handover", out)
+
     def test_lost_record_can_be_handed_over_but_not_audited_or_adopted(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)

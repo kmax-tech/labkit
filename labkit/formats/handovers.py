@@ -460,7 +460,9 @@ def missing_evidence(
         record = read_record(root, path, staged=staged) if root else read_handover(path)
         missing.update(set(record.expected) - present)
     return [
-        f"{findings.DIR}/{name}: recorded evidence loss — restore it or hand over unresolved"
+        f"{findings.DIR}/{name}: lost, as a handover recorded — restore it; until "
+        "then audits and adoption stay refused (a current handover lets only the "
+        "stop and the commit pass)"
         for name in sorted(missing)
     ]
 

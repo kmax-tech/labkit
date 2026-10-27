@@ -274,7 +274,7 @@ class Hook(unittest.TestCase):
         with contextlib.redirect_stdout(out), contextlib.chdir(root):
             rc = claude_hooks.undecided([str(failed.relative_to(root))])
         self.assertEqual(rc, 1)
-        self.assertIn("an audit record is gone", out.getvalue())
+        self.assertIn("audit evidence is gone or does not read", out.getvalue())
         # the deletion committed past the pre-commit: HEAD's journal names a
         # record HEAD lacks — the stop holds it; the repair staged releases
         # the repair commit, and after it the stop is clean again

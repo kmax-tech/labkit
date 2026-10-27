@@ -95,9 +95,12 @@ stop
     (`stop_hook_active`), the checks still run and print, the base stays,
     and it may stop — no loop; the next turn's stop holds again.
     The same stop holds every area the session touched (a changed file
-    under it, git status) to its audit records: a BLOCKER nobody decided →
-    exit 2, naming file and finding (`undecided_blockers`). The pre-commit
-    runs `claude-hook undecided` on the staged paths for the same rule. Deciding is cheap and visible: `accepted` with a reason is
+    under it, git status) to its audit records: a BLOCKER nobody decided,
+    or audit evidence gone or unreadable → exit 2, naming file and finding
+    (`undecided_blockers`); a current handover of the area acknowledges
+    the loss, never the BLOCKER, and one that no longer matches says why.
+    The pre-commit runs `claude-hook undecided` on the staged paths for the
+    same rule. Deciding is cheap and visible: `accepted` with a reason is
     a documented deviation, which is what the gate is for; a hand-written
     `fixed` is a lie the next audit sees (LAB-015 Preflight audit before freezing).
 
@@ -886,11 +889,9 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     if undecided:
         print(
             "an audit of an area this session worked in found BLOCKER(s) nobody "
-            f"decided, or an audit record is gone — decide each ({findings.DECIDED_LIST}, "
-            "with reason) with the `--decide` command "
-            "`labkit-audit <AREA> --findings` prints for it (AREA: the path each line "
-            "starts with), never by rewriting the record, and restore a record that is gone before you stop; a number measured past them "
-            "cannot be reported, and a commit would be refused the same way "
+            "decided, or audit evidence is gone or does not read — "
+            f"{UNDECIDED_WAY}; a number measured past them cannot be reported, "
+            "and a commit would be refused the same way "
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
@@ -918,6 +919,18 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     )
 
 
+#: the way out the stop and the pre-commit print for `undecided_blockers`
+UNDECIDED_WAY = (
+    f"decide each BLOCKER ({findings.DECIDED_LIST}; accepted, deferred and "
+    "dismissed owe a reason) with the `--decide` command `labkit-audit <AREA> "
+    "--findings` prints for it (AREA: the path each line starts with), never by "
+    "rewriting the record; restore evidence that is gone; when the area cannot "
+    "be finished, hand it over with the `protocol-fill <PROTOCOL> --handover` "
+    "command `--findings` prints (it acknowledges the loss at the stop and the "
+    "commit only, never an open BLOCKER)"
+)
+
+
 def undecided_blockers(
     repo: Path, paths: list[Path], *, staged: bool = False
 ) -> list[str]:
@@ -937,19 +950,26 @@ def undecided_blockers(
     STAGED (the pre-commit): the audit records with their decisions and
     the attempt journal as the index holds them (`attempts.area_integrity`)
     — what the commit carries, not the tree.
-    An exact unresolved handover may acknowledge integrity gaps for this
-    stop/commit alone; it never dismisses readable open BLOCKERs. At commit,
-    its audit evidence must also match the working tree, so new unstaged
-    evidence cannot borrow an earlier acknowledgement."""
+    A current handover may acknowledge integrity gaps for this stop/commit
+    alone (`handovers.acknowledgement`); it never dismisses readable open
+    BLOCKERs. At commit, its audit evidence must also match the working
+    tree, so new unstaged evidence cannot borrow an earlier
+    acknowledgement. Where the gaps stand and a handover record of the area
+    does not count, a line per record says why (`handovers.mismatch`)."""
     out = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
         # Only an exact unresolved handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
-        handed_over = handovers.valid(area, staged=staged)
+        handed_over = handovers.acknowledgement(area, staged=staged)
         state = attempts.area_integrity(area, staged=staged)
-        if not handed_over:
+        if not handed_over.valid and state.problems:
             out += [f"{shown}: {problem}" for problem in state.problems]
+            # a handover written for this area that no longer counts says why
+            out += [
+                f"{shown}: the handover {name} no longer acknowledges this: {why}"
+                for name, why in handed_over.refused.items()
+            ]
         out += [f"{shown}: {u.line}" for u in findings.open_blockers(state.records)]
     return out
 
@@ -976,14 +996,10 @@ def undecided(argv: list[str]) -> int:
         return 0
     print(
         "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided "
-        "in the index, "
-        f"or an audit record is gone — decide each ({findings.DECIDED_LIST}, with "
-        "reason) with the `--decide` command `labkit-audit <AREA> "
-        "--findings` prints for it (AREA: the path each line starts with), never by "
-        "rewriting the record, and stage the decided record (the commit carries "
-        "the decision the index holds); restore a "
-        "record that is gone (LAB-015 Preflight audit before freezing):\n  "
-        + "\n  ".join(lines)
+        "in the index, or audit evidence is gone or does not read — "
+        f"{UNDECIDED_WAY}; stage the decided record (the commit carries the "
+        "decision the index holds) "
+        "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(lines)
     )
     return 1
 
