@@ -15,7 +15,7 @@ import re
 import uuid
 from pathlib import Path
 from labkit.formats import promises, protocol_block
-from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND
+from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND, has_bar
 from labkit.formats.protocol_check import model_named
 from labkit.formats.repo import (
     repo_protocols,
@@ -103,8 +103,6 @@ def low_cut(tmpl: str, kind: str, model: bool = False) -> str:
     """The `low` cut: the preamble, and of every section only the items
     tagged `<!-- l -->` — with a bar (KIND fit or apply) also `<!-- lb -->`,
     with a model also `<!-- lm -->` — under their heading."""
-    from labkit.formats.standard_contract import has_bar
-
     tags = (LOW_TAG,)
     if has_bar(kind):
         tags += (LOW_BAR_TAG,)
@@ -130,8 +128,6 @@ def bar_cut(tmpl: str, kind: str) -> str:
     Model / tool, null condition) and the promise tables go — a computation owes
     its question (standard 0.22). A fit or an apply comes back unchanged.
     The low cut keeps fewer fields still (`low_cut`)."""
-    from labkit.formats.standard_contract import has_bar
-
     if has_bar(kind):
         return tmpl
     out: list[str] = []
@@ -152,8 +148,6 @@ def quick_block(tmpl: str, kind: str) -> str:
     in 0.87.0 the hint hit only the model case, and every judge area stamped
     at low repeat cost failed its first run with a TypeError — found by a low-lane
     probe, 2026-10-15.) For a computation the tables go: it has no bar to clear."""
-    from labkit.formats.standard_contract import has_bar
-
     if has_bar(kind):
         return tmpl
     # a deterministic computation has no bar to clear: no promise tables, no
@@ -449,8 +443,6 @@ def name_promise_ids(text: str, kind: str) -> str:
     (an id in its prose would register a promise). Raises ValueError when a
     field is not stamped or the stamped block does not declare its id: the
     prose names only what the block already promises."""
-    from labkit.formats.standard_contract import has_bar
-
     if not has_bar(kind):
         return text
     block = promises.parse_block(text)

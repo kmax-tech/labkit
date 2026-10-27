@@ -72,11 +72,6 @@ def read_case_classes(path: Path) -> tuple[CaseClass, ...]:
     return tuple(out)
 
 
-def ids_of(cls: str, cases: tuple[CaseClass, ...]) -> tuple[str, ...]:
-    """The ids of one class, in table order."""
-    return tuple(c.id for c in cases if c.cls == cls)
-
-
 def one_per_class(cases: tuple[CaseClass, ...]) -> tuple[str, ...]:
     """The first id of every class — one case per thing the criterion distinguishes."""
     first: dict[str, str] = {}

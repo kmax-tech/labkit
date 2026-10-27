@@ -1081,6 +1081,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Dead code and dead parameters gone.** `followup.origins_of`,
+  `lanes.ids_of` and `protocol_reading.terms_judge_prompt` had no caller;
+  `report_check.index_text` only forwarded to `repo.text_at`;
+  `findings.area_records(staged)` and `report_check.refused_link
+  (index_links)` were never passed; a `noqa: C901` no longer applied;
+  local imports with no cycle behind them (`handovers`, `protocol_cuts`)
+  stand at the top. Audit 2026-10-27 (third), M6.
 - **More one-home: run record names, kinds, modes, the hooks path.**
   `runs.CONFIG_FILE`, `COMPLETION_FILE` and `OUTPUTS_FILE` beside
   `METRICS_FILE` replace seven literal names; the kind is compared to

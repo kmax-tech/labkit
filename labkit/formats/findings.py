@@ -1296,14 +1296,14 @@ def _recovery_record_order(path: Path) -> tuple[tuple[str, int, str], str | None
         return ("0000", 0, path.name), str(exc)
 
 
-def area_records(area: Path, *, staged: bool = False) -> list[Record]:
-    """Every findings record, oldest first, from tree or index.
+def area_records(area: Path) -> list[Record]:
+    """Every findings record of AREA in the working tree, oldest first.
 
-    Raise FindingsError on a malformed or unreadable record, or a record
-    the working tree holds but the index omits. Recovery readers use
-    `record_status` to retain the errors and the other readable records.
+    Raise FindingsError on a malformed or unreadable record. The index's
+    records and the readers that keep the errors beside the readable
+    records use `record_status` (`attempts.area_integrity`).
     """
-    status = record_status(area, staged=staged)
+    status = record_status(area)
     if status.errors:
         raise FindingsError(status.errors[0])
     return status.records

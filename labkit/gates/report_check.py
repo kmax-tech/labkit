@@ -1106,14 +1106,6 @@ def affected_protocols(
     return [p for area in sorted(areas) for p in indexed if p.parent == area]
 
 
-def index_text(repo: Path, path: Path) -> str | None:
-    """PATH's own entry as git's index holds it — what a commit now would
-    carry: a file's content, a symbolic link's stored target — or None when
-    the index does not hold it (untracked, or staged as deleted). PATH must
-    lie under REPO (`repo.text_at`)."""
-    return text_at(repo, path)
-
-
 def state_link(
     repo: Path,
     path: Path,
@@ -1178,23 +1170,17 @@ def held_place(repo: Path, path: Path) -> bool:
     return not SKIP_DIRS & set(path.relative_to(repo.resolve()).parts)
 
 
-def refused_link(
-    repo: Path,
-    path: Path,
-    *,
-    staged: bool,
-    index_links: dict[Path, str] | None = None,
-) -> str | None:
+def refused_link(repo: Path, path: Path, *, staged: bool) -> str | None:
     """The target PATH stores when it is a symbolic link the gate refuses as
     a report: one whose chain ends where no report is held (`held_place`:
     under `runs/` or `data/`, outside the repository, no Markdown file) or
     runs in a circle. None for a regular file, and for a link ending at a
     held place — that file is held where it lies, and the link reads as it
     does (`CLAUDE.md -> AGENTS.md`)."""
-    target = state_link(repo, path, staged=staged, index_links=index_links)
+    target = state_link(repo, path, staged=staged)
     if target is None:
         return None
-    end = link_end(repo, path, staged=staged, index_links=index_links)
+    end = link_end(repo, path, staged=staged)
     return None if end is not None and held_place(repo, end) else target
 
 
@@ -1229,7 +1215,7 @@ def report_entry(
         return None, None
     if not staged or not under_root(repo, end):
         return link_target, end.read_text(encoding="utf-8") if end.is_file() else None
-    return link_target, index_text(repo, end)
+    return link_target, text_at(repo, end)
 
 
 def tree_differs(repo: Path, area: Path) -> list[str]:

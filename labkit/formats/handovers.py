@@ -45,6 +45,8 @@ from labkit.formats.comment_blocks import (
     write_comment_block,
 )
 from labkit.formats.repo import (
+    PROTOCOL_NAME,
+    SKIP_DIRS,
     GitError,
     area_protocols,
     blobs_now,
@@ -292,8 +294,6 @@ def report_destination(root: Path, path: Path) -> Path:
     Raise HandoverError rather than write into a protocol or a file in the
     repository's excluded evidence/environment directories.
     """
-    from labkit.formats.repo import PROTOCOL_NAME, SKIP_DIRS
-
     report = path.resolve()
     if (
         path.is_symlink()

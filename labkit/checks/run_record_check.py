@@ -254,7 +254,7 @@ def _in_repo(path: Path, repo: Path) -> bool:
     return inner is not None and inner.resolve() == root
 
 
-def criterion_n_input_mismatches(answering_run: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08
+def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
     """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""

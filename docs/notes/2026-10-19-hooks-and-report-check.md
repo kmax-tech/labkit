@@ -68,7 +68,8 @@ it `open`; reproduced through `python -m labkit.gates.claude_hooks
 undecided` with the index holding `status = "open"`: `rc=0`. The reverse
 held a commit falsely: a staged decision reopened only in the tree. The
 commit now reads the records as the index holds them
-(`findings.area_records(staged=True)`); the stop keeps reading the tree.
+(`findings.area_records(staged=True)` then; `findings.record_status(staged=True)`
+through `attempts.area_integrity` since 2026-10-27); the stop keeps reading the tree.
 
 **The stop base moves only on a clean tree (audit 2026-10-27, C7).** The
 stop's checks read the working tree. A commit past the pre-commit with

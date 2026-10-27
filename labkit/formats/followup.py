@@ -32,7 +32,7 @@ Pure: records in, data out. The audit shows and writes
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from labkit.formats.findings import (
@@ -172,16 +172,6 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
         member.finding.check_note,
         member.ref,
     )
-
-
-def origins_of(members: Iterable[Member], c: Chain) -> list[str]:
-    """The distinct origins of MEMBERS under C, in their order."""
-    out: list[str] = []
-    for m in members:
-        o = c.origin[m.ref]
-        if o not in out:
-            out.append(o)
-    return out
 
 
 @dataclass(frozen=True)

@@ -21,7 +21,7 @@ first sentence for a person, ids and keys in the summary, results as
 - **terms**: the reader's unclear terms against two layers — the Summary
   must be plain itself, elsewhere a term may be explained in Terms or a
   glossary it links (`terms_coverage`, occurrence = static evidence;
-  `terms_judge_prompt` asks a reader whether `entry_for`'s entry explains it).
+  whether `entry_for`'s entry explains it is a reader's judgement).
 
 Reading time comes from the reader's transcript (agent_transcript); what
 every probe shares (the newcomer, the answer's shape) is in `cold_reader`.
@@ -365,7 +365,7 @@ def score_glance_answer(
 # Terms field cannot rescue it; a term in the technical part may be
 # explained in Terms or in a glossary note it links. Whether a term OCCURS
 # there is checked here — static evidence, never proof of an explanation;
-# whether the entry explains it is a reader's judgement (`terms_judge_prompt`).
+# whether the entry explains it is a reader's judgement.
 # Ids are matched as patterns: digit runs become NN, so an entry
 # `beschaffungsantrag-NN` covers `beschaffungsantrag-09`.
 
@@ -443,22 +443,6 @@ def terms_coverage(
             )
         )
     return hits
-
-
-def terms_judge_prompt(pairs: list[tuple[str, str]], answer_path: str) -> str:
-    """Ask a reader whether each entry explains its term (the semantics the
-    occurrence check cannot see)."""
-    body = "\n\n".join(f"TERM: {t}\nENTRY: {e}" for t, e in pairs)
-    return (
-        f"{NEWCOMER} For each term below you get the entry a protocol gives "
-        "for it. Does the entry let you understand the term — what it is, in "
-        "plain words? A mere mention, a code, or a pointer elsewhere is not an "
-        "explanation.\n\n"
-        "Answer with one JSON object mapping each term exactly as given to "
-        "true (explained) or false (not explained). No files, no other "
-        f"tools.\n{answer_contract(answer_path)}\n\n"
-        f"{body}\n"
-    )
 
 
 _LABEL = re.compile(r"^(?:- )?\*{1,2}([^*]+)\*{1,2}")
