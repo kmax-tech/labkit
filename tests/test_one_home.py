@@ -104,6 +104,22 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"startswith\(\"## \"\)|\(\?=\^## ",
         {"protocol_block"},
     ),
+    # seven sites listed the decided statuses, two copied the rule that a
+    # carried finding closed dismissed or deferred owes a review (audit
+    # 2026-10-27, C17): `findings.DECIDED_LIST`, `carried_and_closed`
+    (
+        "the decided statuses spelled by hand",
+        r"fixed / accepted / deferred / dismissed|\(\"dismissed\", \"deferred\"\)",
+        {"findings"},
+    ),
+    # a bare area name was read by two globs, `*` running over dashes, and
+    # three slug comparisons that took the first match (audit 2026-10-27):
+    # `repo.areas_named` reads it by the name grammar
+    (
+        "an area name globbed by hand",
+        r"glob\(f?\"(\[0-9\]\*|\*)-|split_area_name\([^)]*\)\[1\] ==",
+        {"repo"},
+    ),
     # labkit-audit printed three refusals and its progress lines itself
     # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
     # `console.progress`
@@ -223,6 +239,8 @@ class OneHome(unittest.TestCase):
             "an open-finding walk": "for f in rec.open:",
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
+            "the decided statuses spelled by hand": 'if f.carries and f.status in ("dismissed", "deferred"):',
+            "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
             "a section heading found by hand": 'if line.startswith("## "):',
