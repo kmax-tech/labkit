@@ -117,6 +117,17 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
 
 
+def into_command(protocol: Path, report: Path) -> str:
+    """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
+    result block into REPORT, both as the working directory reaches them
+    (`shown`), shell-quoted: a protocol named relative to the report and a
+    report relative to the repo ran from neither (audit 2026-10-27, S2)."""
+    here = Path.cwd()
+    return shlex.join(
+        ["protocol-fill", shown(protocol, here), "--into", shown(report, here)]
+    )
+
+
 def handover_command(protocol: Path, report: str = "REPORT.md") -> str:
     """The `protocol-fill … --handover` line for PROTOCOL into REPORT, its
     why and tried as placeholders; it runs no model."""

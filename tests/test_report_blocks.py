@@ -86,18 +86,22 @@ class Blocks(unittest.TestCase):
     def test_block_gaps_hold_the_declared_run_and_equality(self):
         found = report_blocks.blocks(report_blocks.write_block("", P, RUN, "a = 1"))
         BlockSource = report_blocks.BlockSource
+        report = Path.cwd() / "REPORT.md"
         self.assertEqual(
-            report_blocks.block_gaps(found, {P: BlockSource(RUN, "a = 1")}), []
+            report_blocks.block_gaps(found, {P: BlockSource(RUN, "a = 1")}, report),
+            [],
         )
-        (gap,) = report_blocks.block_gaps(found, {P: BlockSource(RUN, "a = 2")})
+        (gap,) = report_blocks.block_gaps(found, {P: BlockSource(RUN, "a = 2")}, report)
         self.assertIn("differs from the protocol's rendering", gap)
         (gap,) = report_blocks.block_gaps(
-            found, {P: BlockSource("2026-10-08T10-00-00_cd34", "a = 2")}
+            found, {P: BlockSource("2026-10-08T10-00-00_cd34", "a = 2")}, report
         )
         self.assertIn("the protocol declares run 2026-10-08T10-00-00_cd34 now", gap)
-        self.assertIn(f"`protocol-fill {P} --into <FILE>` replaces the block", gap)
+        # protocol and report as the working directory reaches them, runnable
+        # from there (audit 2026-10-27, third, S2)
+        self.assertIn(f"`protocol-fill {P} --into REPORT.md` replaces the block", gap)
         (gap,) = report_blocks.block_gaps(
-            found, {P: BlockSource(None, None, "it declares no result")}
+            found, {P: BlockSource(None, None, "it declares no result")}, report
         )
         self.assertIn(
             "it declares no result — a block shows a declared result only", gap
@@ -364,15 +368,18 @@ class ReportFiles(unittest.TestCase):
         report = root / "notes" / "REPORT.md"
         report.parent.mkdir()
         report.write_text(f"c1_pass = True (run {self.RUN})\n", encoding="utf-8")
-        code, out = self._gate(root, report)
+        with contextlib.chdir(root):  # where AGENTS.md runs every command
+            code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn(
             f"notes/REPORT.md: line 1: cites run {self.RUN}, the declared result of "
             f"../experiments/01-x/PROTOCOL-x.md, without its generated block",
             out,
         )
+        # the command runs from there: it named the protocol relative to the
+        # report and the report relative to the repo (audit 2026-10-27, S2)
         self.assertIn(
-            "`protocol-fill ../experiments/01-x/PROTOCOL-x.md --into notes/REPORT.md` "
+            "`protocol-fill experiments/01-x/PROTOCOL-x.md --into notes/REPORT.md` "
             "writes it",
             out,
         )

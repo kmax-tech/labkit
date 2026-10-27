@@ -139,6 +139,7 @@ from labkit.formats.repo import (
     adopt_command,
     audit_command,
     decide_command,
+    into_command,
     area_path,
     area_protocols,
     choose_protocol,
@@ -1447,16 +1448,17 @@ def owed_blocks(
     protocol's block (`report_blocks.blocks_owed`), named as the report
     names it (`path_from_report`) so the sentence carries the command."""
     cited = report_blocks.cited_run_ids(text)
-    declaring = {
-        run_id: [report_blocks.path_from_report(p, report) for p in protocols]
-        for run_id in {r for _, r in cited}
-        if (protocols := sources.declaring(run_id))
-    }
-    rel = report.relative_to(sources.repo).as_posix()
+    named: dict[str, Path] = {}
+    declaring: dict[str, list[str]] = {}
+    for run_id in {r for _, r in cited}:
+        for p in sources.declaring(run_id):
+            name = report_blocks.path_from_report(p, report)
+            named[name] = p
+            declaring.setdefault(run_id, []).append(name)
     return [
         f"line {n}: cites run {run_id}, the declared result of {protocol}, without "
         f"its generated block — the number a report shows of a declared result is "
-        f"the generated one: `protocol-fill {protocol} --into {rel}` writes it"
+        f"the generated one: `{into_command(named[protocol], report)}` writes it"
         for n, run_id, protocol in report_blocks.blocks_owed(
             cited, declaring, {b.protocol for b in found}
         )
@@ -1540,7 +1542,9 @@ def hold_report(
     except report_blocks.ReportBlockError as exc:
         out.block(f"{rel}: {exc}")
         return out.report("report-check", "reporting")
-    for gap in report_blocks.block_gaps(found, block_sources(path, found, sources)):
+    for gap in report_blocks.block_gaps(
+        found, block_sources(path, found, sources), path
+    ):
         out.block(f"{rel}: {gap}")
     cited = report_blocks.cited_run_ids(text)
     for gap in report_blocks.cited_gaps(cited, sources.known):

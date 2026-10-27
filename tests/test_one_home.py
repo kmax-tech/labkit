@@ -53,6 +53,10 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"protocol-fill (?:\{[^}]*\} --from-run|--from-run \{)",
         {"repo"},
     ),
+    # report-check printed `--into` with the protocol relative to the report
+    # and the report relative to the repo: run from neither (audit
+    # 2026-10-27, third, S2); `repo.into_command`
+    ("an --into command spelled by hand", r"protocol-fill \{[^}]*\} --into", {"repo"}),
     # thirteen modules read config.json's labkit fields by key; RunConfig
     # holds them typed where the record is read (2026-10-20)
     (
@@ -245,6 +249,7 @@ class OneHome(unittest.TestCase):
             "a shell line cut by hand": "words = shlex.split(command)",
             "a command cut at -- by hand": "cut = argv.index('--')",
             "an adopt command spelled by hand": 'print(f"protocol-fill {PROTOCOL.name} --from-run {rid}")',
+            "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",

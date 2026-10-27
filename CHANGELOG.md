@@ -306,6 +306,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The printed `--into` command runs.** report-check named the protocol
+  relative to the report and the report relative to the repo, so
+  `protocol-fill ../experiments/… --into notes/REPORT.md` ran from
+  neither; a stale result block said `--into <FILE>`. One builder,
+  `repo.into_command`, names both as the working directory reaches them;
+  `tests/test_one_home.py` holds a hand-built one. Audit 2026-10-27
+  (third), S2.
 - **`runlog start` returns once the run exists.** It returned right after
   launching the command, so `runlog AREA --wait` straight after it could
   see no open run and exit 0 before the child made its directory — a

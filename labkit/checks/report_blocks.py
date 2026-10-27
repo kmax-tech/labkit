@@ -71,6 +71,7 @@ from pathlib import Path
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
 from labkit.formats.protocol_block import toml_string
+from labkit.formats.repo import into_command
 
 #: the block's opening and closing lines, each a line of its own
 OPEN = re.compile(
@@ -202,11 +203,15 @@ class BlockSource:
     why: str = ""
 
 
-def block_gaps(found: list[Block], sources: dict[str, BlockSource]) -> list[str]:
-    """Why a block of FOUND does not show what its protocol says now, one
-    sentence each, or []: SOURCES maps each block's protocol (as written)
-    to its `BlockSource`. Exact: the declared run and equality of the body, no
-    reading of what the body says."""
+def block_gaps(
+    found: list[Block], sources: dict[str, BlockSource], report: Path
+) -> list[str]:
+    """Why a block of FOUND (in REPORT) does not show what its protocol says
+    now, one sentence each, or []: SOURCES maps each block's protocol (as
+    written) to its `BlockSource`; the command that writes it again names
+    protocol and report as the working directory reaches them
+    (`repo.into_command`). Exact: the declared run and equality of the
+    body, no reading of what the body says."""
     gaps: list[str] = []
     for b in found:
         s = sources[b.protocol]
@@ -219,14 +224,14 @@ def block_gaps(found: list[Block], sources: dict[str, BlockSource]) -> list[str]
         elif s.run_id != b.run_id:
             gaps.append(
                 f"{at}: the protocol declares run {s.run_id} now — "
-                f"`protocol-fill {b.protocol} --into <FILE>` replaces the block"
+                f"`{into_command(report.parent / b.protocol, report)}` replaces the block"
             )
         elif s.body is None:
             gaps.append(f"{at}: {s.why}")
         elif b.body != s.body:
             gaps.append(
                 f"{at} differs from the protocol's rendering — "
-                f"`protocol-fill {b.protocol} --into <FILE>` writes it again"
+                f"`{into_command(report.parent / b.protocol, report)}` writes it again"
             )
     return gaps
 
