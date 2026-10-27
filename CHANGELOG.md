@@ -187,6 +187,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`usability stage` commits without a global git identity.** labkit's
+  own commits in a probe repo carry a fixed committer
+  (`usability.PROBE_IDENTITY`, given per commit with `git -c`); no git
+  config is written, so the operator's later commits there keep their own.
+  The suite failed in a fresh clone with an empty home at the probe's first
+  commit (`tests/test_workflow_example.py`, audit 2026-10-27, C14); the
+  walkthrough test gives the walk's own commits an identity in its
+  environment.
 - **The decision and the report review are attempts in the journal.**
   `labkit-audit --review` and `--report-review` begin an attempt before
   their model call (`attempts.attempt`, modes `review` and

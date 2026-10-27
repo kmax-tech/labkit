@@ -8,10 +8,12 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -355,6 +357,49 @@ class ProbeIsolation(unittest.TestCase):
         kind, why = usability.labkit_spec_problem(editable, linked=True) or ("", "")
         self.assertEqual(kind, "warn")
         self.assertIn("working tree", why)
+
+    def test_the_probe_commits_without_a_global_git_identity(self):
+        """A fresh clone with an empty home failed at the probe's first
+        commit (audit 2026-10-27, C14): labkit's own commits carry their
+        committer. The twin: no git config is written, local or global."""
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d) / "home"
+            home.mkdir()
+            global_config = home / ".gitconfig"
+            global_config.write_text("")
+            empty = {
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(home / ".config"),
+                "GIT_CONFIG_GLOBAL": str(global_config),
+                "GIT_CONFIG_NOSYSTEM": "1",
+            }
+            root = Path(d) / "probe"
+            with (
+                mock.patch.dict(os.environ, empty),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                rc = usability.stage(root, Path(sys.prefix))
+                authors = subprocess.run(
+                    ["git", "log", "--format=%an <%ae>"],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.split("\n")
+                local = subprocess.run(
+                    ["git", "config", "--local", "--get", "user.name"],
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                )
+            self.assertEqual(rc, 0)
+            self.assertEqual(
+                [a for a in authors if a], ["labkit probe <probe@labkit.invalid>"] * 3
+            )
+            # the twin: no git config is written, the operator's commits keep theirs
+            self.assertEqual(local.returncode, 1, local.stdout)
+            self.assertEqual(global_config.read_text(), "")
 
 
 class Archive(unittest.TestCase):

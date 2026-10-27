@@ -43,9 +43,11 @@ stage
     warned with `--venv` (`labkit_spec_problem`) — a probe measures a fixed
     labkit. What was measured is pinned in `<dir>.probe.json`: the labkit
     the probe venv holds, a sha over the scaffolder and the templates it
-    stamps, the flags. Side effects: a git repo with three commits, a venv
-    or a symlink, `.tmp/` (git-ignored), three sidecar files next to <dir>
-    (probe.json, log.md, prompt.md).
+    stamps, the flags. Side effects: a git repo with three commits by a
+    fixed committer (`PROBE_IDENTITY`, given to each of labkit's own
+    commits; no git config is written), a venv or a symlink, `.tmp/`
+    (git-ignored), three sidecar files next to <dir> (probe.json, log.md,
+    prompt.md).
 
 log
     The agent's step log, one call per step: appends `HH:MM:SS · TAG · TEXT`
@@ -201,6 +203,10 @@ SOURCE_READ = re.compile(
 #: not derived — the first traces decide whether it is the right one.
 TARGET_MINUTES = 5
 TOL = 1e-9
+#: the committer of labkit's own commits in a probe repo, given to each
+#: (`git -c`): staging needs no git identity of the operator's, and the
+#: operator's later commits there keep theirs — no git config is written
+PROBE_IDENTITY = (("user.name", "labkit probe"), ("user.email", "probe@labkit.invalid"))
 
 
 def _sh(args: list[str], cwd: Path) -> str:
@@ -222,13 +228,14 @@ def _sh(args: list[str], cwd: Path) -> str:
 
 
 def _commit(root: Path, title: str, body: str | None = None) -> None:
-    """The probe's own commit of what is staged. It skips the pre-commit
+    """The probe's own commit of what is staged, by PROBE_IDENTITY. It skips the pre-commit
     hook: a freshly stamped protocol is all placeholders by design, and the
     hook is the agent's gate, not the stamper's (`labkit-init exp` sets
     core.hooksPath, 2026-10-05)."""
     _sh(
         [
             "git",
+            *(arg for key, value in PROBE_IDENTITY for arg in ("-c", f"{key}={value}")),
             "commit",
             "-q",
             "--no-verify",

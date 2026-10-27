@@ -8,6 +8,7 @@ tools under the text (TODO "Klarheit des Ablaufs", 2026-10-22).
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -29,11 +30,23 @@ VENV = Path(sys.prefix)
 class CountWalkthrough(unittest.TestCase):
     def test_the_walk_ends_where_the_text_says(self):
         work = Path(tempfile.mkdtemp()) / "walk"
+        # the walk's own commits are the reader's: in a home without a git
+        # identity (a fresh clone) the test supplies one, as a reader would
+        who = {"NAME": "walkthrough", "EMAIL": "walkthrough@labkit.invalid"}
+        env = {
+            **os.environ,
+            **{
+                f"GIT_{role}_{k}": v
+                for role in ("AUTHOR", "COMMITTER")
+                for k, v in who.items()
+            },
+        }
         p = subprocess.run(
             ["sh", str(SCRIPT), str(work), str(VENV)],
             capture_output=True,
             text=True,
             timeout=600,
+            env=env,
         )
         out = p.stdout + p.stderr
         self.assertEqual(p.returncode, 0, out[-4000:])
