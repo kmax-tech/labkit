@@ -526,7 +526,13 @@ Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 
    deklariert, dann übergeben“ (der Schreiber zieht `[result] run`
    zurück); jeweils Übergabe samt Stop und Commit möglich,
    Ergebnisübernahme verweigert.
-4. **Neuansatz plus Registrierungsvergleich (A4, A5, B1, B3):** Ein neuer
+4. **Neuansatz plus Registrierungsvergleich (A4, A5, B1, B3) — präzisiert
+   2026-10-27 nach dem Reparaturfall als K1 (Vorgänger `replaces`,
+   `[[change]]`-Liste, erzwungen `exploratory`, Vorgänger-Urteil im
+   erzeugten Block; Auslöser: ein Bericht wechselt von Läufen von A zu
+   Läufen von B) und K3 (Registrierung steht wie bei der ersten Messung,
+   exakt über die Laufrecords):
+   [Note](docs/notes/2026-10-27-new-registration-contracts.md).** Ein neuer
    Bereich mit neuer Protokoll-id nennt seinen Vorgänger in einem
    Kopffeld — die eine Heimat; „abgelöst“ wird daraus abgeleitet, in den
    alten Bereich wird nichts geschrieben (ein Schreiben dort berührte
@@ -659,6 +665,26 @@ Phase 4 — gemeinsame Abnahme, ohne Garantien und Nutzen zu vermischen:
    labkit aus dem Image (A8), Regel der ersten Messung (F) und
    Kategorie „ehrliche Übergabe“ sind Voraussetzungen der dortigen
    Auswertung, keine in labkit erledigten Aufgaben.
+
+9. **„not assessable“ begrenzt das Urteil (K2, neu 2026-10-27):** Eine
+   nicht beurteilbare Zulässigkeitsbedingung lässt jedes Kriterium des
+   Laufs nicht beurteilbar; der erzeugte Block schreibt nie ein nacktes
+   `c1_pass = True` neben `A3 not assessable` (im Reparaturfall geschehen).
+   Messwerte bleiben als Beschreibung. Eigene Lücke, schließt K1 nicht.
+   Note wie 2.4.
+
+Nach dem Reparaturfall (2026-10-27, Richtung vom Autor bestätigt): Neuansatz
+erlauben, Änderungen sichtbar binden (K1, K3); „not assessable“ begrenzt
+das Urteil (K2); das Bewertungsinstrument in labkit-paper zuerst (K4,
+eigener Auftrag: zwei Bereiche auswertbar, `report-only` bleibt
+registrierter Wert, `escaped` als nachträgliche Diagnose daneben); die
+Anleitung („When you are stuck“, `BLOCKER_ROUTES`) nach den Verträgen in
+drei Punkten (Schranken vor den Ergebnissen; neu registrieren nur bei
+unbeantwortbarer Registrierung, nie wegen eines Verfehlens; not assessable
+heißt kein Urteil), per Test gleich gehalten. Reihenfolge: K3 → K2 → K1 →
+Anleitung → Replay des gespeicherten Versuchs mit Gegenfällen. (a) bleibt
+zurückgestellt: Der Fall zeigt WARNINGs, die nach `rejected` geschlossen
+wurden, keinen ungeprüften `dismissed`/`deferred`-BLOCKER.
 
 Noch zu entscheiden, jeweils vor dem betroffenen Bau: (a) Erweiterung
 der Entscheidungsprüfung in 2.6; (c) Abschluss-/Neuansatzformat,
