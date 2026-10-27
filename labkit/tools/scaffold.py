@@ -51,7 +51,7 @@ from labkit.formats.runs import runs_path
 from labkit.formats.files import write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
-    added_in,
+    first_added,
     adopt_command,
     AREA_NAME,
     area_protocols,
@@ -780,34 +780,39 @@ def edited_stamps(
 
 
 def earlier_pin_text(root: Path, path: Path) -> tuple[str, str] | None:
-    """(commit, text): PATH as the newest commit that added it holds it,
-    when a pin file under ROOT (`repo_check.PIN_FILES`) names another
-    labkit then than now (its `labkit` lines): the evidence that this
+    """(commit, text): PATH as the commit that first added it holds it
+    (`repo.first_added`, renames followed), when a pin file under ROOT
+    (`repo_check.PIN_FILES`) pins another labkit then than now (its
+    `labkit` lines, a trailing comment aside): the evidence that this
     labkit's templates are not the ones PATH was stamped from, so a
     difference from today's stamp shows no edit. None without that
-    evidence: outside a git repo, PATH never committed, or no pin file
-    with a labkit line both then and now that differs. Limit: an edit
-    committed together with the stamp, under the earlier pin, reads as
-    that pin's stamp — the commit keeps it. Reads git and the pin files,
-    writes nothing; raises RuntimeError when git fails."""
+    evidence: outside a git repo, PATH never committed, deleted and added
+    again, a shallow clone, or no pin file with a labkit line both then
+    and now that pins another. Limit: an edit committed together with the
+    stamp, under the earlier pin, reads as that pin's stamp — the commit
+    keeps it. Reads git and the pin files, writes nothing; raises
+    RuntimeError when git fails."""
     repo = git_root(root)
     if repo is None:
         return None
-    commit = added_in(repo, path)
-    if commit is None:
+    found = first_added(repo, path)
+    if found is None:
         return None
+    commit, then_path = found
     for name in PIN_FILES:
         pins = root / name
-        then = requirement_lines(text_at(repo, pins, commit) or "", "labkit")
-        now = (
-            requirement_lines(pins.read_text(encoding="utf-8"), "labkit")
-            if pins.is_file()
-            else []
-        )
+        then = _pins(text_at(repo, pins, commit) or "")
+        now = _pins(pins.read_text(encoding="utf-8")) if pins.is_file() else []
         if then and now and then != now:
-            text = text_at(repo, path, commit)
+            text = text_at(repo, then_path, commit)
             return None if text is None else (commit, text)
     return None
+
+
+def _pins(text: str) -> list[str]:
+    """The `labkit` lines of a pin file's TEXT without a trailing comment
+    (pip reads ` #` as one): what they pin, a note beside it aside."""
+    return [re.sub(r"\s+#.*$", "", ln) for ln in requirement_lines(text, "labkit")]
 
 
 def same_promises(then: str, now: str) -> bool:

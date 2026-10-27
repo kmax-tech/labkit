@@ -274,19 +274,38 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     return r.stdout if r.returncode == 0 else None
 
 
-def added_in(repo: Path, path: Path) -> str | None:
-    """The newest commit under REPO that added PATH (`git log
-    --diff-filter=A`; a rename counts as an addition at its new path), or
-    None: before the first commit, or PATH never committed. PATH must lie
-    under REPO. Raises RuntimeError when git fails."""
+def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:
+    """(commit, path then): the one commit under REPO that added PATH,
+    followed back through renames (`git log --follow`), and the path PATH
+    had there. None when that is not one commit: PATH never committed,
+    deleted and added again (its history holds two beginnings), or a
+    shallow clone (its oldest commit shows every file as added). PATH must
+    lie under REPO. Raises RuntimeError when git fails."""
     if not head_sha(repo):
         return None
+    shallow = git_run(["rev-parse", "--is-shallow-repository"], repo)
+    if shallow.returncode != 0 or shallow.stdout.strip() != "false":
+        return None
     rel = path.resolve().relative_to(repo.resolve()).as_posix()
-    args = ["log", "-1", "--no-renames", "--diff-filter=A", "--format=%H", "--", rel]
+    args = ["log", "--follow", "--name-status", "--format=%x00%H", "--", rel]
     r = git_run(args, repo)
     if r.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {r.stderr.strip()}")
-    return r.stdout.strip() or None
+    # one entry per commit, newest first: its hash, then the status line
+    # of the followed file, tab-separated (`A\tpath`, `R100\told\tnew`);
+    # a path git quotes (unusual characters) reads nowhere — no evidence
+    entries = []
+    for chunk in r.stdout.split("\0"):
+        lines = [ln for ln in chunk.splitlines() if ln]
+        if lines:
+            entries.append((lines[0], lines[1].split("\t") if len(lines) > 1 else []))
+    statuses = [fields[0][:1] for _, fields in entries if fields]
+    if not entries or statuses.count("A") != 1 or "D" in statuses:
+        return None
+    commit, fields = entries[-1]
+    if len(fields) != 2 or fields[0] != "A":
+        return None
+    return commit, repo / fields[1]
 
 
 def find_area(

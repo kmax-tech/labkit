@@ -738,12 +738,18 @@ class Exp(unittest.TestCase):
         )
 
     def _stamped_by_an_earlier_labkit(
-        self, kind: str, tmpl: str, old: str, new: str
+        self,
+        kind: str,
+        tmpl: str,
+        old: str,
+        new: str,
+        meanwhile: Callable[[Path], None] | None = None,
     ) -> Path:
         """`foo-bar` stamped as KIND at low cost by an earlier labkit — the
         template TMPL then read OLD where it reads NEW now — and committed
-        under that labkit's pin; then the pin raised and committed. Nothing
-        of the stamp is edited. Returns the area."""
+        under that labkit's pin; then MEANWHILE (given the area: the work
+        done under that pin, nothing by default); then the pin raised and
+        committed. Returns the area."""
         real = scaffold.template
 
         def earlier(name: str) -> str:
@@ -758,6 +764,8 @@ class Exp(unittest.TestCase):
         self._git("init", "-q")
         self._git("add", "-A")
         self._git("commit", "-qm", "stamp under the earlier pin")
+        if meanwhile is not None:
+            meanwhile(self.area())
         req = self.root / "requirements.txt"
         raised = re.sub(r"labkit\.git@\S+", "labkit.git@v99.0.0", req.read_text())
         self.assertNotEqual(raised, req.read_text())
@@ -819,6 +827,89 @@ class Exp(unittest.TestCase):
         _, report = scaffold.change_kind(self.root, "foo-bar", "compute")
         self.assertIn("the promise block of an earlier pin", report)
 
+    def _measure_template(self) -> str:
+        return dict((dest, tmpl) for tmpl, dest in standard_contract.COMPUTE.scripts)[
+            "01_measure.py"
+        ]
+
+    def test_an_edit_is_no_earlier_stamp_after_a_rename_a_re_add_or_a_shallow_clone(
+        self,
+    ) -> None:
+        """The commit that "added" the file was taken as the stamp: a rename
+        after an edit, a delete and re-add with one's own text, and a
+        shallow clone's only commit each made an edit read as the earlier
+        labkit's stamp, and `--change-kind` replaced it (cold review
+        2026-10-27). The first addition is followed through renames; a
+        re-add or a shallow clone is no evidence. The twin: a rename
+        without an edit is still the earlier stamp."""
+        old = "#!/usr/bin/env python3\n# an earlier labkit's line\n"
+        new = "#!/usr/bin/env python3\n"
+
+        def stamped(meanwhile: Callable[[Path], None]) -> Path:
+            return self._stamped_by_an_earlier_labkit(
+                "compute", self._measure_template(), old, new, meanwhile
+            )
+
+        def held(root: Path) -> None:
+            with self.assertRaises(console.Refused) as caught:
+                scaffold.change_kind(root, "foo-bar", "fit")
+            self.assertIn(
+                "01_measure.py: edited since the compute stamp", str(caught.exception)
+            )
+
+        def edit(area: Path) -> None:
+            script = area / "scripts" / "01_measure.py"
+            script.write_text(script.read_text(encoding="utf-8") + "# mine\n")
+            self._git("commit", "-qam", "my edit")
+
+        def renumber(area: Path) -> None:
+            self._git("mv", str(area), str(area.with_name("02-foo-bar")))
+            self._git("commit", "-qm", "renumber")
+
+        def re_add(area: Path) -> None:
+            script = area / "scripts" / "01_measure.py"
+            mine = script.read_text(encoding="utf-8") + "# mine\n"
+            self._git("rm", "-q", str(script))
+            self._git("commit", "-qm", "drop")
+            script.write_text(mine, encoding="utf-8")
+            self._git("add", str(script))
+            self._git("commit", "-qm", "mine")
+
+        def edit_then_renumber(area: Path) -> None:
+            edit(area)
+            renumber(area)
+
+        with self.subTest("renamed after an edit"):
+            stamped(edit_then_renumber)
+            held(self.root)
+        with self.subTest("deleted and added again"):
+            self.setUp()
+            stamped(re_add)
+            held(self.root)
+        with self.subTest("a shallow clone"):
+            self.setUp()
+            clone = self.root.with_name("clone")
+
+            def shallow(area: Path) -> None:
+                edit(area)
+                self._git(
+                    "clone", "-q", "--depth", "1", f"file://{self.root}", str(clone)
+                )
+
+            stamped(shallow)
+            req = clone / "requirements.txt"  # the pin raised in the clone, too
+            req.write_text(
+                (self.root / "requirements.txt").read_text(), encoding="utf-8"
+            )
+            held(clone)
+        with self.subTest("renamed without an edit: the earlier stamp"):
+            self.setUp()
+            stamped(renumber)
+            _, report = scaffold.change_kind(self.root, "foo-bar", "fit")
+            self.assertRegex(
+                report, r"replaced\s+\S*01_measure\.py \(the stamp of an earlier pin, "
+            )
+
     def test_an_edit_committed_with_the_stamp_still_holds(self) -> None:
         """Without a pin raise this labkit's templates are the ones the area
         was stamped from: a difference committed with the stamp is an edit
@@ -830,7 +921,16 @@ class Exp(unittest.TestCase):
         self._git("init", "-q")
         self._git("add", "-A")
         self._git("commit", "-qm", "stamp with an edit")
-        for step in ("stamped", "locked"):
+        for step in ("stamped", "commented", "locked"):
+            if step == "commented":  # a note beside the pin pins no other labkit
+                req = self.root / "requirements.txt"
+                req.write_text(
+                    re.sub(
+                        r"(labkit\.git@\S+)", r"\1  # the lab's pin", req.read_text()
+                    ),
+                    encoding="utf-8",
+                )
+                self._git("commit", "-qam", "note the pin")
             if step == "locked":
                 (self.root / "requirements.lock").write_text(
                     "labkit @ git+https://github.com/kmax-tech/labkit.git@0123abc\n",

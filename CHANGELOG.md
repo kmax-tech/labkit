@@ -203,13 +203,15 @@ pins (`requirements.txt` / `requirements.lock`).
   the installed labkit's templates, so after a pin raise an unedited stamp
   held the change for nothing (audit 2026-10-27, C13). Such a difference
   now passes when git shows the file (or the promise block) unchanged since
-  the commit that added it, and a pin file names another labkit then than
-  now (`scaffold.earlier_pin_text`). That is the earlier labkit's stamp: it
-  is replaced, and the log names the commit that keeps it. An edit since
-  that commit, an untracked file, or a difference committed under the same
-  pin still holds. Limit: an edit committed together with the stamp under
-  the earlier pin reads as that pin's stamp. New: `repo.added_in`, the
-  commit that added a path.
+  the commit that first added it, followed through renames, and a pin file
+  pins another labkit then than now, a comment beside the pin aside
+  (`scaffold.earlier_pin_text`). That is the earlier labkit's stamp: it is
+  replaced, and the log names the commit that keeps it. An edit since that
+  commit, an untracked file, a difference committed under the same pin, a
+  file deleted and added again, and a shallow clone still hold. Limit: an
+  edit committed together with the stamp under the earlier pin reads as
+  that pin's stamp. New: `repo.first_added`, the one commit that added a
+  path and the path it had there.
 - **The pre-run hook runs preflight before an LLM measurement.** The prompt
   skeleton opens its run inside `lanes.Lanes.main`, so its own text names
   no `runlog.run(`; the hook's recognition (`claude_hooks.OPENS_RUN`) never
