@@ -9,6 +9,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A protocol is a regular file; a symbolic link is refused.** The stop
+  read a protocol link's target in the tree (`report_check.repo_sources`,
+  `hold_declared` followed it) and the commit read the name the link
+  stores in the index, so the two judged different text. A protocol that
+  is a symbolic link, valid or broken, is now refused with one sentence
+  naming it (`repo.protocol_link`), each state by itself
+  (`repo.protocol_links`): by the protocol choice of every command
+  (`repo.the_protocol`), by report-check at the stop and the commit, by
+  `protocol-check` and by the handover. `repo_sources` reads through
+  `repo.state_text`. Migration: put the file in place of the link; 0.103.0
+  is the last version that followed one. Audit 2026-10-27 (second), left
+  open, settled the same day.
 - **Not assessable limits the verdict: Recorded results opens with the
   reportable verdicts.** The generated line listed every metric as
   recorded and appended "A3 not assessable with this run": in the repair

@@ -285,6 +285,30 @@ def indexed_protocols(repo: Path) -> list[Path]:
     return [p for p in indexed_files(repo) if PROTOCOL_NAME.match(p.name)]
 
 
+def protocol_link(path: Path, state: str) -> str:
+    """The refusal of PATH, a protocol that is a symbolic link in STATE
+    ("tree" or "index"). A protocol is a regular file: the tree's reader
+    followed a link and the index's read the name it stores, so the stop
+    and the commit judged different text."""
+    return (
+        f"{path}: a protocol must be a regular file, not a symbolic link (in the "
+        f"{state}) — the stop would read the file it names and the commit the "
+        "link itself; put the file there instead of the link"
+    )
+
+
+def protocol_links(
+    repo: Path, protocols: list[Path], *, staged: bool
+) -> dict[Path, str]:
+    """Each of PROTOCOLS that is a symbolic link in the tree or, STAGED, in
+    git's index (`indexed_links`, one listing), broken or not, → its refusal
+    (`protocol_link`). Raises RuntimeError when git fails."""
+    if staged:
+        held = set(indexed_links(repo))
+        return {p: protocol_link(p, "index") for p in protocols if own_path(p) in held}
+    return {p: protocol_link(p, "tree") for p in protocols if p.is_symlink()}
+
+
 def under_root(root: Path, path: Path) -> bool:
     """Does ROOT hold PATH (ROOT resolved, PATH at its own path,
     `own_path`)? A membership test for a gate that is given paths from
@@ -864,8 +888,11 @@ def the_protocol(area: Path, protocol: Path | None) -> Path:
     """The protocol a command holds the area to: the named one, else the
     area's only one. Raises ProtocolChoiceError (the message says why and
     lists the candidates) when there is none, or several and none is named
-    — a gate never guesses. `choose_protocol` is the printing form."""
+    — a gate never guesses, and when the one it holds is a symbolic link
+    (`protocol_link`). `choose_protocol` is the printing form."""
     if protocol is not None:
+        if protocol.is_symlink():
+            raise ProtocolChoiceError(protocol_link(protocol, "tree"))
         if not protocol.is_file():
             raise ProtocolChoiceError(f"no such protocol: {protocol}")
         return protocol
@@ -877,6 +904,8 @@ def the_protocol(area: Path, protocol: Path | None) -> Path:
             f"{len(protocols)} protocols in {area} — name one with --protocol FILE:\n"
             + "\n".join(f"  {p}" for p in protocols)
         )
+    if protocols[0].is_symlink():
+        raise ProtocolChoiceError(protocol_link(protocols[0], "tree"))
     return protocols[0]
 
 

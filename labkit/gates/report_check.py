@@ -149,6 +149,7 @@ from labkit.formats.repo import (
     indexed_links,
     indexed_protocols,
     own_path,
+    protocol_links,
     layout_root,
     no_such_area,
     PROTOCOL_NAME,
@@ -1359,9 +1360,16 @@ def repo_sources(repo: Path, *, staged: bool) -> Sources:
     index's protocols and texts when STAGED."""
     protocols = indexed_protocols(repo) if staged else repo_protocols(repo.resolve())
     out = Sources(repo.resolve(), set(), {}, {}, {})
+    out.unreadable.update(protocol_links(repo, protocols, staged=staged))
     for p in protocols:
         out.known.update(rd.dir.name for rd in run_dirs(p.parent))
-        text = index_text(repo, p) if staged else p.read_text(encoding="utf-8")
+        if p in out.unreadable:
+            continue  # a link: no text to read, the refusal stands
+        try:
+            text = state_text(repo, p, staged=staged)
+        except UnicodeError as exc:
+            out.unreadable[p] = str(exc)
+            continue
         if text is None:
             continue
         out.texts[p] = text
@@ -1389,13 +1397,13 @@ def block_sources(
         if b.protocol in out:
             continue
         p = block_protocol(report, b)
-        if p not in sources.texts:
-            out[b.protocol] = report_blocks.BlockSource(
-                None, None, "no protocol of the repo there"
-            )
-        elif p in sources.unreadable:
+        if p in sources.unreadable:
             out[b.protocol] = report_blocks.BlockSource(
                 None, None, f"its head does not read: {sources.unreadable[p]}"
+            )
+        elif p not in sources.texts:
+            out[b.protocol] = report_blocks.BlockSource(
+                None, None, "no protocol of the repo there"
             )
         elif (run_id := sources.declared[p]) is None:
             out[b.protocol] = report_blocks.BlockSource(
@@ -1988,17 +1996,22 @@ def held_by_reports(reports: list[tuple[Path, str]], sources: Sources) -> list[P
 def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
     """`report-check` on PROTOCOL when its head declares a result, as the
     state holds it (the index when STAGED); 0 for an exploration or a
-    protocol the commit does not hold, 2 for one that cannot be read."""
-    if staged:
-        text = index_text(repo, protocol)
-        if text is None:
+    protocol the commit does not hold, 2 for one that cannot be read or is
+    a symbolic link in that state (`repo.protocol_links`)."""
+    link = protocol_links(repo, [protocol], staged=staged)
+    if link:
+        console.refuse("report-check", link[protocol])
+        return 2
+    try:
+        text = state_text(repo, protocol, staged=staged)
+    except UnicodeError as exc:
+        console.refuse("report-check", str(exc))
+        return 2
+    if text is None:
+        if staged:
             return 0  # not in the commit: nothing declared there
-    else:
-        try:
-            text = protocol.read_text(encoding="utf-8")
-        except OSError as exc:
-            console.refuse("report-check", f"{protocol}: {exc}")
-            return 2
+        console.refuse("report-check", f"{protocol}: no such file")
+        return 2
     declared, gap = _declaration(text)
     if declared is None and gap is None:
         return 0  # an exploration: nothing declared, nothing owed

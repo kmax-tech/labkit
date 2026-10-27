@@ -42,6 +42,7 @@ from labkit.formats.repo import (
     git_root,
     indexed_blobs,
     indexed_protocols,
+    protocol_links,
     state_text,
     under_root,
 )
@@ -478,9 +479,14 @@ def _protocols(area: Path, root: Path, *, staged: bool) -> list[Path]:
 def declared_results(area: Path, root: Path, *, staged: bool = False) -> list[Path]:
     """The protocols of AREA, in the tree or STAGED the index, that declare
     a result: none may, while the area is handed over. Raises HandoverError
-    on a protocol that does not read."""
+    on a protocol that does not read or is a symbolic link there
+    (`repo.protocol_links`)."""
+    protocols = _protocols(area.resolve(), root, staged=staged)
+    links = protocol_links(root, protocols, staged=staged)
+    if links:
+        raise HandoverError(next(iter(links.values())))
     out = []
-    for p in _protocols(area.resolve(), root, staged=staged):
+    for p in protocols:
         try:
             text = state_text(root, p, staged=staged)
             if text is not None and protocol_block.declared_run(text) is not None:
@@ -488,6 +494,30 @@ def declared_results(area: Path, root: Path, *, staged: bool = False) -> list[Pa
         except (UnicodeError, protocol_block.BlockError) as exc:
             raise HandoverError(f"{p}: the protocol does not read: {exc}") from exc
     return out
+
+
+def _protocol_mismatch(
+    area: Path, root: Path, record: Handover, *, staged: bool
+) -> str | None:
+    """Why RECORD's protocol no longer stands as handed over in the tree
+    or, STAGED, the index — not one of AREA's, a symbolic link, changed
+    since, or a protocol of the area declaring a result — or None."""
+    protocol = root / record.protocol
+    if protocol not in _protocols(area, root, staged=staged):
+        return (
+            f"its protocol {record.protocol} is not a protocol of the area in "
+            f"the {_state(staged)}"
+        )
+    link = protocol_links(root, [protocol], staged=staged)
+    if link:
+        return link[protocol]
+    text = state_text(root, protocol, staged=staged)
+    if text is None or protocol_fingerprint(text) != record.protocol_sha:
+        return f"{record.protocol} changed since the handover"
+    declaring = declared_results(area, root, staged=staged)
+    if declaring:
+        return f"{declaring[0].relative_to(root).as_posix()} declares a result"
+    return None
 
 
 def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:
@@ -500,18 +530,9 @@ def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:
     state = _state(staged)
     try:
         record = read_record(root, path, staged=staged)
-        protocol = root / record.protocol
-        if (
-            protocol not in _protocols(area, root, staged=staged)
-            or protocol.is_symlink()
-        ):
-            return f"its protocol {record.protocol} is not a protocol of the area in the {state}"
-        text = state_text(root, protocol, staged=staged)
-        if text is None or protocol_fingerprint(text) != record.protocol_sha:
-            return f"{record.protocol} changed since the handover"
-        declaring = declared_results(area, root, staged=staged)
-        if declaring:
-            return f"{declaring[0].relative_to(root).as_posix()} declares a result"
+        changed = _protocol_mismatch(area, root, record, staged=staged)
+        if changed:
+            return changed
         report = report_destination(root, root / record.report)
         written = state_text(root, report, staged=staged)
         if written is None:

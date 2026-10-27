@@ -24,7 +24,7 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
-from labkit.formats.repo import adopt_command, git_root, repo_protocols
+from labkit.formats.repo import adopt_command, git_root, protocol_link, repo_protocols
 from labkit.formats.findings import audit_record_gap
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding
 from labkit.formats.protocol_history import (
@@ -667,11 +667,16 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
 
 
 def check_files(files: list[Path], tmpl: set[str]) -> bool:
-    """Check and print every protocol in FILES; True when any blocks.
-    The repo's protocol ids are read once per repo for this call."""
+    """Check and print every protocol in FILES; True when any blocks, a
+    symbolic link among them too (`repo.protocol_link`). The repo's
+    protocol ids are read once per repo for this call."""
     ids_by_root: dict[Path | None, dict[str, list[Path]]] = {}
     failed = False
     for f in files:
+        if f.is_symlink():
+            print(protocol_link(f, "tree"))
+            failed = True
+            continue
         try:
             text = f.read_text(encoding="utf-8")
         except OSError as exc:
