@@ -358,8 +358,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
 <!-- labkit:route -->
 **Trace it.**
 - Contract and reported answer: `PROTOCOL-{slug}.md`
-- Runs and provenance: `runlog .`
-- Effective values: `labkit-params .`
+- Runs and provenance: `runlog experiments/{nn}-{slug}` (from the repo root)
+- Effective values: `labkit-params experiments/{nn}-{slug}`
 - Where the ids are decided: `scripts/01_measure.py:evaluate_rows`
 - Immutable record: `config.json` of the chosen run under `runs/`
 <!-- /labkit:route -->

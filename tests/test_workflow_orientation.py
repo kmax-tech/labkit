@@ -30,6 +30,14 @@ class WorkflowOrientation(unittest.TestCase):
                 positions = [route.index(stage) for stage in stages]
                 self.assertEqual(positions, sorted(positions), route)
 
+    def test_the_area_route_names_the_area_from_the_root(self):
+        # `runlog .` from the root, as AGENTS.md asks, read the repo as an
+        # area (audit 2026-10-27, third, I10)
+        text = scaffold.area_readme("01", "example", standard_contract.COMPUTE, False)
+        self.assertIn("`runlog experiments/01-example`", text)
+        self.assertIn("`labkit-params experiments/01-example`", text)
+        self.assertNotIn("`runlog .`", text)
+
     def test_model_raw_output_is_listed_after_the_run_in_the_contract(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):

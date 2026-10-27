@@ -276,6 +276,23 @@ class TestStartWaitsForTheRun(unittest.TestCase):
             self.assertIn("still starting", out)
 
 
+class TestTheLabRootIsNoArea(unittest.TestCase):
+    def test_runlog_on_the_lab_root_refuses(self):
+        # `runlog .` from the root read the repo as an area: "no open runs",
+        # and --wait idle while a measurement ran (audit 2026-10-27, third, I10)
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "experiments" / "01-x").mkdir(parents=True)
+            for argv in ([d], [d, "--wait", "--max-seconds", "1"]):
+                with self.subTest(argv=argv):
+                    err = io.StringIO()
+                    with contextlib.redirect_stderr(err):
+                        code, out = _run_main(argv)
+                    self.assertEqual(code, 2, out + err.getvalue())
+                    self.assertIn("is the lab root", err.getvalue())
+            code, _ = _run_main([str(Path(d) / "experiments" / "01-x")])
+            self.assertEqual(code, 0)
+
+
 class TestStartNamesTheArea(unittest.TestCase):
     """The area is named, not guessed: the default log lands in its output/,
     and the printed wait command names it. Before, the log went to output/

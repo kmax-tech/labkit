@@ -306,6 +306,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`runlog` refuses the lab root.** The area README said `runlog .` and
+  `labkit-params .`; run from the root, as AGENTS.md asks, `runlog`
+  read the repo as an area — "no open runs", and `--wait` idle while a
+  measurement ran. `runlog` refuses a directory that holds `experiments/`
+  and names the form; the README names the area from the root
+  (`runlog experiments/NN-name`). Audit 2026-10-27 (third), I10.
 - **An unreadable protocol is a refusal at the stop and the commit.**
   Since the release gate read protocols through `repo.state_text`, a
   protocol it could not open (a permission error) ended `report-check`
