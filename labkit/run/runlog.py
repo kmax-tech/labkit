@@ -88,7 +88,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit.formats.runs import metrics_path, run_path, runs_path
+from labkit.formats.runs import metrics_path, patch_path, run_path, runs_path
 from labkit.run import batch
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
@@ -523,7 +523,7 @@ class Run:
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if repo.head_sha(self.base) and repo.tree_dirty(self.base):
             write_atomic(
-                self.dir / "uncommitted.patch",
+                patch_path(self.dir),
                 repo.git(["diff", "HEAD"], self.base) or "",
             )
 

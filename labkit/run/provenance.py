@@ -31,6 +31,8 @@ from labkit.formats.runs import (
     NO_GIT,
     RECORD_SHA_CHARS,
     recorded_path,
+    script_copy_path,
+    untracked_copy_path,
 )
 
 
@@ -467,7 +469,7 @@ def snapshot_script(run_dir: Path) -> str:
         if not src.is_file():
             return "no-script"
         body = src.read_bytes()
-        write_atomic_bytes(run_dir / f"script-source{src.suffix or '.txt'}", body)
+        write_atomic_bytes(script_copy_path(run_dir, src.suffix), body)
         # the hash of the bytes copied, not of a second read: a save in
         # between left a record whose hash matched no stored script
         return digest(body)
@@ -530,7 +532,7 @@ def snapshot_untracked_sources(run_dir: Path) -> list[str]:
         try:
             if not srcf.is_file() or srcf.stat().st_size > _SNAPSHOT_CAP:
                 continue
-            dest = run_dir / "source-untracked" / relp
+            dest = untracked_copy_path(run_dir, rel)
             dest.parent.mkdir(parents=True, exist_ok=True)
             write_atomic_bytes(dest, srcf.read_bytes())
             copied.append(rel)

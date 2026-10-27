@@ -192,6 +192,24 @@ def metrics_path(run_dir: Path) -> Path:
     return run_dir / METRICS_FILE
 
 
+def script_copy_path(run_dir: Path, suffix: str) -> Path:
+    """RUN_DIR's copy of the script as it ran (`script-source<SUFFIX>`;
+    `.txt` for a script without one)."""
+    return run_dir / f"script-source{suffix or '.txt'}"
+
+
+def patch_path(run_dir: Path) -> Path:
+    """RUN_DIR's `uncommitted.patch`: the tree's `git diff HEAD` at the
+    start, written only when tracked files differed from the commit."""
+    return run_dir / "uncommitted.patch"
+
+
+def untracked_copy_path(run_dir: Path, rel: str) -> Path:
+    """RUN_DIR's copy of REL, an untracked file beside an untracked script
+    (`source-untracked/<REL>`, REL relative to the script's directory)."""
+    return run_dir / "source-untracked" / rel
+
+
 def write_failure(
     run_dir: Path, exc_type: type[BaseException], exc: BaseException | None
 ) -> Path:
@@ -569,7 +587,7 @@ def run_summary(run_dir: Path) -> RunSummary:
 def summarize(run_dir: Path, cfg: RunConfig) -> RunSummary:
     """The RunSummary of RUN_DIR from CFG, its config.json as already read
     (`run_dirs`) — a listing reads each run once, not once per fact."""
-    patch = run_dir / "uncommitted.patch"
+    patch = patch_path(run_dir)
     return RunSummary(
         run_id=run_dir.name,
         state=run_state(run_dir, alive=False),
