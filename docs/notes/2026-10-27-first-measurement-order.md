@@ -60,3 +60,6 @@ provably preceded is first, and the registration is held at each:
   as before; its binding is unknowable.
 - The clock still orders other things: the answering run (newest by name)
   and the stop hook's session runs (`claude_hooks`, by the time in the id).
+  2.2 protects the registration, not every choice of a run: which run
+  answers can still depend on the time zone it was started under (open,
+  related to A13).

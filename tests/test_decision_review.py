@@ -352,6 +352,32 @@ class TheCall(unittest.TestCase):
         self.assertIn("a review nobody can read", out)
         self.assertIn("review again", out)
 
+    def test_an_again_draw_alone_releases_nothing(self):
+        """`--again` on a decision never reviewed skipped the contested check
+        and its `upheld` released the decision, though the rule decided for
+        both reviews is that an `--again` draw releases nothing (2026-10-27).
+        The record says it was one, its verdicts count, and the exit says
+        the state. The twin: a review without `--again` on the same state
+        releases it."""
+        area, record = area_with(
+            [BLOCKER], {1: ("accepted", "Finding noted", "stands")}
+        )
+        rc, out, _, sent = run_review(area, UPHELD, "--again")
+        self.assertEqual((rc, len(sent)), (1, 1))
+        self.assertIn("(--again, it releases nothing)", out)
+        rec = findings.read(record)
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        found = reviews.area_reviews(area)
+        self.assertTrue(found[0].again)
+        self.assertFalse(reviews.upholding(rec, 1, found, text))
+        self.assertIn(
+            "only `--again` draws said upheld", reviews.state(rec, 1, found, text)
+        )
+        rc, out, _, _ = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("review state: every decision reviewed is released", out)
+        self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
+
     def test_a_rejected_decision_is_not_released_by_a_later_draw(self):
         """Review 2026-10-22: the newest matching review won, so an unchanged
         rejected could be re-reviewed until an upheld came. Now every draw
@@ -366,8 +392,10 @@ class TheCall(unittest.TestCase):
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("another draw settles nothing", err)
         self.assertIn("decide again", err)
-        rc, _, _, sent = run_review(area, UPHELD, "--again")
-        self.assertEqual((rc, len(sent)), (0, 1))  # the draw itself says upheld…
+        rc, out, _, sent = run_review(area, UPHELD, "--again")
+        # the draw itself says upheld, the exit the state: held
+        self.assertEqual((rc, len(sent)), (1, 1))
+        self.assertIn("review state: held — finding(s) 1 not released", out)
         rec = findings.read(record)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         found = reviews.area_reviews(area)
@@ -557,9 +585,16 @@ class TheFile(unittest.TestCase):
         area = Path(tempfile.mkdtemp())
         d = reviews.Decision(1, "a" * 12, "upheld", "fine")
         path = reviews.write_review(
-            area, "opus", "r.toml", "s" * 12, "h" * 12, "c" * 12, [d]
+            area, "opus", "r.toml", "s" * 12, "h" * 12, "c" * 12, [d], again=False
         )
         self.assertEqual(reviews.read_review(path).counts, (1, 0, 0))
+        text = path.read_text(encoding="utf-8")
+        # a review written before `again` was recorded is not read: whether
+        # it was an `--again` draw cannot be told
+        path.write_text(text.replace("again = false\n", ""), encoding="utf-8")
+        with self.assertRaisesRegex(reviews.ReviewError, "again is missing"):
+            reviews.read_review(path)
+        path.write_text(text, encoding="utf-8")
         text = path.read_text(encoding="utf-8")
         path.write_text(text.replace("upheld = 1", "upheld = 2"), encoding="utf-8")
         with self.assertRaisesRegex(reviews.ReviewError, "counts"):
@@ -570,7 +605,9 @@ class TheFile(unittest.TestCase):
         with self.assertRaisesRegex(reviews.ReviewError, "verdict 'ok'"):
             reviews.read_review(path)
         with self.assertRaisesRegex(ValueError, "reviewed twice"):
-            reviews.write_review(area, "opus", "r.toml", "s", "h", "c", [d, d])
+            reviews.write_review(
+                area, "opus", "r.toml", "s", "h", "c", [d, d], again=False
+            )
         self.assertEqual(
             findings.written_order(path),
             ("".join(path.name.split("-review")[:1]), 1, path.name),
@@ -578,7 +615,9 @@ class TheFile(unittest.TestCase):
         # a second review of the minute: numbered before the suffix, read as
         # a review and never as a findings record
         path.write_text(text, encoding="utf-8")
-        second = reviews.write_review(area, "opus", "r.toml", "s", "h", "c", [d])
+        second = reviews.write_review(
+            area, "opus", "r.toml", "s", "h", "c", [d], again=False
+        )
         self.assertTrue(second.name.endswith("-review-2.toml"), second.name)
         self.assertEqual([r.path for r in reviews.area_reviews(area)], [path, second])
         self.assertEqual(findings.area_records(area), [])
@@ -657,7 +696,7 @@ class Journal(unittest.TestCase):
         journal: one that no attempt names stands as it is."""
         area, record = area_with([BLOCKER], {1: ("accepted", "in-sample", "stands")})
         d = reviews.Decision(1, "a" * 12, "upheld", "fine")
-        reviews.write_review(area, "opus", record.name, "s", "h", "c", [d])
+        reviews.write_review(area, "opus", record.name, "s", "h", "c", [d], again=False)
         self.assertEqual(attempts.read_journal(area), [])
         self.assertEqual(attempts.area_gaps(area).blockers, [])
 

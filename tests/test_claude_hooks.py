@@ -897,23 +897,29 @@ class Stop(unittest.TestCase):
         transcript began: nothing was missed, nothing is said."""
         self.assertEqual(self._stop(), (0, "", ""))
 
-    def test_without_a_transcript_the_missing_base_is_said_and_not_kept(self):
-        """No base and no transcript start: the session's commits are not
-        read. The stop said so and then, clean, kept HEAD as its base — past
-        the commits it had just not checked, so no later stop read them
-        (cold review 2026-10-27). It keeps none; the twin, a clean stop with
-        its commits read, keeps HEAD (the stops above)."""
+    def test_without_a_transcript_the_missing_base_holds_and_keeps_none(self):
+        """No base and no transcript start: the session's commits cannot be
+        read. The stop said so, passed, and kept HEAD as its base — past the
+        commits it had just not checked (cold review 2026-10-27). A check
+        that cannot run is not clean: it holds, once per turn, keeps no
+        base, and names the way out — the files checked by hand, then a
+        Bash command keeps a base. The twin: a clean stop with its commits
+        read keeps HEAD (the stops above)."""
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "a commit the stop cannot date")
         path = claude_hooks.stop_base_file(self.root, "s1")
         assert path is not None
-        rc, _, err = _run(
-            claude_hooks.stop,
-            {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": False},
-        )
-        self.assertEqual(rc, 0, err)
+        event = {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": False}
+        rc, _, err = _run(claude_hooks.stop, event)
+        self.assertEqual(rc, 2, err)
         self.assertIn("no stop base and no transcript start", err)
+        self.assertIn("report-check --if-reported", err)
         self.assertFalse(path.exists())
+        rc, _, _ = _run(claude_hooks.stop, {**event, "stop_hook_active": True})
+        self.assertEqual(rc, 0)  # once per turn
+        _run(claude_hooks.pre_run, {**_bash(self.root, "ls"), "session_id": "s1"})
+        self.assertTrue(path.exists())  # the way out: a Bash command keeps a base
+        self.assertEqual(_run(claude_hooks.stop, event)[0], 0)
 
     def test_the_stop_holds_when_its_checks_outrun_its_budget(self):
         """A stop Claude Code cancels at its timeout holds nothing: the

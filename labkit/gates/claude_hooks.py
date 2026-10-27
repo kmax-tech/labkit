@@ -676,13 +676,15 @@ def keep_stop_base(repo: Path, event: dict) -> None:
 class SessionCommits(NamedTuple):
     """What the session committed, as the stop reads it: the PATHS the
     commits touched, a NOTE when the reading is not the plain one (a base
-    gone or off HEAD's line), and UNCHECKED when commits of the session may
-    be among none of those paths — then the stop's base must not move past
-    them, or no later stop would ever check them."""
+    gone or off HEAD's line), UNCHECKED when commits of the session may be
+    among none of those paths — then the stop's base must not move past
+    them, or no later stop would ever check them — and HOLD when no check
+    of them could run at all: a check that cannot run is not clean."""
 
     paths: list[Path]
     note: str
     unchecked: bool = False
+    hold: bool = False
 
 
 def committed_in_session(repo: Path, event: dict) -> SessionCommits:
@@ -726,16 +728,20 @@ def committed_since_transcript(repo: Path, event: dict) -> SessionCommits:
     commit came before the session's first Bash command. Only the session's
     commits, never every protocol of the repo: an old area must not hold
     every stop. ([], "") when nothing is dated since: nothing was missed.
-    No transcript to date the session by: none checked, said, and
-    UNCHECKED. The limit: a commit date is the commit's own word."""
+    No transcript to date the session by: none checked, said, UNCHECKED
+    and HOLD — the stop holds, once per turn, with the way out. The limit: a
+    commit date is the commit's own word."""
     start = _transcript_start(event.get("transcript_path"))
     if start is None:
         return SessionCommits(
             [],
             "the session has no stop base and no transcript start to stand in "
-            "for it — the commits of this session are not checked here, and no "
-            "base is kept past them; the commit gate still holds",
+            "for it — its commits cannot be checked, and a check that cannot run "
+            "is not clean: check the files your commits touched by hand "
+            "(`report-check --if-reported <path>…`; `git log --name-only` lists "
+            "them), then any Bash command keeps a stop base for the next stop",
             unchecked=True,
+            hold=True,
         )
     base = head_before(repo, start)
     if base is None or base == head_sha(repo):
@@ -905,7 +911,7 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     # commits it could not read keep the base where it is: past them, no
     # later stop would check them
     return (
-        rc != 0 or bool(undecided),
+        rc != 0 or bool(undecided) or session.hold,
         not in_tree and not session.unchecked,
         checked_head,
     )

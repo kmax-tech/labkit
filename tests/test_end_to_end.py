@@ -19,6 +19,7 @@ import contextlib
 import importlib.util
 import io
 import json
+from datetime import datetime, timezone
 import os
 import re
 import subprocess
@@ -57,6 +58,17 @@ class Lab:
 
     def __init__(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
+        # the session's transcript, its first record dated as the lab is made:
+        # the stop dates the session's commits by it
+        self.transcript = Path(self.tmp.name) / "session.jsonl"
+        when = datetime.now(timezone.utc)
+        self.transcript.write_text(
+            json.dumps(
+                {"type": "user", "timestamp": when.isoformat(timespec="milliseconds")}
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         self.root = Path(self.tmp.name) / "lab"
         self.root.mkdir()
         scaffold.stamp_lab(self.root, "lab")
@@ -186,7 +198,13 @@ class Lab:
             contextlib.redirect_stderr(err),
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            rc = claude_hooks.stop({"cwd": str(self.root), "session_id": "e2e"})
+            rc = claude_hooks.stop(
+                {
+                    "cwd": str(self.root),
+                    "session_id": "e2e",
+                    "transcript_path": str(self.transcript),
+                }
+            )
         return rc, err.getvalue()
 
     def pre_commit(self, *paths: Path) -> tuple[int, str]:

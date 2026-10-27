@@ -66,6 +66,12 @@ CRITERION_N = promises.CRITERION_N_KEY
 #: what a script search in an area passes over: run records, outputs, data
 _NOT_CODE = frozenset({"runs", "output", "data", "__pycache__", ".git"})
 ANEW = "or measure anew and audit that run"
+#: the way out of a code change since the run, the fix first: restoring the
+#: old code removes the difference, not a fault the change corrected
+FIX_FIRST = (
+    "measure anew with the code as it is now and audit that run; only when the "
+    "change was not meant, restore it as it ran"
+)
 
 
 def code_since_run(area: Path, answering_run: Path) -> tuple[list[str], list[str]]:
@@ -82,8 +88,10 @@ def code_since_run(area: Path, answering_run: Path) -> tuple[list[str], list[str
     seen, and a module in another repository (a submodule, a link out of
     the repository) is a warning, not compared. Analysis code and the pin
     are not compared: a fix there needs no new measurement. Each blocker
-    names its way out — the command that restores the code as it ran, or
-    measuring anew. Read-only."""
+    names its way out, the fix first: measure anew with the code as it is
+    and audit that run — restoring the old code removes the difference,
+    not a fault the change corrected —, and only for a change not meant,
+    the command that restores the code as it ran. Read-only."""
     try:
         chain = lineage(answering_run)
     except ValueError as exc:
@@ -110,13 +118,17 @@ def _run_code(area: Path, run: Path) -> tuple[list[str], list[str]]:
     script = _script_of(area, cfg)
     kept = script_copy_path(run, Path(cfg.script).suffix)
     if isinstance(script, str):
-        return [f"{rid}: {script} — restore it from {shown(kept, here)} {ANEW}"], []
+        return [
+            f"{rid}: {script} — measure anew with the script where it is now and "
+            f"audit that run; only when it was moved or deleted by mistake, restore "
+            f"it from {shown(kept, here)}"
+        ], []
     out: list[str] = []
     if file_digest(script)[:DIGEST_CHARS] != cfg.script_sha:
         out.append(
             f"{shown(script, here)} changed since {rid} ran it — its number came from "
-            f"other code: restore the script as it ran (`cp "
-            f"{shlex.quote(shown(kept, here))} {shlex.quote(shown(script, here))}`) {ANEW}"
+            f"other code: {FIX_FIRST} (`cp "
+            f"{shlex.quote(shown(kept, here))} {shlex.quote(shown(script, here))}`)"
         )
     repo = git_root(area)
     try:
@@ -177,9 +189,8 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             if not copy.is_file() or copy.read_bytes() != f.read_bytes():
                 out.append(
                     f"{shown(f, here)} changed since {rid} ran it (it was untracked; "
-                    f"the run kept it as {shown(copy, here)}) — restore it from there "
-                    f"(`cp {shlex.quote(shown(copy, here))} {shlex.quote(shown(f, here))}`) "
-                    f"{ANEW}"
+                    f"the run kept it as {shown(copy, here)}) — {FIX_FIRST} "
+                    f"(`cp {shlex.quote(shown(copy, here))} {shlex.quote(shown(f, here))}`)"
                 )
         elif repo is not None and not _in_repo(f, repo):
             warnings.append(
@@ -226,9 +237,9 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         elif then[f] != now[f]:
             blob = then[f]
             out.append(
-                f"{shown(f, here)} changed since {rid} ran — restore it as the run's "
-                f"tree held it (`git -C {shlex.quote(shown(repo, here))} cat-file blob "
-                f"{blob} > {shlex.quote(shown(f, here))}`) {ANEW}"
+                f"{shown(f, here)} changed since {rid} ran — {FIX_FIRST} "
+                f"(`git -C {shlex.quote(shown(repo, here))} cat-file blob "
+                f"{blob} > {shlex.quote(shown(f, here))}`)"
             )
     return out, warnings
 

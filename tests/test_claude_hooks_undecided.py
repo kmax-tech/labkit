@@ -70,9 +70,17 @@ class Undecided(unittest.TestCase):
         return p
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:
+        # a session as Claude Code starts one: its transcript dates it
+        if not hasattr(self, "transcript"):
+            self.transcript = _transcript()
         return _run(
             claude_hooks.stop,
-            {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": active},
+            {
+                "session_id": "s1",
+                "cwd": str(self.root),
+                "stop_hook_active": active,
+                "transcript_path": str(self.transcript),
+            },
         )
 
     def test_an_open_blocker_in_a_touched_area_sends_the_agent_back(self):
@@ -91,8 +99,9 @@ class Undecided(unittest.TestCase):
 
     def test_the_committed_record_blocks_once_the_area_is_touched_again(self):
         self._record(self.area, [BLOCKER])
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "audit")
+        with _dated(3600):  # committed before the session
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", "audit")
         rc, _, _ = self._stop()
         self.assertEqual(rc, 0)  # nothing of this area changed in the session
         self._touch(self.area)
@@ -129,8 +138,9 @@ class Undecided(unittest.TestCase):
 
     def test_an_untouched_area_does_not_block(self):
         self._record(self.other, [BLOCKER])
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "audit elsewhere")
+        with _dated(3600):  # committed before the session
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", "audit elsewhere")
         self._touch(self.area)
         rc, _, err = self._stop()
         self.assertEqual(rc, 0, err)
@@ -280,11 +290,14 @@ class Undecided(unittest.TestCase):
         path = self._record(self.area, [BLOCKER])
         sub = self.root / "experiments"
         os.environ["CLAUDE_PROJECT_DIR"] = str(sub)
+        event = {
+            "session_id": "s1",
+            "cwd": str(sub),
+            "stop_hook_active": False,
+            "transcript_path": str(_transcript()),
+        }
         try:
-            rc, _, err = _run(
-                claude_hooks.stop,
-                {"session_id": "s1", "cwd": str(sub), "stop_hook_active": False},
-            )
+            rc, _, err = _run(claude_hooks.stop, event)
             self.assertEqual(rc, 2, err)
             self.assertIn(f"experiments/01-x: {path.name}", err)
             _git(self.root, "add", "-A")
@@ -301,13 +314,11 @@ class Undecided(unittest.TestCase):
                         ["undecided", "experiments/02-y/scripts/01_measure.py"]
                     )
                 self.assertEqual(rc, 0)
-            _git(self.root, "add", "-A")
-            _git(self.root, "commit", "-qm", "audit")
+            with _dated(3600):  # the audit committed before the session
+                _git(self.root, "add", "-A")
+                _git(self.root, "commit", "-qm", "audit")
             self._touch(self.other)
-            rc, _, err = _run(
-                claude_hooks.stop,
-                {"session_id": "s1", "cwd": str(sub), "stop_hook_active": False},
-            )
+            rc, _, err = _run(claude_hooks.stop, event)
             self.assertEqual(rc, 0, err)
         finally:
             os.environ.pop("CLAUDE_PROJECT_DIR", None)

@@ -1091,42 +1091,45 @@ Forschung und Benchmark-Fallliste liegen in
 
 ### Phase-2-Reste (2026-10-27)
 
+Entschieden 2026-10-27 (Autor), umgesetzt:
+
+1. `--review --again` gibt nichts frei; der Exit sagt den Stand
+   (Vertragsfehler, kein offener Grundsatz).
+2. Ohne Stop-Basis und ohne Transkript hält der Stop: eine Prüfung, die
+   nicht laufen kann, gilt nicht als sauber.
+3. 2.1: Der erste Ausweg ist „korrigieren → neu messen → auditieren“;
+   den alten Code wiederherstellen nur bei einer ungewollten Änderung.
+4. 2.2 schützt die Registrierung, nicht jede Laufauswahl — Grenze in
+   CHANGELOG und Note genannt.
+
 Offen, Entscheidung des Autors:
 
-1. `labkit-audit --review --again` endet wie früher `--report-review
-   --again` mit dem Ergebnis des Zugs, nicht des Stands; ein bestätigender
-   `--again`-Zug auf einer nie geprüften Entscheidung gibt frei, und der
-   Record hält `again` nicht (`decision_review.py`,
-   `tests/test_decision_review.py:369`). Empfehlung: denselben Vertrag wie
-   2.8 (Exit = Stand, Zug und Stand getrennt gedruckt).
-2. Eine Sitzung, die unter dem Repo-Root startet, lädt laut Claude-Code-Doku
+5. Eine Sitzung, die unter dem Repo-Root startet, lädt laut Claude-Code-Doku
    keine Projekt-Hooks aus der `.claude/settings.json` des Roots. Nur
    dokumentieren („Claude Code im Repo-Root starten“) oder anders
    installieren. Empfehlung: dokumentieren.
-3. Ohne Stop-Basis sagt der Stop es, aber bei Exit 0 erreicht der Satz den
-   Agenten nicht; ohne Basis und ohne Transkript hält er nicht (legt aber
-   seit `cd2e8a4` auch keine Basis mehr über die ungelesenen Commits).
-   Empfehlung: nur den zweiten Fall halten (eine Prüfung, die nicht laufen
-   kann, hält) und den ersten so lassen.
+
+Als Nächstes: der Reparaturfall (Phase 0.3) vor jedem weiteren
+Härtungspaket; Tests und Reviews ersetzen die Ausführungsprobe nicht.
 
 Notiert, nicht gemacht:
 
-4. Der antwortende Lauf ist weiter der neueste nach Namen
+6. Der antwortende Lauf ist weiter der neueste nach Namen
    (`answering_run.bound_answering_run`); die Zeitzone kann steuern, welcher
    Lauf antwortet (verwandt A13). Ebenso vergleicht `record_session` im
    Stop-Hook die Ortszeit der Lauf-id mit dem Sitzungsbeginn.
-5. Läufe mit unlesbarer `config.json` überspringt die Bestimmung der ersten
+7. Läufe mit unlesbarer `config.json` überspringt die Bestimmung der ersten
    Messung still (wie vorher); `git` und `git_full` im Record werden nicht
    gegeneinander geprüft (gehört zu 2.5); `undecided --staged` bestimmt die
    Bereiche aus den Protokollen im Baum, nicht im Index (2.5).
-6. Berichte unter einem Verzeichnis-Link (`reports -> data/reports`)
+8. Berichte unter einem Verzeichnis-Link (`reports -> data/reports`)
    erreicht `report_files` nicht; ein Kreis aus Links lässt
    `affected_protocols` laut abbrechen; Protokolle als Links sind
    ungeregelt.
-7. Das Stop-Budget (90 s) an echten Repos messen: ein Bereich mit Tests
+9. Das Stop-Budget (90 s) an echten Repos messen: ein Bereich mit Tests
    über 90 s hält jeden Stop einmal pro Zug. pre-run hat dasselbe
    Zeitproblem (Hook-Timeout 120 s, Bereichstests bis 300 s).
-8. Ein Ledger der vom Pre-commit geprüften Tree-Hashes zeigte Commits, die
+10. Ein Ledger der vom Pre-commit geprüften Tree-Hashes zeigte Commits, die
    an ihm vorbeigingen (`--no-verify`); nicht gebaut.
 
 ### Phase-1-Reste (2026-10-27)

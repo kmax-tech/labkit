@@ -362,8 +362,12 @@ def review(
     again: bool = False,
 ) -> int:
     """The command: gather, one call, parse, write the review, print the
-    verdicts. Exit 0 every decision upheld, 1 not every one, 2 no review —
-    among the refusals a contested state (`contested_gap`) unless AGAIN."""
+    draw's verdicts and, apart, the state they leave (`held_after`). The
+    exit says the state, not the draw: 0 every decision reviewed is
+    released (`reviews.upholding`), 1 not every one — a verdict of this or
+    an earlier draw holds it, or only `--again` draws said upheld —, 2 no
+    review; among the refusals a contested state (`contested_gap`) unless
+    AGAIN, whose draw counts and releases nothing."""
     try:
         chosen = the_protocol(area, protocol)
         rec = _record(area, record)
@@ -408,6 +412,7 @@ def review(
                 evidence.shown_sha,
                 evidence.claim_sha,
                 decisions,
+                again=again,
             )
             running.end("record", file=attempts.under_audits(area, written))
     except (
@@ -425,10 +430,20 @@ def review(
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     u, r, i = reviews.counts_of(decisions)
+    held = held_after(area, chosen, rec, [d.finding for d in decisions])
     print()
     print(
-        f"review: {shown(written, Path.cwd())} — {u} upheld, {r} rejected, "
-        f"{i} insufficient; only `upheld` releases a `stands`."
+        f"review: this draw{' (--again, it releases nothing)' if again else ''} "
+        f"— {u} upheld, {r} rejected, {i} insufficient, recorded in "
+        f"{shown(written, Path.cwd())}"
+    )
+    print(
+        "review state: "
+        + (
+            f"held — finding(s) {', '.join(map(str, held))} not released"
+            if held
+            else "every decision reviewed is released"
+        )
     )
     if r:
         print(
@@ -443,4 +458,16 @@ def review(
             "  insufficient: supply the evidence the reviewer names (in the "
             "protocol or the run's outputs) and review again"
         )
-    return 0 if r == 0 and i == 0 else 1
+    return 1 if held else 0
+
+
+def held_after(
+    area: Path, protocol: Path, record: findings.Record, numbers: list[int]
+) -> list[int]:
+    """The findings among NUMBERS of RECORD the area's reviews, read back,
+    do not release (`reviews.upholding`, under the claim PROTOCOL makes
+    now) — every draw on the state counted, an `--again` draw releasing
+    nothing."""
+    text = protocol.read_text(encoding="utf-8")
+    found = reviews.area_reviews(area)
+    return [n for n in numbers if not reviews.upholding(record, n, found, text)]

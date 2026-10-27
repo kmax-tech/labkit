@@ -120,8 +120,9 @@ twice. Then the stations: the head's declared run is the answering run
 promises against its metrics; the code it ran — the measurement script
 and the modules it imports, not the analysis code or the pin — and the
 declared scopes unchanged since it ran (a fix after the run means:
-restore the code as it ran, or measure anew and audit that run); no
-field left open; at `low` the source frozen in the run and
+measure anew with the fixed code and audit that run — restoring the old
+code removes the difference, not the fault; it is the way out only for a
+change not meant); no field left open; at `low` the source frozen in the run and
 source and output tracked in git; the area test; the denominators; the
 audit records — one of a deleted run is a blocker. Clean means the run
 can carry a number; it does not release one.
@@ -163,7 +164,10 @@ and the run as shown, and says per decision `upheld`, `rejected` or
 it is bound to the decision and the Conclusion as reviewed — change
 either and the review is stale. `rejected` means deciding again (limit the
 Conclusion, change the effect, fix the fault), not drawing again; the
-command refuses a second draw on an unchanged state. Deciding again is
+command refuses a second draw on an unchanged state. `--again` draws
+anyway: its verdicts count, and it releases nothing — an `upheld` from
+`--again` draws alone releases no decision. The exit says the state, not
+the draw: 0 every decision reviewed released, 1 one held. Deciding again is
 not closing: once a review did not uphold a decision on a finding, a
 `dismissed`, `fixed` or `deferred` on it is under review as well — the
 reviewer is asked whether the reason shows the finding inapplicable, the

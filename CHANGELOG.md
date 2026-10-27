@@ -9,6 +9,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **An `--again` decision review releases nothing, and `--review` exits
+  with the state.** `labkit-audit --review --again` skipped the contested
+  check, so on a decision never reviewed its `upheld` released the
+  decision, though the rule decided for both reviews is that an `--again`
+  draw releases nothing; and the exit was the draw's. A review record now
+  says whether it was an `--again` draw (`[review] again`); its verdicts
+  count, and a decision is released only when a review that is no
+  `--again` draw upheld it and none said otherwise (`reviews.upholding`).
+  Every draw prints its verdicts and the state apart, and the exit says
+  the state: 0 every decision reviewed released, 1 one held, 2 no review.
+  A review record without `again` is no longer read; 0.103.0 is the last
+  version that reads one — review again.
 - **The first measurement is the one git's history puts first, not the
   clock.** report-check holds the low registration to the commit of the
   first measurement, and that was the oldest run by name. A run id is
@@ -27,8 +39,11 @@ pins (`requirements.txt` / `requirements.lock`).
   whose commit is not recorded or not in the clone — the latter a new
   blocker naming the commit to fetch; until now such a run was held only
   when its name sorted first. No new field, no schema change. 0.103.0 is
-  the last version that orders by run id. Rule, rejected alternatives and
-  limits: `docs/notes/2026-10-27-first-measurement-order.md`.
+  the last version that orders by run id. Limit: this protects the
+  registration, not every choice of a run — the answering run is still the
+  newest bound run by run id, local time, so which run answers can still
+  depend on the time zone it was started under. Rule, rejected
+  alternatives and limits: `docs/notes/2026-10-27-first-measurement-order.md`.
 - **finalize and report-check hold a number whose code changed since its
   run.** No gate compared the code that produced the answering run's
   number with the code now: a script fixed after the run, with no new
@@ -40,9 +55,11 @@ pins (`requirements.txt` / `requirements.lock`).
   `src/` (`scope_sha.measured_code`) — with the tree the run started from
   (its commit with the part of its `uncommitted.patch` for that module,
   `repo.blobs_then`); an untracked sibling against the run's copy. Each
-  difference is a blocker naming the command that restores the code as
-  it ran (`cp` of the run's copy, `git cat-file blob <id> > <path>`), or
-  measuring anew. A module in another repository (a submodule, a link out
+  difference is a blocker naming the way out, the fix first: measure anew
+  with the code as it is and audit that run — restoring the old code
+  removes the difference, not a fault the change corrected; only for a
+  change not meant, the command that restores the code as it ran (`cp` of
+  the run's copy, `git cat-file blob <id> > <path>`). A module in another repository (a submodule, a link out
   of the repository) is a warning, not compared. A run now keeps its
   patch in a form that applies again whatever the user's diff settings
   (`repo.tree_patch`: binary in full, no colour, no textconv, a/ b/
@@ -264,7 +281,9 @@ pins (`requirements.txt` / `requirements.lock`).
   (`repo.head_before`) — the session's commits, never every protocol;
   pre-run keeps no base past them; a stop that could not read the
   session's commits (no transcript start, a base sharing no commit with
-  HEAD) keeps no base either. Limit: a commit date is the commit's own
+  HEAD) keeps no base either, and with no base and no transcript start the
+  stop holds — a check that cannot run is not clean — naming the check by
+  hand; a Bash command then keeps a base. Limit: a commit date is the commit's own
   word (A12).
 - **The stop runs within its own budget.** Claude Code cancels the stop
   hook at 120 s (`install_hooks.STOP_TIMEOUT_S`) and a cancelled stop holds

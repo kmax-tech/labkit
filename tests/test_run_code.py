@@ -128,6 +128,8 @@ class CodeSinceRun(unittest.TestCase):
             "01_measure.py changed since 2026-10-27T10-00-00_ab12 ran it", line
         )
         self.assertIn("script-source.py", line)
+        # the fix comes first: measuring anew; restoring is for a change not meant
+        self.assertLess(line.index("measure anew"), line.index("restore it as it ran"))
         self.run_printed(line)  # the way back: restored as it ran
         self.assertEqual(self.held(run), [])
 

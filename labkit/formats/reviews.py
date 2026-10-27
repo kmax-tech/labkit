@@ -20,6 +20,7 @@ next to the records:
     scope_sha = "597fafd525d3"   # the code the reviewer read (= the record's)
     shown_sha = "15b62aeeac1f"   # what it was shown of the run (= the record's)
     claim_sha = "0a9c3d7e5b21"   # the claim it judged: the Conclusion (`claim_digest`)
+    again = false                # an `--again` draw: its verdicts count, it releases nothing
     upheld = 1
     rejected = 2
     insufficient = 0
@@ -36,7 +37,8 @@ claim the protocol makes now (`claim_sha`: the Conclusion,
 `protocol_check.reported_claim` — the Recorded results and Limit lines
 are generated from the record and the run and bound through them),
 carries a `[[decision]]` for N whose `decision_sha` is the digest of the
-finding as it stands now, and says `upheld` (`upholding`). A changed
+finding as it stands now, says `upheld`, and is no `--again` draw — at
+least one review on that state must be one (`upholding`). A changed
 reason, effect or status makes the review stale, and so does a rewritten
 claim — the wording of the claim is what separates upheld from rejected
 (replay 2026-10-22: the two upheld decisions were the two whose
@@ -47,8 +49,9 @@ yes. Every draw on one state counts: once a review of the decision as
 decided and claimed now said anything but `upheld`, no later draw
 releases it (`contested`) — the way out is deciding again, with the
 evidence in the reason, or limiting the claim; `labkit-audit --review`
-refuses another draw on such a state unless asked for one as a
-measurement (`--again`). Deciding again does not mean closing: once a
+refuses another draw on such a state unless asked for one (`--again`):
+its verdicts count like any draw's, and it releases nothing — an `upheld`
+from `--again` alone never releases a decision, contested or not. Deciding again does not mean closing: once a
 review of this record did not uphold a decision on a finding
 (`once_not_upheld`), a `dismissed`, `fixed` or `deferred` on it owes an
 upholding review of the new decision as well — the reviewer is asked
@@ -124,6 +127,7 @@ class Review:
     scope_sha: str
     shown_sha: str
     claim_sha: str  # the claim judged (`claim_digest`: the Conclusion then)
+    again: bool  # an `--again` draw: its verdicts count, it releases nothing
     counts: tuple[int, int, int]  # upheld, rejected, insufficient
     decisions: tuple[Decision, ...]
 
@@ -146,10 +150,11 @@ def write_review(
     claim_sha: str,
     decisions: list[Decision],
     *,
+    again: bool,
     now: float | None = None,
 ) -> Path:
-    """Write the review of RECORD's decisions into AREA/audits/ and return
-    its path (`<minute>-review[-n].toml`, never overwriting). Refuses
+    """Write the review of RECORD's decisions into AREA/audits/ — AGAIN when
+    the draw was asked for with `--again` — and return its path (`<minute>-review[-n].toml`, never overwriting). Refuses
     (ValueError) a verdict outside VERDICTS, an empty review and a finding
     number reviewed twice."""
     if not decisions:
@@ -174,6 +179,7 @@ def write_review(
         f"scope_sha = {_s(scope_sha)}",
         f"shown_sha = {_s(shown_sha)}",
         f"claim_sha = {_s(claim_sha)}",
+        f"again = {'true' if again else 'false'}",
         f"upheld = {u}",
         f"rejected = {r}",
         f"insufficient = {i}",
@@ -212,6 +218,12 @@ def read_review(path: Path) -> Review:
                     else ""
                 )
             )
+    if not isinstance(table.get("again"), bool):
+        raise ReviewError(
+            f"{path}: [review] again is missing or not true or false — a review "
+            f"written by labkit 0.103.0 or earlier is not read (whether it was an "
+            f"`--again` draw is not recorded): review again"
+        )
     rows = data.get("decision", [])
     if not isinstance(rows, list) or not rows:
         raise ReviewError(f"{path}: `decision` must be one or more [[decision]] tables")
@@ -230,6 +242,7 @@ def read_review(path: Path) -> Review:
         table["scope_sha"],
         table["shown_sha"],
         table["claim_sha"],
+        table["again"],
         counts_of(decisions),
         decisions,
     )
@@ -319,12 +332,19 @@ def verdicts_on_state(
     so an unchanged `rejected` could be re-reviewed until an `upheld`
     came — the borderline baseline decision came back rejected, upheld,
     upheld and insufficient over four draws)."""
+    return [d for _, d in _on_state(record, n, reviews, text)]
+
+
+def _on_state(
+    record: findings.Record, n: int, reviews: list[Review], text: str
+) -> list[tuple[Review, Decision]]:
+    """`verdicts_on_state` with the review each verdict came from."""
     now = findings.decision_digest(record.findings[n - 1])
-    out: list[Decision] = []
+    out: list[tuple[Review, Decision]] = []
     for r in reviews_of(record, reviews, text):
         d = r.of(n)
         if d is not None and d.decision_sha == now:
-            out.append(d)
+            out.append((r, d))
     return out
 
 
@@ -332,12 +352,15 @@ def upholding(
     record: findings.Record, n: int, reviews: list[Review], text: str
 ) -> bool:
     """Does the review uphold finding N of RECORD as decided now, under the
-    claim TEXT makes now? Yes only when at least one review judged this
-    state and every one of them said `upheld`: `rejected` and
-    `insufficient` do not release, a later draw does not outvote them,
-    and a review of a decision or a claim since changed says nothing."""
-    verdicts = verdicts_on_state(record, n, reviews, text)
-    return bool(verdicts) and all(d.verdict == UPHELD for d in verdicts)
+    claim TEXT makes now? Yes only when at least one review that is no
+    `--again` draw judged this state and every review of it said `upheld`:
+    `rejected` and `insufficient` do not release, a later draw does not
+    outvote them, an `--again` draw's `upheld` releases nothing, and a
+    review of a decision or a claim since changed says nothing."""
+    pairs = _on_state(record, n, reviews, text)
+    return any(not r.again for r, _ in pairs) and all(
+        d.verdict == UPHELD for _, d in pairs
+    )
 
 
 def contested(
@@ -372,6 +395,8 @@ def state(record: findings.Record, n: int, reviews: list[Review], text: str) -> 
         )
     kinds = {d.verdict for d in verdicts}
     if kinds == {UPHELD}:
+        if not upholding(record, n, reviews, text):
+            return f"{NOT_REVIEWED} — only `--again` draws said upheld, and they release nothing"
         return UPHELD
     first = next(d for d in verdicts if d.verdict != UPHELD)
     if len(kinds) == 1 and len(verdicts) == 1:
