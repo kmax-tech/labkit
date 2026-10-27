@@ -26,8 +26,8 @@ from labkit.formats import (
     promises,
     protocol_block,
     protocol_history,
-    protocol_report,
-)  # noqa: E402
+)
+from labkit.checks import protocol_report  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
 from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 

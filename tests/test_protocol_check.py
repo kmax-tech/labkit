@@ -30,9 +30,9 @@ from labkit.formats import (  # noqa: E402
     promises,
     protocol_block,
     protocol_check,
-    protocol_report,
     scope_sha,
-)  # noqa: E402
+)
+from labkit.checks import protocol_report  # noqa: E402
 from protocol_fixture import head, scope_file  # noqa: E402
 
 

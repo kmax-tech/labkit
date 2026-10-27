@@ -72,7 +72,7 @@
         "labkit.checks.notes_check",
         "labkit.tools.params",
         "labkit.gates.preflight",
-        "labkit.formats.protocol_report",
+        "labkit.checks.protocol_report",
         "labkit.tools.protocol_fill",
         "labkit.tools.repo_check",
         "labkit.gates.report_check",

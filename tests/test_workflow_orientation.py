@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.formats import findings, protocol_check, protocol_report, standard_contract
+from labkit.formats import findings, protocol_check, standard_contract
+from labkit.checks import protocol_report
 from labkit.gates import audit
 from labkit.tools import scaffold
 

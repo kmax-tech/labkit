@@ -1081,6 +1081,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`protocol_report` is a check, in `labkit/checks/`.** The
+  `protocol-check` command (47 prints, `main`, `cli`, doctrine imports)
+  stood in layer 1 among the formats. It moved to layer 3; the console
+  script's entry point follows (`labkit.checks.protocol_report:cli`) — an
+  editable install runs `pip install -e .` once to rewrite it. Audit
+  2026-10-27 (third), M5.
 - **The pre-run hook reads preflight's findings, not its printed report.**
   It captured `preflight_area`'s stdout and quoted it back. `preflight_area`
   takes a `Findings` collector as `finalize_area` does; the hook passes a

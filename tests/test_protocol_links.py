@@ -23,8 +23,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.formats import repo  # noqa: E402
-from labkit.formats.protocol_report import check_files, template_lines  # noqa: E402
-from labkit.formats.protocol_report import find_template  # noqa: E402
+from labkit.checks.protocol_report import check_files, template_lines  # noqa: E402
+from labkit.checks.protocol_report import find_template  # noqa: E402
 from labkit.gates import report_check  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 

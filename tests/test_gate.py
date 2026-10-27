@@ -32,7 +32,7 @@ class HelpStatesTheExitContract(unittest.TestCase):
 
     def test_every_mechanical_gate(self):
         from labkit.checks import code_check, intent_check, notes_check
-        from labkit.formats import protocol_report
+        from labkit.checks import protocol_report
         from labkit.gates import finalize, preflight, report_check
 
         for mod in (

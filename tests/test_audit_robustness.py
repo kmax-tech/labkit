@@ -11,7 +11,8 @@ from pathlib import Path
 
 from labkit.checks import intent_check, recheck
 from labkit.run import runlog
-from labkit.formats import promises, protocol_block, protocol_check, protocol_report
+from labkit.formats import promises, protocol_block, protocol_check
+from labkit.checks import protocol_report
 from protocol_fixture import PID, head
 
 C1 = """[[promise]]

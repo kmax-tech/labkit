@@ -146,14 +146,13 @@ from labkit.formats import (
     jsonl,
     protocol_block,
     protocol_check,
-    protocol_report,
     runs,
     standard_contract,
 )
 from labkit.formats.gate import Findings
 from labkit.formats.shell import segments
 from labkit.formats import handovers
-from labkit.checks import notes_check
+from labkit.checks import notes_check, protocol_report
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check
 from labkit.gates.install_hooks import STOP_TIMEOUT_S

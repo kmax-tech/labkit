@@ -25,8 +25,8 @@ from labkit.formats import (  # noqa: E402
     protocol_block,
     protocol_check,
     protocol_history,
-    protocol_report,
 )
+from labkit.checks import protocol_report  # noqa: E402
 from protocol_fixture import PID, head  # noqa: E402
 
 # Every must field of a pilot filled, so the id alone decides the verdict.
