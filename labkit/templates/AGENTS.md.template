@@ -21,7 +21,9 @@ When an audit or gate stops you, run `labkit-audit <area> --findings`
 readable open BLOCKERs, evidence problems and complete decision/handover
 commands. If the first audit failed, it names the failed calls and offers
 the handover, exit 2; there are no findings to decide. Use those paths and
-prerequisites rather than inventing flags or editing records. With no audit
+prerequisites rather than inventing flags or editing records (audit and run
+records; the protocol is yours to edit — its freeze, `preflight_audit` and
+`frozen`, is set by hand in the TOML head). With no audit
 attempt yet, the area's README and `protocol-check <PROTOCOL> --contract`
 name the next step; an area that cannot be finished ends without a result
 through `protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried

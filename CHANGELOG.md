@@ -1080,6 +1080,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`protocol-fill` sets `number_describes`; the freeze says it is set by
+  hand.** A computation with a model owes `[model] number_describes`, but
+  no tool could set it and `--list` never named it; `frozen` and
+  `preflight_audit` answered "no field labelled". `number_describes` is a
+  head choice now (`HEAD_KEYS`, listed and checked against its two
+  values) and the next steps of a computation with a model name it; a
+  fill of a freeze key says how to set it in the TOML head, and AGENTS.md
+  says the protocol is the author's to edit, audit and run records are
+  not. Audit 2026-10-27 (third), I5, I6.
 - **The instructions after a run and before the first audit say one
   thing.** Every skeleton printed the adoption as the next step after a
   run and finalize said adoption followed "once this finalize is clean";

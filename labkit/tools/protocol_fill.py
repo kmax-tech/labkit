@@ -158,7 +158,14 @@ HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     "repeat_cost": ("repeat_cost", protocol_block.REPEAT_COSTS),
     "kind": ("kind", protocol_block.KINDS),
     "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
+    # [model] number_describes, a MUST of a computation with a model that no
+    # tool could set and `--list` never named (audit 2026-10-27, third, I5)
+    "number_describes": ("number_describes", protocol_block.NUMBER_DESCRIBES),
 }
+#: the head's freeze keys: a deliberate edit by the author once preflight is
+#: clean and the preflight audit decided, not a fill — named so a fill of
+#: them says so instead of "no field labelled" (audit 2026-10-27, third, I6)
+FREEZE_KEYS = ("frozen", "preflight_audit")
 #: TOML key → its allowed values (None: free), for `head_open` and `fill_head`
 HEAD_CHOICES: dict[str, tuple[str, ...] | None] = {
     key: choices for key, choices in HEAD_KEYS.values()
@@ -793,8 +800,10 @@ def fill_many(
     line_no: int | None = None,
     force: bool = False,
 ) -> str:
-    """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`
-    and `model alias` (`HEAD_KEYS`), `fill_sentence` for `<id> sentence`;
+    """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`,
+    `model alias` and `number_describes` (`HEAD_KEYS`), `fill_sentence` for
+    `<id> sentence`; the freeze keys (`FREEZE_KEYS`) are refused with how to
+    set them by hand;
     the first ValueError leaves the caller's file untouched — all or
     nothing."""
     for label, value in assignments:
@@ -803,6 +812,14 @@ def fill_many(
         sentence = SENTENCE_LABEL.match(label)
         if sentence and not promises.is_block_id(sentence.group(1).upper()):
             sentence = None  # a prose label such as "Key sentence"
+        if label.strip().lower() in FREEZE_KEYS:
+            raise ValueError(
+                f"{label.strip()} is the freeze, set by hand in the TOML head once "
+                "`preflight` is clean and the preflight audit decided: "
+                '`preflight_audit = "<the record file labkit-audit wrote>"`, '
+                "`frozen = true` — the protocol is the author's to edit; audit and "
+                "run records are not"
+            )
         if label.strip().lower() in HEAD_KEYS:
             text = fill_head(text, HEAD_KEYS[label.strip().lower()][0], value)
         elif sentence:

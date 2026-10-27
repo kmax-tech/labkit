@@ -244,6 +244,33 @@ class HeadType(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "alias: an empty value"):
             protocol_fill.fill_head(text, "alias", " ")
 
+    def test_number_describes_is_listed_and_set_and_the_freeze_says_how(self):
+        # a MUST of a computation with a model that no tool set, and the
+        # freeze keys answered "no field labelled" (audit 2026-10-27, third,
+        # I5, I6)
+        text = self.HEAD.replace(
+            'preflight_audit = "none"\n',
+            'preflight_audit = "none"\n\n[model]\nalias = "haiku"\n'
+            'number_describes = "<model_outputs | target_property>"\n',
+        )
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_fill.main([str(p), "--list"]), 0)
+                rc = protocol_fill.main([str(p), "number_describes=model_outputs"])
+            self.assertEqual(rc, 0)
+            filled = p.read_text(encoding="utf-8")
+        self.assertIn("number_describes", out.getvalue())
+        self.assertIn('number_describes = "model_outputs"', filled)
+        with self.assertRaisesRegex(ValueError, "must be one of"):
+            protocol_fill.fill_many(text, [("number_describes", "outputs")])
+        for key in ("frozen", "preflight_audit"):
+            with self.subTest(key=key):
+                with self.assertRaisesRegex(ValueError, "set by hand in the TOML head"):
+                    protocol_fill.fill_many(text, [(key, "true")])
+
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
             protocol_fill.fill_head(self.HEAD, "type", "descriptive")

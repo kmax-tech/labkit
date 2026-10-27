@@ -1158,6 +1158,13 @@ def step_fields(sk: standard_contract.Skeleton, kind: str, model: bool) -> str:
             "; a model is named: also prompt and data profile — your judgement, "
             "before the run, whether a surface feature could answer the question "
             "without the model"
+            + (
+                # a MUST the steps never named (audit 2026-10-27, third, I5)
+                "; and what the number describes, `protocol-fill "
+                "PROTOCOL number_describes=model_outputs|target_property`"
+                if not standard_contract.has_bar(kind)
+                else ""
+            )
         )
     return bar
 
