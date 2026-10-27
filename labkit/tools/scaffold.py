@@ -139,12 +139,14 @@ LAB_DIRS = (
 
 
 def write_if_absent(path: Path, content: str, log: list[str]) -> bool:
-    """Write CONTENT to PATH unless it exists; log either way. True when written."""
+    """Write CONTENT to PATH unless it exists — whole or not at all
+    (`files.write_atomic`), so a write that died leaves nothing a later
+    stamp skips as existing; log either way. True when written."""
     if path.exists() or path.is_symlink():
         log.append(f"  skip (exists)  {path}")
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    write_atomic(path, content)
     log.append(f"  created        {path}")
     return True
 
