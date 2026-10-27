@@ -9,6 +9,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The first measurement is the one git's history puts first, not the
+  clock.** report-check holds the low registration to the commit of the
+  first measurement, and that was the oldest run by name. A run id is
+  local time, so a run started under `TZ=Etc/GMT+12` sorted twelve hours
+  early and became first: a measurement at a commit without the
+  registration was passed over for a later one whose commit held it, and
+  no gap was named (audit 2026-10-27, A11).
+  `answering_run.first_measurements(area, pid, repo)` replaces
+  `first_measurement` and orders the measurements by the commit each record
+  names and git's ancestry (`repo.earliest_commits`, `is_ancestor`,
+  `commit_known`); the run id orders only runs at one commit, which share
+  their verdict. `runs.recorded_commit` returns the full sha (`git_full`)
+  instead of the short `git`; blockers show its first twelve characters.
+  Where git cannot order, each candidate is held: on diverged history (a
+  rebase, an amend, a side branch) the first of each branch, and every run
+  whose commit is not recorded or not in the clone — the latter a new
+  blocker naming the commit to fetch; until now such a run was held only
+  when its name sorted first. No new field, no schema change. 0.103.0 is
+  the last version that orders by run id. Rule, rejected alternatives and
+  limits: `docs/notes/2026-10-27-first-measurement-order.md`.
 - **finalize and report-check hold a number whose code changed since its
   run.** No gate compared the code that produced the answering run's
   number with the code now: a script fixed after the run, with no new
