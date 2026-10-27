@@ -36,9 +36,11 @@ _PKG = r"(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)"
 VCS_REQUIREMENT = re.compile(
     rf"^{_PKG}\s*@\s*git\+(?P<url>[^@\s#]+)(?:@(?P<ref>[^#\s]+))?\s*(?:#.*)?$"
 )
-#: `-e git+<url>@<ref>#egg=<name>` — how pip freezes an editable VCS install
+#: `-e git+<url>@<ref>#egg=<name>` — how pip freezes an editable VCS install;
+#: in a git worktree pip appends `&subdirectory=<path to the worktree>`
+#: (2026-10-27: every probe staged from a worktree found no labkit line)
 EDITABLE_REQUIREMENT = re.compile(
-    rf"^-e\s+git\+(?P<url>[^@\s#]+)@(?P<ref>[^#\s]+)#egg={_PKG}\s*$"
+    rf"^-e\s+git\+(?P<url>[^@\s#]+)@(?P<ref>[^#\s]+)#egg={_PKG}(?:&\S*)?\s*$"
 )
 #: `-e /path/to/<name>` — how pip freezes an editable path install
 EDITABLE_PATH_REQUIREMENT = re.compile(rf"^-e\s+(?P<path>\S*/{_PKG})/?\s*$")

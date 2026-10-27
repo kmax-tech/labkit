@@ -172,6 +172,10 @@ class RequirementLines(unittest.TestCase):
             ("labkit @ git+https://github.com/x/labkit@v0.89.0", "labkit"),
             ("labkit @ git+file:///home/x/labkit@abc1234  # dev", "labkit"),
             ("-e git+https://github.com/x/labkit@abc1234#egg=labkit", "labkit"),
+            (  # pip's freeze of an editable install in a git worktree
+                "-e git+https://github.com/x/labkit@abc1234#egg=labkit&subdirectory=../../labkit-wt",
+                "labkit",
+            ),
             ("-e /Users/x/projects/labkit", "labkit"),
             ("labkit==0.89.0", "labkit"),
             ("Lab_Kit==1.0", "lab-kit"),
