@@ -1018,6 +1018,23 @@ Notiert, nicht geplant:
    (Abschnitt „State“). Die zwei zunächst offenen Punkte am selben Tag
    nachgezogen: Protokolle sind reguläre Dateien (`d0e02f7`), der
    Preflight trennt „übergeben“ von „zurückgestellt“ (`0393ffc`).
+8. **Nach dem Workflow-Review 2026-10-27** (`6d08293`, `0667f0a`; Note
+   `docs/notes/2026-10-27-workflow-stages.md`). Offen:
+   (1) `runlog start` kehrt zurück, bevor das Kind seinen Laufordner
+   anlegt; ein sofortiges `runlog --wait` kann ohne Lauf Erfolg melden
+   (vom Review beobachtet, hier nicht nachgestellt) — Korrektheit, zuerst.
+   (2) Die Übergabe nennt andere Berichte mit dem zurückgezogenen
+   Ergebnisblock nur pauschal; sie könnte sie mit Pfad nennen (report-check
+   kennt sie).
+   (3) Lokales `apply`: der Nullvergleich ist ein von Hand gebauter
+   Prädiktor. Alternative ohne zweites Artefakt: die Vorhersagen des
+   Primärmodells gegen innerhalb des Seeds permutierte Labels werten —
+   Forschungsentscheidung, nicht still ändern.
+   (4) Das Estimator-Skelett hasht `PREDICTOR_FILES` schon beim Import
+   (`CONFIG`); der Bereichstest liest damit die Modelldateien.
+   (5) Eine Zustandsauskunft „du stehst hier, dieser Schritt fehlt“ gibt
+   es nicht; `--contract`, `--list`, `--findings` decken Teile ab. Erst
+   nach Benchmark-Beleg (Reihenfolge vor Features).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
