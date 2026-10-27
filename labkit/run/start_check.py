@@ -346,30 +346,33 @@ def foreground_timeout() -> tuple[float, str] | None:
     return None
 
 
-def reseed_refusal(
-    prepared: Prepared, repeat_of: str | None, reseed: bool
-) -> str | None:
-    """Why a run may not have its seed drawn anew (RESEED), or None: a
+def reseed_refusal(prepared: Prepared, repeat_of: str | None, reseed: bool) -> None:
+    """Refuse a run whose seed is drawn anew (RESEED) against the rules: a
     reseed goes with REPEAT_OF; the config must hold an integer
     REPEAT_SEED_KEY; and a seed the protocol registers as a constant is
-    not drawn — a repeat may not change a registered value. Pure, before
-    any lock: the derivation itself needs the draw (`runlog._repeat_draw`)."""
+    not drawn — a repeat may not change a registered value. Before any
+    lock: the derivation itself needs the draw (`runlog._repeat_draw`).
+    Raises SystemExit with the reason."""
     if not reseed:
-        return None
+        return
     if repeat_of is None:
-        return "reseed draws a repeat's seed anew — it goes with repeat_of"
+        raise SystemExit(
+            "runlog: reseed draws a repeat's seed anew — it goes with repeat_of"
+        )
     seed = prepared.config.get(REPEAT_SEED_KEY)
     if not isinstance(seed, int) or isinstance(seed, bool):
-        return f"reseed: the config holds no integer `{REPEAT_SEED_KEY}` to draw anew ({seed!r})"
+        raise SystemExit(
+            f"runlog: reseed: the config holds no integer `{REPEAT_SEED_KEY}` to "
+            f"draw anew ({seed!r})"
+        )
     registered = promises.all_constants(prepared.block) if prepared.block else {}
     if REPEAT_SEED_KEY in registered:
-        return (
-            f"reseed: the protocol registers `{REPEAT_SEED_KEY}` = "
+        raise SystemExit(
+            f"runlog: reseed: the protocol registers `{REPEAT_SEED_KEY}` = "
             f"{registered[REPEAT_SEED_KEY]!r} — a spread over "
             f"seeds needs a seed the protocol does not fix, and a repeat may not "
             f"change a registered value"
         )
-    return None
 
 
 def registration_refusal(
@@ -377,18 +380,19 @@ def registration_refusal(
     block: "promises.PromiseTables | None",
     config: dict,
     full_run: bool,
-) -> str | None:
-    """The registration's contract, before any gate that can be acknowledged
-    and before mkdir (standard 0.19): a frozen protocol and every full run
-    carry the promises as data (`promises.promise_tables_owed`), and a run under a
-    block records every registered constant unchanged — otherwise the
-    number is held to a threshold nobody registered (Durchstich
-    2026-10-06). FULL_RUN means the script declares a measurement. None
-    when it holds, or when the run is unbound
-    (the freeze gate refuses an unbound full run on its own)."""
+) -> None:
+    """Refuse a run that breaks the registration's contract, before any
+    gate that can be acknowledged and before mkdir (standard 0.19): a
+    frozen protocol and every full run carry the promises as data
+    (`promises.promise_tables_owed`), and a run under a block records every
+    registered constant unchanged — otherwise the number is held to a
+    threshold nobody registered (Durchstich 2026-10-06). FULL_RUN means the
+    script declares a measurement. An unbound run passes here (the freeze
+    gate refuses an unbound full run on its own). Raises SystemExit with
+    the reason."""
     name, head = bound.name, bound.head
     if head is None or bound.text is None:
-        return None
+        return
     owed = promises.promise_tables_owed(
         block,
         frozen=head.frozen,
@@ -398,12 +402,11 @@ def registration_refusal(
         registers=head.kind != COMPUTE_KIND or promises.registers_ids(bound.text),
     )
     if owed:
-        return f"{name}: {owed}"
+        raise SystemExit(f"runlog: {name}: {owed}")
     if block is not None:
         refusal = _constants_refusal(block, config)
         if refusal:
-            return f"{name}: {refusal}"
-    return None
+            raise SystemExit(f"runlog: {name}: {refusal}")
 
 
 def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | None:

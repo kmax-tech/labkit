@@ -1113,6 +1113,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Every start check refuses itself.** `registration_refusal` and
+  `reseed_refusal` returned the sentence for `runlog.Run` to raise, while
+  every other check at a run's start (`foreground_refusal`, `freeze_gate`,
+  `completed_parent`, `prepare`) raised it; they raise now too, as
+  `start_check`'s module text already said. Audit 2026-10-27 (third), M4.
 - **The post-change hook no longer rewrites a checker's printed text.**
   It ran `protocol-check` and `notes-check` on the absolute path and
   replaced that path in their output with the repo-relative one; it now

@@ -397,17 +397,13 @@ class Run:
         prepared = prepare(base_dir, config, run_kind, protocol, derived_from)
         # 2. the start check — the order and every skip are visible here;
         #    helpers check the facts without reading a partly built Run
-        refusal = registration_refusal(
+        registration_refusal(
             prepared.bound,
             prepared.block,
             prepared.config,
             prepared.run_kind == "measurement",
         )
-        if refusal:
-            raise SystemExit(f"runlog: {refusal}")
-        refusal = reseed_refusal(prepared, repeat_of, reseed)
-        if refusal:
-            raise SystemExit(f"runlog: {refusal}")
+        reseed_refusal(prepared, repeat_of, reseed)
         obligations = lane(prepared.repeat_cost)
         if prepared.run_kind == "measurement" and not obligations.foreground:
             limit = foreground_timeout()
