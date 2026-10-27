@@ -294,6 +294,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **finalize's command for a mismatched `[result]` runs.** It printed
+  `protocol-fill --from-run <run> --force` without the protocol, which
+  argparse refuses; it now names the protocol (`repo.adopt_command`), and
+  `tests/test_one_home.py` holds that form too. Audit 2026-10-27
+  (second), H5.
 - **`labkit-audit --findings` offers the handover only where something
   stands.** It printed the handover command in a clean area (exit 0) and,
   before its own refusal, in an area never audited. Now an area without a

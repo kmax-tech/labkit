@@ -45,10 +45,12 @@ RULES: list[tuple[str, str, set[str]]] = [
     # runlog start and usability log each cut at `--` by hand (2026-10-20)
     ("a command cut at -- by hand", r"\.index\(\s*[\"']--[\"']\s*\)", {"console"}),
     # six sites spelled `protocol-fill <file name> --from-run`; run from the
-    # repo root the bare name failed (count probe, 2026-10-20)
+    # repo root the bare name failed (count probe, 2026-10-20); finalize
+    # printed one with no protocol at all, which argparse refuses (audit
+    # 2026-10-27, H5)
     (
         "an adopt command spelled by hand",
-        r"protocol-fill \{[^}]*\} --from-run",
+        r"protocol-fill (?:\{[^}]*\} --from-run|--from-run \{)",
         {"repo"},
     ),
     # thirteen modules read config.json's labkit fields by key; RunConfig

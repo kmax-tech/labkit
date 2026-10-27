@@ -15,16 +15,28 @@ class Steps(unittest.TestCase):
     def test_a_declared_run_that_is_not_the_answering_one_blocks(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
         text = head(repeat_cost="low", result="2026-10-07T09-00-00_bb22")
-        mismatch = finalize.declared_run_mismatch(text, run)
+        protocol = Path("/x/PROTOCOL-x.md")
+        mismatch = finalize.declared_run_mismatch(text, run, protocol)
         assert mismatch is not None
         self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch)
-        self.assertIn("--from-run 2026-10-07T10-00-00_aa11 --force", mismatch)
+        # the command names the protocol: without it argparse refused it
+        # (audit 2026-10-27, H5)
+        self.assertIn(
+            "protocol-fill /x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_aa11 --force",
+            mismatch,
+        )
 
     def test_declaring_the_answering_run_or_none_passes(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
         declares_it = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
-        self.assertIsNone(finalize.declared_run_mismatch(declares_it, run))
-        self.assertIsNone(finalize.declared_run_mismatch(head(repeat_cost="low"), run))
+        self.assertIsNone(
+            finalize.declared_run_mismatch(declares_it, run, Path("/x/PROTOCOL-x.md"))
+        )
+        self.assertIsNone(
+            finalize.declared_run_mismatch(
+                head(repeat_cost="low"), run, Path("/x/PROTOCOL-x.md")
+            )
+        )
 
     def test_two_protocols_and_none_named_refuses(self):
         with tempfile.TemporaryDirectory() as d:

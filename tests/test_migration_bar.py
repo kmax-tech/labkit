@@ -98,7 +98,11 @@ class Declaration(unittest.TestCase):
         text = self.protocol(f"C1 met · recorded: (run {RUN})", declared=RUN)
         self.assertEqual(protocol_block.declared_run(text), RUN)
         self.assertIsNone(protocol_check.recorded_results_without_run(text))
-        self.assertIsNone(finalize.declared_run_mismatch(text, Path("runs") / RUN))
+        self.assertIsNone(
+            finalize.declared_run_mismatch(
+                text, Path("runs") / RUN, Path("PROTOCOL-x.md")
+            )
+        )
 
     def test_a_typed_id_does_not_read_and_a_shaped_one_must_be_a_run(self):
         with tempfile.TemporaryDirectory() as d:

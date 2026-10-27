@@ -128,9 +128,10 @@ def choose_answering_run(
     return choice.run_dir
 
 
-def declared_run_mismatch(text: str, answering_run: Path) -> str | None:
-    """A blocker when the head's `[result] run` names another run than the
-    one the checks hold; None when it names that run or the protocol
+def declared_run_mismatch(text: str, answering_run: Path, protocol: Path) -> str | None:
+    """A blocker when the head's `[result] run` of PROTOCOL (its TEXT) names
+    another run than the one the checks hold, with the command that
+    declares that one; None when it names that run or the protocol
     declares none (an exploration). The declaration is a projection of
     `answering_run.bound_answering_run`, never a second binding — held to the
     choice, not consulted for it."""
@@ -139,7 +140,7 @@ def declared_run_mismatch(text: str, answering_run: Path) -> str | None:
         return None
     return (
         f"[result] declares {declared}, but the run that answers is "
-        f"{answering_run.name} — `protocol-fill --from-run {answering_run.name} "
+        f"{answering_run.name} — `{adopt_command(protocol, answering_run.name)} "
         f"--force` declares the run the checks hold, or rerun"
     )
 
@@ -174,7 +175,7 @@ def _hold_declaration(
         protocol_block.declared_run(text)
     except protocol_block.BlockError:
         return  # named in GAPS; nothing to hold to the run
-    mismatch = declared_run_mismatch(text, run)
+    mismatch = declared_run_mismatch(text, run, protocol)
     if mismatch:
         findings.block(mismatch)
     hint = undeclared_hint(text, run, protocol)
