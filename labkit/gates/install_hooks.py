@@ -8,7 +8,10 @@ The hooks come with the pinned labkit, so raising the pin and running
 before, the scaffolder in the house dotfiles wrote its own copy once, and
 existing repos never got a newer one).
 
-    .githooks/pre-commit     protocol-check on staged protocols; report-check
+    .githooks/pre-commit     protocol-check on staged protocols; the area
+                             numbers in the index (labkit-init numbers
+                             --staged) when a staged path lies under
+                             experiments/; report-check
                              --if-reported on every staged path — a
                              written-back answer in an area it touches (the
                              whole release check, finalize among its
@@ -17,6 +20,12 @@ existing repos never got a newer one).
                              guard test where a repo has it; then the
                              repo's own .githooks/pre-commit.local, if any
                              (the repo owns it, labkit-hooks never writes it)
+    .githooks/pre-merge-commit
+                             the area numbers in the merge's index — git
+                             runs this hook, never pre-commit, for a merge
+                             it completes on its own, and the merge is where
+                             two branches' areas meet; then
+                             .githooks/pre-merge-commit.local, if any
     git core.hooksPath       set to .githooks (it used to be a manual step
                              per clone, and the hook silently did nothing)
     .claude/settings.json    claude-hook pre-run · post-change · stop
@@ -46,6 +55,30 @@ def labkit_version() -> str:
         return "unknown"
 
 
+def numbers_step(hook: str) -> str:
+    """The shell step that holds the index to one number per area
+    (`labkit-init numbers --staged`), as HOOK runs it; quiet when it holds.
+    Only when a staged path lies under `experiments/`: nothing else can
+    give two areas one number."""
+    return f"""\
+staged_areas=$(git diff --cached --name-only -- experiments)
+if [ -n "$staged_areas" ]; then
+    if [ ! -x .venv/bin/labkit-init ]; then
+        echo "{hook}: .venv/bin/labkit-init missing — the area numbers cannot be"
+        echo "checked; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
+        fail=1
+    else
+        out=$(.venv/bin/labkit-init numbers --staged 2>&1) || {{
+            echo "$out"
+            echo ""
+            echo "{hook}: two areas carry one number (see above)."
+            fail=1
+        }}
+    fi
+fi
+"""
+
+
 def pre_commit() -> str:
     """The pre-commit script of this labkit version."""
     return f"""#!/bin/sh
@@ -70,6 +103,10 @@ if [ -n "$staged_protocols" ]; then
     fi
 fi
 
+# 1b. One number per area: two branches that each stamped their next area
+#     carry one number twice. A merge with conflicts is committed here; one
+#     git completes on its own runs pre-merge-commit.
+{numbers_step("pre-commit")}
 # 2. A number written back: every protocol of an area a staged file touches
 #    whose head declares a result ([result] run) goes through report-check —
 #    the whole release check at every repeat cost (finalize clean, a full run,
@@ -129,6 +166,34 @@ fi
 
 exit $fail
 """
+
+
+def pre_merge_commit() -> str:
+    """The pre-merge-commit script of this labkit version: the area numbers
+    in the merge's index. git runs it, never pre-commit, for a merge it
+    completes on its own — the merge is where two branches' areas meet."""
+    return f"""#!/bin/sh
+{MARK} {labkit_version()} — reinstall: .venv/bin/labkit-hooks install
+# Escape hatch for a deliberate exception: git merge --no-verify
+# git runs this hook, not pre-commit, for a merge it completes on its own;
+# a merge with conflicts is committed through pre-commit.
+
+fail=0
+
+# 1. One number per area: the merge brings two branches' areas together.
+{numbers_step("pre-merge-commit")}
+# 2. The repo's own checks, as .githooks/pre-commit.local for a commit.
+if [ -x .githooks/pre-merge-commit.local ]; then
+    .githooks/pre-merge-commit.local || fail=1
+fi
+
+exit $fail
+"""
+
+
+def git_hooks() -> dict[str, str]:
+    """The git hooks an install writes under `.githooks/`, by file name."""
+    return {"pre-commit": pre_commit(), "pre-merge-commit": pre_merge_commit()}
 
 
 def _hook(name: str, timeout: int, message: str) -> dict:
@@ -237,28 +302,28 @@ START_IN_ROOT = (
 def install(repo: Path) -> list[str]:
     """Write the hooks; returns what was done."""
     done = []
-    hook = repo / ".githooks" / "pre-commit"
-    hook.parent.mkdir(exist_ok=True)
-    text = pre_commit()
-    if hook.is_file() and MARK not in hook.read_text(encoding="utf-8"):
-        # A hook labkit did not write may carry the repo's own checks:
-        # kept beside, never erased in silence.
-        kept = hook.with_name("pre-commit.before-labkit")
-        if kept.exists():
-            raise SystemExit(
-                f"labkit-hooks: {hook} was not written by labkit-hooks and "
-                f"{kept.name} exists already — move the repo's own steps to "
-                f".githooks/pre-commit.local, remove {kept.name}, run install again"
+    (repo / ".githooks").mkdir(exist_ok=True)
+    for name, text in git_hooks().items():
+        hook = repo / ".githooks" / name
+        if hook.is_file() and MARK not in hook.read_text(encoding="utf-8"):
+            # A hook labkit did not write may carry the repo's own checks:
+            # kept beside, never erased in silence.
+            kept = hook.with_name(f"{name}.before-labkit")
+            if kept.exists():
+                raise SystemExit(
+                    f"labkit-hooks: {hook} was not written by labkit-hooks and "
+                    f"{kept.name} exists already — move the repo's own steps to "
+                    f".githooks/{name}.local, remove {kept.name}, run install again"
+                )
+            hook.rename(kept)
+            done.append(
+                f"kept the previous hook as {kept.relative_to(repo)} — move its "
+                f"repo-specific steps to .githooks/{name}.local (executable)"
             )
-        hook.rename(kept)
-        done.append(
-            f"kept the previous hook as {kept.relative_to(repo)} — move its "
-            f"repo-specific steps to .githooks/pre-commit.local (executable)"
-        )
-    if not hook.is_file() or hook.read_text(encoding="utf-8") != text:
-        hook.write_text(text, encoding="utf-8")
-        done.append(f"wrote {hook.relative_to(repo)}")
-    hook.chmod(hook.stat().st_mode | 0o755)
+        if not hook.is_file() or hook.read_text(encoding="utf-8") != text:
+            hook.write_text(text, encoding="utf-8")
+            done.append(f"wrote {hook.relative_to(repo)}")
+        hook.chmod(hook.stat().st_mode | 0o755)
     r = git_run(["config", "core.hooksPath", ".githooks"], repo)
     if r.returncode != 0:
         raise SystemExit(
@@ -279,24 +344,25 @@ def install(repo: Path) -> list[str]:
 def check(repo: Path) -> list[str]:
     """What is missing or from another labkit version; empty means installed."""
     out = []
-    hook = repo / ".githooks" / "pre-commit"
-    if not hook.is_file():
-        out.append(".githooks/pre-commit is missing")
-    elif hook.read_text(encoding="utf-8") != pre_commit():
-        first = next(
-            (
-                ln
-                for ln in hook.read_text(encoding="utf-8").splitlines()
-                if ln.startswith(MARK)
-            ),
-            "",
-        )
-        was = first.removeprefix(MARK).split("—")[0].strip()
-        out.append(
-            f".githooks/pre-commit is from labkit {was}, this labkit is {labkit_version()}"
-            if was
-            else ".githooks/pre-commit was not written by labkit-hooks"
-        )
+    for name, text in git_hooks().items():
+        hook = repo / ".githooks" / name
+        if not hook.is_file():
+            out.append(f".githooks/{name} is missing")
+        elif hook.read_text(encoding="utf-8") != text:
+            first = next(
+                (
+                    ln
+                    for ln in hook.read_text(encoding="utf-8").splitlines()
+                    if ln.startswith(MARK)
+                ),
+                "",
+            )
+            was = first.removeprefix(MARK).split("—")[0].strip()
+            out.append(
+                f".githooks/{name} is from labkit {was}, this labkit is {labkit_version()}"
+                if was
+                else f".githooks/{name} was not written by labkit-hooks"
+            )
     r = git_run(["config", "--get", "core.hooksPath"], repo)
     if r.stdout.strip() != ".githooks":
         out.append(

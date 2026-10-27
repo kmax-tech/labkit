@@ -1551,6 +1551,130 @@ class Exp(unittest.TestCase):
             scaffold.stamp_area(bare, "foo-bar")
 
 
+class AreaNumbers(unittest.TestCase):
+    """A new area's number is one above every number the repository holds —
+    this tree, `_archiv/`, every branch, every other worktree — and
+    `labkit-init numbers` holds one number per area (labkit-paper,
+    2026-10-27: two branches of one repo each had their next area at 12)."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name) / "lab"
+        self.root.mkdir()
+        scaffold.stamp_lab(self.root, "lab")
+        self.exp = self.root / "experiments"
+        self._git("init", "-q", "-b", "main")
+        self._git("add", "-A")
+        self._git("commit", "-qm", "lab")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def _git(self, *args: str, cwd: Path | None = None) -> None:
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            cwd=cwd or self.root,
+            check=True,
+            capture_output=True,
+        )
+
+    def _areas(self, *names: str) -> None:
+        for name in names:
+            (self.exp / name).mkdir(parents=True)
+            (self.exp / name / "README.md").write_text("x\n", encoding="utf-8")
+
+    def test_paths_name_living_and_archived_areas(self) -> None:
+        paths = [
+            "01-a/README.md",
+            "_archiv/02-b/data/raw/.gitkeep",
+            "explore/x.py",
+            ".gitkeep",
+            "_archiv/.gitkeep",
+            "03-c",  # a file, no area
+        ]
+        self.assertEqual(scaffold.area_dirs_in(paths), {"01-a", "_archiv/02-b"})
+
+    def test_the_next_number_is_one_above_every_place(self) -> None:
+        nxt = scaffold.next_experiment_number
+        self.assertEqual(nxt(set(), {}), "01")
+        self.assertEqual(nxt({"01-a", "_archiv/05-e"}, {}), "06")
+        self.assertEqual(nxt({"11-a"}, {"branch side": {"12-b", "13-c"}}), "14")
+        self.assertEqual(nxt({"11-a"}, {"branch old": {"03-c"}}), "12")
+        self.assertEqual(nxt(set(), {"branch side": {"99-z"}}), "100")
+
+    def test_a_number_another_branch_took_is_not_handed_out(self) -> None:
+        self._git("checkout", "-qb", "side")
+        quiet(scaffold.stamp_area, self.root, "on-side", kind="fit")
+        self._git("add", "-A")
+        self._git("commit", "-qm", "side")
+        self._git("checkout", "-q", "main")
+        self.assertFalse((self.exp / "01-on-side").exists())
+        area, report = quiet(scaffold.stamp_area, self.root, "on-main", kind="fit")
+        self.assertEqual(area.name, "02-on-main")
+        self.assertIn("number taken   01-on-side on branch side", report)
+
+    def test_an_area_in_another_worktree_counts_before_its_commit(self) -> None:
+        other = Path(self.tmp.name) / "other"
+        self._git("worktree", "add", "-q", "-b", "other", str(other))
+        quiet(scaffold.stamp_area, other, "there", kind="fit")  # not committed
+        area, report = quiet(scaffold.stamp_area, self.root, "here", kind="fit")
+        self.assertEqual(area.name, "02-here")
+        self.assertIn("01-there on worktree ", report)
+
+    def test_without_other_places_the_numbers_leave_no_gap(self) -> None:
+        """The twin: one branch, one worktree — the numbers count up as before."""
+        quiet(scaffold.stamp_area, self.root, "first", kind="fit")
+        area, report = quiet(scaffold.stamp_area, self.root, "second", kind="fit")
+        self.assertEqual(area.name, "02-second")
+        self.assertNotIn("number taken", report)
+
+    def test_two_areas_of_one_number_are_named_in_the_tree_and_the_index(self) -> None:
+        self._areas("12-a", "12-b")
+        code, report = scaffold.number_check(self.root, staged=False)
+        self.assertEqual(code, 1)
+        self.assertIn(
+            "number 12 is carried by 2 areas in the working tree: "
+            "experiments/12-a, experiments/12-b",
+            report,
+        )
+        self.assertIn("move the other area to the next free number, 13", report)
+        # nothing staged yet: the index holds neither area
+        self.assertEqual(scaffold.number_check(self.root, staged=True)[0], 0)
+        self._git("add", "experiments")
+        code, report = scaffold.number_check(self.root, staged=True)
+        self.assertEqual(code, 1)
+        self.assertIn("in the index: experiments/12-a, experiments/12-b", report)
+
+    def test_an_archived_area_keeps_its_number(self) -> None:
+        self._areas("12-a", "_archiv/12-b")
+        code, report = scaffold.number_check(self.root, staged=False)
+        self.assertEqual(code, 1)
+        self.assertIn("experiments/12-a, experiments/_archiv/12-b", report)
+
+    def test_one_number_per_area_passes(self) -> None:
+        self._areas("12-a", "_archiv/13-b")
+        self._git("checkout", "-qb", "side")
+        self._areas("15-c")
+        self._git("add", "experiments/15-c")
+        self._git("commit", "-qm", "side")
+        self._git("checkout", "-q", "main")
+        self.assertEqual(
+            scaffold.number_check(self.root, staged=False),
+            (
+                0,
+                "labkit-init numbers: 2 area(s) in the working tree, each with a "
+                "number of its own; next free number 16",
+            ),
+        )
+
+    def test_staged_outside_a_repository_refuses(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            scaffold.stamp_lab(Path(tmp), "lab")
+            with self.assertRaisesRegex(console.Refused, "no index to read"):
+                scaffold.number_check(Path(tmp), staged=True)
+            self.assertEqual(scaffold.number_check(Path(tmp), staged=False)[0], 0)
+
+
 class Report(unittest.TestCase):
     """--report answers what a model-free protocol cannot: seed, noise, parser."""
 

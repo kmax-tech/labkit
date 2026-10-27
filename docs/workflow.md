@@ -37,6 +37,11 @@ repeat cost, `frozen = false`), `scripts/01_measure.py` and `02_analyze.py`
 (the skeleton for the instrument: compute, estimator or model), the area
 test, the README card. Nothing is owed yet; `protocol-check <PROTOCOL>
 --contract` prints what its repeat cost and kind will owe and when.
+`NN` is one above every number the repository holds — this tree,
+`_archiv/`, every branch this clone knows, every other worktree — so two
+branches do not both stamp the same next area; `labkit-init numbers`
+checks that each area has a number of its own, and the pre-commit and
+pre-merge-commit hooks run it on the index.
 
 ## 1. The measurement code
 

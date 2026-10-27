@@ -233,6 +233,7 @@ The **console commands** are installed with the package. Use
 labkit-init lab [DIR]               # create a lab repo
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--explore]
 labkit-init exp NAME --kind KIND --change-kind # another kind before the first measurement, written fields kept
+labkit-init numbers [--staged]      # one number per area (--staged: the index); the next free one over every branch and worktree
 protocol-check PROTOCOL             # check required fields and promise tables
 protocol-check --contract | --guide # field contract or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields

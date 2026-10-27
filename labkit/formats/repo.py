@@ -709,6 +709,38 @@ def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
     return {p[len(rel) + 1 :] for p in r.stdout.split("\0") if p.startswith(rel + "/")}
 
 
+def branch_refs(repo: Path) -> list[str]:
+    """Every branch REPO's repository knows, local and remote-tracking, as
+    full ref names (`refs/heads/main`, `refs/remotes/origin/x`) — a
+    symbolic ref (`refs/remotes/origin/HEAD`) left out, it names one of the
+    others. Only what this clone holds: a branch never fetched is not
+    there. [] outside a repository; GitError when git fails inside one."""
+    out = git(
+        [
+            "for-each-ref",
+            "--format=%(if)%(symref)%(then)%(else)%(refname)%(end)",
+            "refs/heads",
+            "refs/remotes",
+        ],
+        repo,
+    )
+    return [ref for ref in (out or "").splitlines() if ref]
+
+
+def worktree_roots(repo: Path) -> list[Path]:
+    """The working directory of every worktree of REPO's repository, REPO's
+    own among them, as `git worktree list` names them — a directory removed
+    without `git worktree remove` is still named (git calls it prunable),
+    so the caller checks it exists. [] outside a repository; GitError when
+    git fails inside one."""
+    out = git(["worktree", "list", "--porcelain", "-z"], repo)
+    return [
+        Path(field.removeprefix("worktree "))
+        for field in (out or "").split("\0")
+        if field.startswith("worktree ")
+    ]
+
+
 def fork_point(repo: Path, base: str) -> str | None:
     """The newest commit BASE and HEAD share — BASE itself when HEAD grew
     from it — or None when git knows no common one (BASE unknown, or
