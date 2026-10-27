@@ -1291,6 +1291,12 @@ def main(argv: list[str]) -> int:
             "--change-kind takes only --kind: the repeat cost, the model and "
             "the report fields come from the protocol, and --explore stamps no area"
         )
+    if a.explore and (a.kind or a.repeat_cost or a.model or a.report):
+        ap.error(
+            "--explore stamps only experiments/explore/<name>.py: --kind, "
+            "--repeat-cost, --model and --report belong to the area's stamp, the "
+            "step --explore prints next"
+        )
     if a.explore:
         print("\n".join(stamp_explore(root / "experiments", area_slug(a.name))))
         print(explore_next(area_slug(a.name)))

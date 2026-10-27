@@ -944,6 +944,30 @@ class Exp(unittest.TestCase):
                 "01_measure.py: edited since the compute stamp", str(caught.exception)
             )
 
+    def test_explore_refuses_the_flags_of_an_area_stamp(self) -> None:
+        """`--explore` dropped `--kind`, `--repeat-cost`, `--model` and
+        `--report` without a word: the person believed them stamped. Each is
+        refused with nothing written; the twin, `--explore` alone, stamps
+        (below)."""
+        argv = ["exp", "foo-bar", "--repo", str(self.root), "--explore"]
+        explore = self.root / "experiments" / "explore" / "foo-bar.py"
+        for extra in (
+            ["--kind", "fit"],
+            ["--repeat-cost", "low"],
+            ["--model"],
+            ["--report"],
+        ):
+            with self.subTest(extra=extra):
+                err = io.StringIO()
+                with (
+                    contextlib.redirect_stderr(err),
+                    self.assertRaises(SystemExit) as caught,
+                ):
+                    quiet(scaffold.main, [*argv, *extra])
+                self.assertEqual(caught.exception.code, 2)
+                self.assertIn("--explore stamps only", err.getvalue())
+                self.assertFalse(explore.exists())
+
     def test_change_kind_with_explore_is_refused_before_anything_is_written(
         self,
     ) -> None:
