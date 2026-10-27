@@ -596,6 +596,15 @@ class Constants(unittest.TestCase):
             "a full run is held to the registration, but",
             promises.promise_tables_owed(None, frozen=False, full_run=True) or "",
         )
+        # a computation registers nothing, frozen too: the high-cost freeze
+        # asked for the tables its own stamp removes (review 2026-10-27, 1)
+        for frozen, full_run in ((True, False), (True, True), (False, True)):
+            with self.subTest(frozen=frozen, full_run=full_run):
+                self.assertIsNone(
+                    promises.promise_tables_owed(
+                        None, frozen=frozen, full_run=full_run, registers=False
+                    )
+                )
 
 
 class KeyKind(unittest.TestCase):

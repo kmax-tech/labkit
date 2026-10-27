@@ -407,9 +407,10 @@ def promise_tables_owed(
     the rule (standard 0.19) for protocol-check, preflight, runlog and
     finalize. The table:
 
+        registers = False (the prose names no [C]/[A]/[B] id — a
+            computation, 0.87.1) → not owed, frozen or not: it judges no
+            prediction, and its stamp carries no table (`protocol_cuts.bar_cut`)
         frozen = true            → owed (the freeze is the registration)
-        registers = False and not frozen (the prose names no [C]/[A]/[B]
-            id — a plain computation at low repeat cost, 0.87.1) → not owed: nothing to hold
         full_run (runlog run_kind='measurement') → owed
         otherwise (an unfrozen pilot) → not owed
 
@@ -436,8 +437,10 @@ def promise_tables_owed(
             f"stamp's `<…>` sentence — state each promise explicitly in one "
             f"sentence in its table"
         )
-    if not registers and not frozen:
-        return None  # a full run of a computation: nothing registered, nothing to hold
+    if not registers:
+        # a computation, frozen or a full run: nothing registered, nothing to
+        # hold — its high-cost freeze asked for tables its own stamp removes
+        return None
     because = "frozen = true" if frozen else "a full run is held to the registration"
     return (
         f"{because}, but the protocol declares no [[promise]] table — the "

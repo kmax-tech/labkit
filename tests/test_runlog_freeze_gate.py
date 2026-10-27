@@ -90,14 +90,15 @@ class FreezeGate(unittest.TestCase):
             r = runlog.Run("t", {}, area, run_kind=run_kind)
         return r, buf.getvalue()
 
-    def _audited(self, record: bool = True) -> str:
+    def _audited(self, record: bool = True, **fields) -> str:
         """A frozen protocol whose audit line carries the area's real stamp,
-        and (RECORD) the decided preflight audit record of that stamp."""
+        and (RECORD) the decided preflight audit record of that stamp; FIELDS
+        go to the fixture's `head` as well."""
         (self.tmp / "scripts").mkdir(exist_ok=True)
         (self.tmp / "scripts" / "m.py").write_text("x = 1\n")
         scope_file(self.tmp)  # part of the stamped code, written before the stamp
         sha = scope_sha.area_stamp(self.tmp)[0]
-        text = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT)
+        text = head(repeat_cost="high", frozen=True, preflight_audit=AUDIT, **fields)
         if record:
             written = findings.write(
                 self.tmp,
@@ -109,7 +110,9 @@ class FreezeGate(unittest.TestCase):
                 [],
                 registration=protocol_check.registration_stamp(text),
             )
-            text = head(repeat_cost="high", frozen=True, preflight_audit=written.name)
+            text = head(
+                repeat_cost="high", frozen=True, preflight_audit=written.name, **fields
+            )
         return text
 
     def test_full_run_on_frozen_protocol_starts(self):
@@ -118,6 +121,18 @@ class FreezeGate(unittest.TestCase):
         self.assertFalse(
             json.loads((r.dir / "config.json").read_text())["unfrozen_ack"]
         )
+
+    def test_a_frozen_computation_without_promise_tables_starts(self):
+        # its stamp removes the tables (`protocol_cuts.bar_cut`) and the freeze
+        # asked for them again (review 2026-10-27, 1); a fit is still held
+        r, out = self._start(
+            self._audited(kind="compute", promises=None), run_kind="measurement"
+        )
+        self.assertTrue((r.dir / "config.json").is_file(), out)
+        with self.assertRaises(SystemExit):
+            self._start(
+                self._audited(kind="fit", promises=None), run_kind="measurement"
+            )
 
     def test_an_audit_line_of_other_code_is_refused(self):
         """Twin of the start above: the code changed after the audit, so the

@@ -133,13 +133,18 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             )
 
     def test_frozen_without_a_block_is_a_must_finding(self) -> None:
-        report = protocol_check.check_fields(
-            head(frozen=True, preflight_audit=AUDIT, promises=None)
-        )
-        self.assertTrue(
-            any("declares no [[promise]]" in m for m in report.missing_must),
-            report.missing_must,
-        )
+        # a fit or an apply registers by its kind; a computation registers
+        # nothing, frozen too (review 2026-10-27, 1)
+        for kind, owed in (("fit", True), ("apply", True), ("compute", False)):
+            with self.subTest(kind=kind):
+                report = protocol_check.check_fields(
+                    head(frozen=True, preflight_audit=AUDIT, promises=None, kind=kind)
+                )
+                self.assertEqual(
+                    any("declares no [[promise]]" in m for m in report.missing_must),
+                    owed,
+                    report.missing_must,
+                )
 
     def test_frozen_with_a_block_is_quiet_on_that_point(self) -> None:
         report = protocol_check.check_fields(head(frozen=True, preflight_audit=AUDIT))

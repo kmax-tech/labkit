@@ -306,6 +306,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A frozen computation starts without promise tables.** The stamp of a
+  computation removes the `[[promise]]` tables (`protocol_cuts.bar_cut`);
+  at `high` the freeze asked for them again, so a filled, audited and
+  frozen compute protocol could not start its measurement, and the
+  refusal advised stamping the tables. `promises.promise_tables_owed` now
+  owes none to a protocol that registers no id, frozen or not; a fit or an
+  apply is held as before. Review 2026-10-27, 1.
 - **The instructions for a stop say one thing.** `protocol-check
   PROTOCOL --contract` printed five fixed rows whatever the protocol (none
   for a high-cost computation) while the stamped AGENTS.md sends an agent
