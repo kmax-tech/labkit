@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 from unittest import mock
 
@@ -727,6 +728,69 @@ class Exp(unittest.TestCase):
         self.assertFalse(explore.exists())
         self.assertEqual(quiet(scaffold.main, [*argv, "--explore"]), 0)
         self.assertTrue(explore.is_file())
+
+    def _dying_midway(self, part: str):  # noqa: ANN202 — a patch context
+        """`Path.write_text` that truncates a file whose name holds PART,
+        writes half of the text and fails as a full disk does — the write
+        of an existing file dying midway."""
+        real = Path.write_text
+
+        def write_text(path: Path, data: str, *a, **kw) -> int:  # noqa: ANN002, ANN003
+            if part in path.name:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(data[: len(data) // 2])
+                raise OSError(28, "No space left on device (simulated)")
+            return real(path, data, *a, **kw)
+
+        return mock.patch.object(Path, "write_text", write_text)
+
+    def _rewrites(self) -> dict[str, tuple[Path, Callable[[], object]]]:
+        """{flag: (protocol, the call rewriting it)} — `--report` on a high
+        area `other`, `--change-kind` on the computation `foo-bar`."""
+        _, proto, _ = self._compute_area_with_work()
+        quiet(scaffold.stamp_area, self.root, "other", "high", kind="fit")
+        (high,) = (self.root / "experiments").glob("*-other")
+        return {
+            "--report": (
+                high / "PROTOCOL-other.md",
+                lambda: scaffold.stamp_area(self.root, "other", report=True),
+            ),
+            "--change-kind": (
+                proto,
+                lambda: scaffold.change_kind(self.root, "foo-bar", "fit"),
+            ),
+        }
+
+    def test_a_write_that_dies_midway_leaves_the_protocol_whole(self) -> None:
+        """`--report` and `--change-kind` rewrote the protocol in place
+        (`Path.write_text`): a write that died midway left it truncated
+        (audit 2026-10-27, D8). Both write through `files.write_atomic`."""
+        for flag, (protocol, call) in self._rewrites().items():
+            with self.subTest(flag=flag):
+                before = protocol.read_text(encoding="utf-8")
+                with self._dying_midway("PROTOCOL-"), self.assertRaises(OSError):
+                    quiet(call)
+                self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+
+    def test_the_twin_a_whole_rewrite_leaves_no_staging_file(self) -> None:
+        for flag, (protocol, call) in self._rewrites().items():
+            with self.subTest(flag=flag):
+                before = protocol.read_text(encoding="utf-8")
+                quiet(call)
+                self.assertNotEqual(protocol.read_text(encoding="utf-8"), before)
+                self.assertEqual(
+                    [p for p in protocol.parent.rglob(".*") if ".tmp" in p.name], []
+                )
+
+    def test_a_kind_change_that_dies_midway_leaves_the_script_whole(self) -> None:
+        """The stamp files `--change-kind` replaces go through
+        `files.write_atomic` too: the script it was writing stays as it was."""
+        area, _, _ = self._compute_area_with_work()
+        script = area / "scripts" / "01_measure.py"
+        before = script.read_text(encoding="utf-8")
+        with self._dying_midway("01_measure"), self.assertRaises(OSError):
+            quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
+        self.assertEqual(script.read_text(encoding="utf-8"), before)
 
     def test_the_kind_refusal_asks_the_questions(self) -> None:
         """Without `--kind` the refusal prints the same questions as the

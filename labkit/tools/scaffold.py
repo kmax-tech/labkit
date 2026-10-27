@@ -45,6 +45,7 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import promises, protocol_block, protocol_check, standard_contract
 from labkit.formats.runs import runs_path
+from labkit.formats.files import write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
     added_in,
@@ -345,7 +346,7 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
             log.append(f"  skip (report fields already there)  {proto}")
             continue
         new, auto = auto_fill_deterministic(new)
-        proto.write_text(new, encoding="utf-8")
+        write_atomic(proto, new)
         log.append(
             f"  filled in      {proto} ({added} report field(s), each in its section)"
         )
@@ -799,9 +800,11 @@ def carried_fields(old: str, old_stamp: str, new: str) -> tuple[str, list[str]]:
 
 def write_kind_change(area: Path, plan: KindChange) -> list[str]:
     """Write PLAN: remove the old kind's stamp files the new kind does not
-    stamp, write the new kind's (scripts executable), write the protocol.
-    Returns the log lines; one replaced on the evidence of an earlier pin
-    names the commit that keeps it (`KindChange.earlier`)."""
+    stamp, write the new kind's (scripts executable), write the protocol —
+    each file whole or not at all (`files.write_atomic`); the change as a
+    whole is not one step. Returns the log lines; one replaced on the
+    evidence of an earlier pin names the commit that keeps it
+    (`KindChange.earlier`)."""
 
     def earlier(path: Path) -> str:
         """` of an earlier pin, as committed in <commit>` for a PATH
@@ -819,14 +822,14 @@ def write_kind_change(area: Path, plan: KindChange) -> list[str]:
     for path, text in plan.after.items():
         replaced = path.exists()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        write_atomic(path, text)
         if path.parent == area / "scripts":
             path.chmod(0o755)  # a shebang nobody can run is a lint finding
         log.append(
             f"  {'replaced' if replaced else 'created':<14} {path}"
             + (f" (the stamp{earlier(path)})" if path in plan.earlier else "")
         )
-    plan.protocol.write_text(plan.text, encoding="utf-8")
+    write_atomic(plan.protocol, plan.text)
     log.append(
         f"  restamped      {plan.protocol} (same id, written fields kept"
         + (

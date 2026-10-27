@@ -254,7 +254,7 @@ evidence** (warns), **agent audit** (semantic).
 | What answers under a models.toml alias today? | `llm.model_entry` (the same lookup as the spec loader, `llm_specs.alias_tables`; the audit's evidence of a bound validation's alias) |
 | Where do a protocol's `## ` sections begin and end? | `protocol_block.section_starts`, `protocol_block.section_end` (outside every fence; the prose count, the Runs list, the cuts, the reading probe) |
 | How does a command refuse, tell progress, or print its usage? | `console.refuse` (stderr, the caller exits 2), `console.Refused` (raised where the reason is known, `console.exit_with` prints it), `console.progress` (stderr, no exit code), `console.usage` (0 asked, 2 bare) |
-| Write a file whole or not at all | `files.write_atomic`, `files.write_atomic_bytes` (every file a run leaves — records, failure, patch, raw artefacts, source snapshots — the lease, a filled protocol; the run index is appended under its lock) |
+| Write a file whole or not at all | `files.write_atomic`, `files.write_atomic_bytes` (every file a run leaves — records, failure, patch, raw artefacts, source snapshots — the lease, a filled protocol, a protocol `labkit-init` promotes or restamps and the stamp files it replaces; the run index is appended under its lock) |
 | The digest of a file, or of a set of named contents | `scope_sha.file_digest`, `scope_sha.tree_digest` (`DIGEST_CHARS` is the one recorded width of a stamp) |
 | How is a JSONL text split into its records? | `jsonl.record_lines` (at "\n" only — `str.splitlines` also breaks at U+2028, U+2029, U+0085 inside a record) |
 | What does a run's metadata say? | `runs.read_run_config` |
