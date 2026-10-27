@@ -954,9 +954,13 @@ class Stop(unittest.TestCase):
         )
         self._answer(self.RUN)
         _run(claude_hooks.pre_run, _bash(self.root, "ls"))
-        with mock.patch.object(claude_hooks, "STOP_BUDGET_S", 3.0):
+        # 10 s, not 3: under a load of 25 the budget ran out before the
+        # script had started its child, and no pid file was left to read
+        # (2026-10-28); `sleep 41` still outlives any budget by far
+        with mock.patch.object(claude_hooks, "STOP_BUDGET_S", 10.0):
             rc, _, err = self._stop()
         self.assertEqual(rc, 2, err)
+        self.assertTrue(pidfile.is_file(), f"the check never started its child: {err}")
         pid = int(pidfile.read_text())
 
         def alive() -> bool:
