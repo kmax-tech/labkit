@@ -53,6 +53,26 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"protocol-fill (?:\{[^}]*\} --from-run|--from-run \{)",
         {"repo"},
     ),
+    # the run record's file names had one constant of four (audit
+    # 2026-10-27, third, S6); `runs.CONFIG_FILE`, `COMPLETION_FILE`, `OUTPUTS_FILE`
+    (
+        "a run record file spelled by hand",
+        r"/ \"(config|completion|outputs)\.json\"",
+        {"runs"},
+    ),
+    # a kind compared as a word (audit 2026-10-27, third, S5);
+    # `standard_contract.*_KIND`
+    (
+        "a kind compared as a word",
+        r"kind [=!]= \"(compute|fit|apply)\"",
+        {"standard_contract"},
+    ),
+    # `core.hooksPath` set in two places (audit 2026-10-27, third, S9)
+    (
+        "core.hooksPath set by hand",
+        r"\"core\.hooksPath\", \"\.githooks\"",
+        {"install_hooks"},
+    ),
     # report-check printed `--into` with the protocol relative to the report
     # and the report relative to the repo: run from neither (audit
     # 2026-10-27, third, S2); `repo.into_command`
@@ -249,6 +269,9 @@ class OneHome(unittest.TestCase):
             "a shell line cut by hand": "words = shlex.split(command)",
             "a command cut at -- by hand": "cut = argv.index('--')",
             "an adopt command spelled by hand": 'print(f"protocol-fill {PROTOCOL.name} --from-run {rid}")',
+            "a run record file spelled by hand": 'cfg = run_dir / "config.json"',
+            "a kind compared as a word": 'if kind == "apply":',
+            "core.hooksPath set by hand": 'git_run(["config", "core.hooksPath", ".githooks"], root)',
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',

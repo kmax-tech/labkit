@@ -1081,6 +1081,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **More one-home: run record names, kinds, modes, the hooks path.**
+  `runs.CONFIG_FILE`, `COMPLETION_FILE` and `OUTPUTS_FILE` beside
+  `METRICS_FILE` replace seven literal names; the kind is compared to
+  `standard_contract.*_KIND`, not a word; `audit.MODES` extends
+  `findings.MODES`; `core.hooksPath` is set in one place
+  (`install_hooks.point_hooks_at`, which `labkit-init` calls).
+  `tests/test_one_home.py` holds each. Audit 2026-10-27 (third), S5, S6,
+  S9.
 - **One scanner for a report's comment blocks.** The handover block's
   reader and writer were a near copy of the discussion block's and had
   already diverged (only one handled an empty report). `comment_blocks`

@@ -94,6 +94,9 @@ from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
 from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
+    COMPLETION_FILE,
+    CONFIG_FILE,
+    OUTPUTS_FILE,
     COMPLETED,
     RunKind,
     RUN_SCHEMA,
@@ -518,7 +521,7 @@ class Run:
         # whole or not at all, like every record file: a listing that read
         # config.json mid-write saw a damaged run (CODE-013; audit 2026-10-15)
         write_atomic(
-            self.dir / "config.json", json.dumps(frozen, ensure_ascii=False, indent=2)
+            self.dir / CONFIG_FILE, json.dumps(frozen, ensure_ascii=False, indent=2)
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if repo.head_sha(self.base) and repo.tree_dirty(self.base):
@@ -611,7 +614,7 @@ class Run:
                         }
                     )
             write_atomic(
-                self.dir / "outputs.json",
+                self.dir / OUTPUTS_FILE,
                 json.dumps(rows, ensure_ascii=False, indent=2),
             )
         write_atomic(
@@ -626,7 +629,7 @@ class Run:
         # tracked files only: the run's own untracked products are not drift
         git_end = git_state(self.base, untracked=False)
         write_atomic(
-            self.dir / "completion.json",
+            self.dir / COMPLETION_FILE,
             json.dumps(
                 {
                     "schema_version": RUN_SCHEMA,

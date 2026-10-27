@@ -49,6 +49,7 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import promises, protocol_block, protocol_check, standard_contract
+from labkit.gates import install_hooks
 from labkit.formats.runs import runs_path
 from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
@@ -599,7 +600,11 @@ def protocol_stamp(
             pilot = estimator_placeholders(pilot, cut=True, kind=kind)
     elif skeleton is standard_contract.ESTIMATOR:
         pilot = estimator_placeholders(pilot, kind=kind)
-    if report and skeleton is standard_contract.ESTIMATOR and kind == "apply":
+    if (
+        report
+        and skeleton is standard_contract.ESTIMATOR
+        and kind == standard_contract.APPLY_KIND
+    ):
         clean = estimator_placeholders(clean, kind=kind)
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
     stamped = name_promise_ids(stamped, kind)
@@ -1023,13 +1028,12 @@ def asked_kind(kind: str | None) -> str:
 def _point_hooks_at(root: Path) -> None:
     """`core.hooksPath = .githooks` where the repo has both: the hook runs
     only where that setting points at it (2026-10-05)."""
-    if not ((root / ".git").exists() and (root / ".githooks").is_dir()):
+    if not ((root / ".git").exists() and (root / install_hooks.HOOKS_DIR).is_dir()):
         return
-    r = git_run(["config", "core.hooksPath", ".githooks"], root)
-    if r.returncode != 0:
-        raise console.Refused(
-            "labkit-init", f"git config core.hooksPath failed: {r.stderr.strip()}"
-        )
+    try:
+        install_hooks.point_hooks_at(root)
+    except RuntimeError as exc:
+        raise console.Refused("labkit-init", str(exc)) from exc
 
 
 def blank_before_headings(text: str) -> str:
@@ -1201,7 +1205,7 @@ def next_steps(
             fill = (
                 "make_estimator() loads the unchanged predictor (the null lane permutes "
                 "the labels); SCORE, FEATURES_FIELD; --show 3, then the run"
-                if kind == "apply"
+                if kind == standard_contract.APPLY_KIND
                 else "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
             )
         steps = [
@@ -1241,7 +1245,7 @@ def next_steps(
             (
                 "scripts/01_measure.py: make_estimator() loads the unchanged predictor "
                 "(the null lane permutes the labels); SCORE, FEATURES_FIELD; --show 3 "
-                if kind == "apply"
+                if kind == standard_contract.APPLY_KIND
                 else "scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 "
             )
             + "reads the config and feature rows"
@@ -1250,7 +1254,7 @@ def next_steps(
             (
                 (
                     "scripts/01_measure.py --probe 12  instrument check: the unchanged predictor, "
-                    if kind == "apply"
+                    if kind == standard_contract.APPLY_KIND
                     else "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
                 )
                 + "both lanes, throwaway; the rows into the protocol's raw output"

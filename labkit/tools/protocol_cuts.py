@@ -15,6 +15,7 @@ import re
 import uuid
 from pathlib import Path
 from labkit.formats import promises, protocol_block
+from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND
 from labkit.formats.protocol_check import model_named
 from labkit.formats.repo import (
     repo_protocols,
@@ -480,11 +481,11 @@ def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -
     — a silently unfilled field is the leftover this exists to remove; in
     the low CUT only the fields the cut carries are owed, the others
     are not stamped at all."""
-    if kind not in ("fit", "apply"):
+    if kind not in (FIT_KIND, APPLY_KIND):
         raise ValueError(
             f"estimator_placeholders: kind must be fit or apply, got {kind!r}"
         )
-    values = ESTIMATOR_FIELDS | (APPLY_FIELDS if kind == "apply" else {})
+    values = ESTIMATOR_FIELDS | (APPLY_FIELDS if kind == APPLY_KIND else {})
     lines = text.split("\n")
     for label, value in values.items():
         if not _replace_field(lines, label, value) and not cut:
@@ -493,7 +494,7 @@ def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -
             )
     out = "\n".join(lines)
     for pattern, replacement in ESTIMATOR_PROMISES:
-        if kind == "apply":
+        if kind == APPLY_KIND:
             replacement = replacement.replace("out-of-fold SCORE", "SCORE")
             replacement = replacement.replace(
                 "an out-of-fold prediction", "a prediction"

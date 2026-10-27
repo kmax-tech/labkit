@@ -234,6 +234,22 @@ START_IN_ROOT = (
 )
 
 
+#: where the versioned hooks live, and what `core.hooksPath` points at
+HOOKS_DIR = ".githooks"
+
+
+def point_hooks_at(repo: Path) -> None:
+    """`git config core.hooksPath .githooks` in REPO: the hook runs only
+    where that setting points at it (2026-10-05). The one place it is set
+    — `labkit-hooks install` and `labkit-init` both call it (audit
+    2026-10-27, third, S9). Raises RuntimeError naming git's refusal."""
+    r = git_run(["config", "core.hooksPath", HOOKS_DIR], repo)
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"git config core.hooksPath failed in {repo}: {r.stderr.strip()}"
+        )
+
+
 def install(repo: Path) -> list[str]:
     """Write the hooks; returns what was done."""
     done = []
@@ -259,11 +275,10 @@ def install(repo: Path) -> list[str]:
         hook.write_text(text, encoding="utf-8")
         done.append(f"wrote {hook.relative_to(repo)}")
     hook.chmod(hook.stat().st_mode | 0o755)
-    r = git_run(["config", "core.hooksPath", ".githooks"], repo)
-    if r.returncode != 0:
-        raise SystemExit(
-            f"labkit-hooks: git config failed in {repo}: {r.stderr.strip()}"
-        )
+    try:
+        point_hooks_at(repo)
+    except RuntimeError as exc:
+        raise SystemExit(f"labkit-hooks: {exc}") from exc
     done.append("git core.hooksPath = .githooks")
     path, current = _settings(repo)
     wanted = merged_settings(current)

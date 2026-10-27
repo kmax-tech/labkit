@@ -134,7 +134,7 @@ REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
     findings.ATTEMPT_TIMEOUT_S
 )  # one call reads the area, the rules, the rows
-MODES = ("preflight", "analysis", "clarity")
+MODES = (*findings.MODES, "clarity")  # the recorded modes and the readability read
 #: the audit's exit contract — not `gate.EXIT_CONTRACT`: a warning is a
 #: finding to decide here, so it exits 1 too (the module docstring says why)
 AUDIT_EXIT_CONTRACT = (

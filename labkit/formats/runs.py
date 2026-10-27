@@ -129,7 +129,7 @@ def run_state(run_dir: Path, alive: bool | None) -> RunState:
     alive; `run_state` uses the same contract.
     """
     has_metrics = metrics_path(run_dir).is_file()
-    has_completion = (run_dir / "completion.json").is_file()
+    has_completion = (run_dir / COMPLETION_FILE).is_file()
     if has_metrics and has_completion:
         return COMPLETED
     if alive is True:
@@ -174,6 +174,10 @@ FAILURE_FILE = "failure.json"
 #: `run / "metrics.json"` by hand)
 RUNS_DIR = "runs"
 METRICS_FILE = "metrics.json"
+#: the run record's other files, one spelling each (audit 2026-10-27, third, S6)
+CONFIG_FILE = "config.json"
+COMPLETION_FILE = "completion.json"
+OUTPUTS_FILE = "outputs.json"
 
 
 def runs_path(area: Path) -> Path:
@@ -274,7 +278,7 @@ def read_run_config(run_dir: Path) -> RunConfig | None:
     and let an older one be chosen or reported in its place (review
     2026-10-06) — listings show it as `corrupt`, choices refuse.
     """
-    cfg_file = run_dir / "config.json"
+    cfg_file = run_dir / CONFIG_FILE
     if not cfg_file.is_file():
         return None
     try:
@@ -356,7 +360,7 @@ def read_outputs(run_dir: Path) -> list[OutputEntry] | None:
     registered none (no file). Raises ArtefactError when an entry is not the
     shape `runlog` writes — a path as text, sha256 text or null, lines an
     integer or null."""
-    path = run_dir / "outputs.json"
+    path = run_dir / OUTPUTS_FILE
     if not path.is_file():
         return None
     data = _json_of(path, "outputs")
@@ -417,7 +421,7 @@ def read_completion(run_dir: Path) -> dict[str, object]:
     """A run's completion.json as a JSON object. Raises ArtefactError when it
     is missing, unreadable or not an object — the caller asks a completed
     run, whose marker this is (`completion_state` decides that, by markers)."""
-    path = run_dir / "completion.json"
+    path = run_dir / COMPLETION_FILE
     data = _json_of(path, "completion")
     if not isinstance(data, dict):
         raise ArtefactError(f"{path}: must be a JSON object, not {type(data).__name__}")
