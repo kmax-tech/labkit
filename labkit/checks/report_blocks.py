@@ -70,6 +70,14 @@ from pathlib import Path
 
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
+from labkit.formats.comment_blocks import (
+    HEAD_END,
+    CommentBlockError,
+    closer,
+    comment_blocks,
+    opener,
+    write_comment_block,
+)
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.repo import into_command
 
@@ -302,9 +310,9 @@ def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[str]:
 #: apart on the first backtick around the id (eighth haiku round, t3;
 #: docs/notes/2026-10-26-report-run-citations.md).
 DISCUSSED = "discussed"
-DISCUSS_OPEN = "<!-- labkit discussed"
-DISCUSS_HEAD_END = "-->"
-DISCUSS_CLOSE = "<!-- /labkit discussed -->"
+DISCUSS_OPEN = opener(DISCUSSED)
+DISCUSS_HEAD_END = HEAD_END
+DISCUSS_CLOSE = closer(DISCUSSED)
 DISCUSS_KEYS = ("protocol", "run", "why")
 
 
@@ -397,79 +405,53 @@ def _discussion_head(head: list[str], at: int) -> tuple[str, str, str]:
 
 
 def discussions(text: str) -> list[Discussion]:
-    """Every discussion block of TEXT in order. Raises ReportBlockError on
-    a block that does not read: never closed, closed without opening,
-    nested, or a head that is not the three keys."""
-    out: list[Discussion] = []
-    lines = text.split("\n")
-    n = 0
-    while n < len(lines):
-        line = lines[n].strip()
-        n += 1
-        if line == DISCUSS_CLOSE:
-            raise ReportBlockError(
-                f"line {n}: {DISCUSS_CLOSE} closes no discussion block"
-            )
-        if line != DISCUSS_OPEN:
-            continue
-        first = n
-        head: list[str] = []
-        while n < len(lines) and lines[n].strip() != DISCUSS_HEAD_END:
-            if lines[n].strip() in (DISCUSS_OPEN, DISCUSS_CLOSE):
-                break
-            head.append(lines[n])
-            n += 1
-        if n >= len(lines) or lines[n].strip() != DISCUSS_HEAD_END:
-            raise ReportBlockError(
-                f"line {first}: the discussion block's head is never closed "
-                f"({DISCUSS_HEAD_END} on a line of its own)"
-            )
-        n += 1
-        protocol, run_id, why = _discussion_head(head, first)
-        body: list[str] = []
-        while n < len(lines) and lines[n].strip() != DISCUSS_CLOSE:
-            if lines[n].strip() == DISCUSS_OPEN:
-                raise ReportBlockError(
-                    f"line {n + 1}: a discussion block opens inside the one "
-                    f"opened at line {first}"
-                )
-            body.append(lines[n])
-            n += 1
-        if n >= len(lines):
-            raise ReportBlockError(
-                f"line {first}: the discussion block of run {run_id} is never "
-                f"closed ({DISCUSS_CLOSE})"
-            )
-        n += 1
-        out.append(Discussion(protocol, run_id, why, first, n, "\n".join(body).strip()))
-    return out
+    """Every discussion block of TEXT in order (`comment_blocks`). Raises
+    ReportBlockError on a block that does not read: never closed, closed
+    without opening, nested, or a head that is not the three keys."""
+    try:
+        found = comment_blocks(
+            text, DISCUSSED, "discussion block", check_head=_discussion_head
+        )
+    except CommentBlockError as exc:
+        raise ReportBlockError(str(exc)) from exc
+    return [
+        Discussion(
+            *_discussion_head(b.head, b.first),
+            b.first,
+            b.last,
+            "\n".join(b.body).strip(),
+        )
+        for b in found
+    ]
 
 
 def write_discussion(text: str, protocol: str, run_id: str, why: str) -> str:
     """TEXT with the block discussing RUN_ID of PROTOCOL with WHY: the one
     block of that protocol and run replaced in place, or one appended at
-    the end; other discussions stay. Raises ReportBlockError on a block
-    that does not read or on two blocks of the same protocol and run (the
-    gate names that too), ValueError on a why that cannot stand
-    (`discussion_lines`)."""
+    the end; other discussions stay (`write_comment_block`). Raises
+    ReportBlockError on a block that does not read or on two blocks of the
+    same protocol and run (the gate names that too), ValueError on a why
+    that cannot stand (`discussion_lines`)."""
     new = discussion_lines(protocol, run_id, why)
-    same = [
-        d for d in discussions(text) if (d.protocol, d.run_id) == (protocol, run_id)
-    ]
-    if len(same) > 1:
-        raise ReportBlockError(
-            f"run {run_id} of {protocol} is discussed in "
-            f"{len(same)} blocks (lines {', '.join(str(d.first) for d in same)}) — "
-            f"remove all but one, then write it again"
+    matching = {
+        d.first
+        for d in discussions(text)
+        if (d.protocol, d.run_id) == (protocol, run_id)
+    }
+    try:
+        return write_comment_block(
+            text,
+            new,
+            comment_blocks(text, DISCUSSED, "discussion block"),
+            lambda b: b.first in matching,
+            lambda same: (
+                f"run {run_id} of {protocol} is discussed in {len(same)} blocks "
+                f"(lines {', '.join(str(b.first) for b in same)}) — remove all "
+                f"but one, then write it again"
+            ),
         )
-    lines = text.split("\n")
-    if not same:
-        while lines and lines[-1] == "":
-            lines.pop()
-        return "\n".join([*lines, "", *new, ""])
-    (d,) = same
-    lines[d.first - 1 : d.last] = new
-    return "\n".join(lines)
+    except CommentBlockError as exc:
+        raise ReportBlockError(str(exc)) from exc
 
 
 def discussion_gaps(found: list[Discussion]) -> list[str]:

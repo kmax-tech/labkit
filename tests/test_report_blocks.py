@@ -220,7 +220,10 @@ class Discussions(unittest.TestCase):
     def test_a_block_that_does_not_read_raises_with_its_line(self):
         lines = report_blocks.discussion_lines(P, RUN, "a")
         for text, said in (
-            ("\n".join(lines[:-1]) + "\n", "line 1: the discussion block of run"),
+            (
+                "\n".join(lines[:-1]) + "\n",
+                "line 1: the discussion block opened there is never closed",
+            ),
             ("\n".join(lines[:3]) + "\n", "head is never closed"),
             (report_blocks.DISCUSS_CLOSE + "\n", "line 1: .* closes no discussion"),
             (

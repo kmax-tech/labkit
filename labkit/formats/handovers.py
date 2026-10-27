@@ -36,6 +36,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
 from labkit.formats import files, findings, protocol_block, runs, scope_sha
+from labkit.formats.comment_blocks import (
+    HEAD_END,
+    CommentBlockError,
+    closer,
+    comment_blocks,
+    opener,
+    write_comment_block,
+)
 from labkit.formats.repo import (
     GitError,
     area_protocols,
@@ -51,9 +59,9 @@ from labkit.formats.repo import (
 DIRECTORY = "handovers"
 SCHEMA = 1
 
-OPEN = "<!-- labkit handover"
-HEAD_END = "-->"
-CLOSE = "<!-- /labkit handover -->"
+KIND = "handover"
+OPEN = opener(KIND)
+CLOSE = closer(KIND)
 HEAD_KEYS = ("protocol", "record")
 #: the decisions a handover lists as left over: nothing settled them
 UNSETTLED = ("open", "deferred")
@@ -358,42 +366,18 @@ def handover_lines(record: Handover, root: Path, path: Path) -> list[str]:
 
 
 def handover_blocks(text: str) -> list[HandoverBlock]:
-    """Every handover block of TEXT in order. Raises HandoverError naming
-    the line on a block that does not read: never closed, closed without
-    opening, nested, or a head that is not protocol and record."""
-    out: list[HandoverBlock] = []
-    lines = text.split("\n")
-    n = 0
-    while n < len(lines):
-        line = lines[n].strip()
-        n += 1
-        if line == CLOSE:
-            raise HandoverError(f"line {n}: {CLOSE} closes no handover block")
-        if line != OPEN:
-            continue
-        first = n
-        while n < len(lines) and lines[n].strip() not in (HEAD_END, OPEN, CLOSE):
-            n += 1
-        if n >= len(lines) or lines[n].strip() != HEAD_END:
-            raise HandoverError(
-                f"line {first}: the handover block's head is never closed "
-                f"({HEAD_END} on a line of its own)"
-            )
-        head = _block_head(lines[first:n], first)
-        while n < len(lines) and lines[n].strip() != CLOSE:
-            if lines[n].strip() == OPEN:
-                raise HandoverError(
-                    f"line {n + 1}: a handover block opens inside the one opened "
-                    f"at line {first}"
-                )
-            n += 1
-        if n >= len(lines):
-            raise HandoverError(
-                f"line {first}: the handover block is never closed ({CLOSE})"
-            )
-        n += 1
-        out.append(HandoverBlock(*head, first, n, lines[first - 1 : n]))
-    return out
+    """Every handover block of TEXT in order (`comment_blocks`). Raises
+    HandoverError naming the line on a block that does not read: never
+    closed, closed without opening, nested, or a head that is not protocol
+    and record."""
+    try:
+        found = comment_blocks(text, KIND, "handover block", check_head=_block_head)
+    except CommentBlockError as exc:
+        raise HandoverError(str(exc)) from exc
+    return [
+        HandoverBlock(*_block_head(b.head, b.first), b.first, b.last, b.lines)
+        for b in found
+    ]
 
 
 def _block_head(head: list[str], at: int) -> tuple[str, str]:
@@ -418,26 +402,25 @@ def _block_head(head: list[str], at: int) -> tuple[str, str]:
 
 def write_handover_block(text: str, record: Handover, root: Path, path: Path) -> str:
     """TEXT with RECORD's handover block: the one block of its protocol
-    replaced in place, or one appended at the end; everything else stays.
-    Raises HandoverError on a block that does not read or on two blocks of
-    the same protocol."""
-    new = handover_lines(record, root, path)
+    replaced in place, or one appended at the end; everything else stays
+    (`write_comment_block`). Raises HandoverError on a block that does not
+    read or on two blocks of the same protocol."""
     protocol = _shown(record, root, path)[0]
-    same = [b for b in handover_blocks(text) if b.protocol == protocol]
-    if len(same) > 1:
-        raise HandoverError(
-            f"{protocol} is handed over in {len(same)} blocks (lines "
-            f"{', '.join(str(b.first) for b in same)}) — remove all but one, "
-            "then write it again"
+    matching = {b.first for b in handover_blocks(text) if b.protocol == protocol}
+    try:
+        return write_comment_block(
+            text,
+            handover_lines(record, root, path),
+            comment_blocks(text, KIND, "handover block"),
+            lambda b: b.first in matching,
+            lambda same: (
+                f"{protocol} is handed over in {len(same)} blocks (lines "
+                f"{', '.join(str(b.first) for b in same)}) — remove all but one, "
+                "then write it again"
+            ),
         )
-    lines = text.split("\n")
-    if not same:
-        while lines and lines[-1] == "":
-            lines.pop()
-        return "\n".join([*lines, "", *new, ""] if lines else [*new, ""])
-    (b,) = same
-    lines[b.first - 1 : b.last] = new
-    return "\n".join(lines)
+    except CommentBlockError as exc:
+        raise HandoverError(str(exc)) from exc
 
 
 def _json(record: Handover) -> str:

@@ -1081,6 +1081,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One scanner for a report's comment blocks.** The handover block's
+  reader and writer were a near copy of the discussion block's and had
+  already diverged (only one handled an empty report). `comment_blocks`
+  (layer 1) reads and writes every `<!-- labkit KIND` block — head, body,
+  the errors naming the line, the head checked before the body — and
+  both kinds use it, each checking its own head; an unclosed discussion
+  block is named by the line it opens at. Audit 2026-10-27 (third), S1.
 - **Small messages that misled.** A handover that fails after writing its
   record (and protocol) names them and says they grant nothing until the
   report matches; `runlog start` takes the run whose record names its
