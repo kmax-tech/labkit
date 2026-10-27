@@ -116,7 +116,8 @@ _TOML_RAW_UNSAFE = str.maketrans(
 
 def toml_string(value: str) -> str:
     """VALUE as a one-line TOML basic string, the one writer of a TOML
-    string labkit writes (findings files, a promise sentence). json's
+    string labkit writes (findings and review files, a promise sentence,
+    the head of a report's discussion block). json's
     escaping is TOML's for the quote, the backslash and every control
     character below U+0020; DEL, U+0085, U+2028 and U+2029 are escaped on
     top. Raises

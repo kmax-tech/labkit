@@ -58,7 +58,6 @@ no gate read the file.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import tomllib
@@ -67,6 +66,7 @@ from pathlib import Path
 
 from labkit.checks.result_render import Rendering
 from labkit.formats import runs
+from labkit.formats.protocol_block import toml_string
 
 #: the block's opening and closing lines, each a line of its own
 OPEN = re.compile(
@@ -311,15 +311,12 @@ def discussion_body(run_id: str, why: str) -> str:
     return f"Run {run_id} — {DISCUSSED}, not reported: {why}"
 
 
-def _toml_string(value: str) -> str:
-    """VALUE as a TOML basic string."""
-    return json.dumps(value, ensure_ascii=False)
-
-
 def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
-    """The block discussing RUN_ID of PROTOCOL with WHY, line by line.
-    Raises ValueError on a why that cannot stand in the block: empty, more
-    than one line, or holding `-->` (it would close the comment)."""
+    """The block discussing RUN_ID of PROTOCOL with WHY, line by line; the
+    head's strings written by `protocol_block.toml_string`. Raises
+    ValueError on a why that cannot stand in the block: empty, more than
+    one line, holding `-->` (it would close the comment), or a lone
+    surrogate (no TOML string holds one)."""
     why = why.strip()
     if not why:
         raise ValueError(
@@ -330,11 +327,15 @@ def discussion_lines(protocol: str, run_id: str, why: str) -> list[str]:
             f"--why {why!r}: one line, without {DISCUSS_HEAD_END!r} (it closes the "
             f"block's head)"
         )
+    try:
+        why_string = toml_string(why)
+    except ValueError as exc:
+        raise ValueError(f"--why: {exc}") from exc
     return [
         DISCUSS_OPEN,
-        f"protocol = {_toml_string(protocol)}",
-        f"run = {_toml_string(run_id)}",
-        f"why = {_toml_string(why)}",
+        f"protocol = {toml_string(protocol)}",
+        f"run = {toml_string(run_id)}",
+        f"why = {why_string}",
         DISCUSS_HEAD_END,
         discussion_body(run_id, why),
         DISCUSS_CLOSE,

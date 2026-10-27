@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -133,6 +134,36 @@ class Discussions(unittest.TestCase):
         for why in ("", "  ", "two\nlines", "closes --> early"):
             with self.assertRaises(ValueError):
                 report_blocks.discussion_lines(P, RUN, why)
+
+    def test_control_characters_in_the_why_read_back_from_the_file(self):
+        """The head's strings are written by `protocol_block.toml_string`,
+        the one TOML string writer: json.dumps here left DEL raw, a head
+        tomllib refuses, so the report no longer read (audit 2026-10-27,
+        C15). Each why reads back unchanged, through the file as the gate
+        reads it, and its line equals its head."""
+        for why in (
+            "del\x7fx",
+            "nul\x00x",
+            "bell\x07 esc\x1b",
+            "tab\there",
+            "vt\x0bff\x0cx",
+            "nel\x85x",
+            "ls x ps y",
+            'quote " and back\\slash',
+        ):
+            with self.subTest(why=why), tempfile.TemporaryDirectory() as d:
+                report = Path(d) / "REPORT.md"
+                text = report_blocks.write_discussion("# R\n", P, RUN, why)
+                report.write_text(text, encoding="utf-8")
+                found = report_blocks.discussions(report.read_text(encoding="utf-8"))
+                self.assertEqual([x.why for x in found], [why])
+                self.assertEqual(report_blocks.discussion_gaps(found), [])
+
+    def test_a_lone_surrogate_in_the_why_is_refused_naming_it(self):
+        """An argument not decoded as UTF-8 reaches `--why` as a lone
+        surrogate; writing the report then ended in a traceback."""
+        with self.assertRaisesRegex(ValueError, "--why: a lone surrogate U\\+DCFF"):
+            report_blocks.discussion_lines(P, RUN, "bad \udcff byte")
 
     def test_two_blocks_of_one_protocol_and_run_are_a_gap_and_refuse_a_write(self):
         one = "\n".join(report_blocks.discussion_lines(P, RUN, "a"))
@@ -713,6 +744,37 @@ class ReportFiles(unittest.TestCase):
             )
         found = report_blocks.discussions(report.read_text(encoding="utf-8"))
         self.assertEqual([(d.run_id, d.why) for d in found], [(self.RUN, "two")])
+
+    def test_discuss_with_a_control_character_writes_a_block_that_reads_back(self):
+        """A DEL in `--why` wrote a head tomllib refuses: the next `--discuss`
+        and the gate refused the report (audit 2026-10-27, C15). A lone
+        surrogate ended in a traceback; it is refused, nothing written."""
+        area = self._area(f"c1_pass = True (run {self.RUN})", declared=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        proto = str(area / "PROTOCOL-x.md")
+
+        def discuss(why: str) -> tuple[int, str]:
+            err = io.StringIO()
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(err),
+            ):
+                rc = protocol_fill.main(
+                    [proto, "--discuss", self.RUN, "--why", why, "--into", str(report)]
+                )
+            return rc, err.getvalue()
+
+        rc, err = discuss("bad \udcff byte")
+        self.assertEqual(rc, 2, err)
+        self.assertIn("--why: a lone surrogate U+DCFF", err)
+        self.assertFalse(report.exists())
+        for why in ("del\x7f one", "del\x7f two"):
+            self.assertEqual(discuss(why), (0, ""))
+        found = report_blocks.discussions(report.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [(d.run_id, d.why) for d in found], [(self.RUN, "del\x7f two")]
+        )
 
     def test_blocks_owed_names_each_declaring_protocol_once(self):
         other = "2026-10-08T10-00-00_cd34"
