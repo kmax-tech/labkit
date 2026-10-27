@@ -28,6 +28,7 @@ from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
     COMPLETED,
     RUN_ID,
+    RunConfig,
     RunConfigError,
     completion_state,
     read_run_config,
@@ -425,6 +426,27 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
     )
 
 
+def completed_parent(base_dir: Path, key: str, run_id: str, why: str = "") -> RunConfig:
+    """The config of RUN_ID, the parent a new run names under KEY
+    (`repeat_of`, `derived_from`), or a refusal naming KEY: no completed
+    run of this area, or a config that does not read; WHY ends the "no
+    completed run" sentence. The one reading of a parent run for both keys
+    (audit 2026-10-27, third, S4); each caller adds its own check that the
+    parent is no repeat."""
+    parent = run_path(base_dir, run_id)
+    try:
+        state = completion_state(parent) if parent.is_dir() else "missing"
+        pcfg = read_run_config(parent) if state == COMPLETED else None
+    except RunConfigError as exc:
+        raise SystemExit(f"runlog: {key}={run_id!r}: {exc}") from exc
+    if pcfg is None:
+        raise SystemExit(
+            f"runlog: {key}={run_id!r} names no completed run under "
+            f"{runs_path(base_dir)} ({state}){why}"
+        )
+    return pcfg
+
+
 def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     """DERIVED_FROM as config.json records it, or a refusal: the parent must
     be a completed run of this area and no repeat."""
@@ -435,19 +457,12 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
             f"runlog: derived_from={derived_from!r} is not a run id — name a "
             f"run of {runs_path(base_dir)} by its id, never a path"
         )
-    parent = run_path(base_dir, derived_from)
-    try:
-        state = completion_state(parent) if parent.is_dir() else "missing"
-        pcfg = read_run_config(parent) if state == COMPLETED else None
-        drawn_from = pcfg.repeat_of if pcfg else None
-    except RunConfigError as exc:
-        raise SystemExit(f"runlog: derived_from={derived_from!r}: {exc}") from exc
-    if state != COMPLETED:
-        raise SystemExit(
-            f"runlog: derived_from={derived_from!r} names no completed "
-            f"run under {runs_path(base_dir)} ({state}) — a derived run "
-            f"needs a finished parent"
-        )
+    drawn_from = completed_parent(
+        base_dir,
+        "derived_from",
+        derived_from,
+        " — a derived run needs a finished parent",
+    ).repeat_of
     # a derived run is no repeat and may answer: from a repeat, the
     # best of several draws would answer through it (2026-10-15)
     if drawn_from is not None:

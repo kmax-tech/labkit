@@ -1088,6 +1088,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One reading of a parent run.** `repeat_of` (runlog) and
+  `derived_from` (start check) each read their parent's completion state
+  and config and refused in their own words; `start_check.completed_parent`
+  reads it for both, each keeps its own "no repeat" check. Audit 2026-10-27
+  (third), S4.
 - **One answer-line grammar and one prompt join for the audit and both
   reviewers.** Each spelled the separator of an answer line
   (`· — – :`), the lead before its keyword, the "last verdict line or

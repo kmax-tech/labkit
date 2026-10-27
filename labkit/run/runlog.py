@@ -88,7 +88,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
-from labkit.formats.runs import metrics_path, patch_path, run_path, runs_path
+from labkit.formats.runs import metrics_path, patch_path, run_path
 from labkit.run import batch
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
@@ -106,13 +106,11 @@ from labkit.formats.runs import (
     RunConfig,
     RunConfigError,
     RunState,
-    completion_state,
     is_alive,
     now_stamp,
     read_completion,
     write_failure,
     read_metrics,
-    read_run_config,
     recorded_path,
     run_dirs,
     run_state,
@@ -135,6 +133,7 @@ from labkit.run.provenance import (
 )
 from labkit.run.start_check import (
     Prepared,
+    completed_parent,
     foreground_refusal,
     freeze_gate,
     prepare,
@@ -267,17 +266,7 @@ def _runs_held(path: Path) -> set[str] | None:
 def _repeat_parent(base_dir: Path, repeat_of: str) -> RunConfig:
     """The config of REPEAT_OF, a completed primary run of this area, or a
     refusal: missing, not completed, unreadable, or itself a repeat."""
-    parent = run_path(base_dir, repeat_of)
-    try:
-        state = completion_state(parent) if parent.is_dir() else "missing"
-        pcfg = read_run_config(parent) if state == COMPLETED else None
-    except RunConfigError as exc:
-        raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
-    if pcfg is None:
-        raise SystemExit(
-            f"runlog: repeat_of={repeat_of!r} names no completed run under "
-            f"{runs_path(base_dir)} ({state})"
-        )
+    pcfg = completed_parent(base_dir, "repeat_of", repeat_of)
     if pcfg.repeat_of is not None:
         raise SystemExit(
             f"runlog: {repeat_of} is itself a repeat of {pcfg.repeat_of} — "
