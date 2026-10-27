@@ -233,6 +233,47 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The Claude hooks find the git root from a subdirectory.** A session
+  whose project directory lies below the repo root skipped the stop and
+  post-change's git status in silence, pre-run's walk to an area ended at
+  the project directory, and `claude-hook undecided` read the
+  pre-commit's staged paths against `CLAUDE_PROJECT_DIR`. The hooks now
+  hold the git root of the project directory (`claude_hooks.session_repo`);
+  `undecided` reads its paths against the repository of its current
+  directory, where git runs the pre-commit. Outside every repository the
+  stop holds once per turn and says why. Limit: Claude Code loads no
+  project hooks from the root's `.claude/settings.json` in a session
+  started below it (audit 2026-10-27, C8).
+- **The pre-commit reads audit decisions from the index.** `claude-hook
+  undecided` read the attempt journal from the index but the records and
+  their decisions from the tree: a BLOCKER decided and never staged passed
+  while the commit carried it open. `findings.area_records(area,
+  staged=True)` reads the records the index carries; the refusal asks to
+  stage the decided record (C9).
+- **The stop base moves only past a clean stop on a clean tree.** The
+  stop's checks read the working tree: a commit past the pre-commit with
+  its fix left uncommitted passed and moved the base past the bad commit,
+  so dropping the fix was never held. The base now moves only after a stop
+  without a blocker that found `git status` empty (C7).
+- **Without a stop base the stop checks the commits since the transcript
+  start.** A removed base (`rm -rf .git/labkit-stop-base`) left the stop
+  checking no commit, in silence, and the next Bash command kept a new
+  base past the commit. The stop now says so and checks the commits on
+  HEAD's first-parent line dated since the transcript's first record
+  (`repo.head_before`) — the session's commits, never every protocol;
+  pre-run keeps no base past them. Limit: a commit date is the commit's
+  own word (A12).
+- **The stop runs within its own budget.** Claude Code cancels the stop
+  hook at 120 s (`install_hooks.STOP_TIMEOUT_S`) and a cancelled stop holds
+  nothing, while one area's tests or `--check` may take 300 s. The checks
+  now end at `claude_hooks.STOP_BUDGET_S` (90 s); past it the stop holds
+  once per turn and says so.
+- **post-change tells a linked report its refusal.** It resolved paths
+  before `report_files`, so a report linking into `data/` got no word
+  while the stop and the commit refuse it; it now names the refusal and
+  its way out (`report_check.link_gap`).
+- The standard (LAB-011 Required-field check) states the stop's control
+  after `--no-verify` and its limits.
 - **A report that is a symbolic link is refused at its own path.**
   `report_files` resolved a path before it tested `runs/`/`data/`, so
   `REPORT.md` linked into `data/` carried a retyped result block past the
