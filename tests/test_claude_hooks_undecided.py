@@ -203,6 +203,32 @@ class Undecided(unittest.TestCase):
         self.assertEqual(commit_gate(), (0, ""))
         self.assertEqual(self._stop()[0], 2)
 
+    def test_a_record_left_out_of_the_commit_holds_it(self):
+        """Reading the records the index carries let a fresh audit record,
+        never staged, out of the commit's view: a commit of the area's
+        script passed its open BLOCKER (cold review 2026-10-27). A record in
+        the tree the index lacks holds the commit, naming the `git add`; the
+        twin, the record staged and decided, passes."""
+        path = self._record(self.area, [BLOCKER])
+        script = self._touch(self.area)
+        _git(self.root, "add", str(script))
+
+        def commit_gate() -> tuple[int, str]:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
+                rc = claude_hooks.main(
+                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
+                )
+            return rc, out.getvalue()
+
+        rc, out = commit_gate()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("in the tree, not in the index", out)
+        self.assertIn(f"git add experiments/01-x/audits/{path.name}", out)
+        findings.write_decision(path, 1, "deferred", "measured in area 02")
+        _git(self.root, "add", str(path))
+        self.assertEqual(commit_gate(), (0, ""))
+
     def test_a_record_the_index_cannot_read_is_named_as_the_index_holds_it(self):
         self._record(self.area, [BLOCKER])
         bad = self.area / findings.DIR / "2026-10-20T14-03-preflight.toml"

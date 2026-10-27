@@ -873,6 +873,65 @@ def linked_file(path: Path, link_target: str) -> Path:
     return Path(os.path.normpath(path.parent / link_target))
 
 
+def link_end(
+    repo: Path,
+    path: Path,
+    *,
+    staged: bool,
+    index_links: dict[Path, str] | None = None,
+) -> Path | None:
+    """The file a chain of symbolic links starting at PATH ends at: in the
+    tree as the system follows it; STAGED, hop by hop through the index's
+    links (INDEX_LINKS, `repo.indexed_links`) while the chain stays in REPO,
+    then as the disk holds it. None when the chain runs in a circle."""
+    if not staged:
+        try:
+            return Path(os.path.realpath(path, strict=True))
+        except FileNotFoundError:  # a dangling link: where it points
+            return Path(os.path.realpath(path))
+        except OSError:  # a circle
+            return None
+    links = index_links if index_links is not None else indexed_links(repo)
+    seen = {path}
+    file = linked_file(path, links[path]) if path in links else path
+    while file not in seen:
+        if not under_root(repo, file) or file not in links:
+            return file
+        seen.add(file)
+        file = linked_file(file, links[file])
+    return None
+
+
+def held_place(repo: Path, path: Path) -> bool:
+    """Is PATH a place the gate holds a report at: inside REPO, a Markdown
+    file, no protocol, under none of SKIP_DIRS (`runs/`, `data/`, …)?"""
+    if path.suffix != REPORT_SUFFIX or PROTOCOL_NAME.match(path.name):
+        return False
+    if not under_root(repo, path):
+        return False
+    return not SKIP_DIRS & set(path.relative_to(repo.resolve()).parts)
+
+
+def refused_link(
+    repo: Path,
+    path: Path,
+    *,
+    staged: bool,
+    index_links: dict[Path, str] | None = None,
+) -> str | None:
+    """The target PATH stores when it is a symbolic link the gate refuses as
+    a report: one whose chain ends where no report is held (`held_place`:
+    under `runs/` or `data/`, outside the repository, no Markdown file) or
+    runs in a circle. None for a regular file, and for a link ending at a
+    held place — that file is held where it lies, and the link reads as it
+    does (`CLAUDE.md -> AGENTS.md`)."""
+    target = state_link(repo, path, staged=staged, index_links=index_links)
+    if target is None:
+        return None
+    end = link_end(repo, path, staged=staged, index_links=index_links)
+    return None if end is not None and held_place(repo, end) else target
+
+
 def report_entry(
     repo: Path,
     path: Path,
@@ -882,38 +941,29 @@ def report_entry(
 ) -> tuple[str | None, str | None]:
     """(the target PATH stores as a symbolic link, or None; what a reader of
     the gate's state sees at PATH). A regular file: its content
-    (`state_text`). A link — or a chain of links — the content of the file
-    the chain ends at: in the tree as the system follows it; STAGED, hop by
-    hop through the index's links, read from the index while the chain
-    stays in REPO and from the disk once it leaves (no commit holds a file
-    outside the repo). The text is None when the state holds nothing there
-    or the chain runs in a circle. INDEX_LINKS: the index's links when the
-    caller listed them already (`repo.indexed_links`). The one reading of a
-    report for `report_files`, `committed_reports` and `discussing_reports`."""
-    if not staged:
-        link_target = state_link(repo, path, staged=False)
-        if link_target is None:
-            return None, state_text(repo, path, staged=False)
-        # the system follows the whole chain
-        return link_target, (
-            path.read_text(encoding="utf-8") if path.is_file() else None
-        )
-    links = index_links if index_links is not None else indexed_links(repo)
-    link_target = state_link(repo, path, staged=True, index_links=links)
+    (`state_text`). A link — or a chain of links (`link_end`) — the content
+    of the file the chain ends at: from the index while STAGED and in
+    REPO, else from the disk (no commit holds a file outside the repo).
+    (None, None) for a link ending at a held place (`held_place`): the
+    file it points to is the report, held where it lies. The text is None
+    when the state holds nothing there or the chain runs in a circle.
+    INDEX_LINKS: the index's links when the caller listed them already
+    (`repo.indexed_links`). The one reading of a report for `report_files`,
+    `committed_reports` and `discussing_reports`."""
+    links = (
+        index_links if index_links is not None or not staged else indexed_links(repo)
+    )
+    link_target = state_link(repo, path, staged=staged, index_links=links)
     if link_target is None:
-        return None, state_text(repo, path, staged=True)
-    seen = {path}
-    file = linked_file(path, link_target)
-    while file not in seen:
-        if not under_root(repo, file):
-            return link_target, (
-                file.read_text(encoding="utf-8") if file.is_file() else None
-            )
-        if file not in links:
-            return link_target, index_text(repo, file)
-        seen.add(file)
-        file = linked_file(file, links[file])
-    return link_target, None
+        return None, state_text(repo, path, staged=staged)
+    end = link_end(repo, path, staged=staged, index_links=links)
+    if end is None:
+        return link_target, None
+    if held_place(repo, end):
+        return None, None
+    if not staged or not under_root(repo, end):
+        return link_target, end.read_text(encoding="utf-8") if end.is_file() else None
+    return link_target, index_text(repo, end)
 
 
 def tree_differs(repo: Path, area: Path) -> list[str]:
@@ -1170,7 +1220,7 @@ def hold_report(
     staged: bool = False,
 ) -> int:
     """Hold one report. First: a report that is a symbolic link in the
-    state (`state_link`) is refused alone, one blocker naming the copy that
+    state, ending where no report is held (`refused_link`), is refused alone, one blocker naming the copy that
     replaces it (`link_gap`) — the checks below wait for that copy. Then:
     its result blocks equal their protocols' rendering,
     every cited run id a run of the repo, every cited declared result shown
@@ -1191,7 +1241,7 @@ def hold_report(
     rel = path.relative_to(repo.resolve()).as_posix()
     print(f"═══ report-check {rel} ({held_as}) ═══")
     out = Findings()
-    link_target = state_link(repo, path, staged=staged)
+    link_target = refused_link(repo, path, staged=staged)
     if link_target is not None:
         # alone: a block names its protocol from the report's directory,
         # which the link and the file it points to do not share — the other

@@ -17,6 +17,7 @@ import contextlib
 import io
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -580,6 +581,14 @@ class PostChange(unittest.TestCase):
         self.assertIn("REPORT.md: a symbolic link to data/report.md", ctx)
         self.assertIn("rm REPORT.md && cp data/report.md REPORT.md", ctx)
         self.assertNotIn("--report-review", ctx)
+        # the way out followed in the same session: the copy has the bytes
+        # the link read, and the cache, keyed on them, kept the review
+        # command back (cold review 2026-10-27); another hint is told
+        report.unlink()
+        report.write_bytes(target.read_bytes())
+        rc, out, _ = _run(claude_hooks.post_change, ev)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("--report-review", ctx)
 
     def test_a_report_citing_a_run_unmarked_gets_no_review_command(self):
         ev = self._marked_report()
@@ -888,13 +897,23 @@ class Stop(unittest.TestCase):
         transcript began: nothing was missed, nothing is said."""
         self.assertEqual(self._stop(), (0, "", ""))
 
-    def test_without_a_transcript_the_missing_base_is_said(self):
+    def test_without_a_transcript_the_missing_base_is_said_and_not_kept(self):
+        """No base and no transcript start: the session's commits are not
+        read. The stop said so and then, clean, kept HEAD as its base — past
+        the commits it had just not checked, so no later stop read them
+        (cold review 2026-10-27). It keeps none; the twin, a clean stop with
+        its commits read, keeps HEAD (the stops above)."""
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "a commit the stop cannot date")
+        path = claude_hooks.stop_base_file(self.root, "s1")
+        assert path is not None
         rc, _, err = _run(
             claude_hooks.stop,
             {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": False},
         )
         self.assertEqual(rc, 0, err)
         self.assertIn("no stop base and no transcript start", err)
+        self.assertFalse(path.exists())
 
     def test_the_stop_holds_when_its_checks_outrun_its_budget(self):
         """A stop Claude Code cancels at its timeout holds nothing: the
@@ -916,6 +935,39 @@ class Stop(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("did not end within", err)
         self.assertEqual(self._base(), base)
+
+    def test_over_budget_no_process_the_checks_started_is_left(self):
+        """The budget killed only the check's direct child: a process that
+        child started ran on, reparented (cold review 2026-10-27). Every
+        process below the hook ends."""
+        pidfile = self.root / "grandchild.pid"
+        (self.area / "scripts" / "02_analyze.py").write_text(
+            "import pathlib, subprocess\n"
+            "p = subprocess.Popen(['sleep', '41'])\n"
+            f"pathlib.Path({str(pidfile)!r}).write_text(str(p.pid))\n"
+            "p.wait()\n",
+            encoding="utf-8",
+        )
+        self._answer(self.RUN)
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))
+        with mock.patch.object(claude_hooks, "STOP_BUDGET_S", 3.0):
+            rc, _, err = self._stop()
+        self.assertEqual(rc, 2, err)
+        pid = int(pidfile.read_text())
+
+        def alive() -> bool:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return False
+            return True
+
+        deadline = time.monotonic() + 5
+        while alive() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        if alive():
+            os.kill(pid, signal.SIGKILL)
+            self.fail(f"sleep {pid} outlived the stop's budget")
 
     def test_the_budget_ends_before_claude_code_cancels_the_stop(self):
         from labkit.gates import install_hooks

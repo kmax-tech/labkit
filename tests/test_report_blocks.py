@@ -1057,6 +1057,26 @@ class ReportFiles(unittest.TestCase):
             code, out = self._gate(root, root / "CLAUDE.md", staged=staged)
             self.assertEqual((code, out), (0, ""))
 
+    def test_a_link_to_a_held_report_is_read_where_the_report_lies(self):
+        """CLAUDE.md -> AGENTS.md was refused once AGENTS.md cited a run, and
+        the printed way out replaced the link with a copy — the convention
+        the twin above protects (cold review 2026-10-27). A link ending at
+        a place a report is held is no report itself: the file it points to
+        is held where it lies. The twin: a link into data/ is refused
+        (above)."""
+        root, report = self._reported(git=True)
+        (root / "AGENTS.md").write_text(
+            report.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        (root / "CLAUDE.md").symlink_to("AGENTS.md")
+        self._git(root, "add", "AGENTS.md", "CLAUDE.md")
+        for staged in (False, True):
+            code, out = self._gate(root, root / "CLAUDE.md", staged=staged)
+            self.assertEqual((code, out), (0, ""))
+            code, out = self._gate(root, root / "AGENTS.md", staged=staged)
+            self.assertNotIn("symbolic link", out)
+            self.assertIn("AGENTS.md", out)
+
     def test_staged_reads_the_report_as_the_index_holds_it(self):
         root, report = self._reported(git=True)
         self._git(root, "add", "REPORT.md")

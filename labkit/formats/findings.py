@@ -105,6 +105,7 @@ the field — a findings file nobody can read is not "no findings".
 from __future__ import annotations
 
 import re
+import shlex
 import time
 import tomllib
 from collections.abc import Iterable, Mapping
@@ -114,7 +115,7 @@ from pathlib import Path
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import registration_drift, registration_stamp
-from labkit.formats.repo import INDEX_REV, files_at, git_root, text_at
+from labkit.formats.repo import INDEX_REV, files_at, git_root, shown, text_at
 from labkit.formats.runs import as_stored
 from labkit.formats.scope_sha import area_stamp, digest, validation_note
 
@@ -1216,8 +1217,9 @@ def area_records(area: Path, *, staged: bool = False) -> list[Record]:
     working tree holds it — or, STAGED (the commit), as git's index holds
     it: the files the index carries, each with its decisions as staged; a
     decision written in the tree and not staged is not in the commit. A
-    file that cannot be read raises FindingsError; STAGED outside a
-    repository git takes raises too (there is no index to read)."""
+    file that cannot be read raises FindingsError, and so, STAGED, does a
+    record in the tree the index does not carry (the commit would leave it
+    behind) and a repository git does not take (there is no index to read)."""
     folder = area / DIR
     if not staged:
         if not folder.is_dir():
@@ -1232,6 +1234,23 @@ def area_records(area: Path, *, staged: bool = False) -> list[Record]:
             f"holds them cannot be read"
         )
     paths = [folder / rel for rel in held if "/" not in rel and _is_record_name(rel)]
+    staged_names = {p.name for p in paths}
+    left = (
+        sorted(
+            p
+            for p in folder.glob("*.toml")
+            if _is_record_name(p.name) and p.name not in staged_names
+        )
+        if folder.is_dir()
+        else []
+    )
+    if left:
+        here = Path.cwd()
+        raise FindingsError(
+            f"{', '.join(shown(p, here) for p in left)}: in the tree, not in the "
+            f"index — the commit would leave the audit record behind; stage it "
+            f"(`git add {' '.join(shlex.quote(shown(p, here)) for p in left)}`)"
+        )
     out = []
     for p in sorted(paths, key=written_order):
         text = text_at(root, p, INDEX_REV)

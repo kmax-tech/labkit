@@ -124,6 +124,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import re
 import signal
 import sys
@@ -131,6 +132,7 @@ import tempfile
 from datetime import datetime
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import NamedTuple
 from types import FrameType
 
 from labkit.formats import (
@@ -168,6 +170,7 @@ from labkit.formats.repo import (
     touched_paths,
 )
 from labkit.formats.scope_sha import areas_touched, file_digest
+from labkit.formats.scope_sha import digest as scope_digest
 
 # The template's throwaway stages: none of them opens a run, and the probe
 # is what comes BEFORE preflight, so gating it would invert the order.
@@ -445,7 +448,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
     the stop and the commit, said now: a report that is a symbolic link
     (`report_check.link_gap`, with its way out), a block in it that does
     not read."""
-    link_target = report_check.state_link(repo, path, staged=False)
+    link_target = report_check.refused_link(repo, path, staged=False)
     if link_target is not None:
         # named where it lies: `shown` resolves, which follows the link
         rel = path.relative_to(repo.resolve()).as_posix()
@@ -496,10 +499,12 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     cache_file = _cache_path(event.get("session_id"))
     cache = _load_cache(cache_file)
     reports = []
-    # once per report text: a hint repeated on every edit of the same state
-    # is noise; a changed text is told again
+    # once per report text and hint: a hint repeated on every edit of the
+    # same state is noise; a changed text, or another hint for the same
+    # bytes (a link replaced by its copy is then a report), is told again
     for path, hint in marked:
-        key, digest = f"report-review:{path}", file_digest(path)
+        key = f"report-review:{path}"
+        digest = f"{file_digest(path)}:{scope_digest(hint.encode('utf-8'))}"
         if cache.get(key) != digest:
             cache[key] = digest
             reports.append(hint)
@@ -668,61 +673,81 @@ def keep_stop_base(repo: Path, event: dict) -> None:
     _write_stop_base(path, head)
 
 
-def committed_in_session(repo: Path, event: dict) -> tuple[list[Path], str]:
-    """(paths, note): every path a commit since the session's stop base
-    touched (`paths_committed_since`), and a sentence when that base no
-    longer leads to HEAD — a rebase or a reset: then the commits since the
-    newest shared one count, or none when git knows no shared one; said,
-    never skipped in silence. Without a kept base the commits since the
-    transcript start stand in (`committed_since_transcript`)."""
+class SessionCommits(NamedTuple):
+    """What the session committed, as the stop reads it: the PATHS the
+    commits touched, a NOTE when the reading is not the plain one (a base
+    gone or off HEAD's line), and UNCHECKED when commits of the session may
+    be among none of those paths — then the stop's base must not move past
+    them, or no later stop would ever check them."""
+
+    paths: list[Path]
+    note: str
+    unchecked: bool = False
+
+
+def committed_in_session(repo: Path, event: dict) -> SessionCommits:
+    """Every path a commit since the session's stop base touched
+    (`paths_committed_since`), and a sentence when that base no longer
+    leads to HEAD — a rebase or a reset: then the commits since the newest
+    shared one count, or none when git knows no shared one; said, never
+    skipped in silence, and UNCHECKED. Without a kept base the commits
+    since the transcript start stand in (`committed_since_transcript`)."""
     session = event.get("session_id")
     path = stop_base_file(repo, session) if session else None
     if path is None or not path.is_file():
         return committed_since_transcript(repo, event)
     base = path.read_text(encoding="utf-8").strip()
     if not base:
-        return paths_committed_since(repo, ""), ""
+        return SessionCommits(paths_committed_since(repo, ""), "")
     start = fork_point(repo, base)
     if start == base:
-        return paths_committed_since(repo, base), ""
+        return SessionCommits(paths_committed_since(repo, base), "")
     if start is None:
-        return [], (
+        return SessionCommits(
+            [],
             f"the session's stop base {base[:12]} is no ancestor of HEAD and "
             f"shares no commit with it — the commits of this session are not "
-            f"checked here; the commit gate still holds"
+            f"checked here, and the base stays; the commit gate still holds",
+            unchecked=True,
         )
-    return paths_committed_since(repo, start), (
+    return SessionCommits(
+        paths_committed_since(repo, start),
         f"the session's stop base {base[:12]} is no ancestor of HEAD (rebase "
         f"or reset) — the commits since {start[:12]}, the newest shared one, "
-        f"are checked"
+        f"are checked",
     )
 
 
-def committed_since_transcript(repo: Path, event: dict) -> tuple[list[Path], str]:
-    """(paths, note) for a session without a stop base: every path the
+def committed_since_transcript(repo: Path, event: dict) -> SessionCommits:
+    """`committed_in_session` for a session without a stop base: every path the
     commits on HEAD's line dated since the transcript's first record
     touched (`repo.head_before`, `paths_committed_since`), with a sentence
     saying so whenever there is such a commit — the base was removed, or a
     commit came before the session's first Bash command. Only the session's
     commits, never every protocol of the repo: an old area must not hold
     every stop. ([], "") when nothing is dated since: nothing was missed.
-    No transcript to date the session by: none checked, said. The limit: a
-    commit date is the commit's own word."""
+    No transcript to date the session by: none checked, said, and
+    UNCHECKED. The limit: a commit date is the commit's own word."""
     start = _transcript_start(event.get("transcript_path"))
     if start is None:
-        return [], (
+        return SessionCommits(
+            [],
             "the session has no stop base and no transcript start to stand in "
-            "for it — the commits of this session are not checked here; the "
-            "commit gate still holds"
+            "for it — the commits of this session are not checked here, and no "
+            "base is kept past them; the commit gate still holds",
+            unchecked=True,
         )
     base = head_before(repo, start)
     if base is None or base == head_sha(repo):
-        return [], ""
-    return paths_committed_since(repo, base), (
-        f"the session has no stop base (pre-run keeps one before the first Bash "
-        f"command; removed, or a commit came first) — the commits on HEAD's line "
-        f"dated since the transcript began ({start:%Y-%m-%d %H:%M:%S}) are "
-        f"checked instead, since {base[:12] or 'the first commit'}"
+        return SessionCommits([], "")
+    return SessionCommits(
+        paths_committed_since(repo, base),
+        (
+            f"the session has no stop base (pre-run keeps one before the first Bash "
+            f"command; removed, or a commit came first) — the commits on HEAD's line "
+            f"dated since the transcript began ({start:%Y-%m-%d %H:%M:%S}) are "
+            f"checked instead, since {base[:12] or 'the first commit'}"
+        ),
     )
 
 
@@ -738,14 +763,42 @@ class _OverBudget(BaseException):
     BaseException, so that no `except Exception` on the way takes it."""
 
 
+def _end_descendants() -> None:
+    """SIGKILL every process below this one, children before their own
+    children are read again (a process started meanwhile is caught by the
+    next pass; three passes). `ps -A -o pid=,ppid=` reads the tree, as on
+    macOS and Linux alike."""
+    me = os.getpid()
+    for _ in range(3):
+        listed = subprocess.run(
+            ["ps", "-A", "-o", "pid=,ppid="], capture_output=True, text=True
+        ).stdout
+        below: dict[int, list[int]] = {}
+        for line in listed.splitlines():
+            pid, ppid = (int(x) for x in line.split())
+            below.setdefault(ppid, []).append(pid)
+        found, todo = [], list(below.get(me, []))
+        while todo:
+            pid = todo.pop()
+            found.append(pid)
+            todo += below.get(pid, [])
+        if not found:
+            return
+        for pid in found:
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGKILL)
+
+
 @contextlib.contextmanager
 def _budget(seconds: float) -> Iterator[None]:
     """Raise _OverBudget in the main thread once SECONDS have passed
-    (SIGALRM); a child process a check waits on is killed on the way out
-    (`subprocess.run`). The alarm and the previous handler are restored
-    whatever ends the block."""
+    (SIGALRM), after ending every process the checks started, at any depth
+    (`_end_descendants`: a test runner's own children too — killing only
+    the direct child left them running on their own). The alarm and the
+    previous handler are restored whatever ends the block."""
 
     def ring(signum: int, frame: FrameType | None) -> None:
+        _end_descendants()
         raise _OverBudget
 
     previous = signal.signal(signal.SIGALRM, ring)
@@ -807,8 +860,9 @@ def stop(event: dict) -> int:
 
 
 def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
-    """The stop's checks, their findings on stderr: (held, the working
-    tree equal to HEAD, the HEAD checked)."""
+    """The stop's checks, their findings on stderr: (held, whether the base
+    may move — the working tree equal to HEAD and every session commit
+    read —, the HEAD checked)."""
     record_session(repo, event)
     checked_head = head_sha(repo)
     # deletions and rename sources too: a script or result removed under a
@@ -817,10 +871,10 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     # leaves the tree clean and the delivered state with the blocker
     # (eighth haiku round, t3)
     in_tree = touched_paths(repo)
-    committed, note = committed_in_session(repo, event)
-    changed = list(dict.fromkeys(in_tree + committed))
-    if note:
-        print(f"claude-hook stop: {note}", file=sys.stderr)
+    session = committed_in_session(repo, event)
+    changed = list(dict.fromkeys(in_tree + session.paths))
+    if session.note:
+        print(f"claude-hook stop: {session.note}", file=sys.stderr)
     undecided = undecided_blockers(repo, changed)
     if undecided:
         print(
@@ -848,7 +902,13 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
                 "reported leaves the answer open:\n" + out,
                 file=sys.stderr,
             )
-    return rc != 0 or bool(undecided), not in_tree, checked_head
+    # commits it could not read keep the base where it is: past them, no
+    # later stop would check them
+    return (
+        rc != 0 or bool(undecided),
+        not in_tree and not session.unchecked,
+        checked_head,
+    )
 
 
 def undecided_blockers(

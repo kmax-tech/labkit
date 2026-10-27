@@ -249,7 +249,8 @@ pins (`requirements.txt` / `requirements.lock`).
   their decisions from the tree: a BLOCKER decided and never staged passed
   while the commit carried it open. `findings.area_records(area,
   staged=True)` reads the records the index carries; the refusal asks to
-  stage the decided record (C9).
+  stage the decided record, and a record in the tree the index does not
+  carry holds the commit with its `git add` (C9).
 - **The stop base moves only past a clean stop on a clean tree.** The
   stop's checks read the working tree: a commit past the pre-commit with
   its fix left uncommitted passed and moved the base past the bad commit,
@@ -261,17 +262,21 @@ pins (`requirements.txt` / `requirements.lock`).
   base past the commit. The stop now says so and checks the commits on
   HEAD's first-parent line dated since the transcript's first record
   (`repo.head_before`) — the session's commits, never every protocol;
-  pre-run keeps no base past them. Limit: a commit date is the commit's
-  own word (A12).
+  pre-run keeps no base past them; a stop that could not read the
+  session's commits (no transcript start, a base sharing no commit with
+  HEAD) keeps no base either. Limit: a commit date is the commit's own
+  word (A12).
 - **The stop runs within its own budget.** Claude Code cancels the stop
   hook at 120 s (`install_hooks.STOP_TIMEOUT_S`) and a cancelled stop holds
   nothing, while one area's tests or `--check` may take 300 s. The checks
-  now end at `claude_hooks.STOP_BUDGET_S` (90 s); past it the stop holds
-  once per turn and says so.
+  now end at `claude_hooks.STOP_BUDGET_S` (90 s); past it every process
+  the checks started, at any depth, is ended, and the stop holds once per
+  turn and says so.
 - **post-change tells a linked report its refusal.** It resolved paths
   before `report_files`, so a report linking into `data/` got no word
   while the stop and the commit refuse it; it now names the refusal and
-  its way out (`report_check.link_gap`).
+  its way out (`report_check.link_gap`), and the review command once the
+  copy stands in its place.
 - The standard (LAB-011 Required-field check) states the stop's control
   after `--no-verify` and its limits.
 - **A report that is a symbolic link is refused at its own path.**
@@ -285,8 +290,9 @@ pins (`requirements.txt` / `requirements.lock`).
   plus `git add REPORT.md` at the commit); its other checks follow on the
   copy (`report_check.link_gap`, `report_entry`). `repo.text_at` reads a
   path's own entry: a link in the tree no longer points it at another
-  file's index entry. A link that cites no run (`CLAUDE.md -> AGENTS.md`)
-  is no report.
+  file's index entry. A link ending at a place a report is held
+  (`report_check.refused_link`, `held_place`: `CLAUDE.md -> AGENTS.md`)
+  is no report itself: the file it points to is held where it lies.
 - **`labkit-audit --report-review` exits with the state, not the draw.** A
   clean `--again` draw on a state a claim holds exited 0 and read as done
   while the commit stayed refused, and the help called the draw "a
