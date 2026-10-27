@@ -47,9 +47,9 @@ contested finding, no carried finding closed), the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
 them there or audit again), a decision already reviewed as decided and
 claimed now and not upheld (another draw settles nothing; `--again` draws
-once more as a measurement, which never releases), the backend did not
-answer, or a report whose lines and closing counts disagree (nothing is
-recorded).
+once more — its verdicts count, and it never releases a contested
+decision), the backend did not answer, or a report whose lines and
+closing counts disagree (nothing is recorded).
 
 History: docs/notes/2026-10-23-decision-review-history.md.
 """
@@ -347,7 +347,7 @@ def contested_gap(area: Path, protocol: Path, record: findings.Record) -> str | 
         f"decided and claimed now and not upheld — another draw settles nothing; "
         f"decide again (`--decide N …`, the reason naming the evidence, or the "
         f"effect `not assessable`) or limit the claim, then review; `--again` "
-        f"draws once more as a measurement and never releases"
+        f"draws once more: its verdicts count, and it never releases this state"
     )
 
 

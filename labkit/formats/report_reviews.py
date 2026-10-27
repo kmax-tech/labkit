@@ -14,7 +14,7 @@ audit records, and writes what it found here:
     report = "REPORT.md"                              # relative to the repo
     protocol = "experiments/01-x/PROTOCOL-x.md"       # relative to the repo
     fingerprint = "5e0c…"     # over the parts below (`fingerprint`)
-    again = false             # a measurement draw (`--again`): releases nothing
+    again = false             # an `--again` draw: its claims count, it releases nothing
     claims = 1
 
     [report_review.parts]     # one digest per input the reader saw
@@ -40,9 +40,10 @@ with the version, not with the report.
 The release rule (`standing`, pure): a report is released for a protocol
 when at least one review that is no `--again` draw saw this very state
 (the fingerprint now) and no review of this state named a claim. A claim
-holds the state; a later clean review of the same state does not outvote
-it. The way out is a changed input — the report, or a source the reader
-read (a protocol, a decision) — and a review of that state. Why (eighth
+holds the state, an `--again` draw's as well; a later clean review of the
+same state does not outvote it. The way out is a changed input — the
+report, or a source the reader read (a protocol, a decision) — and a
+review of that state. Why (eighth
 haiku round, 2026-10-26, t18): the review was a hint at the commit, the
 agent passed it over, and the discussed run's numbers stayed in the
 report as results.

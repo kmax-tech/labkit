@@ -245,8 +245,15 @@ discussion block owes a report review of its state: `labkit-audit <AREA>
 --report-review REPORT.md` writes `audits/report-reviews/<minute>-review.toml`
 with the fingerprint of the inputs it read, and the gate holds the report
 until a review of the state it reads names no claim; a claim holds that
-state, and only a changed report or source and a review of it release it. A probe's or an older
-run's citation stays the warning it was: an exploration's run is looked at.
+state, and only a changed report or source and a review of it release it.
+`--again` draws once more on a judged state: its claims hold the state
+like any review's, and it releases nothing. The command prints this
+draw's claims and the state apart, and its exit code is the state's — 0
+once the state is released, 1 after a draw while a claim or only
+`--again` draws hold it (the commit counts the review records the index
+holds); a plain re-run on a claimed state is refused before any call,
+exit 2. A probe's or an older run's citation stays the warning it was:
+an exploration's run is looked at.
 
 ## 9. The gate — at the stop and the commit
 

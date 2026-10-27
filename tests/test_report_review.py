@@ -256,14 +256,18 @@ class Command(unittest.TestCase):
         self.assertEqual((rc, calls), (2, 0))
         self.assertIn("another draw settles nothing", err)
         self.assertIn("line 5 (contradiction): C1 PASS against C1 not assessable", err)
-        # --again draws, records the draw as a measurement, releases nothing —
-        # and says so: a clean draw on a held state printed "released" while
-        # the commit stayed refused (ninth haiku round, t5)
+        # --again draws and records the draw, releases nothing — and says so,
+        # the draw and the state apart: a clean draw on a held state printed
+        # "released" while the commit stayed refused (ninth haiku round, t5),
+        # then exited 0, which read as done (audit 2026-10-27, C6)
         rc, out, _, calls = self.review(MARKED, self.CLEAN, again=True)
-        self.assertEqual((rc, calls), (0, 1))
-        self.assertIn("a measurement, it releases nothing", out)
+        self.assertEqual((rc, calls), (1, 1))
+        self.assertIn("report review: this draw names 0 claim(s), recorded in ", out)
+        self.assertIn("an `--again` draw: a claim it names holds the state", out)
         self.assertNotIn("released", out.replace("releases nothing", ""))
-        self.assertIn("the commit holds this state: CLAIM in ", out)
+        self.assertIn(
+            "report review state: the commit holds this state: CLAIM in ", out
+        )
         first, second = self.reviews()
         self.assertTrue(second.again)
         self.assertEqual(first.fingerprint, second.fingerprint)
@@ -273,13 +277,32 @@ class Command(unittest.TestCase):
         self.assertFalse(stands.released)
 
     def test_a_clean_draw_alone_names_the_review_that_releases(self):
-        """A state seen only by an `--again` draw is not released; the line
-        names the command without `--again` that releases it."""
+        """A state seen only by an `--again` draw is not released — the exit
+        code says so too; the line names the command without `--again` that
+        releases it."""
         rc, out, _, calls = self.review(HONEST, self.CLEAN, again=True)
-        self.assertEqual((rc, calls), (0, 1))
+        self.assertEqual((rc, calls), (1, 1))
         self.assertIn("only a review that is no `--again` draw releases it", out)
         self.assertIn("--report-review", out.split("releases it")[-1])
         self.assertNotIn("--again`", out.split("releases it")[-1])
+
+    def test_an_again_draw_on_a_released_state_exits_with_the_state(self):
+        """The twin: a clean `--again` draw on a released state leaves it
+        released, exit 0; a claim it names holds the state, exit 1 — the
+        exit code is the state's either way, never the draw's alone."""
+        rc, _, _, _ = self.review(HONEST, self.CLEAN)
+        self.assertEqual(rc, 0)
+        rc, out, _, calls = self.review(HONEST, self.CLEAN, again=True)
+        self.assertEqual((rc, calls), (0, 1))
+        self.assertIn("report review state: this state is released", out)
+        rc, out, _, calls = self.review(HONEST, self.CLAIMED, again=True)
+        self.assertEqual((rc, calls), (1, 1))
+        self.assertIn("report review: this draw names 1 claim(s)", out)
+        self.assertIn("report review state: the commit holds this state: CLAIM", out)
+        stands = report_reviews.standing(
+            self.reviews(), "REPORT.md", P, self.reviews()[-1].fingerprint
+        )
+        self.assertFalse(stands.released)
 
     def test_a_changed_source_may_be_reviewed_again(self):
         """A corrected source settles a claim without a text change: the

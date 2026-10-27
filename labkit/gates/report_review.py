@@ -27,16 +27,28 @@ names no claim (`report_check.report_review_owed`); a claim holds the
 state, and a later clean draw does not release it. On a state a review
 already judged the command makes no new call: after a claim, change the
 report or a source the reviewer read; after a clean review there is
-nothing to do. `--again` draws once more as a measurement and releases
-nothing. Nothing starts the review but this command: the hooks name it.
+nothing to do. `--again` draws once more on such a state, to see how the
+reviewer's answers spread; its record counts like any review's — a claim
+it names holds the state — and it releases nothing: a clean `--again`
+draw lifts no claim, and a state only `--again` draws saw is still owed
+a review. After every draw the command prints two lines, the draw's
+claims and the state as every record of it now stands (`state_after`),
+and the exit code is the state's: a clean draw on a held state is no
+"done". Nothing starts the review but this command: the hooks name it.
 A report that discusses no run is not reviewed — one that cites no run
 at all is left out of reach of this review.
 
-Exit codes: 0 no claim (or this state already reviewed clean), 1 at least
-one claim, 2 no review — no discussed run of the protocol in the report,
-a discussed run with no `runs/<id>/`, a state with a claim and no
-`--again`, the backend did not answer, or a reply whose lines and closing
-count disagree.
+Exit codes (the state's, by the release rule report-check holds the
+report to, `report_reviews.standing`; at the commit only the records the
+index holds count): 0 the state is
+released — a review that is no `--again` draw saw it and no review of it
+named a claim (this call's, or one before it: nothing to do; the commit
+counts the record once it is staged); 1 after a draw, the commit holds
+the state — a claim on it, this draw's or an earlier one's, or only
+`--again` draws saw it; 2 no review — no discussed run of the protocol
+in the report, a discussed run with no `runs/<id>/`, a state with a
+claim and no `--again` (refused, no call), the backend did not answer, or a reply
+whose lines and closing count disagree.
 """
 
 from __future__ import annotations
@@ -284,28 +296,29 @@ def review_report(
 ) -> int:
     """The command: gather, refuse a state already judged (unless AGAIN),
     one call, parse, write the record, print the claims and the call's
-    cost. Exit 0 no claim (or this state already reviewed clean), 1 a
-    claim, 2 no review."""
+    cost, then the draw and the state apart (`state_after`, `state_line`).
+    Exit the state's: 0 released (by this review, or already — nothing to
+    do), 1 the commit holds it, 2 no review."""
     try:
         chosen = the_protocol(area, protocol)
         prompt, discussed, pieces = gather_report(area, report, chosen)
         whole, parts = report_reviews.fingerprint(pieces)
         report_key, protocol_key = review_keys(area, report, chosen)
-        stands = report_reviews.standing(
+        standing = report_reviews.standing(
             report_reviews.area_report_reviews(area), report_key, protocol_key, whole
         )
-        if not again and stands.claims:
+        if not again and standing.claims:
             raise AuditError(
-                f"{report_key}: this state is held by {held_by(stands)} — another "
+                f"{report_key}: this state is held by {held_by(standing)} — another "
                 f"draw settles nothing; change the report, or a source the reviewer "
                 f"read, so that the claim no longer holds, then run this command "
-                f"again on that state (`--again` draws as a measurement and "
-                f"releases nothing)"
+                f"again on that state (`--again` draws once more on this one: its "
+                f"claims hold it too, and it releases nothing)"
             )
-        if not again and stands.released:
+        if not again and standing.released:
             print(
                 f"report review: {report_key} in this state is reviewed, no claim "
-                f"({stands.on_state[-1].path.name}) — nothing to do"
+                f"({standing.on_state[-1].path.name}) — nothing to do"
             )
             return 0
         console.progress(
@@ -360,45 +373,58 @@ def review_report(
     for c in claims:
         print(f"CLAIM: {where}:{c.line}: {c.kind} — {c.why}")
     print(
-        f"report review: {len(claims)} claim(s), recorded in "
+        f"report review: this draw names {len(claims)} claim(s), recorded in "
         f"{shown(written, Path.cwd())}"
-        + (" (--again: a measurement, it releases nothing)" if again else "")
-        + f" — {after_draw(area, report_key, protocol_key, whole, report, chosen)}"
+        + (
+            " — an `--again` draw: a claim it names holds the state like any "
+            "review's, and it releases nothing"
+            if again
+            else ""
+        )
     )
-    return 1 if claims else 0
+    standing = state_after(area, report_key, protocol_key, whole)
+    print(f"report review state: {state_line(standing, area, report, chosen)}")
+    # the state's code, not the draw's: a clean draw on a held state is no "done"
+    return 0 if standing.released else 1
 
 
-def held_by(stands: report_reviews.Standing) -> str:
+def held_by(standing: report_reviews.Standing) -> str:
     """The claims that hold a state, each with its record, line, kind and
     why — what a refusal names so the next step can answer it."""
     return "; ".join(
         f"CLAIM in {r.path.name}, line {c.line} ({c.kind}): {c.why}"
-        for r, c in stands.claims
+        for r, c in standing.claims
     )
 
 
-def after_draw(
-    area: Path,
-    report_key: str,
-    protocol_key: str,
-    whole: str,
-    report: Path,
-    protocol: Path,
-) -> str:
-    """What the state is after the review just written, read back from
-    every record of the area (`report_reviews.standing`): released, held by
-    a claim — this draw's or an earlier one's on the same state — or owed
-    a review that is no `--again` draw. A clean `--again` draw on a held
-    state was printed as "released" while the commit stayed refused (ninth
-    haiku round, t5)."""
-    stands = report_reviews.standing(
+def state_after(
+    area: Path, report_key: str, protocol_key: str, whole: str
+) -> report_reviews.Standing:
+    """Where the state of REPORT_KEY under PROTOCOL_KEY (its fingerprint
+    WHOLE) stands after the review just written, read back from every
+    record of AREA (`report_reviews.standing`) — what the command's exit
+    code and its state line say, not the draw alone."""
+    return report_reviews.standing(
         report_reviews.area_report_reviews(area), report_key, protocol_key, whole
     )
-    if stands.released:
-        return "this state is released"
-    if stands.claims:
+
+
+def state_line(
+    standing: report_reviews.Standing, area: Path, report: Path, protocol: Path
+) -> str:
+    """STANDING in words, with the step that answers it: released, held by a
+    claim — this draw's or an earlier one's on the same state — or owed a
+    review that is no `--again` draw (the command for REPORT under PROTOCOL
+    in AREA). Printed apart from the draw's own claims: a clean `--again`
+    draw on a held state read as released while the commit stayed refused."""
+    if standing.released:
         return (
-            f"the commit holds this state: {held_by(stands)}; change the report, "
+            "this state is released (the commit counts the review record "
+            "once it is staged)"
+        )
+    if standing.claims:
+        return (
+            f"the commit holds this state: {held_by(standing)}; change the report, "
             f"or a source the reviewer read, so that no claim holds, then review "
             f"that state"
         )

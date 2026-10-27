@@ -138,7 +138,11 @@ AUDIT_EXIT_CONTRACT = (
     "exit codes: 0 no blocker and no warning, 1 findings to decide (a blocker "
     "OR a warning), 2 no audit (missing file, unreadable report, backend failure); "
     "--review: 0 every decision upheld, 1 at least one not upheld, 2 no review; "
-    "--report-review: 0 no claim (or this state reviewed clean), 1 a claim (the commit holds), 2 no review"
+    "--report-review (the state's, with --again too): 0 the state is released "
+    "(the commit counts the record once it is staged), 1 after a draw the commit "
+    "holds it (a claim on it, this draw's or an earlier one's, or only --again "
+    "draws saw it), 2 no review (a claimed state without --again is refused "
+    "with no call)"
 )
 CLARITY = "clarity"
 ANALYSIS = "analysis"
@@ -1097,7 +1101,11 @@ def main(argv: list[str]) -> int:
         "--again",
         action="store_true",
         help="with --review or --report-review: draw once more on a state already "
-        "reviewed — a measurement of the reviewer's spread; it never releases",
+        "reviewed, to see the reviewer's spread; the draw is recorded and counts — "
+        "a verdict other than upheld, or a claim, holds the state like any review's "
+        "— and it lifts no hold an earlier review placed (a report review drawn "
+        "with --again releases nothing at all); exit: --report-review the state's, "
+        "--review this draw's",
     )
     ap.add_argument(
         "--record",
