@@ -406,6 +406,34 @@ class GitHomes(unittest.TestCase):
             repo.files_at(d, d / "audits", "HEAD"), {"r.toml", "sub/s.toml"}
         )
 
+    def test_text_at_reads_a_paths_own_entry_and_indexed_links_names_links(self):
+        """A link in the tree is not followed to another entry, and a link
+        git holds reads as the target it writes; `indexed_links` lists the
+        links with their targets (A10: a report linked into data/)."""
+        d = make_repo()
+        (d / "data").mkdir()
+        (d / "data" / "R.md").write_text("behind the link\n")
+        (d / "R.md").write_text("own entry\n")
+        (d / "L.md").symlink_to(Path("data") / "R.md")
+        subprocess.run(["git", "add", "-A"], cwd=d, check=True)
+        self.assertEqual(repo.text_at(d, d / "L.md"), "data/R.md")
+        self.assertEqual(repo.indexed_links(d), {d.resolve() / "L.md": "data/R.md"})
+        (d / "R.md").unlink()
+        (d / "R.md").symlink_to(Path("data") / "R.md")  # the tree only
+        self.assertEqual(repo.text_at(d, d / "R.md"), "own entry\n")
+        self.assertEqual(repo.own_path(d / "R.md"), d.resolve() / "R.md")
+        self.assertEqual(repo.indexed_links(make_repo()), {})
+
+    def test_under_root_holds_a_link_where_it_lies(self):
+        d = make_repo()
+        elsewhere = Path(tempfile.mkdtemp())
+        (elsewhere / "x.md").write_text("x")
+        (d / "in.md").symlink_to(elsewhere / "x.md")
+        (elsewhere / "back.md").symlink_to(d / "f.txt")
+        self.assertTrue(repo.under_root(d, d / "in.md"))
+        self.assertFalse(repo.under_root(d, elsewhere / "back.md"))
+        self.assertTrue(repo.under_root(d, d / "f.txt"))
+
     def test_files_at_says_none_for_no_state_and_raises_for_a_failure(self):
         unborn = make_repo(commit=False)
         (unborn / "audits").mkdir()

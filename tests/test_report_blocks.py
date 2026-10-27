@@ -954,6 +954,109 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertNotIn("REPORT.md", out)  # the declaration is HEAD's: nothing reached
 
+    def _linked(self, git: bool = False) -> tuple[Path, Path]:
+        """(the repo root, REPORT.md) where REPORT.md is a symbolic link to
+        data/REPORT.md, the rendered report with its number retyped — the
+        red team's s1 (audit 2026-10-27, A10)."""
+        root, report = self._reported(git=git)
+        (root / "data").mkdir()
+        target = root / "data" / "REPORT.md"
+        text = report.read_text(encoding="utf-8")
+        target.write_text(
+            text.replace("c1_pass = True", "c1_pass = False"), encoding="utf-8"
+        )
+        report.unlink()
+        report.symlink_to(Path("data") / "REPORT.md")
+        return root, report
+
+    def test_a_report_linked_into_data_is_refused_naming_the_copy(self):
+        """A10: the link was resolved before the data/ test, so the forged
+        block behind it passed the stop and the commit."""
+        root, report = self._linked()
+        code, out = self._gate(root, report, root / "data" / "REPORT.md")
+        self.assertEqual(code, 1, out)
+        self.assertIn("REPORT.md: a symbolic link to data/REPORT.md", out)
+        self.assertIn("`rm REPORT.md && cp data/REPORT.md REPORT.md`", out)
+        # the copy in its place is held as any report: the retyped number
+        report.unlink()
+        report.write_text(
+            (root / "data" / "REPORT.md").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn("symbolic link", out)
+        self.assertIn("differs from the protocol's rendering", out)
+
+    def test_a_staged_link_is_refused_until_the_index_holds_the_copy(self):
+        root, report = self._linked(git=True)
+        self._git(root, "add", "REPORT.md", "data/REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            "`rm REPORT.md && cp data/REPORT.md REPORT.md && git add REPORT.md`", out
+        )
+        # copied in the tree, not staged: the commit still carries the link
+        report.unlink()
+        report.write_text(
+            (root / "data" / "REPORT.md").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("a symbolic link to data/REPORT.md", out)
+        self._git(root, "add", "REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn("symbolic link", out)
+        self.assertIn("differs from the protocol's rendering", out)
+
+    def test_a_staged_chain_of_links_is_followed_and_refused(self):
+        """REPORT.md -> B.md -> data/REPORT.md: the index holds two links;
+        the report the chain ends at is read, and the first link refused.
+        A chain in a circle reads as nothing, and stops."""
+        root, report = self._linked(git=True)
+        report.unlink()
+        report.symlink_to("B.md")
+        (root / "B.md").symlink_to(Path("data") / "REPORT.md")
+        self._git(root, "add", "REPORT.md", "B.md", "data/REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("REPORT.md: a symbolic link to B.md", out)
+        own = root.resolve() / "REPORT.md"
+        circle = {own: "B.md", root.resolve() / "B.md": "REPORT.md"}
+        self.assertEqual(
+            report_check.report_entry(root, own, staged=True, index_links=circle),
+            ("B.md", None),
+        )
+
+    def test_staged_reads_the_reports_own_entry_not_a_link_in_the_tree(self):
+        """The index holds the retyped report as a file, the tree a link to
+        a file that cites nothing: the commit carries the retyped number."""
+        root, report = self._reported(git=True)
+        text = report.read_text(encoding="utf-8")
+        report.write_text(
+            text.replace("c1_pass = True", "c1_pass = False"), encoding="utf-8"
+        )
+        self._git(root, "add", "REPORT.md")
+        (root / "NOTE.md").write_text("nothing cited\n", encoding="utf-8")
+        report.unlink()
+        report.symlink_to("NOTE.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("differs from the protocol's rendering", out)
+
+    def test_the_twin_a_link_that_cites_no_run_is_no_report(self):
+        """CLAUDE.md -> AGENTS.md, as labkit-init stamps it, is no report:
+        neither the stop nor the commit names it."""
+        root, _ = self._reported(git=True)
+        (root / "AGENTS.md").write_text("# Agents\n\nRead TODO.md.\n", encoding="utf-8")
+        (root / "CLAUDE.md").symlink_to("AGENTS.md")
+        self._git(root, "add", "AGENTS.md", "CLAUDE.md")
+        for staged in (False, True):
+            code, out = self._gate(root, root / "CLAUDE.md", staged=staged)
+            self.assertEqual((code, out), (0, ""))
+
     def test_staged_reads_the_report_as_the_index_holds_it(self):
         root, report = self._reported(git=True)
         self._git(root, "add", "REPORT.md")

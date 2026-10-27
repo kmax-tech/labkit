@@ -253,10 +253,21 @@ def indexed_protocols(repo: Path) -> list[Path]:
 
 
 def under_root(root: Path, path: Path) -> bool:
-    """Does ROOT hold PATH (both resolved)? A membership test for a gate
-    that is given paths from anywhere — the stop hook's changed paths, a
-    test's temporary area — and reads only those of its repo."""
-    return path.resolve().is_relative_to(root.resolve())
+    """Does ROOT hold PATH (ROOT resolved, PATH at its own path,
+    `own_path`)? A membership test for a gate that is given paths from
+    anywhere — the stop hook's changed paths, a test's temporary area —
+    and reads only those of its repo. A symbolic link is where it lies: a
+    link in the repo to a file outside is held, a link outside to a file
+    in the repo is not."""
+    return own_path(path).is_relative_to(root.resolve())
+
+
+def own_path(path: Path) -> Path:
+    """PATH with its directory resolved and its own name kept: a symbolic
+    link stays the link, where `resolve()` would give the file it names.
+    The path git keeps an entry under, and the one a gate tests before it
+    reads through a link (`report_check.report_files`)."""
+    return path.parent.resolve() / path.name
 
 
 #: the revision `text_at` reads the index as
@@ -269,12 +280,43 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     else that revision's (`HEAD:path`: the last commit's). None when that
     state does not hold the file (untracked, staged as deleted, new since
     HEAD) or there is no such revision (an unborn branch). PATH must lie
-    under REPO. The one reading of a file at a git state: the pre-commit's
-    declaration, the citing report as the index holds it, the protocol as
-    HEAD last committed it."""
-    rel = path.resolve().relative_to(repo.resolve()).as_posix()
+    under REPO. The entry at PATH's own path (`own_path`): a link in the
+    working tree is not followed, and a symbolic link git holds reads as
+    the target it stores (`indexed_links` names those). The one reading of
+    a file at a git state: the pre-commit's declaration, the citing report
+    as the index holds it, the protocol as HEAD last committed it."""
+    rel = own_path(path).relative_to(repo.resolve()).as_posix()
     r = git_run(["show", f"{rev}:{rel}"], repo)
     return r.stdout if r.returncode == 0 else None
+
+
+#: git's mode of a symbolic link (`git ls-files --stage`)
+LINK_MODE = "120000"
+
+
+def indexed_links(repo: Path) -> dict[Path, str]:
+    """Every symbolic link git's index holds under REPO, as its own path
+    (under REPO resolved) → the target it stores, as stored (`../x.md`, an
+    absolute path) — what a commit now would carry where `indexed_files`
+    names a file. One listing of the index and one read per link. Raises
+    RuntimeError when git fails."""
+    r = git_run(["ls-files", "--stage", "-z"], repo)
+    if r.returncode != 0:
+        raise RuntimeError(f"git ls-files --stage failed in {repo}: {r.stderr.strip()}")
+    root = repo.resolve()
+    out: dict[Path, str] = {}
+    for entry in r.stdout.split("\0"):
+        meta, _, rel = entry.partition("\t")
+        if not rel or meta.split(" ")[0] != LINK_MODE:
+            continue
+        sha = meta.split(" ")[1]
+        blob = git_run(["cat-file", "blob", sha], repo)
+        if blob.returncode != 0:
+            raise RuntimeError(
+                f"git cat-file blob {sha} ({rel}) failed in {repo}: {blob.stderr.strip()}"
+            )
+        out[root / rel] = blob.stdout
+    return out
 
 
 def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:

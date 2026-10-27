@@ -66,8 +66,12 @@ result owes nothing here: an exploration ends with no reported result,
 probes or not; a `[result]` that does not read is held and blocks.
 
 A report outside the protocol — a Markdown file among the paths that
-cites a run, not a protocol, not under `runs/` or `data/` (`report_files`)
-— is held too (`hold_report`): each generated result block equals what the
+cites a run, not a protocol, not under `runs/` or `data/`, tested at its
+own path (`report_files`) — is held too (`hold_report`): a report that is
+a symbolic link, wherever it points, is refused alone, one blocker naming
+the copy that replaces it (`link_gap`: the file a link points to can lie
+where no report is held), and its other checks wait for that copy; else
+each generated result block equals what the
 protocol it names declares now — the block's run — and renders for it
 (`report_blocks.block_gaps`, written by
 `protocol-fill --into`), each token that reads as a run id names a run of
@@ -94,6 +98,8 @@ the check would judge a state the commit does not hold.
 from __future__ import annotations
 
 import argparse
+import os
+import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -134,7 +140,9 @@ from labkit.formats.repo import (
     git_root,
     under_root,
     indexed_files,
+    indexed_links,
     indexed_protocols,
+    own_path,
     layout_root,
     no_such_area,
     PROTOCOL_NAME,
@@ -820,19 +828,92 @@ def affected_protocols(
 
 
 def index_text(repo: Path, path: Path) -> str | None:
-    """PATH's content as git's index holds it — what a commit now would
-    carry — or None when the index does not hold it (untracked, or staged
-    as deleted). PATH must lie under REPO (`repo.text_at`)."""
+    """PATH's own entry as git's index holds it — what a commit now would
+    carry: a file's content, a symbolic link's stored target — or None when
+    the index does not hold it (untracked, or staged as deleted). PATH must
+    lie under REPO (`repo.text_at`)."""
     return text_at(repo, path)
 
 
 def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
-    """PATH's content as the gate's state holds it: the index when STAGED
-    (`index_text`), else the working tree; None when that state does not
-    hold the file."""
+    """PATH's own entry as the gate's state holds it: the index when STAGED
+    (`index_text`), else the working tree — in both a file's content, and
+    for a symbolic link the target it stores, not the file it points to (a
+    report is read through its link by `report_entry`); None when that
+    state does not hold the file."""
     if staged:
         return index_text(repo, path)
+    if path.is_symlink():
+        return os.readlink(path)
     return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def state_link(
+    repo: Path,
+    path: Path,
+    *,
+    staged: bool,
+    index_links: dict[Path, str] | None = None,
+) -> str | None:
+    """The target PATH (its own path, `repo.own_path`) stores when the
+    gate's state holds it as a symbolic link — the index's when STAGED
+    (`repo.indexed_links`; INDEX_LINKS when the caller listed them
+    already), else the working tree's — None for a regular file or none.
+    The gate's one answer to "is this report a link"."""
+    if staged:
+        links = index_links if index_links is not None else indexed_links(repo)
+        return links.get(path)
+    return os.readlink(path) if path.is_symlink() else None
+
+
+def linked_file(path: Path, link_target: str) -> Path:
+    """The file a symbolic link at PATH storing LINK_TARGET points to:
+    LINK_TARGET read against PATH's directory, `..` taken by its text — as
+    a checkout of the commit resolves it."""
+    return Path(os.path.normpath(path.parent / link_target))
+
+
+def report_entry(
+    repo: Path,
+    path: Path,
+    *,
+    staged: bool,
+    index_links: dict[Path, str] | None = None,
+) -> tuple[str | None, str | None]:
+    """(the target PATH stores as a symbolic link, or None; what a reader of
+    the gate's state sees at PATH). A regular file: its content
+    (`state_text`). A link — or a chain of links — the content of the file
+    the chain ends at: in the tree as the system follows it; STAGED, hop by
+    hop through the index's links, read from the index while the chain
+    stays in REPO and from the disk once it leaves (no commit holds a file
+    outside the repo). The text is None when the state holds nothing there
+    or the chain runs in a circle. INDEX_LINKS: the index's links when the
+    caller listed them already (`repo.indexed_links`). The one reading of a
+    report for `report_files`, `committed_reports` and `discussing_reports`."""
+    if not staged:
+        link_target = state_link(repo, path, staged=False)
+        if link_target is None:
+            return None, state_text(repo, path, staged=False)
+        # the system follows the whole chain
+        return link_target, (
+            path.read_text(encoding="utf-8") if path.is_file() else None
+        )
+    links = index_links if index_links is not None else indexed_links(repo)
+    link_target = state_link(repo, path, staged=True, index_links=links)
+    if link_target is None:
+        return None, state_text(repo, path, staged=True)
+    seen = {path}
+    file = linked_file(path, link_target)
+    while file not in seen:
+        if not under_root(repo, file):
+            return link_target, (
+                file.read_text(encoding="utf-8") if file.is_file() else None
+            )
+        if file not in links:
+            return link_target, index_text(repo, file)
+        seen.add(file)
+        file = linked_file(file, links[file])
+    return link_target, None
 
 
 def tree_differs(repo: Path, area: Path) -> list[str]:
@@ -852,22 +933,28 @@ def report_files(
     paths: list[Path], repo: Path, *, staged: bool
 ) -> list[tuple[Path, str]]:
     """(path, text) of every Markdown file among PATHS that cites a run
-    (`report_blocks.cited_run_ids`) — not a protocol, not under SKIP_DIRS —
-    with its text as the state holds it: the index when STAGED, else the
-    tree. A file the state does not hold (deleted, untracked at the commit)
-    reports nothing. Only these paths: an old citation in a file nobody
-    touched reopens nothing."""
+    (`report_blocks.cited_run_ids`) — not a protocol, not under SKIP_DIRS,
+    both tested at its own path (`repo.own_path`): a symbolic link where it
+    lies, not where it points — with its text as the state holds it
+    (`report_entry`: the index when STAGED, else the tree; through a link,
+    the file it points to). A link that reads as a report is among them,
+    and `hold_report` refuses it. PATHS come as the repo names them: a
+    caller that resolves a link hands in the file it points to, and that
+    file is tested where it lies. A file the state does not hold (deleted,
+    untracked at the commit) reports nothing. Only these paths: an old
+    citation in a file nobody touched reopens nothing."""
     root = repo.resolve()
+    links = indexed_links(repo) if staged else None
     out: list[tuple[Path, str]] = []
     for path in paths:
-        full = (path if path.is_absolute() else root / path).resolve()
+        full = own_path(path if path.is_absolute() else root / path)
         if full.suffix != REPORT_SUFFIX or PROTOCOL_NAME.match(full.name):
             continue
         if not under_root(root, full):
             continue  # outside the repo: no commit and no stop holds it
         if SKIP_DIRS & set(full.relative_to(root).parts):
             continue
-        text = state_text(repo, full, staged=staged)
+        _, text = report_entry(repo, full, staged=staged, index_links=links)
         if text is not None and report_blocks.cited_run_ids(text):
             out.append((full, text))
     return out
@@ -912,7 +999,8 @@ def committed_reports(
 ) -> list[tuple[Path, str]]:
     """(path, text) of every report git's index holds (`repo.indexed_files`,
     the Markdown files `report_files` would hold) citing a run of RUN_IDS,
-    with its text as the state holds it. The reports a changed declaration
+    with its text as the state holds it (`report_entry`, through a symbolic
+    link — `hold_report` refuses the link). The reports a changed declaration
     reaches without being changed themselves: sixth haiku round
     (2026-10-23, t5), REPORT.md citing the run was committed while the
     protocol stayed unstaged — the commit's protocol declared nothing and
@@ -926,9 +1014,10 @@ def committed_reports(
         for p in indexed_files(repo)
         if p.suffix == REPORT_SUFFIX and not PROTOCOL_NAME.match(p.name)
     ]
+    links = indexed_links(repo) if staged else None
     out: list[tuple[Path, str]] = []
     for full in candidates:
-        text = state_text(repo, full, staged=staged)
+        _, text = report_entry(repo, full, staged=staged, index_links=links)
         if text is None:
             continue
         if any(r in run_ids for _, r in report_blocks.cited_run_ids(text)):
@@ -1080,7 +1169,10 @@ def hold_report(
     held_as: str = AMONG_PATHS,
     staged: bool = False,
 ) -> int:
-    """Hold one report: its result blocks equal their protocols' rendering,
+    """Hold one report. First: a report that is a symbolic link in the
+    state (`state_link`) is refused alone, one blocker naming the copy that
+    replaces it (`link_gap`) — the checks below wait for that copy. Then:
+    its result blocks equal their protocols' rendering,
     every cited run id a run of the repo, every cited declared result shown
     in its protocol's block, every discussion block says why, says it on
     its line as its head holds it, once per protocol and run, and names a
@@ -1093,12 +1185,19 @@ def hold_report(
     where to look, not a check of them; a report discussing a run owes a
     report review of its state that names no claim (`report_review_owed`,
     a blocker; STAGED: only the review records the index holds count —
-    the commit carries its evidence). HELD_AS
-    says in the heading
-    why this report is held. 0 clean or warnings only, 1 a blocker."""
+    the commit carries its evidence). PATH is the report's own path
+    (`repo.own_path`). HELD_AS says in the heading why this report is held.
+    0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
     print(f"═══ report-check {rel} ({held_as}) ═══")
     out = Findings()
+    link_target = state_link(repo, path, staged=staged)
+    if link_target is not None:
+        # alone: a block names its protocol from the report's directory,
+        # which the link and the file it points to do not share — the other
+        # checks read the copy once it is in place
+        out.block(link_gap(rel, path, link_target, repo, staged=staged))
+        return out.report("report-check", "reporting")
     try:
         found = report_blocks.blocks(text)
         discussed = report_blocks.discussions(text)
@@ -1120,6 +1219,27 @@ def hold_report(
     report_hints(out, rel, text, discussed)
     out.take_all(undeclared_findings(path, rel, cited, discussed, sources))
     return out.report("report-check", "reporting")
+
+
+def link_gap(
+    rel: str, path: Path, link_target: str, repo: Path, *, staged: bool
+) -> str:
+    """Why the report at PATH (REL to REPO), a symbolic link storing
+    LINK_TARGET, is refused, with the way out: the file it points to copied
+    into its place. `rm` comes first — `cp` onto a link writes into the
+    file it points to, or refuses it as the same file (macOS) — and STAGED
+    adds `git add`: the commit holds the index, which still holds the link
+    after the copy."""
+    source = shown(linked_file(path, link_target), repo)
+    steps = [f"rm {shlex.quote(rel)}", f"cp {shlex.quote(source)} {shlex.quote(rel)}"]
+    if staged:
+        steps.append(f"git add {shlex.quote(rel)}")
+    return (
+        f"{rel}: a symbolic link to {link_target} — a report is held as a file "
+        f"at its own path, never through a link: the file a link points to can "
+        f"lie where no report is held (under runs/ or data/, outside the repo); "
+        f"put the file in its place: `{' && '.join(steps)}`"
+    )
 
 
 def discussion_sources(path: Path, found: list[report_blocks.Discussion]) -> list[str]:
@@ -1368,10 +1488,12 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     whose head declares a result, and for every report among PATHS
     (`report_files`): the gate at the stop and the commit. A result declared
     reported is held to the whole chain, a protocol declaring none is
-    skipped (an exploration may end with no reported result). A report's
-    generated blocks are held to the protocols they name, which the
-    stations hold too, its cited run ids to the repo's runs; its other
-    numbers are hints. STAGED (the pre-commit): declarations and reports are
+    skipped (an exploration may end with no reported result). A report
+    that is a symbolic link is refused alone, naming the copy that replaces
+    it; its other checks wait for that copy. A report's generated blocks
+    are held to the protocols they name, which the stations hold too, its
+    cited run ids to the repo's runs; its other numbers are hints. STAGED
+    (the pre-commit): declarations and reports are
     read from the index, and an area whose tree differs from the index is a
     blocker — the stations read the tree, the commit holds the index.
     A protocol among them whose declaration differs from HEAD's
@@ -1421,13 +1543,15 @@ def discussing_reports(
     touch (`areas_touched`): the review of such a report read that area's
     protocol, runs and audits, so a change there makes it stale though the
     report is untouched. Text as the state holds it (the index when
-    STAGED). A report whose blocks do not read is held too — the gate names
-    the block. Empty outside a repository."""
+    STAGED; `report_entry`, through a symbolic link — `hold_report` refuses
+    the link). A report whose blocks do not read is held too — the gate
+    names the block. Empty outside a repository."""
     if git_root(repo) is None:
         return []
     areas = {a.resolve() for a in areas_touched(paths, repo)}
     if not areas:
         return []
+    links = indexed_links(repo) if staged else None
     out: list[tuple[Path, str, str]] = []
     for full in indexed_files(repo):
         if (
@@ -1436,7 +1560,7 @@ def discussing_reports(
             or PROTOCOL_NAME.match(full.name)
         ):
             continue
-        text = state_text(repo, full, staged=staged)
+        _, text = report_entry(repo, full, staged=staged, index_links=links)
         if text is None or report_blocks.DISCUSS_OPEN not in text:
             continue
         try:

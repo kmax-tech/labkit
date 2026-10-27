@@ -210,7 +210,11 @@ protocol's whole chain holds. What it does not: the prose beside it. A
 count or median the run never stored has no source; numbers outside the
 block are named as unsourced (a hint), and whether the prose reads the
 number rightly, and whether a decided limit is enough, stay the audit's
-and the reader's judgement.
+and the reader's judgement. The report is a file at its own path: a
+report that is a symbolic link, wherever it points, is refused at the
+stop and the commit — the file a link points to can lie where no report
+is read, as `data/` — and the refusal names the copy that replaces the
+link; its other checks follow once the copy is in place.
 
 A number about the inputs — records per split, class sizes, a median or
 threshold the code derives — therefore belongs in `metrics.json`: the
