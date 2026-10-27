@@ -140,11 +140,16 @@ def _hook(name: str, timeout: int, message: str) -> dict:
     }
 
 
+#: the seconds Claude Code gives the stop hook; past them it cancels the
+#: hook, and a cancelled stop holds nothing (`claude_hooks.STOP_BUDGET_S`
+#: ends the checks before)
+STOP_TIMEOUT_S = 120
+
 #: event -> (matcher or None, hook)
 CLAUDE_HOOKS = {
     "PreToolUse": ("Bash", _hook("pre-run", 120, "preflight before a run")),
     "PostToolUse": ("Bash|Write|Edit", _hook("post-change", 60, "check what changed")),
-    "Stop": (None, _hook("stop", 120, "finalize a written-back number")),
+    "Stop": (None, _hook("stop", STOP_TIMEOUT_S, "finalize a written-back number")),
 }
 
 

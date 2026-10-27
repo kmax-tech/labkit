@@ -20,8 +20,11 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -97,6 +100,29 @@ def _repo(frozen: bool, script: str = RUN_SCRIPT, repeat_cost: str = "high") -> 
     _git(root, "add", "-A")
     _git(root, "commit", "-qm", "init")
     return root
+
+
+@contextlib.contextmanager
+def _dated(seconds_ago: int):
+    """Commits made inside are dated SECONDS_AGO before now (committer and
+    author): a fixture committed before the session began."""
+    stamp = f"@{int(time.time()) - seconds_ago} +0000"
+    with mock.patch.dict(
+        os.environ, {"GIT_COMMITTER_DATE": stamp, "GIT_AUTHOR_DATE": stamp}
+    ):
+        yield
+
+
+def _transcript(start: datetime | None = None) -> Path:
+    """A transcript outside every repository whose first record is dated
+    START (now): where Claude Code's session began."""
+    when = (start or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    path = Path(tempfile.mkdtemp()) / "session.jsonl"
+    stamp = when.strftime("%Y-%m-%dT%H:%M:%S.") + f"{when.microsecond // 1000:03d}Z"
+    path.write_text(
+        json.dumps({"type": "user", "timestamp": stamp}) + "\n", encoding="utf-8"
+    )
+    return path
 
 
 def _run(fn, event: dict) -> tuple[int, str, str]:
@@ -564,16 +590,20 @@ class Stop(unittest.TestCase):
 
     def setUp(self):
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
-        self.root = _repo(False, repeat_cost="low")
-        self.area = self.root / "experiments" / "01-x"
-        (self.area / "scripts" / "02_analyze.py").write_text(
-            "print('ok')\n", encoding="utf-8"
-        )
-        # at low repeat cost finalize holds the provenance: the source tracked in git
-        (self.root / "data").mkdir()
-        (self.root / "data" / "cases.jsonl").write_text('{"id": 1}\n', encoding="utf-8")
-        _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "analyze and data")
+        with _dated(3600):  # the fixture predates the session
+            self.root = _repo(False, repeat_cost="low")
+            self.area = self.root / "experiments" / "01-x"
+            (self.area / "scripts" / "02_analyze.py").write_text(
+                "print('ok')\n", encoding="utf-8"
+            )
+            # at low repeat cost finalize holds the provenance: the source tracked in git
+            (self.root / "data").mkdir()
+            (self.root / "data" / "cases.jsonl").write_text(
+                '{"id": 1}\n', encoding="utf-8"
+            )
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", "analyze and data")
+        self.transcript = _transcript()
         self._run_dir(run_kind="measurement")
 
     def _run_dir(self, run_kind: RunKind) -> None:
@@ -638,8 +668,19 @@ class Stop(unittest.TestCase):
     def _stop(self, active: bool = False) -> tuple[int, str, str]:
         return _run(
             claude_hooks.stop,
-            {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": active},
+            {
+                "session_id": "s1",
+                "cwd": str(self.root),
+                "transcript_path": str(self.transcript),
+                "stop_hook_active": active,
+            },
         )
+
+    def _command(self, command: str = "ls") -> tuple[int, str, str]:
+        """A Bash command of the session: pre-run keeps the stop base."""
+        event = _bash(self.root, command)
+        event["transcript_path"] = str(self.transcript)
+        return _run(claude_hooks.pre_run, event)
 
     def test_a_blocker_sends_the_agent_back(self):
         self._answer("2026-10-01T09-00-00_ffff")
@@ -659,6 +700,7 @@ class Stop(unittest.TestCase):
         """The answer committed, then a script edited: the protocol is not
         among the changed files, and the stop hook let it pass (audit
         2026-10-19)."""
+        self._command()  # the session's first command keeps the base
         self._answer(self.RUN)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the answer")
@@ -784,6 +826,86 @@ class Stop(unittest.TestCase):
         rc, _, err = self._stop()
         self.assertEqual(rc, 0, err)
         self.assertIn("is no ancestor of HEAD and shares no commit with it", err)
+
+    def test_a_base_removed_after_a_commit_holds_the_commits_since_the_transcript(
+        self,
+    ):
+        """`rm -rf .git/labkit-stop-base` after a commit past the pre-commit:
+        the stop checked no commit and said nothing, and the next command
+        kept a new base past the bad commit. Without a base the stop says so
+        and holds the commits dated since the transcript began; pre-run
+        keeps no base past them. The twin: the fix committed, a clean stop
+        keeps HEAD, and the next stop is silent."""
+        self._command()
+        path = claude_hooks.stop_base_file(self.root, "s1")
+        assert path is not None
+        self._answer("2026-10-01T09-00-00_ffff")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the wrong answer", "--no-verify")
+        self._command("rm -rf .git/labkit-stop-base")
+        path.unlink()
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("the session has no stop base", err)
+        self.assertIn("dated since the transcript began", err)
+        self.assertIn("but the run that answers is", err)
+        self._command()  # the next command keeps no base past the commit
+        self.assertFalse(path.exists())
+        self.assertEqual(self._stop()[0], 2)
+        protocol = "experiments/01-x/PROTOCOL-x.md"
+        _git(self.root, "checkout", "HEAD~1", "--", protocol)
+        _git(self.root, "reset", "-q", "--", protocol)
+        self._answer(self.RUN)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the fix")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("the session has no stop base", err)  # said, and clean
+        self.assertEqual(self._base(), repo.head_sha(self.root))
+        self.assertEqual(self._stop(), (0, "", ""))
+
+    def test_a_session_without_a_command_or_a_commit_is_silent(self):
+        """No Bash command, so no base kept, and nothing committed since the
+        transcript began: nothing was missed, nothing is said."""
+        self.assertEqual(self._stop(), (0, "", ""))
+
+    def test_without_a_transcript_the_missing_base_is_said(self):
+        rc, _, err = _run(
+            claude_hooks.stop,
+            {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": False},
+        )
+        self.assertEqual(rc, 0, err)
+        self.assertIn("no stop base and no transcript start", err)
+
+    def test_the_stop_holds_when_its_checks_outrun_its_budget(self):
+        """A stop Claude Code cancels at its timeout holds nothing: the
+        checks end at the stop's own budget and hold, once per turn. The
+        twin is every stop above, inside the budget."""
+        (self.area / "scripts" / "02_analyze.py").write_text(
+            "import time\ntime.sleep(30)\n", encoding="utf-8"
+        )
+        self._answer(self.RUN)
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))
+        base = self._base()
+        began = time.monotonic()
+        with mock.patch.object(claude_hooks, "STOP_BUDGET_S", 1.0):
+            rc, _, err = self._stop()
+            self.assertLess(time.monotonic() - began, 20)  # the child was killed
+            self.assertEqual(rc, 2, err)
+            self.assertIn("the checks did not end within 1 s", err)
+            rc, _, err = self._stop(active=True)
+        self.assertEqual(rc, 0)
+        self.assertIn("did not end within", err)
+        self.assertEqual(self._base(), base)
+
+    def test_the_budget_ends_before_claude_code_cancels_the_stop(self):
+        from labkit.gates import install_hooks
+
+        _, hook = install_hooks.CLAUDE_HOOKS["Stop"]
+        self.assertEqual(hook["timeout"], install_hooks.STOP_TIMEOUT_S)
+        self.assertLessEqual(
+            claude_hooks.STOP_BUDGET_S + 20, install_hooks.STOP_TIMEOUT_S
+        )
 
     def test_a_session_id_that_is_no_file_name_keeps_no_base(self):
         self.assertIsNone(claude_hooks.stop_base_file(self.root, "../x"))

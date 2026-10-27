@@ -78,7 +78,16 @@ stop
     uncommitted lets the turn end and keeps the base, and the stop after
     the fix is dropped holds again. The limit: the stop never checks HEAD
     apart from the tree — a session may end with the fault committed and
-    its fix uncommitted; the commit of the fix meets the pre-commit. Once
+    its fix uncommitted; the commit of the fix meets the pre-commit.
+    Without a base (removed, or a commit came before the first Bash
+    command) the stop says so and holds the commits on HEAD's line dated
+    since the transcript's first record (`committed_since_transcript`) —
+    the session's commits, never every protocol of the repo; pre-run keeps
+    no base past such a commit, and the stop keeps HEAD after a clean stop
+    on a clean tree. A commit date is the commit's own word: that is the
+    fallback's limit. The checks run within `STOP_BUDGET_S`, under the
+    hook's timeout (`install_hooks.STOP_TIMEOUT_S`): past it the stop
+    holds and says so, since a hook Claude Code cancels holds nothing. Once
     per turn: when the agent was already sent back in this turn
     (`stop_hook_active`), the checks still run and print, the base stays,
     and it may stop — no loop; the next turn's stop holds again.
@@ -113,11 +122,13 @@ import io
 import json
 import os
 import re
+import signal
 import sys
 import tempfile
 from datetime import datetime
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from types import FrameType
 
 from labkit.formats import (
     attempts,
@@ -135,6 +146,7 @@ from labkit.formats.shell import segments
 from labkit.checks import notes_check
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check
+from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.report_review import review_hint
 from labkit.formats.repo import (
     PROTOCOL_NAME,
@@ -144,6 +156,7 @@ from labkit.formats.repo import (
     fork_point,
     git_dir_path,
     git_root,
+    head_before,
     head_sha,
     paths_committed_since,
     shown,
@@ -607,19 +620,34 @@ def stop_base_file(repo: Path, session: str) -> Path | None:
     return None if base is None else base / session
 
 
+def _write_stop_base(path: Path, sha: str) -> None:
+    """Write SHA as the stop base at PATH (`stop_base_file`), its directory
+    made when missing."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    files.write_atomic(path, sha + "\n")
+
+
 def keep_stop_base(repo: Path, event: dict) -> None:
     """Keep HEAD as the session's stop base when the session has none yet:
     called before every Bash command (`pre_run`), so before any commit the
-    session makes. Nothing outside git or without a session id. "" stands
-    for a HEAD not yet born: every commit counts."""
+    session makes. Not while HEAD's line holds a commit dated since the
+    session's transcript began (`repo.head_before`): a base gone after a
+    commit is not kept again past it — the stop checks the commits since
+    the transcript start instead, says so (`committed_in_session`), and
+    keeps HEAD itself after a clean stop on a clean tree. Nothing outside
+    git or without a session id. "" stands for a HEAD not yet born: every
+    commit counts."""
     session = event.get("session_id")
     if not session:
         return
     path = stop_base_file(repo, session)
     if path is None or path.exists():
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    files.write_atomic(path, head_sha(repo) + "\n")
+    head = head_sha(repo)
+    start = _transcript_start(event.get("transcript_path"))
+    if start is not None and head_before(repo, start) not in (head, None):
+        return
+    _write_stop_base(path, head)
 
 
 def committed_in_session(repo: Path, event: dict) -> tuple[list[Path], str]:
@@ -627,11 +655,12 @@ def committed_in_session(repo: Path, event: dict) -> tuple[list[Path], str]:
     touched (`paths_committed_since`), and a sentence when that base no
     longer leads to HEAD — a rebase or a reset: then the commits since the
     newest shared one count, or none when git knows no shared one; said,
-    never skipped in silence. ([], "") without a kept base."""
+    never skipped in silence. Without a kept base the commits since the
+    transcript start stand in (`committed_since_transcript`)."""
     session = event.get("session_id")
     path = stop_base_file(repo, session) if session else None
     if path is None or not path.is_file():
-        return [], ""
+        return committed_since_transcript(repo, event)
     base = path.read_text(encoding="utf-8").strip()
     if not base:
         return paths_committed_since(repo, ""), ""
@@ -651,8 +680,67 @@ def committed_in_session(repo: Path, event: dict) -> tuple[list[Path], str]:
     )
 
 
+def committed_since_transcript(repo: Path, event: dict) -> tuple[list[Path], str]:
+    """(paths, note) for a session without a stop base: every path the
+    commits on HEAD's line dated since the transcript's first record
+    touched (`repo.head_before`, `paths_committed_since`), with a sentence
+    saying so whenever there is such a commit — the base was removed, or a
+    commit came before the session's first Bash command. Only the session's
+    commits, never every protocol of the repo: an old area must not hold
+    every stop. ([], "") when nothing is dated since: nothing was missed.
+    No transcript to date the session by: none checked, said. The limit: a
+    commit date is the commit's own word."""
+    start = _transcript_start(event.get("transcript_path"))
+    if start is None:
+        return [], (
+            "the session has no stop base and no transcript start to stand in "
+            "for it — the commits of this session are not checked here; the "
+            "commit gate still holds"
+        )
+    base = head_before(repo, start)
+    if base is None or base == head_sha(repo):
+        return [], ""
+    return paths_committed_since(repo, base), (
+        f"the session has no stop base (pre-run keeps one before the first Bash "
+        f"command; removed, or a commit came first) — the commits on HEAD's line "
+        f"dated since the transcript began ({start:%Y-%m-%d %H:%M:%S}) are "
+        f"checked instead, since {base[:12] or 'the first commit'}"
+    )
+
+
+#: the stop's own limit, under the one Claude Code gives the hook
+#: (`install_hooks.STOP_TIMEOUT_S`): checks still running then hold the stop
+#: and say so, where a cancelled hook would hold nothing; the margin is for
+#: the interpreter's start, the session log and git
+STOP_BUDGET_S = STOP_TIMEOUT_S - 30
+
+
+class _OverBudget(BaseException):
+    """Raised by the stop's alarm inside whichever check runs — a
+    BaseException, so that no `except Exception` on the way takes it."""
+
+
+@contextlib.contextmanager
+def _budget(seconds: float) -> Iterator[None]:
+    """Raise _OverBudget in the main thread once SECONDS have passed
+    (SIGALRM); a child process a check waits on is killed on the way out
+    (`subprocess.run`). The alarm and the previous handler are restored
+    whatever ends the block."""
+
+    def ring(signum: int, frame: FrameType | None) -> None:
+        raise _OverBudget
+
+    previous = signal.signal(signal.SIGALRM, ring)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
 def stop(event: dict) -> int:
-    """Stop hook: a number written back or committed in this session gets report-check; blockers send the agent back (exit 2), once per turn."""
+    """Stop hook: a number written back or committed in this session gets report-check; blockers, or checks that outrun the stop's budget, send the agent back (exit 2), once per turn."""
     repo = session_repo(event)
     if repo is None:
         # nothing tells the stop what the session changed or committed: a
@@ -665,6 +753,44 @@ def stop(event: dict) -> int:
             file=sys.stderr,
         )
         return 0 if event.get("stop_hook_active") else 2
+    try:
+        with _budget(STOP_BUDGET_S):
+            held, clean_tree, checked_head = _stop_checks(repo, event)
+    except _OverBudget:
+        print(
+            f"claude-hook stop: the checks did not end within {STOP_BUDGET_S:g} s "
+            f"— Claude Code cancels the stop hook at {STOP_TIMEOUT_S} s, and a "
+            "cancelled stop holds nothing; so this stop holds, clears nothing "
+            "and keeps its base. The pre-commit runs the same checks without "
+            "that limit; `report-check --if-reported <path>…` runs them by hand",
+            file=sys.stderr,
+        )
+        held, clean_tree, checked_head = True, False, ""
+    if not held:
+        # the base moves only past a clean stop that read what HEAD holds:
+        # the checks read the tree, and a tree that differs from HEAD — a
+        # fix not yet committed beside a commit past the pre-commit — keeps
+        # the base, so the commit is checked again at every later stop
+        session = event.get("session_id")
+        path = stop_base_file(repo, session) if session else None
+        if clean_tree and path is not None:
+            _write_stop_base(path, checked_head)
+        return 0
+    if event.get("stop_hook_active"):
+        # sent back once in this turn already: no loop — the findings stand
+        # on stderr, the base stays, the next turn's stop holds again
+        print(
+            "claude-hook stop: sent back once in this turn — stopping; the "
+            "blockers above stand and the next stop holds them again",
+            file=sys.stderr,
+        )
+        return 0
+    return 2
+
+
+def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
+    """The stop's checks, their findings on stderr: (held, the working
+    tree equal to HEAD, the HEAD checked)."""
     record_session(repo, event)
     checked_head = head_sha(repo)
     # deletions and rename sources too: a script or result removed under a
@@ -704,27 +830,7 @@ def stop(event: dict) -> int:
                 "reported leaves the answer open:\n" + out,
                 file=sys.stderr,
             )
-    held = rc != 0 or bool(undecided)
-    if not held:
-        # the base moves only past a clean stop that read what HEAD holds:
-        # the checks read the tree, and a tree that differs from HEAD — a
-        # fix not yet committed beside a commit past the pre-commit — keeps
-        # the base, so the commit is checked again at every later stop
-        session = event.get("session_id")
-        path = stop_base_file(repo, session) if session else None
-        if not in_tree and path is not None and path.is_file():
-            files.write_atomic(path, checked_head + "\n")
-        return 0
-    if event.get("stop_hook_active"):
-        # sent back once in this turn already: no loop — the findings stand
-        # on stderr, the base stays, the next turn's stop holds again
-        print(
-            "claude-hook stop: sent back once in this turn — stopping; the "
-            "blockers above stand and the next stop holds them again",
-            file=sys.stderr,
-        )
-        return 0
-    return 2
+    return rc != 0 or bool(undecided), not in_tree, checked_head
 
 
 def undecided_blockers(

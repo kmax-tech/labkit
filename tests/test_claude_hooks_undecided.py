@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.gates import claude_hooks  # noqa: E402
 from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import registration_of, head  # noqa: E402
-from test_claude_hooks import _git, _run  # noqa: E402
+from test_claude_hooks import _dated, _git, _run, _transcript  # noqa: E402
 
 BLOCKER = ("BLOCKER", "BLOCKER · scripts/01_measure.py:3 · the target leaks")
 WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
@@ -45,7 +45,8 @@ class Undecided(unittest.TestCase):
         _git(self.root, "config", "user.email", "t@t")
         _git(self.root, "config", "user.name", "t")
         _git(self.root, "add", "-A")
-        _git(self.root, "commit", "-qm", "init")
+        with _dated(3600):  # the repo predates the session
+            _git(self.root, "commit", "-qm", "init")
 
     def _record(self, area: Path, rows) -> Path:
         return findings.write(
@@ -215,6 +216,34 @@ class Undecided(unittest.TestCase):
             any("not TOML" in ln and "as git's index holds it" in ln for ln in lines),
             lines,
         )
+
+    def test_without_a_stop_base_only_the_sessions_commits_are_held(self):
+        """The stop base gone: the commits dated since the transcript began
+        stand in — never every protocol of the repo, or an old area's open
+        BLOCKER would hold every stop (decided 2026-10-17). The twin: a
+        session commit in that area holds."""
+        with _dated(3600):  # the repo before the session
+            self._record(self.other, [BLOCKER])
+            _git(self.root, "add", "-A")
+            _git(self.root, "commit", "-qm", "an old audit")
+        event = {
+            "session_id": "s1",
+            "cwd": str(self.root),
+            "transcript_path": str(_transcript()),
+            "stop_hook_active": False,
+        }
+        self._touch(self.area)
+        _git(self.root, "commit", "-qam", "the session's work", "--no-verify")
+        rc, _, err = _run(claude_hooks.stop, event)
+        self.assertEqual(rc, 0, err)
+        self.assertIn("the session has no stop base", err)
+        self.assertNotIn("the target leaks", err)
+        self._touch(self.other)
+        _git(self.root, "commit", "-qam", "into the old area", "--no-verify")
+        rc, _, err = _run(claude_hooks.stop, event)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("experiments/02-y", err)
+        self.assertIn("the target leaks", err)
 
     def test_a_session_started_in_a_subdirectory_is_held_too(self):
         """The project directory below the repo root has no `.git` of its

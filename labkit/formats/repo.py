@@ -23,6 +23,7 @@ import shlex
 import subprocess
 import tempfile
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 
 from labkit.formats import console
@@ -696,6 +697,29 @@ def paths_committed_since(repo: Path, base: str) -> list[Path]:
     if r.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {r.stderr.strip()}")
     return [repo / p for p in r.stdout.split("\0") if p]
+
+
+def head_before(repo: Path, when: datetime) -> str | None:
+    """The commit HEAD's line stood on before WHEN (aware, or naive in
+    local time), told by commit dates: the first parent of the oldest
+    commit on HEAD's first-parent line whose committer date is at or after
+    WHEN in whole seconds (`rev-list --since`) — HEAD itself when none is,
+    "" when that oldest commit has no parent (every commit counts). None
+    while HEAD is unborn. The date is the commit's own word: an amend or a
+    rebase dates a commit anew, a set GIT_COMMITTER_DATE moves it. Raises
+    RuntimeError when git fails."""
+    head = head_sha(repo)
+    if not head:
+        return None
+    args = ["rev-list", "--first-parent", f"--since=@{int(when.timestamp())}", "HEAD"]
+    r = git_run(args, repo)
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed in {repo}: {r.stderr.strip()}")
+    since = r.stdout.split()
+    if not since:
+        return head
+    parent = git_run(["rev-parse", "--verify", "-q", f"{since[-1]}^1"], repo)
+    return parent.stdout.strip() if parent.returncode == 0 else ""
 
 
 def _status_records(

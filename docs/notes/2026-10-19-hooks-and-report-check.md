@@ -72,6 +72,35 @@ would ask for a commit), and checking HEAD itself (the stations read the
 tree; HEAD would need a checkout of its own). `--no-verify` stays the
 deliberate exception; the loop protection per turn stays as decided.
 
+**Without a stop base, the commits since the transcript start (audit
+2026-10-27, A12).** `rm -rf .git/labkit-stop-base` after a commit past the
+pre-commit: `committed_in_session` returned no path and no word, and the
+next Bash command kept a new base at the bad commit. Reproduced through the
+entry point: `stop without a base: rc=0 stderr='<empty>'`, then `base kept
+again at: 80764864 HEAD: 80764864`. Now the stop says the base is missing
+and checks the commits on HEAD's first-parent line dated since the
+transcript's first record (`repo.head_before`); pre-run keeps no base past
+such a commit, and a clean stop on a clean tree keeps HEAD. Rejected:
+checking every protocol of the repo (an old area's open BLOCKER would hold
+every stop, decided 2026-10-17), and HEAD's reflog (`HEAD@{date}`, as easy
+to delete as the base). The limits: a commit date is the commit's own word
+(`GIT_COMMITTER_DATE`); and the sentence reaches the agent only when the
+stop holds — "Claude never sees stderr from a hook that exits 0"
+(https://code.claude.com/docs/en/hooks#exit-code-0, read 2026-10-27); a
+clean fallback stop leaves it in the debug log.
+
+**The stop's time budget (2.7).** Claude Code cancels the stop hook at its
+timeout (120 s, `install_hooks.STOP_TIMEOUT_S`), "discarding the hook's
+output, so on most events a timed-out hook renders no decision"
+(https://code.claude.com/docs/en/hooks#timeouts, read 2026-10-27): a
+cancelled stop holds nothing — while one area's tests and `--check` may
+each take up to 300 s inside the gates. The checks now run under `STOP_BUDGET_S` (90 s, SIGALRM in
+the hook's main thread; `subprocess.run` kills the child it waits on); past
+it the stop holds once per turn and says so: a check that cannot run blocks
+(2026-10-17). Measured on the Stop test fixture: 0.32 s for a clean stop;
+a `--check` sleeping 30 s under a 3-s budget held after 3.01 s, the child
+gone.
+
 ## `report_check`: the gate after the last step
 
 **Trigger.** `finalize` holds the run before the number is written back;

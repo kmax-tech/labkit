@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import shlex
 import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -341,6 +343,47 @@ class CommitOrder(unittest.TestCase):
     def test_a_failing_git_is_loud(self):
         with self.assertRaises(RuntimeError):
             repo.is_ancestor(make_repo(), "0" * 40, "HEAD")
+
+
+class HeadBefore(unittest.TestCase):
+    """`head_before`: the commit HEAD's line stood on before a time, by
+    commit dates — the stop's base when the kept one is gone."""
+
+    T = 1_800_000_000  # the session's start, in whole seconds
+
+    def _commit_at(self, d: Path, msg: str, epoch: int) -> str:
+        (d / f"{msg}.txt").write_text(msg)
+        subprocess.run(["git", "add", "-A"], cwd=d, check=True)
+        stamp = f"@{epoch} +0000"
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", msg],
+            cwd=d,
+            check=True,
+            env={**os.environ, "GIT_COMMITTER_DATE": stamp, "GIT_AUTHOR_DATE": stamp},
+        )
+        return repo.head_sha(d)
+
+    def _at(self, epoch: int) -> datetime:
+        return datetime.fromtimestamp(epoch, tz=timezone.utc)
+
+    def test_the_parent_of_the_oldest_commit_dated_since(self):
+        d = make_repo(commit=False)
+        root = self._commit_at(d, "old", self.T - 60)
+        self._commit_at(d, "first", self.T)  # the same second counts
+        head = self._commit_at(d, "second", self.T + 60)
+        self.assertEqual(repo.head_before(d, self._at(self.T)), root)
+        # a naive time is local time, the same instant
+        naive = self._at(self.T).astimezone().replace(tzinfo=None)
+        self.assertEqual(repo.head_before(d, naive), root)
+        self.assertEqual(repo.head_before(d, self._at(self.T + 61)), head)
+
+    def test_a_root_commit_dated_since_is_every_commit(self):
+        d = make_repo(commit=False)
+        self._commit_at(d, "first", self.T + 1)
+        self.assertEqual(repo.head_before(d, self._at(self.T)), "")
+
+    def test_an_unborn_head_is_none(self):
+        self.assertIsNone(repo.head_before(make_repo(commit=False), self._at(self.T)))
 
 
 class GitHomes(unittest.TestCase):
