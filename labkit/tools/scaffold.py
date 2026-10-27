@@ -52,6 +52,7 @@ from labkit.formats.repo import (
     adopt_command,
     AREA_NAME,
     area_protocols,
+    areas_named,
     git_root,
     git_run,
     lab_root,
@@ -428,27 +429,19 @@ def stamp_area(
             "labkit-init",
             f"{root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first",
         )
-    existing = [
-        p
-        for p in experiments.iterdir()
-        if p.is_dir() and split_area_name(p.name)[1] == slug
-    ]
-    if existing and report:
+    if report and (found := existing_area(experiments, name)) is not None:
         _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
-        return existing[0], "\n".join(promote(existing[0], blocks))
+        return found, "\n".join(promote(found, blocks))
     kind = asked_kind(kind)
     quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     stamped = protocol_stamp(root, slug, repeat_cost, kind, model, report)
-    existing = [
-        p
-        for p in experiments.iterdir()
-        if p.is_dir() and split_area_name(p.name)[1] == slug
-    ]
+    existing = areas_named(experiments, slug)
     if existing:
         raise console.Refused(
             "labkit-init",
-            f"experiment already exists: {existing[0]} (add report fields: --report)",
+            f"experiment already exists: {', '.join(map(str, existing))} (add "
+            f"report fields: --report)",
         )
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
@@ -556,7 +549,7 @@ def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
     Returns (area, report to print)."""
     kind = asked_kind(kind)
     slug = area_slug(name)
-    area = restampable_area(root, slug, kind)
+    area = restampable_area(root, name, kind)
     plan = plan_kind_change(root, area, slug, kind)
     if plan.held:
         raise console.Refused(
@@ -574,29 +567,42 @@ def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
     )
 
 
-def restampable_area(root: Path, slug: str, kind: str) -> Path:
-    """The area of SLUG under ROOT that `--change-kind` may restamp: it
-    exists, holds its one stamped protocol and has not measured. Raises
-    `console.Refused` otherwise — after a run the kind is part of the
-    registration the first measurement stood on
+def existing_area(experiments: Path, name: str) -> Path | None:
+    """The existing area `exp NAME` means under EXPERIMENTS: the one area
+    of NAME's slug (`repo.areas_named`) — or, when several carry the slug,
+    the one NAME names as typed (`02-x`). None when no area carries the
+    slug. Raises `console.Refused` naming every candidate when NAME leaves
+    several: the first in directory order was a guess (audit 2026-10-27,
+    D3)."""
+    slug = area_slug(name)
+    found = areas_named(experiments, slug)
+    if len(found) > 1:
+        found = areas_named(experiments, name) or found
+    if len(found) > 1:
+        raise console.Refused(
+            "labkit-init",
+            f"{len(found)} areas carry the name {slug!r}: "
+            f"{', '.join(p.name for p in found)} — name the one you mean with "
+            f"its number (`labkit-init exp {found[0].name} …`)",
+        )
+    return found[0] if found else None
+
+
+def restampable_area(root: Path, name: str, kind: str) -> Path:
+    """The area NAME names under ROOT (`existing_area`) that `--change-kind`
+    may restamp: it exists, holds its one stamped protocol and has not
+    measured. Raises `console.Refused` otherwise — after a run the kind is
+    part of the registration the first measurement stood on
     (`report_check.registration_gaps`), so the way is a new registration."""
     experiments = root / "experiments"
-    found = (
-        [
-            p
-            for p in experiments.iterdir()
-            if p.is_dir() and split_area_name(p.name)[1] == slug
-        ]
-        if experiments.is_dir()
-        else []
-    )
-    if not found:
+    slug = area_slug(name)
+    area = existing_area(experiments, name)
+    if area is None:
         raise console.Refused(
             "labkit-init",
             f"--change-kind: no area {slug!r} under {experiments} — "
             f"`labkit-init exp {slug} --kind {kind}` stamps a new one",
         )
-    area = found[0]
     protocol = area / f"PROTOCOL-{slug}.md"
     if area_protocols(area) != [protocol]:
         raise console.Refused(

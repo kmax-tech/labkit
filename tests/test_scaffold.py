@@ -4,6 +4,7 @@ import ast
 import contextlib
 import io
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -246,6 +247,59 @@ class Exp(unittest.TestCase):
         quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
         with self.assertRaisesRegex(console.Refused, "already exists"):
             quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
+
+    def _two_areas_of_one_name(self) -> Path:
+        """`experiments/` with `01-x` (high fit) and its copy `02-x`, and
+        `03-y` (low computation) beside a hand-made `y` — two areas for each
+        name, as a copy or a rename by hand leaves them."""
+        quiet(scaffold.stamp_area, self.root, "x", "high", kind="fit")
+        quiet(scaffold.stamp_area, self.root, "other", kind="fit")
+        quiet(scaffold.stamp_area, self.root, "y", "low", kind="compute")
+        exp = self.root / "experiments"
+        shutil.copytree(exp / "01-x", exp / "02-x")
+        shutil.copytree(exp / "03-y", exp / "y")
+        return exp
+
+    def _snapshot(self) -> dict[Path, bytes]:
+        return {p: p.read_bytes() for p in sorted(self.root.rglob("*")) if p.is_file()}
+
+    def test_a_name_two_areas_carry_is_refused_naming_both(self) -> None:
+        """`--report` and `--change-kind` took the first area of the slug in
+        directory order, without a word (audit 2026-10-27, D3: the copy
+        `02-x` was promoted); a new area's refusal named one of them. Each
+        refuses naming both, nothing changed."""
+        self._two_areas_of_one_name()
+        before = self._snapshot()
+        for call, both in (
+            (lambda: scaffold.stamp_area(self.root, "x", report=True), "01-x, 02-x"),
+            (lambda: scaffold.change_kind(self.root, "y", "fit"), "03-y, y"),
+            (lambda: scaffold.stamp_area(self.root, "x", kind="fit"), "01-x, "),
+        ):
+            with self.subTest(both=both):
+                with self.assertRaises(console.Refused) as caught:
+                    quiet(call)
+                self.assertIn(both, caught.exception.why)
+                self.assertEqual(self._snapshot(), before)
+        with self.assertRaises(console.Refused) as caught:
+            quiet(scaffold.stamp_area, self.root, "x", report=True)
+        self.assertIn("labkit-init exp 01-x", caught.exception.why)
+
+    def test_the_twin_the_numbered_name_picks_one_of_them(self) -> None:
+        exp = self._two_areas_of_one_name()
+        first = (exp / "01-x" / "PROTOCOL-x.md").read_bytes()
+        area, _ = quiet(scaffold.stamp_area, self.root, "02-x", report=True)
+        self.assertEqual(area, exp / "02-x")
+        self.assertIn(
+            "Deviations after freeze",
+            (exp / "02-x" / "PROTOCOL-x.md").read_text(encoding="utf-8"),
+        )
+        self.assertEqual((exp / "01-x" / "PROTOCOL-x.md").read_bytes(), first)
+        area, _ = quiet(scaffold.change_kind, self.root, "03-y", "fit")
+        self.assertEqual(area, exp / "03-y")
+        head = protocol_block.head(
+            (exp / "03-y" / "PROTOCOL-y.md").read_text(encoding="utf-8")
+        )
+        self.assertEqual(head.kind, "fit")
 
     def test_low_stamps_the_cut_and_the_counting_skeleton(self) -> None:
         quiet(
