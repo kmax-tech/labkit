@@ -265,35 +265,83 @@ class Exp(unittest.TestCase):
 
     def test_a_name_two_areas_carry_is_refused_naming_both(self) -> None:
         """`--report` and `--change-kind` took the first area of the slug in
-        directory order, without a word (audit 2026-10-27, D3: the copy
-        `02-x` was promoted); a new area's refusal named one of them. Each
-        refuses naming both, nothing changed."""
+        directory order, without a word (audit 2026-10-27, doubled homes:
+        the copy `02-x` was promoted); a new area's refusal named one of
+        them. Each refuses naming both and the command that picks one,
+        nothing changed; an area without a number is told to take one."""
         self._two_areas_of_one_name()
         before = self._snapshot()
-        for call, both in (
-            (lambda: scaffold.stamp_area(self.root, "x", report=True), "01-x, 02-x"),
-            (lambda: scaffold.change_kind(self.root, "y", "fit"), "03-y, y"),
-            (lambda: scaffold.stamp_area(self.root, "x", kind="fit"), "01-x, "),
+        for call, said in (
+            (
+                lambda: scaffold.stamp_area(self.root, "x", report=True),
+                "01-x, 02-x — name the one you mean by its number "
+                "(`labkit-init exp 01-x …`)",
+            ),
+            (
+                lambda: scaffold.change_kind(self.root, "y", "fit"),
+                "03-y, y — name the one you mean by its number (`labkit-init "
+                "exp 03-y …`); y has no number to be named by",
+            ),
+            (
+                lambda: scaffold.stamp_area(self.root, "x", kind="fit"),
+                "already exists: 01-x, 02-x under",
+            ),
         ):
-            with self.subTest(both=both):
+            with self.subTest(said=said):
                 with self.assertRaises(console.Refused) as caught:
                     quiet(call)
-                self.assertIn(both, caught.exception.why)
+                self.assertIn(said, caught.exception.why)
                 self.assertEqual(self._snapshot(), before)
         with self.assertRaises(console.Refused) as caught:
-            quiet(scaffold.stamp_area, self.root, "x", report=True)
-        self.assertIn("labkit-init exp 01-x", caught.exception.why)
+            quiet(scaffold.stamp_area, self.root, "x", kind="fit")
+        self.assertIn("`labkit-init exp 01-x --report`", caught.exception.why)
+
+    def test_a_typed_number_no_area_carries_is_refused(self) -> None:
+        """`exp 02-x --change-kind` beside `01-x` alone restamped `01-x`:
+        the number typed was dropped for an existing area too (cold review
+        of this change). For `--report` and `--change-kind` it names the
+        area or is refused naming the areas of that name; a new area still
+        drops it (`test_numbers_count_up_and_a_typed_number_is_dropped`)."""
+        self._two_areas_of_one_name()
+        before = self._snapshot()
+        for call, said in (
+            (
+                lambda: scaffold.stamp_area(self.root, "05-other", report=True),
+                "no area 05-other under",
+            ),
+            (
+                lambda: scaffold.change_kind(self.root, "09-y", "fit"),
+                "no area 09-y under",
+            ),
+        ):
+            with self.subTest(said=said):
+                with self.assertRaises(console.Refused) as caught:
+                    quiet(call)
+                self.assertIn(said, caught.exception.why)
+                self.assertEqual(self._snapshot(), before)
+        with self.assertRaises(console.Refused) as caught:
+            quiet(scaffold.stamp_area, self.root, "05-other", report=True)
+        self.assertIn(
+            "'other' names 02-other; name the one you mean by its number "
+            "(`labkit-init exp 02-other …`)",
+            caught.exception.why,
+        )
 
     def test_the_twin_the_numbered_name_picks_one_of_them(self) -> None:
         exp = self._two_areas_of_one_name()
         first = (exp / "01-x" / "PROTOCOL-x.md").read_bytes()
-        area, _ = quiet(scaffold.stamp_area, self.root, "02-x", report=True)
-        self.assertEqual(area, exp / "02-x")
-        self.assertIn(
-            "Deviations after freeze",
-            (exp / "02-x" / "PROTOCOL-x.md").read_text(encoding="utf-8"),
-        )
-        self.assertEqual((exp / "01-x" / "PROTOCOL-x.md").read_bytes(), first)
+        report_field = r"(?m)^- \*\*[^*]*†:\*\*"
+        for name in ("02-x", "02-X", "02-x/"):
+            with self.subTest(name=name):
+                area, _ = quiet(scaffold.stamp_area, self.root, name, report=True)
+                self.assertEqual(area, exp / "02-x")
+                self.assertRegex(
+                    (exp / "02-x" / "PROTOCOL-x.md").read_text(encoding="utf-8"),
+                    report_field,
+                )
+                self.assertEqual((exp / "01-x" / "PROTOCOL-x.md").read_bytes(), first)
+        area, _ = quiet(scaffold.stamp_area, self.root, "02-other", report=True)
+        self.assertEqual(area, exp / "02-other")
         area, _ = quiet(scaffold.change_kind, self.root, "03-y", "fit")
         self.assertEqual(area, exp / "03-y")
         head = protocol_block.head(

@@ -421,7 +421,10 @@ def stamp_area(
     and the report to print (what was written, then the next steps) — the
     caller prints; `stamp_lab` returns its log the same way. KIND is what
     the kept number asserts (`protocol_block.KINDS`); a new area without it
-    is refused — nothing falls back to a computation (standard 0.22)."""
+    is refused — nothing falls back to a computation (standard 0.22).
+    Raises `console.Refused` too for an area of NAME that exists without
+    REPORT, and with REPORT where NAME names no one area
+    (`existing_area`)."""
     slug = area_slug(name)
     experiments = root / "experiments"
     if not (root / "models.toml").is_file() or not experiments.is_dir():
@@ -429,6 +432,7 @@ def stamp_area(
             "labkit-init",
             f"{root} is not a lab repo (no models.toml / experiments/) — run `labkit-init lab` first",
         )
+    # existing_area refuses a name several areas carry; None: stamp a new one
     if report and (found := existing_area(experiments, name)) is not None:
         _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
         return found, "\n".join(promote(found, blocks))
@@ -438,10 +442,12 @@ def stamp_area(
     stamped = protocol_stamp(root, slug, repeat_cost, kind, model, report)
     existing = areas_named(experiments, slug)
     if existing:
+        which = slug if len(existing) == 1 else existing[0].name
         raise console.Refused(
             "labkit-init",
-            f"experiment already exists: {', '.join(map(str, existing))} (add "
-            f"report fields: --report)",
+            f"experiment already exists: {_area_names(existing)} under "
+            f"{experiments} — add report fields with `labkit-init exp {which} "
+            f"--report`",
         )
     nn = next_experiment_number(experiments)
     area = experiments / f"{nn}-{slug}"
@@ -568,24 +574,56 @@ def change_kind(root: Path, name: str, kind: str | None) -> tuple[Path, str]:
 
 
 def existing_area(experiments: Path, name: str) -> Path | None:
-    """The existing area `exp NAME` means under EXPERIMENTS: the one area
-    of NAME's slug (`repo.areas_named`) — or, when several carry the slug,
-    the one NAME names as typed (`02-x`). None when no area carries the
-    slug. Raises `console.Refused` naming every candidate when NAME leaves
-    several: the first in directory order was a guess (audit 2026-10-27,
-    D3)."""
+    """The existing area `exp NAME` means under EXPERIMENTS — the one
+    `--report` promotes and `--change-kind` restamps. NAME is spelled as
+    `area_slug` reads it; the areas of its slug are `repo.areas_named`'s.
+    A number typed with it (`02-x`) picks the area of that number; without
+    one the slug must name a single area. None when no area carries the
+    slug. Raises `console.Refused`, naming the candidates and how to name
+    one, when the typed number names none of them, or several carry the
+    slug and no number was typed: taking the first in directory order, or
+    another number's area, was a guess (audit 2026-10-27)."""
     slug = area_slug(name)
     found = areas_named(experiments, slug)
-    if len(found) > 1:
-        found = areas_named(experiments, name) or found
+    number = split_area_name(name.strip())[0]
+    if number is not None and found:
+        picked = [p for p in found if p.name == f"{number}-{slug}"]
+        if not picked:
+            raise console.Refused(
+                "labkit-init",
+                f"no area {number}-{slug} under {experiments} — {slug!r} names "
+                f"{_area_names(found)}; {_name_one(found)}",
+            )
+        found = picked
     if len(found) > 1:
         raise console.Refused(
             "labkit-init",
-            f"{len(found)} areas carry the name {slug!r}: "
-            f"{', '.join(p.name for p in found)} — name the one you mean with "
-            f"its number (`labkit-init exp {found[0].name} …`)",
+            f"{len(found)} areas under {experiments} carry the name {slug!r}: "
+            f"{_area_names(found)} — {_name_one(found)}",
         )
     return found[0] if found else None
+
+
+def _area_names(areas: list[Path]) -> str:
+    """AREAS by their directory names, as a refusal lists them."""
+    return ", ".join(p.name for p in areas)
+
+
+def _name_one(areas: list[Path]) -> str:
+    """How to name one of AREAS, the areas of one slug: by its number; an
+    area without a number cannot be named apart from the others."""
+    numbered = [p.name for p in areas if split_area_name(p.name)[0] is not None]
+    how = (
+        [f"name the one you mean by its number (`labkit-init exp {numbered[0]} …`)"]
+        if numbered
+        else []
+    )
+    how += [
+        f"{p.name} has no number to be named by — rename it NN-{p.name} to choose it"
+        for p in areas
+        if split_area_name(p.name)[0] is None
+    ]
+    return "; ".join(how)
 
 
 def restampable_area(root: Path, name: str, kind: str) -> Path:
