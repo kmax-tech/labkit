@@ -75,7 +75,7 @@ class ApplySkeleton(unittest.TestCase):
             {"id": str(i), "features": [i % 2], "gold": i % 2} for i in range(12)
         ] + [{"id": "unlabelled", "features": [1], "gold": None}]
 
-    def test_apply_predicts_without_training_either_instrument(self):
+    def test_apply_with_a_registered_fixed_null_trains_neither(self):
         area, measure = self.measure_module("apply")
         primary, null = mock.Mock(), mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
@@ -102,15 +102,38 @@ class ApplySkeleton(unittest.TestCase):
         self.assertTrue(metrics["c1_pass"])
         self.assertTrue(all(r["fold"] is None for r in rows))
 
-    def test_apply_refuses_until_an_independent_null_is_defined(self):
+    def test_apply_null_scores_the_same_predictions_against_permuted_labels(self):
+        # decided 2026-10-27: no second instrument by default — the primary's
+        # predictions against the gold permuted with the seed, as fit's lane
         area, measure = self.measure_module("apply")
-        output = area / "output" / "kept.jsonl"
+        primary = mock.Mock()
+        primary.predict.side_effect = lambda xs: [x[0] for x in xs]
         with (
-            mock.patch.object(measure, "make_estimator", return_value=mock.Mock()),
-            self.assertRaisesRegex(NotImplementedError, "make_null_predictor"),
+            mock.patch.object(measure, "make_estimator", return_value=primary),
+            contextlib.redirect_stdout(io.StringIO()),
         ):
-            measure.measure(measure.CONFIG, self.items(), output)
-        self.assertFalse(output.exists())
+            rows = measure.measure(
+                measure.CONFIG, self.items(), area / "output" / "kept.jsonl"
+            )
+            again = measure.apply_rows(measure.CONFIG, self.items(), False)
+        primary.fit.assert_not_called()
+        self.assertEqual(primary.predict.call_count, 4)  # labelled + test, twice
+        reg = [r for r in rows if r["lane"] == "registered"]
+        null = [r for r in rows if r["lane"] == "null"]
+        self.assertEqual([r["pred"] for r in null], [r["pred"] for r in reg])
+        self.assertEqual(
+            sorted(r["gold"] for r in null), sorted(r["gold"] for r in reg)
+        )
+        by_id = {it["id"]: it["gold"] for it in self.items()}
+        self.assertTrue(all(r["gold"] == by_id[r["gold_of"]] for r in null))
+        self.assertNotEqual([r["gold_of"] for r in null], [r["item"] for r in null])
+        self.assertEqual(
+            [r["gold_of"] for r in null],
+            [r["gold_of"] for r in again if r["lane"] == "null"],
+        )
+        metrics = measure.evaluate_rows(rows)
+        self.assertEqual(metrics["c1_score"], 1.0)
+        self.assertLess(metrics["a2_score"], 1.0)
 
     def test_apply_refuses_a_missing_prediction_instead_of_dropping_an_item(self):
         area, measure = self.measure_module("apply")
@@ -125,16 +148,17 @@ class ApplySkeleton(unittest.TestCase):
                 measure.CONFIG, self.items(), area / "output" / "kept.jsonl"
             )
 
-    def test_apply_protocols_name_the_independently_registered_fixed_null(self):
+    def test_apply_protocols_name_the_permuted_label_null(self):
         for cost in ("low", "high"):
             for report in (False, True):
                 with self.subTest(cost=cost, report=report):
                     text = scaffold.protocol_stamp(
                         self.root, "fixed", cost, "apply", False, report
                     )
-                    self.assertIn("independent fixed null lane", text)
-                    self.assertNotIn("permuted-label lane", text)
+                    self.assertIn("permuted-label lane", text)
                     self.assertNotIn("out-of-fold prediction", text)
+                    if not report:  # the pilot stamp answers the null field
+                        self.assertIn("gold labels permuted with the seed", text)
 
     def test_declared_primary_and_null_files_bind_rows_config_and_run_inputs(self):
         area, measure = self.measure_module("apply")

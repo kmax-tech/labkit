@@ -77,12 +77,12 @@ registration follow it: `compute` judges no prediction (the compute
 skeleton; question, scope, exclusions, unit); `fit` judges a model trained
 or adjusted in the experiment (the estimator skeleton; also criterion,
 admissibility condition, null condition); `apply` judges a model used
-unchanged (with `--model <alias>` the prompt skeleton, else fixed primary
-and independently specified null predictors). The local apply loaders
-provide `predict(X)` and never train either predictor; declare every loaded
-model or null artifact in `PREDICTOR_FILES` so its content is bound to the
-run, resumed output and repeat configuration. The null comparison remains
-an explicit experiment choice. Add `--model <alias>` when the model answers through `models.toml`;
+unchanged (with `--model <alias>` the prompt skeleton, else the unchanged
+predictor's `predict(X)`, never trained; its null lane scores the same
+predictions against labels permuted with the seed, or a fixed null
+predictor the protocol registers). Declare every loaded model file in
+`PREDICTOR_FILES` so its content is bound to the run, resumed output and
+repeat configuration. Add `--model <alias>` when the model answers through `models.toml`;
 configure that alias there. Audits also use an alias; the default
 `opus` uses the Claude CLI and needs its authentication. `--model` on
 `labkit-audit` selects another configured backend.

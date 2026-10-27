@@ -189,7 +189,8 @@ checks that they are installed.
 fills protocol fields. `scaffold` stamps a lab repo and its areas from the
 shipped templates; `protocol_cuts` selects the protocol template for a cost
 tier. The estimator script fits models only for `kind = "fit"`; a local
-`apply` uses unchanged primary and independently registered null predictors.
+`apply` uses the unchanged predictor, its null lane on labels permuted with
+the seed (or a registered fixed null predictor).
 Declared predictor artifacts are run inputs, hashed in the config and
 output fingerprint so resume and repeats cannot silently change them.
 `repo_check`, behind `labkit-check`, compares the installation with

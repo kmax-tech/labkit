@@ -316,9 +316,12 @@ pins (`requirements.txt` / `requirements.lock`).
   `--wait`. Workflow review 2026-10-27.
 - **Local apply predicts without fitting.** An `apply` without a model
   alias used the estimator's training path. The shared script now loads
-  unchanged primary and explicitly supplied null predictors; only `fit`
-  trains on true and permuted labels. No null method is invented for the
-  author. Declared `PREDICTOR_FILES` are hashed into the config, output
+  the unchanged predictor and never trains it; only `fit` trains, on true
+  and permuted labels. The apply null lane scores the same predictions
+  against the labelled gold permuted with the seed, each row naming whose
+  label it carries (`gold_of`) — no second artifact; a protocol that
+  registers a fixed null predictor returns it from `make_null_predictor()`
+  (decided 2026-10-27). Declared `PREDICTOR_FILES` are hashed into the config, output
   fingerprint and run provenance, and a changed artifact refuses resume
   or an unchanged repeat. They are read when `main()` runs, never at import:
   the area's test imports the script. `provenance.BinaryInput(path)` explicitly records

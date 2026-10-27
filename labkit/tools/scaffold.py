@@ -1188,8 +1188,8 @@ def next_steps(
             fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
         else:
             fill = (
-                "make_estimator() loads the unchanged predictor, make_null_predictor() "
-                "the independently registered fixed null; SCORE, FEATURES_FIELD; --show 3, then the run"
+                "make_estimator() loads the unchanged predictor (the null lane permutes "
+                "the labels); SCORE, FEATURES_FIELD; --show 3, then the run"
                 if kind == "apply"
                 else "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
             )
@@ -1228,8 +1228,8 @@ def next_steps(
             + (", gold null for the unlabelled split" if estimator else "")
             + f"   ({rel}/scripts)",
             (
-                "scripts/01_measure.py: make_estimator() loads the unchanged predictor; "
-                "make_null_predictor() the independently registered fixed null; SCORE, FEATURES_FIELD; --show 3 "
+                "scripts/01_measure.py: make_estimator() loads the unchanged predictor "
+                "(the null lane permutes the labels); SCORE, FEATURES_FIELD; --show 3 "
                 if kind == "apply"
                 else "scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 "
             )
@@ -1238,7 +1238,7 @@ def next_steps(
             else "scripts/01_measure.py --show 3    read the prompts, no call",
             (
                 (
-                    "scripts/01_measure.py --probe 12  instrument check: unchanged primary/null predictors, "
+                    "scripts/01_measure.py --probe 12  instrument check: the unchanged predictor, "
                     if kind == "apply"
                     else "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
                 )

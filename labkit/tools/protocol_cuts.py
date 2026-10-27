@@ -407,11 +407,11 @@ ESTIMATOR_PROMISES = (
 
 
 APPLY_FIELDS = {
-    "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` and the independent fixed null by `make_null_predictor()` in scripts/01_measure.py",
+    "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` in scripts/01_measure.py",
     "Model I/O": "<in · the feature fields per item · out · one prediction from each unchanged instrument without fitting>",
-    "Null condition / anchors (in the same run)": "<the independently registered fixed predictor of make_null_predictor() and why it targets chance_of() within null_band>",
+    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, expected at chance_of() within null_band — or the registered fixed null of make_null_predictor() and why it targets chance>",
     "Raw output": "<one registered row and one null row as --probe prints them>",
-    "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged primary and null predictors on N labelled items · scores read, never reported>",
+    "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged predictor on N labelled items, both lanes · scores read, never reported>",
 }
 
 
@@ -473,7 +473,8 @@ def name_promise_ids(text: str, kind: str) -> str:
 def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -> str:
     """The pilot protocol of an estimator area (kind fit, or apply without a
     model): fields and promise sentences describe fitting at KIND fit, or
-    unchanged primary/independent null predictors at KIND apply. The
+    the unchanged predictor at KIND apply (its null lane on permuted
+    labels). The
     constants and score formulas are shared. Raises when KIND is neither
     fit nor apply or the stamp lacks a field or a table line
     — a silently unfilled field is the leftover this exists to remove; in
@@ -496,9 +497,6 @@ def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -
             replacement = replacement.replace("out-of-fold SCORE", "SCORE")
             replacement = replacement.replace(
                 "an out-of-fold prediction", "a prediction"
-            )
-            replacement = replacement.replace(
-                "permuted-label lane", "independent fixed null lane"
             )
         out, n = re.subn(pattern, lambda _m, r=replacement: r, out, count=1, flags=re.M)
         if n != 1:

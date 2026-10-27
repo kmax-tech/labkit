@@ -6,7 +6,7 @@ Usage:
         The config and three feature rows per split; no fit.
     ../../.venv/bin/python scripts/01_measure.py --probe
         Instrument check: twelve labelled items, reduced estimator at fit
-        or unchanged primary/null predictors at apply,
+        or the unchanged predictor at apply (its null on permuted labels),
         both lanes, into a throwaway file; prints the scores (not reported)
         and one row per lane for the protocol's raw-output field.
     ../../.venv/bin/python scripts/01_measure.py
@@ -30,13 +30,15 @@ creates an estimator with fit(X, y) and predict(X): the registered lane
 fits true labels, the null lane fits labels permuted inside each fitting
 fold, and the test lane fits every labelled item before predicting the
 unlabelled split. Every scored prediction is out of fold.
-At `apply`, `make_estimator()` loads the unchanged predictor, and
-`make_null_predictor()` supplies the independently registered fixed null
-predictor. Both expose predict(X); neither is fitted, nor receives gold.
-Define both instruments explicitly before measuring. The null must target
-`chance_of()` within the registered `null_band`; the script invents no null
-predictor. All lanes are recorded in the same run (LAB-034 Null condition
-in the same run). Unlabelled predictions are never scored.
+At `apply`, `make_estimator()` loads the unchanged predictor with
+predict(X); it is never fitted and never sees gold. Its null lane scores
+the same predictions against the gold labels permuted with the seed —
+each null row names whose label it carries (`gold_of`) —, so the noise
+floor needs no second instrument; a protocol that registers a fixed null
+predictor returns it from `make_null_predictor()` instead. The null must
+target `chance_of()` within the registered `null_band`. All lanes are
+recorded in the same run (LAB-034 Null condition in the same run).
+Unlabelled predictions are never scored.
 
 Measurement contract:
   - Every labelled item is predicted once per scored lane in the same run;
@@ -129,8 +131,8 @@ def predictor_digests() -> dict[str, str]:
 
 
 def data_files() -> dict[str, Path | provenance.BinaryInput]:
-    """Inputs runlog records: prepared rows and every declared primary/null
-    dependency. Predictor names are prefixed to keep the prepared input.
+    """Inputs runlog records: prepared rows and every declared predictor
+    dependency (the primary's, and a registered fixed null's). Predictor names are prefixed to keep the prepared input.
     Returns paths without reading or changing any file.
     """
     return {"prepared": ITEMS, **{f"predictor_{name}": provenance.BinaryInput(path) for name, path in PREDICTOR_FILES.items()}}
@@ -157,16 +159,15 @@ def make_estimator(seed: int, probe: bool = False):
 
 
 def make_null_predictor(seed: int, probe: bool = False):
-    """TODO for apply: return the independently registered fixed null
-    predictor with predict(X). It receives features only, never gold;
-    neither this loader nor prediction may train or adjust it. State its
-    construction and expected chance_of() score in the protocol before
-    measuring. PROBE changes only the items, not the fixed instrument.
-    Declare every loaded dependency in PREDICTOR_FILES, just as for the
-    primary predictor, e.g. load(PREDICTOR_FILES["null"]).
-    Fit uses its permuted-label lane instead and never calls this loader.
+    """At apply: None, the default — the null lane scores the primary's
+    predictions against the gold labels permuted with SEED. Return a fixed
+    null predictor with predict(X) only when the protocol registers one
+    instead: it receives features only, never gold, and is never trained;
+    declare its files in PREDICTOR_FILES, e.g. load(PREDICTOR_FILES["null"]).
+    PROBE changes only the items. Fit never calls this: its null lane
+    fits permuted labels.
     """
-    raise NotImplementedError("make_null_predictor(): define the registered fixed null predictor")
+    return None
 
 
 @dataclass(frozen=True)
@@ -267,7 +268,8 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
             prov: dict | None = None, probe: bool = False) -> list[dict]:
     """Predict every item in its lanes and write OUT, with PROV on every row.
 
-    Apply uses fixed primary/null predictors without training; fit uses
+    Apply predicts with the unchanged primary (its null lane on permuted
+    gold, or a registered fixed null) without training; fit uses
     out-of-fold registered/permuted-label training and fits all labelled
     items for the unlabelled test lane. A short prediction list raises
     ValueError rather than dropping items. No other kind is accepted.
@@ -289,23 +291,40 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
 
 
 def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
-    """Rows from unchanged primary and independently registered null
-    predictors, neither fitted nor given gold. Each scored lane covers all
-    labelled items; the primary alone predicts unlabelled items. Raises
-    ValueError for a predictor returning the wrong number of answers.
+    """Rows of the unchanged primary predictor, never fitted nor given gold:
+    the registered lane over the labelled items, the test lane over the
+    unlabelled ones. The null lane scores the registered predictions
+    against the labelled items' gold permuted with the seed, each row
+    naming whose label it carries (`gold_of`); a fixed null predictor
+    from `make_null_predictor()` predicts it instead. Raises ValueError
+    for a predictor returning the wrong number of answers.
     """
     primary = make_estimator(cfg.seed, probe)
     null = make_null_predictor(cfg.seed, probe)
-    rows: list[dict] = []
-    for lane, part, predictor in (("registered", labelled(items), primary),
-                                  ("null", labelled(items), null),
-                                  ("test", unlabelled(items), primary)):
-        if not part:
-            continue
-        predictions = predictor.predict([it[FEATURES_FIELD] for it in part])
-        rows += [{"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"],
-                  "fold": None, "pred": _plain(pred), "gold": it[GOLD_FIELD]}
-                 for it, pred in zip(part, predictions, strict=True)]
+    train, test = labelled(items), unlabelled(items)
+
+    def predict(predictor, part: list[dict]) -> list:
+        # strict: fewer answers than items is refused, never cut short
+        answers = list(predictor.predict([it[FEATURES_FIELD] for it in part]))
+        if len(answers) != len(part):
+            raise ValueError(f"apply_rows(): {len(answers)} predictions for {len(part)} items")
+        return [_plain(a) for a in answers]
+
+    def row(lane: str, it: dict, pred, gold, **more) -> dict:
+        return {"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"],
+                "fold": None, "pred": pred, "gold": gold, **more}
+
+    registered = predict(primary, train) if train else []
+    rows = [row("registered", it, p, it[GOLD_FIELD]) for it, p in zip(train, registered)]
+    if null is None:
+        donors = list(train)
+        random.Random(f"apply-null:{cfg.seed}").shuffle(donors)
+        rows += [row("null", it, p, d[GOLD_FIELD], gold_of=d["id"])
+                 for it, p, d in zip(train, registered, donors)]
+    elif train:
+        rows += [row("null", it, p, it[GOLD_FIELD]) for it, p in zip(train, predict(null, train))]
+    if test:
+        rows += [row("test", it, p, None) for it, p in zip(test, predict(primary, test))]
     return rows
 
 

@@ -49,9 +49,11 @@ Reads: the scripts, the protocol's promise tables. Changes: nothing.
 Clean means: every declared key appears in the code, every `PROMPT`
 constant stands in the protocol, the parsers have fixtures — the static
 part of the promise → code link. It proves nothing about meaning; that is
-the audit's question. A local `apply` loads fixed primary and independently
-specified null predictors; neither receives labels or trains. The author
-declares their artifacts in `PREDICTOR_FILES`, whose digests are recorded
+the audit's question. A local `apply` loads the unchanged predictor; it
+neither receives labels nor trains, and its null lane scores the same
+predictions against labels permuted with the seed (or a registered fixed
+null predictor). The author declares the model's files in
+`PREDICTOR_FILES`, whose digests are recorded
 in the config, run inputs and output fingerprint. A changed artifact cannot
 resume old rows or count as an unchanged repeat.
 At `high` the `--probe` checks the instrument on a few items before anything

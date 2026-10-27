@@ -9,10 +9,14 @@ either repeat cost. Freezing it still requires its registration and a
 covering preflight audit. Requiring invented tables contradicted the
 compute stamp and prevented its high-cost measurement from starting.
 
-A local apply uses unchanged primary and independently specified null
-predictors. The shared estimator template keeps the evaluation in one
-place, but only its fit path trains. The author supplies the null; the
-fix must not choose a new scientific comparison implicitly. Every loaded
+A local apply uses the unchanged predictor. The shared estimator template
+keeps the evaluation in one place, but only its fit path trains. The
+first form required an author-built null predictor; decided the same day
+(the lab's choice, not the fix's): the null lane scores the primary's own
+predictions against the labelled gold permuted with the seed, each null
+row naming whose label it carries (`gold_of`) — the same noise floor as
+fit's permuted lane without a second artifact. A protocol that registers
+a fixed null predictor returns it from `make_null_predictor()` instead. Every loaded
 predictor dependency belongs in `PREDICTOR_FILES`: source digests bind
 it to the config, run inputs and output fingerprint. That detects changed
 declared artifacts, not omitted dependencies or hidden training in a loader;
