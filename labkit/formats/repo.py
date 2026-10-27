@@ -333,11 +333,69 @@ def touched_paths(repo: Path) -> list[Path]:
     return out
 
 
-def head_sha(repo: Path) -> str:
-    """HEAD's commit under REPO, "" before the first commit (an unborn HEAD
-    is a state). The caller has made sure REPO is a repository."""
-    r = git_run(["rev-parse", "--verify", "-q", "HEAD"], repo)
+def head_sha(repo: Path, *, short: bool = False) -> str:
+    """HEAD's commit under REPO — git's short form with SHORT —, "" outside
+    a repository and before the first commit (an unborn HEAD is a state,
+    not an error). Raises GitError only when git cannot run."""
+    if git_root(repo) is None:
+        return ""
+    r = git_run(
+        ["rev-parse", "--verify", "-q", *(["--short"] if short else []), "HEAD"], repo
+    )
     return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def tree_dirty(repo: Path, *, untracked: bool = True) -> bool:
+    """Does the working tree under REPO differ from HEAD (`git status
+    --porcelain` names anything)? UNTRACKED counts files git does not know
+    — a file nobody committed may have been run —, False counts tracked
+    files only. False outside a repository; a git that fails inside one
+    raises GitError (it used to read as clean)."""
+    args = ["status", "--porcelain", *([] if untracked else ["--untracked-files=no"])]
+    return bool(git(args, repo))
+
+
+def git_dir_path(repo: Path, name: str, *, common: bool = False) -> Path | None:
+    """NAME inside REPO's git directory — this worktree's own (each worktree
+    has its own HEAD), or with COMMON the main repository's, which every
+    worktree shares —; None outside a repository git takes. Local, never
+    committed: where labkit keeps the audit locks, the stop base and the
+    session log."""
+    r = git_run(["rev-parse", "--git-common-dir" if common else "--git-dir"], repo)
+    if r.returncode != 0:
+        return None
+    d = Path(r.stdout.strip())
+    return (d if d.is_absolute() else repo / d) / name
+
+
+def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
+    """The files REV holds under FOLDER (inside REPO), relative to FOLDER,
+    `/`-separated — the index when REV is INDEX_REV (`ls-files --cached`,
+    what a commit now would carry), else that revision's tree (`ls-tree
+    -r`). None when there is no such state: REPO is no repository git takes
+    (a bare `.git` directory), or REV names no revision (an unborn HEAD) —
+    told by git's exit codes, not its words. Raises RuntimeError when git
+    fails otherwise."""
+    if git_run(["rev-parse", "--git-dir"], repo).returncode != 0:
+        return None
+    if (
+        rev != INDEX_REV
+        and git_run(["rev-parse", "--verify", "-q", f"{rev}^{{tree}}"], repo).returncode
+        != 0
+    ):
+        return None
+    rel = folder.resolve().relative_to(repo.resolve()).as_posix()
+    args = (
+        ["ls-files", "-z", "--cached", "--", rel]
+        if rev == INDEX_REV
+        else ["ls-tree", "-r", "-z", "--name-only", rev, "--", rel]
+    )
+    r = git_run(args, repo)
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args[:2])} failed in {repo}: {r.stderr.strip()}"
+        )
+    return {p[len(rel) + 1 :] for p in r.stdout.split("\0") if p.startswith(rel + "/")}
 
 
 def fork_point(repo: Path, base: str) -> str | None:

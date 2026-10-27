@@ -124,7 +124,6 @@ from labkit.run.provenance import (
     Provenance,
     describe_data,
     git_state,
-    git_head,
     record_provenance,
     script_sha,
     source_digest,
@@ -522,7 +521,7 @@ class Run:
             self.dir / "config.json", json.dumps(frozen, ensure_ascii=False, indent=2)
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
-        if git_head(self.base) and repo.git(["status", "--porcelain"], self.base):
+        if repo.head_sha(self.base) and repo.tree_dirty(self.base):
             write_atomic(
                 self.dir / "uncommitted.patch",
                 repo.git(["diff", "HEAD"], self.base) or "",
@@ -636,7 +635,7 @@ class Run:
                     "schema_version": RUN_SCHEMA,
                     "finished": now_stamp(),
                     "git": git_end,
-                    "git_full": git_head(self.base),
+                    "git_full": repo.head_sha(self.base),
                     "note": self._note,
                     "continues": sorted(continues),
                 },

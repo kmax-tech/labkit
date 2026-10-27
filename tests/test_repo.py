@@ -267,6 +267,84 @@ class CommittedSince(unittest.TestCase):
         self.assertIsNone(repo.fork_point(make_repo(), "0" * 40))
 
 
+class GitHomes(unittest.TestCase):
+    """The git questions asked in one place (audit 2026-10-27, D): HEAD, a
+    dirty tree, a path in the git directory, the files a state holds."""
+
+    def _commit(self, d: Path) -> None:
+        subprocess.run(["git", "add", "-A"], cwd=d, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "c"],
+            cwd=d,
+            check=True,
+        )
+
+    def test_head_sha_short_and_outside_a_repository(self):
+        d = make_repo()
+        full, short = repo.head_sha(d), repo.head_sha(d, short=True)
+        self.assertEqual(len(full), 40)
+        self.assertTrue(full.startswith(short) and 4 <= len(short) < 40)
+        self.assertEqual(repo.head_sha(Path(tempfile.mkdtemp())), "")
+
+    def test_tree_dirty_counts_untracked_files_unless_told_not_to(self):
+        d = make_repo()
+        self.assertFalse(repo.tree_dirty(d))
+        (d / "new.txt").write_text("y")
+        self.assertTrue(repo.tree_dirty(d))
+        self.assertFalse(repo.tree_dirty(d, untracked=False))
+        (d / "f.txt").write_text("changed")
+        self.assertTrue(repo.tree_dirty(d, untracked=False))
+        self.assertFalse(repo.tree_dirty(Path(tempfile.mkdtemp())))
+
+    def test_git_dir_path_is_the_worktrees_own_or_the_common_one(self):
+        d = make_repo()
+        self.assertEqual(repo.git_dir_path(d, "x"), d / ".git" / "x")
+        wt = Path(tempfile.mkdtemp()) / "wt"
+        subprocess.run(
+            ["git", "worktree", "add", "-q", "--detach", str(wt)], cwd=d, check=True
+        )
+        own = repo.git_dir_path(wt, "x")
+        self.assertIsNotNone(own)
+        assert own is not None
+        self.assertEqual(
+            own.parent.parent.resolve(), (d / ".git" / "worktrees").resolve()
+        )
+        common = repo.git_dir_path(wt, "x", common=True)
+        assert common is not None
+        self.assertEqual(common.resolve(), (d / ".git" / "x").resolve())
+        self.assertIsNone(repo.git_dir_path(Path(tempfile.mkdtemp()), "x"))
+
+    def test_files_at_the_index_and_a_revision_under_a_folder(self):
+        d = make_repo()
+        (d / "audits" / "sub").mkdir(parents=True)
+        (d / "audits" / "r.toml").write_text("a")
+        (d / "audits" / "sub" / "s.toml").write_text("b")
+        (d / "other.toml").write_text("c")
+        self.assertEqual(repo.files_at(d, d / "audits"), set())  # nothing staged yet
+        self.assertEqual(repo.files_at(d, d / "audits", "HEAD"), set())
+        subprocess.run(["git", "add", "audits"], cwd=d, check=True)
+        self.assertEqual(repo.files_at(d, d / "audits"), {"r.toml", "sub/s.toml"})
+        self.assertEqual(repo.files_at(d, d / "audits", "HEAD"), set())
+        self._commit(d)
+        self.assertEqual(
+            repo.files_at(d, d / "audits", "HEAD"), {"r.toml", "sub/s.toml"}
+        )
+
+    def test_files_at_says_none_for_no_state_and_raises_for_a_failure(self):
+        unborn = make_repo(commit=False)
+        (unborn / "audits").mkdir()
+        self.assertIsNone(repo.files_at(unborn, unborn / "audits", "HEAD"))
+        self.assertEqual(
+            repo.files_at(unborn, unborn / "audits"), set()
+        )  # the index exists
+        bare = Path(tempfile.mkdtemp())
+        (bare / ".git").mkdir()  # a `.git` git does not take for a repository
+        (bare / "audits").mkdir()
+        self.assertIsNone(repo.files_at(bare, bare / "audits"))
+        d = make_repo()
+        self.assertIsNone(repo.files_at(d, d / "audits", "no-such-rev"))
+
+
 class RunlogGitState(unittest.TestCase):
     def test_unborn_head_is_a_state_not_an_error(self):
         self.assertEqual(provenance.git_state(make_repo(commit=False)), "no-git")

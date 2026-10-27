@@ -80,8 +80,8 @@ from labkit.formats.repo import (
     AmbiguousArea,
     area_path,
     choose_protocol,
-    git,
     git_root,
+    tree_dirty,
     layout_root,
     no_such_area,
     split_area_name,
@@ -94,12 +94,6 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.scope_sha import AREA_GLOBS, area_stamp
-
-
-def _is_dirty(area: Path) -> bool:
-    """Uncommitted changes under `area`; False outside a repo. A git that
-    fails inside a repo raises (repo.GitError) — it used to read as clean."""
-    return bool(git(["status", "--porcelain"], area))
 
 
 @dataclass(frozen=True)
@@ -453,7 +447,7 @@ def scope_stamp_line(area: Path) -> str:
 def check_working_tree(findings: Findings, repo: Path) -> None:
     """Station 6: uncommitted changes under REPO warn — the number would
     rest on code no commit holds."""
-    if _is_dirty(repo):
+    if tree_dirty(repo):
         findings.warn(
             f"uncommitted changes in {repo} (commit or stash before the run)",
             evidence_kind=GUARANTEED,

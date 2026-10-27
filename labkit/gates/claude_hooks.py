@@ -125,7 +125,7 @@ from labkit.formats.repo import (
     repo_protocols,
     find_area,
     fork_point,
-    git_run,
+    git_dir_path,
     head_sha,
     paths_committed_since,
     shown,
@@ -452,11 +452,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
 def session_log(repo: Path) -> Path | None:
     """`.git/labkit-sessions.jsonl` of the repo (the common git dir, so a
     worktree logs into its main repo); None outside git."""
-    r = git_run(["rev-parse", "--git-common-dir"], repo)
-    if r.returncode != 0:
-        return None
-    common = Path(r.stdout.strip())
-    return (common if common.is_absolute() else repo / common) / "labkit-sessions.jsonl"
+    return git_dir_path(repo, "labkit-sessions.jsonl", common=True)
 
 
 def read_sessions(log: Path) -> list[dict]:
@@ -565,15 +561,8 @@ def stop_base_file(repo: Path, session: str) -> Path | None:
     no file name."""
     if not _SESSION_FILE.match(session):
         return None
-    r = git_run(["rev-parse", "--git-dir"], repo)
-    if r.returncode != 0:
-        return None
-    gitdir = Path(r.stdout.strip())
-    return (
-        (gitdir if gitdir.is_absolute() else repo / gitdir)
-        / "labkit-stop-base"
-        / session
-    )
+    base = git_dir_path(repo, "labkit-stop-base")
+    return None if base is None else base / session
 
 
 def keep_stop_base(repo: Path, event: dict) -> None:

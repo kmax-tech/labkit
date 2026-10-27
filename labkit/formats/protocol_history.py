@@ -75,11 +75,11 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
     unreadable = 0
     undeclared = 0
     for commit in log.stdout.split():
-        shown = git_run(["show", f"{commit}:{rel}"], root)
-        if shown.returncode != 0:  # the commit deleted the file
+        shown = text_at(root, path, commit)
+        if shown is None:  # the commit deleted the file
             continue
         try:
-            value = protocol_block.head(shown.stdout).repeat_cost
+            value = protocol_block.head(shown).repeat_cost
         except protocol_block.BlockError:
             unreadable += 1
             continue
@@ -105,18 +105,17 @@ def registration_in_commit(
     root = git_root(path)
     if root is None:
         return None
-    rel = path.resolve().relative_to(root).as_posix()
-    shown = git_run(["show", f"{commit}:{rel}"], root)
-    if shown.returncode != 0:
+    shown = text_at(root, path, commit)
+    if shown is None:
         return None
     try:
-        protocol_block.head(shown.stdout)
+        protocol_block.head(shown)
     except protocol_block.BlockError as exc:
         # `low_registration_missing` reads an unreadable head as "no
         # repeat_cost"; here the committed text is older than the reader, and the
         # sentence says so instead of naming a field
         return [f"a head this labkit reads ({exc})"]
-    return low_registration_missing(shown.stdout, kind_now)
+    return low_registration_missing(shown, kind_now)
 
 
 def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:

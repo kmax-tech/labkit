@@ -243,6 +243,7 @@ evidence** (warns), **agent audit** (semantic).
 | Which areas do changed or staged paths touch? | `scope_sha.areas_touched` (the nearest area above each path — `repo.areas_of` — and every area whose promises declare a changed path or whose code imports a changed shared helper; the stop's reported numbers and the commit's undecided findings read the same answer) |
 | Where is the repo? Where is the lab? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree); `repo.lab_root` (the nearest `models.toml`) |
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
+| Ask git about the repository — HEAD, a dirty tree, a path in the git directory, the files a state holds under a folder | `repo.head_sha` (short form, "" outside a repo or unborn), `repo.tree_dirty` (untracked counted or not), `repo.git_dir_path` (this worktree's or the common git dir: locks, stop base, session log), `repo.files_at` (the index's or a revision's files, None where there is no such state — by exit code, not git's words) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
 | Where is an area's `runs/`, a run's directory, its metrics file? | `runs.runs_path`, `runs.run_path`, `runs.metrics_path` (`RUNS_DIR`, `METRICS_FILE` are the spelling; a message names the path through them too) |

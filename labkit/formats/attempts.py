@@ -78,7 +78,7 @@ from typing import IO
 from labkit.formats import jsonl
 from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
-from labkit.formats.repo import INDEX_REV, git_root, git_run, text_at
+from labkit.formats.repo import INDEX_REV, files_at, git_dir_path, git_root, text_at
 from labkit.formats.runs import now_stamp
 from labkit.formats.scope_sha import digest
 
@@ -305,14 +305,8 @@ def _lock_dir(area: Path) -> Path:
     """Where the area's locks live: the git dir of its repository (local,
     never committed), else the system's temp dir."""
     root = git_root(area)
-    if root is not None:
-        r = git_run(["rev-parse", "--git-dir"], root)
-        if r.returncode == 0:
-            gitdir = Path(r.stdout.strip())
-            return (
-                gitdir if gitdir.is_absolute() else root / gitdir
-            ) / "labkit-audit-locks"
-    return Path(tempfile.gettempdir()) / "labkit-audit-locks"
+    locks = None if root is None else git_dir_path(root, "labkit-audit-locks")
+    return locks or Path(tempfile.gettempdir()) / "labkit-audit-locks"
 
 
 def _lock_file(area: Path, name: str) -> Path:
@@ -363,26 +357,11 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
     ({}, None) outside git or before the first commit. Raises RuntimeError
     when git fails."""
     root = git_root(area)
-    if root is None:
+    held = None if root is None else files_at(root, area / DIR, rev)
+    if root is None or held is None:
+        # no repository git takes, or no HEAD yet: no committed state to
+        # compare against
         return set(), None
-    folder = (area / DIR).resolve()
-    rel = folder.relative_to(root.resolve()).as_posix()
-    args = (
-        ["ls-files", "-z", "--cached", "--", rel]
-        if rev == INDEX_REV
-        else ["ls-tree", "-r", "-z", "--name-only", rev, "--", rel]
-    )
-    r = git_run(args, root)
-    if r.returncode != 0:
-        # no HEAD yet, or a `.git` git does not take for a repository: no
-        # committed state to compare against
-        if any(
-            m in r.stderr
-            for m in ("Not a valid object name", "not a tree", "not a git repository")
-        ):
-            return set(), None
-        raise RuntimeError(f"git ls-tree failed in {root}: {r.stderr.strip()}")
-    held = {p[len(rel) + 1 :] for p in r.stdout.split("\0") if p.startswith(rel + "/")}
     return held, text_at(root, journal_path(area), rev)
 
 

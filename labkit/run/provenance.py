@@ -65,15 +65,6 @@ MEASURED_ROLES = (
 )
 
 
-def git_head(cwd: Path, short: bool = False) -> str:
-    """HEAD's commit, "" outside a repo or before the first commit (an
-    unborn HEAD is a state, not an error)."""
-    if repo.git_root(cwd) is None:
-        return ""
-    r = repo.git_run(["rev-parse", *(["--short"] if short else []), "HEAD"], cwd)
-    return r.stdout.strip() if r.returncode == 0 else ""
-
-
 def git_state(cwd: Path, untracked: bool = True) -> str:
     """HEAD's short commit, `+dirty` when the tree differs from it.
 
@@ -84,12 +75,10 @@ def git_state(cwd: Path, untracked: bool = True) -> str:
     run read `+dirty` and the index column said nothing (74 of 74 rows in
     one lab repo; a cloud agent reported "beae3bf+dirty but the patch is
     empty", 2026-10-13)."""
-    rev = git_head(cwd, short=True)
+    rev = repo.head_sha(cwd, short=True)
     if not rev:
         return NO_GIT
-    args = ["status", "--porcelain"] + ([] if untracked else ["--untracked-files=no"])
-    dirty = repo.git(args, cwd)
-    return f"{rev}{DIRTY_MARK if dirty else ''}"
+    return f"{rev}{DIRTY_MARK if repo.tree_dirty(cwd, untracked=untracked) else ''}"
 
 
 def parse_lock(lock: Path) -> dict[str, str | None]:
@@ -197,10 +186,10 @@ def _direct_url_commit(dist: importlib.metadata.Distribution) -> str | None:
 def checkout_head(path: Path) -> str | None:
     """HEAD of the git checkout at `path`; None when it is none."""
     try:
-        r = repo.git_run(["rev-parse", "HEAD"], path)
+        sha = repo.head_sha(path)
     except repo.GitError:
         return None
-    return r.stdout.strip().lower() if r.returncode == 0 else None
+    return sha.lower() or None
 
 
 def vcs_mismatch(url: str, ref: str, installed_commit: str | None) -> bool:
@@ -584,7 +573,7 @@ def record_provenance(base_dir: Path, config: dict, derived: bool) -> Provenance
     walks derived_from to the run that did)."""
     return Provenance(
         git=git_state(base_dir),
-        git_full=git_head(base_dir),
+        git_full=repo.head_sha(base_dir),
         env=env_state(base_dir),
         models={} if derived else resolve_models(config),
     )
