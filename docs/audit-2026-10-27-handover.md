@@ -140,16 +140,10 @@ on top, every new test red at its parent.
 | B, C (`--decide`) | one name "handover", README term, which block a report gets, `--why` per mode; `repo.decide_command` | `fdc22e6` |
 | D, E | help texts, record order, docstrings, architecture rows, tier wording; `tests/test_template_ties.py` | `2fb62a1` |
 | C (ways-out test) | every flag of a code span checked | `2bae48f` |
+| C (protocol reader) | a protocol is a regular file: a link, valid or broken, refused per state; `repo_sources` reads through `repo.state_text` (Breaking) | `d0e02f7` |
+| B (`deferred`) | preflight tells a deferred finding a handover lists ("handed over unresolved — no result released") from one set aside for later; bound by the record's `remaining`, no new status | `0393ffc` |
 
 Left open, deliberately:
-
-- `deferred` keeps two meanings: every later `preflight` of another area
-  lists a handed-over BLOCKER as "deferred elsewhere". A reminder, never
-  counted; separating them needs a status or a mark, a format decision.
-- `report_check.repo_sources` (`gates/report_check.py:1363`) still reads
-  a protocol through its link in the tree where `repo.state_text` returns
-  the link's target; the two differ for a symlinked protocol, so it was
-  not merged.
 - `"runs"` in four skip sets and the two "not code" sets: read, not
   re-checked here (R).
 - pytest's `-n auto -p no:warnings` stand in the commit hook only; `just

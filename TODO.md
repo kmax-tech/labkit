@@ -1015,10 +1015,9 @@ Notiert, nicht geplant:
    als „wann welches“ (B);
    (8) Kleinkram E und Konfiguration D in einem Aufräum-Commit.
    **Erledigt 2026-10-27** (1)–(8), je ein Commit, Stand im Register
-   (Abschnitt „State“). Offen und bewusst liegen gelassen: `deferred` mit
-   zwei Bedeutungen (übergebene BLOCKER erscheinen im Preflight anderer
-   Bereiche als Erinnerung — eine Formatentscheidung), der Protokoll-Leser
-   in `report_check.repo_sources` (Symlink-Semantik weicht ab).
+   (Abschnitt „State“). Die zwei zunächst offenen Punkte am selben Tag
+   nachgezogen: Protokolle sind reguläre Dateien (`d0e02f7`), der
+   Preflight trennt „übergeben“ von „zurückgestellt“ (`0393ffc`).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
