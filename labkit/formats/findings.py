@@ -1232,7 +1232,9 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
     """Read every findings record of AREA in the requested state.
 
     Return readable records and errors separately for recovery guidance.
-    Normal gates use `area_records`, which refuses any error. At the index,
+    `area_records` is the strict view, which refuses any error; the
+    stop/commit, `--findings` and the handover read this one through
+    `attempts.area_integrity`, the errors kept beside. At the index,
     an unstaged record is an error too; decisions are never read from the
     tree in place of the index. No writes or console output.
     """
@@ -1285,11 +1287,13 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
 
 
 def _recovery_record_order(path: Path) -> tuple[tuple[str, int, str], str | None]:
-    """Order a record while retaining a naming error separately from its findings."""
+    """Order a record while retaining a naming error separately from its
+    findings. A record whose name gives no time sorts first, so the newest
+    `--findings` names is the one `--decide` takes as the newest."""
     try:
         return written_order(path), None
     except FindingsError as exc:
-        return ("9999", 0, path.name), str(exc)
+        return ("0000", 0, path.name), str(exc)
 
 
 def area_records(area: Path, *, staged: bool = False) -> list[Record]:

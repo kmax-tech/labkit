@@ -7,7 +7,7 @@ the chain of checks is in [architecture](architecture.md), the promise
 format in [promise-block](promise-block.md), which run answers in
 [protocol-run-binding](protocol-run-binding.md), the lab standard in
 `labkit/docs/standard.md` (`python -m labkit.formats.rules show LAB-nnn`).
-Terms are the README's glossary. The steps are the `low` tier's; what
+Terms are the README's glossary. The steps are those of repeat cost `low`; what
 `high` owes on top is said inside the step it belongs to.
 
 Five words the page leans on: a **full run** is one started with
@@ -35,8 +35,8 @@ Reads: the templates shipped with labkit. Writes: `experiments/NN-<name>/`
 with `PROTOCOL-<name>.md` (its TOML head stamped with a protocol id, the
 repeat cost, `frozen = false`), `scripts/01_measure.py` and `02_analyze.py`
 (the skeleton for the instrument: compute, estimator or model), the area
-test, the README card. Nothing is owed yet; `protocol-check --contract`
-prints what the tier will owe and when.
+test, the README card. Nothing is owed yet; `protocol-check <PROTOCOL>
+--contract` prints what its repeat cost and kind will owe and when.
 
 ## 1. The measurement code
 
@@ -64,7 +64,7 @@ git add -A && git commit
 
 Reads and changes: the protocol's prose fields, by exact label
 (`protocol-fill --list` names what is still open). Which fields follow the
-kind, not the tier (`standard_contract.registration_fields(kind, model)`):
+kind, not the repeat cost (`standard_contract.registration_fields(kind, model)`):
 every kind the question; a fit or an apply also the success criterion, the
 admissibility condition and the null condition / anchors; a `[model]` table
 adds the data profile, and a computation with one says in the head what its

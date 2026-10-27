@@ -24,6 +24,11 @@ placeholders included) and leaves everything else byte-identical.
                                                reporting it, as a discussion block
                                                (head: protocol, run, why; its line
                                                written from them)
+    protocol-fill PROTOCOL-x.md --handover --why "…" --tried "…" --into REPORT.md
+                                               the protocol's end without a result:
+                                               `[result]` withdrawn, a handover record
+                                               under audits/handovers/, its handover
+                                               block in the report (`handovers`)
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), Recorded results and
                                                Runs lines from its metrics.json (by default the
@@ -933,8 +938,9 @@ def _render_file(protocol: Path, text: str) -> int:
 
 
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the mode ARGS name (--list, --prompts, --render,
-    --into, --from-run), or None when they name none: a field fill."""
+    """The exit code of the mode ARGS name (--handover, --list, --prompts,
+    --render, --into, --from-run), or None when they name none: a field
+    fill."""
     if args.handover:
         return _handover_file(args, text)
     if args.list:
@@ -1116,9 +1122,10 @@ def main(argv: list[str]) -> int:
         type=Path,
         default=None,
         metavar="REPORT",
-        help="write the declared result into REPORT (a report outside the protocol) "
-        "as a generated block: Recorded results and Limit lines as rendered; the "
-        "protocol's block is replaced (also after a new run), else one is appended",
+        help="the report a block is written into (a report outside the protocol): "
+        "alone, the declared result as a generated block — Recorded results and "
+        "Limit lines as rendered; the protocol's block is replaced (also after a "
+        "new run), else one is appended; with --discuss or --handover, that block",
     )
     ap.add_argument(
         "--discuss",
@@ -1159,7 +1166,10 @@ def main(argv: list[str]) -> int:
         help="line number, when the label is ambiguous",
     )
     ap.add_argument(
-        "--force", action="store_true", help="overwrite a field that is already filled"
+        "--force",
+        action="store_true",
+        help="overwrite a field that is already filled; with --from-run, replace "
+        "a [result] that declares another run",
     )
     args = ap.parse_args(argv)
     _check_report_mode_args(ap, args)

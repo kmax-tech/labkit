@@ -1320,9 +1320,10 @@ READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
 #: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit).
 #: A route promises only what a gate checks: report-check holds the fields
 #: the kind owes and the kind to the first measurement's commit
-#: (`report_check.registration_gaps`), not their values — a bar lowered
-#: after it and measured again is not held yet (TODO, with the fresh
-#: attempt that keeps its predecessor)
+#: (`report_check.registration_gaps`), and the promise block to the
+#: registration the first measurements recorded
+#: (`report_check.registration_changes`) — a bar lowered after it and
+#: measured again is held
 #: the ways out of a BLOCKER, by its cause: (name, what to do). Printed with
 #: every decision list (BLOCKER_ROUTES) and stated in the stamped AGENTS.md
 #: ("When you are stuck"); tests/test_ways_out.py holds both to the same

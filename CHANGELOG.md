@@ -978,6 +978,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Small drift after the handover audit.** `protocol-fill`'s usage
+  names `--handover`; `--into`, `--force` and `--why` say what they do with
+  each mode; a record whose name gives no time sorts first, so `--findings`
+  and `--decide` agree on the newest; the README calls the repeat-cost
+  column "Repeat cost" (a tier is an evidence kind) and says when
+  `--findings` exits 2; the architecture tables name the handover's
+  exception and the records under `audits/handovers/`,
+  `audits/report-reviews/` and the attempt journal; the comment over the
+  ways out no longer says a lowered bar is unheld. Two copies a stamp
+  repeats are tied by `tests/test_template_ties.py`: the editor's search
+  exclusions and pyright's, and the `labkit-audit` default alias in
+  `models.toml`. Audit 2026-10-27 (second), D and E.
 - **One name for the handover, one builder for a printed decision.** The
   same step was called handover, terminal handover, unresolved report and
   unresolved exit; it is a handover everywhere now, with an entry in the

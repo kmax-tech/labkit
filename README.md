@@ -67,7 +67,7 @@ In a fresh repo this creates `experiments/01-document-count/` and its test
 under `tests/`. The command prints the paths. Choose the repeat cost by how
 cheaply you can repeat the measurement:
 
-| Tier | Before the full run | Before reporting a result |
+| Repeat cost | Before the full run | Before reporting a result |
 |---|---|---|
 | `low` | Write and commit the registration, implement/test the measurement; no freeze or preflight audit. | Finalize, decide the analysis audit, adopt the result through `report-check` (which holds the registration to the commit of the first measurement). |
 | `high` | Also probe the instrument where the skeleton has a probe (a computation's run is its own instrument check), pass preflight, decide the preflight audit, complete the report fields and freeze the protocol. | Finalize, decide the analysis audit, adopt the result through `report-check`. |
@@ -269,7 +269,9 @@ usability nav|nav-score|human       # code navigation probes
 
 Mechanical gates return failure when they have blockers; warnings alone
 pass. `labkit-audit` exits 1 for either blockers or warnings, and 2 on an
-execution error. `--mode clarity` reviews readability and is never a gate.
+execution error; `--findings` exits 2 also when audit evidence is gone or
+does not read, after listing what does. `--mode clarity` reviews
+readability and is never a gate.
 
 ## Terms
 
