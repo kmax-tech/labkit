@@ -58,7 +58,7 @@ KINDS = ("compute", "fit", "apply")
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
-_TOP_LEVEL = {"protocol", "promise", "result", "model", "gate"}
+_TOP_LEVEL = {"protocol", "promise", "result", "model", "gate", "replaces"}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
@@ -474,6 +474,73 @@ def declared_run(text: str) -> str | None:
             f"<run_id>`, never typed"
         )
     return run
+
+
+#: the fields of one declared change of a new registration
+CHANGE_KEYS = ("what", "from", "to", "why")
+
+
+@dataclass(frozen=True)
+class Change:
+    """One difference a replacing protocol declares against its predecessor:
+    WHAT (`C1 margin`, `C1 sentence`, `kind`, `Data profile`, …), FROM and TO
+    as the registrations read, and WHY — the reason, owed."""
+
+    what: str
+    from_: str
+    to: str
+    why: str
+
+
+@dataclass(frozen=True)
+class Replaces:
+    """`[replaces]`: the protocol this one replaces and every change of the
+    registration against it (K1, docs/notes/2026-10-27-new-registration-contracts.md)."""
+
+    protocol: str
+    changes: tuple[Change, ...]
+
+
+def replaces(text: str) -> Replaces | None:
+    """The protocol's `[replaces]` table — `protocol = "p-<id>"` and one
+    `[[replaces.change]]` per declared difference (CHANGE_KEYS, `why` not
+    empty) —, or None without one: a protocol that replaces nothing.
+    Raises BlockError on a non-table, an unknown key, an id not in the
+    shape labkit stamps, or a change missing a field or its reason."""
+    data = parse_toml_block(text)
+    if "replaces" not in data:
+        return None
+    table = data["replaces"]
+    if not isinstance(table, dict):
+        raise BlockError("`replaces` must be a table: [replaces]")
+    _only_keys(table, "[replaces]", ("protocol", "change"))
+    pid = table.get("protocol")
+    if not isinstance(pid, str) or not ID_SHAPE.match(pid):
+        raise BlockError(
+            f"[replaces] protocol = {pid!r} — the id of the protocol this one "
+            f"replaces (`p-` plus 16 lowercase hex digits)"
+        )
+    rows = table.get("change", [])
+    if not isinstance(rows, list):
+        raise BlockError("[replaces] change must be [[replaces.change]] tables")
+    changes = []
+    for i, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise BlockError(f"[[replaces.change]] #{i} is not a table")
+        _only_keys(row, f"[[replaces.change]] #{i}", CHANGE_KEYS)
+        values = {k: row.get(k) for k in CHANGE_KEYS}
+        missing = [k for k, v in values.items() if not isinstance(v, str)]
+        if missing:
+            raise BlockError(
+                f"[[replaces.change]] #{i}: {', '.join(missing)} missing or not a string"
+            )
+        what, from_, to, why = (str(values[k]) for k in CHANGE_KEYS)
+        if not why.strip():
+            raise BlockError(
+                f"[[replaces.change]] #{i}: `why` is empty — a change owes its reason"
+            )
+        changes.append(Change(what, from_, to, why))
+    return Replaces(pid, tuple(changes))
 
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:

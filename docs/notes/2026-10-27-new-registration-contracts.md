@@ -71,7 +71,9 @@ bytes inside an unchanged declaration are a code change.
 ## K1 — a new registration names its predecessor and declares its changes
 
 **Rule.** A protocol that replaces an earlier one declares it in its
-head: `[protocol] replaces = "p-<id>"`. The declaration is what activates
+head: `[replaces] protocol = "p-<id>"`, one `[[replaces.change]]` per
+difference (`what`, `from`, `to`, `why`; built 2026-10-27 as a table of its
+own, so `[protocol]` keeps its fields). The declaration is what activates
 the checks; an undeclared successor is only indicated (below). Then,
 exactly:
 

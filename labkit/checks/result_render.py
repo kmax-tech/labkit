@@ -28,7 +28,7 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.formats import findings, promises, runs
+from labkit.formats import findings, promises, protocol_block, runs
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     fields,
@@ -120,30 +120,87 @@ def limits_of(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
 
 def rendering(area: Path, text: str, run: Path) -> Rendering:
     """The result section of TEXT as RUN's `metrics.json` and the covering
-    records render it. Raises what `runs.read_metrics` raises on a run
+    records render it. A protocol that replaces another (`[replaces]`)
+    opens with the predecessor's verdict as its own sources give it, then
+    `this question:` (`predecessor_verdict`): the new answer never reads as
+    the earlier question's. Raises what `runs.read_metrics` raises on a run
     without readable metrics."""
-    metrics = runs.read_metrics(runs.metrics_path(run))
     limits = limits_of(area, text, run)
     note = findings.answer_note([(label, effect) for label, _, effect in limits])
+    said, recorded = _verdicts_and_values(area, text, run, limits)
+    before = predecessor_verdict(area, text, set())
+    recorded_results = (
+        (f"{before} · this question: " if before else "")
+        + (f"{said} · recorded: " if said else "")
+        + recorded
+        + note
+    )
+    return Rendering(
+        recorded_results, tuple((label, value) for label, value, _ in limits)
+    )
+
+
+def _verdicts_and_values(
+    area: Path, text: str, run: Path, limits: list[tuple[str, str, str]]
+) -> tuple[str, str]:
+    """(the verdicts of TEXT's promises for RUN, "" without a block; the
+    other recorded values with the run id) — `verdicts` and
+    `recorded_results_line`."""
+    metrics = runs.read_metrics(runs.metrics_path(run))
     try:
         block = promises.parse_block(text)
     except promises.PromiseError:
         block = None  # the head station names an unreadable block
     if block is None:
-        recorded_results = recorded_results_line(metrics, run.name) + note
-    else:
-        unjudged: dict[str, str] = {}
-        for label, _, effect in limits:
-            for pid in findings.effect_ids(effect):
-                unjudged.setdefault(pid, label)
-        said = "; ".join(verdicts(block, metrics, unjudged))
-        keys = frozenset(p.key for p in block.promises)
-        recorded_results = (
-            f"{said} · recorded: {recorded_results_line(metrics, run.name, keys)}{note}"
-        )
-    return Rendering(
-        recorded_results, tuple((label, value) for label, value, _ in limits)
+        return "", recorded_results_line(metrics, run.name)
+    unjudged: dict[str, str] = {}
+    for label, _, effect in limits:
+        for pid in findings.effect_ids(effect):
+            unjudged.setdefault(pid, label)
+    keys = frozenset(p.key for p in block.promises)
+    return (
+        "; ".join(verdicts(block, metrics, unjudged)),
+        recorded_results_line(metrics, run.name, keys),
     )
+
+
+def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
+    """`replaces <id> (<protocol>): <its verdict>` for a TEXT that declares
+    `[replaces]`, "" without one — the predecessor's verdict derived from its
+    own bound sources (its declared run, its covering records), never from
+    the successor's words, its own predecessor before it; `no result
+    declared — unresolved` when it declares none, `unresolved (<why>)` when
+    its sources do not read or the chain runs in a circle (report-check
+    holds that). SEEN: the ids already rendered."""
+    try:
+        rep = protocol_block.replaces(text)
+    except protocol_block.BlockError:
+        return ""  # report-check names the malformed table
+    if rep is None:
+        return ""
+    hits = protocol_block.repo_protocol_ids(area).get(rep.protocol, [])
+    if len(hits) != 1 or rep.protocol in seen:
+        return f"replaces {rep.protocol}: unresolved (no single predecessor to read)"
+    pred = hits[0]
+    where = f"replaces {rep.protocol} ({pred.parent.name}/{pred.name})"
+    try:
+        pred_text = pred.read_text(encoding="utf-8")
+        declared = protocol_block.declared_run(pred_text)
+        earlier = predecessor_verdict(pred.parent, pred_text, {*seen, rep.protocol})
+        if declared is None:
+            verdict = "no result declared — unresolved"
+        else:
+            pred_run = runs.run_path(pred.parent, declared)
+            said, _ = _verdicts_and_values(
+                pred.parent,
+                pred_text,
+                pred_run,
+                limits_of(pred.parent, pred_text, pred_run),
+            )
+            verdict = said or f"run {declared}, no promise to judge"
+    except (OSError, ValueError, protocol_block.BlockError) as exc:
+        return f"{where}: unresolved ({exc})"
+    return (f"{earlier} · " if earlier else "") + f"{where}: {verdict}"
 
 
 def render_gaps(text: str, expected: Rendering) -> list[str]:

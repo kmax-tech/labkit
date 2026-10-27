@@ -1132,6 +1132,29 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **A new registration names what it replaces, and the declaration binds
+  it (K1).** In the repair case (2026-10-27) the agent took the "register
+  anew" route into a second area and lowered the criterion's margin 0.25 →
+  0.15 without a word. A protocol may now declare `[replaces] protocol =
+  "p-<id>"` with one `[[replaces.change]]` (`what`, `from`, `to`, `why`) per
+  difference of its registration against the predecessor's — each as it
+  stood at its first measurement (`protocol_history.registration_as_first_measured`,
+  `registration_differences`: promise sentences, keys, constants, scopes,
+  the kind, the data profile). report-check then holds, exactly
+  (`report_check.replacement_gaps`): a predecessor that is itself, none or
+  several protocols of the repo, or a circle; a type other than
+  `exploratory`; a difference not declared — named with the TOML lines
+  that declare it — or a declared change that is none; the predecessor's
+  open BLOCKERs, each with the `--decide … deferred` that hands it over.
+  The generated Recorded results of a replacing protocol open with the
+  predecessor's verdict, derived from its own sources, then `this
+  question:` (`result_render.predecessor_verdict`). A report that cited one
+  protocol's runs at HEAD and now cites another's, which declares no
+  `[replaces]` of it, is a WARNING of static evidence
+  (`report_check.replacement_hints`): a citation shows no succession, and
+  independent questions stay free. Limit: a successor that never declares
+  `[replaces]` is the audit's question. Contract:
+  `docs/notes/2026-10-27-new-registration-contracts.md`.
 - **`labkit-init exp NAME --kind KIND --change-kind`** restamps an area
   under another kind before its first measurement: the old kind's stamped
   scripts, README and area test are replaced where unchanged, the protocol

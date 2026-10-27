@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit.formats.gate import GUARANTEED
-from labkit.formats import protocol_block, standard_contract
+from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
-from labkit.formats.protocol_check import low_registration_missing
+from labkit.formats.protocol_check import fields, low_registration_missing
 from labkit.formats.repo import git_root, git_run, text_at
 
 
@@ -271,3 +271,110 @@ def check_annotation_validity(
             BLOCKER, f"{where} — {bound}", form=AS_WRITTEN, evidence_kind=GUARANTEED
         )
     ]
+
+
+#: the registration fields outside the promise block a replacement compares
+COMPARED_FIELDS = ("Data profile",)
+
+
+def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
+    """(what, from, to) for every difference of the registration between the
+    protocol texts OLD and NEW (K1): per promise id its sentence, key, each
+    constant and its scope, an id added or dropped, the head's kind, and
+    COMPARED_FIELDS. Values as the registrations write them; `(none)` where
+    one has nothing. Pure; raises BlockError or PromiseError on a head or a
+    block that does not read."""
+    out: list[tuple[str, str, str]] = []
+    ka, kb = protocol_block.head(old).kind, protocol_block.head(new).kind
+    if ka != kb:
+        out.append(("kind", str(ka), str(kb)))
+    a = {
+        p.id: p
+        for p in (promises.parse_block(old) or promises.PromiseTables((), "")).promises
+    }
+    b = {
+        p.id: p
+        for p in (promises.parse_block(new) or promises.PromiseTables((), "")).promises
+    }
+    for pid in sorted(set(a) | set(b)):
+        if pid not in a or pid not in b:
+            out.append(
+                (
+                    pid,
+                    a[pid].sentence if pid in a else "(none)",
+                    b[pid].sentence if pid in b else "(none)",
+                )
+            )
+        else:
+            out += _promise_differences(a[pid], b[pid])
+    fa = {f.label: f.value for f in fields(old)}
+    fb = {f.label: f.value for f in fields(new)}
+    for label in COMPARED_FIELDS:
+        x, y = fa.get(label) or "(none)", fb.get(label) or "(none)"
+        if x != y:
+            out.append((label, x, y))
+    return out
+
+
+def _promise_differences(
+    pa: promises.Promise, pb: promises.Promise
+) -> list[tuple[str, str, str]]:
+    """`registration_differences` of one promise id in both texts."""
+    out = [
+        (f"{pa.id} {what}", x, y)
+        for what, x, y in (
+            ("sentence", pa.sentence, pb.sentence),
+            ("key", pa.key, pb.key),
+            ("scope", ", ".join(sorted(pa.scope)), ", ".join(sorted(pb.scope))),
+        )
+        if x != y
+    ]
+    for name in sorted(set(pa.constants) | set(pb.constants)):
+        x, y = pa.constants.get(name), pb.constants.get(name)
+        if x != y:
+            out.append(
+                (
+                    f"{pa.id} {name}",
+                    "(none)" if x is None else str(x),
+                    "(none)" if y is None else str(y),
+                )
+            )
+    return out
+
+
+def registration_as_first_measured(
+    protocol: Path, pid: str, root: Path | None
+) -> tuple[str | None, str]:
+    """(text, where): PROTOCOL's text as the commit of its first measurement
+    holds it (`answering_run.first_measurement_groups`, every first
+    position) — the registration that stood before its number —, or its
+    text now when it has no measurement yet. TEXT is None, WHERE then saying
+    why, when that evidence is not readable: a first measurement without a
+    recorded commit, a commit this clone does not hold or that does not hold
+    the protocol, or first measurements whose commits hold different texts.
+    Never an invented earlier value. Raises RuntimeError when git fails."""
+    from labkit.formats.answering_run import first_measurement_groups
+    from labkit.formats.runs import recorded_commit
+
+    groups = first_measurement_groups(protocol.parent, pid, root)
+    if not groups:
+        return protocol.read_text(encoding="utf-8"), "as it stands (no measurement yet)"
+    texts: dict[str, str] = {}
+    for group in groups:
+        rd = group[0]
+        commit = recorded_commit(rd.config) if rd.config is not None else None
+        shown = text_at(root, protocol, commit) if commit and root is not None else None
+        if shown is None:
+            return None, (
+                f"its first measurement {rd.dir.name} names no commit this clone "
+                f"holds with the protocol in it"
+                + (f" ({commit[:12]})" if commit else "")
+            )
+        texts[commit or ""] = shown
+    if len(set(texts.values())) > 1:
+        return None, (
+            f"its first measurements stand at commits holding different texts "
+            f"({', '.join(c[:12] for c in texts)})"
+        )
+    ((commit, text),) = list(texts.items())[:1]
+    return text, f"as committed at its first measurement ({commit[:12]})"

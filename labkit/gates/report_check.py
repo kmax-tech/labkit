@@ -108,7 +108,11 @@ from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import RunDir, run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
 from labkit.formats.answering_run import first_measurement_groups, first_measurements
-from labkit.formats.protocol_history import registration_in_commit
+from labkit.formats.protocol_history import (
+    registration_as_first_measured,
+    registration_differences,
+    registration_in_commit,
+)
 from labkit.formats import (
     console,
     findings,
@@ -369,6 +373,153 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
             evidence_kind=GUARANTEED,
         )
     ]
+
+
+def replacement_gaps(ctx: Checked) -> list[GateFinding]:
+    """A protocol that declares `[replaces]` (K1,
+    docs/notes/2026-10-27-new-registration-contracts.md) answers a new,
+    post-hoc question, and the declaration binds it, exactly: the
+    predecessor is one protocol of the repo, not itself, and the chain of
+    replacements has no circle; the protocol is `type = "exploratory"`;
+    every difference of its registration against the predecessor's — each
+    as it stood at its first measurement (`protocol_history.
+    registration_as_first_measured`) — is a `[[replaces.change]]`, and every
+    declared change is one (`registration_differences`); the predecessor's
+    open BLOCKERs are decided first. Blockers, each with the line or command
+    that clears it. Nothing without `[replaces]`: an undeclared successor is
+    indicated at the report (`replacement_hints`), never held here."""
+    name = ctx.protocol.name
+    try:
+        rep = protocol_block.replaces(ctx.text)
+    except protocol_block.BlockError as exc:
+        return [_blocker(f"{name}: {exc}")]
+    if rep is None or ctx.head.id is None:
+        return []
+    pred, why = _predecessor(ctx, rep.protocol)
+    if pred is None:
+        return [_blocker(f"{name}: {why}")]
+    out = []
+    if ctx.head.type != "exploratory":
+        out.append(
+            _blocker(
+                f'{name}: [protocol] type = "{ctx.head.type}" — a protocol that replaces '
+                f'another answers a new, post-hoc question: type = "exploratory"'
+            )
+        )
+    out += [_blocker(f"{name}: {line}") for line in _undeclared_changes(ctx, rep, pred)]
+    out += [_blocker(f"{name}: {line}") for line in _predecessor_open(ctx, pred)]
+    return out
+
+
+def _blocker(line: str) -> GateFinding:
+    return GateFinding(BLOCKER, line, evidence_kind=GUARANTEED)
+
+
+def _predecessor(ctx: Checked, pid: str) -> tuple[Path | None, str]:
+    """(the predecessor's protocol, "") for `[replaces] protocol = PID`, or
+    (None, why it is none): its own id, no or several protocols of the repo
+    carrying PID, or a circle of replacements."""
+    if pid == ctx.head.id:
+        return None, "[replaces] protocol is its own id — name the protocol it replaces"
+    hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
+    if len(hits) != 1:
+        return None, (
+            f"[replaces] protocol = {pid} names "
+            + ("no protocol of this repo" if not hits else f"{len(hits)} protocols")
+            + " — the predecessor is one protocol here, kept as it is"
+        )
+    circle = _replacement_circle(str(ctx.head.id), hits[0])
+    if circle:
+        return (
+            None,
+            f"the replacements run in a circle ({circle}) — each names the one before it",
+        )
+    return hits[0], ""
+
+
+def _undeclared_changes(
+    ctx: Checked, rep: protocol_block.Replaces, pred: Path
+) -> list[str]:
+    """Every difference of the registration against PRED's that REP does not
+    declare, and every declared change that is none — each registration as
+    it stood at its first measurement; or why they cannot be compared."""
+    old, old_where = registration_as_first_measured(pred, rep.protocol, git_root(pred))
+    new, new_where = registration_as_first_measured(
+        ctx.protocol, str(ctx.head.id), git_root(ctx.protocol)
+    )
+    if old is None or new is None:
+        missing = "; ".join(
+            f"{p.name} {where}"
+            for p, text, where in (
+                (pred, old, old_where),
+                (ctx.protocol, new, new_where),
+            )
+            if text is None
+        )
+        return [
+            f"the registrations cannot be compared — {missing}; restore that state "
+            f"(fetch the commit) or hand the question over unresolved"
+        ]
+    computed = registration_differences(old, new)
+    listed = {(c.what, c.from_, c.to) for c in rep.changes}
+    s = protocol_block.toml_string
+    out = [
+        f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
+        f"{y} — add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
+        f'{s(x)}, to = {s(y)}, why = "…"'
+        for what, x, y in computed
+        if (what, x, y) not in listed
+    ]
+    out += [
+        f"declares a change the registrations do not show: {what} {x} → {y} — "
+        f"remove that [[replaces.change]] (the predecessor {old_where}, this "
+        f"protocol {new_where})"
+        for what, x, y in sorted(listed - set(computed))
+    ]
+    return out
+
+
+def _predecessor_open(ctx: Checked, pred: Path) -> list[str]:
+    """PRED's BLOCKERs still `open`, each with the `--decide` that defers it
+    to this protocol — they are decided before the replacement reports."""
+    try:
+        held = [
+            u
+            for u in findings.open_findings(findings.area_records(pred.parent))
+            if u.grade == BLOCKER
+        ]
+    except findings.FindingsError as exc:
+        return [f"the predecessor's audit records do not read: {exc}"]
+    return [
+        f"its predecessor's BLOCKER is still open — {u.line}; decide it first: "
+        f"`{audit_command(pred.parent)} --decide "
+        f"{u.record.findings.index(u.finding) + 1} deferred "
+        f'"replaced by {ctx.head.id}: <why>" --record {u.record.path.name}`'
+        for u in held
+    ]
+
+
+def _replacement_circle(start: str, pred: Path) -> str:
+    """The chain of `[replaces]` from PRED back, as ids joined by ` → `,
+    when it returns to START or to an id it already passed; "" when it
+    ends."""
+    seen = [start]
+    current: Path | None = pred
+    while current is not None:
+        try:
+            text = current.read_text(encoding="utf-8")
+            pid = protocol_block.head(text).id
+            nxt = protocol_block.replaces(text)
+        except (OSError, protocol_block.BlockError):
+            return ""
+        if pid in seen:
+            return " → ".join([*seen, str(pid)])
+        seen.append(str(pid))
+        if nxt is None:
+            return ""
+        hits = protocol_block.repo_protocol_ids(current).get(nxt.protocol, [])
+        current = hits[0] if len(hits) == 1 else None
+    return ""
 
 
 def registration_gaps(ctx: Checked) -> list[GateFinding]:
@@ -852,6 +1003,8 @@ def report_check(
             findings.take_all(registration_gaps(ctx))
     # the registration as at the first measurement — every lane (K3)
     findings.take_all(registration_changes(ctx))
+    # a declared replacement binds its changes (K1)
+    findings.take_all(replacement_gaps(ctx))
 
     # 3. finalize — always, with its blockers named
     findings.take_all(
@@ -1347,6 +1500,8 @@ def hold_report(
         out.block(f"{rel}: {gap}")
     out.take_all(report_review_owed(path, rel, text, discussed, sources, staged=staged))
     report_hints(out, rel, text, discussed)
+    for line in replacement_hints(path, rel, text, repo, sources):
+        out.warn(line, evidence_kind=STATIC_EVIDENCE)
     out.take_all(undeclared_findings(path, rel, cited, discussed, sources))
     return out.report("report-check", "reporting")
 
@@ -1389,6 +1544,54 @@ def discussion_sources(path: Path, found: list[report_blocks.Discussion]) -> lis
                 f"discussion names a run of its protocol's area"
             )
     return gaps
+
+
+def replacement_hints(
+    path: Path, rel: str, text: str, repo: Path, sources: Sources
+) -> list[str]:
+    """Hints that a report changed which question it answers without the
+    new protocol saying so (K1): the report at HEAD cited runs of protocol A,
+    its TEXT now cites runs of protocol B and none of A's, and B declares no
+    `[replaces]` of A — one sentence per such pair. Static evidence: a
+    report may answer several independent questions, so a switched
+    citation shows no succession; whether B is a concealed new attempt is
+    the audit's question. Exact over git; [] outside a repository or for a
+    report HEAD does not hold."""
+    before = text_at(repo, path, "HEAD")
+    if before is None:
+        return []
+    owner = _run_protocols(sources)
+    then = {owner[r] for _, r in report_blocks.cited_run_ids(before) if r in owner}
+    now = {owner[r] for _, r in report_blocks.cited_run_ids(text) if r in owner}
+    out = []
+    for b in sorted(now - then):
+        try:
+            declared = protocol_block.replaces(sources.texts[b])
+        except protocol_block.BlockError:
+            declared = None
+        for a in sorted(then - now):
+            aid = protocol_block.id_of(sources.texts[a])
+            if declared is None or declared.protocol != aid:
+                out.append(
+                    f"{rel}: cited runs of {shown(a, repo)} at HEAD and now runs of "
+                    f"{shown(b, repo)}, which declares no [replaces] of it — if it is "
+                    f"a new attempt at that question, declare it ([replaces] protocol "
+                    f'= "{aid}" with its changes); an independent question needs '
+                    f"nothing (a hint: a citation shows no succession)"
+                )
+    return out
+
+
+def _run_protocols(sources: Sources) -> dict[str, Path]:
+    """Every run id of the repo's protocols, mapped to the protocol its
+    record binds it to (`protocol.id`)."""
+    out: dict[str, Path] = {}
+    for p, text in sources.texts.items():
+        pid = protocol_block.id_of(text)
+        for rd in run_dirs(p.parent):
+            if rd.config is not None and rd.config.protocol.id == pid:
+                out[rd.dir.name] = p
+    return out
 
 
 def report_hints(
