@@ -134,6 +134,40 @@ class FreezeGate(unittest.TestCase):
                 self._audited(kind="fit", promises=None), run_kind="measurement"
             )
 
+    def test_a_first_low_measurement_needs_the_registration_committed(self):
+        # it started on a written, uncommitted registration; finalize was clean
+        # and adoption refused for good (audit 2026-10-27, third, I1). The twin:
+        # committed, it starts; a second measurement is not held here.
+        import subprocess
+
+        def git(*args: str) -> None:
+            subprocess.run(
+                ["git", *args], cwd=self.tmp, check=True, capture_output=True
+            )
+
+        git("init", "-q")
+        git("config", "user.email", "t@t")
+        git("config", "user.name", "t")
+        area = self._area(SECONDS_COMPUTE)
+        err = io.StringIO()
+        with (
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+            self.assertRaises(SystemExit) as cm,
+        ):
+            runlog.Run("t", {}, area, run_kind="measurement")
+        self.assertIn("is not committed", str(cm.exception) + err.getvalue())
+        self.assertFalse((area / "runs").exists())
+        git("add", "-A")
+        git("commit", "-qm", "registration")
+        r, out = self._start(SECONDS_COMPUTE, run_kind="measurement")
+        self.assertTrue((r.dir / "config.json").is_file(), out)
+        (area / "PROTOCOL-x.md").write_text(SECONDS_COMPUTE + "\nmore prose\n")
+        r2, out = self._start(
+            (area / "PROTOCOL-x.md").read_text(), run_kind="measurement"
+        )
+        self.assertTrue((r2.dir / "config.json").is_file(), out)
+
     def test_an_audit_line_of_other_code_is_refused(self):
         """Twin of the start above: the code changed after the audit, so the
         line's stamp no longer covers it (review 2026-10-07: a hand-written

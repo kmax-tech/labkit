@@ -71,6 +71,11 @@ KNOWN_CROSSINGS = {
     # (moved with it out of runlog; the same crossings, not new ones)
     ("start_check", "findings"),  # findings.audit_coverage
     ("start_check", "protocol_check"),  # protocol_check.low_registration_missing
+    # the same registration, as HEAD holds it, for a first measurement:
+    # report-check holds that commit, and a start on an uncommitted one could
+    # never be adopted (audit 2026-10-27, third, I1) — added deliberately, the
+    # same doctrine as the line above; moving it would split protocol_history
+    ("start_check", "protocol_history"),  # protocol_history.registration_in_commit
     ("start_check", "standard_contract"),  # standard_contract.lane
     ("runlog", "standard_contract"),  # standard_contract.lane (was a copied rule)
     # the field catalogue and a rule's text in the code check — the boundary

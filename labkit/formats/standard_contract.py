@@ -294,7 +294,8 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
     ln, sk = lane(repeat_cost), skeleton(repeat_cost, kind, model)
     check = " ".join((CHECK_SCRIPT.as_posix(), CHECK_FLAG))
     before = (
-        "the registration written: " + ", ".join(registration_fields(kind, model))
+        "the registration written and committed (the first measurement is held "
+        "to what its commit holds): " + ", ".join(registration_fields(kind, model))
         if ln.registration
         else "`preflight` clean, the preflight audit decided and its record named "
         "in the head (`preflight_audit`), `frozen = true`"

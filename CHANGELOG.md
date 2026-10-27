@@ -306,6 +306,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A first measurement at `low` needs its registration committed.** The
+  start gate read the tree: a registration written a minute before the
+  run passed, the run started uncommitted, finalize was clean — and
+  report-check refused adoption for good, since the commit the run
+  recorded held no registration ("nothing stood before the number"),
+  with no way on but a new protocol. runlog now refuses the first
+  measurement of a protocol whose registration HEAD does not hold
+  (`start_check._committed_registration`, the same
+  `protocol_history.registration_in_commit` report-check reads); later
+  measurements are not held there, and `--contract` says "written and
+  committed". A new known core→doctrine crossing
+  (`start_check`→`protocol_history`), the same doctrine as the
+  registration check beside it. Audit 2026-10-27 (third), I1 (A4).
 - **The prompt skeleton refuses a missing items file.** `lanes` read a
   missing prepared file as no items, so `--show` printed only the config
   and `--probe` reported "to measure: 0 of 0" with exit 0 — an instrument

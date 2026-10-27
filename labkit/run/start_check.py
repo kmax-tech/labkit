@@ -110,6 +110,43 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
     return _Bound({"id": head.id, "path": rel}, text, head)
 
 
+def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
+    """Where the lane holds the registration instead of the freeze, the
+    FIRST measurement of the protocol needs it committed: report-check
+    holds it to the commit the run records (`report_check.registration_gaps`,
+    `protocol_history.registration_in_commit` on HEAD here), and a run on
+    an uncommitted one could never be adopted — finalize clean, adoption
+    refused for good (audit 2026-10-27, third, I1). A later measurement is
+    not held here: the first decides. Nothing outside a repository (the
+    release gate warns there) or for an unbound protocol (refused above)."""
+    from labkit.formats.answering_run import first_measurements
+    from labkit.formats.protocol_history import registration_in_commit
+
+    head, rel = bound.head, bound.binding.get("path")
+    root = repo.git_root(base_dir)
+    if root is None or head is None or head.id is None or not isinstance(rel, str):
+        return []
+    if first_measurements(base_dir, head.id, root):
+        return []
+    protocol = (base_dir / rel).resolve()
+    missing = registration_in_commit(protocol, "HEAD", head.kind)
+    if missing is None:
+        return [
+            f"{protocol.name} is not committed — the first measurement is held to "
+            f"the registration its commit holds; commit the protocol (`git add` + "
+            f"`git commit`), then start the run (LAB-003 No run without an intent "
+            f"paragraph)"
+        ]
+    if missing:
+        return [
+            f"{protocol.name}: the registration as committed (HEAD) lacks "
+            f"{', '.join(missing)} — the first measurement is held to what its "
+            f"commit holds; commit the written registration, then start the run "
+            f"(LAB-003 No run without an intent paragraph)"
+        ]
+    return []
+
+
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.formats.protocol_check import low_registration_missing
@@ -132,7 +169,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     if lane(head.repeat_cost).registration:
         missing = low_registration_missing(text)
         if not missing:
-            return []
+            return _committed_registration(base_dir, bound)
         return [
             f'{path.name}: `repeat_cost = "{head.repeat_cost}"`, but the registration is not '
             f"written: {', '.join(missing)} — at low repeat cost the gate is the "

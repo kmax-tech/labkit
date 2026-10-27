@@ -568,9 +568,11 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
     recorded no commit, the repository does not hold that commit, the
     commit does not hold the protocol (nothing stood before the number),
     the fields the lane owes were not written there
-    (`protocol_history.registration_in_commit`). runlog's start gate reads
-    the tree, which a line written a minute before the run passes; what
-    stood before the number is what the commit holds. Outside a repository
+    (`protocol_history.registration_in_commit`). runlog's start gate holds
+    a first measurement to the same registration at HEAD
+    (`start_check._committed_registration`), so this station catches what
+    got past it — a commit rewritten after the run, a run started outside
+    runlog; what stood before the number is what the commit holds. Outside a repository
     a warning, as the provenance station's (`run_record_check.provenance_findings`).
     Empty without a measurement (finalize names the missing run) and
     without a stamped id. Why (labkit-paper area 09, fifth haiku round,
