@@ -68,6 +68,7 @@ from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
     console,
+    handovers,
     promises,
     protocol_block,
     protocol_check,
@@ -397,7 +398,10 @@ def check_deferred_elsewhere(
 ) -> None:
     """Station 3, the reminder: every `deferred` finding in another area of
     the repo, told and never counted — a finding deferred there as "its own
-    task" may be this area's; a record elsewhere nobody can read warns.
+    task" may be this area's; one a handover of that area lists
+    (`handovers.handed_over`) is told as handed over unresolved, no result
+    released, the rest as set aside for later; a record elsewhere nobody
+    can read warns.
     Closes the station with what RECORDS (this area's) say when nothing is
     open."""
     experiments = area.resolve().parent
@@ -406,12 +410,29 @@ def check_deferred_elsewhere(
     except audit_findings.FindingsError as exc:
         findings.warn(str(exc), evidence_kind=GUARANTEED)
         elsewhere = []
+    handed: dict[Path, set[str]] = {}
+    over = 0
     for other, r, f in elsewhere:
-        findings.note(f"  deferred in {other.name} ({r.date}): {f.text} — {f.reason}")
+        if other not in handed:
+            try:
+                handed[other] = handovers.handed_over(other)
+            except handovers.HandoverError as exc:
+                findings.warn(str(exc), evidence_kind=GUARANTEED)
+                handed[other] = set()
+        n = r.findings.index(f) + 1
+        if handovers.entry(r, n) in handed[other]:
+            over += 1
+            how = "handed over unresolved — no result released"
+        else:
+            how = "set aside for later work"
+        findings.note(
+            f"  deferred in {other.name} ({r.date}), {how}: {f.text} — {f.reason}"
+        )
     if elsewhere:
         findings.note(
-            f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo — a reminder, "
-            f"not counted"
+            f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo "
+            f"({len(elsewhere) - over} set aside for later, {over} handed over "
+            "unresolved) — a reminder, not counted"
         )
     undecided = bool(audit_findings.open_findings(records))
     if not records and not elsewhere:

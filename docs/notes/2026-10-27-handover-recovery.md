@@ -21,7 +21,13 @@ handover only where an open BLOCKER or an evidence problem stands; it is
 not a second workflow engine.
 
 An unresolved readable BLOCKER is explicitly decided `deferred`, with the
-reason, before handover. No command automatically decides or resolves a
+reason, before handover. `deferred` is the decision on the finding; the
+handover is what happens to the area — both hold at once, and no extra
+status says so: the handover record lists the finding by record and
+number (`remaining`), and `preflight` of another area tells a deferred
+finding it lists as "handed over unresolved — no result released", any
+other as "set aside for later work". Both stay listed; a handover settles
+nothing. No command automatically decides or resolves a
 finding. Even a readable record with an invalid filename retains its
 findings in recovery inspection; naming errors are additional data.
 

@@ -115,15 +115,34 @@ def evidence(
     }
 
 
+def entry(record: findings.Record, n: int) -> str:
+    """Finding N of RECORD as a handover names it: `<record file> #<n>
+    (<grade>, <status>)` — never its text, which may cite a run. The one
+    spelling `remaining` writes and `handed_over` is matched against."""
+    f = record.findings[n - 1]
+    return f"{record.path.name} #{n} ({f.grade}, {f.status})"
+
+
 def remaining(records: Iterable[findings.Record]) -> list[str]:
     """Every finding of RECORDS no decision settled (`UNSETTLED`), by
-    record file and number — never its text, which may cite a run."""
+    record file and number (`entry`)."""
     return [
-        f"{r.path.name} #{n} ({f.grade}, {f.status})"
+        entry(r, n)
         for r in records
         for n, f in enumerate(r.findings, 1)
         if f.status in UNSETTLED
     ]
+
+
+def handed_over(area: Path) -> set[str]:
+    """The findings any handover record of AREA in the tree lists as left
+    over (`Handover.remaining`, as `entry` spells them) — the binding a
+    reader uses to tell a finding handed over unresolved from one set
+    aside for later. A handover settles nothing: the findings stay listed.
+    Raises HandoverError on a record that does not read."""
+    return {
+        name for path in record_paths(area) for name in read_handover(path).remaining
+    }
 
 
 def build(

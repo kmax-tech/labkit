@@ -990,6 +990,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A deferred finding handed over reads apart from one set aside.**
+  `deferred` is the decision on a finding, a handover what happens to its
+  area; both hold at once. `preflight` listed every deferred finding of
+  another area as one kind of reminder; a deferred finding a handover
+  record of that area lists (`remaining`, matched by record and number
+  through `handovers.entry` and `handovers.handed_over`) is now told as
+  "handed over unresolved — no result released", any other as "set aside
+  for later work", and the summary counts both. No new status and no
+  format change: the record already carried the binding. Audit 2026-10-27
+  (second), left open, settled the same day.
 - **Small drift after the handover audit.** `protocol-fill`'s usage
   names `--handover`; `--into`, `--force` and `--why` say what they do with
   each mode; a record whose name gives no time sorts first, so `--findings`
