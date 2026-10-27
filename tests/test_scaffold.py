@@ -910,6 +910,21 @@ class Exp(unittest.TestCase):
                 report, r"replaced\s+\S*01_measure\.py \(the stamp of an earlier pin, "
             )
 
+    def test_an_uncommitted_stamp_file_is_named_as_such(self) -> None:
+        """A stamp file git never saw differs from today's stamp: no evidence
+        whose text it is, and the refusal says that instead of "edited". The
+        twin: committed, an edit is named an edit (above)."""
+        area, _, _ = self._compute_area_with_work()
+        self._git("init", "-q")
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text(encoding="utf-8") + "# mine\n")
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.change_kind(self.root, "foo-bar", "fit")
+        self.assertIn(
+            "01_measure.py: differs from the compute stamp and was never committed",
+            str(caught.exception),
+        )
+
     def test_an_edit_committed_with_the_stamp_still_holds(self) -> None:
         """Without a pin raise this labkit's templates are the ones the area
         was stamped from: a difference committed with the stamp is an edit

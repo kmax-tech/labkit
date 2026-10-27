@@ -51,6 +51,7 @@ from labkit.formats.runs import runs_path
 from labkit.formats.files import write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
+    files_at,
     first_added,
     adopt_command,
     AREA_NAME,
@@ -774,9 +775,25 @@ def edited_stamps(
         found = earlier_pin_text(root, path)
         if found is not None and found[1] == now:
             earlier[path] = found[0]
+        elif _never_committed(root, path):
+            # git sees the file but no commit holds it: nothing tells an
+            # edit from an earlier labkit's stamp
+            held.append(
+                f"{path}: differs from the {kind} stamp and was never committed — "
+                f"no evidence whose text it is"
+            )
         else:
             held.append(f"{path}: edited since the {kind} stamp")
     return held, earlier
+
+
+def _never_committed(root: Path, path: Path) -> bool:
+    """Is ROOT inside a repository whose index lacks PATH (`repo.files_at`)?
+    False outside a repository: there the stamp of this labkit is all there
+    is to compare with."""
+    repo = git_root(root)
+    held = None if repo is None else files_at(repo, path.parent)
+    return held is not None and path.name not in held
 
 
 def earlier_pin_text(root: Path, path: Path) -> tuple[str, str] | None:
