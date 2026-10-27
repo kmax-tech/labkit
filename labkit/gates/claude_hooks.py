@@ -733,8 +733,9 @@ def undecided_blockers(
     audits/ gone from the tree but committed is a gap: this holds the areas
     the session worked in, not the whole repo
     (A4, 2026-10-17: a repo's old areas must not block every stop).
-    STAGED (the pre-commit): the attempt journal and its records as the
-    index holds them (`attempts.area_gaps`)."""
+    STAGED (the pre-commit): the audit records with their decisions
+    (`findings.area_records`) and the attempt journal (`attempts.area_gaps`)
+    as the index holds them — what the commit carries, not the tree."""
     out = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
@@ -746,7 +747,7 @@ def undecided_blockers(
         except attempts.AttemptError as exc:
             out.append(f"{shown}: {exc}")
         try:
-            records = findings.area_records(area)
+            records = findings.area_records(area, staged=staged)
         except findings.FindingsError as exc:
             out.append(f"{shown}: {exc}")
             continue
@@ -779,11 +780,13 @@ def undecided(argv: list[str]) -> int:
     if not lines:
         return 0
     print(
-        "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided, "
+        "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided "
+        "in the index, "
         f"or an audit record is gone — decide each ({findings.DECIDED_LIST}, with "
         "reason) with the `--decide` command `labkit-audit <AREA> "
         "--findings` prints for it (AREA: the path each line starts with), never by "
-        "rewriting the record, and restore a "
+        "rewriting the record, and stage the decided record (the commit carries "
+        "the decision the index holds); restore a "
         "record that is gone (LAB-015 Preflight audit before freezing):\n  "
         + "\n  ".join(lines)
     )

@@ -150,6 +150,7 @@ class Undecided(unittest.TestCase):
 
     def test_the_pre_commit_command_holds_the_staged_paths(self):
         path = self._record(self.area, [BLOCKER])
+        _git(self.root, "add", "-A")  # the commit carries the record
         with contextlib.chdir(self.root):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
@@ -169,6 +170,52 @@ class Undecided(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(claude_hooks.main(["undecided"]), 2)
 
+    def test_the_commit_reads_the_decisions_the_index_holds(self):
+        """The pre-commit read the journal from the index and the decisions
+        from the tree: a BLOCKER decided in the tree and never staged passed
+        while the commit carried it open. The twins: the decision staged
+        passes, and a staged decision reopened only in the tree does not
+        hold the commit, which carries the decision."""
+        path = self._record(self.area, [BLOCKER])
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "audit")
+        open_text = path.read_text(encoding="utf-8")
+        findings.write_decision(path, 1, "deferred", "measured in area 02")
+        script = self._touch(self.area)
+        _git(self.root, "add", str(script))
+
+        def commit_gate() -> tuple[int, str]:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
+                rc = claude_hooks.main(
+                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
+                )
+            return rc, out.getvalue()
+
+        rc, out = commit_gate()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"experiments/01-x: {path.name}: BLOCKER", out)
+        self.assertEqual(self._stop()[0], 0)  # the tree is decided
+        _git(self.root, "add", str(path))
+        self.assertEqual(commit_gate(), (0, ""))
+        path.write_text(open_text, encoding="utf-8")  # reopened, not staged
+        self.assertEqual(commit_gate(), (0, ""))
+        self.assertEqual(self._stop()[0], 2)
+
+    def test_a_record_the_index_cannot_read_is_named_as_the_index_holds_it(self):
+        self._record(self.area, [BLOCKER])
+        bad = self.area / findings.DIR / "2026-10-20T14-03-preflight.toml"
+        bad.write_text("no = [toml\n", encoding="utf-8")
+        _git(self.root, "add", "-A")
+        bad.unlink()  # the tree lost it, the commit carries it
+        lines = claude_hooks.undecided_blockers(
+            self.root, [self.area / "scripts" / "01_measure.py"], staged=True
+        )
+        self.assertTrue(
+            any("not TOML" in ln and "as git's index holds it" in ln for ln in lines),
+            lines,
+        )
+
     def test_a_session_started_in_a_subdirectory_is_held_too(self):
         """The project directory below the repo root has no `.git` of its
         own: the stop returned 0 in silence, and the pre-commit — git runs
@@ -185,6 +232,7 @@ class Undecided(unittest.TestCase):
             )
             self.assertEqual(rc, 2, err)
             self.assertIn(f"experiments/01-x: {path.name}", err)
+            _git(self.root, "add", "-A")
             with contextlib.chdir(self.root):
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):

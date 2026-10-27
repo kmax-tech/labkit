@@ -48,6 +48,16 @@ The hooks now hold the git root of the project directory, `undecided` that
 of its current directory. Outside every repository the stop holds once per
 turn and says why: a check that cannot run blocks (decided 2026-10-17).
 
+**The commit's decisions from the index (audit 2026-10-27, C9).**
+`undecided_blockers(staged=True)` read the attempt journal from the index
+and the records with their decisions from the tree. A BLOCKER decided with
+`--decide` and never staged passed the pre-commit while the commit carried
+it `open`; reproduced through `python -m labkit.gates.claude_hooks
+undecided` with the index holding `status = "open"`: `rc=0`. The reverse
+held a commit falsely: a staged decision reopened only in the tree. The
+commit now reads the records as the index holds them
+(`findings.area_records(staged=True)`); the stop keeps reading the tree.
+
 ## `report_check`: the gate after the last step
 
 **Trigger.** `finalize` holds the run before the number is written back;

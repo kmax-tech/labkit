@@ -114,6 +114,7 @@ from pathlib import Path
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import registration_drift, registration_stamp
+from labkit.formats.repo import INDEX_REV, files_at, git_root, text_at
 from labkit.formats.runs import as_stored
 from labkit.formats.scope_sha import area_stamp, digest, validation_note
 
@@ -1200,18 +1201,47 @@ def written_order(path: Path) -> tuple[str, int, str]:
     return (m.group(1), int(m.group("n") or 1), path.name)
 
 
-def area_records(area: Path) -> list[Record]:
-    """Every findings file of AREA, oldest first (`written_order`); a file
-    that cannot be read raises."""
+def _is_record_name(name: str) -> bool:
+    """Whether a file directly in `audits/` named NAME is a record of
+    findings: TOML, neither a failed attempt nor a decision review."""
+    return (
+        name.endswith(".toml")
+        and not name.endswith(FAILED_SUFFIX)
+        and not REVIEW_NAME.search(name)
+    )
+
+
+def area_records(area: Path, *, staged: bool = False) -> list[Record]:
+    """Every findings file of AREA, oldest first (`written_order`), as the
+    working tree holds it — or, STAGED (the commit), as git's index holds
+    it: the files the index carries, each with its decisions as staged; a
+    decision written in the tree and not staged is not in the commit. A
+    file that cannot be read raises FindingsError; STAGED outside a
+    repository git takes raises too (there is no index to read)."""
     folder = area / DIR
-    if not folder.is_dir():
-        return []
-    paths = [
-        p
-        for p in folder.glob("*.toml")
-        if not p.name.endswith(FAILED_SUFFIX) and not REVIEW_NAME.search(p.name)
-    ]
-    return [read(p) for p in sorted(paths, key=written_order)]
+    if not staged:
+        if not folder.is_dir():
+            return []
+        paths = [p for p in folder.glob("*.toml") if _is_record_name(p.name)]
+        return [read(p) for p in sorted(paths, key=written_order)]
+    root = git_root(area)
+    held = None if root is None else files_at(root, folder, INDEX_REV)
+    if root is None or held is None:
+        raise FindingsError(
+            f"{folder}: no git repository holds it — the records as the index "
+            f"holds them cannot be read"
+        )
+    paths = [folder / rel for rel in held if "/" not in rel and _is_record_name(rel)]
+    out = []
+    for p in sorted(paths, key=written_order):
+        text = text_at(root, p, INDEX_REV)
+        if text is None:
+            raise FindingsError(f"{p}: listed in git's index, but not readable there")
+        try:
+            out.append(_record_of(p, text))
+        except FindingsError as exc:
+            raise FindingsError(f"{exc} (as git's index holds it)") from exc
+    return out
 
 
 def _bound(
