@@ -688,21 +688,34 @@ Code-Reparatur zuerst, geänderte Anschlussfrage separat und offengelegt;
 not assessable heißt kein Urteil), durch Lese- und Verhaltenstests geprüft.
 Stand: K4 gebaut (labkit-paper `f383411`; nachträgliche Diagnose von Bereich
 12: `escaped`, Standard von 2c7dfe6 erfüllt, `c85e4e9`). K3 gebaut
-(`be0e539`); sich widersprechende erste Messungen sind bis K1 eine Warnung.
-K2 gebaut (`fe8e440`). K1 gebaut (dieser Stand: `[replaces]`,
-`replacement_gaps`, Vorgänger-Urteil im Ergebnis, Hinweis beim
-Berichtswechsel); offen aus K1: der Hinweis „neues Protokoll nach einer nicht
-freigegebenen Messung ohne `replaces`“ und sich widersprechende erste
-Messungen als Blocker (jetzt Warnung). Anleitung gebaut (`audit.WAYS_OUT`,
-AGENTS.md „When you are stuck“; Eingriff für Bereich 09). Replay
-durchgeführt (labkit-paper `be59d5d`, Lauf `2026-10-27T16-41-54_ea77`,
-labkit `4e921b1`): der abgegebene Stand wird von K3 (`null_band 0.1 → 0.15`
-nach `98dd`) und K2 (erzeugte Zeile, Ergebnisblock) gehalten, K1 gibt den
-Hinweis zum Zitatwechsel. Offen: die Gegenfälle in labkit-paper (Start wie
-registriert repariert, ehrliches Verfehlen) — sie brauchen ein Folgeaudit
-ohne Modell, also eine konstruierte Auditantwort (Entscheidung des Autors);
-der K1-Hinweis „neues Protokoll nach nicht freigegebener Messung“; ob
-widersprüchliche erste Messungen mit K1 als Ausweg zum Blocker werden.
+(`be0e539`); sich widersprechende erste Messungen sind seit `5c4479c` ein
+Blocker mit zwei Auswegen (Neuansatz gegen jede Registrierung, Übergabe
+`audit.HANDOVER`), der Rückweg macht seit `509760f` jede Änderung rückgängig
+(auch ein hinzugefügtes `[A3]`). K2 gebaut (`fe8e440`). K1 gebaut
+(`a23ac05`; seit `5c4479c` gegen jede erste Registrierung, so wie ihr Lauf
+sie sah — Commit plus `uncommitted.patch`, am aufgezeichneten Block geprüft;
+ein Vorgänger, dessen Registrierung nicht steht, erscheint als „no
+verdict“). Anleitung gebaut (`4e921b1`; die Übergabe nennt das Protokoll,
+nicht seine Läufe — eine zitierte Run-ID liest sich als berichtete Zahl).
+Replay durchgeführt (labkit-paper `be59d5d`, Lauf
+`2026-10-27T16-41-54_ea77`, labkit `4e921b1`): gehalten von K3 und K2, K1
+gibt den Hinweis zum Zitatwechsel. Gegenfälle gebaut (`c4c49e2`,
+`5c4479c`, `tests/test_counter_cases.py`: Judge-Skelett, jede Auditantwort
+als SIMULATED markiert und durch den Parser von `labkit-audit`): Reparatur
+unter unveränderten Versprechen freigegeben, ehrliches Verfehlen als `C1
+missed` freigegeben, Übergabe passiert Stop und Commit, Neuansatz gegen
+beide Registrierungen freigegeben; die Zwillinge (zitierte Run-ID,
+Übernahme, eine fehlende Änderung) gehalten. Befund am echten Startzustand
+von Bereich 12: K3 hält schon den Start — `null_band` 0.1 → 0.15
+(`40e862b`, Haiku in Runde 8) und `[A3]` hinzugefügt (`7eb2d50`, unser
+Fallbau „pilot 2 case A“), beides nach der ersten Messung `ad0d`; eine
+Reparatur „wie registriert“ nähme dort die Leckregel heraus. Offen: (1)
+Startzustand für eine neue Runde neu bauen (`[A3]` vor der ersten Messung
+registriert) oder den Neuansatz mit `replaces` als richtigen Weg des Falls
+registrieren — Entscheidung des Autors; (2) der K1-Hinweis „neues Protokoll
+nach nicht freigegebener Messung“ bleibt zurückgestellt (erst ein engerer
+Auslöser und Gegenproben mit unabhängigen Fragen, Review 2026-10-27); (3)
+gemeinsame Abnahme, danach Release.
 Reihenfolge (bestätigt 2026-10-27): K4 → K3 → K2 → K1 → Anleitung →
 Replay des gespeicherten Versuchs mit Gegenfällen; jeder Vertrag mit seinen
 Tests, der Replay prüft das Zusammenspiel. K3 wird erst aktiv, wenn jede
