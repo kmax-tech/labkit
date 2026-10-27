@@ -306,6 +306,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The prompt skeleton refuses a missing items file.** `lanes` read a
+  missing prepared file as no items, so `--show` printed only the config
+  and `--probe` reported "to measure: 0 of 0" with exit 0 — an instrument
+  check that checked nothing. It refuses with the file and the step that
+  writes it. Audit 2026-10-27 (third), I7.
 - **`runlog` refuses the lab root.** The area README said `runlog .` and
   `labkit-params .`; run from the root, as AGENTS.md asks, `runlog`
   read the repo as an area — "no open runs", and `--wait` idle while a

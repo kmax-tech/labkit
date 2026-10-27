@@ -272,6 +272,13 @@ class Lanes:
                 "--probe is not available at repeat_cost='low'; run the full measurement"
             )
         cfg = replace(config, model=args.model)
+        if not self.items.is_file():
+            # a missing file read as no items: --show and --probe passed on
+            # nothing (audit 2026-10-27, third, I7)
+            ap.error(
+                f"{self.items}: no prepared items — write them first "
+                "(scripts/00_prepare.py), then show, probe or measure"
+            )
         items = read_jsonl(self.items)
         if args.show is not None:  # `is not None`: `--show 0` must not start a paid run
             self._show(cfg, items, args.show)

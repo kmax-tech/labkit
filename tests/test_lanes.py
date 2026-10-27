@@ -287,6 +287,27 @@ class EvaluateKeptRows(Case):
             self.assertIn("paste into tests/test_01_x.py PROBE_CASES", out.getvalue())
 
 
+class NoItemsNoCheck(unittest.TestCase):
+    def test_show_and_probe_refuse_a_missing_items_file(self):
+        # a missing file read as no items, and --probe printed "0 of 0"
+        # with exit 0 (audit 2026-10-27, third, I7)
+        with tempfile.TemporaryDirectory() as d:
+            run, _ = lanes_in(Path(d))
+            run.items.unlink()
+            for argv in (["--show", "2"], ["--probe", "2"]):
+                with self.subTest(argv=argv):
+                    err = io.StringIO()
+                    with (
+                        mock.patch.object(llm, "complete_many") as calls,
+                        contextlib.redirect_stderr(err),
+                        self.assertRaises(SystemExit) as cm,
+                    ):
+                        run.main(Cfg(), argv)
+                    self.assertEqual(cm.exception.code, 2)
+                    self.assertIn("no prepared items", err.getvalue())
+                    calls.assert_not_called()
+
+
 class TheAuditStillSeesTheExperiment(unittest.TestCase):
     """The mechanics left the area; what decides the number did not. The
     audit's prompt of a freshly stamped judge area carries the prompts, the
