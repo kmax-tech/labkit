@@ -31,7 +31,7 @@ from labkit.formats.scope_sha import (
     measured_code,
 )
 from labkit.run import batch
-from labkit.formats import promises, protocol_block
+from labkit.formats import jsonl, promises, protocol_block
 from labkit.formats.runs import (
     RunConfig,
     RunConfigError,
@@ -252,6 +252,51 @@ def _in_repo(path: Path, repo: Path) -> bool:
         return False
     inner = git_root(real.parent)
     return inner is not None and inner.resolve() == root
+
+
+#: the two scored lanes a null comparison runs in, as the skeletons name them
+NULL_LANES = ("registered", "null")
+
+
+def null_lane_unmoved(rows: list[dict]) -> bool:
+    """Do ROWS carry a null lane that cannot have moved — for every item
+    its null row's answer (`pred`, or `answer`) and gold equal its
+    registered row's? Then the null measures no noise floor: an instrument
+    that ignores its labels predicts the same in both lanes (LAB-034 Null
+    condition in the same run). False without both lanes, or when one item
+    differs — a permuted gold (`gold_of`) or another answer is a move."""
+    lanes: dict[str, dict[object, tuple[object, object]]] = {k: {} for k in NULL_LANES}
+    for r in rows:
+        lane = r.get("lane")
+        if lane in lanes and "item" in r:
+            lanes[lane][r["item"]] = (r.get("pred", r.get("answer")), r.get("gold"))
+    registered, null = lanes["registered"], lanes["null"]
+    if not registered or not null:
+        return False
+    return all(registered.get(item) == said for item, said in null.items())
+
+
+def null_lane_findings(answering_run: Path) -> list[str]:
+    """One sentence per output of ANSWERING_RUN (`runs.read_outputs`, its
+    JSONL files) whose null lane did not move (`null_lane_unmoved`) — read
+    from the rows the run kept, not from a check in the editable script: a
+    cold agent deleted the script's own guard before it first ran (SAB-like
+    apply case, 2026-10-27). Raises ValueError on an output that does not
+    read."""
+    out: list[str] = []
+    for entry in read_outputs(answering_run) or []:
+        if entry.path.suffix != ".jsonl" or not entry.path.is_file():
+            continue
+        rows = jsonl.data_rows(entry.path.read_text(encoding="utf-8"), str(entry.path))
+        if null_lane_unmoved(rows):
+            out.append(
+                f"{entry.path.name}: the null lane answers what the registered lane "
+                f"answers on every item — it measures no noise floor (an instrument "
+                f"that ignores its labels predicts the same in both lanes); give the "
+                f"instrument a null of its own, e.g. its predictions against "
+                f"permuted gold (LAB-034 Null condition in the same run)"
+            )
+    return out
 
 
 def criterion_n_input_mismatches(answering_run: Path) -> list[str]:

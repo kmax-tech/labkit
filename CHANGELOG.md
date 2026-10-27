@@ -1487,6 +1487,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **finalize holds a null lane that did not move, from the kept rows.**
+  An instrument that ignores its labels predicts the same in both lanes,
+  and a null that answers the registered lane on every item measures no
+  noise floor. In the SAB-like apply case (2026-10-27, branch
+  `sab-like-cases`) the guard stood in the editable script and a cold
+  agent deleted it before it first ran. finalize now reads the rows the
+  answering run registered as its output (`outputs.json`) and blocks such
+  a null (`run_record_check.null_lane_unmoved`, `null_lane_findings`): a
+  fitted null that predicts otherwise, or a local apply's null on permuted
+  gold, moved. LAB-034 Null condition in the same run.
 - **Ask for recovery steps instead of memorizing them.**
   `labkit-audit AREA --findings` makes no model call and lists readable open
   BLOCKERs even behind a damaged journal or an invalid record name, explicit

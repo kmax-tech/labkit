@@ -93,6 +93,7 @@ from labkit.checks.run_record_check import (
     arm_findings,
     code_since_run,
     criterion_n_input_mismatches,
+    null_lane_findings,
     model_provenance_gap,
     provenance_findings,
     row_provenance_findings,
@@ -420,6 +421,20 @@ def check_area_tests(findings: Findings, area: Path) -> None:
         )
 
 
+def check_null_lane(findings: Findings, answering_run: Path) -> None:
+    """Station 7b: the kept rows' null lane moved (`null_lane_findings`) —
+    a gate over the run's own output, not the editable script's guard."""
+    try:
+        unmoved = null_lane_findings(answering_run)
+    except (ValueError, OSError) as exc:
+        findings.block(f"the outputs of {answering_run.name} do not read: {exc}")
+        return
+    for line in unmoved:
+        findings.block(line)
+    if not unmoved:
+        findings.note("  the null lane moved, or the run keeps no two lanes")
+
+
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
     w = criterion_n_input_mismatches(answering_run)
@@ -529,12 +544,14 @@ def finalize_area(
     findings.header("area tests")
     check_area_tests(findings, area)
 
-    # 7. criterion n — only with a run
+    # 7. criterion n and the null lane — only with a run
     findings.header("criterion n")
     if answering_run is None:
         findings.note(NO_RUN)
     else:
         check_criterion_n(findings, answering_run)
+        findings.header("null lane")
+        check_null_lane(findings, answering_run)
 
     # 8. audit findings — always
     findings.header("audit findings")
