@@ -725,6 +725,38 @@ class Stop(unittest.TestCase):
         rc, _, _ = self._stop()  # the next turn
         self.assertEqual(rc, 2)
 
+    def test_a_bad_commit_beside_an_uncommitted_fix_keeps_the_base(self):
+        """The stop reads the tree: a commit past the pre-commit with the
+        wrong run declared, and the fix uncommitted, passed — and the base
+        moved past the bad commit, so dropping the fix was never held. The
+        base stays until a stop on a clean tree passes; the twin: the fix
+        committed, the tree clean, the base moves."""
+        _run(claude_hooks.pre_run, _bash(self.root, "ls"))
+        base = self._base()
+        protocol = "experiments/01-x/PROTOCOL-x.md"
+        self._answer("2026-10-01T09-00-00_ffff")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the wrong answer", "--no-verify")
+        _git(self.root, "checkout", "HEAD~1", "--", protocol)
+        _git(self.root, "reset", "-q", "--", protocol)
+        self._answer(self.RUN)  # the fix, in the tree only
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(self._base(), base)
+        _git(self.root, "checkout", "--", protocol)  # the fix dropped
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("but the run that answers is", err)
+        self.assertEqual(self._base(), base)
+        _git(self.root, "checkout", "HEAD~1", "--", protocol)
+        _git(self.root, "reset", "-q", "--", protocol)
+        self._answer(self.RUN)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the fix")
+        rc, _, err = self._stop()
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(self._base(), repo.head_sha(self.root))
+
     def test_the_twin_a_correct_commit_stops_and_moves_the_base(self):
         _run(claude_hooks.pre_run, _bash(self.root, "ls"))
         self._answer(self.RUN)

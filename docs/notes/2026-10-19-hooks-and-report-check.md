@@ -58,6 +58,20 @@ held a commit falsely: a staged decision reopened only in the tree. The
 commit now reads the records as the index holds them
 (`findings.area_records(staged=True)`); the stop keeps reading the tree.
 
+**The stop base moves only on a clean tree (audit 2026-10-27, C7).** The
+stop's checks read the working tree. A commit past the pre-commit with
+the wrong run declared, and the fix left uncommitted, passed the stop —
+and the base moved to the bad commit, so dropping the fix afterwards was
+never held. Reproduced through the entry point: `stop with the fix
+uncommitted: rc=0`, `base ef07f648 -> 385993f7 (bad commit 385993f7)`,
+`stop after the fix is dropped: rc=0`. The base now moves only past a
+stop without a blocker on a tree equal to HEAD (git status empty). Not
+done, deliberately: holding the turn until the fix is committed (a normal
+session commits through the pre-commit and keeps editing — every stop
+would ask for a commit), and checking HEAD itself (the stations read the
+tree; HEAD would need a checkout of its own). `--no-verify` stays the
+deliberate exception; the loop protection per turn stays as decided.
+
 ## `report_check`: the gate after the last step
 
 **Trigger.** `finalize` holds the run before the number is written back;

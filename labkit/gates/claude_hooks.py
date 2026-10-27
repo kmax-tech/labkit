@@ -70,12 +70,18 @@ stop
     with "no reported result", probes in `runs/` or not. The stop base is
     the HEAD `pre-run` kept before the session's first Bash command
     (`keep_stop_base`, `<git dir>/labkit-stop-base/<session>`); it moves to
-    HEAD only after a stop without a blocker, so a commit past the
-    pre-commit (`--no-verify`) is held at every stop until it is fixed
-    (eighth haiku round, t3). Once per turn: when the agent was already
-    sent back in this turn (`stop_hook_active`), the checks still run and
-    print, the base stays, and it may stop — no loop; the next turn's stop
-    holds again.
+    HEAD only after a stop without a blocker that found the working tree
+    equal to HEAD (git status names nothing) — the checks read the tree,
+    so only then did they check what HEAD holds. A commit past the
+    pre-commit (`--no-verify`) is so checked at every stop, as the tree
+    holds its areas, until a stop on a clean tree passes: a fix left
+    uncommitted lets the turn end and keeps the base, and the stop after
+    the fix is dropped holds again. The limit: the stop never checks HEAD
+    apart from the tree — a session may end with the fault committed and
+    its fix uncommitted; the commit of the fix meets the pre-commit. Once
+    per turn: when the agent was already sent back in this turn
+    (`stop_hook_active`), the checks still run and print, the base stays,
+    and it may stop — no loop; the next turn's stop holds again.
     The same stop holds every area the session touched (a changed file
     under it, git status) to its audit records: a BLOCKER nobody decided →
     exit 2, naming file and finding (`undecided_blockers`). The pre-commit
@@ -660,13 +666,15 @@ def stop(event: dict) -> int:
         )
         return 0 if event.get("stop_hook_active") else 2
     record_session(repo, event)
+    checked_head = head_sha(repo)
     # deletions and rename sources too: a script or result removed under a
     # reported number reopens it as an edit does; and what the session
     # committed — a commit, even past the pre-commit with --no-verify,
     # leaves the tree clean and the delivered state with the blocker
     # (eighth haiku round, t3)
+    in_tree = touched_paths(repo)
     committed, note = committed_in_session(repo, event)
-    changed = list(dict.fromkeys(touched_paths(repo) + committed))
+    changed = list(dict.fromkeys(in_tree + committed))
     if note:
         print(f"claude-hook stop: {note}", file=sys.stderr)
     undecided = undecided_blockers(repo, changed)
@@ -698,12 +706,14 @@ def stop(event: dict) -> int:
             )
     held = rc != 0 or bool(undecided)
     if not held:
-        # the base moves only past a clean stop: a held commit is checked
-        # again at the next turn's stop, never forgotten with the turn
+        # the base moves only past a clean stop that read what HEAD holds:
+        # the checks read the tree, and a tree that differs from HEAD — a
+        # fix not yet committed beside a commit past the pre-commit — keeps
+        # the base, so the commit is checked again at every later stop
         session = event.get("session_id")
         path = stop_base_file(repo, session) if session else None
-        if path is not None and path.is_file():
-            files.write_atomic(path, head_sha(repo) + "\n")
+        if not in_tree and path is not None and path.is_file():
+            files.write_atomic(path, checked_head + "\n")
         return 0
     if event.get("stop_hook_active"):
         # sent back once in this turn already: no loop — the findings stand

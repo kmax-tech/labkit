@@ -441,7 +441,7 @@ An exploration declares no result and releases none.
 | git pre-commit | Checks staged protocols, affected reported results and unresolved audit blockers. Report checks use the staged answer and require the area's working tree to agree with the index; a staged declaration that differs from HEAD's reaches the committed reports citing that run. |
 | Claude `pre-run` | Runs preflight for recognized measurement commands; blocks a frozen area's command on blockers. |
 | Claude `post-change` | Reports protocol and note checks after changes, and names `labkit-audit --report-review` for a changed report that discusses a run; tracks content per session to avoid repeating unchanged files. |
-| Claude `stop` | Sends the session back for a failed release check or an unresolved audit blocker in an affected area — changed in the tree or committed since the session's stop base (kept by `pre-run` before the first command, moved only past a clean stop) — once per turn; the next turn's stop holds again. |
+| Claude `stop` | Sends the session back for a failed release check or an unresolved audit blocker in an affected area — changed in the tree or committed since the session's stop base (kept by `pre-run` before the first command, moved only past a clean stop on a working tree equal to HEAD) — once per turn; the next turn's stop holds again. |
 
 `labkit-hooks install` installs the pinned package's git and Claude hooks;
 `preflight` checks their installation. The run writer and git hooks work
