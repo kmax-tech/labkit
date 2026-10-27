@@ -1035,6 +1035,8 @@ Notiert, nicht geplant:
    (5) Eine Zustandsauskunft „du stehst hier, dieser Schritt fehlt“ gibt
    es nicht; `--contract`, `--list`, `--findings` decken Teile ab. Erst
    nach Benchmark-Beleg (Reihenfolge vor Features).
+   Erledigt 2026-10-27: (1) `2286d8d`, (2) `0bad41c`, (4) `10c9773`.
+   (3) und (5) warten auf eine Entscheidung.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
