@@ -448,7 +448,9 @@ Elternstand. Reste unter „Phase-1-Reste“ (Architektur und Lesbarkeit).
 Phase 2 — Härtung; jeder Vertrag mit Ausweg und expliziter Grenze:
 
 Stand 2026-10-27: 2.1, 2.2, 2.7 und 2.8 umgesetzt (2.1 selbst, die
-anderen von Subagenten in Worktrees; Hook je Commit grün). 2.3, 2.4 und
+anderen von Subagenten in Worktrees; Hook je Commit grün). Kalte Prüfung
+von 2.1 (sechs Befunde, behoben in `f4ec985`) und von 2.2/2.7/2.8 (fünf
+Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 2.4 und
 2.6 warten auf die Entscheidungen (a) und (c) nach dem Reparaturfall,
 2.5 auf 2.3. Reste und offene Entscheidungen unter „Phase-2-Reste“
 (Architektur und Lesbarkeit).
@@ -1102,7 +1104,8 @@ Offen, Entscheidung des Autors:
    dokumentieren („Claude Code im Repo-Root starten“) oder anders
    installieren. Empfehlung: dokumentieren.
 3. Ohne Stop-Basis sagt der Stop es, aber bei Exit 0 erreicht der Satz den
-   Agenten nicht; ohne Basis und ohne Transkript hält er nicht.
+   Agenten nicht; ohne Basis und ohne Transkript hält er nicht (legt aber
+   seit `cd2e8a4` auch keine Basis mehr über die ungelesenen Commits).
    Empfehlung: nur den zweiten Fall halten (eine Prüfung, die nicht laufen
    kann, hält) und den ersten so lassen.
 
