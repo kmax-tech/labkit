@@ -85,6 +85,17 @@ class Held:
     summary: str
 
 
+class NoRunChosen(console.Refused):
+    """No metrics.json chosen for the protocol: no stamped id, or no bound
+    run that may answer. The command line adds `METRICS_HINT`; finalize,
+    which has no `--metrics`, shows the reason alone (audit 2026-10-27,
+    third, I12: it passed the hint on)."""
+
+
+#: the way out only intent-check's own command line offers
+METRICS_HINT = "Name one explicitly with --metrics FILE if you know it belongs here."
+
+
 def main(argv: list[str]) -> int:
     """intent-check: every registered promise id reports as a key of the
     answering run's metrics.json. Exit 0 all keys present, 1 findings (a key
@@ -93,6 +104,9 @@ def main(argv: list[str]) -> int:
     blocker."""
     try:
         return _main(argv)
+    except NoRunChosen as exc:
+        console.refuse(exc.tool, f"{exc.why}\n  {METRICS_HINT}")
+        return 2
     except console.Refused as exc:
         console.refuse(exc.tool, exc.why)
         return 2
@@ -128,10 +142,9 @@ def _metrics_file(
         return choose_explicit(protocol, metrics_arg, pid)
     if pid is not None:
         return choose_bound(protocol, pid, promises.registers_ids(text))
-    raise console.Refused(
+    raise NoRunChosen(
         "intent-check",
-        f"{protocol.name} has no stamped id ([protocol] "
-        f"id) — no run is bound to it; name the run with --metrics FILE.",
+        f"{protocol.name} has no stamped id ([protocol] id) — no run is bound to it.",
     )
 
 
@@ -393,10 +406,7 @@ def choose_bound(
             why += [f"    {line}" for line in lines]
         elif choice.run_dir is None:
             why.append(f"  no runs in {protocol.parent} yet.")
-        why.append(
-            "  Name one explicitly with --metrics FILE if you know it belongs here."
-        )
-        raise console.Refused("intent-check", "\n".join(why))
+        raise NoRunChosen("intent-check", "\n".join(why))
     assert choice.run_dir is not None, (
         "explain() names a blocker whenever no run stands"
     )

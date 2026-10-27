@@ -188,6 +188,15 @@ class TestIntentCheck(unittest.TestCase):
         self.assertEqual(rc, 2, out)
         self.assertIn(f"no completed run bound to {PID}", out)
         self.assertIn("no runs in", out)
+        self.assertIn(intent_check.METRICS_HINT, out)  # its own command line
+
+    def test_finalize_is_not_offered_a_flag_it_lacks(self):
+        # finalize calls hold() and has no --metrics; it passed the hint on
+        # (audit 2026-10-27, third, I12)
+        self.proto.write_text(PROTOCOL, encoding="utf-8")
+        with self.assertRaises(intent_check.NoRunChosen) as caught:
+            intent_check.hold(self.proto, None)
+        self.assertNotIn("--metrics", caught.exception.why)
 
     # -- usage ------------------------------------------------------------
     def test_missing_protocol_exits_two(self):

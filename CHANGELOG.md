@@ -306,6 +306,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **finalize no longer offers intent-check's `--metrics FILE`.** When no
+  run could be chosen, intent-check's reason ended in "Name one explicitly
+  with --metrics FILE", and finalize, which calls it as a station and has
+  no such flag, printed that as its blocker. The refusal is
+  `intent_check.NoRunChosen`; only intent-check's own command line adds
+  `METRICS_HINT`. Audit 2026-10-27 (third), I12.
 - **The printed next steps name what every kind fills and call the cost
   by its key.** The high steps of a fit or an apply named neither unit nor
   data nor exclusions, which AGENTS.md owes of every kind; the titles said
