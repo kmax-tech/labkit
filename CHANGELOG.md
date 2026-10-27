@@ -1081,6 +1081,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The pre-run hook reads preflight's findings, not its printed report.**
+  It captured `preflight_area`'s stdout and quoted it back. `preflight_area`
+  takes a `Findings` collector as `finalize_area` does; the hook passes a
+  silent one and names the summary and the blockers from it. Audit
+  2026-10-27 (third), M4.
 - **The release gate loads no model backend.** `report_check`, which the
   pre-commit and the stop import, pulled in `llm` and `llm_backends`
   through `audit`, `decision_review` and `report_review` for eight

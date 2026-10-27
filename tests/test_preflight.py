@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, handovers, promises  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
+from labkit.formats.gate import Findings  # noqa: E402
 from protocol_fixture import registration_of, head  # noqa: E402
 
 BODY = """\
@@ -316,6 +317,22 @@ class GraduationGate(unittest.TestCase):
                 rc = preflight.preflight_area(area)
             self.assertEqual(rc, 1)
             self.assertIn("MISSING (must): Problem in one sentence", buf.getvalue())
+
+    def test_a_collector_receives_the_findings_and_nothing_is_printed(self):
+        # the pre-run hook read the printed report back (audit 2026-10-27,
+        # third, M4); a silent collector carries the same blockers as data
+        with _area_dir() as d:
+            area, _ = _area(d, _protocol(frozen=True))
+            found = Findings(tell=None)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = preflight.preflight_area(area, None, found)
+            self.assertEqual(rc, 1)
+            self.assertEqual(buf.getvalue(), "")
+            self.assertTrue(
+                any("Problem in one sentence" in m for m in found.blocked),
+                found.blocked,
+            )
 
     def test_unfrozen_protocol_same_gaps_are_warnings(self):
         with _area_dir() as d:

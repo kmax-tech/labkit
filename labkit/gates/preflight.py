@@ -178,9 +178,15 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     return AreaTests(pattern, files, "failed", tail)
 
 
-def preflight_area(area: Path, protocol: Path | None = None) -> int:
+def preflight_area(
+    area: Path, protocol: Path | None = None, findings: Findings | None = None
+) -> int:
     """The gate before the freeze, on AREA. Returns 0 (clean or warnings
-    only), 1 (a blocker) or 2 (no protocol to hold the area to).
+    only), 1 (a blocker) or 2 (no protocol to hold the area to). FINDINGS,
+    when given, collects what the stations found and is the channel every
+    line goes through (`gate.Findings`), as for `finalize_area`: the pre-run
+    hook hands over a silent one and reads the blockers as data instead of
+    the printed report (audit 2026-10-27, third, M4).
 
     The flow — every condition that decides whether a station runs is in
     this function; one level down is how a station checks, not whether it
@@ -210,7 +216,7 @@ def preflight_area(area: Path, protocol: Path | None = None) -> int:
     runs, then the summary names every blocker again. Warnings alone end
     with 0.
     """
-    findings = Findings()
+    findings = findings if findings is not None else Findings()
 
     # 0. protocol — the only exit 2
     protocol = choose_protocol(area, protocol, "preflight")

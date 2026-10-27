@@ -150,6 +150,7 @@ from labkit.formats import (
     runs,
     standard_contract,
 )
+from labkit.formats.gate import Findings
 from labkit.formats.shell import segments
 from labkit.formats import handovers
 from labkit.checks import notes_check
@@ -382,22 +383,29 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
                     f"until the registration is written (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)."
                 )
             continue
-        rc, out = _capture(preflight.preflight_area, area, protocol)
+        # the stations' findings as data (`preflight_area`'s collector), not
+        # the printed report read back; stdout is kept off the hook's own
+        found = Findings(tell=None)
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = preflight.preflight_area(area, protocol, found)
+        said = "\n".join(found.summary("preflight", "freezing"))
         frozen = any(h.frozen for h in heads)
         if rc == 1 and frozen:
             blocked.append(
                 f"{head}: BLOCKED — the protocol is frozen and "
-                f"preflight reports blockers:\n{out}"
+                f"preflight reports blockers:\n{said}"
             )
         elif rc == 1:
             notes.append(
                 f"{head}: blockers, protocol not frozen (pilot) — "
-                f"the full run will not start until they are fixed:\n{out}"
+                f"the full run will not start until they are fixed:\n{said}"
             )
         elif rc == 2:
-            notes.append(f"{head}: could not run preflight:\n{out}")
+            notes.append(
+                f"{head}: could not run preflight — no protocol to hold the area to"
+            )
         else:
-            notes.append(f"{head}: " + (out.splitlines()[-1] if out else "ok"))
+            notes.append(f"{head}: {said.splitlines()[0]}")
     if blocked:
         sys.stderr.write("\n\n".join(blocked) + "\n")
         if notes:
