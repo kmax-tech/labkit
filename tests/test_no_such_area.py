@@ -71,6 +71,25 @@ class BareName(unittest.TestCase):
     def test_an_unknown_name_stays_as_given(self):
         self.assertEqual(self.resolve("nope"), Path("nope"))
 
+    def test_the_name_is_read_by_the_area_name_grammar_not_a_glob(self):
+        """`[0-9]*-<name>` matched `02-count-docs` for `docs` too — a false
+        "matches 2 areas" — and `*` matched every numbered area (audit
+        2026-10-27, step 1.4). A bare name names the area called so or
+        `NN-<name>` (`repo.AREA_NAME`), nothing else."""
+        exp = self.root / "experiments"
+        (exp / "02-count-docs").mkdir()
+        (exp / "03-docs-per-case-v2").mkdir()
+        (exp / "4x-docs").mkdir()  # no area name: the number is not digits
+        self.assertEqual(self.resolve("docs-per-case"), exp / "01-docs-per-case")
+        self.assertEqual(self.resolve("count-docs"), exp / "02-count-docs")
+        self.assertEqual(self.resolve("docs"), Path("docs"))
+        self.assertEqual(self.resolve("*"), Path("*"))
+        self.assertEqual(
+            repo.areas_named(exp, "docs-per-case"), [exp / "01-docs-per-case"]
+        )
+        self.assertEqual(repo.areas_named(exp, "4x-docs"), [exp / "4x-docs"])
+        self.assertEqual(repo.areas_named(self.root / "none", "docs"), [])
+
     def test_audit_and_report_check_take_the_name(self):
         """Both took the argument as a plain path: `labkit-audit 01-<name>`
         was refused in four of seven cold probes (2026-10-20) while

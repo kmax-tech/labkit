@@ -82,23 +82,20 @@ class AmbiguousArea(argparse.ArgumentTypeError):
 
 def area_path(arg: str) -> Path:
     """The area a command argument names: a directory as given, else the
-    bare name as `labkit-init exp` prints it — `01-<name>` or `<name>` — under
-    `experiments/` of the working directory or of its repository. Returns
-    the argument unchanged when nothing matches, so the caller's "no such
-    area" still speaks (2026-10-07: two agents passed `01-docs-per-case` to
-    code-check and were refused). Raises AmbiguousArea naming every
-    candidate when more than one area matches: "no such area" for a name
-    that exists twice sent the reader looking for a missing one (review,
-    2026-10-20)."""
+    bare name as `labkit-init exp` prints it — `01-<name>` or `<name>`
+    (`areas_named`) — under `experiments/` of the working directory or of
+    its repository. Returns the argument unchanged when nothing matches,
+    so the caller's "no such area" still speaks (2026-10-07: two agents
+    passed `01-docs-per-case` to code-check and were refused). Raises
+    AmbiguousArea naming every candidate when more than one area matches:
+    "no such area" for a name that exists twice sent the reader looking
+    for a missing one (review, 2026-10-20)."""
     given = Path(arg)
     if given.is_dir() or given.is_absolute() or "/" in arg:
         return given
     hits: set[Path] = set()
     for base in {Path.cwd(), git_root(Path.cwd()) or Path.cwd()}:
-        exp = base / "experiments"
-        if (exp / arg).is_dir():
-            hits.add((exp / arg).resolve())
-        hits.update(p.resolve() for p in exp.glob(f"[0-9]*-{arg}") if p.is_dir())
+        hits.update(p.resolve() for p in areas_named(base / "experiments", arg))
     if len(hits) > 1:
         names = ", ".join(sorted(shown(h, Path.cwd()) for h in hits))
         raise AmbiguousArea(
@@ -164,6 +161,23 @@ def split_area_name(name: str) -> tuple[str | None, str]:
     carries no `NN-` prefix. Four regexes said this before (audit 2026-10-15)."""
     m = AREA_NAME.match(name)
     return (m.group(1), m.group(2)) if m else (None, name)
+
+
+def areas_named(experiments: Path, name: str) -> list[Path]:
+    """Every area directory under EXPERIMENTS that the bare NAME names,
+    sorted: the one called NAME and every `NN-<NAME>` (`AREA_NAME`) — the
+    one rule of a bare area name, for a command's argument (`area_path`)
+    and for the area `labkit-init exp` stamps, promotes or restamps. []
+    when EXPERIMENTS is no directory. Read by the grammar, not a glob:
+    `[0-9]*-<name>` also took `02-count-docs` for `docs` (audit
+    2026-10-27)."""
+    if not experiments.is_dir():
+        return []
+    return sorted(
+        p
+        for p in experiments.iterdir()
+        if p.is_dir() and name in (p.name, split_area_name(p.name)[1])
+    )
 
 
 #: the one name shape of a protocol file, as a glob and as a pattern
