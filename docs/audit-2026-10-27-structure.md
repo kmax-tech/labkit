@@ -9,8 +9,9 @@ name first), homes, structure, and code clarity on the day's diff
 [audit-2026-10-27.md](audit-2026-10-27.md) and
 [audit-2026-10-27-handover.md](audit-2026-10-27-handover.md) are not
 repeated; one still open is named by its id. Evidence: **V** verified
-here (lines opened or run), **RR** the reader ran it, **R** read. Every
-row is open; fixing is its own order.*
+here (lines opened or run), **RR** the reader ran it, **R** read. The
+rows describe the state audited; what was done stands under "State" at
+the end.*
 
 ## Ground truth
 
@@ -118,3 +119,52 @@ cycles; (5) a collector parameter on `preflight_area`; (6)
 `protocol_report` into `checks/`; (7) `start_check` returns every
 refusal as text; (8) the dead code and stale local imports; (9) pure
 `write_*` renamed `with_*`.
+
+## State (2026-10-27, after the fixes)
+
+Each commit carries its tests, red at the parent where a behaviour
+changed; the hook ran ruff, format, pyright and the suite on each.
+
+| Rows | Done | Commit |
+|---|---|---|
+| S2 | `repo.into_command`, runnable from where the agent stands | `3c0e11c` |
+| K1, K3, K5 | a broken handover record is one more gap; git's refusal a sentence; preflight says it cannot tell | `7467806` |
+| K2 | an unreadable protocol is a refusal | `fa56fc0` |
+| I10 | `runlog` refuses the lab root; the README names the area | `89f5a72` |
+| I7 | the prompt skeleton refuses a missing items file | `3f39fe2` |
+| I1 (A4) | a first measurement at low needs its registration committed — a deliberate new known core→doctrine crossing (`start_check`→`protocol_history`) | `5760496` |
+| I2, I3, I4, I8 | `repo.next_after_run`; one reading of the low audit; the exit before the first audit; `--repeat-cost` after exploring | `65b59b3` |
+| I5, I6 | `number_describes` settable; the freeze said to be set by hand | `f31c032` |
+| I9 (C2, checker) | `protocol_check.full_owed`; `--list` sets unowed placeholders apart | `5e47136` |
+| D1–D8, K10 | drift in docs, help, docstrings, `--contract` rows | `51418de` |
+| K4, K6–K8, I12 (part) | small messages | `031033b` |
+| S1 | `formats/comment_blocks`, one scanner for report blocks | `218ef25` |
+| S5, S6, S9 | run record names, kinds, modes, the hooks path; one-home rules | `49a1d99` |
+| M6 | dead code and parameters, a stale noqa, local imports | `c62f2da` |
+
+Open, with a plan:
+
+- **M1** — the release gate still loads `llm`. The moves that end it:
+  `decision_review.conclusion_written` → `protocol_check`;
+  `report_review.held_by`, `review_keys`, `review_pieces` →
+  `report_reviews`; `report_review.review_command` → `repo`;
+  `audit.earlier_of` with `Followup` → `followup` (its `AuditError`
+  becomes the format's error); `HANDOVER`, `register_anew`, `WAYS_OUT`,
+  `BLOCKER_ROUTES` → a model-free `gates/ways_out`. Then a test that
+  importing `report_check` loads no `labkit.run.llm`.
+- **M3** — split `report_check` at report discovery/holding (`:1106`
+  onward) into its own gate module; link/index helpers into `repo`.
+- **M4** — a `Findings` collector on `preflight_area`, as `finalize_area`
+  has; the pre-run hook reads data instead of printed text. M5 —
+  `protocol_report` into `checks/`.
+- **I9, stamp side** — the full template still carries the fields a
+  protocol does not owe; cut it by model and bar as `bar_cut` does by bar.
+- **K9** — a stop that a handover lets pass says nothing of the loss it
+  acknowledged. **I11** — Raw output's two jobs. **I12 rest** — finalize
+  passing intent-check's `--metrics FILE`; `--change-kind` compute+model →
+  fit writing "no model call"; the per-kind field lists of the "Next"
+  steps against AGENTS.md; "lane high" beside `repeat_cost`.
+- **S rest** — minute stamp, answer-line grammar, prompt assembly, held
+  report place (S3), parent run (S4), area-test rendering (S7), git
+  outside `repo` (S8), and the matching `test_one_home` rules; K5's
+  `findings.index(f)` on equal findings.

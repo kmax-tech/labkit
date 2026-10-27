@@ -1066,6 +1066,17 @@ Notiert, nicht geplant:
    (8) Struktur nach Nutzen/Risiko: Prüfer-Bausteine aus `audit` lösen,
    damit der Pre-commit kein `llm` lädt (M1, M2); `report_check` teilen
    (M3); Hash-Modul; `preflight_area` mit Sammler (M4); toter Code (M6).
+   **Stand 2026-10-27:** (1)–(7) erledigt, (8) M6; vierzehn Commits von
+   `3c0e11c` bis `c62f2da`, Liste im Register (Abschnitt „State“).
+   Offen mit Plan (Register): M1 die modellfreien Teile aus `audit`,
+   `decision_review`, `report_review` verschieben, bis `report_check` kein
+   `llm` lädt; M3 `report_check` teilen; M4 Sammler für `preflight_area`;
+   M5; die Vorlage nach Modell und Kriterium schneiden (I9 Stempelseite);
+   K9, I11, Rest von I12; restliche S-Zeilen und ihre Grep-Regeln.
+   Regelkonflikt gemeldet: eine neue bekannte Kern→Doktrin-Kreuzung
+   (`start_check`→`protocol_history`, `5760496`), obwohl die Liste „not
+   extended in passing“ sagt — bewusst, gleiche Doktrin wie die Zeile
+   davor.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
