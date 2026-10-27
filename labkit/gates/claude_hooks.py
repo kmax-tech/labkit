@@ -691,8 +691,10 @@ def undecided_blockers(
     PROTOCOL-*.md, inside REPO, and every area whose promises declare a
     changed path in their scope or whose code imports a changed shared
     helper (`scope_sha.areas_touched`, the stop's answer too). A
-    path outside every area, and an area without audits/, contribute
-    nothing: this holds the areas the session worked in, not the whole repo
+    path outside every area contributes nothing, and so does an area with
+    no audit record and no journal in the state checked or at HEAD — an
+    audits/ gone from the tree but committed is a gap: this holds the areas
+    the session worked in, not the whole repo
     (A4, 2026-10-17: a repo's old areas must not block every stop).
     STAGED (the pre-commit): the attempt journal and its records as the
     index holds them (`attempts.area_gaps`)."""

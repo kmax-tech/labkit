@@ -509,9 +509,11 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
     record upholds the new decision — the follow-up did not find the fault
     gone, so closing it is not settling it (the rule of
     `reviews.once_not_upheld`, for a verdict of the follow-up). A chain
-    that does not read is a BLOCKER. Empty when no record covers the run
-    (`analysis_audit_gap` names that); silent on whether a verdict is
-    right: that is the auditor's judgement. Why: the fixed-followup
+    that does not read is a BLOCKER. Without a covering record every
+    earlier decided BLOCKER is held — no follow-up saw it. Empty without an
+    answering run, or when the covering records or the area's records do
+    not read (`analysis_audit_gap` names those); silent on whether a verdict
+    is right: that is the auditor's judgement. Why: the fixed-followup
     pilots, 2026-10-26."""
     if ctx.run is None:
         return []
