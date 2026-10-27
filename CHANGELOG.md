@@ -233,6 +233,27 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A report that is a symbolic link is refused at its own path.**
+  `report_files` resolved a path before it tested `runs/`/`data/`, so
+  `REPORT.md` linked into `data/` carried a retyped result block past the
+  stop and the commit (audit 2026-10-27, A10). A report is now tested
+  where it lies (`repo.own_path`); one that is a symbolic link in the
+  gate's state — the tree at the stop, the index at the commit
+  (`repo.indexed_links`) — is refused alone, wherever it points, naming the
+  copy that replaces it (`rm REPORT.md && cp data/REPORT.md REPORT.md`,
+  plus `git add REPORT.md` at the commit); its other checks follow on the
+  copy (`report_check.link_gap`, `report_entry`). `repo.text_at` reads a
+  path's own entry: a link in the tree no longer points it at another
+  file's index entry. A link that cites no run (`CLAUDE.md -> AGENTS.md`)
+  is no report.
+- **`labkit-audit --report-review` exits with the state, not the draw.** A
+  clean `--again` draw on a state a claim holds exited 0 and read as done
+  while the commit stayed refused, and the help called the draw "a
+  measurement" though its claims hold the state (audit 2026-10-27, C6).
+  Every draw now prints its own claims and the state apart
+  (`report_review.state_after`, `state_line`); exit 0 the state is
+  released, 1 after a draw while a claim or only `--again` draws hold it, 2
+  no review. A clean extra draw still releases no claim of the same state.
 - **After `labkit-init exp NAME --explore` the next step is a command that
   runs.** It printed `labkit-init exp NAME`, which is refused without
   `--kind`, so the one step offered was a dead end (audit 2026-10-27, B4).
