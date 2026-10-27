@@ -293,10 +293,41 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     working tree is not followed, and a symbolic link git holds reads as
     the target it stores (`indexed_links` names those). The one reading of
     a file at a git state: the pre-commit's declaration, the citing report
-    as the index holds it, the protocol as HEAD last committed it."""
+    as the index holds it, the protocol as HEAD last committed it. Raises
+    UnicodeDecodeError naming `REV:path` when the bytes are not UTF-8."""
     rel = own_path(path).relative_to(repo.resolve()).as_posix()
-    r = git_run(["show", f"{rev}:{rel}"], repo)
+    try:
+        r = git_run(["show", f"{rev}:{rel}"], repo)
+    except UnicodeDecodeError as exc:
+        raise _not_text(exc, f"{rev}:{rel}") from exc
     return r.stdout if r.returncode == 0 else None
+
+
+def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
+    """PATH's own entry as a gate's state holds it: the index when STAGED
+    (`text_at`), else the working tree — in both a file's content, and for
+    a symbolic link the target it stores, not the file it points to; None
+    when that state does not hold the file. The one reading of a file in
+    "the tree or the index" (report-check, the handover, the hooks). Raises
+    UnicodeDecodeError naming PATH when the bytes are not UTF-8."""
+    if staged:
+        return text_at(repo, path)
+    if path.is_symlink():
+        return os.readlink(path)
+    if not path.is_file():
+        return None
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise _not_text(exc, str(path)) from exc
+
+
+def _not_text(exc: UnicodeDecodeError, where: str) -> UnicodeDecodeError:
+    """EXC with WHERE in its reason: still a UnicodeError for every caller
+    that catches one, and its sentence names the file that did not decode."""
+    return UnicodeDecodeError(
+        exc.encoding, exc.object, exc.start, exc.end, f"{exc.reason} in {where}"
+    )
 
 
 #: git's mode of a symbolic link (`git ls-files --stage`)

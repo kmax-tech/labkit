@@ -75,7 +75,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
-from labkit.formats import jsonl
+from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
@@ -372,17 +372,22 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
     return held, text
 
 
+def _tree_journal(area: Path) -> str:
+    """AREA's journal text in the working tree, "" without a journal.
+    Raises AttemptError when its bytes are not UTF-8."""
+    path = journal_path(area)
+    if not path.is_file():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeError as exc:
+        raise AttemptError(f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}") from exc
+
+
 def read_journal(area: Path) -> list[Attempt]:
     """The attempts AREA's journal holds; [] without a journal. Raises
     AttemptError on a journal that does not read."""
-    path = journal_path(area)
-    if not path.is_file():
-        return []
-    try:
-        text = path.read_text(encoding="utf-8")
-    except UnicodeError as exc:
-        raise AttemptError(f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}") from exc
-    return parse_journal(text, f"{DIR}/{JOURNAL}")
+    return parse_journal(_tree_journal(area), f"{DIR}/{JOURNAL}")
 
 
 def expected_evidence(area: Path) -> tuple[set[str], list[str]]:
@@ -430,12 +435,8 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         now = in_index or ""
         attempts = parse_journal(now, f":{DIR}/{JOURNAL}")
     else:
-        path = journal_path(area)
-        try:
-            now = path.read_text(encoding="utf-8") if path.is_file() else ""
-        except UnicodeError as exc:
-            raise AttemptError(f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}") from exc
-        attempts = read_journal(area)
+        now = _tree_journal(area)
+        attempts = parse_journal(now, f"{DIR}/{JOURNAL}")
         present = _paths_under(area / DIR)
     at_head, journal_at_head = _git_paths(area, "HEAD")
     found = gaps(
@@ -453,6 +454,30 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     except handovers.HandoverError as exc:
         raise AttemptError(str(exc)) from exc
     return Gaps([*found.blockers, *lost], found.notes)
+
+
+@dataclass(frozen=True)
+class Integrity:
+    """An area's audit evidence as one state holds it: the records that
+    read, and every problem that keeps the rest from counting."""
+
+    records: list[findings.Record]
+    problems: list[str]
+
+
+def area_integrity(area: Path, *, staged: bool = False) -> Integrity:
+    """AREA's readable audit records and its integrity problems in the tree
+    or, STAGED, the index: every record or attempt that is gone
+    (`area_gaps`), a journal that does not read, and each record that does
+    not read (`findings.record_status`) — a broken file hides no other
+    record. The one assembly the stop/commit, `labkit-audit --findings` and
+    the handover read. Raises RuntimeError when git fails."""
+    status = findings.record_status(area, staged=staged)
+    try:
+        gaps = area_gaps(area, staged=staged).blockers
+    except AttemptError as exc:
+        gaps = [str(exc)]
+    return Integrity(status.records, [*gaps, *status.errors])
 
 
 def _append(area: Path, event: dict[str, str]) -> None:

@@ -241,6 +241,28 @@ class HandoverRecovery(cases._Chain):
             )
         )
 
+    def test_an_undecodable_handover_record_is_a_sentence_in_tree_and_index(self):
+        # The pre-commit raised UnicodeDecodeError on it (audit 2026-10-27, H4).
+        broken = self.area / "audits" / "handovers" / "handover-broken.json"
+        broken.parent.mkdir(parents=True)
+        broken.write_bytes(b"\xff\xfe not json")
+        self.lab.git("add", "-A")
+        for staged in (False, True):
+            with self.subTest(staged=staged):
+                lines = claude_hooks.undecided_blockers(
+                    self.lab.root, [self.protocol], staged=staged
+                )
+                self.assertTrue(any(broken.name in line for line in lines), lines)
+
+    def test_a_staged_record_that_is_not_utf8_names_its_file(self):
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        record.path.write_bytes(b"\xff\xfe")
+        self.lab.git("add", "-A")
+        (error,) = findings.record_status(self.area, staged=True).errors
+        self.assertIn(record.path.name, error)
+
 
 if __name__ == "__main__":
     unittest.main()

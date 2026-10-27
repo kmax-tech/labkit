@@ -154,6 +154,7 @@ from labkit.formats.repo import (
     repo_protocols,
     SKIP_DIRS,
     shown,
+    state_text,
     status_entries,
     text_at,
 )
@@ -510,11 +511,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[str]:
     """PRED's BLOCKERs still `open`, each with the `--decide` that defers it
     to this protocol — they are decided before the replacement reports."""
     try:
-        held = [
-            u
-            for u in findings.open_findings(findings.area_records(pred.parent))
-            if u.grade == BLOCKER
-        ]
+        held = findings.open_blockers(findings.area_records(pred.parent))
     except findings.FindingsError as exc:
         return [f"the predecessor's audit records do not read: {exc}"]
     return [
@@ -1093,19 +1090,6 @@ def index_text(repo: Path, path: Path) -> str | None:
     the index does not hold it (untracked, or staged as deleted). PATH must
     lie under REPO (`repo.text_at`)."""
     return text_at(repo, path)
-
-
-def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
-    """PATH's own entry as the gate's state holds it: the index when STAGED
-    (`index_text`), else the working tree — in both a file's content, and
-    for a symbolic link the target it stores, not the file it points to (a
-    report is read through its link by `report_entry`); None when that
-    state does not hold the file."""
-    if staged:
-        return index_text(repo, path)
-    if path.is_symlink():
-        return os.readlink(path)
-    return path.read_text(encoding="utf-8") if path.is_file() else None
 
 
 def state_link(

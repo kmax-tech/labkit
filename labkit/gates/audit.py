@@ -1538,12 +1538,8 @@ def _newest_record(area: Path) -> Path:
 
 def _recovery_records(area: Path, record: Path | None) -> findings.RecordStatus:
     """Readable records needing decisions, plus explicit evidence/read errors."""
-    status = findings.record_status(area)
-    errors = list(status.errors)
-    try:
-        errors += attempts.area_gaps(area).blockers
-    except (attempts.AttemptError, UnicodeError) as exc:
-        errors.append(str(exc))
+    state = attempts.area_integrity(area)
+    errors = list(state.problems)
     if record is not None:
         try:
             records = [findings.read(record_path(area, record))]
@@ -1551,14 +1547,10 @@ def _recovery_records(area: Path, record: Path | None) -> findings.RecordStatus:
             records = []
             errors.append(str(exc))
     else:
-        opened = {
-            f.record.path
-            for f in findings.open_findings(status.records)
-            if f.grade == "BLOCKER"
-        }
-        records = [r for r in status.records if r.path in opened]
-        if status.records and status.records[-1] not in records:
-            records.append(status.records[-1])
+        opened = {u.record.path for u in findings.open_blockers(state.records)}
+        records = [r for r in state.records if r.path in opened]
+        if state.records and state.records[-1] not in records:
+            records.append(state.records[-1])
     return findings.RecordStatus(records, errors)
 
 
@@ -1577,19 +1569,18 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     for rec in records:
         for line in decision_lines(rec, area, "", protocol):
             print(line)
-        for n, finding in enumerate(rec.findings, 1):
-            if finding.grade == "BLOCKER" and finding.status == "open":
-                cmd = audit_command(
-                    area,
-                    "--decide",
-                    str(n),
-                    "deferred",
-                    "unresolved; handed over without a result",
-                    "--record",
-                    rec.path.name,
-                    protocol=protocol,
-                )
-                print(f"  if handing this unresolved finding over: {cmd}")
+        for u in findings.open_blockers([rec]):
+            cmd = audit_command(
+                area,
+                "--decide",
+                str(rec.findings.index(u.finding) + 1),
+                "deferred",
+                "unresolved; handed over without a result",
+                "--record",
+                rec.path.name,
+                protocol=protocol,
+            )
+            print(f"  if handing this unresolved finding over: {cmd}")
     selected = [protocol.resolve()] if protocol is not None else area_protocols(area)
     for chosen in selected:
         print(f"  unresolved exit (no model call): {handover_command(chosen)}")

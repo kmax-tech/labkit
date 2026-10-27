@@ -294,6 +294,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Bytes that are not UTF-8 are a sentence naming the file, in the tree
+  and in the index.** A staged handover record that did not decode made
+  the pre-commit's `claude-hook undecided` end in a `UnicodeDecodeError`
+  traceback; a staged findings record that did not decode was named
+  nowhere in its error. `repo.text_at` and `repo.state_text` (moved from
+  `report_check`, the one reading of "the tree or the index") now name the
+  file in the decode error; the handover reads its records through
+  `handovers.read_record`. One home each, where three to five callers
+  assembled them: `attempts.area_integrity` (an area's readable records
+  and every integrity problem — the stop/commit, `labkit-audit
+  --findings` and `protocol-fill --handover`) and `findings.open_blockers`
+  (the gate table in `findings.open_findings` names its callers);
+  `tests/test_one_home.py` holds a hand-filtered copy. Audit 2026-10-27
+  (second), H4 and table C: `docs/audit-2026-10-27-handover.md`.
 - **`labkit-init lab` stamps only templates the pin holds.** Run from a
   source checkout (an editable install), it pinned the release tag of the
   installed version while reading the checkout's templates: a lab stamped

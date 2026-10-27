@@ -934,9 +934,9 @@ def undecided_blockers(
     audits/ gone from the tree but committed is a gap: this holds the areas
     the session worked in, not the whole repo
     (A4, 2026-10-17: a repo's old areas must not block every stop).
-    STAGED (the pre-commit): the audit records with their decisions
-    (`findings.area_records`) and the attempt journal (`attempts.area_gaps`)
-    as the index holds them — what the commit carries, not the tree.
+    STAGED (the pre-commit): the audit records with their decisions and
+    the attempt journal as the index holds them (`attempts.area_integrity`)
+    — what the commit carries, not the tree.
     An exact unresolved handover may acknowledge integrity gaps for this
     stop/commit alone; it never dismisses readable open BLOCKERs. At commit,
     its audit evidence must also match the working tree, so new unstaged
@@ -947,22 +947,10 @@ def undecided_blockers(
         # Only an exact unresolved handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
         handed_over = handovers.valid(area, staged=staged)
-        try:
-            gaps = [
-                f"{shown}: {gap}"
-                for gap in attempts.area_gaps(area, staged=staged).blockers
-            ]
-        except attempts.AttemptError as exc:
-            gaps = [f"{shown}: {exc}"]
-        status = findings.record_status(area, staged=staged)
+        state = attempts.area_integrity(area, staged=staged)
         if not handed_over:
-            out += gaps
-            out += [f"{shown}: {error}" for error in status.errors]
-        out += [
-            f"{shown}: {u.line}"
-            for u in findings.open_findings(status.records)
-            if u.grade == "BLOCKER"
-        ]
+            out += [f"{shown}: {problem}" for problem in state.problems]
+        out += [f"{shown}: {u.line}" for u in findings.open_blockers(state.records)]
     return out
 
 

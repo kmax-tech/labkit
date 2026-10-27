@@ -22,7 +22,7 @@ from labkit.formats.repo import (
     git_root,
     indexed_blobs,
     indexed_protocols,
-    text_at,
+    state_text,
     under_root,
 )
 
@@ -122,6 +122,24 @@ def read_handover(path: Path, text: str | None = None) -> Handover:
         ],
         _strings(raw["problems"], "problems"),
     )
+
+
+def read_record(root: Path, path: Path, *, staged: bool = False) -> Handover:
+    """The handover record at PATH as the tree or, STAGED, the index holds
+    it. Raises HandoverError naming PATH when it is absent there, not UTF-8
+    or not a record."""
+    try:
+        text = state_text(root, path, staged=staged)
+    except UnicodeError as exc:
+        raise HandoverError(f"{path}: handover is not UTF-8 JSON: {exc}") from exc
+    if text is None:
+        raise HandoverError(f"{path}: no handover record in the {_state(staged)}")
+    return read_handover(path, text)
+
+
+def _state(staged: bool) -> str:
+    """The state a check reads, as its sentences name it."""
+    return "index" if staged else "tree"
 
 
 def _string(value: object, field: str) -> str:
@@ -235,8 +253,7 @@ def missing_evidence(
     root = git_root(area)
     missing: set[str] = set()
     for path in record_paths(area, staged=staged):
-        text = text_at(root, path) if staged and root is not None else None
-        record = read_handover(path, text)
+        record = read_record(root, path, staged=staged) if root else read_handover(path)
         missing.update(set(record.expected) - present)
     return [
         f"{findings.DIR}/{name}: recorded evidence loss — restore it or hand over unresolved"
@@ -263,29 +280,19 @@ def valid(area: Path, *, staged: bool = False) -> bool:
     )
     for path in record_paths(area, staged=staged):
         try:
-            raw = text_at(root, path) if staged else None
-            record = read_handover(path, raw)
+            record = read_record(root, path, staged=staged)
             protocol = root / record.protocol
             report = report_destination(root, root / record.report)
             if protocol not in protocols or protocol.is_symlink():
                 continue
-            protocol_text = (
-                text_at(root, protocol)
-                if staged
-                else protocol.read_text(encoding="utf-8")
-            )
-            report_value = (
-                text_at(root, report) if staged else report.read_text(encoding="utf-8")
-            )
+            protocol_text = state_text(root, protocol, staged=staged)
+            report_value = state_text(root, report, staged=staged)
             if (
                 protocol_text is None
                 or protocol_fingerprint(protocol_text) != record.protocol_sha
             ):
                 continue
-            texts = [
-                text_at(root, p) if staged else p.read_text(encoding="utf-8")
-                for p in protocols
-            ]
+            texts = [state_text(root, p, staged=staged) for p in protocols]
             if any(
                 t is None or protocol_block.declared_run(t) is not None for t in texts
             ):

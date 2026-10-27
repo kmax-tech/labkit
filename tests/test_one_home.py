@@ -78,6 +78,15 @@ RULES: list[tuple[str, str, set[str]]] = [
     # grading differently (audit 2026-10-23, C1); `findings.open_findings` holds
     # the walk and the table of the gates' rules
     ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
+    # the stop, the handover and --findings each filtered open findings to
+    # BLOCKERs themselves, one by status and grade (audit 2026-10-27, table C);
+    # `findings.open_blockers`
+    (
+        "open BLOCKERs filtered by hand",
+        r"\.grade == \"BLOCKER\" and \w+\.status == \"open\"|"
+        r"open_findings\([^\n]*\) if \w+\.grade ==",
+        {"findings"},
+    ),
     # about twenty call sites spelled a run's directory and its metrics file
     # by hand (audit 2026-10-23); `runs.run_path`, `runs_path`, `metrics_path`
     (
@@ -237,6 +246,7 @@ class OneHome(unittest.TestCase):
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.repeat_cost == "low":',
             "an open-finding walk": "for f in rec.open:",
+            "open BLOCKERs filtered by hand": 'held = [u for u in open_findings(rs) if u.grade == "BLOCKER"]',
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
             "the decided statuses spelled by hand": 'if f.carries and f.status in ("dismissed", "deferred"):',

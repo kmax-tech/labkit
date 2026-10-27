@@ -409,8 +409,14 @@ def open_findings(
                                                         for the frozen state, decided whole
         finalize                     every mode         its grade: BLOCKER blocks, WARNING warns, NOTE is told
         claude-hook stop / undecided every mode, the    a BLOCKER only — the hook says what the commit would be
-                                     areas the session  refused for and nags for nothing less
+                                     areas the session  refused for and nags for nothing less (`open_blockers`)
                                      touched
+        protocol-fill --handover     every mode         a BLOCKER refuses the handover: decided first, `deferred`
+                                                        when it stays unresolved (`open_blockers`)
+        labkit-audit --findings      every mode         a BLOCKER selects its record for the listing and prints
+                                                        its `deferred` command (`open_blockers`)
+        report-check, replacement    the predecessor's  a BLOCKER holds the replacement until it is decided
+                                     area               (`open_blockers`)
         audit_coverage (report-check) the covering record  any grade: the record is not decided
 
     The differences are intended. A change to one row is a change to that
@@ -424,6 +430,13 @@ def open_findings(
         if mode is None or r.mode == mode
         for f in r.open
     ]
+
+
+def open_blockers(records: Iterable[Record]) -> list[OpenFinding]:
+    """The open findings of RECORDS graded BLOCKER (`open_findings`): what
+    the stop and the commit hold, what a handover owes decided first, what
+    `labkit-audit --findings` leads with."""
+    return [u for u in open_findings(records) if u.grade == "BLOCKER"]
 
 
 def limit_label(record: Record, n: int) -> str:

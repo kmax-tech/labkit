@@ -1000,10 +1000,8 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             raise ValueError(
                 f"{report}: already exists — review its contents, then add --force to replace it with an unresolved report"
             )
-        status = findings.record_status(area)
-        opened = [
-            u for u in findings.open_findings(status.records) if u.grade == "BLOCKER"
-        ]
+        state = attempts.area_integrity(area)
+        opened = findings.open_blockers(state.records)
         if opened:
             raise ValueError(
                 "open BLOCKERs must be decided explicitly first: "
@@ -1021,10 +1019,6 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
                     f"{other}: declares a result; an area with lost audit evidence cannot also release another protocol's result"
                 )
         expected, errors = attempts.expected_evidence(area)
-        try:
-            gaps = attempts.area_gaps(area).blockers
-        except (attempts.AttemptError, UnicodeError) as exc:
-            gaps = [str(exc)]
         path = handovers.new_path(area)
         record = handovers.Handover(
             handovers.SCHEMA,
@@ -1035,7 +1029,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             args.tried.strip(),
             handovers.evidence(area, omit=path),
             sorted(expected),
-            list(dict.fromkeys([*status.errors, *errors, *gaps])),
+            list(dict.fromkeys([*state.problems, *errors])),
         )
         rendered = handovers.report_text(record, root, path)
         handovers.write_record(path, record)
