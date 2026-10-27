@@ -567,6 +567,36 @@ class Exp(unittest.TestCase):
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
             self.assertIn(owed, low, low)
 
+    def test_the_next_steps_name_only_what_the_skeleton_has(self) -> None:
+        """A high computation was told to fill `00_prepare.py` and run
+        `--show 3` and `--probe 4`, which its skeleton lacks, and no area
+        with a model but without the prompt skeleton heard of the data
+        profile it owes (audit 2026-10-27, C2 and C4). The steps name a
+        script only when the skeleton stamps it, a probe only when the lane
+        allows one, the data profile whenever a model is named; the detached
+        command names its script from the repo root, where `runlog start`
+        runs it (C3)."""
+        rel = Path("experiments/01-foo")
+        for kind in ("compute", "fit", "apply"):
+            for cost in ("low", "high"):
+                for model in (False, True):
+                    text = scaffold.next_steps(rel, "foo", "01", cost, kind, model)
+                    sk = standard_contract.skeleton(cost, kind, model)
+                    stamped = {dest for _, dest in sk.scripts}
+                    for name in re.findall(r"scripts/(\d\d_\w+\.py)", text):
+                        self.assertIn(name, stamped, text)
+                    owes_probe = sk.probe and standard_contract.lane(cost).probe_allowed
+                    self.assertEqual("--probe" in text, owes_probe, text)
+                    if sk is standard_contract.COMPUTE:
+                        self.assertNotIn("--show", text)
+                    self.assertEqual("data profile" in text, model, text)
+                    if not standard_contract.lane(cost).foreground:
+                        self.assertIn(
+                            "runlog start experiments/01-foo -- .venv/bin/python "
+                            "experiments/01-foo/scripts/01_measure.py",
+                            text,
+                        )
+
     def test_a_computation_is_told_to_check_its_kind_first(self) -> None:
         """An agent told to train a random forest stamped `--kind compute` and
         read "no criterion" (docs/notes/2026-10-26-kind-choice.md). A

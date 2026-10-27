@@ -17,15 +17,18 @@ copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
 (the pilot part by default; `--report` adds the † fields, now or when the run
 graduates; `--repeat-cost low` stamps the low cut instead), the script
-skeletons (`00_prepare`, `01_measure`, `02_analyze` — with `--model` the
-prompt skeleton, without it the estimator skeleton; at low repeat cost without a
-model the counting skeleton), the area README and the area's test under
-`tests/`. `--explore` stamps only `experiments/explore/<name>.py`, the entry
-before an area exists; the plain command later moves it into the area.
-`--change-kind` restamps an area under another kind before its first
-measurement (`change_kind`).
+skeletons the kind calls for (`standard_contract.skeleton`: a computation
+the compute skeleton, `01_measure` and `02_analyze`; a fit, and an apply
+without `--model`, the estimator skeleton; an apply with `--model` the
+prompt skeleton — both with `00_prepare` before them), the area README and
+the area's test under `tests/`. `--explore` stamps only
+`experiments/explore/<name>.py`, the entry before an area exists; the plain
+command later moves it into the area. `--change-kind` restamps an area under
+another kind before its first measurement (`change_kind`).
 
-Every file is written only if absent: rerunning never overwrites. The pin
+Every file is written only if absent: rerunning never overwrites — except
+`--change-kind`, which replaces or removes the old kind's stamp files and
+rewrites the protocol, and is refused when that would lose an edit. The pin
 names the release tag `v<version>` of the installed labkit; until that tag is
 pushed the pin does not install, so `--labkit-ref` names another ref (a pushed
 commit) for development and tests.
@@ -242,12 +245,25 @@ def area_slug(name: str) -> str:
     return slug
 
 
-def area_readme(nn: str, slug: str, skeleton: bool) -> str:
+def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool) -> str:
     """The area README: the one question, the route through the area, the contract on one page.
 
-    A computation (`skeleton=False`: repeat cost low without a model) carries no blank:
+    A computation (SK the compute skeleton, kind compute at every tier) carries no blank:
     its question and contract live in the protocol, and a README placeholder
-    was the one gate line left in the cloud probe (draw 11, 2026-10-13)."""
+    was the one gate line left in the cloud probe (draw 11, 2026-10-13).
+    PROBE: the lane allows a `--probe` before the run (`Lane.probe_allowed`);
+    the State list names it only then, and parser cases only for the prompt
+    skeleton, the one with a parser."""
+    skeleton = sk is not standard_contract.COMPUTE
+    test = f"`.venv/bin/python -m pytest tests/test_{nn}_{slug.replace('-', '_')}.py`"
+    if not skeleton:
+        state = f"the area test green ({test})"
+    elif sk is standard_contract.MODEL:
+        state = "parser cases in the test"
+    else:
+        state = f"the resolution check green ({test})"
+    if probe and sk.probe:
+        state = "`--probe` read, " + state
     question = (
         "**The one question.** <one sentence — the same question as in the protocol's\n"
         'Intent; if it needs an "and", it is two experiments>'
@@ -265,8 +281,8 @@ def area_readme(nn: str, slug: str, skeleton: bool) -> str:
         if skeleton
         else "**What `evaluate_rows()` returns.** The number under `METRIC_KEY` of\n"
         "`scripts/01_measure.py`; a computation registers no ids. The formula lives once, there;\n"
-        "`02_analyze.py --check` and the test call it, and `finalize` holds the protocol's\n"
-        "Answer line to the run's `metrics.json`."
+        "`02_analyze.py --check` and the test call it, and `--check` holds the protocol's\n"
+        "Recorded results line to the run's `metrics.json`."
     )
     recheck = "`02_analyze.py --check`"  # the one public recheck of every skeleton
     return f"""# Experiment {nn}: {slug}
@@ -295,7 +311,7 @@ through `runlog` · `finalize` · `protocol-fill --from-run` writes the number b
 ## State
 
 - [ ] Registration written in the protocol (**before** the first run)
-{"- [ ] `--probe` read, parser cases in the test" if skeleton else "- [ ] the area test green (`.venv/bin/python -m pytest tests/test_" + nn + "_" + slug.replace("-", "_") + ".py`)"}
+- [ ] {state}
 - [ ] Run, `protocol-fill --from-run`, `finalize` green
 """
 
@@ -456,7 +472,9 @@ def stamp_area(
         write_if_absent(area / d / ".gitkeep", "", log)
     write_if_absent(
         area / "README.md",
-        area_readme(nn, slug, skeleton=skeleton is not standard_contract.COMPUTE),
+        area_readme(
+            nn, slug, skeleton, standard_contract.lane(repeat_cost).probe_allowed
+        ),
         log,
     )
     pre = experiments / "explore" / f"{slug}.py"
@@ -818,7 +836,7 @@ def stamp_files(
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     out = script_stamps(root, area, nn, slug, skeleton, model)
     out[area / "README.md"] = area_readme(
-        nn, slug, skeleton=skeleton is not standard_contract.COMPUTE
+        nn, slug, skeleton, standard_contract.lane(repeat_cost).probe_allowed
     )
     return out
 
@@ -1015,11 +1033,44 @@ def check_stamped_head(
         raise ValueError("labkit-init: --model asked, the stamped head has no [model]")
 
 
+def step_fields(sk: standard_contract.Skeleton, kind: str, model: bool) -> str:
+    """The protocol fields the first next step names after question and unit:
+    the bar by KIND (`standard_contract.has_bar`), the prompt and the data
+    profile whenever a model is named — the low cut's marks
+    (`protocol_check.in_cut`). Only the prompt skeleton's `00_prepare.py
+    --audit` prints a data-profile aid; elsewhere the step names none."""
+    if not standard_contract.has_bar(kind):
+        bar = (
+            "data, exclusions — no criterion, no promise table: a computation "
+            "judges no prediction, so it has no bar to clear"
+        )
+    elif sk is standard_contract.MODEL:
+        bar = "criterion, admissibility condition, prompt, null condition"
+    else:
+        bar = (
+            f"criterion, admissibility condition, null condition — kind = {kind!r}: "
+            "the number judges a prediction, so it has a bar and its reference"
+        )
+    if sk is standard_contract.MODEL:
+        return bar + (
+            ", data profile — your judgement of the data before the run, "
+            "`scripts/00_prepare.py --audit` prints an aid"
+        )
+    if model:
+        return bar + (
+            "; a model is named: also prompt and data profile — your judgement, "
+            "before the run, whether a surface feature could answer the question "
+            "without the model"
+        )
+    return bar
+
+
 def next_steps(
     rel: Path, slug: str, nn: str, repeat_cost: str | None, kind: str, model: bool
 ) -> str:
     """What to do after `exp`, in order — the lane of AGENTS.md for this
-    area, read off the contract: the preflight and its audit stand where
+    area, read off the contract: the fields by kind and model, the files
+    and flags by the skeleton, the preflight and its audit where
     the lane owes the freeze, the analysis audit where the lane owes it,
     the adoption at the end of every lane. Until 2026-10-19 the printed
     steps at high repeat cost skipped the preflight, both audits and the
@@ -1030,41 +1081,51 @@ def next_steps(
     protocol = f"PROTOCOL-{slug}.md"
     audit = f"labkit-audit {rel} --mode"
     code_check = f"after every code change `code-check {rel}`"
+    # the files and flags follow the skeleton: a computation has no
+    # 00_prepare.py and no --show/--probe
+    fields = step_fields(sk, kind, model)
     if ln.cut == standard_contract.LOW_CUT:
         title = (
             f'repeat_cost = "{ln.repeat_cost}" — no freeze, no audit before the run, '
             "the run is the instrument check"
         )
         if sk is standard_contract.COMPUTE:
-            fields = (
-                "data, exclusions — no criterion, no promise table: a computation "
-                "judges no prediction, so it has no bar to clear"
-            )
             fill = "expected_ids(), rows(), evaluate_rows()"
         elif sk is standard_contract.MODEL:
-            fields = "criterion, admissibility condition, prompt, null condition, data profile"
             fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
         else:
-            fields = (
-                f"criterion, admissibility condition, null condition — kind = {kind!r}: "
-                "the number judges a prediction, so it has a bar and its reference"
-            )
             fill = "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
         steps = [
             f"{protocol}: fill the low cut — `type` in the head, then question, unit,\n"
             f"     {fields}; `protocol-check --contract` names the labels.",
             f"scripts/01_measure.py: {fill}; {code_check}.",
         ]
+    elif sk is standard_contract.COMPUTE:
+        test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
+        title = (
+            f"lane {ln.repeat_cost}: light pilot, heavy report — a computation, "
+            "the run is the instrument check"
+        )
+        steps = [
+            f"{protocol}: fill the pilot part (head: type, repeat_cost; question, "
+            f"unit, {fields}); `protocol-check --contract` names the labels.",
+            f"scripts/01_measure.py: expected_ids(), rows(), evaluate_rows(); {code_check}.",
+            f"{test}: the counting function at two edges — no criterion, so no "
+            "resolution check.",
+        ]
     else:
         test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
         estimator = sk is standard_contract.ESTIMATOR
         title = f"lane {ln.repeat_cost}: light pilot, heavy report" + (
-            " — the instrument is an estimator, no model call" if estimator else ""
+            " — the instrument is an estimator" + ("" if model else ", no model call")
+            if estimator
+            else ""
         )
         steps = [
-            f"{protocol}: fill the pilot part (head: type, repeat_cost; question, success, "
-            f"admissibility, {'the estimator in Model / tool' if estimator else 'prompt'}, "
-            "the null condition).",
+            f"{protocol}: fill the pilot part (head: type, repeat_cost; question, "
+            f"{fields}"
+            + ("; the estimator in Model / tool" if estimator else "")
+            + "); `protocol-check --contract` names the labels.",
             "scripts/00_prepare.py: raw -> prepared"
             + (", gold null for the unlabelled split" if estimator else "")
             + f"   ({rel}/scripts)",
@@ -1099,9 +1160,12 @@ def next_steps(
             "the instrument check too."
         )
     else:
+        # runlog start runs the command in the caller's directory: both paths
+        # from the repo root, where every other printed command runs
         steps.append(
-            "git add + commit, THEN scripts/01_measure.py, detached: "
-            f"`runlog start {rel} -- .venv/bin/python scripts/01_measure.py` "
+            "git add + commit, THEN scripts/01_measure.py, detached, from the repo root: "
+            f"`.venv/bin/runlog start {rel} -- .venv/bin/python "
+            f"{(rel / 'scripts' / '01_measure.py').as_posix()}` "
             f"(untracked code is in no diff); running processes: .venv/bin/runlog {rel}."
         )
     if kind == standard_contract.COMPUTE_KIND:
