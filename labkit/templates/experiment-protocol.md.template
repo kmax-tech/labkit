@@ -92,7 +92,7 @@
 ## Setup
 
 - **Data / scope:** <!-- l --> <source, N, producer script; pilot subset first>
-- **Data profile:** <!-- lm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
+- **Data profile:** <!-- lm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the prompt skeleton's `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
 - **Model / tool:** <!-- lb --> <the instrument in one sentence: what the model
   does here and what it sees — its alias stands in the head's `[model]`, never
   hardcode endpoint or ID; two arms (profiles) compared? say what `before` and

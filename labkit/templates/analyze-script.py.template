@@ -65,7 +65,7 @@ def draws() -> list[str]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--check", action="store_true",
-                    help="pin OUT to the newest run, recompute, hold NOTE to it")
+                    help="pin OUT to the answering run, recompute, hold NOTE to it")
     ap.add_argument("--draws", action="store_true",
                     help="the kept run and its repeats: c1 per draw, range, flipped items")
     args = ap.parse_args()

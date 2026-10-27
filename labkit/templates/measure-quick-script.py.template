@@ -2,11 +2,15 @@
 """<name>: one question, one number — kept through runlog, rechecked from its rows.
 
     ../../.venv/bin/python scripts/01_measure.py            # count, keep, print the number + run_id
+    ../../.venv/bin/runlog start . -- ../../.venv/bin/python scripts/01_measure.py   # the same, detached (high repeat cost)
     ../../.venv/bin/python scripts/02_analyze.py --check    # recompute from the kept rows; hold metrics.json and the protocol to it
 
-repeat_cost = "low" (the protocol head says so) — no freeze, no audit before the run,
-the run itself is the instrument check; the one analysis audit comes when
-the number is promoted or steers a decision (LAB-017 The number of audits follows the cost tier). The number is produced here, never
+The protocol head's repeat_cost sets the lane (LAB-017 The number of audits follows the cost tier):
+at "low" no freeze and no audit before the run, the one analysis audit when
+the number is promoted or steers a decision; at "high" `preflight`, the
+preflight audit and the freeze before the run, which starts detached, and
+the analysis audit after it. At both the run itself is the instrument check:
+this skeleton has no --show and no --probe. The number is produced here, never
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
 `scripts/02_analyze.py --check` (stamped beside this script) holds that line to the run.
 

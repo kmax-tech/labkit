@@ -48,7 +48,7 @@ seconds is a fit.
    the area); after it, the measured protocol stays and a new one registers
    the other kind.
 2. Write the registration: `protocol-fill <PROTOCOL> --list` names every
-   open field, the TOML head's `type` and, with a model, each promise's
+   open field, the TOML head's `type` and, for a fit or an apply, each promise's
    `<id> sentence` first (`repeat_cost = "low"` is stamped); the fields
    written after the run stand apart at the end — leave them now.
    A computation owes question · data · exclusions · unit; a fit or an apply also
@@ -62,14 +62,16 @@ seconds is a fit.
    "C1 sentence=<value>" "<Label>=<value>" ...` (one quoted word per
    field); the prompt block from
    the script's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
-3. Fill the skeleton (with a model: read `--show 2`), run `code-check <area>`
-   after every code change.
+3. Fill the skeleton (the prompt and the estimator skeleton: read `--show 2`
+   first; a computation's has no `--show`), run `code-check <area>` after
+   every code change.
    With a model, before the run: judge the data — could a surface
    feature answer the question without the model? — and write the
-   judgement into the protocol's Data profile field. `00_prepare.py
-   --audit` prints an aid (items and words per class, and the cue words
-   you list in `MARKERS`, optional); its counts are a hint, not proof
-   either way. Running `--audit` is not the judgement.
+   judgement into the protocol's Data profile field. The prompt
+   skeleton's `00_prepare.py --audit` prints an aid (items and words per
+   class, and the cue words you list in `MARKERS`, optional); the other
+   skeletons stamp none. Its counts are a hint, not proof either way.
+   Running `--audit` is not the judgement.
 4. Commit, then the run — in the foreground; it is the instrument check too.
 5. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
    analysis`) and decide its findings — it lists each recorded one with
@@ -171,22 +173,30 @@ fields, no reading of labkit's source.
 
 1. `labkit-init exp <name> --repeat-cost high --kind compute|fit|apply` —
    never `mkdir`; the kind is decided as on the low lane, and without
-   `--kind` the command stamps nothing. Stamps the protocol and the script
-   skeletons (`scripts/00_prepare.py · 01_measure.py · 02_analyze.py`).
+   `--kind` the command stamps nothing. Stamps the protocol and the
+   skeleton the kind calls for (`protocol-check --contract` names its
+   scripts): `scripts/00_prepare.py · 01_measure.py · 02_analyze.py` for a
+   fit or an apply; a computation's has no `00_prepare.py`, no `--show` and
+   no `--probe` — its run is the instrument check, so steps 3 and 5 do not
+   apply to it.
 2. Read `protocol-check --contract`, then fill the TOML head (`type`, `repeat_cost`)
-   and the Intent before the first call: hypothesis · success criterion ·
-   admissibility condition, the prompt verbatim; an id `[C]/[A]/[B]` on every
+   and the Intent before the first call: the hypothesis; for a fit or an
+   apply also success criterion · admissibility condition · null condition;
+   with a model the prompt verbatim and the data profile (judged as in
+   step 3 of the low lane); an id `[C]/[A]/[B]` on every
    promise to the code (LAB-003 No run without an intent paragraph,
    LAB-004 Identifiers make the intent addressable).
-3. `01_measure.py --show 3` — render check: read prompts on real data, no
-   call (LAB-007 Render check before the instrument check).
+3. `01_measure.py --show 3` — render check: read prompts (the estimator:
+   config and feature rows) on real data, no call (LAB-007 Render check
+   before the instrument check).
 4. After every code change `code-check <area>`
    (LAB-018 Routine check after every implementation).
 5. `--probe` — instrument check in the real pipeline; it may change the
    instrument, never the hypothesis or the criteria; its numbers are never
    reported (LAB-008 Instrument check before freezing).
 6. Resolution check as a test: fill `tests/test_<NN>_<name>.py`
-   (LAB-016 Resolution check before freezing).
+   (LAB-016 Resolution check before freezing); a computation has no
+   criterion to resolve, its test holds the counting function.
 7. `preflight <area>`, then the preflight audit (`labkit-audit <area> --mode
    preflight`); decide the findings, the record's file name into the head
    (`preflight_audit = "<minute>-preflight.toml"`, LAB-015 Preflight audit
@@ -198,7 +208,9 @@ fields, no reading of labkit's source.
    `pgrep` loop, which finds its own command line and never ends.
 8. `labkit-init exp <name> --report`, fill the † fields, only now
    `frozen = true` (LAB-011 Required-field check).
-9. Commit first, then pilot → run, always through `runlog`; resume = the same
+9. Commit first, then pilot → run, always through `runlog`, the run
+   detached from the repo root: `.venv/bin/runlog start <area> --
+   .venv/bin/python <area>/scripts/01_measure.py`; resume = the same
    command; state: `.venv/bin/runlog <area>` (LAB-010 Commit before the run,
    LAB-043 Runs go through `runlog`).
 10. `finalize <area>`, then the analysis audit (`labkit-audit <area> --mode
