@@ -113,6 +113,15 @@ it the stop holds once per turn and says so: a check that cannot run blocks
 a `--check` sleeping 30 s under a 3-s budget held after 3.01 s, the child
 gone.
 
+**A linked report at post-change (2026-10-27, after A10).** Since 2.8 the
+stop and the commit test a report at its own path and refuse one that is a
+symbolic link. post-change still resolved every path first, so a
+`REPORT.md` linking into `data/` was read where it points — a skipped
+directory — and told nothing (through the entry point: `post-change rc=0
+context='<no context>'`). It now reads the reports as the repo names them
+(`repo.own_path`) and gives a link the refusal and its way out
+(`report_check.link_gap`), where the agent writes it.
+
 ## `report_check`: the gate after the last step
 
 **Trigger.** `finalize` holds the run before the number is written back;

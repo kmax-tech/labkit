@@ -562,6 +562,25 @@ class PostChange(unittest.TestCase):
         (self.root / "REPORT.md").write_text(f"# Report\n\n{block}\n", encoding="utf-8")
         self.assertIn("--report-review", _run(claude_hooks.post_change, ev)[1])
 
+    def test_a_report_that_is_a_link_is_told_its_refusal_where_it_is_written(self):
+        """post-change resolved every path, so a REPORT.md linking to a file
+        under data/ was read where it points — a skipped directory — and
+        got no word, while the stop and the commit refuse it. It hears the
+        refusal and its way out now. The twin: the regular report above
+        gets the review command."""
+        ev = self._marked_report()
+        report = self.root / "REPORT.md"
+        (self.root / "data").mkdir()
+        target = self.root / "data" / "report.md"
+        report.rename(target)
+        report.symlink_to(Path("data") / "report.md")
+        rc, out, _ = _run(claude_hooks.post_change, ev)
+        self.assertEqual(rc, 0)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("REPORT.md: a symbolic link to data/report.md", ctx)
+        self.assertIn("rm REPORT.md && cp data/report.md REPORT.md", ctx)
+        self.assertNotIn("--report-review", ctx)
+
     def test_a_report_citing_a_run_unmarked_gets_no_review_command(self):
         ev = self._marked_report()
         (self.root / "REPORT.md").write_text(

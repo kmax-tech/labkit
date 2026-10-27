@@ -50,7 +50,10 @@ post-change
     notes-check. A changed Markdown report that discusses a run (a
     discussion block, `report_blocks.discussions`) gets the report review's command
     (`report_review.review_hint`) — a hint; the review is one model call
-    and the agent's to start. A per-session cache of content hashes keeps a
+    and the agent's to start. A report is read at its own path
+    (`repo.own_path`), as the stop and the commit read it: one that is a
+    symbolic link is told their refusal and its way out
+    (`report_check.link_gap`). A per-session cache of content hashes keeps a
     file that was already checked or hinted at this content from being
     reported after every later command.
 
@@ -158,6 +161,7 @@ from labkit.formats.repo import (
     git_root,
     head_before,
     head_sha,
+    own_path,
     paths_committed_since,
     shown,
     status_entries,
@@ -436,9 +440,16 @@ def _load_cache(p: Path | None) -> dict:
 
 
 def _report_hint(text: str, path: Path, repo: Path) -> str | None:
-    """The review's hint for the report at PATH (`review_hint`), or the
-    sentence of a block in it that does not read — report-check blocks on
-    it at the stop and the commit; the hook says it now."""
+    """The review's hint for the report at PATH, its own path
+    (`repo.own_path`) — `review_hint` —, or what report-check refuses at
+    the stop and the commit, said now: a report that is a symbolic link
+    (`report_check.link_gap`, with its way out), a block in it that does
+    not read."""
+    link_target = report_check.state_link(repo, path, staged=False)
+    if link_target is not None:
+        # named where it lies: `shown` resolves, which follows the link
+        rel = path.relative_to(repo.resolve()).as_posix()
+        return report_check.link_gap(rel, path, link_target, repo, staged=False)
     try:
         return review_hint(text, path, repo)
     except ReportBlockError as exc:
@@ -458,8 +469,15 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     if fp:
         candidates.append(Path(fp))
     seen: set[Path] = set()
+    # the reports as the repo names them, a link kept where it lies
+    # (`repo.own_path`), as the stop and the commit hold them: resolved, a
+    # linked report would be read where it points
+    named: list[Path] = []
     targets: list[tuple[str, Path]] = []
     for c in candidates:
+        own = own_path(c if c.is_absolute() else repo / c)
+        if own not in named:
+            named.append(own)
         c = c.resolve()
         if c in seen or not c.is_file():
             continue
@@ -469,7 +487,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
             targets.append((kind, c))
     marked = [
         (path, hint)
-        for path, text in report_check.report_files(sorted(seen), repo, staged=False)
+        for path, text in report_check.report_files(named, repo, staged=False)
         if (hint := _report_hint(text, path, repo))
     ]
     if not targets and not marked:
