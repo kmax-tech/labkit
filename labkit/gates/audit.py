@@ -70,7 +70,6 @@ import json
 import ast
 import os
 import re
-import shlex
 import sys
 import time
 from dataclasses import dataclass
@@ -101,6 +100,7 @@ from labkit.formats.repo import (
     area_path,
     area_protocols,
     audit_command,
+    decide_command,
     handover_command,
     layout_root,
     no_such_area,
@@ -1433,8 +1433,10 @@ def decision_lines(
             )
             out.append(f"  {n} · {text}")
             out.append(
-                f"      {audit_command(area, protocol=protocol, base=here)} --decide {n} "
-                f'STATUS "REASON" --record {shlex.quote(where)}'
+                "      "
+                + decide_command(
+                    area, n, "STATUS", "REASON", where, protocol=protocol, base=here
+                )
             )
             if f.grade == "BLOCKER":
                 out.append(
@@ -1607,13 +1609,11 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
         "it records the loss and approves no result):"
     )
     for u in blockers:
-        cmd = audit_command(
+        cmd = decide_command(
             area,
-            "--decide",
-            str(u.record.findings.index(u.finding) + 1),
+            u.record.findings.index(u.finding) + 1,
             "deferred",
             "<why it stays unresolved>",
-            "--record",
             u.record.path.name,
             protocol=protocol,
         )

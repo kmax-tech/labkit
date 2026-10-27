@@ -1,4 +1,4 @@
-# Recovery guidance and a terminal handover with damaged evidence
+# Recovery guidance and a handover with damaged evidence
 
 *2026-10-27. Sources: the instruction review, `tests/test_counter_cases.py`,
 and the recovery cases in `tests/test_handovers.py`.*

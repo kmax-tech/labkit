@@ -978,6 +978,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One name for the handover, one builder for a printed decision.** The
+  same step was called handover, terminal handover, unresolved report and
+  unresolved exit; it is a handover everywhere now, with an entry in the
+  README's terms and one line on which block a report gets (`--into` a
+  declared number, `--discuss` a run looked at, `--handover` an end
+  without a result); `--why` says what it holds for each. Every printed
+  `labkit-audit … --decide` line comes from `repo.decide_command` — four
+  sites built it their own way, one without `--protocol` in a
+  multi-protocol predecessor area — and `tests/test_one_home.py` holds a
+  hand-built one. Audit 2026-10-27 (second), B and table C.
 - **One experiment workflow in the stamped agent instructions.** The
   entry guide separates `kind`, `repeat_cost` and `type`, then gives a
   shared sequence with the additional high-cost checks at their actual

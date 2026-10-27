@@ -266,7 +266,7 @@ an exploration's run is looked at.
 
 ## 9. The gate — at the stop and the commit
 
-For an unresolved terminal handover, use `labkit-audit <AREA> --findings`
+To end a protocol without a result (a handover), use `labkit-audit <AREA> --findings`
 first: it reads all open BLOCKER records and evidence errors without a
 model call and prints complete commands. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>

@@ -163,6 +163,9 @@ discussion block, `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what
 refused the adoption, what you found>" --into REPORT.md`: its head holds
 the protocol, the run and the why as TOML, its line
 (`Run <run_id> — discussed, not reported: <why>`) is written from them.
+Which block a report gets: the number a protocol declares → `--into`; a
+run looked at but not reported → `--discuss`; a protocol that ends
+without a result → `--handover` (below).
 
 ### When a check stops you
 
@@ -286,6 +289,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **repeat cost** | `repeat_cost` in the protocol head, `low` or `high`: the price of repeating the run. It selects the lane — what the area owes before and after the run (the table above, `standard_contract.lane`). |
 | **probe** | Instrument check before a measurement at high repeat cost; its number is not reported. |
 | **measurement** | Run of the registered question, eligible for result release after the required checks. |
+| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open or deferred) and writes its handover block into the report. The stop and the commit then accept the loss it records, never an open BLOCKER; audits and adoption stay refused until the evidence is restored. |
 | **run metadata** | Start and completion records: `config.json` and `completion.json`. |
 | **run index** | Searchable overview in `runs.tsv`. |
 | **metrics** | Measured values recorded in `metrics.json`. |

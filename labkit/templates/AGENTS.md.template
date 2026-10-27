@@ -215,7 +215,7 @@ unadopted numbers as the answer in REPORT.md.
 ## When you are stuck — both repeat costs
 
 Name the cause before changing anything. A refusal is a finding about the
-work; an honest unresolved report is an admissible end. `labkit-audit`
+work; an honest handover without a result is an admissible end. `labkit-audit`
 prints these same recovery choices with each decision list:
 
 - **an implementation error** — fix the code, measure again under the

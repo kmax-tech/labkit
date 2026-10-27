@@ -138,6 +138,7 @@ from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     adopt_command,
     audit_command,
+    decide_command,
     area_path,
     area_protocols,
     choose_protocol,
@@ -516,9 +517,16 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[str]:
         return [f"the predecessor's audit records do not read: {exc}"]
     return [
         f"its predecessor's BLOCKER is still open — {u.line}; decide it first: "
-        f"`{audit_command(pred.parent)} --decide "
-        f"{u.record.findings.index(u.finding) + 1} deferred "
-        f'"replaced by {ctx.head.id}: <why>" --record {u.record.path.name}`'
+        "`"
+        + decide_command(
+            pred.parent,
+            u.record.findings.index(u.finding) + 1,
+            "deferred",
+            f"replaced by {ctx.head.id}: <why>",
+            u.record.path.name,
+            protocol=pred,
+        )
+        + "`"
         for u in held
     ]
 
@@ -693,8 +701,17 @@ def limit_gaps(ctx: Checked) -> list[str]:
             if not f.effect:
                 gaps.append(
                     f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its effect "
-                    f'on the verdicts — `{audit_command(ctx.area, protocol=ctx.protocol)} --decide {n} accepted "REASON" '
-                    f'--effect stands|"<ID> not assessable" --record {r.path.name}`'
+                    "on the verdicts — `"
+                    + decide_command(
+                        ctx.area,
+                        n,
+                        "accepted",
+                        "REASON",
+                        r.path.name,
+                        effect='stands|"<ID> not assessable"',
+                        protocol=ctx.protocol,
+                    )
+                    + "`"
                 )
     if ctx.declared is None:
         return gaps  # nothing reported: the result section is not owed yet

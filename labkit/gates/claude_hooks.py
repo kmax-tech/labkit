@@ -959,7 +959,7 @@ def undecided_blockers(
     out = []
     for area in areas_touched(paths, repo):
         shown = area.relative_to(repo.resolve()).as_posix()
-        # Only an exact unresolved handover can acknowledge integrity gaps.
+        # Only a current handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
         handed_over = handovers.acknowledgement(area, staged=staged)
         state = attempts.area_integrity(area, staged=staged)

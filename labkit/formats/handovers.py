@@ -1,4 +1,5 @@
-"""Write and validate a terminal handover, never an approval of evidence.
+"""Write and validate a handover — a protocol's end without a result —,
+never an approval of evidence.
 
 Each immutable JSON record in audits/handovers binds one unresolved end:
 its protocol without a result, the findings left open or deferred, and

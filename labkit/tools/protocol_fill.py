@@ -980,7 +980,7 @@ def without_result(text: str) -> str:
 
 
 def _handover_file(args: argparse.Namespace, text: str) -> int:
-    """Write a terminal handover without changing any audit or run evidence.
+    """Write a handover without changing any audit or run evidence.
 
     Refuse open readable BLOCKERs and another protocol of the area that
     declares a result before writing. Bind the available audit bytes, the
@@ -1041,7 +1041,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         console.refuse("protocol-fill", str(exc))
         return 2
     print(
-        f"unresolved handover: its block in {shown(report, Path.cwd())}; "
+        f"handover: its block in {shown(report, Path.cwd())}; "
         f"record: {shown(path, Path.cwd())}"
     )
     print(
@@ -1132,7 +1132,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--why",
         default=None,
-        help="with --discuss or --handover: what blocks — one line",
+        help="one line: with --discuss what refused the adoption and what you "
+        "found; with --handover what blocks, naming the protocol, no run ids",
     )
     ap.add_argument(
         "--handover",

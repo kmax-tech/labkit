@@ -118,7 +118,8 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
 
 
 def handover_command(protocol: Path, report: str = "REPORT.md") -> str:
-    """The explicit unresolved-handover command; it runs no model."""
+    """The `protocol-fill … --handover` line for PROTOCOL into REPORT, its
+    why and tried as placeholders; it runs no model."""
     return (
         f"protocol-fill {shlex.quote(shown(protocol, Path.cwd()))} --handover "
         f'--why "<what blocks>" --tried "<what you tried>" --into {shlex.quote(report)}'
@@ -140,6 +141,29 @@ def audit_command(
     if protocol is not None and len(area_protocols(area)) > 1:
         words += ["--protocol", shown(protocol, here)]
     return shlex.join(words)
+
+
+def decide_command(
+    area: Path,
+    n: int,
+    status: str,
+    reason: str,
+    record: str,
+    *,
+    effect: str | None = None,
+    protocol: Path | None = None,
+    base: Path | None = None,
+) -> str:
+    """The `labkit-audit … --decide N STATUS "REASON" [--effect EFFECT]
+    --record RECORD` line (`audit_command`): REASON in double quotes as
+    given — a placeholder the reader replaces (`<why>`), never a ready-made
+    reason —, EFFECT as given, RECORD as the caller shows it. The one
+    builder of a printed decision."""
+    effect_words = f" --effect {effect}" if effect is not None else ""
+    return (
+        f"{audit_command(area, protocol=protocol, base=base)} --decide {n} "
+        f'{status} "{reason}"{effect_words} --record {shlex.quote(record)}'
+    )
 
 
 def shown(path: Path, base: Path) -> str:
