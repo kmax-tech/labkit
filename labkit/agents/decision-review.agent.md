@@ -18,9 +18,10 @@ and you do not soften a finding the auditor made.
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
    the effect `stands` (accepted findings). A decision of `dismissed`,
-   `fixed` or `deferred` appears only when an earlier review did not
-   uphold a decision on that finding; the line `decided again after a
-   review said …` carries that verdict.
+   `fixed` or `deferred` appears when an earlier review did not uphold a
+   decision on that finding — the line `decided again after a review said
+   …` carries that verdict — and a `dismissed` or `deferred` one when the
+   finding is carried (a follow-up audit did not find its fault gone).
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, admissibility condition, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:

@@ -824,7 +824,7 @@ def stamp_facts(stamp: Stamp, verdict: tuple[int, int, int]) -> str:
     b, w, n = verdict
     return (
         f"{time.strftime('%Y-%m-%d')} · scope sha {sha} · {b + w + n} findings "
-        f"({b} blockers, {w} warnings, {n} notes — decide each: fixed / accepted / deferred / dismissed)"
+        f"({b} blockers, {w} warnings, {n} notes — decide each: {findings.DECIDED_LIST})"
     )
 
 
@@ -950,7 +950,8 @@ def bound_prompt(
     protocol text the prompt carries; in MODE analysis
     the run is chosen once, and what the prompt shows of it is one snapshot
     whose digest goes in the record (NO_RUN when none answers), and the
-    area's `fixed` BLOCKERs are read once: the prompt shows them, and each
+    area's earlier decided BLOCKERs (`followup.earlier_blockers`) are read
+    once: the prompt shows them, and each
     verdict on one is bound to the decision shown (`parse_fixes`).
 
     The reading's file list was taken before the snapshot. After rendering,
@@ -1064,9 +1065,11 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--review",
         action="store_true",
-        help="a second auditor on the accepted findings with effect `stands` of the "
-        "newest analysis record (or --record): does the reported claim stand within "
-        "each limit? writes audits/<minute>-review.toml",
+        help="a second auditor on the decisions of the newest analysis record (or "
+        "--record) that owe one — an accepted finding with effect `stands`, a finding "
+        "closed after a review did not uphold a decision on it, a carried finding "
+        "closed dismissed or deferred: does the reported claim stand? writes "
+        "audits/<minute>-review.toml",
     )
     ap.add_argument(
         "--report-review",
@@ -1243,8 +1246,8 @@ def _record(
 def fix_lines(
     earlier: list[followup.Member], fixes: list[findings.FixVerdict]
 ) -> list[str]:
-    """One line per earlier `fixed` BLOCKER the audit was shown: its
-    verdict, or that it has none and its repair stays unchecked."""
+    """One line per earlier decided BLOCKER the audit was shown: its
+    verdict, or that it has none and its follow-up stays unchecked."""
     given = {v.ref: v for v in fixes}
     out = []
     for e in earlier:
@@ -1252,7 +1255,7 @@ def fix_lines(
         out.append(
             f"  fix {e.ref}: {v.verdict} — {v.why}"
             if v
-            else f"  fix {e.ref}: no verdict — its repair stays unchecked"
+            else f"  fix {e.ref}: no verdict — its follow-up stays unchecked"
         )
     return out
 

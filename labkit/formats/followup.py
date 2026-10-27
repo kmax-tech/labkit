@@ -36,6 +36,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from labkit.formats.findings import (
+    DECIDED,
     Finding,
     FindingsError,
     FixVerdict,
@@ -43,8 +44,8 @@ from labkit.formats.findings import (
     decision_digest,
 )
 
-#: the statuses under which a BLOCKER is earlier evidence to follow up
-DECIDED = ("fixed", "accepted", "dismissed", "deferred")
+#: the statuses under which a BLOCKER is earlier evidence to follow up:
+#: every decided one (`findings.DECIDED`)
 
 
 @dataclass(frozen=True)

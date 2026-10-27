@@ -25,9 +25,11 @@ area, one file per audit:
     reason = ""          # owed for accepted, deferred and dismissed
     # effect = "C1 not assessable"  — an accepted BLOCKER or WARNING: see EFFECT
 
-The person decides each finding — by hand in the file, or with
-`labkit-audit AREA --decide N STATUS REASON`, which validates the decision
-the person typed and stores it (`write_decision`). labkit never decides.
+The person decides each finding with `labkit-audit AREA --decide N STATUS
+REASON`, which validates the decision the person typed and stores it
+(`write_decision`) — the one supported way to write a decision; a record
+changed by hand is not one labkit wrote, whatever its fields say, and a
+check of the file cannot tell who wrote them. labkit never decides.
 
 When the backend does not answer (`llm_backends.BackendError`: the CLI died, the
 server was down, every retry ran out), `labkit-audit` writes no findings
@@ -140,6 +142,13 @@ REASON_OWED = ("accepted", "deferred", "dismissed")
 #: review did not uphold a decision on the finding, none of them settles
 #: it alone (`reviews.once_not_upheld`, `report_check.review_findings`)
 CLOSING = ("fixed", "deferred", "dismissed")
+#: every status but `open`: what deciding a finding sets
+DECIDED = tuple(s for s in STATUSES if s != "open")
+#: the decided statuses as a step names them: "fixed / accepted / deferred / dismissed"
+DECIDED_LIST = " / ".join(DECIDED)
+#: a carried finding (`carries`: a follow-up did not find its fault gone)
+#: closed with one of these owes a decision review before the number leaves
+CARRIED_CLOSING = ("dismissed", "deferred")
 #: an accepted BLOCKER's effect on the verdicts: they stand with the limit,
 #: or the run judges the named promises not at all
 EFFECT_STANDS = "stands"
@@ -190,7 +199,8 @@ class Finding:
         return self.grade in EFFECT_GRADES and self.status == "accepted"
 
 
-#: an analysis audit's verdict on the repair of an earlier `fixed` BLOCKER:
+#: an analysis audit's verdict on an earlier decided BLOCKER (fixed,
+#: accepted, deferred or dismissed):
 #: the fault is gone in the files and rows it was shown, still there, or
 #: not to be judged from them (no diagnostic shown that could tell)
 FIX_VERDICTS = ("resolved", "unresolved", "not_assessable")
@@ -198,7 +208,7 @@ FIX_VERDICTS = ("resolved", "unresolved", "not_assessable")
 
 @dataclass(frozen=True)
 class FixVerdict:
-    """An analysis audit's verdict on one earlier `fixed` BLOCKER: the
+    """An analysis audit's verdict on one earlier decided BLOCKER: the
     record and number it stands in, the decision as it was shown
     (`decision_digest`), the verdict and its why. Bound to that decision:
     a changed status or reason is another decision, which this verdict
@@ -325,7 +335,7 @@ class Record:
     shown_sha: str | None
     verdict: tuple[int, int, int]
     findings: tuple[Finding, ...]
-    # mode analysis: its verdicts on earlier `fixed` BLOCKERs, one per
+    # mode analysis: its verdicts on earlier decided BLOCKERs, one per
     # finding at most; a finding shown without one is unchecked
     fix_verdicts: tuple[FixVerdict, ...] = ()
 
@@ -489,9 +499,17 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
     return None
 
 
-#: how a person writes a reason by hand — in the file's head and in the
-#: refusal of a file that does not parse (count probe, 2026-10-20: an
-#: unescaped quote in a reason made the record unreadable)
+def carried_and_closed(f: Finding) -> bool:
+    """Is F a carried finding (`carries`: a follow-up did not find its fault
+    gone) closed `dismissed` or `deferred` (CARRIED_CLOSING)? Such a
+    decision owes a decision review before the number leaves — the one rule
+    the gate (`report_check.followup_findings`) and the review
+    (`decision_review.reviewable`) both read."""
+    return bool(f.carries) and f.status in CARRIED_CLOSING
+
+
+#: why a record changed by hand may not parse — told in the refusal of a
+#: file that does not (an unescaped quote in a reason makes it unreadable)
 REASON_FORM = (
     'a reason is a TOML string: "double quotes" escape a quote as \\" and a '
     "backslash as \\\\; 'single quotes' take one line of text without a ' "
@@ -569,9 +587,8 @@ def write(
     stamp = time.strftime("%Y-%m-%dT%H-%M", when)
     b, w, k = verdict
     lines = [
-        "# written by labkit-audit — decide each finding: "
-        "`labkit-audit <area> --decide N STATUS REASON`, or set status and reason here",
-        f"# {REASON_FORM}",
+        "# written by labkit-audit — decide each finding with "
+        "`labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote",
         "[audit]",
         f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
         f"mode = {_s(mode)}",
@@ -961,30 +978,48 @@ _DECISION_LINE = re.compile(
 )
 
 
+#: the opening of a multi-line decision value (`reason = """…"""` or `'''…'''`)
+_DECISION_OPEN = re.compile(r"""^(\s*(status|reason|effect)\s*=\s*)(\"\"\"|''')""")
+
+
 def _decision_lines(
     lines: list[str], n: int
-) -> dict[str, tuple[int, re.Match[str]]] | None:
-    """{"status": (index, match), "reason": …, "effect": … when it stands} of
-    the N-th `[[finding]]` table in LINES, or None when it lacks status or
-    reason as a one-line value. The table runs from its header to the next
-    table header of any kind."""
+) -> dict[str, tuple[int, int, str, str]] | None:
+    """{"status": (first, end, head, tail), "reason": …, "effect": … when it
+    stands} of the N-th `[[finding]]` table in LINES: the value spans
+    lines[first:end], HEAD is the text before it (`reason = `), TAIL the
+    text after it on its last line (a comment). A value is a one-line TOML
+    string or a multi-line one; None when status or reason is missing or a
+    multi-line value never closes. The table runs from its header to the
+    next table header of any kind."""
     seen, inside = 0, False
-    at: dict[str, tuple[int, re.Match[str]]] = {}
-    for i, line in enumerate(lines):
+    at: dict[str, tuple[int, int, str, str]] = {}
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         if _FINDING_HEADER.match(line):
             seen += 1
             inside = seen == n
-            continue
-        if _TABLE_HEADER.match(line):
+        elif _TABLE_HEADER.match(line):
             inside = False
-            continue
-        m = (
-            _DECISION_LINE.match(line.splitlines()[0])
-            if inside and line.strip()
-            else None
-        )
-        if m:
-            at[m.group(2)] = (i, m)
+        elif inside and line.strip():
+            first = line.splitlines()[0]
+            one = _DECISION_LINE.match(first)
+            opened = None if one else _DECISION_OPEN.match(first)
+            if one:
+                at[one.group(2)] = (i, i + 1, one.group(1), one.group(3))
+            elif opened:
+                delim, j = opened.group(3), i
+                rest = first[opened.end() :]
+                while delim not in rest:
+                    j += 1
+                    if j == len(lines):
+                        return None
+                    rest = lines[j].splitlines()[0] if lines[j].strip("\r\n") else ""
+                tail = rest[rest.index(delim) + len(delim) :]
+                at[opened.group(2)] = (i, j + 1, opened.group(1), tail)
+                i = j
+        i += 1
     return at if {"status", "reason"} <= set(at) else None
 
 
@@ -1002,7 +1037,8 @@ def write_decision(
     FindingsError — the file untouched — on a record that does not read, a
     number outside it, a status outside STATUSES, a reason owed and empty,
     an accepted BLOCKER without its effect or an effect anywhere else, or a
-    status or reason not on one line (edit those by hand)."""
+    finding without the status and reason lines labkit-audit writes (a
+    one-line or a multi-line TOML string each)."""
     from labkit.formats.files import write_atomic
 
     before = read(path)
@@ -1040,7 +1076,8 @@ def write_decision(
 def _effect_problem(f: Finding) -> str | None:
     """Why F's effect cannot stand, or None: an effect on anything but an
     accepted BLOCKER or WARNING, or not in EFFECT_FORM. An accepted BLOCKER
-    without one reads (a record decided by hand); report-check asks for it."""
+    without one reads (a record decided before effects were owed);
+    report-check asks for it."""
     if not f.effect:
         return None
     if not f.effect_allowed:
@@ -1068,31 +1105,44 @@ def _hold_effect(decided: Finding) -> None:
 
 
 def _decided_text(path: Path, n: int, decided: Finding) -> str:
-    """The record's text with finding N's decision lines set to DECIDED."""
+    """The record's text with finding N's decision lines set to DECIDED —
+    each value written on one line (`toml_string`), a multi-line one
+    replaced whole."""
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     at = _decision_lines(lines, n)
     if at is None:
         raise FindingsError(
-            f"{path}: finding {n} has no one-line `status = …` and `reason = …` "
-            f"— edit it by hand"
+            f"{path}: finding {n} has no `status` and `reason` lines as labkit-audit "
+            f"writes them — the record was changed by hand; restore it "
+            f"(`git checkout HEAD -- {path.name}` in its audits/) or audit again"
         )
-    for key, value in (("status", decided.status), ("reason", decided.reason)):
-        i, m = at[key]
-        ending = lines[i][len(lines[i].splitlines()[0]) :]
-        lines[i] = m.group(1) + _s(value) + m.group(3) + ending
+
+    def line(span: tuple[int, int, str, str], value: str) -> str:
+        first, end, head, tail = span
+        ending = lines[end - 1][len(lines[end - 1].splitlines()[0]) :] or "\n"
+        return head + _s(value) + tail + ending
+
+    edits = [
+        (at["status"], [line(at["status"], decided.status)]),
+        (
+            at["reason"],
+            [line(at["reason"], decided.reason)]
+            + (
+                [f"effect = {_s(decided.effect)}\n"]
+                if decided.effect and "effect" not in at
+                else []
+            ),
+        ),
+    ]
     if "effect" in at:
-        i, m = at["effect"]
-        if decided.effect:
-            ending = lines[i][len(lines[i].splitlines()[0]) :]
-            lines[i] = m.group(1) + _s(decided.effect) + m.group(3) + ending
-        else:
-            del lines[i]
-    elif decided.effect:
-        i = at["reason"][0]
-        ending = lines[i][len(lines[i].splitlines()[0]) :] or "\n"
-        if not lines[i].endswith("\n"):
-            lines[i] += "\n"
-        lines.insert(i + 1, f"effect = {_s(decided.effect)}{ending}")
+        edits.append(
+            (
+                at["effect"],
+                [line(at["effect"], decided.effect)] if decided.effect else [],
+            )
+        )
+    for (first, end, _, _), new in sorted(edits, key=lambda e: -e[0][0]):
+        lines[first:end] = new
     return "".join(lines)
 
 
@@ -1289,7 +1339,7 @@ def audit_coverage(
     if still_open:
         return (
             f"{len(still_open)} finding(s) of the {mode} audit of {sha} still "
-            f"`open` — decide each (fixed / accepted / deferred / dismissed)"
+            f"`open` — decide each ({DECIDED_LIST})"
         )
     return None
 
@@ -1544,7 +1594,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
     if record.open:
         return (
             f"{len(record.open)} finding(s) of {name} still `open` — decide each "
-            f"(fixed / accepted / deferred / dismissed)"
+            f"({DECIDED_LIST})"
         )
     return None
 

@@ -629,8 +629,8 @@ def stop(event: dict) -> int:
     if undecided:
         print(
             "an audit of an area this session worked in found BLOCKER(s) nobody "
-            "decided, or an audit record is gone — decide each (fixed / accepted / "
-            "deferred / dismissed, with reason) with the `--decide` command "
+            f"decided, or an audit record is gone — decide each ({findings.DECIDED_LIST}, "
+            "with reason) with the `--decide` command "
             "`labkit-audit <AREA> --findings` prints for it (AREA: the path each line "
             "starts with), never by rewriting the record, and restore a record that is gone before you stop; a number measured past them "
             "cannot be reported, and a commit would be refused the same way "
@@ -724,8 +724,8 @@ def undecided(argv: list[str]) -> int:
         return 0
     print(
         "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided, "
-        "or an audit record is gone — decide each (fixed / accepted / deferred / "
-        "dismissed, with reason) with the `--decide` command `labkit-audit <AREA> "
+        f"or an audit record is gone — decide each ({findings.DECIDED_LIST}, with "
+        "reason) with the `--decide` command `labkit-audit <AREA> "
         "--findings` prints for it (AREA: the path each line starts with), never by "
         "rewriting the record, and restore a "
         "record that is gone (LAB-015 Preflight audit before freezing):\n  "

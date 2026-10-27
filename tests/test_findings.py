@@ -335,17 +335,19 @@ class Decisions(unittest.TestCase):
 
 
 class HandDecisions(unittest.TestCase):
-    """The person decides in the file; nothing else writes it. A reason with
-    an unescaped quote made the record unreadable (count probe, 2026-10-20),
-    so the file says how a reason is written, and the refusal says where it
-    went wrong and how to write it."""
+    """A decision is written through `--decide` (decided 2026-10-27); a
+    record changed by hand is not one labkit wrote. Such a record still
+    reads when it is TOML, and one that is not is refused with where it went
+    wrong and why (an unescaped quote made a record unreadable, count probe
+    2026-10-20)."""
 
-    def test_the_file_says_how_a_reason_is_written(self):
+    def test_the_file_names_the_one_way_to_decide_and_hand_forms_still_read(self):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         text = path.read_text(encoding="utf-8")
-        self.assertIn("'single quotes' take one line of text without a '", text)
-        # both forms the comment names read back
+        self.assertIn("decide each finding with `labkit-audit <area> --decide", text)
+        self.assertNotIn("'single quotes' take one line", text)
+        # both string forms a hand may have written read back
         decided = text.replace(
             'status = "open"\nreason = ""',
             'status = "accepted"\nreason = \'the "inputs" root is fixed\'',
@@ -429,6 +431,71 @@ class WriteDecision(unittest.TestCase):
         self.assertEqual(len(changed), 2, changed)  # the status and the reason line
         self.assertEqual(list(path.parent.glob(".*tmp*")), [])
 
+    def test_a_multi_line_value_is_replaced_whole_by_the_one_writer(self):
+        """`--decide` is the one supported way to write a decision (decided
+        2026-10-27), so it writes every decision a record can hold: a reason
+        set as a multi-line string — basic or literal — is replaced whole,
+        the result one line. The twin: the one-line form, above, as before."""
+        for opening, closing in (('"""', '"""'), ("'''", "'''")):
+            with self.subTest(form=opening):
+                path = self.record()
+                text = path.read_text(encoding="utf-8")
+                first = text.index('reason = ""')
+                hand = f"reason = {opening}\nchecked by hand\nover two lines{closing}  # kept"
+                path.write_text(
+                    text[:first] + hand + text[first + len('reason = ""') :]
+                )
+                self.assertEqual(
+                    findings.read(path).findings[0].reason,
+                    "checked by hand\nover two lines",
+                )
+                after = findings.write_decision(
+                    path, 1, "accepted", "the leak is named", "stands"
+                )
+                self.assertEqual(
+                    (
+                        after.findings[0].status,
+                        after.findings[0].reason,
+                        after.findings[0].effect,
+                    ),
+                    ("accepted", "the leak is named", "stands"),
+                )
+                written = path.read_text(encoding="utf-8")
+                self.assertIn('reason = "the leak is named"  # kept', written)
+                self.assertNotIn("over two lines", written)
+
+    def test_a_record_without_the_written_lines_names_its_restore(self):
+        path = self.record()
+        text = path.read_text(encoding="utf-8")
+        # TOML reads a quoted key the same; the writer finds only the lines it writes
+        path.write_text(
+            text.replace('status = "open"', '"status" = "open"', 1), encoding="utf-8"
+        )
+        self.assertEqual(findings.read(path).findings[0].status, "open")
+        with self.assertRaisesRegex(
+            findings.FindingsError, "changed by hand; restore it"
+        ):
+            findings.write_decision(path, 1, "fixed", "")
+
+    def test_the_decided_statuses_and_the_carried_rule_have_one_home(self):
+        self.assertEqual(
+            findings.DECIDED_LIST, "fixed / accepted / deferred / dismissed"
+        )
+        carried = findings.Finding(
+            "BLOCKER", "x", status="dismissed", reason="r", carries="r.toml#1"
+        )
+        self.assertTrue(findings.carried_and_closed(carried))
+        for twin in (
+            findings.Finding("BLOCKER", "x", status="dismissed", reason="r"),
+            findings.Finding(
+                "BLOCKER", "x", status="accepted", reason="r", carries="r.toml#1"
+            ),
+        ):
+            self.assertFalse(findings.carried_and_closed(twin))
+        head = self.record().read_text(encoding="utf-8").splitlines()[0]
+        self.assertIn("--decide N STATUS REASON", head)
+        self.assertNotIn("set status and reason here", head)
+
     def test_a_reason_is_owed_and_a_status_is_one_of_the_list(self):
         path = self.record()
         before = path.read_text(encoding="utf-8")
@@ -473,15 +540,19 @@ class WriteDecision(unittest.TestCase):
         rec = findings.read(path)
         self.assertEqual([f.status for f in rec.findings], ["fixed", "open", "open"])
 
-    def test_a_status_line_not_on_one_line_is_refused(self):
+    def test_a_status_written_over_two_lines_is_replaced_on_one(self):
+        """A status after its reason, set as a multi-line string: `--decide`
+        writes it, on one line, the reason line kept in its place."""
         path = self.record()
         text = path.read_text(encoding="utf-8").replace(
             'status = "open"\nreason = ""', 'reason = ""\nstatus = """\nopen"""', 1
         )
         path.write_text(text, encoding="utf-8")
-        with self.assertRaises(findings.FindingsError):
-            findings.write_decision(path, 1, "fixed", "")
-        self.assertEqual(path.read_text(encoding="utf-8"), text)
+        after = findings.write_decision(path, 1, "fixed", "")
+        self.assertEqual(after.findings[0].status, "fixed")
+        self.assertIn(
+            'reason = ""\nstatus = "fixed"\n', path.read_text(encoding="utf-8")
+        )
 
 
 class DecideCommand(unittest.TestCase):

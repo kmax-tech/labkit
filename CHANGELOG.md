@@ -187,6 +187,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A decision is written through `--decide` only, and `--decide` writes
+  every one a record holds.** The record's head invited setting status and
+  reason by hand, and `--decide` refused a value written as a multi-line
+  string ("edit it by hand") — two ways in, one a dead end. `--decide` is
+  the one supported way now (decided 2026-10-27): it replaces a multi-line
+  value whole, the head of a new record names only it, and a record whose
+  lines it cannot find is refused with its restore. A check of the file
+  validates the allowed fields; it cannot tell who wrote them. The decided
+  statuses and the rule that a carried finding closed `dismissed` or
+  `deferred` owes a decision review have one home each (`findings.DECIDED`,
+  `DECIDED_LIST`, `carried_and_closed`); the docs and the `--review` help
+  now name that rule, and "fixed BLOCKER" reads "decided BLOCKER" where all
+  four statuses are meant (audit 2026-10-27, C17, D, E).
 - **A printed `labkit-audit` step runs as printed.** The next steps report-check,
   the decision list and the report review's hint print were built in four
   places; three left out `--protocol`, which the command needs in an area

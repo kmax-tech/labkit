@@ -43,7 +43,7 @@ BLOCKER, and warns on a WARNING's (`report_check.review_findings`).
 
 Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
 review — no record, nothing to review in it (no `stands`, no closed
-contested finding), the code or the run not what
+contested finding, no carried finding closed), the code or the run not what
 the record's auditor saw (the decisions were made on that state; review
 them there or audit again), a decision already reviewed as decided and
 claimed now and not upheld (another draw settles nothing; `--again` draws
@@ -133,7 +133,7 @@ def reviewable(
         (n, f)
         for n, f in enumerate(record.findings, 1)
         if n in stands
-        or (f.carries and f.status in ("dismissed", "deferred"))
+        or findings.carried_and_closed(f)
         or (
             f.status in findings.CLOSING
             and reviews.once_not_upheld(record, n, found) is not None
@@ -226,8 +226,9 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     decided = reviewable(record, found)
     if not decided:
         raise AuditError(
-            f"{record.path.name}: no accepted finding with effect `stands` and no "
-            f"finding closed after a review did not uphold it — nothing to review"
+            f"{record.path.name}: no accepted finding with effect `stands`, no "
+            f"finding closed after a review did not uphold it and no carried finding "
+            f"closed dismissed or deferred — nothing to review"
         )
     repo = layout_root(area)
     text = protocol.read_text(encoding="utf-8")

@@ -160,8 +160,10 @@ not closing: once a review did not uphold a decision on a finding, a
 reviewer is asked whether the reason shows the finding inapplicable, the
 fault gone in the files as audited, or the task somebody else's — and
 `report-check` holds it by the finding's grade until a review upholds
-the new decision. A reason alone releases nothing. An accepted WARNING
-with `stands` owes no review yet; `report-check` names it as a warning.
+the new decision. The same holds for a carried finding — one a follow-up
+audit did not find gone — closed `dismissed` or `deferred`. A reason alone
+releases nothing. An accepted WARNING with `stands` owes no review yet;
+`report-check` names it as a warning.
 
 ## 7. The adoption
 
@@ -263,7 +265,8 @@ owes nothing: an exploration ends without a reported number.
 - *When is a decision review needed?* When an accepted BLOCKER carries
   `stands`; `report-check` blocks until one upholds it. And when a
   finding a review did not uphold is closed instead (`dismissed`,
-  `fixed`, `deferred`): the new decision owes its own review. Not for
+  `fixed`, `deferred`): the new decision owes its own review. And when a
+  carried finding is closed `dismissed` or `deferred`. Not for
   `not assessable`, not (yet) for a WARNING.
 - *Which file does `--from-run` change?* The protocol, and only it.
 - *What does the report block guarantee, and what remains judgement?* The

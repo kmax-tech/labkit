@@ -908,7 +908,7 @@ class FixVerdicts(unittest.TestCase):
         (record,) = self.new_records(area, earlier)
         self.assertEqual(record.fix_verdicts, ())
         self.assertIn(
-            f"fix {earlier.name}#1: no verdict — its repair stays unchecked", out
+            f"fix {earlier.name}#1: no verdict — its follow-up stays unchecked", out
         )
 
     #: the FIX entry of pilot draw B-2 (2026-10-26) as the auditor wrote it,

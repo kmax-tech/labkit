@@ -553,10 +553,8 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         found = []  # review_findings names the file; unreviewed holds here
     for r in covering:
         for n, f in enumerate(r.findings, 1):
-            if (
-                f.carries
-                and f.status in ("dismissed", "deferred")
-                and not reviews.upholding(r, n, found, ctx.text)
+            if findings.carried_and_closed(f) and not reviews.upholding(
+                r, n, found, ctx.text
             ):
                 out.append(
                     GateFinding(

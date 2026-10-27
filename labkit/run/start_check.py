@@ -534,8 +534,9 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             f"runlog: {declares}, and a "
             "preflight audit found BLOCKER(s) nobody decided — not an "
             "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
-            "it. Decide each (fixed / accepted / deferred / dismissed) "
-            "in the record:\n  " + "\n  ".join(blockers)
+            f"it. Decide each ({findings.DECIDED_LIST}) with `labkit-audit <area> "
+            "--decide` (`--findings` prints the command per finding):\n  "
+            + "\n  ".join(blockers)
         )
     gaps = _freeze_findings(base_dir, prepared.bound)
     if not gaps:

@@ -370,8 +370,8 @@ def check_audit_records(
         _owed(findings, frozen)(f"undecided in {u.line}")
     if undecided:
         findings.note(
-            f"  {len(undecided)} finding(s) still `open` — decide each (fixed / accepted / "
-            f"deferred / dismissed) before freezing (LAB-015 Preflight audit before freezing)"
+            f"  {len(undecided)} finding(s) still `open` — decide each ({audit_findings.DECIDED_LIST}) "
+            f"with `labkit-audit <area> --decide` before freezing (LAB-015 Preflight audit before freezing)"
             + (" — frozen = true owes it" if frozen else "")
         )
     return records
