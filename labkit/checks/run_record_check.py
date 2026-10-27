@@ -14,6 +14,7 @@ their grade. Read-only.
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
 from labkit.formats.runs import (
@@ -48,6 +49,7 @@ from labkit.formats.repo import (
     GitError,
     blobs_now,
     blobs_then,
+    commit_known,
     git_root,
     git_run,
     shown,
@@ -61,62 +63,107 @@ def _tracked(repo: Path, path: Path) -> bool:
 
 CRITERION_N = promises.CRITERION_N_KEY
 
-#: where a run's script lives in its area, in the order looked for
-SCRIPT_HOMES = ("scripts", ".", "analysis")
+#: what a script search in an area passes over: run records, outputs, data
+_NOT_CODE = frozenset({"runs", "output", "data", "__pycache__", ".git"})
+ANEW = "or measure anew and audit that run"
 
 
-def code_since_run(area: Path, answering_run: Path) -> list[str]:
-    """Blockers: the code that produced ANSWERING_RUN's number is not the
-    code here now (audit 2026-10-27, A1) — its script against the hash the
-    run recorded (`script_sha`), each module the script imports
+def code_since_run(area: Path, answering_run: Path) -> tuple[list[str], list[str]]:
+    """(blockers, warnings): the code that produced ANSWERING_RUN's number
+    is not the code here now (audit 2026-10-27, A1). For the run and each
+    run it derives from (`answering_run.lineage`: a re-evaluation rests on
+    its parent's rows): its script against the hash the run recorded
+    (`script_sha`), and each module the script imports
     (`scope_sha.measured_code`: beside it, under `lib/` or `src/`) against
-    the tree the run started from (its commit with its `uncommitted.patch`,
-    `repo.blobs_then`; an untracked sibling against its copy in the run).
-    Exact over what that scope holds; a change made and undone between run
-    and now, and code loaded another way, are not seen. Analysis code and
-    the pin are not compared: a fix there needs no new measurement. Each
-    blocker names its way out — restore the code as it ran, or measure
-    anew and audit that run. Read-only."""
-    cfg = read_run_config(answering_run)
+    the tree the run started from — its commit with the part of its
+    `uncommitted.patch` that touches the module (`repo.blobs_then`), an
+    untracked sibling against its copy in the run. Exact over that scope; a
+    change made and undone in between and code loaded another way are not
+    seen, and a module in another repository (a submodule, a link out of
+    the repository) is a warning, not compared. Analysis code and the pin
+    are not compared: a fix there needs no new measurement. Each blocker
+    names its way out — the command that restores the code as it ran, or
+    measuring anew. Read-only."""
+    try:
+        chain = lineage(answering_run)
+    except ValueError as exc:
+        return [f"{answering_run.name}: its runs cannot be followed ({exc})"], []
+    blockers: list[str] = []
+    warnings: list[str] = []
+    for run in chain:
+        b, w = _run_code(area, run)
+        blockers += b
+        warnings += w
+    return blockers, warnings
+
+
+def _run_code(area: Path, run: Path) -> tuple[list[str], list[str]]:
+    """`code_since_run` for one RUN, its own record only."""
+    cfg = read_run_config(run)
     if cfg is None:
-        return []  # the answering-run station names an unreadable record
-    rid = answering_run.name
-    anew = "or measure anew and audit that run"
+        return [], []  # the answering-run station names an unreadable record
+    rid, here = run.name, Path.cwd()
     if cfg.script_sha == "no-script":
         return [
-            f"{rid} recorded no script — the code behind its number cannot be compared; {anew[3:]}"
-        ]
-    homes = [area / d / cfg.script for d in SCRIPT_HOMES]
-    script = next((p.resolve() for p in homes if p.is_file()), None)
-    kept = script_copy_path(answering_run, Path(cfg.script).suffix)
-    here = Path.cwd()
-    if script is None:
-        return [
-            f"{shown(homes[0], here)} is gone — {rid} ran it: restore it from "
-            f"{shown(kept, here)} {anew}"
-        ]
+            f"{rid} recorded no script — the code behind its number cannot be compared; {ANEW[3:]}"
+        ], []
+    script = _script_of(area, cfg)
+    kept = script_copy_path(run, Path(cfg.script).suffix)
+    if isinstance(script, str):
+        return [f"{rid}: {script} — restore it from {shown(kept, here)} {ANEW}"], []
     out: list[str] = []
     if file_digest(script)[:DIGEST_CHARS] != cfg.script_sha:
         out.append(
             f"{shown(script, here)} changed since {rid} ran it — its number came from "
-            f"other code: restore the script as it ran (`cp {shown(kept, here)} "
-            f"{shown(script, here)}`) {anew}"
+            f"other code: restore the script as it ran (`cp "
+            f"{shlex.quote(shown(kept, here))} {shlex.quote(shown(script, here))}`) {ANEW}"
         )
     repo = git_root(area)
     try:
         helpers = [f for f in measured_code(script, repo or area) if f != script]
     except SourceError as exc:
-        return [*out, f"the code {rid} ran cannot be read now: {exc}"]
-    return out + _helpers_since_run(helpers, script, repo, answering_run, cfg)
+        return [*out, f"the code {rid} ran cannot be read now: {exc}"], []
+    b, w = _helpers_since_run(helpers, script, repo, run, cfg)
+    return out + b, w
+
+
+def _script_of(area: Path, cfg: RunConfig) -> Path | str:
+    """The script the run ran, as it stands here now: the path its command
+    names (`sys.argv[0]`, relative to the area, the repository or the
+    area's scripts/ — the working directory then is not recorded), else
+    the one file of its name in the area; a sentence when it is gone or
+    when several carry its name."""
+    named = Path(cfg.command[0]) if cfg.command else Path(cfg.script)
+    repo = git_root(area)
+    bases = [area, *([repo] if repo else []), area / "scripts"]
+    for p in [named] if named.is_absolute() else [b / named for b in bases]:
+        if p.is_file() and p.name == cfg.script:
+            return p.resolve()
+    found = [
+        p.resolve()
+        for p in area.rglob(cfg.script)
+        if p.is_file() and not _NOT_CODE.intersection(p.relative_to(area).parts)
+    ]
+    if len(found) == 1:
+        return found[0]
+    here = Path.cwd()
+    if found:
+        return (
+            f"its script {cfg.script} cannot be told apart from "
+            f"{', '.join(shown(p, here) for p in found)}"
+        )
+    return f"its script {named} is gone"
 
 
 def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can differ
     helpers: list[Path], script: Path, repo: Path | None, run_dir: Path, cfg: RunConfig
-) -> list[str]:
-    """Blockers for HELPERS (the modules SCRIPT imports) that differ from
-    the run's tree, or whose state then is not recorded."""
+) -> tuple[list[str], list[str]]:
+    """(blockers, warnings) for HELPERS, the modules SCRIPT imports: one
+    that differs from the run's tree or whose state then is not recorded
+    blocks; one in another repository is named, not compared."""
     rid, here = run_dir.name, Path.cwd()
     out: list[str] = []
+    warnings: list[str] = []
     copied = set(cfg.untracked_sources)
     in_git: list[Path] = []
     for f in helpers:
@@ -131,19 +178,31 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 out.append(
                     f"{shown(f, here)} changed since {rid} ran it (it was untracked; "
                     f"the run kept it as {shown(copy, here)}) — restore it from there "
-                    f"or measure anew and audit that run"
+                    f"(`cp {shlex.quote(shown(copy, here))} {shlex.quote(shown(f, here))}`) "
+                    f"{ANEW}"
                 )
+        elif repo is not None and not _in_repo(f, repo):
+            warnings.append(
+                f"{shown(f, here)} lies in another repository (a submodule or a link "
+                f"out of this one) — not compared with what {rid} ran"
+            )
         else:
             in_git.append(f)
     if not in_git:
-        return out
+        return out, warnings
+    names = ", ".join(shown(f, here) for f in in_git)
     if repo is None or not cfg.git_full or cfg.git_full == NO_GIT:
         return [
             *out,
-            f"{rid} recorded no commit, so the helpers its script imports "
-            f"({', '.join(shown(f, here) for f in in_git)}) cannot be compared — "
-            f"measure anew in the repository and audit that run",
-        ]
+            f"{rid} recorded no commit, so the helpers its script imports ({names}) "
+            f"cannot be compared — measure anew in the repository and audit that run",
+        ], warnings
+    if not commit_known(repo, cfg.git_full):
+        return [
+            *out,
+            f"{rid} started at commit {cfg.git_full[:12]}, which this clone does not "
+            f"hold — fetch it (`git fetch --unshallow` in a shallow clone) {ANEW}",
+        ], warnings
     patch = patch_path(run_dir)
     try:
         then = blobs_then(
@@ -156,8 +215,8 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
     except GitError as exc:
         return [
             *out,
-            f"the tree {rid} started from cannot be read: {exc} — measure anew and audit that run",
-        ]
+            f"the tree {rid} started from cannot be read for {names}: {exc} — {ANEW[3:]}",
+        ], warnings
     for f in in_git:
         if then[f] is None:
             out.append(
@@ -165,13 +224,23 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"held then is not recorded; commit it, measure anew and audit that run"
             )
         elif then[f] != now[f]:
+            blob = then[f]
             out.append(
                 f"{shown(f, here)} changed since {rid} ran — restore it as the run's "
-                f"tree held it (`git checkout {cfg.git_full[:12]} -- {shown(f, here)}`"
-                + (f", then {shown(patch, here)}" if patch.is_file() else "")
-                + ") or measure anew and audit that run"
+                f"tree held it (`git -C {shlex.quote(shown(repo, here))} cat-file blob "
+                f"{blob} > {shlex.quote(shown(f, here))}`) {ANEW}"
             )
-    return out
+    return out, warnings
+
+
+def _in_repo(path: Path, repo: Path) -> bool:
+    """Is PATH a file of REPO itself — inside it once links are resolved,
+    and not in a nested repository (a submodule)?"""
+    real, root = path.resolve(), repo.resolve()
+    if root not in real.parents:
+        return False
+    inner = git_root(real.parent)
+    return inner is not None and inner.resolve() == root
 
 
 def criterion_n_input_mismatches(answering_run: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08

@@ -33,14 +33,21 @@ pins (`requirements.txt` / `requirements.lock`).
   run.** No gate compared the code that produced the answering run's
   number with the code now: a script fixed after the run, with no new
   run, left the old code's number standing (audit 2026-10-27, A1;
-  red-team scenario g1). Station 3 now compares, for every kind, the
-  measurement script with the hash its run recorded (`script_sha`) and
-  every module it imports — beside it, under `lib/` or `src/`
-  (`scope_sha.measured_code`) — with the tree the run started from (its
-  commit with its `uncommitted.patch`, `repo.blobs_then`); an untracked
-  sibling against the run's copy. Each difference is a blocker naming the
-  way back: restore the code as it ran, or measure anew and audit that
-  run. Analysis code and the pin are not compared, so an analysis fix or
+  red-team scenario g1). Station 3 now compares, for every kind and for
+  the answering run and each run it derives from, the measurement script
+  (the path its command names) with the hash its run recorded
+  (`script_sha`) and every module it imports — beside it, under `lib/` or
+  `src/` (`scope_sha.measured_code`) — with the tree the run started from
+  (its commit with the part of its `uncommitted.patch` for that module,
+  `repo.blobs_then`); an untracked sibling against the run's copy. Each
+  difference is a blocker naming the command that restores the code as
+  it ran (`cp` of the run's copy, `git cat-file blob <id> > <path>`), or
+  measuring anew. A module in another repository (a submodule, a link out
+  of the repository) is a warning, not compared. A run now keeps its
+  patch in a form that applies again whatever the user's diff settings
+  (`repo.tree_patch`: binary in full, no colour, no textconv, a/ b/
+  prefixes, unstripped); a patch an earlier labkit wrote is read as far
+  as it can be. Analysis code and the pin are not compared, so an analysis fix or
   a pin raise needs no new measurement. A run that recorded no script, a
   helper not committed when the run started, and a run with no commit are
   held: what they ran is not recorded. Not seen: a change made and undone

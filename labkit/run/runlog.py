@@ -522,10 +522,7 @@ class Run:
         )
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if repo.head_sha(self.base) and repo.tree_dirty(self.base):
-            write_atomic(
-                patch_path(self.dir),
-                repo.git(["diff", "HEAD"], self.base) or "",
-            )
+            write_atomic(patch_path(self.dir), repo.tree_patch(self.base))
 
     def output(self, *paths: str | Path) -> None:
         """Register the files this run WRITES (2026-08-18).

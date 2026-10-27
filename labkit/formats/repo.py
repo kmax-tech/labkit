@@ -311,27 +311,81 @@ def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:
     return commit, repo / fields[1]
 
 
+#: the options a run's patch is written with: every file in full (binary
+#: ones too), whatever the user's diff settings say — so it applies again
+TREE_PATCH_ARGS = (
+    "diff",
+    "--binary",
+    "--full-index",
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-relative",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
+    "HEAD",
+)
+_COLOR = re.compile(r"\x1b\[[0-9;]*m")
+_PREFIXED = re.compile(r"^diff --git [a-z]/", re.M)
+
+
+def tree_patch(cwd: Path) -> str:
+    """The working tree's tracked changes against HEAD as a patch that
+    applies again (TREE_PATCH_ARGS), unstripped — what a run keeps as its
+    `uncommitted.patch`. Raises GitError when git fails."""
+    r = git_run(list(TREE_PATCH_ARGS), cwd)
+    if r.returncode != 0:
+        raise GitError(f"git diff HEAD in {cwd}: {r.stderr.strip()}")
+    return r.stdout
+
+
 def blobs_then(
     repo: Path, commit: str, patch: str, paths: list[Path]
 ) -> dict[Path, str | None]:
     """The blob id each of PATHS had in the working tree a run started
-    from: COMMIT's tree with PATCH (the run's `git diff HEAD`, "" when its
-    tree was clean) applied — read in a temporary index, the repository's
-    own index untouched. None for a path that tree lacks: untracked when
-    the run started, or not yet there. PATHS lie under REPO. Raises GitError
-    when COMMIT is no commit of REPO or PATCH does not apply to it."""
+    from: COMMIT's tree with the part of PATCH (the run's `git diff HEAD`,
+    "" when its tree was clean) that touches PATHS applied — read in a
+    temporary index, the repository's own index untouched; the blobs land
+    in the object store, so `git cat-file blob <id>` restores one. A patch
+    written before TREE_PATCH_ARGS is read as far as it can be: colour
+    codes dropped, hunk lengths recounted and a hunk not held to the file's
+    end (stripping cut its last blank context lines), its path prefix taken
+    as written; a last added line's trailing whitespace the stripping took
+    is lost and reads as a change. None for a path that tree
+    lacks: untracked when the run started, or not yet there. PATHS lie in
+    REPO's own tree. Raises GitError when COMMIT is no commit of REPO or
+    the part of PATCH for PATHS does not apply to it."""
     rels = {p.resolve().relative_to(repo.resolve()).as_posix(): p for p in paths}
     with tempfile.TemporaryDirectory() as tmp:
         env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
         steps: list[tuple[list[str], str | None]] = [(["read-tree", commit], None)]
-        if patch:
-            steps.append((["apply", "--cached", "-"], patch.rstrip("\n") + "\n"))
+        if patch.strip():
+            plain = _COLOR.sub("", patch).rstrip("\n") + "\n"
+            strip = "-p1" if _PREFIXED.search(plain) else "-p0"
+            includes = [f"--include={rel}" for rel in rels]
+            steps.append(
+                (
+                    [
+                        "-c",
+                        "apply.whitespace=nowarn",
+                        "apply",
+                        "--cached",
+                        "--recount",
+                        "--unidiff-zero",
+                        strip,
+                        *includes,
+                        "-",
+                    ],
+                    plain,
+                )
+            )
         steps.append((["ls-files", "-s", "-z", "--", *rels], None))
         listed = ""
         for args, stdin in steps:
             r = git_run(args, repo, env=env, stdin=stdin)
             if r.returncode != 0:
-                raise GitError(f"git {args[0]} at {commit[:12]}: {r.stderr.strip()}")
+                step = args[2] if args[0] == "-c" else args[0]
+                raise GitError(f"git {step} at {commit[:12]}: {r.stderr.strip()}")
             listed = r.stdout
     found: dict[Path, str | None] = dict.fromkeys(rels.values())
     for entry in listed.split("\0"):

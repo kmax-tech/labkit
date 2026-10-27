@@ -302,13 +302,16 @@ def check_intent_keys_in_metrics(
 
 def check_run_code(findings: Findings, area: Path, answering_run: Path) -> None:
     """Station 3, first half: the code that produced the answering run's
-    number is the code here now (`run_record_check.code_since_run`), for
-    every kind — a fix after the run with no new run left the old code's
-    number standing (audit 2026-10-27, A1)."""
-    changed = code_since_run(area, answering_run)
+    number, and that of every run it derives from, is the code here now
+    (`run_record_check.code_since_run`), for every kind — a fix after the
+    run with no new run left the old code's number standing (audit
+    2026-10-27, A1). A module in another repository is a warning."""
+    changed, apart = code_since_run(area, answering_run)
     for line in changed:
         findings.block(line)
-    if not changed:
+    for line in apart:
+        findings.warn(line, evidence_kind=GUARANTEED)
+    if not changed and not apart:
         findings.note(
             f"  the script and the helpers it imports are as {answering_run.name} ran them"
         )
