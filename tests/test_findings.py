@@ -464,6 +464,44 @@ class WriteDecision(unittest.TestCase):
                 self.assertIn('reason = "the leak is named"  # kept', written)
                 self.assertNotIn("over two lines", written)
 
+    def test_a_multi_line_value_closes_where_toml_closes_it(self):
+        """An escaped quote run and up to two quotes before the closing three
+        belong to the value; the scan closed early there, refusing the record
+        as "not TOML" or leaving a stray line (cold review 2026-10-27). Each
+        hand form reads, is replaced whole, and the next line stays."""
+        for hand, value in (
+            ('reason = """x \\""" y\nstill x"""\n', 'x """ y\nstill x'),
+            ('reason = """he said "no""""\n', 'he said "no"'),
+            ('reason = """two ""quotes"""""\n', 'two ""quotes""'),
+            ('reason = """x \\"""\n# """\n', 'x """\n#'),  # the reader strips a reason
+        ):
+            with self.subTest(hand=hand):
+                path = self.record()
+                text = path.read_text(encoding="utf-8")
+                at = text.index('reason = ""\n')
+                path.write_text(text[:at] + hand + text[at + len('reason = ""\n') :])
+                self.assertEqual(findings.read(path).findings[0].reason, value)
+                findings.write_decision(path, 1, "dismissed", "not a fault")
+                after = path.read_text(encoding="utf-8")
+                self.assertEqual(
+                    after,
+                    text.replace(
+                        'status = "open"\nreason = ""\n',
+                        'status = "dismissed"\nreason = "not a fault"\n',
+                        1,
+                    ),
+                )
+
+    def test_a_crlf_record_keeps_its_line_endings(self):
+        path = self.record()
+        crlf = path.read_text(encoding="utf-8").replace("\n", "\r\n")
+        path.write_bytes(crlf.encode("utf-8"))
+        findings.write_decision(path, 2, "accepted", "known", "stands")
+        after = path.read_bytes().decode("utf-8")
+        self.assertNotIn("\n", after.replace("\r\n", ""))
+        self.assertEqual(after.count("\r\n"), crlf.count("\r\n") + 1)  # the effect line
+        self.assertEqual(findings.read(path).findings[1].effect, "stands")
+
     def test_a_record_without_the_written_lines_names_its_restore(self):
         path = self.record()
         text = path.read_text(encoding="utf-8")

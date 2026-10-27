@@ -311,7 +311,9 @@ pins (`requirements.txt` / `requirements.lock`).
   `deferred` owes a decision review have one home each (`findings.DECIDED`,
   `DECIDED_LIST`, `carried_and_closed`); the docs and the `--review` help
   now name that rule, and "fixed BLOCKER" reads "decided BLOCKER" where all
-  four statuses are meant (audit 2026-10-27, C17, D, E).
+  four statuses are meant (audit 2026-10-27, C17, D, E). A multi-line value
+  ends where TOML ends it (an escaped quote, up to two quotes before the
+  closing three), and a CRLF record keeps its line endings (cold review).
 - **A printed `labkit-audit` step runs as printed.** The next steps report-check,
   the decision list and the report review's hint print were built in four
   places; three left out `--protocol`, which the command needs in an area

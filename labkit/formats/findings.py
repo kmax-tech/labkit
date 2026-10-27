@@ -982,6 +982,26 @@ _DECISION_LINE = re.compile(
 _DECISION_OPEN = re.compile(r"""^(\s*(status|reason|effect)\s*=\s*)(\"\"\"|''')""")
 
 
+def _closing(rest: str, delim: str) -> int | None:
+    """Where the multi-line string opened by DELIM ends in REST (one line of
+    it, without its line break): the index after its closing delimiter, or
+    None when it does not close there. As TOML reads it: a basic string
+    (`\"\"\"`) skips an escaped character, and up to two quotes of the
+    delimiter's kind right before the closing three belong to the value."""
+    quote, i = delim[0], 0
+    while i < len(rest):
+        if quote == '"' and rest[i] == "\\":
+            i += 2
+            continue
+        if rest.startswith(delim, i):
+            end = i + 3
+            while end < len(rest) and rest[end] == quote and end - i < 5:
+                end += 1
+            return end
+        i += 1
+    return None
+
+
 def _decision_lines(
     lines: list[str], n: int
 ) -> dict[str, tuple[int, int, str, str]] | None:
@@ -1011,13 +1031,12 @@ def _decision_lines(
             elif opened:
                 delim, j = opened.group(3), i
                 rest = first[opened.end() :]
-                while delim not in rest:
+                while (end := _closing(rest, delim)) is None:
                     j += 1
                     if j == len(lines):
                         return None
                     rest = lines[j].splitlines()[0] if lines[j].strip("\r\n") else ""
-                tail = rest[rest.index(delim) + len(delim) :]
-                at[opened.group(2)] = (i, j + 1, opened.group(1), tail)
+                at[opened.group(2)] = (i, j + 1, opened.group(1), rest[end:])
                 i = j
         i += 1
     return at if {"status", "reason"} <= set(at) else None
@@ -1108,7 +1127,8 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
     """The record's text with finding N's decision lines set to DECIDED —
     each value written on one line (`toml_string`), a multi-line one
     replaced whole."""
-    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    # decoded, not read as text: a CRLF record keeps its line endings
+    lines = path.read_bytes().decode("utf-8").splitlines(keepends=True)
     at = _decision_lines(lines, n)
     if at is None:
         raise FindingsError(
@@ -1117,10 +1137,13 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
             f"(`git checkout HEAD -- {path.name}` in its audits/) or audit again"
         )
 
+    def ending(span: tuple[int, int, str, str]) -> str:
+        last = lines[span[1] - 1]
+        return last[len(last.splitlines()[0]) :] or "\n"
+
     def line(span: tuple[int, int, str, str], value: str) -> str:
-        first, end, head, tail = span
-        ending = lines[end - 1][len(lines[end - 1].splitlines()[0]) :] or "\n"
-        return head + _s(value) + tail + ending
+        _, _, head, tail = span
+        return head + _s(value) + tail + ending(span)
 
     edits = [
         (at["status"], [line(at["status"], decided.status)]),
@@ -1128,7 +1151,7 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
             at["reason"],
             [line(at["reason"], decided.reason)]
             + (
-                [f"effect = {_s(decided.effect)}\n"]
+                [f"effect = {_s(decided.effect)}{ending(at['reason'])}"]
                 if decided.effect and "effect" not in at
                 else []
             ),
