@@ -10,8 +10,9 @@ here. Method: ground truth first; three readers in parallel (clarity on
 the handover diff, drift, homes); every row below re-opened, the marked
 ones re-run in scratch repos built with the test fixtures
 (`e2e.Lab`, `judge_area`). Evidence: **V** verified here (lines opened or
-scenario run), **RR** the reader ran it, **R** the reader read it. Every
-row is open; fixing is its own order.*
+scenario run), **RR** the reader ran it, **R** the reader read it. The
+rows describe the state audited; what was done with each stands under
+"State" at the end.*
 
 ## Ground truth
 
@@ -121,3 +122,35 @@ configured only in `pyproject.toml`; the rules ledger checks clean.
 - "Tier" names repeat cost (`README.md:70`) and evidence kind
   (`README.md:200`); `TODO.md:1263` records C5 of the 10-23 audit as
   closed. (V)
+
+## State (2026-10-27, after the fixes)
+
+The found handover work was committed as found (`fde983d`, the reading
+probe's evidence apart in `da52a1d`); each point below is its own commit
+on top, every new test red at its parent.
+
+| Row | Done | Commit |
+|---|---|---|
+| H4, C: decode, integrity, open BLOCKERs | `repo.text_at`/`state_text` name the file; `attempts.area_integrity`, `findings.open_blockers`; one-home rule | `74fe852` |
+| H3, C: report form, what a handover binds | the handover block, one per protocol, in place; `remaining` in the record; `handovers.build`, `declared_results`; `--force` refused | `87a450e` |
+| H2 | each record that no longer counts says why (`handovers.mismatch`); one way-out sentence for stop and pre-commit | `2bcb43e` |
+| H1, E (`--findings`) | refusal first; the handover only beside an open BLOCKER or an evidence problem, two steps, `<why>` placeholder; hidden records counted; help | `c4b4a15` |
+| H5 | finalize names the protocol; one-home rule covers the form | `d2456dc` |
+| H6–H9 | README step 4 and `--again`; `audit.HANDOVER` names the command; `--contract PROTOCOL` prints its own row | `8704a6b` |
+| B, C (`--decide`) | one name "handover", README term, which block a report gets, `--why` per mode; `repo.decide_command` | `fdc22e6` |
+| D, E | help texts, record order, docstrings, architecture rows, tier wording; `tests/test_template_ties.py` | `2fb62a1` |
+| C (ways-out test) | every flag of a code span checked | `2bae48f` |
+
+Left open, deliberately:
+
+- `deferred` keeps two meanings: every later `preflight` of another area
+  lists a handed-over BLOCKER as "deferred elsewhere". A reminder, never
+  counted; separating them needs a status or a mark, a format decision.
+- `report_check.repo_sources` (`gates/report_check.py:1363`) still reads
+  a protocol through its link in the tree where `repo.state_text` returns
+  the link's target; the two differ for a symlinked protocol, so it was
+  not merged.
+- `"runs"` in four skip sets and the two "not code" sets: read, not
+  re-checked here (R).
+- pytest's `-n auto -p no:warnings` stand in the commit hook only; `just
+  test` runs plain on purpose (a debugger needs one process).
