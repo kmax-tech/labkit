@@ -306,6 +306,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A fit with a model is no longer stamped "no model call".** A fit
+  gets the estimator skeleton with or without `--model`, and its stamp
+  wrote "n/a — no model call", "no prompt" and "no model text to parse"
+  beside `[model] alias`. With a model named those fields
+  (`protocol_cuts.NO_MODEL_FIELDS`) keep the template's placeholders. Audit
+  2026-10-27 (third), I12.
 - **finalize no longer offers intent-check's `--metrics FILE`.** When no
   run could be chosen, intent-check's reason ended in "Name one explicitly
   with --metrics FILE", and finalize, which calls it as a station and has

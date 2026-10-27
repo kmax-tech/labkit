@@ -427,6 +427,17 @@ ESTIMATOR_FIELDS = {
 }
 
 
+#: the ESTIMATOR_FIELDS values that state no model is called; a fit with
+#: `[model]` keeps the template's own placeholders there — the stamp wrote
+#: "n/a — no model call" beside the alias (audit 2026-10-27, third, I12)
+NO_MODEL_FIELDS = (
+    "Model / tool",
+    "Prompt (verbatim, per variant)",
+    "Render check (ZERO calls, `--show N`)",
+    "Parser cases harvested",
+)
+
+
 ESTIMATOR_PROMISES = (
     (
         r'sentence = "<the criterion in one sentence:[^"]*"',
@@ -506,11 +517,14 @@ def name_promise_ids(text: str, kind: str) -> str:
     return "\n".join(lines)
 
 
-def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -> str:
+def estimator_placeholders(
+    text: str, cut: bool = False, *, kind: str = "fit", model: bool = False
+) -> str:
     """The pilot protocol of an estimator area (kind fit, or apply without a
     model): fields and promise sentences describe fitting at KIND fit, or
     the unchanged predictor at KIND apply (its null lane on permuted
-    labels). The
+    labels). With MODEL named, the fields that say no model is called
+    (`NO_MODEL_FIELDS`) keep the template's placeholders. The
     constants and score formulas are shared. Raises when KIND is neither
     fit nor apply or the stamp lacks a field or a table line
     — a silently unfilled field is the leftover this exists to remove; in
@@ -521,6 +535,8 @@ def estimator_placeholders(text: str, cut: bool = False, *, kind: str = "fit") -
             f"estimator_placeholders: kind must be fit or apply, got {kind!r}"
         )
     values = ESTIMATOR_FIELDS | (APPLY_FIELDS if kind == APPLY_KIND else {})
+    if model:  # MODEL named: the fields that say "no model" keep the template's
+        values = {k: v for k, v in values.items() if k not in NO_MODEL_FIELDS}
     lines = text.split("\n")
     for label, value in values.items():
         if not _replace_field(lines, label, value) and not cut:

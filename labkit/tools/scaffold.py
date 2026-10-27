@@ -597,15 +597,17 @@ def protocol_stamp(
         if skeleton is standard_contract.COMPUTE:
             pilot = count_placeholders(pilot)
         elif skeleton is standard_contract.ESTIMATOR:
-            pilot = estimator_placeholders(pilot, cut=True, kind=kind)
+            pilot = estimator_placeholders(
+                pilot, cut=True, kind=kind, model=bool(model)
+            )
     elif skeleton is standard_contract.ESTIMATOR:
-        pilot = estimator_placeholders(pilot, kind=kind)
+        pilot = estimator_placeholders(pilot, kind=kind, model=bool(model))
     if (
         report
         and skeleton is standard_contract.ESTIMATOR
         and kind == standard_contract.APPLY_KIND
     ):
-        clean = estimator_placeholders(clean, kind=kind)
+        clean = estimator_placeholders(clean, kind=kind, model=bool(model))
     stamped = blank_before_headings(short_placeholders(clean if report else pilot))
     if not quick:
         stamped = owed_cut(stamped)  # the full form owes by kind and model too

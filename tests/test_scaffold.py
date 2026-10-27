@@ -1635,6 +1635,24 @@ class OwedCut(unittest.TestCase):
         self.assertNotIn("--probe", line)
         self.assertNotIn("**Raw output", fit)
 
+    def test_a_fit_with_a_model_is_not_stamped_no_model_call(self):
+        # the estimator stamp wrote "n/a — no model call" beside `[model]
+        # alias` (audit 2026-10-27, third, I12)
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "lab"
+            scaffold.stamp_lab(root, "lab")
+            for cost in ("low", "high"):
+                with self.subTest(cost=cost):
+                    stamped = scaffold.protocol_stamp(
+                        root, "f", cost, "fit", "haiku", False
+                    )
+                    self.assertIn('alias = "haiku"', stamped)
+                    self.assertNotIn("no model call", stamped)
+                    plain = scaffold.protocol_stamp(
+                        root, "g", cost, "fit", False, False
+                    )
+                    self.assertIn("no model call", plain)
+
 
 class Cli(unittest.TestCase):
     def test_lab_then_exp(self) -> None:
