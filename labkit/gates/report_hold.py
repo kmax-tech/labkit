@@ -39,6 +39,7 @@ from labkit.checks.result_render import rendering
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
+    REPORT_SUFFIX,
     adopt_command,
     into_command,
     git_root,
@@ -188,10 +189,6 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     would hold."""
     rel = area.resolve().relative_to(repo.resolve()).as_posix()
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
-
-
-#: the files a report lives in; a protocol is held by the stations instead
-REPORT_SUFFIX = ".md"
 
 
 def report_files(

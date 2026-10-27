@@ -425,7 +425,7 @@ def check_deferred_elsewhere(
             except handovers.HandoverError as exc:
                 findings.warn(str(exc), evidence_kind=GUARANTEED)
                 handed[other] = None  # cannot tell; "set aside" would claim it
-        n = r.findings.index(f) + 1
+        n = audit_findings.number_of(r, f)
         names = handed[other]
         if names is None:
             how = "handed over or set aside cannot be told — its handover record does not read"

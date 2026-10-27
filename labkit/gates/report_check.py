@@ -522,7 +522,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[str]:
         "`"
         + decide_command(
             pred.parent,
-            u.record.findings.index(u.finding) + 1,
+            u.number,
             "deferred",
             f"replaced by {ctx.head.id}: <why>",
             u.record.path.name,

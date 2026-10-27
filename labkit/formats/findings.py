@@ -374,6 +374,12 @@ class OpenFinding:
     finding: Finding
 
     @property
+    def number(self) -> int:
+        """The finding's number in its record, as `--decide` takes it
+        (`number_of`)."""
+        return number_of(self.record, self.finding)
+
+    @property
     def grade(self) -> str:
         """The finding's grade — BLOCKER, WARNING or NOTE."""
         return self.finding.grade
@@ -382,6 +388,17 @@ class OpenFinding:
     def line(self) -> str:
         """`<record file>: <text>` — how every gate names it."""
         return f"{self.record.path.name}: {self.finding.text}"
+
+
+def number_of(record: Record, finding: Finding) -> int:
+    """FINDING's 1-based number in RECORD, found by identity: two equal
+    findings in one record took the first's number by `list.index`, and a
+    printed `--decide` named the wrong one (audit 2026-10-27, third, K5).
+    Raises ValueError when FINDING is not one of RECORD's."""
+    for n, f in enumerate(record.findings, 1):
+        if f is finding:
+            return n
+    raise ValueError(f"{record.path.name}: the finding is not one of its own")
 
 
 def open_findings(

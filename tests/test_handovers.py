@@ -419,6 +419,16 @@ class HandoverRecovery(cases._Chain):
         self.assertIn(path.name, out)
         self.assertFalse(handovers.valid(self.area))
 
+    def test_the_handover_writes_only_where_report_check_looks(self):
+        # it took REPORT.MD, a file report-check never holds (audit
+        # 2026-10-27, third, S3)
+        root = self.lab.root.resolve()  # as git_root gives it
+        with self.assertRaises(handovers.HandoverError):
+            handovers.report_destination(root, root / "REPORT.MD")
+        self.assertEqual(
+            handovers.report_destination(root, self.report), self.report.resolve()
+        )
+
     def test_a_staged_record_that_is_not_utf8_names_its_file(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)

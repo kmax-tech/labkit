@@ -1019,3 +1019,17 @@ class Binding(unittest.TestCase):
             findings.FindingsError, "run the analysis audit again"
         ):
             findings.read(ana)
+
+
+class NumberOf(unittest.TestCase):
+    def test_two_equal_findings_keep_their_own_numbers(self):
+        # list.index gave the second the first's number, and a printed
+        # --decide named the wrong one (audit 2026-10-27, third, K5)
+        from types import SimpleNamespace
+
+        first = findings.Finding("BLOCKER", "same text", "open", "")
+        second = findings.Finding("BLOCKER", "same text", "open", "")
+        self.assertEqual(first, second)
+        record = SimpleNamespace(findings=[first, second], path=Path("r.toml"))
+        self.assertEqual(findings.number_of(record, first), 1)  # type: ignore[arg-type]
+        self.assertEqual(findings.number_of(record, second), 2)  # type: ignore[arg-type]

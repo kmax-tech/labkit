@@ -46,6 +46,7 @@ from labkit.formats.comment_blocks import (
 )
 from labkit.formats.repo import (
     PROTOCOL_NAME,
+    REPORT_SUFFIX,
     SKIP_DIRS,
     GitError,
     area_protocols,
@@ -298,7 +299,7 @@ def report_destination(root: Path, path: Path) -> Path:
     if (
         path.is_symlink()
         or not under_root(root, report)
-        or report.suffix.lower() != ".md"
+        or report.suffix != REPORT_SUFFIX
     ):
         raise HandoverError(
             "handover report must be a regular Markdown file inside the repository"

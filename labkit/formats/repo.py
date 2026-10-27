@@ -320,6 +320,12 @@ def indexed_protocols(repo: Path) -> list[Path]:
     return [p for p in indexed_files(repo) if PROTOCOL_NAME.match(p.name)]
 
 
+#: the suffix of a report the gates hold (`report_hold.report_files`) and
+#: a handover may write: exactly `.md`, so a handover never writes where
+#: report-check would not look (audit 2026-10-27, third, S3)
+REPORT_SUFFIX = ".md"
+
+
 def protocol_link(path: Path, state: str) -> str:
     """The refusal of PATH, a protocol that is a symbolic link in STATE
     ("tree" or "index"). A protocol is a regular file: the tree's reader

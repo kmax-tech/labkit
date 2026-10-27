@@ -306,6 +306,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A finding's number is its own; a handover writes only where
+  report-check looks.** Printed `--decide` commands numbered a finding by
+  `list.index`, so of two equal findings in one record the second got the
+  first's number; `findings.number_of` (and `OpenFinding.number`) finds it
+  by identity. The handover accepted `REPORT.MD`, a file report-check never
+  holds; one `repo.REPORT_SUFFIX` serves both. Audit 2026-10-27 (third),
+  K5, S3.
 - **A first measurement at `low` needs its registration committed.** The
   start gate read the tree: a registration written a minute before the
   run passed, the run started uncommitted, finalize was clean — and

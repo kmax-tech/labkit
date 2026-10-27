@@ -1563,7 +1563,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     for u in blockers:
         cmd = decide_command(
             area,
-            u.record.findings.index(u.finding) + 1,
+            u.number,
             "deferred",
             "<why it stays unresolved>",
             u.record.path.name,
