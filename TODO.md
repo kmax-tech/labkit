@@ -1038,6 +1038,34 @@ Notiert, nicht geplant:
    Erledigt 2026-10-27: (1) `2286d8d`, (2) `0bad41c`, (4) `10c9773`;
    (3) entschieden: Standard-Null auf permutierten Labels, ein fester
    Null-Prädiktor bleibt Option. (5) bleibt bis zum Benchmark-Beleg liegen.
+9. **Audit 2026-10-27, dritter Durchgang** ([Register](docs/audit-2026-10-27-structure.md),
+   HEAD `2847c1e`: Anweisungen am gestempelten Labor, Drift, Heimaten,
+   Struktur, Klarheit des Tagesdiffs). Offene Entscheidungen:
+   (1) Fehler mit Wirkung beheben, je ein Commit: K1 (kaputter
+   Übergabe-Record verdeckt Journal-Lücken), K2/K3 (Tracebacks statt
+   Ablehnung in `hold_declared` und am Commit), K5 (Preflight nennt eine
+   unlesbare Übergabe „set aside“), S2 (`--into`-Befehl mit falschem
+   Pfad), I10 (`runlog .` nimmt das Repo als Bereich, `--wait` meldet
+   leer), I7 (Prompt-Skelett prüft ohne Eingabe grün).
+   (2) A4/I1 schließen: bei `low` den Start ohne committete Registrierung
+   ablehnen statt die Übernahme später für immer zu sperren —
+   Gate-Änderung.
+   (3) Anweisungen angleichen: nach dem Lauf Audit, Entscheidung,
+   Conclusion vor der Übernahme (I3), Audit bei `low` eine Lesart (I4),
+   Ausweg vor dem ersten Audit nennen (I2), Exploration mit
+   `--repeat-cost` (I8).
+   (4) Kopffelder `number_describes`, `frozen`, `preflight_audit` über
+   `protocol-fill` setzbar machen oder das Handeditieren ausdrücklich
+   erlauben (I5, I6).
+   (5) Die `high`-Form ohne Modell und ohne Kriterium von Modell- und
+   Kriteriumsfeldern befreien (I9, C2 offen).
+   (6) Drift-Paket D1–D8 und Kleinkram K4, K6–K10, I11–I12.
+   (7) Heimaten: ein Block-Scanner für Bericht-Blöcke (S1),
+   Befehls-Bauer in `repo` (S2), die übrigen S-Zeilen und die neun
+   fehlenden `test_one_home`-Regeln.
+   (8) Struktur nach Nutzen/Risiko: Prüfer-Bausteine aus `audit` lösen,
+   damit der Pre-commit kein `llm` lädt (M1, M2); `report_check` teilen
+   (M3); Hash-Modul; `preflight_area` mit Sammler (M4); toter Code (M6).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
