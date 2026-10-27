@@ -294,6 +294,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-init lab` stamps only templates the pin holds.** Run from a
+  source checkout (an editable install), it pinned the release tag of the
+  installed version while reading the checkout's templates: a lab stamped
+  from main on 2026-10-27 got an `AGENTS.md` naming `--repeat-cost` and
+  `--kind` under a `v0.103.0` pin that knows only `--cost`. `lab` now
+  compares the lab templates (`scaffold.LAB_TEMPLATES`) in the checkout's
+  working tree with the ref the pin names and refuses on any difference,
+  naming the templates and the ways out: release first, pin a pushed
+  commit that holds them (`--labkit-ref`), or stamp from an installed
+  release. A ref the checkout lacks refuses too; an installed release
+  compares nothing. Note: `docs/notes/2026-10-27-lab-pin-templates.md`.
 - **The Claude hooks find the git root from a subdirectory.** A session
   whose project directory lies below the repo root skipped the stop and
   post-change's git status in silence, pre-run's walk to an area ended at

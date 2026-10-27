@@ -31,7 +31,9 @@ Every file is written only if absent: rerunning never overwrites — except
 rewrites the protocol, and is refused when that would lose an edit. The pin
 names the release tag `v<version>` of the installed labkit; until that tag is
 pushed the pin does not install, so `--labkit-ref` names another ref (a pushed
-commit) for development and tests.
+commit) for development and tests. Run from a source checkout (an editable
+install), `lab` stamps only templates that ref holds unchanged
+(`check_lab_pin`).
 """
 
 from __future__ import annotations
@@ -127,6 +129,8 @@ LAB_FILES = (
         "notes/theorie/terms.md",
     ),  # the lab's glossary (LAB-084 Double-coinage check)
 )
+#: the templates `stamp_lab` writes — what the ref a lab's pin names must hold unchanged
+LAB_TEMPLATES = ("AGENTS.md.template", *(tmpl for tmpl, _ in LAB_FILES))
 LAB_DIRS = (
     "experiments",
     "data/raw",
@@ -174,9 +178,9 @@ def source_version() -> str | None:
     return m.group(1)
 
 
-def labkit_pin(ref: str | None = None) -> str:
-    """The requirements line pinning labkit: the release tag of the installed
-    version on GitHub, or REF when given (a pushed commit, for development).
+def pinned_ref(ref: str | None = None) -> str:
+    """The ref a lab's pin names: the release tag of the installed version,
+    or REF when given (a pushed commit, for development).
 
     Refuses when the installed metadata and the source checkout disagree: an
     editable install keeps the version of its last `pip install -e` while
@@ -192,7 +196,64 @@ def labkit_pin(ref: str | None = None) -> str:
             f"version of its last install; run `pip install -e '.[dev]'` "
             f"there, or the pin names a tag the templates do not belong to",
         )
-    return f"labkit @ git+{LABKIT_REMOTE}@{ref or 'v' + version}"
+    return ref or f"v{version}"
+
+
+def labkit_pin(ref: str | None = None) -> str:
+    """The requirements line pinning labkit on GitHub at `pinned_ref(REF)`."""
+    return f"labkit @ git+{LABKIT_REMOTE}@{pinned_ref(ref)}"
+
+
+def lab_templates_off_ref(checkout: Path, ref: str) -> list[str]:
+    """The lab templates (`LAB_TEMPLATES`) whose text in CHECKOUT, as its
+    working tree holds it, differs from REF's, or that REF lacks. Raises
+    RuntimeError when CHECKOUT is no git repository or REF no commit in it
+    (a tag not fetched): then nothing shows that the two agree."""
+    if git_root(checkout) is None:
+        raise RuntimeError(f"{checkout} is no git checkout")
+    r = git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], checkout)
+    if r.returncode != 0:
+        raise RuntimeError(f"{ref} is no commit in {checkout}")
+    commit = r.stdout.strip()
+    templates = checkout / "labkit" / "templates"
+    return [
+        name
+        for name in LAB_TEMPLATES
+        if text_at(checkout, templates / name, commit)
+        != (templates / name).read_text(encoding="utf-8")
+    ]
+
+
+def check_lab_pin(ref: str | None) -> None:
+    """Refuse to stamp a lab from a source checkout whose lab templates are
+    not those of the ref the pin names (`pinned_ref`, `lab_templates_off_ref`):
+    the stamped `AGENTS.md` would describe commands the pinned labkit does
+    not have (docs/notes/2026-10-27-lab-pin-templates.md). A check that
+    cannot compare refuses too. An installed release stamps its own
+    templates; then nothing is compared."""
+    if source_version() is None:
+        return
+    pinned = pinned_ref(ref)
+    checkout = PACKAGE_DIR.parent
+    try:
+        off = lab_templates_off_ref(checkout, pinned)
+    except RuntimeError as e:
+        raise console.Refused(
+            "labkit-init",
+            f"cannot tell whether the lab templates in {checkout} are "
+            f"{pinned}'s, which the pin installs: {e} — `git fetch --tags "
+            f"origin` there, or name a commit it holds with --labkit-ref",
+        ) from e
+    if off:
+        raise console.Refused(
+            "labkit-init",
+            f"the lab templates in {checkout} differ from {pinned}, which "
+            f"the pin installs ({', '.join(off)}): the stamped files would "
+            f"describe a labkit the lab does not get. Release first (the "
+            f"CHANGELOG entry, then `just release X.Y.Z` there), pin a pushed "
+            f"commit that holds these templates (--labkit-ref <commit>), or "
+            f"stamp from an installed release",
+        )
 
 
 # --- lab ----------------------------------------------------------------------
@@ -1287,6 +1348,7 @@ def main(argv: list[str]) -> int:
     )
     a = ap.parse_args(argv)
     if a.cmd == "lab":
+        check_lab_pin(a.labkit_ref)
         root = a.dir.resolve()
         root.mkdir(parents=True, exist_ok=True)
         log = stamp_lab(root, a.name or root.name, a.labkit_ref)

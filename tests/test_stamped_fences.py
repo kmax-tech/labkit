@@ -48,7 +48,7 @@ class StampedFences(unittest.TestCase):
                             contextlib.redirect_stdout(out),
                             contextlib.redirect_stderr(out),
                         ):
-                            self.assertEqual(scaffold.main(["lab", str(root)]), 0)
+                            scaffold.stamp_lab(root, root.name)
                             self.assertEqual(scaffold.main(argv), 0, out.getvalue())
                         stamped = sorted(root.rglob("*.md"))
                         self.assertTrue(

@@ -305,7 +305,7 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()),
                 contextlib.redirect_stderr(io.StringIO()),
             ):
-                self.assertEqual(scaffold.main(["lab", str(root)]), 0)
+                scaffold.stamp_lab(root, root.name)
                 argv = [
                     "exp",
                     "judge",

@@ -24,7 +24,10 @@ The commands (`protocol-check`, `intent-check`, `scope-sha`, `runlog`, …)
 then live in `.venv/bin/`; scripts import `from labkit.run import llm, runlog`.
 The lab standard comes with the pin (`python -m labkit.formats.rules show LAB-nnn`),
 nothing is copied. Until the tag is pushed the pin does not install;
-`--labkit-ref <commit>` pins a pushed commit instead.
+`--labkit-ref <commit>` pins a pushed commit instead. Run from a source
+checkout, `labkit-init lab` refuses unless the checkout's lab templates are
+those of the ref it pins, so a repo never gets an `AGENTS.md` its labkit
+does not match.
 
 The author's house keeps a separate thesis starter
 (`local-init.py --thesis` in the dotfiles) that adds house

@@ -104,6 +104,42 @@ class Lab(unittest.TestCase):
         finally:
             scaffold.importlib.metadata.version = real
 
+    def test_lab_from_a_checkout_off_the_pin_is_refused(self) -> None:
+        """Stamped from main under a v0.103.0 pin, AGENTS.md named `--kind`,
+        which that labkit lacks (2026-10-27). This suite runs from the
+        checkout, so `check_lab_pin` compares."""
+        self.assertIsNotNone(scaffold.source_version())
+        root = self.root / "lab"
+        off = mock.patch.object(
+            scaffold, "lab_templates_off_ref", return_value=["AGENTS.md.template"]
+        )
+        with off, self.assertRaisesRegex(console.Refused, "AGENTS.md.template"):
+            quiet(scaffold.main, ["lab", str(root)])
+        self.assertFalse(root.exists())
+        unknown = mock.patch.object(
+            scaffold,
+            "lab_templates_off_ref",
+            side_effect=RuntimeError("v0.0.1 is no commit"),
+        )
+        with unknown, self.assertRaisesRegex(console.Refused, "cannot tell"):
+            quiet(scaffold.main, ["lab", str(root)])
+        self.assertFalse(root.exists())
+        same = mock.patch.object(scaffold, "lab_templates_off_ref", return_value=[])
+        with same:
+            self.assertEqual(quiet(scaffold.main, ["lab", str(root)]), 0)
+        self.assertTrue((root / "AGENTS.md").is_file())
+
+    def test_lab_from_an_installed_release_compares_nothing(self) -> None:
+        root = self.root / "lab"
+        with (
+            mock.patch.object(scaffold, "source_version", return_value=None),
+            mock.patch.object(
+                scaffold, "lab_templates_off_ref", side_effect=AssertionError
+            ),
+        ):
+            self.assertEqual(quiet(scaffold.main, ["lab", str(root)]), 0)
+        self.assertTrue((root / "AGENTS.md").is_file())
+
     def test_the_stamped_repo_tests_pass_against_this_labkit(self) -> None:
         """The lab repo's own guard test compares the helpers' module names
         with their package path; it is run here, not only read, so a stamped
@@ -138,6 +174,64 @@ class Lab(unittest.TestCase):
                 ),
                 path.name,
             )
+
+
+GIT_ID = ["-c", "user.name=t", "-c", "user.email=t@example.org"]
+
+
+class LabTemplatesOffRef(unittest.TestCase):
+    """`lab_templates_off_ref` against a labkit-like checkout tagged v1.0.0."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo = Path(self.tmp.name)
+        self.templates = self.repo / "labkit" / "templates"
+        self.templates.mkdir(parents=True)
+        for name in scaffold.LAB_TEMPLATES:
+            (self.templates / name).write_text(f"{name}\n", encoding="utf-8")
+        self.git("init", "-q")
+        self.git("add", ".")
+        self.git("commit", "-q", "-m", "release")
+        self.git("tag", "v1.0.0")
+
+    def git(self, *args: str) -> str:
+        r = subprocess.run(
+            ["git", *GIT_ID, *args],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return r.stdout.strip()
+
+    def test_the_templates_as_tagged_pass(self) -> None:
+        self.assertEqual(scaffold.lab_templates_off_ref(self.repo, "v1.0.0"), [])
+
+    def test_a_template_changed_since_the_ref_is_named(self) -> None:
+        (self.templates / "AGENTS.md.template").write_text("--kind\n", encoding="utf-8")
+        off = ["AGENTS.md.template"]
+        self.assertEqual(scaffold.lab_templates_off_ref(self.repo, "v1.0.0"), off)
+        self.git("commit", "-q", "-am", "main moves on")
+        self.assertEqual(scaffold.lab_templates_off_ref(self.repo, "v1.0.0"), off)
+        head = self.git("rev-parse", "HEAD")
+        self.assertEqual(scaffold.lab_templates_off_ref(self.repo, head), [])
+
+    def test_a_template_the_ref_lacks_is_named(self) -> None:
+        name = scaffold.LAB_TEMPLATES[-1]
+        self.git("rm", "-q", "--cached", f"labkit/templates/{name}")
+        self.git("commit", "-q", "-m", "untrack one template")
+        self.git("tag", "v1.0.1")
+        self.assertEqual(scaffold.lab_templates_off_ref(self.repo, "v1.0.1"), [name])
+
+    def test_a_ref_the_checkout_lacks_cannot_be_compared(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "v9.9.9 is no commit"):
+            scaffold.lab_templates_off_ref(self.repo, "v9.9.9")
+
+    def test_a_directory_without_git_cannot_be_compared(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaisesRegex(RuntimeError, "no git checkout"):
+                scaffold.lab_templates_off_ref(Path(d), "v1.0.0")
 
 
 class Exp(unittest.TestCase):
@@ -1487,9 +1581,12 @@ class Cli(unittest.TestCase):
     def test_lab_then_exp(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "x"
-            self.assertEqual(
-                quiet(scaffold.main, ["lab", str(root), "--labkit-ref", "deadbee"]), 0
-            )
+            # deadbee is no commit: the comparison with the pin has its own tests
+            with mock.patch.object(scaffold, "lab_templates_off_ref", return_value=[]):
+                self.assertEqual(
+                    quiet(scaffold.main, ["lab", str(root), "--labkit-ref", "deadbee"]),
+                    0,
+                )
             self.assertIn(
                 "@deadbee", (root / "requirements.txt").read_text(encoding="utf-8")
             )

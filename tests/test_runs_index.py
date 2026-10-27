@@ -50,7 +50,7 @@ class IgnoredByTheStamp(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "lab"
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(scaffold.main(["lab", str(root)]), 0)
+                scaffold.stamp_lab(root, root.name)
             area = root / "experiments" / "01-x"
             area.mkdir(parents=True)
             (area / "runs.tsv").write_text("run_id\n", encoding="utf-8")
