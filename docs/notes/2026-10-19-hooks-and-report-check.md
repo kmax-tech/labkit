@@ -47,6 +47,18 @@ subdirectory and found no area. Reproduced through the entry point
 The hooks now hold the git root of the project directory, `undecided` that
 of its current directory. Outside every repository the stop holds once per
 turn and says why: a check that cannot run blocks (decided 2026-10-17).
+The fix's reach: per the Claude Code docs (read 2026-10-27), hooks "load
+from the current working directory's `.claude/` folder with no
+parent-directory fallback" (https://code.claude.com/docs/en/permissions),
+so a session started below the root runs none of the hooks
+`labkit-hooks install` writes into the root's `.claude/settings.json`;
+only `.claude/settings.local.json` loads from the git root. The fix holds
+where a hook does fire there (local or user settings, the subdirectory's
+own), and the pre-commit holds the commit either way. The stamped command
+`"${CLAUDE_PROJECT_DIR:-.}/.venv/bin/claude-hook"` also looks for the venv
+under the project directory; what `CLAUDE_PROJECT_DIR` holds in a
+subdirectory session the docs leave open ("the project root where the
+session started").
 
 **The commit's decisions from the index (audit 2026-10-27, C9).**
 `undecided_blockers(staged=True)` read the attempt journal from the index
