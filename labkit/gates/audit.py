@@ -1347,7 +1347,7 @@ def decision_lines(
         owed = ", ".join(findings.REASON_OWED)
         out.append(
             f"findings: {where} — {len(record.findings)} to decide "
-            f"({' / '.join(s for s in findings.STATUSES if s != 'open')}; a reason "
+            f"({findings.DECIDED_LIST}; a reason "
             f"owed for {owed}):"
         )
         if any(f.grade == "BLOCKER" for f in record.findings):
@@ -1360,7 +1360,7 @@ def decision_lines(
             )
             out.append(f"  {n} · {text}")
             out.append(
-                f"      {audit_command(area, base=here)} --decide {n} "
+                f"      {audit_command(area, protocol=protocol, base=here)} --decide {n} "
                 f'STATUS "REASON" --record {shlex.quote(where)}'
             )
             if f.grade == "BLOCKER":

@@ -103,6 +103,28 @@ class FailedAudit(unittest.TestCase):
         self.assertIn("labkit-audit", msg)
         self.assertIn(findings.FAILED_SUFFIX, msg)
 
+    def test_the_owed_audit_names_the_bound_protocol_where_several(self):
+        """The refusal printed `labkit-audit AREA --mode preflight`, which
+        refuses to choose in an area of several protocols (cold review
+        2026-10-27); it names the bound one there. The twin: one protocol,
+        no `--protocol`."""
+        self.assertNotIn("--protocol", self._refused())
+        (self.tmp / "PROTOCOL-y.md").write_text(
+            head(id="p-ffffffffffffffff", repeat_cost="high", promises=DEFAULT_BLOCK),
+            encoding="utf-8",
+        )
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), self.assertRaises(SystemExit) as cm:
+            runlog.Run(
+                "t",
+                {},
+                self.tmp,
+                run_kind="measurement",
+                protocol=self.tmp / "PROTOCOL-x.md",
+            )
+        self.assertIn("--mode preflight --protocol", str(cm.exception))
+        self.assertIn("PROTOCOL-x.md", str(cm.exception))
+
     def test_an_attempt_at_other_code_is_not_one(self):
         self._failed(sha="000000000000")
         msg = self._refused()

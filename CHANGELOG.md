@@ -324,7 +324,12 @@ pins (`requirements.txt` / `requirements.lock`).
   decided BLOCKERs — the hold no longer names that audit and says that no
   step labkit offers clears it there yet (`followup.STEP_NONE_SEVERAL`); the
   audit's own refusal no longer advises settling the earlier findings, which
-  removes none of them (audit 2026-10-27, B1 and D).
+  removes none of them (audit 2026-10-27, B1 and D). The `--decide` lines
+  name `--protocol` there too (an effect's ids need it), every hold whose
+  step ends in the follow-up audit says that no step clears it (not only
+  the bare one: a run and then the audit, a repair and then the audit —
+  `followup.Hold.needs_followup_audit`), and runlog's LABKIT_UNFROZEN
+  refusal names the audit it owes with the bound protocol (cold review).
 - **`usability stage` commits without a global git identity.** labkit's
   own commits in a probe repo carry a fixed committer
   (`usability.PROBE_IDENTITY`, given per commit with `git -c`); no git

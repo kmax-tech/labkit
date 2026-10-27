@@ -194,11 +194,19 @@ class Hold:
     why: str
     step: str
 
+    @property
+    def needs_followup_audit(self) -> bool:
+        """Does STEP end in the follow-up audit (FOLLOWUP_AUDIT)? It refuses an
+        area holding several protocols (`audit.earlier_of`)."""
+        return FOLLOWUP_AUDIT in self.step
 
+
+#: the follow-up audit as a step names it
+FOLLOWUP_AUDIT = "`labkit-audit <area> --mode analysis`"
 #: the step when a follow-up audit is all that is missing
-STEP_AUDIT = "`labkit-audit <area> --mode analysis` follows it up"
-#: what stands instead of STEP_AUDIT where the follow-up cannot run: an
-#: area holding several protocols (`audit.earlier_of` refuses there)
+STEP_AUDIT = f"{FOLLOWUP_AUDIT} follows it up"
+#: what stands instead of a step ending in the follow-up audit where it
+#: cannot run: an area holding several protocols (`audit.earlier_of`)
 STEP_NONE_SEVERAL = (
     "no step labkit offers clears this here yet: the follow-up audit refuses an "
     "area holding several protocols (its records name no protocol, so it would "
@@ -242,7 +250,7 @@ def release_holds(
                         "decided `fixed` in the state audited — no follow-up has seen "
                         "the repair",
                         "change what the finding names, then a new run and "
-                        "`labkit-audit <area> --mode analysis`",
+                        f"{FOLLOWUP_AUDIT}",
                     )
                 )
             continue

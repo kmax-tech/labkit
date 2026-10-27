@@ -411,7 +411,7 @@ def limit_gaps(ctx: Checked) -> list[str]:
             if not f.effect:
                 gaps.append(
                     f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its effect "
-                    f'on the verdicts — `{audit_command(ctx.area)} --decide {n} accepted "REASON" '
+                    f'on the verdicts — `{audit_command(ctx.area, protocol=ctx.protocol)} --decide {n} accepted "REASON" '
                     f'--effect stands|"<ID> not assessable" --record {r.path.name}`'
                 )
     if ctx.declared is None:
@@ -543,7 +543,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         GateFinding(
             BLOCKER,
             f"audit {h.ref}: {h.why} — "
-            f"{followup.STEP_NONE_SEVERAL if several and h.step == followup.STEP_AUDIT else h.step} "
+            f"{followup.STEP_NONE_SEVERAL if several and h.needs_followup_audit else h.step} "
             f"(LAB-015 Preflight audit before freezing)",
             evidence_kind=GUARANTEED,
         )

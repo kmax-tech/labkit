@@ -10,7 +10,9 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import re
+import shlex
 import sys
 import tempfile
 import unittest
@@ -1562,6 +1564,64 @@ class Carried(unittest.TestCase):
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("records name no protocol", err)
 
+    def test_a_printed_decide_line_runs_as_printed_where_several(self):
+        """The `--decide` line named no protocol; with an effect's ids it was
+        refused in an area of several protocols (cold review 2026-10-27).
+        Printed with `--protocol`, it runs as printed with an effect filled
+        in; the twin, the same line without it, is refused."""
+        area, r1 = self.fv.area()
+        x0 = area / "PROTOCOL-x0.md"
+        pid = re.search(r'^id = "(p-[0-9a-f]+)"', x0.read_text(encoding="utf-8"), re.M)
+        assert pid is not None
+        x0.write_text(
+            fixture.head(
+                id=pid.group(1),
+                promises='[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "holds"\n'
+                'scope = ["scripts/01_measure.py"]\n',
+            )
+            + PROTOCOL,
+            encoding="utf-8",
+        )
+        text = x0.read_text(encoding="utf-8")
+        (area / "PROTOCOL-x1.md").write_text(
+            re.sub(
+                r'^id = "p-[0-9a-f]+"',
+                'id = "p-ffffffffffffffff"',
+                text,
+                count=1,
+                flags=re.M,
+            ),
+            encoding="utf-8",
+        )
+        here = Path.cwd()
+        try:
+            os.chdir(area.parents[1])
+            (line,) = [
+                ln.strip()
+                for ln in audit.decision_lines(findings.read(r1), area, "", x0)
+                if "--decide 1 " in ln
+            ]
+            self.assertIn("--protocol", line)
+            words = shlex.split(line)
+            filled = [w if w != "STATUS" else "accepted" for w in words[1:]]
+            filled = [w if w != "REASON" else "known limit" for w in filled]
+            effect = ["--effect", "C1 not assessable"]
+            without = [
+                w
+                for i, w in enumerate(filled)
+                if w != "--protocol" and filled[i - 1] != "--protocol"
+            ]
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                refused = audit.main(without + effect)
+                rc = audit.main(filled + effect)
+        finally:
+            os.chdir(here)
+        self.assertEqual(refused, 2)
+        self.assertIn("name one with --protocol", err.getvalue())
+        self.assertEqual(rc, 0, err.getvalue())
+        self.assertEqual(findings.read(r1).findings[0].effect, "C1 not assessable")
+
     def test_past_the_operating_limit_the_audit_refuses(self):
         area, _ = self.fv.area()
         with mock.patch.object(audit, "EARLIER_MAX_ENTRIES", 0):
@@ -1630,6 +1690,39 @@ class FollowupGate(unittest.TestCase):
             encoding="utf-8",
         )
         (line,) = self.gate(area)
+        self.assertIn(followup.STEP_NONE_SEVERAL, line)
+        self.assertNotIn("labkit-audit", line)
+
+    def test_every_step_ending_in_the_follow_up_is_replaced_where_several(self):
+        """Not only the bare follow-up: a step that asks for a run and then
+        the follow-up, and the step of a BLOCKER `fixed` in the state
+        audited, end in the audit the area refuses (cold review
+        2026-10-27). The twin: a step that names no follow-up stays."""
+        for step in (
+            followup.STEP_AUDIT,
+            f"a run that writes `x` to metrics.json, then {followup.STEP_AUDIT}",
+            f"change what the finding names, then a new run and {followup.FOLLOWUP_AUDIT}",
+        ):
+            self.assertTrue(followup.Hold("r#1", "w", step).needs_followup_audit, step)
+        self.assertFalse(
+            followup.Hold(
+                "r#1", "w", "decide the finding the follow-up carried"
+            ).needs_followup_audit
+        )
+        area, _ = self.fv.area(RequiredCheck.CHECKED)
+        text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
+        (area / "PROTOCOL-x1.md").write_text(
+            re.sub(
+                r'^id = "p-[0-9a-f]+"',
+                'id = "p-ffffffffffffffff"',
+                text,
+                count=1,
+                flags=re.M,
+            ),
+            encoding="utf-8",
+        )
+        (line,) = self.gate(area)
+        self.assertIn("lacks the required check", line)
         self.assertIn(followup.STEP_NONE_SEVERAL, line)
         self.assertNotIn("labkit-audit", line)
 
