@@ -17,9 +17,12 @@ Two git calls, by what a non-zero exit means:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shlex
 import subprocess
+import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 
 from labkit.formats import console
@@ -308,6 +311,49 @@ def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:
     return commit, repo / fields[1]
 
 
+def blobs_then(
+    repo: Path, commit: str, patch: str, paths: list[Path]
+) -> dict[Path, str | None]:
+    """The blob id each of PATHS had in the working tree a run started
+    from: COMMIT's tree with PATCH (the run's `git diff HEAD`, "" when its
+    tree was clean) applied — read in a temporary index, the repository's
+    own index untouched. None for a path that tree lacks: untracked when
+    the run started, or not yet there. PATHS lie under REPO. Raises GitError
+    when COMMIT is no commit of REPO or PATCH does not apply to it."""
+    rels = {p.resolve().relative_to(repo.resolve()).as_posix(): p for p in paths}
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
+        steps: list[tuple[list[str], str | None]] = [(["read-tree", commit], None)]
+        if patch:
+            steps.append((["apply", "--cached", "-"], patch.rstrip("\n") + "\n"))
+        steps.append((["ls-files", "-s", "-z", "--", *rels], None))
+        listed = ""
+        for args, stdin in steps:
+            r = git_run(args, repo, env=env, stdin=stdin)
+            if r.returncode != 0:
+                raise GitError(f"git {args[0]} at {commit[:12]}: {r.stderr.strip()}")
+            listed = r.stdout
+    found: dict[Path, str | None] = dict.fromkeys(rels.values())
+    for entry in listed.split("\0"):
+        if entry:
+            meta, _, rel = entry.partition("\t")
+            if rel in rels:
+                found[rels[rel]] = meta.split()[1]
+    return found
+
+
+def blobs_now(repo: Path, paths: list[Path]) -> dict[Path, str]:
+    """The blob id each of PATHS (existing files under REPO) would have if
+    added now (`git hash-object`, the repository's filters applied as
+    `git add` applies them). Raises GitError when git fails."""
+    if not paths:
+        return {}
+    r = git_run(["hash-object", "--", *(str(p) for p in paths)], repo)
+    if r.returncode != 0:
+        raise GitError(f"git hash-object in {repo}: {r.stderr.strip()}")
+    return dict(zip(paths, r.stdout.split(), strict=True))
+
+
 def find_area(
     path: Path, stop: Path | None = None, protocols: list[Path] | None = None
 ) -> Path | None:
@@ -365,13 +411,24 @@ def layout_root(path: Path) -> Path:
 
 
 def git_run(
-    args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S
+    args: list[str],
+    cwd: Path,
+    timeout: float = GIT_TIMEOUT_S,
+    env: Mapping[str, str] | None = None,
+    stdin: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run git; the caller reads the exit code. Raises GitError only when
-    git itself cannot run (missing binary, timeout)."""
+    """Run git, ENV added to the environment and STDIN given; the caller
+    reads the exit code. Raises GitError only when git itself cannot run
+    (missing binary, timeout)."""
     try:
         return subprocess.run(
-            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=timeout
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env={**os.environ, **env} if env else None,
+            input=stdin,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitError(f"git {' '.join(args)} in {cwd}: {exc}") from exc

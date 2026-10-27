@@ -90,6 +90,7 @@ from labkit.formats.protocol_check import (
 )
 from labkit.checks.run_record_check import (
     arm_findings,
+    code_since_run,
     criterion_n_input_mismatches,
     model_provenance_gap,
     provenance_findings,
@@ -299,10 +300,24 @@ def check_intent_keys_in_metrics(
         findings.note(f"  {held.summary}")
 
 
+def check_run_code(findings: Findings, area: Path, answering_run: Path) -> None:
+    """Station 3, first half: the code that produced the answering run's
+    number is the code here now (`run_record_check.code_since_run`), for
+    every kind — a fix after the run with no new run left the old code's
+    number standing (audit 2026-10-27, A1)."""
+    changed = code_since_run(area, answering_run)
+    for line in changed:
+        findings.block(line)
+    if not changed:
+        findings.note(
+            f"  the script and the helpers it imports are as {answering_run.name} ran them"
+        )
+
+
 def check_declared_scopes(
     findings: Findings, area: Path, answering_run: Path, text: str = ""
 ) -> None:
-    """Station 3: a promise's declared scope edited after the run: today's code is not
+    """Station 3, second half: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
     (Durchstich). An answering run that recorded no block is a blocker
     (standard 0.19, `promises.promise_tables_owed`: every reportable run is held to
@@ -478,11 +493,12 @@ def finalize_area(
     findings.header("intent-check")
     check_intent_keys_in_metrics(findings, chosen, text, answering_run)
 
-    # 3. declared scopes — only with a run
-    findings.header("declared scopes")
+    # 3. the run's code and the declared scopes — only with a run
+    findings.header("the run's code and declared scopes")
     if answering_run is None:
         findings.note(NO_RUN)
     else:
+        check_run_code(findings, area, answering_run)
         check_declared_scopes(findings, area, answering_run, text)
 
     # 4. open fields — always

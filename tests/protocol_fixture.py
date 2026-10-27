@@ -12,7 +12,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from labkit.formats import promises, runs
+from labkit.formats import promises, runs, scope_sha
 
 PID = "p-0123456789abcdef"
 
@@ -78,6 +78,13 @@ def scope_file(area: Path) -> Path:
     return script
 
 
+def script_sha_of(script: Path) -> str:
+    """The `script_sha` a run of SCRIPT records (`provenance.snapshot_script`):
+    a fixture run that names the script it ran, so the code-since-run check
+    (finalize station 3) finds it unchanged."""
+    return scope_sha.file_digest(script)[: scope_sha.DIGEST_CHARS]
+
+
 def run_record(
     fields: dict | None = None, /, *, drop: tuple[str, ...] = (), **more: object
 ) -> dict:
@@ -140,9 +147,10 @@ def completed_run(
     shape (finalize, report-check)."""
     d = area / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
-    scope_file(area)  # the block's scopes name the fixture's script
+    script = scope_file(area)  # the block's scopes name the fixture's script
     block = promises.parse_block((area / "PROTOCOL-x.md").read_text(encoding="utf-8"))
     cfg = run_record(
+        script_sha=script_sha_of(script),
         protocol={"id": pid, "path": "PROTOCOL-x.md"},
         run_kind=run_kind,
         unfrozen_ack=unfrozen_ack,

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import promises  # noqa: E402
-from protocol_fixture import run_record, PID, head, scope_file  # noqa: E402
+from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** how many documents per case?
@@ -70,6 +70,7 @@ class Provenance(unittest.TestCase):
         d.mkdir(parents=True)
         cfg = {
             "script": "01_measure.py",
+            "script_sha": script_sha_of(scope_file(self.area)),
             "pid": 1,
             "schema_version": 4,
             "run_kind": "measurement",

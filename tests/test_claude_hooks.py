@@ -38,6 +38,8 @@ from protocol_fixture import (
     PID,
     head,
     head_commit,
+    scope_file,
+    script_sha_of,
 )  # noqa: E402
 
 BODY = """\
@@ -542,6 +544,7 @@ class Stop(unittest.TestCase):
                         "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
                         "promises": promises.snapshot(block, self.area),
                         "run_kind": run_kind,
+                        "script_sha": script_sha_of(scope_file(self.area)),
                         "git": head_commit(self.root),
                         "data": {
                             "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}

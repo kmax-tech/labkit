@@ -1,7 +1,8 @@
 """run_record_check — what a finished run's record must show before its number counts.
 
-A criterion's denominator against a recorded input count
-(`criterion_n_input_mismatches`), the source frozen in the run and
+The code that produced the number unchanged since the run
+(`code_since_run`), a criterion's denominator against a recorded input
+count (`criterion_n_input_mismatches`), the source frozen in the run and
 tracked in git (`provenance_findings`), a model that answered named in
 the record (`model_provenance_gap`), a single draw where a model was
 asked (`single_draw`), every JSONL row held to the runs that wrote it
@@ -15,10 +16,23 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from labkit.formats.runs import metrics_path
+from labkit.formats.runs import (
+    NO_GIT,
+    metrics_path,
+    patch_path,
+    script_copy_path,
+    untracked_copy_path,
+)
+from labkit.formats.scope_sha import (
+    DIGEST_CHARS,
+    SourceError,
+    file_digest,
+    measured_code,
+)
 from labkit.run import batch
 from labkit.formats import promises, protocol_block
 from labkit.formats.runs import (
+    RunConfig,
     RunConfigError,
     read_metrics,
     read_outputs,
@@ -31,8 +45,12 @@ from labkit.formats.answering_run import (
     repeats_of,
 )
 from labkit.formats.repo import (
+    GitError,
+    blobs_now,
+    blobs_then,
     git_root,
     git_run,
+    shown,
 )
 
 
@@ -42,6 +60,118 @@ def _tracked(repo: Path, path: Path) -> bool:
 
 
 CRITERION_N = promises.CRITERION_N_KEY
+
+#: where a run's script lives in its area, in the order looked for
+SCRIPT_HOMES = ("scripts", ".", "analysis")
+
+
+def code_since_run(area: Path, answering_run: Path) -> list[str]:
+    """Blockers: the code that produced ANSWERING_RUN's number is not the
+    code here now (audit 2026-10-27, A1) — its script against the hash the
+    run recorded (`script_sha`), each module the script imports
+    (`scope_sha.measured_code`: beside it, under `lib/` or `src/`) against
+    the tree the run started from (its commit with its `uncommitted.patch`,
+    `repo.blobs_then`; an untracked sibling against its copy in the run).
+    Exact over what that scope holds; a change made and undone between run
+    and now, and code loaded another way, are not seen. Analysis code and
+    the pin are not compared: a fix there needs no new measurement. Each
+    blocker names its way out — restore the code as it ran, or measure
+    anew and audit that run. Read-only."""
+    cfg = read_run_config(answering_run)
+    if cfg is None:
+        return []  # the answering-run station names an unreadable record
+    rid = answering_run.name
+    anew = "or measure anew and audit that run"
+    if cfg.script_sha == "no-script":
+        return [
+            f"{rid} recorded no script — the code behind its number cannot be compared; {anew[3:]}"
+        ]
+    homes = [area / d / cfg.script for d in SCRIPT_HOMES]
+    script = next((p.resolve() for p in homes if p.is_file()), None)
+    kept = script_copy_path(answering_run, Path(cfg.script).suffix)
+    here = Path.cwd()
+    if script is None:
+        return [
+            f"{shown(homes[0], here)} is gone — {rid} ran it: restore it from "
+            f"{shown(kept, here)} {anew}"
+        ]
+    out: list[str] = []
+    if file_digest(script)[:DIGEST_CHARS] != cfg.script_sha:
+        out.append(
+            f"{shown(script, here)} changed since {rid} ran it — its number came from "
+            f"other code: restore the script as it ran (`cp {shown(kept, here)} "
+            f"{shown(script, here)}`) {anew}"
+        )
+    repo = git_root(area)
+    try:
+        helpers = [f for f in measured_code(script, repo or area) if f != script]
+    except SourceError as exc:
+        return [*out, f"the code {rid} ran cannot be read now: {exc}"]
+    return out + _helpers_since_run(helpers, script, repo, answering_run, cfg)
+
+
+def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can differ
+    helpers: list[Path], script: Path, repo: Path | None, run_dir: Path, cfg: RunConfig
+) -> list[str]:
+    """Blockers for HELPERS (the modules SCRIPT imports) that differ from
+    the run's tree, or whose state then is not recorded."""
+    rid, here = run_dir.name, Path.cwd()
+    out: list[str] = []
+    copied = set(cfg.untracked_sources)
+    in_git: list[Path] = []
+    for f in helpers:
+        rel = (
+            f.relative_to(script.parent).as_posix()
+            if script.parent in f.parents
+            else None
+        )
+        if rel is not None and rel in copied:
+            copy = untracked_copy_path(run_dir, rel)
+            if not copy.is_file() or copy.read_bytes() != f.read_bytes():
+                out.append(
+                    f"{shown(f, here)} changed since {rid} ran it (it was untracked; "
+                    f"the run kept it as {shown(copy, here)}) — restore it from there "
+                    f"or measure anew and audit that run"
+                )
+        else:
+            in_git.append(f)
+    if not in_git:
+        return out
+    if repo is None or not cfg.git_full or cfg.git_full == NO_GIT:
+        return [
+            *out,
+            f"{rid} recorded no commit, so the helpers its script imports "
+            f"({', '.join(shown(f, here) for f in in_git)}) cannot be compared — "
+            f"measure anew in the repository and audit that run",
+        ]
+    patch = patch_path(run_dir)
+    try:
+        then = blobs_then(
+            repo,
+            cfg.git_full,
+            patch.read_text(encoding="utf-8") if patch.is_file() else "",
+            in_git,
+        )
+        now = blobs_now(repo, in_git)
+    except GitError as exc:
+        return [
+            *out,
+            f"the tree {rid} started from cannot be read: {exc} — measure anew and audit that run",
+        ]
+    for f in in_git:
+        if then[f] is None:
+            out.append(
+                f"{shown(f, here)} was not committed when {rid} started — what it "
+                f"held then is not recorded; commit it, measure anew and audit that run"
+            )
+        elif then[f] != now[f]:
+            out.append(
+                f"{shown(f, here)} changed since {rid} ran — restore it as the run's "
+                f"tree held it (`git checkout {cfg.git_full[:12]} -- {shown(f, here)}`"
+                + (f", then {shown(patch, here)}" if patch.is_file() else "")
+                + ") or measure anew and audit that run"
+            )
+    return out
 
 
 def criterion_n_input_mismatches(answering_run: Path) -> list[str]:  # noqa: C901 complexity baseline 2026-10-08

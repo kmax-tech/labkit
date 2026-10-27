@@ -113,8 +113,11 @@ so for a computation it is simply the newest completed bound run. Every later
 station holds that run, and so does every other gate: nobody chooses
 twice. Then the stations: the head's declared run is the answering run
 (or no run is declared yet); the output rows were written by it; the
-promises against its metrics; the declared scopes unchanged since it
-ran; no field left open; at `low` the source frozen in the run and
+promises against its metrics; the code it ran — the measurement script
+and the modules it imports, not the analysis code or the pin — and the
+declared scopes unchanged since it ran (a fix after the run means:
+restore the code as it ran, or measure anew and audit that run); no
+field left open; at `low` the source frozen in the run and
 source and output tracked in git; the area test; the denominators; the
 audit records — one of a deleted run is a blocker. Clean means the run
 can carry a number; it does not release one.

@@ -208,9 +208,23 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
     return _import_closure(list(area_files(area)), repo)
 
 
-def _import_closure(start: list[Path], repo: Path) -> list[Path]:
-    """The repo-local files START reach by import, transitively, sorted."""
-    roots = [repo / r for r in LOCAL_ROOTS if (repo / r).is_dir()]
+def measured_code(script: Path, repo: Path) -> list[Path]:
+    """The files a measurement SCRIPT runs, sorted: SCRIPT, the modules
+    beside it that it imports, and the repo-local helpers (LOCAL_ROOTS
+    under REPO) these reach, transitively — the code that produced a run's
+    number. Analysis code and the pin are not in it (`area_stamp` covers
+    both): an analysis fix or a pin raise leaves it as it was. Code loaded
+    another way (a path built at run time, `importlib`) is not in it.
+    Raises SourceError like the stamp."""
+    return sorted({script, *_import_closure([script], repo, (script.parent,))})
+
+
+def _import_closure(
+    start: list[Path], repo: Path, more_roots: tuple[Path, ...] = ()
+) -> list[Path]:
+    """The repo-local files START reach by import, transitively, sorted;
+    MORE_ROOTS are searched beside LOCAL_ROOTS (a script's own directory)."""
+    roots = [*more_roots, *(repo / r for r in LOCAL_ROOTS if (repo / r).is_dir())]
     seen: set[Path] = set()
     todo = list(start)
     while todo:

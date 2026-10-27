@@ -423,7 +423,11 @@ class Chain(unittest.TestCase):
             with contextlib.redirect_stdout(buf):
                 finalize.main([str(self.area)])
             out = buf.getvalue()
-            return out[out.index("── declared scopes ──") : out.index("── open fields")]
+            return out[
+                out.index("── the run's code and declared scopes ──") : out.index(
+                    "── open fields"
+                )
+            ]
 
         self.assertIn("2 declared scope(s) unchanged", station())
         script = self.area / "scripts" / "01_measure.py"

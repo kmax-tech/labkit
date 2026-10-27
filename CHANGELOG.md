@@ -9,6 +9,25 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **finalize and report-check hold a number whose code changed since its
+  run.** No gate compared the code that produced the answering run's
+  number with the code now: a script fixed after the run, with no new
+  run, left the old code's number standing (audit 2026-10-27, A1;
+  red-team scenario g1). Station 3 now compares, for every kind, the
+  measurement script with the hash its run recorded (`script_sha`) and
+  every module it imports — beside it, under `lib/` or `src/`
+  (`scope_sha.measured_code`) — with the tree the run started from (its
+  commit with its `uncommitted.patch`, `repo.blobs_then`); an untracked
+  sibling against the run's copy. Each difference is a blocker naming the
+  way back: restore the code as it ran, or measure anew and audit that
+  run. Analysis code and the pin are not compared, so an analysis fix or
+  a pin raise needs no new measurement. A run that recorded no script, a
+  helper not committed when the run started, and a run with no commit are
+  held: what they ran is not recorded. Not seen: a change made and undone
+  in between, and code loaded another way. No field was added to the run
+  record. Areas whose measurement code changed since their answering run
+  are held from this release on; 0.103.0 is the last version that lets
+  them through.
 - **report-check holds an earlier decided BLOCKER until a follow-up
   releases it.** Every BLOCKER decided `fixed`, `accepted`, `dismissed` or
   `deferred` in a record not of the state reported is held
