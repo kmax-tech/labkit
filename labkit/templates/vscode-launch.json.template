@@ -35,7 +35,7 @@
       "justMyCode": false
     },
     {
-      "name": "measure: --probe (open script, a few real calls, throwaway file)",
+      "name": "measure: --probe (open script, a few items, throwaway file)",
       "type": "debugpy",
       "request": "launch",
       "program": "${file}",

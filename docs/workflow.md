@@ -49,8 +49,10 @@ Reads: the scripts, the protocol's promise tables. Changes: nothing.
 Clean means: every declared key appears in the code, every `PROMPT`
 constant stands in the protocol, the parsers have fixtures — the static
 part of the promise → code link. It proves nothing about meaning; that is
-the audit's question. At `high` the model skeleton's `--probe`
-checks the instrument on a few items before anything is frozen.
+the audit's question. At `high` the `--probe` of the model and the
+estimator skeletons checks the instrument on a few items before anything
+is frozen (a few real calls; a reduced estimator on twelve labelled
+items); a computation has none.
 
 ## 2. The registration
 
