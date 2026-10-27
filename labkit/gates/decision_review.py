@@ -76,8 +76,8 @@ from labkit.run import llm, llm_backends
 REVIEW = "review"
 #: a decision line of the reviewer's report
 DECISION = re.compile(
-    r"^[\s>*`-]*\**DECISION\s*#(\d+)\**\s*(?:·|—|–|:)\s*\**"
-    r"(upheld|rejected|insufficient)\**\s*(?:·|—|–|:)\s*(.*?)\s*$",
+    audit.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + audit.SEP + r"\s*\**"
+    r"(upheld|rejected|insufficient)\**\s*" + audit.SEP + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(
@@ -266,7 +266,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
             pieces.append((f"FILE: {shown(f, repo)}", snap.text(f)))
     pieces += list(seen.pieces)
     pieces.append((f"FILE: {label}", rules_text))
-    body = "".join(f"===== {lbl} =====\n{txt}\n" for lbl, txt in pieces)
+    body = audit.prompt_body(pieces)
     prompt = (
         f"{audit.instructions(REVIEW)}\n\nMODE: {REVIEW} · AREA: {shown(area, repo)} · "
         f"RECORD: {record.path.name}\n\n{audit.INLINE_NOTE}\n\n{body}"
@@ -281,10 +281,7 @@ def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
     line, held to NUMBERS: every number once, no other, and the closing
     counts equal to the lines. Raises AuditError otherwise — nothing is
     recorded from a report that disagrees with itself."""
-    matches = list(VERDICT.finditer(report or ""))
-    if not matches:
-        raise AuditError("the report has no readable `verdict:` line — not a review")
-    m = matches[-1]
+    m = audit.last_verdict(VERDICT, report, "the report", "a review")
     body = (report or "")[: m.start()]
     lines = [
         (int(d.group(1)), d.group(2), d.group(3).strip())

@@ -78,8 +78,14 @@ REPORT_REVIEW = "report"
 ATTEMPT_MODE = "report-review"
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
-    r"^[\s>*`-]*\**CLAIM\s*#(\d+)\**\s*(?:·|—|–|:)\s*line\s*(\d+)\s*(?:·|—|–|:)\s*"
-    r"\**(result|contradiction)\**\s*(?:·|—|–|:)\s*(.*?)\s*$",
+    audit.LEAD
+    + r"\**CLAIM\s*#(\d+)\**\s*"
+    + audit.SEP
+    + r"\s*line\s*(\d+)\s*"
+    + audit.SEP
+    + r"\s*\**(result|contradiction)\**\s*"
+    + audit.SEP
+    + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(r"verdict:\s*(\d+)\s*claims?(?:\(s\))?", re.I)
@@ -161,7 +167,7 @@ def gather_report(
     repo = layout_root(area)
     label, rules_text = audit.standard_excerpt(REPORT_REVIEW)
     shown_pieces = [*pieces, (f"FILE: {label}", rules_text)]
-    body = "".join(f"===== {lbl} =====\n{txt}\n" for lbl, txt in shown_pieces)
+    body = audit.prompt_body(shown_pieces)
     prompt = (
         f"{audit.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
         f"{shown(area, repo)} · REPORT: {shown(report, repo)}\n\n{INLINE_NOTE}\n\n{body}"
@@ -174,10 +180,7 @@ def parse_claims(report: str, n_lines: int) -> list[ReportClaim]:
     report of N_LINES, numbered 1, 2, … in order, and as many as the
     closing count says. Raises AuditError otherwise — a reply that
     disagrees with itself names nothing."""
-    matches = list(VERDICT.finditer(report or ""))
-    if not matches:
-        raise AuditError("the reply has no readable `verdict:` line — not a review")
-    last = matches[-1]
+    last = audit.last_verdict(VERDICT, report, "the reply", "a review")
     found = list(CLAIM.finditer((report or "")[: last.start()]))
     numbers = [int(m.group(1)) for m in found]
     if numbers != list(range(1, len(found) + 1)):

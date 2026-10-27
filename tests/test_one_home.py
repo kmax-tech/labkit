@@ -73,6 +73,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"\"core\.hooksPath\", \"\.githooks\"",
         {"install_hooks"},
     ),
+    # the audit and both reviewers each spelled the answer-line separator and
+    # joined the prompt themselves (audit 2026-10-27, third); `audit.SEP`,
+    # `audit.LEAD`, `audit.prompt_body`
+    ("an answer-line separator spelled by hand", r"\(\?:·\|—\|–\|:\)", {"audit"}),
+    ("a prompt joined by hand", r"\.join\(f\"===== \{", {"audit"}),
     # report-check printed `--into` with the protocol relative to the report
     # and the report relative to the repo: run from neither (audit
     # 2026-10-27, third, S2); `repo.into_command`
@@ -275,6 +280,8 @@ class OneHome(unittest.TestCase):
             "a run record file spelled by hand": 'cfg = run_dir / "config.json"',
             "a kind compared as a word": 'if kind == "apply":',
             "core.hooksPath set by hand": 'git_run(["config", "core.hooksPath", ".githooks"], root)',
+            "an answer-line separator spelled by hand": 'CLAIM = re.compile(r"CLAIM\\s*(?:·|—|–|:)")',
+            "a prompt joined by hand": 'body = "".join(f"===== {lbl} =====\\n{txt}\\n" for lbl, txt in p)',
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',

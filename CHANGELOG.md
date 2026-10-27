@@ -1088,6 +1088,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One answer-line grammar and one prompt join for the audit and both
+  reviewers.** Each spelled the separator of an answer line
+  (`· — – :`), the lead before its keyword, the "last verdict line or
+  refuse" reading and the `===== label =====` join of its prompt;
+  `audit.LEAD`, `audit.SEP`, `audit.last_verdict` and `audit.prompt_body`
+  hold them, the finding line takes its grades from `findings.GRADES`, and
+  `tests/test_one_home.py` holds a hand-spelled separator or join. Audit
+  2026-10-27 (third), S rest.
 - **One spelling of an audit file's minute.** The records, the decision
   and report reviews and the attempt journal each formatted the minute
   of their name (`2026-10-27T14-05`) and their `date`

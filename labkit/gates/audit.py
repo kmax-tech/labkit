@@ -156,10 +156,18 @@ STANDARD_LABEL = (
     "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
 )
 
-#: a finding line: the grade, then the ` · ` the instructions ask for — or
-#: a dash or colon, which auditors write too (audit 2026-10-15: two blockers
-#: written as `BLOCKER — …` parsed as none, and the record read as covered)
-FINDING = re.compile(r"^[\s>*`-]*\**(BLOCKER|WARNING|NOTE)\**\s*(?:·|—|–|:)", re.M)
+#: the grammar of an answer line, one home for the audit and both
+#: reviewers (audit 2026-10-27, third): what may stand before its keyword
+#: (indentation, a quote, a bullet, a code mark) and the separator between
+#: its fields — the ` · ` the instructions ask for, or a dash or colon,
+#: which agents write too (audit 2026-10-15: two blockers written as
+#: `BLOCKER — …` parsed as none, and the record read as covered)
+LEAD = r"^[\s>*`-]*"
+SEP = r"(?:·|—|–|:)"
+#: a finding line: the grade, then a separator
+FINDING = re.compile(
+    LEAD + r"\**(" + "|".join(findings.GRADES) + r")\**\s*" + SEP, re.M
+)
 VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*blockers?(?:\(s\))?,\s*(\d+)\s*warnings?(?:\(s\))?"
     r"(?:,\s*(\d+)\s*notes?(?:\(s\))?)?",
@@ -471,7 +479,7 @@ def render(
         if mode == ANALYSIS:
             pieces += source.run
             pieces += source.fixes
-    body = "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
+    body = prompt_body(pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
         f"{INLINE_NOTE}\n\n{body}"
@@ -487,11 +495,17 @@ EARLIER_LABEL = "EARLIER DECIDED BLOCKERS"
 EARLIER_MAX_ENTRIES = 40
 EARLIER_MAX_BYTES = 60_000
 #: a line that opens as a fix verdict — read whole or refused, never skipped
-FIX_OPEN = re.compile(r"^[\s>*`-]*\**FIX\**\s*(?:·|—|–|:)", re.M)
+FIX_OPEN = re.compile(LEAD + r"\**FIX\**\s*" + SEP, re.M)
 #: a fix verdict line: `FIX · <record>#<n> · <verdict> · <why>`
 FIX = re.compile(
-    r"^[\s>*`-]*\**FIX\**\s*(?:·|—|–|:)\s*`?(?P<record>[^\s`#]+)#(?P<n>\d+)`?\s*"
-    r"(?:·|—|–|:)\s*`?(?P<verdict>[a-z_]+)`?\s*(?:·|—|–|:)\s*(?P<why>\S.*)$"
+    LEAD
+    + r"\**FIX\**\s*"
+    + SEP
+    + r"\s*`?(?P<record>[^\s`#]+)#(?P<n>\d+)`?\s*"
+    + SEP
+    + r"\s*`?(?P<verdict>[a-z_]+)`?\s*"
+    + SEP
+    + r"\s*(?P<why>\S.*)$"
 )
 
 
@@ -699,14 +713,32 @@ def earlier_of(
     return Followup(shown, metrics, origins)
 
 
+def last_verdict(
+    pattern: re.Pattern[str], text: str | None, said: str, kind: str
+) -> re.Match[str]:
+    """The LAST match of the verdict PATTERN in TEXT — the closing line an
+    agent's answer is held to. Raises AuditError naming SAID ("the
+    report", "the reply") and KIND ("an audit", "a review") when there is
+    none. The one reading of a closing line for the audit and both
+    reviewers."""
+    matches = list(pattern.finditer(text or ""))
+    if not matches:
+        raise AuditError(f"{said} has no readable `verdict:` line — not {kind}")
+    return matches[-1]
+
+
+def prompt_body(pieces: list[tuple[str, str]]) -> str:
+    """PIECES as an agent's prompt inlines them: each under a `===== label
+    =====` line (`INLINE_NOTE` tells the agent so). One home for the audit
+    and both reviewers."""
+    return "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
+
+
 def parse_clarity(text: str) -> dict:
     """{"findings": N, "wrong": M, "lines": [(rule, line)]} from the LAST
     `verdict: N findings (M would be answered wrong)` line. Raises AuditError
     when no verdict line is readable."""
-    matches = list(CLARITY_VERDICT.finditer(text or ""))
-    if not matches:
-        raise AuditError("the report has no readable `verdict:` line — not a reading")
-    m = matches[-1]
+    m = last_verdict(CLARITY_VERDICT, text, "the report", "a reading")
     body = (text or "")[: m.start()]
     lines = [
         (int(f.group(1)), line.strip())
@@ -1318,7 +1350,7 @@ def _stamp_report(
 
 #: a READ line of the auditor's report: a reading hint, printed and never
 #: recorded (the record keeps what FINDING matches)
-READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
+READ_HINT = re.compile(LEAD + r"\**READ\**\s*" + SEP)
 DECISION_TEXT_WIDTH = 160
 
 
