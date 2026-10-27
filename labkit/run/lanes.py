@@ -291,11 +291,7 @@ class Lanes:
             data={"prepared": self.items}, run_kind="measurement",
             protocol=self.protocol.name, repeat_of=repeat,
         ) as run:  # fmt: skip
-            out = (
-                self.out
-                if run.draw is None
-                else self.out.with_name(f"{self.out.stem}_draw{run.draw}.jsonl")
-            )
+            out = run.draw_output(self.out)
             run.output(out)
             jobs = self.plan(items)
             self.measure(

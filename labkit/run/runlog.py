@@ -39,7 +39,12 @@ Three ways a run depends on another run's rows — not one:
                    asked again — new model calls, its own model record, the
                    same protocol, block, config and inputs as ID or a
                    refusal (`answering_run.repeat_mismatch`); `draw` numbers it (2,
-                   3, …). Supporting evidence: it never answers the protocol
+                   3, …). With `reseed=True` (a fit's spread over seeds) runlog
+                   sets the config's `seed` to `answering_run.repeat_seed` of
+                   ID and the draw and records that value — the seed the
+                   script passed is not used, every other key stays ID's;
+                   the script measures with `Run.config` and writes to
+                   `Run.draw_output`. Supporting evidence: it never answers the protocol
 
 Usage:
     import runlog
@@ -109,7 +114,12 @@ from labkit.formats.runs import (
     run_dirs,
     run_state,
 )
-from labkit.formats.answering_run import repeat_mismatch, next_draw
+from labkit.formats.answering_run import (
+    REPEAT_SEED_KEY,
+    next_draw,
+    repeat_mismatch,
+    repeat_seed,
+)
 from labkit.run.provenance import (
     Provenance,
     describe_data,
@@ -127,6 +137,7 @@ from labkit.run.start_check import (
     freeze_gate,
     prepare,
     registration_refusal,
+    reseed_refusal,
     foreground_timeout,
 )
 
@@ -251,25 +262,9 @@ def _runs_held(path: Path) -> set[str] | None:
         return None
 
 
-def _repeat_draw(
-    base_dir: Path,
-    repeat_of: str | None,
-    prepared: Prepared,
-    data: dict,
-    models: dict,
-) -> tuple[str | None, int | None]:
-    """(repeat_of, draw) for config.json, before mkdir and under the index
-    lock the caller holds: a repeat draws a completed primary run of this
-    area again, comparable in protocol, promise block, config and inputs
-    (`answering_run.repeat_mismatch`) — else a refusal. Draw 1 is the run itself;
-    its repeats count on from 2. (None, None) for a run that repeats none."""
-    if repeat_of is None:
-        return None, None
-    if prepared.derived_from is not None:
-        raise SystemExit(
-            "runlog: repeat_of and derived_from exclude each other — a repeat "
-            "asks the model again, a derived run re-reads old rows"
-        )
+def _repeat_parent(base_dir: Path, repeat_of: str) -> RunConfig:
+    """The config of REPEAT_OF, a completed primary run of this area, or a
+    refusal: missing, not completed, unreadable, or itself a repeat."""
     parent = run_path(base_dir, repeat_of)
     try:
         state = completion_state(parent) if parent.is_dir() else "missing"
@@ -286,16 +281,55 @@ def _repeat_draw(
             f"runlog: {repeat_of} is itself a repeat of {pcfg.repeat_of} — "
             f"repeat the primary run"
         )
+    return pcfg
+
+
+def _repeat_draw(
+    base_dir: Path,
+    repeat_of: str | None,
+    reseed: bool,
+    prepared: Prepared,
+    data: dict,
+    models: dict,
+) -> tuple[str | None, int | None, dict]:
+    """(repeat_of, draw, config) for config.json, before mkdir and under the
+    index lock the caller holds: a repeat draws a completed primary run of
+    this area again, comparable in protocol, promise block, config and
+    inputs (`answering_run.repeat_mismatch`) — else a refusal. Draw 1 is the
+    run itself; its repeats count on from 2. RESEED (its conditions held
+    before, `start_check.reseed_refusal`) sets the config's REPEAT_SEED_KEY
+    to `repeat_seed(repeat_of, draw)`, and the comparison holds it to that
+    value. (None, None, the config) for a run that repeats none."""
+    if repeat_of is None:
+        return None, None, prepared.config
+    if prepared.derived_from is not None:
+        raise SystemExit(
+            "runlog: repeat_of and derived_from exclude each other — a repeat "
+            "asks the model again, a derived run re-reads old rows"
+        )
+    pcfg = _repeat_parent(base_dir, repeat_of)
+    try:
+        draw = next_draw(base_dir, repeat_of)
+    except RunConfigError as exc:
+        raise SystemExit(
+            f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
+            f"counted — {exc}"
+        ) from exc
+    config = prepared.config
+    if reseed:
+        config = {**config, REPEAT_SEED_KEY: repeat_seed(repeat_of, draw)}
     mine = {
         "protocol": prepared.bound.binding,
         "promises": prepared.promises,
-        "config": prepared.config,
+        "config": config,
         "data": data,
         "script_sha": script_sha(),
         "models_resolved": models,
     }
     try:
-        differs = repeat_mismatch(pcfg, mine)
+        differs = repeat_mismatch(
+            pcfg, mine, reseed_of=(repeat_of, draw) if reseed else None
+        )
     except RunConfigError as exc:
         raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
     if differs:
@@ -303,13 +337,7 @@ def _repeat_draw(
             f"runlog: this run is no repeat of {repeat_of} — it measures "
             f"something else:\n  " + "\n  ".join(differs)
         )
-    try:
-        return repeat_of, next_draw(base_dir, repeat_of)
-    except RunConfigError as exc:
-        raise SystemExit(
-            f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
-            f"counted — {exc}"
-        ) from exc
+    return repeat_of, draw, config
 
 
 #: how often a run id is drawn when the drawn one is taken — 16^4 suffixes
@@ -354,8 +382,9 @@ class Run:
          acknowledgement over a failed audit)
       3. creation: git, environment and models read (`record_provenance` — a
          derived run resolves no model anew), then under one lock for a
-         repeat: the draw counted (`_repeat_draw`), mkdir, the record
-         written (`_write_record`); a failure there removes the directory
+         repeat: the draw counted and, with RESEED, its seed derived
+         (`_repeat_draw`), mkdir, the record written (`_write_record`); a
+         failure there removes the directory
 
     A refusal in 1 or 2 is a SystemExit (a RuntimeError for the index
     header and a leak), and leaves no run directory behind. `class run` is
@@ -371,6 +400,7 @@ class Run:
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
+        reseed: bool = False,
     ) -> None:
         # 1. preparation — what the run is held to, read once
         prepared = prepare(base_dir, config, run_kind, protocol, derived_from)
@@ -382,6 +412,9 @@ class Run:
             prepared.config,
             prepared.run_kind == "measurement",
         )
+        if refusal:
+            raise SystemExit(f"runlog: {refusal}")
+        refusal = reseed_refusal(prepared, repeat_of, reseed)
         if refusal:
             raise SystemExit(f"runlog: {refusal}")
         obligations = lane(prepared.repeat_cost)
@@ -402,7 +435,6 @@ class Run:
         self._protocol = prepared.bound.binding
         self._repeat_cost = prepared.repeat_cost
         self._promises = prepared.promises
-        self._config = prepared.config
         self._derived_from = prepared.derived_from
         self._run_kind = prepared.run_kind
         self._data = described
@@ -425,8 +457,8 @@ class Run:
             _index_lock(base_dir) if repeat_of is not None else contextlib.nullcontext()
         )
         with guard:
-            self._repeat_of, self.draw = _repeat_draw(
-                base_dir, repeat_of, prepared, described, provenance.models
+            self._repeat_of, self.draw, self._config = _repeat_draw(
+                base_dir, repeat_of, reseed, prepared, described, provenance.models
             )
             self.run_id, self.dir = _make_run_dir(base_dir)
             try:
@@ -434,6 +466,24 @@ class Run:
             except BaseException:
                 shutil.rmtree(self.dir, ignore_errors=True)  # no half-made run
                 raise
+
+    @property
+    def config(self) -> dict:
+        """The config as config.json records it — in its stored form (a
+        tuple as a list), a reseeded repeat's derived seed included: what
+        the script measures with. A new object each time; the record is not
+        changed through it."""
+        return json.loads(json.dumps(self._config, ensure_ascii=False))
+
+    def draw_output(self, out: Path) -> Path:
+        """OUT for a run that repeats none, else the repeat's own file
+        `<stem>_draw<N><suffix>` beside it — the one name of a draw's
+        output (`lanes`, the estimator skeleton)."""
+        return (
+            out
+            if self.draw is None
+            else out.with_name(f"{out.stem}_draw{self.draw}{out.suffix}")
+        )
 
     def _write_record(self, provenance: Provenance) -> None:
         """config.json — what this run was, written once at start — plus the
@@ -679,8 +729,10 @@ class run:
         protocol: str | Path | None = None,
         derived_from: str | None = None,
         repeat_of: str | None = None,
+        reseed: bool = False,
     ) -> None:
-        # `protocol`, `derived_from`, `repeat_of` last: no existing positional call shifts.
+        # `protocol`, `derived_from`, `repeat_of`, `reseed` last: no existing
+        # positional call shifts.
         base = Path(base_dir) if base_dir else Path(sys.argv[0]).resolve().parent
         self._run = Run(
             experiment,
@@ -691,6 +743,7 @@ class run:
             protocol=protocol,
             derived_from=derived_from,
             repeat_of=repeat_of,
+            reseed=reseed,
         )
 
     def __enter__(self) -> Run:

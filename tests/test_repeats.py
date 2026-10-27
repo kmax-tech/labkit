@@ -399,5 +399,173 @@ class Repeats(unittest.TestCase):
                 self.assertIn(needle, str(cm.exception))
 
 
+def _area(block: str) -> tuple[Path, Path]:
+    """(area, its items file): a fresh area whose protocol carries BLOCK."""
+    area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+    area.mkdir(parents=True)
+    scope_file(area)
+    (area / "PROTOCOL-x.md").write_text(
+        head(promises=block) + "\n- **Question / hypothesis:** q\n", encoding="utf-8"
+    )
+    data = area / "items.jsonl"
+    data.write_text('{"id": "a"}\n{"id": "b"}\n', encoding="utf-8")
+    return area, data
+
+
+class Reseed(unittest.TestCase):
+    """A fit's spread over seeds (audit 2026-10-27, C1 and A13): with
+    `reseed`, runlog sets the repeat's seed to `repeat_seed` of the parent
+    and the draw and records it; every other config key stays the
+    parent's, and a seed the script or the protocol fixes is not drawn."""
+
+    CFG = {"estimator_sha": "aaaaaaaaaaaa", "seed": 0, "n_folds": 5}
+
+    def setUp(self) -> None:
+        os.environ.pop("CLAUDECODE", None)
+        self.area, self.data = _area(DEFAULT_BLOCK)
+
+    def _run(
+        self, config: dict, repeat_of: str | None = None, reseed: bool = False
+    ) -> tuple[str, dict]:
+        """(run id, the config the script saw through `Run.config`)."""
+        r = runlog.run(
+            "m",
+            config=config,
+            base_dir=self.area,
+            data={"items": self.data},
+            repeat_of=repeat_of,
+            reseed=reseed,
+        )
+        seen: dict = {}
+        with contextlib.redirect_stdout(io.StringIO()), r as run:
+            seen = run.config
+            run.metrics(c1_pass=True, a1_pass=True, a2_pass=True)
+        return run.run_id, seen
+
+    def _recorded(self, run_id: str) -> dict:
+        path = self.area / "runs" / run_id / "config.json"
+        return json.loads(path.read_text(encoding="utf-8"))["config"]
+
+    def test_the_seed_is_a_function_of_the_run_and_the_draw(self):
+        run = "2026-10-27T10-00-00_ab12"
+        seed = answering_run.repeat_seed(run, 2)
+        # pinned (`shasum -a 256` of "<run>:2", first four bytes): the
+        # derivation is part of what a recorded seed means
+        self.assertEqual(seed, 562606026)
+        self.assertEqual(seed, answering_run.repeat_seed(run, 2))
+        self.assertNotEqual(seed, answering_run.repeat_seed(run, 3))
+        self.assertNotEqual(
+            seed, answering_run.repeat_seed("2026-10-27T10-00-00_cd34", 2)
+        )
+        self.assertLess(answering_run.repeat_seed(run, 3), 2**32)
+        with self.assertRaises(ValueError):
+            answering_run.repeat_seed(run, 1)
+
+    def test_each_draw_records_its_derived_seed_and_the_parent_keeps_its_own(self):
+        first, _ = self._run(self.CFG)
+        second, seen2 = self._run(self.CFG, repeat_of=first, reseed=True)
+        third, seen3 = self._run(self.CFG, repeat_of=first, reseed=True)
+        for run_id, draw, seen in ((second, 2, seen2), (third, 3, seen3)):
+            want = {**self.CFG, "seed": answering_run.repeat_seed(first, draw)}
+            self.assertEqual(self._recorded(run_id), want)
+            self.assertEqual(seen, want)  # what the script measures with
+        self.assertNotEqual(
+            self._recorded(second)["seed"], self._recorded(third)["seed"]
+        )
+        self.assertEqual(self._recorded(first), self.CFG)
+        answering, _ = answering_run.bound_runs(self.area, PID)
+        self.assertEqual([f.dir.name for f in answering], [first])
+
+    def test_the_seed_passed_is_replaced_and_every_other_key_held(self):
+        first, _ = self._run(self.CFG)
+        second, _ = self._run({**self.CFG, "seed": 7}, repeat_of=first, reseed=True)
+        self.assertEqual(
+            self._recorded(second)["seed"], answering_run.repeat_seed(first, 2)
+        )
+        with self.assertRaises(SystemExit) as cm:
+            self._run({**self.CFG, "n_folds": 3}, repeat_of=first, reseed=True)
+        self.assertIn("config n_folds: 5 → 3", str(cm.exception))
+
+    def test_the_twin_without_reseed_another_seed_is_no_repeat(self):
+        first, _ = self._run(self.CFG)
+        with self.assertRaises(SystemExit) as cm:
+            self._run({**self.CFG, "seed": 7}, repeat_of=first)
+        self.assertIn("config seed: 0 → 7", str(cm.exception))
+        same, _ = self._run(self.CFG, repeat_of=first)
+        self.assertEqual(self._recorded(same), self.CFG)
+
+    def test_reseed_needs_an_integer_seed_and_a_repeat_before_any_directory(self):
+        bare = {"estimator_sha": "aaaaaaaaaaaa"}
+        first, _ = self._run(bare)
+        before = sorted((self.area / "runs").iterdir())
+        with self.assertRaises(SystemExit) as cm:
+            self._run(bare, repeat_of=first, reseed=True)
+        self.assertIn("no integer `seed`", str(cm.exception))
+        with self.assertRaises(SystemExit) as cm:
+            self._run(self.CFG, reseed=True)
+        self.assertIn("it goes with repeat_of", str(cm.exception))
+        self.assertEqual(sorted((self.area / "runs").iterdir()), before)
+
+    def test_a_seed_the_protocol_registers_is_not_drawn_anew(self):
+        sentence = 'sentence = "the criterion holds"\n'
+        self.assertEqual(DEFAULT_BLOCK.count(sentence), 1)
+        self.area, self.data = _area(
+            DEFAULT_BLOCK.replace(sentence, sentence + "constants = { seed = 0 }\n")
+        )
+        first, _ = self._run(self.CFG)
+        with self.assertRaises(SystemExit) as cm:
+            self._run(self.CFG, repeat_of=first, reseed=True)
+        self.assertIn(
+            "registers `seed` = 0 — a spread over seeds needs a seed the protocol "
+            "does not fix",
+            str(cm.exception),
+        )
+        same, _ = self._run(self.CFG, repeat_of=first)  # the twin: the same seed
+        self.assertEqual(self._recorded(same), self.CFG)
+
+    def test_the_comparison_derives_the_seed_itself(self):
+        parent = _read({"config": {"seed": 0, "n": 1}})
+        base = parent.repeat_basis()
+        derived = answering_run.repeat_seed("P", 2)
+
+        def mismatch(cfg: dict, of: runs.RunConfig = parent) -> list[str]:
+            return answering_run.repeat_mismatch(
+                of, {**of.repeat_basis(), "config": cfg}, reseed_of=("P", 2)
+            )
+
+        self.assertEqual(mismatch({"seed": derived, "n": 1}), [])
+        self.assertEqual(
+            mismatch({"seed": 98, "n": 1}),
+            [f"config seed: 98, the derived seed of this draw is {derived}"],
+        )
+        self.assertEqual(
+            mismatch({"seed": derived, "n": 2}), ["config n: 1 → 2"]
+        )  # every other key stays the parent's
+        unseeded = _read({"config": {"n": 1}})
+        self.assertIn(
+            "config seed: the parent records (absent), no integer seed — a repeat "
+            "draws only a seed the parent had",
+            mismatch({"seed": derived, "n": 1}, unseeded),
+        )
+        # the twin: without reseed the seed is held to the parent's
+        self.assertEqual(answering_run.repeat_mismatch(parent, base), [])
+
+    def test_a_recorded_seed_no_runlog_wrote_is_refused_where_draws_are_read(self):
+        first, _ = self._run(self.CFG)
+        reseeded, _ = self._run(self.CFG, repeat_of=first, reseed=True)
+        plain, _ = self._run(self.CFG, repeat_of=first)
+        self.assertEqual(
+            [d.name for _, d in answering_run.draws(self.area, first)],
+            [first, reseeded, plain],
+        )  # the twin: the parent's seed and the derived one both read
+        path = self.area / "runs" / reseeded / "config.json"
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["config"]["seed"] = 7
+        path.write_text(json.dumps(record), encoding="utf-8")
+        with self.assertRaises(runs.RunConfigError) as cm:
+            answering_run.draws(self.area, first)
+        self.assertIn("config seed: 7 is neither the parent's (0)", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

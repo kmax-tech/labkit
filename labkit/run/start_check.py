@@ -2,8 +2,10 @@
 
 Two phases of `runlog.Run`'s start live here: the preparation
 (`prepare`: the protocol binding, the promise snapshot, the config
-frozen; it refuses what cannot be read) and the checks the constructor
-sequences — the low registration (`registration_refusal`), the
+frozen — a reseeded repeat's seed is set later, under runlog's lock; it
+refuses what cannot be read) and the checks the constructor
+sequences — the low registration (`registration_refusal`), a reseed's
+conditions (`reseed_refusal`), the
 detach gate (`foreground_refusal`, with `foreground_timeout`), and for a
 full run the freeze gate (`freeze_gate`: undecided blockers, the freeze
 or the registration, the acknowledgement over a failed audit). Each
@@ -20,6 +22,7 @@ from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, repo
+from labkit.formats.answering_run import REPEAT_SEED_KEY
 from labkit.formats.standard_contract import COMPUTE_KIND, PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
@@ -305,6 +308,32 @@ def foreground_timeout() -> tuple[float, str] | None:
     return None
 
 
+def reseed_refusal(
+    prepared: Prepared, repeat_of: str | None, reseed: bool
+) -> str | None:
+    """Why a run may not have its seed drawn anew (RESEED), or None: a
+    reseed goes with REPEAT_OF; the config must hold an integer
+    REPEAT_SEED_KEY; and a seed the protocol registers as a constant is
+    not drawn — a repeat may not change a registered value. Pure, before
+    any lock: the derivation itself needs the draw (`runlog._repeat_draw`)."""
+    if not reseed:
+        return None
+    if repeat_of is None:
+        return "reseed draws a repeat's seed anew — it goes with repeat_of"
+    seed = prepared.config.get(REPEAT_SEED_KEY)
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        return f"reseed: the config holds no integer `{REPEAT_SEED_KEY}` to draw anew ({seed!r})"
+    registered = promises.all_constants(prepared.block) if prepared.block else {}
+    if REPEAT_SEED_KEY in registered:
+        return (
+            f"reseed: the protocol registers `{REPEAT_SEED_KEY}` = "
+            f"{registered[REPEAT_SEED_KEY]!r} — a spread over "
+            f"seeds needs a seed the protocol does not fix, and a repeat may not "
+            f"change a registered value"
+        )
+    return None
+
+
 def registration_refusal(
     bound: _Bound,
     block: "promises.PromiseTables | None",
@@ -408,7 +437,9 @@ class Prepared:
         block: The parsed promise block, None without tables.
         promises: The snapshot of the block the record carries (`promises.snapshot`).
         config: The run's config, frozen now — what the checks hold is what
-            config.json records.
+            config.json records, but for a reseeded repeat's seed, which
+            runlog derives under its lock (`reseed_refusal` holds the
+            conditions first).
         run_kind: Data preparation, an instrument probe, or a measurement.
     """
 
@@ -434,7 +465,9 @@ def prepare(
     a protocol that cannot be bound (`protocol_binding`), a promise block
     that does not parse or names code that does not exist
     (`_promise_snapshot`) — each a SystemExit. Freezes the config: what
-    the registration check holds is what config.json records."""
+    the registration check holds is what config.json records, but for a
+    reseeded repeat's seed, which runlog derives under its lock (its
+    conditions: `reseed_refusal`)."""
     run_kind = parse_run_kind(run_kind)
     derived = _derived_parent(base_dir, derived_from)
     bound = protocol_binding(base_dir, protocol)

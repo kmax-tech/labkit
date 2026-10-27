@@ -195,6 +195,28 @@ pins (`requirements.txt` / `requirements.lock`).
   commit (`tests/test_workflow_example.py`, audit 2026-10-27, C14); the
   walkthrough test gives the walk's own commits an identity in its
   environment.
+- **A fit's spread over seeds is a repeat, never the answer.** The
+  estimator skeleton told the user that `01_measure.py --seed 7` was "never
+  the answer"; it opened a plain measurement, which became the newest
+  answering run and left the declared one behind, and `02_analyze.py
+  --draws` sent to a `--repeat-of` the script did not have (audit
+  2026-10-27, C1 and A13). Now `--repeat-of RUN_ID` draws the kept run
+  again: `runlog.run(…, repeat_of=ID, reseed=True)` counts the draw under
+  its lock, sets the config's `seed` to `answering_run.repeat_seed(ID,
+  draw)` and records it — the seed the script passed is not used;
+  `repeat_mismatch(…, reseed_of=(ID, draw))` derives the seed itself and
+  holds the record to it, every other key to the parent's; where draws are
+  read (`answering_run.draws`) a repeat whose seed is neither the parent's
+  nor its derived one is refused (`repeat_seed_problem`). The conditions
+  (`reseed` with `repeat_of`, an integer seed, no seed the protocol
+  registers) are refused before any directory (`start_check.reseed_refusal`).
+  The skeleton measures with the recorded config (`Run.config`, in its
+  stored form) and writes the draw to `Run.draw_output`, the one name of a
+  draw's file (the model skeleton's lanes use it too); its default seed is
+  the registered one when the protocol registers a seed. `--seed` with
+  `--repeat-of` is refused; `--seed N` alone is a measurement, which
+  answers when it is the newest — choosing among seeds stays possible and
+  is not detected.
 - **The decision and the report review are attempts in the journal.**
   `labkit-audit --review` and `--report-review` begin an attempt before
   their model call (`attempts.attempt`, modes `review` and

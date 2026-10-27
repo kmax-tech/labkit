@@ -20,6 +20,7 @@ from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises
+from labkit.formats.scope_sha import digest
 from labkit.formats.runs import (
     as_stored,
     binding_of,
@@ -118,12 +119,27 @@ def _repeats(area: Path, run_id: str) -> list[tuple[int, RunDir]]:
 def _numbered_repeats(area: Path, run_id: str) -> list[tuple[int, Path]]:
     """(recorded draw, run dir) of RUN_ID's completed repeats, by draw. Two
     completed repeats with one draw number raise: the lock reserves each
-    number once, so a second holder was copied or written by hand."""
-    found = sorted(
-        (draw, rd.dir)
+    number once, so a second holder was copied or written by hand. So does
+    a repeat whose seed is neither the parent's nor its derived one
+    (`repeat_seed_problem`) — a seed no runlog wrote. Without the parent's
+    config.json its seed is not known here and the seeds go unchecked; the
+    missing parent is draw 1, refused where it is read. An unreadable one
+    raises (`read_run_config`)."""
+    held = [
+        (draw, rd.dir, rd.config)
         for draw, rd in _repeats(area, run_id)
         if rd.config is not None and run_state(rd.dir, alive=False) == COMPLETED
-    )
+    ]
+    parent_run = read_run_config(run_path(area, run_id)) if held else None
+    if parent_run is not None:
+        parent = _table(parent_run.repeat_basis(), "config")
+        for draw, rd_dir, cfg in held:
+            why = repeat_seed_problem(
+                parent, _table(cfg.repeat_basis(), "config"), run_id, draw
+            )
+            if why:
+                raise RunConfigError(f"{rd_dir}/config.json: {why}")
+    found = sorted((draw, rd_dir) for draw, rd_dir, _ in held)
     for (a, da), (b, db) in zip(found, found[1:]):
         if a == b:
             raise RunConfigError(
@@ -140,13 +156,61 @@ def next_draw(area: Path, run_id: str) -> int:
     return 1 + max([1, *(draw for draw, _ in _repeats(area, run_id))])
 
 
+#: the one config key a repeat may change, and only when the script asks
+#: runlog to draw it anew (`reseed`): the seed of a fit, set to `repeat_seed`
+#: of the parent and the draw — a spread over seeds, with no seed the script
+#: or the person chooses
+REPEAT_SEED_KEY = "seed"
+
+
+def repeat_seed(run_id: str, draw: int) -> int:
+    """The seed draw DRAW of RUN_ID gets when its seed is drawn anew: the
+    first four bytes of sha256("<run_id>:<draw>") (`scope_sha.digest`, eight
+    hex characters) as an unsigned integer —
+    below 2**32, which numpy's and scikit-learn's `random_state` take.
+    Anyone recomputes it from the repeat's record (`repeat_of`, `draw`);
+    two draws of one run differ unless their digests collide in those four
+    bytes. Raises ValueError for a draw below 2 (draw 1 is the run itself,
+    with its own seed)."""
+    if draw < 2:
+        raise ValueError(f"draw {draw}: a repeat is draw 2 or later")
+    return int(digest(f"{run_id}:{draw}".encode(), chars=8), 16)
+
+
+def repeat_seed_problem(
+    parent: JsonObject, repeat: JsonObject, run_id: str, draw: int
+) -> str | None:
+    """Why the config REPEAT of draw DRAW of RUN_ID carries a seed no
+    repeat may carry, or None: REPEAT_SEED_KEY is the parent's (a repeat
+    without `reseed`) or `repeat_seed(run_id, draw)` (with it), absent
+    exactly when the parent's is. Pure; PARENT and REPEAT are config
+    tables as recorded."""
+    if REPEAT_SEED_KEY not in parent and REPEAT_SEED_KEY not in repeat:
+        return None
+    mine = repeat.get(REPEAT_SEED_KEY)
+    if REPEAT_SEED_KEY in repeat and as_stored(mine) in (
+        _shown(parent, REPEAT_SEED_KEY),
+        as_stored(repeat_seed(run_id, draw)),
+    ):
+        return None
+    return (
+        f"config {REPEAT_SEED_KEY}: {_shown(repeat, REPEAT_SEED_KEY)} is neither the "
+        f"parent's ({_shown(parent, REPEAT_SEED_KEY)}) nor the derived seed of draw "
+        f"{draw} ({repeat_seed(run_id, draw)})"
+    )
+
+
 def draws(area: Path, run_id: str) -> list[tuple[int, Path]]:
     """(draw, run dir) for RUN_ID and its completed repeats, draw 1 first —
     what an analysis reads to show the spread of the number."""
     return [(1, run_path(area, run_id)), *_numbered_repeats(area, run_id)]
 
 
-def repeat_mismatch(parent_run: RunConfig, new: JsonObject) -> list[str]:
+def repeat_mismatch(
+    parent_run: RunConfig,
+    new: JsonObject,
+    reseed_of: tuple[str, int] | None = None,
+) -> list[str]:
     """Why a run whose config.json would be NEW is no comparable repeat of
     PARENT_RUN, [] when it is — compared on `RunConfig.repeat_basis`, the keys
     NEW carries too: the same protocol, the
@@ -162,7 +226,13 @@ def repeat_mismatch(parent_run: RunConfig, new: JsonObject) -> list[str]:
     by their JSON text, so `1` is not `true` and a missing config key is not
     `null`. A record table (`runs.RECORD_TABLES`) absent on one side, null
     on the other or an object on one only differs; a table that is neither
-    raises RunConfigError."""
+    raises RunConfigError.
+
+    With RESEED_OF = (the parent's id, the draw) — a repeat whose seed runlog
+    draws anew — the config key REPEAT_SEED_KEY is held to
+    `repeat_seed(*RESEED_OF)`, derived here, instead of the parent's: the
+    parent must record an integer one, NEW must carry exactly the derived
+    value; every other key stays the parent's."""
     parent = parent_run.repeat_basis()
     new = json.loads(json.dumps(new, ensure_ascii=False))
     out: list[str] = [
@@ -185,10 +255,7 @@ def repeat_mismatch(parent_run: RunConfig, new: JsonObject) -> list[str]:
         _table(new, "models_resolved")
     ):
         out.append("the model resolved differently (models_resolved)")
-    pc, nc = _table(parent, "config"), _table(new, "config")
-    for key in sorted(set(pc) | set(nc)):
-        if key not in pc or key not in nc or as_stored(pc[key]) != as_stored(nc[key]):
-            out.append(f"config {key}: {_shown(pc, key)} → {_shown(nc, key)}")
+    out += _config_mismatch(_table(parent, "config"), _table(new, "config"), reseed_of)
 
     def digests(cfg: JsonObject) -> JsonObject:
         data = _table(cfg, "data")
@@ -224,6 +291,37 @@ def _form(cfg: JsonObject, key: str) -> str:
         return "null"
     _table(cfg, key)
     return "an object"
+
+
+def _config_mismatch(
+    pc: JsonObject, nc: JsonObject, reseed_of: tuple[str, int] | None
+) -> list[str]:
+    """Why the config NC is not the parent's PC, key by key — with
+    RESEED_OF, REPEAT_SEED_KEY held to `repeat_seed(*RESEED_OF)` instead (the
+    parent must record an integer one); `repeat_mismatch` says the rest."""
+    out = [
+        f"config {key}: {_shown(pc, key)} → {_shown(nc, key)}"
+        for key in sorted(set(pc) | set(nc))
+        if not (reseed_of is not None and key == REPEAT_SEED_KEY)
+        and (key not in pc or key not in nc or as_stored(pc[key]) != as_stored(nc[key]))
+    ]
+    if reseed_of is None:
+        return out
+    seed = pc.get(REPEAT_SEED_KEY)
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        out.append(
+            f"config {REPEAT_SEED_KEY}: the parent records {_shown(pc, REPEAT_SEED_KEY)}, "
+            f"no integer seed — a repeat draws only a seed the parent had"
+        )
+    derived = repeat_seed(*reseed_of)
+    if REPEAT_SEED_KEY not in nc or as_stored(nc[REPEAT_SEED_KEY]) != as_stored(
+        derived
+    ):
+        out.append(
+            f"config {REPEAT_SEED_KEY}: {_shown(nc, REPEAT_SEED_KEY)}, the derived "
+            f"seed of this draw is {derived}"
+        )
+    return out
 
 
 def _shown(cfg: JsonObject, key: str) -> str:

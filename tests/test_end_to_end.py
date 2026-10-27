@@ -32,6 +32,7 @@ from labkit.gates import audit, claude_hooks, finalize, preflight, report_check
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import (
+    answering_run,
     findings,
     promises,
     protocol_block,
@@ -971,6 +972,7 @@ class Estimator(unittest.TestCase):
         self.assertIn(f"c1_pass = True (run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
         assert_draws(self, lab, self.area, run_id, "c1_score", "c1_accuracy")
+        self._a_repeat_draws_a_derived_seed_and_never_answers(run_id)
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
         lab.git("add", "-A")
@@ -979,6 +981,45 @@ class Estimator(unittest.TestCase):
         self.assertIn("read from the index", out)
         lab.commit("the verdict, adopted")
         self._the_class_counts_reach_the_report_block_and_are_held()
+
+    def _a_repeat_draws_a_derived_seed_and_never_answers(self, run_id: str) -> None:
+        """`01_measure.py --repeat-of` (audit 2026-10-27, C1): the kept run
+        drawn again with the seed labkit derives — a run of its own, never
+        the answer; `--draws` shows it and the declared run still answers.
+        A seed of the script's own beside it is refused."""
+        lab = type(self).lab
+        with self.assertRaises(AssertionError) as cm:
+            lab.script(self.area, "01_measure.py", "--repeat-of", run_id, "--seed", "3")
+        self.assertIn("drop --seed", str(cm.exception))
+        out = lab.script(self.area, "01_measure.py", "--repeat-of", run_id)
+        repeat = lab.run_id_of(out)
+        self.assertIn(f"draw 2 of {run_id}", out)
+        recorded = json.loads(
+            (self.area / "runs" / repeat / "config.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual((recorded["repeat_of"], recorded["draw"]), (run_id, 2))
+        self.assertEqual(
+            recorded["config"]["seed"], answering_run.repeat_seed(run_id, 2)
+        )
+        # measured with the recorded seed: every row of the draw's own file
+        # carries it (a script that kept the parent's seed showed a spread of 0)
+        (draw_file,) = (self.area / "output").glob("*_draw2.jsonl")
+        rows = [
+            json.loads(x) for x in draw_file.read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertTrue(rows)
+        self.assertEqual(
+            {r["_instrument"]["seed"] for r in rows},
+            {answering_run.repeat_seed(run_id, 2)},
+        )
+        out = lab.script(self.area, "02_analyze.py", "--draws")
+        self.assertIn(f"draw 2  {repeat}  c1_score", out)
+        rc, out = lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id
+        assert pid is not None
+        chosen = answering_run.bound_answering_run(self.area, pid).run_dir
+        self.assertEqual(chosen.name if chosen else None, run_id)  # still the answer
 
     def _the_class_counts_reach_the_report_block_and_are_held(self) -> None:
         """The input numbers come from the run: the scored rows' class counts

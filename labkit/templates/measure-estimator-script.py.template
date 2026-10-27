@@ -13,9 +13,16 @@ Usage:
         <area> -- …`, after the freeze and the preflight audit).
     ../../.venv/bin/python scripts/01_measure.py --eval-only
         Re-evaluate the kept rows; no fit.
+    ../../.venv/bin/python scripts/01_measure.py --repeat-of RUN_ID
+        The kept run RUN_ID drawn again with a seed labkit derives from it
+        and the draw number (`answering_run.repeat_seed`), everything else
+        unchanged: a run of its own (repeat_of) into <out>_draw<N>.jsonl —
+        the spread over seeds, never the answer. `02_analyze.py --draws`
+        shows it.
     ../../.venv/bin/python scripts/01_measure.py --seed 7
-        Another seed: a run of its own — the spread over seeds, never the
-        answer (the kept run is the one the protocol names).
+        A measurement with another seed: a full run like the one above,
+        which answers the protocol when it is the newest — the spread is
+        `--repeat-of`, not this.
 
 Terms: the *estimator* is the instrument — anything with fit(X, y) and
 predict(X); it stands in `make_estimator()` and nowhere else. A *lane* is one
@@ -372,18 +379,26 @@ def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    ap.add_argument("--seed", type=int, default=SEED, help="folds, permutation, estimator")
+    ap.add_argument("--seed", type=int, default=None,
+                    help="folds, permutation, estimator (default: CONFIG's — the registered seed, "
+                         "else SEED); a full run with it answers")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--show", type=int, metavar="N", help="the config and N feature rows per split, no fit")
     mode.add_argument("--probe", type=int, nargs="?", const=12, metavar="N",
                       help="instrument check: a reduced estimator on N labelled items, both lanes, "
                            "throwaway output; prints the scores (not reported) and one row per lane")
     mode.add_argument("--eval-only", action="store_true")
+    mode.add_argument("--repeat-of", metavar="RUN_ID",
+                      help="draw the kept run RUN_ID again with a derived seed: a run of its own "
+                           "(repeat_of) into <out>_draw<N>.jsonl — the spread, never the answer")
     args = ap.parse_args()
+    if args.repeat_of is not None and args.seed is not None:
+        ap.error("--repeat-of takes the kept run's config and derives its seed; drop --seed")
     head = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
     if args.probe is not None and not standard_contract.lane(head.repeat_cost).probe_allowed:
         ap.error("--probe is not available at repeat_cost='low'; run the full measurement")
-    cfg = replace(CONFIG, seed=args.seed)   # the one field the command line may set
+    # the one field the command line may set
+    cfg = CONFIG if args.seed is None else replace(CONFIG, seed=args.seed)
     items = read_jsonl(ITEMS)
 
     if args.show is not None:          # `is not None`: `--show 0` must not start a run
@@ -421,13 +436,23 @@ def main() -> None:
     # full run: at high repeat cost the protocol must be frozen with the
     # preflight audit stamped and the run detached (`runlog start <area> -- …`).
     # `data=` freezes the items in the run.
+    # A repeat (`--repeat-of`): runlog holds every key but the seed to the
+    # kept run's, derives the seed from that run and the draw and records it
+    # (`reseed`) — the seed passed here is not used.
     with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data={"prepared": ITEMS},
-                    run_kind="measurement", protocol=PROTOCOL.name) as run:
-        run.output(OUT)
-        measure(cfg, items, OUT, prov={"run": run.run_id})
-        evaluate(OUT, cfg, items, run)
-        print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
-              f"(writes Recorded results, [result] run and the run entry from metrics.json)")
+                    run_kind="measurement", protocol=PROTOCOL.name,
+                    repeat_of=args.repeat_of, reseed=args.repeat_of is not None) as run:
+        cfg = MeasureConfig(**run.config)   # measure with what is recorded
+        out = run.draw_output(OUT)
+        run.output(out)
+        measure(cfg, items, out, prov={"run": run.run_id})
+        evaluate(out, cfg, items, run)
+        if run.draw is None:
+            print(f"run: {run.run_id}  → {adopt_command(PROTOCOL, run.run_id)}  "
+                  f"(writes Recorded results, [result] run and the run entry from metrics.json)")
+        else:
+            print(f"run: {run.run_id}  draw {run.draw} of {args.repeat_of}, seed {cfg.seed} — "
+                  f"supporting evidence, never the answer: `scripts/02_analyze.py --draws`")
 
 
 if __name__ == "__main__":
