@@ -439,97 +439,106 @@ def _load(measure: Path, name: str):
     return mod
 
 
+#: the judge's sentences: one causal claim and its plain counterpart
+JUDGE_GOLD = {
+    "causal": "Rain causes the street to be wet.",
+    "not_causal": "The street is wet.",
+}
+
+
+def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
+    """A judge area NAME of LAB as `Judge` registers it — stamped at low
+    repeat cost, its prompt filled, its protocol filled, its prepare script
+    run; not committed. (area, protocol)."""
+    root = lab.root
+    raw = root / "data" / "raw" / "sentences.jsonl"
+    raw.parent.mkdir(parents=True, exist_ok=True)
+    raw.write_text(
+        "".join(
+            json.dumps(
+                {"id": f"s{i}", "text": f"{i}: {JUDGE_GOLD[gold]}", "gold": gold}
+            )
+            + "\n"
+            for i, gold in enumerate(["causal", "not_causal"] * 6)
+        ),
+        encoding="utf-8",
+    )
+    area, protocol = lab.exp(name, repeat_cost="low", kind="apply", model="haiku")
+    scripts = area / "scripts"
+    _replace(
+        scripts / "00_prepare.py",
+        [
+            (
+                'SOURCE = REPO / "data" / "TODO"',
+                'SOURCE = REPO / "data" / "raw" / "sentences.jsonl"',
+            ),
+            (
+                'OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
+                'OUT = AREA / "data" / "prepared" / "sentences_v1.jsonl"',
+            ),
+            (
+                'ABOUT = "TODO: one sentence — what one row is and what this dataset is for."',
+                'ABOUT = "one sentence, labelled causal or not"',
+            ),
+            (
+                '"gold": "TODO: every gold value spelled out, e.g. causal | not_causal",',
+                '"gold": "causal | not_causal",',
+            ),
+        ],
+    )
+    measure = scripts / "01_measure.py"
+    _replace(
+        measure,
+        [
+            (
+                'ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
+                'ITEMS = AREA / "data" / "prepared" / "sentences_v1.jsonl"',
+            ),
+            (
+                'ANSWERS = {"Yes": "TODO-positive-gold", "No": "TODO-negative-gold"}',
+                'ANSWERS = {"Yes": "causal", "No": "not_causal"}',
+            ),
+            (
+                'PROMPT = ("TODO: the question about this text.\\n\\n"',
+                'PROMPT = ("Does the text state that one thing causes another?\\n\\n"',
+            ),
+            (
+                'PROMPT_NULL = ("TODO: a question about this text that has nothing to do with the gold label.\\n\\n"',
+                'PROMPT_NULL = ("Is this text written in English?\\n\\n"',
+            ),
+        ],
+    )
+    _strip_promise_placeholders(protocol)
+    lab.fill(
+        protocol,
+        "type=exploratory",
+        "Terms of this protocol=n/a — no coinage",
+        "Question / hypothesis=Does the model read a causal claim off one sentence?",
+        "Success / failure criterion=[C1] registered accuracy at least the null lane's plus margin",
+        "Admissibility condition=[A1] at most max_empty empty answers; [A2] the null lane at chance within null_band_items",
+        "Data / scope=data/prepared/sentences_v1.jsonl, 12 sentences, 00_prepare.py",
+        "Data profile=6 and 6 sentences, the marker 'because' in both classes",
+        "Model / tool=haiku",
+        "Null condition / anchors (in the same run)=[A2] the placebo question (English?) answers Yes for every item: expected accuracy 6 of 12",
+        "Exclusions / filters=none",
+        "Unit=one sentence",
+    )
+    lab.fill(protocol, "--prompts")
+    lab.script(area, "00_prepare.py")
+    return area, protocol
+
+
 class Judge(unittest.TestCase):
     """The prompt skeleton at low repeat cost, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
 
     run_id = ""  # the kept run, adopted and committed by `_adopted`
 
-    GOLD = {
-        "causal": "Rain causes the street to be wet.",
-        "not_causal": "The street is wet.",
-    }
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.lab = Lab()
-        root = cls.lab.root
-        raw = root / "data" / "raw" / "sentences.jsonl"
-        raw.parent.mkdir(parents=True, exist_ok=True)
-        raw.write_text(
-            "".join(
-                json.dumps(
-                    {"id": f"s{i}", "text": f"{i}: {cls.GOLD[gold]}", "gold": gold}
-                )
-                + "\n"
-                for i, gold in enumerate(["causal", "not_causal"] * 6)
-            ),
-            encoding="utf-8",
-        )
-        cls.area, cls.protocol = cls.lab.exp(
-            "judge", repeat_cost="low", kind="apply", model="haiku"
-        )
-        scripts = cls.area / "scripts"
-        _replace(
-            scripts / "00_prepare.py",
-            [
-                (
-                    'SOURCE = REPO / "data" / "TODO"',
-                    'SOURCE = REPO / "data" / "raw" / "sentences.jsonl"',
-                ),
-                (
-                    'OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
-                    'OUT = AREA / "data" / "prepared" / "sentences_v1.jsonl"',
-                ),
-                (
-                    'ABOUT = "TODO: one sentence — what one row is and what this dataset is for."',
-                    'ABOUT = "one sentence, labelled causal or not"',
-                ),
-                (
-                    '"gold": "TODO: every gold value spelled out, e.g. causal | not_causal",',
-                    '"gold": "causal | not_causal",',
-                ),
-            ],
-        )
-        cls.measure = scripts / "01_measure.py"
-        _replace(
-            cls.measure,
-            [
-                (
-                    'ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
-                    'ITEMS = AREA / "data" / "prepared" / "sentences_v1.jsonl"',
-                ),
-                (
-                    'ANSWERS = {"Yes": "TODO-positive-gold", "No": "TODO-negative-gold"}',
-                    'ANSWERS = {"Yes": "causal", "No": "not_causal"}',
-                ),
-                (
-                    'PROMPT = ("TODO: the question about this text.\\n\\n"',
-                    'PROMPT = ("Does the text state that one thing causes another?\\n\\n"',
-                ),
-                (
-                    'PROMPT_NULL = ("TODO: a question about this text that has nothing to do with the gold label.\\n\\n"',
-                    'PROMPT_NULL = ("Is this text written in English?\\n\\n"',
-                ),
-            ],
-        )
-        _strip_promise_placeholders(cls.protocol)
-        cls.lab.fill(
-            cls.protocol,
-            "type=exploratory",
-            "Terms of this protocol=n/a — no coinage",
-            "Question / hypothesis=Does the model read a causal claim off one sentence?",
-            "Success / failure criterion=[C1] registered accuracy at least the null lane's plus margin",
-            "Admissibility condition=[A1] at most max_empty empty answers; [A2] the null lane at chance within null_band_items",
-            "Data / scope=data/prepared/sentences_v1.jsonl, 12 sentences, 00_prepare.py",
-            "Data profile=6 and 6 sentences, the marker 'because' in both classes",
-            "Model / tool=haiku",
-            "Null condition / anchors (in the same run)=[A2] the placebo question (English?) answers Yes for every item: expected accuracy 6 of 12",
-            "Exclusions / filters=none",
-            "Unit=one sentence",
-        )
-        cls.lab.fill(cls.protocol, "--prompts")
-        cls.lab.script(cls.area, "00_prepare.py")
+        cls.area, cls.protocol = judge_area(cls.lab, "judge")
+        cls.measure = cls.area / "scripts" / "01_measure.py"
         cls.lab.commit("the judge, registered")
 
     @classmethod

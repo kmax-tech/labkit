@@ -432,6 +432,26 @@ def first_measurement_groups(
     return sorted(groups, key=lambda g: g[0].dir.name)
 
 
+def first_registrations(
+    area: Path, pid: str, repo: Path | None
+) -> dict[str, tuple[RunDir, JsonObject]]:
+    """Every promise block the first measurements of protocol PID recorded
+    (`first_measurement_groups`, every run at each first position): its
+    digest → (the first run by name that recorded it, its snapshot). One
+    entry is the registration that stood before the number; several are a
+    registration that cannot be told (K3, docs/notes/2026-10-27-new-
+    registration-contracts.md). A run that recorded no block is left out.
+    Raises RuntimeError when git fails."""
+    out: dict[str, tuple[RunDir, JsonObject]] = {}
+    for rd in (
+        rd for group in first_measurement_groups(area, pid, repo) for rd in group
+    ):
+        snap = rd.config.promises if rd.config is not None else None
+        if snap is not None:
+            out.setdefault(snap["block_sha"], (rd, snap))
+    return out
+
+
 def newest_with_intent_keys(
     cands: list[RunFacts],
 ) -> tuple[Path | None, int, bool]:

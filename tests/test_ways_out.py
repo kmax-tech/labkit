@@ -49,6 +49,17 @@ class WaysOut(unittest.TestCase):
             self.assertIn("never turns an earlier miss into a pass", text)
             self.assertIn('type = "exploratory"', text)
 
+    def test_a_handover_names_the_protocol_not_its_runs(self):
+        """A run id in a report reads as its number: the counter-case's
+        handover that named the answering run was held."""
+        for text in (dict(audit.WAYS_OUT)["none of these"], stuck_section()):
+            text = " ".join(text.split())
+            self.assertIn("the report names the protocol, not its runs", text)
+            self.assertIn(
+                "no `[result]` table" if "`[result]`" in text else "no [result] table",
+                text,
+            )
+
     def test_every_command_named_is_a_real_command_and_flag(self):
         both = " ".join(("\n".join(audit.BLOCKER_ROUTES) + stuck_section()).split())
         self.assertIn("labkit-init exp <new-name> --kind", both)

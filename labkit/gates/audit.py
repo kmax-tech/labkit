@@ -1325,6 +1325,16 @@ READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
 #: took the invalid-registration route for a missed criterion and moved
 #: its bars inside it: the miss comes first, a new registration declares
 #: what it changes (K1–K3, docs/notes/2026-10-27-new-registration-contracts.md).
+#: how a question that cannot be answered leaves the session — the one
+#: sentence the ways out and report-check's holds (K1, K3) print. A run id
+#: in a report reads as that run's number: report-check holds the answering
+#: run of a protocol that declares no result, so a handover names the
+#: protocol (the counter-case of 2026-10-27, tests/test_counter_cases.py)
+HANDOVER = (
+    "hand over: no [result] table in the protocol's head; the report names the "
+    "protocol, not its runs (a cited run id reads as a reported number), says "
+    "what stands in the way and what was tried; no number"
+)
 WAYS_OUT = (
     (
         "an implementation error",
@@ -1358,9 +1368,8 @@ WAYS_OUT = (
     ),
     (
         "none of these",
-        "stop: say in the report what stands in the way and what you tried; no "
-        "number is reported — never delete or rewrite `runs/` or `audits/`, never "
-        "`--no-verify`",
+        f"stop and {HANDOVER} — never delete or rewrite `runs/` or `audits/`, "
+        "never `--no-verify`",
     ),
 )
 BLOCKER_ROUTES = (

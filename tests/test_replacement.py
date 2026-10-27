@@ -111,7 +111,7 @@ class Differences(unittest.TestCase):
         self.assertEqual(protocol_history.registration_differences(old, old), [])
 
 
-class Gate(unittest.TestCase):
+class _Areas(unittest.TestCase):
     """Two areas in one repository: A registered and measured, B replacing it."""
 
     def setUp(self) -> None:
@@ -152,6 +152,8 @@ class Gate(unittest.TestCase):
         ctx = report_check.checked(self.b, self.b / "PROTOCOL-x.md")
         return [g.line for g in report_check.replacement_gaps(ctx)]
 
+
+class Gate(_Areas):
     def test_an_undeclared_change_is_held_with_the_lines_that_declare_it(self):
         """The repair case's margin, lowered in the new area and not declared."""
         self._b(replaces(A_ID))
@@ -260,7 +262,119 @@ class Gate(unittest.TestCase):
         )
 
 
-class Hint(Gate):
+class ConflictingRegistrations(_Areas):
+    """K3's registration that cannot be told, and its way out through K1:
+    two first measurements at one commit, the second with the margin raised
+    in the tree (its `uncommitted.patch` keeps the change). A replacement
+    declares its changes against each, read back as each run saw it."""
+
+    A2_RUN = "2026-10-27T09-30-00_cccc"
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp())
+        _git(self.root, "init", "-q")
+        self.a = self.root / "experiments" / "01-a"
+        self.b = self.root / "experiments" / "02-b"
+        (self.a / "scripts").mkdir(parents=True)
+        (self.a / "scripts" / "01_measure.py").write_text("x = 1\n", encoding="utf-8")
+        proto = self.a / "PROTOCOL-x.md"
+        proto.write_text(head(id=A_ID, promises=block(0.25)) + BODY, encoding="utf-8")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "register 01-a")
+        metrics = {"c1_pass": True, "a1_pass": True}
+        started_at(completed_run(self.a, A_RUN, pid=A_ID, metrics=metrics), self.root)
+        proto.write_text(
+            head(id=A_ID, result=self.A2_RUN, promises=block(0.3)) + BODY,
+            encoding="utf-8",
+        )  # not committed: the second run at the same commit saw another block
+        second = completed_run(self.a, self.A2_RUN, pid=A_ID, metrics=metrics)
+        started_at(second, self.root)
+        (second / "uncommitted.patch").write_text(
+            _git(self.root, "diff", "HEAD") + "\n", encoding="utf-8"
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the margin raised, runs")
+
+    def test_k3_holds_the_predecessor(self):
+        ctx = report_check.checked(self.a, self.a / "PROTOCOL-x.md")
+        (finding,) = report_check.registration_changes(ctx)
+        self.assertEqual(finding.grade, report_check.BLOCKER)
+        self.assertIn("recorded different registrations", finding.line)
+
+    def test_a_change_owed_against_one_of_them_is_held_naming_that_run(self):
+        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        (gap,) = self.gaps()
+        self.assertIn(f"as its first measurement {self.A2_RUN} saw it", gap)
+        self.assertIn("with its uncommitted.patch", gap)
+        self.assertIn("not declared: C1 margin 0.3 → 0.15", gap)
+
+    def test_the_twin_declared_against_each_passes(self):
+        self._b(
+            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("C1 margin", "0.3", "0.15"))
+        )
+        self.assertEqual(self.gaps(), [])
+
+    def test_a_registration_that_cannot_be_read_back_hands_over(self):
+        (self.a / "runs" / self.A2_RUN / "uncommitted.patch").unlink()
+        self._b(
+            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("C1 margin", "0.3", "0.15"))
+        )
+        (gap,) = self.gaps()
+        self.assertIn(f"its first measurement {self.A2_RUN} recorded block", gap)
+        self.assertIn("cannot be read back", gap)
+        self.assertIn("until they can, hand over: no [result] table", gap)
+        self.assertNotIn("fetch", gap)
+
+    def test_the_predecessor_renders_no_verdict(self):
+        proto = self._b(
+            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("C1 margin", "0.3", "0.15"))
+        )
+        line = result_render.rendering(
+            self.b, proto.read_text(encoding="utf-8"), self.b / "runs" / B_RUN
+        ).recorded_results
+        self.assertTrue(
+            line.startswith(
+                f"replaces {A_ID} (01-a/PROTOCOL-x.md): no verdict — its first "
+                f"measurements recorded different registrations · this question: "
+            ),
+            line,
+        )
+
+
+class MovedPredecessor(_Areas):
+    """The repair case's laundering: the predecessor's bar moved after its
+    first measurement (K3 holds it), and a replacement must not carry the
+    moved verdict as the earlier one."""
+
+    def test_a_verdict_under_a_moved_bar_is_not_rendered_first(self):
+        proto = self.a / "PROTOCOL-x.md"
+        later = "2026-10-27T09-30-00_cccc"
+        proto.write_text(
+            head(id=A_ID, result=later, promises=block(0.1)) + BODY, encoding="utf-8"
+        )
+        _git(self.root, "commit", "-qam", "the margin lowered after the first run")
+        started_at(
+            completed_run(
+                self.a, later, pid=A_ID, metrics={"c1_pass": True, "a1_pass": True}
+            ),
+            self.root,
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "run again")
+        proto_b = self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        line = result_render.rendering(
+            self.b, proto_b.read_text(encoding="utf-8"), self.b / "runs" / B_RUN
+        ).recorded_results
+        self.assertTrue(
+            line.startswith(
+                f"replaces {A_ID} (01-a/PROTOCOL-x.md): no verdict — its "
+                f"registration changed after the first measurement {A_RUN}"
+            ),
+            line,
+        )
+
+
+class Hint(_Areas):
     """The report switch is a hint, never a block."""
 
     def _report(self, *runs: str) -> Path:

@@ -347,11 +347,12 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn("a promise's sentence", line)
         self.assertIn("git show", line)
 
-    def test_first_measurements_that_disagree_are_named_not_chosen_by_name(self):
+    def test_first_measurements_that_disagree_are_held_with_both_ways_out(self):
         """Two runs at one commit with different blocks (the tree differed):
         which registration stood cannot be told, and a run id does not
-        settle it — a warning until a new registration can name its
-        predecessor."""
+        settle it — no run answers a registered question. The ways out:
+        register anew against each, or hand over (both walked in
+        tests/test_replacement.py `ConflictingRegistrations`)."""
         sha = self._register(_block(0.1))
         early = self._run(sha, "2026-10-07T08-00-00_aaaa")
         self.proto.write_text(
@@ -363,12 +364,16 @@ class RegistrationAsFirstMeasured(_Repository):
         (finding,) = report_check.registration_changes(
             report_check.checked(self.area, self.proto)
         )
-        self.assertEqual(finding.grade, report_check.WARNING)
+        self.assertEqual(finding.grade, report_check.BLOCKER)
         self.assertIn(
             "the first measurements recorded different registrations", finding.line
         )
         self.assertIn(early.name, finding.line)
         self.assertIn(later.name, finding.line)
+        self.assertIn('[replaces] protocol = "', finding.line)
+        self.assertIn("against each of these registrations", finding.line)
+        self.assertIn("or hand over: no [result] table", finding.line)
+        self.assertIn("the report names the protocol, not its runs", finding.line)
 
 
 class FirstMeasurementInGitOrder(_Repository):

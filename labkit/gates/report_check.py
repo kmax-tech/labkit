@@ -107,10 +107,10 @@ from pathlib import Path
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import RunDir, run_dirs, run_path
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
-from labkit.formats.answering_run import first_measurement_groups, first_measurements
+from labkit.formats.answering_run import first_measurements, first_registrations
 from labkit.formats.protocol_history import (
-    registration_as_first_measured,
     registration_differences,
+    registrations_as_first_measured,
     registration_in_commit,
 )
 from labkit.formats import (
@@ -133,7 +133,7 @@ from labkit.checks import report_blocks
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python
-from labkit.gates import decision_review, report_review
+from labkit.gates import audit, decision_review, report_review
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     adopt_command,
@@ -309,32 +309,35 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
     restore what was registered and measure again, or register anew. Every
     lane: a bar moved after a result was seen answers no registered
     question at any repeat cost. The first measurements are every run at
-    each first position (`answering_run.first_measurement_groups`), not one
+    each first position (`answering_run.first_registrations`), not one
     chosen by name; when they recorded different blocks, which one stood
-    cannot be told, and that is a warning until a new registration can name
-    its predecessor (plan step 2.4). Empty without an answering run, a
-    stamped id, or a block in the records (another station names those)."""
+    cannot be told and no run answers a registered question: held too, the
+    ways out a new registration that declares its changes against each (K1,
+    `replacement_gaps`) or a handover without a declared result. Empty
+    without an answering run, a stamped id, or a block in the records
+    (another station names those)."""
     if ctx.head.id is None or ctx.run is None:
         return []
     cfg = read_run_config(ctx.run)
     now = cfg.promises if cfg is not None else None
     if now is None:
         return []
-    groups = first_measurement_groups(ctx.area, ctx.head.id, git_root(ctx.protocol))
-    registered: dict[str, tuple[RunDir, dict]] = {}
-    for rd in (rd for group in groups for rd in group):
-        snap = rd.config.promises if rd.config is not None else None
-        if snap is not None:
-            registered.setdefault(snap["block_sha"], (rd, snap))
+    registered = first_registrations(ctx.area, ctx.head.id, git_root(ctx.protocol))
     if len(registered) > 1:
         named = ", ".join(
             f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
         )
         return [
             GateFinding(
-                WARNING,
+                BLOCKER,
                 f"the first measurements recorded different registrations: {named} — "
-                f"which one stood before the number cannot be told; held to none of them",
+                f"which one stood before the number cannot be told, so no run of "
+                f"this protocol answers a registered question. Register anew: a new "
+                f'protocol, type = "exploratory", with `[replaces] protocol = '
+                f'"{ctx.head.id}"` and one [[replaces.change]] per change against '
+                f"each of these registrations (report-check of the new protocol "
+                f"lists them), committed before its own first run; or "
+                f"{audit.HANDOVER}",
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -382,8 +385,10 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     predecessor is one protocol of the repo, not itself, and the chain of
     replacements has no circle; the protocol is `type = "exploratory"`;
     every difference of its registration against the predecessor's — each
-    as it stood at its first measurement (`protocol_history.
-    registration_as_first_measured`) — is a `[[replaces.change]]`, and every
+    as its first measurements saw it (`protocol_history.
+    registrations_as_first_measured`; against each when they saw several,
+    the way out of K3's registration that cannot be told) — is a
+    `[[replaces.change]]`, and every
     declared change is one (`registration_differences`); the predecessor's
     open BLOCKERs are decided first. Blockers, each with the line or command
     that clears it. Nothing without `[replaces]`: an undeclared successor is
@@ -441,38 +446,47 @@ def _undeclared_changes(
     ctx: Checked, rep: protocol_block.Replaces, pred: Path
 ) -> list[str]:
     """Every difference of the registration against PRED's that REP does not
-    declare, and every declared change that is none — each registration as
-    it stood at its first measurement; or why they cannot be compared."""
-    old, old_where = registration_as_first_measured(pred, rep.protocol, git_root(pred))
-    new, new_where = registration_as_first_measured(
+    declare, and every declared change that is none — PRED's registration
+    as each of its first measurements saw it (several: the changes are owed
+    against each), this protocol's as its first measurement saw it, or as
+    it stands before one; or why they cannot be compared."""
+    olds, missing = registrations_as_first_measured(pred, rep.protocol, git_root(pred))
+    news, own_missing = registrations_as_first_measured(
         ctx.protocol, str(ctx.head.id), git_root(ctx.protocol)
     )
-    if old is None or new is None:
-        missing = "; ".join(
-            f"{p.name} {where}"
-            for p, text, where in (
-                (pred, old, old_where),
-                (ctx.protocol, new, new_where),
-            )
-            if text is None
+    gaps = [
+        f"{p.name}: {why}"
+        for p, why in ((pred, missing), (ctx.protocol, own_missing))
+        if why
+    ]
+    if len(news) > 1:
+        gaps.append(
+            f"{ctx.protocol.name}: its own first measurements saw different "
+            f"registrations (the registration station names them)"
         )
+    if gaps:
         return [
-            f"the registrations cannot be compared — {missing}; restore that state "
-            f"(fetch the commit) or hand the question over unresolved"
+            f"the registrations cannot be compared — {'; '.join(gaps)}; until "
+            f"they can, {audit.HANDOVER}"
         ]
-    computed = registration_differences(old, new)
+    ((new, new_where),) = news
+    computed: dict[tuple[str, str, str], str] = {}
+    for old, old_where in olds:
+        for change in registration_differences(old, new):
+            computed.setdefault(change, old_where)
     listed = {(c.what, c.from_, c.to) for c in rep.changes}
     s = protocol_block.toml_string
     out = [
         f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
         f"{y} — add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
         f'{s(x)}, to = {s(y)}, why = "…"'
-        for what, x, y in computed
+        for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
     ]
+    against = "; ".join(where for _, where in olds)
     out += [
         f"declares a change the registrations do not show: {what} {x} → {y} — "
-        f"remove that [[replaces.change]] (the predecessor {old_where}, this "
+        f"remove that [[replaces.change]] (the predecessor {against}, this "
         f"protocol {new_where})"
         for what, x, y in sorted(listed - set(computed))
     ]

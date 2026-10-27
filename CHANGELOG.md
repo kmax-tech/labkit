@@ -41,11 +41,16 @@ pins (`requirements.txt` / `requirements.lock`).
   way back: restore what was registered and measure again, or register
   anew. The code the scopes name is not compared: a repair measured again
   under unchanged promises passes. The first measurements are every run at
-  each first position (`answering_run.first_measurement_groups`), not one
-  chosen by name; when they recorded different blocks it is a warning —
-  which one stood cannot be told — until a new registration can name its
-  predecessor. Contract: `docs/notes/2026-10-27-new-registration-contracts.md`
-  (K3). 0.103.0 is the last version that lets such a run through.
+  each first position (`answering_run.first_registrations`), not one
+  chosen by name; when they recorded different blocks, which one stood
+  cannot be told and no run answers a registered question: held too, with
+  both ways out named — a new registration that declares its changes
+  against each (K1), or a handover (`audit.HANDOVER`: no `[result]`, the
+  report names the protocol, not its runs, and no number); the adoption of
+  such a run is refused. Both ways, and the twins that are held, run
+  through the whole chain in `tests/test_counter_cases.py`. Contract:
+  `docs/notes/2026-10-27-new-registration-contracts.md` (K3). 0.103.0 is
+  the last version that lets such a run through.
 - **An `--again` decision review releases nothing, and `--review` exits
   with the state.** `labkit-audit --review --again` skipped the contested
   check, so on a decision never reviewed its `upheld` released the
@@ -905,6 +910,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One experiment workflow in the stamped agent instructions.** The
+  entry guide separates `kind`, `repeat_cost` and `type`, then gives a
+  shared sequence with the additional high-cost checks at their actual
+  steps. Recovery examples distinguish a code fault, an honest miss and
+  an invalid registration. Decisions through `--decide` and generated
+  result updates are explicitly permitted while earlier evidence stays
+  intact. This changes newly stamped instructions, not historical runs
+  or other repositories' pins; it is an instruction intervention for a
+  future usability run, not measured improvement in task completion.
 - **The ways out of a BLOCKER put the miss first and bind a new
   registration.** The printed routes offered "register anew" for an invalid
   registration with the earlier protocol named in its Context; the repair
@@ -1153,10 +1167,14 @@ pins (`requirements.txt` / `requirements.lock`).
   anew" route into a second area and lowered the criterion's margin 0.25 →
   0.15 without a word. A protocol may now declare `[replaces] protocol =
   "p-<id>"` with one `[[replaces.change]]` (`what`, `from`, `to`, `why`) per
-  difference of its registration against the predecessor's — each as it
-  stood at its first measurement (`protocol_history.registration_as_first_measured`,
-  `registration_differences`: promise sentences, keys, constants, scopes,
-  the kind, the data profile). report-check then holds, exactly
+  difference of its registration against the predecessor's — as each of
+  its first measurements saw it: the recorded commit's text with the run's
+  `uncommitted.patch` for the protocol applied, held to the block the run
+  recorded (`protocol_history.registrations_as_first_measured`,
+  `as_measured`); when they saw several, the changes are owed against each
+  (`registration_differences`: promise sentences, keys, constants, scopes,
+  the kind, the data profile); a registration that cannot be read back
+  leaves the handover. report-check then holds, exactly
   (`report_check.replacement_gaps`): a predecessor that is itself, none or
   several protocols of the repo, or a circle; a type other than
   `exploratory`; a difference not declared — named with the TOML lines
@@ -1164,7 +1182,11 @@ pins (`requirements.txt` / `requirements.lock`).
   open BLOCKERs, each with the `--decide … deferred` that hands it over.
   The generated Recorded results of a replacing protocol open with the
   predecessor's verdict, derived from its own sources, then `this
-  question:` (`result_render.predecessor_verdict`). A report that cited one
+  question:` (`result_render.predecessor_verdict`); `no verdict — …` when
+  its declared run answers no registered question (its first measurements
+  saw different registrations, or its registration changed after the
+  first — a bar moved in the predecessor does not reach the successor as
+  its earlier verdict). A report that cited one
   protocol's runs at HEAD and now cites another's, which declares no
   `[replaces]` of it, is a WARNING of static evidence
   (`report_check.replacement_hints`): a citation shows no succession, and

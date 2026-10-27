@@ -12,13 +12,25 @@ Read-only; git is asked through `repo.git_run`.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_check import fields, low_registration_missing
-from labkit.formats.repo import git_root, git_run, text_at
+
+if TYPE_CHECKING:
+    from labkit.formats.runs import RunDir
+
+from labkit.formats.repo import (
+    GitError,
+    blob_text,
+    blobs_then,
+    commit_known,
+    git_root,
+    git_run,
+    text_at,
+)
 
 
 def id_in_git_head(path: Path) -> str | None:
@@ -342,39 +354,85 @@ def _promise_differences(
     return out
 
 
-def registration_as_first_measured(
+def registrations_as_first_measured(
     protocol: Path, pid: str, root: Path | None
-) -> tuple[str | None, str]:
-    """(text, where): PROTOCOL's text as the commit of its first measurement
-    holds it (`answering_run.first_measurement_groups`, every first
-    position) — the registration that stood before its number —, or its
-    text now when it has no measurement yet. TEXT is None, WHERE then saying
-    why, when that evidence is not readable: a first measurement without a
-    recorded commit, a commit this clone does not hold or that does not hold
-    the protocol, or first measurements whose commits hold different texts.
-    Never an invented earlier value. Raises RuntimeError when git fails."""
+) -> tuple[list[tuple[str, str]], str]:
+    """([(text, where)], "") — PROTOCOL's text as each of its first
+    measurements saw it (`answering_run.first_measurement_groups`, every run
+    at each first position; `as_measured`), one entry per distinct text,
+    WHERE naming the run; its text as it stands when it has no measurement
+    yet. Several entries are first measurements that saw different
+    registrations: K3 holds that protocol, a replacement declares its
+    changes against each (K1). ([], why) when one first measurement's
+    registration cannot be read back. Never an invented earlier value.
+    Raises RuntimeError when git fails."""
     from labkit.formats.answering_run import first_measurement_groups
-    from labkit.formats.runs import recorded_commit
 
     groups = first_measurement_groups(protocol.parent, pid, root)
     if not groups:
-        return protocol.read_text(encoding="utf-8"), "as it stands (no measurement yet)"
+        return [
+            (protocol.read_text(encoding="utf-8"), "as it stands (no measurement yet)")
+        ], ""
     texts: dict[str, str] = {}
-    for group in groups:
-        rd = group[0]
-        commit = recorded_commit(rd.config) if rd.config is not None else None
-        shown = text_at(root, protocol, commit) if commit and root is not None else None
-        if shown is None:
-            return None, (
-                f"its first measurement {rd.dir.name} names no commit this clone "
-                f"holds with the protocol in it"
-                + (f" ({commit[:12]})" if commit else "")
-            )
-        texts[commit or ""] = shown
-    if len(set(texts.values())) > 1:
+    for rd in (rd for group in groups for rd in group):
+        text, where = as_measured(protocol, rd, root)
+        if text is None:
+            return [], where
+        texts.setdefault(text, where)
+    return list(texts.items()), ""
+
+
+def as_measured(
+    protocol: Path, rd: "RunDir", root: Path | None
+) -> tuple[str | None, str]:
+    """(text, where): PROTOCOL as run RD saw it — its recorded commit's text
+    with the part of the run's `uncommitted.patch` that touches the protocol
+    applied (`repo.blobs_then`), held to the promise block the run recorded.
+    TEXT None, WHERE then saying why and what brings it back, when that
+    cannot be read: no recorded commit, a commit this clone does not hold
+    (`git fetch` brings it), a patch that does not apply, a tree without the
+    protocol (untracked when the run started), a text whose block is not
+    the one the run recorded. Raises RuntimeError when git fails."""
+    from labkit.formats.runs import patch_path, recorded_commit
+
+    commit = recorded_commit(rd.config) if rd.config is not None else None
+    if commit is None or root is None:
+        return None, f"its first measurement {rd.dir.name} recorded no commit"
+    if not commit_known(root, commit):
         return None, (
-            f"its first measurements stand at commits holding different texts "
-            f"({', '.join(c[:12] for c in texts)})"
+            f"its first measurement {rd.dir.name} started at {commit[:12]}, a commit "
+            f"this clone does not hold — `git fetch` brings it"
         )
-    ((commit, text),) = list(texts.items())[:1]
-    return text, f"as committed at its first measurement ({commit[:12]})"
+    patch_file = patch_path(rd.dir)
+    patch = patch_file.read_text(encoding="utf-8") if patch_file.is_file() else ""
+    try:
+        blob = blobs_then(root, commit, patch, [protocol])[protocol]
+    except GitError as exc:
+        return None, f"its first measurement {rd.dir.name}: {exc}"
+    if blob is None:
+        return None, (
+            f"its first measurement {rd.dir.name} ran with the protocol untracked: "
+            f"no commit holds what it registered"
+        )
+    text = blob_text(root, blob)
+    patched = " with its uncommitted.patch" if patch.strip() else ""
+    recorded = (rd.config.promises or {}).get("block_sha") if rd.config else None
+    if recorded is not None and _block_sha(text) != recorded:
+        return None, (
+            f"its first measurement {rd.dir.name} recorded block {recorded}, and "
+            f"{commit[:12]}{patched} gives {_block_sha(text)}: what it registered "
+            f"cannot be read back"
+        )
+    return (
+        text,
+        f"as its first measurement {rd.dir.name} saw it ({commit[:12]}{patched})",
+    )
+
+
+def _block_sha(text: str) -> str | None:
+    """The digest of TEXT's promise block; None without one or unreadable."""
+    try:
+        block = promises.parse_block(text)
+    except promises.PromiseError:
+        return None
+    return block.sha if block is not None else None

@@ -63,7 +63,14 @@ still owes its current registration and the committed-registration check.
 
 **Way out**, in the refusal: restore the registered values and measure
 again; or register anew (K1), where the change is declared and the
-earlier verdict stands. A real code repair under unchanged registration
+earlier verdict stands. Conflicting baselines block too (built
+2026-10-27, after the review that a warning there drops K3 exactly where
+the ground is unclear), with two ways out that the suite walks through the
+whole chain (`tests/test_counter_cases.py`): a replacement that declares
+its changes against each baseline, or a handover (`audit.HANDOVER`): no
+`[result]`, a report that names the protocol and not its runs — a cited
+answering run reads as its number and is held —, no number. A
+`git fetch` resolves a missing commit, never a real conflict. A real code repair under unchanged registration
 must pass after its new measurement and audit. A promised-scope declaration
 changed after the first measurement is a registration change; changed
 bytes inside an unchanged declaration are a code change.
@@ -77,16 +84,22 @@ own, so `[protocol]` keeps its fields). The declaration is what activates
 the checks; an undeclared successor is only indicated (below). Then,
 exactly:
 
-1. the predecessor's registration at its first measurement (K3) and the
-   new one at its own are compared; every difference — a criterion or
+1. the predecessor's registration as each of its first measurements saw
+   it (K3; the recorded commit with the run's `uncommitted.patch` for the
+   protocol applied, held to the block the run recorded) and the new one
+   at its own are compared — against each when they differ; one that
+   cannot be read back leaves the handover; every difference — a criterion or
    admissibility sentence, a constant, the kind, the data profile — is
    listed in the new head as `[[change]]` (`id`, `key`, `from`, `to`,
    `why`); an unlisted difference or a listed one that is not one blocks;
 2. a protocol that replaces is `type = "exploratory"`: its answer is a
    new, post-hoc question, never the predecessor's;
 3. the report's generated block names the predecessor and its verdict as
-   it stands — met, missed, not assessable or unresolved (held, handed
-   over) — before the new result; the new result never renders as the
+   it stands — met, missed, not assessable, unresolved (held, handed
+   over), or no verdict when its declared run answers no registered
+   question (K3: its baselines conflict, or its bar moved after the first
+   measurement — the moved verdict never reaches the successor as the
+   earlier one) — before the new result; the new result never renders as the
    answer to the predecessor's question;
 4. the predecessor's open BLOCKERs are decided first (`deferred`, the
    reason naming the successor); nothing else is written in its area.
@@ -211,12 +224,13 @@ self-contained):
 | contract | case and required response | correct counter-case |
 |---|---|---|
 | K3 | a constant changed after the first measurement (`null_band` 0.1 → 0.15) | unchanged promises, repaired implementation, new run and audit |
-| K3 baseline | conflicting blocks at one earliest commit, or incomparable earliest commits | matching baselines; timezone does not change the choice |
+| K3 baseline | conflicting blocks at one earliest commit, or incomparable earliest commits: held, adoption refused, a report citing the answering run held | matching baselines; timezone does not change the choice; a replacement declared against each released; a handover naming the protocol passes the stop and the commit |
 | K3 evidence | sentence digest changed but old sentence is unavailable | diagnostic reports only retained facts and offers evidence restoration/handover |
 | K1 indication | REPORT.md moved from A's run to B's without a declared relation: warns, review sees history | independent questions do not become a guaranteed blocker |
 | K1 relation | self-reference, missing predecessor or cycle | valid chain, all earlier verdicts visible |
 | K1 changes | B names A, lowers `margin` and does not list it | the change listed, B exploratory, the predecessor's verdict rendered |
 | K1 type | B replaces and claims `confirmatory` | B exploratory |
+| K1 predecessor | A's bar moved after its first measurement, or its baselines conflict: B renders A as `no verdict` | A's registration stands: its verdict rendered first |
 | K2 | `A3 not assessable` accepted, block renders `c1_pass = True` | no admissibility limit: `c1_pass = True` renders as a pass |
 | K2 | a recorded true A with an accepted A not-assessable effect is shown as a valid pass | primary verdict not assessable; raw values unchanged and separate |
 | K2 shape | required A key missing or malformed | explicit input error; valid custom promise key is read correctly |
@@ -231,4 +245,8 @@ that the report switch alone proves the predecessor relation. The
 counter-cases are the start repaired by hand as registered (FEATURES
 without `G_VRH`, a new run, a
 follow-up audit — a stored answer, no model) released; an honest miss
-reported released.
+reported released. Built 2026-10-27 in labkit's suite on the judge
+skeleton (`tests/test_counter_cases.py`, every audit answer marked
+SIMULATED and read by `labkit-audit`'s own parser): an implementation
+error fixed, measured again under unchanged promises, followed up
+`resolved`, released; a missed criterion released as `C1 missed`.

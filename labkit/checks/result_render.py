@@ -29,6 +29,8 @@ from pathlib import Path
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, runs
+from labkit.formats.answering_run import first_registrations
+from labkit.formats.repo import git_root
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     fields,
@@ -169,9 +171,13 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
     `[replaces]`, "" without one — the predecessor's verdict derived from its
     own bound sources (its declared run, its covering records), never from
     the successor's words, its own predecessor before it; `no result
-    declared — unresolved` when it declares none, `unresolved (<why>)` when
-    its sources do not read or the chain runs in a circle (report-check
-    holds that). SEEN: the ids already rendered."""
+    declared — unresolved` when it declares none, `no verdict — <why>` when
+    its declared run answers no registered question (K3: its first
+    measurements recorded different registrations, or the run recorded
+    another block than theirs — a verdict there is no earlier miss or pass
+    to put first), `unresolved (<why>)` when its sources do not read or the
+    chain runs in a circle (report-check holds that). SEEN: the ids already
+    rendered. Raises RuntimeError when git fails."""
     try:
         rep = protocol_block.replaces(text)
     except protocol_block.BlockError:
@@ -191,16 +197,39 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
             verdict = "no result declared — unresolved"
         else:
             pred_run = runs.run_path(pred.parent, declared)
-            said, _ = _verdicts_and_values(
-                pred.parent,
-                pred_text,
-                pred_run,
-                limits_of(pred.parent, pred_text, pred_run),
-            )
-            verdict = said or f"run {declared}, no promise to judge"
+            unregistered = _unregistered(pred, rep.protocol, pred_run)
+            if unregistered:
+                verdict = f"no verdict — {unregistered}"
+            else:
+                said, _ = _verdicts_and_values(
+                    pred.parent,
+                    pred_text,
+                    pred_run,
+                    limits_of(pred.parent, pred_text, pred_run),
+                )
+                verdict = said or f"run {declared}, no promise to judge"
     except (OSError, ValueError, protocol_block.BlockError) as exc:
         return f"{where}: unresolved ({exc})"
     return (f"{earlier} · " if earlier else "") + f"{where}: {verdict}"
+
+
+def _unregistered(protocol: Path, pid: str, run_dir: Path) -> str | None:
+    """Why RUN_DIR, the run PROTOCOL declares, answers no registered question
+    (K3): its first measurements recorded different registrations, or the
+    run recorded a block other than the one they recorded. None when it
+    holds theirs, or when no block was recorded (another station names
+    that). Raises RuntimeError when git fails."""
+    registered = first_registrations(protocol.parent, pid, git_root(protocol))
+    if len(registered) > 1:
+        return "its first measurements recorded different registrations"
+    cfg = runs.read_run_config(run_dir)
+    now = cfg.promises if cfg is not None else None
+    if not registered or now is None:
+        return None
+    ((sha, (first, _)),) = registered.items()
+    if now["block_sha"] != sha:
+        return f"its registration changed after the first measurement {first.dir.name}"
+    return None
 
 
 def render_gaps(text: str, expected: Rendering) -> list[str]:

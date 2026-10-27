@@ -310,14 +310,19 @@ def indexed_links(repo: Path) -> dict[Path, str]:
         meta, _, rel = entry.partition("\t")
         if not rel or meta.split(" ")[0] != LINK_MODE:
             continue
-        sha = meta.split(" ")[1]
-        blob = git_run(["cat-file", "blob", sha], repo)
-        if blob.returncode != 0:
-            raise RuntimeError(
-                f"git cat-file blob {sha} ({rel}) failed in {repo}: {blob.stderr.strip()}"
-            )
-        out[root / rel] = blob.stdout
+        out[root / rel] = blob_text(repo, meta.split(" ")[1])
     return out
+
+
+def blob_text(repo: Path, sha: str) -> str:
+    """The text of blob SHA in REPO's object store (`git cat-file blob`).
+    Raises RuntimeError when git cannot read it."""
+    blob = git_run(["cat-file", "blob", sha], repo)
+    if blob.returncode != 0:
+        raise RuntimeError(
+            f"git cat-file blob {sha} failed in {repo}: {blob.stderr.strip()}"
+        )
+    return blob.stdout
 
 
 def first_added(repo: Path, path: Path) -> tuple[str, Path] | None:
