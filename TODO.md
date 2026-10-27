@@ -447,7 +447,14 @@ Elternstand. Reste unter „Phase-1-Reste“ (Architektur und Lesbarkeit).
 
 Phase 2 — Härtung; jeder Vertrag mit Ausweg und expliziter Grenze:
 
-1. **Codebindung des Laufs (A1), ohne Schemabruch:** In finalize
+Stand 2026-10-27: 2.1, 2.2, 2.7 und 2.8 umgesetzt (2.1 selbst, die
+anderen von Subagenten in Worktrees; Hook je Commit grün). 2.3, 2.4 und
+2.6 warten auf die Entscheidungen (a) und (c) nach dem Reparaturfall,
+2.5 auf 2.3. Reste und offene Entscheidungen unter „Phase-2-Reste“
+(Architektur und Lesbarkeit).
+
+1. **Codebindung des Laufs (A1), ohne Schemabruch — umgesetzt
+   (`ee0d1ab`, `263cefc`, nach kalter Prüfung `f4ec985`):** In finalize
    Station 3 (`finalize.py:302-338`) für jeden Typ den aufgezeichneten
    `script_sha` des antwortenden Laufs mit dem heutigen Messskript
    vergleichen; das fängt das Red-Team-Szenario g1. Der Bereichsstempel
@@ -463,7 +470,8 @@ Phase 2 — Härtung; jeder Vertrag mit Ausweg und expliziter Grenze:
    Änderung am Messskript oder an `lib/` hält. Garantiert ist die
    Gleichheit des erfassten Umfangs; Ändern und Zurücksetzen dazwischen
    und dynamische Abhängigkeiten erfasst der Vergleich nicht.
-2. **Reihenfolge der ersten Messung (A11), ohne neues Zeitfeld:** Wo der
+2. **Reihenfolge der ersten Messung (A11), ohne neues Zeitfeld —
+   umgesetzt (`36bb216`, Note `docs/notes/2026-10-27-first-measurement-order.md`):** Wo der
    Registrierungsvergleich (2.4) die erste Messung bestimmt, zuerst die
    Git-Abstammung der aufgezeichneten Commits (`git_full`) nehmen, die
    Lauf-id nur bei gleichem Commit; Gleichstand ausdrücklich behandeln,
@@ -560,7 +568,8 @@ Phase 2 — Härtung; jeder Vertrag mit Ausweg und expliziter Grenze:
    `accepted`/`stands` nach `rejected`; das Berichtsreview bindet über den
    Rohtext (`report_reviews.standing`), künftig gehen die Claims derselben
    Bericht-/Protokollpaarung in die nächste Prüfung mit.
-7. **Hooks und geprüfter Stand (C8, C9, C7, A12):** Git-Root auch vom
+7. **Hooks und geprüfter Stand (C8, C9, C7, A12) — umgesetzt
+   (`42d31ab`..`b452495`):** Git-Root auch vom
    Unterordner finden; ohne Stop-Basis laut melden und die Commits seit
    Transkriptbeginn (`_transcript_start`) prüfen, nie alle Protokolle des
    Repos — alte Bereiche blockieren nicht jeden Stop (2026-10-17), und der
@@ -570,7 +579,8 @@ Phase 2 — Härtung; jeder Vertrag mit Ausweg und expliziter Grenze:
    nicht freigeben. Schleifenschutz pro Zug bleibt wie beschlossen.
    `--no-verify` wird nicht beiläufig verboten; Standardtext beschreibt
    genau die nachfolgende Kontrolle und ihre Grenzen.
-8. **Berichtspfade und Exit-Vertrag (A10, C6):** Symlink-Berichte am
+8. **Berichtspfade und Exit-Vertrag (A10, C6) — umgesetzt (`dc21e6a`,
+   `5e1354f`):** Symlink-Berichte am
    ursprünglichen Pfad erkennen und mit konkretem Ausweg verweigern.
    Bei `--again` Messergebnis und gehaltenen Gesamtstand ausdrücklich
    trennen; Exit-Code samt allen Aufrufern am dokumentierten Vertrag
@@ -1077,6 +1087,45 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+### Phase-2-Reste (2026-10-27)
+
+Offen, Entscheidung des Autors:
+
+1. `labkit-audit --review --again` endet wie früher `--report-review
+   --again` mit dem Ergebnis des Zugs, nicht des Stands; ein bestätigender
+   `--again`-Zug auf einer nie geprüften Entscheidung gibt frei, und der
+   Record hält `again` nicht (`decision_review.py`,
+   `tests/test_decision_review.py:369`). Empfehlung: denselben Vertrag wie
+   2.8 (Exit = Stand, Zug und Stand getrennt gedruckt).
+2. Eine Sitzung, die unter dem Repo-Root startet, lädt laut Claude-Code-Doku
+   keine Projekt-Hooks aus der `.claude/settings.json` des Roots. Nur
+   dokumentieren („Claude Code im Repo-Root starten“) oder anders
+   installieren. Empfehlung: dokumentieren.
+3. Ohne Stop-Basis sagt der Stop es, aber bei Exit 0 erreicht der Satz den
+   Agenten nicht; ohne Basis und ohne Transkript hält er nicht.
+   Empfehlung: nur den zweiten Fall halten (eine Prüfung, die nicht laufen
+   kann, hält) und den ersten so lassen.
+
+Notiert, nicht gemacht:
+
+4. Der antwortende Lauf ist weiter der neueste nach Namen
+   (`answering_run.bound_answering_run`); die Zeitzone kann steuern, welcher
+   Lauf antwortet (verwandt A13). Ebenso vergleicht `record_session` im
+   Stop-Hook die Ortszeit der Lauf-id mit dem Sitzungsbeginn.
+5. Läufe mit unlesbarer `config.json` überspringt die Bestimmung der ersten
+   Messung still (wie vorher); `git` und `git_full` im Record werden nicht
+   gegeneinander geprüft (gehört zu 2.5); `undecided --staged` bestimmt die
+   Bereiche aus den Protokollen im Baum, nicht im Index (2.5).
+6. Berichte unter einem Verzeichnis-Link (`reports -> data/reports`)
+   erreicht `report_files` nicht; ein Kreis aus Links lässt
+   `affected_protocols` laut abbrechen; Protokolle als Links sind
+   ungeregelt.
+7. Das Stop-Budget (90 s) an echten Repos messen: ein Bereich mit Tests
+   über 90 s hält jeden Stop einmal pro Zug. pre-run hat dasselbe
+   Zeitproblem (Hook-Timeout 120 s, Bereichstests bis 300 s).
+8. Ein Ledger der vom Pre-commit geprüften Tree-Hashes zeigte Commits, die
+   an ihm vorbeigingen (`--no-verify`); nicht gebaut.
+
 ### Phase-1-Reste (2026-10-27)
 
 Gefunden beim Umsetzen von Phase 1; abgearbeitet am selben Tag:
@@ -1281,6 +1330,12 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
 ## Rollout und Aufgaben außerhalb dieses Repos
+
+labkit-paper: `lib/sandboxlab/standard_check.py:117`
+(`registration_at_first_measurement`) bestimmt die erste Messung selbst
+nach Namensreihenfolge und liest `git` — dieselbe A11-Lücke, die labkit
+mit 2.2 geschlossen hat; das Bewertungsinstrument der Runde 10 braucht
+die labkit-Regel (gefunden 2026-10-27).
 
 Für labkit-paper, Bereich 09 (eigener Auftrag): t18s Setup und Code
 schneiden die MC-/LC-/NC-Blöcke um eine Zeile versetzt; die Behauptung
