@@ -37,10 +37,41 @@ def write_atomic_bytes(path: Path, data: bytes) -> None:
     _replace(path, lambda tmp: tmp.write_bytes(data))
 
 
+def write_all(texts: dict[Path, str]) -> None:
+    """Write every file of TEXTS (path to text) as `write_atomic` does, and
+    none when one cannot be staged: all temp files are written first, then
+    renamed in turn. A failed stage removes the staged ones, every target
+    as it was; a rename failing after the first leaves the files renamed
+    before it new (renames beside their targets do not fail but for a
+    vanished directory or a changed permission)."""
+    staged: list[tuple[Path, Path]] = []
+    try:
+        for path, text in texts.items():
+            staged.append(
+                (
+                    _stage(
+                        path, lambda tmp, t=text: tmp.write_text(t, encoding="utf-8")
+                    ),
+                    path,
+                )
+            )
+    except BaseException:
+        for tmp, _ in staged:
+            tmp.unlink(missing_ok=True)
+        raise
+    for tmp, path in staged:
+        os.replace(tmp, path)
+
+
 def _replace(path: Path, write: Callable[[Path], object]) -> None:
-    """WRITE the temp file beside PATH, give it PATH's mode when PATH
-    exists, and rename it over PATH; the temp file is removed when any step
-    fails."""
+    """Stage PATH through WRITE (`_stage`) and rename the temp file over it."""
+    os.replace(_stage(path, write), path)
+
+
+def _stage(path: Path, write: Callable[[Path], object]) -> Path:
+    """The temp file beside PATH, written by WRITE and given PATH's mode
+    when PATH exists; removed again when a step fails. PermissionError,
+    nothing written, when PATH exists and is not writable."""
     mode = None
     if path.exists():
         if not os.access(path, os.W_OK):
@@ -51,7 +82,7 @@ def _replace(path: Path, write: Callable[[Path], object]) -> None:
         write(tmp)
         if mode is not None:
             os.chmod(tmp, mode)
-        os.replace(tmp, path)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
+    return tmp

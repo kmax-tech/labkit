@@ -48,7 +48,7 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import promises, protocol_block, protocol_check, standard_contract
 from labkit.formats.runs import runs_path
-from labkit.formats.files import write_atomic
+from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
     files_at,
@@ -886,11 +886,11 @@ def carried_fields(old: str, old_stamp: str, new: str) -> tuple[str, list[str]]:
 
 def write_kind_change(area: Path, plan: KindChange) -> list[str]:
     """Write PLAN: remove the old kind's stamp files the new kind does not
-    stamp, write the new kind's (scripts executable), write the protocol —
-    each file whole or not at all (`files.write_atomic`); the change as a
-    whole is not one step. Returns the log lines; one replaced on the
-    evidence of an earlier pin names the commit that keeps it
-    (`KindChange.earlier`)."""
+    stamp, write the new kind's (scripts executable) and the protocol — all
+    staged before any is replaced (`files.write_all`), so a write that
+    fails changes nothing, and the old kind's files are removed only after.
+    Returns the log lines; one replaced on the evidence of an earlier pin
+    names the commit that keeps it (`KindChange.earlier`)."""
 
     def earlier(path: Path) -> str:
         """` of an earlier pin, as committed in <commit>` for a PATH
@@ -898,24 +898,22 @@ def write_kind_change(area: Path, plan: KindChange) -> list[str]:
         commit = plan.earlier.get(path)
         return f" of an earlier pin, as committed in {commit[:12]}" if commit else ""
 
-    log: list[str] = []
-    for path in plan.before:
-        if path.is_file() and path not in plan.after:
-            path.unlink()
-            log.append(
-                f"  removed        {path} (the {plan.old_kind} stamp{earlier(path)})"
-            )
-    for path, text in plan.after.items():
-        replaced = path.exists()
+    removed = [p for p in plan.before if p.is_file() and p not in plan.after]
+    replaced = {path: path.exists() for path in plan.after}
+    for path in plan.after:
         path.parent.mkdir(parents=True, exist_ok=True)
-        write_atomic(path, text)
+    write_all({**plan.after, plan.protocol: plan.text})
+    log = [
+        f"  removed        {path} (the {plan.old_kind} stamp{earlier(path)})"
+        for path in removed
+    ]
+    for path in plan.after:
         if path.parent == area / "scripts":
             path.chmod(0o755)  # a shebang nobody can run is a lint finding
         log.append(
-            f"  {'replaced' if replaced else 'created':<14} {path}"
+            f"  {'replaced' if replaced[path] else 'created':<14} {path}"
             + (f" (the stamp{earlier(path)})" if path in plan.earlier else "")
         )
-    write_atomic(plan.protocol, plan.text)
     log.append(
         f"  restamped      {plan.protocol} (same id, written fields kept"
         + (
@@ -925,6 +923,8 @@ def write_kind_change(area: Path, plan: KindChange) -> list[str]:
         )
         + ")"
     )
+    for path in removed:
+        path.unlink()
     return log
 
 

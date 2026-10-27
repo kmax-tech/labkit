@@ -1036,8 +1036,8 @@ class Exp(unittest.TestCase):
         """`--report` and `--change-kind` rewrote the protocol in place
         (`Path.write_text`): a write that died midway left it truncated
         (audit 2026-10-27, doubled homes: protocols written non-atomically).
-        Both write through `files.write_atomic`; the replacement takes the
-        default file mode, the old file's mode is not kept."""
+        Both write through `files.write_atomic`, which keeps the old file's
+        mode."""
         for flag, (protocol, call) in self._rewrites().items():
             with self.subTest(flag=flag):
                 before = protocol.read_text(encoding="utf-8")
@@ -1064,6 +1064,28 @@ class Exp(unittest.TestCase):
         with self._dying_midway("01_measure"), self.assertRaises(OSError):
             quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
         self.assertEqual(script.read_text(encoding="utf-8"), before)
+
+    def test_a_kind_change_that_fails_at_the_protocol_changes_nothing(self) -> None:
+        """The scripts were written before the protocol: a protocol write that
+        died left the scripts of the new kind beside the old protocol, and a
+        second `--change-kind` was refused as "edited since the stamp"
+        (phase-1 leftover). Every file is staged first (`files.write_all`):
+        the area stays as it was, and the change runs again."""
+        area, _, _ = self._compute_area_with_work()
+
+        def snapshot() -> dict[str, str]:
+            return {
+                str(p.relative_to(area)): p.read_text(encoding="utf-8")
+                for p in sorted(area.rglob("*"))
+                if p.is_file()
+            }
+
+        before = snapshot()
+        with self._dying_midway("PROTOCOL-"), self.assertRaises(OSError):
+            quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
+        self.assertEqual(snapshot(), before)
+        quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
+        self.assertNotEqual(snapshot(), before)
 
     def test_the_kind_refusal_asks_the_questions(self) -> None:
         """Without `--kind` the refusal prints the same questions as the
