@@ -1097,8 +1097,8 @@ Gefunden beim Umsetzen von Phase 1, nicht gemacht:
    liegen und übernimmt den Dateimodus der alten Datei nicht;
    `scaffold.write_if_absent` schreibt nicht atomar (eine halbe neue Datei
    gilt beim nächsten Lauf als „exists“).
-5. Standard, Bezeichnerregel 5: ausdrücklich sagen, dass ein verkürzter
-   Titelanfang an einem Satzzeichen endet (Doktrin-Wortlaut, Autor).
+5. ~~Standard, Bezeichnerregel 5: ein verkürzter Titelanfang endet an
+   einem Satzzeichen~~ — erledigt 2026-10-27 (Wortlaut vom Autor).
 6. `docs/workflow.md:52` nennt `--probe` nur beim Modellskelett, der
    Schätzer hat auch eines; der launch.json-Eintrag `--probe` sagt „a few
    real calls“.
@@ -1286,11 +1286,6 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
 ## Rollout und Aufgaben außerhalb dieses Repos
-
-`lib exp` (dotfiles, `~/.claude/resources/tools/local-init.py`) bricht:
-es importiert `load_registry` aus `labkit.formats.rules`, das es nicht
-mehr gibt (gefunden 2026-10-27 beim Anlegen von labkit-paper Bereich 12,
-der darum von Hand angelegt ist).
 
 Für labkit-paper, Bereich 09 (eigener Auftrag): t18s Setup und Code
 schneiden die MC-/LC-/NC-Blöcke um eine Zeile versetzt; die Behauptung

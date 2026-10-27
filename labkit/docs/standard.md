@@ -47,7 +47,9 @@ written with. The following applies:
 4. Every old §-identifier remains resolvable as an alias: in the rule head
    (`*(was §2.A12)*`) and in the ledger.
 5. Identifier and name fit together: a reference gives the title or its
-   start (at least two words or the first clause).
+   start (at least two words or the first clause). A shortened start ends
+   at punctuation or the end of the reference; a line wrap alone does not
+   end it.
 6. Current references are identifier + name: `LAB-015 Preflight audit before
    freezing`. In answers to the user, only the name appears.
 7. Historical material is never rewritten: run snapshots, patches, raw output,

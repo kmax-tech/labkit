@@ -281,7 +281,10 @@ pins (`requirements.txt` / `requirements.lock`).
   punctuation or the end of the text breaks it off; words running on are
   read as part of the name and must match, and a name broken at a line's
   end is read on into the next line. A lab's `labkit-check` may now name
-  references it passed before; each one names no rule as written.
+  references it passed before; each one names no rule as written. The
+  standard's identifier rule 5 says so: a shortened start ends at
+  punctuation or the end of the reference; a line wrap alone does not end
+  it.
 - **Help texts, next steps, templates and docs say what the contract
   holds** (audit 2026-10-27, C2–C4, C10–C12 and the drift list).
   `labkit-init exp` no longer tells a high computation to fill
