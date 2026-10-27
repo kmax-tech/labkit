@@ -163,6 +163,24 @@ def now_stamp() -> str:
     return time.strftime(RECORD_TIME)
 
 
+#: the minute an audit file's name starts with (`2026-10-27T14-05`) and
+#: the minute its `date` field states (`2026-10-27T14:05`): one spelling
+#: each for the records labkit-audit, the reviews and the attempt journal
+#: write — nine writers spelled them by hand (audit 2026-10-27, third)
+NAME_MINUTE = "%Y-%m-%dT%H-%M"
+DATE_MINUTE = "%Y-%m-%dT%H:%M"
+
+
+def name_minute(when: time.struct_time | None = None) -> str:
+    """WHEN (local time now when None) as an audit file's name begins."""
+    return time.strftime(NAME_MINUTE, when or time.localtime())
+
+
+def date_minute(when: time.struct_time | None = None) -> str:
+    """WHEN (local time now when None) as an audit file's `date` states it."""
+    return time.strftime(DATE_MINUTE, when or time.localtime())
+
+
 #: why a run broke off, written by `runlog.run` when the block raises — the
 #: exception's type and message; without it a crashed run showed only that
 #: it crashed (a claude-cli answer another model wrote ends a run loudly,

@@ -1088,6 +1088,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One spelling of an audit file's minute.** The records, the decision
+  and report reviews and the attempt journal each formatted the minute
+  of their name (`2026-10-27T14-05`) and their `date`
+  (`2026-10-27T14:05`) by hand; `runs.name_minute` and `runs.date_minute`
+  beside `RECORD_TIME` do it, and `tests/test_one_home.py` holds a hand
+  spelling. Audit 2026-10-27 (third), S row of the first register.
 - **A stop or commit a handover lets pass names the loss.** It passed in
   silence, so the pass read as "nothing wrong". `claude_hooks.undecided_state`
   returns the blockers and, per area, the losses a current handover

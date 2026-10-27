@@ -69,7 +69,6 @@ import os
 import secrets
 import socket
 import tempfile
-import time
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,7 +79,7 @@ from labkit.formats import handovers
 from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
 from labkit.formats.repo import INDEX_REV, files_at, git_dir_path, git_root, text_at
-from labkit.formats.runs import now_stamp
+from labkit.formats.runs import name_minute, now_stamp
 from labkit.formats.scope_sha import digest
 
 JOURNAL = "attempts.jsonl"
@@ -584,7 +583,7 @@ def begin(area: Path, mode: str, model: str, scope_sha: str) -> Running:
                     + found.blockers
                 )
             )
-        stamp = time.strftime("%Y-%m-%dT%H-%M")
+        stamp = name_minute()
         aid = f"{stamp}-{mode}-{secrets.token_hex(2)}"
         for a in attempts:
             if alive.get(a.id) is False:

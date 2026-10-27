@@ -86,6 +86,9 @@ RULES: list[tuple[str, str, set[str]]] = [
     ),
     # six hand-spelled copies of a record's time (audit 2026-10-18)
     ("a record time spelled by hand", r"%Y-%m-%dT%H:%M:%S", {"runs"}),
+    # nine writers spelled an audit file's minute by hand (audit 2026-10-27,
+    # third); `runs.name_minute`, `runs.date_minute`
+    ("a record minute spelled by hand", r"%Y-%m-%dT%H[-:]%M[\"']", {"runs"}),
     (
         "a run id's start second compared by hand",
         r"start_second\(|rsplit\(\"_\", 1\)",
@@ -275,6 +278,7 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
+            "a record minute spelled by hand": 'stamp = time.strftime("%Y-%m-%dT%H-%M", when)',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.repeat_cost == "low":',

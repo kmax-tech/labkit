@@ -63,6 +63,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import findings
+from labkit.formats.runs import date_minute, name_minute
 from labkit.formats.findings import create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.scope_sha import digest
@@ -142,7 +143,7 @@ def write_report_review(
         "# written by labkit-audit --report-review — a cold reader's claims on "
         "the report named below, bound to the inputs it read; not edited by hand",
         "[report_review]",
-        f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
+        f"date = {_s(date_minute(when))}",
         f"model = {_s(model)}",
         f"report = {_s(report)}",
         f"protocol = {_s(protocol)}",
@@ -165,7 +166,7 @@ def write_report_review(
     target.parent.mkdir(exist_ok=True)
     return create_file(
         target,
-        time.strftime("%Y-%m-%dT%H-%M", when) + "-review",
+        name_minute(when) + "-review",
         ".toml",
         "\n".join(lines) + "\n",
     )

@@ -116,7 +116,7 @@ from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import registration_drift, registration_stamp
 from labkit.formats.repo import INDEX_REV, files_at, git_root, shown, text_at
-from labkit.formats.runs import as_stored
+from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.scope_sha import area_stamp, digest, validation_note
 
 DIR = "audits"
@@ -611,13 +611,13 @@ def write(
             f"no line is withdrawn below it; run the audit again"
         )
     when = time.localtime(now)
-    stamp = time.strftime("%Y-%m-%dT%H-%M", when)
+    stamp = name_minute(when)
     b, w, k = verdict
     lines = [
         "# written by labkit-audit — decide each finding with "
         "`labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote",
         "[audit]",
-        f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
+        f"date = {_s(date_minute(when))}",
         f"mode = {_s(mode)}",
         f"model = {_s(model)}",
         f"scope_sha = {_s(scope_sha)}",
@@ -1526,12 +1526,12 @@ def write_failed(
     if cause not in FAILED_CAUSES:
         raise ValueError(f"cause {cause!r} — one of {', '.join(FAILED_CAUSES)}")
     when = time.localtime(now)
-    stamp = time.strftime("%Y-%m-%dT%H-%M", when)
+    stamp = name_minute(when)
     lines = [
         "# written by labkit-audit — the audit did not run; this is the evidence, "
         "not a record of findings",
         "[failed]",
-        f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
+        f"date = {_s(date_minute(when))}",
         f"mode = {_s(mode)}",
         f"model = {_s(model)}",
         f"scope_sha = {_s(scope_sha)}",

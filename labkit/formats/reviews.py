@@ -84,7 +84,7 @@ from labkit.formats import findings
 from labkit.formats.findings import REVIEW_NAME, create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import reported_claim
-from labkit.formats.runs import as_stored
+from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.scope_sha import digest
 
 VERDICTS = ("upheld", "rejected", "insufficient")
@@ -167,13 +167,13 @@ def write_review(
             raise ValueError(f"finding {d.finding} reviewed twice")
         seen.add(d.finding)
     when = time.localtime(now)
-    stamp = time.strftime("%Y-%m-%dT%H-%M", when)
+    stamp = name_minute(when)
     u, r, i = counts_of(decisions)
     lines = [
         "# written by labkit-audit --review — a second auditor's verdicts on the "
         "accepted findings of the record named below; not edited by hand",
         "[review]",
-        f"date = {_s(time.strftime('%Y-%m-%dT%H:%M', when))}",
+        f"date = {_s(date_minute(when))}",
         f"model = {_s(model)}",
         f"record = {_s(record)}",
         f"scope_sha = {_s(scope_sha)}",
