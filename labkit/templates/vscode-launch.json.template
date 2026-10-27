@@ -7,7 +7,9 @@
   // serves every area; the interpreter is the repo's .venv, the same the
   // terminal uses. --eval-only is the door for "why is this key True?":
   // the stored rows, the real formula, no model call, no run registered
-  // (2026-10-09, asked on area 19).
+  // (2026-10-09, asked on area 19). The three measure entries fit the
+  // estimator and prompt skeletons; a computation's 01_measure.py takes no
+  // flag — debug its formula through the area test (the pytest entry).
   "version": "0.2.0",
   "configurations": [
     {
@@ -44,17 +46,6 @@
       "justMyCode": false
     },
     {
-      "name": "measure: --derive RUN_ID (open script, re-evaluate stored rows as a derived run)",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${file}",
-      "args": ["--derive", "${input:runId}"],
-      "cwd": "${fileDirname}/..",
-      "python": "${workspaceFolder}/.venv/bin/python",
-      "console": "integratedTerminal",
-      "justMyCode": false
-    },
-    {
       "name": "pytest: open test file, stop at the first failure",
       "type": "debugpy",
       "request": "launch",
@@ -64,13 +55,6 @@
       "python": "${workspaceFolder}/.venv/bin/python",
       "console": "integratedTerminal",
       "justMyCode": false
-    }
-  ],
-  "inputs": [
-    {
-      "id": "runId",
-      "type": "promptString",
-      "description": "run id to derive from (runs/<id>, see `runlog <area>`)"
     }
   ]
 }

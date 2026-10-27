@@ -4,15 +4,17 @@
 
   // Shared helpers come from the pinned labkit package (venv below),
   // imported directly; lib/ holds repo-local helpers, reached via a
-  // sys.path insert — the layer rule
-  // of docs/coding-style.md. experiments/ is listed for older repos that keep helpers there.
+  // sys.path insert (the estimator, prompt and explore skeletons carry it)
+  // — the layout AGENTS.md names. experiments/ is listed for older repos
+  // that keep helpers there.
   "extraPaths": ["lib", "experiments"],
 
   // Artefacts, not code under maintenance. runs/ holds the frozen
   // script-source.py of every logged run — checking those reports each finding
   // once per run and never stops reporting imports that have since been
-  // renamed. resources/templates/ is the snapshot copy of the helpers; without
-  // it, every helper exists twice.
+  // renamed. resources/templates/ is excluded for older repos that keep a
+  // snapshot copy of the helpers there (labkit-init stamps none); checked,
+  // every such helper would exist twice.
   "exclude": [
     "**/__pycache__",
     "**/runs",
