@@ -314,6 +314,58 @@ class PreRun(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("skipped", out)
 
+    def test_the_prompt_skeleton_is_a_run_start(self):
+        """The prompt skeleton opens its run inside `lanes.Lanes.main`
+        (`run/lanes.py`): its own text names no `runlog.run(`, and the hook
+        let every LLM measurement pass without preflight (audit 2026-10-27,
+        C5). Its full run, a repeat and a run under another model get
+        preflight — frozen with blockers is held, unfrozen only told; its
+        throwaway stages and its analysis stay free; the compute skeleton
+        keeps its gate."""
+        from labkit.tools import scaffold
+
+        root = Path(tempfile.mkdtemp()) / "lab"
+        with contextlib.redirect_stdout(io.StringIO()):
+            scaffold.stamp_lab(root, "lab")
+            scaffold.stamp_area(root, "judge", model="haiku", kind="apply")
+            scaffold.stamp_area(root, "count", "low", kind="compute")
+        _git(root, "init", "-q", ".")
+        measure = "python experiments/01-judge/scripts/01_measure.py"
+        head = "preflight 01-judge --protocol PROTOCOL-judge.md"  # the script names it
+        for cmd in (
+            measure,
+            f"{measure} --repeat-of 2026-01-01T00-00-00_0001",
+            f"{measure} --model sonnet",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual(rc, 0, cmd)
+            ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn(f"{head}: blockers, protocol not frozen", ctx)
+        for cmd in (
+            f"{measure} --show 3",
+            f"{measure} --probe 2",
+            f"{measure} --eval-only",
+            "python experiments/01-judge/scripts/02_analyze.py --check",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual((rc, out, err), (0, "", ""), cmd)
+        proto = root / "experiments/01-judge/PROTOCOL-judge.md"
+        text = proto.read_text(encoding="utf-8")
+        self.assertEqual(text.count("frozen = false"), 1)
+        proto.write_text(text.replace("frozen = false", "frozen = true"))
+        rc, out, err = _run(claude_hooks.pre_run, _bash(root, measure))
+        self.assertEqual(rc, 2)
+        self.assertIn(f"{head}: BLOCKED", err)
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/02-count/scripts/01_measure.py"),
+        )
+        self.assertEqual(rc, 0)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn(
+            "preflight 02-count --protocol PROTOCOL-count.md: repeat cost low", ctx
+        )
+
     def test_relative_to_cwd_inside_area(self):
         # unfrozen: the fixture's should-gaps stay warnings (graduation
         # gate), so this test sees only the path resolution

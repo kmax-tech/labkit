@@ -18,7 +18,8 @@ docs/notes/2026-10-19-hooks-and-report-check.md.
 
 pre-run
     The command is a run start when it names a .py file that opens a run
-    (`runlog.run(` / `runlog.Run(`) and is not one of the throwaway stages
+    (`runlog.run(` / `runlog.Run(`, or `lanes.Lanes(`, whose `main` opens
+    it: the prompt skeleton) and is not one of the throwaway stages
     (`--show`, `--probe`, `--eval-only`). For that script's area (the
     nearest directory above it with a PROTOCOL-*.md) `preflight` runs:
       · protocol frozen (`frozen = true`) + blockers           → exit 2, blocked
@@ -147,7 +148,10 @@ PY_TOKEN = re.compile(r"[\w./~-]+\.py")
 INTERPRETER = re.compile(r"(?:^|/)python[\d.]*$")
 COMMAND_PREFIX = {"--", "nohup", "time", "exec"}
 STRIP = "\"'`();"  # around a token: quotes, parentheses, a trailing ;
-OPENS_RUN = re.compile(r"runlog\.(run|Run)\(")
+# A script opens a run when its text calls runlog, or builds the `lanes.Lanes`
+# whose `main` opens it (`run/lanes.py`) — the prompt skeleton names no runlog
+# call of its own.
+OPENS_RUN = re.compile(r"runlog\.(run|Run)\(|lanes\.Lanes\(")
 PROTOCOL_IN_SCRIPT = re.compile(r"PROTOCOL-[\w.-]+\.md")
 SKIP_TOKEN = "LABKIT_PREFLIGHT=skip"
 
