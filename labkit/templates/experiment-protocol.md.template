@@ -70,7 +70,7 @@
   `frozen = true` — the registered plan is the Intent above and is not
   rewritten; a deviation that touches the verdict is named in Summary →
   Limits as well>
-- **Raw output:** <!-- lm --> <one real prompt+answer pair per finding>
+- **Raw output:** <!-- lm --> <one real prompt+answer pair per finding, read from the run's kept output>
 - **Interpretation / next step:** <one sentence; keep instrument findings
   apart from findings about the subject>
 - **Outcome †:** <expected or surprising — failures belong here>

@@ -990,10 +990,8 @@ class Estimator(unittest.TestCase):
         run_id = lab.run_id_of(out)
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
-        lab.fill(
-            self.protocol,
-            "Raw output=one registered row and one test row, from the probe",
-        )
+        # no model: Raw output is not owed, and the stamp left it out (I11)
+        self.assertNotIn("**Raw output", self.protocol.read_text(encoding="utf-8"))
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         rc, out = lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)

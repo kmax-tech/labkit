@@ -1597,11 +1597,25 @@ class OwedCut(unittest.TestCase):
                 root, "a", "high", "apply", "haiku", True
             )
         for label in ("Data profile", "Prompt (verbatim", "Model I/O", "Instrument check",
-                      "Resolution check", "Noise ceiling", "Render check", "Parser cases"):  # fmt: skip
+                      "Resolution check", "Noise ceiling", "Render check", "Parser cases",
+                      "Raw output"):  # fmt: skip
             with self.subTest(label=label):
                 self.assertNotIn(f"**{label}", compute)
                 self.assertIn(f"**{label}", apply_model)
         self.assertIn("**Question / hypothesis:**", compute)
+
+    def test_raw_output_asks_for_the_runs_rows_not_the_probes(self):
+        # the estimator stamp asked for rows "as --probe prints them" in a
+        # field written after the run (audit 2026-10-27, third, I11)
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "lab"
+            scaffold.stamp_lab(root, "lab")
+            fit_model = scaffold.protocol_stamp(root, "f", "high", "fit", "haiku", True)
+            fit = scaffold.protocol_stamp(root, "g", "high", "fit", False, True)
+        (line,) = [ln for ln in fit_model.splitlines() if "**Raw output" in ln]
+        self.assertIn("read from the run's kept output", line)
+        self.assertNotIn("--probe", line)
+        self.assertNotIn("**Raw output", fit)
 
 
 class Cli(unittest.TestCase):

@@ -417,7 +417,10 @@ ESTIMATOR_FIELDS = {
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
     "Null condition / anchors (in the same run)": "<the same estimator on labels permuted inside each fitting fold, expected at chance_of() within null_band>",
-    "Raw output": "<one registered row and one test row as --probe prints them>",
+    # filled after the run from its kept rows, owed only with a model
+    # (`protocol_check.not_owed`); --probe's rows are thrown away — the
+    # stamp asked for them here (audit 2026-10-27, third, I11)
+    "Raw output": "<one registered row and one null row per finding, read from the run's kept output>",
     "Render check (ZERO calls, `--show N`)": "n/a — no prompt; `--show N` prints the config and N feature rows",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",
     "Parser cases harvested": "n/a — no model text to parse",
@@ -446,7 +449,6 @@ APPLY_FIELDS = {
     "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` in scripts/01_measure.py",
     "Model I/O": "<in · the feature fields per item · out · one prediction from each unchanged instrument without fitting>",
     "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, expected at chance_of() within null_band — or the registered fixed null of make_null_predictor() and why it targets chance>",
-    "Raw output": "<one registered row and one null row as --probe prints them>",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged predictor on N labelled items, both lanes · scores read, never reported>",
 }
 

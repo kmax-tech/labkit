@@ -382,7 +382,9 @@ scattered in output files nobody can interpret.
   ```text
   - **Recorded results:** C1 met · recorded: c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
-- **Raw output:** one real prompt+answer pair per finding.
+- **Raw output:** one real prompt+answer pair per finding, read from the
+  run's kept output after the run — never `--probe`'s, which is thrown
+  away. Owed only with a model; without one the stamp leaves it out.
 - **Interpretation / next step:** one sentence; keep instrument findings
   apart from findings about the subject.
 - **Outcome †:** expected or surprising — failures belong here.

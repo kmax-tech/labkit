@@ -719,11 +719,14 @@ def _name_yours(text: str, area: Path, run: Path) -> None:
     the author writes (Conclusion: the question's answer in two sentences within
     the Limits; Raw output from the rows), and the run's output files — the
     post hook asked for Raw output only after the commit, and two of three
-    cold agents filled it in a second round (sandbox, 2026-10-21)."""
+    cold agents filled it in a second round (sandbox, 2026-10-21). A field
+    this protocol does not owe (`not_owed`: Raw output without a model) is
+    not named."""
+    spared = not_owed(text)
     open_ = [
         (n, label)
         for n, label in placeholder_fields(text)
-        if label in WRITTEN_AFTER_RUN
+        if label in WRITTEN_AFTER_RUN and label not in spared
     ]
     if not open_:
         return

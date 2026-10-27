@@ -392,10 +392,12 @@ def full_owed(f: Field, kind: str | None, model: bool) -> bool:
 
 
 def not_owed(text: str) -> set[str]:
-    """The labels of the must and should fields this protocol's full form
-    does not owe (`full_owed`, by its kind and model) — a stamp may still
-    carry their placeholders, and `protocol-fill --list` sets them apart.
-    Empty when the head does not read."""
+    """The labels of the must, should and after-run fields this protocol's
+    full form does not owe (`full_owed`, by its kind and model: Raw output
+    only with a model) — the stamp leaves them out (`owed_cut`),
+    `protocol-fill --list` sets apart those an older stamp still carries,
+    and `--from-run` does not name them as the author's. Empty when the
+    head does not read."""
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError:
@@ -404,7 +406,7 @@ def not_owed(text: str) -> set[str]:
     return {
         f.label
         for f in FIELDS
-        if f.level in ("must", "should") and not full_owed(f, head.kind, model)
+        if f.level in ("must", "should", "after") and not full_owed(f, head.kind, model)
     }
 
 

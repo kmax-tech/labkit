@@ -1093,6 +1093,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Raw output has one job: one real output per finding, from the run's
+  kept rows, and only with a model.** The estimator stamp asked for rows
+  "as --probe prints them" (thrown away, before the run) in a field written
+  after it, the field guide for a prompt+answer pair from the run, and
+  `--from-run` named it as the author's in an area without a model, where
+  nothing owes it. `protocol_check.not_owed` now covers the after-run
+  fields too: the full stamp leaves Raw output out without a model,
+  `--list` sets an older stamp's apart, `--from-run` does not name it.
+  Audit 2026-10-27 (third), I11.
 - **One "ref → commit" in `repo`.** The lab-pin check (`scaffold`), a
   lock's ref (`provenance`) and a pin's tag (`repo_check`) each asked git
   for a ref's commit, one without `--verify`; `repo.commit_of` does, and a
