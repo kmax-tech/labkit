@@ -217,12 +217,16 @@ def find_field_guide() -> Path | None:
     return here if here.exists() else None
 
 
-def print_contract() -> None:
+def print_contract(protocol: Path | None = None) -> None:
     """The checker's contract in one screen (2026-10-05: two cold agents
     learnt the budgets from the pre-commit hook and the field words from
     the checker's source, four rewrite rounds each). The low cut and the
     fill command come first: last, five of six agents found them only after
-    reading the whole list, and none found protocol-fill (2026-10-07)."""
+    reading the whole list, and none found protocol-fill (2026-10-07).
+    With PROTOCOL, the tier table is that protocol's one row — its
+    repeat_cost, kind (the most a kind owes while undecided) and model
+    (`model_named`) —, else the common rows. Raises OSError, UnicodeError
+    or protocol_block.BlockError when PROTOCOL does not read."""
     print(
         'at repeat_cost = "low" (nothing freezes, no SHOULD) the protocol owes: '
         + ", ".join(
@@ -243,17 +247,30 @@ def print_contract() -> None:
         "protocol-fill PROTOCOL-x.md --list; the Prompt block from the scripts' "
         "PROMPT constants: protocol-fill PROTOCOL-x.md --prompts\n"
     )
-    print(
-        "what each tier owes, by occasion — the one table every gate reads "
-        "(standard_contract):"
-    )
-    for repeat_cost, kind, model in (
+    rows = [
         (standard_contract.LOW, standard_contract.COMPUTE_KIND, False),
         (standard_contract.LOW, standard_contract.FIT_KIND, False),
         (standard_contract.LOW, standard_contract.APPLY_KIND, True),
         (standard_contract.HIGH, standard_contract.FIT_KIND, False),
         (standard_contract.HIGH, standard_contract.APPLY_KIND, True),
-    ):
+    ]
+    if protocol is not None:
+        text = protocol.read_text(encoding="utf-8")
+        head = protocol_block.head(text)
+        kind = head.kind or standard_contract.APPLY_KIND
+        rows = [(head.repeat_cost, kind, model_named(text))]
+        print(
+            f"what {protocol.name} owes, by occasion — its repeat_cost, kind"
+            + ("" if head.kind else " (undecided: the most a kind owes)")
+            + " and model, from the one table every gate reads (standard_contract):"
+        )
+    else:
+        print(
+            "what each tier owes, by occasion — the one table every gate reads "
+            "(standard_contract); `protocol-check PROTOCOL --contract` prints "
+            "one protocol's row:"
+        )
+    for repeat_cost, kind, model in rows:
         first, *rest = standard_contract.describe(repeat_cost, kind, model)
         print(f"  {first}")
         for line in rest:
@@ -670,6 +687,21 @@ def check_files(files: list[Path], tmpl: set[str]) -> bool:
     return failed
 
 
+def _contract(named: list[str]) -> int:
+    """`--contract` with NAMED, at most one protocol: its row, or every
+    common row without one (`print_contract`); exit 2 when it does not
+    read."""
+    if len(named) > 1:
+        console.refuse("protocol-check", "--contract takes at most one protocol")
+        return 2
+    try:
+        print_contract(Path(named[0]) if named else None)
+    except (OSError, UnicodeError, protocol_block.BlockError) as exc:
+        console.refuse("protocol-check", f"{' '.join(named)}: {exc}")
+        return 2
+    return 0
+
+
 def main(argv: list[str]) -> int:
     """Command line of `protocol-check`: check protocols against the template and their own head."""
     if argv and argv[0] in ("-h", "--help"):
@@ -682,15 +714,15 @@ def main(argv: list[str]) -> int:
         print(
             "  --contract       print what the checker holds a protocol to: the "
             "prose-line budget per section and the exact label of each field "
-            "it recognises — read it BEFORE writing, not from the pre-commit hook"
+            "it recognises — read it BEFORE writing, not from the pre-commit hook; "
+            "with one PROTOCOL, what its repeat cost, kind and model owe"
         )
         print(EXIT_CONTRACT)
         return 0
     # `protocol-check PROTOCOL --contract` read the flag as a file name
     # ("not readable: '--contract'", 2026-10-13): a flag is a flag anywhere.
     if "--contract" in argv:
-        print_contract()
-        return 0
+        return _contract([a for a in argv if a != "--contract"])
     if "--guide" in argv:
         fg = find_field_guide()
         print(fg or "field guide not found")

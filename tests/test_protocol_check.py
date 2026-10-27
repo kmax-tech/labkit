@@ -181,12 +181,33 @@ class TestResultAfterARun(unittest.TestCase):
 
 class TestFlagsAnywhere(unittest.TestCase):
     def test_contract_after_the_path_is_the_flag_not_a_file(self):
-        for argv in (["--contract", "PROTOCOL-x.md"], ["PROTOCOL-x.md", "--contract"]):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(head(repeat_cost="low"))
+            for argv in (["--contract", str(protocol)], [str(protocol), "--contract"]):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    self.assertEqual(protocol_report.main(argv), 0, argv)
+                self.assertNotIn("not readable", out.getvalue())
+                self.assertIn("Question / hypothesis", out.getvalue())
+
+    def test_contract_with_a_protocol_prints_its_own_row(self):
+        # It printed five fixed rows whatever the protocol, none for a
+        # high-cost computation (audit 2026-10-27, H8).
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(head(repeat_cost="high", kind="compute"))
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                self.assertEqual(protocol_report.main(argv), 0, argv)
-            self.assertNotIn("not readable", out.getvalue())
-            self.assertIn("Question / hypothesis", out.getvalue())
+                self.assertEqual(protocol_report.main([str(protocol), "--contract"]), 0)
+            rows = [ln for ln in out.getvalue().splitlines() if "repeat_cost = '" in ln]
+            self.assertEqual(len(rows), 1, rows)
+            self.assertIn("repeat_cost = 'high', kind = 'compute'", rows[0])
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                self.assertEqual(
+                    protocol_report.main(["--contract", str(Path(d) / "none.md")]), 2
+                )
 
 
 class TestFixtures(unittest.TestCase):

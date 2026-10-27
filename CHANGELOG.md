@@ -294,6 +294,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The instructions for a stop say one thing.** `protocol-check
+  PROTOCOL --contract` printed five fixed rows whatever the protocol (none
+  for a high-cost computation) while the stamped AGENTS.md sends an agent
+  there for "the exact obligations for this area"; with a protocol it now
+  prints that protocol's own row (its repeat cost, kind and model), without
+  one the common rows. report-check's holds described a hand-written
+  handover while every other place goes through the command: `audit.HANDOVER`
+  now names `labkit-audit <area> --findings` and `protocol-fill <PROTOCOL>
+  --handover`. The README told the reader to resolve findings in the
+  written `audits/*.toml` — a hand edit — and that every status owes a
+  reason; it now names `--decide` through `--findings`, `fixed` owing none
+  and an accepted BLOCKER owing `--effect`; its `--review --again` line
+  says the exit is the state's. Audit 2026-10-27 (second), H6–H9.
 - **finalize's command for a mismatched `[result]` runs.** It printed
   `protocol-fill --from-run <run> --force` without the protocol, which
   argparse refuses; it now names the protocol (`repo.adopt_command`), and

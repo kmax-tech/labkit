@@ -129,10 +129,13 @@ repo root.
    .venv/bin/labkit-audit experiments/01-document-count --mode analysis
    ```
 
-   Resolve the findings in the written `audits/*.toml`: each needs a status
-   (`fixed`, `accepted`, `deferred` or `dismissed`) and a reason. Fixes can
-   invalidate the audit's binding; rerun the affected measurement or audit
-   when the checks require it.
+   Decide each finding with the command `labkit-audit
+   experiments/01-document-count --findings` prints for it (`--decide N
+   STATUS "REASON"`): `fixed`, `accepted`, `deferred` or `dismissed`;
+   all but `fixed` owe a reason, and an accepted BLOCKER owes `--effect`.
+   The record is never edited by hand. Fixes can invalidate the audit's
+   binding; rerun the affected measurement or audit when the checks
+   require it.
 
 5. **Adopt the result.** Replace `<run-id>` with the recorded run ID:
 
@@ -241,7 +244,7 @@ finalize AREA                      # checks after the run
 labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS REASON [--effect E] [--record FILE] # store your decision on a finding (an accepted BLOCKER owes --effect)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
-labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw on a judged state — its verdicts count, it lifts no hold; the exit code is this draw's, not the state's)
+labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw on a judged state — its verdicts count, it lifts no hold; the exit is the state's, as without --again)
 labkit-audit AREA --report-review REPORT                   # a cold reader on a report that discusses a run (a discussion block): does it state that run's numbers as results, or what the audits contradict? recorded in audits/report-reviews/; report-check holds the report until a review of its state names no claim; exit 0 only when the state is released, 2 on a claimed state without --again [--again: one more draw on a judged state — its claims hold, it releases nothing]
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas and citing reports

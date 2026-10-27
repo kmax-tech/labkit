@@ -393,7 +393,8 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn(later.name, finding.line)
         self.assertIn('[replaces] protocol = "', finding.line)
         self.assertIn("against each of these registrations", finding.line)
-        self.assertIn("or hand over: no [result] table", finding.line)
+        self.assertIn("or hand over: `labkit-audit <area> --findings`", finding.line)
+        self.assertIn("--handover", finding.line)
         self.assertIn("the report names the protocol, not its runs", finding.line)
 
 

@@ -1336,8 +1336,10 @@ READ_HINT = re.compile(r"^[\s>*`-]*\**READ\**\s*(?:·|—|–|:)")
 #: run of a protocol that declares no result, so a handover names the
 #: protocol (the counter-case of 2026-10-27, tests/test_counter_cases.py)
 HANDOVER = (
-    "hand over: no [result] table in the protocol's head; the report names the "
-    "protocol, not its runs (a cited run id reads as a reported number), says "
+    "hand over: `labkit-audit <area> --findings` prints the --decide and "
+    "`protocol-fill <PROTOCOL> --handover` commands — the handover leaves no "
+    "[result] table in the protocol's head, and its block in the report names "
+    "the protocol, not its runs (a cited run id reads as a reported number), "
     "what stands in the way and what was tried; no number"
 )
 
@@ -1385,11 +1387,10 @@ WAYS_OUT = (
     ),
     (
         "none of these",
-        f"stop and {HANDOVER} — decide readable open BLOCKERs explicitly first "
-        "(deferred with an unresolved-handover reason when unresolved); use "
-        "protocol-fill --handover for a report bound to the remaining evidence. "
-        "Never hand-edit audit or run evidence; decisions use --decide, "
-        "generated reports use protocol-fill; never --no-verify",
+        f"stop and {HANDOVER} — decide each readable open BLOCKER first "
+        "(deferred, with why it stays unresolved). Never hand-edit audit or "
+        "run evidence; decisions use --decide, generated report blocks use "
+        "protocol-fill; never --no-verify",
     ),
 )
 BLOCKER_ROUTES = (

@@ -322,7 +322,10 @@ class ConflictingRegistrations(_Areas):
         (gap,) = self.gaps()
         self.assertIn(f"its first measurement {self.A2_RUN} recorded block", gap)
         self.assertIn("cannot be read back", gap)
-        self.assertIn("until they can, hand over: no [result] table", gap)
+        self.assertIn(
+            "until they can, hand over: `labkit-audit <area> --findings`", gap
+        )
+        self.assertIn("the handover leaves no [result] table", gap)
         self.assertNotIn("fetch", gap)
 
     def test_the_predecessor_renders_no_verdict(self):
