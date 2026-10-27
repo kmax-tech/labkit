@@ -715,7 +715,10 @@ Leckregel für einen grünen Gegenfall zu entfernen, wäre fachlich falsch.
 Die synthetischen Gegenfälle belegen den mechanischen Weg, keinen realen
 Reparaturfall (labkit-paper `1589a05`, Note des Reparaturfalls). Offen: (1)
 ein korrekt registrierter realer Reparaturfall (`[A3]` vor der ersten
-Messung registriert) als eigener Fall; (2) der K1-Hinweis „neues Protokoll
+Messung registriert) als eigener Fall — vorbereitet als labkit-paper
+Bereich 13 (`db55281`: Startbauer, Gegenprobe mit Handreparatur,
+Trockenlauf im lokalen Image von labkit `976df24` trägt); vor dem Bau des
+echten Starts: Abnahme, Pin, Image, ein bezahltes Analyseaudit; (2) der K1-Hinweis „neues Protokoll
 nach nicht freigegebener Messung“ bleibt zurückgestellt (erst ein engerer
 Auslöser und Gegenproben mit unabhängigen Fragen, Review 2026-10-27); (3)
 gemeinsame Abnahme, danach Release.
