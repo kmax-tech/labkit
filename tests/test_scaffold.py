@@ -595,6 +595,23 @@ class Exp(unittest.TestCase):
         self.assertIn("a new registration", str(caught.exception))
         self.assertEqual(snapshot(), before)
 
+    def test_change_kind_with_explore_is_refused_before_anything_is_written(
+        self,
+    ) -> None:
+        """`--explore` returned before the `--change-kind` guard: the pair
+        stamped the explore file and exited 0 (audit 2026-10-27, C13). It is
+        refused with nothing written; the twin, `--explore` alone, stamps."""
+        argv = ["exp", "foo-bar", "--repo", str(self.root)]
+        explore = self.root / "experiments" / "explore" / "foo-bar.py"
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as caught:
+            quiet(scaffold.main, [*argv, "--explore", "--change-kind", "--kind", "fit"])
+        self.assertEqual(caught.exception.code, 2)
+        self.assertIn("--change-kind takes only --kind", err.getvalue())
+        self.assertFalse(explore.exists())
+        self.assertEqual(quiet(scaffold.main, [*argv, "--explore"]), 0)
+        self.assertTrue(explore.is_file())
+
     def test_the_kind_refusal_asks_the_questions(self) -> None:
         """Without `--kind` the refusal prints the same questions as the
         help, training first."""

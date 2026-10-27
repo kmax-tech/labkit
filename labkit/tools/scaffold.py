@@ -1066,16 +1066,18 @@ def main(argv: list[str]) -> int:
         if a.repo is not None
         else lab_root(Path.cwd()) or Path.cwd().resolve()
     )
+    # before the explore branch returns, or `--explore --change-kind` stamps
+    # the explore file and exits 0 (audit 2026-10-27, C13)
+    if a.change_kind and (a.repeat_cost or a.model or a.report or a.explore):
+        ap.error(
+            "--change-kind takes only --kind: the repeat cost, the model and "
+            "the report fields come from the protocol, and --explore stamps no area"
+        )
     if a.explore:
         print("\n".join(stamp_explore(root / "experiments", area_slug(a.name))))
         print(explore_next(area_slug(a.name)))
         return 0
     if a.change_kind:
-        if a.repeat_cost or a.model or a.report or a.explore:
-            ap.error(
-                "--change-kind takes only --kind: the repeat cost, the model and "
-                "the report fields come from the protocol"
-            )
         _, report = change_kind(root, a.name, a.kind)
         print(report)
         return 0
