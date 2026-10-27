@@ -142,29 +142,33 @@ changed; the hook ran ruff, format, pyright and the suite on each.
 | S5, S6, S9 | run record names, kinds, modes, the hooks path; one-home rules | `49a1d99` |
 | M6 | dead code and parameters, a stale noqa, local imports | `c62f2da` |
 
-Open, with a plan:
+Done in the second round (the order agreed: model-free moves, the
+collector, the split, the stamp, the rests):
 
-- **M1** — the release gate still loads `llm`. The moves that end it:
-  `decision_review.conclusion_written` → `protocol_check`;
-  `report_review.held_by`, `review_keys`, `review_pieces` →
-  `report_reviews`; `report_review.review_command` → `repo`;
-  `audit.earlier_of` with `Followup` → `followup` (its `AuditError`
-  becomes the format's error); `HANDOVER`, `register_anew`, `WAYS_OUT`,
-  `BLOCKER_ROUTES` → a model-free `gates/ways_out`. Then a test that
-  importing `report_check` loads no `labkit.run.llm`.
-- **M3** — split `report_check` at report discovery/holding (`:1106`
-  onward) into its own gate module; link/index helpers into `repo`.
-- **M4** — a `Findings` collector on `preflight_area`, as `finalize_area`
-  has; the pre-run hook reads data instead of printed text. M5 —
-  `protocol_report` into `checks/`.
-- **I9, stamp side** — the full template still carries the fields a
-  protocol does not owe; cut it by model and bar as `bar_cut` does by bar.
-- **K9** — a stop that a handover lets pass says nothing of the loss it
-  acknowledged. **I11** — Raw output's two jobs. **I12 rest** — finalize
-  passing intent-check's `--metrics FILE`; `--change-kind` compute+model →
-  fit writing "no model call"; the per-kind field lists of the "Next"
-  steps against AGENTS.md; "lane high" beside `repeat_cost`.
-- **S rest** — minute stamp, answer-line grammar, prompt assembly, held
-  report place (S3), parent run (S4), area-test rendering (S7), git
-  outside `repo` (S8), and the matching `test_one_home` rules; K5's
-  `findings.index(f)` on equal findings.
+| Rows | Done | Commit |
+|---|---|---|
+| I1 crossing | the exception documented with reason and removal target | `a589b33` |
+| M1 | the release gate loads no model backend (`ways_out`, `report_review_inputs`, moves to `report_reviews`, `protocol_check`, `repo`) | `d7ce46d` |
+| M4 | `preflight_area` takes a collector; the pre-run hook reads data | `e0a5b88` |
+| M5 | `protocol_report` in `checks/` | `ae2a2d4` |
+| M3 | `report_check` split; `report_hold` finds and holds reports | `89b8287` |
+| I9 stamp | `protocol_cuts.owed_cut`: the stamp carries only owed fields | `347b70b` |
+| K9 | a stop a handover lets pass names the loss | `4dc4c56` |
+| test session (1) | finalize holds an unmoved null lane from the kept rows | `8b500c6` |
+| K5, S3 | finding numbers by identity; one report suffix | `2497092` |
+
+Still open:
+
+- **S rest** — minute stamp, answer-line grammar, prompt assembly,
+  parent run (S4), area-test rendering (S7), git outside `repo` (S8),
+  and their `test_one_home` rules.
+- **I11, I12 rest** — Raw output's two jobs; finalize passing
+  intent-check's `--metrics FILE`; `--change-kind` compute+model → fit;
+  the per-kind field lists of the "Next" steps; "lane high" beside
+  `repeat_cost`.
+- **M4 rest, M7** — `post_change` still reads `protocol-check`'s printed
+  text; `start_check` mixes returned refusals with `SystemExit`; the long
+  hook handlers, `next_steps`, `bound_prompt`'s 8-tuple.
+- **Test session (3), (4)** — the task's key against `c1_score` lives in
+  the probe module of branch `sab-like-cases`; the run time is the
+  agent's, not a gate's.

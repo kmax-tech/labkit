@@ -1073,6 +1073,13 @@ Notiert, nicht geplant:
    `llm` lädt; M3 `report_check` teilen; M4 Sammler für `preflight_area`;
    M5; die Vorlage nach Modell und Kriterium schneiden (I9 Stempelseite);
    K9, I11, Rest von I12; restliche S-Zeilen und ihre Grep-Regeln.
+   Zweite Runde 2026-10-27 (`a589b33` bis `2497092`): M1, M4, M5, M3,
+   Stempel nach Modell und Kriterium, K9, K5, S3, die Null-Lane-Station aus
+   der Test-Session; die Kreuzung ist befristet dokumentiert. Offen: Rest
+   der S-Zeilen samt Grep-Regeln, I11, Rest von I12, `post_change` liest
+   noch Druckausgabe, `start_check` mischt Ablehnungsformen, M7; aus der
+   Test-Session (3) Aufgaben-Schlüssel gegen `c1_score` (nur auf dem
+   Branch `sab-like-cases`) und (4) Laufzeit.
    Regelkonflikt gemeldet: eine neue bekannte Kern→Doktrin-Kreuzung
    (`start_check`→`protocol_history`, `5760496`), obwohl die Liste „not
    extended in passing“ sagt — bewusst, gleiche Doktrin wie die Zeile
