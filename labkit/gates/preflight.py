@@ -501,20 +501,15 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
         )
 
 
-def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> None:
-    """Station 8: what running the area's tests found (TESTS, from
-    `area_tests`). No file: a warning, a blocker once FROZEN — frozen means
-    every gap is owed (protocol-check's graduation), and the permanent
-    resolution check is such a gap. A failing run blocks, with its last
-    lines told; a missing pytest warns."""
+def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
+    """What running the area's tests (TESTS, with files) found, one
+    rendering for preflight and finalize: ok a note, a missing pytest a
+    warning, a failure a blocker naming the files, pytest's last line (the
+    counts) and FAILED, the gate's sentence on what no longer holds. The
+    tail before it is a note; it reaches no collecting caller, so the
+    counts travel with the blocker (audit 2026-10-23, B1)."""
     names = ", ".join(f.name for f in tests.files)
-    if not tests.files:
-        _owed(findings, frozen)(
-            f"no {tests.pattern} — the resolution check has no "
-            f"permanent form (LAB-016 Resolution check before freezing)"
-            + (" and frozen = true owes it" if frozen else "")
-        )
-    elif tests.state == "ok":
+    if tests.state == "ok":
         findings.note(f"  ok — {names}")
     elif tests.state == "no-pytest":
         findings.warn(
@@ -524,8 +519,27 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
     else:
         for ln in tests.tail:
             findings.note(f"  {ln}")
-        findings.block(
-            f"{names} failed — an unfilled or broken resolution check must not pass the freeze"
+        last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
+        findings.block(f"{names} failed{last} — {failed}")
+
+
+def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> None:
+    """Station 8: what running the area's tests found (TESTS, from
+    `area_tests`). No file: a warning, a blocker once FROZEN — frozen means
+    every gap is owed (protocol-check's graduation), and the permanent
+    resolution check is such a gap. A failing run blocks, with its last
+    lines told; a missing pytest warns (`tell_test_run`)."""
+    if not tests.files:
+        _owed(findings, frozen)(
+            f"no {tests.pattern} — the resolution check has no "
+            f"permanent form (LAB-016 Resolution check before freezing)"
+            + (" and frozen = true owes it" if frozen else "")
+        )
+    else:
+        tell_test_run(
+            findings,
+            tests,
+            "an unfilled or broken resolution check must not pass the freeze",
         )
 
 

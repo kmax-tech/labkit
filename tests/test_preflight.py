@@ -140,6 +140,32 @@ class TestAreaTests(unittest.TestCase):
             self.assertIn(f"ok — {name}", out)
 
 
+class TellTestRun(unittest.TestCase):
+    """preflight and finalize render the area-test run alike (S7)."""
+
+    def test_a_failed_run_carries_its_counts_into_the_blocker(self):
+        # the 10-23 B1 fix stood in finalize only; preflight's blocker lost
+        # pytest's counts for a collecting caller
+        tests = preflight.AreaTests(
+            "tests/test_01_x.py",
+            [Path("test_01_x.py")],
+            "failed",
+            ["E   assert 0 == 1", "1 failed, 2 passed in 0.1s"],
+        )
+        found = Findings(tell=None)
+        preflight.check_tests_owed(found, tests, frozen=False)
+        (blocker,) = found.blocked
+        self.assertIn("test_01_x.py failed (1 failed, 2 passed in 0.1s)", blocker)
+
+    def test_a_passing_run_blocks_nothing(self):
+        tests = preflight.AreaTests(
+            "tests/test_01_x.py", [Path("test_01_x.py")], "ok", []
+        )
+        found = Findings(tell=None)
+        preflight.check_tests_owed(found, tests, frozen=True)
+        self.assertEqual(found.blocked, [])
+
+
 class TestAreaTestNames(unittest.TestCase):
     """An area runs its own stamped test, not one whose name extends its own
     (uniagent 2026-10-07: area 08 ran area 09's test)."""

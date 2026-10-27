@@ -85,7 +85,7 @@ from labkit.formats.repo import (
     the_protocol,
 )
 from labkit.checks.intent_check import hold as intent_hold
-from labkit.gates.preflight import area_tests
+from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
     open_holes,
 )
@@ -401,23 +401,12 @@ def check_area_tests(findings: Findings, area: Path) -> None:
     tests = area_tests(area, layout_root(area))
     if tests.state == "none":
         findings.note(f"  none ({tests.pattern})")
-    elif tests.state == "ok":
-        findings.note(f"  ok — {', '.join(t.name for t in tests.files)}")
-    elif tests.state == "no-pytest":
-        findings.warn(
-            "pytest is not installed in this interpreter — tests not run",
-            evidence_kind=GUARANTEED,
-        )
     else:
-        for ln in tests.tail:
-            findings.note(f"  {ln}")
-        # pytest's last line (the counts) travels with the blocker; the tail
-        # above is a note and reaches no collecting caller (audit 2026-10-23, B1)
-        last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
-        findings.block(
-            f"{', '.join(t.name for t in tests.files)} failed{last} — the area's "
-            f"own checks of evaluate() (its resolution check, where it has a "
-            f"criterion) no longer hold"
+        tell_test_run(
+            findings,
+            tests,
+            "the area's own checks of evaluate() (its resolution check, where "
+            "it has a criterion) no longer hold",
         )
 
 

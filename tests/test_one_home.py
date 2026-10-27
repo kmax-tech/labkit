@@ -97,6 +97,13 @@ RULES: list[tuple[str, str, set[str]]] = [
     # runlog's repeat_of and start_check's derived_from each read their
     # parent run (audit 2026-10-27, third, S4); `start_check.completed_parent`
     ("a parent run read by hand", r"names no completed run", {"start_check"}),
+    # finalize and preflight each rendered the area-test run; the 10-23 B1
+    # fix landed in one (audit 2026-10-27, third, S7); `preflight.tell_test_run`
+    (
+        "an area-test run rendered by hand",
+        r"pytest is not installed in this",
+        {"preflight"},
+    ),
     (
         "a run id's start second compared by hand",
         r"start_second\(|rsplit\(\"_\", 1\)",
@@ -288,6 +295,7 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
+            "an area-test run rendered by hand": '"pytest is not installed in this interpreter — tests not run"',
             "a parent run read by hand": 'f"runlog: repeat_of={x!r} names no completed run under {d}"',
             "a record minute spelled by hand": 'stamp = time.strftime("%Y-%m-%dT%H-%M", when)',
             "a run id's start second compared by hand": "if answering_run.start_second(a) == answering_run.start_second(b):",

@@ -306,6 +306,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **preflight's area-test blocker carries pytest's counts, as finalize's
+  does.** The two gates rendered the area-test run each on their own, and
+  the fix that lets the counts travel with the blocker (audit 2026-10-23,
+  B1) stood in finalize only; `preflight.tell_test_run` renders it for
+  both. Audit 2026-10-27 (third), S7.
 - **A finding's number is its own; a handover writes only where
   report-check looks.** Printed `--decide` commands numbered a finding by
   `list.index`, so of two equal findings in one record the second got the
