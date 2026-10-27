@@ -529,9 +529,10 @@ Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 
 4. **Neuansatz plus Registrierungsvergleich (A4, A5, B1, B3) — präzisiert
    2026-10-27 nach dem Reparaturfall als K1 (Vorgänger `replaces`,
    `[[change]]`-Liste, erzwungen `exploratory`, Vorgänger-Urteil im
-   erzeugten Block; Auslöser: ein Bericht wechselt von Läufen von A zu
-   Läufen von B) und K3 (Registrierung steht wie bei der ersten Messung,
-   exakt über die Laufrecords):
+   erzeugten Block; expliziter Vorgänger aktiviert die Prüfung, bloßer
+   Zitatwechsel ist nur Hinweis) und K3 (Registrierung steht wie bei der
+   ersten Messung; Snapshot-Felder exakt, historische Prosa aus belegter
+   Quelle, Code-Digests nicht als Registrierungsänderung):
    [Note](docs/notes/2026-10-27-new-registration-contracts.md).** Ein neuer
    Bereich mit neuer Protokoll-id nennt seinen Vorgänger in einem
    Kopffeld — die eine Heimat; „abgelöst“ wird daraus abgeleitet, in den
@@ -608,6 +609,16 @@ Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 
    ausrichten. Ein sauberer zusätzlicher Draw gibt einen CLAIM desselben
    Stands weiterhin nicht frei.
 
+9. **„not assessable“ begrenzt das Urteil (K2, neu 2026-10-27):** Eine
+   nicht beurteilbare Zulässigkeitsbedingung lässt nach dem geltenden
+   Vertrag jedes Kriterium des Laufs nicht beurteilbar. Primäres erzeugtes
+   Urteil: „C1: not assessable“, kein `True` mit angehängter Einschränkung.
+   Rohwerte im Runrecord bleiben unverändert; nur separat als Rohwerte
+   kennzeichnen. Eine Heimat für die Ableitung in allen Renderern und
+   Prüfungen; registrierte Keys lesen. Fehlende oder fehlerhafte Pflicht-
+   Keys bleiben Fehler, ein ehrliches C-Verfehlen bei gültigen A bleibt
+   ein Verfehlen. Note und Gegenfälle wie 2.4.
+
 Phase 3 — genaue Anleitung auf den geprüften Befehlen aufbauen:
 
 1. **Abschlussvertrag (gebaut mit 2.3):** Geschuldete Abgabeberichte ausdrücklich bestimmen,
@@ -666,34 +677,37 @@ Phase 4 — gemeinsame Abnahme, ohne Garantien und Nutzen zu vermischen:
    Kategorie „ehrliche Übergabe“ sind Voraussetzungen der dortigen
    Auswertung, keine in labkit erledigten Aufgaben.
 
-9. **„not assessable“ begrenzt das Urteil (K2, neu 2026-10-27):** Eine
-   nicht beurteilbare Zulässigkeitsbedingung lässt jedes Kriterium des
-   Laufs nicht beurteilbar; der erzeugte Block schreibt nie ein nacktes
-   `c1_pass = True` neben `A3 not assessable` (im Reparaturfall geschehen).
-   Messwerte bleiben als Beschreibung. Eigene Lücke, schließt K1 nicht.
-   Note wie 2.4.
-
 Nach dem Reparaturfall (2026-10-27, Richtung vom Autor bestätigt): Neuansatz
 erlauben, Änderungen sichtbar binden (K1, K3); „not assessable“ begrenzt
 das Urteil (K2); das Bewertungsinstrument in labkit-paper zuerst (K4,
 eigener Auftrag: zwei Bereiche auswertbar, `report-only` bleibt
 registrierter Wert, `escaped` als nachträgliche Diagnose daneben); die
 Anleitung („When you are stuck“, `BLOCKER_ROUTES`) nach den Verträgen in
-drei Punkten (Schranken vor den Ergebnissen; neu registrieren nur bei
-unbeantwortbarer Registrierung, nie wegen eines Verfehlens; not assessable
-heißt kein Urteil), per Test gleich gehalten. Reihenfolge: K3 → K2 → K1 →
-Anleitung → Replay des gespeicherten Versuchs mit Gegenfällen. (a) bleibt
+drei Punkten (Schranken vor den Ergebnissen; ehrliches Verfehlen und
+Code-Reparatur zuerst, geänderte Anschlussfrage separat und offengelegt;
+not assessable heißt kein Urteil), durch Lese- und Verhaltenstests geprüft.
+Reihenfolge (bestätigt 2026-10-27): K4 → K3 → K2 → K1 → Anleitung →
+Replay des gespeicherten Versuchs mit Gegenfällen; jeder Vertrag mit seinen
+Tests, der Replay prüft das Zusammenspiel. K3 wird erst aktiv, wenn jede
+seiner Verweigerungen einen ausführbaren Weg nennt (Werte wiederherstellen
+und neu messen, Neuansatz mit `replaces`, Übergabe). K1 bleibt begrenzt:
+nur ein ausdrückliches `replaces` aktiviert seine Prüfungen, ein
+Zitatwechsel warnt; eine spätere strukturierte Berichtszuordnung könnte
+mehr mechanisch prüfen, bewiese aber keine fachliche Gleichheit. Die
+Restlücke gehört in die Auswertung: Schranken vor der ersten Messung eines
+neuen Protokolls zu senken, kann formal sauber sein und doch auf bekannten
+Ergebnissen beruhen — Vorgeschichte und Begründung gehören ins Audit. (a) bleibt
 zurückgestellt: Der Fall zeigt WARNINGs, die nach `rejected` geschlossen
 wurden, keinen ungeprüften `dismissed`/`deferred`-BLOCKER.
 
-Noch zu entscheiden, jeweils vor dem betroffenen Bau: (a) Erweiterung
-der Entscheidungsprüfung in 2.6; (c) Abschluss-/Neuansatzformat,
-zugeordnete Abgabeberichte und Behandlung bereits verfehlter Kriterien
-beim Neuansatz. Empfehlung für (c): Ein Verfehlen bleibt sichtbares
-Ergebnis, ein nachträglicher neuer Ansatz wird ausdrücklich als solcher
-registriert. Der Reparaturfall liefert Eingabe für (a) und (c); diese
-danach und vor ihrem Bau treffen. Keine erneute Entscheidung über die
-bereits beschlossene Nichtfreigabe durch `--again`.
+Noch offen vor dem betroffenen Bau: (a) Erweiterung der Prüfpflicht in
+2.6 bleibt zurückgestellt. Die Richtung von (c) steht mit K1–K3 fest;
+Abschluss-/Neuansatzformat, zugeordnete Abgabeberichte und eine explizite
+Berichtszuordnung sind vor dem Bau zu präzisieren. Ein Zitatwechsel beweist
+keine fachliche Nachfolge; ohne expliziten Vertrag nur Hinweis und
+Gegenstand des Agentenaudits. Unabhängige Fragen dürfen keinen falschen
+Blocker erhalten. Keine erneute Entscheidung über die bereits beschlossene
+Nichtfreigabe durch `--again`.
 (b) Schemabruch: für A1 und A11 nicht nötig (2.1, 2.2); ein Bruch nur,
 wenn der Reparaturfall ihn belegt. labkit liest nur die aktuelle
 Schema-Version (`runs.py:452`), die Stände der Runden 8 und 9 und der
