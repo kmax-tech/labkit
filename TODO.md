@@ -335,7 +335,8 @@ Arbeitsregeln für jeden Umsetzungsschritt:
 
 Phase 0 — belastbare Gegenprobe vorbereiten, vor neuen Sperren:
 
-1. **Fit-Wiederholungen (C1, A13):** `--repeat-of RUN_ID` an die bestehende
+1. **Fit-Wiederholungen (C1, A13) — umgesetzt 2026-10-27 (`1ca12de`):**
+   `--repeat-of RUN_ID` an die bestehende
    Repeat-Mechanik anschließen; Beispiele für andere Seeds nennen den
    Ausgangslauf ausdrücklich. `--seed` allein ist kein zuverlässiges
    Kennzeichen einer Wiederholung: Auch die erste registrierte Messung
@@ -357,12 +358,15 @@ Phase 0 — belastbare Gegenprobe vorbereiten, vor neuen Sperren:
    Verworfen (b), die Seed-Streuung aus den Fit-Vorlagen zu streichen:
    Sie ist eine Stabilitätsprüfung, nach der die Audits der achten Runde
    (t3) ausdrücklich fragten.
-2. **Unabhängige Probe (C14):** Die von `usability` selbst erzeugten
+2. **Unabhängige Probe (C14) — umgesetzt 2026-10-27 (`dc515a2`):** Die
+   Identität gilt je Commit (`git -c`), es wird keine Git-Konfiguration
+   geschrieben. Die von `usability` selbst erzeugten
    Probe-Commits bekommen eine lokale feste Git-Identität. Abnahme in
    echter temporärer Git-Kopie mit leerem Home und isolierter Git-Config;
    kein Eingriff in die globale Identität, Tagtest nicht mit einem
    taglosen Archiv verwechseln.
-3. **Reparaturfall:** Startzustand und erwartete Reparatur vorab festlegen,
+3. **Reparaturfall (als Nächstes; wartet auf `git push` durch den Autor):**
+   Startzustand und erwartete Reparatur vorab festlegen,
    vorhandene Belege behalten, Startkorrekturen einzeln festhalten.
    Nach Veröffentlichung des benötigten Stands durch den Autor ein
    begrenzter Versuch im Labor. Vorher lokale Gegenprobe ohne Modell.
