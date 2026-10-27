@@ -365,7 +365,14 @@ Phase 0 — belastbare Gegenprobe vorbereiten, vor neuen Sperren:
    echter temporärer Git-Kopie mit leerem Home und isolierter Git-Config;
    kein Eingriff in die globale Identität, Tagtest nicht mit einem
    taglosen Archiv verwechseln.
-3. **Reparaturfall (als Nächstes; wartet auf `git push` durch den Autor):**
+3. **Reparaturfall — vorbereitet 2026-10-27, der bezahlte Versuch liegt beim
+   Autor:** labkit-paper, Branch `round7-haiku` (nicht gepusht), Bereich
+   `experiments/12-agent-finishes-a-partial-repair/` (`97ab150`: Startzustand
+   als Bundle mit zwei einzeln festgehaltenen Startkorrekturen, Vorab-
+   Festlegung C1/A1/A2/B1, Auswertung R1–R5) und Pin auf `2c7dfe6`
+   (`4926c61`). Offen: Image bauen, `01_measure.py --stage`, `--check` [A1],
+   Fortsetzungstext (als DRAFT markiert) prüfen, `--attempt`, `--score`.
+   Ursprünglicher Auftrag:
    Startzustand und erwartete Reparatur vorab festlegen,
    vorhandene Belege behalten, Startkorrekturen einzeln festhalten.
    Nach Veröffentlichung des benötigten Stands durch den Autor ein
@@ -381,11 +388,19 @@ Phase 0 — belastbare Gegenprobe vorbereiten, vor neuen Sperren:
 
 Phase 1 — Code bereinigen, danach die Verhaltenskorrekturen getrennt:
 
-1. **Git-Zugriffe (D):** Tatsächlich doppelte Fragen nach Git-Verzeichnis,
+Stand 2026-10-27: Phase 1 umgesetzt (`b54b4d5`..`70d3301`, 30 Commits, Hook
+je Commit grün); 1.4–1.6 von Subagenten in eigenen Worktrees, nacheinander
+auf main gesetzt. Kalte Prüfung von 1.1–1.3 und der Upgrade-Erkennung
+(1.5): 1.1 ohne Befund; gedruckte Schritte ohne `--protocol` (`a42f425`),
+`--decide`-Scan an TOML-Ende und CRLF (`5914ec0`), vier Wege, ein Edit als
+früheren Stempel durchzubringen (`70d3301`) — behoben, je Gegenprobe rot am
+Elternstand. Reste unter „Phase-1-Reste“ (Architektur und Lesbarkeit).
+
+1. **Git-Zugriffe (D) — umgesetzt (`b54b4d5`):** Tatsächlich doppelte Fragen nach Git-Verzeichnis,
    Dateien an einer Revision, Dateiinhalten, HEAD und Änderungen nach
    `formats/repo.py` bewegen. Außerhalb eines Repos und Git-Fehler bleiben
    unterscheidbar; Index und Arbeitsbaum bleiben explizite Eingaben.
-2. **Befehle (D, B1):** Ein Bauer je Audit-/Review-Befehl, mit Bereich,
+2. **Befehle (D, B1) — umgesetzt (`931644f`, `repo.audit_command`):** Ein Bauer je Audit-/Review-Befehl, mit Bereich,
    bei Bedarf `--protocol`, korrekter Shell-Quotierung und vorhandenen
    Voraussetzungen. Abnahme vom Repo-Root und Unterordner, mit Leerzeichen
    im Pfad und mehreren Protokollen. Kein gedruckter nicht ausführbarer
@@ -393,7 +408,7 @@ Phase 1 — Code bereinigen, danach die Verhaltenskorrekturen getrennt:
    entschiedenen BLOCKERn verweigert das Folgeaudit (`audit.py:674-680`);
    dort liefert der Bauer bis 2.4 nachweislich „kein ausführbarer Befehl“
    samt Diagnose, den ausführbaren Weg bringt 2.4.
-3. **Entscheidungen (D, C17, E):** Statuslisten aus `findings.STATUSES`,
+3. **Entscheidungen (D, C17, E) — umgesetzt (`fc78bb4`):** Statuslisten aus `findings.STATUSES`,
    ein gemeinsames Prädikat für die Prüfpflicht geschlossener übertragener
    Befunde. Zuerst Verhalten erhalten; eine Erweiterung auf alle
    `dismissed`/`deferred`-BLOCKER ist separat Phase 2. Namen und Docs nennen
@@ -407,20 +422,23 @@ Phase 1 — Code bereinigen, danach die Verhaltenskorrekturen getrennt:
    diese Erweiterung entstünde eine Sackgasse. Die Integritätsprüfung (2.5)
    validiert erlaubte Felder und Werte; dass `--decide` der Schreiber war,
    kann sie aus Dateibytes nicht beweisen.
-4. **Schreiber und Orte (D, C15):** TOML nur über
+4. **Schreiber und Orte (D, C15) — umgesetzt (`7a0be59`..`d606362`; dazu
+   `\r` in `--why`, die mitgetippte Bereichsnummer):** TOML nur über
    `protocol_block.toml_string`, Protokollschreiben über
    `files.write_atomic`, Bereichsauflösung über `repo.area_path`.
    Abnahme: Steuerzeichen roundtrip-fähig, mehrdeutige Namen verweigert,
    vorhandene Protokolle nach fehlgeschlagenem Schreiben erhalten.
    Wo sich Verhalten ändert, eigener Bugfix statt Refactor-Etikett.
-5. **Belegte Verhaltensfehler (B4, C5, C13, C16):** Explore nennt einen
+5. **Belegte Verhaltensfehler (B4, C5, C13, C16) — umgesetzt
+   (`f1bc885`..`4a2cb68`):** Explore nennt einen
    vollständigen nächsten Befehl; widersprüchliche Flags werden vor dem
    frühen Return geprüft; Vorlagenupgrade gilt nicht ohne Beleg als
    Benutzeränderung; erkannte LLM-Messungen erreichen den vorgesehenen
    Hook-Pfad; die aufbewahrte Audit-Ablehnung wird trotz Parsefehler
    angezeigt. Je Fehler ein Schritt mit Gegenprobe; kein neuer Auditaufruf
    allein für eine Fehlermeldung.
-6. **Textabgleich (C2–C4, C10–C12, E):** Hilfen und Beispiele am
+6. **Textabgleich (C2–C4, C10–C12, E) — umgesetzt (`3f5291c`..`ca3dab9`;
+   Bugfix `rules.names_rule`):** Hilfen und Beispiele am
    wirklichen Vertrag prüfen: Typ × Kostenstufe × Modell, vorhandene
    Flags/Dateien, cwd des Detached-Befehls, Datenprofil, antwortender Lauf,
    ausgelieferte Agenten. Gedruckte Befehle im gestempelten Bereich prüfen.
@@ -1059,6 +1077,35 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+### Phase-1-Reste (2026-10-27)
+
+Gefunden beim Umsetzen von Phase 1, nicht gemacht:
+
+1. `labkit-init exp --explore` verwirft `--kind`, `--repeat-cost`,
+   `--model` und `--report` ohne Wort; nur `--change-kind` wird verweigert.
+   Gleiche Fail-loud-Korrektur.
+2. `--change-kind`: `carried_fields` misst „geschrieben“ noch am Stempel
+   des installierten labkit — eine Vorgabe, die sich zwischen Versionen
+   änderte, kann als geschrieben mitwandern (Upgrade-als-Edit auf
+   Feldebene, nicht nachgestellt). Eine ungetrackte abweichende Datei
+   heißt nach einem Upgrade weiter „edited since the stamp“ (ohne Commit
+   kein Beleg).
+3. `--change-kind` ist als Ganzes nicht atomar: stirbt das Schreiben des
+   Protokolls, sind die Skripte schon von der neuen Art, und ein zweites
+   `--change-kind` wird verweigert. Abhilfe: alles stagen, dann umbenennen.
+4. `files.write_atomic` lässt bei einem Fehlschlag `.<name>.tmp<pid>`
+   liegen und übernimmt den Dateimodus der alten Datei nicht;
+   `scaffold.write_if_absent` schreibt nicht atomar (eine halbe neue Datei
+   gilt beim nächsten Lauf als „exists“).
+5. Standard, Bezeichnerregel 5: ausdrücklich sagen, dass ein verkürzter
+   Titelanfang an einem Satzzeichen endet (Doktrin-Wortlaut, Autor).
+6. `docs/workflow.md:52` nennt `--probe` nur beim Modellskelett, der
+   Schätzer hat auch eines; der launch.json-Eintrag `--probe` sagt „a few
+   real calls“.
+7. `scaffold.next_steps` baut `labkit-audit {rel} --mode …` selbst statt
+   über `repo.audit_command` (Bereichsnamen sind dort sicher; eine Heimat
+   wäre trotzdem sauberer).
+
 ### Audit 2026-10-23
 
 Befunde mit Belegen: [Repo-Audit](docs/audit-2026-10-23.md) (Stand
@@ -1239,6 +1286,11 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
 ## Rollout und Aufgaben außerhalb dieses Repos
+
+`lib exp` (dotfiles, `~/.claude/resources/tools/local-init.py`) bricht:
+es importiert `load_registry` aus `labkit.formats.rules`, das es nicht
+mehr gibt (gefunden 2026-10-27 beim Anlegen von labkit-paper Bereich 12,
+der darum von Hand angelegt ist).
 
 Für labkit-paper, Bereich 09 (eigener Auftrag): t18s Setup und Code
 schneiden die MC-/LC-/NC-Blöcke um eine Zeile versetzt; die Behauptung
