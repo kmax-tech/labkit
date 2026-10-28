@@ -39,9 +39,10 @@ path the task names from the answering run: its measurement script writes
 it there, or you copy that run's own output file; never retype it or
 compute it apart from the run. When a result no longer holds —
 a gate refuses it, or an audit BLOCKER against the code or data that
-produced it is not fixed — rewrite the output from a measurement run after
-the fix; if there is none, remove the output file. The report says which
-you did and why (2026-10-27: an output file kept the heart rate an analysis audit had
+produced it is not fixed — remove the output file at once, and write it
+again from the new answering run once that run is adopted; until then, or
+if there is none, the file stays away. The report says which you did and
+why (2026-10-27: an output file kept the heart rate an analysis audit had
 rejected, while the report handed the question over).
 
 ## Choose the experiment: three separate decisions
@@ -220,6 +221,13 @@ An analysis audit with no findings covers the run when it saw the current
 code, promises and run: there is nothing to decide. It re-checks each
 earlier decided BLOCKER itself; adoption needs it to find that fix in
 place — you add nothing to the record.
+After a fix the new run is adopted the same way, in this order: its
+analysis audit and decisions, then the Conclusion for it (`--force` if one
+is filled), then `protocol-fill <PROTOCOL> --from-run <new run_id> --force`
+(the head still names the old run), `--render`, `--into REPORT.md`.
+Adoption runs `report-check` and is refused while any other blocker
+stands: a `--from-run` line beside other blockers is the last step, not
+the fix.
 Recorded results derives each promise's reportable verdict before its
 measured values; raw metrics in the run remain unchanged. A failed
 criterion under valid admissibility is a reportable miss.
