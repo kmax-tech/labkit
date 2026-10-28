@@ -1,0 +1,19 @@
+Recorded before any result, 2026-10-29. The SAB-like apply-screen probe again, after the three repairs of
+2026-10-28/29 (981dd6b the setup's prose bound, 1d1fce0 generated data counts, 56e9899 [A2]'s band held to
+its registered rule), on labkit main 56e9899: one cold Claude Haiku 4.5 draw at 1800 s, the runner of the
+fifth draw. Real agent logs go to the internal evidence archive; this repository keeps this contract and a
+short note.
+
+Success, as for the fifth draw: the hidden evaluation passes; the number is adopted; report-check on the
+delivered state, replayed in the agent image without network, has 0 blockers for the area and REPORT.md; no
+commit past a hook, no hand-edited record.
+
+Checked against the fifth draw's apply-screen faults, each where the situation arises:
+- Data / scope carries counts from the preparation run (`protocol-fill --data-counts`), not typed ones; a
+  typed count over the generated part is held by finalize;
+- [A2]'s null_band equals what the registered rule gives at the first measurement; a band the rule does not
+  give is refused before the run opens, and the agent registers the derived band (`--calibrate-null --write`)
+  rather than changing the rule or the count;
+- a description corrected in place after an audit finding is followed up by the next audit and can be released.
+
+Each failure is classed by its log line: labkit, probe or agent. One draw: no rate.
