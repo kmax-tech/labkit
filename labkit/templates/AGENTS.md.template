@@ -203,7 +203,16 @@ a model call, with a complete decision command for each:
 `labkit-audit <area> --decide <N> <STATUS> "<REASON>" --record <record>`
 
 Decide each finding using that command. READ lines are hints, not findings
-to decide. `fixed` means the whole named fault was corrected and, where
+to decide. The four statuses:
+
+| status | when | what follows |
+|---|---|---|
+| `fixed` | after you made the repair — the named fault is gone from the files (code, data or the declaration); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
+| `accepted` | the fault stays and you report within it | `--effect stands` (the verdict holds within the limit; a second auditor must uphold it) or `--effect "<ID> not assessable"` |
+| `dismissed` | the finding does not apply to the code and run as audited — the auditor misread them | the reason shows from the files why; a dismissal a review did not uphold, or of a finding a follow-up carried, needs a second auditor |
+| `deferred` | the fault is real but not this result's to fix — someone else's task, or the area is handed over | the reason names who or why; a carried one needs a second auditor |
+
+`fixed` means the whole named fault was corrected and, where
 the finding ends in `check: <key> — <what it must show>`, its diagnostic
 shown: extend the measuring script so that its kept rows carry what
 `<key>` (what it must show) needs and `evaluate_rows()` computes it from
@@ -322,11 +331,17 @@ unadopted numbers as the answer in REPORT.md.
 ## When you are stuck — both repeat costs
 
 Name the cause before changing anything. A refusal is a finding about the
-work; an honest handover without a result is an admissible end. `labkit-audit`
+work; an honest handover without a result is an admissible end. Hand over
+when a way out cannot be taken because a prerequisite it names is missing
+— say which one. A refusal alone is no reason to hand over: it names its
+next step. `--no-verify` is never a way out. `labkit-audit`
 prints these same recovery choices with each decision list:
 
-- **an implementation error** — fix the code, measure again under the
-  unchanged registration, audit the new run; `fixed` names the change.
+- **an implementation error** — fix the code, decide `fixed` naming the
+  change, measure again under the unchanged registration, audit the new
+  run. Where the protocol already declares a result, withdraw it first
+  (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`): the commit hook
+  holds the code to the declared run.
   Example: an excluded feature is still used. Remove it from the code,
   not from the exclusion rule.
 - **a missed criterion** — that is the result: report the miss first.
@@ -368,7 +383,9 @@ prints these same recovery choices with each decision list:
   again: the follow-up judges the finding. Then adopt the run that
   answers (`--from-run`). No new measurement, and never past a hook with
   `--no-verify`.
-- **none of these** — run `labkit-audit <area> --findings` first. Decide
+- **none of these** — a way out above cannot be taken because a
+  prerequisite it names is missing; say which. Run `labkit-audit <area>
+  --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the
   printed `protocol-fill <PROTOCOL> --handover --why "<what blocks>"

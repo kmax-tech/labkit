@@ -763,6 +763,30 @@ class Withdraw(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.records(), records)
 
+    # -- after an adoption, a code change is told to withdraw first
+    def test_a_code_change_after_the_adoption_is_told_to_withdraw_first(self):
+        """The commit of a fix after an adoption is held (the hook holds the
+        code to the declared run); its output names the withdrawal before
+        "measure anew", so the agent does not spend an audit under the old
+        declaration (file-check case, 2026-10-28). The twin: once withdrawn,
+        the same commit passes."""
+        run_a = self.adopted_a()
+        self.change_code()
+        measure = self.area / "scripts" / "01_measure.py"
+        self.lab.git("add", str(measure))
+        rc, out = self.lab.pre_commit(measure)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"a result is declared ({run_a}) and its code changed since: withdraw "
+            f"the declaration first",
+            out,
+        )
+        self.assertEqual(self.withdraw("the measuring code changes")[0], 0)
+        self.lab.git("add", str(self.protocol))
+        rc, out = self.lab.pre_commit(measure, self.protocol)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("withdraw the declaration first", out)
+
     # -- a withdrawal releases nothing
     def test_a_withdrawal_releases_nothing(self):
         run_a = self.measure()

@@ -89,9 +89,10 @@ UNJUDGED_PROMISE = "an unjudged promise"
 WAYS_OUT = (
     (
         "an implementation error",
-        "the code does not do what the registration says: fix the code, measure "
-        "again under the unchanged registration, audit the new run; `fixed` names "
-        "the change",
+        "the code does not do what the registration says: fix the code (where "
+        "the protocol declares a result, withdraw it first — `protocol-fill "
+        '<PROTOCOL> --withdraw --why "<why>"`), decide `fixed` naming the change, '
+        "measure again under the unchanged registration, audit the new run",
     ),
     (
         "a missed criterion",
@@ -135,12 +136,59 @@ WAYS_OUT = (
     ),
     (
         "none of these",
-        f"stop and {HANDOVER} — decide each readable open BLOCKER first "
+        "a way out above cannot be taken because a prerequisite it names is "
+        "missing — name which; a refusal alone is no reason, it names its next "
+        f"step: stop and {HANDOVER} — decide each readable open BLOCKER first "
         "(deferred, with why it stays unresolved). Never hand-edit audit or "
         "run evidence; decisions use --decide, generated report blocks use "
         "protocol-fill; never --no-verify",
     ),
 )
+#: each way out in one line, as the decision list prints it: when it is
+#: the cause, and the next step — the whole text stands in WAYS_OUT and
+#: AGENTS.md ("When you are stuck"); the cold agent of the declared-run case
+#: found the full list hard to filter
+WAYS_OUT_SHORT = {
+    "an implementation error": (
+        "the code does not do what the registration says → fix it (a declared "
+        "result: `--withdraw` first), decide `fixed`, measure again, audit"
+    ),
+    "a missed criterion": (
+        "the code is right and the criterion is missed: that is the result → "
+        "report the miss first (LAB-042 Log the outcome — failures too); never "
+        "move the bar"
+    ),
+    UNJUDGED_PROMISE: (
+        'a fault you cannot fix → `accepted` with `--effect "<ID> not '
+        'assessable"`; the numbers stay description'
+    ),
+    "an invalid registration": (
+        "the question cannot be answered as written: it is not repaired in place "
+        '→ register anew, naming the earlier one in `[replaces] protocol = "<id>"`, '
+        "exploratory; a new approach never turns an earlier miss into a pass"
+    ),
+    "an incomplete registration": (
+        "report-check names a field missing at the first measurement → "
+        "register anew with `[replaces]`, or hand over"
+    ),
+    "a wrong declaration": (
+        "the measurement stands, the head declares another run → `--withdraw`, "
+        "decide `fixed`, audit again, then `--from-run`; no new measurement"
+    ),
+    "none of these": (
+        "a way out cannot be taken for a missing prerequisite you can name → "
+        "open BLOCKERs `deferred`, then `--handover`; never `--no-verify`"
+    ),
+}
+#: the one-line form of NO_PROMISE_ROUTE
+NO_PROMISE_SHORT = (
+    "a fault you cannot fix, no promise registered → `accepted --effect stands` "
+    "with the limit named, or `deferred` and hand over"
+)
+#: where every way out stands in full
+WAYS_OUT_IN_FULL = 'each in full: AGENTS.md, "When you are stuck"'
+
+
 #: the unjudged-promise cause's way out where the protocol registers no
 #: promise — a computation has no [[promise]] table, and `--decide` refuses
 #: every id an effect names there (`audit._registered`); the routes left
@@ -154,18 +202,22 @@ NO_PROMISE_ROUTE = (
 )
 
 
-def blocker_routes(promised: bool) -> tuple[str, ...]:
-    """The ways out of a BLOCKER by its cause (WAYS_OUT), as printed with a
-    decision list and shown to the analysis auditor — for a protocol that
-    registers promises (PROMISED) as WAYS_OUT states them, else with the
-    unjudged-promise route as NO_PROMISE_ROUTE."""
+def blocker_routes(promised: bool, *, full: bool) -> tuple[str, ...]:
+    """The ways out of a BLOCKER by its cause — FULL as WAYS_OUT states them
+    (shown to the analysis auditor), else one line each (WAYS_OUT_SHORT,
+    printed with a decision list) and where they stand in full; for a
+    protocol that registers no promise (not PROMISED) the unjudged-promise
+    route as NO_PROMISE_ROUTE or NO_PROMISE_SHORT."""
+
+    def what(name: str, text: str) -> str:
+        if name == UNJUDGED_PROMISE and not promised:
+            return NO_PROMISE_ROUTE if full else NO_PROMISE_SHORT
+        return text if full else WAYS_OUT_SHORT[name]
+
     return (
         "  before deciding a BLOCKER, name which of these it is:",
-        *(
-            f"    {name}: "
-            f"{NO_PROMISE_ROUTE if name == UNJUDGED_PROMISE and not promised else what}"
-            for name, what in WAYS_OUT
-        ),
+        *(f"    {name}: {what(name, text)}" for name, text in WAYS_OUT),
+        *(() if full else (f"    ({WAYS_OUT_IN_FULL})",)),
     )
 
 

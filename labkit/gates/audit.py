@@ -512,7 +512,7 @@ def render(
             # it (`promises.block_stamp` raises first), so no PromiseError
             # here; the audit holds one protocol, as `--decide` does
             routes = ways_out.blocker_routes(
-                bool(promises.table_ids(source.protocol_text))
+                bool(promises.table_ids(source.protocol_text)), full=True
             )
             pieces.append((WAYS_OUT_LABEL, "\n".join(routes)))
     body = prompt_body(pieces)
@@ -1438,7 +1438,7 @@ def decision_lines(
         )
         promised = may_leave_unassessed(area, protocol)
         if any(f.grade == "BLOCKER" for f in record.findings):
-            out.extend(ways_out.blocker_routes(promised))
+            out.extend(ways_out.blocker_routes(promised, full=False))
         for n, f in enumerate(record.findings, 1):
             text = (
                 f.text

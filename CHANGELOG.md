@@ -1358,6 +1358,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The agent's decisions and ways out say when, what next and when to
+  stop.** Four changes from the day's cases:
+  - After an adoption, report-check names the withdrawal first where a
+    declared run's code changed (`withdraw_first_note`); before, "measure
+    anew" led past it, and the agent met it only at a refused adoption
+    after an audit spent under the old declaration (file-check case:
+    `--no-verify`).
+  - The way out "an implementation error" names the withdrawal where a
+    result is declared.
+  - Step 4 of AGENTS.md has a table of the four statuses: when each fits
+    and what follows; `fixed` only after the repair is made. Agents had
+    decided BLOCKERs `fixed` for a repair still to come.
+  - A handover is the way out when a way out cannot be taken because a
+    prerequisite it names is missing (say which). A refusal alone is no
+    reason, and `--no-verify` is never one.
+  - The decision list prints each way out in one line, with its cause, its
+    next step and where it stands in full (`WAYS_OUT_SHORT`); the cold
+    agent of the declared-run case found the full list hard to filter. The
+    auditor's prompt keeps the full text.
+
 - **A declared result is replaced by withdrawing it: `protocol-fill
   --withdraw`; an audit binds the run declared beside it.** In the
   file-check case (2026-10-28) an audit found the protocol's `[result]`

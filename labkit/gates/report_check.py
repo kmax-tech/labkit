@@ -1097,6 +1097,7 @@ def report_check(
     # 7b. adoption last — a `--from-run` line beside other blockers is the last
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
+    tell_withdraw_first(findings, ctx)
 
     # 8. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
@@ -1123,6 +1124,35 @@ def adoption_order_note(blocked: list[str]) -> str | None:
         f"clear them first, or hand the area over; the `--from-run` line names "
         f"the last step, not the fix"
     )
+
+
+def withdraw_first_note(
+    declared: str | None, blocked: list[str], protocol: Path
+) -> str | None:
+    """The first step to tell when the protocol declares a run (DECLARED)
+    and BLOCKED names a change since that run — its script, its helpers,
+    its declared scope (`changed since <run>`): the declared number no
+    longer holds for the code as it is, the commit hook holds the code to
+    it, and an audit made while it stands declared does not cover the next
+    run, so the declaration is withdrawn first. None otherwise. Why: after
+    an adoption the printed "measure anew" led past the withdrawal, which
+    the agent met only at a refused adoption (file-check case,
+    2026-10-28)."""
+    if declared is None or not any(f"changed since {declared}" in m for m in blocked):
+        return None
+    return (
+        f"  a result is declared ({declared}) and its code changed since: withdraw "
+        f"the declaration first — `{withdraw_command(protocol)}` —, then measure "
+        f"anew, audit that run and adopt it; an audit made while {declared} stands "
+        f"declared does not cover the new run"
+    )
+
+
+def tell_withdraw_first(findings: Findings, ctx: Checked) -> None:
+    """Tell `withdraw_first_note` through FINDINGS when it applies."""
+    first = withdraw_first_note(ctx.declared, findings.blocked, ctx.protocol)
+    if first:
+        findings.note(first)
 
 
 def tell_adoption_order(findings: Findings) -> None:

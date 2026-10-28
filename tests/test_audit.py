@@ -827,7 +827,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
             "cannot be read within: decide it `deferred` and hand over",
             out,
         )
-        self.assertIn("this protocol registers no promise", out)
+        # the decision list prints the one-line form (WAYS_OUT_SHORT)
+        self.assertIn(ways_out.NO_PROMISE_SHORT, out)
         # and the refusal it spares: --decide holds the effect to the tables
         decided = io.StringIO()
         with contextlib.redirect_stderr(decided):
