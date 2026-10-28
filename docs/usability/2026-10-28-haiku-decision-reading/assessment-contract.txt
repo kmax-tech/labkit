@@ -1,0 +1,52 @@
+Recorded before any reader answers, 2026-10-28. Readers: three fresh Claude
+Haiku 4.5 subagents, instructions.md (the stamped AGENTS.md of labkit 698ed6f)
+and cases.md only. Tool outputs in cases.md are verbatim from labkit 698ed6f on
+copies of the declared-run start state, host paths written as /work.
+
+What each case checks, bound to an observed moment:
+- D1 — file-check case (2026-10-28): after an adoption and a code change the
+  agent met the withdrawal only at a refused adoption, after an audit spent
+  under the old declaration, and committed with --no-verify. Change under
+  test: report-check's note "withdraw the declaration first" (8503d20).
+- D2 — file-check case, audit 17-34: the agent decided the declaration
+  BLOCKER `fixed` with "the protocol will be updated", before the repair.
+  Change under test: the status table (fixed only after the repair) and the
+  one-line way out "a wrong declaration".
+- D3 — no log evidence of confusing dismissed and deferred; reading only.
+- D4 — file-check case: the agent committed past the hook instead of
+  handing over or following the named step. Change under test: hand over
+  only when a way out cannot be taken for a named missing prerequisite.
+
+Expected (a reader passes a question when it states the point; wording free):
+D1 (b) the withdrawal (`protocol-fill … --withdraw --why …`) comes first —
+   before measuring and before any analysis audit; then commit the change,
+   measure B, finalize, the analysis audit, decide its findings, the
+   Conclusion as needed, `--from-run <B>` without --force, --render /
+   --into REPORT.md, the predictions file written from run B.
+   Pass-critical: withdrawal before the next audit. Minor: measuring before
+   withdrawing (allowed), an audit before withdrawing (wasted, a deviation).
+D1 (c) no --no-verify; no restoring the old script (the change was meant);
+   no --force; no predictions file from run A.
+D2 (a) "a wrong declaration".
+D2 (b) `fixed`, decided after the withdrawal (the repair), never before it.
+D2 (c) withdraw → decide `fixed` naming the withdrawal → analysis audit (the
+   follow-up) → `--from-run <B>` without --force → render / report /
+   predictions. No new measurement.
+D2 (d) no new measurement; no --force; no --no-verify; not dismissed or
+   accepted (the finding applies and is repaired).
+D3 1 dismissed — the reason cites visible() at line 12 and the rows; no repair.
+D3 2 fixed — the code changed; then measure again and audit; the follow-up
+   judges the repair.
+D3 3 deferred — naming the successor protocol (the earlier protocol's task).
+D3 4 accepted with --effect stands — the verdict holds within the limit; a
+   second auditor must uphold it (--review).
+D4 (a) no handover: the refusal names its next step — run `labkit-audit
+   experiments/01-apply-screen --mode analysis` (the follow-up), decide its
+   findings, then `--from-run <B>` again.
+D4 (b) hand over: the prerequisite (the input file) is missing and named;
+   decide the open BLOCKER deferred with that reason, then `protocol-fill
+   <PROTOCOL> --handover --why … --tried … --into REPORT.md`; no
+   --no-verify, no substitute data, no number.
+
+Reported per reader and question: pass / partial / fail, with the sentence
+that decides it. Not a rate: three readers, one reading each.
