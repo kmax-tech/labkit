@@ -33,6 +33,7 @@ from labkit.formats import (  # noqa: E402
     scope_sha,
 )
 from labkit.checks import protocol_report  # noqa: E402
+from labkit.tools import scaffold  # noqa: E402
 from protocol_fixture import head, scope_file  # noqa: E402
 
 
@@ -554,6 +555,85 @@ class TestStampPlaceholders(unittest.TestCase):
             "- **Next step:** one draw; <what was not tested>\n"
         )
         self.assertEqual(protocol_check.placeholder_fields(filled), [])
+
+
+#: PILOT_FIELDS' prompt, the stamp's form of it and a written block under the
+#: template's label
+PILOT_PROMPT = "- **Prompt:** see block\n\n  ```text\n  Is this fallacious?\n  ```\n"
+WRITTEN_BLOCK = "\n  ```text\n  Is this fallacious?\n  ```\n"
+
+
+def stamped_prompt() -> str:
+    """The template's Prompt field as a stamp leaves it: the label, an empty
+    value and the fence that holds only `<the real prompt — …>`."""
+    lines = TEMPLATE.read_text(encoding="utf-8").splitlines()
+    at = next(i for i, ln in enumerate(lines) if ln.startswith("- **Prompt"))
+    close = next(i for i in range(at + 3, len(lines)) if lines[i].strip() == "```")
+    field = "\n".join(lines[at : close + 1]) + "\n"
+    return protocol_check.HTML_COMMENT.sub("", field).replace(":** \n", ":**\n")
+
+
+class TestStampedPromptBlock(unittest.TestCase):
+    """The stamp writes the Prompt label with an empty value and a fence that
+    holds only the template's `<the real prompt — …>`. That fence is no
+    value: read as one, an unfilled Prompt passed the commit hook, finalize
+    and `--list`, which the contract says the hook holds (pilot PubMedQA,
+    labkit c2c5da2, 2026-10-28)."""
+
+    def stamp(self, repeat_cost: str) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            return scaffold.protocol_stamp(
+                Path(d), "x", repeat_cost, "apply", "haiku", False
+            )
+
+    def test_the_template_has_one_placeholder_block_the_prompts(self):
+        (block,) = protocol_check.stamp_block_placeholders()
+        self.assertTrue(block.startswith("<the real prompt — "), block)
+
+    def test_a_fresh_stamp_owes_its_prompt_at_both_costs(self):
+        for repeat_cost in ("low", "high"):
+            with self.subTest(repeat_cost=repeat_cost):
+                text = self.stamp(repeat_cost)
+                report = protocol_check.check_fields(text)
+                self.assertIn(
+                    "Prompt (verbatim, per variant)",
+                    [lb for _, lb in report.must_holes],
+                )
+                # what `protocol-fill --list` lists
+                self.assertIn(
+                    "Prompt (verbatim, per variant)",
+                    [lb for _, lb in protocol_check.placeholder_fields(text)],
+                )
+
+    def test_the_commit_hooks_check_exits_one_on_the_stamped_block(self):
+        rc, out = run_main(pilot().replace(PILOT_PROMPT, stamped_prompt()))
+        self.assertEqual(rc, 1, out)
+        self.assertIn("PLACEHOLDER ONLY (must): Prompt (verbatim, per variant)", out)
+
+    def test_a_written_block_under_the_empty_label_is_filled(self):
+        """Twin: the block `protocol-fill --prompts` writes is the value."""
+        label = stamped_prompt().splitlines()[0] + "\n"
+        rc, out = run_main(pilot().replace(PILOT_PROMPT, label + WRITTEN_BLOCK))
+        self.assertEqual(rc, 0, out)
+
+    def test_a_written_block_after_the_stamped_one_is_filled(self):
+        """A second block with the prompt makes the field written; the
+        stamped block left above it is template text, a warning."""
+        rc, out = run_main(
+            pilot().replace(PILOT_PROMPT, stamped_prompt() + WRITTEN_BLOCK)
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertIn("still verbatim template text", out)
+
+    def test_a_coined_placeholder_block_is_content(self):
+        """Only the template's block is recognised, exactly: a prompt that
+        opens and closes with a tag is a prompt."""
+        tagged = "\n  ```text\n  <claim>{text}</claim>\n  ```\n"
+        label = stamped_prompt().splitlines()[0] + "\n"
+        report = protocol_check.check_fields(
+            pilot().replace(PILOT_PROMPT, label + tagged)
+        )
+        self.assertEqual(report.must_holes, [])
 
 
 class TestTemplateLines(unittest.TestCase):

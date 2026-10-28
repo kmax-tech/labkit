@@ -377,6 +377,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An unfilled, stamped Prompt block is a hole wherever the field is
+  owed.** The stamp writes the Prompt label with an empty value and a
+  fence that holds only `<the real prompt — …>`; the field parser read
+  that fence as the value, and `prompt_check` skips the block as the
+  template's, so protocol-check (the commit hook), the post-change hook,
+  finalize's open fields and `protocol-fill --list` let an unfilled
+  Prompt through — which `--contract` says the hook holds for a protocol
+  with a `[model]` table. A fence whose body is exactly the template's
+  placeholder (`protocol_check.stamp_block_placeholders`,
+  `is_stamp_placeholder_block`) is no content now; a written block, also
+  one below the stamped fence, fills the field. Pilot of labkit-paper
+  area 15 on c2c5da2 (PubMedQA), defect 6.
 - **Four faults found by the audit of 2026-10-28.** A line of the
   journal's copy that is not JSON ended the stop hook in a traceback:
   `attempts.copy_gaps` now raises AttemptError naming the copy's own line,

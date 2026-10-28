@@ -166,7 +166,7 @@ def stamp_placeholders() -> frozenset[str]:
     in its prose, whitespace collapsed: the exact placeholders a stamp
     leaves, no heuristic. Read outside code fences and HTML comments (the
     TOML head's sentences are `promises.placeholder_sentences`, the Prompt
-    block is `prompt_check`'s); a one-word `<…>` (`<alias>`, `<name>`) is
+    block's `stamp_block_placeholders`); a one-word `<…>` (`<alias>`, `<name>`) is
     left out, since it also occurs in quoted commands as content
     (`PROTOCOL-<name>.md`). A `<…>` nested in another yields both phrases."""
     lines = PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
@@ -190,6 +190,27 @@ def holds_stamp_placeholder(value: str) -> bool:
     """Does VALUE, whitespace collapsed, still hold one of `stamp_placeholders`?"""
     flat = " ".join(value.split())
     return any(phrase in flat for phrase in stamp_placeholders())
+
+
+@functools.lru_cache(maxsize=1)
+def stamp_block_placeholders() -> frozenset[str]:
+    """The body of every code fence in the protocol template that starts
+    with `<` and ends with `>`, whitespace collapsed — today one, the
+    Prompt block a stamp leaves (`<the real prompt — …>`). A protocol's
+    block is matched against these bodies whole (`is_stamp_placeholder_block`),
+    so a prompt that opens and closes with a tag stays a prompt."""
+    lines = PROTOCOL_TEMPLATE.read_text(encoding="utf-8").splitlines()
+    bodies = (
+        " ".join(" ".join(lines[start:end]).split())
+        for _, start, end in protocol_block.fence_spans(lines)
+    )
+    return frozenset(b for b in bodies if b.startswith("<") and b.endswith(">"))
+
+
+def is_stamp_placeholder_block(body: str) -> bool:
+    """Is BODY, a code fence's text, whitespace collapsed, one of
+    `stamp_block_placeholders` — a block the stamp left unfilled?"""
+    return " ".join(body.split()) in stamp_block_placeholders()
 
 
 #: A list item that is nothing but stamped placeholders — `- <…>`,
@@ -221,9 +242,9 @@ class FieldLine:
     name: str  # field_name() of the label
     label: str  # the label as written
     value: str  # the value with its continuation lines, cut markers removed
-    block: bool = (
-        False  # content below the label: a code fence or deeper-indented lines
-    )
+    # content below the label: a code fence or deeper-indented lines; the
+    # stamp's own placeholder fence is none (`is_stamp_placeholder_block`)
+    block: bool = False
     last: int = 0  # 1-based last line of the value
 
     @property
@@ -239,7 +260,12 @@ class FieldLine:
         filled and let a freeze through); a placeholder the author coins
         (`<fill later>`) inside their own prose is not recognised. The id a
         stamp writes before a placeholder (`[C1] <…>`) is not a value: the
-        field is read without it, and an id alone is still a hole."""
+        field is read without it, and an id alone is still a hole.
+
+        A fence that holds only the stamp's placeholder (`<the real prompt
+        — …>`) is no code block in this sense: the parser reads past it
+        (`_content_below`), so `block` is False for it and an unfilled
+        Prompt is a hole wherever the field is owed."""
         if not self.value:
             return not self.block
         v = promises.ID_PREFIX.sub("", self.value)
@@ -262,10 +288,30 @@ def fields(text: str) -> list[FieldLine]:
     return list(_parsed_fields(text))
 
 
+def _content_below(
+    lines: list[str], start: int, spans: Mapping[int, tuple[int, int]]
+) -> str:
+    """The first line of content below a field's value, from the 0-based
+    index START: the next non-blank line, past every fence that holds only
+    a stamp placeholder (`is_stamp_placeholder_block`) — "" when nothing
+    follows. SPANS maps a fence's opening line to its body (`fence_spans`)."""
+    i = start
+    while True:
+        i = next((j for j in range(i, len(lines)) if lines[j].strip()), len(lines))
+        span = spans.get(i)
+        if span is None or not is_stamp_placeholder_block(
+            "\n".join(lines[span[0] : span[1]])
+        ):
+            return lines[i] if i < len(lines) else ""
+        i = span[1] + 1
+
+
 @functools.lru_cache(maxsize=64)
 def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity baseline 2026-10-08
     out: list[FieldLine] = []
     lines = text.splitlines()
+    # opening line -> (first body line, line after the body), 0-based
+    spans = {s - 1: (s, e) for _, s, e in protocol_block.fence_spans(lines)}
     fence: str | None = None  # the open fence's marker; nested fences are body
     comment = False  # inside a multi-line <!-- … --> — not prose
     for i, line in enumerate(lines):
@@ -312,7 +358,9 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
             nxt += 1
         value = HTML_COMMENT.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
-        below = next((ln for ln in lines[nxt:] if ln.strip()), "")
+        # for every field: a fence holding only a stamp placeholder is
+        # skipped, not read as content (the template has one, under Prompt)
+        below = _content_below(lines, nxt, spans)
         indent = len(line) - len(line.lstrip())
         deeper = len(below) - len(
             below.lstrip()
