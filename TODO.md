@@ -1218,6 +1218,19 @@ Notiert, nicht geplant:
    protocol-check warnt (statische Evidenz), wenn der Satz eines
    Versprechens den Wert seiner Konstante nicht nennt. (6) Audit über
    120 s (bekannt, „Auditdauer“).
+   Ursachen (Abschnitt „Why they happened“ der Notiz) und dazu je eine
+   Entscheidung: (7) Das eigene Analyse-Audit hat beide
+   Registrierungsänderungen angestoßen — sein Prompt
+   (`agents/experiment-preflight.agent.md`) sagt nicht, dass nach der
+   ersten Messung nur neue Registrierung, `accepted` mit Wirkung oder
+   Übergabe bleiben; Vorschlag: das dort festhalten. (8) „null_band aus
+   --calibrate-null vor der Registrierung“ steht nur im Platzhalter, der
+   beim Ausfüllen verschwindet; Vorschlag: in AGENTS.md bei apply nennen
+   und sagen, woher `margin` und `null_band` kommen. (9) „Veraltetes Audit
+   löschen“: AGENTS.md und die Commit-Meldung nennen den Fall nicht — ein
+   durch spätere Änderung veralteter Record bleibt, seine BLOCKER werden
+   `fixed` mit der Änderung entschieden. (10) Die Probe selbst: fit-assay
+   nennt keine Kennzahl, der Harness erwartet ROC-AUC.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
