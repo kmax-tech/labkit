@@ -128,6 +128,7 @@ from labkit.formats import (
     console,
     findings,
     followup,
+    promises,
     protocol_block,
     reviews,
     runs,
@@ -670,6 +671,12 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
     except (AuditError, FileNotFoundError, ValueError):
         return []
     gaps: list[GateFinding] = []
+    # `<ID> not assessable` only where the protocol registers a promise: a
+    # computation has none, and `--decide` refuses every id there. The block
+    # reads here: `covering_analysis` above stamped it (PromiseError → [])
+    effects = (
+        'stands|"<ID> not assessable"' if promises.table_ids(ctx.text) else "stands"
+    )
     for r in records:
         for n, f in r.limits():
             if not f.effect:
@@ -684,7 +691,7 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                             "accepted",
                             "REASON",
                             r.path.name,
-                            effect='stands|"<ID> not assessable"',
+                            effect=effects,
                             protocol=ctx.protocol,
                         )
                         + "`",

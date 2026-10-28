@@ -19,7 +19,7 @@ from __future__ import annotations
 #: (`finalize.registration_changes`) — a bar lowered after it and
 #: measured again is held
 #: the ways out of a BLOCKER, by its cause: (name, what to do). Printed with
-#: every decision list (BLOCKER_ROUTES) and stated in the stamped AGENTS.md
+#: every decision list (`blocker_routes`) and stated in the stamped AGENTS.md
 #: ("When you are stuck"); tests/test_ways_out.py holds both to the same
 #: names and every command to a real one. The repair case (2026-10-27)
 #: took the invalid-registration route for a missed criterion and moved
@@ -62,6 +62,10 @@ def register_anew(pid: str = "<id>", per: str = "per change") -> str:
     )
 
 
+#: the cause whose way out is an effect `<ID> not assessable` — WAYS_OUT
+#: states it for a protocol with promises; for one without (a computation)
+#: `blocker_routes` prints NO_PROMISE_ROUTE in its place
+UNJUDGED_PROMISE = "an unjudged promise"
 WAYS_OUT = (
     (
         "an implementation error",
@@ -77,7 +81,7 @@ WAYS_OUT = (
         "and report-check holds a registration changed after the first measurement",
     ),
     (
-        "an unjudged promise",
+        UNJUDGED_PROMISE,
         "a fault you cannot fix leaves a promise unjudged: decide it accepted "
         'with `--effect "<ID> not assessable"`; the criterion then reads not '
         "assessable — report the measured numbers as description, no verdict",
@@ -108,8 +112,32 @@ WAYS_OUT = (
         "protocol-fill; never --no-verify",
     ),
 )
-BLOCKER_ROUTES = (
-    "  before deciding a BLOCKER, name which of these it is:",
-    *(f"    {name}: {what}" for name, what in WAYS_OUT),
+#: the unjudged-promise cause's way out where the protocol registers no
+#: promise — a computation has no [[promise]] table, and `--decide` refuses
+#: every id an effect names there (`audit._registered`); the routes left
+#: are the ones that work: limit the claim, fix the fault, defer and hand over
+NO_PROMISE_ROUTE = (
+    "this protocol registers no promise, so no effect leaves one not "
+    "assessable (`--decide` refuses every id): a fault you cannot fix limits "
+    "the claim — accept it with `--effect stands`, the limit named in the "
+    "Conclusion (a second auditor must uphold it) — or decide it `deferred` "
+    "and hand over"
 )
+
+
+def blocker_routes(promised: bool) -> tuple[str, ...]:
+    """The ways out of a BLOCKER by its cause (WAYS_OUT), as printed with a
+    decision list and shown to the analysis auditor — for a protocol that
+    registers promises (PROMISED) as WAYS_OUT states them, else with the
+    unjudged-promise route as NO_PROMISE_ROUTE."""
+    return (
+        "  before deciding a BLOCKER, name which of these it is:",
+        *(
+            f"    {name}: "
+            f"{NO_PROMISE_ROUTE if name == UNJUDGED_PROMISE and not promised else what}"
+            for name, what in WAYS_OUT
+        ),
+    )
+
+
 #: how long a finding's text stands in the decision list

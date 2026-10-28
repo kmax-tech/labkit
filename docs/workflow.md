@@ -168,7 +168,10 @@ fields written later do not move it) — the run and what the auditor was
 shown of it (`shown_sha`). The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
-named promise (`not assessable`). At `low` this is the lane's one
+named promise (`not assessable`) — where the protocol registers one: a
+computation has no [[promise]] table, `--decide` refuses every id there,
+and the printed ways out name `stands`, a fix, or `deferred` and the
+handover instead. At `low` this is the lane's one
 audit (LAB-017 The number of audits follows the cost tier); at
 `high` the preflight audit came before the freeze and this one
 comes before the number leaves (LAB-050 Analysis audit before reporting).

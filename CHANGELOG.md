@@ -451,6 +451,21 @@ pins (`requirements.txt` / `requirements.lock`).
   declared, not recognised: the decode decides, not the file type, so
   one whose bytes happen to decode is read as text, and guessing it from
   the failure would excuse a corrupt text dataset.
+- **`--effect "<ID> not assessable"` is offered only where the protocol
+  registers a promise.** A computation has no [[promise]] table, and
+  `--decide` refuses every id an effect names there; the decision list,
+  the ways out shown to the analysis auditor, the decision review after
+  a rejection and on a contested state, and report-check's command for an
+  effect owed all offered the route anyway (pilot of labkit-paper area 15,
+  t34 and t21, 2026-10-28). For a protocol without promises they name
+  what works — `--effect stands` with the limit in the Conclusion, a fix,
+  or `deferred` and the handover (`ways_out.NO_PROMISE_ROUTE`,
+  `ways_out.blocker_routes(promised)`, which replaces the constant
+  `BLOCKER_ROUTES`) — and `--decide`'s refusals of an effect's form
+  (`findings.EffectFormError`, raised for an effect owed and missing or
+  malformed) or of an id say so too. `promises.table_ids` is the one rule
+  `--decide` and the texts read; the stamped AGENTS.md says it under "an
+  unjudged promise".
 - **Four faults found by the audit of 2026-10-28.** A line of the
   journal's copy that is not JSON ended the stop hook in a traceback:
   `attempts.copy_gaps` now raises AttemptError naming the copy's own line,

@@ -177,6 +177,12 @@ class FindingsError(ValueError):
     """A findings file that cannot be read as such; the message names file and field."""
 
 
+class EffectFormError(FindingsError):
+    """A decision's effect missing where it is owed (an accepted BLOCKER) or
+    not in EFFECT_FORM — the refusals whose example is a promise id, which
+    `labkit-audit --decide` completes for a protocol without promises."""
+
+
 @dataclass(frozen=True)
 class Finding:
     """One finding of one audit and what the person decided about it."""
@@ -1240,15 +1246,18 @@ def _effect_problem(f: Finding) -> str | None:
 
 
 def _hold_effect(decided: Finding) -> None:
-    """An accepted BLOCKER names its effect, an accepted WARNING may, nothing else does — or FindingsError."""
+    """An accepted BLOCKER names its effect, an accepted WARNING may, nothing
+    else does — or FindingsError: EffectFormError for an effect owed and
+    missing or not in EFFECT_FORM."""
     if decided.effect_owed and not decided.effect:
-        raise FindingsError(
+        raise EffectFormError(
             "an accepted BLOCKER owes its effect on the verdicts — "
             f"--effect {EFFECT_FORM}: does this run still judge the promise?"
         )
     problem = _effect_problem(decided)
     if problem:
-        raise FindingsError(problem)
+        # where an effect is allowed, the only problem left is its form
+        raise (EffectFormError if decided.effect_allowed else FindingsError)(problem)
 
 
 def _decided_text(path: Path, n: int, decided: Finding) -> str:

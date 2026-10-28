@@ -322,7 +322,10 @@ prints these same recovery choices with each decision list:
   Lowering the margin is not a repair.
 - **an unjudged promise** — a fault you cannot fix: decide it accepted
   with `--effect "<ID> not assessable"`; report descriptive values and
-  the promise as not assessable, not a pass.
+  the promise as not assessable, not a pass. A protocol without promises
+  (a `compute`) has none to leave unjudged, and `--decide` refuses every
+  id: there the fault limits the claim (`--effect stands`, the limit in
+  the Conclusion) or is decided `deferred` and handed over.
 - **an invalid registration** — the question cannot be answered as
   written, not merely missed. Example: incompatible definitions of what
   the criterion must judge. Explain the conflict before registering anew

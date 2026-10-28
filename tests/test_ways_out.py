@@ -34,9 +34,29 @@ class WaysOut(unittest.TestCase):
     def test_the_template_names_the_same_causes_as_the_printed_list(self):
         named = re.findall(r"^- \*\*([^*]+)\*\* — ", stuck_section(), re.M)
         self.assertEqual(named, [name for name, _ in ways_out.WAYS_OUT])
-        printed = "\n".join(ways_out.BLOCKER_ROUTES)
-        for name, _ in ways_out.WAYS_OUT:
-            self.assertIn(f"    {name}: ", printed)
+        for promised in (True, False):
+            printed = "\n".join(ways_out.blocker_routes(promised))
+            for name, _ in ways_out.WAYS_OUT:
+                self.assertIn(f"    {name}: ", printed)
+
+    def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
+        """A computation registers no promise and `--decide` refuses every
+        id an effect names (t34, t21 of the pilot, 2026-10-28): its routes
+        name what works — limit the claim, fix, defer and hand over."""
+        promised = "\n".join(ways_out.blocker_routes(True))
+        self.assertIn('--effect "<ID> not assessable"', promised)
+        bare = "\n".join(ways_out.blocker_routes(False))
+        self.assertNotIn("<ID> not assessable", bare)
+        unjudged = next(
+            ln for ln in bare.splitlines() if ways_out.UNJUDGED_PROMISE in ln
+        )
+        for way in ("`--effect stands`", "Conclusion", "`deferred`", "hand over"):
+            self.assertIn(way, unjudged)
+        # the other routes stay as they are
+        self.assertEqual(
+            [ln for ln in bare.splitlines() if ways_out.UNJUDGED_PROMISE not in ln],
+            [ln for ln in promised.splitlines() if ways_out.UNJUDGED_PROMISE not in ln],
+        )
 
     def test_a_miss_comes_before_a_new_registration_and_never_becomes_a_pass(self):
         """The repair case read a missed criterion as an invalid registration."""
@@ -64,7 +84,8 @@ class WaysOut(unittest.TestCase):
             )
 
     def test_every_command_named_is_a_real_command_and_flag(self):
-        both = " ".join(("\n".join(ways_out.BLOCKER_ROUTES) + stuck_section()).split())
+        routes = [*ways_out.blocker_routes(True), *ways_out.blocker_routes(False)]
+        both = " ".join(("\n".join(routes) + stuck_section()).split())
         self.assertIn("labkit-init exp <new-name> --kind", both)
         init = flags_of(scaffold.main, ["exp", "--help"])
         for flag in re.findall(r"labkit-init exp <new-name> (--[a-z-]+)", both):
