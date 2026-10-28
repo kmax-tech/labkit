@@ -208,7 +208,7 @@ to decide. The four statuses:
 | status | when | what follows |
 |---|---|---|
 | `fixed` | after you made the repair — the named fault is gone from the files (code, data or the declaration); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
-| `accepted` | the fault stays and you report within it | `--effect stands` (the verdict holds within the limit; a second auditor must uphold it) or `--effect "<ID> not assessable"` |
+| `accepted` | the fault stays and you report within it | `--effect stands` (the verdict holds within the limit; for a BLOCKER a second auditor must uphold it, for a WARNING its missing review stays a warning) or `--effect "<ID> not assessable"` |
 | `dismissed` | the finding does not apply to the code and run as audited — the auditor misread them | the reason shows from the files why; a dismissal a review did not uphold, or of a finding a follow-up carried, needs a second auditor |
 | `deferred` | the fault is real but not this result's to fix — someone else's task, or the area is handed over | the reason names who or why; a carried one needs a second auditor |
 
