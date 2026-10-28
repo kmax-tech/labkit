@@ -1292,6 +1292,20 @@ Notiert, nicht geplant:
    inline zeigen, binäre beim Namen und Digest nennen. (2) Ein Befund,
    der eine Bestätigung aus einer Datei verlangt, hat keinen Kanal wie
    `check:`. (3) Null-Spur: Entscheidung offen (Punkt 13).
+   Stand 2026-10-28 abends: (1) gebaut — Analyse-Audit und
+   Entscheidungsprüfung sehen die deklarierten Abhängigkeiten des Laufs,
+   kleine Textdateien ganz, sonst Name und Digest (`23bdccd`, Breaking:
+   frühere Analyse-Records solcher Läufe decken nicht mehr); (3)
+   entschieden und gebaut — apply: Schwelle auf dem exakten
+   Permutations-Erwartungswert (`c54a4dc`), fit: Mittel aus fünf
+   Neutrainings (`7b9700b`). Einordnung: der zweite Versuch erreicht die
+   korrekt gebundene, übernommene Zahl, der Schutz vor alten Messzeilen
+   bewährt sich; eine richtige Zahl und ein sauberer report-check sind
+   noch keine bestätigte Aussage, 651 s gegen 1242 s ist je ein Versuch,
+   kein Geschwindigkeitsnachweis. Offen: (2) und die Abnahme des
+   Prüfkennzahl-Auftrags — ein gezielter Fall, dessen Fehler nur eine
+   Kennzahl zeigen kann; danach derselbe Reparaturfall erneut, ob C1/A1/A2
+   jetzt beurteilbar sind (ein Experiment, startet auf Ansage).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

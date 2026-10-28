@@ -1,6 +1,10 @@
 # The null lane and the C1 bar: what must be fixed in advance (2026-10-28)
 
-*A decision for the author, not built. The estimator skeleton
+> **Decided and built the same day:** apply — the proposal below, the bar
+> on the exact permutation expectation (`c54a4dc`); fit — option (a) with
+> K = 5 (`NULL_REFITS`), the bar on the refits' mean (`7b9700b`).
+
+*A decision for the author. The estimator skeleton
 (`labkit/templates/measure-estimator-script.py.template`) passes [C1]
 when the registered lane reaches the null lane plus `margin`, and the
 null lane is one draw: at apply one permutation of the gold under the

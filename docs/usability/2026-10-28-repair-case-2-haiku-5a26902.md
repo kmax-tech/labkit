@@ -13,8 +13,12 @@ AGENTS.md. Records: `2026-10-28-repair-case-2-haiku-5a26902/`.*
 
 ## Result
 
-The agent reached an adopted, correctly bound number in 651 s (the first
-attempt: 1242 s, a discussion block):
+The second repair attempt reaches the correctly bound, adopted number.
+The guard against old measurement rows holds. The acceptance of the
+required-check work order and whether C1/A1/A2 can be judged stay open:
+a correct number and a clean report-check are not yet a confirmed claim.
+651 s against the first attempt's 1242 s is one draw each — no evidence
+of speed.
 
 | step | what |
 |---|---|
@@ -56,8 +60,9 @@ Two causes:
    finding's request to confirm something from a file has no channel like
    a `check:` key: the agent cannot hand the auditor the answer.
 2. **The C1 bar on one null draw** again (`15-27`, `15-30`): accepted with
-   `C1 not assessable`. The decision is open
-   ([note](../notes/2026-10-28-null-lane-spec.md)).
+   `C1 not assessable`. Decided and built since
+   ([note](../notes/2026-10-28-null-lane-spec.md), `c54a4dc`, `7b9700b`);
+   the shown dependencies are `23bdccd`.
 
 The agent decided the planted fault's BLOCKER `fixed` and then, after the
 follow-up's `not_assessable`, `accepted` with `C1 not assessable` — an
