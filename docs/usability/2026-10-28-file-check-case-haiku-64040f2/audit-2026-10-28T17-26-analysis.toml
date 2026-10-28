@@ -1,0 +1,20 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:26"
+mode = "analysis"
+model = "opus"
+scope_sha = "8a544e260b1e"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-23-05_5581"
+shown_sha = "0449c6fe93aa"
+blockers = 0
+warnings = 1
+notes = 4
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:550 · The answering run 2026-10-28T17-23-05_5581 is not tied to any commit. Its rows carry code_sha b130e789e05c, and git shows `scripts/01_measure.py` modified and uncommitted after the first measurement under the registration (dd49f0f \"Run: the first measurement under the registration\"). That run's output was v1; this one writes `apply-screen_v2.jsonl`. The docstring dates the bar decision (\"one permutation's draw put the bar anywhere between 0.54 and 0.78 on a screening model whose agreement is 0.76 (null-lane decision, 2026-10-28)\") to after the agreement was known. So the record cannot show whether the change is a repair toward the registered permutation expectation or a bar moved after a seen result. · The run reports c1_threshold 0.6528 and c1_pass true. If the dd49f0f run scored against one permuted draw and missed, this pass replaces a recorded miss with no commit showing why. Assignment for the caller: (1) from the dd49f0f run's metrics.json, read c1_threshold and c1_pass; (2) check that `git diff 8923787 dd49f0f -- experiments/01-apply-screen/PROTOCOL-apply-screen.md` is empty, which means the registration already named the permutation expectation before the first measurement; (3) run `git diff dd49f0f -- experiments/01-apply-screen/scripts/01_measure.py` to see the bar change; (4) state what run 2026-10-28T17-22-58_649b measured. · LAB-017 The number of audits follows the cost tier · commit the instrument change with its test, re-run the same command from that commit, and list the first measurement with its verdict under Runs"
+status = "accepted"
+reason = "Code fix is being committed now, tying the run to the commit"

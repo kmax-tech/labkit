@@ -1,0 +1,56 @@
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T17-32-30_90d9; the answering run is 2026-10-28T17-32-30_90d9
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  WARNING: Limit (audit 2026-10-28T17-35-analysis #1): `stands` on an accepted WARNING not reviewed — no decision review upholds that the reported claim stands within this limit (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --review --record 2026-10-28T17-35-analysis.toml` asks a second auditor; after a rejection, decide again
+  WARNING: Limit (audit 2026-10-28T17-39-analysis #1): `stands` on an accepted WARNING not reviewed — no decision review upholds that the reported claim stands within this limit (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --review --record 2026-10-28T17-39-analysis.toml` asks a second auditor; after a rejection, decide again
+  BLOCKER: audit 2026-10-28T17-34-analysis.toml#1: decided `fixed` in the state audited — no follow-up has seen the repair (LAB-015 Preflight audit before freezing) — way out: change what the finding names, then a new run and `labkit-audit experiments/01-apply-screen --mode analysis`
+
+report-check: 1 blocker(s), 2 warning(s) — fix the blockers before reporting:
+  - audit 2026-10-28T17-34-analysis.toml#1: decided `fixed` in the state audited — no follow-up has seen the repair (LAB-015 Preflight audit before freezing) — way out: change what the finding names, then a new run and `labkit-audit experiments/01-apply-screen --mode analysis`
+area exit 1
+═══ report-check /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md (its head declares 2026-10-28T17-32-30_90d9) ═══
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T17-32-30_90d9; the answering run is 2026-10-28T17-32-30_90d9
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  WARNING: Limit (audit 2026-10-28T17-35-analysis #1): `stands` on an accepted WARNING not reviewed — no decision review upholds that the reported claim stands within this limit (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --review --record 2026-10-28T17-35-analysis.toml` asks a second auditor; after a rejection, decide again
+  WARNING: Limit (audit 2026-10-28T17-39-analysis #1): `stands` on an accepted WARNING not reviewed — no decision review upholds that the reported claim stands within this limit (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --review --record 2026-10-28T17-39-analysis.toml` asks a second auditor; after a rejection, decide again
+  BLOCKER: audit 2026-10-28T17-34-analysis.toml#1: decided `fixed` in the state audited — no follow-up has seen the repair (LAB-015 Preflight audit before freezing) — way out: change what the finding names, then a new run and `labkit-audit experiments/01-apply-screen --mode analysis`
+
+report-check: 1 blocker(s), 2 warning(s) — fix the blockers before reporting:
+  - audit 2026-10-28T17-34-analysis.toml#1: decided `fixed` in the state audited — no follow-up has seen the repair (LAB-015 Preflight audit before freezing) — way out: change what the finding names, then a new run and `labkit-audit experiments/01-apply-screen --mode analysis`
+═══ report-check REPORT.md (a report citing runs) ═══
+  BLOCKER: REPORT.md: line 9: cites run 2026-10-28T17-32-30_90d9, the declared result of experiments/01-apply-screen/PROTOCOL-apply-screen.md, without its generated block — the number a report shows of a declared result is the generated one — way out: `protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --into REPORT.md` writes it
+  WARNING: REPORT.md: no assigned source found for the numbers on 31 line(s) — they stand outside every generated result block (a hint, not a check of the numbers):
+    REPORT.md:5: 76.1, 92
+    REPORT.md:8: 0.7608695652173914
+    REPORT.md:12: 92
+    REPORT.md:15: 50.28, 25.8, 15, 0.7609, 0.6528
+    REPORT.md:20: 88
+    REPORT.md:21: 13
+    REPORT.md:22: 301, 92
+    REPORT.md:24: 770
+    REPORT.md:36: 01
+    REPORT.md:37: 197
+    REPORT.md:38: 134
+    REPORT.md:39: 139
+    REPORT.md:44: 01
+    REPORT.md:49: 92
+    REPORT.md:67: 70
+    REPORT.md:78: 40
+    REPORT.md:81: 0.13
+    REPORT.md:84: 25
+    REPORT.md:90: 5581
+    REPORT.md:94: 12, 12
+    REPORT.md:96: 0.13, 0.1276
+    REPORT.md:105: 90
+    REPORT.md:108: 25
+    REPORT.md:112: 15
+    REPORT.md:114: 76.1
+    REPORT.md:116: 20
+    REPORT.md:121: 40
+    REPORT.md:122: 10
+    REPORT.md:123: 15
+    REPORT.md:125: 10
+    REPORT.md:127: 135
+
+report-check: 1 blocker(s), 1 warning(s) (1 static evidence) — fix the blockers before reporting:
+  - REPORT.md: line 9: cites run 2026-10-28T17-32-30_90d9, the declared result of experiments/01-apply-screen/PROTOCOL-apply-screen.md, without its generated block — the number a report shows of a declared result is the generated one — way out: `protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --into REPORT.md` writes it
+report exit 1

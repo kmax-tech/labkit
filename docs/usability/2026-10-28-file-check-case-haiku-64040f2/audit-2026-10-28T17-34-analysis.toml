@@ -1,0 +1,29 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:34"
+mode = "analysis"
+model = "opus"
+scope_sha = "8360f4804518"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-32-30_90d9"
+shown_sha = "542b58fe3851"
+blockers = 1
+warnings = 0
+notes = 4
+followup = { entries = 1, bytes = 1750 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/PROTOCOL-apply-screen.md:85 · The protocol reports the wrong run. Its head (`[result] run = \"2026-10-28T17-23-05_5581\"`), Recorded results (:21) and Runs (:54) all name run 5581. The rows and metrics.json shown here belong to run 2026-10-28T17-32-30_90d9: every row of output/apply-screen_v3.jsonl carries `\"_prov\": {\"run\": \"2026-10-28T17-32-30_90d9\"}` (apply-screen_v3.jsonl:1). That file is what `OUT` now names (scripts/01_measure.py, `OUT = … apply-screen_v3.jsonl`). The script says a new `_vN` name marks \"the code repaired\", so 5581 wrote some earlier file, most likely apply-screen_v2.jsonl, under the earlier code. 5581 also started 7 s after 649b, which leaves little room for the sd fix (d186bc1) between them. Yet Recorded results carries exactly 90d9's numbers (c1_score 0.7608695652173914, a2_score 0.4782608695652174, c1_threshold 0.652835538752363). · The run_id attached to c1_score, c1_threshold, a2_score and c1_pass, and so whether the reported C1/A1/A2 verdicts come from the repaired instrument at all. Assignment for the caller: read runs/2026-10-28T17-23-05_5581/config.json, metrics.json and the `_instrument.code_sha` of its registered output. Compare them with 90d9's `code_sha` f0c5b892abb7 and the metrics above. If 5581 ran under the sd**2 code, or under a code_sha other than f0c5b892abb7, the protocol reports a faulty or unaudited run under audited numbers. `02_analyze.py --check` pins `OUT` (v3, run 90d9) against the cited run, so it cannot hold for 5581 as written. · LAB-015 Preflight audit before freezing (scar row Provenance incomplete, LAB-043 Runs go through `runlog`); LAB-050 Analysis audit before reporting · an implementation error in the write-back: write the result back from the answering run 90d9 (`protocol-fill --from-run`), with Runs listing it as the kept run. The registration is unchanged. Then rerun `02_analyze.py --check`."
+status = "fixed"
+reason = "The protocol will be updated to declare run 2026-10-28T17-32-30_90d9 as the answering run, which contains the output with probabilities and matches the metrics shown"
+
+[[fix_verdict]]
+record = "2026-10-28T17-22-analysis.toml"
+n = 1
+decision_sha = "8557b2c615f5"
+verdict = "resolved"
+why = "The code was repaired and the required check holds. scripts/01_measure.py:197 now computes `w * (v - mu) / sd`, which standardises by the standard deviation.\nmodel.json is declared (`PREDICTOR_FILES = {\"model\": MODEL_JSON}`, passed to runlog through `data_files()`). The run recorded its digest (`predictor_sha.model` c94491aa…, apply-screen_v3.jsonl:1), and that digest matches the DEPENDENCY shown.\nThe required check is shown and holds: the DEPENDENCY data/raw/screening/model.json `std` = [12.0, 16.0, 4.5, 0.8, 0.9, 0.43]. These are plausible standard deviations for age, systolic_bp, bmi, hba1c and ldl. For smoker, 0.43 is √(0.25·0.75) = 0.433, the standard deviation of a 0/1 feature with mean 0.25; its variance would be 0.1875.\nThe repaired code was measured: run 90d9, code_sha f0c5b892abb7, metrics.json shown."
+check = "file:data/raw/screening/model.json"
+check_present = true

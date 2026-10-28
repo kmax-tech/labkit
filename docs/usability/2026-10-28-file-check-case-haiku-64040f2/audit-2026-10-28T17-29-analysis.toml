@@ -1,0 +1,37 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:29"
+mode = "analysis"
+model = "opus"
+scope_sha = "8a544e260b1e"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-23-05_5581"
+shown_sha = "0449c6fe93aa"
+blockers = 0
+warnings = 2
+notes = 3
+followup = { entries = 1, bytes = 1750 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · [A2] holds the null lane to the permutation expectation of the registered lane's own flags. That null reuses the registered predictions (`apply_rows`, `gold_of` rows), so no fault in the predictor can move it: any flag set, permuted, is centred on its own expectation. `a2_pass` therefore certifies the seed's draw, not the instrument. No anchor in the run compares `ScreeningModel` against reference output of model.json version 2.1, so the \"applied unchanged\" claim rests on code reading alone. · `a2_pass = true` (metrics.json) reads as admitting the flags behind `c1_pass = true`. By construction it would have admitted the `(v - mu) / sd**2` predictor of the first measurement (commit dd49f0f) just the same, and that predictor's flags answered for a model nobody supplied. Only the code-reading audit caught it. · LAB-015 Preflight audit before freezing (scar row Gate without anchor/resolution: instrument gate without positive control) · an unjudged promise is not needed here (the fix is verified below): decide accepted, carrying a `Limit` line saying [A2] checks the permutation, not the predictor; a positive control of the predictor (reference flags of model 2.1) belongs to a successor registration naming this one in `[replaces]`, not to this protocol"
+status = "accepted"
+reason = "Effect stands within limits: A2 passes as the permutation check is robust; the Conclusion acknowledges A2 does not anchor the predictor output"
+effect = "stands"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · The registration derives `null_band` 0.13 from `--calibrate-null` \"on the supplied model, before this registration\". That calibration predates commit d186bc1, so it ran on the `sd**2` implementation, not on the supplied model. No file records the calibration output, so the derivation the sentence claims is not shown. · `a2_pass` depends on 0.13. Assignment: run `scripts/01_measure.py --calibrate-null` at the current commit and compare its printed band with 0.13. On this run `|a2_score − a2_target|` = `|0.47826 − 0.50284|` = 0.0246 (metrics.json), so `a2_pass` holds under any band of 0.025 or more. No influence on the current verdict is shown. · LAB-003 No run without an intent paragraph (the registered rationale of a constant does not hold as written) · the registration binds, so 0.13 stays as registered: decide accepted, recording the recalibrated band beside it as a `Limit` line; a different band is only for a successor registration naming this one in `[replaces]`"
+status = "accepted"
+reason = "Effect stands: recalibration at current commit yields null_band 0.1276, slightly wider than the registered 0.13, so A2 verdict (a2_score 0.4783 within 0.1300 of 0.5028) holds under the registered band"
+effect = "stands"
+
+[[fix_verdict]]
+record = "2026-10-28T17-22-analysis.toml"
+n = 1
+decision_sha = "8557b2c615f5"
+verdict = "resolved"
+why = "repaired: experiments/01-apply-screen/scripts/01_measure.py:197 now standardises as `w * (v - mu) / sd`, and the required check holds\n- The DEPENDENCY data/raw/screening/model.json `std` = [12.0, 16.0, 4.5, 0.8, 0.9, 0.43]. These are standard deviations, not variances:\n- smoker, with mean 0.25, is binary, so its sd is √(0.25·0.75) = 0.433; its variance would be 0.1875;\n- an age variance of 12 would mean an sd of 3.5 years, which is implausible for a screening cohort.\n- The file is now declared: `PREDICTOR_FILES = {\"model\": MODEL_JSON}` at 01_measure.py:134.\n- Every shown row carries `predictor_sha.model` c94491aa5768f54d…, matching the dependency the run recorded.\n- The run 2026-10-28T17-23-05_5581 wrote a new output file, apply-screen_v2.jsonl. Rows 1 and 392 both carry `_prov.run` 2026-10-28T17-23-05_5581, so no row of an earlier run sits at the head of the file.\n- Pinning `code_sha` b130e789e05c to the fixed commit is `02_analyze.py --check`'s job."
+check = "file:data/raw/screening/model.json"
+check_present = true

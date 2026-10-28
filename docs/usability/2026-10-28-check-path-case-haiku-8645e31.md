@@ -70,6 +70,6 @@ vanished key names that way.
 
 ## What is left
 
-The acceptance of the work order is still owed: the same case again on
-the repaired branch — does the agent compute `z_sd` in `evaluate_rows()`
-from what the rows carry, and does the adoption hold?
+Accepted since: the same case on `64040f2` computed `z_sd` in
+`evaluate_rows()` from what the rows carry, and the number was adopted
+([second attempt](2026-10-28-check-path-case-2-haiku-64040f2.md)).

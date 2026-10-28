@@ -1,0 +1,34 @@
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T17-13-46_3cc0; the answering run is 2026-10-28T17-13-46_3cc0
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  PROTOCOL-apply-screen.md: finalized, audited, checked
+
+report-check: all clear.
+area exit 0
+═══ report-check /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md (its head declares 2026-10-28T17-13-46_3cc0) ═══
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T17-13-46_3cc0; the answering run is 2026-10-28T17-13-46_3cc0
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  PROTOCOL-apply-screen.md: finalized, audited, checked
+
+report-check: all clear.
+═══ report-check REPORT.md (a report citing runs) ═══
+  WARNING: REPORT.md: no assigned source found for the numbers on 17 line(s) — they stand outside every generated result block (a hint, not a check of the numbers):
+    REPORT.md:5: 76.1, 92, 50.3, 26.0, 15
+    REPORT.md:6: 92, 208
+    REPORT.md:11: 92, 392, 208, 0.4782608695652174, 0.502835538752363, 48, 44, 1.1319430826754953, 0.9504909569644793, 0.9858825073525805, 1.1216943909993424, 1.0184864670381597, 1.0901849672824986, 0.7608695652173914, 0.652835538752363
+    REPORT.md:15: 76.1, 70, 92, 92
+    REPORT.md:19: 0.5028, 0.15, 0.6528, 0.7609
+    REPORT.md:26: 301, 300
+    REPORT.md:28: 121
+    REPORT.md:29: 794
+    REPORT.md:30: 301, 300
+    REPORT.md:45: 196
+    REPORT.md:62: 10
+    REPORT.md:64: 20
+    REPORT.md:65: 40
+    REPORT.md:76: 0.8, 1.25
+    REPORT.md:81: 0.76
+    REPORT.md:91: 12
+    REPORT.md:103: 30, 30
+
+report-check: 0 blockers, 1 warning(s) (1 static evidence) — review the warnings above before reporting.
+report exit 0

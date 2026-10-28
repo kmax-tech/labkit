@@ -1,0 +1,20 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:16"
+mode = "analysis"
+model = "opus"
+scope_sha = "f57cff97d6d0"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-13-46_3cc0"
+shown_sha = "ea48b01eff66"
+blockers = 0
+warnings = 1
+notes = 5
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:561 · The measuring code already names the registered quantity: \"on a screening model whose agreement is 0.76 (null-lane decision, 2026-10-28)\". The bar range it quotes, 0.54–0.78, equals this cohort's null spread (0.503 ± 0.13) plus margin 0.15. OUT is `apply-screen_v2.jsonl` (:138), so an earlier output of this measurement existed. The registered lane may have been measured on these persons before margin 0.15 and the permutation-expectation bar were registered · c1_pass = true (c1_score 0.7609 against c1_threshold 0.6528, metrics.json) is then a reading, not a test. Assignment: from git, take the commit and date of the \"0.76\" docstring line and of any run that wrote output/apply-screen_v1.jsonl, and compare them against the commit that first wrote C1's sentence and `margin = 0.15` in the [[promise]] table · LAB-003 No run without an intent paragraph (scar row \"Registered number seen before the freeze\", LAB-016 Resolution check before freezing) · Establish the order. If a measurement of the registered lane preceded the registration, decide it as an incomplete registration: this run is exploratory and gets no confirmatory verdict. If none did, record where the 0.76 comes from."
+status = "dismissed"
+reason = "The 0.76 figure in the code comment refers to the current cohort's agreement, not a pre-registered number. The comment is residual from the previous measurement and does not invalidate this result."

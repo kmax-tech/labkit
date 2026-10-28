@@ -1,0 +1,24 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T17:30"
+model = "opus"
+record = "2026-10-28T17-29-analysis.toml"
+scope_sha = "8a544e260b1e"
+shown_sha = "0449c6fe93aa"
+claim_sha = "faa467bc354b"
+again = false
+upheld = 1
+rejected = 1
+insufficient = 0
+
+[[decision]]
+finding = 1
+decision_sha = "05261cb3986b"
+verdict = "rejected"
+why = "The reason only repeats that the 0.0246 gap fits inside the 0.13 band, which the finding already grants; it never addresses that `a2_pass = true` checks the permutation draw and not the predictor, so nothing in the run admits the flags behind `c1_pass = true`, and the Limit line does not say that A2 leaves the predictor unchecked while the Conclusion still credits 76.1% agreement to \"the screening model\" applied unchanged."
+
+[[decision]]
+finding = 2
+decision_sha = "8984bbe0985f"
+verdict = "upheld"
+why = "A2 met is judged against the registered `null_band` 0.13, and the reason correctly says the registration binds; the finding itself shows `|0.47826 − 0.50284| = 0.0246` passes under any band of 0.025 or more, so the A2 verdict does not depend on the undocumented derivation (the reason's claim about what a recalibration \"would yield\" is not shown, but the verdict does not rest on it)."

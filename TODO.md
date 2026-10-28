@@ -1319,6 +1319,21 @@ Notiert, nicht geplant:
    Kennzahl braucht, und `evaluate_rows()` rechnet sie daraus. Offen: die
    Abnahme dieser Behebung — derselbe Prüfkennzahl-Fall erneut (ein
    Experiment, startet auf Ansage).
+   Abnahme auf `64040f2`: Prüfkennzahl-Fall erneut
+   ([Notiz](docs/usability/2026-10-28-check-path-case-2-haiku-64040f2.md))
+   — die Zeilen tragen `standardized`, `evaluate_rows()` rechnet `z_sd`,
+   Folge-Audit `resolved`, Nachrechen-Check grün, Zahl übernommen, „C1
+   met; A1 met; A2 met“, report-check im Image sauber. Datei-Prüfung
+   ([Notiz](docs/usability/2026-10-28-file-check-case-haiku-64040f2.md))
+   — `model.json` deklariert, vier Folge-Audits `resolved` mit der Datei;
+   die Abgabe aber nicht sauber. Je ein Versuch, keine Rate. Offen,
+   Entscheidung: ein `fixed`-BLOCKER zum deklarierten Lauf (`[result]
+   run`) wird für immer gehalten, weil die erneute Übernahme den
+   auditierten Zustand nicht bewegt und der Ausweg „neue Messung“ nicht
+   passt; der Agent ging mit `--no-verify` am Hook vorbei. Zwei Wege in
+   der Notiz: der deklarierte Lauf gehört zur Bindung des Records, oder
+   report-check gibt einen solchen BLOCKER frei, sobald der Kopf den
+   auditierten Lauf deklariert.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

@@ -1,0 +1,23 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:20"
+mode = "analysis"
+model = "opus"
+scope_sha = "f57cff97d6d0"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-13-46_3cc0"
+shown_sha = "ea48b01eff66"
+blockers = 0
+warnings = 0
+notes = 2
+followup = { entries = 1, bytes = 1814 }
+
+[[fix_verdict]]
+record = "2026-10-28T17-12-analysis.toml"
+n = 1
+decision_sha = "a4743ee00d09"
+verdict = "resolved"
+why = "repaired: `ScreeningModel.probability` now standardises as `(v - mu) / sd` (experiments/01-apply-screen/scripts/01_measure.py:200), and the kept flags follow that formula.\nThe kept flags were recomputed from each row's `standardized` vector with model.json's weights and intercept:\n- row 25 (P071, `[0.618, 0.866, 0.687, 0.288, 0.478, -0.581]`): z ≈ +0.24, so referral, as kept. Under the old `/sd**2` the same person gives z ≈ −1.35, which would be no_referral.\n- rows 14 (P033) and 43 (P126): z ≈ +0.19 gives referral and z ≈ −0.33 gives no_referral, both as kept.\n- The required check `z_sd` = [1.132, 0.950, 0.986, 1.122, 1.018, 1.090] lies inside [0.8, 1.25] on every feature.\n- Caveat: `z_sd` is computed from `standardize()` (01_measure.py:193), not from the `probability()` path that produces the flags. The check by itself does not show the flags' path; the rows above do."
+check = "z_sd"
+check_present = true

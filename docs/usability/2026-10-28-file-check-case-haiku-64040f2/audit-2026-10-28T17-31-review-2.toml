@@ -1,0 +1,24 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T17:31"
+model = "opus"
+record = "2026-10-28T17-29-analysis.toml"
+scope_sha = "8a544e260b1e"
+shown_sha = "0449c6fe93aa"
+claim_sha = "020aa14ebfd9"
+again = false
+upheld = 2
+rejected = 0
+insufficient = 0
+
+[[decision]]
+finding = 1
+decision_sha = "e5d77aaf5a53"
+verdict = "upheld"
+why = "The reason engages the finding's scenario: the Conclusion and the rendered Limit line say that [A2] verifies the permutation draw, not the predictor output, so \"A2 met\" is reported only as what the null check certifies, and the C1 verdict (c1_score 0.7609 ≥ c1_threshold 0.6528) is not claimed to rest on A2 anchoring the model."
+
+[[decision]]
+finding = 2
+decision_sha = "6419689c0438"
+verdict = "upheld"
+why = "The A2 verdict does not depend on the recalibrated band, because metrics.json gives |a2_score − a2_target| = |0.4783 − 0.5028| = 0.0246, which passes under the registered 0.13 and under any band of 0.025 or more; the cited recalibration output (0.1276) is not inlined, though, and the reason wrongly calls it \"slightly wider\" than 0.13 when it is narrower."

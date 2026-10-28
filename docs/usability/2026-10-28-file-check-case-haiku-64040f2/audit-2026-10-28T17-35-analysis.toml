@@ -1,0 +1,30 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:35"
+mode = "analysis"
+model = "opus"
+scope_sha = "8360f4804518"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-32-30_90d9"
+shown_sha = "542b58fe3851"
+blockers = 0
+warnings = 1
+notes = 1
+followup = { entries = 1, bytes = 1750 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:84 · `[result] run`, Recorded results and the Runs list all name run 2026-10-28T17-23-05_5581, but the run given to this audit is 2026-10-28T17-32-30_90d9 (every row's `_prov.run`, output apply-screen_v3.jsonl). That run was measured by an `01_measure.py` that git status shows modified and uncommitted. `OUT` now points at `_v3` while an untracked `apply-screen_v2.jsonl` exists, so 5581 most likely ran other code than `code_sha` f0c5b892abb7 · The reported c1_score 0.7609, c1_threshold 0.6528, a2_score 0.4783 and a2_target 0.5028 are credited to a run whose rows and code nobody here has seen. They equal 90d9's metrics.json to the last digit. Assignment: compare runs/2026-10-28T17-23-05_5581/metrics.json, and the `_instrument.code_sha` / `predictor_sha` in output/apply-screen_v2.jsonl, against 90d9 (f0c5b892abb7, c94491aa…). Also establish whether 5581 ran before or after commit d186bc1, which fixed the standardisation · new class (the reported run is not the audited run; the run's code is outside git, which `finalize` refuses at `low` per LAB-017 The number of audits follows the cost tier) · commit the measuring code, then point the result write-back (`protocol-fill --from-run`) at the run this audit judged, or have 5581's rows audited."
+status = "accepted"
+reason = "The protocol now declares run 2026-10-28T17-32-30_90d9, which audited in this record, contains the output file apply-screen_v3.jsonl and produces the reported metrics with the correct standardisation code"
+effect = "stands"
+
+[[fix_verdict]]
+record = "2026-10-28T17-22-analysis.toml"
+n = 1
+decision_sha = "8557b2c615f5"
+verdict = "resolved"
+why = "repaired: `ScreeningModel.probability` now divides by the standard deviation (`w * (v - mu) / sd`, experiments/01-apply-screen/scripts/01_measure.py:197). The required check shows that model.json's `std` holds standard deviations.\nThe DEPENDENCY data/raw/screening/model.json has `std` = [12.0, 16.0, 4.5, 0.8, 0.9, 0.43]. Smoker is binary with mean 0.25, so its standard deviation is √(0.25·0.75) = 0.433, matching 0.43; its variance would be 0.1875. The other values are plausible standard deviations for age, blood pressure, BMI, HbA1c and LDL.\nmodel.json is now declared (`PREDICTOR_FILES = {\"model\": MODEL_JSON}`, `data_files()`). Every row of run 90d9 carries `predictor_sha.model` c94491aa…, which matches the dependency's recorded sha.\nThe flags follow the model's threshold: row 3 has p = 0.465 → no_referral, row 14 has p = 0.547 → referral, and row 50 has p = 0.4895 → no_referral."
+check = "file:data/raw/screening/model.json"
+check_present = true

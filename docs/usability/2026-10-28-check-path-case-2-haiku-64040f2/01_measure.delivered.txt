@@ -1,0 +1,794 @@
+#!/usr/bin/env python3
+"""<the same measurement question as in PROTOCOL-apply-screen.md, one sentence>
+
+Usage:
+    ../../.venv/bin/python scripts/01_measure.py --show 3
+        The config and three feature rows per split; no fit.
+    ../../.venv/bin/python scripts/01_measure.py --probe
+        Instrument check: twelve labelled items, reduced estimator at fit
+        or the unchanged predictor at apply (its null on permuted labels),
+        both lanes, into a throwaway file; prints the scores (not reported)
+        and one row per lane as the run will keep them.
+    ../../.venv/bin/python scripts/01_measure.py --calibrate-null
+        Apply only, before the registration: the unchanged predictor's
+        predictions on the labelled items, fixed, scored against 200
+        permutations of their gold; prints their spread and the null_band
+        the rule below derives from it. No run, nothing written, and the
+        predictions are never scored against their true gold.
+    ../../.venv/bin/python scripts/01_measure.py
+        The full run, recorded by runlog (at high repeat cost: `runlog start
+        <area> -- …`, after the freeze and the preflight audit).
+    ../../.venv/bin/python scripts/01_measure.py --eval-only
+        Re-evaluate the kept rows; no fit.
+    ../../.venv/bin/python scripts/01_measure.py --repeat-of RUN_ID
+        The kept run RUN_ID drawn again with a seed labkit derives from it
+        and the draw number (`answering_run.repeat_seed`), everything else
+        unchanged: a run of its own (repeat_of) into <out>_draw<N>.jsonl —
+        the spread over seeds, never the answer. `02_analyze.py --draws`
+        shows it.
+    ../../.venv/bin/python scripts/01_measure.py --seed 7
+        A measurement with another seed: a full run like the one above,
+        which answers the protocol when it is the newest — the spread is
+        `--repeat-of`, not this.
+
+The protocol's kind chooses the instrument. At `fit`, `make_estimator()`
+creates an estimator with fit(X, y) and predict(X): the registered lane
+fits true labels, the null lane fits labels permuted inside each fitting
+fold, and the test lane fits every labelled item before predicting the
+unlabelled split. Every scored prediction is out of fold.
+At `apply`, `make_estimator()` loads the unchanged predictor with
+predict(X); it is never fitted and never sees gold. Its null lane scores
+the same predictions against the gold labels permuted with the seed —
+each null row names whose label it carries (`gold_of`) —, so the noise
+floor needs no second instrument. What those predictions reach against
+randomly assigned labels on average is exact, no draw
+(`permutation_expectation()`): [C1]'s bar is it plus `margin`, and [A2]
+holds the one permuted draw — the anchor in the same run — within
+`null_band` of it. `--calibrate-null` derives that band before the
+registration from the spread the permutation brings (not a refit, not new
+model answers), by a rule fixed here (`NULL_PERMUTATIONS`,
+`NULL_BAND_QUANTILE`). A protocol that registers a fixed null predictor
+returns it from `make_null_predictor()` instead; its score plus `margin`
+is the bar, and [A2] holds it within `null_band` of `chance_of()`. At fit
+the null lane refits on permuted labels `NULL_REFITS` times, each draw
+seeded from the run's seed, its fold and its number: [C1]'s bar is the
+mean of their scores plus `margin`, [A2] holds that mean within
+`null_band` of `chance_of()`, and the draws' scores (`a2_draw_scores`)
+show how far one strays — one refit's draw decided a fit's verdict
+(fourth SAB-like draw: `c1_score` = `c1_threshold`). A band changed after the first measurement is
+refused (report-check). All lanes are
+recorded in the same run (LAB-034 Null condition in the same run).
+Unlabelled predictions are never scored.
+
+Measurement contract:
+  - Every labelled item is predicted once per scored lane in the same run;
+    `fit` uses out-of-fold fitting, `apply` uses unchanged predictors.
+  - The score (`SCORE`: accuracy · r2 · auc) is over EVERY labelled item of
+    the lane: an item without a prediction scores as wrong (accuracy, auc)
+    or as the mean (r2) and is counted on its own as `a1_empty`.
+  - [C1] passes when the registered lane's score is at least the bar plus
+    `margin`: at apply with the permuted null its exact expectation
+    (`permutation_expectation`), at fit the mean of the `NULL_REFITS`
+    permuted-label refits, with a fixed null predictor its score.
+  - [A1] checks the yield (at most `max_empty` labelled items without a
+    prediction); [A2] that the null lane scores within `null_band` of its
+    target — the permutation expectation at apply, chance otherwise
+    (`chance_of`, derived, not guessed). If either fails, [C1] has no
+    verdict (None).
+  - A withheld label is no label: the prepare step writes `gold: null` for
+    the unlabelled split (a test file storing 0 or -999 is a placeholder),
+    and a lane carrying an item without gold is never scored — a criterion
+    on zero gold once "passed" (haiku t3, labkit-paper area 09, 2026-10-16).
+  - `evaluate_rows()` is the only implementation of these formulas;
+    `02_analyze.py` and the test import it, never copy it.
+  - The protocol owns the registered thresholds; `MeasureConfig` holds them
+    for one execution; config.json records that object whole.
+  - A seed is a source of randomness, so the protocol's randomness and
+    noise-ceiling fields are owed. Measure the spread on the probe or on
+    the null lane; the registered lane on all items before the freeze makes
+    the freeze empty (Sonnet v3 t3 and t5, 2026-10-16).
+
+Why (house rules, one per line so a reference is never cut):
+  LAB-034 Null condition in the same run
+  LAB-035 Thresholds belong to the run
+  LAB-041 Generate numbers, don't retype them
+  LAB-004 Identifiers make the intent addressable
+  LAB-016 Resolution check before freezing
+  LAB-023 No silent loss
+Stamped by `labkit-init exp apply-screen` (no --model); fill the TODOs, keep the structure.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import random
+import sys
+from collections import Counter
+from dataclasses import asdict, dataclass, field, replace
+from fractions import Fraction
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+AREA = HERE.parent
+# Which protocol this script's runs belong to — named, not guessed.
+PROTOCOL = AREA / "PROTOCOL-apply-screen.md"
+REPO = AREA.parent.parent
+sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
+from labkit.run import batch, provenance, runlog
+from labkit.formats import promises, protocol_block, scope_sha, standard_contract
+from labkit.formats.repo import next_after_run
+
+KIND = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).kind
+
+# written by 00_prepare.py: id · features (a list of numbers) · gold (null for
+# the unlabelled split) · split ("train" | "test")
+ITEMS = AREA / "data" / "prepared" / "person_v1.jsonl"
+# Declare EVERY file or directory loaded by the primary and null
+# predictors, e.g. {"primary": AREA / "data" / "model.joblib"}. Include
+# weights, preprocessing state and reference files; code-only predictors
+# need none. These bytes bind the config, resumed rows and run provenance.
+# Fit hashes no model files unless they are explicitly declared here.
+PREDICTOR_FILES: dict[str, Path] = {"primary": REPO / "data" / "raw" / "screening" / "model.json"}
+# One run, one output file; a new measurement — other estimator, other
+# features, other items, the code repaired — gets a new file name, never two
+# measurements in one: the row identity (`instrument()`) refuses a resume
+# across a code change, and runlog says when a run continues a finished one.
+OUT = AREA / "output" / "apply-screen_v2.jsonl"
+FEATURES_FIELD = "features"
+GOLD_FIELD = "gold"
+SPLIT_FIELD = "split"
+SCORE = "accuracy"
+N_FOLDS = 5
+SEED = 0
+# the instrument's version (estimator_sha): a changed line is a changed config
+ESTIMATOR = "ScreeningModel(model.json version 2.1): standardised features, weighted sum plus intercept, logistic, referral at p >= threshold"
+#: the two lanes every labelled item is scored in, in the same run — the
+#: names finalize reads the kept rows by (`run_record_check.NULL_LANES`)
+SCORED_LANES = ("registered", "null")
+LANES = (*SCORED_LANES, "test")
+#: `--calibrate-null` (apply): how many permutations of the gold, and the
+#: rule that turns their spread into null_band — fixed before any
+#: calibration, so the band is derived, never chosen after seeing it
+NULL_PERMUTATIONS = 200
+#: fit: how many permuted-label refits the null lane takes in the run —
+#: fixed before any run; [C1]'s bar and [A2] read their mean (null-lane
+#: decision, 2026-10-28: one refit's draw decided a verdict)
+NULL_REFITS = 5
+NULL_BAND_QUANTILE = 0.99  # null_band = this quantile of |null − permutation expectation|
+
+
+def predictor_digests() -> dict[str, str]:
+    """Read every declared predictor dependency and return its source digest.
+    Empty for self-contained predictors. Missing or unreadable paths raise
+    their filesystem error; directories use provenance's source-tree digest.
+    """
+    return {name: provenance.source_digest(path) for name, path in PREDICTOR_FILES.items()}
+
+
+def data_files() -> dict[str, Path | provenance.BinaryInput]:
+    """Inputs runlog records: prepared rows and every declared predictor
+    dependency (the primary's, and a registered fixed null's). Predictor names are prefixed to keep the prepared input.
+    Returns paths without reading or changing any file.
+    """
+    return {"prepared": ITEMS, **{f"predictor_{name}": provenance.BinaryInput(path) for name, path in PREDICTOR_FILES.items()}}
+
+
+class ScreeningModel:
+    """The supplied screening model, loaded unchanged from model.json: each
+    feature standardised, the weighted sum plus the intercept, the logistic
+    function, a referral where the probability reaches the threshold."""
+
+    def __init__(self, path: Path) -> None:
+        m = json.loads(path.read_text(encoding="utf-8"))
+        self.weights = m["weights"]
+        self.intercept = m["intercept"]
+        self.threshold = m["threshold"]
+        self.mean, self.std = m["mean"], m["std"]
+
+    def standardize(self, X: list[list[float]]) -> list[list[float]]:
+        return [[(v - mu) / sd for v, mu, sd in zip(x, self.mean, self.std)] for x in X]
+
+    def probability(self, X: list[list[float]]) -> list[float]:
+        import math
+
+        out = []
+        for x in X:
+            z = self.intercept + sum(
+                w * (v - mu) / sd
+                for w, v, mu, sd in zip(self.weights, x, self.mean, self.std)
+            )
+            out.append(1.0 / (1.0 + math.exp(-z)))
+        return out
+
+    def predict(self, X: list[list[float]]) -> list[str]:
+        return ["referral" if p >= self.threshold else "no_referral" for p in self.probability(X)]
+
+
+def make_estimator(seed: int, probe: bool = False):
+    """The unchanged screening model of model.json (never fitted)."""
+    return ScreeningModel(PREDICTOR_FILES["primary"])
+
+
+def make_null_predictor(seed: int, probe: bool = False):
+    """At apply: None, the default — the null lane scores the primary's
+    predictions against the gold labels permuted with SEED. Return a fixed
+    null predictor with predict(X) only when the protocol registers one
+    instead: it receives features only, never gold, and is never trained;
+    declare its files in PREDICTOR_FILES, e.g. load(PREDICTOR_FILES["null"]).
+    PROBE changes only the items. Fit never calls this: its null lane
+    fits permuted labels.
+    """
+    return None
+
+
+@dataclass(frozen=True)
+class MeasureConfig:
+    """Every value that shapes the number — one execution of this protocol.
+
+    The PROTOCOL owns validity and meaning (criterion, registered constants,
+    which run reports); this object materialises one execution; the run's
+    config.json records it whole (`asdict(cfg)`); `evaluate_rows()` reads
+    its thresholds from here and nowhere else. The thresholds have NO
+    default: they come from the protocol's [[promise]] tables under the SAME
+    name (`constants = { margin = 0.25 }` ↔ `margin`) through
+    `promises.all_constants()`; runlog refuses a run whose config lacks a
+    registered constant or carries another value.
+    """
+
+    margin: float               # [C1]: registered score ≥ bar + margin, in score units (apply:
+                                # the permutation expectation; fit: the refits' mean)
+    max_empty: int              # [A1]: at most this many labelled items without a prediction
+    null_band: float            # [A2]: the null lane scores within this of its target, in score units;
+                                # apply: `--calibrate-null` derives it before the registration
+    seed: int = SEED            # folds, permutation, estimator
+    n_folds: int = N_FOLDS
+    score: str = SCORE
+    # the instrument's version: the estimator line, so a changed parameter is
+    # a different config even when every threshold stays
+    estimator_sha: str = hashlib.sha256(ESTIMATOR.encode()).hexdigest()[:12]
+    # the declared predictor files' digests, set by main() from the files as
+    # they are then — never at import: the area's test imports this file
+    predictor_sha: dict[str, str] = field(default_factory=dict)
+
+
+# The registered execution: thresholds from the protocol, nothing copied;
+# `--seed` replaces one field.
+CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
+#: the metrics key of the criterion's value — 02_analyze.py reads this name
+C1_VALUE_KEY = "c1_score"
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    """Input records; the `_meta` header line is documentation, not data."""
+    return batch.Store(path).records()
+
+
+def labelled(items: list[dict]) -> list[dict]:
+    """The items with a gold value — the scored lanes are over exactly these."""
+    return [it for it in items if it.get(GOLD_FIELD) is not None]
+
+
+def unlabelled(items: list[dict]) -> list[dict]:
+    """The items without gold — predicted by the test lane, never scored."""
+    return [it for it in items if it.get(GOLD_FIELD) is None]
+
+
+def folds(n: int, k: int, seed: int) -> list[list[int]]:
+    """K folds of the indices 0..n-1, shuffled by SEED; sizes differ by at most one."""
+    if n < k:
+        raise ValueError(f"folds(): {n} labelled items for {k} folds — fewer folds, or more items")
+    order = list(range(n))
+    random.Random(seed).shuffle(order)
+    return [order[i::k] for i in range(k)]
+
+
+def _plain(value):
+    """A JSON-safe scalar: numpy scalars carry their value in .item()."""
+    return value.item() if hasattr(value, "item") else value
+
+
+def fit_predict(cfg: MeasureConfig, fit: list[dict], predict: list[dict],
+                permute: random.Random | None, probe: bool) -> list:
+    """Fit a fresh estimator on FIT (labels permuted by PERMUTE for the null
+    lane) and predict PREDICT; never the same items on both sides."""
+    est = make_estimator(cfg.seed, probe)
+    y = [it[GOLD_FIELD] for it in fit]
+    if permute is not None:
+        permute.shuffle(y)
+    est.fit([it[FEATURES_FIELD] for it in fit], y)
+    return [_plain(p) for p in est.predict([it[FEATURES_FIELD] for it in predict])]
+
+
+def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
+    """What makes two predictions comparable: the measuring code (this
+    script and the local modules it imports), the estimator line, the
+    score, declared predictor dependencies as they read now, the seed,
+    folds and items. Filesystem errors from reading dependencies propagate.
+    Every row carries it; a resume refuses rows of another (batch.Store
+    `instrument`) — without the code, a fix measured again kept the faulty
+    rows. The items as one fingerprint, not one per item: an edited item
+    changes the fit, so every prediction."""
+    return {"code_sha": scope_sha.measured_code_sha(Path(__file__).resolve(), REPO),
+            "estimator_sha": cfg.estimator_sha, "predictor_sha": predictor_digests(), "score": cfg.score,
+            "seed": cfg.seed, "n_folds": cfg.n_folds, "items_sha": batch.content_sha(items)}
+
+
+def null_draws() -> list[int | None]:
+    """The draws of the null lane, as its rows number them: at fit the
+    `NULL_REFITS` refits (0, 1, …), at apply one unnumbered draw."""
+    return list(range(NULL_REFITS)) if KIND == "fit" else [None]
+
+
+def expected(items: list[dict]) -> list[dict]:
+    """The rows a complete run holds, by id: the registered lane and each
+    null draw over the labelled items, the test lane over the unlabelled
+    ones."""
+    return ([{"id": f"registered:{it['id']}"} for it in labelled(items)]
+            + [{"id": row_id("null", it, d)} for d in null_draws() for it in labelled(items)]
+            + [{"id": f"test:{it['id']}"} for it in unlabelled(items)])
+
+
+def measure(cfg: MeasureConfig, items: list[dict], out: Path,
+            prov: dict | None = None, probe: bool = False) -> list[dict]:
+    """Predict every item in its lanes and write OUT, with PROV on every row.
+
+    Apply predicts with the unchanged primary (its null lane on permuted
+    gold, or a registered fixed null) without training; fit uses
+    out-of-fold registered/permuted-label training and fits all labelled
+    items for the unlabelled test lane. A short prediction list raises
+    ValueError rather than dropping items. No other kind is accepted.
+    """
+    if KIND not in ("fit", "apply"):
+        raise ValueError(f"measure(): kind must be fit or apply, got {KIND!r} — set [protocol] kind in the head")
+    identity = instrument(cfg, items)
+    if identity["predictor_sha"] != cfg.predictor_sha:
+        if not cfg.predictor_sha:   # CONFIG as imported: no snapshot was taken
+            raise ValueError("measure(): cfg carries no predictor snapshot — main() takes it; "
+                             "a caller passes replace(CONFIG, predictor_sha=predictor_digests())")
+        raise ValueError("measure(): predictor dependencies changed since the config snapshot")
+    rows = (apply_rows(cfg, items, probe) if KIND == "apply"
+            else fit_rows(cfg, items, probe))
+    if predictor_digests() != cfg.predictor_sha:
+        raise ValueError("measure(): predictor dependencies changed during prediction")
+    with batch.Store(out, prov=prov, instrument=identity) as store:
+        for r in store.pending(rows):
+            store.append(r)
+    print(f"rows: {len(rows)} — {len(labelled(items))} labelled items in two lanes, {len(unlabelled(items))} test items")
+    return rows
+
+
+def predict_all(predictor, part: list[dict], who: str) -> list:
+    """PREDICTOR's answers for every item of PART, as plain values — strict:
+    fewer or more answers than items is refused, never cut short. WHO names
+    the caller in the ValueError."""
+    answers = list(predictor.predict([it[FEATURES_FIELD] for it in part]))
+    if len(answers) != len(part):
+        raise ValueError(f"{who}: {len(answers)} predictions for {len(part)} items")
+    return [_plain(a) for a in answers]
+
+
+def row_id(lane: str, it: dict, draw: int | None = None) -> str:
+    """A kept row's id: `<lane>:<item>`, `<lane>:<draw>:<item>` for a
+    numbered null draw."""
+    return f"{lane}:{it['id']}" if draw is None else f"{lane}:{draw}:{it['id']}"
+
+
+def lane_row(lane: str, it: dict, pred, gold, fold: int | None = None,
+             draw: int | None = None, standardized: list[float] | None = None, **more) -> dict:
+    """One kept row: item IT predicted PRED in LANE, scored against GOLD
+    (None for the test lane), with its FOLD, its null DRAW (fit) and MORE
+    (`gold_of`)."""
+    row = {"id": row_id(lane, it, draw), "lane": lane, "item": it["id"],
+           "fold": fold, "pred": pred, "gold": gold, **more}
+    if draw is not None:
+        row["draw"] = draw
+    if standardized is not None:
+        row["standardized"] = standardized
+    return row
+
+
+def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
+    """Rows of the unchanged primary predictor, never fitted nor given gold:
+    the registered lane over the labelled items, the test lane over the
+    unlabelled ones. The null lane scores the registered predictions
+    against the labelled items' gold permuted with the seed, each row
+    naming whose label it carries (`gold_of`); a fixed null predictor
+    from `make_null_predictor()` predicts it instead. Raises ValueError
+    for a predictor returning the wrong number of answers.
+    """
+    primary = make_estimator(cfg.seed, probe)
+    null = make_null_predictor(cfg.seed, probe)
+    train, test = labelled(items), unlabelled(items)
+
+    def predict(predictor, part: list[dict]) -> list:
+        return predict_all(predictor, part, "apply_rows()")
+
+    registered = predict(primary, train) if train else []
+    standardized = primary.standardize([it[FEATURES_FIELD] for it in train]) if train else []
+    rows = [lane_row("registered", it, p, it[GOLD_FIELD], standardized=s)
+            for it, p, s in zip(train, registered, standardized)]
+    if null is None:
+        donors = list(train)
+        random.Random(f"apply-null:{cfg.seed}").shuffle(donors)
+        rows += [lane_row("null", it, p, d[GOLD_FIELD], gold_of=d["id"], standardized=s)
+                 for it, p, d, s in zip(train, registered, donors, standardized)]
+    elif train:
+        rows += [lane_row("null", it, p, it[GOLD_FIELD]) for it, p in zip(train, predict(null, train))]
+    if test:
+        rows += [lane_row("test", it, p, None) for it, p in zip(test, predict(primary, test))]
+    return rows
+
+
+def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
+    """Out-of-fold registered rows, `NULL_REFITS` draws of out-of-fold
+    permuted-label rows, and unlabelled test rows; every lane and draw fits
+    a fresh estimator. Returns rows without writing them.
+    """
+    train, test = labelled(items), unlabelled(items)
+    rows: list[dict] = []
+    estimator = make_estimator(cfg.seed, probe)
+    for k, held in enumerate(folds(len(train), cfg.n_folds, cfg.seed)):
+        held_set = set(held)
+        fit = [train[i] for i in range(len(train)) if i not in held_set]
+        out_items = [train[i] for i in held]
+        standardized = estimator.standardize([it[FEATURES_FIELD] for it in out_items])
+        draws = [("registered", None, None)] + [
+            ("null", d, random.Random(f"fit-null:{cfg.seed}:{k}:{d}")) for d in range(NULL_REFITS)
+        ]
+        for lane, d, permute in draws:
+            preds = fit_predict(cfg, fit, out_items, permute, probe)
+            # strict: a fit_predict that returns fewer predictions is refused,
+            # never cut to the shorter list (the missing items would vanish)
+            rows += [lane_row(lane, it, p, it[GOLD_FIELD], fold=k, draw=d, standardized=s)
+                     for it, p, s in zip(out_items, preds, standardized, strict=True)]
+    if test:
+        preds = fit_predict(cfg, train, test, None, probe)
+        rows += [lane_row("test", it, p, None) for it, p in zip(test, preds, strict=True)]
+    return rows
+
+
+def answer_of(r: dict):
+    """The prediction a row carries — what `02_analyze.py --draws` compares across draws."""
+    return r["pred"]
+
+
+# --- the scores: exact where the data is exact (Fraction), so a lane sitting
+# exactly at null + margin passes (floats put the bar one ulp high, 2026-10-14)
+
+def _accuracy(pairs: list[tuple]) -> Fraction:
+    """Correct over every item; a missing prediction is not correct."""
+    return Fraction(sum(1 for p, g in pairs if p is not None and p == g), len(pairs))
+
+
+def _r2(pairs: list[tuple]) -> float:
+    """1 - SSE/SST over every item; a missing prediction counts as the gold mean."""
+    golds = [float(g) for _, g in pairs]
+    mean = sum(golds) / len(golds)
+    sst = sum((g - mean) ** 2 for g in golds)
+    if sst == 0:
+        raise ValueError("r2: the gold values have no variance — nothing to explain")
+    sse = sum(((mean if p is None else float(p)) - g) ** 2 for p, g in pairs)
+    return 1 - sse / sst
+
+
+def _auc(pairs: list[tuple]) -> Fraction:
+    """ROC-AUC as the Mann–Whitney statistic with ties counted half, over every
+    item: gold truthy = positive; a missing score ranks below every real one."""
+    scored = [(float("-inf") if p is None else float(p), bool(g)) for p, g in pairs]
+    pos = [s for s, g in scored if g]
+    neg = [s for s, g in scored if not g]
+    if not pos or not neg:
+        raise ValueError("auc: both classes must be present in the gold")
+    wins = sum(2 if sp > sn else 1 if sp == sn else 0 for sp in pos for sn in neg)
+    return Fraction(wins, 2 * len(pos) * len(neg))
+
+
+SCORES = {"accuracy": _accuracy, "r2": _r2, "auc": _auc}
+
+
+def calibrate_null(cfg: MeasureConfig, items: list[dict], k: int = NULL_PERMUTATIONS) -> dict:
+    """The apply null's spread, measured before the registration: the
+    unchanged predictor's predictions on the labelled items, fixed, scored
+    against K permutations of their gold, seeded from cfg.seed apart from
+    the run's own null. Returns {"target", "null_scores", "band"}: TARGET the
+    permutation expectation (`permutation_expectation`), the band the
+    NULL_BAND_QUANTILE quantile of |null − target|, the rule fixed above. It measures the spread the permutation brings — not a refit, not
+    new model answers — and never scores a prediction against its true
+    gold. Raises ValueError at kind fit (the null refits: no free
+    calibration), with a registered fixed null predictor, for K < 1,
+    without labelled items, or for a predictor returning the wrong number
+    of answers."""
+    if KIND != "apply":
+        raise ValueError(
+            "calibrate_null(): kind apply only — at fit the null lane refits on permuted "
+            f"labels {NULL_REFITS} times in the run, and its draws' scores (a2_draw_scores) "
+            "show the spread; the band is a reasoned value, or at high repeat cost the "
+            "draws of --probe over a few --seed values")
+    if make_null_predictor(cfg.seed) is not None:
+        raise ValueError(
+            "calibrate_null(): a fixed null predictor is registered — its spread is no "
+            "permutation's; derive its band from what it predicts")
+    train = labelled(items)
+    if k < 1 or not train:
+        raise ValueError(f"calibrate_null(): {k} permutation(s) of {len(train)} labelled item(s)")
+    preds = predict_all(make_estimator(cfg.seed), train, "calibrate_null()")
+    golds = [it[GOLD_FIELD] for it in train]
+    target = permutation_expectation(cfg.score, list(zip(preds, golds)))
+    scores = []
+    for n in range(k):
+        permuted = list(golds)
+        random.Random(f"calibrate-null:{cfg.seed}:{n}").shuffle(permuted)
+        scores.append(SCORES[cfg.score](list(zip(preds, permuted))))
+    off = sorted(abs(s - target) for s in scores)
+    # the quantile's rank, exact: a float 0.99 * 200 may land on either side of 198
+    band = off[max(0, math.ceil(Fraction(str(NULL_BAND_QUANTILE)) * len(off)) - 1)]
+    return {"target": target, "null_scores": scores, "band": band}
+
+
+def chance_of(score: str, golds: list) -> Fraction | float:
+    """The score an estimator that learned nothing is expected to reach, derived
+    from the gold alone (LAB-037 Every anchor carries its target and rationale):
+    accuracy — the sum of squared class shares (two independent draws from the
+    label distribution agree that often; 1/2 on balanced binary gold);
+    r2 — 0 (the mean explains nothing; a fitted forest sits slightly below);
+    auc — 1/2 (a random ranking)."""
+    if score == "accuracy":
+        n = len(golds)
+        counts: dict = {}
+        for g in golds:
+            counts[g] = counts.get(g, 0) + 1
+        return sum(Fraction(c, n) ** 2 for c in counts.values())
+    if score == "r2":
+        return 0.0
+    if score == "auc":
+        return Fraction(1, 2)
+    raise ValueError(f"chance_of(): no chance rule for score {score!r} — one of {', '.join(SCORES)}")
+
+
+def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction | float:
+    """The score the predictions of PAIRS (prediction, gold) reach, on
+    average, against their gold permuted uniformly — exact, no draw: each
+    item's permuted label is distributed as the gold. accuracy — the sum
+    over classes of the predictions' share times the gold's (a missing
+    prediction is never correct); auc — 1/2; r2 — −Σ(ŷ − ȳ)² / Σ(y − ȳ)²,
+    since the total sum of squares does not move under a permutation (a
+    missing prediction counts as the mean). [C1]'s bar and [A2]'s target at
+    apply with the permuted null: one permutation's draw put the bar
+    anywhere between 0.54 and 0.78 on a screening model whose agreement
+    is 0.76 (null-lane decision, 2026-10-28)."""
+    if not pairs:
+        raise ValueError("permutation_expectation(): no labelled items")
+    n = len(pairs)
+    if score == "accuracy":
+        golds = Counter(g for _, g in pairs)
+        preds = Counter(p for p, _ in pairs if p is not None)
+        return sum((Fraction(preds[c], n) * Fraction(k, n) for c, k in golds.items()), Fraction(0))
+    if score == "auc":
+        return Fraction(1, 2)
+    if score == "r2":
+        ys = [float(g) for _, g in pairs]
+        mean = sum(ys) / n
+        sst = sum((y - mean) ** 2 for y in ys)
+        if sst == 0:
+            raise ValueError("r2: the gold values have no variance — nothing to explain")
+        return -sum(((mean if p is None else float(p)) - mean) ** 2 for p, _ in pairs) / sst
+    raise ValueError(f"permutation_expectation(): no rule for score {score!r} — one of {', '.join(SCORES)}")
+
+
+def score_of(cfg: MeasureConfig, rows: list[dict]) -> tuple[Fraction | float, int]:
+    """(score over every item of the lane, number of items without a prediction)."""
+    pairs = [(r["pred"], r["gold"]) for r in rows]
+    return SCORES[cfg.score](pairs), sum(1 for p, _ in pairs if p is None)
+
+
+def scored_class_counts(rows: list[dict]) -> dict[str, int]:
+    """Items per gold value over ROWS (one scored lane), keys as text in
+    sorted order — JSON object keys are text, so the recomputation compares
+    equal to metrics.json."""
+    counts = Counter(str(r["gold"]) for r in rows)
+    return {g: counts[g] for g in sorted(counts)}
+
+
+def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
+    """THE experiment, as a pure function of the stored rows and the config — gates first.
+
+    Returns every registered id's keys on every evaluation:
+      a1_empty · a1_pass                 admissibility: yield of the registered lane
+      a2_score · a2_target · a2_pass     admissibility: the null lane inside its band around its target
+                                         (apply, permuted null: the permutation expectation; else chance);
+                                         at fit a2_score is the mean of the draws, a2_draw_scores each
+      c1_score · c1_threshold · c1_pass  criterion: registered lane against the bar + cfg.margin
+                                         (apply, permuted null: the permutation expectation; else the null)
+      n_items · n_rows · n_test          yield (→ LAB-023 No silent loss)
+      scored_class_counts                accuracy/auc: items per gold value in the scored
+                                         rows — not the class distribution of the input file
+      z_sd                               standard deviation of each standardized feature
+    A failed [A] reports its keys and no criterion verdict (`c1_pass` None).
+    A number about the inputs the report states belongs in this dict, computed
+    from the kept rows; one the rows cannot give owes rows that keep what it
+    needs — never a count typed into the report."""
+    if not rows:
+        raise ValueError("evaluate_rows(): no rows — refusing a number over nothing")
+    reg = [r for r in rows if r["lane"] == "registered"]
+    null = [r for r in rows if r["lane"] == "null"]
+    test = [r for r in rows if r["lane"] == "test"]
+    if not reg or not null:
+        raise ValueError("evaluate_rows(): both scored lanes must be in the same run (LAB-034 Null condition in the same run)")
+    if any(r["gold"] is None for r in reg + null):
+        raise ValueError("evaluate_rows(): a scored lane carries an item without gold — a withheld label is no label")
+    reg_score, reg_empty = score_of(cfg, reg)
+    # numbered draws (fit): the null's score is their mean, each kept
+    draws: dict = {}
+    for r in null:
+        draws.setdefault(r.get("draw"), []).append(r)
+    draw_scores = [score_of(cfg, draws[d])[0] for d in sorted(draws, key=str)]
+    null_score = sum(draw_scores) / len(draw_scores)
+    # a permuted null (its rows name the donor of their label): the bar and
+    # [A2]'s target are the exact permutation expectation, the draw only the
+    # anchor; a fitted or fixed null: chance is the target, its score the bar
+    if all("gold_of" in r for r in null):
+        target = permutation_expectation(cfg.score, [(r["pred"], r["gold"]) for r in reg])
+        base = target
+    else:
+        target = chance_of(cfg.score, [r["gold"] for r in reg])
+        base = null_score
+    band = Fraction(str(cfg.null_band))
+    metrics: dict = {"n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
+                     "a1_empty": reg_empty, "a1_pass": reg_empty <= cfg.max_empty,
+                     "a2_score": float(null_score), "a2_target": float(target),
+                     "a2_pass": abs(null_score - target) <= band}
+    if len(draw_scores) > 1:
+        metrics["a2_draw_scores"] = [float(s) for s in draw_scores]
+    if cfg.score != "r2":
+        metrics["scored_class_counts"] = scored_class_counts(reg)
+    # compute z_sd: standard deviation of each standardized feature
+    if any("standardized" in r for r in reg):
+        z_sds = []
+        if reg and "standardized" in reg[0]:
+            n_features = len(reg[0]["standardized"])
+            for f_idx in range(n_features):
+                feature_values = [r["standardized"][f_idx] for r in reg if "standardized" in r]
+                if feature_values:
+                    mean_val = sum(feature_values) / len(feature_values)
+                    variance = sum((v - mean_val) ** 2 for v in feature_values) / len(feature_values)
+                    sd = math.sqrt(variance)
+                    z_sds.append(float(sd))
+        if z_sds:
+            metrics["z_sd"] = z_sds
+    if not (metrics["a1_pass"] and metrics["a2_pass"]):
+        metrics.update({C1_VALUE_KEY: float(reg_score), "c1_threshold": None, "c1_pass": None})
+        return metrics
+    bar = base + Fraction(str(cfg.margin))
+    metrics.update({C1_VALUE_KEY: float(reg_score), "c1_threshold": float(bar),
+                    "c1_pass": reg_score >= bar})
+    return metrics
+
+
+def balance(out: Path, cfg: MeasureConfig, items: list[dict]) -> None:
+    """Every expected row present once, no row the items do not ask for,
+    every row from this instrument and these items — or SystemExit naming
+    each gap, before any number (→ LAB-023 No silent loss). The rows then are
+    the source's items, and every count `evaluate_rows` makes is a count of
+    the source."""
+    batch.Store(out).ledger(expected(items),
+                            expect={"_instrument": instrument(cfg, items)}).require_complete()
+
+
+def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict:
+    """Balance the kept rows against ITEMS, then gates first, then the metrics on the run."""
+    balance(out, cfg, items)
+    metrics = evaluate_rows(read_jsonl(out), cfg)
+    for key in ("a1_pass", "a1_empty", "a2_score", "a2_target", "a2_pass",
+                "c1_score", "c1_threshold", "c1_pass"):
+        print(f"  {key:<13} {metrics[key]}")
+    if run is not None:
+        run.metrics(**metrics)
+    return metrics
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    ap.add_argument("--seed", type=int, default=None,
+                    help="folds, permutation, estimator (default: CONFIG's — the registered seed, "
+                         "else SEED); a full run with it answers")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--show", type=int, metavar="N", help="the config and N feature rows per split, no fit")
+    mode.add_argument("--probe", type=int, nargs="?", const=12, metavar="N",
+                      help="instrument check: N labelled items, both lanes; fit uses a reduced "
+                           "estimator, apply its unchanged predictors; "
+                           "throwaway output; prints the scores (not reported) and one row per lane")
+    mode.add_argument("--calibrate-null", type=int, nargs="?", const=NULL_PERMUTATIONS,
+                      metavar="K",
+                      help="apply, before the registration: the null's spread over K "
+                           "permutations of the gold (predictions fixed) and the null_band "
+                           "the fixed rule derives; no run, nothing written")
+    mode.add_argument("--eval-only", action="store_true")
+    mode.add_argument("--repeat-of", metavar="RUN_ID",
+                      help="draw the kept run RUN_ID again with a derived seed: a run of its own "
+                           "(repeat_of) into <out>_draw<N>.jsonl — the spread, never the answer")
+    args = ap.parse_args()
+    if args.repeat_of is not None and args.seed is not None:
+        ap.error("--repeat-of takes the kept run's config and derives its seed; drop --seed")
+    head = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
+    if args.probe is not None and not standard_contract.lane(head.repeat_cost).probe_allowed:
+        ap.error("--probe is not available at repeat_cost='low'; run the full measurement")
+    # the one field the command line may set
+    cfg = replace(CONFIG, predictor_sha=predictor_digests())
+    if args.seed is not None:
+        cfg = replace(cfg, seed=args.seed)
+    items = read_jsonl(ITEMS)
+
+    if args.show is not None:          # `is not None`: `--show 0` must not start a run
+        print("===== config (what a run writes to config.json)")
+        for key, value in asdict(cfg).items():
+            print(f"  {key:<16} {value}")
+        for split, part in (("train", labelled(items)), ("test", unlabelled(items))):
+            print(f"===== {split}: {len(part)} items")
+            for it in part[:args.show]:
+                print(json.dumps(it, ensure_ascii=False)[:200])
+        return
+
+    if args.calibrate_null is not None:
+        try:
+            cal = calibrate_null(cfg, items, args.calibrate_null)
+        except ValueError as exc:
+            ap.error(str(exc))
+        s = sorted(float(x) for x in cal["null_scores"])
+        print(f"null over {len(s)} permutations of the gold, predictions fixed: min {s[0]:.4f}  "
+              f"median {s[len(s) // 2]:.4f}  max {s[-1]:.4f}  permutation expectation "
+              f"{float(cal['target']):.4f}")
+        print(f"null_band by the rule (the {NULL_BAND_QUANTILE} quantile of |null - expectation| over "
+              f"{len(s)} permutations): {float(cal['band']):.4f}"
+              + ("" if len(s) == NULL_PERMUTATIONS else
+                 f" — not the fixed count {NULL_PERMUTATIONS}: name the K you used in the null condition"))
+        print("register it as [A2]'s null_band before the first measurement and name the rule "
+              "in the null condition; a band changed after it is refused (report-check)")
+        return
+
+    if args.probe is not None:
+        # Throwaway: own output file, NO runlog (LAB-008 Instrument check before freezing) — the moment a
+        # number is kept, it is a run. Few items, reduced fit or unchanged apply: the
+        # pipeline is checked, the registered number is not seen.
+        out = OUT.with_name(OUT.stem + "_probe.jsonl")
+        out.unlink(missing_ok=True)  # a fresh file each probe: its items may have changed
+        few = labelled(items)[:args.probe] + unlabelled(items)[:5]
+        rows = measure(cfg, few, out, probe=True)
+        m = evaluate_rows(rows, cfg)
+        print(f"probe: registered {m['c1_score']}  null {m['a2_score']}  target {m['a2_target']}  — not reported")
+        print("\n# one row per lane, as the run will keep them (Raw output comes from the run):")
+        for lane in LANES:
+            first = next((r for r in rows if r["lane"] == lane), None)
+            if first is not None:
+                print(json.dumps(first, ensure_ascii=False))
+        return
+
+    if args.eval_only:
+        evaluate(OUT, cfg, items)
+        return
+
+    # The whole config, never a hand-picked subset. run_kind="measurement" declares the
+    # full run: at high repeat cost the protocol must be frozen with the
+    # preflight audit stamped and the run detached (`runlog start <area> -- …`).
+    # `data=` freezes the items in the run.
+    # A repeat (`--repeat-of`): runlog holds every key but the seed to the
+    # kept run's, derives the seed from that run and the draw and records it
+    # (`reseed`) — the seed passed here is not used.
+    with runlog.run("apply-screen", config=asdict(cfg), base_dir=AREA, data=data_files(),
+                    run_kind="measurement", protocol=PROTOCOL.name,
+                    repeat_of=args.repeat_of, reseed=args.repeat_of is not None) as run:
+        cfg = MeasureConfig(**run.config)   # measure with what is recorded
+        out = run.draw_output(OUT)
+        run.output(out)
+        measure(cfg, items, out, prov={"run": run.run_id})
+        evaluate(out, cfg, items, run)
+        if run.draw is None:
+            print(f"run: {run.run_id}\n" + next_after_run(PROTOCOL, run.run_id))
+        else:
+            print(f"run: {run.run_id}  draw {run.draw} of {args.repeat_of}, seed {cfg.seed} — "
+                  f"supporting evidence, never the answer: `scripts/02_analyze.py --draws`")
+
+
+if __name__ == "__main__":
+    main()

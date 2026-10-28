@@ -1,0 +1,24 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T17:31"
+model = "opus"
+record = "2026-10-28T17-29-analysis.toml"
+scope_sha = "8a544e260b1e"
+shown_sha = "0449c6fe93aa"
+claim_sha = "020aa14ebfd9"
+again = false
+upheld = 1
+rejected = 0
+insufficient = 1
+
+[[decision]]
+finding = 1
+decision_sha = "e5d77aaf5a53"
+verdict = "upheld"
+why = "The reason and the Conclusion both read [A2] as a check of the permutation draw, not of the predictor, so \"A2 met\" is reported as no more than that; the C1 verdict (c1_score 0.7609 against c1_threshold 0.6528) does not rest on [A2] anchoring the predictor."
+
+[[decision]]
+finding = 2
+decision_sha = "8984bbe0985f"
+verdict = "insufficient"
+why = "The reason says a recalibration at the current commit \"would yield a band consistent with the run\", but no `--calibrate-null` output at the current commit is on the page, so that support for the A2 verdict and the registered null_band 0.13 cannot be checked; the recalibrated band the finding asked for is not recorded."

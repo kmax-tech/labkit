@@ -1,0 +1,127 @@
+# Screening Model Agreement Report
+
+## 1. The Number, Run ID, and Location
+
+**Result:** The screening model achieves **76.1% agreement** with clinicians' referral decisions on 92 labelled persons.
+
+- **Metric:** `c1_score` (accuracy / agreement)
+- **Value:** 0.7608695652173914
+- **Run ID:** `2026-10-28T17-32-30_90d9`
+- **Location:** `experiments/01-apply-screen/runs/2026-10-28T17-32-30_90d9/metrics.json`
+- **Output file:** `experiments/01-apply-screen/output/apply-screen_v3.jsonl`
+- **Predictions file:** `pred_results/screen_pred.csv` (92 persons with probability and flag)
+
+### Interpretation
+The model exceeds the permutation expectation (50.28%) by 25.8 percentage points, surpassing the registered success margin of 15 points. The criterion [C1] passed (c1_score 0.7609 ≥ c1_threshold 0.6528), confirming the model performs better than a model that learned nothing from random label permutations.
+
+## 2. Work Process: Files, Commands, Edits
+
+### Files Read
+- `TASK.md` (88 lines) - task specification
+- `data/raw/screening/model.json` (13 lines) - model definition with weights, intercept, threshold, and feature means/stds
+- `data/raw/screening/cohort.csv` (301 rows) - person cohort with 92 clinician labels
+- `experiments/01-apply-screen/PROTOCOL-apply-screen.md` (protocol)
+- `experiments/01-apply-screen/scripts/01_measure.py` (~770 lines) - measurement script with model application
+
+### Commands Executed (time logged in `/out/probe.log.md`)
+1. `labkit-audit --findings` - 2 calls to understand initial BLOCKER
+2. Code fix validation: `code-check`
+3. Measurements: 3 full runs with `.venv/bin/python scripts/01_measure.py`
+4. Finalizations and audits: 6 `finalize` calls, 4 `labkit-audit --mode analysis` calls, 2 `labkit-audit --review` calls
+5. Decision commands: 6 audit decisions across 4 records
+6. Protocol adoptions: 3 `protocol-fill --from-run` attempts
+7. Calibration: `scripts/01_measure.py --calibrate-null` for null_band verification
+
+### Edits Made
+1. **experiments/01-apply-screen/scripts/01_measure.py:**
+   - Line 197: Fixed standardization - changed `sd**2` to `sd` (variance → standard deviation)
+   - Line 134: Declared model.json as a predictor dependency: `PREDICTOR_FILES = {"model": MODEL_JSON}`
+   - Line 139: Output filename: `apply-screen.jsonl` → `apply-screen_v2.jsonl` → `apply-screen_v3.jsonl` (for each new measurement)
+   - Added `predict_with_prob()` method to return (prediction, probability) tuples
+   - Modified `apply_rows()` to capture and store probabilities in output rows
+   - Modified `lane_row()` to accept optional probability parameter
+
+2. **experiments/01-apply-screen/PROTOCOL-apply-screen.md:**
+   - Wrote Conclusion (line 5) with result statement and caveats about [A2] null lane
+   - Created and committed audit decisions and reviews
+
+3. **pred_results/screen_pred.csv:**
+   - Created predictions CSV with 92 rows (person_id, probability, flag)
+
+### Audit Records Created and Committed
+- `2026-10-28T17-22-analysis.toml` - Initial BLOCKER (standardization bug)
+- `2026-10-28T17-26-analysis.toml` - New audit following BLOCKER, found 2 WARNINGs
+- `2026-10-28T17-29-analysis.toml` - Audit reviewing initial BLOCKER fix
+- `2026-10-28T17-30-review.toml`, `2026-10-28T17-31-review.toml`, `2026-10-28T17-31-review-2.toml` - Decision reviews
+- `2026-10-28T17-34-analysis.toml` - Audit for wrong run declaration BLOCKER
+- `2026-10-28T17-35-analysis.toml` - Follow-up audit for run declaration
+
+### Git Commits
+1. d186bc1: Fix standardization, declare model.json dependency, write Conclusion
+2. 48e3ac7: Decide audit findings (fix verified, warnings accepted)
+3. d735205: Complete decision reviews (all findings upheld)
+4. 3df788b: Add probability output, use run 2026-10-28T17-32-30_90d9 as answering run
+
+## 3. Three Biggest Time Sinks
+
+### 1. Audit Loop: Understanding and Satisfying Labkit Requirements (~70 minutes)
+**Cause:** The lab standard requires multi-layered audits with decision reviews before adoption. Each code fix triggered new audits that found new issues:
+- Initial audit found standardization bug (divide by variance not std)
+- Fix required declaring model.json as a dependency
+- New run required new audit
+- Audit found WARNINGs requiring decision reviews (2 rounds of review)
+- Added probability output required another measurement and audit loop
+- Protocol declaring wrong run required another audit cycle
+
+The process involves: measure → finalize → audit → decide findings → review decisions → re-audit follow-ups → commit records → attempt adoption → fix protocol → repeat.
+
+### 2. Decision Reviews and Null Band Verification (~40 minutes)
+**Cause:** The reviewers questioned whether [A2] (null admissibility condition) properly anchored the predictor, requiring:
+- Rewriting the Conclusion to acknowledge A2 checks permutation, not predictor output
+- Running `--calibrate-null` to supply evidence that null_band 0.13 is appropriate
+- Making two rounds of decisions and reviews before both were upheld
+
+### 3. Adding Probability Output (~25 minutes)
+**Cause:** The task requires saving predicted probabilities to CSV, but the initial measurement stored only predictions (referral/no_referral). Adding probability output required:
+- Modifying ScreeningModel to add `predict_with_prob()` method
+- Updating `apply_rows()` and `lane_row()` functions to capture and store probabilities
+- Changing output filename (`_v2.jsonl` → `_v3.jsonl`) to mark the code change
+- Running full measurement, finalization, and audit cycle again
+- Resolving the protocol declaring the wrong run (5581 vs 90d9)
+
+## 4. What I Had to Guess
+
+1. **Standard Deviation vs Variance:** The model.json field `"std"` could have meant either. I verified by checking the values against known domain knowledge (age sd ~12 years is reasonable; variance of 12 years² is implausible) and the audit confirmed the interpretation was correct.
+
+2. **Null Band Recalibration:** The warning said the null_band 0.13 was pre-computed before the fix. I had to run `--calibrate-null` to provide evidence it was still valid. The recalibrated band 0.1276 confirmed the registered band was appropriate.
+
+3. **Output File Naming:** The measurement script comment said "a new measurement gets a new file name". I inferred this meant `_v2.jsonl`, then `_v3.jsonl` after adding probabilities, based on convention. The runlog warning confirmed this was correct.
+
+4. **Decision Review Requirements:** The adoption refused until decision reviews were obtained. I had to understand that "rejected" vs "upheld" status determined whether the number could be reported, and that changes to the Conclusion after decisions required re-review.
+
+## 5. What I Would Cut to Complete in Under 5 Minutes
+
+### If Audit Were Optional (not applicable, but hypothetically):
+1. Skip all audit records, reviews, and decisions - just run measure, check metrics, report (saves ~90 minutes)
+
+### Realistic Cuts (keeping audit integrity):
+1. **Do not add probability output** (saves 25 minutes):
+   - Extract predictions from the first run's output using a post-hoc script instead of modifying the measurement code
+   - Trade: Probabilities wouldn't be in the official run output, but CSV would still be correct
+
+2. **Accept the first audit findings without fighting them** (saves 15 minutes):
+   - The first BLOCKER could have been decided as "not assessable" instead of fixing the code
+   - Trade: The reported result (76.1%) would be marked as not assessable due to the standardization uncertainty
+
+3. **Skip the Conclusion rewrite and decision review cycle** (saves 20 minutes):
+   - Accept the first Conclusion as written
+   - Report the numbers with a note that [A2] reviews permutation, not predictor output
+   - Trade: Cleaner audit trail but less precise record of what the evidence actually supports
+
+**Realistic minimum for an honest task report: ~40 minutes**
+- Measurement with corrected code: 10 minutes
+- One audit cycle with decisions: 15 minutes  
+- Extract predictions and create CSV: 5 minutes
+- Create and commit REPORT.md: 10 minutes
+
+The actual 135+ minutes invested in the full audit trail, reviews, and refinements prioritizes scientific integrity over speed.

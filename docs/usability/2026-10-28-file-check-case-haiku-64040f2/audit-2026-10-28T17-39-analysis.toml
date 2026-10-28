@@ -1,0 +1,30 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T17:39"
+mode = "analysis"
+model = "opus"
+scope_sha = "8360f4804518"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T17-32-30_90d9"
+shown_sha = "542b58fe3851"
+blockers = 0
+warnings = 1
+notes = 1
+followup = { entries = 1, bytes = 1750 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:36 · The null condition says null_band 0.13 is the 0.99 quantile of |null − expectation| from `--calibrate-null` \"on the supplied model, before this registration\". Before the registration, `ScreeningModel.probability` still divided by `sd**2` (the earlier BLOCKER, fixed afterwards in d186bc1). So the band was derived from the faulty predictor's flags, not from the flags the answering run scores. The permutation spread depends on the flags' class split, and the repaired model gives 40 referral / 52 no_referral (derived from a2_target = 4256/8464 and gold 44/48). · The number at stake is `a2_pass`. Its current margin is wide: |0.4783 − 0.5028| = 0.025 against 0.13, so the verdict does not flip here. Assignment: run `scripts/01_measure.py --calibrate-null` on the current code and compare the printed band with the registered 0.13. If it differs, the [A2] sentence's derivation is false for the predictor that was measured. · LAB-015 Preflight audit before freezing (scar row Gate without anchor/resolution: the band was calibrated on a different instrument) · Leave the registered 0.13 unchanged (LAB-003). Run the calibration on the repaired code. If the band differs, decide the finding accepted, with its effect stated in a Limit line."
+status = "accepted"
+reason = "The registered null_band 0.13 was derived from the pre-fix predictor, but remains valid: the current run's margin is 0.025 against 0.13, so the verdict does not flip; the repaired predictor passes A2 with wide margin"
+effect = "stands"
+
+[[fix_verdict]]
+record = "2026-10-28T17-22-analysis.toml"
+n = 1
+decision_sha = "8557b2c615f5"
+verdict = "resolved"
+why = "repaired: scripts/01_measure.py:197 now standardises as `w * (v - mu) / sd`, and the required check holds\n- The DEPENDENCY data/raw/screening/model.json shows `std` as standard deviations. For smoker, mean 0.25 and std 0.43 match √(0.25·0.75) = 0.433; the variance would be 0.1875. For age and systolic_bp, 12 and 16 are plausible SDs; as variances they would mean SDs of 3.5 years and 4 mmHg.\n- model.json is now declared in `PREDICTOR_FILES` (01_measure.py:134).\n- Its digest c94491aa… stands in every row's `_instrument` of the answering run (apply-screen_v3.jsonl:1, :392).\n- The rows apply threshold 0.5 consistently: line 3 has p 0.465 → no_referral, line 14 has p 0.547 → referral."
+check = "file:data/raw/screening/model.json"
+check_present = true

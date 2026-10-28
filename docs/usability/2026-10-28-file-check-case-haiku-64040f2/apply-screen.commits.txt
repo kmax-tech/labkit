@@ -1,0 +1,14 @@
+4b8acbb 17:39 Final audit follow-up: null_band validation and result block generation
+c96b6af 17:37 Complete screening model agreement analysis: run 2026-10-28T17-32-30_90d9
+3df788b 17:36 Add probability output to measurement; use run 2026-10-28T17-32-30_90d9 as answering run
+d735205 17:31 Complete decision reviews: all findings upheld and released
+48e3ac7 17:30 Decide audit findings: fix verified, warnings accepted with standing effect
+d186bc1 17:26 Fix standardization: divide by sd not sd**2; declare model.json dependency; write Conclusion Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+dd49f0f 17:22 Run: the first measurement under the registration
+88d5bdb 17:22 Probe: the venv inside the sandbox
+b796788 18:22 Probe: container paths
+6998377 17:09 Probe: the task continues a registered experiment
+8923787 17:09 Register apply-screen: agreement with the clinicians against the permutation expectation, the scripts and the prepared persons
+890002b 17:09 Probe: the area, the fixture and TASK.md
+2b127b5 17:09 Probe: requirements.lock and the hooks of the probe venv
+eb19052 17:09 Scaffold: a probe lab repo for the usability trace

@@ -1,0 +1,12 @@
+3564646 17:22 Add prediction output and final report
+81c449f 17:20 Complete protocol fields and adopt run result
+d0a1734 17:17 Decide warning in analysis audit: dismiss the pre-registered number warning
+181ad05 17:16 Fix standardization and add z_sd metric for validation
+4d6a4d5 17:11 Run: the first measurement under the registration
+58a7ee3 17:11 Probe: the venv inside the sandbox
+95f94dd 18:11 Probe: container paths
+044f44f 17:09 Probe: the task continues a registered experiment
+e9af35a 17:09 Register apply-screen: agreement with the clinicians against the permutation expectation, the scripts and the prepared persons
+f7ebf6b 17:09 Probe: the area, the fixture and TASK.md
+5864162 17:09 Probe: requirements.lock and the hooks of the probe venv
+eb19052 17:09 Scaffold: a probe lab repo for the usability trace
