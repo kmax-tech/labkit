@@ -91,11 +91,12 @@ written with. The following applies:
 - **Pilot** — small run, checkable by hand, before scaling up.
 - **Freezing (frozen)** — fixing hypothesis and criteria in writing; from then on
   the run counts as a test, before that it is exploration.
-- **Confirmatory / exploratory** (`type`) — confirmatory: the question and the
-  analysis plan stood before the relevant results; a fit or an apply adds the
-  success criterion it is judged by, a computation (no criterion) fixes its
-  quantity, unit, data and exclusions as the plan. Exploratory: the approach
-  is formed or chosen with what was already seen.
+- **Confirmatory / exploratory** (`type`) — confirmatory: the question, the
+  inputs and the analysis plan stood before the relevant results were seen;
+  a fit or an apply also fixes the success criterion it is judged by, while
+  a computation needs none — its plan is the quantity, unit and exclusions.
+  Otherwise exploratory: the approach is formed or chosen with what was
+  already seen. The two types cover a computation too; there is no third.
 - **Null condition / anchor** — companion checks with a known target; if they do not show
   what is expected, the instrument measures nothing.
 - **Gold label** — the label in the data that is taken to be correct.

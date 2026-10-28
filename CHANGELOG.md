@@ -1230,9 +1230,10 @@ pins (`requirements.txt` / `requirements.lock`).
   AGENTS.md defined it as "a question and criterion specified before the
   relevant results", and a computation has no criterion; two of three
   readers asked in two rounds. Decided 2026-10-28, no new type: the
-  question and the analysis plan stood before the relevant results — a fit
-  or an apply adds its success criterion, a computation's plan is its
-  quantity, unit, data and exclusions. AGENTS.md, the field guide and the
+  question, the inputs and the analysis plan stood before the relevant
+  results were seen — a fit or an apply adds its success criterion, a
+  computation needs none and its plan is its quantity, unit and
+  exclusions; otherwise exploratory. AGENTS.md, the field guide and the
   standard's terms say so.
 - **A registration incomplete at its first measurement has a way on.**
   report-check held it ("the registration as committed at the first
