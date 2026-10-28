@@ -165,7 +165,7 @@ class ReviewFindings(unittest.TestCase):
         )
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            runlog_command._print_status(str(area), runlog.active(area), [])
+            runlog_command._print_status(str(area), runlog.active(area), [], [])
         self.assertIn('{"zeta": "ü", "alpha": [0]}', out.getvalue())
 
     def test_the_binding_holds_id_and_path_only_and_reads_back_as_stored(self) -> None:

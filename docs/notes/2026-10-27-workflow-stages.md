@@ -96,6 +96,21 @@ runs" (exit 0) at 17:23:32, and the run opened at 17:23:36. Since then
 (`labkit/run/detached.py`), and the command inherits the lock on it:
 `runlog AREA` lists it and `--wait` waits for it until the command ends,
 its run record open or not. A lock, not the pid, because the system
-reuses pids (as for the audit attempts, `attempts.py`). Open: a command that dies
-before it opens its run record leaves only its log; `--wait` then reads
-the area as idle, exit 0.
+reuses pids (as for the audit attempts, `attempts.py`).
+
+The review of that repair (same day) found the failure half missing: a
+command that died while it prepared its rows left only its log, and
+`--wait` said "no open runs — no finished runs", exit 0. Only a parent
+can learn a process's exit status, so `runlog start` now starts a small
+supervisor (`python -P -m labkit.run.detached`) in the new session; the
+supervisor starts the command as its child — the pid the run records
+stays the command's own —, writes the start record, waits, and writes
+the command's exit into it (negative: the signal). A start that ended
+without a run record bound to it (one naming its pid, started no earlier)
+and not with exit 0 is a failed state: `--wait` exits 2 naming the exit
+and the log, `runlog AREA` lists it. It stays until the next `runlog
+start` in the area, which prints it once more and removes it: starting
+again is the acknowledgement labkit already has (resume is the same
+command), and a process that ended can no longer open a record that
+would bind it. An exit 0 without a run is a command that opened none,
+as `runlog start` says when it sees it end.

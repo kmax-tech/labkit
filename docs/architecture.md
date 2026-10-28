@@ -150,8 +150,9 @@ declared predictor artifacts this way; the prepare stamps and AGENTS.md
 name it where they ask for every file a run reads.
 `runlog` writes the run and index; `runlog_command` implements the console
 command; `detached` keeps the record of a command `runlog start` detached,
-locked while the command runs, so `runlog AREA --wait` sees it before its
-run opens a record. `batch` manages resumable output. `lanes` is the run mechanics of
+locked while the command runs, with the exit status its supervisor
+writes, so `runlog AREA --wait` sees it before its run opens a record and
+fails on it when it ended without one. `batch` manages resumable output. `lanes` is the run mechanics of
 the stamped two-lane judge — jobs per item and lane, batches, resume, the
 probe, the balance, the area's command line — doctrine, since the two lanes
 and the probe policy per tier are how the lab chooses to measure; the

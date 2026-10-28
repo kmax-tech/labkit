@@ -442,6 +442,24 @@ pins (`requirements.txt` / `requirements.lock`).
   example is named where it is owed. Without a protocol the low cut and
   the full form's lists stay as they were. Pilot of labkit-paper area 15
   on 72507d0 (t15, t60, t21, t34), defect D9.
+- **A command `runlog start` detached that ends without a run record
+  fails `runlog AREA --wait`.** With the record below, a command that
+  died while it prepared its rows left only its log: `--wait` said "no
+  open runs — no finished runs", exit 0. `runlog start` now starts a
+  supervisor in the new session (`python -P -m labkit.run.detached`)
+  that starts the command as its child — the pid the run records stays
+  the command's —, writes the start record, waits and writes the
+  command's exit status into it. A start that ended without a run record
+  naming its pid (started no earlier than it) and not with exit 0 is a
+  failed state: `--wait` exits 2 with its exit (or the signal, or "exit
+  not recorded" when the supervisor ended first) and its log, and `runlog
+  AREA` lists it, until the next `runlog start` in the area prints it
+  once more and removes it. A run record bound to the start tells its own
+  state; an exit 0 without one is a command that opened no run. A command
+  that cannot be started is refused by `runlog start` (exit 2, the
+  supervisor's reason in the log's tail), and a start record that does
+  not read is a refusal naming the file and its removal. Review of D6
+  (2026-10-28).
 - **`runlog AREA --wait` waits for a command `runlog start` detached,
   also before its run opens a record.** AGENTS.md says to detach with
   `runlog start` and monitor with `runlog <area> --wait`, but `--wait`
@@ -452,7 +470,8 @@ pins (`requirements.txt` / `requirements.lock`).
   command it detached (`labkit/run/detached.py`, new: pid, command, log,
   start time, in the git directory's `labkit-run-starts/`, else the temp
   dir), and the command inherits the lock on it, which the kernel
-  releases when the command ends. `runlog AREA` lists such a command
+  releases when the command ends (the supervisor of the entry above
+  holds it too). `runlog AREA` lists such a command
   ("starting", "no run record yet"), and `--wait` and `--follow` count it
   until it ends, its run record open or not; idle is no open run and no
   such command. `repo.local_dir` (new) is the one home of "the git

@@ -320,28 +320,64 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
             code, out = _run_main([d])
             self.assertIn("no open runs", out)
 
-    def test_a_record_reads_while_held_and_ended_ones_are_removed(self):
-        """A held record that does not read is named, never skipped; a
-        record whose lock is free is an ended command — read as nothing,
-        removed by the next start."""
+    def test_a_record_runs_while_held_and_without_exit(self):
+        """A record runs while its lock is held and its exit is null; it
+        ended once the exit is written or the lock is free (exit not
+        recorded). One that does not read is refused with its way out; an
+        ended one is removed by the next start, a running one kept."""
         import fcntl
 
+        from labkit.formats import console
         from labkit.run import detached
 
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
-            path = detached.HeldStart(area).record(4242, ["python", "x.py"], area)
-            self.assertEqual(detached.running(area), [])  # no command holds it
-            path.write_text('{"pid": "4242"}', encoding="utf-8")
-            with path.open("rb") as fh:
-                fcntl.flock(fh, fcntl.LOCK_EX)
-                with self.assertRaisesRegex(RuntimeError, "pid is '4242'"):
-                    detached.running(area)
-            detached.HeldStart(area).abandon()
-            self.assertFalse(path.exists())
-            # a command that cannot start leaves no record behind
-            with self.assertRaises(FileNotFoundError):
-                _run_main(["start", d, "--", str(area / "no-such-command")])
+            detached._folder(area).mkdir(parents=True, exist_ok=True)
+
+            def record(pid: int, exit_status: int | None) -> Path:
+                path = detached._record_path(area, pid)
+                data = {"pid": pid, "command": ["python", "x.py"], "log": "l.log",
+                        "started": "2026-10-28T17:00:00", "supervisor": 1,
+                        "exit": exit_status}  # fmt: skip
+                path.write_text(json.dumps(data), encoding="utf-8")
+                return path
+
+            running, done, gone = record(11, None), record(12, 3), record(13, None)
+            with running.open("rb") as fh:
+                fcntl.flock(fh, fcntl.LOCK_EX)  # what the supervisor's descriptor holds
+                got = {s.pid: (s.running, s.exit) for s in detached.starts(area)}
+                self.assertEqual(
+                    got, {11: (True, None), 12: (False, 3), 13: (False, None)}
+                )
+                self.assertEqual(
+                    detached.exit_words(detached.starts(area)[2]),
+                    "exit not recorded (its supervisor ended first)",
+                )
+                detached.remove_ended(area)
+                self.assertEqual([p.exists() for p in (running, done, gone)],
+                                 [True, False, False])  # fmt: skip
+                running.write_text('{"pid": "11"}', encoding="utf-8")
+                with self.assertRaises(console.Refused) as cm:
+                    detached.starts(area)
+                self.assertIn("command is None", cm.exception.why)
+                self.assertIn(f"way out: remove it (`rm {running}`)", cm.exception.why)
+
+    def test_a_command_that_cannot_start_is_refused_and_leaves_no_record(self):
+        from labkit.run import detached
+
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code, out = _run_main(
+                    ["start", d, "--log", str(area / "l.log"), "--",
+                     str(area / "no-such-command")]
+                )  # fmt: skip
+            self.assertEqual(code, 2, out + err.getvalue())
+            self.assertIn("could not be started (exit 127)", err.getvalue())
+            self.assertIn(
+                "cannot run", err.getvalue()
+            )  # the supervisor's reason, in the log
             self.assertEqual(
                 list(detached._folder(area).glob(f"{detached._key(area)}-*")), []
             )
@@ -373,6 +409,117 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
             )
             self.assertEqual(code, 3, out)
             self.assertIn(run_dir.name, out)
+
+
+def _start_in(d: str, *command: str, max_seconds: str = "0.3") -> tuple[int, str]:
+    """`runlog start D --log D/l.log --max-seconds S -- COMMAND` from D;
+    stdout and stderr."""
+    cwd = os.getcwd()
+    err = io.StringIO()
+    argv = ["start", d, "--log", str(Path(d) / "l.log"), "--max-seconds", max_seconds]
+    try:
+        os.chdir(d)
+        with contextlib.redirect_stderr(err):
+            code, out = _run_main([*argv, "--", *command])
+    finally:
+        os.chdir(cwd)
+    return code, out + err.getvalue()
+
+
+def _run_script(run_dir: Path, *, finished: bool, then: str) -> str:
+    """A script that opens a run record in RUN_DIR naming its own pid —
+    completed when FINISHED, else left open — and then runs THEN."""
+    record = run_record({"run_kind": "measurement", "script": "01_measure.py"})
+    done = (
+        "(d / 'metrics.json').write_text('{}'); (d / 'completion.json').write_text('{}')\n"
+        if finished
+        else ""
+    )
+    return (
+        "import json, os, pathlib, sys, time\n"
+        "from labkit.formats.runs import now_stamp\n"
+        f"d = pathlib.Path({str(run_dir)!r}); d.mkdir(parents=True)\n"
+        f"record = {record!r}\n"
+        "record.update(pid=os.getpid(), started=now_stamp())\n"
+        "(d / 'config.json').write_text(json.dumps(record))\n" + done + then + "\n"
+    )
+
+
+def _wait_for(d: str, max_seconds: str = "20") -> tuple[int, str]:
+    return _run_main([d, "--wait", "--max-seconds", max_seconds, "--interval", "0.1"])
+
+
+class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
+    """The started command died while it prepared its rows: `runlog AREA
+    --wait` said "no open runs — no finished runs", exit 0, and the error
+    stood in the log alone (review of D6, 2026-10-28). A started command
+    that ended without a run record, and not with exit 0, is a failed
+    state: `--wait` exits 2 naming its exit and log, the status names it,
+    until the next `runlog start` in the area says it once more and clears
+    it."""
+
+    def test_a_command_that_dies_while_preparing_fails_the_wait(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "01_measure.py"
+            script.write_text("import sys, time\ntime.sleep(0.8)\nsys.exit(3)\n")
+            code, out = _start_in(d, sys.executable, str(script))
+            self.assertEqual(code, 3, out)  # still preparing when start gave up
+            code, out = _wait_for(d)
+            self.assertEqual(code, 2, out)
+            self.assertIn("ENDED", out)
+            self.assertIn("exit 3 without a run record", out)
+            self.assertIn(f"check the log: {Path(d) / 'l.log'}", out)
+            code, out = _wait_for(d, "1")
+            self.assertEqual(code, 2, out)  # it stays a failure
+            code, out = _run_main([d])
+            self.assertNotIn("no open runs", out)
+            self.assertIn("exit 3 without a run record — check the log", out)
+            code, out = _start_in(d, sys.executable, "-c", "print(1)", max_seconds="5")
+            self.assertEqual(code, 0, out)
+            self.assertIn("earlier start, cleared now", out)
+            self.assertIn("exit 3 without a run record", out)
+            code, out = _wait_for(d)
+            self.assertEqual(code, 0, out)  # exit 0 without a run: nothing failed
+            self.assertIn("no open runs", out)
+
+    def test_a_command_killed_before_its_record_names_the_signal(self):
+        import signal
+
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "01_measure.py"
+            script.write_text("import time\ntime.sleep(30)\n")
+            code, out = _start_in(d, sys.executable, str(script))
+            self.assertEqual(code, 3, out)
+            os.kill(int(out.split("pid=")[1].split()[0]), signal.SIGKILL)
+            code, out = _wait_for(d)
+            self.assertEqual(code, 2, out)
+            self.assertIn(
+                f"killed by signal {int(signal.SIGKILL)} without a run record", out
+            )
+
+    def test_a_command_whose_run_record_names_it_tells_the_runs_state(self):
+        """The twins: a bound run that completed leaves the area idle, though
+        the command exits 1 after it; a bound run that crashed is that run's
+        CRASHED line, no ENDED line beside it."""
+        with tempfile.TemporaryDirectory() as d:
+            run_dir = Path(d) / "runs" / "2026-10-28T20-00-00_done"
+            script = Path(d) / "01_measure.py"
+            script.write_text(_run_script(run_dir, finished=True, then="sys.exit(1)"))
+            code, out = _start_in(d, sys.executable, str(script), max_seconds="5")
+            self.assertEqual(code, 0, out)
+            code, out = _wait_for(d)
+            self.assertEqual(code, 0, out)
+            self.assertIn(run_dir.name, out)
+        with tempfile.TemporaryDirectory() as d:
+            run_dir = Path(d) / "runs" / "2026-10-28T20-00-00_dead"
+            script = Path(d) / "01_measure.py"
+            script.write_text(_run_script(run_dir, finished=False, then="sys.exit(1)"))
+            code, out = _start_in(d, sys.executable, str(script), max_seconds="5")
+            self.assertEqual(code, 0, out)
+            code, out = _wait_for(d)
+            self.assertEqual(code, 2, out)
+            self.assertIn("CRASHED", out)
+            self.assertNotIn("ENDED", out)
 
 
 class TestTheLabRootIsNoArea(unittest.TestCase):

@@ -3,7 +3,8 @@
 `runlog start AREA -- CMD` starts a run detached and returns once its
 directory exists (or the command ended first, said so); `runlog [AREA]` shows what an area's runs are doing and
 how they ended, `--wait` and `--follow` block until it is idle — no open
-run and no command `runlog start` detached still running (`detached`);
+run and no command `runlog start` detached still running (`detached`) —
+or a run, or a started command, ended without finishing cleanly;
 `runlog reindex` rebuilds
 runs.tsv from the run directories (`runlog.reindex`). The run itself is
 written by `runlog.Run`; this module only reads it and starts processes.
@@ -54,19 +55,51 @@ def _newest_output(area: Path) -> str:
     return f"output: {newest.name} {lines} line(s), last write {age}s ago"
 
 
-def _unopened(area: Path, live: list[ActiveRun]) -> list[DetachedStart]:
-    """The commands `runlog start` detached in AREA that still run and that
-    no open run of LIVE names by its pid: a stamped script prepares its
-    rows before `runlog.run` opens the record. A wrapper shell's run
-    records another pid and is listed beside its run."""
+def _unopened(
+    starts: list[DetachedStart], live: list[ActiveRun]
+) -> list[DetachedStart]:
+    """The STARTS still running that no open run of LIVE names by its pid:
+    a stamped script prepares its rows before `runlog.run` opens the
+    record. A wrapper shell's run records another pid and is listed
+    beside its run."""
     pids = {r.config.pid for r in live if r.config is not None}
-    return [s for s in detached.running(area) if s.pid not in pids]
+    return [s for s in starts if s.running and s.pid not in pids]
+
+
+def _failed_starts(area: Path, starts: list[DetachedStart]) -> list[DetachedStart]:
+    """The STARTS of AREA that ended without finishing cleanly and without a
+    run record bound to them: an exit other than 0, or none recorded, and no
+    run record that names their pid and started no earlier than they did (a
+    pid the system reused for an older run binds nothing). A bound run
+    tells its own state; an exit 0 without one is a command that opened no
+    run, as `runlog start` says when it sees it end."""
+    bound = {
+        (rd.config.pid, rd.config.started)
+        for rd in run_dirs(area)
+        if rd.config is not None
+    }
+
+    def is_bound(s: DetachedStart) -> bool:
+        return any(pid == s.pid and started >= s.started for pid, started in bound)
+
+    return [s for s in starts if not s.running and s.exit != 0 and not is_bound(s)]
+
+
+def _failed_start_line(s: DetachedStart) -> str:
+    """One line for a failed start: what ended, how, where its log is."""
+    return (
+        f"(detached)  ENDED  pid={s.pid}  {shlex.join(s.command)}  "
+        f"({detached.exit_words(s)} without a run record — check the log: {s.log})"
+    )
 
 
 def _print_status(
-    area: str, live: list[ActiveRun], pending: list[DetachedStart]
+    area: str,
+    live: list[ActiveRun],
+    pending: list[DetachedStart],
+    failed_starts: list[DetachedStart],
 ) -> None:
-    if not live and not pending:
+    if not live and not pending and not failed_starts:
         print(f"{area}: no open runs")
     for r in live:
         pid, script = (r.config.pid, r.config.script) if r.config else (None, None)
@@ -80,6 +113,13 @@ def _print_status(
         print(f"(detached)  {'starting':12s} pid={s.pid}  {shlex.join(s.command)}")
         print(
             f"    started {s.started} by runlog start, no run record yet — log: {s.log}"
+        )
+    for s in failed_starts:
+        print(f"(detached)  {'ended':12s} pid={s.pid}  {shlex.join(s.command)}")
+        print(
+            f"    started {s.started} by runlog start, {detached.exit_words(s)} "
+            f"without a run record — check the log: {s.log} (the next "
+            f"`runlog start` in this area clears this line)"
         )
 
 
@@ -134,49 +174,65 @@ def _finished_line(area: Path) -> str:
     return f"last finished: {last.name} ({keys})"
 
 
+#: why a run in a failed state is one, for `--wait`'s line
+_FAILED_WHY = {
+    "crashed": "config.json without metrics.json",
+    "unfinalized": "metrics.json without completion.json — "
+    "finalization broke off, numbers must not be "
+    "reported",
+    "corrupt": "completion.json without metrics.json — the results are gone",
+    "unreadable": "config.json cannot be read — the run's record is damaged",
+}
+
+
+def _print_failures(
+    failed: list[ActiveRun], failed_starts: list[DetachedStart]
+) -> None:
+    """`--wait`'s exit-2 lines: each failed start, then each run in a failed
+    state. Exit 2 covers every failed state: a machine only needs "did not
+    finish cleanly", a human tells them apart by state and message."""
+    for s in failed_starts:
+        print(_failed_start_line(s))
+    for r in failed:
+        why = r.error or f"{r.dir}: {_FAILED_WHY.get(r.state, '')}"
+        failure = read_failure(r.dir)
+        if failure:
+            why += f" — broke off with {failure}"
+        print(
+            f"{r.run_id}  {r.state.upper()}  pid={r.config.pid if r.config else None}  "
+            f"{r.config.script if r.config else None}  ({why})"
+        )
+
+
 def _wait(
     area: str, max_seconds: float | None, interval: float, follow: bool, notify: bool
 ) -> int:
     """Block until the area is idle: no open runs and no command `runlog
     start` detached that still runs without one (`_unopened`). Exit codes
-    are the contract: 0 = idle (finished) · 2 = a run crashed · 3 = still
-    running at --max-seconds. The waiter only OBSERVES — the run owns its
-    process group and its lock, so a killed waiter is harmless (verified in
-    the detach probe: killing the waiter left run and lock untouched)."""
+    are the contract: 0 = idle (finished) · 2 = a run crashed, or a started
+    command ended without a run record and not with exit 0
+    (`_failed_starts`) · 3 = still running at --max-seconds. The waiter
+    only OBSERVES — the run owns its process group and its lock, so a
+    killed waiter is harmless (verified in the detach probe: killing the
+    waiter left run and lock untouched)."""
     t0 = time.monotonic()
     apath = Path(area)
     while True:
         live = active(area)
-        pending = _unopened(apath, live)
-        if not live and not pending:
+        starts = detached.starts(apath)
+        pending = _unopened(starts, live)
+        failed_starts = _failed_starts(apath, starts)
+        if not live and not pending and not failed_starts:
             print(f"{area}: no open runs — {_finished_line(apath)}")
             if notify:
                 notify_desktop("runlog --wait", f"{area}: no open runs")
             return 0
-        # Exit 2 covers every failed state: a machine only needs "did not
-        # finish cleanly", a human tells them apart by state and message.
-        WHY = {
-            "crashed": "config.json without metrics.json",
-            "unfinalized": "metrics.json without completion.json — "
-            "finalization broke off, numbers must not be "
-            "reported",
-            "corrupt": "completion.json without metrics.json — the results are gone",
-            "unreadable": "config.json cannot be read — the run's record is damaged",
-        }
         failed = [r for r in live if r.state in FAILED_STATES]
-        if failed:
-            for r in failed:
-                state = r.state
-                why = r.error or f"{r.dir}: {WHY.get(state, '')}"
-                failure = read_failure(r.dir)
-                if failure:
-                    why += f" — broke off with {failure}"
-                print(
-                    f"{r.run_id}  {state.upper()}  pid={r.config.pid if r.config else None}  "
-                    f"{r.config.script if r.config else None}  ({why})"
-                )
+        if failed or failed_starts:
+            _print_failures(failed, failed_starts)
             if notify:
-                notify_desktop("runlog --wait", f"{area}: run {failed[0].state}")
+                what = f"run {failed[0].state}" if failed else "started command ended"
+                notify_desktop("runlog --wait", f"{area}: {what}")
             return 2
         starting = [f"pid={s.pid} (detached, no run record yet)" for s in pending]
         if follow:
@@ -211,17 +267,50 @@ def _wait(
 #: how long `runlog start` waits for the run's directory by default: the
 #: script's gates and provenance (hashing its data) come before it
 START_WAIT_S = 60.0
+#: how long `runlog start` waits for the supervisor to name the command it
+#: started (an interpreter's start-up and one fork: well under a second)
+SUPERVISOR_WAIT_S = 30.0
+
+
+def _await_supervisor(
+    area: Path, proc: subprocess.Popen[bytes], log: Path, interval: float = 0.05
+) -> int | None:
+    """The pid of the command the supervisor PROC started, once its record
+    in AREA names it (`detached.supervise`). None, refused with the log's
+    tail, when the supervisor ended first (the command could not be
+    started) or named none within SUPERVISOR_WAIT_S."""
+    t0 = time.monotonic()
+    while True:
+        code = proc.poll()  # before the look: a record written just before exit is seen
+        named = [s.pid for s in detached.starts(area) if s.supervisor == proc.pid]
+        if named:
+            return named[0]
+        if code is not None or time.monotonic() - t0 >= SUPERVISOR_WAIT_S:
+            tail = log.read_text(encoding="utf-8", errors="replace").splitlines()[-15:]
+            why = (
+                f"the command could not be started (exit {code})"
+                if code is not None
+                else f"its supervisor (pid {proc.pid}) named no command within "
+                f"{int(SUPERVISOR_WAIT_S)}s"
+            )
+            console.refuse(
+                "runlog start", f"{why} — log {log}:\n  " + "\n  ".join(tail)
+            )
+            return None
+        time.sleep(interval)
 
 
 def _await_run(
     area: Path,
     before: set[str],
     proc: subprocess.Popen[bytes],
+    pid: int,
     log: Path,
     max_seconds: float,
     interval: float = 0.2,
 ) -> int:
-    """Block until the started command's run directory exists in AREA (a
+    """Block until the run directory of the command PID (started by the
+    supervisor PROC, whose exit is the command's) exists in AREA (a
     directory not in BEFORE): exit 0, the run named. The command ending
     first: exit 0 when it ended cleanly without a run (nothing to wait for),
     2 when it failed, with the log's last lines. Still alive after
@@ -233,7 +322,7 @@ def _await_run(
         new = [rd for rd in run_dirs(area) if rd.dir.name not in before]
         # this command's run, where its record names its pid; else the newest
         # new one (a wrapper shell records another pid)
-        own = [rd for rd in new if rd.config is not None and rd.config.pid == proc.pid]
+        own = [rd for rd in new if rd.config is not None and rd.config.pid == pid]
         if new:
             rd = (own or new)[-1]
             if rd.error is not None:
@@ -260,7 +349,7 @@ def _await_run(
             return 2
         if time.monotonic() - t0 >= max_seconds:
             print(
-                f"no run in {area} after {int(max_seconds)}s; pid {proc.pid} is still "
+                f"no run in {area} after {int(max_seconds)}s; pid {pid} is still "
                 f"starting — `runlog {area} --wait` waits for it"
             )
             return 3
@@ -283,9 +372,11 @@ def _start(argv: list[str]) -> int:
     started it — and any tool timeout that kills that shell's group — cannot
     take the run down with it (scar 2026-08-13). LABKIT_DETACHED=1 tells the
     `run_kind='measurement'` gate inside the script that the detach already happened.
-    The command inherits the lock of its start record (`detached.HeldStart`),
-    so `runlog AREA` and `--wait` see it until it ends, its run record
-    open or not.
+    A supervisor in that session starts the command and keeps its start
+    record (`detached`): `runlog AREA` and `--wait` see the command until it
+    ends, its run record open or not, and an exit without a run record
+    after it. Starting again prints the failed starts the area kept and
+    clears every ended one.
     """
     import argparse
 
@@ -296,7 +387,9 @@ def _start(argv: list[str]) -> int:
         "output to a log file, return once its run directory exists: exit 0 "
         "(the run named, or the command ended cleanly without a run), 2 the "
         "command failed before its run existed (the log's tail shown), 3 "
-        "still starting after --max-seconds.",
+        "still starting after --max-seconds. A start that ended without a "
+        "run record and not with exit 0 stays in `runlog AREA` and exits "
+        "`--wait` with 2 until the next `runlog start` in the area clears it.",
     )
     ap.add_argument("area", type=Path, help="the experiment area the run belongs to")
     ap.add_argument(
@@ -335,11 +428,16 @@ def _start(argv: list[str]) -> int:
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
     before = {rd.dir.name for rd in run_dirs(area)}
+    # starting again clears what earlier starts left: an ended command's
+    # failure is said once more here, then its record goes
+    for s in _failed_starts(area, detached.starts(area)):
+        print(f"earlier start, cleared now: {_failed_start_line(s)}")
+    detached.remove_ended(area)
     held = detached.HeldStart(area)
     with log.open("ab") as fh:
         try:
             proc = subprocess.Popen(
-                cmd,
+                detached.supervisor_command(held, log, cmd),
                 stdin=subprocess.DEVNULL,
                 stdout=fh,
                 stderr=fh,
@@ -350,10 +448,13 @@ def _start(argv: list[str]) -> int:
         except OSError:
             held.abandon()
             raise
-    held.record(proc.pid, cmd, log)
-    print(f"started detached: pid={proc.pid}  log={log}", flush=True)
+    held.release()
+    pid = _await_supervisor(area, proc, log)
+    if pid is None:
+        return 2
+    print(f"started detached: pid={pid}  log={log}", flush=True)
     print(f"status:  runlog {area}        wait:  runlog {area} --wait", flush=True)
-    return _await_run(area, before, proc, log, args.max_seconds)
+    return _await_run(area, before, proc, pid, log, args.max_seconds)
 
 
 def main(argv: list[str]) -> int:
@@ -452,7 +553,8 @@ def main(argv: list[str]) -> int:
     if args.wait:
         return _wait(shown, args.max_seconds, args.interval or 2.0, False, args.notify)
     live = active(area)
-    _print_status(shown, live, _unopened(area, live))
+    starts = detached.starts(area)
+    _print_status(shown, live, _unopened(starts, live), _failed_starts(area, starts))
     _print_finished(area)
     return 0
 
