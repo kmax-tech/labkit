@@ -202,9 +202,12 @@ a model call, with a complete decision command for each:
 Decide each finding using that command. READ lines are hints, not findings
 to decide. `fixed` means the whole named fault was corrected and, where
 the finding ends in `check: <key> — <what it must show>`, its diagnostic
-shown: extend the measuring script so that it computes `<key>` (what it
-must show) from what the run measures and writes the computed value to
-metrics.json under that key — a key written as a constant shows nothing.
+shown: extend the measuring script so that its kept rows carry what
+`<key>` (what it must show) needs and `evaluate_rows()` computes it from
+them, writing the value to metrics.json under that key — the check
+(`02_analyze.py --check`) recomputes every metrics key from the kept rows
+and refuses one computed beside them; a key written as a constant shows
+nothing.
 Where it ends in `check: file:<path>`, the run declares that file among
 the files it reads (`PREDICTOR_FILES`, else runlog's `data=`): the
 follow-up is shown it whole. Then measure again and run the analysis

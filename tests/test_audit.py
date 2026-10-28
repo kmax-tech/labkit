@@ -1150,8 +1150,9 @@ class RequiredCheck(unittest.TestCase):
         record = findings.read(earlier)
         lines = "\n".join(audit.decision_lines(record, area, ""))
         self.assertIn(
-            "check owed before `fixed` holds: extend the measuring script so that it "
-            "computes `feature_sources`",
+            "check owed before `fixed` holds: extend the measuring script so that its "
+            "kept rows carry what `feature_sources` needs and `evaluate_rows()` "
+            "computes it from them",
             lines,
         )
         self.assertIn("--mode analysis", lines)
@@ -1843,9 +1844,7 @@ class FollowupGate(unittest.TestCase):
         self.assertIn(
             "the required check `feature_sources` was not in the run shown", line
         )
-        self.assertIn(
-            "extend the measuring script so that it computes `feature_sources`", line
-        )
+        self.assertIn("`evaluate_rows()` computes it from them", line)
         RequiredCheck().with_metrics(
             area, {"c1_pass": True, "feature_sources": {"a": ["b"]}}
         )

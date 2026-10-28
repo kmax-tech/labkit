@@ -1212,6 +1212,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A required check is computed from the kept rows.** The work order
+  said "compute the key from what the run measures", and the recheck
+  (`02_analyze.py --check`) recomputes every metrics key from the kept
+  rows and refuses one it does not produce. In the check-path case
+  (2026-10-28) a cold agent computed `z_sd` beside the rows, the
+  follow-up judged the repair `resolved` on it, the adoption was refused
+  (`vanished ['z_sd']`), and the agent dropped the key — every later
+  follow-up judged the repair not assessable, and no number was adopted.
+  The work order (`findings.check_order`, the decision list, the
+  follow-up's holds, AGENTS.md) now says: the kept rows carry what the
+  check needs and `evaluate_rows()` computes it from them; the recheck's
+  refusal of a vanished key names the same way.
 - **A required check can name a file: `· check: file:<path>`.** In the
   repair case (2026-10-28) the follow-up asked to confirm from
   `model.json` that `std` holds standard deviations; a check could only

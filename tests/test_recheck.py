@@ -96,6 +96,10 @@ class Area(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, lambda rows: {"mean_n": 3.5}, self.note)
         self.assertIn("vanished ['n_cases']", str(cm.exception))
+        # the way out: a key the rows' evaluation does not produce is computed
+        # there (check-path case, 2026-10-28: a required check computed beside
+        # the rows was refused, and the agent dropped it)
+        self.assertIn("compute each in `evaluate_rows()`", str(cm.exception))
         v = recheck.holds(
             self.area, self.out, lambda rows: {**evaluate(rows), "max_n": 4}, self.note
         )

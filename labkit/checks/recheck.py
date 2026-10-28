@@ -196,9 +196,16 @@ def agree(
     one_sided = sorted(k for k in intent if (k in metrics) != (k in recomputed))
     vanished = sorted(set(metrics) - set(recomputed) - ignore)
     if one_sided or vanished:
+        beside = (
+            f" — {vanished} stand in metrics.json, but the evaluation of the kept "
+            f"rows does not produce them: compute each in `evaluate_rows()` from "
+            f"what the rows carry (a required check too), never beside it"
+            if vanished
+            else ""
+        )
         raise SystemExit(
             f"recheck: metrics.json and the recomputation disagree — "
-            f"intent keys on one side only {one_sided}, vanished {vanished}"
+            f"intent keys on one side only {one_sided}, vanished {vanished}{beside}"
         )
     differing = sorted(
         k

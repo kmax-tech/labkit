@@ -294,8 +294,9 @@ def check_of(text: str) -> tuple[str, str]:
 def check_order(check: str, note: str = "") -> str:
     """What a finding's required CHECK asks of the measuring code — the one
     wording of the decision list, the follow-up's holds and AGENTS.md: the
-    script computes the value while it measures and writes it to
-    metrics.json under CHECK; NOTE, what it must show. A `file:<path>`
+    kept rows carry what the value needs, `evaluate_rows()` computes it from
+    them and writes it to metrics.json under CHECK, where the recheck
+    recomputes it; NOTE, what it must show. A `file:<path>`
     check asks for the file declared as the run's dependency instead. A key alone shows
     nothing: the follow-up judges the computed value. In the repair case
     (2026-10-28) the check went unwritten, and every follow-up judged the
@@ -311,10 +312,15 @@ def check_order(check: str, note: str = "") -> str:
             f"with `provenance.BinaryInput` — so that the run records its digest "
             f"and the analysis audit is shown its content"
         )
+    # from the kept rows: the recheck recomputes every metrics key from them
+    # and refuses one computed beside them (check-path case, 2026-10-28)
     return (
-        f"extend the measuring script so that it computes `{check}`{shows} from "
-        f"what the run measures and writes the computed value to metrics.json "
-        f"under that key — a key written as a constant shows nothing"
+        f"extend the measuring script so that its kept rows carry what "
+        f"`{check}`{shows} needs and `evaluate_rows()` computes it from them, "
+        f"writing the value to metrics.json under that key — the check "
+        f"(`02_analyze.py --check`) recomputes every metrics key from the kept "
+        f"rows and refuses one computed beside them; a key written as a "
+        f"constant shows nothing"
     )
 
 
