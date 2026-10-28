@@ -1119,10 +1119,11 @@ Notiert, nicht geplant:
    fit hat keinen kostenlosen Weg (die Null fittet neu). Eine nach der
    ersten Messung geänderte Bandbreite verweigert report-check schon
    (`registration_changes`). `ea8d060`.
-   (b) Schlüssel (1): `b3737c6` der anderen Sitzung liest `c1_score`; die
-   Bedeutungsprüfung (Kennzahl und gelabelte Items gegen die Aufgabe, sonst
-   ein Satz statt einer Zahl) liegt auf Branch `sab-cases-meaning`
-   (`a15e261`), zum Übernehmen in `sab-cases-on-main`.
+   (b) Schlüssel (1): `b3737c6` liest `c1_score`; die Bedeutungsprüfung
+   (Kennzahl und gelabelte Items gegen die Aufgabe, sonst ein Satz statt
+   einer Zahl) ist `a15e261`. Beide mit dem Harness in `main` gemergt
+   (`8e709d7`, `1438edb`); die Notizen der Ziehungen 1 und 2 als Dateien
+   von `sab-like-cases` (`dcf3091`), dessen Code `main` anders gelöst hat.
    (c) Report-Churn: der Ablauf ist gewollt (die Review bindet den ganzen
    Stand); AGENTS.md und die Verweigerung nennen jetzt die Reihenfolge.
    Offen: die Laufzeit vergleichbar messen — dieselben Aufgaben mit und
