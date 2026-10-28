@@ -49,7 +49,7 @@ class Case:
     kind: str  # compute | fit | apply — what the kept number asserts
     dataset: str  # directory under data/raw/
     output: str  # the file under pred_results/ the evaluation reads
-    metric_key: str  # where the kept number lands in metrics.json
+    metric_key: str  # where the kept number lands in metrics.json — the skeleton's key, never one of the harness's own
     tolerance: (
         float | None
     )  # relative tolerance against the truth; None: no truth, the range [0, 1]
@@ -58,6 +58,14 @@ class Case:
 
 #: relative error the evaluation allows on heart rate and RMSSD — the R peaks sit on a 10 ms grid
 HRV_TOLERANCE = 0.10
+#: Where a stamped skeleton with a criterion keeps the number: the estimator
+#: skeleton (fit; apply without a model in the loop) reports [C1] as
+#: `c1_score`, by labkit's contract (intent-check holds every registered id
+#: to its key). Asking for the task's own name (`val_roc_auc`, `agreement`)
+#: measured the harness, not labkit: three draws kept the right number under
+#: `c1_score` and scored "absent" (docs/usability/2026-10-28-sab-cases-haiku-main.md).
+#: A computation has no criterion; its sheet names the key (`rmssd_ms`).
+CRITERION_KEY = "c1_score"
 CASES = {
     c.task: c
     for c in (
@@ -75,7 +83,7 @@ CASES = {
             "fit",
             "assay",
             "test_pred.csv",
-            "val_roc_auc",
+            CRITERION_KEY,
             None,
             ("numpy", "pandas", "scikit-learn"),
         ),
@@ -84,7 +92,7 @@ CASES = {
             "apply",
             "screening",
             "screen_pred.csv",
-            "agreement",
+            CRITERION_KEY,
             1e-6,
             ("numpy", "pandas"),
         ),
@@ -414,7 +422,9 @@ def task_text(root: Path, task: str) -> str:
 def truth(root: Path, task: str) -> float | None:
     """The kept number's true value — regenerated from the seed, never read
     from a file the agent could write; None for the fit (a fitted model's
-    validation score has no single true value)."""
+    validation score has no single true value). apply-screen's `c1_score` is
+    the agreement when the skeleton's SCORE is accuracy; another SCORE shows
+    as a wrong number — a finding about the attempt, not the harness."""
     del root  # the truth depends on the seed alone; the probe directory is not read
     if task == "compute-hrv":
         return hrv_truth()["rmssd_ms"]

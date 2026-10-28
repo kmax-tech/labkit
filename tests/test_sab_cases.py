@@ -313,6 +313,13 @@ class HarnessTest(unittest.TestCase):
                 ):
                     self.assertIn(part, sheet, task)
                 self.assertTrue((root / sab_cases.RAW / c.dataset).is_dir())
+                if (
+                    c.kind != "compute"
+                ):  # the key the harness reads is the one the stamped skeleton writes
+                    stamped = next(
+                        (root / "experiments").glob("*/scripts/01_measure.py")
+                    )
+                    self.assertIn(f'"{c.metric_key}"', stamped.read_text(), task)
                 with contextlib.redirect_stdout(io.StringIO()):
                     usability_score.score(root)
                 sc = json.loads(usability.sidecar(root, "score.json").read_text())
