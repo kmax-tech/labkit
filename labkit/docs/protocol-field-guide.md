@@ -151,8 +151,11 @@ The same block may hold the `[[promise]]` tables (labkit
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
-  nothing from it may be reported as a test. `"confirmatory"` tests a
-  hypothesis fixed BEFORE the run, on data that influenced no choice.
+  nothing from it may be reported as a test. `"confirmatory"`: the
+  question and the analysis plan stood BEFORE the relevant results, on data
+  that influenced no choice — a fit or an apply also its success
+  criterion; a computation, which has none, its quantity, unit, data and
+  exclusions.
 - **kind** — what the kept number asserts: `"compute"` judges no prediction
   (a measurement that cannot pass trivially: no criterion, no promise
   tables); `"fit"` judges a model trained or adjusted in this experiment;

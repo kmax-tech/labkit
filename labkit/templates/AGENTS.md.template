@@ -51,7 +51,7 @@ rejected, while the report handed the question over).
 |---|---|---|
 | `kind` | What the number asserts | `fit`: train, adjust or select a model/procedure here; `apply`: judge predictions of a model used unchanged; `compute`: calculate a quantity without judging predictions. |
 | `repeat_cost` | What repeating the measurement costs | `low`: you can repeat it at will; `high`: a repeat needs protection by a preflight audit and freeze. This is the measurement's cost, not the audit's or the whole task's duration. |
-| `type` | The scientific claim | `confirmatory`: test a question and criterion specified before the relevant results; `exploratory`: investigate or formulate an approach using what has already been observed. Writing a type does not establish its scientific validity. |
+| `type` | The scientific claim | `confirmatory`: the question and the analysis plan stood before the relevant results — for a fit or an apply also the success criterion; a computation's plan is its quantity, unit, data and exclusions; `exploratory`: investigate or formulate an approach using what has already been observed. Writing a type does not establish its scientific validity. |
 
 Decide `kind` first: does this area train, adjust or select a model or
 procedure? Choose `fit`, even if the deliverable is predictions without
