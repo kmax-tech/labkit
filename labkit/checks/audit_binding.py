@@ -155,20 +155,18 @@ def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
     return label, "\n".join(body)
 
 
-def analysis_now(
-    area: Path, text: str, run: Path
-) -> tuple[str, str, str, str, dict[str, str]]:
-    """(code stamp, promise block stamp, run id, shown sha, registration) of
-    AREA, the promises and the registration of TEXT and RUN as they are now
-    — what an analysis record must carry to cover them. Raises AuditError (a
-    registered output is gone), FileNotFoundError or ValueError (nothing to
-    stamp, a promise block or a head unreadable)."""
-    return (
+def analysis_now(area: Path, text: str, run: Path) -> findings.AuditedState:
+    """The state of AREA, the promises and the registration of TEXT and RUN
+    as they are now (`findings.AuditedState`) — what an analysis record
+    must bind to cover them. Raises AuditError (a registered output is
+    gone), FileNotFoundError or ValueError (nothing to stamp, a promise
+    block or a head unreadable)."""
+    return findings.AuditedState(
         area_stamp(area)[0],
         promises.block_stamp(text),
+        protocol_check.registration_stamp(text),
         run.name,
         run_shown(area, run, "").sha,
-        protocol_check.registration_stamp(text),
     )
 
 
@@ -178,4 +176,4 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     Raises what `analysis_now` raises, and FindingsError (a ValueError) on a
     findings file it cannot read."""
     records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
-    return findings.covering_records(records, *analysis_now(area, text, run))
+    return findings.covering_records(records, analysis_now(area, text, run))

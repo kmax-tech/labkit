@@ -302,10 +302,8 @@ class Decisions(unittest.TestCase):
         with self.assertRaises(findings.FindingsError):
             findings.audit_coverage(
                 area,
-                "abc123def456",
                 "preflight",
-                BLOCK,
-                registration=registration_of(area),
+                findings.AuditedState("abc123def456", BLOCK, registration_of(area)),
             )
         # a table cut out of the file is the same loss
         head, _, _ = text.partition("\n[[finding]]")
@@ -771,7 +769,9 @@ class AuditCoverage(unittest.TestCase):
         set_status(path, 2, "accepted", "spread is a limit")
         self.assertIsNone(
             findings.audit_coverage(
-                area, self.SHA, "preflight", BLOCK, registration=registration_of(area)
+                area,
+                "preflight",
+                findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
             )
         )
 
@@ -781,7 +781,9 @@ class AuditCoverage(unittest.TestCase):
         self.assertIn(
             "audited: none",
             findings.audit_coverage(
-                empty, self.SHA, "preflight", BLOCK, registration=registration_of(empty)
+                empty,
+                "preflight",
+                findings.AuditedState(self.SHA, BLOCK, registration_of(empty)),
             )
             or "",
         )
@@ -789,10 +791,8 @@ class AuditCoverage(unittest.TestCase):
         gap = (
             findings.audit_coverage(
                 area,
-                "0123456789ab",
                 "preflight",
-                BLOCK,
-                registration=registration_of(area),
+                findings.AuditedState("0123456789ab", BLOCK, registration_of(area)),
             )
             or ""
         )
@@ -803,10 +803,8 @@ class AuditCoverage(unittest.TestCase):
             "audited: none",
             findings.audit_coverage(
                 analysis_only,
-                self.SHA,
                 "preflight",
-                BLOCK,
-                registration=registration_of(analysis_only),
+                findings.AuditedState(self.SHA, BLOCK, registration_of(analysis_only)),
             )
             or "",
         )
@@ -816,7 +814,9 @@ class AuditCoverage(unittest.TestCase):
         self.assertIn(
             "2 finding(s)",
             findings.audit_coverage(
-                area, self.SHA, "preflight", BLOCK, registration=registration_of(area)
+                area,
+                "preflight",
+                findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
             )
             or "",
         )
@@ -834,16 +834,16 @@ class Binding(unittest.TestCase):
         area = area_with([("preflight", [])])
         self.assertIsNone(
             findings.audit_coverage(
-                area, self.SHA, "preflight", BLOCK, registration=registration_of(area)
+                area,
+                "preflight",
+                findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
             )
         )
         gap = (
             findings.audit_coverage(
                 area,
-                self.SHA,
                 "preflight",
-                "0ther0000000",
-                registration=registration_of(area),
+                findings.AuditedState(self.SHA, "0ther0000000", registration_of(area)),
             )
             or ""
         )
@@ -855,23 +855,23 @@ class Binding(unittest.TestCase):
         self.assertIsNone(
             findings.audit_coverage(
                 area,
-                self.SHA,
                 "analysis",
-                BLOCK,
-                RUN,
-                SHOWN,
-                registration=registration_of(area),
+                findings.AuditedState(
+                    self.SHA, BLOCK, registration_of(area), RUN, SHOWN
+                ),
             )
         )
         gap = (
             findings.audit_coverage(
                 area,
-                self.SHA,
                 "analysis",
-                BLOCK,
-                "2026-01-02T00-00-00_0002",
-                SHOWN,
-                registration=registration_of(area),
+                findings.AuditedState(
+                    self.SHA,
+                    BLOCK,
+                    registration_of(area),
+                    "2026-01-02T00-00-00_0002",
+                    SHOWN,
+                ),
             )
             or ""
         )
@@ -885,12 +885,10 @@ class Binding(unittest.TestCase):
         gap = (
             findings.audit_coverage(
                 area,
-                self.SHA,
                 "analysis",
-                BLOCK,
-                RUN,
-                "6" * 12,
-                registration=registration_of(area),
+                findings.AuditedState(
+                    self.SHA, BLOCK, registration_of(area), RUN, "6" * 12
+                ),
             )
             or ""
         )
@@ -948,25 +946,25 @@ class Binding(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "held to the answering run"):
             findings.audit_coverage(
-                area, self.SHA, "analysis", BLOCK, registration=registration_of(area)
+                area,
+                "analysis",
+                findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
             )
         with self.assertRaisesRegex(ValueError, "held to the answering run"):
             findings.audit_coverage(
                 area,
-                self.SHA,
                 "analysis",
-                BLOCK,
-                RUN,
-                registration=registration_of(area),
+                findings.AuditedState(
+                    self.SHA, BLOCK, registration_of(area), RUN, None
+                ),
             )
         with self.assertRaisesRegex(ValueError, "a preflight audit to neither"):
             findings.audit_coverage(
                 area,
-                self.SHA,
                 "preflight",
-                BLOCK,
-                RUN,
-                registration=registration_of(area),
+                findings.AuditedState(
+                    self.SHA, BLOCK, registration_of(area), RUN, None
+                ),
             )
         # a record without a run is written as NO_RUN, and read so
         path = findings.write(
@@ -986,12 +984,8 @@ class Binding(unittest.TestCase):
             "run none",
             findings.audit_coverage(
                 area,
-                "s",
                 "analysis",
-                "b",
-                RUN,
-                SHOWN,
-                registration=registration_of(area),
+                findings.AuditedState("s", "b", registration_of(area), RUN, SHOWN),
             )
             or "",
         )
@@ -1033,3 +1027,37 @@ class NumberOf(unittest.TestCase):
         record = SimpleNamespace(findings=[first, second], path=Path("r.toml"))
         self.assertEqual(findings.number_of(record, first), 1)  # type: ignore[arg-type]
         self.assertEqual(findings.number_of(record, second), 2)  # type: ignore[arg-type]
+
+
+class AuditedStateMatch(unittest.TestCase):
+    """One type for the state an audit saw: the prompt binds it, the record
+    carries it, `covering_records` compares the two (audit 2026-10-27,
+    third, plan 2)."""
+
+    def test_the_registration_compares_as_a_mapping(self):
+        a = findings.AuditedState("c", "b", {"kind": "fit", "q": "1"}, RUN, SHOWN)
+        self.assertEqual(
+            a, findings.AuditedState("c", "b", {"q": "1", "kind": "fit"}, RUN, SHOWN)
+        )
+        self.assertNotEqual(
+            a, findings.AuditedState("c", "b", {"kind": "fit"}, RUN, SHOWN)
+        )
+        self.assertNotEqual(
+            a, findings.AuditedState("c", "b", {"kind": "fit", "q": "1"})
+        )
+        self.assertEqual(a.words(), f"code c, promises b, run {RUN}, shown {SHOWN}")
+
+    def test_a_record_covers_the_state_it_was_written_for(self):
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        reg = registration_of(area)
+        path = findings.write(
+            area, "analysis", "m", "c", "b", (0, 0, 0), [],
+            run_id=RUN, shown_sha=SHOWN, registration=reg,
+        )  # fmt: skip
+        record = findings.read(path)
+        now = findings.AuditedState("c", "b", reg, RUN, SHOWN)
+        self.assertEqual(record.state, now)
+        self.assertEqual(findings.covering_records([record], now), [record])
+        other = findings.AuditedState("c", "b", reg, RUN, "0" * 12)
+        self.assertEqual(findings.covering_records([record], other), [])

@@ -503,14 +503,18 @@ class Audit(unittest.TestCase):
         self.assertIn(
             "still `open`",
             findings.audit_coverage(
-                area, before, "preflight", block, registration=registration_of(area)
+                area,
+                "preflight",
+                findings.AuditedState(before, block, registration_of(area)),
             )
             or "",
         )
         self.assertIn(
             "no preflight audit saw",
             findings.audit_coverage(
-                area, after, "preflight", block, registration=registration_of(area)
+                area,
+                "preflight",
+                findings.AuditedState(after, block, registration_of(area)),
             )
             or "",
         )

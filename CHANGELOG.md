@@ -1113,6 +1113,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One named type for the state an audit saw.** The code, promise
+  block, registration, run and shown digest a record binds were passed as
+  five loose values, and `labkit-audit` matched a record against them
+  field by field beside `findings.covering_records`. `findings.AuditedState`
+  carries them: `bound_prompt` binds it, `Record.state` reads it back,
+  `covering_records(records, now)` and `audit_coverage(area, mode, now)`
+  take it, `audit_binding.analysis_now` returns it. Breaking for callers of
+  `audit_coverage`, `covering_records` and `analysis_now`. Audit 2026-10-27
+  (third), plan 2.
 - **One layout of a run-index row; `runlog reindex` reads, appends and
   prints in steps.** A run's end and `reindex` each built the row; both
   use `runlog.index_row`. `reindex` read the folders, appended and

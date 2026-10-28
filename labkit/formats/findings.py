@@ -317,6 +317,48 @@ def effect_sentence(effect: str) -> str:
 
 
 @dataclass(frozen=True)
+class AuditedState:
+    """The state of an area an audit saw and its record binds: the code
+    (SCOPE_SHA, `scope_sha.area_stamp`), the promise block (BLOCK_SHA,
+    `promises.block_stamp`), the REGISTRATION it judged
+    (`protocol_check.registration_stamp`, compared as a mapping) and, mode
+    analysis, the RUN_ID it read (NO_RUN: none) and the SHOWN_SHA of what
+    it was shown of that run; both None for preflight. One type for the
+    prompt that binds it (`audit.bound_prompt`), the record (`Record.state`)
+    and every match of the two (`covering_records`) — the audit matched a
+    record field by field beside `covering_records` (audit 2026-10-27,
+    third, plan 2)."""
+
+    scope_sha: str
+    block_sha: str
+    registration: Mapping[str, str]
+    run_id: str | None = None
+    shown_sha: str | None = None
+
+    def __eq__(self, other: object) -> bool:
+        # the registration as a mapping: a record keeps it in the order written
+        if not isinstance(other, AuditedState):
+            return NotImplemented
+        return self.bound == other.bound and dict(self.registration) == dict(
+            other.registration
+        )
+
+    @property
+    def bound(self) -> tuple[str, str, str | None, str | None]:
+        """(code, promises, run, shown) — the state, its registration aside."""
+        return (self.scope_sha, self.block_sha, self.run_id, self.shown_sha)
+
+    def words(self) -> str:
+        """What the state binds, in words: `code <sha>, promises <block>[,
+        run <id>, shown <sha>]`."""
+        return (
+            f"code {self.scope_sha}, promises {self.block_sha}"
+            + (f", run {self.run_id}" if self.run_id is not None else "")
+            + (f", shown {self.shown_sha}" if self.shown_sha is not None else "")
+        )
+
+
+@dataclass(frozen=True)
 class Record:
     """One audit's findings file."""
 
@@ -340,6 +382,17 @@ class Record:
     # mode analysis: its verdicts on earlier decided BLOCKERs, one per
     # finding at most; a finding shown without one is unchecked
     fix_verdicts: tuple[FixVerdict, ...] = ()
+
+    @property
+    def state(self) -> AuditedState:
+        """The state this record binds (`AuditedState`)."""
+        return AuditedState(
+            self.scope_sha,
+            self.block_sha,
+            dict(self.registration),
+            self.run_id,
+            self.shown_sha,
+        )
 
     @property
     def open(self) -> list[Finding]:
@@ -1326,36 +1379,11 @@ def area_records(area: Path) -> list[Record]:
     return status.records
 
 
-def _bound(
-    sha: str, block_sha: str, run_id: str | None, shown_sha: str | None = None
-) -> str:
-    """What a record binds, in words: `code <sha>, promises <block>[, run
-    <id>, shown <sha>]`."""
-    return (
-        f"code {sha}, promises {block_sha}"
-        + (f", run {run_id}" if run_id is not None else "")
-        + (f", shown {shown_sha}" if shown_sha is not None else "")
-    )
-
-
-def covering_records(
-    records: list[Record],
-    sha: str,
-    block_sha: str,
-    run_id: str | None,
-    shown_sha: str | None,
-    registration: Mapping[str, str],
-) -> list[Record]:
-    """The RECORDS that saw the area as it is now: that code, that promise
-    block, that registration (`protocol_check.registration_stamp`) and —
-    mode analysis — that run and what was shown of it."""
-    now = (sha, block_sha, run_id, shown_sha)
-    return [
-        r
-        for r in records
-        if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
-        and dict(r.registration) == dict(registration)
-    ]
+def covering_records(records: list[Record], now: AuditedState) -> list[Record]:
+    """The RECORDS that saw the area as it is NOW: that code, that promise
+    block, that registration and — mode analysis — that run and what was
+    shown of it (`AuditedState`)."""
+    return [r for r in records if r.state == now]
 
 
 def registration_note(records: list[Record], registration: Mapping[str, str]) -> str:
@@ -1388,24 +1416,13 @@ def records_of_gone_runs(records: list[Record], known: set[str]) -> list[Record]
     ]
 
 
-def audit_coverage(
-    area: Path,
-    sha: str,
-    mode: str,
-    block_sha: str,
-    run_id: str | None = None,
-    shown_sha: str | None = None,
-    *,
-    registration: Mapping[str, str],
-) -> str | None:
-    """Why no audit of MODE covers the area as it is now, or None: a record
-    with that `mode` whose `scope_sha` is SHA (the code), whose `block_sha`
-    is BLOCK_SHA (the promises, `promises.block_stamp`), whose
-    `registration` is REGISTRATION (`protocol_check.registration_stamp`) and — mode analysis
-    — whose `run_id` is RUN_ID (the answering run) and whose `shown_sha` is
-    SHOWN_SHA (what the prompt showed of that run, recomputed now: a
-    metrics.json or output rows changed after the audit owe a new one),
-    every finding of it decided. The head names a record by hand; this is what makes
+def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
+    """Why no audit of MODE covers the area as it is NOW, or None: a record
+    with that `mode` that binds NOW (`AuditedState`: the code, the
+    promises, the registration and — mode analysis — the answering run and
+    what the prompt showed of it, recomputed now: a metrics.json or output
+    rows changed after the audit owe a new one), every finding of it
+    decided. The head names a record by hand; this is what makes
     "the frozen code was audited" a fact instead of a line (2026-10-14: after
     fixing the audit's findings a cold agent stamped the new sha, and no
     audit had seen that code). `preflight` for the freeze (runlog, preflight),
@@ -1415,50 +1432,36 @@ def audit_coverage(
 
     Raises:
         FindingsError: A findings file of AREA cannot be read.
-        ValueError: MODE is not one of MODES, or RUN_ID and SHOWN_SHA are
-            given for `preflight` or missing for `analysis`.
+        ValueError: MODE is not one of MODES, or NOW's run and shown sha
+            are given for `preflight` or missing for `analysis`.
     """
     if mode not in MODES:
         raise ValueError(f"audit mode {mode!r} is not one of {', '.join(MODES)}")
     analysis = mode == "analysis"
-    if analysis != (run_id is not None) or analysis != (shown_sha is not None):
+    if analysis != (now.run_id is not None) or analysis != (now.shown_sha is not None):
         raise ValueError(
-            f"audit mode {mode!r} with run_id {run_id!r}, shown_sha {shown_sha!r}: "
+            f"audit mode {mode!r} with run_id {now.run_id!r}, shown_sha "
+            f"{now.shown_sha!r}: "
             f"an analysis audit is held to the answering run and what it was "
             f"shown of it, a preflight audit to neither"
         )
     records = [r for r in area_records(area) if r.mode == mode]
-    now = (sha, block_sha, run_id, shown_sha)
-    covering = covering_records(records, *now, registration)
+    covering = covering_records(records, now)
     if not covering:
         # the code, promises and run as audited, the registration rewritten
-        same_state = [
-            r
-            for r in records
-            if (r.scope_sha, r.block_sha, r.run_id, r.shown_sha) == now
-        ]
+        same_state = [r for r in records if r.state.bound == now.bound]
         if same_state:
             return (
                 f"no {mode} audit saw the area as it is now"
-                f"{registration_note(same_state, registration)} — "
+                f"{registration_note(same_state, now.registration)} — "
                 f"`labkit-audit <area> --mode {mode}`"
             )
-        seen = (
-            "; ".join(
-                sorted(
-                    {
-                        _bound(r.scope_sha, r.block_sha, r.run_id, r.shown_sha)
-                        for r in records
-                    }
-                )
-            )
-            or "none"
-        )
-        stopped = unproven_attempts(area, mode, sha, block_sha)
+        seen = "; ".join(sorted({r.state.words() for r in records})) or "none"
+        stopped = unproven_attempts(area, mode, now.scope_sha, now.block_sha)
         if stopped:
             models = ", ".join(sorted({f.model for f in stopped}))
             return (
-                f"no {mode} audit saw the area as it is now ({_bound(*now)}): "
+                f"no {mode} audit saw the area as it is now ({now.words()}): "
                 f"{len(stopped)} attempt(s) unproven — {models} did not write the "
                 f"answer whole (a safety stop or another model; "
                 f"{stopped[-1].path.name}); the same model is not tried again on "
@@ -1471,14 +1474,14 @@ def audit_coverage(
         )
         return (
             f"no {mode} audit saw the area as it is now "
-            f"({_bound(*now)}; audited: {seen}) — {why}: "
+            f"({now.words()}; audited: {seen}) — {why}: "
             f"`labkit-audit <area> --mode {mode}`"
             f"{validation_note(area)}"
         )
     still_open = open_findings(covering)
     if still_open:
         return (
-            f"{len(still_open)} finding(s) of the {mode} audit of {sha} still "
+            f"{len(still_open)} finding(s) of the {mode} audit of {now.scope_sha} still "
             f"`open` — decide each ({DECIDED_LIST})"
         )
     return None

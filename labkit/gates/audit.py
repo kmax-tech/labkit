@@ -1017,20 +1017,17 @@ def journaled_answer(
 @dataclass(frozen=True)
 class BoundPrompt:
     """An audit prompt and what its record binds, from one reading
-    (`bound_prompt`): the PROMPT; the code STAMP; the promise block's sha
-    (BLOCK_SHA) and the REGISTRATION it carries; in MODE analysis the
-    RUN_ID it shows (NO_RUN when none answers) and the SHOWN_SHA of what it
-    shows of that run; the INDEXED files (stamped, not read in full); and
-    SHOWN_NOW, the earlier repairs shown (`Followup`). It replaced an
+    (`bound_prompt`): the PROMPT; the code STAMP with the files it covers;
+    the STATE the record binds (`findings.AuditedState`: code, promises,
+    registration and, in MODE analysis, the run shown and the digest of
+    what is shown of it); the INDEXED files (stamped, not read in full);
+    and SHOWN_NOW, the earlier repairs shown (`Followup`). It replaced an
     8-tuple passed on as ten arguments (audit 2026-10-27, third, M7)."""
 
     prompt: str
     stamp: Stamp
-    block_sha: str
-    run_id: str | None
-    shown_sha: str | None
+    state: findings.AuditedState
     indexed: list[Path]
-    registration: dict[str, str]
     shown_now: Followup
 
 
@@ -1065,19 +1062,17 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
         run_dir, why = audited_run(area, protocol, text)
         run_id = run_dir.name if run_dir is not None else findings.NO_RUN
         shown = run_shown(area, run_dir, why)
-    block = promises.block_stamp(text)
-    registration = protocol_check.registration_stamp(text)
+    state = findings.AuditedState(
+        snap.sha,
+        promises.block_stamp(text),
+        protocol_check.registration_stamp(text),
+        run_id,
+        shown.sha if shown else None,
+    )
 
     def current(r: findings.Record) -> bool:
         """Is R a record of the state this prompt shows?"""
-        return (
-            r.mode == ANALYSIS
-            and r.scope_sha == snap.sha
-            and r.block_sha == block
-            and r.run_id == run_id
-            and r.shown_sha == (shown.sha if shown else None)
-            and dict(r.registration) == registration
-        )
+        return r.mode == ANALYSIS and r.state == state
 
     shown_now = (
         earlier_of(area, current, shown.metrics() if shown else None)
@@ -1110,17 +1105,8 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
         or protocol.read_text(encoding="utf-8") != text
     ):
         raise AuditError(f"{area}: {changed}")
-    stamp = Stamp(snap.sha, list(snap.files))
-    shown_sha = shown.sha if shown else None
     return BoundPrompt(
-        prompt,
-        stamp,
-        promises.block_stamp(text),
-        run_id,
-        shown_sha,
-        indexed,
-        protocol_check.registration_stamp(text),
-        shown_now,
+        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, shown_now
     )
 
 
@@ -1230,7 +1216,7 @@ def main(argv: list[str]) -> int:
             f"{args.model} · {len(bound.prompt) // 1000} kB",
         )
         report, running = _answer_or_record(
-            args, argv, bound.prompt, bound.stamp, bound.block_sha
+            args, argv, bound.prompt, bound.stamp, bound.state.block_sha
         )
     except REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
@@ -1278,13 +1264,13 @@ def _record(
             args.area,
             args.mode,
             args.model,
-            bound.stamp.sha,
-            bound.block_sha,
+            bound.state.scope_sha,
+            bound.state.block_sha,
             result["verdict"],
             result["findings"],
-            registration=bound.registration,
-            run_id=bound.run_id,
-            shown_sha=bound.shown_sha,
+            registration=bound.state.registration,
+            run_id=bound.state.run_id,
+            shown_sha=bound.state.shown_sha,
             fix_verdicts=fixes,
             carried=carried_of(bound.shown_now, fixes),
             followup_size=followup_size(bound.shown_now)

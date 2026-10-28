@@ -139,7 +139,9 @@ class CoverageNamesTheStop(unittest.TestCase):
     def test_an_unproven_attempt_at_this_state_is_named(self):
         attempt(self.area, cause="unproven", model="opus")
         why = findings.audit_coverage(
-            self.area, SHA, "preflight", BLOCK, registration=registration_of(self.area)
+            self.area,
+            "preflight",
+            findings.AuditedState(SHA, BLOCK, registration_of(self.area)),
         )
         assert why is not None
         self.assertIn(
@@ -151,7 +153,9 @@ class CoverageNamesTheStop(unittest.TestCase):
         attempt(self.area, cause="unavailable")
         attempt(self.area, cause="unproven", scope_sha="other" * 3)
         why = findings.audit_coverage(
-            self.area, SHA, "preflight", BLOCK, registration=registration_of(self.area)
+            self.area,
+            "preflight",
+            findings.AuditedState(SHA, BLOCK, registration_of(self.area)),
         )
         assert why is not None
         self.assertNotIn("unproven", why)
