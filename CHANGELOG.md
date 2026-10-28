@@ -34,31 +34,46 @@ pins (`requirements.txt` / `requirements.lock`).
   the generated lines of the run declared. 0.103.0 is the last version
   that replaces.
 
-- **A failed audit call is covered only by a later audit of its mode,
-  code and promise block; the journal's start names the block.** An
-  earlier completed audit hid a later failed call from `labkit-audit
-  --findings`, exit 0 (review of the D3 repair, 2026-10-28): a
-  `-failed.toml` was covered by any record of its mode, code and promises,
-  and an attempt that ended without a record by any record of its mode
-  and code, whenever made. Now both are covered by one rule
-  (`attempts.covered_by_later_record`): a record of the same mode, code
-  and promise block written by an attempt the journal started after the
-  call. An audit's start event records the promise block it read
-  (`block_sha`; `attempts.begin` takes it as a keyword, None for a
-  review, whose start names none; `Attempt.block_sha`). A `-failed.toml`
-  carries its block in its file, as before; an attempt that ended without
-  a record takes it from its start. A record no attempt names covers
-  nothing. A historical call — an attempt whose start names no block
-  (written by 0.103.0 or earlier; it reads as it stands, and no block is
+- **A failed audit call is superseded by a later audit of its mode,
+  protocol and promise block, also after a code change; the journal's
+  start names block and protocol.** An earlier completed audit hid a later
+  failed call from `labkit-audit --findings`, exit 0 (review of the D3
+  repair, 2026-10-28): a `-failed.toml` was covered by any record of its
+  mode, code and promises, an attempt that ended without a record by any
+  record of its mode and code, whenever made. A rule of mode, code and
+  block in the journal's order closed that and left a dead end: a call
+  that failed on code corrected since stayed named, exit 2, until an
+  audit of exactly the old code existed — in practice only the handover
+  cleared it. The rule now (`attempts.superseding_record`): a later
+  completed audit of the same mode and the same protocol with the same
+  promise block supersedes the failed call, also after a code change —
+  a record written by an attempt the journal started after the call, on
+  the same protocol. `--findings` shows a superseded call as superseded
+  by that record, informational, exit unaffected, never as open: the
+  reader sees which audit took its place and what that means. The old
+  call and its kept answer stay as they are; superseding confirms neither
+  the call's content nor the repair of any finding, and a recorded
+  BLOCKER stays under the follow-up rule — whether the current result may
+  be adopted is decided by the checks of the current code and run
+  (`followup`, report-check), as before. An earlier audit, another
+  protocol or another promise block supersede nothing, nor a record no
+  attempt names. An audit's start event records the promise block it
+  read and the protocol it audited, by file name in the area
+  (`block_sha`, `protocol`; `attempts.begin` takes both as keywords, None
+  for a review, whose start names neither; `Attempt.block_sha`,
+  `Attempt.protocol`). A `-failed.toml` carries its block in its file and
+  takes its protocol from the start of the attempt that wrote it. A
+  historical call — an attempt whose start names no block and protocol
+  (written by 0.103.0 or earlier; it reads as it stands, and neither is
   supplied after the fact) or a `-failed.toml` no attempt of the journal
-  names — has a binding or order the journal cannot give (`historical_call`):
-  `--findings` names it as historical, exit 2, with the step that settles
-  it. Migration, that step: run the audit of its mode again now, in the
-  current format — `labkit-audit <area> --mode <preflight|analysis>`, the
-  command `--findings` prints; the later record of its mode settles the
-  historical call on whatever code and promises it reads, as it binds
-  today's. Journal, answers and records stay as written. 0.103.0 is the
-  last version whose starts name no block.
+  names — has a binding or order the journal cannot give
+  (`historical_call`): `--findings` names it as historical, exit 2, with
+  the step that supersedes it. Migration, that step: run the audit of its
+  mode again now, in the current format — `labkit-audit <area> --mode
+  <preflight|analysis>`, the command `--findings` prints; a later audit of
+  its mode whose start names block and protocol supersedes the historical
+  call, of any protocol of the area, since the old start names none. Journal, answers and records stay as written. 0.103.0 is the last
+  version whose starts name neither.
 - **The analysis audit and the decision review see the run's declared
   dependencies.** In the second repair case the follow-up could not
   confirm a correct repair against `model.json` — "that result is in no
@@ -593,7 +608,7 @@ pins (`requirements.txt` / `requirements.lock`).
   "no audit record yet". Such an attempt of mode preflight or analysis is
   now a failed call there: named by its id with its error and its kept
   answer, the handover offered, exit 2 — until a later completed audit
-  covers it (Breaking, above: one rule for both kinds). Pilot round 2 of
+  supersedes it (Breaking, above: one rule for both kinds). Pilot round 2 of
   labkit-paper area 15 on 72507d0 (t71), defect D3.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a

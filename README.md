@@ -177,15 +177,18 @@ When a check stops you, `labkit-audit <area> --findings` shows readable
 open findings, evidence problems and complete recovery commands without a
 model call. For a failed audit call — a `-failed.toml` (the backend did
 not answer) or an attempt the journal ended without a record (the answer
-did not read, kept under `audits/answers/`) — that no completed audit of
-the same mode, code and promise block made after it covers (the
-journal's order; an earlier record covers nothing), it names the call,
-its error and its kept answer and offers the handover without inventing
-findings; it exits 2 then. A historical call — its start written by
-labkit 0.103.0 or earlier without a promise block, or a `-failed.toml` no
-journal attempt names — is named as such with the command that settles
-it: the audit of its mode run again now (`labkit-audit <area> --mode
-<mode>`). Decide unresolved readable BLOCKERs explicitly before using
+did not read, kept under `audits/answers/`) — it names the call, its
+error and its kept answer and offers the handover without inventing
+findings; it exits 2 then. A later completed audit of the same mode and
+the same protocol with the same promise block supersedes the call, also
+after a code change (the journal's order; an earlier audit, another
+protocol or promise block supersede nothing): it is then shown as
+superseded by that record, informational, never as open. The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. A historical call —
+its start written by labkit 0.103.0 or earlier without a promise block
+and protocol, or a `-failed.toml` no journal attempt names — is named as
+such with the command that supersedes it: the audit of its mode run
+again now (`labkit-audit <area> --mode <mode>`), of any protocol of the
+area, since the old start names none. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
 immutable handover record of the remaining evidence, losses and the

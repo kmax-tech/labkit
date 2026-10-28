@@ -1018,9 +1018,11 @@ def _answer_or_record(
     prompt: str,
     stamp: Stamp,
     block_sha: str,
+    protocol: Path,
 ) -> tuple[str, attempts.Running]:
     """(the auditor's report, its attempt in the area's journal — the
-    caller ends it with the record). The attempt is begun right before the
+    caller ends it with the record). The attempt, on BLOCK_SHA and the
+    PROTOCOL audited (its start names both), is begun right before the
     call (`attempts.begin`: refused while another audit of the area runs
     or a record the journal or HEAD names is gone; an earlier attempt
     without an end is marked interrupted and named). When the backend does not answer (the CLI died,
@@ -1053,7 +1055,12 @@ def _answer_or_record(
     # does not know is a usage error (KeyError), not an attempt
     room = _report_room(args.model)
     running = attempts.begin(
-        args.area, args.mode, args.model, stamp.sha, block_sha=block_sha
+        args.area,
+        args.mode,
+        args.model,
+        stamp.sha,
+        block_sha=block_sha,
+        protocol=protocol.name,
     )
     for note in running.notes:
         console.progress("labkit-audit", note)
@@ -1278,10 +1285,11 @@ def main(argv: list[str]) -> int:
         "the newest, the evidence problems, and where a BLOCKER or a problem "
         "stands the --decide and handover commands; a failed audit call — a "
         "-failed.toml, or an attempt that ended without a record, with its kept "
-        "answer — is named with its error and the handover unless a completed "
-        "audit of its mode, code and promise block came after it (a historical "
-        "call, of labkit 0.103.0 or earlier, with the audit that settles it); no "
-        "audit runs; exit 2 on such a call, on evidence that does not read, or "
+        "answer — is named with its error and the handover until a later "
+        "completed audit of its mode, protocol and promise block supersedes it, "
+        "also after a code change (then it is shown as superseded; a historical "
+        "call, of labkit 0.103.0 or earlier, with the audit that supersedes it); "
+        "no audit runs; exit 2 on such a call, on evidence that does not read, or "
         "with no record at all",
     )
     ap.add_argument(
@@ -1352,7 +1360,7 @@ def main(argv: list[str]) -> int:
             f"{args.model} · {len(bound.prompt) // 1000} kB",
         )
         report, running = _answer_or_record(
-            args, argv, bound.prompt, bound.stamp, bound.state.block_sha
+            args, argv, bound.prompt, bound.stamp, bound.state.block_sha, protocol
         )
     except REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
@@ -1678,13 +1686,41 @@ def _newest_record(area: Path) -> Path:
 
 
 @dataclass(frozen=True)
+class _Superseded:
+    """A failed audit call a later completed audit took the place of
+    (`attempts.superseding_record`): its LABEL as `--findings` names it,
+    its MODE, the RECORD file that supersedes it, and OF_MODE_ONLY — the
+    call is historical, so an audit of its mode in the current format, of
+    any protocol, superseded it."""
+
+    label: str
+    mode: str
+    record: str
+    of_mode_only: bool
+
+
+@dataclass(frozen=True)
+class _Calls:
+    """The failed audit calls of an area as `--findings` shows them: the
+    FAILED files and UNRECORDED attempts (ended without a record) still
+    open, why each historical one among them is (HISTORICAL_WHY, by file
+    name or attempt id), and those a later audit SUPERSEDED."""
+
+    failed: tuple[findings.Failed, ...] = ()
+    unrecorded: tuple[attempts.Attempt, ...] = ()
+    historical_why: Mapping[str, str] = field(default_factory=dict)
+    superseded: tuple[_Superseded, ...] = ()
+
+
+@dataclass(frozen=True)
 class _Listing:
     """The shown RECORDS, evidence ERRORS, HIDDEN record count, the FAILED
     calls (`-failed.toml`) and the UNRECORDED ones (audit attempts the
     journal ended without a record) that no later completed audit of their
-    mode, code and promise block covers, which of them are HISTORICAL, and
-    the evidence CHANGED against git (`evidence.changes`,
-    `evidence.ignored`) — undone by a restore, never by a handover."""
+    mode, protocol and promise block superseded, which of them are
+    HISTORICAL, the calls a later audit SUPERSEDED, and the evidence CHANGED
+    against git (`evidence.changes`, `evidence.ignored`) — undone by a
+    restore, never by a handover."""
 
     records: list[findings.Record]
     errors: list[str]
@@ -1692,9 +1728,11 @@ class _Listing:
     failed: tuple[findings.Failed, ...] = ()
     unrecorded: tuple[attempts.Attempt, ...] = ()
     # of those, the historical calls (`attempts.historical_call`): failed file
-    # name or attempt id → why its binding or order is not known; settled by
-    # the audit of its mode run again now
-    historical: Mapping[str, str] = field(default_factory=dict)
+    # name or attempt id → why its binding or order is not known; superseded
+    # by the audit of its mode run again now
+    historical_why: Mapping[str, str] = field(default_factory=dict)
+    # the failed calls a later audit superseded: shown as such, never as open
+    superseded: tuple[_Superseded, ...] = ()
     changed: tuple[str, ...] = ()
 
 
@@ -1704,13 +1742,18 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     area are kept beside them (`attempts.area_integrity`). A failed audit
     call — a `-failed.toml`, or an audit attempt the journal ended without
     a record (outcome `none`: an answer that did not read, a call that
-    raised) — remains recovery guidance unless a completed audit of the
-    same mode, code and promise block came after it, in the journal's
-    order (`attempts.covered_by_later_record`): an earlier record, another
-    mode or other promises cover nothing, nor a record no attempt names. A
-    historical call — a start without its promise block (labkit 0.103.0 or
-    earlier), a failed file no attempt names — is settled by a later audit
-    of its mode in the current format, and named as such. An attempt
+    raised) — remains recovery guidance until a later completed audit of
+    the same mode and the same protocol with the same promise block
+    supersedes it, in the journal's order, also after a code change
+    (`attempts.superseding_record`); an earlier record, another mode,
+    protocol or promise block supersede nothing, nor a record no attempt
+    names. A superseded call is shown as such, never as open; that
+    confirms neither its content nor the repair of any finding — a
+    recorded BLOCKER stays under the follow-up rule. A historical call —
+    a start without its promise block and protocol (labkit 0.103.0 or
+    earlier), a failed file no attempt names — is superseded by a later
+    audit of its mode in the current format, and named as such until
+    then. An attempt
     without an end (running, or interrupted: killed, timed out in the
     shell) is not listed; the next audit's start names it
     (`attempts.begin`). This does not establish whether that audit covers
@@ -1725,24 +1768,32 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
             return _Listing([read], errors, 0, changed=changed)
         except findings.FindingsError as exc:
             return _Listing([], [*errors, str(exc)], 0, changed=changed)
-    failed, unrecorded, historical = _open_calls(area, state.records, errors)
+    calls = _open_calls(area, state.records, errors)
     opened = {u.record.path for u in findings.open_blockers(state.records)}
     records = [r for r in state.records if r.path in opened]
     if state.records and state.records[-1] not in records:
         records.append(state.records[-1])
     hidden = len(state.records) - len(records)
-    return _Listing(records, errors, hidden, failed, unrecorded, historical, changed)
+    return _Listing(
+        records,
+        errors,
+        hidden,
+        calls.failed,
+        calls.unrecorded,
+        calls.historical_why,
+        calls.superseded,
+        changed,
+    )
 
 
 def _open_calls(
     area: Path, records: list[findings.Record], errors: list[str]
-) -> tuple[tuple[findings.Failed, ...], tuple[attempts.Attempt, ...], dict[str, str]]:
-    """(failed files, attempts ended without a record, the historical ones
-    among both: file name or attempt id → why) of AREA that no completed
-    audit of RECORDS covers (`attempts.covered_by_later_record`). A
-    journal or a failed file that does not read is added to ERRORS;
-    without the journal no failed file is covered, and none is called
-    historical — the journal's error is the cause."""
+) -> _Calls:
+    """AREA's failed audit calls against its RECORDS (`_Calls`): each is
+    superseded or still open (`_classify`). A journal or a failed file
+    that does not read is added to ERRORS; without the journal no failed
+    file is superseded, and none is called historical — the journal's
+    error is the cause."""
     journal: list[attempts.Attempt] = []
     journal_read = True
     try:
@@ -1751,57 +1802,104 @@ def _open_calls(
         errors.append(str(exc))
         journal_read = False
     by_file = {r.path.name: r for r in records}  # records of findings only
-    historical: dict[str, str] = {}
-    failed: tuple[findings.Failed, ...] = ()
+    of_files = _Calls()
     try:
-        failed = _open_failed(
-            area, journal, by_file, historical if journal_read else {}
-        )
+        of_files = _open_failed(area, journal, by_file, journal_read)
     except (findings.FindingsError, OSError) as exc:
         errors.append(str(exc))
     unrecorded: tuple[attempts.Attempt, ...] = ()
+    why: dict[str, str] = {}
+    superseded: list[_Superseded] = []
     for i, a in enumerate(journal):
         if a.outcome != "none" or a.mode not in findings.MODES:
             continue
-        if attempts.covered_by_later_record(
-            journal, i, by_file, a.mode, a.scope_sha, a.block_sha
-        ):
+        by, is_historical = _classify(
+            journal, i, by_file, a.mode, a.protocol, a.block_sha, f"attempt {a.id}"
+        )
+        if by is not None:
+            superseded.append(by)
             continue
         unrecorded += (a,)
-        if a.block_sha == "":  # `attempts.historical_call`
-            historical[a.id] = (
+        if is_historical:
+            missing = [
+                n
+                for n, v in (("promise block", a.block_sha), ("protocol", a.protocol))
+                if not v
+            ]
+            why[a.id] = (
                 "its start, written by labkit 0.103.0 or earlier, names no "
-                "promise block"
+                + " and no ".join(missing)
             )
-    return failed, unrecorded, historical
+    return _Calls(
+        of_files.failed,
+        unrecorded,
+        {**of_files.historical_why, **why},
+        (*of_files.superseded, *superseded),
+    )
+
+
+def _classify(
+    journal: list[attempts.Attempt],
+    at: int | None,
+    records: Mapping[str, findings.Record],
+    mode: str,
+    protocol: str,
+    block_sha: str,
+    label: str,
+) -> tuple[_Superseded | None, bool]:
+    """(the supersession of the failed call LABEL — at AT in JOURNAL, of
+    MODE, PROTOCOL and BLOCK_SHA — by a later record of RECORDS, None while
+    it is open; whether the call is historical): the one test both kinds of
+    failed call go through (`attempts.superseding_record`,
+    `attempts.historical_call`)."""
+    by = attempts.superseding_record(journal, at, records, mode, protocol, block_sha)
+    is_historical = attempts.historical_call(at, block_sha, protocol)
+    if by is None:
+        return None, is_historical
+    return _Superseded(label, mode, by.path.name, is_historical), is_historical
 
 
 def _open_failed(
     area: Path,
     journal: list[attempts.Attempt],
     records: Mapping[str, findings.Record],
-    historical: dict[str, str],
-) -> tuple[findings.Failed, ...]:
-    """AREA's `-failed.toml` files no completed audit of RECORDS covers, in
-    the JOURNAL's order (`attempts.covered_by_later_record`); each that is
-    historical goes into HISTORICAL (file name → why). Raises FindingsError
-    on a failed file that does not read."""
+    journal_read: bool,
+) -> _Calls:
+    """AREA's `-failed.toml` files as `_Calls` (no UNRECORDED): each
+    superseded by a later audit of RECORDS in the JOURNAL's order or still
+    open (`_classify`), why each open historical one is — none where the
+    journal did not read (JOURNAL_READ false). A failed file takes its
+    promise block from itself, its protocol from the start of the attempt
+    that wrote it. Raises FindingsError on a failed file that does not
+    read."""
     failed_at = {a.file: i for i, a in enumerate(journal) if a.outcome == "failed"}
-    out: tuple[findings.Failed, ...] = ()
+    failed: tuple[findings.Failed, ...] = ()
+    why: dict[str, str] = {}
+    superseded: list[_Superseded] = []
     for f in findings.failed_attempts(area):
         at = failed_at.get(f.path.name)  # None: no attempt names the file
-        if attempts.covered_by_later_record(
-            journal, at, records, f.mode, f.scope_sha, f.block_sha
-        ):
+        protocol = journal[at].protocol if at is not None else ""
+        by, is_historical = _classify(
+            journal, at, records, f.mode, protocol, f.block_sha, f.path.name
+        )
+        if by is not None:
+            superseded.append(by)
             continue
-        out += (f,)
+        failed += (f,)
+        if not (journal_read and is_historical):
+            continue
         if at is None:
-            historical[f.path.name] = (
+            why[f.path.name] = (
                 "no attempt of the journal names it, so its order is not known"
             )
-        elif f.block_sha == "":
-            historical[f.path.name] = "its file names no promise block"
-    return out
+        elif not f.block_sha:
+            why[f.path.name] = "its file names no promise block"
+        else:
+            why[f.path.name] = (
+                "the start of the attempt that wrote it, of labkit 0.103.0 or "
+                "earlier, names no protocol"
+            )
+    return _Calls(failed, (), why, tuple(superseded))
 
 
 def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
@@ -1809,7 +1907,8 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     write. Shown: the evidence errors of the area, each failed audit call
     — a `-failed.toml`, or an attempt the journal ended without a record,
     named with its kept answer — that no later completed audit of its
-    mode, code and promise block covers (`_recovery_records`), then each
+    mode, protocol and promise block superseded (`_recovery_records`);
+    each superseded one as superseded, informational; then each
     shown record's decisions (`decision_lines`) — RECORD alone, else every
     record with an open BLOCKER and the newest, the others counted. Where
     an open BLOCKER, an evidence error or such a failed call stands, the
@@ -1872,8 +1971,8 @@ def _print_problems(
         print(f"audit evidence incomplete: {error}")
     for f in listing.failed:
         call = f"{f.path.name} ({f.mode}, {f.model}): {f.error}"
-        if f.path.name in listing.historical:
-            why = listing.historical[f.path.name]
+        if f.path.name in listing.historical_why:
+            why = listing.historical_why[f.path.name]
             print(_historical_line(area, call, why, f.mode, protocol))
             continue
         print(
@@ -1889,15 +1988,39 @@ def _print_problems(
             f"attempt {a.id} ({a.mode}, {a.model}) ended without a record: "
             f"{a.error}{kept}"
         )
-        if a.id in listing.historical:
-            print(
-                _historical_line(area, call, listing.historical[a.id], a.mode, protocol)
-            )
+        if a.id in listing.historical_why:
+            why = listing.historical_why[a.id]
+            print(_historical_line(area, call, why, a.mode, protocol))
             continue
         print(
             f"audit did not complete: {call} — no findings to decide; the "
             "failed call approves no result"
         )
+    for c in listing.superseded:
+        print(_superseded_line(c))
+
+
+#: what superseding a failed call means and does not: the one wording of
+#: `--findings`' line, which the docs (README, workflow, CHANGELOG) state
+SUPERSEDED_MEANS = (
+    "this confirms neither its content nor the repair of any finding — a "
+    "recorded BLOCKER stays under the follow-up rule; the call and its answer "
+    "stay as they are, and the call needs nothing more"
+)
+
+
+def _superseded_line(c: _Superseded) -> str:
+    """The `--findings` line of a failed call a later audit superseded —
+    informational, it changes no exit: which record took its place and
+    what that means (SUPERSEDED_MEANS)."""
+    by = (
+        f"the later audit {c.record} of its mode in the current format (a "
+        "historical call: any protocol of the area)"
+        if c.of_mode_only
+        else f"the later audit {c.record} of its mode, protocol and promise block "
+        "(its code may differ)"
+    )
+    return f"audit call superseded: {c.label} ({c.mode}) by {by} — {SUPERSEDED_MEANS}"
 
 
 def _historical_line(

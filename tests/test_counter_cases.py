@@ -173,6 +173,61 @@ class RepairUnderUnchangedPromises(_Chain):
         self.assertIn(f"(run {second})", text)
 
 
+class SupersededCallReleasesNothing(_Chain):
+    """Counter-test 2 of the D3 rule (2026-10-28): a later audit that
+    supersedes a failed call confirms neither the call's content nor the
+    repair of any finding. A BLOCKER recorded, the code changed, a failed
+    call and the audit that supersedes it: the adoption stays held until a
+    follow-up judges the BLOCKER resolved with its required check shown,
+    and only then is the result released."""
+
+    def test_a_superseded_call_releases_no_recorded_blocker(self):
+        e2e._replace(self.measure_script, [(RIGHT, SWAPPED)])
+        self.lab.commit("the labels swapped: an implementation error")
+        first = self.run_measure(e2e.Judge._model)
+        rc, out = self.audit(
+            SIMULATED
+            + "BLOCKER · scripts/01_measure.py:82 · ANSWERS reads Yes as not_causal · "
+            "c1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
+            "demands · map Yes to causal · check: c1_accuracy\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
+        )
+        self.assertEqual(rc, 1, out)
+        (record,) = [r for r in findings.area_records(self.area) if r.run_id == first]
+        e2e._replace(self.measure_script, [(SWAPPED, RIGHT)])
+        self.decide(record.path, "fixed", "ANSWERS maps Yes to causal again")
+        self.lab.commit("the labels fixed")
+        second = self.run_measure(e2e.Judge._model)
+        # a failed call on the new code, then an audit that supersedes it and
+        # judges nothing of the earlier BLOCKER
+        rc, out = self.audit(
+            SIMULATED + "BLOCKER · x · check: Not A Key\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        self.assertEqual(rc, 2, out)
+        rc, out = self.audit(CLEAN)
+        self.assertEqual(rc, 0, out)
+        listing = io.StringIO()
+        with contextlib.redirect_stdout(listing), contextlib.redirect_stderr(listing):
+            rc = audit.main([str(self.area), "--findings"])
+        self.assertNotEqual(rc, 2, listing.getvalue())
+        self.assertIn("audit call superseded: attempt", listing.getvalue())
+        # the supersession released nothing: the BLOCKER holds the adoption
+        rc, out = self.lab.adopt(self.protocol, second)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"{record.path.name}#1: decided `fixed`, never followed up", out)
+        # the follow-up judges it resolved, the check shown: released
+        rc, out = self.audit(
+            SIMULATED
+            + f"FIX · {record.path.name}#1 · resolved · scripts/01_measure.py:82 maps "
+            f"Yes to causal; c1_accuracy 1.0 in run {second}\n"
+            + CLEAN.removeprefix(SIMULATED)
+        )
+        self.assertEqual(rc, 0, out)
+        text = self.released(second)
+        self.assertIn(f"(run {second})", text)
+
+
 class HonestMiss(_Chain):
     """The code does what it says and the criterion is missed: that is the
     result, reported as a miss and released — never not assessable, never

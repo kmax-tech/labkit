@@ -1740,25 +1740,31 @@ class UnrecordedCall(unittest.TestCase):
         self.assertEqual(rc, 2, out)
         self.assertIn(f"audit did not complete: {tried.path.name}", out)
 
-    def test_a_later_audit_of_its_mode_code_and_promise_block_covers_it(self):
+    def test_a_later_audit_of_its_mode_protocol_and_block_supersedes_it(self):
+        """The twins of the supersession: a later audit under another
+        promise block, or a later record of another mode, does not supersede
+        the call; the audit run again on the registered promises does — the
+        call is shown as superseded, never as open, exit 0."""
         area, attempt = self.unrecorded()
         protocol = area / "PROTOCOL-x0.md"
         registered = protocol.read_text(encoding="utf-8")
-        # a later audit under another promise block: no cover
         protocol.write_text(
             fixture.head(promises=fixture.C1_BLOCK) + registered, encoding="utf-8"
         )
         rc, _, err, _ = run(area, WARN)
         self.assertEqual(rc, 1, err)
         (other,) = findings.area_records(area)
-        self.assertEqual(other.scope_sha, attempt.scope_sha)
         self.assertNotEqual(other.block_sha, attempt.block_sha)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
-        self.assertIn(f"attempt {attempt.id}", out)
-        # a later record of another mode, journaled, on the same code and block
+        self.assertIn(f"audit did not complete: attempt {attempt.id}", out)
         later = attempts.begin(
-            area, "analysis", "opus", attempt.scope_sha, block_sha=attempt.block_sha
+            area,
+            "analysis",
+            "opus",
+            attempt.scope_sha,
+            block_sha=attempt.block_sha,
+            protocol=attempt.protocol,
         )
         analysis = findings.write(
             area,
@@ -1775,25 +1781,76 @@ class UnrecordedCall(unittest.TestCase):
         later.end("record", file=analysis.name)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
-        self.assertIn(f"attempt {attempt.id}", out)
-        # the audit run again on the registered promises: the call is covered
+        self.assertIn(f"audit did not complete: attempt {attempt.id}", out)
         protocol.write_text(registered, encoding="utf-8")
         rc, _, err, _ = run(area, WARN)
         self.assertEqual(rc, 1, err)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn(f"attempt {attempt.id}", out)
+        self.assertIn(f"audit call superseded: attempt {attempt.id} (preflight)", out)
+        self.assertNotIn(f"audit did not complete: attempt {attempt.id}", out)
         self.assertNotIn("--handover", out)
+
+    def test_a_corrected_code_and_a_new_audit_leave_no_hold(self):
+        """Counter-test 1, through labkit-audit: a failed audit, the code
+        corrected, a new audit of the same mode, protocol and promise block
+        on the new code — `--findings` holds nothing on the call's account
+        and names it superseded with what that means; the old journal lines
+        and the kept answer stay byte for byte."""
+        area, attempt = self.unrecorded()
+        journal = attempts.journal_path(area)
+        old = journal.read_text(encoding="utf-8")
+        answer = area / "audits" / attempt.answer
+        kept = answer.read_bytes()
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(SCRIPT + "# corrected\n", encoding="utf-8")
+        rc, _, err, _ = run(area, CLEAN)
+        self.assertEqual(rc, 0, err)
+        (record,) = findings.area_records(area)
+        self.assertNotEqual(record.scope_sha, attempt.scope_sha)  # the code moved
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            f"audit call superseded: attempt {attempt.id} (preflight) by the later "
+            f"audit {record.path.name} of its mode, protocol and promise block (its "
+            f"code may differ) — {audit.SUPERSEDED_MEANS}",
+            out,
+        )
+        self.assertNotIn("audit did not complete", out)
+        self.assertNotIn("--handover", out)
+        self.assertTrue(journal.read_text(encoding="utf-8").startswith(old))
+        self.assertEqual(answer.read_bytes(), kept)
+
+    def test_another_protocol_does_not_supersede(self):
+        """An area of two protocols: a later audit of the other protocol
+        leaves the call open; one of its own protocol supersedes it."""
+        area = repo_with(2)
+        rc, _, err, _ = run(area, self.UNREADABLE, "--protocol", "PROTOCOL-x0.md")
+        self.assertEqual(rc, 2, err)
+        (attempt,) = attempts.read_journal(area)
+        self.assertEqual(attempt.protocol, "PROTOCOL-x0.md")
+        rc, _, err, _ = run(area, CLEAN, "--protocol", "PROTOCOL-x1.md")
+        self.assertEqual(rc, 0, err)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"audit did not complete: attempt {attempt.id}", out)
+        rc, _, err, _ = run(area, CLEAN, "--protocol", "PROTOCOL-x0.md")
+        self.assertEqual(rc, 0, err)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"audit call superseded: attempt {attempt.id}", out)
 
     def as_historical(self, area: Path, attempt: attempts.Attempt) -> str:
         """Rewrite ATTEMPT's start in AREA's journal (and its copy) as labkit
-        0.103.0 wrote it, without `block_sha`; return the journal's text."""
+        0.103.0 wrote it, without `block_sha` and `protocol`; return the
+        journal's text."""
         journal = attempts.journal_path(area)
         rows = [json.loads(x) for x in journal.read_text(encoding="utf-8").splitlines()]
         (start,) = [
             r for r in rows if r["event"] == "started" and r["id"] == attempt.id
         ]
         self.assertEqual(start.pop("block_sha"), attempt.block_sha)
+        self.assertEqual(start.pop("protocol"), attempt.protocol)
         old = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
         journal.write_text(old, encoding="utf-8")
         copy = attempts.journal_copy(area)
@@ -1834,7 +1891,13 @@ class UnrecordedCall(unittest.TestCase):
         self.assertNotEqual(findings.area_records(area)[0].scope_sha, attempt.scope_sha)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn(attempt.id, out)
+        (record,) = findings.area_records(area)
+        self.assertIn(
+            f"audit call superseded: attempt {attempt.id} (preflight) by the later "
+            f"audit {record.path.name} of its mode in the current format",
+            out,
+        )
+        self.assertNotIn("audit did not complete", out)
         # the old evidence as it was: the journal only grew, the answer kept
         journal = attempts.journal_path(area).read_text(encoding="utf-8")
         self.assertTrue(journal.startswith(old))
@@ -1869,7 +1932,8 @@ class UnrecordedCall(unittest.TestCase):
         self.assertEqual(rc, 1, err)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn(failed.name, out)
+        self.assertIn(f"audit call superseded: {failed.name} (preflight)", out)
+        self.assertNotIn("audit did not complete", out)
 
     def test_without_a_readable_journal_no_failed_file_is_called_historical(self):
         area = repo_with()

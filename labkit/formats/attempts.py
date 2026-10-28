@@ -9,7 +9,7 @@ object per line, never rewriting one:
 
     {"event": "started", "id": "2026-10-26T09-16-analysis-3f2a", "mode": "analysis",
      "model": "opus", "scope_sha": "fa45c7618423", "block_sha": "0c1d2e3f4a5b",
-     "started": "2026-10-26T09:16:02", "host": "pcstein6"}
+     "protocol": "PROTOCOL-x.md", "started": "2026-10-26T09:16:02", "host": "pcstein6"}
     {"event": "ended", "id": "2026-10-26T09-16-analysis-3f2a", "outcome": "failed",
      "file": "2026-10-26T09-16-analysis-failed.toml"}
     {"event": "interrupted", "id": "…", "found_by": "<the id of the next attempt>"}
@@ -49,10 +49,10 @@ read: the area's stamp for an audit and a decision review, the
 fingerprint of its inputs for a report review (`report_reviews.fingerprint`
 — an area without scripts has no stamp, and the inputs are what the
 reader saw). An audit's start also names the promise block it read
-(`block_sha`, `promises.block_stamp`); a review's names none. Together
-with the journal's order they tell whether a later audit covers a
-failed call (`covered_by_later_record`), the one gate that reads them:
-`labkit-audit --findings`.
+(`block_sha`, `promises.block_stamp`) and the protocol it audited (its
+file name in the area, `protocol`); a review's names neither. With the
+journal's order they tell whether a later audit supersedes a failed
+call (`superseding_record`), which only `labkit-audit --findings` reads.
 
 The journal starts with the attempts made since it was introduced; a
 record older than its journal is named by none, and none is added for it
@@ -176,11 +176,13 @@ class Attempt:
     interrupted: bool = False
     answer: str = ""  # the kept answer under audits/, once ended after one
     # the promise block an audit was started on (`promises.NO_BLOCK` for a
-    # protocol that declares none, compared like any block); "" where the
-    # start names no block — a review's (`begin(block_sha=None)`), or an
-    # audit's written by labkit 0.103.0 or earlier: a historical call
-    # (`historical_call`), never compared on its block
+    # protocol that declares none, compared like any block) and the protocol
+    # it audited, by file name in the area; "" where the start names none —
+    # a review's (`begin(block_sha=None, protocol=None)`), or an audit's
+    # written by labkit 0.103.0 or earlier: a historical call
+    # (`historical_call`), never compared on them
     block_sha: str = ""
+    protocol: str = ""
 
 
 def journal_path(area: Path) -> Path:
@@ -241,10 +243,11 @@ def _started(aid: str, row: dict, at: str) -> Attempt:
             str(row["scope_sha"]),
             str(row["started"]),
             str(row["host"]),
-            # a review's start names no block, nor an audit's written by
-            # 0.103.0 or earlier: such a start reads as it stands, a historical
-            # call (`historical_call`), and no block is supplied for it
+            # a review's start names no block and no protocol, nor an audit's
+            # written by 0.103.0 or earlier: such a start reads as it stands, a
+            # historical call (`historical_call`), and neither is supplied
             block_sha=str(row.get("block_sha") or ""),
+            protocol=str(row.get("protocol") or ""),
         )
     except KeyError as exc:
         raise AttemptError(
@@ -277,54 +280,59 @@ def _after(was: Attempt, event: str, row: dict, at: str) -> Attempt:
     )
 
 
-def historical_call(at: int | None, block_sha: str) -> bool:
+def historical_call(at: int | None, block_sha: str, protocol: str) -> bool:
     """Is a failed audit call historical — one whose binding or order the
-    journal cannot give: an attempt whose start names no promise block
-    (BLOCK_SHA "", written by labkit 0.103.0 or earlier), or a
-    `-failed.toml` no attempt of the journal names (AT None)?"""
-    return at is None or not block_sha
+    journal cannot give: an attempt whose start names no promise block or
+    no protocol (BLOCK_SHA or PROTOCOL "", a start written by labkit
+    0.103.0 or earlier), or a `-failed.toml` no attempt of the journal
+    names (AT None)?"""
+    return at is None or not block_sha or not protocol
 
 
-def covered_by_later_record(
+def superseding_record(
     journal: list[Attempt],
     at: int | None,
     records: Mapping[str, findings.Record],
     mode: str,
-    scope_sha: str,
+    protocol: str,
     block_sha: str,
-) -> bool:
-    """Is the failed audit call that JOURNAL holds at AT (None: no attempt
-    names it) — of MODE, on the code SCOPE_SHA and the promise block
-    BLOCK_SHA it would have read — covered by a completed audit? Two cases:
+) -> findings.Record | None:
+    """The record that supersedes the failed audit call JOURNAL holds at AT
+    (None: no attempt names it) — of MODE, on the PROTOCOL (file name) and
+    the promise block BLOCK_SHA it audited — or None. Superseded means: a
+    later completed audit of the same mode and the same protocol with the
+    same promise block took the call's place, also after a code change.
+    The call and its kept answer stay as they are; nothing is confirmed —
+    neither the call's content nor the repair of any finding (a recorded
+    BLOCKER stays under the follow-up rule, `followup`). Two cases:
 
-    - a historical call (`historical_call`): by a later audit of its MODE
-      alone, started in the current format (its start names a block), on
-      whatever code and promises it read — the old call cannot be held to
-      a binding or an order the journal never named, no block is supplied
-      after the fact, and the new record binds today's; that is the
-      documented way from the old format to the new (`--findings` names
-      the command);
-    - any other call: by a record of the same mode, code and promise block
-      that a later attempt of JOURNAL ended with.
+    - a historical call (`historical_call`): a later audit of its MODE
+      alone, started in the current format (its start names a block and a
+      protocol) — the old call cannot be held to a binding or an order the
+      journal never named, and none is supplied after the fact; that is
+      the documented way from the old format to the new;
+    - any other call: a record of the same mode and promise block that a
+      later attempt of JOURNAL, started on the same protocol, ended with.
 
     RECORDS are the area's records of findings by file name under audits/;
-    one no attempt names covers nothing. BLOCK_SHA is the call's own: a
-    `-failed.toml` carries it in its file, an attempt that ended without a
-    record in its start. Pure."""
+    one no attempt names supersedes nothing, nor does an earlier one. The
+    call's BLOCK_SHA is its own: a `-failed.toml` carries it in its file,
+    an attempt that ended without a record in its start. The first
+    superseding record is returned. Pure."""
     # a file no attempt names (a historical call) has no place in the
     # journal: every attempt of it counts as later
     later = journal if at is None else journal[at + 1 :]
-    ended = [(a, records.get(a.file)) for a in later if a.outcome == "record"]
-    if historical_call(at, block_sha):
-        return any(
-            r is not None and r.mode == mode and a.block_sha != ""  # current format
-            for a, r in ended
-        )
-    return any(
-        r is not None
-        and (r.mode, r.scope_sha, r.block_sha) == (mode, scope_sha, block_sha)
-        for _, r in ended
-    )
+    historical = historical_call(at, block_sha, protocol)
+    for a in later:
+        r = records.get(a.file) if a.outcome == "record" else None
+        if r is None or r.mode != mode:
+            continue
+        if historical:
+            if a.block_sha != "" and a.protocol != "":  # the current format
+                return r
+        elif a.protocol == protocol and r.block_sha == block_sha:
+            return r
+    return None
 
 
 @dataclass(frozen=True)
@@ -1021,18 +1029,24 @@ class Running:
 
 
 def begin(
-    area: Path, mode: str, model: str, scope_sha: str, *, block_sha: str | None
+    area: Path,
+    mode: str,
+    model: str,
+    scope_sha: str,
+    *,
+    block_sha: str | None,
+    protocol: str | None,
 ) -> Running:
     """Start an attempt of MODE on AREA: under the area's lock, read the
     journal and the files, refuse when another attempt runs or a file is
     gone (`gaps`), mark every attempt without an end whose lock is free as
     interrupted (named in `Running.notes`), take the new attempt's lock and
-    write its start — with BLOCK_SHA, the promise block an audit reads
-    (None for a review, which binds no block of its own; the start then
-    names none and reads back as `Attempt.block_sha` "", as a start of
-    labkit 0.103.0 or earlier does: `historical_call`). Raises AttemptError
-    on a refusal or a journal that does not read, RuntimeError when git
-    fails."""
+    write its start — with BLOCK_SHA, the promise block an audit reads, and
+    PROTOCOL, the file name of the protocol it audits (None for a review,
+    which binds neither of its own; the start then names none and reads
+    back as "", as a start of labkit 0.103.0 or earlier does:
+    `historical_call`). Raises AttemptError on a refusal or a journal that
+    does not read, RuntimeError when git fails."""
     with _area_lock(area):
         found = area_gaps(area)
         attempts = read_journal(area)
@@ -1072,6 +1086,7 @@ def begin(
                 "model": model,
                 "scope_sha": scope_sha,
                 **({"block_sha": block_sha} if block_sha is not None else {}),
+                **({"protocol": protocol} if protocol is not None else {}),
                 "started": now_stamp(),
                 "host": socket.gethostname(),
             },
@@ -1088,7 +1103,8 @@ def attempt(area: Path, mode: str, model: str, scope_sha: str) -> Generator[Runn
     ended before the record". The decision and the report review use it;
     the analysis audit ends its attempt across two steps itself
     (`gates.audit`). Raises what `begin` raises, before any call."""
-    running = begin(area, mode, model, scope_sha, block_sha=None)  # reviews only
+    # reviews only: they bind no promise block or protocol of their own
+    running = begin(area, mode, model, scope_sha, block_sha=None, protocol=None)
     try:
         yield running
     except BaseException as exc:

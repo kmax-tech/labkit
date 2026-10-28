@@ -125,7 +125,14 @@ class WorkflowOrientation(unittest.TestCase):
             )
             # the failed call and the later audit as labkit-audit makes them:
             # each an attempt of the journal, ended with its file
-            tried = attempts.begin(area, "analysis", "auditor", "abc", block_sha="none")
+            tried = attempts.begin(
+                area,
+                "analysis",
+                "auditor",
+                "abc",
+                block_sha="none",
+                protocol="PROTOCOL-example.md",
+            )
             failed = findings.write_failed(
                 area,
                 "analysis",
@@ -144,7 +151,14 @@ class WorkflowOrientation(unittest.TestCase):
             self.assertEqual(rc, 2, out.getvalue())
             self.assertIn(failed.name, out.getvalue())
             self.assertIn("--handover", out.getvalue())
-            later = attempts.begin(area, "analysis", "auditor", "abc", block_sha="none")
+            later = attempts.begin(
+                area,
+                "analysis",
+                "auditor",
+                "abc",
+                block_sha="none",
+                protocol="PROTOCOL-example.md",
+            )
             covering = findings.write(
                 area,
                 "analysis",
@@ -162,7 +176,8 @@ class WorkflowOrientation(unittest.TestCase):
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
                 rc = audit.main([str(area), "--findings"])
             self.assertEqual(rc, 0, out.getvalue())
-            self.assertNotIn(failed.name, out.getvalue())
+            self.assertIn(f"audit call superseded: {failed.name}", out.getvalue())
+            self.assertNotIn("audit did not complete", out.getvalue())
             self.assertNotIn("--handover", out.getvalue())
 
 

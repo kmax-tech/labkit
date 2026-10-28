@@ -315,13 +315,19 @@ To end a protocol without a result (a handover), use `labkit-audit <AREA> --find
 first: it reads all open BLOCKER records and evidence errors without a
 model call and prints complete commands. For a failed audit call — a
 `-failed.toml` or an attempt the journal ended without a record (its
-answer kept under `audits/answers/`) — that no completed audit of the
-same mode, code and promise block made after it covers (the journal's
-order), it names the call, its error and its kept answer and offers the
-handover, exit 2; that call left no findings to decide. A historical
-call (a start of labkit 0.103.0 or earlier, which names no promise block,
-or a `-failed.toml` no journal attempt names) is named as such with the
-audit, run again now in the current format, that settles it. Explicitly decide readable
+answer kept under `audits/answers/`) — it names the call, its error and
+its kept answer and offers the handover, exit 2; that call left no
+findings to decide. A later completed audit of the same mode and the
+same protocol with the same promise block supersedes it, also after a
+code change: `--findings` then shows it as superseded, informational.
+The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. Whether the current result may be adopted is decided
+by the checks of the current code and run (the follow-up holds,
+report-check), not by the supersession. A historical call (a start of
+labkit 0.103.0 or earlier, which names no promise block and protocol, or
+a `-failed.toml` no journal attempt names) is named as such with the
+audit, run again now in the current format, that supersedes it — an
+audit of its mode, of any protocol of the area, since the old start
+names none. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
 REPORT.md` command. It withdraws the result declaration, keeps an
