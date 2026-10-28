@@ -727,7 +727,7 @@ class Adopt(unittest.TestCase):
                 [],
                 run_id=self.RUN,
                 shown_sha=audit_binding.run_shown(
-                    area, area / "runs" / self.RUN, ""
+                    area, area / "runs" / self.RUN, "", None
                 ).sha,
                 registration=registration_of(area),
             )
@@ -812,6 +812,90 @@ class Adopt(unittest.TestCase):
         self.assertEqual(atomic.call_count, 1)
         self.assertEqual(proto.read_text(encoding="utf-8"), seen["text"])
         self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])
+
+
+class WithdrawText(unittest.TestCase):
+    """`protocol_fill.withdraw` on a protocol's text: the declaration gone,
+    the generated lines reset, the trace on the run's Runs entry — also for a
+    `[result]` that does not read, which no audit may crash on
+    (`protocol_block.declared_run_shown`). The chain through the commands
+    stands in test_end_to_end.Withdraw."""
+
+    RUN = "2026-01-01T00-00-00_0001"
+    DAY = "2026-10-28"
+
+    def protocol(self, result: str | None) -> str:
+        return (
+            "# Experiment protocol: x\n\n## Result\n\n"
+            f"- **Recorded results:** lines_mean = 3.0 (run {self.RUN})\n"
+            "- **Limit (audit 2026-01-01T00-00-analysis #1):** the verdicts stand\n"
+            "- **Deviations after freeze:** none\n\n"
+            f"## Runs\n\n- {self.RUN} — the kept run\n\n## Head\n\n"
+            + head(result=result)
+        )
+
+    def test_the_declaration_goes_and_the_trace_stays_on_the_runs_entry(self):
+        new, run = protocol_fill.withdraw(
+            self.protocol(self.RUN), "code changed", self.DAY
+        )
+        self.assertEqual(run, self.RUN)
+        self.assertIsNone(protocol_block.declared_run(new))
+        self.assertIn(
+            f"- {self.RUN} — the kept run · withdrawn {self.DAY}: code changed", new
+        )
+        (rr,) = [f for f in protocol_check.fields(new) if f.name == "recorded results"]
+        self.assertTrue(rr.placeholder)  # the next --from-run needs no --force
+        self.assertIn(
+            f"run {self.RUN} is no longer the result — code changed", rr.value
+        )
+        self.assertNotIn("Limit (audit", new)
+        self.assertIn("- **Deviations after freeze:** none", new)  # the rest kept
+
+    def test_a_declaration_that_does_not_read_is_withdrawn_too(self):
+        text = self.protocol("final")
+        with self.assertRaises(protocol_block.BlockError):
+            protocol_block.declared_run(text)
+        shown = protocol_block.declared_run_shown(text)
+        assert shown is not None
+        self.assertIn("does not read", shown)
+        piece = audit_binding.declared_piece(None, shown)
+        self.assertEqual(len(piece), 1)  # the audit shows it, never crashes on it
+        new, _ = protocol_fill.withdraw(text, "a typed run id", self.DAY)
+        self.assertIsNone(protocol_block.declared_run(new))
+        self.assertIn(f"withdrawn {self.DAY}: a typed run id", new)
+
+    def test_nothing_declared_or_no_reason_is_refused(self):
+        with self.assertRaises(ValueError):
+            protocol_fill.withdraw(self.protocol(None), "why", self.DAY)
+        with self.assertRaises(ValueError):
+            protocol_fill.withdraw(self.protocol(self.RUN), "  ", self.DAY)
+
+    def test_the_declared_piece_stands_only_beside_another_run(self):
+        run = Path("/x/runs") / self.RUN
+        self.assertEqual(audit_binding.declared_piece(run, None), [])
+        self.assertEqual(
+            audit_binding.declared_piece(run, self.RUN), []
+        )  # first adoption
+        ((label, text),) = audit_binding.declared_piece(run, "2026-01-01T00-00-00_0000")
+        self.assertEqual(label, audit_binding.DECLARED_LABEL)
+        self.assertIn("2026-01-01T00-00-00_0000", text)
+
+    def test_withdraw_takes_why_and_no_other_operation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "PROTOCOL-x.md"
+            p.write_text(self.protocol(self.RUN), encoding="utf-8")
+            for argv in (
+                [str(p), "--withdraw"],
+                [str(p), "--withdraw", "--why", "w", "--force"],
+                [str(p), "--withdraw", "--why", "w", "--from-run", self.RUN],
+            ):
+                with self.subTest(argv=argv[1:]):
+                    with (
+                        self.assertRaises(SystemExit),
+                        contextlib.redirect_stderr(io.StringIO()),
+                    ):
+                        protocol_fill.main(argv)
+            self.assertEqual(p.read_text(encoding="utf-8"), self.protocol(self.RUN))
 
 
 class PromiseSentences(unittest.TestCase):

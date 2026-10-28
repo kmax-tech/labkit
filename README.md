@@ -251,6 +251,7 @@ protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
 protocol-fill PROTOCOL --into REPORT.md # the declared result as a generated block in a report
 protocol-fill PROTOCOL --handover --why "…" --tried "…" --into REPORT.md # end without a result: [result] withdrawn, a handover record, its block in the report
 protocol-fill PROTOCOL --discuss RUN_ID --why "…" --into REPORT.md # a run the report looks at without reporting it, as a discussion block
+protocol-fill PROTOCOL --withdraw --why "…" [--into REPORT.md] # the declaration withdrawn, the run's Runs entry marked; audit, then --from-run adopts the run that answers
 code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
 intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
 scope-sha AREA                     # code stamp used by an audit

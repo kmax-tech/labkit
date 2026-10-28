@@ -165,7 +165,10 @@ the cited rules of the standard — one model call. Writes: `audits/<minute>-ana
 promise block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`; the report
 fields written later do not move it) — the run and what the auditor was
-shown of it (`shown_sha`). The person decides every finding; labkit stores the
+shown of it (`shown_sha`) — with the run the protocol declares when that
+is another one, so withdrawing that declaration moves the state and the
+next audit follows earlier findings up, while the first adoption of the
+run audited moves nothing. The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
 named promise (`not assessable`) — where the protocol registers one: a
@@ -226,6 +229,17 @@ the file on a blocker: a result adopted this way has passed every check.
 The `Conclusion` is the author's sentence, written before this step (the
 walkthrough does so); `--render` writes the generated lines again after
 a change.
+
+A declared result is replaced, never overwritten: `protocol-fill
+PROTOCOL-<name>.md --withdraw --why "<why>"` removes `[result]`, resets
+the generated lines and marks the run's entry in the run list `withdrawn
+<date>: <why>` (with `--into REPORT.md` it also withdraws the result
+blocks there). It touches no audit record and releases nothing: the
+analysis audit of the run that answers comes next — it follows earlier
+decided BLOCKERs up —, then this step for that run. An audit made while
+another run was declared does not cover the new declaration. The commit
+hook holds the code to a declared run, so a change of the measuring code
+after an adoption starts with the withdrawal.
 
 ## 8. The report block — the number outside the protocol
 

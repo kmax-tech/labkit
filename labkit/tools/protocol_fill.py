@@ -30,6 +30,14 @@ placeholders included) and leaves everything else byte-identical.
                                                `[result]` withdrawn, a handover record
                                                under audits/handovers/, its handover
                                                block in the report (`handovers`)
+    protocol-fill PROTOCOL-x.md --withdraw --why "…" [--into REPORT.md]
+                                               the declaration withdrawn: `[result]`
+                                               gone, Recorded results and Limit lines
+                                               reset, the run's Runs entry marked
+                                               `withdrawn <date>: <why>`, its result
+                                               blocks in REPORT withdrawn; audit
+                                               records and findings untouched, no
+                                               result released
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), Recorded results and
                                                Runs lines from its metrics.json (by default the
@@ -67,6 +75,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from datetime import date
 from pathlib import Path
 
 from labkit.formats import (
@@ -80,7 +89,14 @@ from labkit.formats import (
     runs,
 )
 from labkit.checks.result_render import Rendering, rendering
-from labkit.formats.repo import GitError, audit_command, git_root, shown, state_text
+from labkit.formats.repo import (
+    GitError,
+    adopt_command,
+    audit_command,
+    git_root,
+    shown,
+    state_text,
+)
 from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check, report_hold
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
@@ -995,6 +1011,8 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     """The exit code of the mode ARGS name (--handover, --list, --prompts,
     --render, --discuss, --into, --from-run), or None when they name none:
     a field fill."""
+    if args.withdraw:
+        return _withdraw_file(args, text)
     if args.handover:
         return _handover_file(args, text)
     if args.list:
@@ -1017,13 +1035,15 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
 
 
 def without_result(text: str) -> str:
-    """Withdraw only the result declaration; preserve registration and run evidence."""
-    if protocol_block.declared_run(text) is None:
-        return text
+    """Withdraw only the result declaration — the `[result]` table, also one
+    that does not read; preserve registration and run evidence."""
     span = protocol_block.toml_block_span(text)
-    assert span is not None
+    if span is None:
+        return text
     lines = text.split("\n")
-    start = next(i for i in range(*span) if _RESULT_HEADER.match(lines[i]))
+    start = next((i for i in range(*span) if _RESULT_HEADER.match(lines[i])), None)
+    if start is None:
+        return text
     end = next(
         (
             i
@@ -1037,6 +1057,111 @@ def without_result(text: str) -> str:
     if protocol_block.declared_run(result) is not None:
         raise ValueError("[result] declaration could not be withdrawn")
     return result
+
+
+def withdrawn_runs_entry(text: str, run_id: str, day: str, why: str) -> str:
+    """TEXT with the `## Runs` entry of RUN_ID marked `· withdrawn DAY: WHY`
+    — the trace a withdrawal leaves where the run list stands and every
+    later adoption keeps (`runs_line` only appends); an entry is added when
+    the list does not name the run. Raises ValueError without a `## Runs`
+    section."""
+    mark = f" · withdrawn {day}: {why}"
+    if not runs.RUN_ID.match(run_id):
+        # a declaration that did not read names no run: its own entry
+        text, _ = runs_line(text, f"[result] {run_id}", f"withdrawn {day}: {why}")
+        return text
+    text, _ = runs_line(text, run_id, "the run declared as the result")
+    lines = text.split("\n")
+    heading = next(
+        i for i in protocol_block.section_starts(lines) if RUNS_HEADING.match(lines[i])
+    )
+    end = protocol_block.section_end(lines, heading)
+    at = next(i for i in range(heading + 1, end) if run_id in lines[i])
+    lines[at] += mark
+    return "\n".join(lines)
+
+
+#: what Recorded results says after a withdrawal: a placeholder again (the
+#: next `--from-run` fills it without --force), naming what was withdrawn
+WITHDRAWN_RESULTS = (
+    "<withdrawn {day}: run {run} is no longer the result — {why}; "
+    "protocol-fill --from-run writes this field for the run adopted next>"
+)
+
+
+def withdraw(text: str, why: str, day: str) -> tuple[str, str]:
+    """`--withdraw`: TEXT without its result declaration (`without_result`),
+    the lines `--from-run` generated reset — Recorded results to a
+    placeholder naming the withdrawal (WITHDRAWN_RESULTS), every Limit line
+    dropped — and the run's Runs entry marked with DAY and WHY
+    (`withdrawn_runs_entry`). Audit records, findings and runs are not
+    touched: a withdrawal releases nothing and settles nothing. Returns
+    (text, the run withdrawn). Raises ValueError when TEXT declares no
+    result or WHY is empty."""
+    run_id = protocol_block.declared_run_shown(text)
+    if run_id is None:
+        raise ValueError(
+            "the protocol declares no result ([result] run) — nothing to withdraw"
+        )
+    if not why.strip():
+        raise ValueError(
+            "--withdraw needs --why: one line, why the run is no longer the result"
+        )
+    new = without_result(text)
+    new = fill(
+        new,
+        RECORDED_RESULTS_LABEL,
+        WITHDRAWN_RESULTS.format(day=day, run=run_id, why=why.strip()),
+        force=True,
+    )
+    new, _ = drop_stray_limits(new, ())
+    return withdrawn_runs_entry(new, run_id, day, why.strip()), run_id
+
+
+def _withdraw_file(args: argparse.Namespace, text: str) -> int:
+    """`--withdraw`: the protocol's declaration withdrawn (`withdraw`) and,
+    with --into, the protocol's result blocks in that report
+    (`report_blocks.withdraw_result_blocks`); the protocol is written last,
+    so a report that does not read leaves both as they were. Names the
+    steps that remain and every report still citing the run."""
+    protocol = args.protocol.resolve()
+    try:
+        new, run_id = withdraw(text, args.why, date.today().isoformat())
+        report_after: tuple[Path, str] | None = None
+        if args.into is not None:
+            report = args.into.resolve()
+            if not report.is_file():
+                raise ValueError(f"no such report: {args.into}")
+            before = report.read_text(encoding="utf-8")
+            after = report_blocks.withdraw_result_blocks(before, protocol, report)
+            if after != before:
+                report_after = (report, after)
+    except (ValueError, report_blocks.ReportBlockError) as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+    if report_after is not None:
+        files.write_atomic(*report_after)
+    files.write_atomic(protocol, new)
+    area = protocol.parent
+    print(
+        f"withdrawn: run {run_id} is no longer the result of {protocol.name} — its "
+        f"Runs entry keeps why; audit records and findings are as they were, and "
+        f"nothing is released"
+        + (
+            f"; its result blocks left {shown(report_after[0], Path.cwd())}"
+            if report_after
+            else ""
+        )
+    )
+    print(
+        f"next: `{audit_command(area, '--mode analysis', protocol=protocol)}` audits "
+        f"the state as it is now (earlier decided BLOCKERs are followed up), decide "
+        f"its findings, then `{adopt_command(protocol)}` adopts the run that answers"
+    )
+    root = git_root(area)
+    if root is not None:
+        _print_still_citing(protocol, run_id, root)
+    return 0
 
 
 def _handover_file(args: argparse.Namespace, text: str) -> int:
@@ -1165,7 +1290,24 @@ def _check_report_mode_args(
     ap: argparse.ArgumentParser, args: argparse.Namespace
 ) -> None:
     """Refuse incomplete or conflicting report operations before file access."""
-    if args.handover:
+    if args.withdraw:
+        if not args.why:
+            ap.error(
+                "--withdraw requires --why TEXT: why the run is no longer the result"
+            )
+        if (
+            args.handover
+            or args.discuss is not None
+            or args.from_run is not None
+            or args.tried is not None
+            or args.force
+            or args.list
+            or args.prompts
+            or args.render
+            or args.field is not None
+        ):
+            ap.error("--withdraw goes with --why and an optional --into REPORT only")
+    elif args.handover:
         if not args.why or not args.tried or args.into is None:
             ap.error("--handover requires --why TEXT, --tried TEXT and --into REPORT")
         if args.force:
@@ -1244,7 +1386,8 @@ def main(argv: list[str]) -> int:
         "--why",
         default=None,
         help="one line: with --discuss what refused the adoption and what you "
-        "found; with --handover what blocks, naming the protocol, no run ids",
+        "found; with --handover what blocks, naming the protocol, no run ids; "
+        "with --withdraw why the run is no longer the result",
     )
     ap.add_argument(
         "--handover",
@@ -1253,6 +1396,15 @@ def main(argv: list[str]) -> int:
     )
     ap.add_argument(
         "--tried", help="with --handover: what was tried — one line, no run ids"
+    )
+    ap.add_argument(
+        "--withdraw",
+        action="store_true",
+        help="with --why (and --into REPORT): withdraw the result declaration — "
+        "[result] removed, Recorded results and Limit lines reset, the run's Runs "
+        "entry marked withdrawn with the date and why, its result blocks in REPORT "
+        "withdrawn; audit records and findings untouched; no result is released, "
+        "the next adoption owes a covering audit",
     )
     ap.add_argument(
         "--from-run",

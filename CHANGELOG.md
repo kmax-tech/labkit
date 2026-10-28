@@ -1347,6 +1347,34 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A declared result is replaced by withdrawing it: `protocol-fill
+  --withdraw`; an audit binds the run declared beside it.** In the
+  file-check case (2026-10-28) an audit found the protocol's `[result]`
+  declaring another run than the one it judged. The agent re-adopted with
+  `protocol-fill --from-run` and decided the BLOCKER `fixed`. The
+  re-adoption did not move the audited state, so no later audit followed
+  the finding up, and report-check held it for good. The agent committed
+  past the hook. A first fix bound the declaration but kept `--from-run
+  --force` as the way; then an audit made while another run was declared
+  could never cover the new declaration, and it was reverted before its
+  acceptance.
+
+  Now MODE analysis shows a `DECLARED RUN` piece when the protocol
+  declares another run than the one shown, also one that does not read,
+  and `shown_sha` binds it (`audit_binding.declared_piece`). A declaration
+  is replaced in three steps. `protocol-fill <PROTOCOL> --withdraw --why
+  "…"` removes `[result]`, resets Recorded results and the Limit lines,
+  and marks the run's Runs entry `withdrawn <date>: <why>`. With `--into
+  REPORT.md` it also withdraws the result blocks there. It touches no
+  audit record or finding and releases nothing. Then the analysis audit of
+  the run that answers follows earlier BLOCKERs up. Then `--from-run`
+  adopts it, without `--force`. The first adoption of the run audited
+  moves no state. The ways out gain "a wrong declaration", and finalize,
+  report-check, the hold of a BLOCKER `fixed` in the state audited and
+  AGENTS.md name the withdrawal where they named `--from-run --force`. The
+  `--force` replacement stays in protocol-fill until the acceptance case
+  has run. An analysis record written while the head declared another run
+  than it audited no longer covers the state; audit again.
 - **A required check is computed from the kept rows.** The work order
   said "compute the key from what the run measures", and the recheck
   (`02_analyze.py --check`) recomputes every metrics key from the kept

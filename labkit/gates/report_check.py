@@ -162,20 +162,21 @@ from labkit.gates.report_hold import (
 from labkit.formats.protocol_check import check_fields, conclusion_written
 from labkit.formats.repo import (
     adopt_command,
-    audit_command,
-    decide_command,
     area_path,
     area_protocols,
+    audit_command,
     choose_protocol,
     commit_known,
+    decide_command,
     git_root,
     indexed_protocols,
-    protocol_links,
     layout_root,
     measure_command,
     no_such_area,
+    protocol_links,
     shown,
     state_text,
+    withdraw_command,
 )
 from labkit.formats.runs import read_run_config, recorded_commit, unreportable
 from labkit.formats.scope_sha import areas_touched
@@ -1054,8 +1055,9 @@ def report_check(
     if ctx.declaration_gap:
         findings.block(
             f"{chosen.name}: {ctx.declaration_gap}",
-            fix=f"`{adopt_command(ctx.protocol)} --force` writes the `[result]` "
-            f"table for the run that answers",
+            fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
+            f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
+            f"`[result]` table for it",
         )
 
     # 2. registration — freeze or committed registration, as the lane owes

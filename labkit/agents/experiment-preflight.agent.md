@@ -125,7 +125,9 @@ output), say so in one line and audit the code alone. Under `===== DEPENDENCY
 predictor's weights, a model file — as the run read them: whole when small
 text, else named with their digest and why they are not shown. Judge the
 instrument against them; a finding that needs a dependency shown nowhere
-says which file and what it must show.
+says which file and what it must show. Under `===== DECLARED RUN =====`
+stands the run the protocol's `[result]` declares when it is not the run
+shown: the head reports another run than the one you judge.
 
 **In MODE analysis, judge every earlier decided BLOCKER.** Under
 `===== EARLIER DECIDED BLOCKERS =====` stand the area's BLOCKERs that a

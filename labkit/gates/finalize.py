@@ -95,17 +95,18 @@ from labkit.formats.answering_run import (
 )
 from labkit.formats import protocol_history
 from labkit.formats.repo import (
-    AmbiguousArea,
-    ProtocolChoiceError,
     adopt_command,
-    audit_command,
+    AmbiguousArea,
     area_path,
+    audit_command,
+    git_root,
     layout_root,
     measure_command,
     no_such_area,
+    ProtocolChoiceError,
     shown,
-    git_root,
     the_protocol,
+    withdraw_command,
 )
 from labkit.gates.ways_out import HANDOVER, PROTOCOL_NAMED, register_anew
 from labkit.checks.intent_check import hold as intent_hold
@@ -177,10 +178,11 @@ def declared_run_mismatch(
     return blocker(
         f"[result] declares {declared}, but the run that answers is "
         f"{answering_run.name}",
-        fix=f"once that run's checks hold (its analysis audit decided, no open "
-        f"BLOCKER on it), `{adopt_command(protocol, answering_run.name)} --force` "
-        f"declares it; if the fault is in that run, fix the code and measure "
-        f"again first",
+        fix=f"withdraw the declaration (`{withdraw_command(protocol)}`), audit the "
+        f"run that answers and decide its findings, then "
+        f"`{adopt_command(protocol, answering_run.name)}` declares it — an audit "
+        f"made while another run is declared does not cover it; if the fault is "
+        f"in that run, fix the code and measure again first",
     )
 
 
@@ -794,8 +796,8 @@ def declared_run_gaps(area: Path, text: str, protocol: Path) -> list[GateFinding
     typed — a typed one claims a run that may not exist. Empty without a
     declaration."""
     written = (
-        f"`{adopt_command(protocol, '<run_id>')} --force` writes the table for the "
-        f"run that answers"
+        f"`{withdraw_command(protocol)}` removes it; audit the run that answers, "
+        f"then `{adopt_command(protocol, '<run_id>')}` writes the table for it"
     )
     try:
         declared = protocol_block.declared_run(text)

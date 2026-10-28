@@ -45,8 +45,13 @@ class AdoptionOrder(unittest.TestCase):
         )
         self.assertIsNotNone(msg)
         assert msg is not None
-        self.assertIn("once that run's checks hold", msg.fix or "")
+        # the replacement goes through the withdrawal and an audit, never --force
+        self.assertIn("withdraw the declaration", msg.fix or "")
+        self.assertIn(
+            "audit the run that answers and decide its findings", msg.fix or ""
+        )
         self.assertIn("fix the code and measure again first", msg.fix or "")
+        self.assertNotIn("--force", msg.fix or "")
 
 
 HEAD = '```toml\n[protocol]\nstandard = "0.23"\nid = "p-0123456789abcdef"\ntype = "exploratory"\nrepeat_cost = "{cost}"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'

@@ -251,7 +251,7 @@ class Audit(unittest.TestCase):
         # the prompt, and the record's shown_sha is its digest, the one
         # report-check recomputes for the answering run
         shown = audit_binding.run_shown(
-            area, area / "runs" / "2026-01-01T00-00-00_0001", ""
+            area, area / "runs" / "2026-01-01T00-00-00_0001", "", None
         )
         for label, text in shown.pieces:
             self.assertIn(f"===== {label} =====\n{text}\n", prompt)
@@ -1677,7 +1677,7 @@ class Carried(unittest.TestCase):
             [("BLOCKER", FixVerdicts.LEAK)],
             registration=registration_of(area),
             run_id=run.name,
-            shown_sha=audit_binding.run_shown(area, run, "").sha,
+            shown_sha=audit_binding.run_shown(area, run, "", None).sha,
             now=60,
         )
         findings.write_decision(same, 1, "dismissed", "does not apply")
@@ -1892,7 +1892,9 @@ class FollowupGate(unittest.TestCase):
         for step in (
             followup.STEP_AUDIT,
             f"a run that writes `x` to metrics.json, then {followup.STEP_AUDIT}",
-            f"change what the finding names, then a new run and {followup.FOLLOWUP_AUDIT}",
+            "change what the finding names — the code, then a new run; the declared "
+            "run, `protocol-fill <PROTOCOL> --from-run <run_id> --force` — and "
+            f"{followup.FOLLOWUP_AUDIT}",
         ):
             self.assertTrue(followup.Hold("r#1", "w", step).needs_followup_audit, step)
         self.assertFalse(

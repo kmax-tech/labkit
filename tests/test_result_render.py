@@ -57,7 +57,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         (0, 1, 0),
         items,
         run_id=run.name,
-        shown_sha=audit_binding.run_shown(area, run, "").sha,
+        shown_sha=audit_binding.run_shown(area, run, "", None).sha,
         registration=registration_of(area),
     )
     if limit_reason is not None:

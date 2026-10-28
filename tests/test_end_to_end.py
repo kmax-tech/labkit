@@ -162,7 +162,7 @@ class Lab:
             [],
             run_id=run_id,
             shown_sha=(
-                audit_binding.run_shown(area, area / "runs" / run_id, "").sha
+                audit_binding.run_shown(area, area / "runs" / run_id, "", None).sha
                 if run_id is not None
                 else None
             ),
@@ -229,6 +229,52 @@ def assert_draws(
     test.assertNotIn(other, out)
 
 
+def stamp_count(lab: "Lab") -> tuple[Path, Path]:
+    """The counting skeleton at low repeat cost in LAB, filled and committed:
+    lines per document over three documents (1, 2, 6 lines — mean 3.0).
+    Returns (area, protocol)."""
+    root = lab.root
+    docs = root / "data" / "raw" / "docs"
+    docs.mkdir(parents=True)
+    for name, lines in (("a.txt", 1), ("b.txt", 2), ("c.txt", 6)):
+        (docs / name).write_text("x\n" * lines, encoding="utf-8")
+    area, protocol = lab.exp("lines", repeat_cost="low", kind="compute")
+    _replace(
+        area / "scripts" / "01_measure.py",
+        [
+            (
+                'SOURCE = REPO / "data" / "TODO"',
+                'SOURCE = REPO / "data" / "raw" / "docs"',
+            ),
+            ('COUNT_FIELD = "TODO_count"', 'COUNT_FIELD = "lines"'),
+            ('METRIC_KEY = "TODO_mean"', 'METRIC_KEY = "lines_mean"'),
+            (
+                '    raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
+                "    return [p.name for p in visible(SOURCE)]",
+            ),
+            (
+                '    raise NotImplementedError("rows(): one dict per id, fail loud on a missing one")',
+                '    return [{"id": i, COUNT_FIELD: len((SOURCE / i).read_text(encoding="utf-8").splitlines())} for i in ids]',
+            ),
+            (
+                '    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")',
+                "    return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
+            ),
+        ],
+    )
+    lab.fill(
+        protocol,
+        "type=exploratory",
+        "Terms of this protocol=n/a — no coinage",
+        "Question / hypothesis=How many lines does a document of data/raw/docs hold on average?",
+        "Data / scope=data/raw/docs, 3 documents, read directly",
+        "Exclusions / filters=hidden entries and nested directories (visible())",
+        "Unit=one document of data/raw/docs",
+    )
+    lab.commit("the count, registered")
+    return area, protocol
+
+
 class Count(unittest.TestCase):
     """The counting skeleton at low repeat cost: lines per document, three documents."""
 
@@ -238,46 +284,8 @@ class Count(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.lab = Lab()
-        root = cls.lab.root
-        docs = root / "data" / "raw" / "docs"
-        docs.mkdir(parents=True)
-        for name, lines in (("a.txt", 1), ("b.txt", 2), ("c.txt", 6)):
-            (docs / name).write_text("x\n" * lines, encoding="utf-8")
-        cls.area, cls.protocol = cls.lab.exp("lines", repeat_cost="low", kind="compute")
+        cls.area, cls.protocol = stamp_count(cls.lab)
         cls.measure = cls.area / "scripts" / "01_measure.py"
-        _replace(
-            cls.measure,
-            [
-                (
-                    'SOURCE = REPO / "data" / "TODO"',
-                    'SOURCE = REPO / "data" / "raw" / "docs"',
-                ),
-                ('COUNT_FIELD = "TODO_count"', 'COUNT_FIELD = "lines"'),
-                ('METRIC_KEY = "TODO_mean"', 'METRIC_KEY = "lines_mean"'),
-                (
-                    '    raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
-                    "    return [p.name for p in visible(SOURCE)]",
-                ),
-                (
-                    '    raise NotImplementedError("rows(): one dict per id, fail loud on a missing one")',
-                    '    return [{"id": i, COUNT_FIELD: len((SOURCE / i).read_text(encoding="utf-8").splitlines())} for i in ids]',
-                ),
-                (
-                    '    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")',
-                    "    return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
-                ),
-            ],
-        )
-        cls.lab.fill(
-            cls.protocol,
-            "type=exploratory",
-            "Terms of this protocol=n/a — no coinage",
-            "Question / hypothesis=How many lines does a document of data/raw/docs hold on average?",
-            "Data / scope=data/raw/docs, 3 documents, read directly",
-            "Exclusions / filters=hidden entries and nested directories (visible())",
-            "Unit=one document of data/raw/docs",
-        )
-        cls.lab.commit("the count, registered")
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -528,6 +536,264 @@ def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
     return area, protocol
 
 
+class Withdraw(unittest.TestCase):
+    """Replacing a declared result goes through the real commands: withdraw
+    the declaration (`protocol-fill --withdraw`), audit the run that
+    answers, adopt it (`--from-run`). An analysis record binds the run the
+    head declared when it was another one (`audit_binding.declared_piece`),
+    so a withdrawal moves the state and the next audit follows earlier
+    findings up. File-check case, 2026-10-28: a BLOCKER on the declared run,
+    fixed by re-adopting, stayed held, and the agent committed past the
+    hook; a first fix bound the declaration but left `--from-run --force`
+    as the way, which then could never pass. No test here writes a
+    protocol head by hand."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        rel = self.area.relative_to(self.lab.root).as_posix()
+        self.clean = (
+            "verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n"
+            f"{rel}/scripts/01_measure.py"
+        )
+
+    # -- the commands, as an agent runs them
+    def measure(self) -> str:
+        return self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+
+    def records(self) -> set[Path]:
+        return set((self.area / "audits").glob("*-analysis*.toml"))
+
+    def analysis(self, answer: str) -> tuple[int, str, str]:
+        """`labkit-audit AREA --mode analysis`, the model's answer ANSWER:
+        (exit, output, the prompt sent); the record it wrote is `self.record`
+        — by the set of records, not by name order (`…-analysis-2.toml`
+        sorts before `…-analysis.toml`)."""
+        before = self.records()
+        sent: list[str] = []
+
+        def fake(alias, prompt, **kw):
+            sent.append(prompt)
+            return answer
+
+        out = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", fake),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            rc = audit.main([str(self.area), "--mode", "analysis"])
+        written = self.records() - before
+        self.record = written.pop() if len(written) == 1 else None
+        return rc, out.getvalue(), sent[0] if sent else ""
+
+    def decide(self, record: Path, n: int, status: str, reason: str) -> None:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = audit.main(
+                [
+                    str(self.area),
+                    "--decide",
+                    str(n),
+                    status,
+                    reason,
+                    "--record",
+                    str(record),
+                ]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+
+    def withdraw(self, why: str, *more: str) -> tuple[int, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = protocol_fill.main(
+                [str(self.protocol), "--withdraw", "--why", why, *more]
+            )
+        return rc, out.getvalue() + err.getvalue()
+
+    def declared(self) -> str | None:
+        return protocol_block.declared_run(self.protocol.read_text(encoding="utf-8"))
+
+    def adopted_a(self) -> str:
+        """Run A measured, finalized, audited without findings, adopted and
+        committed — the state a later change starts from."""
+        run_a = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 0, out)
+        self.lab.commit(f"adopt {run_a}")
+        return run_a
+
+    def change_code(self) -> None:
+        """The measuring code extended: each kept row also carries its size."""
+        _replace(
+            self.area / "scripts" / "01_measure.py",
+            [
+                (
+                    'COUNT_FIELD: len((SOURCE / i).read_text(encoding="utf-8").splitlines())}',
+                    'COUNT_FIELD: len((SOURCE / i).read_text(encoding="utf-8").splitlines()), '
+                    '"bytes": (SOURCE / i).stat().st_size}',
+                )
+            ],
+        )
+
+    # -- the repair case
+    def test_a_wrong_declaration_is_withdrawn_followed_up_and_replaced(self):
+        run_a = self.adopted_a()
+        self.change_code()
+        run_b = self.measure()
+        # finalize names the mismatch, and the withdrawal as its way out
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"[result] declares {run_a}, but the run that answers is {run_b}", out
+        )
+        self.assertIn("--withdraw", out)
+        wrong = (
+            f"BLOCKER · PROTOCOL-lines.md:1 · the head declares run {run_a}, the rows "
+            f"shown are run {run_b} · the reported mean · LAB-050 Analysis audit "
+            f"before reporting · declare the run the current code measured\n"
+            f"verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        rc, out, prompt = self.analysis(wrong)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"the protocol's [result] declares {run_a}, not the run shown", prompt
+        )
+        self.assertIn("a wrong declaration", out)  # the way out, where it is decided
+        self.assertIn("--withdraw", out)
+        record = self.record
+        assert record is not None
+        self.decide(record, 1, "fixed", "the wrong declaration withdrawn")
+        # the replacement without a withdrawal cannot pass: no audit saw B declared
+        rc, out = self.lab.adopt_forced(self.protocol, run_b)
+        self.assertEqual(rc, 1, out)
+        self.assertEqual(self.declared(), run_a)
+        rc, out = self.withdraw("the measuring code changed after the adoption")
+        self.assertEqual(rc, 0, out)
+        self.assertIsNone(self.declared())
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertRegex(
+            text,
+            rf"- {run_a} — .* · withdrawn \d{{4}}-\d{{2}}-\d{{2}}: the measuring code changed after the adoption",
+        )
+        # withdrawn alone, nothing is released: the fixed BLOCKER owes its follow-up
+        rc, out = self.lab.adopt(self.protocol, run_b)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"{record.name}#1: decided `fixed`, never followed up", out)
+        rc, out, prompt = self.analysis(
+            f"FIX · {record.name}#1 · resolved · the head declares no run now\n\n{self.clean}"
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("the protocol's [result] declares", prompt)
+        rc, out = self.lab.adopt(self.protocol, run_b)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared(), run_b)
+        self.assertIn(
+            " · withdrawn ", self.protocol.read_text(encoding="utf-8")
+        )  # the trace stays
+
+    # -- the usual path: change the code, measure B, audit B, adopt B
+    def test_change_measure_audit_adopt_after_a_withdrawal(self):
+        run_a = self.adopted_a()
+        rc, out = self.withdraw("the measuring code changes: each row carries its size")
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("withdraw")
+        self.change_code()
+        self.lab.commit("the measuring code extended")
+        run_b = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        rc, out, prompt = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("the protocol's [result] declares", prompt)
+        rc, out = self.lab.adopt(self.protocol, run_b)  # no --force
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.declared(), run_b)
+        self.assertNotEqual(run_a, run_b)
+
+    def test_an_audit_made_while_another_run_was_declared_is_owed_again(self):
+        """The twin of the usual path in the other order: B audited while A
+        is still declared; after the withdrawal that audit does not cover,
+        and one audit more does."""
+        self.adopted_a()
+        self.change_code()
+        run_b = self.measure()
+        rc, out, prompt = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("the protocol's [result] declares", prompt)
+        self.assertEqual(self.withdraw("code changed")[0], 0)
+        rc, out = self.lab.adopt(self.protocol, run_b)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("no analysis audit saw the area as it is now", out)
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, run_b)
+        self.assertEqual(rc, 0, out)
+
+    def test_a_first_adoption_of_the_run_audited_keeps_its_audit(self):
+        """The usual order — audit, then adopt — moves no state: adopting
+        the run audited needs no audit more."""
+        run_a = self.measure()
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        records = self.records()
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.records(), records)
+
+    # -- a withdrawal releases nothing
+    def test_a_withdrawal_releases_nothing(self):
+        run_a = self.measure()
+        rc, out = self.withdraw("nothing declared yet")
+        self.assertEqual(rc, 2, out)  # nothing to withdraw
+        self.assertIn("declares no result", out)
+        rc, out, _ = self.analysis(self.clean)
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 0, out)
+        # a later audit finds a fault; its BLOCKER stays open
+        rc, out, _ = self.analysis(
+            "BLOCKER · scripts/01_measure.py:1 · hidden files are counted · the mean "
+            "· LAB-050 Analysis audit before reporting · skip them\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        self.assertEqual(rc, 1, out)
+        blocking = self.record
+        assert blocking is not None
+        audits = {
+            p: p.read_bytes() for p in (self.area / "audits").rglob("*") if p.is_file()
+        }
+        report = self.lab.root / "REPORT.md"
+        report.write_text("# Report\n", encoding="utf-8")
+        out_into = io.StringIO()
+        with contextlib.redirect_stdout(out_into):
+            protocol_fill.main([str(self.protocol), "--into", str(report)])
+        self.assertIn(run_a, report.read_text(encoding="utf-8"))
+        rc, out = self.withdraw(
+            "a fault found after the adoption", "--into", str(report)
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(
+            run_a, report.read_text(encoding="utf-8")
+        )  # its block withdrawn
+        # the withdrawal touched no audit evidence, and decided nothing
+        after = {
+            p: p.read_bytes() for p in (self.area / "audits").rglob("*") if p.is_file()
+        }
+        self.assertEqual(after, audits)
+        self.assertEqual([f.status for f in findings.read(blocking).findings], ["open"])
+        # and it opens no way to a result: the open BLOCKER still holds the adoption
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("still `open`", out)
+        self.assertIsNone(self.declared())
+
+
 class Judge(unittest.TestCase):
     """The prompt skeleton at low repeat cost, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
@@ -646,7 +912,7 @@ class Judge(unittest.TestCase):
             (1, 0, 0),
             [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · the prompt asks more than the gold scores")],
             run_id=self.run_id,
-            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "").sha, registration=registration_of(self.area),)  # fmt: skip
+            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "", None).sha, registration=registration_of(self.area),)  # fmt: skip
 
     def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
         out = io.StringIO()
@@ -786,7 +1052,7 @@ class Judge(unittest.TestCase):
             (0, 1, 0),
             [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
             run_id=self.run_id,
-            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "").sha, registration=registration_of(self.area),)  # fmt: skip
+            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "", None).sha, registration=registration_of(self.area),)  # fmt: skip
         label = f"Limit (audit {record.stem} #1)"
         reason = "C1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
         rc, out = self._decide(record, "accepted", reason, "--effect", "stands")

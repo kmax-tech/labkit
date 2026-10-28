@@ -119,6 +119,13 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
 
 
+def withdraw_command(protocol: Path) -> str:
+    """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
+    declaration, the protocol named as the working directory reaches it —
+    the way to replace a declaration: withdraw, audit, adopt."""
+    return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"'
+
+
 def measure_command(area: Path) -> str:
     """The line that measures AREA: its stamped `scripts/01_measure.py` (every
     skeleton has one) with the repo's interpreter, the script as the working

@@ -21,10 +21,12 @@ class Steps(unittest.TestCase):
         self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch.text)
         # the command names the protocol: without it argparse refused it
         # (audit 2026-10-27, H5)
+        fix = mismatch.fix or ""
+        self.assertIn('protocol-fill /x/PROTOCOL-x.md --withdraw --why "<why>"', fix)
         self.assertIn(
-            "protocol-fill /x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_aa11 --force",
-            mismatch.fix or "",
+            "`protocol-fill /x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_aa11`", fix
         )
+        self.assertNotIn("--force", fix)
 
     def test_declaring_the_answering_run_or_none_passes(self):
         run = Path("/x/runs/2026-10-07T10-00-00_aa11")
@@ -84,7 +86,9 @@ class DeclaredRunHint(unittest.TestCase):
                 protocol,
             )
             self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap.text)
-            self.assertIn("--from-run <run_id> --force", gap.fix or "")
+            self.assertIn("--withdraw", gap.fix or "")
+            self.assertIn("--from-run <run_id>`", gap.fix or "")
+            self.assertNotIn("--force", gap.fix or "")
             typed = head(repeat_cost="low").replace(
                 'preflight_audit = ""\n',
                 'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',

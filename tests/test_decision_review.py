@@ -97,7 +97,7 @@ def area_with(
         ),
         rows,
         run_id=RUN,
-        shown_sha=audit_binding.run_shown(area, run, "").sha,
+        shown_sha=audit_binding.run_shown(area, run, "", None).sha,
         registration=registration_of(area),
     )
     for n, (status, reason, effect) in decide.items():

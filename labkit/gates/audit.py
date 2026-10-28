@@ -1122,7 +1122,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
     if mode == ANALYSIS:
         run_dir, why = audited_run(area, protocol, text)
         run_id = run_dir.name if run_dir is not None else findings.NO_RUN
-        shown = run_shown(area, run_dir, why)
+        shown = run_shown(area, run_dir, why, protocol_block.declared_run_shown(text))
     state = findings.AuditedState(
         snap.sha,
         promises.block_stamp(text),

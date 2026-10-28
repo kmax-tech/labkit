@@ -271,10 +271,13 @@ An analysis audit with no findings covers the run when it saw the current
 code, promises and run: there is nothing to decide. It re-checks each
 earlier decided BLOCKER itself; adoption needs it to find that fix in
 place — you add nothing to the record.
-After a fix the new run is adopted the same way, in this order: its
-analysis audit and decisions, then the Conclusion for it (`--force` if one
-is filled), then `protocol-fill <PROTOCOL> --from-run <new run_id> --force`
-(the head still names the old run), `--render`, `--into REPORT.md`.
+After a fix, withdraw the old declaration first (`protocol-fill <PROTOCOL>
+--withdraw --why "<why>"`): the commit hook holds the code to the declared
+run, and an audit made while another run is declared does not cover the
+next adoption. Then the new run is adopted the same way, in this order:
+its analysis audit and decisions, the Conclusion for it (`--force` if one
+is filled), `protocol-fill <PROTOCOL> --from-run <new run_id>`,
+`--render`, `--into REPORT.md`.
 Adoption runs `report-check` and is refused while any other blocker
 stands: a `--from-run` line beside other blockers is the last step, not
 the fix.
@@ -358,6 +361,13 @@ prints these same recovery choices with each decision list:
   over without a result. A pure typo in a prose field you correct in the
   protocol itself (an audit that judged the field is owed again); a
   promise's sentence, key or constant stays as registered.
+- **a wrong declaration** — the measurement stands, but the protocol's
+  head declares another run than the one the finding judged. Withdraw the
+  declaration (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`),
+  decide the BLOCKER `fixed` naming that, and run the analysis audit
+  again: the follow-up judges the finding. Then adopt the run that
+  answers (`--from-run`). No new measurement, and never past a hook with
+  `--no-verify`.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the

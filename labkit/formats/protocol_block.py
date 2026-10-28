@@ -501,6 +501,18 @@ class Replaces:
     changes: tuple[Change, ...]
 
 
+def declared_run_shown(text: str) -> str | None:
+    """What TEXT's `[result]` declares, as an audit shows and binds it: the
+    run id (`declared_run`), or — for a table that does not read — the
+    sentence naming why; None without a `[result]` table. Never raises on
+    the table: the gates refuse a broken declaration (`declared_run`), and
+    an audit that crashed on it could never see it repaired."""
+    try:
+        return declared_run(text)
+    except BlockError as exc:
+        return f"a [result] that does not read ({exc})"
+
+
 def replaces(text: str) -> Replaces | None:
     """The protocol's `[replaces]` table — `protocol = "p-<id>"` and one
     `[[replaces.change]]` per declared difference (CHANGE_KEYS, `why` not
