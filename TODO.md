@@ -1349,6 +1349,27 @@ Notiert, nicht geplant:
    Offen: die Abnahme mit einem kalten Agenten — ein Startzustand, in dem
    ein Audit einen falsch deklarierten Lauf findet (ein Experiment,
    startet auf Ansage).
+   Zurückgenommen (`b2da352`), vor der Abnahme: ein Probedurchlauf von
+   Hand fand eine Sackgasse. `protocol-fill --from-run` schreibt nur,
+   wenn report-check besteht; ein Audit von B, das lief, während noch A
+   deklariert war, trägt das Stück `DECLARED RUN` und deckt nach der
+   Übernahme von B nicht mehr — die Deklaration kann also nie geschrieben
+   werden. Das sperrte auch den gewöhnlichen Weg (Code ändern, B messen,
+   B auditieren, B mit `--force` übernehmen). Der Kettentest schrieb den
+   Kopf direkt statt über `protocol-fill` und sah es nicht; ein neuer
+   Test muss über `protocol-fill` gehen. Startzustand und Plant-Skript
+   liegen bereit (Scratchpad `declared-case`, `plant_declared.py`).
+   Entscheidung offen, zwei Wege:
+   (A) `protocol-fill --withdraw` zieht die Deklaration mit Spur zurück
+   (welcher Lauf, warum); dann gilt die Bindung wie gebaut: Rückzug,
+   Folge-Audit beurteilt den Befund, erste Übernahme von B bewegt nichts.
+   Derselbe Rückzug löst, dass der Commit-Hook eine Codeänderung nach der
+   Übernahme nur zusammen mit neuem Lauf und neuer Deklaration durchlässt;
+   `--from-run --force` als Ersatz einer Deklaration entfällt
+   (finalize-Ausweg und AGENTS.md nachziehen).
+   (B) zwei Zustandsbegriffe — Deckung für „Audit fällig“ ohne die
+   Deklaration, für die Nachverfolgung mit ihr — nah an der verworfenen
+   Sonderregel. Empfehlung: (A).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
