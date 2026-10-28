@@ -34,13 +34,13 @@ scientifically justified remains your responsibility.
 
 When an external task names its outputs (a file such as
 `pred_results/<name>`, a report), those files are the deliverable; the
-area keeps the number, it does not replace them. Write them from the
-measurement, at the paths the task names, and keep them in step with what
-labkit finds: when a gate or an audit shows the number wrong, correct the
-output file or remove it, and say so in the report. A file left standing
-with a number labkit rejected is delivered as if it held (2026-10-27: an
-output file kept the heart rate an analysis audit had rejected, while the
-report handed the question over).
+run's metrics in the area do not replace them. Write each output from the
+measurement, at the path the task names. When a result no longer holds —
+a gate refuses it, or an audit BLOCKER against the code or data that
+produced it is not fixed — rewrite the output from a measurement run after
+the fix; if there is none, remove the output file. The report says which
+you did and why (2026-10-27: an output file kept the heart rate an analysis audit had
+rejected, while the report handed the question over).
 
 ## Choose the experiment: three separate decisions
 
