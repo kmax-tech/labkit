@@ -1,0 +1,90 @@
+{"images": {"agent": "labkit-sandbox:c5e9959d714c", "proxy": "agentsandbox-proxy:aa300c7b22af"}, "model": "claude-haiku-4-5-20251001", "wheel": "labkit-0.103.0-py3-none-any.whl", "limits": {"timeout_s": 1800, "max_turns": 300, "max_budget_usd": 10.0}}
+{"task": "compute-hrv", "seconds": 462.872, "timed_out": false, "result": {"subtype": "success", "is_error": false, "num_turns": 75, "total_cost_usd": 0.6472186999999997, "terminal_reason": "completed", "duration_ms": 461151}, "requests": 77}
+  agent                                    haiku-4.5
+  labkit in probe                          labkit @ git+file:///Users/max/projects/labkit@87036d370973019bf4e95c49fc67572437b755b1
+  scaffold sha                             1018fc1be287
+  run                                      2026-10-28T13-11-05_173e
+  number (rmssd_ms)                        25.877087469689833
+  the task's quantity                      yes
+  equals the truth                         yes
+  hidden evaluation (pred_results/)        pass — relative error {'heart_rate_bpm': 1.0796387614349161e-05, 'rmssd_ms': 0.020484663047273543}
+  bound to                                 PROTOCOL-compute-hrv.md
+  frozen                                   no
+  repeat cost                              low
+  audit attempts failed                    0 (0 unproven)
+  wall-clock (log span)                    7m03s
+  steps · read                             1
+  steps · run                              18
+  steps · edit                             4
+  steps · unsure                           0
+  steps · gate                             0
+  steps · untagged                         0
+  reads of labkit source / standard        0
+  protocol · lines                         89
+  protocol · prose before the first field  0
+  protocol · · chains (> 2 items)          0
+  protocol · longest field (chars)         240
+  protocol · codes in the Summary          0
+  protocol · answer as a table             no
+  target: one kept number under 5 min — MISSED
+→ /private/tmp/claude-501/-Users-max-projects-labkit/3880f8c4-30a8-43bd-8755-145293cd724b/scratchpad/sab-draw4/scored/compute-hrv.score.json
+{"task": "fit-assay", "seconds": 543.731, "timed_out": false, "result": {"subtype": "success", "is_error": false, "num_turns": 117, "total_cost_usd": 1.2365678000000002, "terminal_reason": "completed", "duration_ms": 542444}, "requests": 118}
+  agent                                    haiku-4.5
+  labkit in probe                          labkit @ git+file:///Users/max/projects/labkit@87036d370973019bf4e95c49fc67572437b755b1
+  scaffold sha                             1018fc1be287
+  run                                      2026-10-28T13-23-20_1455
+  number (c1_score)                        0.7625
+  the task's quantity                      NO — c1_score is not the task's number — its SCORE is 'accuracy', not 'auc'; the task's number is the out-of-fold ROC-AUC over the train and val compounds, the skeleton's held-out score — not an AUC on the validation split alone
+  within [0, 1]                            yes
+  null condition reported                  yes
+  hidden evaluation (pred_results/)        pass — test ROC-AUC 0.7895 (bar 0.75)
+  bound to                                 PROTOCOL-fit-assay.md
+  frozen                                   no
+  repeat cost                              low
+  audit attempts failed                    0 (0 unproven)
+  wall-clock (log span)                    8m10s
+  steps · read                             1
+  steps · run                              21
+  steps · edit                             1
+  steps · unsure                           0
+  steps · gate                             0
+  steps · untagged                         0
+  reads of labkit source / standard        0
+  protocol · lines                         113
+  protocol · prose before the first field  0
+  protocol · · chains (> 2 items)          1
+  protocol · longest field (chars)         221
+  protocol · codes in the Summary          0
+  protocol · answer as a table             no
+  target: one kept number under 5 min — MISSED
+→ /private/tmp/claude-501/-Users-max-projects-labkit/3880f8c4-30a8-43bd-8755-145293cd724b/scratchpad/sab-draw4/scored/fit-assay.score.json
+{"task": "apply-screen", "seconds": 894.467, "timed_out": false, "result": {"subtype": "success", "is_error": false, "num_turns": 102, "total_cost_usd": 1.1328599, "terminal_reason": "completed", "duration_ms": 892808}, "requests": 107}
+  agent                                    haiku-4.5
+  labkit in probe                          labkit @ git+file:///Users/max/projects/labkit@87036d370973019bf4e95c49fc67572437b755b1
+  scaffold sha                             1018fc1be287
+  run                                      2026-10-28T13-36-46_ae18
+  number (c1_score)                        0.7608695652173914
+  the task's quantity                      yes
+  equals the truth                         yes
+  null condition reported                  yes
+  hidden evaluation (pred_results/)        pass — 0 persons off model 2.1, 0 missing
+  bound to                                 PROTOCOL-apply-screen.md
+  frozen                                   no
+  repeat cost                              low
+  audit attempts failed                    0 (0 unproven)
+  wall-clock (log span)                    11m47s
+  steps · read                             2
+  steps · run                              15
+  steps · edit                             11
+  steps · unsure                           0
+  steps · gate                             0
+  steps · untagged                         0
+  reads of labkit source / standard        0
+  protocol · lines                         114
+  protocol · prose before the first field  0
+  protocol · · chains (> 2 items)          2
+  protocol · longest field (chars)         208
+  protocol · codes in the Summary          0
+  protocol · answer as a table             no
+  target: one kept number under 5 min — MISSED
+→ /private/tmp/claude-501/-Users-max-projects-labkit/3880f8c4-30a8-43bd-8755-145293cd724b/scratchpad/sab-draw4/scored/apply-screen.score.json

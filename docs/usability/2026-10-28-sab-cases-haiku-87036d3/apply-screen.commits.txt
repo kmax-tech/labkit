@@ -1,0 +1,11 @@
+bdd4a99 13:40:22 Final deliverables: screening model application results
+ebbea09 13:37:00 Restore test expectation for margin=0.25
+d756fda 13:36:42 Restore original protocol constants for adoption
+1e815a8 13:32:44 Update test for margin=0 constant
+51d389b 13:32:12 Fix protocol registration: clarify criterion, update constants
+ac7a686 13:27:52 Register apply-screen protocol and implement measurement scripts
+70d9fff 13:25:40 Probe: the venv inside the sandbox
+9fde52a 14:25:37 Probe: container paths
+5a45073 14:08:09 Probe: the area, the fixture and TASK.md
+c134aa1 14:08:09 Probe: requirements.lock and the hooks of the probe venv
+ed3be9a 14:08:09 Scaffold: a probe lab repo for the usability trace

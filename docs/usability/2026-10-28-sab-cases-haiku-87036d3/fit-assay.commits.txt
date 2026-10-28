@@ -1,0 +1,11 @@
+add9318 13:23:28 Update run and predictions with fixed accuracy function
+e5be751 13:23:14 Fix accuracy function to handle both discrete and continuous predictions
+f474bc3 13:22:54 Add new run with probability predictions and test predictions
+c63b53a 13:22:40 Modify estimator to return probabilities instead of class labels for better task compliance
+a5a5b00 13:21:38 Update protocol to match actual data and scoring (320 labelled compounds, all splits touched)
+184df34 13:18:55 Register fit-assay protocol and implement estimator.
+d083142 13:16:32 Probe: the venv inside the sandbox
+8765d2e 14:16:30 Probe: container paths
+d491665 14:08:08 Probe: the area, the fixture and TASK.md
+82cf1d6 14:08:08 Probe: requirements.lock and the hooks of the probe venv
+0cf784b 14:08:08 Scaffold: a probe lab repo for the usability trace

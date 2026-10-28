@@ -1,0 +1,9 @@
+d67d79c 13:16:13 Write final REPORT.md with methodology, timing, and honest analysis
+ac03aae 13:15:46 Adopt run 2026-10-28T13-11-05_173e and generate output files
+1f06123 13:15:22 Update protocol with audit findings and clearer structure
+1bcb0be 13:11:01 Register HRV computation protocol and implement measurement script
+b9868e7 13:08:46 Probe: the venv inside the sandbox
+b489d77 14:08:43 Probe: container paths
+e3cc612 14:08:07 Probe: the area, the fixture and TASK.md
+f6dc3b9 14:08:07 Probe: requirements.lock and the hooks of the probe venv
+c1ac773 14:08:06 Scaffold: a probe lab repo for the usability trace

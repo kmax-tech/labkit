@@ -1,0 +1,38 @@
+  PROTOCOL-fit-assay.md: read from the working tree; the head declares no run; the answering run is 2026-10-28T13-23-20_1455
+  PROTOCOL-fit-assay.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  BLOCKER: the registration changed after the first measurement 2026-10-28T13-18-58_43b1: a promise's sentence (recorded by the answering run 2026-10-28T13-23-20_1455) — a bar set after a result was seen does not answer the registered question — way out: restore the [[promise]] tables as 2026-10-28T13-18-58_43b1 registered them (every sentence as then) — `git show 184df3463ebb:experiments/01-fit-assay/PROTOCOL-fit-assay.md` shows them as committed then, runs/2026-10-28T13-18-58_43b1/uncommitted.patch what its tree changed, and measure again, then audit that run (the earlier runs stay); or, when the registration cannot be answered as written, register anew: a new protocol (`labkit-init exp <new-name> --kind …`), `type = "exploratory"`, committed before its own first run, naming the earlier one in `[replaces] protocol = "p-6046e00361a34e68"` with one `[[replaces.change]]` (what, from, to, why) per change — the earlier protocol, its runs and their verdict stay
+  BLOCKER: analysis audit: no analysis audit saw the area as it is now (code 5f939c551fc5, promises fe111e4d3225, run 2026-10-28T13-23-20_1455, shown e3afff59bd9e; audited: none) — none has run yet: `labkit-audit experiments/01-fit-assay --mode analysis` (LAB-017 The number of audits follows the cost tier) — way out: audit the answering run as it stands: `labkit-audit experiments/01-fit-assay --mode analysis`, then decide its findings
+  BLOCKER: scripts/02_analyze.py --check exits 1: recheck: PROTOCOL-fit-assay.md has no answer yet — `protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md --from-run 2026-10-28T13-23-20_1455` writes it once that run's analysis audit is decided and report-check shows no other blocker (LAB-041 Generate numbers, don't retype them) — way out: fix what the check names until `.venv/bin/python experiments/01-fit-assay/scripts/02_analyze.py --check` exits 0; a number in the protocol comes from `protocol-fill`, never typed
+  adoption comes last: `--from-run` runs report-check itself and is refused while any of the 2 other blocker(s) above stands — clear them first, or hand the area over; the `--from-run` line names the last step, not the fix
+
+report-check: 3 blocker(s), 0 warning(s) — fix the blockers before reporting:
+  - the registration changed after the first measurement 2026-10-28T13-18-58_43b1: a promise's sentence (recorded by the answering run 2026-10-28T13-23-20_1455) — a bar set after a result was seen does not answer the registered question — way out: restore the [[promise]] tables as 2026-10-28T13-18-58_43b1 registered them (every sentence as then) — `git show 184df3463ebb:experiments/01-fit-assay/PROTOCOL-fit-assay.md` shows them as committed then, runs/2026-10-28T13-18-58_43b1/uncommitted.patch what its tree changed, and measure again, then audit that run (the earlier runs stay); or, when the registration cannot be answered as written, register anew: a new protocol (`labkit-init exp <new-name> --kind …`), `type = "exploratory"`, committed before its own first run, naming the earlier one in `[replaces] protocol = "p-6046e00361a34e68"` with one `[[replaces.change]]` (what, from, to, why) per change — the earlier protocol, its runs and their verdict stay
+  - analysis audit: no analysis audit saw the area as it is now (code 5f939c551fc5, promises fe111e4d3225, run 2026-10-28T13-23-20_1455, shown e3afff59bd9e; audited: none) — none has run yet: `labkit-audit experiments/01-fit-assay --mode analysis` (LAB-017 The number of audits follows the cost tier) — way out: audit the answering run as it stands: `labkit-audit experiments/01-fit-assay --mode analysis`, then decide its findings
+  - scripts/02_analyze.py --check exits 1: recheck: PROTOCOL-fit-assay.md has no answer yet — `protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md --from-run 2026-10-28T13-23-20_1455` writes it once that run's analysis audit is decided and report-check shows no other blocker (LAB-041 Generate numbers, don't retype them) — way out: fix what the check names until `.venv/bin/python experiments/01-fit-assay/scripts/02_analyze.py --check` exits 0; a number in the protocol comes from `protocol-fill`, never typed
+[area exit 1]
+═══ report-check REPORT.md (a report citing runs) ═══
+  BLOCKER: REPORT.md: discusses 2026-10-28T13-23-20_1455 as not reported and has no clean report review of this state (one naming no claim) — a cold reader checks that the report states none of their numbers as results — way out: `labkit-audit experiments/01-fit-assay --report-review REPORT.md` (one model call) — last, after the report's text and its discussion block are final: a change after it owes another
+  WARNING: REPORT.md: no assigned source found for the numbers on 17 line(s) — they stand outside every generated result block (a hint, not a check of the numbers):
+    REPORT.md:5: 80
+    REPORT.md:7: 320
+    REPORT.md:12: 240
+    REPORT.md:13: 80
+    REPORT.md:14: 80
+    REPORT.md:15: 400
+    REPORT.md:16: 80
+    REPORT.md:23: 400, 320, 80
+    REPORT.md:27: 100, 10
+    REPORT.md:30: 320
+    REPORT.md:32: 80
+    REPORT.md:44: 30
+    REPORT.md:49: 320, 80
+    REPORT.md:53: 320, 166, 154, 51.9
+    REPORT.md:54: 80
+    REPORT.md:56: 100, 10
+    REPORT.md:58: 76.25
+  WARNING: REPORT.md: numbers on 1 line(s) in or beside a discussed run — a discussed run's number in a report is a reported number unless the sentence says what it is (a hint, not a check):
+    REPORT.md:65: 76.25, 51.25, 25
+
+report-check: 1 blocker(s), 2 warning(s) (2 static evidence) — fix the blockers before reporting:
+  - REPORT.md: discusses 2026-10-28T13-23-20_1455 as not reported and has no clean report review of this state (one naming no claim) — a cold reader checks that the report states none of their numbers as results — way out: `labkit-audit experiments/01-fit-assay --report-review REPORT.md` (one model call) — last, after the report's text and its discussion block are final: a change after it owes another
+[REPORT exit 1]

@@ -1194,7 +1194,31 @@ Notiert, nicht geplant:
    neuen Hinweis zum Vorlagenfehler 0,15 gegen 0,25 beim tatsächlichen
    Ausfüllen beachten — das prüft die nächste Schreibprobe, ein
    Experiment, das auf Ansage startet; ebenso, ob die verständlicheren
-   Texte zu zuverlässig durchgeführten Experimenten führen.
+   Texte zu zuverlässig durchgeführten Experimenten führen. Erste Antwort
+   in Punkt 13: in der vierten SAB-Ziehung nicht beachtet (apply-screen).
+13. **SAB-ähnliche Fälle, vierte Ziehung auf `87036d3` (2026-10-28)**
+   ([Notiz](docs/usability/2026-10-28-sab-cases-haiku-87036d3.md)): alle
+   drei bestehen die versteckte Bewertung, nur compute-hrv übernimmt eine
+   Zahl sauber; fit-assay und apply-screen enden mit Diskussionsblock.
+   Sechs systematische Befunde an labkit, je eine Entscheidung:
+   (1) Die gemeldete Registrierungsänderung verschweigt geänderte Sätze,
+   sobald sich auch eine Konstante ändert (`promises.py:132`); Vorschlag:
+   die Versprechen der ersten Messung aus ihrem Commit lesen und jede
+   Änderung nennen. (2) Eine Registrierungsänderung zeigt sich erst bei
+   der Übernahme; Vorschlag: eine Station in finalize. (3) Ein vor dem
+   Stagen gelöschter Audit-Record ist verloren, der Commit geht durch, die
+   angebotenen Wiederherstellungen greifen nicht; Vorschlag: Records wie
+   das Journal in einer Kopie im Git-Verzeichnis halten, daraus
+   wiederherstellen, und den Commit halten, wenn das Journal im Baum einen
+   fehlenden Record nennt. (4) Die Schwelle von [C1] beruht auf einer
+   Null-Ziehung (beide Analyse-Audits: BLOCKER); Vorschlag für apply: die
+   Null-Spur über K Permutationen, für fit offen — eine
+   Standardentscheidung. (5) Gestempelte Werte (`margin`, `null_band`,
+   `SCORE`) bleiben als scheinbare Entscheidung stehen; Vorschlag:
+   protocol-check warnt (statische Evidenz), wenn der Satz eines
+   Versprechens den Wert seiner Konstante nicht nennt. (6) Audit über
+   120 s (bekannt, „Auditdauer“).
+
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und

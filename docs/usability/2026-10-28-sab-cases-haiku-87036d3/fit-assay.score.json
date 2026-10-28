@@ -1,0 +1,56 @@
+{
+ "probe": {
+  "staged": "2026-10-28T14:08:08",
+  "task": "fit-assay",
+  "area": "01-fit-assay",
+  "metric_key": "c1_score",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@87036d370973019bf4e95c49fc67572437b755b1",
+  "scaffold_sha": "1018fc1be287",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "fit-assay",
+   "--kind",
+   "fit"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-28T13-23-20_1455",
+ "number": 0.7625,
+ "expected": null,
+ "number_ok": false,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-fit-assay.md",
+ "frozen": false,
+ "repeat_cost": "low",
+ "log": {
+  "lines": 23,
+  "wall_seconds": 490,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 1,
+  "run": 21,
+  "edit": 1,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 113,
+  "prose_before_first_field": 0,
+  "chains": 1,
+  "longest_field": 221,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-4.5",
+ "audit_failed": 0,
+ "audit_unproven": 0,
+ "evaluation": 1,
+ "evaluation_detail": "test ROC-AUC 0.7895 (bar 0.75)",
+ "number_meaning": "c1_score is not the task's number \u2014 its SCORE is 'accuracy', not 'auc'; the task's number is the out-of-fold ROC-AUC over the train and val compounds, the skeleton's held-out score \u2014 not an AUC on the validation split alone"
+}

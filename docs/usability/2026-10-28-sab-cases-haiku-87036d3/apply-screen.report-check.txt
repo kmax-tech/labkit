@@ -1,0 +1,43 @@
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares no run; the answering run is 2026-10-28T13-36-46_ae18
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  BLOCKER: the registration changed after the first measurement 2026-10-28T13-27-56_ac9c: a promise's sentence (recorded by the answering run 2026-10-28T13-36-46_ae18) — a bar set after a result was seen does not answer the registered question — way out: restore the [[promise]] tables as 2026-10-28T13-27-56_ac9c registered them (every sentence as then) — `git show ac7a686d0f4f:experiments/01-apply-screen/PROTOCOL-apply-screen.md` shows them as committed then, runs/2026-10-28T13-27-56_ac9c/uncommitted.patch what its tree changed, and measure again, then audit that run (the earlier runs stay); or, when the registration cannot be answered as written, register anew: a new protocol (`labkit-init exp <new-name> --kind …`), `type = "exploratory"`, committed before its own first run, naming the earlier one in `[replaces] protocol = "p-f6f02060d04f47b5"` with one `[[replaces.change]]` (what, from, to, why) per change — the earlier protocol, its runs and their verdict stay
+  BLOCKER: analysis audit: no analysis audit saw the area as it is now (code 295622728186, promises 0c0a55b9b95f, run 2026-10-28T13-36-46_ae18, shown d23b53a0a225; audited: code 295622728186, promises 21b614dd6244, run 2026-10-28T13-32-16_02f0, shown 9dcf04e241fe; code 295622728186, promises 4f084d85ecd9, run 2026-10-28T13-27-56_ac9c, shown ff7f0c765c27) — a change after the audit owes a new one: `labkit-audit experiments/01-apply-screen --mode analysis` (LAB-017 The number of audits follows the cost tier) — way out: audit the answering run as it stands: `labkit-audit experiments/01-apply-screen --mode analysis`, then decide its findings
+  BLOCKER: scripts/02_analyze.py --check exits 1: recheck: PROTOCOL-apply-screen.md has no answer yet — `protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --from-run 2026-10-28T13-36-46_ae18` writes it once that run's analysis audit is decided and report-check shows no other blocker (LAB-041 Generate numbers, don't retype them) — way out: fix what the check names until `.venv/bin/python experiments/01-apply-screen/scripts/02_analyze.py --check` exits 0; a number in the protocol comes from `protocol-fill`, never typed
+  BLOCKER: audit 2026-10-28T13-34-analysis.toml#1: decided `accepted`, never followed up (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --mode analysis` follows it up
+  BLOCKER: audit 2026-10-28T13-34-analysis.toml#5: decided `accepted`, never followed up (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --mode analysis` follows it up
+  adoption comes last: `--from-run` runs report-check itself and is refused while any of the 4 other blocker(s) above stands — clear them first, or hand the area over; the `--from-run` line names the last step, not the fix
+
+report-check: 5 blocker(s), 0 warning(s) — fix the blockers before reporting:
+  - the registration changed after the first measurement 2026-10-28T13-27-56_ac9c: a promise's sentence (recorded by the answering run 2026-10-28T13-36-46_ae18) — a bar set after a result was seen does not answer the registered question — way out: restore the [[promise]] tables as 2026-10-28T13-27-56_ac9c registered them (every sentence as then) — `git show ac7a686d0f4f:experiments/01-apply-screen/PROTOCOL-apply-screen.md` shows them as committed then, runs/2026-10-28T13-27-56_ac9c/uncommitted.patch what its tree changed, and measure again, then audit that run (the earlier runs stay); or, when the registration cannot be answered as written, register anew: a new protocol (`labkit-init exp <new-name> --kind …`), `type = "exploratory"`, committed before its own first run, naming the earlier one in `[replaces] protocol = "p-f6f02060d04f47b5"` with one `[[replaces.change]]` (what, from, to, why) per change — the earlier protocol, its runs and their verdict stay
+  - analysis audit: no analysis audit saw the area as it is now (code 295622728186, promises 0c0a55b9b95f, run 2026-10-28T13-36-46_ae18, shown d23b53a0a225; audited: code 295622728186, promises 21b614dd6244, run 2026-10-28T13-32-16_02f0, shown 9dcf04e241fe; code 295622728186, promises 4f084d85ecd9, run 2026-10-28T13-27-56_ac9c, shown ff7f0c765c27) — a change after the audit owes a new one: `labkit-audit experiments/01-apply-screen --mode analysis` (LAB-017 The number of audits follows the cost tier) — way out: audit the answering run as it stands: `labkit-audit experiments/01-apply-screen --mode analysis`, then decide its findings
+  - scripts/02_analyze.py --check exits 1: recheck: PROTOCOL-apply-screen.md has no answer yet — `protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --from-run 2026-10-28T13-36-46_ae18` writes it once that run's analysis audit is decided and report-check shows no other blocker (LAB-041 Generate numbers, don't retype them) — way out: fix what the check names until `.venv/bin/python experiments/01-apply-screen/scripts/02_analyze.py --check` exits 0; a number in the protocol comes from `protocol-fill`, never typed
+  - audit 2026-10-28T13-34-analysis.toml#1: decided `accepted`, never followed up (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --mode analysis` follows it up
+  - audit 2026-10-28T13-34-analysis.toml#5: decided `accepted`, never followed up (LAB-015 Preflight audit before freezing) — way out: `labkit-audit experiments/01-apply-screen --mode analysis` follows it up
+[area exit 1]
+═══ report-check REPORT.md (a report citing runs) ═══
+  WARNING: REPORT.md: no assigned source found for the numbers on 22 line(s) — they stand outside every generated result block (a hint, not a check of the numbers):
+    REPORT.md:9: 300, 01
+    REPORT.md:11: 300
+    REPORT.md:12: 92, 208
+    REPORT.md:13: 0.5
+    REPORT.md:15: 70, 92, 76.1, 44, 92, 47.8, 0.25
+    REPORT.md:27: 301, 300
+    REPORT.md:28: 38
+    REPORT.md:29: 01, 114
+    REPORT.md:30: 120, 665
+    REPORT.md:31: 128
+    REPORT.md:34: 11, 14, 13, 25, 56, 13, 37, 10
+    REPORT.md:40: 10
+    REPORT.md:46: 0.25
+    REPORT.md:47: 300
+    REPORT.md:54: 0.1, 0.1295, 0.25, 0.25, 0.1, 0.15, 0.1
+    REPORT.md:59: 1.5
+    REPORT.md:68: 0.25, 0.1, 0.15
+    REPORT.md:78: 11, 55
+    REPORT.md:81: 1.5
+    REPORT.md:83: 0.5, 0.25, 0.1
+    REPORT.md:91: 300
+    REPORT.md:96: 300, 0.5
+
+report-check: 0 blockers, 1 warning(s) (1 static evidence) — review the warnings above before reporting.
+[REPORT exit 0]
