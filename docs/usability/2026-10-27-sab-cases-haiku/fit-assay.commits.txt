@@ -1,0 +1,7 @@
+437f009 19:47:58 Add resolution checks and finalize protocol
+d9c4db6 19:45:01 Implement fit-assay protocol: prepare data and model
+244c813 19:38:41 Probe: the venv inside the sandbox
+2a82b9a 20:38:38 Probe: container paths
+4991a01 20:27:26 Probe: the area, the fixture and TASK.md
+2585405 20:27:26 Probe: requirements.lock and the hooks of the probe venv
+dd0cce4 20:27:25 Scaffold: a probe lab repo for the usability trace

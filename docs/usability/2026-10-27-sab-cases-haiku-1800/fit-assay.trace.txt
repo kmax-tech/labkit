@@ -1,0 +1,72 @@
+ 0:05   0.0s Read   /work/TASK.md
+ 0:14   0.3s Bash   ls -la experiments/01-fit-assay/
+ 0:21   0.0s Read   /work/experiments/01-fit-assay/PROTOCOL-fit-assay.md
+ 0:21   0.0s Read   /work/experiments/01-fit-assay/README.md
+ 0:29   0.2s Bash   ls -la experiments/01-fit-assay/scripts/ && cat experiments/01-fit-assay/scripts/01_measure.py | head -50
+ 0:36   0.0s Read   /work/experiments/01-fit-assay/scripts/01_measure.py
+ 0:45   0.3s Bash   ls -la experiments/01-fit-assay/data/ && cat experiments/01-fit-assay/scripts/00_prepare.py
+ 0:53   0.2s Bash   ls -la experiments/01-fit-assay/data/raw/ && ls -la experiments/01-fit-assay/data/prepared/ 2 >& 1
+ 1:00   0.2s Bash   ls -la /work/data/raw/assay/ 2 >& 1 | head -20
+ 1:08   0.2s Bash   head -3 /work/data/raw/assay/train.csv && wc -l /work/data/raw/assay/*.csv
+ 1:16   0.3s Bash   mkdir -p /out
+ 1:30   0.0s Edit   /work/experiments/01-fit-assay/scripts/00_prepare.py
+ 1:37   0.0s Read   /work/experiments/01-fit-assay/scripts/00_prepare.py
+ 1:57   0.2s Write  /work/experiments/01-fit-assay/scripts/00_prepare.py
+ 2:12   0.3s Edit   /work/experiments/01-fit-assay/scripts/01_measure.py
+ 2:24   0.2s Edit   /work/experiments/01-fit-assay/scripts/01_measure.py
+ 2:38   0.4s Edit   /work/experiments/01-fit-assay/scripts/01_measure.py
+ 2:50   0.2s Edit   /work/experiments/01-fit-assay/scripts/01_measure.py
+ 2:58   0.4s Bash   (log only)
+ 3:06   0.3s Bash   .venv/bin/protocol-check experiments/01-fit-assay/PROTOCOL-fit-assay.md --contract
+ 3:17   0.2s Edit   /work/experiments/01-fit-assay/PROTOCOL-fit-assay.md
+ 3:30   0.5s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Terms of this protocol=IC50 thresho
+ 3:37   0.6s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md --list
+ 3:45   0.0s Read   /work/experiments/01-fit-assay/PROTOCOL-fit-assay.md
+ 3:53   0.3s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Terms of this protocol=Active compo
+ 4:01   0.3s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Question / hypothesis=Can we predic
+ 4:09   0.4s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Success / failure criterion=[C1] Th
+ 4:19   0.3s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Admissibility condition=[A1] All la
+ 4:27   0.4s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Null condition / anchors (in the sa
+ 4:34   0.0s Read   /work/experiments/01-fit-assay/PROTOCOL-fit-assay.md
+ 4:42   0.6s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; C1 sentence=The model's out-of-fold
+ 4:50   0.8s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md --list | head -20
+ 4:59   0.5s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; Split touched=train and val (labell
+ 5:07   0.5s Bash   (log only)
+ 5:15   0.4s Bash   (log only)
+ 5:22   0.6s Bash   (log only)
+ 5:30   4.0s Bash   (log only)
+ 5:44   1.3s Bash   (log only) REFUSED
+ 5:53   0.0s Read   /work/experiments/01-fit-assay/tests/test_01_fit_assay.py
+ 5:59   0.4s Bash   find /work/experiments -name test_*.py -o -name *_test.py
+ 6:08   1.1s Bash   git add experiments/01-fit-assay/data/prepared/compounds_v1.jsonl && git commit -m Prepared dataset for assay 
+ 6:16   0.0s Read   /work/experiments/01-fit-assay/README.md
+ 6:32   0.2s Write  /work/experiments/01-fit-assay/tests/test_01_fit_assay.py
+ 6:39   0.3s Bash   .venv/bin/python -m pytest experiments/01-fit-assay/tests/test_01_fit_assay.py -v
+ 6:51   0.1s Edit   /work/experiments/01-fit-assay/tests/test_01_fit_assay.py
+ 6:57   0.4s Bash   .venv/bin/python -m pytest experiments/01-fit-assay/tests/test_01_fit_assay.py -v
+ 7:10   0.4s Edit   /work/experiments/01-fit-assay/tests/test_01_fit_assay.py
+ 7:17   0.8s Bash   .venv/bin/python -m pytest experiments/01-fit-assay/tests/test_01_fit_assay.py -v
+ 7:26   0.9s Bash   git add experiments/01-fit-assay/tests/test_01_fit_assay.py && git commit -m Add resolution checks for fit-ass
+ 7:33   0.6s Bash   (log only) REFUSED
+ 7:42   0.4s Bash   .venv/bin/python -m pytest experiments/01-fit-assay/tests/test_01_fit_assay.py -v 2 >& 1 | tail -50
+ 7:53   0.8s Bash   (log only)
+ 8:04   0.3s Bash   git log --oneline -10 | head -20
+ 8:16   0.2s Bash   mkdir -p /work/pred_results
+ 8:23   0.2s Bash   head -5 /work/pred_results/test_pred.csv && wc -l /work/pred_results/test_pred.csv
+ 8:31   0.4s Bash   (log only)
+ 8:58   0.3s Write  /work/REPORT.md
+ 9:06   1.1s Bash   (log only) REFUSED
+ 9:14   0.4s Bash   git status
+ 9:23   0.6s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; --discuss 2026-10-27T20-41-18_77fd 
+ 9:30  14.6s Bash   .venv/bin/labkit-audit experiments/01-fit-assay --report-review REPORT.md
+ 9:52   0.0s Read   /work/REPORT.md
+10:06   0.3s Edit   /work/REPORT.md
+10:13  15.9s Bash   .venv/bin/labkit-audit experiments/01-fit-assay --report-review REPORT.md
+10:50   0.1s Write  /work/REPORT.md
+10:57   0.2s Bash   .venv/bin/labkit-audit experiments/01-fit-assay --report-review REPORT.md
+11:05   0.3s Bash   .venv/bin/protocol-fill experiments/01-fit-assay/PROTOCOL-fit-assay.md   ; --discuss 2026-10-27T20-41-18_77fd 
+11:12  12.0s Bash   .venv/bin/labkit-audit experiments/01-fit-assay --report-review REPORT.md
+11:32   0.6s Bash   git add -A ; git commit -m Task complete: predictions and report delivered ;  ; Deliverable: pred_results/test
+11:41   0.4s Bash     ; head -10 /work/pred_results/test_pred.csv &&   ;   ; tail -3 /work/pred_results/test_pred.csv
+11:48   0.5s Bash   head -20 /work/REPORT.md
+tokens: 153 calls · output 54,383 · context max 89,686 · cache read 8,935,948

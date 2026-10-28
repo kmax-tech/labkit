@@ -1,0 +1,8 @@
+cd3e64a 19:57:10 Complete protocol registration before first measurement
+52a9cb2 19:56:38 Update tests to work with new configuration (margin=0, null_band=0.5)
+caf7f63 19:55:52 Add prepared screening data for apply-screen experiment
+1c07b1f 19:48:44 Probe: the venv inside the sandbox
+ffb5e67 20:48:41 Probe: container paths
+1a785ec 20:27:27 Probe: the area, the fixture and TASK.md
+62c652d 20:27:27 Probe: requirements.lock and the hooks of the probe venv
+aba8292 20:27:26 Scaffold: a probe lab repo for the usability trace

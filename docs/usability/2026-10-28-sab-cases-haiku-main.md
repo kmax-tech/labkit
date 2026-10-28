@@ -7,8 +7,9 @@ fix, branch `sab-cases-on-main`); the fixes of branch `sab-like-cases`
 AGENTS.md) are not in it. Same image, model, runner and limit as the
 second draw, so a difference to that draw belongs to labkit (and to one
 draw per case). Records: `2026-10-28-sab-cases-haiku-main/`. The first two
-draws are on branch `sab-like-cases`
-(`2026-10-27-sab-cases-haiku.md`, `2026-10-27-sab-cases-haiku-1800.md`).*
+draws: [2026-10-27-sab-cases-haiku.md](2026-10-27-sab-cases-haiku.md),
+[2026-10-27-sab-cases-haiku-1800.md](2026-10-27-sab-cases-haiku-1800.md)
+(run on branch `sab-like-cases`).*
 
 ## Result
 

@@ -1,0 +1,5 @@
+4dfccf3 19:28:37 Probe: the venv inside the sandbox
+725c642 20:28:33 Probe: container paths
+5e61d7f 20:28:24 Probe: the area, the fixture and TASK.md
+c7139e4 20:28:24 Probe: requirements.lock and the hooks of the probe venv
+0cf6cc2 20:28:24 Scaffold: a probe lab repo for the usability trace

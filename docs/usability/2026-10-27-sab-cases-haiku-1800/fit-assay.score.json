@@ -1,0 +1,55 @@
+{
+ "probe": {
+  "staged": "2026-10-27T21:18:56",
+  "task": "fit-assay",
+  "area": "01-fit-assay",
+  "metric_key": "val_roc_auc",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@41d31c9a9ac9c3226423b58f0936255e35b558ed",
+  "scaffold_sha": "25f52ac83b92",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "fit-assay",
+   "--kind",
+   "fit"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-27T20-41-18_77fd",
+ "number": null,
+ "expected": null,
+ "number_ok": false,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-fit-assay.md",
+ "frozen": false,
+ "repeat_cost": "low",
+ "log": {
+  "lines": 10,
+  "wall_seconds": 435,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 1,
+  "run": 7,
+  "edit": 2,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 116,
+  "prose_before_first_field": 0,
+  "chains": 1,
+  "longest_field": 241,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-4.5",
+ "audit_failed": 0,
+ "audit_unproven": 0,
+ "evaluation": 1,
+ "evaluation_detail": "test ROC-AUC 0.8070 (bar 0.75)"
+}

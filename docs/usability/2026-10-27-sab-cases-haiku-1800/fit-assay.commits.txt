@@ -1,0 +1,8 @@
+2cea55e 20:47:19 Task complete: predictions and report delivered
+085adbb 20:43:12 Add resolution checks for fit-assay measurement
+59eb5e2 20:41:55 Prepared dataset for assay experiment: 320 labelled, 80 test compounds with 7 molecular descriptors Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+4a94dc6 20:35:46 Probe: the venv inside the sandbox
+ce60524 21:35:41 Probe: container paths
+3ee83a6 21:18:57 Probe: the area, the fixture and TASK.md
+7b8d7c7 21:18:56 Probe: requirements.lock and the hooks of the probe venv
+7aebfe0 21:18:56 Scaffold: a probe lab repo for the usability trace

@@ -1,0 +1,9 @@
+34269a1 20:35:07 Document HRV computation handover due to unvalidated peak detector
+a5ef144 20:29:26 Add RR interval outlier fraction check to HRV metrics
+7e02ea2 20:28:08 Fix expected_ids to use visible() instead of glob for CSV file discovery
+364ed4d 20:25:00 Register HRV computation protocol with exploratory type and low repeat cost
+01a7dd1 20:19:11 Probe: the venv inside the sandbox
+2df7ccb 21:19:07 Probe: container paths
+89fefda 21:18:55 Probe: the area, the fixture and TASK.md
+884b580 21:18:55 Probe: requirements.lock and the hooks of the probe venv
+c411736 21:18:55 Scaffold: a probe lab repo for the usability trace

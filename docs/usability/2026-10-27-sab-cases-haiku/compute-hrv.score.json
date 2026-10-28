@@ -1,0 +1,55 @@
+{
+ "probe": {
+  "staged": "2026-10-27T20:28:24",
+  "task": "compute-hrv",
+  "area": "01-compute-hrv",
+  "metric_key": "rmssd_ms",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@2763d54af9d045d60e5006693e403815801dae31",
+  "scaffold_sha": "7d721ea017b0",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "compute-hrv",
+   "--kind",
+   "compute"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-27T19-36-31_52db",
+ "number": 25.88,
+ "expected": 25.35764466309386,
+ "number_ok": true,
+ "null_reported": null,
+ "bound_to": "PROTOCOL-compute-hrv.md",
+ "frozen": false,
+ "repeat_cost": "low",
+ "log": {
+  "lines": 18,
+  "wall_seconds": 548,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 1,
+  "run": 13,
+  "edit": 4,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 89,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 315,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-4.5",
+ "audit_failed": 0,
+ "audit_unproven": 0,
+ "evaluation": 0,
+ "evaluation_detail": "pred_results/hrv.csv missing"
+}

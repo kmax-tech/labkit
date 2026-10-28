@@ -1,6 +1,6 @@
 # AGENTS.md clarified for Haiku readers: rounds two and three (2026-10-28)
 
-*Round one (branch `sab-cases-on-main`, `2026-10-28-haiku-instruction-reading.md`):
+*Round one ([2026-10-28-haiku-instruction-reading.md](2026-10-28-haiku-instruction-reading.md)):
 three Haiku 4.5 readers answered the twelve cases of the
 [2026-10-27 probe](2026-10-27-common-workflow-reading-probe.md) as
 contracted and named four gaps of AGENTS.md by two or three of three: the

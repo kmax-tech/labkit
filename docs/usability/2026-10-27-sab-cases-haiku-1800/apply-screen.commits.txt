@@ -1,0 +1,7 @@
+9986ad8 21:06:43 Complete applied screening model evaluation task
+b812716 20:56:58 Fill protocol, implement model application, and update tests for applied screening model
+0bbf623 20:47:57 Probe: the venv inside the sandbox
+26ab22c 21:47:53 Probe: container paths
+b8cd54a 21:18:58 Probe: the area, the fixture and TASK.md
+4344c42 21:18:57 Probe: requirements.lock and the hooks of the probe venv
+238dfc7 21:18:57 Scaffold: a probe lab repo for the usability trace
