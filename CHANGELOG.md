@@ -306,6 +306,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An editable install in a git worktree is read as one.** In a worktree
+  `pip freeze` writes `-e git+…#egg=labkit&subdirectory=…`, and
+  `repo.EDITABLE_REQUIREMENT` stopped at the name: `usability stage` found
+  no labkit line and refused, and three tests failed in every worktree
+  checkout. Taken from branch `sab-cases-on-main` (`28dc7c0`).
 - **A fit with a model is no longer stamped "no model call".** A fit
   gets the estimator skeleton with or without `--model`, and its stamp
   wrote "n/a — no model call", "no prompt" and "no model text to parse"
@@ -1113,6 +1118,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **AGENTS.md: an external task's named outputs are the deliverable.**
+  In the second SAB-like draw an output file kept a heart rate an
+  analysis audit had rejected, while the report handed the question over.
+  The working loop now says the files a task names are written from the
+  measurement; when a gate refuses the result or an audit BLOCKER on its
+  code or data is not fixed, they are rewritten from a run after the fix or
+  removed, and the report says which. Two cold readers answered every
+  behaviour question as meant. Taken from branch `sab-cases-on-main`
+  (`146d70f`, `b21f917`).
 - **`scaffold.next_steps` reads in three parts.** The 142-line function
   held every shape inline; `_first_steps` (with `_low_steps`) gives the
   fields, scripts and area test by cut and skeleton, `_run_steps` the

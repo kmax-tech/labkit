@@ -973,6 +973,16 @@ Notiert, nicht geplant:
    oder nur Implementierungsfehler und ungültige Registrierung; für das
    Labor, ob Bereich 09 einen ehrlich gemeldeten Abbruch von einem
    Ausweichen trennt — heute sind beide „Standard nicht erfüllt“.
+   Vierter Beleg (SAB-ähnliche Ziehung 1, 2026-10-27, compute-hrv): `rm`
+   des Analyse-Records und `rm -rf runs/` vor dem letzten Lauf, nichts
+   committet. Auf `main` nachgespielt (2026-10-28): ein fehlender Record
+   blockt Stop, Commit und das nächste Audit (`attempts.area_gaps`); ein
+   Laufordner, den ein Record nennt, blockt `finalize`
+   (`records_of_gone_runs`); Record, Journal und Läufe zusammen vor dem
+   ersten Commit gelöscht hinterlassen keine Spur — dieselbe Lücke wie
+   neunte t5. Abhilfe wäre eine Kopie des Journals außerhalb des
+   Arbeitsbaums (im Git-Verzeichnis wie `labkit-sessions.jsonl`); nicht
+   gebaut, gehört in diesen Neuansatz.
 4. **Prüfmatrix der Ausweichaktionen, Runden 1–9 (2026-10-26):**
    [Note](docs/notes/2026-10-26-escape-routes-checks-and-exits.md), je
    Ausweg ein Check und ein genannter nächster Schritt. Neu gefunden:
@@ -1088,6 +1098,24 @@ Notiert, nicht geplant:
    (`start_check`→`protocol_history`, `5760496`), obwohl die Liste „not
    extended in passing“ sagt — bewusst, gleiche Doktrin wie die Zeile
    davor.
+10. **SAB-ähnliche Fälle, offene Entscheidungen (2026-10-28).** Drei
+   kalte Haiku-Ziehungen auf ScienceAgentBench-förmigen Fällen (Notizen auf
+   den Branches `sab-like-cases` und `sab-cases-on-main`). Übernommen:
+   `2dd2751` (editable install im Worktree), `f576e0f`, `658dfde`
+   (AGENTS.md: die benannten Ausgaben der Aufgabe sind das Ergebnis).
+   Offen, je eine Entscheidung:
+   (a) `null_band`: Das Skelett sagt „aus der Streuung der Null-Spur über
+   Seeds auf der Probe ableiten“, `--probe` misst einen Seed und fehlt bei
+   `low` ganz; apply-screen (low, 92 Items) behielt die gestempelten 0,1,
+   Null 0,391 gegen Zufall 0,501, [A2] fiel, Permutationsstreuung etwa
+   0,05. n = 1.
+   (b) Der Schlüssel der Aufgabe (`val_roc_auc`, `agreement`) gegen das
+   `c1_score` des Skeletts: die Probe-Bewertung findet bei fit und apply
+   nie eine Zahl (dreimal `number: null`); Entscheidung im Probe-Modul.
+   (c) Kosten: 1058–1238 s Agentenarbeit je Fall gegen 73–617 s ohne
+   labkit (Runde 7, andere Aufgaben); sichtbar ist Report-Churn — jede
+   Änderung an REPORT.md nach einer Report-Review schuldet eine neue
+   (fit-assay: drei verweigerte Commits in 2,5 min).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
