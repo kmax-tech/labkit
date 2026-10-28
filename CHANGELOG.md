@@ -1377,7 +1377,9 @@ pins (`requirements.txt` / `requirements.lock`).
   "…"` removes `[result]`, resets Recorded results and the Limit lines,
   and marks the run's Runs entry `withdrawn <date>: <why>`. With `--into
   REPORT.md` it also withdraws the result blocks there. It touches no
-  audit record or finding and releases nothing. Then the analysis audit of
+  audit record or finding and releases nothing, and it prints the next
+  steps numbered in the order of the way out: decide the BLOCKER that
+  named the declaration, audit, adopt. Then the analysis audit of
   the run that answers follows earlier BLOCKERs up. Then `--from-run`
   adopts it, without `--force`. The first adoption of the run audited
   moves no state. The ways out gain "a wrong declaration", and finalize,

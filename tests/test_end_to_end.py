@@ -679,8 +679,20 @@ class Withdraw(unittest.TestCase):
         rc, out = self.withdraw("the measuring code changed after the adoption")
         self.assertEqual(rc, 0, out)
         self.assertIsNone(self.declared())
-        # the next step as a command that runs: two words, not one quoted token
-        self.assertRegex(out, r"next: `labkit-audit \S+ --mode analysis`")
+        # the steps in the order of the way out — decide, audit, adopt — each a
+        # command that runs (two words, not one quoted token)
+        steps = [
+            out.index(s)
+            for s in (
+                "  1. a BLOCKER that named",
+                " --findings`",
+                "  2. `labkit-audit ",
+                " --mode analysis`",
+                "  3. `protocol-fill ",
+                " --from-run ",
+            )
+        ]
+        self.assertEqual(steps, sorted(steps))
         text = self.protocol.read_text(encoding="utf-8")
         self.assertRegex(
             text,

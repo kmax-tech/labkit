@@ -1158,11 +1158,20 @@ def _withdraw_file(args: argparse.Namespace, text: str) -> int:
             else ""
         )
     )
+    # the order of the way out "a wrong declaration" (ways_out.WAYS_OUT), one
+    # step a line, so the decision is not skipped
+    print("next, in this order:")
     print(
-        f"next: `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` audits "
-        f"the state as it is now (earlier decided BLOCKERs are followed up), decide "
-        f"its findings, then `{adopt_command(protocol)}` adopts the run that answers"
+        f"  1. a BLOCKER that named this declaration: decide it `fixed`, naming the "
+        f"withdrawal — `{audit_command(area, '--findings', protocol=protocol)}` "
+        f"prints its --decide command"
     )
+    print(
+        f"  2. `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` — the "
+        f"state moved, so it audits the run that answers and follows earlier decided "
+        f"BLOCKERs up; decide its findings"
+    )
+    print(f"  3. `{adopt_command(protocol)}` adopts the run that answers")
     root = git_root(area)
     if root is not None:
         _print_still_citing(protocol, run_id, root)

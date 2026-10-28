@@ -395,8 +395,11 @@ provide evidence of the attempt, not analysis coverage. Do not bypass a
 refusal with `--no-verify`, record edits, deletion or ignore rules.
 An audit that a later change made outdated stays as well: decide its
 BLOCKERs — `fixed`, naming the change, where the change repaired the
-fault — and stage the record with that change; then measure again and
-audit the new run, which adds a record of its own. A record deleted
+fault — and stage the record with that change. Where the change touched
+what a run measured — the measuring code or its inputs — measure again
+and audit the new run, which adds a record of its own; a withdrawn
+declaration needs no new measurement, only the analysis audit of the
+run that answers. A record deleted
 before it was staged holds the commit; the hold names how it comes back.
 
 ## Setup and layout
