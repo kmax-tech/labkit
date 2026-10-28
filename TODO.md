@@ -1135,7 +1135,7 @@ Notiert, nicht geplant:
    Probe-Zeilen ins Protokoll; B4 Probe-Bewertung sagt „NO (truth)“ bei
    Bedeutungslücke), acht Doku-Drifts (D2 korrigiert eine eigene falsche
    Begründung zu „lane“), neun doppelte Heimaten, fünf Klarheitszeilen.
-   Offen in sechs Entscheidungen (Register, Ende).
+   Alle sechs Punkte erledigt (`3a7cba3` bis `86945a2`, Stand im Register).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
