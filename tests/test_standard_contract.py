@@ -161,6 +161,14 @@ class Described(unittest.TestCase):
             "Success / failure", "\n".join(sc.describe("low", "compute", False))
         )
 
+    def test_the_before_run_line_says_which_gate_holds_which_list(self):
+        # runlog checks the registration fields, the pre-commit hook every
+        # must field (Haiku start reading 2026-10-28: 3 of 3 asked)
+        for kind in ("compute", "fit", "apply"):
+            with self.subTest(kind=kind):
+                text = "\n".join(sc.describe("low", kind, False))
+                self.assertIn("runlog checks these; the pre-commit hook holds", text)
+
 
 if __name__ == "__main__":
     unittest.main()

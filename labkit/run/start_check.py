@@ -190,7 +190,8 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             return _committed_registration(base_dir, bound)
         return [
             f'{path.name}: `repeat_cost = "{head.repeat_cost}"`, but the registration is not '
-            f"written: {', '.join(missing)} — at low repeat cost the gate is the "
+            f"written: {', '.join(missing)} (the commit also owes the other fields "
+            f"`protocol-check --contract` names) — at low repeat cost the gate is the "
             f"registration the kind owes (a computation its question; a fit or an apply "
             f"also criterion · admissibility condition · null condition; with a "
             f"model the data profile), not the freeze (LAB-003 No run without an "

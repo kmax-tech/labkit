@@ -311,7 +311,13 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
     check = " ".join((CHECK_SCRIPT.as_posix(), CHECK_FLAG))
     before = (
         "the registration written and committed (the first measurement is held "
-        "to what its commit holds): " + ", ".join(registration_fields(kind, model))
+        "to what its commit holds): "
+        + ", ".join(registration_fields(kind, model))
+        # runlog checks these; the pre-commit hook every must field of the
+        # first line, so the commit holds all of them (Haiku start reading
+        # 2026-10-28: three of three asked which list applies)
+        + " — runlog checks these; the pre-commit hook holds every field the "
+        "first line names, so the commit carries all of them"
         if ln.registration
         else "`preflight` clean, the preflight audit decided and its record named "
         "in the head (`preflight_audit`), `frozen = true`"
