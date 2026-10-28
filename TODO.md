@@ -1231,6 +1231,27 @@ Notiert, nicht geplant:
    durch spätere Änderung veralteter Record bleibt, seine BLOCKER werden
    `fixed` mit der Änderung entschieden. (10) Die Probe selbst: fit-assay
    nennt keine Kennzahl, der Harness erwartet ROC-AUC.
+   Umgesetzt 2026-10-28 in der Reihenfolge des Autors: Audit und Gates
+   nennen denselben Reparaturweg (7) — `8a1b5f2`; finalize hält eine
+   Registrierungsänderung und nennt jede Änderung samt Satz (1, 2) —
+   `658a5fd`; Records im Git-Verzeichnis gesichert, der Commit hält einen
+   nie gestagten fehlenden Record, jede Meldung nennt einen ausführbaren
+   Wiederherstellungsweg (3) — `f751938`; dauerhafte Anweisungen zu
+   `margin`, `null_band` und veraltetem Audit (8, 9) — `f868b42`; die
+   Probe nennt ROC-AUC und trennt interne Validierung von der versteckten
+   Testbewertung, eine Accuracy unter altem Blatt gilt als Lücke der
+   Probe (10) — `5daa0ae`.
+   Offen: (4) die Null-Spur als eigene Standardentscheidung — mehrere
+   Permutationen allein sind keine Spezifikation: Anzahl, Seeds,
+   Aggregation und Bedeutung der C1-Schwelle stehen vorab fest; für apply
+   liegt ein Vorschlag vor (die festen Vorhersagen gegen K Permutationen
+   des Golds), für fit ist die Regel offen. (5) Warnung von
+   protocol-check, wenn ein Satz den Wert seiner Konstante nicht nennt —
+   nicht beauftragt. (6) Auditdauer, bekannt. Danach ein vollständiger
+   Reparaturfall: Befund verstehen → Code korrigieren → neu messen →
+   Audit bestehen → Ergebnis übernehmen; erst er zeigt, ob der
+   widersprüchliche Rat und die Sackgassen beseitigt sind — ein
+   Experiment, startet auf Ansage.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
