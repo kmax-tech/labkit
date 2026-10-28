@@ -1,0 +1,55 @@
+{
+ "probe": {
+  "staged": "2026-10-27T23:28:44",
+  "task": "compute-hrv",
+  "area": "01-compute-hrv",
+  "metric_key": "rmssd_ms",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@47235e2b42887b906e046c9e199da1a24025ebd7",
+  "scaffold_sha": "a01264570df7",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "compute-hrv",
+   "--kind",
+   "compute"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-27T22-46-40_4268",
+ "number": 25.404700985734227,
+ "expected": 25.35764466309386,
+ "number_ok": true,
+ "null_reported": null,
+ "bound_to": "PROTOCOL-compute-hrv.md",
+ "frozen": false,
+ "repeat_cost": "low",
+ "log": {
+  "lines": 25,
+  "wall_seconds": 1019,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 0,
+  "run": 17,
+  "edit": 7,
+  "unsure": 1,
+  "gate": 0,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 81,
+  "prose_before_first_field": 0,
+  "chains": 0,
+  "longest_field": 283,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-4.5",
+ "audit_failed": 0,
+ "audit_unproven": 0,
+ "evaluation": 1,
+ "evaluation_detail": "relative error {'heart_rate_bpm': 8.849043834723881e-08, 'rmssd_ms': 0.0018557055777681296}"
+}

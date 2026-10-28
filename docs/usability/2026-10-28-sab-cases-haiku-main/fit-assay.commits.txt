@@ -1,0 +1,12 @@
+9e83694 23:27:37 Add test predictions and final execution report
+fb68098 23:21:58 Finalize protocol with conclusions and audit decisions
+48e253c 23:18:55 Fix protocol margin and resolve audit findings
+e6e7046 23:15:37 Add measurement output file
+c68e481 23:15:19 Update tests for AUC scoring
+9bf248c 23:12:21 Add prepared assay compounds data
+bcbf790 23:11:46 Register protocol and implement assay model measurement
+db4f120 22:48:37 Probe: the venv inside the sandbox
+025920c 23:48:34 Probe: container paths
+d8d7e8a 23:28:47 Probe: the area, the fixture and TASK.md
+da73378 23:28:46 Probe: requirements.lock and the hooks of the probe venv
+1b316e1 23:28:45 Scaffold: a probe lab repo for the usability trace

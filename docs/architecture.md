@@ -25,7 +25,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `report_hold`, `claude_hooks`, `audit`, `decision_review`, `report_review`, `install_hooks`, `ways_out` | `preflight`, `finalize`, `report_check`, `report_hold`, `claude_hooks`, `audit`, `decision_review`, `report_review`, `install_hooks`, `ways_out` |
 | tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` |
-| tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
+| tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `sab_cases`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `sab_cases`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
 
 The third column names the doctrine modules of each row; every other
 module in the second column is core.
@@ -213,7 +213,9 @@ run's values and provenance; `calltree` shows what a command actually called.
 
 `labkit/probes/` contains the workflow and reading probes. `usability`
 stages a cold-agent probe, `usability_score` scores it, and
-`usability_command` implements the command. `agent_transcript` reads what
+`usability_command` implements the command. `sab_cases` holds the
+ScienceAgentBench-shaped cases the probe can stage, one per kind, each with
+a known trap and an evaluation the agent never sees. `agent_transcript` reads what
 an agent did in its session. `cold_reader` holds the shared probe logic;
 `protocol_reading` measures how a person reads a protocol, and
 `code_navigation` measures how a newcomer finds their way in code.

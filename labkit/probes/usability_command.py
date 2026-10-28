@@ -79,7 +79,9 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         "--task",
         choices=sorted(TASKS),
         help="which task sheet and fixture: count (deterministic, the default), "
-        "judge (a model used unchanged) or fit (a model fitted here; --data)",
+        "judge (a model used unchanged), fit (a model fitted here; --data), or a "
+        "ScienceAgentBench-shaped case with a hidden evaluation: compute-hrv, "
+        "fit-assay, apply-screen",
     )
     s.add_argument(
         "--data",

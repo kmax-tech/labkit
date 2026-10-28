@@ -18,11 +18,13 @@ from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
 from labkit.formats import answering_run, console, findings, promises, runs
+from labkit.probes import sab_cases
 from labkit.probes.usability import (
     LOG_LINE,
     LOG_TAGS,
     Probe,
     SOURCE_READ,
+    TASK_STAMP,
     TOL,
     read_answer,
     read_probe,
@@ -102,8 +104,10 @@ class Score:
     probe: Probe
     run_id: str | None
     number: float | None  # metrics[metric_key], or None when absent
-    expected: float | None  # the recounted truth (count), None for a model's number
-    number_ok: bool  # equals the truth, or (judge) present and within [0, 1]
+    expected: (
+        float | None
+    )  # the recounted truth (count, a SAB-like case's), None for a model's number
+    number_ok: bool  # equals the truth (a SAB-like case: within its tolerance), or present and within [0, 1]
     null_reported: (
         bool | None
     )  # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
@@ -120,6 +124,15 @@ class Score:
     )
     audit_failed: int = 0  # failed audit attempts in the area, any cause
     audit_unproven: int = 0  # of them `unproven`: the auditor did not write it whole
+    evaluation: int | None = (
+        None  # a SAB-like case: the hidden evaluation of pred_results/ (1 pass, 0 fail)
+    )
+    evaluation_detail: str | None = (
+        None  # what the evaluation measured, or why it could not read the output
+    )
+    # a SAB-like case: why the kept number is not the task's quantity
+    # (`sab_cases.meaning_gap`), None when it is or the case has no meaning
+    number_meaning: str | None = None
 
 
 def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
@@ -500,7 +513,13 @@ def probe_score(
     notes: list[str] = []
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics
-    expected = recount(root) if probe.task == "count" else None
+    sab = probe.task in sab_cases.CASES
+    expected = (
+        recount(root)
+        if probe.task == "count"
+        else (sab_cases.truth(root, probe.task) if sab else None)
+    )
+    verdict, detail = sab_cases.evaluate(root, probe.task) if sab else (None, None)
     number = bound_to = frozen = tier = None
     form: protocol_reading.Form | None = None
     null_reported = None
@@ -508,7 +527,7 @@ def probe_score(
         number = protocol_reading.metric_number(metrics, probe.metric_key)
         bound_to = pr.protocol_as_recorded if pr.bound else None
         tier = pr.repeat_cost
-        if probe.task != "count":
+        if TASK_STAMP[probe.task][1] != "compute":  # a computation owes no null
             null_reported = any(
                 promises.key_kind(k) == "admissibility" for k in metrics
             )
@@ -540,14 +559,30 @@ def probe_score(
     except (agent_transcript.TranscriptError, OSError) as exc:
         raise console.Refused("usability", f"transcript: {exc}") from exc
     failed = findings.failed_attempts(pr.area)
+    # a matching key is not a matching quantity: the run's SCORE and items
+    # are held to what the task's number means, and a mismatch is named
+    # SCORE is the script's own setting (`RunConfig.config`, free JSON),
+    # not a labkit field of the record
+    own = pr.config.config if pr.config is not None else {}
+    number_meaning = (
+        sab_cases.meaning_gap(probe.task, own.get("score"), metrics.get("n_items"))
+        if sab and run is not None
+        else None
+    )
     sc = Score(
         probe=probe,
         run_id=run.name if run else None,
         number=number,
         expected=expected,
-        number_ok=(number is not None and abs(number - expected) <= TOL)
-        if expected is not None
-        else (number is not None and 0.0 <= number <= 1.0),
+        number_ok=(
+            number_meaning is None and sab_cases.number_ok(probe.task, number, expected)
+        )
+        if sab
+        else (
+            (number is not None and abs(number - expected) <= TOL)
+            if expected is not None
+            else (number is not None and 0.0 <= number <= 1.0)
+        ),
         null_reported=null_reported,
         bound_to=bound_to,
         frozen=frozen,
@@ -558,6 +593,9 @@ def probe_score(
         agent=agent,
         audit_failed=len(failed),
         audit_unproven=sum(f.cause == "unproven" for f in failed),
+        evaluation=verdict,
+        evaluation_detail=detail,
+        number_meaning=number_meaning,
     )
     return sc, notes
 
@@ -592,12 +630,29 @@ def score_rows(sc: Score) -> list[tuple[str, str]]:
         sc.repeat_cost,
     )
     trace, form, measured, agent = sc.log, sc.form, sc.transcript, sc.agent
+    # a SAB-like case: the task's quantity and the hidden evaluation
+    sab = probe.task in sab_cases.CASES
+    number_meaning, verdict, detail = (
+        sc.number_meaning,
+        sc.evaluation,
+        sc.evaluation_detail,
+    )
     rows = [
         ("agent", agent or "not stated (--agent)"),
         ("labkit in probe", probe.labkit_installed),
         ("scaffold sha", probe.scaffold_sha),
         ("run", sc.run_id or "none"),
         (f"number ({probe.metric_key})", "absent" if number is None else str(number)),
+        *(
+            [
+                (
+                    "the task's quantity",
+                    f"NO — {number_meaning}" if number_meaning else "yes",
+                )
+            ]
+            if sab and sc.run_id is not None
+            else []
+        ),
         (
             "equals the truth" if expected is not None else "within [0, 1]",
             "yes"
@@ -606,7 +661,17 @@ def score_rows(sc: Score) -> list[tuple[str, str]]:
         ),
         *(
             [("null condition reported", "yes" if null_reported else "NO")]
-            if probe.task != "count"
+            if TASK_STAMP[probe.task][1] != "compute"
+            else []
+        ),
+        *(
+            [
+                (
+                    "hidden evaluation (pred_results/)",
+                    f"{'pass' if verdict else 'FAIL'} — {detail}",
+                )
+            ]
+            if sab
             else []
         ),
         ("bound to", bound_to or "NOTHING"),

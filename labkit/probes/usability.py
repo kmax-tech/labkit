@@ -30,7 +30,10 @@ stage
     `labkit-init exp <area>`), commits it, plants the task's fixture —
     `--task count` (default): twelve cases and their files, a deterministic
     mean; `--task judge`: twelve sentences with a gold label, a model's
-    accuracy, no truth, only a range and a null condition to report — with a
+    accuracy, no truth, only a range and a null condition to report;
+    `--task compute-hrv | fit-assay | apply-screen`: a ScienceAgentBench-shaped
+    task with a known trap and a hidden evaluation of `pred_results/`
+    (`sab_cases`; the created venv gets the case's packages) — with a
     known answer (twelve cases, their input files; the answer is recounted
     from the files at score time, never written down) and TASK.md — the
     task sheet, from `usability-task-<task>.md.template`, with the log
@@ -102,6 +105,7 @@ from pathlib import Path
 
 from labkit.tools import scaffold
 from labkit.formats import console, jsonl, repo, runs, scope_sha, standard_contract
+from labkit.probes import sab_cases
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
 #: condition. All of it ships with labkit — the probe needs no house machinery.
@@ -175,6 +179,16 @@ TASKS = {
         "metric_key": "c1_score",
         "template": "usability-task-fit.md.template",
     },
+    # SAB-like cases, one per kind: a ScienceAgentBench-shaped task with a
+    # known trap and a hidden evaluation (`sab_cases`, 2026-10-27)
+    **{
+        c.task: {
+            "area": c.task,
+            "metric_key": c.metric_key,
+            "template": "usability-task-sab.md.template",
+        }
+        for c in sab_cases.CASES.values()
+    },
 }
 #: (repeat cost, kind, model in the loop) per task: what the house route
 #: stamps for it (`labkit-init exp --repeat-cost low --kind …`, plus `--model`
@@ -185,6 +199,8 @@ TASK_STAMP: dict[str, tuple[str, str, bool]] = {
     "count": ("low", "compute", False),
     "judge": ("low", "apply", True),
     "fit": ("low", "fit", False),
+    # the repeat cost is the agent's to declare, as in a ScienceAgentBench round
+    **{c.task: ("unset", c.kind, False) for c in sab_cases.CASES.values()},
 }
 #: where the fit task's data land in the probe, and the columns the sheet names
 FIT_DATA = Path("data") / "raw" / "dili" / "train.csv"
@@ -376,6 +392,8 @@ def plant_task(root: Path, task: str, data: Path | None) -> None:
         plant_fixture(root)
     elif task == "fit":
         plant_dili(root, data)
+    elif task in sab_cases.CASES:
+        sab_cases.plant(root, task)
     else:
         plant_claims(root)
 
@@ -564,6 +582,16 @@ def stage(
         )
         if extra:
             _sh([str(root / ".venv" / "bin" / "pip"), "install", "-q", *extra], root)
+        if task in sab_cases.CASES:
+            _sh(
+                [
+                    str(root / ".venv" / "bin" / "pip"),
+                    "install",
+                    "-q",
+                    *sab_cases.case(task).packages,
+                ],
+                root,
+            )
     # The hooks, as a real setup installs them (`labkit-hooks install`, labkit
     # 0.51): pre-commit with finalize, core.hooksPath, the claude-hook entries.
     _sh([str(root / ".venv" / "bin" / "labkit-hooks"), "install"], root)
@@ -601,6 +629,14 @@ def stage(
         ("<log>", str(log)),
         ("<target>", str(TARGET_MINUTES)),
         ("<tier>", tier_sentence(repeat_cost)),
+        (
+            "<sab_task>",
+            sab_cases.task_text(root, task) if task in sab_cases.CASES else "",
+        ),
+        (
+            "<packages>",
+            ", ".join(sab_cases.case(task).packages) if task in sab_cases.CASES else "",
+        ),
     ):
         sheet = sheet.replace(key, val)
     (root / "TASK.md").write_text(sheet, encoding="utf-8")
