@@ -1360,11 +1360,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 - **The agent's decisions and ways out say when, what next and when to
   stop.** Four changes from the day's cases:
-  - After an adoption, report-check names the withdrawal first where a
-    declared run's code changed (`withdraw_first_note`); before, "measure
-    anew" led past it, and the agent met it only at a refused adoption
-    after an audit spent under the old declaration (file-check case:
-    `--no-verify`).
+  - After an adoption, every hold names the withdrawal first in its own way
+    out where the declared run's code changed (finalize's code and scope
+    holds, report-check's later stations, `ways_out.declared_first`).
+    Before, "measure anew" led past it, and the agent met it only at a
+    refused adoption after an audit spent under the old declaration
+    (file-check case: `--no-verify`); a first note below six such holds
+    was found by readers but stood under holds that said otherwise.
   - The way out "an implementation error" names the withdrawal where a
     result is declared.
   - Step 4 of AGENTS.md has a table of the four statuses: when each fits

@@ -108,7 +108,12 @@ from labkit.formats.repo import (
     the_protocol,
     withdraw_command,
 )
-from labkit.gates.ways_out import HANDOVER, PROTOCOL_NAMED, register_anew
+from labkit.gates.ways_out import (
+    HANDOVER,
+    PROTOCOL_NAMED,
+    declared_first,
+    register_anew,
+)
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
@@ -524,14 +529,18 @@ def check_intent_keys_in_metrics(
         findings.note(f"  {held.summary}")
 
 
-def check_run_code(findings: Findings, area: Path, answering_run: Path) -> None:
+def check_run_code(
+    findings: Findings, area: Path, answering_run: Path, held_by: Path | None
+) -> None:
     """Station 3, first half: the code that produced the answering run's
     number, and that of every run it derives from, is the code here now
     (`run_record_check.code_since_run`), for every kind — a fix after the
     run with no new run left the old code's number standing (audit
-    2026-10-27, A1). A module in another repository is a warning."""
+    2026-10-27, A1). A module in another repository is a warning. HELD_BY,
+    the protocol that declares the answering run (None: none does), puts
+    the withdrawal first in each blocker's way out (`declared_first`)."""
     changed, apart = code_since_run(area, answering_run)
-    findings.take_all(changed)
+    findings.take_all(declared_first(f, held_by) if held_by else f for f in changed)
     for line in apart:
         findings.warn(line, evidence_kind=GUARANTEED)
     if not changed and not apart:
@@ -541,7 +550,11 @@ def check_run_code(findings: Findings, area: Path, answering_run: Path) -> None:
 
 
 def check_declared_scopes(
-    findings: Findings, area: Path, answering_run: Path, text: str = ""
+    findings: Findings,
+    area: Path,
+    answering_run: Path,
+    text: str = "",
+    held_by: Path | None = None,
 ) -> None:
     """Station 3, second half: a promise's declared scope edited after the run: today's code is not
     the code that produced the number; until 2026-10-06 only recheck saw it
@@ -568,10 +581,11 @@ def check_declared_scopes(
         return
     drift = promises.scope_drift(recorded, area)
     for d in drift:
-        findings.block(
+        drifted = blocker(
             f"declared scope changed since {answering_run.name}: {d}",
             fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
         )
+        findings.take(declared_first(drifted, held_by) if held_by else drifted)
     if not drift:
         findings.note(
             f"  {len(recorded['ids'])} declared scope(s) unchanged since {answering_run.name}"
@@ -750,8 +764,14 @@ def finalize_area(
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_run_code(findings, area, answering_run)
-        check_declared_scopes(findings, area, answering_run, text)
+        # the protocol that declares this very run: its holds withdraw first
+        held_by = (
+            chosen
+            if protocol_block.declared_run_shown(text) == answering_run.name
+            else None
+        )
+        check_run_code(findings, area, answering_run, held_by)
+        check_declared_scopes(findings, area, answering_run, text, held_by)
 
     # 4. open fields — always
     findings.header(f"open fields: {chosen.name}")

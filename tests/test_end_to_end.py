@@ -766,21 +766,22 @@ class Withdraw(unittest.TestCase):
     # -- after an adoption, a code change is told to withdraw first
     def test_a_code_change_after_the_adoption_is_told_to_withdraw_first(self):
         """The commit of a fix after an adoption is held (the hook holds the
-        code to the declared run); its output names the withdrawal before
-        "measure anew", so the agent does not spend an audit under the old
-        declaration (file-check case, 2026-10-28). The twin: once withdrawn,
-        the same commit passes."""
+        code to the declared run). Each hold names the withdrawal before its
+        own way out — six holds that said "measure anew" led past a note
+        below them (decision-reading probe, file-check case, 2026-10-28) —
+        so the agent does not spend an audit under the old declaration. The
+        twin: once withdrawn, the same commit passes."""
         run_a = self.adopted_a()
         self.change_code()
         measure = self.area / "scripts" / "01_measure.py"
         self.lab.git("add", str(measure))
         rc, out = self.lab.pre_commit(measure)
         self.assertEqual(rc, 1, out)
-        self.assertIn(
-            f"a result is declared ({run_a}) and its code changed since: withdraw "
-            f"the declaration first",
-            out,
-        )
+        holds = [ln for ln in out.splitlines() if ln.startswith("  BLOCKER: ")]
+        self.assertGreaterEqual(len(holds), 2, out)
+        for hold in holds:
+            self.assertIn("— way out: withdraw the declaration first (`", hold)
+        self.assertIn(f"changed since {run_a}", out)
         self.assertEqual(self.withdraw("the measuring code changes")[0], 0)
         self.lab.git("add", str(self.protocol))
         rc, out = self.lab.pre_commit(measure, self.protocol)

@@ -9,6 +9,12 @@ a real one.
 
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
+
+from labkit.formats.gate import BLOCKER, GateFinding
+from labkit.formats.repo import withdraw_command
+
 #: what a BLOCKER is and what closes it, printed above the decisions: an
 #: agent whose code missed the registered bar moved the bar to the score
 #: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit).
@@ -222,3 +228,21 @@ def blocker_routes(promised: bool, *, full: bool) -> tuple[str, ...]:
 
 
 #: how long a finding's text stands in the decision list
+
+
+#: what every hold names first while a declared run's code has changed
+WITHDRAW_FIRST = "withdraw the declaration first (`{command}`), then "
+
+
+def declared_first(finding: GateFinding, protocol: Path) -> GateFinding:
+    """FINDING with the withdrawal of PROTOCOL's declaration before its way
+    out — for a blocker of a state whose declared run's code changed since
+    it ran: the commit hook holds the code to that run, and an audit made
+    while it stands declared does not cover the next run. A warning, or a
+    blocker without a way out, comes back as it is. Why in each hold, not
+    in one note: six holds that said "measure anew" led past a note below
+    them (decision-reading probe and file-check case, 2026-10-28)."""
+    if finding.grade != BLOCKER or finding.fix is None:
+        return finding
+    first = WITHDRAW_FIRST.format(command=withdraw_command(protocol))
+    return replace(finding, fix=first + finding.fix)
