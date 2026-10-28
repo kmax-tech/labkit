@@ -1113,6 +1113,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`scaffold.next_steps` reads in three parts.** The 142-line function
+  held every shape inline; `_first_steps` (with `_low_steps`) gives the
+  fields, scripts and area test by cut and skeleton, `_run_steps` the
+  freeze and the run, `_closing_steps` finalize, the analysis audit and
+  the adoption. The printed text is unchanged for every repeat cost, kind
+  and model. Audit 2026-10-27 (third), M7.
 - **One named type for the state an audit saw.** The code, promise
   block, registration, run and shown digest a record binds were passed as
   five loose values, and `labkit-audit` matched a record against them

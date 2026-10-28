@@ -1199,92 +1199,135 @@ def next_steps(
     rel: Path, slug: str, nn: str, repeat_cost: str | None, kind: str, model: bool
 ) -> str:
     """What to do after `exp`, in order — the lane of AGENTS.md for this
-    area, read off the contract: the fields by kind and model, the files
-    and flags by the skeleton, the preflight and its audit where
-    the lane owes the freeze, the analysis audit where the lane owes it,
-    the adoption at the end of every lane. Until 2026-10-19 the printed
-    steps at high repeat cost skipped the preflight, both audits and the
-    adoption while the stamped AGENTS.md named them; an agent following the
-    console met the refusal at the run's start."""
+    area, read off the contract: the fields and files first
+    (`_first_steps`), then the freeze and the run (`_run_steps`), then
+    the closing (`_closing_steps`: finalize, the analysis audit where the
+    lane owes it, the adoption at the end of every lane). A computation
+    first checks its kind. Until 2026-10-19 the printed steps at high
+    repeat cost skipped the preflight, both audits and the adoption while
+    the stamped AGENTS.md named them; an agent following the console met
+    the refusal at the run's start."""
     ln = standard_contract.lane(repeat_cost)
-    sk = standard_contract.skeleton(repeat_cost, kind, model)
     protocol = f"PROTOCOL-{slug}.md"
-    audit = f"labkit-audit {rel} --mode"
-    code_check = f"after every code change `code-check {rel}`"
-    # the files and flags follow the skeleton: a computation has no
-    # 00_prepare.py and no --show/--probe
+    title, steps = _first_steps(ln, rel, slug, nn, kind, model)
+    steps += _run_steps(ln, rel, slug)
+    if kind == standard_contract.COMPUTE_KIND:
+        # first, before any field is filled: a model fitted under compute
+        # owes a criterion its protocol has no place for
+        steps.insert(
+            0,
+            f"Check the kind before anything else. {KIND_QUESTIONS}. If (1) "
+            f"is yes: `labkit-init exp {slug} --kind fit --change-kind` — before "
+            f"the first measurement; it keeps what you wrote and refuses to "
+            f"replace a file you changed.",
+        )
+    steps += _closing_steps(ln, rel, protocol)
+    return f"\nNext ({title}):\n" + "\n".join(
+        f"  {i}. {step}" for i, step in enumerate(steps, 1)
+    )
+
+
+def _first_steps(
+    ln: standard_contract.Lane, rel: Path, slug: str, nn: str, kind: str, model: bool
+) -> tuple[str, list[str]]:
+    """(title, steps) before the freeze: the protocol's fields, the stamped
+    scripts and the area test, by the lane's cut and the skeleton — the
+    files and flags follow the skeleton: a computation has no
+    `00_prepare.py` and no `--show`/`--probe`. `next_steps` held all three
+    shapes inline, 142 lines (audit 2026-10-27, third, M7)."""
+    sk = standard_contract.skeleton(ln.repeat_cost, kind, model)
+    protocol = f"PROTOCOL-{slug}.md"
     fields = step_fields(sk, kind, model)
+    code_check = f"after every code change `code-check {rel}`"
+    test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
     if ln.cut == standard_contract.LOW_CUT:
-        title = (
-            f'repeat_cost = "{ln.repeat_cost}" — no freeze, no audit before the run, '
-            "the run is the instrument check"
-        )
-        if sk is standard_contract.COMPUTE:
-            fill = "expected_ids(), rows(), evaluate_rows()"
-        elif sk is standard_contract.MODEL:
-            fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
-        else:
-            fill = f"{estimator_fill(kind)}; --show 3, then the run"
-        steps = [
-            f"{protocol}: fill the low cut — `type` in the head, then\n"
-            f"     {fields}; `protocol-check --contract` names the labels.",
-            f"scripts/01_measure.py: {fill}; {code_check}.",
-        ]
-    elif sk is standard_contract.COMPUTE:
-        test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
-        # repeat_cost, not "lane": a lane is a scored lane of the run
-        # (registered, null) everywhere else (audit 2026-10-27, third, I12)
-        title = (
-            f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report — a '
-            "computation, the run is the instrument check"
-        )
-        steps = [
+        return _low_steps(ln, sk, protocol, fields, kind, code_check)
+    # repeat_cost, not "lane": a lane is a scored lane of the run
+    # (registered, null) everywhere else (audit 2026-10-27, third, I12)
+    title = f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report'
+    if sk is standard_contract.COMPUTE:
+        return title + " — a computation, the run is the instrument check", [
             f"{protocol}: fill the pilot part (head: type, repeat_cost; "
             f"{fields}); `protocol-check --contract` names the labels.",
             f"scripts/01_measure.py: expected_ids(), rows(), evaluate_rows(); {code_check}.",
             f"{test}: the counting function at two edges — no criterion, so no "
             "resolution check.",
         ]
-    else:
-        test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
-        estimator = sk is standard_contract.ESTIMATOR
-        title = f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report' + (
-            " — the instrument is an estimator" + ("" if model else ", no model call")
-            if estimator
-            else ""
+    if sk is standard_contract.ESTIMATOR:
+        title += " — the instrument is an estimator" + (
+            "" if model else ", no model call"
         )
-        steps = [
-            f"{protocol}: fill the pilot part (head: type, repeat_cost; "
-            f"{fields}"
-            + ("; the estimator in Model / tool" if estimator else "")
-            + "); `protocol-check --contract` names the labels.",
-            "scripts/00_prepare.py: raw -> prepared"
-            + (", gold null for the unlabelled split" if estimator else "")
-            + f"   ({rel}/scripts)",
-            f"scripts/01_measure.py: {estimator_fill(kind)}; --show 3 reads the "
-            "config and feature rows"
-            if estimator
-            else "scripts/01_measure.py --show 3    read the prompts, no call",
-            (
-                (
-                    "scripts/01_measure.py --probe 12  instrument check: the unchanged predictor, "
-                    if kind == standard_contract.APPLY_KIND
-                    else "scripts/01_measure.py --probe 12  instrument check: a reduced estimator, "
-                )
-                + "both lanes, throwaway; scores read, never reported"
-                if estimator
-                else "scripts/01_measure.py --probe 4   instrument check in the real "
-                f"pipeline; its answers as parser cases into {test}"
+        probe = (
+            "scripts/01_measure.py --probe 12  instrument check: "
+            + (
+                "the unchanged predictor, "
+                if kind == standard_contract.APPLY_KIND
+                else "a reduced estimator, "
             )
-            + f"; {code_check}.",
+            + "both lanes, throwaway; scores read, never reported"
+        )
+        return title, [
+            f"{protocol}: fill the pilot part (head: type, repeat_cost; {fields}; "
+            "the estimator in Model / tool); `protocol-check --contract` names the labels.",
+            f"scripts/00_prepare.py: raw -> prepared, gold null for the unlabelled "
+            f"split   ({rel}/scripts)",
+            f"scripts/01_measure.py: {estimator_fill(kind)}; --show 3 reads the "
+            "config and feature rows",
+            f"{probe}; {code_check}.",
             f"{test}: the resolution check as a test (LAB-016 Resolution check before freezing).",
         ]
+    return title, [
+        f"{protocol}: fill the pilot part (head: type, repeat_cost; {fields}); "
+        "`protocol-check --contract` names the labels.",
+        f"scripts/00_prepare.py: raw -> prepared   ({rel}/scripts)",
+        "scripts/01_measure.py --show 3    read the prompts, no call",
+        "scripts/01_measure.py --probe 4   instrument check in the real pipeline; "
+        f"its answers as parser cases into {test}; {code_check}.",
+        f"{test}: the resolution check as a test (LAB-016 Resolution check before freezing).",
+    ]
+
+
+def _low_steps(
+    ln: standard_contract.Lane,
+    sk: standard_contract.Skeleton,
+    protocol: str,
+    fields: str,
+    kind: str,
+    code_check: str,
+) -> tuple[str, list[str]]:
+    """(title, steps) of the low cut before its run: fill the cut, fill
+    the skeleton's script — no freeze, no audit, the run is the instrument
+    check."""
+    title = (
+        f'repeat_cost = "{ln.repeat_cost}" — no freeze, no audit before the run, '
+        "the run is the instrument check"
+    )
+    if sk is standard_contract.COMPUTE:
+        fill = "expected_ids(), rows(), evaluate_rows()"
+    elif sk is standard_contract.MODEL:
+        fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
+    else:
+        fill = f"{estimator_fill(kind)}; --show 3, then the run"
+    return title, [
+        f"{protocol}: fill the low cut — `type` in the head, then\n"
+        f"     {fields}; `protocol-check --contract` names the labels.",
+        f"scripts/01_measure.py: {fill}; {code_check}.",
+    ]
+
+
+def _run_steps(ln: standard_contract.Lane, rel: Path, slug: str) -> list[str]:
+    """The freeze where the lane owes it — preflight and its audit, the
+    report fields, `frozen = true` — then the commit and the run: in the
+    foreground where the lane says so, else detached through `runlog
+    start` from the repo root."""
+    steps: list[str] = []
     if ln.freeze:
         if standard_contract.PREFLIGHT_AUDIT in ln.audits:
             steps.append(
-                f"`preflight {rel}`, then the preflight audit (`{audit} preflight`) "
-                "in the background; decide its findings, its record's name into the "
-                "head (`preflight_audit`; LAB-015 Preflight audit before freezing)."
+                f"`preflight {rel}`, then the preflight audit (`labkit-audit {rel} "
+                "--mode preflight`) in the background; decide its findings, its "
+                "record's name into the head (`preflight_audit`; LAB-015 Preflight "
+                "audit before freezing)."
             )
         steps.append(
             f"reportable? `labkit-init exp {slug} --report` adds the report fields; "
@@ -1304,31 +1347,26 @@ def next_steps(
             f"{(rel / 'scripts' / '01_measure.py').as_posix()}` "
             f"(untracked code is in no diff); running processes: .venv/bin/runlog {rel}."
         )
-    if kind == standard_contract.COMPUTE_KIND:
-        # first, before any field is filled: a model fitted under compute
-        # owes a criterion its protocol has no place for
-        steps.insert(
-            0,
-            f"Check the kind before anything else. {KIND_QUESTIONS}. If (1) "
-            f"is yes: `labkit-init exp {slug} --kind fit --change-kind` — before "
-            f"the first measurement; it keeps what you wrote and refuses to "
-            f"replace a file you changed.",
-        )
+    return steps
+
+
+def _closing_steps(ln: standard_contract.Lane, rel: Path, protocol: str) -> list[str]:
+    """After the run: finalize (with the provenance where the lane owes
+    it), the analysis audit where the lane owes it, then the adoption."""
     after = f"`finalize {rel}`" + (
         " checks the provenance (source frozen in the run, tracked in git)"
         if ln.provenance
         else ""
     )
     if standard_contract.ANALYSIS_AUDIT in ln.audits:
-        after += f", then the analysis audit (`{audit} analysis`), decided"
-    steps.append(after + ".")
-    steps.append(
+        after += (
+            f", then the analysis audit (`labkit-audit {rel} --mode analysis`), decided"
+        )
+    return [
+        after + ".",
         f"`{adopt_command(rel / protocol)}` adopts the number: it runs "
-        "report-check, whose last station is scripts/02_analyze.py --check."
-    )
-    return f"\nNext ({title}):\n" + "\n".join(
-        f"  {i}. {step}" for i, step in enumerate(steps, 1)
-    )
+        "report-check, whose last station is scripts/02_analyze.py --check.",
+    ]
 
 
 # --- command line -------------------------------------------------------------
