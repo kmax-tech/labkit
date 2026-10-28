@@ -1520,6 +1520,17 @@ Forschung und Benchmark-Fallliste liegen in
 
 ### Zurückgestellte Erweiterungen
 
+- **Schon veröffentlichte Versuchsbelege (zurückgestellt am 2026-10-28):**
+  Unter `docs/usability/` liegen auf `origin/main` 78 Dateien mit echten
+  Agenten- und Leserantworten, Traces und Logs früherer Runden. Seit
+  2026-10-28 gilt für neue Proben (Entscheidung des Autors für diesen
+  Fall, keine ältere Hausregel): echte Antworten und aufgabenbezogene
+  Logauszüge bleiben intern im Archiv `/Users/max/projects/labkit-evidence`
+  (lokal, ohne Remote), öffentlich nur Kriterien, synthetische Tests und
+  eine knappe Beschreibung. Offen: ob die schon veröffentlichten Belege
+  nachträglich heraus sollen — das hieße gepushte Historie umschreiben und
+  force-pushen; die Originale gingen vorher ins interne Archiv.
+
 - **Protokollprosa außerhalb des geprüften Anspruchs:** Die
   Entscheidungsprüfung bindet die Conclusion (Recorded results und
   Limit-Zeilen sind erzeugt und über Record und Lauf gebunden). Die
