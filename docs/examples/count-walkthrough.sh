@@ -82,14 +82,14 @@ run "$V/protocol-fill" "$P" type=exploratory \
     "Unit=one document = one visible regular file directly in a case's directory"
 run "$V/protocol-check" "$P"
 echo "   (every commit below runs the probe's pre-commit hook: protocol-check on staged protocols, report-check on declared results)"
-run git add -A
-run git commit -q -m "Register docs-per-case: the question, scope and unit; the count filled"
+run git add "$AREA"
+run git commit -q -m "Register docs-per-case: the question, scope and unit; the count filled" -- "$AREA"
 
 say "4. the run — runlog refuses it unless the registration is written; at low repeat cost it is the instrument check too"
 run "$V/python" "$AREA/scripts/01_measure.py"
 RUN=$(ls "$AREA/runs" | tail -1)
-run git add -A
-run git commit -q -m "Run $RUN: output and run record"
+run git add "$AREA"
+run git commit -q -m "Run $RUN: output and run record" -- "$AREA"
 
 say "5. finalize — the answering run chosen, its record held, source and output tracked"
 run "$V/finalize" "$AREA"
@@ -126,8 +126,8 @@ cat REPORT.md
 
 say "9. the gate at the stop and the commit, on the report and the protocol"
 run "$V/report-check" --if-reported REPORT.md "$P"
-run git add -A
-run git commit -q -m "Adopt $RUN as the result; the report block"
+run git add "$AREA" REPORT.md
+run git commit -q -m "Adopt $RUN as the result; the report block" -- "$AREA" REPORT.md
 
 say "10. a generated number retyped — which check refuses it"
 echo "   retyping 3.5 as 3.6 inside REPORT.md's result block"

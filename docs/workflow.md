@@ -70,8 +70,13 @@ apply predictors); a computation has none.
 ```
 protocol-fill PROTOCOL-<name>.md "Question / hypothesis=…" "Unit=…" …
 protocol-check PROTOCOL-<name>.md
-git add -A && git commit
+git add experiments/NN-<name> tests/test_NN_<name>.py && git commit -m "…" -- experiments/NN-<name> tests/test_NN_<name>.py
 ```
+
+The commit names its paths (LAB-077 Own commits, others' state stays with
+the user): `git add` makes new files known, and the paths after `--` keep
+whatever else is staged — another session's work, the state you found —
+out of it.
 
 Reads and changes: the protocol's prose fields, by exact label
 (`protocol-fill --list` names what is still open). Which fields follow the
@@ -105,7 +110,7 @@ preflight audit run and decided, `frozen = true`.
 
 ```
 .venv/bin/python experiments/NN-<name>/scripts/01_measure.py
-git add -A && git commit
+git add experiments/NN-<name> && git commit -m "…" -- experiments/NN-<name>
 ```
 
 Reads: the data the script names (`SOURCE`, `INPUTS`). Writes:
