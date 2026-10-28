@@ -83,7 +83,7 @@ from labkit.checks.result_render import Rendering, rendering
 from labkit.formats.repo import GitError, audit_command, git_root, shown, state_text
 from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check, report_hold
-from labkit.checks.prompt_check import prompt_constants
+from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     BEFORE_RUN_CLAIMS,
@@ -850,9 +850,23 @@ def fill_many(
 
 
 def _prompts_file(protocol: Path, text: str) -> int:
-    """`--prompts` on PROTOCOL: the Prompt block from the scripts' PROMPT constants."""
+    """`--prompts` on PROTOCOL: the Prompt block from the PROMPT constants
+    of the area's scripts that parse — all of them or none. A constant the
+    static reader cannot compute to a string (`unreadable_prompt_constants`)
+    is named and nothing is written (exit 2): a block with one variant of
+    two reads as filled to every gate."""
+    area = protocol.resolve().parent
+    unreadable = unreadable_prompt_constants(area)
+    if unreadable:
+        console.refuse(
+            "protocol-fill",
+            f"{', '.join(unreadable)} not statically readable as a string — "
+            "nothing written; write the Prompt block by hand from the "
+            "script's `--show`",
+        )
+        return 2
     try:
-        new = fill_prompts(text, prompt_constants(protocol.resolve().parent))
+        new = fill_prompts(text, prompt_constants(area))
     except ValueError as exc:
         console.refuse("protocol-fill", str(exc))
         return 2

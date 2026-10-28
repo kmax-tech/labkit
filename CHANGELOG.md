@@ -389,6 +389,15 @@ pins (`requirements.txt` / `requirements.lock`).
   `is_stamp_placeholder_block`) is no content now; a written block, also
   one below the stamped fence, fills the field. Pilot of labkit-paper
   area 15 on c2c5da2 (PubMedQA), defect 6.
+- **`protocol-fill --prompts` names an unreadable PROMPT constant and
+  writes nothing.** It copied the constants the static reader computes
+  and dropped the others without a word: with the registered prompt
+  unreadable (`', '.join(ANSWERS.keys())`, a call) it wrote the null
+  prompt alone and printed "filled", against the rule of the same reader
+  that a prompt it cannot compute is said aloud. Now any constant it
+  cannot compute to a string (`prompt_check.unreadable_prompt_constants`,
+  new) is named with its script, nothing is written and the exit is 2,
+  as when none reads. Pilot of labkit-paper area 15 on c2c5da2 (PubMedQA), defect 11.
 - **Four faults found by the audit of 2026-10-28.** A line of the
   journal's copy that is not JSON ended the stop hook in a traceback:
   `attempts.copy_gaps` now raises AttemptError naming the copy's own line,

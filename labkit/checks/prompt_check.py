@@ -166,8 +166,18 @@ def _script_prompts(source: str) -> tuple[dict[str, str], list[str]]:
 
 def prompt_constants(area: Path) -> dict[str, str]:
     """`PROMPT` / `PROMPT_<VARIANT>` string constants across the area's
-    scripts, as the scripts compute them (`_value_of`)."""
+    scripts, as the scripts compute them (`_value_of`); the ones it cannot
+    compute are `unreadable_prompt_constants`."""
     return _prompts(area)[0]
+
+
+def unreadable_prompt_constants(area: Path) -> list[str]:
+    """`<script>:<NAME>` of every `PROMPT` / `PROMPT_<VARIANT>` constant in
+    the area's scripts that `_value_of` does not compute to a string (a
+    call other than `"sep".join`, a format spec, a tuple, list or dict) — the ones
+    `prompt_constants` leaves out. A script that does not parse is read as
+    having none."""
+    return _prompts(area)[1]
 
 
 def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
