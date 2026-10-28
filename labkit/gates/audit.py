@@ -76,7 +76,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Sequence
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
@@ -905,15 +905,30 @@ class Stamp(NamedTuple):
     files: list[Path]
 
 
-def stamp_facts(stamp: Stamp, verdict: tuple[int, int, int]) -> str:
-    """The stamp's facts, for the person reading the report beside the
-    record: the sha is `scope_sha.area_stamp`, the same a later `scope-sha`
-    recomputes and the record carries as `scope_sha`."""
-    sha = stamp.sha
-    b, w, n = verdict
+def stamp_facts(stamp: Stamp, grades: Sequence[str], counted_notes: int) -> str:
+    """The stamp summary line: date, scope sha, the findings to decide as
+    the record lists them, and the notes the auditor tallied but did not
+    list. The sha is `scope_sha.area_stamp`, the same a later `scope-sha`
+    recomputes and the record carries as `scope_sha`. GRADES are the
+    record's findings' grades in the order `--decide` numbers them (carried
+    ones included); COUNTED_NOTES the notes of the auditor's verdict line —
+    at repeat cost low a tally only, never listed or recorded
+    (`experiment-preflight.agent.md`, LAB-017 The number of audits follows
+    the cost tier), so nothing to decide."""
+    b, w, n = (sum(1 for g in grades if g == grade) for grade in findings.GRADES)
+    # the auditor counts notes loosely and no gate holds the tally
+    # (`findings.verdict_disagrees`): fewer tallied than listed adds nothing
+    unlisted = counted_notes - n
     return (
-        f"{time.strftime('%Y-%m-%d')} · scope sha {sha} · {b + w + n} findings "
-        f"({b} blockers, {w} warnings, {n} notes — decide each: {findings.DECIDED_LIST})"
+        f"{time.strftime('%Y-%m-%d')} · scope sha {stamp.sha} · {len(grades)} "
+        f"findings to decide ({b} blockers, {w} warnings, {n} notes — decide "
+        f"each: {findings.DECIDED_LIST})"
+        + (
+            f" · {unlisted} more note(s) tallied by the auditor, not listed or "
+            "recorded — nothing to decide"
+            if unlisted > 0
+            else ""
+        )
     )
 
 
@@ -1358,10 +1373,12 @@ def _stamp_report(
     area: Path, mode: str, stamp: Stamp, verdict: tuple[int, int, int], recorded: Path
 ) -> None:
     """What the person copies and watches, on stderr after the report: the
-    stamp's facts; in mode preflight the head field that names the record
+    stamp's facts, counted from the record written (RECORDED); in mode
+    preflight the head field that names the record
     (`preflight_audit = "<record>"`, once every finding is decided); and a
     NOTE when the code changed while the auditor read it."""
-    print(f"\nstamp: {stamp_facts(stamp, verdict)}", file=sys.stderr)
+    grades = [f.grade for f in findings.read(recorded).findings]
+    print(f"\nstamp: {stamp_facts(stamp, grades, verdict[2])}", file=sys.stderr)
     if mode == PREFLIGHT_AUDIT:
         print(
             f'head: preflight_audit = "{recorded.name}" — once every finding is '

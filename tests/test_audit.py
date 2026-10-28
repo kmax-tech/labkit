@@ -561,6 +561,34 @@ class Audit(unittest.TestCase):
             err, r"stamp: \d{4}-\d\d-\d\d · scope sha [0-9a-f]{12} · 1 findings"
         )
 
+    def test_the_summary_asks_to_decide_what_the_record_lists(self):
+        """At repeat cost low notes are counted, not listed or recorded; the
+        summary asked to decide them all the same ("6 findings (… 3 notes —
+        decide each …)" beside "3 to decide", pilot of labkit-paper area 15,
+        t15 and PubMedQA). The twin: listed notes are recorded and decided."""
+        counted = WARN.replace("0 notes", "3 notes")
+        _, out, err, _ = run(repo_with(), counted)
+        self.assertIn(
+            "1 findings to decide (0 blockers, 1 warnings, 0 notes — decide each", err
+        )
+        self.assertIn(
+            "3 more note(s) tallied by the auditor, not listed or recorded — "
+            "nothing to decide",
+            err,
+        )
+        self.assertIn("— 1 to decide", out)  # the decision list agrees
+        listed = (
+            "WARNING · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\n"
+            "NOTE · a.py:2 · x · y · LAB-015 Preflight audit before freezing · z\n"
+            "verdict: 0 blockers, 1 warnings, 1 notes"
+        )
+        _, out, err, _ = run(repo_with(), listed)
+        self.assertIn(
+            "2 findings to decide (0 blockers, 1 warnings, 1 notes — decide each", err
+        )
+        self.assertNotIn("tallied by the auditor", err)
+        self.assertIn("— 2 to decide", out)
+
 
 class OneSnapshot(unittest.TestCase):
     """Acceptance of the audit snapshot (2026-10-20): a file changed between

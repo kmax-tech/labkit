@@ -451,6 +451,15 @@ pins (`requirements.txt` / `requirements.lock`).
   declared, not recognised: the decode decides, not the file type, so
   one whose bytes happen to decode is read as text, and guessing it from
   the failure would excuse a corrupt text dataset.
+- **The audit summary asks to decide what the record lists.** At repeat
+  cost low the auditor counts its notes and lists none, and the record
+  holds none; the stamp line still said "6 findings (0 blockers, 3
+  warnings, 3 notes — decide each …)" beside "3 to decide" (pilot of
+  labkit-paper area 15, t15 and PubMedQA). `audit.stamp_facts` now counts
+  the record's findings by grade (carried ones included, as `--decide`
+  numbers them) and names the notes the auditor tallied beyond them
+  apart, "nothing to decide"; it takes the record's grades and the
+  tallied notes in place of the verdict triple.
 - **Every line of a gone audit file names the restore that works there,
   the two left over included.** f751938 made the tree, index and copy
   lines state-specific (`git add` only for a file still on disk); the line

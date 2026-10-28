@@ -205,7 +205,8 @@ class TestOneStampEverywhere(unittest.TestCase):
 
         sha, files, _ = packaged.area_stamp(self.area)
         self.assertIn(
-            f"scope sha {sha}", audit.stamp_facts(audit.Stamp(sha, files), (0, 0, 0))
+            f"scope sha {sha}",
+            audit.stamp_facts(audit.Stamp(sha, files), [], 0),
         )
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
