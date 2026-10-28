@@ -1636,6 +1636,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The attempt journal keeps a copy outside the working tree, one per
+  branch.** Agents deleted `audits/` whole, journal included, before a
+  first commit (ninth haiku round t5; first SAB-like draw, 2026-10-27),
+  and nothing in the tree was left to notice. Every journal line is now
+  also written to `<git common dir>/labkit-attempts/<branch>/<area>.jsonl`
+  (`attempts.journal_copy`), and the tree check — the stop, the next
+  audit, `--findings`, the handover — names every attempt whose line the
+  copy keeps and the journal lacks, with each file its end names that is
+  gone, and the command that restores the lines (`attempts.copy_gaps`).
+  The guarantee is that and no more: an attempt made in this repository
+  on a branch, deleted in the working tree. Not covered: a detached HEAD
+  (no copy), a fresh clone, a deleted git directory, attempts made before
+  the copy existed. Held per branch and as a set of lines, so a switch to
+  a branch with a shorter journal, a merge that interleaves two branches'
+  lines and a journal older than its copy pass; a branch deleted and made
+  again under its old name keeps the old copy, which is then removed by
+  hand.
 - **`01_measure.py --calibrate-null` derives an apply null's band before
   the registration.** The estimator skeleton asked to derive `null_band`
   from the null lane's spread over seeds on the probe, but `--probe` draws

@@ -12,6 +12,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -241,6 +242,60 @@ class Begin(unittest.TestCase):
         running = attempts.begin(area, "analysis", "opus", "s")
         self.assertIn("started on elsewhere and has no end", running.notes[0])
         running.end("none", error="test")
+
+
+class JournalCopy(unittest.TestCase):
+    """The journal's copy in the git directory, one per branch: a journal
+    deleted in the tree before any commit is noticed, and a branch switch,
+    a merge or an older journal is no false block (2026-10-28; first
+    SAB-like draw and ninth haiku round t5 deleted `audits/` whole)."""
+
+    def attempt(self, area: Path, record: str = "r.toml") -> str:
+        running = attempts.begin(area, "analysis", "opus", "s")
+        (area / "audits" / record).write_text("x", encoding="utf-8")
+        running.end("record", file=record)
+        return running.id
+
+    def test_audits_deleted_whole_before_a_commit_is_named(self):
+        area = area_in_repo()
+        aid = self.attempt(area)
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+        shutil.rmtree(area / "audits")  # rm -rf audits/, as the draws did
+        lost = "\n".join(attempts.area_gaps(area).blockers)
+        self.assertIn(f"lost 2 line(s) of attempt(s) {aid}", lost)
+        self.assertIn("ended naming audits/r.toml, and the file is gone", lost)
+        # the restore the message gives brings the lines back
+        subprocess.run(
+            lost.split("`")[1], shell=True, cwd=area, check=True, capture_output=True
+        )
+        self.assertNotIn("lost 2 line(s)", "\n".join(attempts.area_gaps(area).blockers))
+
+    def test_a_branch_with_a_shorter_journal_meets_its_own_copy(self):
+        area = area_in_repo()
+        root = area.parent.parent
+        git(root, "checkout", "-q", "-b", "feature")
+        self.attempt(area)
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "an attempt on feature")
+        git(root, "checkout", "-q", "-")  # back: no journal on this branch
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_lines_older_than_the_copy_and_a_merge_order_pass(self):
+        area = area_in_repo()
+        journal = attempts.journal_path(area)
+        journal.write_text(START + "\n" + END_R + "\n", encoding="utf-8")
+        (area / "audits" / "r.toml").write_text("x", encoding="utf-8")
+        self.attempt(area, "r2.toml")  # the copy holds only this attempt
+        lines = journal.read_text(encoding="utf-8").splitlines()
+        journal.write_text("\n".join([*lines[2:], *lines[:2]]) + "\n", encoding="utf-8")
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_a_detached_head_keeps_no_copy(self):
+        area = area_in_repo()
+        git(area.parent.parent, "checkout", "-q", "--detach")
+        self.assertIsNone(attempts.journal_copy(area))
+        self.attempt(area)
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
 
 
 class Hook(unittest.TestCase):

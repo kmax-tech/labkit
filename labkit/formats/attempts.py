@@ -54,9 +54,26 @@ The journal starts with the attempts made since it was introduced; a
 record older than its journal is named by none, and none is added for it
 afterwards — an entry written later would claim a start nobody saw.
 
+Every line is also written to a copy outside the working tree, in the
+repository's git directory, one file per branch and area
+(`journal_copy`); the tree check holds the journal to it: a line the copy
+keeps that the journal lacks is a lost attempt, and a file its end names
+that is gone is lost evidence (`copy_gaps`). Why: agents deleted
+`audits/` whole, journal included, before a first commit (ninth haiku
+round t5; first SAB-like draw, 2026-10-27), and then nothing in the tree
+was left to notice. The guarantee is exactly that: an attempt made in
+this repository on a branch, its journal line or files deleted in the
+working tree. Not covered: a detached HEAD (no copy is kept), a fresh
+clone, a deleted git directory, attempts made before the copy existed. A
+branch deleted and made again under its old name keeps the old copy, and
+its lines are then named as lost: remove that copy file. Per branch, so a
+switch to a branch with a shorter journal is held to its own copy; held
+as a set of lines, so a merge that interleaves two branches' lines and a
+journal older than its copy both pass.
+
 Limit: an attempt never committed whose journal line was removed with it
-cannot be told from one that never happened — a local check has no
-witness beyond the repository.
+on a detached HEAD, or with the git directory, cannot be told from one
+that never happened — a local check has no witness beyond the repository.
 """
 
 from __future__ import annotations
@@ -69,6 +86,7 @@ import os
 import secrets
 import socket
 import tempfile
+from urllib.parse import quote
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
@@ -78,7 +96,14 @@ from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
-from labkit.formats.repo import INDEX_REV, files_at, git_dir_path, git_root, text_at
+from labkit.formats.repo import (
+    INDEX_REV,
+    files_at,
+    git_dir_path,
+    git_root,
+    git_run,
+    text_at,
+)
 from labkit.formats.runs import name_minute, now_stamp
 from labkit.formats.scope_sha import digest
 
@@ -441,6 +466,17 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         attempts = parse_journal(now, f"{DIR}/{JOURNAL}")
         present = _paths_under(area / DIR)
     at_head, journal_at_head = _git_paths(area, "HEAD")
+    # the tree only: the stop and the next audit hold the journal to its
+    # copy; the commit carries what is staged (`journal_copy`, `copy_gaps`)
+    copy = None if staged else journal_copy(area)
+    try:
+        lost_here = (
+            copy_gaps(now, copy.read_text(encoding="utf-8"), copy, present)
+            if copy is not None and copy.is_file()
+            else []
+        )
+    except UnicodeError as exc:
+        raise AttemptError(f"{copy}: the journal's copy is not UTF-8: {exc}") from exc
     found = gaps(
         attempts,
         present,
@@ -457,7 +493,7 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         # raised as AttemptError it replaced every gap found above (audit
         # 2026-10-27, third, K1)
         lost = [str(exc)]
-    return Gaps([*found.blockers, *lost], found.notes)
+    return Gaps([*found.blockers, *lost_here, *lost], found.notes)
 
 
 @dataclass(frozen=True)
@@ -485,13 +521,84 @@ def area_integrity(area: Path, *, staged: bool = False) -> Integrity:
 
 
 def _append(area: Path, event: dict[str, str]) -> None:
-    """Append EVENT as one line to AREA's journal (one write, flushed)."""
+    """Append EVENT as one line to AREA's journal and to its copy in the
+    git directory (`journal_copy`, none on a detached HEAD or outside
+    git) — each one write, flushed. Raises OSError when either cannot be
+    written: an attempt the copy misses is one the check cannot see."""
+    line = json.dumps(event, ensure_ascii=False) + "\n"
     path = journal_path(area)
     path.parent.mkdir(exist_ok=True)
-    with path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(event, ensure_ascii=False) + "\n")
-        fh.flush()
-        os.fsync(fh.fileno())
+    copy = journal_copy(area)
+    if copy is not None:
+        copy.parent.mkdir(parents=True, exist_ok=True)
+    for target in (path, *([copy] if copy is not None else [])):
+        with target.open("a", encoding="utf-8") as fh:
+            fh.write(line)
+            fh.flush()
+            os.fsync(fh.fileno())
+
+
+#: the folder in the repository's common git directory that keeps the
+#: journal copies, one file per branch and area (`journal_copy`)
+COPY_DIR = "labkit-attempts"
+
+
+def journal_copy(area: Path) -> Path | None:
+    """Where AREA's journal is copied:
+    `<common git dir>/labkit-attempts/<branch>/<area>.jsonl`, the branch and
+    the area's path from the repository root each quoted to one file name.
+    None outside a repository and on a detached HEAD: a copy belongs to a
+    branch, so a switch to a branch with a shorter journal meets that
+    branch's copy. Raises GitError when git cannot run."""
+    root = git_root(area)
+    if root is None:
+        return None
+    branch = git_run(["symbolic-ref", "--short", "-q", "HEAD"], root)
+    base = git_dir_path(root, COPY_DIR, common=True)
+    if branch.returncode != 0 or base is None:
+        return None
+    rel = area.resolve().relative_to(root.resolve()).as_posix()
+    return base / quote(branch.stdout.strip(), safe="") / f"{quote(rel, safe='')}.jsonl"
+
+
+def copy_gaps(
+    journal_now: str, copy_text: str, copy: Path, present: set[str]
+) -> list[str]:
+    """What the tree lost against the journal's COPY (its text COPY_TEXT):
+    every attempt with a line the copy keeps and JOURNAL_NOW lacks, and
+    every file an end among those lines names that PRESENT (the paths under
+    `audits/`) lacks. The journal is held to the copy as a set of lines — a
+    merge may interleave two branches' lines, and lines older than the copy
+    are the journal's own. Pure; a copy line that is not JSON raises
+    AttemptError naming the copy."""
+    kept = set(journal_now.splitlines())
+    lost = [
+        line for line in copy_text.splitlines() if line.strip() and line not in kept
+    ]
+    if not lost:
+        return []
+    events = [obj for _, obj in jsonl.objects("\n".join(lost), str(copy))]
+    ids = list(
+        dict.fromkeys(str(e.get("id", "?")) for e in events if isinstance(e, dict))
+    )
+    out = [
+        f"{DIR}/{JOURNAL} lost {len(lost)} line(s) of attempt(s) {', '.join(ids)} that "
+        f"this branch's copy keeps ({copy}) — the journal is appended to, never "
+        f"cut; restore them: `mkdir -p {DIR} && touch {DIR}/{JOURNAL} && grep -vxFf "
+        f"{DIR}/{JOURNAL} {copy} >> {DIR}/{JOURNAL}` (in the area)"
+    ]
+    for e in events:
+        if not isinstance(e, dict) or e.get("event") != "ended":
+            continue
+        for rel in (e.get("file"), e.get("answer")):
+            if isinstance(rel, str) and rel and rel not in present:
+                out.append(
+                    f"attempt {e.get('id', '?')} ended naming {DIR}/{rel}, and the file "
+                    f"is gone from the tree with its journal line — a record of an "
+                    f"attempt is evidence; restore it (`git add` when only unstaged), "
+                    f"or acknowledge the loss in a handover"
+                )
+    return out
 
 
 @contextlib.contextmanager

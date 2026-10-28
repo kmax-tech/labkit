@@ -988,10 +988,10 @@ Notiert, nicht geplant:
    nennt sonst die verlorenen Versuche samt Records. Garantie genau so weit:
    Löschen im Arbeitsbaum nach einem Versuch dieses Klons — nicht ein
    frischer Klon, nicht ein gelöschtes `.git`, nicht Versuche vor dem
-   Einbau. Vor dem Bau zu lösen: ein Branch-Wechsel zu einem Stand mit
-   kürzerem Journal darf nicht blockieren (Kopie je Branch oder nur prüfen,
-   solange die Kopie mit HEADs Journal beginnt) — sonst schweigt der
-   garantierte Prüfschritt bei korrektem Zustand nicht.
+   Einbau. Gebaut 2026-10-28 (`attempts.journal_copy`, `copy_gaps`): eine
+   Kopie je Branch, geprüft als Menge von Zeilen — Branch-Wechsel, Merge
+   und ein älteres Journal blocken nicht; ein unter altem Namen neu
+   angelegter Branch behält die alte Kopie (von Hand entfernen).
 4. **Prüfmatrix der Ausweichaktionen, Runden 1–9 (2026-10-26):**
    [Note](docs/notes/2026-10-26-escape-routes-checks-and-exits.md), je
    Ausweg ein Check und ein genannter nächster Schritt. Neu gefunden:
