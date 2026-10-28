@@ -17,7 +17,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
-from labkit.formats import answering_run, console, findings, promises, runs
+from labkit.formats import (
+    answering_run,
+    console,
+    findings,
+    promises,
+    runs,
+    standard_contract,
+)
 from labkit.formats.repo import EXPERIMENTS
 from labkit.probes import sab_cases
 from labkit.probes.usability import (
@@ -530,7 +537,9 @@ def probe_score(
         number = protocol_reading.metric_number(metrics, probe.metric_key)
         bound_to = pr.protocol_as_recorded if pr.bound else None
         tier = pr.repeat_cost
-        if TASK_STAMP[probe.task][1] != "compute":  # a computation owes no null
+        if standard_contract.has_bar(
+            TASK_STAMP[probe.task][1]
+        ):  # a computation owes no null
             null_reported = any(
                 promises.key_kind(k) == "admissibility" for k in metrics
             )
@@ -671,7 +680,7 @@ def score_rows(sc: Score) -> list[tuple[str, str]]:
         ),
         *(
             [("null condition reported", "yes" if null_reported else "NO")]
-            if TASK_STAMP[probe.task][1] != "compute"
+            if standard_contract.has_bar(TASK_STAMP[probe.task][1])
             else []
         ),
         *(

@@ -1131,6 +1131,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The skeletons' criterion keys and lanes have one home.** The probes
+  named `c1_score` and `c1_accuracy` by hand; `Skeleton.criterion_key`
+  (`standard_contract.criterion_key`) holds them, a test holds each
+  measure template's `C1_VALUE_KEY` to it, and `tests/test_one_home.py` a
+  hand spelling. The probe score asks `has_bar` instead of comparing the
+  kind as a word. The estimator skeleton predicts strictly through one
+  `predict_all`, builds its rows through one `lane_row`, and names its two
+  scored lanes `SCORED_LANES`, which a test holds to finalize's
+  `run_record_check.NULL_LANES`. Register `docs/audit-2026-10-28-today.md`,
+  H6, H7.
 - **Three homes across modules of the 2026-10-28 audit.** The
   `===== label =====` join an agent reads lives in `formats/prompts.py`
   (`prompt_body`), so the code-check bundle uses it too — it spelled its

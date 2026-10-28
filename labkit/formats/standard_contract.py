@@ -232,6 +232,11 @@ class Skeleton:
     scripts: tuple[tuple[str, str], ...]
     test: str
     probe: bool
+    # the metrics.json key the measure script keeps [C1]'s number under
+    # (its `C1_VALUE_KEY`); None for the compute skeleton, which has no
+    # criterion. One home for the probes, which named it by hand and scored
+    # three draws "absent" (2026-10-28); tests hold each template to it
+    criterion_key: str | None = None
 
 
 COMPUTE = Skeleton(
@@ -252,6 +257,7 @@ ESTIMATOR = Skeleton(
     ),
     test="test-estimator.py.template",
     probe=True,
+    criterion_key="c1_score",
 )
 MODEL = Skeleton(
     instrument="model",
@@ -262,8 +268,18 @@ MODEL = Skeleton(
     ),
     test="test-area.py.template",
     probe=True,
+    criterion_key="c1_accuracy",
 )
 SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
+
+
+def criterion_key(sk: Skeleton) -> str:
+    """The key SK's measure script keeps [C1]'s number under
+    (`Skeleton.criterion_key`). Raises ValueError for a skeleton without a
+    criterion: a computation keeps its own keys."""
+    if sk.criterion_key is None:
+        raise ValueError(f"the {sk.instrument} skeleton keeps no criterion key")
+    return sk.criterion_key
 
 
 def skeleton(repeat_cost: str | None, kind: str, model: bool) -> Skeleton:

@@ -108,6 +108,13 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"pytest is not installed in this",
         {"preflight"},
     ),
+    # the probes named the skeletons' criterion keys by hand and scored three
+    # draws "absent" (audit 2026-10-28, H6); `standard_contract.criterion_key`
+    (
+        "a criterion key named by hand",
+        r"\"c1_(?:score|accuracy)\"",
+        {"standard_contract"},
+    ),
     # audit modes, the experiments folder and a file:// URL were spelled by
     # hand in several modules (audit 2026-10-28, H5, H8)
     (
@@ -322,6 +329,7 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
+            "a criterion key named by hand": '"metric_key": "c1_score",',
             "an audit mode spelled by hand": 'if record.mode == "analysis":',
             "the experiments folder named by hand": 'experiments = root / "experiments"',
             "a file:// URL read by hand": "return Path(url[7:])",

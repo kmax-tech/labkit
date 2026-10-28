@@ -154,6 +154,27 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual(cal["band"], off[49])  # the 0.99 quantile of 50
         self.assertLess(cal["band"], 1 - cal["chance"])  # no permutation is the truth
 
+    def test_the_scored_lanes_are_the_ones_finalize_reads(self):
+        # the skeleton's lane names and finalize's null-lane station must
+        # agree, or the station holds nothing (audit 2026-10-28, H7)
+        from labkit.checks import run_record_check
+
+        _, measure = self.measure_module("apply")
+        self.assertEqual(measure.SCORED_LANES, run_record_check.NULL_LANES)
+
+    def test_each_skeleton_keeps_c1_under_its_contract_key(self):
+        # the probes named the key by hand (audit 2026-10-28, H6)
+        from labkit.formats import standard_contract
+        from labkit.tools.scaffold import template
+
+        for sk in (standard_contract.ESTIMATOR, standard_contract.MODEL):
+            with self.subTest(sk=sk.instrument):
+                measure = next(t for t, dest in sk.scripts if dest == "01_measure.py")
+                key = standard_contract.criterion_key(sk)
+                self.assertIn(f'C1_VALUE_KEY = "{key}"', template(measure))
+        with self.assertRaises(ValueError):
+            standard_contract.criterion_key(standard_contract.COMPUTE)
+
     def test_calibrate_null_has_no_free_path_at_fit_or_for_a_fixed_null(self):
         _, fit = self.measure_module("fit")
         with self.assertRaisesRegex(ValueError, "apply only"):

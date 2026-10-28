@@ -132,7 +132,10 @@ SEED = 0
 # TODO: the estimator and its FIXED parameters, as text — it is the
 # instrument's version (estimator_sha): a changed line is a changed config.
 ESTIMATOR = "TODO: e.g. RandomForestClassifier(n_estimators=500, random_state=seed)"
-LANES = ("registered", "null", "test")
+#: the two lanes every labelled item is scored in, in the same run — the
+#: names finalize reads the kept rows by (`run_record_check.NULL_LANES`)
+SCORED_LANES = ("registered", "null")
+LANES = (*SCORED_LANES, "test")
 #: `--calibrate-null` (apply): how many permutations of the gold, and the
 #: rule that turns their spread into null_band — fixed before any
 #: calibration, so the band is derived, never chosen after seeing it
@@ -278,7 +281,7 @@ def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
 def expected(items: list[dict]) -> list[dict]:
     """The rows a complete run holds, by id: both scored lanes over the
     labelled items, the test lane over the unlabelled ones."""
-    return ([{"id": f"{lane}:{it['id']}"} for lane in ("registered", "null") for it in labelled(items)]
+    return ([{"id": f"{lane}:{it['id']}"} for lane in SCORED_LANES for it in labelled(items)]
             + [{"id": f"test:{it['id']}"} for it in unlabelled(items)])
 
 
@@ -311,6 +314,23 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
     return rows
 
 
+def predict_all(predictor, part: list[dict], who: str) -> list:
+    """PREDICTOR's answers for every item of PART, as plain values — strict:
+    fewer or more answers than items is refused, never cut short. WHO names
+    the caller in the ValueError."""
+    answers = list(predictor.predict([it[FEATURES_FIELD] for it in part]))
+    if len(answers) != len(part):
+        raise ValueError(f"{who}: {len(answers)} predictions for {len(part)} items")
+    return [_plain(a) for a in answers]
+
+
+def lane_row(lane: str, it: dict, pred, gold, fold: int | None = None, **more) -> dict:
+    """One kept row: item IT predicted PRED in LANE, scored against GOLD
+    (None for the test lane), with its FOLD and MORE (`gold_of`)."""
+    return {"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"],
+            "fold": fold, "pred": pred, "gold": gold, **more}
+
+
 def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
     """Rows of the unchanged primary predictor, never fitted nor given gold:
     the registered lane over the labelled items, the test lane over the
@@ -325,27 +345,19 @@ def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]
     train, test = labelled(items), unlabelled(items)
 
     def predict(predictor, part: list[dict]) -> list:
-        # strict: fewer answers than items is refused, never cut short
-        answers = list(predictor.predict([it[FEATURES_FIELD] for it in part]))
-        if len(answers) != len(part):
-            raise ValueError(f"apply_rows(): {len(answers)} predictions for {len(part)} items")
-        return [_plain(a) for a in answers]
-
-    def row(lane: str, it: dict, pred, gold, **more) -> dict:
-        return {"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"],
-                "fold": None, "pred": pred, "gold": gold, **more}
+        return predict_all(predictor, part, "apply_rows()")
 
     registered = predict(primary, train) if train else []
-    rows = [row("registered", it, p, it[GOLD_FIELD]) for it, p in zip(train, registered)]
+    rows = [lane_row("registered", it, p, it[GOLD_FIELD]) for it, p in zip(train, registered)]
     if null is None:
         donors = list(train)
         random.Random(f"apply-null:{cfg.seed}").shuffle(donors)
-        rows += [row("null", it, p, d[GOLD_FIELD], gold_of=d["id"])
+        rows += [lane_row("null", it, p, d[GOLD_FIELD], gold_of=d["id"])
                  for it, p, d in zip(train, registered, donors)]
     elif train:
-        rows += [row("null", it, p, it[GOLD_FIELD]) for it, p in zip(train, predict(null, train))]
+        rows += [lane_row("null", it, p, it[GOLD_FIELD]) for it, p in zip(train, predict(null, train))]
     if test:
-        rows += [row("test", it, p, None) for it, p in zip(test, predict(primary, test))]
+        rows += [lane_row("test", it, p, None) for it, p in zip(test, predict(primary, test))]
     return rows
 
 
@@ -364,12 +376,11 @@ def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
             preds = fit_predict(cfg, fit, out_items, permute, probe)
             # strict: a fit_predict that returns fewer predictions is refused,
             # never cut to the shorter list (the missing items would vanish)
-            rows += [{"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"], "fold": k,
-                      "pred": p, "gold": it[GOLD_FIELD]} for it, p in zip(out_items, preds, strict=True)]
+            rows += [lane_row(lane, it, p, it[GOLD_FIELD], fold=k)
+                     for it, p in zip(out_items, preds, strict=True)]
     if test:
         preds = fit_predict(cfg, train, test, None, probe)
-        rows += [{"id": f"test:{it['id']}", "lane": "test", "item": it["id"], "fold": None,
-                  "pred": p, "gold": None} for it, p in zip(test, preds, strict=True)]
+        rows += [lane_row("test", it, p, None) for it, p in zip(test, preds, strict=True)]
     return rows
 
 
@@ -436,10 +447,7 @@ def calibrate_null(cfg: MeasureConfig, items: list[dict], k: int = NULL_PERMUTAT
     train = labelled(items)
     if k < 1 or not train:
         raise ValueError(f"calibrate_null(): {k} permutation(s) of {len(train)} labelled item(s)")
-    answers = list(make_estimator(cfg.seed).predict([it[FEATURES_FIELD] for it in train]))
-    if len(answers) != len(train):
-        raise ValueError(f"calibrate_null(): {len(answers)} predictions for {len(train)} items")
-    preds = [_plain(a) for a in answers]
+    preds = predict_all(make_estimator(cfg.seed), train, "calibrate_null()")
     golds = [it[GOLD_FIELD] for it in train]
     chance = chance_of(cfg.score, golds)
     scores = []

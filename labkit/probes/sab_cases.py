@@ -40,6 +40,8 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats import standard_contract
+
 
 @dataclass(frozen=True)
 class Case:
@@ -65,7 +67,7 @@ HRV_TOLERANCE = 0.10
 #: measured the harness, not labkit: three draws kept the right number under
 #: `c1_score` and scored "absent" (docs/usability/2026-10-28-sab-cases-haiku-main.md).
 #: A computation has no criterion; its sheet names the key (`rmssd_ms`).
-CRITERION_KEY = "c1_score"
+CRITERION_KEY = standard_contract.criterion_key(standard_contract.ESTIMATOR)
 CASES = {
     c.task: c
     for c in (
