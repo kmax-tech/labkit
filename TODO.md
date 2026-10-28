@@ -1271,6 +1271,27 @@ Notiert, nicht geplant:
    (3) Null-Spur: Entscheidung offen (Punkt 13). Offen als Frage: wählt
    labkit Läufe nach dem Namen, wo Rechner in zwei Zeitzonen einen
    Bereich beschreiben (der Bewerter tat es hier, Artefakt des Starts)?
+   Umgesetzt 2026-10-28: (1) `0796243` — der Code in der Zeilenidentität
+   des Schätzer-Skeletts, Wiederaufnahme über eine Codeänderung verweigert
+   (Läufe, `code_sha`, neuer Ausgabename), Fortsetzen eines abgeschlossenen
+   Laufs laut gesagt statt verweigert (eine harte Weigerung brach die
+   Parser-Reparatur des Modell-Skeletts, dessen Antworten vom Parser nicht
+   abhängen), finalize hält Zeilen mit Code fremder Skripte; (2)
+   `5a26902` — die geforderte Prüfkennzahl als Arbeitsauftrag in
+   `--findings`, in den Halten der Folgeprüfung und in AGENTS.md.
+15. **Reparaturfall, zweiter Versuch auf `5a26902` (2026-10-28)**
+   ([Notiz](docs/usability/2026-10-28-repair-case-2-haiku-5a26902.md)):
+   Haiku kalt bis zur übernommenen, korrekt gebundenen Zahl 0,7609 in
+   651 s, report-check sauber, Lieferung richtig; die Weigerung führte
+   ihn zur eigenen Ausgabedatei. Die Prüfkennzahl kam nicht vor — ihre
+   Abnahme steht aus. Offen, je eine Entscheidung: (1) Das Audit sieht
+   die deklarierte Prädiktor-Datei nicht (`model.json`, sechs Gewichte):
+   das Folge-Audit blieb `not_assessable`, drei Entscheidungsprüfungen
+   `insufficient`, das Ergebnis lautet „C1, A1, A2 not assessable“ trotz
+   wahrer Zahl; Vorschlag: kleine Text-Prädiktoren aus `PREDICTOR_FILES`
+   inline zeigen, binäre beim Namen und Digest nennen. (2) Ein Befund,
+   der eine Bestätigung aus einer Datei verlangt, hat keinen Kanal wie
+   `check:`. (3) Null-Spur: Entscheidung offen (Punkt 13).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

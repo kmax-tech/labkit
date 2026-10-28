@@ -1,0 +1,18 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T15:34"
+model = "opus"
+record = "2026-10-28T15-30-analysis.toml"
+scope_sha = "cb7911523067"
+shown_sha = "47d33a0f083e"
+claim_sha = "62d7d02d5de5"
+again = false
+upheld = 0
+rejected = 0
+insufficient = 1
+
+[[decision]]
+finding = 4
+decision_sha = "227eb9003672"
+verdict = "insufficient"
+why = "The inlined `ScreeningModel.probability` now divides by `sd` and run 2026-10-28T15-28-01_0eae reports `c1_score` 0.7609 and `a2_score` 0.4783, so the `sd**2` fault is absent from the answering run; but the finding's open question is whether model.json's `std` holds standard deviations, and the reason answers it only with values and feature means taken from model.json, which is not inlined (only the author's own quote of the `std` list appears in the protocol's Follow-up), while a changed output shows the numbers differ, not that they are right — so the page cannot show whether the Conclusion's 76% (70 of 92) is the registered model's agreement."

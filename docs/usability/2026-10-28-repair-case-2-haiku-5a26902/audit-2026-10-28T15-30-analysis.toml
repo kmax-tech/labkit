@@ -1,0 +1,51 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T15:30"
+mode = "analysis"
+model = "opus"
+scope_sha = "cb7911523067"
+block_sha = "8b60cd8a1da9"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "20c4c39f3c7e", "Admissibility condition" = "fafe53eaa1b6", "Null condition / anchors" = "92e9d27ee158" }
+run_id = "2026-10-28T15-28-01_0eae"
+shown_sha = "47d33a0f083e"
+blockers = 1
+warnings = 3
+notes = 2
+carried_blockers = 1
+followup = { entries = 1, bytes = 1357 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:372 · The C1 bar is one permutation draw (`apply-null:0`), not the null's expectation. Inside A2's band the verdict on this run can flip: with c1_score 70/92 = 0.7609, a null of 57/92 or 58/92 still passes A2 (|0.6196 − 0.5009| = 0.1187 and |0.6304 − 0.5009| = 0.1295, both ≤ 0.13) but sets the bar at ≥ 0.7696, so c1_pass turns false. A null of ≥ 59/92 or ≤ 34/92 fails A2, and c1_pass becomes None. The reported `c1_pass` true (metrics.json: a2_score 0.4783, c1_threshold 0.6283) rests on n = 1 draw, and no repeat exists. · `c1_pass` true depends on seed 0's permutation. Assignment for the caller: run `01_measure.py --repeat-of 2026-10-28T15-28-01_0eae` (several draws) or `--calibrate-null` under the current code, and count the share of null scores in {57, 58}/92 (c1_pass false) and in ≤ 34/92 or ≥ 59/92 (no verdict). · LAB-015 Preflight audit before freezing (scar row Spread unknown, LAB-036 Validate) · draw repeats of the kept run and report the spread of c1_pass beside the answer (`02_analyze.py --draws`); the registered seed-0 verdict stays the answer."
+status = "accepted"
+reason = "C1 pass depends on one permutation draw (seed 0); further analysis needed to assess spread over seeds"
+effect = "C1 not assessable"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:172 · The flag threshold is read from model.json (`self.threshold = m[\"threshold\"]`) and is never held to the registered value. The registration fixes it in Terms: \"a referral where the model's probability reaches its threshold (0.5)\", and Setup says \"at least 0.5\". If model.json's threshold is not 0.5, every flag comes from a rule other than the registered one. · Every registered and test flag would change, and so would `c1_score` 0.7609, `a2_score` 0.4783 and `c1_pass`, if model.json (sha c94491aa…) carries a threshold ≠ 0.5. Assignment for the caller: read `threshold` from data/raw/screening/model.json and compare it with 0.5. · LAB-015 Preflight audit before freezing (scar row Criterion ≠ code), LAB-003 No run without an intent paragraph · an implementation error if they differ: make the applied threshold the registered 0.5 (or refuse when model.json disagrees), then measure again under the unchanged registration."
+status = "accepted"
+reason = "Threshold value cannot be fully verified without embedding model.json"
+effect = "A1 not assessable"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · The registered null_band 0.13 is justified as \"the 0.99 quantile of |null − chance| over 200 permutations (--calibrate-null, before this registration)\". That calibration predates the first measurement (8584e36) and so ran on the pre-fix predictor that divided by sd² (88cb55b repaired it). Its predictions, and with them the permutation spread, are not this instrument's. · `a2_pass` is judged against a band whose stated derivation may not hold for the predictor that produced the flags. It also sets which null draws in the first finding still yield a C1 verdict. Assignment for the caller: run `01_measure.py --calibrate-null` on the current code and compare its band with 0.13. · LAB-015 Preflight audit before freezing (scar row Gate without anchor/resolution) · re-derive the quantile under the fixed predictor as a diagnostic and report it beside a2_pass; the registered 0.13 stays as registered."
+status = "accepted"
+reason = "Null_band calibration cannot be fully verified without embedding calibration output"
+effect = "A2 not assessable"
+
+[[finding]]
+grade = "BLOCKER"
+text = "carried from 2026-10-28T15-27-analysis.toml#1 (not_assessable): BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:181 · `ScreeningModel.probability` standardises each feature as `(v - mu) / sd**2`. The registration says the model standardises \"with the model's own mean and standard deviation\" (Setup · Data / scope), and the protocol asks whether the model is \"applied unchanged\". Dividing by the variance rescales every feature whose `std` ≠ 1 by a further 1/sd, so a different predictor produced the flags. · Every flag is affected, and so are `c1_score` 0.6957 (all 92 registered rows, e.g. output/apply-screen.jsonl:2 P005 `no_referral` vs gold `referral`), `a2_score` 0.5217 and `c1_threshold` 0.6717, which are computed from those same flags. `c1_pass` true therefore answers the question for a model nobody supplied. Assignment for the caller: confirm from data/raw/screening/model.json that `std` holds standard deviations, not variances. · LAB-015 Preflight audit before freezing (scar row Criterion ≠ code: the instrument deviates from the registered model application), LAB-003 No run without an intent paragraph · an implementation error: standardise by the standard deviation as the registration states, then measure again under the unchanged registration and audit the new run"
+carries = "2026-10-28T15-27-analysis.toml#1"
+status = "accepted"
+reason = "model.json cannot be fully verified without embedding its contents"
+effect = "C1 not assessable"
+
+[[fix_verdict]]
+record = "2026-10-28T15-27-analysis.toml"
+n = 1
+decision_sha = "9b79204cc66b"
+verdict = "not_assessable"
+why = "The code was repaired: experiments/01-apply-screen/scripts/01_measure.py:181 now reads `w * (v - mu) / sd`, and the new run 2026-10-28T15-28-01_0eae (output/apply-screen_v2.jsonl, e.g. line 2: P005 `referral` vs gold `referral`) was measured with it.\nThe finding also asked the caller to confirm from data/raw/screening/model.json that `std` holds standard deviations, not variances. That result is in no file shown here, and the decision's reason only describes the code change. If `std` held variances, dividing by it would still not be the registered standardisation."

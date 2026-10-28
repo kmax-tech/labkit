@@ -1,0 +1,30 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T15:33"
+model = "opus"
+record = "2026-10-28T15-30-analysis.toml"
+scope_sha = "cb7911523067"
+shown_sha = "47d33a0f083e"
+claim_sha = "11a5b7392897"
+again = false
+upheld = 1
+rejected = 0
+insufficient = 2
+
+[[decision]]
+finding = 2
+decision_sha = "4942344ae75e"
+verdict = "insufficient"
+why = "The reason rests on model.json holding `threshold: 0.5`, but model.json (sha c94491aa…) is not on the page; the Follow-up note only repeats the person's own claim, so whether every flag, and with them `c1_score` 0.7609 and `a2_score` 0.4783, follows the registered 0.5 rule cannot be checked from what is inlined."
+
+[[decision]]
+finding = 3
+decision_sha = "650e06a9cd52"
+verdict = "insufficient"
+why = "The reason cites a re-derived band of 0.1295 from `--calibrate-null` under the repaired predictor, but that calibration output is not inlined (no run, log or printed result on the page), so whether the `a2_pass` verdict (|0.4783 − 0.5009| = 0.0227) is judged against a band that holds for this predictor cannot be checked."
+
+[[decision]]
+finding = 4
+decision_sha = "4c4b5727d89c"
+verdict = "upheld"
+why = "The inlined `scripts/01_measure.py` standardises with `(v - mu) / sd`, so the sd**2 fault is gone from the instrument that produced run 2026-10-28T15-28-01_0eae (code_sha 3f8f4e4d037c, output apply-screen_v2.jsonl), the reported `c1_score` 0.7609 and `a2_score` 0.4783 do not rest on the faulty predictor's 0.6957/0.5217, and the repair is disclosed under Deviations after freeze."

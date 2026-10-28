@@ -1,0 +1,36 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T15:31"
+model = "opus"
+record = "2026-10-28T15-30-analysis.toml"
+scope_sha = "cb7911523067"
+shown_sha = "47d33a0f083e"
+claim_sha = "8f69da1c4fa2"
+again = false
+upheld = 0
+rejected = 1
+insufficient = 3
+
+[[decision]]
+finding = 1
+decision_sha = "671882ded1ed"
+verdict = "rejected"
+why = "The reason restates the finding (\"the verdict depends on the seed's draw\") without engaging its scenario: no repeat draws or null calibration show how often a null of 57–58/92 flips `c1_pass` to false or an out-of-band null leaves no verdict, while the Conclusion still reports the lead over the null as a settled pass on one seed-0 draw (a2_score 0.4783, c1_threshold 0.6283)."
+
+[[decision]]
+finding = 2
+decision_sha = "eeffe848ca59"
+verdict = "insufficient"
+why = "The reason says model.json's `threshold` is 0.5, but data/raw/screening/model.json (sha c94491aa…) is not inlined, so the page cannot confirm that the flags behind `c1_score` 0.7609, `a2_score` 0.4783 and `c1_pass` true came from the registered 0.5 rule."
+
+[[decision]]
+finding = 3
+decision_sha = "925b34220383"
+verdict = "insufficient"
+why = "The reason engages the scenario: a band of 0.1295 would still pass `a2_pass` at |0.4783 − 0.5009| = 0.0227. But the `--calibrate-null` output under the current code is not inlined, so the re-derived band it rests on cannot be checked."
+
+[[decision]]
+finding = 4
+decision_sha = "4c4b5727d89c"
+verdict = "insufficient"
+why = "The inlined `ScreeningModel.probability` does divide by `sd`, but the reason's other half, that model.json's `std` holds standard deviations rather than variances, rests on model.json, which is not inlined; that file decides whether `c1_score` 0.7609 and `c1_pass` true come from the supplied model, and the follow-up audit carried the finding because it could not see it either."

@@ -1,0 +1,39 @@
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T15-28-01_0eae; the answering run is 2026-10-28T15-28-01_0eae
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  PROTOCOL-apply-screen.md: finalized, audited, checked
+
+report-check: all clear.
+[area exit 0]
+═══ report-check /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md (its head declares 2026-10-28T15-28-01_0eae) ═══
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T15-28-01_0eae; the answering run is 2026-10-28T15-28-01_0eae
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  PROTOCOL-apply-screen.md: finalized, audited, checked
+
+report-check: all clear.
+═══ report-check REPORT.md (a report citing runs) ═══
+  WARNING: REPORT.md: no assigned source found for the numbers on 21 line(s) — they stand outside every generated result block (a hint, not a check of the numbers):
+    REPORT.md:13: 300, 92
+    REPORT.md:16: 01
+    REPORT.md:17: 0.7608695652173914, 76.09, 92, 70, 92
+    REPORT.md:18: 0.4782608695652174, 47.83
+    REPORT.md:19: 76.09, 47.83, 28.26
+    REPORT.md:24: 0.6957, 0.5217
+    REPORT.md:25: 181
+    REPORT.md:31: 0.5
+    REPORT.md:35: 76
+    REPORT.md:46: 300
+    REPORT.md:47: 0.7609, 70, 92
+    REPORT.md:48: 92, 48, 44
+    REPORT.md:49: 208
+    REPORT.md:52: 01
+    REPORT.md:53: 01
+    REPORT.md:54: 01
+    REPORT.md:61: 92
+    REPORT.md:62: 392
+    REPORT.md:63: 0.7609, 76.09
+    REPORT.md:64: 0.6283, 10.26
+    REPORT.md:65: 0.4783
+  WARNING: REPORT.md: cites 2026-10-28T15-27-51_3229, which no protocol declares as its result — a reported number is declared by `protocol-fill <PROTOCOL> --from-run`, and its block written by `--into REPORT.md`; an exploration's run is cited, not reported
+
+report-check: 0 blockers, 2 warning(s) (1 static evidence) — review the warnings above before reporting.
+[REPORT exit 0]

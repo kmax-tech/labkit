@@ -1,0 +1,30 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T15:32"
+model = "opus"
+record = "2026-10-28T15-30-analysis.toml"
+scope_sha = "cb7911523067"
+shown_sha = "47d33a0f083e"
+claim_sha = "11a5b7392897"
+again = false
+upheld = 1
+rejected = 0
+insufficient = 2
+
+[[decision]]
+finding = 2
+decision_sha = "eeffe848ca59"
+verdict = "insufficient"
+why = "The reason says model.json's threshold is 0.5, but model.json (sha c94491aa…) is not inlined, so nothing on the page shows that the flags behind `c1_score` 0.7609, `a2_score` 0.4783 and the A1/A2 verdicts follow the registered 0.5 rule; the threshold value from that file is missing."
+
+[[decision]]
+finding = 3
+decision_sha = "925b34220383"
+verdict = "insufficient"
+why = "The reason cites a re-derived null_band of 0.1295, but no `--calibrate-null` output under the current code is inlined; the band the A2 verdict (|0.4783 − 0.5009| ≈ 0.023) and the Conclusion's \"±0.13\" are judged against therefore still rests on an unshown calibration, and that calibration output is what is missing."
+
+[[decision]]
+finding = 4
+decision_sha = "4c4b5727d89c"
+verdict = "upheld"
+why = "The inlined `ScreeningModel.probability` now standardises as `(v - mu) / sd`, as the registration states, and the answering run (apply-screen_v2, `c1_score` 0.7609 instead of the faulty 0.6957) comes from that predictor, so the reported score and the A1/A2 verdicts no longer rest on the sd² predictor (C1 is in any case recorded as not assessable under Limit #1)."

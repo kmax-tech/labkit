@@ -1,0 +1,32 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T15:27"
+mode = "analysis"
+model = "opus"
+scope_sha = "94645c7d4cf6"
+block_sha = "8b60cd8a1da9"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "20c4c39f3c7e", "Admissibility condition" = "fafe53eaa1b6", "Null condition / anchors" = "92e9d27ee158" }
+run_id = "2026-10-28T15-25-33_9548"
+shown_sha = "6fe9d286d94f"
+blockers = 1
+warnings = 2
+notes = 4
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:181 · `ScreeningModel.probability` standardises each feature as `(v - mu) / sd**2`. The registration says the model standardises \"with the model's own mean and standard deviation\" (Setup · Data / scope), and the protocol asks whether the model is \"applied unchanged\". Dividing by the variance rescales every feature whose `std` ≠ 1 by a further 1/sd, so a different predictor produced the flags. · Every flag is affected, and so are `c1_score` 0.6957 (all 92 registered rows, e.g. output/apply-screen.jsonl:2 P005 `no_referral` vs gold `referral`), `a2_score` 0.5217 and `c1_threshold` 0.6717, which are computed from those same flags. `c1_pass` true therefore answers the question for a model nobody supplied. Assignment for the caller: confirm from data/raw/screening/model.json that `std` holds standard deviations, not variances. · LAB-015 Preflight audit before freezing (scar row Criterion ≠ code: the instrument deviates from the registered model application), LAB-003 No run without an intent paragraph · an implementation error: standardise by the standard deviation as the registration states, then measure again under the unchanged registration and audit the new run"
+status = "fixed"
+reason = "Standardization now divides by sd, not sd**2"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · The registered `null_band` 0.13 is \"the 0.99 quantile of |null − chance| over 200 permutations\". `--calibrate-null` derived it from `predict_all(make_estimator(...))`, which is the sd² predictor above. The band therefore describes the spread of the faulty flags' permutation null, not the spread of the registered model's null. · `a2_pass` after the repair is held to a band whose stated derivation may no longer be true of the instrument. Assignment for the caller: after the repair, run `01_measure.py --calibrate-null` (it never scores against true gold) and compare the printed band with 0.13. If they differ, the [A2] sentence is false as registered. · LAB-015 Preflight audit before freezing (scar row Gate without anchor/resolution: the band is calibrated on another instrument), LAB-003 No run without an intent paragraph · if the band differs: an invalid registration. Register anew, naming this protocol in `[replaces]`, and do not edit `null_band` in place. If the band matches: none, and record the result of the comparison."
+status = "deferred"
+reason = "Will check calibration after re-measurement with corrected code"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:13 · [C1]'s bar is the agreement of ONE permutation of the gold (`random.Random(f\"apply-null:{cfg.seed}\")` in `apply_rows`) plus 0.15. [A2] admits that null anywhere within ±0.13 of chance (0.501), so the bar may lie anywhere in about [0.52, 0.78] depending on the seed alone. · `c1_pass` true rests on a lead of 0.024 over `c1_threshold`, about two of 92 persons (metrics.json `c1_score` 0.6957 vs `c1_threshold` 0.6717). Another permutation seed can flip the verdict without any change in the model. Assignment for the caller: after the repair, draw the kept run again with `01_measure.py --repeat-of <run_id>` several times and report `c1_pass` per draw via `02_analyze.py --draws`. · LAB-015 Preflight audit before freezing (scar rows Spread unknown, Criterion fails on noise) · keep the registration and report the spread over draws as supporting evidence. If `c1_pass` flips across draws, decide [C1] as an unjudged promise (`--effect \"C1 not assessable\"`) and report the numbers as description only."
+status = "deferred"
+reason = "Will check spread over draws after re-measurement"

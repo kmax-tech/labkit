@@ -1,0 +1,30 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T15:33"
+model = "opus"
+record = "2026-10-28T15-30-analysis.toml"
+scope_sha = "cb7911523067"
+shown_sha = "47d33a0f083e"
+claim_sha = "11a5b7392897"
+again = true
+upheld = 1
+rejected = 0
+insufficient = 2
+
+[[decision]]
+finding = 2
+decision_sha = "4942344ae75e"
+verdict = "insufficient"
+why = "The reason rests on model.json holding `threshold: 0.5`, but model.json (sha c94491aa…) is not inlined; the only support is the person's own transcription in the protocol's Follow-up note, so the page cannot show whether the flags behind `c1_score` 0.7609, `a2_score` 0.4783 and the A1/A2 verdicts come from the registered 0.5 rule."
+
+[[decision]]
+finding = 3
+decision_sha = "650e06a9cd52"
+verdict = "insufficient"
+why = "The reason cites a re-derived band of 0.1295 from `--calibrate-null` on the corrected predictor, but no output of that calibration is inlined, only a hand-typed note in the protocol; the page therefore cannot confirm that the registered 0.13, against which `a2_pass` and the Conclusion's \"±0.13\" are judged, holds for this instrument (the 0.0227 deviation itself is confirmed by metrics.json)."
+
+[[decision]]
+finding = 4
+decision_sha = "4c4b5727d89c"
+verdict = "upheld"
+why = "The inlined `ScreeningModel.probability` divides by `sd`, not `sd**2`, and the answering run's rows carry that code's stamp (code_sha 3f8f4e4d037c, run 2026-10-28T15-28-01_0eae), so the reported `c1_score` 0.7609, `a2_score` 0.4783 and the A1/A2 verdicts do not rest on the variance-scaled predictor the finding names (its 0.6957/0.5217 are the earlier run's)."

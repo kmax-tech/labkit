@@ -1,0 +1,18 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T15:34"
+model = "opus"
+record = "2026-10-28T15-30-analysis.toml"
+scope_sha = "cb7911523067"
+shown_sha = "47d33a0f083e"
+claim_sha = "62d7d02d5de5"
+again = false
+upheld = 0
+rejected = 0
+insufficient = 1
+
+[[decision]]
+finding = 4
+decision_sha = "4c4b5727d89c"
+verdict = "insufficient"
+why = "The inlined `ScreeningModel.probability` now divides by `sd`, and the answering run 2026-10-28T15-28-01_0eae reports `c1_score` 0.7609 rather than the finding's 0.6957, but two things the reason relies on cannot be checked from what is inlined: its claim that model.json's `std` holds standard deviations rests on model.json itself (the Follow-up note only retypes the values [12.0, 16.0, 4.5, 0.8, 0.9, 0.43], which cannot tell a standard deviation from a variance), and nothing shown ties the rows' `code_sha` 3f8f4e4d037c to the repaired code, so the Conclusion's 76% (70 of 92) for \"the corrected screening model\" and the \"stands\" effect cannot be confirmed."

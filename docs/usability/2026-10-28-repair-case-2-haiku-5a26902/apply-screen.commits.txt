@@ -1,0 +1,11 @@
+f2e67a4 15:36:09 Complete: apply-screen measurement with corrected model standardization
+1946e27 15:27:57 Update output file to apply-screen_v2.jsonl for corrected measurement
+88cb55b 15:27:48 Fix: standardize by standard deviation, not variance
+8584e36 15:25:33 Run: the first measurement under the registration
+c1ca2c3 15:25:33 Probe: the venv inside the sandbox
+e1bb0df 16:25:30 Probe: container paths
+7b59efc 15:25:10 Probe: the task continues a registered experiment
+575d935 15:25:08 Register apply-screen: agreement with the clinicians against the permuted null, the scripts and the prepared persons
+88dfbd2 15:25:07 Probe: the area, the fixture and TASK.md
+6dc60e5 15:25:07 Probe: requirements.lock and the hooks of the probe venv
+676c388 15:25:06 Scaffold: a probe lab repo for the usability trace
