@@ -1,0 +1,28 @@
+Recorded before reader answers, 2026-10-28. Comprehension only, not task success. Cases and contract of
+2026-10-27-common-workflow-reading-probe, reused; the instructions are labkit/templates/AGENTS.md.template
+at sab-cases-on-main f16670a (main fddb01b plus the deliverable paragraph b21f917). Readers: three
+independent Claude Haiku 4.5 subagents, fresh context, instructions.md and cases.txt only.
+
+Judge each case per reader: supported / incomplete / wrong / documentation gap; record ambiguities, not
+only mistakes. Expected answers as on 2026-10-27, with two updates for text changed since:
+
+1-3 distinguish kind/cost/type, low vs high additional checks and skeleton-dependent commands.
+4 Conclusion before adoption; report block generated, explanation authored.
+5 complete correction plus diagnostic; code-check/test/commit/new measurement/finalize/new covering audit;
+  no rule weakening.
+6 honest miss first; a new disclosed investigation allowed but cannot reverse the old result.
+7 every C not assessable under the A limit; no raw-file edit; no review owed solely by not assessable.
+8 claim review stale, re-review the current claim, no measurement solely for the Conclusion; --again
+  releases nothing.
+9 UPDATED: keep the failure evidence; `labkit-audit <area> --findings` (a failed audit call it names and
+  offers the handover, exit 2), then either the documented handover (`protocol-fill <PROTOCOL> --handover
+  --why … --tried … --into REPORT.md`) or, to discuss the unadopted run, `--discuss <run_id> --why …
+  --into REPORT.md` followed by `labkit-audit <area> --report-review REPORT.md`; prose "not reported" is
+  not enough; no success claim. (2026-10-27 required "no invented handover command"; the command is now
+  documented.)
+10 replacement linked with declared changes, exploratory, earlier verdict visible; independent questions are
+  not blanket replacements.
+11 UPDATED: the task is not done — the named output is the deliverable and must be written at
+  pred_results/predictions.csv from the measurement; a green finalize guarantees nothing about that path.
+12 decisions via --decide and generated projection updates allowed; earlier evidence preserved; the pinned
+  version controls and old records are not rewritten to satisfy a new package.
