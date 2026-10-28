@@ -249,7 +249,7 @@ def print_contract(protocol: Path | None = None) -> None:
     )
     print(
         "fill a field by its label, multi-line placeholders included: "
-        'protocol-fill PROTOCOL-x.md "<label>" "<value>"; what is still open: '
+        'protocol-fill PROTOCOL-x.md "<Label>=<value>" ["<Label>=<value>" …]; what is still open: '
         "protocol-fill PROTOCOL-x.md --list; the Prompt block from the scripts' "
         "PROMPT constants: protocol-fill PROTOCOL-x.md --prompts\n"
     )

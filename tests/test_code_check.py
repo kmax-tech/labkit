@@ -255,14 +255,30 @@ class TestBundle(unittest.TestCase):
     def test_bundle_carries_protocol_scripts_and_facts(self):
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             out = a.path / "bundle.md"
-            n = code_check.write_bundle(
+            n, unreadable = code_check.write_bundle(
                 a.path, a.path, a.path / "PROTOCOL-fixture.md", out
             )
             text = out.read_text(encoding="utf-8")
-        self.assertEqual(n, 2)
+        self.assertEqual((n, unreadable), (2, []))
         self.assertIn("Schema facts", text)
         self.assertIn("[C1] trifft", text)
         self.assertIn("c1_pass", text)
+
+    def test_an_unreadable_file_is_named_not_left_out(self):
+        # it was skipped without a word and still counted (audit
+        # 2026-10-28, B2)
+        with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
+            bad = a.path / "scripts" / "04_bytes.py"
+            bad.parent.mkdir(exist_ok=True)
+            bad.write_bytes(b"\xff\xfe not utf-8")
+            out = a.path / "bundle.md"
+            n, unreadable = code_check.write_bundle(
+                a.path, a.path, a.path / "PROTOCOL-fixture.md", out
+            )
+            text = out.read_text(encoding="utf-8")
+        self.assertEqual(n, 2)  # the protocol and the readable script, as before
+        self.assertEqual(unreadable, ["scripts/04_bytes.py"])
+        self.assertIn("===== FILE: scripts/04_bytes.py =====\nnot readable:", text)
 
     def test_bundle_includes_gate_labels(self):
         with AreaFixture(

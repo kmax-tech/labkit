@@ -697,8 +697,10 @@ def _registration_at(
             blocker(
                 f"the registration as committed at {at} ({commit[:12]}{among}) lacks "
                 f"{', '.join(missing)} — the registration is what the commit of "
-                f"the first measurement holds, not what the tree says now "
-                f"(LAB-003 No run without an intent paragraph)",
+                f"the first measurement holds, not what the tree says now, so "
+                f"that measurement is exploratory; a new run on the same data does "
+                f"not restore what stood before the number (LAB-003 No run without "
+                f"an intent paragraph)",
                 fix=anew,
             )
         ]
@@ -1144,11 +1146,42 @@ def report_check(
         findings.take_all(review_findings(ctx))
         findings.take_all(followup_findings(ctx))
 
+    # 7b. adoption last — a `--from-run` line beside other blockers is the last
+    # step, not the fix (stuck-state probe 2026-10-28)
+    tell_adoption_order(findings)
+
     # 8. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
+
+
+def adoption_order_note(blocked: list[str]) -> str | None:
+    """The order to tell when BLOCKED (the blocker messages) names an adoption
+    (`--from-run`) beside blockers that are not themselves projections of
+    one (`--from-run`, `--render`): adoption runs this check and is refused
+    while any of them stands, so they come first. None otherwise — then the
+    adoption line is the way out as printed. Why: printed bare, `--from-run
+    <run> --force` beside an open BLOCKER on that run read as the fix to
+    three of three Haiku readers (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
+    adoption = [m for m in blocked if "--from-run" in m]
+    other = [m for m in blocked if "--from-run" not in m and "--render" not in m]
+    if not adoption or not other:
+        return None
+    return (
+        f"  adoption comes last: `--from-run` runs report-check itself and is "
+        f"refused while any of the {len(other)} other blocker(s) above stands — "
+        f"clear them first, or hand the area over; the `--from-run` line names "
+        f"the last step, not the fix"
+    )
+
+
+def tell_adoption_order(findings: Findings) -> None:
+    """Tell `adoption_order_note` through FINDINGS when it applies."""
+    order = adoption_order_note(findings.blocked)
+    if order:
+        findings.note(order)
 
 
 def affected_protocols(

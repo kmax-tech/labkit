@@ -133,7 +133,8 @@ measure anew with the fixed code and audit that run — restoring the old
 code removes the difference, not the fault; it is the way out only for a
 change not meant); no field left open; at `low` the source frozen in the run and
 source and output tracked in git; the area test; the denominators; the
-audit records — one of a deleted run is a blocker. Clean means the run
+audit records — one of a deleted run is a blocker; and a kept output's
+null lane moved against its registered lane. Clean means the run
 can carry a number; it does not release one.
 
 ## 5. The analysis audit and the decisions

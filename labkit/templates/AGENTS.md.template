@@ -39,9 +39,10 @@ path the task names from the answering run: its measurement script writes
 it there, or you copy that run's own output file; never retype it or
 compute it apart from the run. When a result no longer holds —
 a gate refuses it, or an audit BLOCKER against the code or data that
-produced it is not fixed — rewrite the output from a measurement run after
-the fix; if there is none, remove the output file. The report says which
-you did and why (2026-10-27: an output file kept the heart rate an analysis audit had
+produced it is not fixed — remove the output file at once, and write it
+again from the new answering run once that run is adopted; until then, or
+if there is none, the file stays away. The report says which you did and
+why (2026-10-27: an output file kept the heart rate an analysis audit had
 rejected, while the report handed the question over).
 
 ## Choose the experiment: three separate decisions
@@ -50,13 +51,19 @@ rejected, while the report handed the question over).
 |---|---|---|
 | `kind` | What the number asserts | `fit`: train, adjust or select a model/procedure here; `apply`: judge predictions of a model used unchanged; `compute`: calculate a quantity without judging predictions. |
 | `repeat_cost` | What repeating the measurement costs | `low`: you can repeat it at will; `high`: a repeat needs protection by a preflight audit and freeze. This is the measurement's cost, not the audit's or the whole task's duration. |
-| `type` | The scientific claim | `confirmatory`: test a question and criterion specified before the relevant results; `exploratory`: investigate or formulate an approach using what has already been observed. Writing a type does not establish its scientific validity. |
+| `type` | The scientific claim | `confirmatory`: the question and the analysis plan stood before the relevant results — for a fit or an apply also the success criterion; a computation's plan is its quantity, unit, data and exclusions; `exploratory`: investigate or formulate an approach using what has already been observed. Writing a type does not establish its scientific validity. |
 
 Decide `kind` first: does this area train, adjust or select a model or
 procedure? Choose `fit`, even if the deliverable is predictions without
 gold labels; evaluate it on held-out labelled rows. Otherwise, does the
 number judge predictive performance? Choose `apply`; otherwise `compute`.
 A RandomForest fitted in seconds is `fit`, usually at `low` repeat cost.
+A rule fixed before the data is seen that derives a parameter from each
+input itself belongs to a computation — a detection threshold at k
+times each signal's own noise level, k fixed in advance. Choosing a
+threshold, a window or k after seeing results, so that detections look
+plausible or agree with reference annotations, adjusts a procedure:
+`fit`.
 An unchanged LLM judged against labels is `apply`, not a computation.
 Neither `low` nor `exploratory` removes a fit/apply's criterion or audits.
 
@@ -114,7 +121,7 @@ answer the original registered question.
 ### 2. Implement and test the instrument
 
 Fill the stamped scripts and area test. For estimator/prompt skeletons,
-read `.venv/bin/python <area>/scripts/01_measure.py --show 2` before
+read `.venv/bin/python <area>/scripts/01_measure.py --show 3` before
 measuring; compute has no `--show`.
 Run `code-check <area>` after code changes and run the area test on
 hand-checked cases. Checks of names and structure do not prove that the
@@ -128,8 +135,9 @@ actually has, not commands from a different kind's skeleton.
 
 **Additional at `high`:** run
 `.venv/bin/python <area>/scripts/01_measure.py --probe` for estimator/prompt
-skeletons to check the real pipeline, keep representative raw examples in the
-protocol, and test the evaluation on synthetic extremes before freezing.
+skeletons to check the real pipeline (its rows are thrown away; Raw output
+comes from the run's kept rows after it), and test the evaluation on
+synthetic extremes before freezing.
 The probe may correct the instrument, not redefine the hypothesis or
 criteria. Compute has no `--probe`; test its calculation. At `low` there
 is no separate probe: the full measurement checks the instrument too.
@@ -144,7 +152,14 @@ in step 4. Put the matching record filename in the protocol head's
 A code fix changes audit coverage: audit the fixed code before freezing.
 At `low`, no freeze or preflight audit is owed.
 
-Commit the code, registration and inputs, then measure with the stamped
+Commit the code and the registration, and fix the inputs: what must stand
+is the files the run actually reads (or their unchanged versions), where
+they come from and the steps that prepared them. Raw data lie under
+`data/raw/`, prepared inputs under `data/prepared/`, written by the area's
+`00_prepare.py`; the run records the files it reads with their checksums
+(`data=` in `config.json`). Small files free to share go into git; large or
+protected data stay out, and the area names their source and version
+beside the checksum the run recorded. Then measure with the stamped
 script through `runlog`. At `low`, run
 `.venv/bin/python <area>/scripts/01_measure.py` in the foreground.
 At `high`, detach from the root with
@@ -219,6 +234,13 @@ An analysis audit with no findings covers the run when it saw the current
 code, promises and run: there is nothing to decide. It re-checks each
 earlier decided BLOCKER itself; adoption needs it to find that fix in
 place — you add nothing to the record.
+After a fix the new run is adopted the same way, in this order: its
+analysis audit and decisions, then the Conclusion for it (`--force` if one
+is filled), then `protocol-fill <PROTOCOL> --from-run <new run_id> --force`
+(the head still names the old run), `--render`, `--into REPORT.md`.
+Adoption runs `report-check` and is refused while any other blocker
+stands: a `--from-run` line beside other blockers is the last step, not
+the fix.
 Recorded results derives each promise's reportable verdict before its
 measured values; raw metrics in the run remain unchanged. A failed
 criterion under valid admissibility is a reportable miss.
@@ -277,12 +299,20 @@ prints these same recovery choices with each decision list:
   from, to, why) per change and the predecessor's open BLOCKERs decided
   `deferred`. Its verdict is rendered first; a new approach never turns an
   earlier miss into a pass. A replacement is only for a registration that
-  cannot be answered as written. A question asked after a valid result —
+  cannot be answered as written, or one incomplete at its first
+  measurement (below). A question asked after a valid result —
   a miss included, such as another model on the same data — is a protocol
   of its own, without `[replaces]`; when it builds on what an earlier
   protocol showed, its Question / hypothesis names that protocol and what
   it showed, and its type is `exploratory`. No gate checks this naming or
   the type; keeping it is your part, and a green gate says nothing about it.
+- **an incomplete registration** — report-check says the registration as
+  committed at the first measurement lacks a field: that measurement is
+  exploratory. Register anew with `[replaces]` as above, or hand over; a
+  new run on the same data does not restore what stood before the number.
+  A completion that changes no choice — a typo, a sentence saying what the
+  committed fields already fixed — is no new registration; anything that
+  could steer the result or its judgement is.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the

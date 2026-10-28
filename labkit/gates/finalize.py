@@ -39,6 +39,11 @@ each step's condition):
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
                     was 31 of 171 audit findings)
+     null lane      an output the run kept with a registered and a null
+                    lane: the null answers otherwise on some item, gold
+                    included — a blocker (`null_lane_findings`, LAB-034
+                    Null condition in the same run); without both lanes, a
+                    note
   8. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
@@ -152,11 +157,16 @@ def declared_run_mismatch(
     declared = protocol_block.declared_run(text)
     if declared is None or declared == answering_run.name:
         return None
+    # the command is the last step, not the fix: printed bare beside an open
+    # BLOCKER on that very run, three of three Haiku readers were told to
+    # adopt the faulty run (stuck-state probe 2026-10-28)
     return blocker(
         f"[result] declares {declared}, but the run that answers is "
         f"{answering_run.name}",
-        fix=f"`{adopt_command(protocol, answering_run.name)} --force` declares the "
-        f"run the checks hold, or rerun",
+        fix=f"once that run's checks hold (its analysis audit decided, no open "
+        f"BLOCKER on it), `{adopt_command(protocol, answering_run.name)} --force` "
+        f"declares it; if the fault is in that run, fix the code and measure "
+        f"again first",
     )
 
 
@@ -439,7 +449,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
     """Station 7b: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
-        unmoved = null_lane_findings(answering_run)
+        held = null_lane_findings(answering_run)
     except (ValueError, OSError) as exc:
         findings.block(
             f"the outputs of {answering_run.name} do not read: {exc}",
@@ -447,9 +457,11 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
             f"and audit that run; the run's own files stay as they are",
         )
         return
-    findings.take_all(unmoved)
-    if not unmoved:
-        findings.note("  the null lane moved, or the run keeps no two lanes")
+    findings.take_all(held.unmoved)
+    if held.examined == 0:
+        findings.note("  n/a — no kept output holds a registered and a null lane")
+    elif not held.unmoved:
+        findings.note(f"  the null lane moved in {held.examined} kept output(s)")
 
 
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
@@ -499,7 +511,8 @@ def finalize_area(
        stamped `<…>` placeholders left in the area's README.
     5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
-    7. criterion n — only with a run; warnings only.
+    7. criterion n and the null lane — only with a run; criterion n
+       warns, a null lane that did not move blocks.
     8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
 
     A blocker never stops a step: all of them run, then the summary lists

@@ -44,7 +44,7 @@ pins (`requirements.txt` / `requirements.lock`).
   `findings.record_way`, `gate.blocker`. The pure checks that fed blockers
   as sentences return findings now, the step split from the cause:
   `run_record_check.code_since_run`, `provenance_findings`,
-  `row_provenance_findings`, `null_lane_findings`,
+  `row_provenance_findings`, `null_lane_findings` (`NullLanes.unmoved`),
   `report_blocks.block_gaps`, `cited_gaps`, `discussion_gaps`,
   `result_render.render_gaps`, `notes_check.check_file`'s must list, the
   report-check and report-hold producers, `finalize.declared_run_gaps`
@@ -363,6 +363,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Four faults found by the audit of 2026-10-28.** A line of the
+  journal's copy that is not JSON ended the stop hook in a traceback:
+  `attempts.copy_gaps` now raises AttemptError naming the copy's own line,
+  and the stop reports it. `code-check --bundle` skipped a file it could
+  not read without a word and still counted it; the file now stands in the
+  bundle as `not readable: …` and code-check warns with its name
+  (`write_bundle` returns the files read and those it could not). AGENTS.md
+  told high-cost agents to keep `--probe`'s rows in the protocol; the
+  probe's rows are thrown away and Raw output comes from the run. The probe
+  score printed "equals the truth: NO" for a number that equals the truth
+  but means another quantity; the row shows `number_holds` now, and
+  `sab_cases.number_ok` is `number_within`, beside `Score.number_ok`, which
+  is both checks. Register `docs/audit-2026-10-28-today.md`, B1–B4.
 - **An editable install in a git worktree is read as one.** In a worktree
   `pip freeze` writes `-e git+…#egg=labkit&subdirectory=…`, and
   `repo.EDITABLE_REQUIREMENT` stopped at the name: `usability stage` found
@@ -383,8 +396,8 @@ pins (`requirements.txt` / `requirements.lock`).
 - **The printed next steps name what every kind fills and call the cost
   by its key.** The high steps of a fit or an apply named neither unit nor
   data nor exclusions, which AGENTS.md owes of every kind; the titles said
-  "lane high", where a lane is a scored lane of the run everywhere else
-  (now `repeat_cost = "high"`); the estimator's probe step sent its
+  "lane high" and now name the key the reader writes into the head,
+  `repeat_cost = "high"`; the estimator's probe step sent its
   throwaway rows "into the protocol's raw output" (now: scores read, never
   reported), and the model's probe step names its answers as parser cases.
   Audit 2026-10-27 (third), I12.
@@ -1175,6 +1188,110 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One preferred `protocol-fill` form; the stamped null explains
+  chance.** `protocol-check --contract` showed `"<label>" "<value>"` where
+  AGENTS.md shows `"<Label>=<value>"`; the contract's hint and the module
+  text now lead with the `=` form, one call for several fields, the
+  two-word form named as the same for one field. The estimator stamp's
+  null field and [A2] sentence said "chance_of()" without saying what it
+  is; they now say chance is the score of an instrument that learned
+  nothing, which `chance_of()` in `scripts/01_measure.py` computes from the
+  gold. Haiku start reading, 2026-10-28.
+- **What fixing the inputs means.** AGENTS.md said only "commit the code,
+  registration and inputs", and readers asked where data lie and whether
+  they are committed. Decided 2026-10-28: what must stand is the files the
+  run actually reads or their unchanged versions, their source and the
+  steps that prepared them, raw (`data/raw/`) and prepared
+  (`data/prepared/`) apart; small files free to share go into git, large or
+  protected data are named by source and version beside the checksum the
+  run records (`data=`). AGENTS.md, the field guide's Data / scope and the
+  standard's terms say so.
+- **Where a computation ends and a fit begins, with examples.** The kind
+  questions said only "a threshold or prompt chosen on performance data
+  counts"; one or two readers asked in every round whether a detection
+  threshold set on the signal or on reference annotations makes a fit.
+  Decided 2026-10-28: a rule fixed before the data is seen that derives a
+  parameter from each input itself is part of a computation (a threshold at
+  k times each signal's own noise level, k fixed); a threshold, window or k
+  chosen after seeing results, so that detections look plausible or agree
+  with reference annotations, adjusts a procedure: fit. The kind questions,
+  AGENTS.md, the field guide and the standard's terms give both examples.
+- **`confirmatory` is defined without a criterion a computation lacks.**
+  AGENTS.md defined it as "a question and criterion specified before the
+  relevant results", and a computation has no criterion; two of three
+  readers asked in two rounds. Decided 2026-10-28, no new type: the
+  question and the analysis plan stood before the relevant results — a fit
+  or an apply adds its success criterion, a computation's plan is its
+  quantity, unit, data and exclusions. AGENTS.md, the field guide and the
+  standard's terms say so.
+- **A registration incomplete at its first measurement has a way on.**
+  report-check held it ("the registration as committed at the first
+  measurement lacks …") and named no way out; two of three readers in each
+  round were unsure. Decided 2026-10-28: that measurement is exploratory;
+  the way on is a new registration naming it in `[replaces]`, or a
+  handover, and a new run on the same data does not restore what stood
+  before the number. What decides is whether a choice made afterwards
+  could steer the result or its judgement; a completion that changes no
+  choice is no new registration. LAB-003 says so, AGENTS.md and the
+  printed ways out (`ways_out.WAYS_OUT`) name "an incomplete registration",
+  and report-check's refusal names both ways.
+- **Clarity of the 2026-10-28 audit.** The start checks that raise are
+  `require_registration`, `require_valid_reseed` and `require_detached`
+  (were `registration_refusal`, `reseed_refusal`, `foreground_refusal`); a
+  `*_refusal` returns its sentence. `BoundPrompt.shown_now` is
+  `earlier_repairs`, apart from the state's `shown_sha`. finalize's
+  null-lane note tells a check that applied (`the null lane moved in N kept
+  output(s)`) from one that did not (`n/a`): `null_lane_findings` returns
+  `NullLanes` with the outputs examined. `runlog reindex` names a folder
+  under `runs/` without `config.json` instead of dropping it. `post_change`,
+  `before_run` and `score` say what their docstrings left out, and
+  `AuditedState` hashes as it compares. Register
+  `docs/audit-2026-10-28-today.md`, C1–C5.
+- **The skeletons' criterion keys and lanes have one home.** The probes
+  named `c1_score` and `c1_accuracy` by hand; `Skeleton.criterion_key`
+  (`standard_contract.criterion_key`) holds them, a test holds each
+  measure template's `C1_VALUE_KEY` to it, and `tests/test_one_home.py` a
+  hand spelling. The probe score asks `has_bar` instead of comparing the
+  kind as a word. The estimator skeleton predicts strictly through one
+  `predict_all`, builds its rows through one `lane_row`, and names its two
+  scored lanes `SCORED_LANES`, which a test holds to finalize's
+  `run_record_check.NULL_LANES`. Register `docs/audit-2026-10-28-today.md`,
+  H6, H7.
+- **Three homes across modules of the 2026-10-28 audit.** The
+  `===== label =====` join an agent reads lives in `formats/prompts.py`
+  (`prompt_body`), so the code-check bundle uses it too — it spelled its
+  own from a layer below the audit's. The audit modes are
+  `standard_contract.PREFLIGHT_AUDIT` and `ANALYSIS_AUDIT` everywhere
+  (`findings.MODES` is built from them). `repo.EXPERIMENTS` names the
+  areas' folder and `repo.file_url_path` reads a `file://` URL, also after
+  `git+`, for a lock's ref, an editable install and a pin's source.
+  `tests/test_one_home.py` holds a hand spelling of each. Register
+  `docs/audit-2026-10-28-today.md`, H3, H5, H8.
+- **Four small homes of the 2026-10-28 audit.** `audit.parse` reads its
+  closing line through `last_verdict` like the reviewers, and the refusal
+  and clarity lines take `LEAD` and `SEP` (a clarity finding written with
+  a dash or colon now reads, as a finding line does). `repo.commit_known`
+  asks `commit_of`. The run's start and `runlog reindex` refuse an
+  old-format index with one sentence (`runlog.header_refusal`) and name it
+  through `runlog.RUN_INDEX`; `tests/test_one_home.py` holds a hand
+  spelling. The next step for `--calibrate-null` no longer repeats the
+  skeleton's count, and the command prints the K it used, saying so when it
+  is not the fixed `NULL_PERMUTATIONS`. Register
+  `docs/audit-2026-10-28-today.md`, H1, H2, H4, H9.
+- **Documentation drift found by the audit of 2026-10-28.** finalize's
+  null-lane blocker now stands in finalize's own step list, in
+  `run_record_check`'s, in `docs/architecture.md` (the gates row and a
+  chain row) and in `docs/workflow.md`; step 7 no longer says "warnings
+  only". The reason given for `repeat_cost = "high"` in the next steps'
+  title was wrong — README and `standard_contract.lane` use "lane" for
+  the repeat-cost lane —; the comment and the entry above say what holds.
+  `audit_coverage` names its one caller; `area_gaps` names the copy check
+  and that it runs in the tree only; the field guide calibrates bands with
+  `--calibrate-null` or `--probe` and describes Raw output for a model and
+  for an estimator; README lists the SAB-like probe tasks; the SAB task
+  sheet asks a computation for no criterion; `git_dir_path`,
+  `sab_cases.truth` and a `usability_score` comment say what holds.
+  Register `docs/audit-2026-10-28-today.md`, D1–D8.
 - **The report review comes last, and AGENTS.md and the refusal say so.**
   In the third SAB-like draw fit-assay's commit was refused five times in
   four minutes: the discussion block was written after the report, a

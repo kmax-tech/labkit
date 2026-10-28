@@ -191,6 +191,11 @@ class RegistrationAtTheFirstMeasurement(_Repository):
             f"({sha[:12]}) lacks Question / hypothesis",
             out,
         )
+        # the way on (TODO 12a, decided 2026-10-28): exploratory, then a new
+        # registration naming it, or a handover
+        self.assertIn("that measurement is exploratory", out)
+        self.assertIn("[replaces] protocol =", out)
+        self.assertIn("hand over:", out)
 
     def test_a_kind_changed_after_the_first_measurement_blocks(self):
         """Registered and measured as a computation, then turned into a fit

@@ -68,13 +68,18 @@ class NullLane(unittest.TestCase):
             (run / OUTPUTS_FILE).write_text(
                 json.dumps([{"path": str(out), "sha256": None, "lines": len(kept)}])
             )
-            (line,) = run_record_check.null_lane_findings(run)
+            held = run_record_check.null_lane_findings(run)
+            (line,) = held.unmoved
+            self.assertEqual(held.examined, 1)
             self.assertIn(
                 "rows.jsonl: the null lane answers what the registered", line.text
             )
             self.assertIn("permuted gold", line.fix or "")
             out.write_text("".join(json.dumps(r) + "\n" for r in rows(lambda i, g: 0)))
-            self.assertEqual(run_record_check.null_lane_findings(run), [])
+            self.assertEqual(run_record_check.null_lane_findings(run).unmoved, [])
+            # a check that did not apply says so: no output with both lanes
+            out.write_text(json.dumps({"item": "1", "n": 3}) + "\n")
+            self.assertEqual(run_record_check.null_lane_findings(run).examined, 0)
 
 
 if __name__ == "__main__":

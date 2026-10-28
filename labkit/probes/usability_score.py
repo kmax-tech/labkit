@@ -17,7 +17,15 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
-from labkit.formats import answering_run, console, findings, promises, runs
+from labkit.formats import (
+    answering_run,
+    console,
+    findings,
+    promises,
+    runs,
+    standard_contract,
+)
+from labkit.formats.repo import EXPERIMENTS
 from labkit.probes import sab_cases
 from labkit.probes.usability import (
     LOG_LINE,
@@ -107,10 +115,12 @@ class Score:
     expected: (
         float | None
     )  # the recounted truth (count, a SAB-like case's), None for a model's number
-    number_ok: bool  # equals the truth (a SAB-like case: within its tolerance), or present and within [0, 1]
+    # the number holds (`number_holds`) and, a SAB-like case, is the task's
+    # quantity (`number_meaning` None) — the score's exit reads this
+    number_ok: bool
     null_reported: (
         bool | None
-    )  # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
+    )  # a task with a bar: an a<i>_* key (admissibility, the null lane) in metrics.json
     bound_to: str | None  # config["protocol"]["path"]
     frozen: bool | None
     repeat_cost: str | None
@@ -190,7 +200,7 @@ def load_probe_run(root: Path) -> ProbeRun:
             "usability", f"{probe_file} missing — was {root} staged here?"
         )
     probe = read_probe(probe_file)
-    area = root / "experiments" / probe.area
+    area = root / EXPERIMENTS / probe.area
     run = latest_run(area)
     if run is None:
         return ProbeRun(probe, area, None, None, {}, None, None, False, None)
@@ -478,7 +488,9 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
 def score(root: Path, transcript: Path | None = None, agent: str | None = None) -> int:
     """Score a staged probe and tell it: `probe_score` reads it,
     `write_score` keeps it as `<dir>.score.json`, `score_rows` shows it.
-    Exit 0 when the number holds and the run is bound, else 1. It
+    Exit 0 when the number holds as the task's (`Score.number_ok`) and the
+    run is bound, else 1 — the hidden evaluation and the null condition
+    are shown, they do not change the exit. It
     computed, wrote and printed in one 193-line body (audit 2026-10-27,
     third, M4/M7)."""
     sc, notes = probe_score(root, transcript, agent)
@@ -527,7 +539,9 @@ def probe_score(
         number = protocol_reading.metric_number(metrics, probe.metric_key)
         bound_to = pr.protocol_as_recorded if pr.bound else None
         tier = pr.repeat_cost
-        if TASK_STAMP[probe.task][1] != "compute":  # a computation owes no null
+        if standard_contract.has_bar(
+            TASK_STAMP[probe.task][1]
+        ):  # a computation owes no null
             null_reported = any(
                 promises.key_kind(k) == "admissibility" for k in metrics
             )
@@ -574,15 +588,7 @@ def probe_score(
         run_id=run.name if run else None,
         number=number,
         expected=expected,
-        number_ok=(
-            number_meaning is None and sab_cases.number_ok(probe.task, number, expected)
-        )
-        if sab
-        else (
-            (number is not None and abs(number - expected) <= TOL)
-            if expected is not None
-            else (number is not None and 0.0 <= number <= 1.0)
-        ),
+        number_ok=number_meaning is None and number_holds(probe.task, number, expected),
         null_reported=null_reported,
         bound_to=bound_to,
         frozen=frozen,
@@ -598,6 +604,21 @@ def probe_score(
         number_meaning=number_meaning,
     )
     return sc, notes
+
+
+def number_holds(task: str, number: float | None, expected: float | None) -> bool:
+    """Does NUMBER hold as a number — equal to EXPECTED within the task's
+    tolerance (a SAB-like case: its own, `sab_cases.number_within`; else
+    TOL), or without a truth present and within [0, 1]? Says nothing of
+    what the number means (`sab_cases.meaning_gap`): `Score.number_ok` is
+    both."""
+    if task in sab_cases.CASES:
+        return sab_cases.number_within(task, number, expected)
+    if number is None:
+        return False
+    if expected is not None:
+        return abs(number - expected) <= TOL
+    return 0.0 <= number <= 1.0
 
 
 def write_score(root: Path, sc: Score) -> Path:
@@ -656,12 +677,12 @@ def score_rows(sc: Score) -> list[tuple[str, str]]:
         (
             "equals the truth" if expected is not None else "within [0, 1]",
             "yes"
-            if sc.number_ok
+            if number_holds(probe.task, number, expected)
             else (f"NO (truth {expected})" if expected is not None else "NO"),
         ),
         *(
             [("null condition reported", "yes" if null_reported else "NO")]
-            if TASK_STAMP[probe.task][1] != "compute"
+            if standard_contract.has_bar(TASK_STAMP[probe.task][1])
             else []
         ),
         *(

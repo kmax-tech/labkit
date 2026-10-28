@@ -1146,6 +1146,43 @@ Notiert, nicht geplant:
    Stand); AGENTS.md und die Verweigerung nennen jetzt die Reihenfolge.
    Offen: die Laufzeit vergleichbar messen — dieselben Aufgaben mit und
    ohne labkit; ein Experiment, startet auf Ansage.
+11. **Audit 2026-10-28, die heutigen Änderungen** ([Register](docs/audit-2026-10-28-today.md),
+   `f5e48e7..92029c2`): HEAD auf frischem Klon grün. Vier Fehler mit
+   Wirkung (B1 kaputte Journal-Kopie bricht den Stop-Hook ab; B2
+   code-check überspringt unlesbare Dateien still; B3 AGENTS.md schickt
+   Probe-Zeilen ins Protokoll; B4 Probe-Bewertung sagt „NO (truth)“ bei
+   Bedeutungslücke), acht Doku-Drifts (D2 korrigiert eine eigene falsche
+   Begründung zu „lane“), neun doppelte Heimaten, fünf Klarheitszeilen.
+   Alle sechs Punkte erledigt (`3a7cba3` bis `86945a2`, Stand im Register).
+12. **Haiku-Leseproben Steckenbleiben und Start (2026-10-28)**
+   ([Steckenbleiben](docs/usability/2026-10-28-haiku-stuck-reading.md),
+   [Start](docs/usability/2026-10-28-haiku-start-reading.md)): die
+   gemeinsamen Zweifel an den Werkzeugtexten sind behoben und von frischen
+   Lesern bestätigt. Offen, je eine Entscheidung über den Standard:
+   (a) eine bei der ersten Messung unvollständige Registrierung — neu
+   registrieren mit `[replaces]` oder übergeben, report-check und AGENTS.md
+   nennen keinen Weg; (b) `type` einer Berechnung — `confirmatory` ist über
+   „question and criterion“ definiert, eine Berechnung hat kein Kriterium;
+   (c) Grenze compute/fit bei einer am Signal oder an Referenzen gewählten
+   Erkennungsschwelle; (d) wo Eingabedaten liegen und ob sie committet
+   werden („code, registration and inputs“). Klein: `protocol-fill` in
+   zwei Schreibweisen gezeigt; `chance_of()` im gestempelten Null-Satz
+   nirgends erklärt.
+   Entschieden und eingetragen 2026-10-28: (a) die erste Messung bleibt
+   Exploration, weiter mit `[replaces]` oder Übergabe, Maßstab ist, ob eine
+   nachträgliche Wahl Ergebnis oder Bewertung steuern kann (`72e71ca`);
+   (b) kein neuer Typ, `confirmatory` = Frage und Auswertungsplan vorab,
+   das Kriterium dort, wo eine Vorhersage beurteilt wird (`f2f2c71`); (c)
+   eine vorab festgelegte Regel, die einen Parameter aus jeder Eingabe
+   selbst bestimmt, bleibt Berechnung, eine nach Sichtung gewählte
+   Schwelle ist ein fit (`f2cae8b`); (d) festgelegt werden die tatsächlich
+   gelesenen Dateien, Herkunft und Vorbereitung, roh und vorbereitet
+   getrennt, große Daten per Quelle, Version und Prüfsumme (`a6dc065`);
+   die beiden Kleinigkeiten im folgenden Commit. Offen: ob Agenten den
+   neuen Hinweis zum Vorlagenfehler 0,15 gegen 0,25 beim tatsächlichen
+   Ausfüllen beachten — das prüft die nächste Schreibprobe, ein
+   Experiment, das auf Ansage startet; ebenso, ob die verständlicheren
+   Texte zu zuverlässig durchgeführten Experimenten führen.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
@@ -1378,7 +1415,7 @@ Notiert, nicht gemacht:
    bindet — die Übergabe bindet `runs/` heute nicht.
 12. `answering_run` rät bei unlesbaren oder gleichsekundigen Läufen noch,
    sie „beiseite“ bzw. „aus runs/“ zu schieben
-   (`labkit/formats/answering_run.py:653`, `:662`); seit `3a30c3e` hält
+   (`labkit/formats/answering_run.py:657`, `:666`); seit `3a30c3e` hält
    der Stop genau das für einen committeten, abgeschlossenen Lauf. Den
    Ausweg neu fassen (welcher Lauf antwortet, ohne Beleg zu entfernen) —
    hängt an Punkt 6 (antwortender Lauf = neuester nach Namen).
@@ -1403,11 +1440,11 @@ Notiert, nicht gemacht:
    Journal-Kopie, die bei Unlesbarkeit aus dem Journal neu geschrieben
    werden soll (`cp`), wäscht ein gekürztes Journal — nur unter der
    Annahme des gutwilligen Agenten tragbar.
-17. Merge von `evidence-hardening` nach main: main hat parallel
-   `ways_out.py` (neuer Weg „an incomplete registration“),
-   `report_check.py`, CHANGELOG und AGENTS-Vorlage geändert; beim Merge
-   bekommt der neue Weg und jede neue Ablehnung von main ihren `fix`, sonst
-   ist `tests/test_ways_out_data.py` rot.
+17. Merge von `evidence-hardening` nach main: erledigt 2026-10-28. Main
+   brachte neue Ablehnungen ohne `fix` mit (`attempts.copy_gaps` zweimal,
+   `declared_run_mismatch` mit Vorbedingung, `NullLanes`, runlogs
+   `_first_step`); sie tragen ihren Ausweg jetzt als Daten, die Kopie-
+   Auswege an einer Stelle (`attempts._copy_way`).
 
 ### Phase-1-Reste (2026-10-27)
 

@@ -39,6 +39,12 @@ class RebuiltIndex(unittest.TestCase):
             # (audit 2026-10-27, third, M4)
             found = runlog.unindexed(area, set())
             self.assertEqual((len(found.rows), found.unreadable), (2, []))
+            # a folder without config.json was dropped without a word
+            # (audit 2026-10-28, C4)
+            stray = area / "runs" / "2026-10-28T10-00-00_abcd"
+            stray.mkdir()
+            self.assertEqual(runlog.unindexed(area, set()).no_record, [stray.name])
+            stray.rmdir()
             self.assertFalse(index.exists())
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(runlog.reindex(area), 0)
@@ -56,7 +62,10 @@ class IndexRefusal(unittest.TestCase):
         index = Path("runs.tsv")
         why = runlog.index_refusal(index, runlog.RUN_INDEX_COLS, [row, row])
         self.assertIn("more than once", why or "")
-        self.assertIn("old columns", runlog.index_refusal(index, ["run_id"], []) or "")
+        # one sentence for the run's start and reindex (audit 2026-10-28, H4)
+        self.assertIn(
+            "don't match this runlog", runlog.index_refusal(index, ["run_id"], []) or ""
+        )
         self.assertIsNone(runlog.index_refusal(index, runlog.RUN_INDEX_COLS, [row]))
 
 

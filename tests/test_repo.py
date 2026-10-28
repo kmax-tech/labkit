@@ -330,6 +330,14 @@ class CommitOrder(unittest.TestCase):
         amended = repo.head_sha(d)
         self.assertEqual(repo.earliest_commits(d, [first, amended]), [first, amended])
 
+    def test_a_file_url_names_its_path_also_after_git_plus(self):
+        # three callers read file:// by hand (audit 2026-10-28, H8)
+        self.assertEqual(repo.file_url_path("file:///src/labkit"), Path("/src/labkit"))
+        self.assertEqual(
+            repo.file_url_path("git+file:///src/labkit"), Path("/src/labkit")
+        )
+        self.assertIsNone(repo.file_url_path("git+https://github.com/x/labkit.git"))
+
     def test_a_ref_names_its_commit_or_none(self):
         # one "ref → commit" for the lab-pin check, a lock's ref and a pin's
         # tag (audit 2026-10-27, third, S8)

@@ -398,7 +398,7 @@ def main(argv: list[str]) -> int:
     if not area.is_dir():
         console.refuse("runlog", repo.no_such_area(area))
         return 2
-    if (area / "experiments").is_dir():
+    if (area / repo.EXPERIMENTS).is_dir():
         # the lab root read as an area: "no open runs", and --wait as idle
         # while a measurement ran (audit 2026-10-27, third, I10)
         console.refuse(

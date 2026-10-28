@@ -1,0 +1,16 @@
+Recorded before reader answers, 2026-10-28 (second round). The same four situations and questions as
+2026-10-28-haiku-stuck-reading (cases.md unchanged except the tool outputs), now with labkit stuck-clarity
+318dcee: finalize's and recheck's adoption hints name their precondition, report-check tells "adoption comes
+last" beside other blockers (bf3ee85); AGENTS.md describes re-adoption after a fix in its order and removes a
+stale output file at once (318dcee). Readers: three fresh Claude Haiku 4.5 subagents, instructions.md and
+cases.md only.
+
+Expected answers: as in the first round's assessment-contract.txt. Judged in addition, per reader:
+- S1: the readers do not take `--from-run … 4268 --force` for the fix; the Conclusion for the new run comes
+  before `--from-run <new run> --force`; the stale pred_results/hrv.csv is removed at once and written again
+  from the new answering run once adopted.
+- S4, S5: the `--from-run` lines are read as the last step, not as a way out now.
+- S5: whether the incomplete registration at the first measurement still leaves readers unsure (not changed in
+  this round — expected to remain a gap).
+- First round for comparison: 3 of 3 rejected the S1 hint and two called it a contradiction; 2 of 3 wrote the
+  Conclusion after --from-run; 2 of 3 asked whether to remove the output file now or after the rerun.

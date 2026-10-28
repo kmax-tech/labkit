@@ -4,12 +4,14 @@ Two phases of `runlog.Run`'s start live here: the preparation
 (`prepare`: the protocol binding, the promise snapshot, the config
 frozen — a reseeded repeat's seed is set later, under runlog's lock; it
 refuses what cannot be read) and the checks the constructor
-sequences — the low registration (`registration_refusal`), a reseed's
-conditions (`reseed_refusal`), the
-detach gate (`foreground_refusal`, with `foreground_timeout`), and for a
+sequences — the low registration (`require_registration`), a reseed's
+conditions (`require_valid_reseed`), the
+detach gate (`require_detached`, with `foreground_timeout`), and for a
 full run the freeze gate (`freeze_gate`: undecided blockers, the freeze
 or the registration, the acknowledgement over a failed audit). Each
-refusal raises with the sentence a person acts on; nothing here writes.
+`require_*` raises SystemExit with the sentence a person acts on, and so
+does every other refusal here; a `*_refusal` (`_constants_refusal`)
+returns the sentence for its caller to raise. Nothing here writes.
 """
 
 from __future__ import annotations
@@ -160,6 +162,21 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     return []
 
 
+def _first_step(bound: _Bound) -> str:
+    """What comes before a full run, by the bound protocol's repeat cost: the
+    registration at a lane that owes no freeze, else the freeze. One line
+    named the freeze at every cost and corrected itself in parentheses; two
+    of three Haiku readers called that a contradiction (2026-10-28)."""
+    head = bound.head
+    if head is not None and lane(head.repeat_cost).registration:
+        return (
+            f'At repeat_cost = "{head.repeat_cost}" nothing freezes: write and commit '
+            "the registration the kind owes (`protocol-check --contract` names it), "
+            "then start the run again."
+        )
+    return "Freeze first: `preflight <AREA>` clean, audit stamped, `frozen = true`."
+
+
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.formats.protocol_check import low_registration_missing
@@ -185,7 +202,8 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             return _committed_registration(base_dir, bound)
         return [
             f'{path.name}: `repeat_cost = "{head.repeat_cost}"`, but the registration is not '
-            f"written: {', '.join(missing)} — at low repeat cost the gate is the "
+            f"written: {', '.join(missing)} (the commit also owes the other fields "
+            f"`protocol-check --contract` names) — at low repeat cost the gate is the "
             f"registration the kind owes (a computation its question; a fit or an apply "
             f"also criterion · admissibility condition · null condition; with a "
             f"model the data profile), not the freeze (LAB-003 No run without an "
@@ -223,7 +241,7 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
             with_way_out(f"runlog: {exc}", findings.record_way(base_dir))
         ) from exc
     blockers, lesser = [], []
-    for u in findings.open_findings(records, mode="preflight"):
+    for u in findings.open_findings(records, mode=PREFLIGHT_AUDIT):
         (blockers if u.grade == "BLOCKER" else lesser).append(u.line)
     return blockers, lesser
 
@@ -385,7 +403,9 @@ def foreground_timeout() -> tuple[float, str] | None:
     return None
 
 
-def reseed_refusal(prepared: Prepared, repeat_of: str | None, reseed: bool) -> None:
+def require_valid_reseed(
+    prepared: Prepared, repeat_of: str | None, reseed: bool
+) -> None:
     """Refuse a run whose seed is drawn anew (RESEED) against the rules: a
     reseed goes with REPEAT_OF; the config must hold an integer
     REPEAT_SEED_KEY; and a seed the protocol registers as a constant is
@@ -424,7 +444,7 @@ def reseed_refusal(prepared: Prepared, repeat_of: str | None, reseed: bool) -> N
         )
 
 
-def registration_refusal(
+def require_registration(
     bound: _Bound,
     block: "promises.PromiseTables | None",
     config: dict,
@@ -567,7 +587,7 @@ class Prepared:
         promises: The snapshot of the block the record carries (`promises.snapshot`).
         config: The run's config, frozen now — what the checks hold is what
             config.json records, but for a reseeded repeat's seed, which
-            runlog derives under its lock (`reseed_refusal` holds the
+            runlog derives under its lock (`require_valid_reseed` holds the
             conditions first).
         run_kind: Data preparation, an instrument probe, or a measurement.
     """
@@ -596,7 +616,7 @@ def prepare(
     (`_promise_snapshot`) — each a SystemExit. Freezes the config: what
     the registration check holds is what config.json records, but for a
     reseeded repeat's seed, which runlog derives under its lock (its
-    conditions: `reseed_refusal`)."""
+    conditions: `require_valid_reseed`)."""
     run_kind = parse_run_kind(run_kind)
     derived = _derived_parent(base_dir, derived_from)
     bound = protocol_binding(base_dir, protocol)
@@ -623,7 +643,7 @@ def prepare(
     )
 
 
-def foreground_refusal(base_dir: Path, limit: tuple[float, str]) -> None:
+def require_detached(base_dir: Path, limit: tuple[float, str]) -> None:
     """Refuse a foreground start under the harness LIMIT, before mkdir.
 
     The caller decides whether detachment is owed and missing. The harness
@@ -680,15 +700,12 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             with_way_out(
                 f"runlog: {declares}, but its "
                 "protocol is not ready for one:\n  " + "\n  ".join(gaps),
-                "freeze first: `preflight <AREA>` clean, audit stamped, "
-                "`frozen = true` "
-                '(at repeat_cost = "low": the registration the kind owes suffices — '
-                "`protocol-check --contract` names it). "
+                f"{_first_step(prepared.bound)} "
                 "No other run yields a reported number: a probe (run_kind='probe') "
                 "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
                 "high repeat cost only over an audit the backend refused, "
                 f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
-                "recorded as such, and report-check refuses their numbers",
+                "recorded as such, and report-check refuses their numbers.",
             )
         )
     failed = _audit_unavailable(base_dir, prepared.bound)  # SystemExit without one

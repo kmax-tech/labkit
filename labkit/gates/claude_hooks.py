@@ -257,7 +257,9 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     area above it (searched up to STOP), its protocol's head, then the
     lane's gate — the registration at low repeat cost
     (`_low_registration_line`), else preflight with the stations' findings
-    as data. Blocks only a frozen protocol with preflight blockers; every
+    as data. Blocks only a frozen protocol with preflight blockers — an
+    unreadable head or a missing protocol never blocks here, they are
+    notes; every
     other case is a note. One script per call: `pre_run` held all of this
     inline (audit 2026-10-27, third, M7)."""
     area = find_area(script, stop)
@@ -551,7 +553,14 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
 
 
 def post_change(event: dict) -> int:
-    """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that discusses a run gets the report review's command (`report_review.review_hint`), once per text; evidence gone or changed in an area whose `audits/` or `runs/` git status names gets what the stop and the commit will hold, with its way out (`_untold_evidence`), once per state; the findings go back as context."""
+    """PostToolUse hook: the tool's file and every file git shows changed
+    (`_changed`) — a protocol or a measurement note gets its checker, a
+    report that discusses a run the report review's command
+    (`report_review.review_hint`) —, each told once per content (`_untold`);
+    evidence gone or changed in an area whose `audits/` or `runs/` git
+    status names gets what the stop and the commit will hold, with its way
+    out, once per state (`_untold_evidence`); the findings go back as
+    context."""
     found = session_repo(event)
     # outside git only the tool's own file is checked, shown against the
     # project directory

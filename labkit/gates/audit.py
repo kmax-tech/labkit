@@ -84,6 +84,7 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import metrics_path, run_path
 from labkit.run import llm, llm_backends
 from labkit.run.llm import model_entry
+from labkit.formats.prompts import prompt_body
 from labkit.formats import (
     attempts,
     console,
@@ -97,7 +98,12 @@ from labkit.formats import (
     scope_sha,
 )
 from labkit.formats.gate import WARNING, GateFinding, coded
-from labkit.formats.standard_contract import COMPUTE_KIND, lane
+from labkit.formats.standard_contract import (
+    ANALYSIS_AUDIT,
+    COMPUTE_KIND,
+    PREFLIGHT_AUDIT,
+    lane,
+)
 from labkit.gates.ways_out import (
     ANSWER_AGAIN,
     AUDIT_AGAIN,
@@ -159,7 +165,7 @@ AUDIT_EXIT_CONTRACT = (
     "with no call)"
 )
 CLARITY = "clarity"
-ANALYSIS = "analysis"
+ANALYSIS = ANALYSIS_AUDIT  # its one spelling is standard_contract's
 STANDARD_LABEL = (
     "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
 )
@@ -184,8 +190,8 @@ VERDICT = re.compile(
 #: the auditor's refusal to audit — the one line its instructions give it for
 #: an unfilled protocol (`experiment-preflight.agent.md`); an answer without a
 #: verdict line that carries it is shown as that refusal
-REFUSED = re.compile(r"^[\s>*`-]*refused:\s*(.*?)[\s`*]*$", re.M | re.I)
-CLARITY_FINDING = re.compile(r"^[\s>*`-]*RULE\s*(\d+)\**\s*·", re.M)
+REFUSED = re.compile(LEAD + r"refused:\s*(.*?)[\s`*]*$", re.M | re.I)
+CLARITY_FINDING = re.compile(LEAD + r"RULE\s*(\d+)\**\s*" + SEP, re.M)
 CLARITY_VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*findings?(?:\s*\((\d+)\s*would be answered wrong\))?", re.I
 )
@@ -590,7 +596,7 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     return ((EARLIER_LABEL, text),)
 
 
-def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
+def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdict]:
     """The report's `FIX · <record>#<n> · <verdict> · <why>` entries before
     the last verdict line, each bound to the decision EARLIER showed for
     that finding (`findings.decision_digest`) — labkit attaches the digest,
@@ -608,7 +614,7 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
     a `resolved` on a missing key is kept as the auditor wrote it."""
     m = list(VERDICT.finditer(text or ""))
     lines = ((text or "")[: m[-1].start()] if m else (text or "")).splitlines()
-    shown = {e.ref: e for e in shown_now.blockers}
+    shown = {e.ref: e for e in earlier_repairs.blockers}
     out: list[findings.FixVerdict] = []
     for i, line in enumerate(lines):
         if not FIX_OPEN.match(line):
@@ -645,7 +651,7 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
                 f["verdict"],
                 "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
                 e.finding.check,
-                shown_now.check_present(e),
+                earlier_repairs.check_present(e),
             )
         )
     problem = findings.fix_verdict_problem(out)
@@ -753,13 +759,6 @@ def last_verdict(
     return matches[-1]
 
 
-def prompt_body(pieces: list[tuple[str, str]]) -> str:
-    """PIECES as an agent's prompt inlines them: each under a `===== label
-    =====` line (`INLINE_NOTE` tells the agent so). One home for the audit
-    and both reviewers."""
-    return "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
-
-
 def parse_clarity(text: str) -> dict:
     """{"findings": N, "wrong": M, "lines": [(rule, line)]} from the LAST
     `verdict: N findings (M would be answered wrong)` line. Raises AuditError
@@ -783,20 +782,13 @@ def parse(text: str) -> dict:
     the LAST verdict line, findings from the text before it (that the two
     agree is the writer's check, `findings.verdict_disagrees`). Raises AuditError when no verdict line is readable — quoting the auditor's
     `refused:` line when the answer is its refusal (`REFUSED`)."""
-    matches = list(VERDICT.finditer(text or ""))
-    if not matches:
-        refusal = REFUSED.search(text or "")
-        if refusal is not None:
-            raise AuditError(
-                f"no audit — the auditor refused: {refusal.group(1)}. Nothing is "
-                f"recorded",
-                fix="answer what it names, then run the audit again",
-            )
+    refusal = REFUSED.search(text or "")
+    if refusal is not None and VERDICT.search(text or "") is None:
         raise AuditError(
-            "the report has no readable `verdict:` line — not an audit",
-            fix=ANSWER_AGAIN,
+            f"no audit — the auditor refused: {refusal.group(1)}. Nothing is recorded",
+            fix="answer what it names, then run the audit again",
         )
-    m = matches[-1]
+    m = last_verdict(VERDICT, text, "the report", "an audit")
     body = (text or "")[: m.start()]
     findings = [
         (f.group(1), line.strip())
@@ -869,7 +861,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
     2026-10-05: two preflight audits and an analysis audit at low repeat cost, and
     the protocol itself says one after the first run would have done. A
     head this labkit cannot read says nothing here — protocol-check does."""
-    if mode != "preflight":
+    if mode != PREFLIGHT_AUDIT:
         return []
     try:
         head = protocol_block.head(protocol.read_text(encoding="utf-8"))
@@ -1059,7 +1051,7 @@ class BoundPrompt:
     stamp: Stamp
     state: findings.AuditedState
     indexed: list[Path]
-    shown_now: Followup
+    earlier_repairs: Followup
 
 
 def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
@@ -1105,7 +1097,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
         """Is R a record of the state this prompt shows?"""
         return r.mode == ANALYSIS and r.state == state
 
-    shown_now = (
+    earlier_repairs = (
         earlier_of(area, current, shown.metrics() if shown else None)
         if mode == ANALYSIS
         else Followup([], None, {})
@@ -1124,7 +1116,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
                 snap.text,
                 shown.pieces if shown else (),
                 validity_evidence(area, text),
-                earlier_piece(shown_now) if mode == ANALYSIS else (),
+                earlier_piece(earlier_repairs) if mode == ANALYSIS else (),
             ),
         )
     except KeyError as exc:
@@ -1137,7 +1129,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
     ):
         raise AuditError(f"{area}: {changed}", fix=AUDIT_AGAIN)
     return BoundPrompt(
-        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, shown_now
+        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, earlier_repairs
     )
 
 
@@ -1274,8 +1266,8 @@ def _record(
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
     try:
         result = parse(report)
-        fixes = parse_fixes(report, bound.shown_now)
-        moved = decisions_moved(bound.shown_now.blockers, args.area)
+        fixes = parse_fixes(report, bound.earlier_repairs)
+        moved = decisions_moved(bound.earlier_repairs.blockers, args.area)
         if moved:
             raise AuditError(
                 f"the decision on {', '.join(moved)} changed while the auditor read "
@@ -1303,8 +1295,8 @@ def _record(
             run_id=bound.state.run_id,
             shown_sha=bound.state.shown_sha,
             fix_verdicts=fixes,
-            carried=carried_of(bound.shown_now, fixes),
-            followup_size=followup_size(bound.shown_now)
+            carried=carried_of(bound.earlier_repairs, fixes),
+            followup_size=followup_size(bound.earlier_repairs)
             if args.mode == ANALYSIS
             else None,
         )
@@ -1327,9 +1319,9 @@ def _record(
         findings.read(recorded), args.area, report, args.protocol
     ):
         print(line)
-    for line in fix_lines(bound.shown_now.blockers, fixes):
+    for line in fix_lines(bound.earlier_repairs.blockers, fixes):
         print(line)
-    return 1 if b or w or carried_of(bound.shown_now, fixes) else 0
+    return 1 if b or w or carried_of(bound.earlier_repairs, fixes) else 0
 
 
 def fix_lines(
@@ -1357,7 +1349,7 @@ def _stamp_report(
     (`preflight_audit = "<record>"`, once every finding is decided); and a
     NOTE when the code changed while the auditor read it."""
     print(f"\nstamp: {stamp_facts(stamp, verdict)}", file=sys.stderr)
-    if mode == "preflight":
+    if mode == PREFLIGHT_AUDIT:
         print(
             f'head: preflight_audit = "{recorded.name}" — once every finding is '
             f"decided, name this record in [protocol] and freeze "

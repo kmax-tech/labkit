@@ -151,12 +151,20 @@ The same block may hold the `[[promise]]` tables (labkit
 - **id** — `p-` plus 16 hex digits, stamped by `labkit-init exp`, never typed: the
   run binds to it, so renaming or moving the file keeps the binding.
 - **type** — `"exploratory"` generates hypotheses, iterate freely, but
-  nothing from it may be reported as a test. `"confirmatory"` tests a
-  hypothesis fixed BEFORE the run, on data that influenced no choice.
+  nothing from it may be reported as a test. `"confirmatory"`: the
+  question and the analysis plan stood BEFORE the relevant results, on data
+  that influenced no choice — a fit or an apply also its success
+  criterion; a computation, which has none, its quantity, unit, data and
+  exclusions.
 - **kind** — what the kept number asserts: `"compute"` judges no prediction
   (a measurement that cannot pass trivially: no criterion, no promise
   tables); `"fit"` judges a model trained or adjusted in this experiment;
-  `"apply"` judges a model used unchanged. A fit or an apply registers the
+  `"apply"` judges a model used unchanged. A rule fixed before the data is
+  seen that derives a parameter from each input itself belongs to a
+  computation — a detection threshold at k times each signal's own noise
+  level, k fixed in advance; choosing a threshold, a window or k after
+  seeing results, so that detections look plausible or agree with reference
+  annotations, is adjusting a procedure: `"fit"`. A fit or an apply registers the
   bar (criterion), what must hold before it is read (admissibility) and
   what it is held against (null condition / anchors, computed in the same
   run), and carries promise tables; with a `[model]` table also the data
@@ -384,8 +392,9 @@ scattered in output files nobody can interpret.
   ```text
   - **Recorded results:** C1 met · recorded: c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
-- **Raw output:** one real prompt+answer pair per finding, read from the
-  run's kept output after the run — never `--probe`'s, which is thrown
+- **Raw output:** one real output per finding — a prompt+answer pair, or
+  an estimator's registered and null row —, read from the run's kept
+  output after the run — never `--probe`'s, which is thrown
   away. Owed only with a model; without one the stamp leaves it out.
 - **Interpretation / next step:** one sentence; keep instrument findings
   apart from findings about the subject.
@@ -423,9 +432,12 @@ scattered in output files nobody can interpret.
 
 ### Setup (APPARATUS)
 
-- **Data / scope:** source, N, producer script; pilot subset first. Look at
-  the prepared file before running — otherwise a format bug and a model
-  failure look identical.
+- **Data / scope:** source, N, producer script — the raw data under
+  `data/raw/` and what prepared them into `data/prepared/`. Small files
+  free to share are committed; large or protected data are named by source
+  and version, and the run records the checksum of each file it reads
+  (`data=`). Look at the prepared file before running — otherwise a format
+  bug and a model failure look identical.
 - **Data profile:** your judgement of the data, written before the
   measuring run: could a surface feature answer the question without the
   model? Owed whenever a model is named, at every kind. The prompt
@@ -516,8 +528,9 @@ scattered in output files nobody can interpret.
 - **Validation †:** anchor items, second model or self-consistency, cross-check.
 - **Noise ceiling → threshold †:** measure repetition spread; the threshold
   comes from the null condition of THIS run. Calibrate bands on the null
-  lane or on a subset (`--probe`), never on the registered lane over all
-  items before the freeze: a registered number seen before `frozen = true`
+  lane, never on the registered lane over all items before the freeze —
+  at apply `--calibrate-null` (permutations of the gold, predictions
+  fixed), at high repeat cost `--probe` over a few seeds: a registered number seen before `frozen = true`
   makes the freeze empty, and the prediction for the follow-up run a
   reading. Where it happened anyway, it stands here with the numbers and
   the seeds (Sonnet v3 t3 and t5, 2026-10-16, wrote it under Randomness

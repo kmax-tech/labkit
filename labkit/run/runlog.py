@@ -135,11 +135,11 @@ from labkit.run.provenance import (
 from labkit.run.start_check import (
     Prepared,
     completed_parent,
-    foreground_refusal,
+    require_detached,
     freeze_gate,
     prepare,
-    registration_refusal,
-    reseed_refusal,
+    require_registration,
+    require_valid_reseed,
     foreground_timeout,
 )
 
@@ -199,7 +199,7 @@ def _index_lock(base_dir: Path) -> Iterator[None]:
     duplicate check run inside it too — they read the same file.
     """
     base_dir.mkdir(parents=True, exist_ok=True)
-    fd = os.open(base_dir / ".runs.tsv.lock", os.O_CREAT | os.O_RDWR, 0o644)
+    fd = os.open(base_dir / f".{RUN_INDEX}.lock", os.O_CREAT | os.O_RDWR, 0o644)
     t0 = time.monotonic()
     try:
         while True:
@@ -255,26 +255,37 @@ def _append_row(index: Path, row: list[str]) -> None:
         f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
 
 
-def _check_run_index(base_dir: Path) -> None:
-    """Refuse to run against a run index whose header doesn't match RUN_INDEX_COLS.
+#: the run index of an area, a local view rebuilt from runs/ (`reindex`)
+RUN_INDEX = "runs.tsv"
 
-    Appending to an old-format runs.tsv would not error — the columns would
-    just shift silently, and every row after the format change would be
-    misread. Fail before the run instead, with the migration spelled out.
-    """
-    index = base_dir / "runs.tsv"
+
+def header_refusal(header: list[str]) -> str | None:
+    """Why a run index with HEADER may not be appended to, or None: columns
+    other than RUN_INDEX_COLS — appended to, an old-format index would not
+    error, its columns would shift silently. One sentence for the run's
+    start (`_check_run_index`) and `reindex` (`index_refusal`)."""
+    if not header or header == RUN_INDEX_COLS:
+        return None
+    return (
+        f"{RUN_INDEX} columns {header} don't match this runlog "
+        f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
+        "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
+        "keeps every row verbatim), then come back; appending without it "
+        "would shift columns silently."
+    )
+
+
+def _check_run_index(base_dir: Path) -> None:
+    """Refuse to run against a run index of other columns (`header_refusal`),
+    before the run, with the migration spelled out. Reads the header line
+    only. Raises RuntimeError."""
+    index = base_dir / RUN_INDEX
     if not index.exists():
         return
     with index.open(encoding="utf-8") as f:
-        found = f.readline().rstrip("\n").split("\t")
-    if found != RUN_INDEX_COLS:
-        raise RuntimeError(
-            f"runs.tsv columns {found} don't match this runlog "
-            f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
-            "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
-            "keeps every row verbatim), then come back; appending without it "
-            "would shift columns silently."
-        )
+        why = header_refusal(f.readline().rstrip("\n").split("\t"))
+    if why is not None:
+        raise RuntimeError(why)
 
 
 def _runs_held(path: Path) -> set[str] | None:
@@ -315,7 +326,7 @@ def _repeat_draw(
     this area again, comparable in protocol, promise block, config and
     inputs (`answering_run.repeat_mismatch`) — else a refusal. Draw 1 is the
     run itself; its repeats count on from 2. RESEED (its conditions held
-    before, `start_check.reseed_refusal`) sets the config's REPEAT_SEED_KEY
+    before, `start_check.require_valid_reseed`) sets the config's REPEAT_SEED_KEY
     to `repeat_seed(repeat_of, draw)`, and the comparison holds it to that
     value. (None, None, the config) for a run that repeats none."""
     if repeat_of is None:
@@ -442,18 +453,18 @@ class Run:
         prepared = prepare(base_dir, config, run_kind, protocol, derived_from)
         # 2. the start check — the order and every skip are visible here;
         #    helpers check the facts without reading a partly built Run
-        registration_refusal(
+        require_registration(
             prepared.bound,
             prepared.block,
             prepared.config,
             prepared.run_kind == "measurement",
         )
-        reseed_refusal(prepared, repeat_of, reseed)
+        require_valid_reseed(prepared, repeat_of, reseed)
         obligations = lane(prepared.repeat_cost)
         if prepared.run_kind == "measurement" and not obligations.foreground:
             limit = foreground_timeout()
             if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
-                foreground_refusal(base_dir, limit)
+                require_detached(base_dir, limit)
         _check_run_index(base_dir)
         described = describe_data(data, base_dir) if data else {}
         unfrozen_ack, audit_failed = False, None
@@ -684,7 +695,7 @@ class Run:
             self._protocol.get("id") or "",
         )
         with _index_lock(self.base):
-            _append_row(self.base / "runs.tsv", row)
+            _append_row(self.base / RUN_INDEX, row)
         dur = self._metrics.get("duration_s", 0)
         if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:
             notify_desktop(
@@ -811,22 +822,22 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
 class Unindexed:
     """What the run folders hold that the run index does not
     (`unindexed`): the ROWS of completed runs without one, the INCOMPLETE
-    runs' ids, and the UNREADABLE runs' errors (damaged, or written before
-    schema 4)."""
+    runs' ids, the UNREADABLE runs' errors (damaged, or written before
+    schema 4), and NO_RECORD, folders that hold no config.json."""
 
     rows: list[list[str]]
     incomplete: list[str]
     unreadable: list[str]
+    no_record: list[str]  # folders under runs/ without config.json: no run
 
 
 def index_refusal(index: Path, header: list[str], rows: list[list[str]]) -> str | None:
     """Why the run index INDEX (its HEADER and ROWS) may not be appended to,
-    or None: old columns, or a run id listed more than once."""
-    if header and header != RUN_INDEX_COLS:
-        return (
-            f"{index} has old columns {header} — migrate it "
-            f"with labkit 0.47 (`runlog migrate-index`) first."
-        )
+    or None: old columns (`header_refusal`), or a run id listed more than
+    once."""
+    why = header_refusal(header)
+    if why is not None:
+        return why
     seen: dict[str, int] = {}
     for row in rows:
         if row:
@@ -847,6 +858,7 @@ def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
     rows: list[list[str]] = []
     incomplete: list[str] = []
     unreadable: list[str] = []
+    no_record: list[str] = []
     for rd in run_dirs(base_dir):
         d, cfg = rd.dir, rd.config
         if d.name in indexed:
@@ -855,6 +867,7 @@ def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
             unreadable.append(rd.error)
             continue
         if cfg is None:
+            no_record.append(d.name)
             continue
         if run_state(d, alive=False) != COMPLETED:
             incomplete.append(d.name)
@@ -872,7 +885,7 @@ def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
                 cfg.protocol.id or "",
             )
         )
-    return Unindexed(rows, incomplete, unreadable)
+    return Unindexed(rows, incomplete, unreadable, no_record)
 
 
 def reindex(base_dir: Path) -> int:
@@ -885,7 +898,7 @@ def reindex(base_dir: Path) -> int:
     with old columns or a run listed twice is refused (`index_refusal`),
     exit 2.
     """
-    index = base_dir / "runs.tsv"
+    index = base_dir / RUN_INDEX
     with _index_lock(base_dir):
         header, rows = _read_index(index)
         why = index_refusal(index, header, rows)
@@ -900,4 +913,6 @@ def reindex(base_dir: Path) -> int:
         print(f"  {name}: not completed — nothing to index.")
     for err in found.unreadable:
         print(f"  NOT INDEXED: {err}")
+    for name in found.no_record:
+        print(f"  {name}: no config.json — no run record, nothing to index.")
     return 2 if found.unreadable else 0

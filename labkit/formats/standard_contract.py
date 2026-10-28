@@ -232,6 +232,11 @@ class Skeleton:
     scripts: tuple[tuple[str, str], ...]
     test: str
     probe: bool
+    # the metrics.json key the measure script keeps [C1]'s number under
+    # (its `C1_VALUE_KEY`); None for the compute skeleton, which has no
+    # criterion. One home for the probes, which named it by hand and scored
+    # three draws "absent" (2026-10-28); tests hold each template to it
+    criterion_key: str | None = None
 
 
 COMPUTE = Skeleton(
@@ -252,6 +257,7 @@ ESTIMATOR = Skeleton(
     ),
     test="test-estimator.py.template",
     probe=True,
+    criterion_key="c1_score",
 )
 MODEL = Skeleton(
     instrument="model",
@@ -262,8 +268,18 @@ MODEL = Skeleton(
     ),
     test="test-area.py.template",
     probe=True,
+    criterion_key="c1_accuracy",
 )
 SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
+
+
+def criterion_key(sk: Skeleton) -> str:
+    """The key SK's measure script keeps [C1]'s number under
+    (`Skeleton.criterion_key`). Raises ValueError for a skeleton without a
+    criterion: a computation keeps its own keys."""
+    if sk.criterion_key is None:
+        raise ValueError(f"the {sk.instrument} skeleton keeps no criterion key")
+    return sk.criterion_key
 
 
 def skeleton(repeat_cost: str | None, kind: str, model: bool) -> Skeleton:
@@ -295,7 +311,13 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
     check = " ".join((CHECK_SCRIPT.as_posix(), CHECK_FLAG))
     before = (
         "the registration written and committed (the first measurement is held "
-        "to what its commit holds): " + ", ".join(registration_fields(kind, model))
+        "to what its commit holds): "
+        + ", ".join(registration_fields(kind, model))
+        # runlog checks these; the pre-commit hook every must field of the
+        # first line, so the commit holds all of them (Haiku start reading
+        # 2026-10-28: three of three asked which list applies)
+        + " — runlog checks these; the pre-commit hook holds every field the "
+        "first line names, so the commit carries all of them"
         if ln.registration
         else "`preflight` clean, the preflight audit decided and its record named "
         "in the head (`preflight_audit`), `frozen = true`"

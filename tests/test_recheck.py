@@ -129,6 +129,8 @@ class Area(unittest.TestCase):
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("has no answer yet", str(cm.exception))
         self.assertIn("--from-run", str(cm.exception))
+        # the adoption is the last step: its precondition stands beside it (2026-10-28)
+        self.assertIn("report-check shows no other blocker", str(cm.exception))
 
     def test_number_must_be_a_token(self):
         self.assertFalse(recheck._present("3.5", "13.57"))

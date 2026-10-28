@@ -20,7 +20,7 @@ recounted from its files (`usability.recount`).
     plant(root, task)        the dataset under data/raw/<dataset>/; returns its paths
     task_text(root, task)    the task as the sheet shows it (task, knowledge, tree, previews, output)
     truth(root, task)        the kept number's true value, or None where the number has no truth (fit)
-    number_ok(task, number, expected)   the kept number against the truth or its range
+    number_within(task, number, expected)   the kept number against the truth or its range
     evaluate(root, task)     (verdict 0|1, detail): the hidden evaluation on pred_results/
 
 Why (2026-10-27): the labkit-paper main round runs six ScienceAgentBench
@@ -39,6 +39,8 @@ import math
 import random
 from dataclasses import dataclass
 from pathlib import Path
+
+from labkit.formats import standard_contract
 
 
 @dataclass(frozen=True)
@@ -65,7 +67,7 @@ HRV_TOLERANCE = 0.10
 #: measured the harness, not labkit: three draws kept the right number under
 #: `c1_score` and scored "absent" (docs/usability/2026-10-28-sab-cases-haiku-main.md).
 #: A computation has no criterion; its sheet names the key (`rmssd_ms`).
-CRITERION_KEY = "c1_score"
+CRITERION_KEY = standard_contract.criterion_key(standard_contract.ESTIMATOR)
 CASES = {
     c.task: c
     for c in (
@@ -423,8 +425,8 @@ def truth(root: Path, task: str) -> float | None:
     """The kept number's true value — regenerated from the seed, never read
     from a file the agent could write; None for the fit (a fitted model's
     validation score has no single true value). apply-screen's `c1_score` is
-    the agreement when the skeleton's SCORE is accuracy; another SCORE shows
-    as a wrong number — a finding about the attempt, not the harness."""
+    the agreement when the skeleton's SCORE is accuracy; another SCORE is
+    named by `meaning_gap`, not taken for a wrong number."""
     del root  # the truth depends on the seed alone; the probe directory is not read
     if task == "compute-hrv":
         return hrv_truth()["rmssd_ms"]
@@ -491,7 +493,7 @@ def meaning_gap(task: str, score: object, n_items: object) -> str | None:
     )
 
 
-def number_ok(task: str, number: float | None, expected: float | None) -> bool:
+def number_within(task: str, number: float | None, expected: float | None) -> bool:
     """The kept number against the truth within the case's relative tolerance,
     or — without a truth — present and within [0, 1]."""
     tol = case(task).tolerance

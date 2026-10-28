@@ -126,6 +126,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.scope_sha import area_stamp, digest, validation_note
+from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
 DIR = "audits"
 #: the suffix of a failed attempt's file, never of a record of findings
@@ -166,7 +167,7 @@ EFFECT_GRADES = ("BLOCKER", "WARNING")
 _EFFECT_NOT = re.compile(r"^(\S+(?:\s*,\s*\S+)*)\s+not assessable$")
 EFFECT_FORM = '`stands` or `<ID>[, <ID>] not assessable` (e.g. "C1 not assessable")'
 GRADES = ("BLOCKER", "WARNING", "NOTE")
-MODES = ("preflight", "analysis")
+MODES = (PREFLIGHT_AUDIT, ANALYSIS_AUDIT)
 #: what an analysis record names as its run when no completed run was
 #: bound to the protocol while the auditor read — it saw no rows
 NO_RUN = "none"
@@ -350,6 +351,10 @@ class AuditedState:
         return self.bound == other.bound and dict(self.registration) == dict(
             other.registration
         )
+
+    def __hash__(self) -> int:
+        # what __eq__ compares, the registration as sorted pairs
+        return hash((self.bound, tuple(sorted(dict(self.registration).items()))))
 
     @property
     def bound(self) -> tuple[str, str, str | None, str | None]:
@@ -648,12 +653,12 @@ def write(
     carried = tuple(carried)
     if mode not in MODES:
         raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
-    if (mode == "analysis") != (run_id is not None):
+    if (mode == ANALYSIS_AUDIT) != (run_id is not None):
         raise ValueError(
             f"mode {mode!r} with run_id {run_id!r}: an analysis audit names the "
             f"run it read (NO_RUN for none), a preflight audit names none"
         )
-    if (mode == "analysis") != (shown_sha is not None):
+    if (mode == ANALYSIS_AUDIT) != (shown_sha is not None):
         raise ValueError(
             f"mode {mode!r} with shown_sha {shown_sha!r}: an analysis audit names "
             f"what it was shown of the run, a preflight audit is shown none"
@@ -721,7 +726,7 @@ def write(
 def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
     """CARRIED as open `[[finding]]` tables. Raises ValueError outside mode
     analysis and on one that is no BLOCKER or names no finding it carries."""
-    if carried and mode != "analysis":
+    if carried and mode != ANALYSIS_AUDIT:
         raise ValueError(
             f"mode {mode!r} with carried findings: only a follow-up carries"
         )
@@ -751,7 +756,7 @@ def _fix_verdict_lines(mode: str, verdicts: Iterable[FixVerdict]) -> list[str]:
     ValueError on verdicts outside mode analysis and on what
     `fix_verdict_problem` refuses."""
     verdicts = tuple(verdicts)
-    if verdicts and mode != "analysis":
+    if verdicts and mode != ANALYSIS_AUDIT:
         raise ValueError(
             f"mode {mode!r} with fix verdicts: only an analysis audit judges "
             f"earlier repairs"
@@ -861,7 +866,7 @@ def _run_fields_problem(audit: dict) -> str | None:
     record names the run it read (`run_id`, NO_RUN for none) and what it was
     shown of it (`shown_sha`); a preflight record reads no run and names
     neither."""
-    if audit["mode"] == "preflight":
+    if audit["mode"] == PREFLIGHT_AUDIT:
         extra = [k for k in ("run_id", "shown_sha") if k in audit]
         return (
             f"{', '.join(extra)} in a preflight audit, which reads no run"
@@ -967,7 +972,7 @@ def _record_of(path: Path, text: str) -> Record:
         raise FindingsError(f"{path}: `finding` must be [[finding]] tables")
     parsed = tuple(_finding(path, i, row) for i, row in enumerate(rows, start=1))
     verdicts = _fix_verdicts(path, data.get("fix_verdict", []))
-    if verdicts and audit["mode"] != "analysis":
+    if verdicts and audit["mode"] != ANALYSIS_AUDIT:
         raise FindingsError(
             f"{path}: fix_verdict in a {audit['mode']} audit — only an analysis "
             f"audit judges earlier repairs"
@@ -1450,8 +1455,9 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
     decided. The head names a record by hand; this is what makes
     "the frozen code was audited" a fact instead of a line (2026-10-14: after
     fixing the audit's findings a cold agent stamped the new sha, and no
-    audit had seen that code). `preflight` for the freeze (runlog, preflight),
-    `analysis` for the report (report-check). Until 0.97.1 only the code was
+    audit had seen that code). Its caller is report-check, mode `analysis`;
+    the freeze holds the record its head names instead
+    (`audit_record_gap`: runlog, preflight). Until 0.97.1 only the code was
     held: a promise rewritten after the audit, or a later run under the same
     code, kept the old record valid (review 2026-10-18).
 
@@ -1462,7 +1468,7 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
     """
     if mode not in MODES:
         raise ValueError(f"audit mode {mode!r} is not one of {', '.join(MODES)}")
-    analysis = mode == "analysis"
+    analysis = mode == ANALYSIS_AUDIT
     if analysis != (now.run_id is not None) or analysis != (now.shown_sha is not None):
         raise ValueError(
             f"audit mode {mode!r} with run_id {now.run_id!r}, shown_sha "
@@ -1699,7 +1705,9 @@ def names_preflight_record(name: str) -> bool:
     `create_file` gave it under audits/ (`<minute>-preflight[-n].toml`),
     not a failed attempt's?"""
     m = _WRITTEN_NAME.match(name)
-    return m is not None and m.group("mode") == "preflight" and not m.group("failed")
+    return (
+        m is not None and m.group("mode") == PREFLIGHT_AUDIT and not m.group("failed")
+    )
 
 
 def audit_record_gap(area: Path, name: str, text: str) -> str | None:
@@ -1743,7 +1751,7 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
         record = read(path)
     except FindingsError as exc:
         return str(exc)
-    if record.mode != "preflight":
+    if record.mode != PREFLIGHT_AUDIT:
         return f"{name} is a {record.mode} record — `preflight_audit` names the preflight audit"
     try:
         now = area_stamp(area)[0]

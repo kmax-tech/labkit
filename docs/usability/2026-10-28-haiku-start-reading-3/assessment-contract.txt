@@ -1,0 +1,9 @@
+Recorded before reader answers, 2026-10-28 (third round, T1 and T4 only). The one doubt the second round
+shared (3 of 3): runlog names Question / hypothesis alone where the pre-commit hook asks for every must field,
+and the contract's before-run line names a shorter list than its first line. labkit stuck-clarity eb81522
+names both: the contract says runlog checks the registration fields and the hook every field of the first
+line; runlog's refusal says the commit also owes the other fields `protocol-check --contract` names.
+Readers: three fresh Claude Haiku 4.5 subagents, instructions.md and cases.md (T1, T4 as in round two,
+regenerated outputs) only. Expected answers: as in the first round's contract for T1 and T4. Judged in
+addition: the doubt which field list applies is raised by at most one reader; no reader fills only the
+question in T4.

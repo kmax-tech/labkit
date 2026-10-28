@@ -141,6 +141,17 @@ JOURNAL_WAY = (
 )
 
 
+def _copy_way(copy: Path) -> str:
+    """The way out of the journal's COPY when it does not read: the copy is
+    labkit's own, written beside every journal line, so it is written again
+    from the journal."""
+    return (
+        "the copy is labkit's own, written beside every journal line: write it "
+        "again from the journal (`cp <area>/audits/attempts.jsonl "
+        f"{shlex.quote(str(copy))}`)"
+    )
+
+
 @dataclass(frozen=True)
 class Attempt:
     """One attempt as the journal holds it: its ID, MODE, MODEL, the
@@ -487,8 +498,9 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     pre-commit), as the index holds them: a record removed from the index
     (`git rm --cached`) is gone from the commit though it stays on disk,
     and a record HEAD lost but the index restores is delivered again —
-    and HEAD; then the paths a handover record keeps owed
-    (`handovers.missing_evidence`). A handover record that does not read
+    and HEAD; in the tree, not STAGED, also the journal's copy in the git
+    directory (`journal_copy`, `copy_gaps`); then the paths a handover
+    record keeps owed (`handovers.missing_evidence`). A handover record that does not read
     is one more blocker beside the others, never in their place. Raises
     AttemptError on a journal that does not read, RuntimeError when git
     fails."""
@@ -511,11 +523,9 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
             else []
         )
     except UnicodeError as exc:
+        assert copy is not None, "only a copy that exists is read"
         raise AttemptError(
-            f"{copy}: the journal's copy is not UTF-8: {exc}",
-            fix="the copy is labkit's own, written beside every journal line: "
-            "write it again from the journal (`cp <area>/audits/attempts.jsonl "
-            f"{shlex.quote(str(copy))}`)",
+            f"{copy}: the journal's copy is not UTF-8: {exc}", fix=_copy_way(copy)
         ) from exc
     found = gaps(
         attempts,
@@ -609,18 +619,27 @@ def copy_gaps(
     every file an end among those lines names that PRESENT (the paths under
     `audits/`) lacks. The journal is held to the copy as a set of lines — a
     merge may interleave two branches' lines, and lines older than the copy
-    are the journal's own. Pure; a copy line that is not JSON raises
-    AttemptError naming the copy."""
+    are the journal's own. Pure; a lost copy line that is not a JSON object
+    raises AttemptError naming the copy and its line — the stop reports it
+    as a problem (`area_integrity`), it does not end in a traceback."""
     kept = set(journal_now.splitlines())
-    lost = [
-        line for line in copy_text.splitlines() if line.strip() and line not in kept
-    ]
+    lines = jsonl.record_lines(copy_text)
+    try:
+        parsed = jsonl.objects(copy_text, str(copy))  # names the copy's own line
+    except ValueError as exc:
+        raise AttemptError(str(exc), fix=_copy_way(copy)) from exc
+    lost: list[str] = []
+    events: list[dict] = []
+    for n, event in parsed:
+        if lines[n - 1] in kept:
+            continue
+        if not isinstance(event, dict):
+            raise AttemptError(f"{copy}:{n}: not a JSON object", fix=_copy_way(copy))
+        lost.append(lines[n - 1])
+        events.append(event)
     if not lost:
         return []
-    events = [obj for _, obj in jsonl.objects("\n".join(lost), str(copy))]
-    ids = list(
-        dict.fromkeys(str(e.get("id", "?")) for e in events if isinstance(e, dict))
-    )
+    ids = list(dict.fromkeys(str(e.get("id", "?")) for e in events))
     out = [
         f"{DIR}/{JOURNAL} lost {len(lost)} line(s) of attempt(s) {', '.join(ids)} that "
         f"this branch's copy keeps ({copy}) — the journal is appended to, never "
@@ -628,7 +647,7 @@ def copy_gaps(
         f"{DIR}/{JOURNAL} {copy} >> {DIR}/{JOURNAL}` (in the area)"
     ]
     for e in events:
-        if not isinstance(e, dict) or e.get("event") != "ended":
+        if e.get("event") != "ended":
             continue
         for rel in (e.get("file"), e.get("answer")):
             if isinstance(rel, str) and rel and rel not in present:

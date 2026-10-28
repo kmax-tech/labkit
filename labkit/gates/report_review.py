@@ -69,6 +69,7 @@ from labkit.formats.repo import (
     the_protocol,
 )
 from labkit.formats.runs import run_path
+from labkit.formats.prompts import prompt_body
 from labkit.gates import audit
 from labkit.gates.ways_out import ANSWER_AGAIN
 
@@ -171,7 +172,7 @@ def gather_report(
     repo = layout_root(area)
     label, rules_text = audit.standard_excerpt(REPORT_REVIEW)
     shown_pieces = [*pieces, (f"FILE: {label}", rules_text)]
-    body = audit.prompt_body(shown_pieces)
+    body = prompt_body(shown_pieces)
     prompt = (
         f"{audit.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
         f"{shown(area, repo)} · REPORT: {shown(report, repo)}\n\n{INLINE_NOTE}\n\n{body}"

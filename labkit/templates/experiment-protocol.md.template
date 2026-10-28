@@ -92,7 +92,7 @@
 
 ## Setup
 
-- **Data / scope:** <!-- l --> <source, N, producer script; pilot subset first>
+- **Data / scope:** <!-- l --> <source, N, producer script>
 - **Data profile:** <!-- lm --> <your judgement of the data before the run: could a surface feature answer the question without the model? What you looked at (the prompt skeleton's `00_prepare.py --audit` profile, any cue words you counted) and what it cannot show>
 - **Model / tool:** <!-- lb --> <the instrument in one sentence: what the model
   does here and what it sees — its alias stands in the head's `[model]`, never
@@ -199,7 +199,9 @@ preflight_audit = ""
 # promises.all_constants(). A constant is
 # named like the config key (lowercase) and stands in exactly one table;
 # `frozen = true` owes these tables, and no run starts whose config lacks a
-# constant or carries another value.
+# constant or carries another value. The numbers below are the stamp's
+# examples, not your design: set each, before the commit, to the value its
+# sentence states.
 [[promise]]
 id = "C1"
 key = "c1_pass"

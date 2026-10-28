@@ -91,14 +91,32 @@ written with. The following applies:
 - **Pilot** — small run, checkable by hand, before scaling up.
 - **Freezing (frozen)** — fixing hypothesis and criteria in writing; from then on
   the run counts as a test, before that it is exploration.
+- **Confirmatory / exploratory** (`type`) — confirmatory: the question and the
+  analysis plan stood before the relevant results; a fit or an apply adds the
+  success criterion it is judged by, a computation (no criterion) fixes its
+  quantity, unit, data and exclusions as the plan. Exploratory: the approach
+  is formed or chosen with what was already seen.
 - **Null condition / anchor** — companion checks with a known target; if they do not show
   what is expected, the instrument measures nothing.
 - **Gold label** — the label in the data that is taken to be correct.
 - **Free knobs** — every selectable parameter: threshold, filter, wording,
   answer form.
+- **Fit or computation** (`kind`) — choosing a knob with the results in view
+  makes a procedure adjusted, a fit: a threshold, a window or a factor picked
+  so that detections look plausible or agree with reference annotations. A
+  rule fixed before the data is seen that derives a parameter from each input
+  itself stays a computation: a detection threshold at k times each signal's
+  own noise level, k fixed in advance (LAB-035 Thresholds belong to the run,
+  not to the measure).
 - **Yield** — expected vs. obtained per processing step.
 - **Producer** — the script that produces a dataset (`data/raw` →
   `data/prepared`).
+- **Fixed inputs** — what reproduces a run's data: the files it actually read
+  or their unchanged versions, where they come from, and the producer steps
+  that prepared them; raw and prepared inputs kept apart. Small files free to
+  share are committed; large or protected data are named by source and
+  version beside the checksum the run records (`data=`). "Commit the inputs"
+  is not the rule — fixing them is.
 - **run_id** — identifier of a run from `runlog`; every reported number carries
   one.
 - **Confound (rival explanation)** — another cause that would produce the same number.
@@ -133,6 +151,18 @@ evidence file under the same ID (top of this document).*
   script, if need be in the docstring. Intent first, then code.
   `labkit-init exp <name>` generates it from the template; the template lives with its checker in the
   labkit package.
+
+  **Incomplete at the first measurement.** What stood is what the commit of
+  the first measurement holds. When it lacked a choice that steers the
+  result or how it is judged — the question, a criterion, a constant, the
+  data, an exclusion —, that measurement is exploratory, whatever its head
+  says. The way on is a new registration that names it in `[replaces]`, or
+  a handover; measuring the same data again does not restore what stood
+  before the number. What decides is whether a choice made afterwards
+  could steer the result or its judgement: a completion that changes no
+  choice — a typo, a sentence saying what the committed fields already
+  fixed — is no new registration. No gate tells the two apart; the
+  registration check holds every owed field to the commit.
 
 - **LAB-004 · Identifiers make the intent addressable.** *(was §2.A1a)* Every promise to
   the code carries an identifier in the protocol text, depending on its kind:
