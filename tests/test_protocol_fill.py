@@ -611,10 +611,10 @@ class TestFromRun(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             protocol_fill.from_run(protocol, area)
         self.assertIn(f"[result] declares {other}, not {self.RUN}", str(cm.exception))
-        text, filled, _ = protocol_fill.from_run(protocol, area, force=True)
-        self.assertEqual(protocol_block.declared_run(text), self.RUN)
-        self.assertNotIn(other, text)
-        self.assertEqual(text.count("[result]"), 1)
+        # --force does not replace it either: the declaration is withdrawn first
+        with self.assertRaises(ValueError) as cm:
+            protocol_fill.from_run(protocol, area, force=True)
+        self.assertIn("withdraw it", str(cm.exception))
 
     def test_a_named_run_that_is_not_completed_refuses(self):
         area = self._area({"x": 1})
@@ -879,6 +879,13 @@ class WithdrawText(unittest.TestCase):
         ((label, text),) = audit_binding.declared_piece(run, "2026-01-01T00-00-00_0000")
         self.assertEqual(label, audit_binding.DECLARED_LABEL)
         self.assertIn("2026-01-01T00-00-00_0000", text)
+
+    def test_a_declaration_is_never_replaced_by_another_run(self):
+        text = self.protocol(self.RUN)
+        self.assertEqual(protocol_fill.fill_result_run(text, self.RUN), text)
+        with self.assertRaises(ValueError) as cm:
+            protocol_fill.fill_result_run(text, "2026-01-01T00-00-00_0002")
+        self.assertIn("withdraw it", str(cm.exception))
 
     def test_withdraw_takes_why_and_no_other_operation(self):
         with tempfile.TemporaryDirectory() as tmp:

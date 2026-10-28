@@ -400,7 +400,7 @@ class HandoverRecovery(cases._Chain):
 
     def test_an_existing_report_keeps_its_text_and_the_result_is_withdrawn(self):
         text = self.protocol.read_text()
-        text = protocol_fill.fill_result_run(text, self.run_id, force=True)
+        text = protocol_fill.fill_result_run(text, self.run_id)
         self.protocol.write_text(text)
         self.report.write_text("# Earlier report\n\nWhat we looked at.\n")
         with self.assertRaises(SystemExit):  # the block is written in place

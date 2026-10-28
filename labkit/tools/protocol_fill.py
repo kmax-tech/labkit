@@ -353,22 +353,26 @@ _RESULT_HEADER = re.compile(r"^\s*\[\s*result\s*\]\s*(?:#.*)?$")
 _RESULT_RUN_LINE = re.compile(r'^(\s*run\s*=\s*)"[^"\n]*"(\s*(?:#.*)?)$')
 
 
-def fill_result_run(text: str, run_id: str, force: bool = False) -> str:
+def fill_result_run(text: str, run_id: str) -> str:
     """Declare RUN_ID as the protocol's reported result: `[result] run =
     "<id>"` in the TOML block, the one declaration report-check holds the
     protocol to (`protocol_block.declared_run`). Without a `[result]` the
     table is written right after the `[protocol]` table's last key; one
     naming RUN_ID already leaves the text as it is; one naming another run
-    is refused without FORCE. Every other byte stays, and the block is read
-    back and must declare exactly RUN_ID. Raises BlockError on a head that
-    does not read, ValueError on the refusal or a block without
-    `[protocol]`."""
+    is refused, --force or not: a declaration is withdrawn (`--withdraw`),
+    then the run that answers is audited and adopted — an audit made while
+    another run is declared does not cover the new one (file-check case,
+    2026-10-28). Every other byte stays, and the block is read back and
+    must declare exactly RUN_ID. Raises BlockError on a head that does not
+    read, ValueError on the refusal or a block without `[protocol]`."""
     current = protocol_block.declared_run(text)
     if current == run_id:
         return text
-    if current is not None and not force:
+    if current is not None:
         raise ValueError(
-            f"[result] declares {current}, not {run_id} — --force to replace it"
+            f"[result] declares {current}, not {run_id} — a declaration is not "
+            f'replaced: withdraw it (`--withdraw --why "<why>"`), audit the run that '
+            f"answers, then adopt it"
         )
     span = protocol_block.toml_block_span(text)
     if span is None:
@@ -478,7 +482,8 @@ def from_run(
     protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limit line of a record that covers
     the run no longer dropped; the Summary's Conclusion stays the author's
     (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
-    Recorded results, or a `[result]` naming another run, is refused without `force`."""
+    Recorded results is refused without `force`; a `[result]` naming another
+    run is refused always (`fill_result_run`: withdraw it first)."""
     run = recheck.chosen_run(area, text, run_id)
     r = rendering(area, text, run)
     filled: list[str] = []
@@ -490,7 +495,7 @@ def from_run(
             if "no field labelled" in str(exc):
                 continue  # a cut without this line (the Summary of a report-grade full form carries it)
             raise
-    declared = fill_result_run(text, run.name, force=force)
+    declared = fill_result_run(text, run.name)
     if declared != text:
         text = declared
         filled.append(RESULT_LABEL)
@@ -1424,8 +1429,9 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--force",
         action="store_true",
-        help="overwrite a field that is already filled; with --from-run, replace "
-        "a [result] that declares another run",
+        help="overwrite a field that is already filled (with --from-run: the "
+        "generated lines of the run declared); a [result] that declares another "
+        "run is withdrawn first (--withdraw), never replaced",
     )
     args = ap.parse_args(argv)
     _check_report_mode_args(ap, args)

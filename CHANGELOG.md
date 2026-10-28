@@ -9,6 +9,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **`protocol-fill --from-run --force` no longer replaces a declared
+  result.** A `[result]` naming another run is refused, `--force` or not.
+  The declaration is withdrawn (`protocol-fill PROTOCOL --withdraw --why
+  "…"`), the run that answers is audited, then adopted. An audit made
+  while another run is declared does not cover the new declaration, so
+  the replacement could never pass once an audit had seen the old one
+  (file-check case, 2026-10-28). The declared-run acceptance case passed
+  the new way before the old one was removed. `--force` still overwrites
+  the generated lines of the run declared. 0.103.0 is the last version
+  that replaces.
+
 - **The analysis audit and the decision review see the run's declared
   dependencies.** In the second repair case the follow-up could not
   confirm a correct repair against `model.json` — "that result is in no
@@ -1371,10 +1382,10 @@ pins (`requirements.txt` / `requirements.lock`).
   adopts it, without `--force`. The first adoption of the run audited
   moves no state. The ways out gain "a wrong declaration", and finalize,
   report-check, the hold of a BLOCKER `fixed` in the state audited and
-  AGENTS.md name the withdrawal where they named `--from-run --force`. The
-  `--force` replacement stays in protocol-fill until the acceptance case
-  has run. An analysis record written while the head declared another run
-  than it audited no longer covers the state; audit again.
+  AGENTS.md name the withdrawal where they named `--from-run --force`
+  (the replacement itself is gone, under Breaking). An analysis record
+  written while the head declared another run than it audited no longer
+  covers the state; audit again.
 - **A required check is computed from the kept rows.** The work order
   said "compute the key from what the run measures", and the recheck
   (`02_analyze.py --check`) recomputes every metrics key from the kept

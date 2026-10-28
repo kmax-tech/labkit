@@ -184,9 +184,10 @@ class Lab:
         return rc, out.getvalue()
 
     def adopt_forced(self, protocol: Path, run_id: str) -> tuple[int, str]:
-        """`protocol-fill PROTOCOL --from-run RUN_ID --force`."""
+        """`protocol-fill PROTOCOL --from-run RUN_ID --force`: (exit, what it
+        printed, a refusal included)."""
         out = io.StringIO()
-        with contextlib.redirect_stdout(out):
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = protocol_fill.main([str(protocol), "--from-run", run_id, "--force"])
         return rc, out.getvalue()
 
@@ -670,9 +671,10 @@ class Withdraw(unittest.TestCase):
         record = self.record
         assert record is not None
         self.decide(record, 1, "fixed", "the wrong declaration withdrawn")
-        # the replacement without a withdrawal cannot pass: no audit saw B declared
+        # a declaration is never replaced, --force or not: it is withdrawn
         rc, out = self.lab.adopt_forced(self.protocol, run_b)
-        self.assertEqual(rc, 1, out)
+        self.assertEqual(rc, 2, out)
+        self.assertIn("a declaration is not replaced: withdraw it", out)
         self.assertEqual(self.declared(), run_a)
         rc, out = self.withdraw("the measuring code changed after the adoption")
         self.assertEqual(rc, 0, out)
