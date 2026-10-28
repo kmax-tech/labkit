@@ -194,7 +194,10 @@ class TestUniqueness(unittest.TestCase):
                     base,
                     id_findings=[
                         GateFinding(
-                            BLOCKER, "P.md: DUPLICATE", evidence_kind=GUARANTEED
+                            BLOCKER,
+                            "P.md: DUPLICATE",
+                            fix="re-stamp the copy",
+                            evidence_kind=GUARANTEED,
                         )
                     ],
                 ),

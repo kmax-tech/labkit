@@ -105,6 +105,9 @@ class AnsweringRun(unittest.TestCase):
         choice = answering_run.bound_answering_run(self.area, PID)
         self.assertIsNone(choice.run_dir)
         self.assertIn("no completed run bound to p-0001", choice.blocker or "")
+        self.assertIn(
+            "scripts/01_measure.py` opens a run bound to p-0001", choice.way_out or ""
+        )
         self.assertEqual(len(choice.exclusions), 1)
 
     def test_a_newer_unreadable_run_blocks_the_choice(self) -> None:
@@ -115,6 +118,7 @@ class AnsweringRun(unittest.TestCase):
         choice = answering_run.bound_answering_run(self.area, PID)
         self.assertIsNone(choice.run_dir)  # blocked: no run_dir to take by mistake
         self.assertIn("cannot say which protocol", choice.blocker or "")
+        self.assertIn("repair or move them aside", choice.way_out or "")
 
     def test_no_bound_run_with_intent_keys_is_named_not_passed_as_an_answer(
         self,
@@ -137,6 +141,7 @@ class AnsweringRun(unittest.TestCase):
         choice = answering_run.bound_answering_run(self.area, PID)
         self.assertIsNone(choice.run_dir)
         self.assertIn("started in the same second", choice.blocker or "")
+        self.assertIn("move the one that does not answer", choice.way_out or "")
 
     def test_a_probe_in_the_same_second_does_not_block(self) -> None:
         """Twin: only one of the two reports an intent key — it answers
@@ -239,9 +244,18 @@ class Explain(unittest.TestCase):
             0,
             (answering_run.RunExclusion(Path("r/x"), "bound to p-b"),),
             "no completed run bound to p-a",
+            way_out="measure",
         )
+        blocker, lines = choice.explain(True)
+        assert blocker is not None
         self.assertEqual(
-            choice.explain(True), ("no completed run bound to p-a", ["x: bound to p-b"])
+            (blocker.grade, blocker.text, blocker.fix, lines),
+            (
+                "BLOCKER",
+                "no completed run bound to p-a",
+                "measure",
+                ["x: bound to p-b"],
+            ),
         )
 
     def test_a_probe_run_blocks_only_when_ids_are_registered(self):
@@ -249,7 +263,9 @@ class Explain(unittest.TestCase):
             Path("r/x"), 0, (), None, reports_intent_keys=False
         )
         blocker, lines = choice.explain(True)
-        self.assertIn("probe or producer run", blocker or "")
+        assert blocker is not None
+        self.assertIn("probe or producer run", blocker.text)
+        self.assertIn("scripts/01_measure.py", blocker.fix or "")
         self.assertEqual(
             choice.explain(False), (None, [])
         )  # a computation registers no id

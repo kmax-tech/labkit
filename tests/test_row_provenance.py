@@ -107,7 +107,7 @@ class ForeignRowsDuringTheRun(unittest.TestCase):
             self.assertEqual(entries[0].continues, ())
             self.assertEqual(entries[0].rows_from, {A: 2})
             blockers, _ = run_record_check.row_provenance_findings(r.dir)
-            self.assertTrue(any(A in b for b in blockers), blockers)
+            self.assertTrue(any(A in b.text for b in blockers), blockers)
 
 
 class FinalizeHoldsRowsToTheRun(unittest.TestCase):
@@ -159,8 +159,9 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             _rows(out, A, ["2", "3"])  # from a run this one does not name
             blockers, _ = run_record_check.row_provenance_findings(run)
             self.assertEqual(len(blockers), 1)
-            self.assertIn(f"2 row(s) from {A}", blockers[0])
-            self.assertIn("file of two measurements", blockers[0])
+            self.assertIn(f"2 row(s) from {A}", blockers[0].text)
+            self.assertIn("file of two measurements", blockers[0].text)
+            self.assertIn("measure anew", blockers[0].fix or "")
 
     def test_a_derived_run_may_hold_its_parents_rows(self) -> None:
         with tempfile.TemporaryDirectory() as d:

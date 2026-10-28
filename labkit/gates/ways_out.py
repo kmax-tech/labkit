@@ -9,6 +9,11 @@ a real one.
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from labkit.formats import findings
+from labkit.formats.repo import audit_command, decide_command
+
 #: what a BLOCKER is and what closes it, printed above the decisions: an
 #: agent whose code missed the registered bar moved the bar to the score
 #: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit).
@@ -93,3 +98,41 @@ BLOCKER_ROUTES = (
     *(f"    {name}: {what}" for name, what in WAYS_OUT),
 )
 #: how long a finding's text stands in the decision list
+
+
+def decide_way(
+    area: Path, open_finding: findings.OpenFinding, protocol: Path | None = None
+) -> str:
+    """The way out of OPEN_FINDING, an audit finding nobody decided in AREA:
+    its `--decide` command (`repo.decide_command`, STATUS and the reason
+    left for the person), and for a BLOCKER the `--findings` command that
+    prints the ways out by cause beside it — the fix the gates that hold an
+    undecided finding name."""
+    cmd = decide_command(
+        area,
+        open_finding.number,
+        "STATUS",
+        "<why>",
+        open_finding.record.path.name,
+        protocol=protocol,
+    )
+    way = f"decide it ({findings.DECIDED_LIST}): `{cmd}`"
+    if open_finding.grade != "BLOCKER":
+        return way
+    return (
+        f"{way} — `{audit_command(area, '--findings', protocol=protocol)}` "
+        f"prints the ways out of a BLOCKER by its cause"
+    )
+
+
+def record_way(area: Path, protocol: Path | None = None) -> str:
+    """The way out of an audit record in AREA that does not read: restore it
+    as labkit-audit wrote it or audit again, and the recovery entry
+    (`--findings`) that names what stands and the handover — never a
+    record rewritten by hand."""
+    return (
+        "restore the record as labkit-audit wrote it (`git checkout HEAD -- "
+        "<record>` where git holds it) or audit again; "
+        f"`{audit_command(area, '--findings', protocol=protocol)}` names what "
+        "stands and the handover"
+    )

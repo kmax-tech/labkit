@@ -40,7 +40,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 
 import re
 
-from labkit.formats.gate import GUARANTEED
+from labkit.formats.gate import GUARANTEED, GateFinding, blocker
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import git_root
@@ -124,33 +124,43 @@ def collect_notes(paths: list[str]) -> list[Path]:
     return files
 
 
-def check_file(f: Path) -> tuple[list[str], list[str]]:
-    """Return (must_failures, warnings) as printable lines for one note."""
-    must, warn = [], []
+def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
+    """Return (must_failures as blockers with their way out, warnings as
+    printable lines) for one note."""
+    must: list[GateFinding] = []
+    warn: list[str] = []
     text = f.read_text(encoding="utf-8")
     meta = meta_paragraph(text)
     if meta is None:
         must.append(
-            f"{f}:1: MISSING (must): no italic meta line after the "
-            f"title (*<Zweck> · <Sorte> · … · <Datum>*)"
+            blocker(
+                f"{f}:1: MISSING (must): no italic meta line after the title",
+                fix="write one under the title: *<Zweck> · <Sorte> · … · <Datum>*",
+            )
         )
         return must, warn
     n, para = meta
     kind = KIND.search(para)
     if not kind:
         must.append(
-            f"{f}:{n}: MISSING (must): no kind in the meta line "
-            f"(Instrument — Entwurf|implementiert · Related-Lesart "
-            f"· Referenzkarte · Audit)"
+            blocker(
+                f"{f}:{n}: MISSING (must): no kind in the meta line",
+                fix="name one in it: Instrument — Entwurf|implementiert · "
+                "Related-Lesart · Referenzkarte · Audit",
+            )
         )
     if not DATE.search(para):
         warn.append(f"{f}:{n}: warning: no date in the meta line")
     if IMPLEMENTED.search(para):
         if not CODE.search(text):
             must.append(
-                f"{f}:{n}: MISSING (must): declared 'Instrument — "
-                f"implementiert' but names no script, function, or "
-                f"experiments/ path"
+                blocker(
+                    f"{f}:{n}: MISSING (must): declared 'Instrument — "
+                    f"implementiert' but names no script, function, or "
+                    f"experiments/ path",
+                    fix="name the script, function or experiments/ path that "
+                    "implements it, or declare it 'Instrument — Entwurf'",
+                )
             )
         else:
             rotten = unresolved_scripts(text, git_root(f.resolve()))
@@ -195,10 +205,13 @@ def main(argv: list[str]) -> int:
         try:
             must, warn = check_file(f)
         except OSError as exc:
-            findings.block(f"{f}: not readable ({exc})")
+            findings.block(
+                f"{f}: not readable ({exc})",
+                fix="make the file readable (its path and permissions), then run "
+                "notes-check again",
+            )
             continue
-        for line in must:
-            findings.block(line)
+        findings.take_all(must)
         for line in warn:
             findings.warn(line, evidence_kind=GUARANTEED)
         if not must and not warn:

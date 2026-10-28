@@ -19,12 +19,12 @@ from __future__ import annotations
 
 import os
 import shlex
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_dirs, run_path
-from labkit.formats.gate import BLOCKER, WARNING, Findings, GateFinding
+from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
 from labkit.formats import (
     findings,
     protocol_block,
@@ -390,8 +390,8 @@ def block_sources(
 
 def owed_blocks(
     report: Path, text: str, found: list[report_blocks.Block], sources: Sources
-) -> list[str]:
-    """Why REPORT owes a block it does not carry, one sentence each: for
+) -> list[GateFinding]:
+    """Why REPORT owes a block it does not carry, one blocker each: for
     every run it cites that a protocol declares as its result, that
     protocol's block (`report_blocks.blocks_owed`), named as the report
     names it (`path_from_report`) so the sentence carries the command."""
@@ -404,9 +404,12 @@ def owed_blocks(
             named[name] = p
             declaring.setdefault(run_id, []).append(name)
     return [
-        f"line {n}: cites run {run_id}, the declared result of {protocol}, without "
-        f"its generated block — the number a report shows of a declared result is "
-        f"the generated one: `{into_command(named[protocol], report)}` writes it"
+        blocker(
+            f"line {n}: cites run {run_id}, the declared result of {protocol}, "
+            f"without its generated block — the number a report shows of a "
+            f"declared result is the generated one",
+            fix=f"`{into_command(named[protocol], report)}` writes it",
+        )
         for n, run_id, protocol in report_blocks.blocks_owed(
             cited, declaring, {b.protocol for b in found}
         )
@@ -482,27 +485,32 @@ def hold_report(
         # alone: a block names its protocol from the report's directory,
         # which the link and the file it points to do not share — the other
         # checks read the copy once it is in place
-        out.block(link_gap(rel, path, link_target, repo, staged=staged))
+        out.take(link_gap(rel, path, link_target, repo, staged=staged))
         return out.report("report-check", "reporting")
     try:
         found = report_blocks.blocks(text)
         discussed = report_blocks.discussions(text)
     except report_blocks.ReportBlockError as exc:
-        out.block(f"{rel}: {exc}")
+        out.block(
+            f"{rel}: {exc}",
+            fix="restore the block's comment lines as `protocol-fill` wrote them "
+            "(`--into` for a result, `--discuss` for a discussion writes them again)",
+        )
         return out.report("report-check", "reporting")
-    for gap in report_blocks.block_gaps(
-        found, block_sources(path, found, sources), path
-    ):
-        out.block(f"{rel}: {gap}")
+
+    def at_report(gaps: list[GateFinding]) -> list[GateFinding]:
+        return [replace(g, text=f"{rel}: {g.text}") for g in gaps]
+
+    out.take_all(
+        at_report(
+            report_blocks.block_gaps(found, block_sources(path, found, sources), path)
+        )
+    )
     cited = report_blocks.cited_run_ids(text)
-    for gap in report_blocks.cited_gaps(cited, sources.known):
-        out.block(f"{rel}: {gap}")
-    for gap in owed_blocks(path, text, found, sources):
-        out.block(f"{rel}: {gap}")
-    for gap in report_blocks.discussion_gaps(discussed):
-        out.block(f"{rel}: {gap}")
-    for gap in discussion_sources(path, discussed):
-        out.block(f"{rel}: {gap}")
+    out.take_all(at_report(report_blocks.cited_gaps(cited, sources.known)))
+    out.take_all(at_report(owed_blocks(path, text, found, sources)))
+    out.take_all(at_report(report_blocks.discussion_gaps(discussed)))
+    out.take_all(at_report(discussion_sources(path, discussed)))
     out.take_all(report_review_owed(path, rel, text, discussed, sources, staged=staged))
     report_hints(out, rel, text, discussed)
     for line in replacement_hints(path, rel, text, repo, sources):
@@ -513,7 +521,7 @@ def hold_report(
 
 def link_gap(
     rel: str, path: Path, link_target: str, repo: Path, *, staged: bool
-) -> str:
+) -> GateFinding:
     """Why the report at PATH (REL to REPO), a symbolic link storing
     LINK_TARGET, is refused, with the way out: the file it points to copied
     into its place. `rm` comes first — `cp` onto a link writes into the
@@ -524,29 +532,40 @@ def link_gap(
     steps = [f"rm {shlex.quote(rel)}", f"cp {shlex.quote(source)} {shlex.quote(rel)}"]
     if staged:
         steps.append(f"git add {shlex.quote(rel)}")
-    return (
+    return blocker(
         f"{rel}: a symbolic link to {link_target} — a report is held as a file "
         f"at its own path, never through a link: the file a link points to can "
-        f"lie where no report is held (under runs/ or data/, outside the repo); "
-        f"put the file in its place: `{' && '.join(steps)}`"
+        f"lie where no report is held (under runs/ or data/, outside the repo)",
+        fix=f"put the file in its place: `{' && '.join(steps)}`",
     )
 
 
-def discussion_sources(path: Path, found: list[report_blocks.Discussion]) -> list[str]:
+def discussion_sources(
+    path: Path, found: list[report_blocks.Discussion]
+) -> list[GateFinding]:
     """Why a discussion block of FOUND, in the report at PATH, names no run
     it can discuss, one sentence each: its protocol (relative to the
     report) is no file, or the run is no `runs/<id>/` of that protocol's
     area. Exact."""
-    gaps: list[str] = []
+    gaps: list[GateFinding] = []
+    again = "write the block again with `protocol-fill <PROTOCOL> --discuss <run> --why … --into <FILE>`"
     for d in found:
         protocol = (path.parent / d.protocol).resolve()
         at = f"line {d.first}: the discussion of run {d.run_id}"
         if not protocol.is_file():
-            gaps.append(f"{at} names {d.protocol}, and there is no such protocol")
+            gaps.append(
+                blocker(
+                    f"{at} names {d.protocol}, and there is no such protocol",
+                    fix=f"{again}, the protocol named from the report",
+                )
+            )
         elif not run_path(protocol.parent, d.run_id).is_dir():
             gaps.append(
-                f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
-                f"discussion names a run of its protocol's area"
+                blocker(
+                    f"{at}: {d.protocol}'s area has no runs/{d.run_id}/ — a "
+                    f"discussion names a run of its protocol's area",
+                    fix=f"{again}, naming a run of that area",
+                )
             )
     return gaps
 
@@ -673,14 +692,12 @@ def report_review_owed(
             differs = tree_differs(sources.repo, area)
             if differs:
                 out.append(
-                    GateFinding(
-                        BLOCKER,
+                    blocker(
                         f"{rel}: its report review reads "
                         f"{shown(area, sources.repo)}, whose working tree differs "
                         f"from the index ({', '.join(differs)}) — the commit would "
-                        f"not hold what the review saw; stage these too, or stash "
-                        f"them",
-                        evidence_kind=GUARANTEED,
+                        f"not hold what the review saw",
+                        fix="stage these too, or stash them",
                     )
                 )
                 continue
@@ -700,10 +717,10 @@ def report_review_owed(
             RuntimeError,
         ) as exc:
             out.append(
-                GateFinding(
-                    BLOCKER,
+                blocker(
                     f"{rel}: its report review cannot be told — {exc}",
-                    evidence_kind=GUARANTEED,
+                    fix=f"repair what the sentence names, then review this state: "
+                    f"{command}",
                 )
             )
             continue
@@ -712,14 +729,12 @@ def report_review_owed(
         runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
         if stands.claims:
             out.append(
-                GateFinding(
-                    BLOCKER,
+                blocker(
                     f"{rel}: the report review holds this state on the discussion "
-                    f"of {runs_named} — {held_by(stands)}; change the "
-                    f"report, or a source the reviewer read, so that no claim holds, "
-                    f"then review that state: {command} (another draw on this state, "
-                    f"`--again` included, releases nothing)",
-                    evidence_kind=GUARANTEED,
+                    f"of {runs_named} — {held_by(stands)}",
+                    fix=f"change the report, or a source the reviewer read, so that "
+                    f"no claim holds, then review that state: {command} (another "
+                    f"draw on this state, `--again` included, releases nothing)",
                 )
             )
             continue
@@ -730,14 +745,13 @@ def report_review_owed(
             else ""
         )
         out.append(
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{rel}: discusses {runs_named} as not reported and has no clean "
-                f"report review of this state (one naming no claim){since} — a cold reader checks "
-                f"that the report states none of their numbers as results: "
-                f"{command} (one model call) — last, after the report's text and "
+                f"report review of this state (one naming no claim){since} — a cold "
+                f"reader checks that the report states none of their numbers as "
+                f"results",
+                fix=f"{command} (one model call) — last, after the report's text and "
                 f"its discussion block are final: a change after it owes another",
-                evidence_kind=GUARANTEED,
             )
         )
     return out
@@ -764,13 +778,11 @@ def undeclared_findings(
         for protocol in sources.declaring(d.run_id):
             named = report_blocks.path_from_report(protocol, path)
             out.append(
-                GateFinding(
-                    BLOCKER,
+                blocker(
                     f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
-                    f"reported, but {named} declares it as its result — remove "
-                    f"the discussion block; the generated result block shows the "
-                    f"number",
-                    evidence_kind=GUARANTEED,
+                    f"reported, but {named} declares it as its result",
+                    fix="remove the discussion block; the generated result block "
+                    "shows the number",
                 )
             )
     said_so = {d.run_id for d in discussed}
@@ -785,24 +797,23 @@ def undeclared_findings(
         promoted = promotions(undeclared, sources)
     except AuditError as exc:
         return out + [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{rel}: cites a run of a protocol whose head does not read — {exc}",
-                evidence_kind=GUARANTEED,
+                fix="repair the head as the sentence says (`protocol-check "
+                "<PROTOCOL> --contract` shows its fields)",
             )
         ]
     for run_id, protocol in promoted:
         named = report_blocks.path_from_report(protocol, path)
         out.append(
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{rel}: cites {run_id}, the answering run of {named}, which declares "
-                f"no result — a full run's number leaves the area through "
+                f"no result",
+                fix=f"a full run's number leaves the area through "
                 f"`{adopt_command(protocol, run_id)}` (it names what the "
                 f"adoption still owes), then `--into {rel}` writes its block; a run "
                 f"this report looks at without reporting it stands in a discussion "
                 f"block: `{report_blocks.discuss_command(shown(protocol, Path.cwd()), run_id, rel)}`",
-                evidence_kind=GUARANTEED,
             )
         )
     looked_at = [r for r in undeclared if r not in {r for r, _ in promoted}]

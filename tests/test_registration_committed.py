@@ -318,7 +318,7 @@ class RegistrationAsFirstMeasured(_Repository):
         )
         self.assertIn("[A2] null_band 0.1 → 0.15", line)
         self.assertIn(
-            f"Restore the [[promise]] tables as {self.FIRST} registered", line
+            f"way out: restore the [[promise]] tables as {self.FIRST} registered", line
         )
         self.assertIn("[A2] null_band 0.1 back", line)
         self.assertIn(f"git show {first[:12]}:experiments/01-x/PROTOCOL-x.md", line)

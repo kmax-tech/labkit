@@ -92,19 +92,23 @@ class Blocks(unittest.TestCase):
             [],
         )
         (gap,) = report_blocks.block_gaps(found, {P: BlockSource(RUN, "a = 2")}, report)
-        self.assertIn("differs from the protocol's rendering", gap)
+        self.assertIn("differs from the protocol's rendering", gap.line)
         (gap,) = report_blocks.block_gaps(
             found, {P: BlockSource("2026-10-08T10-00-00_cd34", "a = 2")}, report
         )
-        self.assertIn("the protocol declares run 2026-10-08T10-00-00_cd34 now", gap)
+        self.assertIn(
+            "the protocol declares run 2026-10-08T10-00-00_cd34 now", gap.line
+        )
         # protocol and report as the working directory reaches them, runnable
         # from there (audit 2026-10-27, third, S2)
-        self.assertIn(f"`protocol-fill {P} --into REPORT.md` replaces the block", gap)
+        self.assertIn(
+            f"`protocol-fill {P} --into REPORT.md` replaces the block", gap.line
+        )
         (gap,) = report_blocks.block_gaps(
             found, {P: BlockSource(None, None, "it declares no result")}, report
         )
         self.assertIn(
-            "it declares no result — a block shows a declared result only", gap
+            "it declares no result — a block shows a declared result only", gap.line
         )
 
     def test_cited_ids_must_name_runs_of_the_repo(self):
@@ -113,8 +117,12 @@ class Blocks(unittest.TestCase):
         )
         gaps = report_blocks.cited_gaps(report_blocks.cited_run_ids(text), {RUN})
         self.assertEqual(len(gaps), 2, gaps)
-        self.assertIn("line 2: 2026-10-21T12-48-00_final reads as a run id", gaps[0])
-        self.assertIn("line 3: cites run 2026-10-07T10-00-00_ffff — no runs/", gaps[1])
+        self.assertIn(
+            "line 2: 2026-10-21T12-48-00_final reads as a run id", gaps[0].line
+        )
+        self.assertIn(
+            "line 3: cites run 2026-10-07T10-00-00_ffff — no runs/", gaps[1].line
+        )
 
     def test_numbers_outside_blocks_are_named_and_ids_dates_versions_are_not(self):
         text = (
@@ -210,8 +218,8 @@ class Discussions(unittest.TestCase):
         one = "\n".join(report_blocks.discussion_lines(P, RUN, "a"))
         text = f"{one}\n\n{one}\n"
         (gap,) = report_blocks.discussion_gaps(report_blocks.discussions(text))
-        self.assertIn("line 9: the discussion of run", gap)
-        self.assertIn("repeats the block at line 1", gap)
+        self.assertIn("line 9: the discussion of run", gap.line)
+        self.assertIn("repeats the block at line 1", gap.line)
         with self.assertRaisesRegex(report_blocks.ReportBlockError, "in 2 blocks"):
             report_blocks.with_discussion(text, P, RUN, "b")
 

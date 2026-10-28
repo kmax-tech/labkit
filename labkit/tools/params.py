@@ -352,7 +352,12 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         if blocker or choice.run_dir is None:
             console.refuse(
                 "labkit-params",
-                "\n".join([str(blocker), *(f"    {ln}" for ln in lines)]),
+                "\n".join(
+                    [
+                        blocker.message if blocker else "no run answers",
+                        *(f"    {ln}" for ln in lines),
+                    ]
+                ),
             )
             return 2
         run_dir = choice.run_dir

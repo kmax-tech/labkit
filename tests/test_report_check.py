@@ -105,7 +105,9 @@ class ReportCheck(unittest.TestCase):
 
         def fake_finalize(area_: Path, protocol: Path | None, collected) -> int:
             if finalize:  # finalize keeps every reason it has as a blocker
-                collected.block(f"stub blocker (finalize exit {finalize})")
+                collected.block(
+                    f"stub blocker (finalize exit {finalize})", fix="stub way out"
+                )
             return finalize
 
         with (
@@ -324,7 +326,7 @@ class ReportCheck(unittest.TestCase):
             seen["stdout_untouched"] = sys.stdout is out  # this test's, no other
             seen["silent"] = collected._tell is None
             collected.note("── completion ──")
-            collected.block("no completed run bound to p-x")
+            collected.block("no completed run bound to p-x", fix="measure: `x`")
             return collected.report("finalize", "reporting")
 
         with (
@@ -335,8 +337,10 @@ class ReportCheck(unittest.TestCase):
             code = report_check.report_check(area)
         self.assertEqual(code, 1, out.getvalue())
         self.assertEqual(seen, {"stdout_untouched": True, "silent": True})
+        # the nested gate's way out reaches the line (TODO 3.2: nested gates)
         self.assertIn(
-            "BLOCKER: finalize: no completed run bound to p-x", out.getvalue()
+            "BLOCKER: finalize: no completed run bound to p-x — way out: measure: `x`",
+            out.getvalue(),
         )
         self.assertNotIn("── completion ──", out.getvalue())
         self.assertNotIn("finalize: 1 blocker", out.getvalue())

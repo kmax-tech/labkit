@@ -119,6 +119,14 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
 
 
+def measure_command(area: Path) -> str:
+    """The line that measures AREA: its stamped `scripts/01_measure.py` (every
+    skeleton has one) with the repo's interpreter, the script as the working
+    directory reaches it; the script opens its run through runlog."""
+    script = shown(area / "scripts" / "01_measure.py", Path.cwd())
+    return f".venv/bin/python {shlex.quote(script)}"
+
+
 def next_after_run(protocol: Path, run_id: str) -> str:
     """The steps after a measurement of PROTOCOL, in the order the gates
     accept them: finalize, the analysis audit and its decisions, the

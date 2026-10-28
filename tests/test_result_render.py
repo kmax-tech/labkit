@@ -202,9 +202,10 @@ class RenderGaps(unittest.TestCase):
         (gap,) = [
             g
             for g in result_render.render_gaps(self.text, self.expected)
-            if "Recorded results" in g
+            if "Recorded results" in g.text
         ]
-        self.assertIn("not written", gap)
+        self.assertIn("not written", gap.text)
+        self.assertIn("protocol-fill <PROTOCOL> --from-run", gap.fix or "")
 
     def test_a_retyped_answer_and_a_changed_limit_are_named_and_rendered_back(self):
         text = self.written()
@@ -213,8 +214,9 @@ class RenderGaps(unittest.TestCase):
         )
         gaps = result_render.render_gaps(edited, self.expected)
         self.assertEqual(len(gaps), 2, gaps)
-        self.assertIn("Recorded results line differs from its rendering", gaps[0])
-        self.assertIn("differs from the record", gaps[1])
+        self.assertIn("Recorded results line differs from its rendering", gaps[0].text)
+        self.assertIn("differs from the record", gaps[1].text)
+        self.assertIn("--render", gaps[1].fix or "")
         rendered, written = protocol_fill.render_result(edited, self.area)
         self.assertEqual(rendered, text)
         self.assertEqual(len(written), 2)
@@ -241,11 +243,11 @@ class RenderGaps(unittest.TestCase):
         (gap,) = result_render.render_gaps(
             "- **Limit (audit a #1):** no restriction applies\n" + good, exp
         )
-        self.assertIn('"Limit (audit a #1)" is written 2 times', gap)
+        self.assertIn('"Limit (audit a #1)" is written 2 times', gap.text)
         (gap,) = result_render.render_gaps(
             good + "- **Recorded results:** c1_pass = False (run r1)\n", exp
         )
-        self.assertIn('"Recorded results" is written 2 times', gap)
+        self.assertIn('"Recorded results" is written 2 times', gap.text)
 
     def test_a_limit_line_no_record_decides_is_named_and_dropped(self):
         text = self.written()
@@ -255,7 +257,7 @@ class RenderGaps(unittest.TestCase):
             "read within this limit — invented\n- **Raw output:** r",
         )
         (gap,) = result_render.render_gaps(stray, self.expected)
-        self.assertIn("no covering record decides", gap)
+        self.assertIn("no covering record decides", gap.text)
         rendered, written = protocol_fill.render_result(stray, self.area)
         self.assertEqual(rendered, text)
         self.assertEqual(

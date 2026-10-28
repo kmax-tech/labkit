@@ -179,8 +179,10 @@ def check_protocol_id(
                 BLOCKER,
                 f"{path}: DUPLICATE protocol id {head.id} — also carried by "
                 + ", ".join(str(q) for q in others)
-                + ". An id binds runs to ONE protocol; re-stamp the copy.",
+                + ". An id binds runs to ONE protocol",
                 form=AS_WRITTEN,
+                fix="re-stamp the copy: `labkit-init exp <name> --kind …` writes "
+                "a fresh id, and the copy's text moves into it",
                 evidence_kind=GUARANTEED,
             )
         )
@@ -280,7 +282,12 @@ def check_annotation_validity(
     )
     return [
         GateFinding(
-            BLOCKER, f"{where} — {bound}", form=AS_WRITTEN, evidence_kind=GUARANTEED
+            BLOCKER,
+            f"{where} — {bound}",
+            form=AS_WRITTEN,
+            fix="bind it to one apply protocol of this repo whose head declares "
+            "its result (`[result] run`, adopted there first), or name a DOI",
+            evidence_kind=GUARANTEED,
         )
     ]
 

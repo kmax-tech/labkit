@@ -18,12 +18,12 @@ class Steps(unittest.TestCase):
         protocol = Path("/x/PROTOCOL-x.md")
         mismatch = finalize.declared_run_mismatch(text, run, protocol)
         assert mismatch is not None
-        self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch)
+        self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch.text)
         # the command names the protocol: without it argparse refused it
         # (audit 2026-10-27, H5)
         self.assertIn(
             "protocol-fill /x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_aa11 --force",
-            mismatch,
+            mismatch.fix or "",
         )
 
     def test_declaring_the_answering_run_or_none_passes(self):
@@ -77,20 +77,26 @@ class DeclaredRunHint(unittest.TestCase):
     def test_a_declared_run_with_no_directory_or_a_typed_id_is_a_blocker(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
+            protocol = area / "PROTOCOL-x.md"
             (gap,) = finalize.declared_run_gaps(
-                area, head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
+                area,
+                head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"),
+                protocol,
             )
-            self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap)
+            self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap.text)
+            self.assertIn("--from-run <run_id> --force", gap.fix or "")
             typed = head(repeat_cost="low").replace(
                 'preflight_audit = ""\n',
                 'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',
             )
-            (gap,) = finalize.declared_run_gaps(area, typed)
-            self.assertIn("no run id runlog writes", gap)
+            (gap,) = finalize.declared_run_gaps(area, typed, protocol)
+            self.assertIn("no run id runlog writes", gap.text)
             (area / "runs" / "2026-10-07T10-00-00_aa11").mkdir(parents=True)
             self.assertEqual(
                 finalize.declared_run_gaps(
-                    area, head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
+                    area,
+                    head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"),
+                    protocol,
                 ),
                 [],
             )

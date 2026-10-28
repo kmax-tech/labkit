@@ -115,11 +115,12 @@ class Declaration(unittest.TestCase):
                 protocol_block.BlockError, "no run id runlog writes"
             ):
                 protocol_block.declared_run(typed)
-            (gap,) = finalize.declared_run_gaps(area, typed)
-            self.assertIn("no run id runlog writes", gap)
+            protocol = area / "PROTOCOL-x.md"
+            (gap,) = finalize.declared_run_gaps(area, typed, protocol)
+            self.assertIn("no run id runlog writes", gap.text)
             shaped = self.protocol(f"C1 met · recorded: (run {RUN})", declared=RUN)
-            (gap,) = finalize.declared_run_gaps(area, shaped)
-            self.assertIn(f"no runs/{RUN}/", gap)
+            (gap,) = finalize.declared_run_gaps(area, shaped, protocol)
+            self.assertIn(f"no runs/{RUN}/", gap.text)
 
     def test_an_answer_without_a_declaration_is_a_warning_not_a_declaration(self):
         text = self.protocol("c1_pass = True, see the run")

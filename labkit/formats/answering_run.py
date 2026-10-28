@@ -21,7 +21,8 @@ from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises
-from labkit.formats.repo import commit_known, earliest_commits
+from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
+from labkit.formats.repo import commit_known, earliest_commits, measure_command
 from labkit.formats.scope_sha import digest
 from labkit.formats.runs import (
     as_stored,
@@ -523,10 +524,8 @@ def newer_unreadable(chosen: Path, rest: list[RunFacts]) -> str | None:
     bad = [f for f in rest if f.state == UNREADABLE and _not_older(f.dir, chosen)]
     if not bad:
         return None
-    return (
-        f"{len(bad)} newer run(s) cannot say which protocol they belong to — "
-        + "; ".join(f.why or UNREADABLE for f in bad)
-        + f". Repair or move them aside before {chosen.name} may answer."
+    return f"{len(bad)} newer run(s) cannot say which protocol they belong to — " + (
+        "; ".join(f.why or UNREADABLE for f in bad)
     )
 
 
@@ -547,8 +546,7 @@ def same_second_rival(
         return None
     return (
         f"{chosen.name} and {', '.join(rivals)} started in the same second — "
-        "the run ids cannot say which is newest. Move the one that does not "
-        "answer out of runs/."
+        "the run ids cannot say which is newest"
     )
 
 
@@ -575,6 +573,7 @@ class AnsweringRun:
         exclusions: Every run left out, with its reason.
         blocker: Why no choice stands — no completed bound run, or a newer
             run whose binding cannot be read — or None.
+        way_out: What closes `blocker` (`GateFinding.fix`); set with it.
     """
 
     run_dir: Path | None
@@ -582,20 +581,34 @@ class AnsweringRun:
     exclusions: tuple[RunExclusion, ...]
     blocker: str | None
     reports_intent_keys: bool = True
+    way_out: str | None = None
 
-    def explain(self, ids_registered: bool) -> tuple[str | None, list[str]]:
-        """(why no run may answer, or None; the lines that say what was
-        looked at) — ONE telling for finalize, intent-check, recheck, params
-        and the audit, which each rendered this four ways with four
-        semantics (audit 2026-10-15). A chosen run that reports no intent
-        key while the protocol registers ids is a blocker here, everywhere:
-        a probe or producer run is not an answer."""
+    def explain(self, ids_registered: bool) -> tuple[GateFinding | None, list[str]]:
+        """(why no run may answer as a BLOCKER with its way out, or None; the
+        lines that say what was looked at) — ONE telling for finalize,
+        intent-check, recheck, params and the audit, which each rendered
+        this four ways with four semantics (audit 2026-10-15); a caller
+        that tells a sentence tells its `message`. A chosen run that
+        reports no intent key while the protocol registers ids is a blocker
+        here, everywhere: a probe or producer run is not an answer."""
         if self.run_dir is None:
-            return self.blocker, [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
+            assert self.blocker is not None and self.way_out is not None, (
+                "bound_answering_run sets a blocker and its way out whenever no run stands"
+            )
+            return GateFinding(
+                BLOCKER, self.blocker, fix=self.way_out, evidence_kind=GUARANTEED
+            ), [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
         if ids_registered and not self.reports_intent_keys:
+            area = self.run_dir.parent.parent
             return (
-                f"{self.run_dir.name} is the newest bound run, and no bound run "
-                f"reports an intent key — a probe or producer run, not an answer",
+                GateFinding(
+                    BLOCKER,
+                    f"{self.run_dir.name} is the newest bound run, and no bound run "
+                    f"reports an intent key — a probe or producer run, not an answer",
+                    fix=f"measure in full: `{measure_command(area)}` (no `--probe`, "
+                    f"`--show` or `--eval-only`) writes the intent keys to metrics.json",
+                    evidence_kind=GUARANTEED,
+                ),
                 [],
             )
         lines: list[str] = []
@@ -615,24 +628,43 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
     blocks the choice: it may be the one that answers — then run_dir is
     None and `blocker` says why. So does a rival started in the same
     second, whose order the run ids cannot tell."""
+    measure = f"measure: `{measure_command(area)}` opens a run bound to {pid}"
     if not runs_path(area).is_dir():
         return AnsweringRun(
             None,
             0,
             (),
             f"no completed run bound to {pid} — no runs/ directory in {area}",
+            way_out=measure,
         )
     taken, rest = bound_runs(area, pid)
     exclusions = tuple(RunExclusion(f.dir, f.why or f.state) for f in rest)
     if not taken:
-        return AnsweringRun(None, 0, exclusions, f"no completed run bound to {pid}")
+        return AnsweringRun(
+            None, 0, exclusions, f"no completed run bound to {pid}", way_out=measure
+        )
     mpath, skipped, has_keys = newest_with_intent_keys(taken)
     assert mpath is not None, "taken is non-empty, so a metrics file exists"
-    blocker = newer_unreadable(mpath.parent, rest) or same_second_rival(
-        mpath.parent, taken, has_keys
-    )
-    if blocker:
-        return AnsweringRun(None, skipped, exclusions, blocker, has_keys)
+    unreadable = newer_unreadable(mpath.parent, rest)
+    rival = None if unreadable else same_second_rival(mpath.parent, taken, has_keys)
+    if unreadable:
+        return AnsweringRun(
+            None,
+            skipped,
+            exclusions,
+            unreadable,
+            has_keys,
+            way_out=f"repair or move them aside before {mpath.parent.name} may answer",
+        )
+    if rival:
+        return AnsweringRun(
+            None,
+            skipped,
+            exclusions,
+            rival,
+            has_keys,
+            way_out="move the one that does not answer out of runs/",
+        )
     return AnsweringRun(mpath.parent, skipped, exclusions, None, has_keys)
 
 

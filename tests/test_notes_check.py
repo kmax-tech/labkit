@@ -149,7 +149,8 @@ class TestCheckFile(unittest.TestCase):
     def test_unstamped_note_fails_kind(self):
         must, _ = self.check("note.md", UNSTAMPED)
         self.assertEqual(len(must), 1)
-        self.assertIn("no kind", must[0])
+        self.assertIn("no kind", must[0].text)
+        self.assertIn("Instrument — Entwurf|implementiert", must[0].fix or "")
 
     def test_implemented_with_protocol_reference_passes(self):
         # a synthesis note over runs listed in a protocol names that protocol
@@ -165,7 +166,7 @@ class TestCheckFile(unittest.TestCase):
     def test_implemented_without_code_fails(self):
         must, _ = self.check("note.md", IMPLEMENTED_NO_CODE)
         self.assertEqual(len(must), 1)
-        self.assertIn("names no script", must[0])
+        self.assertIn("names no script", must[0].text)
 
     def test_related_without_citekey_warns(self):
         must, warn = self.check("related-eichel23-plausibilitaet.md", RELATED_NO_KEY)

@@ -59,9 +59,11 @@ read-only gate that reports findings.
 
 from __future__ import annotations
 
+import shlex
+from dataclasses import replace
 from pathlib import Path
 
-from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
+from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
 from labkit.formats.runs import metrics_path, run_path
 from labkit.formats import console, findings as audit_findings, promises, protocol_block
 from labkit.formats.standard_contract import lane
@@ -81,9 +83,12 @@ from labkit.formats.repo import (
     audit_command,
     area_path,
     layout_root,
+    measure_command,
     no_such_area,
+    shown,
     the_protocol,
 )
+from labkit.gates.ways_out import decide_way, record_way, register_anew
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
@@ -114,23 +119,30 @@ def choose_answering_run(
     reaches no caller that collects the findings as data (audit
     2026-10-23, B1)."""
     if pid is None:
-        findings.block("no stamped protocol id ([protocol] id) — no run is bound to it")
+        findings.block(
+            "no stamped protocol id ([protocol] id) — no run is bound to it",
+            fix="stamp the area with `labkit-init exp <name> --kind …`, which "
+            "writes a fresh id, and carry the protocol's text over",
+        )
         return None
     choice = bound_answering_run(area, pid)
     blocker, lines = choice.explain(ids_registered)
     if choice.run_dir is None:
+        assert blocker is not None, "explain() names a blocker whenever no run stands"
         looked_at = "".join(f"; {line}" for line in lines)
-        findings.block((blocker or f"no completed run bound to {pid}") + looked_at)
+        findings.take(replace(blocker, text=blocker.text + looked_at))
         return None
     if blocker:
-        findings.block(blocker)
+        findings.take(blocker)
     findings.note(
         f"  {choice.run_dir.name}: completed" + "".join(f" ({ln})" for ln in lines)
     )
     return choice.run_dir
 
 
-def declared_run_mismatch(text: str, answering_run: Path, protocol: Path) -> str | None:
+def declared_run_mismatch(
+    text: str, answering_run: Path, protocol: Path
+) -> GateFinding | None:
     """A blocker when the head's `[result] run` of PROTOCOL (its TEXT) names
     another run than the one the checks hold, with the command that
     declares that one; None when it names that run or the protocol
@@ -140,10 +152,11 @@ def declared_run_mismatch(text: str, answering_run: Path, protocol: Path) -> str
     declared = protocol_block.declared_run(text)
     if declared is None or declared == answering_run.name:
         return None
-    return (
+    return blocker(
         f"[result] declares {declared}, but the run that answers is "
-        f"{answering_run.name} — `{adopt_command(protocol, answering_run.name)} "
-        f"--force` declares the run the checks hold, or rerun"
+        f"{answering_run.name}",
+        fix=f"`{adopt_command(protocol, answering_run.name)} --force` declares the "
+        f"run the checks hold, or rerun",
     )
 
 
@@ -171,9 +184,8 @@ def _hold_declaration(
     that does not read or names no run of AREA blocks (`declared_run_gaps`),
     one naming another run blocks (`declared_run_mismatch`), none yet is a
     note with the command (`undeclared_hint`)."""
-    gaps = declared_run_gaps(area, text)
-    for gap in gaps:
-        findings.block(gap)
+    gaps = declared_run_gaps(area, text, protocol)
+    findings.take_all(gaps)
     if run is None:
         return
     try:
@@ -182,7 +194,7 @@ def _hold_declaration(
         return  # named in GAPS; nothing to hold to the run
     mismatch = declared_run_mismatch(text, run, protocol)
     if mismatch:
-        findings.block(mismatch)
+        findings.take(mismatch)
     hint = undeclared_hint(text, run, protocol)
     if hint:
         findings.note(
@@ -207,8 +219,7 @@ def check_answering_run(
             if warning:
                 findings.warn(warning, evidence_kind=GUARANTEED)
         blockers, notes = row_provenance_findings(answering_run)
-        for b in blockers:
-            findings.block(b)
+        findings.take_all(blockers)
         for n in notes:
             findings.note(f"  {n}")
         for w in arm_findings(text, area, answering_run):
@@ -240,7 +251,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
-        findings.block(str(exc))
+        findings.block(str(exc), fix=record_way(area))
         return
     known = {rd.dir.name for rd in run_dirs(area)}
     gone = audit_findings.records_of_gone_runs(records, known)
@@ -248,15 +259,15 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
         findings.block(
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
             f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run, "
-            f"and nothing restores its rows; measure again under a new run and audit "
-            f"that (LAB-043 Runs go through `runlog`)"
+            f"and nothing restores its rows (LAB-043 Runs go through `runlog`)",
+            fix="measure again under a new run and audit that",
         )
     seen = len(gone)
     for u in audit_findings.open_findings(records):
         seen += 1
         line = f"{u.line} — undecided (LAB-015 Preflight audit before freezing)"
         if u.grade == "BLOCKER":
-            findings.block(line)
+            findings.block(line, fix=decide_way(area, u))
         elif u.grade == "WARNING":
             findings.warn(line, evidence_kind=GUARANTEED)
         else:
@@ -280,6 +291,15 @@ def _registers(text: str) -> bool:
         return True
 
 
+#: the way out of an intent-check finding: the registration and the run name
+#: different promises
+INTENT_FIX = (
+    "make the protocol's ids, its promise block and the run's metrics.json name "
+    "the same promises: fix the code and measure again; after the first "
+    "measurement a changed registration is registered anew"
+)
+
+
 def check_intent_keys_in_metrics(
     findings: Findings, protocol: Path, text: str, answering_run: Path | None
 ) -> None:
@@ -294,14 +314,18 @@ def check_intent_keys_in_metrics(
             protocol, metrics_path(answering_run) if answering_run is not None else None
         )
     except console.Refused as exc:  # nothing to hold: a blocker, as its exit 2
-        findings.block(f"intent-check: {exc.why}")
+        findings.block(
+            f"intent-check: {exc.why}",
+            fix=f"repair what the sentence names; `intent-check "
+            f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",
+        )
         return
     # Its findings as data, each a blocker (audit 2026-10-23, B1); its
     # notes — which run, on what proof — stay notes (follow-up F4).
     for line in held.notes:
         findings.note(f"  {line}")
     for line in held.findings:
-        findings.block(f"intent-check: {line}")
+        findings.block(f"intent-check: {line}", fix=INTENT_FIX)
     if not held.findings:
         findings.note(f"  {held.summary}")
 
@@ -313,8 +337,7 @@ def check_run_code(findings: Findings, area: Path, answering_run: Path) -> None:
     run with no new run left the old code's number standing (audit
     2026-10-27, A1). A module in another repository is a warning."""
     changed, apart = code_since_run(area, answering_run)
-    for line in changed:
-        findings.block(line)
+    findings.take_all(changed)
     for line in apart:
         findings.warn(line, evidence_kind=GUARANTEED)
     if not changed and not apart:
@@ -344,13 +367,16 @@ def check_declared_scopes(
         findings.block(
             f"{answering_run.name} recorded no promise block: {owed} — a run "
             f"under labkit 0.70.0 or earlier is held and reproduced with "
-            f"its pinned version; a block added after the run is a new registration"
+            f"its pinned version",
+            fix=f"a block added after the run is a new registration: "
+            f"{register_anew(per='per change, the promise block among them')}",
         )
         return
     drift = promises.scope_drift(recorded, area)
     for d in drift:
         findings.block(
-            f"declared scope changed since {answering_run.name}: {d} — rerun before reporting"
+            f"declared scope changed since {answering_run.name}: {d}",
+            fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
         )
     if not drift:
         findings.note(
@@ -383,8 +409,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     """Station 5: the run's source frozen in the run, source and output
     tracked in git."""
     b, w = provenance_findings(area, answering_run)
-    for line in b:
-        findings.block(line)
+    findings.take_all(b)
     for line in w:
         findings.warn(line, evidence_kind=GUARANTEED)
     if not b and not w:
@@ -416,10 +441,13 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
     try:
         unmoved = null_lane_findings(answering_run)
     except (ValueError, OSError) as exc:
-        findings.block(f"the outputs of {answering_run.name} do not read: {exc}")
+        findings.block(
+            f"the outputs of {answering_run.name} do not read: {exc}",
+            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
+            f"and audit that run; the run's own files stay as they are",
+        )
         return
-    for line in unmoved:
-        findings.block(line)
+    findings.take_all(unmoved)
     if not unmoved:
         findings.note("  the null lane moved, or the run keeps no two lanes")
 
@@ -486,7 +514,9 @@ def finalize_area(
         if console_output:
             console.refuse("finalize", str(exc))
         else:
-            findings.block(str(exc))
+            findings.block(
+                str(exc), fix="name the protocol: `--protocol PROTOCOL-<name>.md`"
+            )
         return 2
     text = chosen.read_text(encoding="utf-8")
     try:
@@ -495,7 +525,11 @@ def finalize_area(
         if console_output:
             console.refuse("finalize", f"{chosen.name}: {exc}")
         else:
-            findings.block(f"{chosen.name}: {exc}")
+            findings.block(
+                f"{chosen.name}: {exc}",
+                fix=f"repair the head as the sentence says: `protocol-check "
+                f"{shlex.quote(shown(chosen, Path.cwd()))} --contract` shows its fields",
+            )
         return 2
 
     # 1. answering run — the run every later step examines
@@ -549,22 +583,29 @@ def finalize_area(
     return report(findings)  # 1 if any step found a blocker, else 0
 
 
-def declared_run_gaps(area: Path, text: str) -> list[str]:
+def declared_run_gaps(area: Path, text: str, protocol: Path) -> list[GateFinding]:
     """A blocker when the head's `[result] run` names no run of AREA (no
     `runs/<id>/` there), or when the table does not read (a typed id, a
     stray key: `protocol_block.declared_run`'s sentence). A run id is
     written by runlog and copied by `protocol-fill --from-run`, never
     typed — a typed one claims a run that may not exist. Empty without a
     declaration."""
+    written = (
+        f"`{adopt_command(protocol, '<run_id>')} --force` writes the table for the "
+        f"run that answers"
+    )
     try:
         declared = protocol_block.declared_run(text)
     except protocol_block.BlockError as exc:
-        return [str(exc)]
+        return [blocker(str(exc), fix=written)]
     if declared is None or run_path(area, declared).is_dir():
         return []
     return [
-        f"[result] declares {declared}, but there is no runs/{declared}/ in this "
-        f"area — a run id is runlog's, never typed"
+        blocker(
+            f"[result] declares {declared}, but there is no runs/{declared}/ in this "
+            f"area — a run id is runlog's, never typed",
+            fix=written,
+        )
     ]
 
 

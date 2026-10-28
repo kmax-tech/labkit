@@ -63,7 +63,7 @@ def audited_run(
     choice = bound_answering_run(area, pid)
     blocker, _ = choice.explain(promises.registers_ids(text))
     if blocker or choice.run_dir is None:
-        return None, blocker or "no completed bound run"
+        return None, blocker.message if blocker else "no completed bound run"
     return choice.run_dir, ""
 
 

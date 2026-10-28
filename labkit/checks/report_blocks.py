@@ -78,6 +78,7 @@ from labkit.formats.comment_blocks import (
     opener,
     with_comment_block,
 )
+from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.repo import into_command
 
@@ -213,33 +214,47 @@ class BlockSource:
 
 def block_gaps(
     found: list[Block], sources: dict[str, BlockSource], report: Path
-) -> list[str]:
+) -> list[GateFinding]:
     """Why a block of FOUND (in REPORT) does not show what its protocol says
-    now, one sentence each, or []: SOURCES maps each block's protocol (as
+    now, one blocker each with its way out, or []: SOURCES maps each block's protocol (as
     written) to its `BlockSource`; the command that writes it again names
     protocol and report as the working directory reaches them
     (`repo.into_command`). Exact: the declared run and equality of the
     body, no reading of what the body says."""
-    gaps: list[str] = []
+    gaps: list[GateFinding] = []
     for b in found:
         s = sources[b.protocol]
         at = f"line {b.first}: the result block of {b.protocol} (run {b.run_id})"
+        into = f"`{into_command(report.parent / b.protocol, report)}`"
         if s.run_id is None:
             gaps.append(
-                f"{at}: {s.why} — a block shows a declared result only; remove it, "
-                f"or adopt a run in the protocol (`--from-run`) and write it again"
+                blocker(
+                    f"{at}: {s.why} — a block shows a declared result only",
+                    fix="remove it, or adopt a run in the protocol (`--from-run`) "
+                    "and write it again",
+                )
             )
         elif s.run_id != b.run_id:
             gaps.append(
-                f"{at}: the protocol declares run {s.run_id} now — "
-                f"`{into_command(report.parent / b.protocol, report)}` replaces the block"
+                blocker(
+                    f"{at}: the protocol declares run {s.run_id} now",
+                    fix=f"{into} replaces the block",
+                )
             )
         elif s.body is None:
-            gaps.append(f"{at}: {s.why}")
+            gaps.append(
+                blocker(
+                    f"{at}: {s.why}",
+                    fix=f"repair what the sentence names in the protocol, then "
+                    f"{into} writes the block again",
+                )
+            )
         elif b.body != s.body:
             gaps.append(
-                f"{at} differs from the protocol's rendering — "
-                f"`{into_command(report.parent / b.protocol, report)}` writes it again"
+                blocker(
+                    f"{at} differs from the protocol's rendering",
+                    fix=f"{into} writes it again",
+                )
             )
     return gaps
 
@@ -276,17 +291,27 @@ def cited_run_ids(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[str]:
-    """Why a cited token names no run, one sentence each: not in the shape
-    runlog writes, or no `runs/<id>/` among KNOWN (the run ids of the repo)."""
-    gaps: list[str] = []
+def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[GateFinding]:
+    """Why a cited token names no run, one blocker each with its way out: not
+    in the shape runlog writes, or no `runs/<id>/` among KNOWN (the run ids
+    of the repo)."""
+    gaps: list[GateFinding] = []
     for n, token in cited:
         if not runs.RUN_ID.fullmatch(token):
             gaps.append(
-                f"line {n}: {token} reads as a run id but is not one runlog writes"
+                blocker(
+                    f"line {n}: {token} reads as a run id but is not one runlog writes",
+                    fix="cite a run by the id runlog wrote (its `runs/<id>/`), "
+                    "or reword the token",
+                )
             )
         elif token not in known:
-            gaps.append(f"line {n}: cites run {token} — no runs/{token}/ in the repo")
+            gaps.append(
+                blocker(
+                    f"line {n}: cites run {token} — no runs/{token}/ in the repo",
+                    fix="cite a run the repo holds: a run that is gone reports no number",
+                )
+            )
     return gaps
 
 
@@ -454,33 +479,42 @@ def with_discussion(text: str, protocol: str, run_id: str, why: str) -> str:
         raise ReportBlockError(str(exc)) from exc
 
 
-def discussion_gaps(found: list[Discussion]) -> list[str]:
-    """Why a block of FOUND does not say what it holds, one sentence each:
+def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
+    """Why a block of FOUND does not say what it holds, one blocker each with
+    its way out:
     an empty why (it is the report of what stopped the number), a body
     that differs from the line its head writes, two blocks of the same
     protocol and run. Exact, on the text alone."""
-    gaps: list[str] = []
+    gaps: list[GateFinding] = []
     seen: dict[tuple[str, str], int] = {}
     for d in found:
         at = f"line {d.first}: the discussion of run {d.run_id} ({d.protocol})"
         key = (d.protocol, d.run_id)
         if key in seen:
             gaps.append(
-                f"{at} repeats the block at line {seen[key]} — one block per "
-                f"protocol and run; remove one"
+                blocker(
+                    f"{at} repeats the block at line {seen[key]} — one block per "
+                    f"protocol and run",
+                    fix="remove one",
+                )
             )
         else:
             seen[key] = d.first
         if not d.why.strip():
             gaps.append(
-                f"{at} has no why — say what refused the adoption and what was "
-                f"found: `{discuss_command('<PROTOCOL>', d.run_id, '<FILE>')}`"
+                blocker(
+                    f"{at} has no why",
+                    fix=f"say what refused the adoption and what was found: "
+                    f"`{discuss_command('<PROTOCOL>', d.run_id, '<FILE>')}`",
+                )
             )
         elif d.body != discussion_body(d.run_id, d.why.strip()):
             gaps.append(
-                f"{at}: its line differs from its head — edit the head with "
-                f"`protocol-fill … --discuss {d.run_id} --why … --into <FILE>`, "
-                f"not the line"
+                blocker(
+                    f"{at}: its line differs from its head",
+                    fix=f"edit the head with `protocol-fill … --discuss {d.run_id} "
+                    f"--why … --into <FILE>`, not the line",
+                )
             )
     return gaps
 

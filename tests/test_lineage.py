@@ -115,8 +115,8 @@ class BreaksAboveTheFirstModelRecord(unittest.TestCase):
                     params.model_rows(c)
                 blockers, _ = row_provenance_findings(c)
                 self.assertEqual(len(blockers), 1, blockers)
-                self.assertIn("lineage", blockers[0])
-                self.assertIn(needle, blockers[0])
+                self.assertIn("lineage", blockers[0].text)
+                self.assertIn(needle, blockers[0].text)
 
     def test_a_whole_chain_passes_every_reader(self) -> None:
         area = Path(tempfile.mkdtemp())

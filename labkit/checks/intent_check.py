@@ -51,7 +51,7 @@ from pathlib import Path
 
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
-from labkit.formats.gate import EXIT_CONTRACT
+from labkit.formats.gate import EXIT_CONTRACT, WAY_OUT
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import bound_answering_run, run_facts
 from labkit.formats.repo import layout_root, shown
@@ -400,7 +400,10 @@ def choose_bound(
     choice = bound_answering_run(protocol.parent, pid)
     blocker, lines = choice.explain(ids_registered)
     if blocker:
-        why = [f"{blocker} ({protocol.name}) — nothing to hold the promises against."]
+        why = [
+            f"{blocker.text} ({protocol.name}) — nothing to hold the promises "
+            f"against{WAY_OUT}{blocker.fix}"
+        ]
         if lines:
             why.append(f"  {len(lines)} other run(s) in {protocol.parent}:")
             why += [f"    {line}" for line in lines]

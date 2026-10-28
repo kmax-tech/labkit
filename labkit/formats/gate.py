@@ -27,6 +27,14 @@ itself, `take` for a `GateFinding` built where it was found — a protocol
 id's, or a code check's (`coded`: grade, where, what, rule, fix as fields,
 told as `BLOCKER · <where> · <what> · <rule> · <fix>`). No gate reads a
 grade back from a line's words.
+
+Every BLOCKER names its way out (`fix`): the step that closes it, as a
+command where one exists, and where the cause may not be fixable, the
+handover. A BLOCKER without one is refused here, and
+`tests/test_ways_out_data.py` holds every site that builds one. Why: the
+ways past the gates came where an agent saw no admissible next step, and a
+held step that named its command was followed
+(docs/notes/2026-10-27-standard-way-out.md).
 """
 
 from __future__ import annotations
@@ -56,6 +64,10 @@ GUARANTEED = "guaranteed"
 STATIC_EVIDENCE = "static evidence"
 EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 
+#: how a prefixed or as-written line joins its fix to its text; a dotted
+#: line gives the fix its own ` · ` part
+WAY_OUT = " — way out: "
+
 
 @dataclass(frozen=True)
 class GateFinding:
@@ -83,7 +95,9 @@ class GateFinding:
             grade itself, `DUPLICATE protocol id`), DOTTED (`coded`).
         where: The file or `file:line` the finding points at, when it has one.
         rule: The standard's rule it cites (`LAB-nnn Name`), when it cites one.
-        fix: What to do about it.
+        fix: The way out — what closes the finding, a command where one
+            exists. Required for a BLOCKER (refused without one), optional
+            for a WARNING; told in every form (`line`).
         evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
     """
 
@@ -111,26 +125,41 @@ class GateFinding:
             raise ValueError(
                 f"static evidence warns, never blocks (AGENTS.md): {self.text!r}"
             )
+        if self.grade == BLOCKER and not (self.fix or "").strip():
+            raise ValueError(
+                f"a BLOCKER names its way out (fix), and this one has none: "
+                f"{self.text!r}"
+            )
 
     @property
     def line(self) -> str:
         """The finding as a gate tells it, without the indent. The dotted
         form names static evidence (`WARNING · static evidence · …`) so a
         reader of a code check's line sees it is an indication; a prefixed
-        line stays `WARNING: …`, and the summary counts the kind."""
-        if self.form == AS_WRITTEN:
-            return self.text
+        line stays `WARNING: …`, and the summary counts the kind. The fix
+        ends the line in every form: its own dotted part, else after
+        `WAY_OUT`."""
         if self.form == DOTTED:
             kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
             parts = (self.grade, kind, self.where, self.text, self.rule, self.fix)
             return " · ".join(p for p in parts if p)
-        return f"{self.grade}: {self.text}"
+        told = self.text if self.form == AS_WRITTEN else f"{self.grade}: {self.text}"
+        return told + (WAY_OUT + self.fix if self.fix else "")
 
     @property
     def message(self) -> str:
-        """What the summary repeats: the text, and for a DOTTED finding the
-        whole line — its text alone would lose where it points and the fix."""
-        return self.line if self.form == DOTTED else self.text
+        """What the summary repeats: the text with its fix, and for a DOTTED
+        finding the whole line — its text alone would lose where it points
+        and the fix."""
+        if self.form == DOTTED:
+            return self.line
+        return self.text + (WAY_OUT + self.fix if self.fix else "")
+
+
+def blocker(text: str, *, fix: str) -> GateFinding:
+    """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
+    check returns as data for the gate that takes it (`Findings.take`)."""
+    return GateFinding(BLOCKER, text, fix=fix, evidence_kind=GUARANTEED)
 
 
 def coded(
@@ -255,15 +284,17 @@ class Findings:
         for finding in findings:
             self.take(finding)
 
-    def block(self, msg: str) -> None:
-        """A blocker: told as `BLOCKER: msg`, repeated in the summary, exit 1.
-        Always GUARANTEED — static evidence never blocks."""
-        self.take(GateFinding(BLOCKER, msg, evidence_kind=GUARANTEED))
+    def block(self, msg: str, *, fix: str) -> None:
+        """A blocker: told as `BLOCKER: msg — way out: fix`, repeated in the
+        summary, exit 1. Always GUARANTEED — static evidence never blocks.
+        FIX is the way out (`GateFinding.fix`), required."""
+        self.take(GateFinding(BLOCKER, msg, fix=fix, evidence_kind=GUARANTEED))
 
-    def warn(self, msg: str, *, evidence_kind: str) -> None:
+    def warn(self, msg: str, *, evidence_kind: str, fix: str | None = None) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own.
-        EVIDENCE_KIND says what carries it (`GateFinding`)."""
-        self.take(GateFinding(WARNING, msg, evidence_kind=evidence_kind))
+        EVIDENCE_KIND says what carries it (`GateFinding`); FIX, when given,
+        is told after it as for a blocker."""
+        self.take(GateFinding(WARNING, msg, fix=fix, evidence_kind=evidence_kind))
 
     def _kinds(self) -> str:
         """` (K static evidence)` when K warnings are indications, else ``."""

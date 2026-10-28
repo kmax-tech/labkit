@@ -30,6 +30,7 @@ from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, runs
 from labkit.formats.answering_run import first_registrations
+from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.repo import git_root
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
@@ -232,24 +233,34 @@ def _unregistered(protocol: Path, pid: str, run_dir: Path) -> str | None:
     return None
 
 
-def render_gaps(text: str, expected: Rendering) -> list[str]:
-    """Why TEXT's result section is not EXPECTED, one sentence each, or []:
+#: the step that writes a protocol's result section from its run and records
+RENDER = "`protocol-fill <PROTOCOL> --render`"
+
+
+def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
+    """Why TEXT's result section is not EXPECTED, one blocker each with the
+    `protocol-fill` step that writes it, or []:
     the Recorded results line missing or differing, a Limit line missing or differing,
     a Limit line no covering record decides, a generated label written more
     than once (every line of a label is held, not the last one). Exact:
     the comparison is equality of the rendered values, no reading of what
     they say."""
-    gaps: list[str] = []
+    gaps: list[GateFinding] = []
     recorded_results = recorded_results_field(text)
     if recorded_results is None:
         gaps.append(
-            "the Recorded results line is not written — `protocol-fill <PROTOCOL> --from-run` "
-            "writes it from the run"
+            blocker(
+                "the Recorded results line is not written",
+                fix="`protocol-fill <PROTOCOL> --from-run` writes it from the run",
+            )
         )
     elif recorded_results != expected.recorded_results:
         gaps.append(
-            "the Recorded results line differs from its rendering (the run's metrics.json and "
-            "the records' limits) — `protocol-fill <PROTOCOL> --render` writes it again"
+            blocker(
+                "the Recorded results line differs from its rendering (the run's "
+                "metrics.json and the records' limits)",
+                fix=f"{RENDER} writes it again",
+            )
         )
     labels = [f.label.replace("†", "").strip() for f in fields(text)]
     generated = [
@@ -264,29 +275,38 @@ def render_gaps(text: str, expected: Rendering) -> list[str]:
             # saying anything passed beside a correct second one (review
             # 2026-10-22: "no restriction applies" above the record's line)
             gaps.append(
-                f'"{label}" is written {n} times — one generated line per label; '
-                f"remove the extra line(s) by hand (`--render` rewrites one and "
-                f"leaves the others)"
+                blocker(
+                    f'"{label}" is written {n} times — one generated line per label',
+                    fix="remove the extra line(s) by hand (`--render` rewrites one "
+                    "and leaves the others)",
+                )
             )
     have = {f.label.replace("†", "").strip(): f.value for f in fields(text)}
     for label, value in expected.limits:
         got = have.get(label)
         if got is None:
             gaps.append(
-                f'no "{label}" line — the accepted finding\'s limit belongs in the '
-                f"protocol; `protocol-fill <PROTOCOL> --render` writes it from the record"
+                blocker(
+                    f'no "{label}" line — the accepted finding\'s limit belongs in '
+                    f"the protocol",
+                    fix=f"{RENDER} writes it from the record",
+                )
             )
         elif got != value:
             gaps.append(
-                f'"{label}" differs from the record — `protocol-fill <PROTOCOL> '
-                f"--render` writes the record's line"
+                blocker(
+                    f'"{label}" differs from the record',
+                    fix=f"{RENDER} writes the record's line",
+                )
             )
     expected_labels = {label for label, _ in expected.limits}
     for label in have:
         if label.startswith(findings.LIMIT_PREFIX) and label not in expected_labels:
             gaps.append(
-                f'"{label}" names a limit no covering record decides — written by '
-                f"hand or from an older record; `protocol-fill <PROTOCOL> --render` "
-                f"drops it"
+                blocker(
+                    f'"{label}" names a limit no covering record decides — written '
+                    f"by hand or from an older record",
+                    fix=f"{RENDER} drops it",
+                )
             )
     return gaps

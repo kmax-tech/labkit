@@ -60,6 +60,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from dataclasses import dataclass
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -80,13 +81,16 @@ from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     AmbiguousArea,
     area_path,
+    audit_command,
     choose_protocol,
     git_root,
     tree_dirty,
     layout_root,
     no_such_area,
+    shown,
     split_area_name,
 )
+from labkit.gates.ways_out import decide_way, record_way
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.protocol_history import (
     check_annotation_validity,
@@ -228,7 +232,10 @@ def preflight_area(
     findings.header(f"protocol-check: {protocol.name}")
     report = check_fields(text)  # the same field report as protocol-check
     if report.head is None:
-        findings.block(f"HEAD (must): {report.head_error}")
+        findings.block(
+            f"HEAD (must): {report.head_error}",
+            fix=f"repair the head as the sentence says; {contract_hint(protocol)}",
+        )
         return findings.report("preflight", "freezing")  # exit 1, nothing after
     head = report.head
     check_protocol_fields(findings, protocol, report, head)
@@ -298,9 +305,16 @@ def check_protocol_fields(
     )
     lowered = repeat_cost_lowered(protocol, head)
     for label in report.missing_must:
-        findings.block(f"MISSING (must): {label}")
+        findings.block(
+            f"MISSING (must): {label}",
+            fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
+        )
     for n, label in report.must_holes:
-        findings.block(f"{protocol.name}:{n}: PLACEHOLDER (must): {label}")
+        findings.block(
+            f"{protocol.name}:{n}: PLACEHOLDER (must): {label}",
+            fix=f"replace the placeholder with this protocol's own text; "
+            f"{contract_hint(protocol)}",
+        )
     for finding in id_findings:
         findings.take(finding)
     if lowered:
@@ -350,12 +364,18 @@ def repeat_cost_lines(
     ]
 
 
-def _owed(findings: Findings, frozen: bool) -> Callable[[str], None]:
-    """How a gap the freeze owes is told: a blocker once FROZEN, else a
-    warning — a mechanical fact either way (GUARANTEED)."""
+def contract_hint(protocol: Path) -> str:
+    """Where a protocol's owed fields are told: its `--contract` line."""
+    shown_as = shlex.quote(shown(protocol, Path.cwd()))
+    return f"`protocol-check {shown_as} --contract` names what each field owes"
+
+
+def _owed(findings: Findings, frozen: bool) -> Callable[[str, str], None]:
+    """How a gap the freeze owes is told, with its way out: a blocker once
+    FROZEN, else a warning — a mechanical fact either way (GUARANTEED)."""
     if frozen:
-        return findings.block
-    return lambda msg: findings.warn(msg, evidence_kind=GUARANTEED)
+        return lambda msg, fix: findings.block(msg, fix=fix)
+    return lambda msg, fix: findings.warn(msg, fix=fix, evidence_kind=GUARANTEED)
 
 
 def check_audit_records(
@@ -370,11 +390,11 @@ def check_audit_records(
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
-        findings.block(str(exc))
+        findings.block(str(exc), fix=record_way(area))
         return []
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
-        _owed(findings, frozen)(f"undecided in {u.line}")
+        _owed(findings, frozen)(f"undecided in {u.line}", decide_way(area, u))
     if undecided:
         findings.note(
             f"  {len(undecided)} finding(s) still `open` — decide each ({audit_findings.DECIDED_LIST}) "
@@ -395,7 +415,9 @@ def check_audit_coverage(
     gap = audit_findings.audit_record_gap(area, audit_line, text)
     if gap:
         _owed(findings, frozen)(
-            f"preflight_audit: {gap} (LAB-015 Preflight audit before freezing)"
+            f"preflight_audit: {gap} (LAB-015 Preflight audit before freezing)",
+            f"audit this code and promise block: "
+            f"`{audit_command(area, '--mode', 'preflight')}`, then decide its findings",
         )
 
 
@@ -520,7 +542,12 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
         for ln in tests.tail:
             findings.note(f"  {ln}")
         last = f" ({tests.tail[-1].strip()})" if tests.tail else ""
-        findings.block(f"{names} failed{last} — {failed}")
+        files = " ".join(shlex.quote(shown(f, Path.cwd())) for f in tests.files)
+        findings.block(
+            f"{names} failed{last} — {failed}",
+            fix=f"fix the code (or a test that asks the wrong thing) until "
+            f"`.venv/bin/python -m pytest {files}` passes",
+        )
 
 
 def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> None:
@@ -533,7 +560,9 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
         _owed(findings, frozen)(
             f"no {tests.pattern} — the resolution check has no "
             f"permanent form (LAB-016 Resolution check before freezing)"
-            + (" and frozen = true owes it" if frozen else "")
+            + (" and frozen = true owes it" if frozen else ""),
+            f"write {tests.pattern} with the resolution check of evaluate(): the "
+            f"cases it must tell apart",
         )
     else:
         tell_test_run(

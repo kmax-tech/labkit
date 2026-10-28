@@ -107,9 +107,11 @@ class CodeSinceRun(unittest.TestCase):
         return d
 
     def held(self, run: Path) -> list[str]:
+        """The blockers as the gate tells them: each sentence with its way out."""
         blockers, warnings = code_since_run(self.area, run)
         self.assertEqual(warnings, [])
-        return blockers
+        self.assertTrue(all(b.fix for b in blockers))
+        return [b.line for b in blockers]
 
     def run_printed(self, line: str) -> None:
         """Run the way out LINE prints (its backticked command), from the

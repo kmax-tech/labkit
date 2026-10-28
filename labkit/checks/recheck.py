@@ -82,7 +82,8 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
     choice = answering_run.bound_answering_run(area, pid)
     blocker, lines = choice.explain(promises.registers_ids(protocol_text))
     if blocker or choice.run_dir is None:
-        raise SystemExit(f"recheck: {blocker}" + "".join(f"\n  {ln}" for ln in lines))
+        why = blocker.message if blocker else "no run answers"
+        raise SystemExit(f"recheck: {why}" + "".join(f"\n  {ln}" for ln in lines))
     return choice.run_dir
 
 

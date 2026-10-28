@@ -83,7 +83,7 @@ class EvidenceKind(unittest.TestCase):
         f = gate.Findings(tell=None)
         with self.assertRaises(TypeError):
             f.warn("y")  # type: ignore[call-arg]
-        f.block("z")  # a blocker is always guaranteed
+        f.block("z", fix="do w")  # a blocker is always guaranteed
         self.assertEqual(f.found[0].evidence_kind, gate.GUARANTEED)
 
     def test_the_dotted_form_names_static_evidence_only(self):
@@ -108,7 +108,7 @@ class EvidenceKind(unittest.TestCase):
         f.warn("b", evidence_kind=gate.GUARANTEED)
         self.assertEqual((f.warnings, f.static_evidence), (2, 1))
         self.assertIn("2 warning(s) (1 static evidence)", f.summary("t", "x")[0])
-        f.block("c")
+        f.block("c", fix="d")
         self.assertIn(
             "1 blocker(s), 2 warning(s) (1 static evidence)", f.summary("t", "x")[0]
         )
@@ -124,36 +124,40 @@ class Findings(unittest.TestCase):
         and in the summary. Without an area the slot stays."""
         step = f"`labkit-audit {gate.AREA_SLOT} --mode analysis` follows it up"
         f = gate.Findings(tell=None, area="experiments/01-x")
-        f.block(step)
+        f.block(f"{gate.AREA_SLOT}: x", fix=step)
         f.take(
             gate.coded(
                 gate.WARNING, "a.py:1", "x", evidence_kind=gate.GUARANTEED, fix=step
             )
         )
         self.assertEqual(
-            f.blocked, ["`labkit-audit experiments/01-x --mode analysis` follows it up"]
+            f.blocked,
+            [
+                "experiments/01-x: x — way out: `labkit-audit experiments/01-x "
+                "--mode analysis` follows it up"
+            ],
         )
         self.assertIn("labkit-audit experiments/01-x --mode", f.warned[0])
         bare = gate.Findings(tell=None)
-        bare.block(step)
-        self.assertEqual(bare.blocked, [step])
+        bare.block("x", fix=step)
+        self.assertEqual(bare.blocked, [f"x{gate.WAY_OUT}{step}"])
 
     def test_a_blocker_is_exit_1_and_named_again(self):
         f = gate.Findings()
         code, out = run(
             lambda: (
-                f.block("x failed"),
+                f.block("x failed", fix="mend x"),
                 f.warn("y", evidence_kind=gate.GUARANTEED),
                 f.report("t", "freezing"),
             )[-1]
         )
         self.assertEqual(code, 1)
-        self.assertIn("  BLOCKER: x failed", out)
+        self.assertIn("  BLOCKER: x failed — way out: mend x", out)
         self.assertIn("  WARNING: y", out)
         self.assertIn(
             "t: 1 blocker(s), 1 warning(s) — fix the blockers before freezing:", out
         )
-        self.assertIn("  - x failed", out)
+        self.assertIn("  - x failed — way out: mend x", out)
 
     def test_warnings_alone_are_exit_0_and_clear_is_said(self):
         f = gate.Findings(tell=None)
@@ -169,7 +173,9 @@ class Findings(unittest.TestCase):
         f = gate.Findings()
         with contextlib.redirect_stdout(io.StringIO()):
             entries = (
-                gate.coded("BLOCKER", "a.py:1", "x", evidence_kind=gate.GUARANTEED),
+                gate.coded(
+                    "BLOCKER", "a.py:1", "x", evidence_kind=gate.GUARANTEED, fix="y"
+                ),
                 gate.coded(
                     "WARNING",
                     "PROTOCOL-BLOCKER.md:3",
@@ -180,6 +186,7 @@ class Findings(unittest.TestCase):
                     "BLOCKER",
                     "PROTOCOL-WARNING.md: DUPLICATE id",
                     gate.AS_WRITTEN,
+                    fix="re-stamp the copy",
                     evidence_kind=gate.GUARANTEED,
                 ),
             )
@@ -200,8 +207,10 @@ class Findings(unittest.TestCase):
             full.line, "WARNING · a.py:2 · y · why · LAB-004 Name · do this"
         )
         self.assertEqual(
-            gate.coded("BLOCKER", None, "x", evidence_kind=gate.GUARANTEED).line,
-            "BLOCKER · x",
+            gate.coded(
+                "BLOCKER", None, "x", evidence_kind=gate.GUARANTEED, fix="y"
+            ).line,
+            "BLOCKER · x · y",
         )
         self.assertEqual(
             (full.where, full.rule, full.fix), ("a.py:2", "LAB-004 Name", "do this")
@@ -211,7 +220,9 @@ class Findings(unittest.TestCase):
         with self.assertRaises(ValueError):
             gate.GateFinding("NOTE", "x", evidence_kind=gate.GUARANTEED)
         with self.assertRaises(ValueError):
-            gate.GateFinding("BLOCKER", "x", "shouted", evidence_kind=gate.GUARANTEED)
+            gate.GateFinding(
+                "BLOCKER", "x", "shouted", fix="y", evidence_kind=gate.GUARANTEED
+            )
 
 
 class Silent(unittest.TestCase):
@@ -224,7 +235,7 @@ class Silent(unittest.TestCase):
         code, out = run(
             lambda: (
                 f.note("── station ──"),
-                f.block("x failed"),
+                f.block("x failed", fix="mend x"),
                 f.warn("y", evidence_kind=gate.GUARANTEED),
                 f.take_all(
                     [
@@ -237,7 +248,7 @@ class Silent(unittest.TestCase):
             )[-1]
         )
         self.assertEqual((code, out), (1, ""))
-        self.assertEqual(f.blocked, ["x failed"])
+        self.assertEqual(f.blocked, ["x failed — way out: mend x"])
         self.assertEqual(f.warned, ["y", "WARNING · a.py:2 · z"])
         self.assertEqual([x.grade for x in f.found], ["BLOCKER", "WARNING", "WARNING"])
         self.assertEqual(f.exit_code, 1)
@@ -246,13 +257,15 @@ class Silent(unittest.TestCase):
         told = gate.Findings()
         quiet = gate.Findings(tell=None)
         for f in (told, quiet):
-            f.block("x failed")
+            f.block("x failed", fix="mend x")
             f.warn("y", evidence_kind=gate.GUARANTEED)
         _, out = run(lambda: told.report("t", "freezing"))
         self.assertEqual(out.strip().splitlines()[-3:], quiet.summary("t", "freezing"))
         self.assertEqual(
-            gate.GateFinding("BLOCKER", "x", evidence_kind=gate.GUARANTEED).line,
-            "BLOCKER: x",
+            gate.GateFinding(
+                "BLOCKER", "x", fix="y", evidence_kind=gate.GUARANTEED
+            ).line,
+            "BLOCKER: x — way out: y",
         )
         self.assertEqual(
             gate.GateFinding(
@@ -268,9 +281,9 @@ class Silent(unittest.TestCase):
         lines: list[str] = []
         f = gate.Findings(tell=lines.append)
         f.note("── x ──")
-        f.block("b")
+        f.block("b", fix="c")
         f.report("t", "x")
-        self.assertEqual(lines[:2], ["── x ──", "  BLOCKER: b"])
+        self.assertEqual(lines[:2], ["── x ──", "  BLOCKER: b — way out: c"])
         self.assertIn(
             "t: 1 blocker(s), 0 warning(s) — fix the blockers before x:", lines
         )
@@ -290,7 +303,8 @@ class AreaSlot(unittest.TestCase):
         f.take(
             gate.GateFinding(
                 "BLOCKER",
-                "`labkit-audit <area> --mode analysis` follows it up; then `finalize <area>`",
+                "`labkit-audit <area> --mode analysis` follows it up",
+                fix="then `finalize <area>`",
                 evidence_kind=gate.GUARANTEED,
             )
         )
@@ -306,7 +320,8 @@ class AreaSlot(unittest.TestCase):
         f.take(
             gate.GateFinding(
                 "BLOCKER",
-                "`labkit-audit <area> --mode analysis`",
+                "x",
+                fix="`labkit-audit <area> --mode analysis`",
                 evidence_kind=gate.GUARANTEED,
             )
         )

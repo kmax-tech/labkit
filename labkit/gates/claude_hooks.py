@@ -477,7 +477,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
     if link_target is not None:
         # named where it lies: `shown` resolves, which follows the link
         rel = path.relative_to(repo.resolve()).as_posix()
-        return report_hold.link_gap(rel, path, link_target, repo, staged=False)
+        return report_hold.link_gap(rel, path, link_target, repo, staged=False).message
     try:
         return review_hint(text, path, repo)
     except ReportBlockError as exc:

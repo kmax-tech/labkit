@@ -103,13 +103,21 @@ the check would judge a state the commit does not hold.
 from __future__ import annotations
 
 import argparse
+import shlex
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir, patch_path
-from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, WARNING, Findings, GateFinding
+from labkit.formats.gate import (
+    BLOCKER,
+    EXIT_CONTRACT,
+    WARNING,
+    Findings,
+    GateFinding,
+    blocker,
+)
 from labkit.formats.answering_run import first_measurements, first_registrations
 from labkit.formats.protocol_history import (
     registration_differences,
@@ -133,7 +141,7 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
-from labkit.gates.preflight import area_test_python
+from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
 from labkit.gates.report_hold import (
     Sources,
@@ -147,6 +155,7 @@ from labkit.gates.report_hold import (
 )
 from labkit.formats.protocol_check import check_fields, conclusion_written
 from labkit.formats.repo import (
+    adopt_command,
     audit_command,
     decide_command,
     area_path,
@@ -157,6 +166,7 @@ from labkit.formats.repo import (
     indexed_protocols,
     protocol_links,
     layout_root,
+    measure_command,
     no_such_area,
     shown,
     state_text,
@@ -165,6 +175,7 @@ from labkit.formats.runs import read_run_config, recorded_commit, unreportable
 from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
+    CHECK_FLAG,
     CHECK_SCRIPT,
     check_command,
     lane,
@@ -286,20 +297,39 @@ def _declaration(text: str) -> tuple[str | None, str | None]:
         return None, str(exc)
 
 
-def freeze_gaps(ctx: Checked) -> list[str]:
+def freeze_gaps(ctx: Checked) -> list[GateFinding]:
     """Why the freeze does not hold — the flag unset, or a must
     gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
+    name = ctx.protocol.name
+    fields = contract_hint(ctx.protocol)
     gaps = (
         []
         if ctx.head.frozen
-        else ["not `frozen = true` — a reported number owes the freeze"]
+        else [
+            blocker(
+                f"{name}: not `frozen = true` — a reported number owes the freeze",
+                fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "
+                f"clean, the preflight audit run and decided "
+                f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
+                f"then `frozen = true`",
+            )
+        ]
     )
     report = check_fields(ctx.text)
-    gaps += report.missing_must
+    gaps += [
+        blocker(f"{name}: {label}", fix=f"write the field; {fields}")
+        for label in report.missing_must
+    ]
     # a must field still holding its `<…>` placeholder passed here while
     # protocol-check and preflight refused it (audit 2026-10-15)
-    gaps += [f"line {n}: {label} still a placeholder" for n, label in report.must_holes]
-    return [f"{ctx.protocol.name}: {g}" for g in gaps]
+    gaps += [
+        blocker(
+            f"{name}: line {n}: {label} still a placeholder",
+            fix=f"replace it with this protocol's own text; {fields}",
+        )
+        for n, label in report.must_holes
+    ]
+    return gaps
 
 
 def registration_changes(ctx: Checked) -> list[GateFinding]:
@@ -332,18 +362,17 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
             f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
         )
         return [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"the first measurements recorded different registrations: {named} — "
                 f"which one stood before the number cannot be told, so no run of "
-                f"this protocol answers a registered question. Either "
+                f"this protocol answers a registered question",
+                fix="either "
                 + ways_out.register_anew(
                     str(ctx.head.id),
                     "per change against each of these registrations (report-check "
                     "of the new protocol lists them)",
                 )
                 + f"; or {ways_out.HANDOVER}",
-                evidence_kind=GUARANTEED,
             )
         ]
     if not registered:
@@ -366,18 +395,17 @@ def registration_changes(ctx: Checked) -> list[GateFinding]:
             )
         )
     return [
-        GateFinding(
-            BLOCKER,
+        blocker(
             f"the registration changed after the first measurement {first.dir.name}: "
             f"{'; '.join(changes)} (recorded by the answering run {ctx.run.name}) — a "
             f"bar set after a result was seen does not answer the registered "
-            f"question. Restore the [[promise]] tables as {first.dir.name} "
+            f"question",
+            fix=f"restore the [[promise]] tables as {first.dir.name} "
             f"registered them ({'; '.join(_restored(c) for c in changes)}){shown_then}, "
             f"and measure again, then audit that run (the earlier runs stay); or, "
             f"when the registration cannot be answered as written, "
             + ways_out.register_anew(str(ctx.head.id))
             + " — the earlier protocol, its runs and their verdict stay",
-            evidence_kind=GUARANTEED,
         )
     ]
 
@@ -414,54 +442,63 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     try:
         rep = protocol_block.replaces(ctx.text)
     except protocol_block.BlockError as exc:
-        return [_blocker(f"{name}: {exc}")]
+        return [
+            blocker(
+                f"{name}: {exc}",
+                fix='write `[replaces]` as the head reads it: `protocol = "<id>"` '
+                "and one `[[replaces.change]]` (what, from, to, why) per change",
+            )
+        ]
     if rep is None or ctx.head.id is None:
         return []
-    pred, why = _predecessor(ctx, rep.protocol)
-    if pred is None:
-        return [_blocker(f"{name}: {why}")]
+    pred = _predecessor(ctx, rep.protocol)
+    if isinstance(pred, GateFinding):
+        return [replace(pred, text=f"{name}: {pred.text}")]
     out = []
     if ctx.head.type != "exploratory":
         out.append(
-            _blocker(
+            blocker(
                 f'{name}: [protocol] type = "{ctx.head.type}" — a protocol that replaces '
-                f'another answers a new, post-hoc question: type = "exploratory"'
+                f"another answers a new, post-hoc question",
+                fix='set `type = "exploratory"` in its head',
             )
         )
-    out += [_blocker(f"{name}: {line}") for line in _undeclared_changes(ctx, rep, pred)]
-    out += [_blocker(f"{name}: {line}") for line in _predecessor_open(ctx, pred)]
+    out += [
+        replace(f, text=f"{name}: {f.text}")
+        for f in _undeclared_changes(ctx, rep, pred)
+    ]
+    out += [replace(f, text=f"{name}: {f.text}") for f in _predecessor_open(ctx, pred)]
     return out
 
 
-def _blocker(line: str) -> GateFinding:
-    return GateFinding(BLOCKER, line, evidence_kind=GUARANTEED)
-
-
-def _predecessor(ctx: Checked, pid: str) -> tuple[Path | None, str]:
-    """(the predecessor's protocol, "") for `[replaces] protocol = PID`, or
-    (None, why it is none): its own id, no or several protocols of the repo
-    carrying PID, or a circle of replacements."""
+def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
+    """The predecessor's protocol for `[replaces] protocol = PID`, or why it
+    is none, as a blocker with its way out: its own id, no or several
+    protocols of the repo carrying PID, or a circle of replacements."""
     if pid == ctx.head.id:
-        return None, "[replaces] protocol is its own id — name the protocol it replaces"
+        return blocker(
+            "[replaces] protocol is its own id",
+            fix="name the protocol it replaces",
+        )
     hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
     if len(hits) != 1:
-        return None, (
+        return blocker(
             f"[replaces] protocol = {pid} names "
-            + ("no protocol of this repo" if not hits else f"{len(hits)} protocols")
-            + " — the predecessor is one protocol here, kept as it is"
+            + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
+            fix="name the one protocol of this repo it replaces, kept as it is",
         )
     circle = _replacement_circle(str(ctx.head.id), hits[0])
     if circle:
-        return (
-            None,
-            f"the replacements run in a circle ({circle}) — each names the one before it",
+        return blocker(
+            f"the replacements run in a circle ({circle})",
+            fix="let each name the one before it",
         )
-    return hits[0], ""
+    return hits[0]
 
 
 def _undeclared_changes(
     ctx: Checked, rep: protocol_block.Replaces, pred: Path
-) -> list[str]:
+) -> list[GateFinding]:
     """Every difference of the registration against PRED's that REP does not
     declare, and every declared change that is none — PRED's registration
     as each of its first measurements saw it (several: the changes are owed
@@ -483,8 +520,10 @@ def _undeclared_changes(
         )
     if gaps:
         return [
-            f"the registrations cannot be compared — {'; '.join(gaps)}; until "
-            f"they can, {ways_out.HANDOVER}"
+            blocker(
+                f"the registrations cannot be compared — {'; '.join(gaps)}",
+                fix=f"until they can, {ways_out.HANDOVER}",
+            )
         ]
     ((new, new_where),) = news
     computed: dict[tuple[str, str, str], str] = {}
@@ -494,41 +533,53 @@ def _undeclared_changes(
     listed = {(c.what, c.from_, c.to) for c in rep.changes}
     s = protocol_block.toml_string
     out = [
-        f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
-        f"{y} — add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
-        f'{s(x)}, to = {s(y)}, why = "…"'
+        blocker(
+            f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
+            f"{y}",
+            fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
+            f'{s(x)}, to = {s(y)}, why = "…"',
+        )
         for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
     ]
     against = "; ".join(where for _, where in olds)
     out += [
-        f"declares a change the registrations do not show: {what} {x} → {y} — "
-        f"remove that [[replaces.change]] (the predecessor {against}, this "
-        f"protocol {new_where})"
+        blocker(
+            f"declares a change the registrations do not show: {what} {x} → {y} "
+            f"(the predecessor {against}, this protocol {new_where})",
+            fix="remove that [[replaces.change]]",
+        )
         for what, x, y in sorted(listed - set(computed))
     ]
     return out
 
 
-def _predecessor_open(ctx: Checked, pred: Path) -> list[str]:
+def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     """PRED's BLOCKERs still `open`, each with the `--decide` that defers it
     to this protocol — they are decided before the replacement reports."""
     try:
         held = findings.open_blockers(findings.area_records(pred.parent))
     except findings.FindingsError as exc:
-        return [f"the predecessor's audit records do not read: {exc}"]
+        return [
+            blocker(
+                f"the predecessor's audit records do not read: {exc}",
+                fix=ways_out.record_way(pred.parent, pred),
+            )
+        ]
     return [
-        f"its predecessor's BLOCKER is still open — {u.line}; decide it first: "
-        "`"
-        + decide_command(
-            pred.parent,
-            u.number,
-            "deferred",
-            f"replaced by {ctx.head.id}: <why>",
-            u.record.path.name,
-            protocol=pred,
+        blocker(
+            f"its predecessor's BLOCKER is still open — {u.line}",
+            fix="decide it first: `"
+            + decide_command(
+                pred.parent,
+                u.number,
+                "deferred",
+                f"replaced by {ctx.head.id}: <why>",
+                u.record.path.name,
+                protocol=pred,
+            )
+            + "`",
         )
-        + "`"
         for u in held
     ]
 
@@ -607,49 +658,48 @@ def _registration_at(
     # place: without the why, a reader takes the second blocker for a bug
     among = "" if held == 1 else f"; one of {held} that git's history does not order"
     commit = recorded_commit(cfg)
+    # what stood before the number cannot be repaired afterwards: a new
+    # registration, committed before its own first run, or the handover
+    anew = f"{ways_out.register_anew(str(ctx.head.id))}; or {ways_out.HANDOVER}"
     if commit is None:
         return [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{at} recorded no commit ({cfg.git!r}{among}) — the registration "
                 f"cannot be held to what stood before the number (LAB-003 No run "
                 f"without an intent paragraph)",
-                evidence_kind=GUARANTEED,
+                fix=anew,
             )
         ]
     if not commit_known(root, commit):
         return [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{at} ({commit}{among}) recorded a commit this repository does not "
                 f"hold (a rewritten history, a shallow clone) — neither its place "
                 f"among the measurements nor the registration it stood on can be "
-                f"read; fetch that commit from a clone that has it (LAB-003 No run "
-                f"without an intent paragraph)",
-                evidence_kind=GUARANTEED,
+                f"read (LAB-003 No run without an intent paragraph)",
+                fix="fetch that commit from a clone that has it (`git fetch "
+                "--unshallow` in a shallow clone)",
             )
         ]
     missing = registration_in_commit(ctx.protocol, commit, ctx.head.kind)
     if missing is None:
         return [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{ctx.protocol.name} was not committed at {at} ({commit[:12]}{among}) "
                 f"— nothing stood before the number; the registration is what the "
                 f"commit of the first measurement holds (LAB-003 No run without an "
                 f"intent paragraph)",
-                evidence_kind=GUARANTEED,
+                fix=anew,
             )
         ]
     if missing:
         return [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"the registration as committed at {at} ({commit[:12]}{among}) lacks "
                 f"{', '.join(missing)} — the registration is what the commit of "
                 f"the first measurement holds, not what the tree says now "
                 f"(LAB-003 No run without an intent paragraph)",
-                evidence_kind=GUARANTEED,
+                fix=anew,
             )
         ]
     return []
@@ -674,7 +724,7 @@ def analysis_audit_gap(ctx: Checked) -> str | None:
         return f"the analysis audit cannot be held to the area: {exc}"
 
 
-def limit_gaps(ctx: Checked) -> list[str]:
+def limit_gaps(ctx: Checked) -> list[GateFinding]:
     """The generated results and limits: every accepted BLOCKER of the covering analysis
     records has its effect decided, and the result section says exactly
     what those records and the run render (`result_render.render_gaps`):
@@ -690,30 +740,40 @@ def limit_gaps(ctx: Checked) -> list[str]:
         records = covering_analysis(ctx.area, ctx.text, ctx.run)
     except (AuditError, FileNotFoundError, ValueError):
         return []
-    gaps: list[str] = []
+    gaps: list[GateFinding] = []
     for r in records:
         for n, f in r.limits():
             if not f.effect:
                 gaps.append(
-                    f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its effect "
-                    "on the verdicts — `"
-                    + decide_command(
-                        ctx.area,
-                        n,
-                        "accepted",
-                        "REASON",
-                        r.path.name,
-                        effect='stands|"<ID> not assessable"',
-                        protocol=ctx.protocol,
+                    blocker(
+                        f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its "
+                        "effect on the verdicts",
+                        fix="`"
+                        + decide_command(
+                            ctx.area,
+                            n,
+                            "accepted",
+                            "REASON",
+                            r.path.name,
+                            effect='stands|"<ID> not assessable"',
+                            protocol=ctx.protocol,
+                        )
+                        + "`",
                     )
-                    + "`"
                 )
     if ctx.declared is None:
         return gaps  # nothing reported: the result section is not owed yet
     try:
         expected = rendering(ctx.area, ctx.text, ctx.run)
     except (OSError, ValueError) as exc:
-        return gaps + [f"the result cannot be rendered from {ctx.run.name}: {exc}"]
+        return gaps + [
+            blocker(
+                f"the result cannot be rendered from {ctx.run.name}: {exc}",
+                fix=f"repair what the sentence names, then "
+                f"`protocol-fill {shlex.quote(shown(ctx.protocol, Path.cwd()))} "
+                f"--render` writes the result section",
+            )
+        ]
     return gaps + render_gaps(ctx.text, expected)
 
 
@@ -765,10 +825,10 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     BLOCKER if f.grade == "BLOCKER" else WARNING,
                     f"{findings.limit_label(r, n)}: `stands` on an accepted {f.grade} "
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
-                    f"upholds that the reported claim stands within this limit: "
-                    f"{_review_step(ctx, r)} asks a second auditor; after a "
-                    f"rejection, decide again "
+                    f"upholds that the reported claim stands within this limit "
                     f"(LAB-015 Preflight audit before freezing)",
+                    fix=f"{_review_step(ctx, r)} asks a second auditor; after a "
+                    f"rejection, decide again",
                     evidence_kind=GUARANTEED,
                 )
             )
@@ -784,10 +844,10 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     f"audit {r.path.stem} #{n}: `{f.status}` on a {f.grade} a "
                     f"review said {was.verdict} on ({was.why}) — closing a finding "
                     f"a reviewer did not uphold settles nothing by itself; the new "
-                    f"decision is {reviews.state(r, n, found, ctx.text)}: "
-                    f"{_review_step(ctx, r)} asks a second auditor whether the "
-                    f"reason shows it {_closing_question(f.status)} "
+                    f"decision is {reviews.state(r, n, found, ctx.text)} "
                     f"(LAB-015 Preflight audit before freezing)",
+                    fix=f"{_review_step(ctx, r)} asks a second auditor whether the "
+                    f"reason shows it {_closing_question(f.status)}",
                     evidence_kind=GUARANTEED,
                 )
             )
@@ -824,22 +884,20 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         held = followup.release_holds(records, covering, metrics)
     except findings.FindingsError as exc:
         return [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
-                evidence_kind=GUARANTEED,
+                fix=ways_out.record_way(ctx.area, ctx.protocol),
             )
         ]
     # the follow-up refuses an area with several protocols (`audit.earlier_of`):
     # no step there may name it
     several = len(area_protocols(ctx.area)) > 1
     out = [
-        GateFinding(
-            BLOCKER,
-            f"audit {h.ref}: {h.why} — "
-            f"{followup.STEP_NONE_SEVERAL if several and h.needs_followup_audit else h.step} "
-            f"(LAB-015 Preflight audit before freezing)",
-            evidence_kind=GUARANTEED,
+        blocker(
+            f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",
+            fix=followup.STEP_NONE_SEVERAL
+            if several and h.needs_followup_audit
+            else h.step,
         )
         for h in held
     ]
@@ -853,15 +911,13 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
                 r, n, found, ctx.text
             ):
                 out.append(
-                    GateFinding(
-                        BLOCKER,
+                    blocker(
                         f"audit {r.path.stem} #{n}: a carried finding (from {f.carries}) "
                         f"`{f.status}` — the follow-up did not find the fault gone, so "
-                        f"closing it settles nothing by itself: {_review_step(ctx, r)} "
-                        f"asks a second auditor whether the reason shows it "
-                        f"{_closing_question(f.status)} "
+                        f"closing it settles nothing by itself "
                         f"(LAB-015 Preflight audit before freezing)",
-                        evidence_kind=GUARANTEED,
+                        fix=f"{_review_step(ctx, r)} asks a second auditor whether "
+                        f"the reason shows it {_closing_question(f.status)}",
                     )
                 )
     return out
@@ -891,27 +947,37 @@ def _closing_question(status: str) -> str:
     }[status]
 
 
-def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[str]:
+def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
     """Why the answering run's number cannot be reported
     (`runs.unreportable`), each a blocker. Without an answering run there is
     nothing to hold — finalize says so. FREEZE_OWED names the freeze in the
     sentence (high repeat cost); at low repeat cost a full run is owed, no freeze."""
     if ctx.run is None:
         return []
+    measure = f"`{measure_command(ctx.area)}`"
     cfg = read_run_config(ctx.run)
     if cfg is None:
-        return [f"{ctx.run.name}: no config.json — not a run"]
+        return [
+            blocker(
+                f"{ctx.run.name}: no config.json — not a run",
+                fix=f"measure through runlog: {measure}",
+            )
+        ]
     owed = "a full run (run_kind='measurement')" + (
         " on a frozen protocol" if freeze_owed else ""
     )
     return [
-        f"the answering run {ctx.run.name}: {mark} — its number cannot be "
-        f"reported; a reported number owes {owed}"
+        blocker(
+            f"the answering run {ctx.run.name}: {mark} — its number cannot be "
+            f"reported; a reported number owes {owed}",
+            fix=f"measure in full{' after the freeze' if freeze_owed else ''}: "
+            f"{measure}, then audit that run",
+        )
         for mark in unreportable(cfg)
     ]
 
 
-def finalize_gaps(area: Path, protocol: Path) -> list[str]:
+def finalize_gaps(area: Path, protocol: Path) -> list[GateFinding]:
     """Finalize's blockers, each named here with
     its prefix — a hook that says "run it to see them" asks for a round
     trip the agent does not take. finalize runs on a silent collector
@@ -930,7 +996,11 @@ def finalize_gaps(area: Path, protocol: Path) -> list[str]:
             f"finalize {area} exits {finalized} and kept no blocker — every "
             f"reason finalize has must be a finding"
         )
-    return [f"finalize: {b}" for b in collected.blocked]
+    return [
+        replace(f, text=f"finalize: {f.text}")
+        for f in collected.found
+        if f.grade == BLOCKER
+    ]
 
 
 def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
@@ -943,16 +1013,18 @@ def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
     gap = analysis_audit_gap(ctx)
     if gap:
         out.append(
-            GateFinding(
-                BLOCKER, f"analysis audit: {gap} ({rule})", evidence_kind=GUARANTEED
+            blocker(
+                f"analysis audit: {gap} ({rule})",
+                fix=f"audit the answering run as it stands: "
+                f"`{audit_command(ctx.area, '--mode', 'analysis', protocol=ctx.protocol)}`, "
+                f"then decide its findings",
             )
         )
     # the rendered result section is held here too, named as what it is:
     # a cold reader took "analysis audit:" on a retyped Recorded results
     # line for a record problem (reading probe 2026-10-22)
     out.extend(
-        GateFinding(BLOCKER, f"result section: {gap}", evidence_kind=GUARANTEED)
-        for gap in limit_gaps(ctx)
+        replace(gap, text=f"result section: {gap.text}") for gap in limit_gaps(ctx)
     )
     return out
 
@@ -962,10 +1034,12 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
     failed = check_analysis_script(area, repo)
     return (
         [
-            GateFinding(
-                BLOCKER,
+            blocker(
                 f"{failed} (LAB-041 Generate numbers, don't retype them)",
-                evidence_kind=GUARANTEED,
+                fix=f"fix what the check names until `.venv/bin/python "
+                f"{shlex.quote(shown(area / CHECK_SCRIPT, Path.cwd()))} {CHECK_FLAG}` "
+                f"exits 0; a number in the protocol comes from `protocol-fill`, "
+                f"never typed",
             )
         ]
         if failed
@@ -1020,14 +1094,15 @@ def report_check(
 
     # 1. declaration — a blocker does not stop the remaining stages
     if ctx.declaration_gap:
-        findings.block(f"{chosen.name}: {ctx.declaration_gap}")
+        findings.block(
+            f"{chosen.name}: {ctx.declaration_gap}",
+            fix=f"`{adopt_command(ctx.protocol)} --force` writes the `[result]` "
+            f"table for the run that answers",
+        )
 
     # 2. registration — freeze or committed registration, as the lane owes
     if ln.freeze:
-        findings.take_all(
-            GateFinding(BLOCKER, gap, evidence_kind=GUARANTEED)
-            for gap in freeze_gaps(ctx)
-        )
+        findings.take_all(freeze_gaps(ctx))
     else:
         print(
             f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
@@ -1043,17 +1118,11 @@ def report_check(
     findings.take_all(replacement_gaps(ctx))
 
     # 3. finalize — always, with its blockers named
-    findings.take_all(
-        GateFinding(BLOCKER, gap, evidence_kind=GUARANTEED)
-        for gap in finalize_gaps(ctx.area, ctx.protocol)
-    )
+    findings.take_all(finalize_gaps(ctx.area, ctx.protocol))
 
     # 4. full run — only with an answering run; finalize names its absence
     if ctx.run is not None:
-        findings.take_all(
-            GateFinding(BLOCKER, gap, evidence_kind=GUARANTEED)
-            for gap in unreportable_gaps(ctx, ln.freeze)
-        )
+        findings.take_all(unreportable_gaps(ctx, ln.freeze))
 
     # 5. analysis — coverage and rendering where the lane owes the audit
     if ANALYSIS_AUDIT in ln.audits:

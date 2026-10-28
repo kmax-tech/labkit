@@ -9,6 +9,30 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Every BLOCKER names its way out, as data.** The ways past the gates
+  came where an agent saw no admissible next step, and a held step that
+  named its command was followed (docs/notes/2026-10-27-standard-way-out.md);
+  many blockers carried their step inside the sentence, some none.
+  `gate.GateFinding` now refuses a BLOCKER without a `fix`, every line
+  tells it (`BLOCKER: <what> — way out: <fix>`; a dotted line keeps it as
+  its last part) and the summary repeats it; `Findings.block(msg, *, fix)`
+  takes it as a required keyword, `Findings.warn` may. Every site that
+  builds a blocker passes one (`tests/test_ways_out_data.py` reads them
+  all), worded where the cause is known and built from the shared command
+  builders — new: `repo.measure_command`, `ways_out.decide_way`,
+  `ways_out.record_way`, `gate.blocker`. The pure checks that fed blockers
+  as sentences return findings now, the step split from the cause:
+  `run_record_check.code_since_run`, `provenance_findings`,
+  `row_provenance_findings`, `null_lane_findings`,
+  `report_blocks.block_gaps`, `cited_gaps`, `discussion_gaps`,
+  `result_render.render_gaps`, `notes_check.check_file`'s must list, the
+  report-check and report-hold producers, `finalize.declared_run_gaps`
+  (now with the protocol) and `declared_run_mismatch`;
+  `AnsweringRun.explain` returns its blocker as a finding with `way_out`.
+  report-check's finalize station keeps finalize's fixes. Migration: a
+  caller of `Findings.block` passes `fix=`, a reader of these functions
+  reads `.text` / `.fix` (or `.line`, the told form); 0.103.0 is the last
+  version whose blockers carry no way out.
 - **A protocol is a regular file; a symbolic link is refused.** The stop
   read a protocol link's target in the tree (`report_check.repo_sources`,
   `hold_declared` followed it) and the commit read the name the link
