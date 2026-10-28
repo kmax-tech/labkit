@@ -14,6 +14,7 @@ import contextlib
 import io
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -310,6 +311,7 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
             self.assertEqual(code, 0, out)
             self.assertNotIn("no open runs", out)
             self.assertIn(f"pid={pid}", out)
+            self.assertIn("(detached)  starting", out)
             self.assertIn("no run record yet", out)
             # the twin: once the command ended, the area is idle again
             code, out = _run_main(
@@ -520,6 +522,37 @@ class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
             self.assertEqual(code, 2, out)
             self.assertIn("CRASHED", out)
             self.assertNotIn("ENDED", out)
+
+
+class TestAWrapperIsNamedForWhatItIs(unittest.TestCase):
+    """A wrapper process's run records another pid; beside that open run
+    the wrapper read "starting … no run record yet", like a second run still
+    to come (review of D6, 2026-10-28). It reads as a started process still
+    active and matched to no open run by its pid; with no open run at all it
+    still reads "no run record yet"
+    (`test_the_area_is_not_idle_while_the_started_command_has_no_record`)."""
+
+    def test_a_wrapper_beside_its_open_run_is_matched_to_no_run_by_its_pid(self):
+        with tempfile.TemporaryDirectory() as d:
+            run_dir = Path(d) / "runs" / "2026-10-28T20-00-00_open"
+            script = Path(d) / "01_measure.py"
+            script.write_text(
+                _run_script(run_dir, finished=False, then="time.sleep(2)")
+            )
+            # `; true` keeps the shell from replacing itself with python
+            wrapper = f"{shlex.quote(sys.executable)} {shlex.quote(str(script))}; true"
+            code, out = _start_in(d, "sh", "-c", wrapper, max_seconds="5")
+            self.assertEqual(code, 0, out)
+            self.assertIn(f"run: {run_dir.name}", out)
+            code, out = _run_main([d])
+            self.assertIn(run_dir.name, out)
+            matched = "started process still active; matched to no open run by its pid"
+            self.assertIn(matched, out)
+            self.assertIn("(detached)  active", out)
+            self.assertNotIn("no run record yet", out)
+            code, out = _wait_for(d, "0.3")
+            self.assertEqual(code, 3, out)
+            self.assertIn(matched, out)
 
 
 class TestTheLabRootIsNoArea(unittest.TestCase):

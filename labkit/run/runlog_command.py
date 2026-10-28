@@ -60,10 +60,19 @@ def _unopened(
 ) -> list[DetachedStart]:
     """The STARTS still running that no open run of LIVE names by its pid:
     a stamped script prepares its rows before `runlog.run` opens the
-    record. A wrapper shell's run records another pid and is listed
-    beside its run."""
+    record; a wrapper process's run records another pid (`_unopened_words`
+    tells the two apart)."""
     pids = {r.config.pid for r in live if r.config is not None}
     return [s for s in starts if s.running and s.pid not in pids]
+
+
+def _unopened_words(live: list[ActiveRun]) -> tuple[str, str]:
+    """(state, sentence) of an unopened start beside LIVE: with no open run
+    in the area its run has no record yet; beside an open run it may be
+    that run's wrapper or a run still to open — only its pid matched none."""
+    if not live:
+        return "starting", "no run record yet"
+    return "active", "started process still active; matched to no open run by its pid"
 
 
 def _failed_starts(area: Path, starts: list[DetachedStart]) -> list[DetachedStart]:
@@ -109,11 +118,10 @@ def _print_status(
         else:
             shown = r.config.as_record()["config"]  # as stored: key order, null
             print(f"    {json.dumps(shown, ensure_ascii=False)[:160]}")
+    state, unopened = _unopened_words(live)
     for s in pending:
-        print(f"(detached)  {'starting':12s} pid={s.pid}  {shlex.join(s.command)}")
-        print(
-            f"    started {s.started} by runlog start, no run record yet — log: {s.log}"
-        )
+        print(f"(detached)  {state:12s} pid={s.pid}  {shlex.join(s.command)}")
+        print(f"    started {s.started} by runlog start, {unopened} — log: {s.log}")
     for s in failed_starts:
         print(f"(detached)  {'ended':12s} pid={s.pid}  {shlex.join(s.command)}")
         print(
@@ -234,7 +242,8 @@ def _wait(
                 what = f"run {failed[0].state}" if failed else "started command ended"
                 notify_desktop("runlog --wait", f"{area}: {what}")
             return 2
-        starting = [f"pid={s.pid} (detached, no run record yet)" for s in pending]
+        _, unopened = _unopened_words(live)
+        starting = [f"pid={s.pid} (detached, {unopened})" for s in pending]
         if follow:
             stamp = time.strftime("%H:%M:%S")
             extra = _newest_output(apath)

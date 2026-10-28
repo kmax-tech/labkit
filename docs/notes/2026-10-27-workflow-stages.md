@@ -113,4 +113,7 @@ start` in the area, which prints it once more and removes it: starting
 again is the acknowledgement labkit already has (resume is the same
 command), and a process that ended can no longer open a record that
 would bind it. An exit 0 without a run is a command that opened none,
-as `runlog start` says when it sees it end.
+as `runlog start` says when it sees it end. A wrapper process's run
+records another pid; beside an open run the wrapper reads as "started
+process still active; matched to no open run by its pid", not as a run
+still to come.

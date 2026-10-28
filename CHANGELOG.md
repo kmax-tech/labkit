@@ -442,6 +442,14 @@ pins (`requirements.txt` / `requirements.lock`).
   example is named where it is owed. Without a protocol the low cut and
   the full form's lists stay as they were. Pilot of labkit-paper area 15
   on 72507d0 (t15, t60, t21, t34), defect D9.
+- **A wrapper process beside its open run no longer reads as a run still
+  to start.** A wrapper's run records the pid of the process it started,
+  so `runlog AREA` listed the wrapper as "starting … no run record yet"
+  beside that open run. Beside an open run a start no open run names by
+  its pid now reads "active — started process still active; matched to no
+  open run by its pid" (`--wait` and `--follow` say the same); with no
+  open run in the area it still reads "starting — no run record yet".
+  Review of D6 (2026-10-28).
 - **A command `runlog start` detached that ends without a run record
   fails `runlog AREA --wait`.** With the record below, a command that
   died while it prepared its rows left only its log: `--wait` said "no
@@ -472,7 +480,8 @@ pins (`requirements.txt` / `requirements.lock`).
   dir), and the command inherits the lock on it, which the kernel
   releases when the command ends (the supervisor of the entry above
   holds it too). `runlog AREA` lists such a command
-  ("starting", "no run record yet"), and `--wait` and `--follow` count it
+  ("starting", "no run record yet"; beside an open run, see the wrapper
+  entry above), and `--wait` and `--follow` count it
   until it ends, its run record open or not; idle is no open run and no
   such command. `repo.local_dir` (new) is the one home of "the git
   directory, else the temp dir", the audit locks' too. Round 2 of the
