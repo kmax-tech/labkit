@@ -78,3 +78,30 @@ report-check beside it and went by that; the gap stays an observation.
 - AGENTS.md: re-adoption after a fix — Conclusion for the new run, then
   `--from-run <new run> --force`; remove the stale output file now and write
   it again from the new answering run.
+
+## Second round, after bf3ee85 and 318dcee
+
+Points 1 and 3 above were done (point 2, the remedy for an incomplete
+registration at the first measurement, was left open on purpose): the
+declared-run and "no answer yet" hints name their precondition,
+report-check tells "adoption comes last" beside other blockers, AGENTS.md
+gives re-adoption after a fix in its order and removes a stale output file
+at once. The four situations again with the new tool output, three fresh
+Haiku readers, contract committed before the answers (5af3045):
+[cases](2026-10-28-haiku-stuck-reading-2/cases.md),
+[contract](2026-10-28-haiku-stuck-reading-2/assessment-contract.txt), answers
+[1](2026-10-28-haiku-stuck-reading-2/answer-haiku-1.md),
+[2](2026-10-28-haiku-stuck-reading-2/answer-haiku-2.md),
+[3](2026-10-28-haiku-stuck-reading-2/answer-haiku-3.md).
+
+| Target | Round one | Round two |
+|---|---|---|
+| S1: the Conclusion for the new run before `--from-run <new> --force` | 1 of 3 | 3 of 3 |
+| S1/S5: the stale output file removed at once, written again after adoption, no question about when | 1 of 3 | 3 of 3 |
+| S1: `--from-run …4268 --force` not taken for the fix | 3 of 3, two call it a contradiction | 3 of 3, two read it as conditional, one still calls it a trap |
+| S4/S5: the `--from-run` line read as the last step | not asked in this form | 3 of 3 |
+| S5: the incomplete first registration — what remedy | 3 of 3 unsure | 2 of 3 unsure, 1 registers anew (gap left open) |
+
+All three still choose a sound way out in every situation. What remains:
+point 2 (the incomplete registration), and the margin question of S2,
+which readers rightly hand to the researcher.
