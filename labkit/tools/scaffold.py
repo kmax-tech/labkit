@@ -1275,7 +1275,7 @@ def _first_steps(
             "config and feature rows",
             *(
                 [
-                    "scripts/01_measure.py --calibrate-null  null_band from 200 "
+                    "scripts/01_measure.py --calibrate-null  null_band from "
                     "permutations of the gold, predictions fixed — register it before "
                     "the first run"
                 ]

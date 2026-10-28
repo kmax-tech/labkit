@@ -808,13 +808,8 @@ def commit_known(repo: Path, commit: str) -> bool:
     that is not a full sha: a branch name or a short sha would resolve to
     what it names now, not to what was recorded. Raises GitError only when
     git cannot run."""
-    if FULL_SHA.fullmatch(commit) is None:
-        return False
     return (
-        git_run(
-            ["rev-parse", "--verify", "-q", f"{commit}^{{commit}}"], repo
-        ).returncode
-        == 0
+        FULL_SHA.fullmatch(commit) is not None and commit_of(repo, commit) is not None
     )
 
 

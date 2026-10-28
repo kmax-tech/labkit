@@ -177,8 +177,8 @@ VERDICT = re.compile(
 #: the auditor's refusal to audit — the one line its instructions give it for
 #: an unfilled protocol (`experiment-preflight.agent.md`); an answer without a
 #: verdict line that carries it is shown as that refusal
-REFUSED = re.compile(r"^[\s>*`-]*refused:\s*(.*?)[\s`*]*$", re.M | re.I)
-CLARITY_FINDING = re.compile(r"^[\s>*`-]*RULE\s*(\d+)\**\s*·", re.M)
+REFUSED = re.compile(LEAD + r"refused:\s*(.*?)[\s`*]*$", re.M | re.I)
+CLARITY_FINDING = re.compile(LEAD + r"RULE\s*(\d+)\**\s*" + SEP, re.M)
 CLARITY_VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*findings?(?:\s*\((\d+)\s*would be answered wrong\))?", re.I
 )
@@ -758,16 +758,13 @@ def parse(text: str) -> dict:
     the LAST verdict line, findings from the text before it (that the two
     agree is the writer's check, `findings.verdict_disagrees`). Raises AuditError when no verdict line is readable — quoting the auditor's
     `refused:` line when the answer is its refusal (`REFUSED`)."""
-    matches = list(VERDICT.finditer(text or ""))
-    if not matches:
-        refusal = REFUSED.search(text or "")
-        if refusal is not None:
-            raise AuditError(
-                f"no audit — the auditor refused: {refusal.group(1)}. Nothing is "
-                f"recorded; answer what it names, then run the audit again"
-            )
-        raise AuditError("the report has no readable `verdict:` line — not an audit")
-    m = matches[-1]
+    refusal = REFUSED.search(text or "")
+    if refusal is not None and VERDICT.search(text or "") is None:
+        raise AuditError(
+            f"no audit — the auditor refused: {refusal.group(1)}. Nothing is "
+            f"recorded; answer what it names, then run the audit again"
+        )
+    m = last_verdict(VERDICT, text, "the report", "an audit")
     body = (text or "")[: m.start()]
     findings = [
         (f.group(1), line.strip())

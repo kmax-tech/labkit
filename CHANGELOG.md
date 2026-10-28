@@ -1131,6 +1131,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Four small homes of the 2026-10-28 audit.** `audit.parse` reads its
+  closing line through `last_verdict` like the reviewers, and the refusal
+  and clarity lines take `LEAD` and `SEP` (a clarity finding written with
+  a dash or colon now reads, as a finding line does). `repo.commit_known`
+  asks `commit_of`. The run's start and `runlog reindex` refuse an
+  old-format index with one sentence (`runlog.header_refusal`) and name it
+  through `runlog.RUN_INDEX`; `tests/test_one_home.py` holds a hand
+  spelling. The next step for `--calibrate-null` no longer repeats the
+  skeleton's count, and the command prints the K it used, saying so when it
+  is not the fixed `NULL_PERMUTATIONS`. Register
+  `docs/audit-2026-10-28-today.md`, H1, H2, H4, H9.
 - **Documentation drift found by the audit of 2026-10-28.** finalize's
   null-lane blocker now stands in finalize's own step list, in
   `run_record_check`'s, in `docs/architecture.md` (the gates row and a

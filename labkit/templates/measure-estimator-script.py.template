@@ -601,8 +601,10 @@ def main() -> None:
         s = sorted(float(x) for x in cal["null_scores"])
         print(f"null over {len(s)} permutations of the gold, predictions fixed: min {s[0]:.4f}  "
               f"median {s[len(s) // 2]:.4f}  max {s[-1]:.4f}  chance {float(cal['chance']):.4f}")
-        print(f"null_band by the fixed rule (the {NULL_BAND_QUANTILE} quantile of |null - chance|): "
-              f"{float(cal['band']):.4f}")
+        print(f"null_band by the rule (the {NULL_BAND_QUANTILE} quantile of |null - chance| over "
+              f"{len(s)} permutations): {float(cal['band']):.4f}"
+              + ("" if len(s) == NULL_PERMUTATIONS else
+                 f" — not the fixed count {NULL_PERMUTATIONS}: name the K you used in the null condition"))
         print("register it as [A2]'s null_band before the first measurement and name the rule "
               "in the null condition; a band changed after it is refused (report-check)")
         return

@@ -104,6 +104,9 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"pytest is not installed in this",
         {"preflight"},
     ),
+    # the run's start and reindex each checked the index header and spelled
+    # its name (audit 2026-10-28, H4); `runlog.RUN_INDEX`, `header_refusal`
+    ("the run index named by hand", r"\"runs\.tsv\"", {"runlog"}),
     # scaffold, provenance and repo_check each asked git for a ref's commit
     # (audit 2026-10-27, third, S8); `repo.commit_of`, `repo.text_at`
     ("a ref's commit asked of git by hand", r"\^\{\{commit\}\}", {"repo"}),
@@ -298,6 +301,7 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
+            "the run index named by hand": 'index = base_dir / "runs.tsv"',
             "a ref's commit asked of git by hand": 'git_run(["rev-parse", f"{ref}^{{commit}}"], d)',
             "an area-test run rendered by hand": '"pytest is not installed in this interpreter — tests not run"',
             "a parent run read by hand": 'f"runlog: repeat_of={x!r} names no completed run under {d}"',

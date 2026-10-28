@@ -198,7 +198,7 @@ def _index_lock(base_dir: Path) -> Iterator[None]:
     duplicate check run inside it too — they read the same file.
     """
     base_dir.mkdir(parents=True, exist_ok=True)
-    fd = os.open(base_dir / ".runs.tsv.lock", os.O_CREAT | os.O_RDWR, 0o644)
+    fd = os.open(base_dir / f".{RUN_INDEX}.lock", os.O_CREAT | os.O_RDWR, 0o644)
     t0 = time.monotonic()
     try:
         while True:
@@ -254,26 +254,37 @@ def _append_row(index: Path, row: list[str]) -> None:
         f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
 
 
-def _check_run_index(base_dir: Path) -> None:
-    """Refuse to run against a run index whose header doesn't match RUN_INDEX_COLS.
+#: the run index of an area, a local view rebuilt from runs/ (`reindex`)
+RUN_INDEX = "runs.tsv"
 
-    Appending to an old-format runs.tsv would not error — the columns would
-    just shift silently, and every row after the format change would be
-    misread. Fail before the run instead, with the migration spelled out.
-    """
-    index = base_dir / "runs.tsv"
+
+def header_refusal(header: list[str]) -> str | None:
+    """Why a run index with HEADER may not be appended to, or None: columns
+    other than RUN_INDEX_COLS — appended to, an old-format index would not
+    error, its columns would shift silently. One sentence for the run's
+    start (`_check_run_index`) and `reindex` (`index_refusal`)."""
+    if not header or header == RUN_INDEX_COLS:
+        return None
+    return (
+        f"{RUN_INDEX} columns {header} don't match this runlog "
+        f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
+        "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
+        "keeps every row verbatim), then come back; appending without it "
+        "would shift columns silently."
+    )
+
+
+def _check_run_index(base_dir: Path) -> None:
+    """Refuse to run against a run index of other columns (`header_refusal`),
+    before the run, with the migration spelled out. Reads the header line
+    only. Raises RuntimeError."""
+    index = base_dir / RUN_INDEX
     if not index.exists():
         return
     with index.open(encoding="utf-8") as f:
-        found = f.readline().rstrip("\n").split("\t")
-    if found != RUN_INDEX_COLS:
-        raise RuntimeError(
-            f"runs.tsv columns {found} don't match this runlog "
-            f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
-            "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
-            "keeps every row verbatim), then come back; appending without it "
-            "would shift columns silently."
-        )
+        why = header_refusal(f.readline().rstrip("\n").split("\t"))
+    if why is not None:
+        raise RuntimeError(why)
 
 
 def _runs_held(path: Path) -> set[str] | None:
@@ -663,7 +674,7 @@ class Run:
             self._protocol.get("id") or "",
         )
         with _index_lock(self.base):
-            _append_row(self.base / "runs.tsv", row)
+            _append_row(self.base / RUN_INDEX, row)
         dur = self._metrics.get("duration_s", 0)
         if os.environ.get("LABKIT_NOTIFY") == "1" or dur >= _NOTIFY_MIN_S:
             notify_desktop(
@@ -800,12 +811,11 @@ class Unindexed:
 
 def index_refusal(index: Path, header: list[str], rows: list[list[str]]) -> str | None:
     """Why the run index INDEX (its HEADER and ROWS) may not be appended to,
-    or None: old columns, or a run id listed more than once."""
-    if header and header != RUN_INDEX_COLS:
-        return (
-            f"{index} has old columns {header} — migrate it "
-            f"with labkit 0.47 (`runlog migrate-index`) first."
-        )
+    or None: old columns (`header_refusal`), or a run id listed more than
+    once."""
+    why = header_refusal(header)
+    if why is not None:
+        return why
     seen: dict[str, int] = {}
     for row in rows:
         if row:
@@ -864,7 +874,7 @@ def reindex(base_dir: Path) -> int:
     with old columns or a run listed twice is refused (`index_refusal`),
     exit 2.
     """
-    index = base_dir / "runs.tsv"
+    index = base_dir / RUN_INDEX
     with _index_lock(base_dir):
         header, rows = _read_index(index)
         why = index_refusal(index, header, rows)
