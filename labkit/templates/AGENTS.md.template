@@ -32,6 +32,16 @@ through `protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried
 supplies mechanical next steps; deciding the cause and whether a claim is
 scientifically justified remains your responsibility.
 
+When an external task names its outputs (a file such as
+`pred_results/<name>`, a report), those files are the deliverable; the
+area keeps the number, it does not replace them. Write them from the
+measurement, at the paths the task names, and keep them in step with what
+labkit finds: when a gate or an audit shows the number wrong, correct the
+output file or remove it, and say so in the report. A file left standing
+with a number labkit rejected is delivered as if it held (2026-10-27: an
+output file kept the heart rate an analysis audit had rejected, while the
+report handed the question over).
+
 ## Choose the experiment: three separate decisions
 
 | Setting | What it decides | How to choose |
