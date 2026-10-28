@@ -735,7 +735,8 @@ def report_review_owed(
                 f"{rel}: discusses {runs_named} as not reported and has no clean "
                 f"report review of this state (one naming no claim){since} — a cold reader checks "
                 f"that the report states none of their numbers as results: "
-                f"{command} (one model call)",
+                f"{command} (one model call) — last, after the report's text and "
+                f"its discussion block are final: a change after it owes another",
                 evidence_kind=GUARANTEED,
             )
         )

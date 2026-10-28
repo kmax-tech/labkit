@@ -982,7 +982,16 @@ Notiert, nicht geplant:
    ersten Commit gelöscht hinterlassen keine Spur — dieselbe Lücke wie
    neunte t5. Abhilfe wäre eine Kopie des Journals außerhalb des
    Arbeitsbaums (im Git-Verzeichnis wie `labkit-sessions.jsonl`); nicht
-   gebaut, gehört in diesen Neuansatz.
+   gebaut, gehört in diesen Neuansatz. Ausgestaltung (2026-10-28): jede
+   Journalzeile zugleich in eine Kopie im Git-Verzeichnis des Worktrees;
+   der Stop prüft, dass das Journal im Baum mit dieser Kopie beginnt, und
+   nennt sonst die verlorenen Versuche samt Records. Garantie genau so weit:
+   Löschen im Arbeitsbaum nach einem Versuch dieses Klons — nicht ein
+   frischer Klon, nicht ein gelöschtes `.git`, nicht Versuche vor dem
+   Einbau. Vor dem Bau zu lösen: ein Branch-Wechsel zu einem Stand mit
+   kürzerem Journal darf nicht blockieren (Kopie je Branch oder nur prüfen,
+   solange die Kopie mit HEADs Journal beginnt) — sonst schweigt der
+   garantierte Prüfschritt bei korrektem Zustand nicht.
 4. **Prüfmatrix der Ausweichaktionen, Runden 1–9 (2026-10-26):**
    [Note](docs/notes/2026-10-26-escape-routes-checks-and-exits.md), je
    Ausweg ein Check und ein genannter nächster Schritt. Neu gefunden:
@@ -1103,19 +1112,21 @@ Notiert, nicht geplant:
    den Branches `sab-like-cases` und `sab-cases-on-main`). Übernommen:
    `2dd2751` (editable install im Worktree), `f576e0f`, `658dfde`
    (AGENTS.md: die benannten Ausgaben der Aufgabe sind das Ergebnis).
-   Offen, je eine Entscheidung:
-   (a) `null_band`: Das Skelett sagt „aus der Streuung der Null-Spur über
-   Seeds auf der Probe ableiten“, `--probe` misst einen Seed und fehlt bei
-   `low` ganz; apply-screen (low, 92 Items) behielt die gestempelten 0,1,
-   Null 0,391 gegen Zufall 0,501, [A2] fiel, Permutationsstreuung etwa
-   0,05. n = 1.
-   (b) Der Schlüssel der Aufgabe (`val_roc_auc`, `agreement`) gegen das
-   `c1_score` des Skeletts: die Probe-Bewertung findet bei fit und apply
-   nie eine Zahl (dreimal `number: null`); Entscheidung im Probe-Modul.
-   (c) Kosten: 1058–1238 s Agentenarbeit je Fall gegen 73–617 s ohne
-   labkit (Runde 7, andere Aufgaben); sichtbar ist Report-Churn — jede
-   Änderung an REPORT.md nach einer Report-Review schuldet eine neue
-   (fit-assay: drei verweigerte Commits in 2,5 min).
+   Entschieden und gebaut (2026-10-28):
+   (a) `null_band` (b): `01_measure.py --calibrate-null` misst bei apply die
+   Streuung über 200 Gold-Permutationen bei festen Vorhersagen, Regel im
+   Skelett (0,99-Quantil von |Null − Zufall|), vor der Registrierung;
+   fit hat keinen kostenlosen Weg (die Null fittet neu). Eine nach der
+   ersten Messung geänderte Bandbreite verweigert report-check schon
+   (`registration_changes`). `ea8d060`.
+   (b) Schlüssel (1): `b3737c6` der anderen Sitzung liest `c1_score`; die
+   Bedeutungsprüfung (Kennzahl und gelabelte Items gegen die Aufgabe, sonst
+   ein Satz statt einer Zahl) liegt auf Branch `sab-cases-meaning`
+   (`a15e261`), zum Übernehmen in `sab-cases-on-main`.
+   (c) Report-Churn: der Ablauf ist gewollt (die Review bindet den ganzen
+   Stand); AGENTS.md und die Verweigerung nennen jetzt die Reihenfolge.
+   Offen: die Laufzeit vergleichbar messen — dieselben Aufgaben mit und
+   ohne labkit; ein Experiment, startet auf Ansage.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und

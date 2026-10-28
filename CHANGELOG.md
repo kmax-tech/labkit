@@ -1118,6 +1118,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The report review comes last, and AGENTS.md and the refusal say so.**
+  In the third SAB-like draw fit-assay's commit was refused five times in
+  four minutes: the discussion block was written after the report, a
+  `cat >` rewrite after the review dropped that block, and commits were
+  retried on unchanged states. The review reads the report with its block,
+  the protocol, the runs' metrics and the audit records, so any change
+  after it owes another — by design. AGENTS.md now gives the order (the
+  whole report, `--discuss`, the review, the commit) and says that a
+  rewrite drops the generated block; the owed-review refusal says the
+  review comes last.
 - **AGENTS.md: an external task's named outputs are the deliverable.**
   In the second SAB-like draw an output file kept a heart rate an
   analysis audit had rejected, while the report handed the question over.

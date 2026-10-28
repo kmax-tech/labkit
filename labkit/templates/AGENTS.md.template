@@ -219,6 +219,12 @@ unadopted run, use `protocol-fill <PROTOCOL> --discuss <run_id> --why
 "<what refused adoption, what you found>" --into REPORT.md`. Explain
 that the question remains open; discussion is no success claim. It owes
 `labkit-audit <area> --report-review REPORT.md` of the finished report.
+The review reads the report as it stands, with its discussion block, the
+protocol, the discussed runs' metrics and the audit records, so it comes
+last: write the whole report, then `--discuss`, then the review, then the
+commit. Any change after it — a rewrite of the file included, which also
+drops the generated block until `--discuss` writes it again — owes a new
+review; a commit retried on the same state is refused again.
 Correct a claim the reviewer identifies and review the changed state;
 a clean draw on the unchanged state releases nothing.
 
