@@ -1211,10 +1211,11 @@ def blank_before_headings(text: str) -> str:
 #: (docs/notes/2026-10-26-kind-choice.md)
 KIND_QUESTIONS = (
     "(1) Does this area train, adjust or select a model or prediction procedure "
-    "(a threshold, window or prompt chosen after seeing results, or to agree "
-    "with reference annotations, counts; a rule fixed in advance that derives a "
-    "parameter from each input itself — a threshold at k times each signal's "
-    "own noise level, k fixed — does not)? yes: fit — also "
+    "so that data set its free parameters (a threshold, window or prompt tuned "
+    "on reference annotations counts, even by a rule registered in advance, and "
+    "so does one set by hand after seeing results; a fixed formula that "
+    "computes each input's threshold from that input alone — k times each "
+    "signal's own noise level, k fixed — does not)? yes: fit — also "
     "when the deliverable is predictions on unlabelled rows; the kept number is "
     "then the model's score on held-out labelled rows. (2) Otherwise: does the "
     "number judge how well a model used unchanged predicts, against gold labels "

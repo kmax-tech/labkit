@@ -1220,12 +1220,15 @@ pins (`requirements.txt` / `requirements.lock`).
   questions said only "a threshold or prompt chosen on performance data
   counts"; one or two readers asked in every round whether a detection
   threshold set on the signal or on reference annotations makes a fit.
-  Decided 2026-10-28: a rule fixed before the data is seen that derives a
-  parameter from each input itself is part of a computation (a threshold at
-  k times each signal's own noise level, k fixed); a threshold, window or k
-  chosen after seeing results, so that detections look plausible or agree
-  with reference annotations, adjusts a procedure: fit. The kind questions,
-  AGENTS.md, the field guide and the standard's terms give both examples.
+  Decided 2026-10-28: what decides is whether data adjust the procedure,
+  not when its rule was written down. A fixed formula that computes each
+  input's threshold from that input alone is part of a computation (k times
+  each signal's own noise level, k fixed); a threshold, window or k tuned
+  on reference annotations is a fit even by a rule registered in advance,
+  and so is one set by hand after seeing results — a detection performance
+  claimed afterwards is judged on data kept apart from the tuning. The kind
+  questions, AGENTS.md, the field guide and the standard's terms give the
+  examples.
 - **`confirmatory` is defined without a criterion a computation lacks.**
   AGENTS.md defined it as "a question and criterion specified before the
   relevant results", and a computation has no criterion; two of three
