@@ -1380,7 +1380,7 @@ Notiert, nicht geplant:
    Commit ohne `--no-verify`, report-check im Image sauber — ein Versuch,
    keine Rate. Danach `--from-run --force` als Ersatzweg entfernt
    (`4ece8eb`, Breaking).
-   Anleitung des Agenten (`8503d20`): Rückzug zuerst nach einer
+   Anleitung des Agenten (`b679bdb`): Rückzug zuerst nach einer
    Übernahme mit geändertem Code, Statustabelle in Schritt 4, Übergabe
    nur bei benannter fehlender Voraussetzung, Auswege einzeilig in der
    Entscheidungsliste. Beobachtet (Test

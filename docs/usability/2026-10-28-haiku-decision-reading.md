@@ -19,8 +19,10 @@ file-check case and the declared-run case:
 | D3 four findings, four statuses | no log evidence for confusing `dismissed` and `deferred` | the status table |
 | D4 refused: hand over or go on? | a commit past the hook instead of the named step | hand over only for a named missing prerequisite |
 
-The tool outputs were produced by labkit `698ed6f` on copies of the
-declared-run start state. Three fresh Claude Haiku 4.5 readers had the
+The tool outputs were produced by labkit `868999c` on copies of the
+declared-run start state. The contract, recorded before a clean-up of
+unpushed history, names that tree `698ed6f` and the guidance commit
+`8503d20`; both are `868999c` and `b679bdb` now, the same trees. Three fresh Claude Haiku 4.5 readers had the
 stamped AGENTS.md and the cases only. The contract was committed before
 any answer (`6291157`).
 
