@@ -403,6 +403,15 @@ pins (`requirements.txt` / `requirements.lock`).
   yields; what only the prompt skeleton's adds is the data-profile aid,
   and the sentence now says that. Pilot of labkit-paper area 15 on
   c2c5da2 (t71, t15), defect 12.
+- **finalize's way out for an ignored source leads out.** Its `git add
+  <source>` was refused for a path git ignores ("The following paths are
+  ignored by one of your .gitignore files"; labkit-paper area 15, pilot
+  t60, t34 and t21: the sandbox's `.git/info/exclude` held `benchmark/`).
+  The blocker now names the rule as `git check-ignore -v` gives it
+  (`<file>:<line>:<pattern>`, as the evidence check's way out does), and
+  the commit adds the file past it (`git add -f`), the rule kept for the
+  rest; a `!` pattern that un-ignores the path is no such rule. When git
+  cannot answer, finalize ends in its `GitError`.
 - **finalize's blocker for an untracked source names both routes the
   standard allows.** The standard's Fixed inputs makes traceable the rule,
   not "commit the inputs": small inputs that may legally be shared are

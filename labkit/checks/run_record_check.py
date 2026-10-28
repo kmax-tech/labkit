@@ -56,6 +56,7 @@ from labkit.formats.repo import (
     commit_known,
     git_root,
     git_run,
+    own_path,
     shown,
 )
 
@@ -410,7 +411,10 @@ def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
 def provenance_findings(
     area: Path, answering_run: Path
 ) -> tuple[list[GateFinding], list[str]]:
-    """(blockers, warnings) for a run at low repeat cost: source frozen, files tracked."""
+    """(blockers, warnings) for a run at low repeat cost: source frozen, files
+    tracked. Raises GitError when git cannot say whether an untracked source
+    is ignored (`_ignore_rules`): finalize then ends in that error, not in a
+    blocker with a way out that may not lead out."""
     blockers: list[GateFinding] = []
     warnings: list[str] = []
     cfg = read_run_config(answering_run)
@@ -444,7 +448,7 @@ def provenance_findings(
         if not f.exists():
             blockers.append(_gone(f))
         elif not _tracked(repo, f):
-            blockers.append(_untracked_source(f, sha))
+            blockers.append(_untracked_source(repo, f, sha))
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
     # blocker that sends the agent round the loop (2026-10-05, five probes).
@@ -468,31 +472,61 @@ HANDOVER_COMMAND = (
 )
 
 
-def _untracked_source(source: Path, sha: object) -> GateFinding:
+def _untracked_source(repo: Path, source: Path, sha: object) -> GateFinding:
     """The blocker `provenance_findings` raises for a SOURCE of the run that
-    git does not track (in a repository, at repeat cost low), its way out
-    the two routes the standard's Fixed inputs names: a small input that may
-    legally be shared is committed; for large or protected data the
-    protocol's Data / scope names its source or access route and version
-    (the field guide), beside the checksum SHA the run recorded. No labkit
-    text says how a gate holds that declaration, so finalize reads none:
-    the blocker stays, and the second route ends in a handover without a
-    number."""
+    git does not track in REPO (at repeat cost low), its way out the two
+    routes the standard's Fixed inputs names: a small input that may legally
+    be shared is committed; for large or protected data the protocol's
+    Data / scope names its source or access route and version (the field
+    guide), beside the checksum SHA the run recorded. No labkit text says
+    how a gate holds that declaration, so finalize reads none: the blocker
+    stays, and the second route ends in a handover without a number. When
+    git ignores SOURCE the sentence names the rule (`_ignore_rules`) and the
+    commit adds it past the rule (`git add -f`): a plain `git add` of an
+    ignored path is refused (pilot t60). Raises GitError when git fails."""
+    rules = _ignore_rules(repo, [source])
+    ignored = f", and git ignores it ({'; '.join(rules)})" if rules else ""
+    add = "git add -f" if rules else "git add"
+    past = " past the rule" if rules else ""
     checksum = (
         f"the checksum this run recorded (sha256 {sha})"
         if isinstance(sha, str)
         else "the checksum (this run recorded none)"
     )
     return blocker(
-        f"source {source} is not tracked in git — the number cannot be "
-        f"re-derived from the repository",
-        fix=f"if it is small and may legally be shared, commit it (`git add "
+        f"source {source} is not tracked in git{ignored} — the number cannot "
+        f"be re-derived from the repository",
+        fix=f"if it is small and may legally be shared, commit it{past} (`{add} "
         f"{shlex.quote(str(source))}`); large or protected data stay out, but "
         f"finalize still blocks them: it does not read the declaration — name "
         f"the source or access route and version in the protocol's Data / "
         f"scope beside {checksum}, then hand over without a number "
         f"(`{HANDOVER_COMMAND}`, the <…> parts filled)",
     )
+
+
+def _ignore_rules(repo: Path, paths: list[Path]) -> list[str]:
+    """The rules under which git ignores any of PATHS in REPO, each once, as
+    `git check-ignore -v` names them (`<file>:<line>:<pattern>`); [] when no
+    rule ignores one. A path outside REPO is left out: no rule of REPO's
+    applies, and check-ignore refuses it. Raises GitError when git fails."""
+    own = (own_path(p) for p in paths)
+    inside = [p for p in own if repo in p.parents]
+    if not inside:
+        return []
+    r = git_run(
+        ["check-ignore", "-v", "-z", "--stdin"],
+        repo,
+        stdin="".join(f"{p}\0" for p in inside),
+    )
+    if r.returncode not in (0, 1):  # 1: no path is ignored
+        raise GitError(f"git check-ignore in {repo}: {r.stderr.strip()}")
+    # -z -v: four fields per matched path — rule file, line, pattern, path;
+    # a pattern starting with `!` matched to un-ignore the path, so it is no
+    # rule that ignores it
+    fields = r.stdout.split("\0")
+    records = [fields[i : i + 3] for i in range(0, len(fields) - 3, 4)]
+    return sorted({":".join(rec) for rec in records if not rec[2].startswith("!")})
 
 
 def _gone(f: Path) -> GateFinding:

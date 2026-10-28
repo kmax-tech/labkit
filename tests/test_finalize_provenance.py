@@ -150,6 +150,34 @@ class Provenance(unittest.TestCase):
         self.assertIn("the checksum this run recorded (sha256 ab)", line)
         self.assertIn("protocol-fill <PROTOCOL> --handover --why", line)
 
+    def test_an_ignored_source_names_the_rule_and_its_git_add_leads_out(self):
+        # pilot t60: the sandbox's .git/info/exclude held `benchmark/`, and the
+        # printed `git add` was refused for an ignored path
+        (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
+        self._run(SHORT, self._frozen(), commit=True)  # `git add -A` skips it
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        line = next(x for x in out.splitlines() if "not tracked in git" in x)
+        self.assertIn("git ignores it (.git/info/exclude:1:data/raw/)", line)
+        command = line.split("past the rule (`", 1)[1].split("`", 1)[0]
+        self.assertEqual(command, f"git add -f {self.src}")
+        subprocess.run(command.split(), cwd=self.repo, check=True)
+        _git(self.repo, "commit", "-qm", "the source")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("source frozen in the run; source and output tracked", out)
+
+    def test_a_source_a_negated_rule_keeps_in_is_named_without_a_rule(self):
+        # `check-ignore -v` prints the `!` pattern that un-ignores a path too;
+        # git adds such a path without -f
+        (self.repo / ".gitignore").write_text("data/raw/*\n!data/raw/cases.jsonl\n")
+        self._run(SHORT, self._frozen(), commit=False)
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        line = next(x for x in out.splitlines() if "not tracked in git" in x)
+        self.assertNotIn("git ignores", line)
+        self.assertIn(f"commit it (`git add {self.src}`)", line)
+
     def test_the_printed_handover_is_the_one_agents_md_gives(self):
         agents = (PACKAGE_DIR / "templates" / "AGENTS.md.template").read_text(
             encoding="utf-8"
