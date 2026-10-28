@@ -565,6 +565,14 @@ Befunde, behoben in `cd2e8a4`); jeder Befund mit Test, rot am Elternstand. 2.3, 
    Zwischen zwei Fassungen ändern sich nur die Entscheidungszeilen eines
    Befunds, der Kopf bleibt gleich. Den Verlust schreibt der Befehl aus
    2.3; die prüfenden Gates schreiben nichts.
+   **Umgesetzt 2026-10-28 (`3a30c3e`, Branch `evidence-hardening`):**
+   `evidence` — Record nur in den Entscheidungszeilen, andere Auditdateien
+   und abgeschlossene Läufe nie; Rückkehr zur zuerst committeten Fassung
+   ist keine Änderung. Zeugen: Baum/Index gegen HEAD, am Stop die
+   Session-Commits gegen ihren Elternteil und der Reflog; ignorierte Belege.
+   Jede Zeile nennt ihr `git checkout`, keine Übergabe quittiert sie.
+   [Note](docs/notes/2026-10-28-evidence-changes.md). Offen: siehe
+   „Notiert, nicht geplant“ unter „Phase-2-Reste“ (Punkte 11–13).
 6. **Entscheidungen (A2, A3):** Vorschlag zur Entscheidung:
    `dismissed`/`deferred` auf einem BLOCKER schuldet auch ohne frühere
    Ablehnung eine Prüfung. `not assessable` bleibt die ehrliche
@@ -634,6 +642,13 @@ Phase 3 — genaue Anleitung auf den geprüften Befehlen aufbauen:
    `AuditError` über `console.refuse`, `AttemptError`, die
    `SystemExit`-Verweigerungen in runlog und start_check und die
    Hook-Meldungen; was ausgenommen bleibt, steht als Liste im Test.
+   **Umgesetzt 2026-10-28 (`11693b5`, `ec7068c`, Branch
+   `evidence-hardening`):** `GateFinding` weist einen BLOCKER ohne `fix`
+   ab, jede Zeile endet mit `— way out: …`; `AuditError`/`AttemptError`
+   verlangen `fix=`, runlog und start_check verbinden über
+   `gate.with_way_out`; `tests/test_ways_out_data.py` liest alle Stellen
+   (Ausnahmen: `attempts.keep_answer`, `attempts.end`). Zweifelhafte
+   Auswege und Nicht-Erledigtes: „Phase-2-Reste“ Punkte 14–16.
 3. **Gestempelte Anleitung:** „When you are stuck“ mit fünf kurzen Wegen:
    reparieren und neu messen; Kriteriumsverfehlen berichten; Anspruch
    begrenzen; mit Vorgänger neu registrieren; ungelöst übergeben. Echte
@@ -654,6 +669,9 @@ Phase 3 — genaue Anleitung auf den geprüften Befehlen aufbauen:
    Schlüsselwörter wie `reset`, `--amend` oder `audits/`; sie träfe auch
    legitime Operationen. Exakte Integritätsverstöße hält 2.5. Neue
    Heuristiken nur nach belegtem Bedarf und mit Fehlalarm-Gegenproben.
+   Statt einer Befehlsheuristik meldet seit `11a6b84` der post-change-Hook
+   den Zustand nach dem Werkzeug exakt (git status → was Stop und Commit
+   halten, mit Wiederherstellung); er hält nichts selbst.
 5. **Leseprobe vor Ausführung:** Situationen aus der
    [bisherigen Leseprobe](docs/usability/2026-10-26-instruction-reading-probe.md)
    plus Reparatur, fehlende Belege und unregistrierte Messung. Leser nennt
@@ -1349,7 +1367,47 @@ Notiert, nicht gemacht:
    über 90 s hält jeden Stop einmal pro Zug. pre-run hat dasselbe
    Zeitproblem (Hook-Timeout 120 s, Bereichstests bis 300 s).
 10. Ein Ledger der vom Pre-commit geprüften Tree-Hashes zeigte Commits, die
-   an ihm vorbeigingen (`--no-verify`); nicht gebaut.
+   an ihm vorbeigingen (`--no-verify`); verworfen 2026-10-28: es hält
+   Herkunft statt Inhalt, und Pull, Rebase und frischer Klon brächten Trees,
+   die dieser Hook nie sah. Den Inhalt eines umgehenden Commits prüft der
+   Stop gegen dessen Elternteil (`evidence.commit_changes`, `3a30c3e`).
+11. Lauf-Zeuge im Git-Verzeichnis (Blob-ids eines abgeschlossenen Laufs,
+   wie die Journal-Kopie): sähe einen Lauf, der vor seinem ersten Commit
+   geändert oder gelöscht wurde. Offen, weil ein solcher Verlust nicht
+   wiederherstellbar ist und einen Ausweg braucht, den eine Übergabe
+   bindet — die Übergabe bindet `runs/` heute nicht.
+12. `answering_run` rät bei unlesbaren oder gleichsekundigen Läufen noch,
+   sie „beiseite“ bzw. „aus runs/“ zu schieben
+   (`labkit/formats/answering_run.py:653`, `:662`); seit `3a30c3e` hält
+   der Stop genau das für einen committeten, abgeschlossenen Lauf. Den
+   Ausweg neu fassen (welcher Lauf antwortet, ohne Beleg zu entfernen) —
+   hängt an Punkt 6 (antwortender Lauf = neuester nach Namen).
+13. `git` gegen `git_full` im Run-Record und `undecided --staged` mit den
+   Bereichen aus dem Index (Punkt 7) bleiben offen; nicht Teil von
+   `3a30c3e`.
+14. Halbgenerische Auswege („repair what the sentence names, then …“):
+   `finalize.py` (intent-check-Ablehnung), `run_record_check.py`
+   (unlesbarer Code), `report_check.py` (Render-Fehler, Analyse-Lücke),
+   `report_hold.py` (Review nicht bestimmbar), `start_check.py` (Bereich
+   nicht stempelbar); dazu die nicht umgestellten code-check-Auswege
+   (`labkit/checks/code_check.py:227`, `:245`, `:391`,
+   `labkit/checks/code_scan.py:211`). Jeder nennt den nächsten Befehl,
+   aber nicht die Ursache-spezifische Reparatur.
+15. preflight wiederholt für jedes fehlende Pflichtfeld denselben
+   `protocol-check … --contract`-Hinweis — lange Ausgabe; einmal am Ende
+   reichte.
+16. Nicht vom Pflichttest erfasst: allgemeine `console.refuse`-
+   Verweigerungen (Bedienfehler) außerhalb der TODO-Liste;
+   `HandoverError`, `FindingsError`, `ReviewError` ohne `fix`-Feld (ihre
+   Sätze erreichen den Agenten über `findings.record_way`); die
+   Journal-Kopie, die bei Unlesbarkeit aus dem Journal neu geschrieben
+   werden soll (`cp`), wäscht ein gekürztes Journal — nur unter der
+   Annahme des gutwilligen Agenten tragbar.
+17. Merge von `evidence-hardening` nach main: main hat parallel
+   `ways_out.py` (neuer Weg „an incomplete registration“),
+   `report_check.py`, CHANGELOG und AGENTS-Vorlage geändert; beim Merge
+   bekommt der neue Weg und jede neue Ablehnung von main ihren `fix`, sonst
+   ist `tests/test_ways_out_data.py` rot.
 
 ### Phase-1-Reste (2026-10-27)
 
