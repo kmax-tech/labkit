@@ -1,0 +1,18 @@
+Recorded before reader answers, 2026-10-28 (second round). The same five situations and questions as
+2026-10-28-haiku-start-reading (cases.md unchanged except the tool outputs and the stamped protocol), now
+with labkit stuck-clarity 2457c3b. Readers: three fresh Claude Haiku 4.5 subagents, instructions.md and
+cases.md only. Expected answers: as in the first round's assessment-contract.txt.
+
+Judged in addition — the shared doubts of round one, each should be gone (asked by at most one reader):
+- the --show count (round one: 3 of 3 asked, 2 vs 3);
+- 00_prepare.py in a fit area (2 of 3 asked whether to prepare first);
+- "pilot subset first" (2 of 3 asked whether a pilot is owed at low);
+- "Freeze first" at low repeat cost (2 of 3 named a contradiction);
+- the stamped constants (3 of 3 named them but asked whether the stamp's values may stand) — now each
+  reader should treat them as its own values to set, equal to the sentence;
+- the task's output file (3 of 3 asked how it comes about) — now written from the adopted run after
+  adoption.
+Not changed in this round, recorded only: runlog names Question / hypothesis alone where the pre-commit
+hook asks for five fields (3 of 3 noted it and filled all five). T2 (b) still asks "which values are
+already set, and by whom?" — the constants question is prompted in both rounds, so neither round shows
+what an agent notices unprompted.
