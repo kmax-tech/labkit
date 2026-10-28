@@ -175,8 +175,13 @@ without a result → `--handover` (below).
 
 When a check stops you, `labkit-audit <area> --findings` shows readable
 open findings, evidence problems and complete recovery commands without a
-model call. For a failed audit call that no completed audit of the same mode, code and promises covers, it names the call and its error and offers the
-handover without inventing findings; it exits 2 then. Decide unresolved readable BLOCKERs explicitly before using
+model call. For a failed audit call that no completed audit of the same
+mode covers — a `-failed.toml` (the backend did not answer; covered on the
+same code and promises) or an attempt the journal ended without a record
+(the answer did not read, kept under `audits/answers/`; covered on the
+same code, as the journal names no promises) — it names the call, its
+error and its kept answer and offers the handover without inventing
+findings; it exits 2 then. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
 immutable handover record of the remaining evidence, losses and the

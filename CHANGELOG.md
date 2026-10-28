@@ -513,6 +513,19 @@ pins (`requirements.txt` / `requirements.lock`).
   out-of-band test puts the lane outside that band. A wrong band formula
   still fails at every width. Round 2 of the labkit-paper area 15 pilot
   on 72507d0 (PubMedQA), D4.
+- **`labkit-audit --findings` names an audit that ended without a
+  record.** The stamped AGENTS.md says that for an audit call that failed
+  and that no completed audit of the same mode covers, `--findings` names
+  the call and offers the handover, exit 2. It took failed calls only from
+  `-failed.toml` files, so an attempt whose answer did not read (journal
+  outcome `none`, the answer kept under `audits/answers/`) left it saying
+  "no audit record yet". Such an attempt of mode preflight or analysis is
+  now a failed call there: named by its id with its error and its kept
+  answer, the handover offered, exit 2 — until a completed audit of its
+  mode on the same code covers it (the journal names no promises, so the
+  code alone is compared; a `-failed.toml` is still covered on code and
+  promises). Pilot round 2 of labkit-paper area 15 on 72507d0 (t71),
+  defect D3.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a
   fence that holds only `<the real prompt — …>`; the field parser read

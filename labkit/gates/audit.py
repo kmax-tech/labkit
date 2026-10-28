@@ -1206,9 +1206,11 @@ def main(argv: list[str]) -> int:
         help="show what there is to decide: every record with an open BLOCKER and "
         "the newest, the evidence problems, and where a BLOCKER or a problem "
         "stands the --decide and handover commands; a failed audit call no "
-        "completed audit of its mode, code and promises covers is named with "
-        "its error and the handover; no audit runs; exit 2 on such a call, on "
-        "evidence that does not read, or with no record at all",
+        "completed audit of its mode covers is named with its error and the "
+        "handover — a -failed.toml (covered on its code and promises) or an "
+        "attempt that ended without a record, with its kept answer (covered on "
+        "its code); no audit runs; exit 2 on such a call, on evidence that does "
+        "not read, or with no record at all",
     )
     ap.add_argument(
         "--review",
@@ -1575,14 +1577,17 @@ def _newest_record(area: Path) -> Path:
 @dataclass(frozen=True)
 class _Listing:
     """The shown RECORDS, evidence ERRORS, HIDDEN record count, FAILED
-    calls without a completed audit of their mode, code and promises, and
-    the evidence CHANGED against git (`evidence.changes`,
-    `evidence.ignored`) — undone by a restore, never by a handover."""
+    calls without a completed audit of their mode, code and promises, the
+    UNRECORDED calls — audit attempts the journal ended without a record —
+    without a completed audit of their mode and code, and the evidence
+    CHANGED against git (`evidence.changes`, `evidence.ignored`) — undone
+    by a restore, never by a handover."""
 
     records: list[findings.Record]
     errors: list[str]
     hidden: int
     failed: tuple[findings.Failed, ...] = ()
+    unrecorded: tuple[attempts.Attempt, ...] = ()
     changed: tuple[str, ...] = ()
 
 
@@ -1592,7 +1597,13 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     area are kept beside them (`attempts.area_integrity`). Failed calls
     remain recovery guidance unless a completed audit of the same mode,
     code and promises exists; a preflight never covers analysis failure.
-    This does not establish whether that audit covers the current run.
+    So does an audit attempt that ended without a record (outcome `none`:
+    an answer that did not read, a call that raised) unless a completed
+    audit of the same mode and code exists — the journal names no promises.
+    An attempt without an end (running, or interrupted: killed, timed out
+    in the shell) is not listed; the next audit's start names it
+    (`attempts.begin`). This does not establish whether that audit covers
+    the current run.
     """
     state = attempts.area_integrity(area)
     errors = list(state.problems)
@@ -1613,17 +1624,34 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
         )
     except (findings.FindingsError, OSError) as exc:
         errors.append(str(exc))
+    unrecorded: tuple[attempts.Attempt, ...] = ()
+    try:
+        # records of findings only (`findings.record_status`); a record of the
+        # same mode and code covers whatever promises it was made under
+        audited = {(r.mode, r.scope_sha) for r in state.records}
+        unrecorded = tuple(
+            a
+            for a in attempts.read_journal(area)
+            if a.outcome == "none"
+            and a.mode in findings.MODES
+            and (a.mode, a.scope_sha) not in audited
+        )
+    except (attempts.AttemptError, OSError) as exc:
+        errors.append(str(exc))
     opened = {u.record.path for u in findings.open_blockers(state.records)}
     records = [r for r in state.records if r.path in opened]
     if state.records and state.records[-1] not in records:
         records.append(state.records[-1])
-    return _Listing(records, errors, len(state.records) - len(records), failed, changed)
+    hidden = len(state.records) - len(records)
+    return _Listing(records, errors, hidden, failed, unrecorded, changed)
 
 
 def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
     """`--findings`: what there is to decide, without a model call or a
     write. Shown: the evidence errors of the area, each failed audit call
-    no completed audit of its mode, code and promises covers, then each
+    no completed audit of its mode covers — a `-failed.toml` (covered on
+    its code and promises) or an attempt the journal ended without a
+    record, named with its kept answer (covered on its code) — then each
     shown record's decisions (`decision_lines`) — RECORD alone, else every
     record with an open BLOCKER and the newest, the others counted. Where
     an open BLOCKER, an evidence error or such a failed call stands, the
@@ -1642,10 +1670,11 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     """
     listing = _recovery_records(area, record)
     records, errors = listing.records, listing.errors
-    failed, changed = listing.failed, listing.changed
+    failed, unrecorded = listing.failed, listing.unrecorded
+    changed = listing.changed
     for line in changed:
         print(f"evidence changed: {line}")
-    if not records and not errors and not failed:
+    if not records and not errors and not failed and not unrecorded:
         if changed:
             return 2
         console.refuse(
@@ -1655,7 +1684,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
             "AGENTS.md name the next step",
         )
         return 2
-    _print_problems(errors, failed)
+    _print_problems(area, errors, failed, unrecorded)
     blockers: list[findings.OpenFinding] = []
     for rec in records:
         for line in decision_lines(rec, area, "", protocol):
@@ -1666,15 +1695,21 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
             f"  {listing.hidden} earlier record(s) without an open BLOCKER not "
             "shown — `--record FILE` shows one"
         )
-    if not blockers and not errors and not failed:
+    if not blockers and not errors and not failed and not unrecorded:
         return 2 if changed else 0
     _print_handover_steps(area, blockers, protocol)
-    return 2 if errors or failed or changed else 0
+    return 2 if errors or failed or unrecorded or changed else 0
 
 
-def _print_problems(errors: list[str], failed: tuple[findings.Failed, ...]) -> None:
-    """`--findings`' lines for the area's evidence ERRORS, each once, and
-    for the FAILED calls no completed audit covers."""
+def _print_problems(
+    area: Path,
+    errors: list[str],
+    failed: tuple[findings.Failed, ...],
+    unrecorded: tuple[attempts.Attempt, ...],
+) -> None:
+    """`--findings`' lines for AREA's evidence ERRORS, each once, and for
+    the failed calls no completed audit covers: the FAILED ones' files,
+    and the UNRECORDED attempts by id, with the answer each kept."""
     for error in dict.fromkeys(errors):
         print(f"audit evidence incomplete: {error}")
     for attempt in failed:
@@ -1682,6 +1717,16 @@ def _print_problems(errors: list[str], failed: tuple[findings.Failed, ...]) -> N
             f"audit did not complete: {attempt.path.name} ({attempt.mode}, "
             f"{attempt.model}): {attempt.error} — no findings to decide; "
             "the failed call approves no result"
+        )
+    for a in unrecorded:
+        kept = ""
+        if a.answer:
+            answer = area / findings.DIR / a.answer
+            kept = f"; its answer is kept in {shown(answer, Path.cwd())}"
+        print(
+            f"audit did not complete: attempt {a.id} ({a.mode}, {a.model}) ended "
+            f"without a record: {a.error}{kept} — no findings to decide; the "
+            "failed call approves no result"
         )
 
 

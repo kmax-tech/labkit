@@ -1561,6 +1561,127 @@ class KeptAnswer(unittest.TestCase):
         )
 
 
+def findings_listing(area: Path) -> tuple[int, str]:
+    """`labkit-audit AREA --findings` without a model call: (exit, stdout
+    and stderr together)."""
+
+    def no_call(alias, prompt, **kw):
+        raise AssertionError("--findings called the model")
+
+    out = io.StringIO()
+    with (
+        mock.patch.object(audit.llm, "complete", no_call),
+        contextlib.redirect_stdout(out),
+        contextlib.redirect_stderr(out),
+    ):
+        rc = audit.main([str(area), "--findings"])
+    return rc, out.getvalue()
+
+
+class UnrecordedCall(unittest.TestCase):
+    """An audit attempt the journal ended without a record (`none`: an
+    answer that did not read, its answer kept) is a failed call for
+    `--findings`, as the stamped AGENTS.md says: named with its kept
+    answer, the handover offered, exit 2 — until a completed audit of its
+    mode on the same code covers it. Pilot round 2 (labkit-paper area 15,
+    t71): `--findings` said "no audit record yet" after an unrecordable
+    preflight answer, and named neither the call nor a way on."""
+
+    UNREADABLE = (
+        f"{BLOCK.splitlines()[0]} · check: a2 spread\n"
+        "verdict: 1 blockers, 0 warnings, 0 notes"
+    )
+
+    def unrecorded(self) -> tuple[Path, attempts.Attempt]:
+        area = repo_with()
+        rc, _, err, _ = run(area, self.UNREADABLE)
+        self.assertEqual(rc, 2, err)
+        (attempt,) = attempts.read_journal(area)
+        self.assertEqual(attempt.outcome, "none")
+        return area, attempt
+
+    def test_findings_names_the_call_its_answer_and_the_handover(self):
+        area, attempt = self.unrecorded()
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(
+            f"audit did not complete: attempt {attempt.id} (preflight, opus) ended "
+            "without a record: a check field that does not read",
+            out,
+        )
+        answer = (area / "audits" / attempt.answer).resolve()
+        self.assertTrue(answer.is_file())
+        self.assertIn(f"its answer is kept in {answer.as_posix()}", out)
+        self.assertIn("--handover", out)
+        self.assertNotIn("--decide", out)
+        self.assertNotIn("no audit record yet", out)
+
+    def test_a_completed_audit_of_its_mode_and_code_covers_it(self):
+        area, attempt = self.unrecorded()
+        registration = {"kind": "fit"}
+        # another mode on the same code, the same mode on other code: no cover
+        findings.write(
+            area,
+            "analysis",
+            "opus",
+            attempt.scope_sha,
+            "b" * 12,
+            (0, 0, 0),
+            [],
+            registration=registration,
+            run_id=findings.NO_RUN,
+            shown_sha="s" * 12,
+        )
+        findings.write(
+            area,
+            "preflight",
+            "opus",
+            "f" * 12,
+            "b" * 12,
+            (0, 0, 0),
+            [],
+            registration=registration,
+        )
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"attempt {attempt.id}", out)
+        # the audit run again on the same code, recorded: the call is covered
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(f"attempt {attempt.id}", out)
+        self.assertNotIn("--handover", out)
+
+    def test_a_review_that_ended_without_a_record_is_no_audit_call(self):
+        area, attempt = self.unrecorded()
+        run(area, WARN)
+        journal = attempts.journal_path(area)
+        lines = journal.read_text(encoding="utf-8")
+        review = attempt.id.replace("preflight", "review")
+        journal.write_text(
+            lines
+            + json.dumps(
+                {
+                    "event": "started",
+                    "id": review,
+                    "mode": "review",
+                    "model": "opus",
+                    "scope_sha": "x",
+                    "started": "2026-01-01T00:00:00",
+                    "host": "h",
+                }
+            )
+            + "\n"
+            + json.dumps({"event": "ended", "id": review, "outcome": "none"})
+            + "\n",
+            encoding="utf-8",
+        )
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(review, out)
+
+
 class AuditorRefusal(unittest.TestCase):
     """The preflight auditor answers an unfilled protocol with one line,
     `refused: protocol not filled …` (`experiment-preflight.agent.md`);
