@@ -1347,6 +1347,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A record binds the declared run it saw; a wrong declaration has its
+  way out.** In the file-check case (2026-10-28) an audit found the
+  protocol's `[result]` declaring another run than the one it judged. The
+  agent re-adopted with `protocol-fill --from-run` and decided the
+  BLOCKER `fixed`. The re-adoption did not move the audited state, so no
+  later audit followed the finding up, and report-check held it for good
+  with the way out "a new run". The agent committed past the hook. Now
+  MODE analysis shows a `DECLARED RUN` piece when the protocol declares
+  another run than the one shown, and its digest (`shown_sha`) binds it
+  (`audit_binding.declared_piece`): re-adopting moves the state, and the
+  next audit judges the finding like any repair. The first adoption of the
+  run audited adds no piece and moves nothing. The ways out gain "a wrong
+  declaration" (re-adopt, decide `fixed`, audit again; no new measurement),
+  and the hold of a BLOCKER `fixed` in the state audited names
+  `protocol-fill --from-run` beside a new run. An analysis record written
+  while the head declared another run than it audited no longer covers
+  the state; audit again.
 - **A required check is computed from the kept rows.** The work order
   said "compute the key from what the run measures", and the recheck
   (`02_analyze.py --check`) recomputes every metrics key from the kept

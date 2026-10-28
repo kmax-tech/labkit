@@ -125,6 +125,14 @@ WAYS_OUT = (
         "itself",
     ),
     (
+        "a wrong declaration",
+        "the measurement stands and the protocol's head declares another run "
+        "than the one the finding judged: declare that run with "
+        "`protocol-fill <PROTOCOL> --from-run <run_id> --force`, decide `fixed` "
+        "naming that, then run the analysis audit again — the follow-up judges "
+        "the declaration; no new measurement",
+    ),
+    (
         "none of these",
         f"stop and {HANDOVER} — decide each readable open BLOCKER first "
         "(deferred, with why it stays unresolved). Never hand-edit audit or "

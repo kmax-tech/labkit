@@ -727,7 +727,7 @@ class Adopt(unittest.TestCase):
                 [],
                 run_id=self.RUN,
                 shown_sha=audit_binding.run_shown(
-                    area, area / "runs" / self.RUN, ""
+                    area, area / "runs" / self.RUN, "", None
                 ).sha,
                 registration=registration_of(area),
             )

@@ -248,9 +248,38 @@ class RunShown(NamedTuple):
         return None
 
 
-def run_shown(area: Path, run_dir: Path | None, why: str) -> RunShown:
-    """`run_rows` of RUN_DIR as one snapshot with its digest."""
-    pieces = tuple(run_rows(area, run_dir, why))
+#: the label of the piece MODE analysis shows when the protocol declares
+#: another run than the one it shows (`declared_piece`)
+DECLARED_LABEL = "DECLARED RUN"
+
+
+def declared_piece(run_dir: Path | None, declared: str | None) -> list[tuple[str, str]]:
+    """What MODE analysis shows of the protocol's `[result] run` (DECLARED,
+    `protocol_block.declared_run`) beside RUN_DIR, the run it shows:
+    nothing when the protocol declares none or that very run, else one
+    piece naming the run declared. So a record binds a wrong declaration,
+    and re-adopting moves the state the next audit follows a finding up in,
+    while the first adoption of the run audited moves nothing (file-check
+    case, 2026-10-28: a BLOCKER on the declared run, fixed by re-adopting,
+    stayed held as fixed in the same state)."""
+    shown = run_dir.name if run_dir is not None else None
+    if declared is None or declared == shown:
+        return []
+    return [
+        (
+            DECLARED_LABEL,
+            f"the protocol's [result] declares run {declared}, not the run shown "
+            f"here ({shown or 'none'})",
+        )
+    ]
+
+
+def run_shown(
+    area: Path, run_dir: Path | None, why: str, declared: str | None
+) -> RunShown:
+    """`run_rows` of RUN_DIR and the protocol's DECLARED run
+    (`declared_piece`) as one snapshot with its digest."""
+    pieces = tuple([*run_rows(area, run_dir, why), *declared_piece(run_dir, declared)])
     return RunShown(pieces, scope_sha.digest(runs.as_stored(pieces).encode("utf-8")))
 
 
@@ -280,17 +309,17 @@ def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
 
 
 def analysis_now(area: Path, text: str, run: Path) -> findings.AuditedState:
-    """The state of AREA, the promises and the registration of TEXT and RUN
-    as they are now (`findings.AuditedState`) — what an analysis record
-    must bind to cover them. Raises AuditError (a registered output is
-    gone), FileNotFoundError or ValueError (nothing to stamp, a promise
-    block or a head unreadable)."""
+    """The state of AREA, the promises, the registration and the declared
+    run of TEXT, and RUN as they are now (`findings.AuditedState`) — what
+    an analysis record must bind to cover them. Raises AuditError (a
+    registered output is gone), FileNotFoundError or ValueError (nothing to
+    stamp, a promise block or a head unreadable)."""
     return findings.AuditedState(
         area_stamp(area)[0],
         promises.block_stamp(text),
         protocol_check.registration_stamp(text),
         run.name,
-        run_shown(area, run, "").sha,
+        run_shown(area, run, "", protocol_block.declared_run(text)).sha,
     )
 
 

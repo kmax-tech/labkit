@@ -165,7 +165,10 @@ the cited rules of the standard — one model call. Writes: `audits/<minute>-ana
 promise block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`; the report
 fields written later do not move it) — the run and what the auditor was
-shown of it (`shown_sha`). The person decides every finding; labkit stores the
+shown of it (`shown_sha`) — with the run the protocol declares when that
+is another one, so re-adopting after a finding on the declaration moves
+the state and the next audit follows it up, while the first adoption of
+the run audited moves nothing. The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
 named promise (`not assessable`) — where the protocol registers one: a

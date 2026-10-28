@@ -240,8 +240,9 @@ def release_holds(
                         m.ref,
                         "decided `fixed` in the state audited — no follow-up has seen "
                         "the repair",
-                        "change what the finding names, then a new run and "
-                        f"{FOLLOWUP_AUDIT}",
+                        "change what the finding names — the code, then a new run; "
+                        "the declared run, `protocol-fill <PROTOCOL> --from-run "
+                        f"<run_id> --force` — and {FOLLOWUP_AUDIT}",
                     )
                 )
             continue

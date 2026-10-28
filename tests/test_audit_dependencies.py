@@ -79,11 +79,11 @@ class DeclaredDependencies(unittest.TestCase):
         the audit no longer covers the state (`RunShown.sha`)."""
         self.record(predictor_primary=self.entry(self.model, None))
         area = self.run_dir.parents[1]
-        before = audit_binding.run_shown(area, self.run_dir, "")
+        before = audit_binding.run_shown(area, self.run_dir, "", None)
         self.assertTrue(any(lab.startswith("DEPENDENCY ") for lab, _ in before.pieces))
         self.model.write_text(json.dumps({**MODEL, "weights": [0.0, 0.0]}))
         self.assertNotEqual(
-            before.sha, audit_binding.run_shown(area, self.run_dir, "").sha
+            before.sha, audit_binding.run_shown(area, self.run_dir, "", None).sha
         )
 
 
