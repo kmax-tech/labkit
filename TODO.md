@@ -1128,6 +1128,14 @@ Notiert, nicht geplant:
    Stand); AGENTS.md und die Verweigerung nennen jetzt die Reihenfolge.
    Offen: die Laufzeit vergleichbar messen — dieselben Aufgaben mit und
    ohne labkit; ein Experiment, startet auf Ansage.
+11. **Audit 2026-10-28, die heutigen Änderungen** ([Register](docs/audit-2026-10-28-today.md),
+   `f5e48e7..92029c2`): HEAD auf frischem Klon grün. Vier Fehler mit
+   Wirkung (B1 kaputte Journal-Kopie bricht den Stop-Hook ab; B2
+   code-check überspringt unlesbare Dateien still; B3 AGENTS.md schickt
+   Probe-Zeilen ins Protokoll; B4 Probe-Bewertung sagt „NO (truth)“ bei
+   Bedeutungslücke), acht Doku-Drifts (D2 korrigiert eine eigene falsche
+   Begründung zu „lane“), neun doppelte Heimaten, fünf Klarheitszeilen.
+   Offen in sechs Entscheidungen (Register, Ende).
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
