@@ -69,7 +69,8 @@ the protocol format, not the package version. Raising the pin changes
 every area's stamp, so no earlier audit covers an area afterwards.
 Preserve historical protocols and runs with their original commit and
 package pin; do not convert them to make current gates pass — reproduce
-them at that commit and pin, and stamp a fresh area for new work.
+them at that commit and pin (a checkout of that commit with a venv built
+from its own `requirements.lock`), and stamp a fresh area for new work.
 
 ## One workflow — every kind and both repeat costs
 
@@ -215,8 +216,9 @@ it writes `[result] run`, Recorded results and the run entry, checks them
 with `report-check` and restores the protocol if refused. The measurement,
 decided covering analysis audit and `02_analyze.py --check` must hold.
 An analysis audit with no findings covers the run when it saw the current
-code, promises and run: there is nothing to decide, but an earlier
-BLOCKER still needs its fix confirmed in that record.
+code, promises and run: there is nothing to decide. It re-checks each
+earlier decided BLOCKER itself; adoption needs it to find that fix in
+place — you add nothing to the record.
 Recorded results derives each promise's reportable verdict before its
 measured values; raw metrics in the run remain unchanged. A failed
 criterion under valid admissibility is a reportable miss.
@@ -274,11 +276,12 @@ prints these same recovery choices with each decision list:
   `[replaces] protocol = "<id>"`, with one `[[replaces.change]]` (what,
   from, to, why) per change and the predecessor's open BLOCKERs decided
   `deferred`. Its verdict is rendered first; a new approach never turns an
-  earlier miss into a pass. Only a new attempt at the same question is a
-  replacement. Any other later question is a protocol of its own, without
-  `[replaces]`; when it builds on what an earlier protocol showed, its
-  Question / hypothesis names that protocol and what it showed, and its
-  type is `exploratory`.
+  earlier miss into a pass. A replacement is only for a registration that
+  cannot be answered as written. A question asked after a valid result —
+  a miss included, such as another model on the same data — is a protocol
+  of its own, without `[replaces]`; when it builds on what an earlier
+  protocol showed, its Question / hypothesis names that protocol and what
+  it showed, and its type is `exploratory`.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the

@@ -1,0 +1,11 @@
+Recorded before reader answers, 2026-10-28 (third round). Instructions: AGENTS.md.template on agents-clarity
+after three revisions from the second round (reproducing at the old commit; the empty audit re-checks earlier
+BLOCKERs itself; a replacement only for a registration that cannot be answered as written). Readers: two
+independent Claude Haiku 4.5 subagents, instructions.md and cases.txt only. Cases 13-15 of the second round,
+same wording; expected answers as in 2026-10-28-haiku-instruction-reading-2/assessment-contract.txt, made
+precise:
+13 as before, plus: reproduce by checking out the old commit with a venv from its own requirements.lock.
+14 not a replacement — A's registration was answerable; the readers should not hesitate on [replaces].
+15 as before; the reader adds nothing to the record — the audit itself re-checks the earlier BLOCKER and
+   adoption needs the fix found in place.
+Judge per reader: supported / incomplete / wrong; and whether the reader still hesitates where round two did.
