@@ -679,11 +679,22 @@ def area_integrity(area: Path, *, staged: bool = False) -> Integrity:
     record. The one assembly the stop/commit, `labkit-audit --findings` and
     the handover read. Raises RuntimeError when git fails."""
     status = findings.record_status(area, staged=staged)
+    return Integrity(
+        status.records, [*evidence_gaps(area, staged=staged), *status.errors]
+    )
+
+
+def evidence_gaps(area: Path, *, staged: bool = False) -> list[str]:
+    """Why AREA's audit evidence does not stand in the tree or, STAGED, the
+    index, one sentence each with its restore: every file gone
+    (`area_gaps`), or the journal that does not read. In the tree these are
+    what `begin` refuses every new attempt on — an audit, a decision review
+    and a report review alike — so a gate whose way out is such an attempt
+    names them instead. Raises RuntimeError when git fails."""
     try:
-        gaps = area_gaps(area, staged=staged).blockers
+        return area_gaps(area, staged=staged).blockers
     except AttemptError as exc:
-        gaps = [str(exc)]
-    return Integrity(status.records, [*gaps, *status.errors])
+        return [str(exc)]
 
 
 def _append(area: Path, event: dict[str, str]) -> None:

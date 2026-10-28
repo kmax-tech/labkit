@@ -451,6 +451,16 @@ pins (`requirements.txt` / `requirements.lock`).
   declared, not recognised: the decode decides, not the file type, so
   one whose bytes happen to decode is read as text, and guessing it from
   the failure would excuse a corrupt text dataset.
+- **report-check names a lost audit record as lost, not as an audit that
+  never ran.** After an analysis audit's record was deleted, report-check
+  said "none has run yet" and named `labkit-audit --mode analysis`, which
+  labkit-audit refuses while the journal names a record that is gone
+  (pilot of labkit-paper area 15, t60). When no record covers the run and
+  the area's audit evidence is gone (`attempts.evidence_gaps`, the lines
+  `attempts.begin` refuses every attempt on, now also what
+  `area_integrity` reads), the analysis station names the loss with its
+  restore and, where nothing restores it, the handover; a covering record
+  with findings open still asks for the decisions, which need no attempt.
 - **`--effect "<ID> not assessable"` is offered only where the protocol
   registers a promise.** A computation has no [[promise]] table, and
   `--decide` refuses every id an effect names there; the decision list,

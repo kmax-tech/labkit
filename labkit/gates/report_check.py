@@ -38,8 +38,11 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
                     an unfrozen acknowledgement (`runs.unreportable`).
   5. analysis       where the lane owes an analysis audit: a decided record
                     must cover the current code, promises, answering run
-                    and shown evidence. Check the generated Recorded results
-                    and Limit lines against that run and those records.
+                    and shown evidence; while the area's audit evidence is
+                    gone the blocker names the loss and its restore, since
+                    labkit-audit starts no audit then. Check the generated
+                    Recorded results and Limit lines against that run and
+                    those records.
   6. recomputation  always run `scripts/02_analyze.py --check` under the
                     repo's interpreter: its outputs, metrics and cited
                     result must agree (LAB-041 Generate numbers, don't retype them).
@@ -125,6 +128,7 @@ from labkit.formats.protocol_history import (
     registration_in_commit,
 )
 from labkit.formats import (
+    attempts,
     console,
     findings,
     followup,
@@ -624,7 +628,12 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     """Why no decided analysis record covers the code, the promise
     block, the answering run and what the audit was shown of it as they are
     now, as a blocker with its way out, or None. Without an answering run
-    there is nothing the audit could be held to."""
+    there is nothing the audit could be held to. When no record covers and
+    the area's audit evidence is gone (`attempts.evidence_gaps`: a file an
+    attempt of any mode ended with deleted, a journal cut), labkit-audit
+    starts no audit (`attempts.begin`), so the blocker names the loss and
+    its restore, or the handover, instead of an audit command; a covering
+    record with findings open is decided, which needs no attempt."""
     audit = (
         f"audit the answering run as it stands: "
         f"`{audit_command(ctx.area, '--mode', 'analysis', protocol=ctx.protocol)}`, "
@@ -639,6 +648,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
         gap = findings.audit_coverage(
             ctx.area, ANALYSIS_AUDIT, analysis_now(ctx.area, ctx.text, ctx.run)
         )
+        covering = covering_analysis(ctx.area, ctx.text, ctx.run)
     except AuditError as exc:  # a registered output is gone
         return blocker(
             f"the analysis audit cannot be held to the run: {exc.why}",
@@ -651,7 +661,25 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"the analysis audit cannot be held to the area: {exc}",
             fix=f"repair what the sentence names, then {audit}",
         )
-    return blocker(gap, fix=audit) if gap else None
+    if gap is None:
+        return None
+    # the way out is a new audit, and `attempts.begin` refuses every attempt
+    # while one of these stands: "none has run yet" and `--mode analysis`
+    # were printed after an audit's record was deleted (pilot t60)
+    lost = attempts.evidence_gaps(ctx.area) if not covering else []
+    if lost:
+        more = f" (and {len(lost) - 1} more)" if len(lost) > 1 else ""
+        findings_command = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
+        return blocker(
+            f"no analysis audit covers the area as it is now, and labkit-audit "
+            f"starts none while the area's audit evidence is gone (an attempt of "
+            f"any mode): {lost[0]}{more}",
+            fix=f"(a) bring the evidence back — the line names the first "
+            f"restore, `{findings_command}` lists every loss with its restore —, "
+            f"then {audit}; (b) where nothing restores it, no audit covers the "
+            f"area and no number leaves it: {ways_out.HANDOVER}",
+        )
+    return blocker(gap, fix=audit)
 
 
 def limit_gaps(ctx: Checked) -> list[GateFinding]:

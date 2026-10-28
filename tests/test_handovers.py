@@ -9,13 +9,14 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import unittest
 
 import test_counter_cases as cases
 import test_end_to_end as e2e
 from labkit.formats import attempts, findings, handovers, protocol_block
 from labkit.checks import report_blocks
-from labkit.gates import audit, claude_hooks
+from labkit.gates import audit, claude_hooks, report_check
 from labkit.tools import protocol_fill
 
 #: a simulated analysis answer holding one BLOCKER
@@ -87,6 +88,65 @@ class HandoverRecovery(cases._Chain):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = audit.main([str(self.area), "--findings"])
         return rc, out.getvalue()
+
+    def report_check(self) -> tuple[int, str]:
+        """`report-check AREA`, its output captured."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = report_check.main([str(self.area)])
+        return rc, out.getvalue()
+
+    @staticmethod
+    def analysis_blocker(out: str) -> str:
+        """report-check's one analysis-audit BLOCKER line in OUT."""
+        (line,) = [
+            ln for ln in out.splitlines() if ln.startswith("  BLOCKER: analysis audit:")
+        ]
+        return line
+
+    def test_report_check_names_a_lost_record_and_the_restore_that_works(self):
+        """report-check said "none has run yet" and named `--mode analysis`
+        after an audit's record was deleted, though the journal holds the
+        attempt and labkit-audit refuses every audit until the record is
+        back (pilot of labkit-paper area 15, t60). The twin: an area never
+        audited is told so."""
+        rc, out = self.report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("none has run yet", self.analysis_blocker(out))
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        written = record.path.read_bytes()
+        record.path.unlink()
+        rc, out = self.report_check()
+        self.assertEqual(rc, 1, out)
+        line = self.analysis_blocker(out)
+        self.assertNotIn("none has run yet", line)
+        self.assertIn(f"ended as record in audits/{record.path.name}", line)
+        self.assertIn("starts none while the area's audit evidence is gone", line)
+        self.assertIn("--findings", line)
+        self.assertIn("hand over", line)
+        self.assertEqual(self.audit(cases.CLEAN)[0], 2)  # refused, as it says
+        # the restore it names (`attempts.restore_way`, from the evidence
+        # copy: the record was never committed) brings the record back
+        restore = line.split("restore it as the audit wrote it (`")[1].split("`")[0]
+        subprocess.run(restore, shell=True, cwd=self.area, check=True)
+        self.assertEqual(record.path.read_bytes(), written)
+        rc, out = self.report_check()
+        self.assertNotIn("BLOCKER: analysis audit", out)
+
+    def test_a_covering_record_with_an_open_finding_is_decided_despite_a_loss(self):
+        """The twin: deciding needs no attempt, so a loss elsewhere in the
+        area does not replace the open finding's way out."""
+        rc, out = self.audit(BLOCKED)
+        self.assertEqual(rc, 1, out)
+        (answer,) = (self.area / "audits" / "answers").iterdir()
+        answer.unlink()
+        self.assertTrue(attempts.evidence_gaps(self.area))
+        rc, out = self.report_check()
+        line = self.analysis_blocker(out)
+        self.assertIn("still `open` — decide each", line)
+        self.assertNotIn("audit evidence is gone", line)
 
     def test_findings_offer_the_handover_only_where_something_stands(self):
         # It printed the handover command in a clean area and, before its
