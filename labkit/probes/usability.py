@@ -203,6 +203,8 @@ TASK_STAMP: dict[str, tuple[str, str, bool]] = {
     **{c.task: ("unset", c.kind, False) for c in sab_cases.CASES.values()},
 }
 #: where the fit task's data land in the probe, and the columns the sheet names
+#: the task sheet a probe hands its agent, at the probe root
+TASK_SHEET = "TASK.md"
 FIT_DATA = Path("data") / "raw" / "dili" / "train.csv"
 FIT_COLUMNS = ("standardised_smiles", "vDILIConcern")
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
@@ -639,7 +641,7 @@ def stage(
         ),
     ):
         sheet = sheet.replace(key, val)
-    (root / "TASK.md").write_text(sheet, encoding="utf-8")
+    (root / TASK_SHEET).write_text(sheet, encoding="utf-8")
     _sh(["git", "add", "-A"], root)
     _commit(root, "Probe: the area, the fixture and TASK.md")
     sidecar(root, "probe.json").write_text(

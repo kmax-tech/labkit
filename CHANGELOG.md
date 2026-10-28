@@ -1198,6 +1198,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **fit-assay's sheet names ROC-AUC; a sheet that named none is the
+  probe's gap.** The SAB-like fit case asked for predicted probabilities
+  and named no metric, while its meaning check holds the kept number to
+  ROC-AUC; the fourth draw's agent kept accuracy, scored as "not the
+  task's number". The sheet now says the task is evaluated by ROC-AUC and
+  tells internal validation (the number kept, on labelled compounds the
+  model was not fitted on) from the hidden test evaluation (the saved
+  probabilities against withheld labels). `sab_cases.meaning_gap` reads
+  the probe's staged sheet (`usability.TASK_SHEET`): where it does not
+  name the metric (`Meaning.named_as`), the score says the mismatch is
+  the probe's gap, not a disregarded instruction.
 - **Where `margin` and `null_band` come from, and that an outdated audit
   stays, stand where they are not overwritten.** In the fourth SAB-like
   draw "null_band from --calibrate-null before the registration" stood

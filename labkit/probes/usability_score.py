@@ -32,6 +32,7 @@ from labkit.probes.usability import (
     LOG_TAGS,
     Probe,
     SOURCE_READ,
+    TASK_SHEET,
     TASK_STAMP,
     TOL,
     read_answer,
@@ -578,8 +579,14 @@ def probe_score(
     # SCORE is the script's own setting (`RunConfig.config`, free JSON),
     # not a labkit field of the record
     own = pr.config.config if pr.config is not None else {}
+    sheet = root / TASK_SHEET
     number_meaning = (
-        sab_cases.meaning_gap(probe.task, own.get("score"), metrics.get("n_items"))
+        sab_cases.meaning_gap(
+            probe.task,
+            own.get("score"),
+            metrics.get("n_items"),
+            sheet.read_text(encoding="utf-8") if sheet.is_file() else None,
+        )
         if sab and run is not None
         else None
     )

@@ -305,6 +305,25 @@ class MeaningTest(unittest.TestCase):
         self.assertIn("over 80 labelled item(s), not 320", val_only)
         self.assertIn("not an AUC on the validation split alone", val_only)
 
+    def test_a_sheet_that_named_no_metric_is_the_probes_gap(self):
+        """The fourth draw's fit-assay kept accuracy under a sheet that named
+        no metric: no disregarded instruction. The sheet that names ROC-AUC
+        holds it to it."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            sab_cases.plant(root, "fit-assay")
+            sheet = sab_cases.task_text(root, "fit-assay")
+        self.assertIn("evaluated by ROC-AUC", sheet)
+        self.assertIn("Internal validation:", sheet)
+        self.assertIn("Hidden test evaluation:", sheet)
+        held = sab_cases.meaning_gap("fit-assay", "accuracy", 320, sheet) or ""
+        self.assertIn("SCORE is 'accuracy', not 'auc'", held)
+        self.assertNotIn("the probe's gap", held)
+        old = sheet.replace("ROC-AUC", "the score")  # as staged before
+        unasked = sab_cases.meaning_gap("fit-assay", "accuracy", 320, old) or ""
+        self.assertIn("names no metric ('ROC-AUC' is not in it)", unasked)
+        self.assertIn("not a disregarded instruction", unasked)
+
     def test_apply_screen_holds_the_labelled_persons(self):
         m = sab_cases.meaning("apply-screen")
         assert m is not None

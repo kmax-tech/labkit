@@ -375,10 +375,13 @@ TASK_TEXT = {
         "scipy.signal or NeuroKit-style peak detection; the ECG carries baseline wander and noise.",
     ),
     "fit-assay": (
-        "Train a model on the assay data to predict whether a compound is active. Choose the model and its "
-        "hyperparameters with the validation split, then save the predicted probability of being active for every "
-        "test compound, in the order of test.csv, to 'pred_results/test_pred.csv' with the columns compound_id and "
-        "p_active.",
+        "Train a model on the assay data to predict whether a compound is active, evaluated by ROC-AUC. Internal "
+        "validation: choose the model and its hyperparameters on the labelled compounds (train.csv and val.csv), "
+        "and keep as your number the ROC-AUC on labelled compounds the model was not fitted on. Hidden test "
+        "evaluation: the test compounds' activity is withheld; save the predicted probability of being active for "
+        "every test compound, in the order of test.csv, to 'pred_results/test_pred.csv' with the columns "
+        "compound_id and p_active — these probabilities are scored by ROC-AUC against the withheld labels after "
+        "you finish.",
         "A compound is active when its IC50 in the primary assay is below 10 µM. The descriptors are on their "
         "natural scales (molecular weight in Da, TPSA in Å², counts as integers).",
     ),
@@ -448,6 +451,9 @@ class Meaning:
     score: str
     items: int
     said: str
+    #: the words the task sheet names the metric with; a sheet staged
+    #: without them asked for no metric (fit-assay before 2026-10-28)
+    named_as: str
 
 
 def meaning(task: str) -> Meaning | None:
@@ -460,6 +466,7 @@ def meaning(task: str) -> Meaning | None:
             ASSAY_SPLITS["train"] + ASSAY_SPLITS["val"],
             "the out-of-fold ROC-AUC over the train and val compounds, the "
             "skeleton's held-out score — not an AUC on the validation split alone",
+            "ROC-AUC",
         )
     if task == "apply-screen":
         return Meaning(
@@ -467,16 +474,23 @@ def meaning(task: str) -> Meaning | None:
             sum(1 for r in cohort_rows() if r["clinician_label"] != ""),
             "the agreement (accuracy) of the flag with the clinician's label "
             "over the labelled persons",
+            "agreement (accuracy)",
         )
     case(task)
     return None
 
 
-def meaning_gap(task: str, score: object, n_items: object) -> str | None:
+def meaning_gap(
+    task: str, score: object, n_items: object, sheet: str | None = None
+) -> str | None:
     """Why the kept number is not the quantity TASK means (`meaning`), or
     None: the run's SCORE (its config.json) and the labelled items it is
     over (metrics' N_ITEMS) against the case's. A sentence naming each
-    difference, never a number that only looks valid."""
+    difference, never a number that only looks valid. SHEET, the probe's
+    task sheet as staged: one that does not name the metric
+    (`Meaning.named_as`) asked for none, and the sentence says so — a
+    SCORE chosen there is the probe's gap, not a disregarded instruction
+    (fit-assay's accuracy in the fourth draw)."""
     m = meaning(task)
     if m is None:
         return None
@@ -487,9 +501,15 @@ def meaning_gap(task: str, score: object, n_items: object) -> str | None:
         off.append(f"it is over {n_items!r} labelled item(s), not {m.items}")
     if not off:
         return None
+    unasked = (
+        f" — the task sheet as staged names no metric ({m.named_as!r} is not in "
+        f"it): the probe's gap, not a disregarded instruction"
+        if score != m.score and sheet is not None and m.named_as not in sheet
+        else ""
+    )
     return (
         f"{case(task).metric_key} is not the task's number — {'; '.join(off)}; "
-        f"the task's number is {m.said}"
+        f"the task's number is {m.said}{unasked}"
     )
 
 
