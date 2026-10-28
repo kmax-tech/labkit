@@ -1,0 +1,10 @@
+864f57f 14:55:05 Document findings and provenance issue
+1885b24 14:45:37 Fix standardization bug and add script hash to instrument
+ffdb657 14:34:35 Run: the first measurement under the registration
+5000d0a 14:34:35 Probe: the venv inside the sandbox
+14eb560 15:34:33 Probe: container paths
+b3ad627 15:34:13 Probe: the task continues a registered experiment
+a11e935 15:33:41 Register apply-screen: agreement with the clinicians against the permuted null, the scripts and the prepared persons
+5f028e6 15:30:16 Probe: the area, the fixture and TASK.md
+b345570 15:30:16 Probe: requirements.lock and the hooks of the probe venv
+e43a196 15:30:15 Scaffold: a probe lab repo for the usability trace

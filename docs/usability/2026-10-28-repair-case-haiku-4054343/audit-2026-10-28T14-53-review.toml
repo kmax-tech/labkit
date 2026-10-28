@@ -1,0 +1,18 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T14:53"
+model = "opus"
+record = "2026-10-28T14-48-analysis.toml"
+scope_sha = "ecafa07ecee5"
+shown_sha = "42fbcd50c09e"
+claim_sha = "3312d99926ef"
+again = false
+upheld = 0
+rejected = 0
+insufficient = 1
+
+[[decision]]
+finding = 3
+decision_sha = "c9af38709ec7"
+verdict = "insufficient"
+why = "The reason says `script_sha` now stops row reuse, and `instrument()` does hash the script, but it cannot be confirmed that `c1_score` 0.7609 / `c1_pass` true (run 2026-10-28T14-40-34_c9a6) rest only on this run's rows: two things are missing — the `_prov.run` and `script_sha` values for the 322 rows not shown (the check `n_rows_other_run` = 0 cannot be counted), and `labkit.run.batch` (`Store.pending`, `ledger`), which would show whether a row with a different `_instrument` is refused rather than kept."

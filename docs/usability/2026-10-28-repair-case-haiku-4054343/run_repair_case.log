@@ -1,0 +1,31 @@
+{"images": {"agent": "labkit-sandbox:c5e9959d714c", "proxy": "agentsandbox-proxy:aa300c7b22af"}, "model": "claude-haiku-4-5-20251001", "wheel": "labkit-0.103.0-py3-none-any.whl", "limits": {"timeout_s": 1800, "max_turns": 300, "max_budget_usd": 10.0}}
+{"task": "apply-screen", "seconds": 1243.581, "timed_out": false, "result": {"subtype": "success", "is_error": false, "num_turns": 87, "total_cost_usd": 0.8264402000000001, "terminal_reason": "completed", "duration_ms": 1241678}, "requests": 97}
+  agent                                    haiku-4.5
+  labkit in probe                          labkit @ git+file:///Users/max/projects/labkit@4054343097c1d67e6903e501b4316cf7b92936c5
+  scaffold sha                             e8973a8da7a6
+  run                                      2026-10-28T15-32-06_0f81
+  number (c1_score)                        absent
+  the task's quantity                      NO — c1_score is not the task's number — its SCORE is None, not 'accuracy'; it is over 300 labelled item(s), not 92; the task's number is the agreement (accuracy) of the flag with the clinician's label over the labelled persons
+  equals the truth                         NO (truth 0.7608695652173914)
+  null condition reported                  NO
+  hidden evaluation (pred_results/)        FAIL — pred_results/screen_pred.csv missing
+  bound to                                 PROTOCOL-apply-screen.md
+  frozen                                   no
+  repeat cost                              low
+  audit attempts failed                    0 (0 unproven)
+  wall-clock (log span)                    20m01s
+  steps · read                             3
+  steps · run                              19
+  steps · edit                             6
+  steps · unsure                           0
+  steps · gate                             0
+  steps · untagged                         1
+  reads of labkit source / standard        0
+  protocol · lines                         118
+  protocol · prose before the first field  0
+  protocol · · chains (> 2 items)          2
+  protocol · longest field (chars)         471
+  protocol · codes in the Summary          0
+  protocol · answer as a table             no
+  target: one kept number under 5 min — MISSED
+→ /private/tmp/claude-501/-Users-max-projects-labkit/3880f8c4-30a8-43bd-8755-145293cd724b/scratchpad/repair-case/scored/apply-screen.score.json

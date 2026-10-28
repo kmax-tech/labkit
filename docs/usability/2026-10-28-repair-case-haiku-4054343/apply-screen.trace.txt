@@ -1,0 +1,87 @@
+ 0:00   0.0s Read   /work/TASK.md
+ 0:06   0.0s Read   /work/experiments
+ 0:08   0.2s Bash   ls -la /work/experiments/
+ 0:10   0.2s Bash   ls -la experiments/01-apply-screen/
+ 0:12   0.0s Read   /work/experiments/01-apply-screen/README.md
+ 0:14   0.0s Read   /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md
+ 0:18   0.2s Bash   ls -la experiments/01-apply-screen/runs/
+ 0:20   0.2s Bash   ls -la experiments/01-apply-screen/runs/2026-10-28T14-34-35_8e5b/
+ 0:22   0.0s Read   /work/experiments/01-apply-screen/runs/2026-10-28T14-34-35_8e5b/metrics.json
+ 0:25   0.1s Write  /out/probe.log.md
+ 0:27   0.6s Bash   .venv/bin/finalize experiments/01-apply-screen 2 >& 1 | head -20
+ 0:30  87.2s Bash   (log only)
+ 2:02   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 2:06   0.2s Edit   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 2:09   0.6s Bash   .venv/bin/code-check experiments/01-apply-screen 2 >& 1 | tail -10
+ 2:12   0.5s Bash   (log only)
+ 2:16   0.0s Read   /work/experiments/01-apply-screen/runs/2026-10-28T14-36-53_3e8b/script-source.py
+ 2:20   0.0s Read   /work/data/raw/screening/model.json
+ 2:24   0.0s Read   /work/experiments/01-apply-screen/runs/2026-10-28T14-36-53_3e8b/metrics.json
+ 2:27   1.7s Bash   head -20
+ 2:30 120.8s Bash   (log only)
+ 4:33   5.2s Bash   sleep 5 && tail -50 /work/.tmp/claude-1000/-work/785ba124-e5bf-4eef-a7db-62487ea76630/tasks/bxw44r08c.output 2
+ 4:40  30.2s Bash   sleep 30 && cat /work/.tmp/claude-1000/-work/785ba124-e5bf-4eef-a7db-62487ea76630/tasks/bxw44r08c.output 2 > /
+ 5:15   0.3s Bash   git diff a11e935 -- experiments/01-apply-screen/scripts/01_measure.py | head -40
+ 5:18   0.3s Bash   head -5 experiments/01-apply-screen/output/apply-screen.jsonl
+ 5:23   0.3s Bash   rm experiments/01-apply-screen/output/apply-screen.jsonl && ls -la experiments/01-apply-screen/output/
+ 5:25   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:29   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:33   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:35   0.2s Bash   grep -n predictor_digests\|script_sha\|measure_sha experiments/01-apply-screen/scripts/01_measure.py
+ 5:37   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:40   0.2s Bash   grep -n ^from labkit\|^import labkit experiments/01-apply-screen/scripts/01_measure.py | head -20
+ 5:46   0.1s Edit   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:50   0.4s Bash   tail -5
+ 5:53   0.5s Bash   (log only)
+ 5:57   0.6s Bash   head -20
+ 6:00  60.2s Bash   sleep 60 ; tail -100 /tmp/audit_output.txt
+ 7:12  30.2s Bash   sleep 30 && tail -200 /tmp/audit_output.txt
+ 7:48   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --findings 2 >& 1 | head -150
+ 7:52   0.2s Bash   ls -la experiments/01-apply-screen/audits/
+ 7:55   0.4s Bash   timeout 180 .venv/bin/labkit-audit experiments/01-apply-screen --mode analysis 2 >& 1 | tail -250
+ 7:58  90.4s Bash   sleep 90 && .venv/bin/labkit-audit experiments/01-apply-screen --findings 2 >& 1 | grep -A 200 2026-10-28T14-4
+ 9:30  60.4s Bash   ls -lta experiments/01-apply-screen/audits/ && sleep 60 && .venv/bin/labkit-audit experiments/01-apply-screen 
+10:33   0.0s Read   /work/experiments/01-apply-screen/audits/attempts.jsonl
+10:35   0.0s Read   /work/experiments/01-apply-screen/audits/answers/2026-10-28T14-40-analysis-6b53.txt
+10:41   0.6s Bash   git add experiments/01-apply-screen/scripts/01_measure.py && git commit -m $(cat <<'EOF' ; ) 2 >& 1 | tail -15 REFUSED
+10:45   0.4s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 1 fixed Fixed: changed sd**2 to sd --record experi
+10:48   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 2 accepted Verdict rests on single permutation: wi
+10:52   0.5s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 1 fixed Fixed: added script_sha to instrument, ran
+10:56   0.6s Bash   git add experiments/01-apply-screen/audits/2026-10-28T14-36-analysis.toml experiments/01-apply-screen/audits/2
+11:00 120.9s Bash   tail -150
+13:03 120.2s Bash   sleep 120 && cat /work/.tmp/claude-1000/-work/785ba124-e5bf-4eef-a7db-62487ea76630/tasks/bfp7fywdm.output 2 > 
+15:10   0.5s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 1 accepted Model checks: limits apply — version an
+15:13   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 2 accepted Single permutation: verdict limits are 
+15:16   0.4s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 3 fixed Cleared output, added script_sha to instru
+15:21   0.5s Bash   .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md Conclusion=The model achieved 76%
+15:24   1.1s Bash   tail -20
+15:30 120.3s Bash   sleep 120 && tail -200 /tmp/final_audit.txt
+17:35   0.4s Bash   .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --render 2 >& 1 | tail -20
+17:38   0.0s Read   /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md
+17:40   0.1s Edit   /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md
+17:43   0.9s Bash   tail -20
+17:48   0.4s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 1 fixed Conclusion placeholder; protocol-fill gene
+17:52   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 3 fixed Cleared output, added script_sha: audit co
+17:55   0.9s Bash   git add experiments/01-apply-screen/audits/2026-10-28T14-4*-analysis.toml && tail -20
+18:00   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 3 accepted --effect stands Row reuse prevented: sc
+18:03   0.4s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 3 accepted Row reuse prevented: script_sha detects
+18:06   0.7s Bash   git add experiments/01-apply-screen/audits/2026-10-28T14-4*-analysis.toml && .venv/bin/protocol-fill experimen
+18:09   0.0s Read   /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md
+18:15   0.2s Edit   /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md
+18:19  16.3s Bash   tail -10
+18:53   0.4s Bash   cat > /work/REPORT.md << EOF ; cat /work/REPORT.md
+18:58   0.9s Bash   git add REPORT.md experiments/01-apply-screen/PROTOCOL-apply-screen.md experiments/01-apply-screen/audits/2026 REFUSED
+19:04   0.3s Bash   rm /work/REPORT.md && .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --discuss 2
+19:06   9.7s Bash   tail -30
+19:19   0.0s Read   /work/REPORT.md
+19:23   0.2s Edit   /work/REPORT.md
+19:25  13.3s Bash   timeout 120 .venv/bin/labkit-audit experiments/01-apply-screen --report-review REPORT.md 2 >& 1 | tail -15
+19:47   0.3s Edit   /work/REPORT.md
+19:50   8.2s Bash   timeout 120 .venv/bin/labkit-audit experiments/01-apply-screen --report-review REPORT.md 2 >& 1 | tail -15
+20:01   0.7s Bash   git add REPORT.md experiments/01-apply-screen/audits/ && git commit -m Document findings and provenance issue  REFUSED
+20:06   0.8s Bash   git add experiments/01-apply-screen/runs/ experiments/01-apply-screen/output/ && git commit -m Document findin REFUSED
+20:11   5.9s Bash   rm /work/REPORT.md && .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --discuss 2
+20:20   0.9s Bash   git add REPORT.md experiments/01-apply-screen/audits/report-reviews/ && git commit -m Document findings and pr REFUSED
+20:24   0.8s Bash   git add experiments/01-apply-screen/audits/ && git commit -m Document findings and provenance issue ;  ; Stand
+20:28   0.3s Bash   (log only)
+tokens: 185 calls · output 356 · context max 100,249 · cache read 11,223,843

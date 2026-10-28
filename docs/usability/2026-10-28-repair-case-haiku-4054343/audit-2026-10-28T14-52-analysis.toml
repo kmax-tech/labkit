@@ -1,0 +1,40 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T14:52"
+mode = "analysis"
+model = "opus"
+scope_sha = "ecafa07ecee5"
+block_sha = "8b60cd8a1da9"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "20c4c39f3c7e", "Admissibility condition" = "fafe53eaa1b6", "Null condition / anchors" = "92e9d27ee158" }
+run_id = "2026-10-28T14-40-34_c9a6"
+shown_sha = "42fbcd50c09e"
+blockers = 1
+warnings = 2
+notes = 3
+followup = { entries = 1, bytes = 1368 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/PROTOCOL-apply-screen.md:5 · The Conclusion retypes the run's numbers by hand, and two of them are wrong. It says the model exceeds the null lane \"by 15 percentage points\", but 15 points is the registered margin, not the measured lead. It gives the null lane as \"random flags 48.3%\", but the null lane is the same flags scored against permuted labels (Terms, line 11), and its score is a different number. · The reported lead and the reported null score are both wrong. runs/2026-10-28T14-40-34_c9a6/metrics.json has `c1_score` 0.7608695652173914 (70/92) and `a2_score` 0.4782608695652174 (44/92). The lead is therefore 0.2826, about 28.3 points, not 15, and the null lane scores 47.8%, not 48.3%. · new class (a number retyped instead of generated; the script cites LAB-041 Generate numbers, don't retype them, which is not among the rules given to this audit) · Write the Summary back from the run's metrics.json with `protocol-fill --from-run`, citing the run_id. State the lead and the null score as generated, and describe the null lane in the Terms' words."
+status = "accepted"
+reason = "Conclusion placeholder; Summary generated from metrics via protocol-fill"
+effect = "stands"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:365 · [C1]'s bar is the null lane's score from one permutation seeded with `apply-null:{seed}`. The registered lane is deterministic, so whether `c1_pass` holds depends on that single draw. The calibrated band (0.13 at the 0.99 quantile, line 35) lets a null draw reach about 0.63, which would put the bar near 0.78, above the measured 0.761. · `c1_pass` turns false for any null permutation scoring 57/92 or more (bar ≥ 0.7696 > 70/92). This run drew 44/92, below chance (0.5009). Assignment: draw the kept run again with `01_measure.py --repeat-of 2026-10-28T14-40-34_c9a6` (e.g. 20 draws), then use `02_analyze.py --draws` to count the draws whose `c1_pass` is false. · LAB-015 Preflight audit before freezing (scar: Spread unknown) · The registration stands as written: report the draws' spread of `c1_pass` as description beside the verdict. A bar against the null's expectation instead of one draw would be a new registration that names this one in `[replaces]`."
+status = "accepted"
+reason = "Single permutation: limits apply to range where c1_pass could flip"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:169 · The registration fixes the flag threshold at 0.5 (PROTOCOL:11, :32) and the model version at 2.1 (PROTOCOL:12). `ScreeningModel` takes the threshold, and implicitly the version, from whatever model.json holds and compares neither. The ESTIMATOR string's \"version 2.1\" is text only and is never checked. · If model.json's `threshold` is not 0.5, or the file is not version 2.1, every flag among the 300 rows departs from the registered predictor, and `c1_score`, `a2_score` and `c1_pass` move with it. Assignment: read `threshold` and the version field from data/raw/screening/model.json (the declared predictor file, not inlined here) and compare them with 0.5 and 2.1. Also confirm that its `weights`, `mean` and `std` arrays follow its `features` order, which 00_prepare.py uses. · LAB-003 No run without an intent paragraph (scar: Criterion ≠ code, LAB-015 Preflight audit before freezing) · implementation error: make the predictor refuse a model.json whose threshold or version differs from the registered one, then measure again under the unchanged registration."
+status = "accepted"
+reason = "Model version/threshold not checked; limits apply with declared model version 2.1"
+
+[[fix_verdict]]
+record = "2026-10-28T14-36-analysis.toml"
+n = 1
+decision_sha = "444c3ca6cbd7"
+verdict = "resolved"
+why = "Repaired. The term is now `w * (v - mu) / sd` (01_measure.py:179), the registered standardisation by the model's own standard deviation. The new run 2026-10-28T14-40-34_c9a6 carries a `script_sha` in every row (output/apply-screen.jsonl:1, :392). Its metrics differ from the faulty run's (`c1_score` 0.7609 against 0.6957, `a2_score` 0.4783 against 0.5217). The finding's repair was to measure again under the unchanged registration and audit the new run, and that is this run; no required check was set."

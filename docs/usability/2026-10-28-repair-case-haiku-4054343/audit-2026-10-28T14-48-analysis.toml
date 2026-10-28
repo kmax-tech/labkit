@@ -1,0 +1,53 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T14:48"
+mode = "analysis"
+model = "opus"
+scope_sha = "ecafa07ecee5"
+block_sha = "8b60cd8a1da9"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "20c4c39f3c7e", "Admissibility condition" = "fafe53eaa1b6", "Null condition / anchors" = "92e9d27ee158" }
+run_id = "2026-10-28T14-40-34_c9a6"
+shown_sha = "42fbcd50c09e"
+blockers = 1
+warnings = 2
+notes = 2
+carried_blockers = 1
+followup = { entries = 2, bytes = 3192 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:170 · No check in the run ties `ScreeningModel` to the model the registration names. It never reads model.json's version (the question names version 2.1). It takes `threshold` from the file without holding it to the registered 0.5 (Terms: \"Flag\"). It zips `weights`/`mean`/`std` against the features without `strict`, so a shorter list silently drops a feature. [A1] and [A2] cannot see a wrong predictor: the sd² run 2026-10-28T14-34-35_8e5b passed both gates with `c1_pass` true. · `c1_score` 0.7609 and all 300 flags rest on an implementation that nothing in the run compares with model.json. Assignment: read model.json and report `version`, `threshold`, and the lengths of `features`/`weights`/`mean`/`std`, plus any reference probabilities it ships. Recompute p for five labelled persons by hand from it and compare with `pred` at output/apply-screen.jsonl:1–5. · LAB-015 Preflight audit before freezing (scar row: Gate without anchor/resolution) · implementation error: make the instrument refuse a model file whose version or threshold differs from the registered values or whose lists differ in length, and add a reference-output check of the predictor. Then measure again under the unchanged registration."
+status = "accepted"
+reason = "Model checks: limits apply — version and threshold not verified at runtime"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:545 · The bar `null_score + margin` comes from one permutation draw (`apply-null:0`, 01_measure.py:365). The registered band itself says this draw strays up to 0.13 from chance, and no spread is shown for the verdict. · `c1_threshold` 0.6283 rests on a null of 0.4783, which is 0.023 below chance 0.5009. `c1_pass` flips for any permutation with null ≥ 0.6109 (`c1_score` − 0.15). Assignment: count the `--calibrate-null` scores (200 permutations) that are ≥ 0.6109, or run `--repeat-of 2026-10-28T14-40-34_c9a6` several times and report `c1_pass` per draw via `02_analyze.py --draws`. · LAB-015 Preflight audit before freezing (scar row: Spread unknown, LAB-036 Validate) · no change to code or registration: show the spread of the verdict as supporting draws (`--repeat-of`) and report it as a limit; the answer stays draw 1."
+status = "accepted"
+reason = "Single permutation: verdict limits are range where c1_pass could flip on another draw"
+
+[[finding]]
+grade = "BLOCKER"
+text = "carried from 2026-10-28T14-39-analysis.toml#1 (not_assessable): BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:322 · The answering run reports numbers over rows an earlier run wrote. Run 2026-10-28T14-36-53_3e8b reused another run's rows: `measure()` appends only `store.pending(rows)` into the shared `OUT`. The row identity `instrument()` (01_measure.py:289) hashes the `ESTIMATOR` prose line, not the code of `ScreeningModel`/`apply_rows`. So rows of an older script pass the resume check, and 01_measure.py has uncommitted changes since ffdb657. · The run's metrics.json (`c1_score` 0.6957, `c1_threshold` 0.6717, `c1_pass` true) is computed from rows stamped `_prov.run` 2026-10-28T14-34-35_8e5b (output/apply-screen.jsonl:1, :392), not 14-36-53. If the uncommitted change touches prediction or the null shuffle, the number belongs to code no run executed. Assignment: (1) count rows in output/apply-screen.jsonl whose `_prov.run` ≠ 2026-10-28T14-36-53_3e8b; (2) run `git diff ffdb657 -- experiments/01-apply-screen/scripts/01_measure.py` and check whether it touches `ScreeningModel`, `apply_rows`, `chance_of` or `evaluate_rows`; (3) have labkit.run.batch (`Store.pending`) and labkit.run.runlog (`draw_output`) supplied, to see whether a full run is meant to start from an empty file. · LAB-015 Preflight audit before freezing (scar rows: Provenance incomplete; One output file = one run), LAB-003 No run without an intent paragraph · Make the row identity cover the measuring code and make a full run start its output fresh. Commit the script, then measure again under the unchanged registration (an implementation error). · check: n_rows_other_run — must be 0"
+check = "n_rows_other_run"
+check_note = "must be 0"
+carries = "2026-10-28T14-39-analysis.toml#1"
+status = "accepted"
+reason = "Row reuse prevented: script_sha detects code changes"
+effect = "stands"
+
+[[fix_verdict]]
+record = "2026-10-28T14-36-analysis.toml"
+n = 1
+decision_sha = "444c3ca6cbd7"
+verdict = "resolved"
+why = "repaired: 01_measure.py:179 now computes `w * (v - mu) / sd`.\nThe answering run's rows carry the `script_sha` that only the fixed commit 1885b24 introduced (output/apply-screen.jsonl:1). Its numbers moved from 0.6957/0.6717 to `c1_score` 0.7609 / `c1_threshold` 0.6283 (runs/2026-10-28T14-40-34_c9a6/metrics.json)."
+
+[[fix_verdict]]
+record = "2026-10-28T14-39-analysis.toml"
+n = 1
+decision_sha = "17eda9870ef7"
+verdict = "not_assessable"
+why = "the required check `n_rows_other_run` is missing from the answering run's metrics.json.\nThe code changed: `script_sha` is now in `instrument()` (01_measure.py:289), and `balance()` holds every row's `_instrument` to it. But `measure()` still appends `store.pending(rows)` into the shared OUT (01_measure.py:322). Whether `run.draw_output` starts the file fresh lies in an indexed module.\nThe 70 rows shown all carry `_prov.run` 2026-10-28T14-40-34_c9a6. The other 322 rows are not shown."
+check = "n_rows_other_run"
+check_present = false

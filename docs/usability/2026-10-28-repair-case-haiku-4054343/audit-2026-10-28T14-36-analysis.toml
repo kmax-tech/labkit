@@ -1,0 +1,26 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T14:36"
+mode = "analysis"
+model = "opus"
+scope_sha = "04d61f547c90"
+block_sha = "8b60cd8a1da9"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "20c4c39f3c7e", "Admissibility condition" = "fafe53eaa1b6", "Null condition / anchors" = "92e9d27ee158" }
+run_id = "2026-10-28T14-34-35_8e5b"
+shown_sha = "a15e35e07c7f"
+blockers = 1
+warnings = 1
+notes = 3
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:179 · `ScreeningModel.probability` divides each centred feature by `sd**2`, not by `sd`. That is not the standardisation the registration specifies (\"each feature standardised with the model's own mean and standard deviation (model.json)\", PROTOCOL Setup · Data / scope), so the model is not \"applied unchanged\". Every feature's contribution to z is scaled by 1/sd, and the scale differs across age, systolic_bp, bmi, hba1c, ldl and smoker. · Every flag in the run is wrong: all 92 registered rows, the null lane built from them, and the 208 test rows. This gives `c1_score` 0.6957, `c1_threshold` 0.6717, `c1_pass` true, and `a2_score` 0.5217 in runs/2026-10-28T14-34-35_8e5b/metrics.json. Assignment: recompute the 300 flags with (v − mean)/std from model.json and the prepared features, and count the flags that change among the 92 labelled and the 208 unlabelled persons. Any changed labelled flag moves c1_score. · LAB-003 No run without an intent paragraph (scar: Criterion ≠ code, LAB-015 Preflight audit before freezing) · implementation error: make the predictor standardise by the model's standard deviation as registered, then measure again under the unchanged registration and audit the new run"
+status = "fixed"
+reason = "Fixed: changed sd**2 to sd"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:366 · [C1]'s bar is the null lane's agreement from ONE permutation (`apply-null:{seed}`). The registration's own calibration puts that permutation's spread at up to 0.13 around chance. In this run the lead over the bar is 0.6957 − 0.6717 = 0.024, about 2 persons of 92. A null draw only 0.03 higher (3 persons) would flip `c1_pass`, so the verdict rests on which permutation seed 0 happened to give. No draw spread is recorded. · `c1_pass` (true) can flip with the null permutation alone, with the predictor unchanged. Assignment: after the repair above, run `01_measure.py --repeat-of <run>` for several draws and read `02_analyze.py --draws`. Compare the share of draws with `c1_pass` true against the single kept verdict, and report the c1_threshold range. · LAB-015 Preflight audit before freezing (scar: Spread unknown, LAB-036 Validate) · state the c1 verdict together with its spread over null draws, as supporting evidence; the criterion itself stays as registered"
+status = "accepted"
+reason = "Verdict rests on single permutation: will address with spread analysis"

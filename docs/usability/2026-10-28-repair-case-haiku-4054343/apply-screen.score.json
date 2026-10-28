@@ -1,0 +1,56 @@
+{
+ "probe": {
+  "staged": "2026-10-28T15:30:16",
+  "task": "apply-screen",
+  "area": "01-apply-screen",
+  "metric_key": "c1_score",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@4054343097c1d67e6903e501b4316cf7b92936c5",
+  "scaffold_sha": "e8973a8da7a6",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "apply-screen",
+   "--kind",
+   "apply"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-28T15-32-06_0f81",
+ "number": null,
+ "expected": 0.7608695652173914,
+ "number_ok": false,
+ "null_reported": false,
+ "bound_to": "PROTOCOL-apply-screen.md",
+ "frozen": false,
+ "repeat_cost": "low",
+ "log": {
+  "lines": 29,
+  "wall_seconds": 1201,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 3,
+  "run": 19,
+  "edit": 6,
+  "unsure": 0,
+  "gate": 0,
+  "untagged": 1,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 118,
+  "prose_before_first_field": 0,
+  "chains": 2,
+  "longest_field": 471,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-4.5",
+ "audit_failed": 0,
+ "audit_unproven": 0,
+ "evaluation": 0,
+ "evaluation_detail": "pred_results/screen_pred.csv missing",
+ "number_meaning": "c1_score is not the task's number \u2014 its SCORE is None, not 'accuracy'; it is over 300 labelled item(s), not 92; the task's number is the agreement (accuracy) of the flag with the clinician's label over the labelled persons"
+}

@@ -1253,6 +1253,24 @@ Notiert, nicht geplant:
    Audit bestehen → Ergebnis übernehmen; erst er zeigt, ob der
    widersprüchliche Rat und die Sackgassen beseitigt sind — ein
    Experiment, startet auf Ansage.
+14. **Reparaturfall auf `4054343` (2026-10-28)**
+   ([Notiz](docs/usability/2026-10-28-repair-case-haiku-4054343.md)):
+   eingebauter Fehler (`sd**2` statt `sd`) in einer korrekt registrierten
+   apply-Probe. Die Reparaturen aus Punkt 13 tragen: das Audit fand den
+   Fehler, der Agent reparierte den Code, nicht die Registrierung, kein
+   Beleg gelöscht. Der Weg endete trotzdem nicht in der Übernahme; je eine
+   Entscheidung: (1) Eine Reparatur, neu gemessen, übernimmt die Zeilen
+   des fehlerhaften Laufs — die Zeilenidentität des Schätzer-Skeletts
+   (`instrument()`) kennt den Code nicht, `measure()` hängt nur fehlende
+   Zeilen an, finalize sagt nur „continues“; Vorschlag: der Code gehört
+   in die Identität, und ein voller Lauf setzt keinen abgeschlossenen fort
+   (finalize hält Zeilen eines Laufs mit anderem Code). (2) Die geforderte
+   Prüfkennzahl eines Befunds (`check: n_rows_other_run`) erklärt
+   AGENTS.md nicht — ohne sie bleibt die Reparatur `not_assessable`;
+   Vorschlag: sagen, dass das Messskript sie in metrics.json schreibt.
+   (3) Null-Spur: Entscheidung offen (Punkt 13). Offen als Frage: wählt
+   labkit Läufe nach dem Namen, wo Rechner in zwei Zeitzonen einen
+   Bereich beschreiben (der Bewerter tat es hier, Artefakt des Starts)?
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
