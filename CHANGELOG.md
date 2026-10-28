@@ -57,7 +57,7 @@ pins (`requirements.txt` / `requirements.lock`).
   be adopted is decided by the checks of the current code and run
   (`followup`, report-check), as before. An earlier audit, another
   protocol or another promise block supersede nothing, nor a record no
-  attempt names. An audit's start event records the promise block it
+  attempt names. The protocol is named by its file name in the area, not by the head's `id` (a protocol without an `id` must still be nameable; Max, 2026-10-28): a protocol file renamed since counts as another protocol, so its earlier failed calls stay named until the file is renamed back and audited, or the area is handed over. An audit's start event records the promise block it
   read and the protocol it audited, by file name in the area
   (`block_sha`, `protocol`; `attempts.begin` takes both as keywords, None
   for a review, whose start names neither; `Attempt.block_sha`,

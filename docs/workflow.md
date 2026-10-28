@@ -322,7 +322,7 @@ same protocol with the same promise block supersedes it, also after a
 code change: `--findings` then shows it as superseded, informational.
 The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. Whether the current result may be adopted is decided
 by the checks of the current code and run (the follow-up holds,
-report-check), not by the supersession. A historical call (a start of
+report-check), not by the supersession. The protocol is named by its file name in the area, not by the head's `id` (a protocol without an `id` must still be nameable; Max, 2026-10-28): a protocol file renamed since counts as another protocol, so its earlier failed calls stay named until the file is renamed back and audited, or the area is handed over. A historical call (a start of
 labkit 0.103.0 or earlier, which names no promise block and protocol, or
 a `-failed.toml` no journal attempt names) is named as such with the
 audit, run again now in the current format, that supersedes it — an

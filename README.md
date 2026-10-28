@@ -182,7 +182,8 @@ error and its kept answer and offers the handover without inventing
 findings; it exits 2 then. A later completed audit of the same mode and
 the same protocol with the same promise block supersedes the call, also
 after a code change (the journal's order; an earlier audit, another
-protocol or promise block supersede nothing): it is then shown as
+protocol or promise block supersede nothing; a protocol is named by its
+file name, so one renamed since counts as another): it is then shown as
 superseded by that record, informational, never as open. The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. A historical call —
 its start written by labkit 0.103.0 or earlier without a promise block
 and protocol, or a `-failed.toml` no journal attempt names — is named as

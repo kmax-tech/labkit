@@ -314,6 +314,11 @@ def superseding_record(
     - any other call: a record of the same mode and promise block that a
       later attempt of JOURNAL, started on the same protocol, ended with.
 
+    PROTOCOL is the file name in the area, not the head's `id` (a protocol
+    without one must be nameable): a file renamed since counts as another
+    protocol, and its earlier calls stay named until it is renamed back and
+    audited, or the area is handed over (Max, 2026-10-28).
+
     RECORDS are the area's records of findings by file name under audits/;
     one no attempt names supersedes nothing, nor does an earlier one. The
     call's BLOCK_SHA is its own: a `-failed.toml` carries it in its file,
