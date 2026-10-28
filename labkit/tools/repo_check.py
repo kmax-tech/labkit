@@ -44,6 +44,7 @@ from labkit.formats import console, protocol_block, rules
 from labkit.gates import install_hooks
 from labkit.formats.repo import (
     SKIP_DIRS,
+    file_url_path,
     commit_of,
     text_at,
     VCS_REQUIREMENT,
@@ -79,9 +80,7 @@ class Pin:
     @property
     def local_path(self) -> Path | None:
         """The checkout a `git+file://` source names, None for a remote."""
-        if self.source.startswith("git+file://"):
-            return Path(self.source.removeprefix("git+file://"))
-        return None
+        return file_url_path(self.source) if self.source.startswith("git+") else None
 
 
 def version_tuple(version: str) -> tuple[int, ...]:

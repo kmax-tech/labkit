@@ -94,6 +94,7 @@ import ast
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
+from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
 from labkit.formats.gate import (
     EXIT_CONTRACT,
@@ -590,6 +591,7 @@ def write_bundle(
     files += area_files(area)
     files += imported_repo_helpers(area, repo)
     unreadable: list[str] = []
+    pieces: list[tuple[str, str]] = []
     for f in files:
         label = shown(f, repo)
         try:
@@ -597,7 +599,8 @@ def write_bundle(
         except (OSError, UnicodeError) as exc:
             unreadable.append(label)
             body = f"not readable: {exc}"
-        parts.append(f"\n===== FILE: {label} =====\n{body}")
+        pieces.append((f"FILE: {label}", body))
+    parts.append(prompt_body(pieces))
     out.write_text("".join(parts), encoding="utf-8")
     return len(files) - len(unreadable), unreadable
 

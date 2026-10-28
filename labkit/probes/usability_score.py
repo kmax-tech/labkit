@@ -18,6 +18,7 @@ from pathlib import Path
 
 from labkit.probes import agent_transcript, code_navigation, protocol_reading
 from labkit.formats import answering_run, console, findings, promises, runs
+from labkit.formats.repo import EXPERIMENTS
 from labkit.probes import sab_cases
 from labkit.probes.usability import (
     LOG_LINE,
@@ -192,7 +193,7 @@ def load_probe_run(root: Path) -> ProbeRun:
             "usability", f"{probe_file} missing — was {root} staged here?"
         )
     probe = read_probe(probe_file)
-    area = root / "experiments" / probe.area
+    area = root / EXPERIMENTS / probe.area
     run = latest_run(area)
     if run is None:
         return ProbeRun(probe, area, None, None, {}, None, None, False, None)

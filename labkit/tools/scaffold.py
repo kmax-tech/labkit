@@ -54,6 +54,7 @@ from labkit.formats.runs import runs_path
 from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_fill import fill, fill_head
 from labkit.formats.repo import (
+    EXPERIMENTS,
     commit_of,
     files_at,
     first_added,
@@ -134,7 +135,7 @@ LAB_FILES = (
 #: the templates `stamp_lab` writes — what the ref a lab's pin names must hold unchanged
 LAB_TEMPLATES = ("AGENTS.md.template", *(tmpl for tmpl, _ in LAB_FILES))
 LAB_DIRS = (
-    "experiments",
+    EXPERIMENTS,
     "data/raw",
     "data/prepared",
     "lib",
@@ -517,7 +518,7 @@ def stamp_area(
     REPORT, and with REPORT where NAME names no one area
     (`existing_area`)."""
     slug = area_slug(name)
-    experiments = root / "experiments"
+    experiments = root / EXPERIMENTS
     if not (root / "models.toml").is_file() or not experiments.is_dir():
         raise console.Refused(
             "labkit-init",
@@ -735,7 +736,7 @@ def restampable_area(root: Path, name: str, kind: str) -> Path:
     measured. Raises `console.Refused` otherwise — after a run the kind is
     part of the registration the first measurement stood on
     (`report_check.registration_gaps`), so the way is a new registration."""
-    experiments = root / "experiments"
+    experiments = root / EXPERIMENTS
     slug = area_slug(name)
     area = existing_area(experiments, name)
     if area is None:
@@ -1484,7 +1485,7 @@ def main(argv: list[str]) -> int:
             "step --explore prints next"
         )
     if a.explore:
-        print("\n".join(stamp_explore(root / "experiments", area_slug(a.name))))
+        print("\n".join(stamp_explore(root / EXPERIMENTS, area_slug(a.name))))
         print(explore_next(area_slug(a.name)))
         return 0
     if a.change_kind:

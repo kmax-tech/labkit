@@ -77,7 +77,11 @@ RULES: list[tuple[str, str, set[str]]] = [
     # joined the prompt themselves (audit 2026-10-27, third); `audit.SEP`,
     # `audit.LEAD`, `audit.prompt_body`
     ("an answer-line separator spelled by hand", r"\(\?:·\|—\|–\|:\)", {"audit"}),
-    ("a prompt joined by hand", r"\.join\(f\"===== \{", {"audit"}),
+    (
+        "a prompt joined by hand",
+        r"\.join\(f\"===== \{|f\"\\n?===== FILE: \{",
+        {"prompts"},
+    ),
     # report-check printed `--into` with the protocol relative to the report
     # and the report relative to the repo: run from neither (audit
     # 2026-10-27, third, S2); `repo.into_command`
@@ -103,6 +107,23 @@ RULES: list[tuple[str, str, set[str]]] = [
         "an area-test run rendered by hand",
         r"pytest is not installed in this",
         {"preflight"},
+    ),
+    # audit modes, the experiments folder and a file:// URL were spelled by
+    # hand in several modules (audit 2026-10-28, H5, H8)
+    (
+        "an audit mode spelled by hand",
+        r"[=!]= \"(?:analysis|preflight)\"|mode=\"(?:analysis|preflight)\"",
+        {"standard_contract"},
+    ),
+    (
+        "the experiments folder named by hand",
+        r"\"experiments\"[,)]|/ \"experiments\"",
+        {"repo"},
+    ),
+    (
+        "a file:// URL read by hand",
+        r"url\[7:\]|removeprefix\(\"(?:git\+)?file://\"\)",
+        {"repo"},
     ),
     # the run's start and reindex each checked the index header and spelled
     # its name (audit 2026-10-28, H4); `runlog.RUN_INDEX`, `header_refusal`
@@ -301,6 +322,9 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
+            "an audit mode spelled by hand": 'if record.mode == "analysis":',
+            "the experiments folder named by hand": 'experiments = root / "experiments"',
+            "a file:// URL read by hand": "return Path(url[7:])",
             "the run index named by hand": 'index = base_dir / "runs.tsv"',
             "a ref's commit asked of git by hand": 'git_run(["rev-parse", f"{ref}^{{commit}}"], d)',
             "an area-test run rendered by hand": '"pytest is not installed in this interpreter — tests not run"',

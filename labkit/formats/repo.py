@@ -101,7 +101,7 @@ def area_path(arg: str) -> Path:
         return given
     hits: set[Path] = set()
     for base in {Path.cwd(), git_root(Path.cwd()) or Path.cwd()}:
-        hits.update(p.resolve() for p in areas_named(base / "experiments", arg))
+        hits.update(p.resolve() for p in areas_named(base / EXPERIMENTS, arg))
     if len(hits) > 1:
         names = ", ".join(sorted(shown(h, Path.cwd()) for h in hits))
         raise AmbiguousArea(
@@ -234,6 +234,19 @@ def split_area_name(name: str) -> tuple[str | None, str]:
     carries no `NN-` prefix. Four regexes said this before (audit 2026-10-15)."""
     m = AREA_NAME.match(name)
     return (m.group(1), m.group(2)) if m else (None, name)
+
+
+#: the folder of a lab repo that holds its experiment areas
+EXPERIMENTS = "experiments"
+
+
+def file_url_path(url: str) -> Path | None:
+    """The local path a `file://` URL names — also after `git+`, as pip and
+    a requirement pin write it —; None for any other URL. One reading for a
+    lock's ref, an editable install and a pin's source (audit 2026-10-28,
+    H8)."""
+    plain = url.removeprefix("git+")
+    return Path(plain.removeprefix("file://")) if plain.startswith("file://") else None
 
 
 def areas_named(experiments: Path, name: str) -> list[Path]:

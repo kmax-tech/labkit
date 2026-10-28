@@ -209,7 +209,7 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
     except findings.FindingsError as exc:
         raise SystemExit(f"runlog: {exc}") from exc
     blockers, lesser = [], []
-    for u in findings.open_findings(records, mode="preflight"):
+    for u in findings.open_findings(records, mode=PREFLIGHT_AUDIT):
         (blockers if u.grade == "BLOCKER" else lesser).append(u.line)
     return blockers, lesser
 

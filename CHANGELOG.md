@@ -1131,6 +1131,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Three homes across modules of the 2026-10-28 audit.** The
+  `===== label =====` join an agent reads lives in `formats/prompts.py`
+  (`prompt_body`), so the code-check bundle uses it too — it spelled its
+  own from a layer below the audit's. The audit modes are
+  `standard_contract.PREFLIGHT_AUDIT` and `ANALYSIS_AUDIT` everywhere
+  (`findings.MODES` is built from them). `repo.EXPERIMENTS` names the
+  areas' folder and `repo.file_url_path` reads a `file://` URL, also after
+  `git+`, for a lock's ref, an editable install and a pin's source.
+  `tests/test_one_home.py` holds a hand spelling of each. Register
+  `docs/audit-2026-10-28-today.md`, H3, H5, H8.
 - **Four small homes of the 2026-10-28 audit.** `audit.parse` reads its
   closing line through `last_verdict` like the reviewers, and the refusal
   and clarity lines take `LEAD` and `SEP` (a clarity finding written with

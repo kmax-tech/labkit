@@ -148,8 +148,9 @@ def resolve_ref(url: str, ref: str) -> str | None:
     """
     if _HEX_REF.match(ref.lower()):
         return ref.lower()
-    if url.startswith("file://"):
-        return (repo.commit_of(Path(url[7:]), ref) or "").lower()
+    local = repo.file_url_path(url)
+    if local is not None:
+        return (repo.commit_of(local, ref) or "").lower()
     return None
 
 
@@ -175,8 +176,9 @@ def _direct_url_commit(dist: importlib.metadata.Distribution) -> str | None:
     editable = isinstance(info.get("dir_info"), dict) and info["dir_info"].get(
         "editable"
     )
-    if editable and isinstance(url, str) and url.startswith("file://"):
-        return checkout_head(Path(url.removeprefix("file://")))
+    local = repo.file_url_path(url) if editable and isinstance(url, str) else None
+    if local is not None:
+        return checkout_head(local)
     return None
 
 

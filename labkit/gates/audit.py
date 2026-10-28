@@ -84,6 +84,7 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import metrics_path, run_path
 from labkit.run import llm, llm_backends
 from labkit.run.llm import model_entry
+from labkit.formats.prompts import prompt_body
 from labkit.formats import (
     attempts,
     console,
@@ -96,7 +97,12 @@ from labkit.formats import (
     scope_sha,
 )
 from labkit.formats.gate import WARNING, GateFinding, coded
-from labkit.formats.standard_contract import COMPUTE_KIND, lane
+from labkit.formats.standard_contract import (
+    ANALYSIS_AUDIT,
+    COMPUTE_KIND,
+    PREFLIGHT_AUDIT,
+    lane,
+)
 from labkit.gates.ways_out import BLOCKER_ROUTES
 from labkit.formats.repo import (
     ProtocolChoiceError,
@@ -152,7 +158,7 @@ AUDIT_EXIT_CONTRACT = (
     "with no call)"
 )
 CLARITY = "clarity"
-ANALYSIS = "analysis"
+ANALYSIS = ANALYSIS_AUDIT  # its one spelling is standard_contract's
 STANDARD_LABEL = (
     "labkit/docs/standard.md"  # the shipped standard, wherever labkit is installed
 )
@@ -728,13 +734,6 @@ def last_verdict(
     return matches[-1]
 
 
-def prompt_body(pieces: list[tuple[str, str]]) -> str:
-    """PIECES as an agent's prompt inlines them: each under a `===== label
-    =====` line (`INLINE_NOTE` tells the agent so). One home for the audit
-    and both reviewers."""
-    return "".join(f"===== {label} =====\n{text}\n" for label, text in pieces)
-
-
 def parse_clarity(text: str) -> dict:
     """{"findings": N, "wrong": M, "lines": [(rule, line)]} from the LAST
     `verdict: N findings (M would be answered wrong)` line. Raises AuditError
@@ -837,7 +836,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
     2026-10-05: two preflight audits and an analysis audit at low repeat cost, and
     the protocol itself says one after the first run would have done. A
     head this labkit cannot read says nothing here — protocol-check does."""
-    if mode != "preflight":
+    if mode != PREFLIGHT_AUDIT:
         return []
     try:
         head = protocol_block.head(protocol.read_text(encoding="utf-8"))
@@ -1323,7 +1322,7 @@ def _stamp_report(
     (`preflight_audit = "<record>"`, once every finding is decided); and a
     NOTE when the code changed while the auditor read it."""
     print(f"\nstamp: {stamp_facts(stamp, verdict)}", file=sys.stderr)
-    if mode == "preflight":
+    if mode == PREFLIGHT_AUDIT:
         print(
             f'head: preflight_audit = "{recorded.name}" — once every finding is '
             f"decided, name this record in [protocol] and freeze "

@@ -68,6 +68,8 @@ from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import conclusion_written
 from labkit.formats.repo import layout_root, shown, the_protocol
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
+from labkit.formats.prompts import prompt_body
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.gates import audit
 
 #: the review's mode: its instructions, the prompt's MODE line and its
@@ -265,7 +267,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
             pieces.append((f"FILE: {shown(f, repo)}", snap.text(f)))
     pieces += list(seen.pieces)
     pieces.append((f"FILE: {label}", rules_text))
-    body = audit.prompt_body(pieces)
+    body = prompt_body(pieces)
     prompt = (
         f"{audit.instructions(REVIEW)}\n\nMODE: {REVIEW} · AREA: {shown(area, repo)} · "
         f"RECORD: {record.path.name}\n\n{audit.INLINE_NOTE}\n\n{body}"
@@ -309,7 +311,7 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     there is none."""
     if record is not None:
         return findings.read(audit.record_path(area, record))
-    analysis = [r for r in findings.area_records(area) if r.mode == "analysis"]
+    analysis = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
     if not analysis:
         raise findings.FindingsError(f"{area}: no analysis record — nothing to review")
     return analysis[-1]
