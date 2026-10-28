@@ -1693,6 +1693,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The post-change hook tells evidence gone or changed right after the
+  tool.** An agent learnt that a record it deleted or rewrote was evidence
+  only at the stop or the commit, after its next steps rested on it. Now,
+  for an area whose `audits/` or `runs/` git status names, the hook tells
+  at once what those two will hold — `attempts.area_integrity`'s problems
+  and `evidence.changes`/`evidence.ignored` — each line with its restore,
+  once per state (an area git status no longer names forgets its state).
+  It holds nothing itself (`claude_hooks.evidence_areas`,
+  `_untold_evidence`).
 - **The attempt journal keeps a copy outside the working tree, one per
   branch.** Agents deleted `audits/` whole, journal included, before a
   first commit (ninth haiku round t5; first SAB-like draw, 2026-10-27),

@@ -53,9 +53,15 @@ post-change
     and the agent's to start. A report is read at its own path
     (`repo.own_path`), as the stop and the commit read it: one that is a
     symbolic link is told their refusal and its way out
-    (`report_hold.link_gap`). A per-session cache of content hashes keeps a
-    file that was already checked or hinted at this content from being
-    reported after every later command.
+    (`report_hold.link_gap`). An area whose `audits/` or `runs/` git status
+    names (deleted, changed or new) is told what the stop and the commit
+    will hold of its evidence — a record gone, a record rewritten beyond its
+    decision lines, a closed run's file changed — with the restore each line
+    names, right after the tool did it (`_untold_evidence`); it holds
+    nothing itself. A per-session cache of content hashes keeps a
+    file that was already checked or hinted at this content, and an area's
+    evidence in a state already told, from being reported after every later
+    command.
 
 stop
     Before the agent ends its turn: every protocol of an area a changed
@@ -440,10 +446,62 @@ def pre_run(event: dict) -> int:
 # ------------------------------------------------------------ post-change
 
 
-def _git_changed(repo: Path) -> list[Path]:
-    """Every path git sees as changed, untracked included, deletions left
-    out (`repo.status_entries`)."""
-    return [repo / path for xy, path in status_entries(repo) if "D" not in xy]
+def _git_changed(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
+    """Every path of ENTRIES (`repo.status_entries` of REPO) git sees as
+    changed, untracked included, deletions left out."""
+    return [repo / path for xy, path in entries if "D" not in xy]
+
+
+def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
+    """The areas whose evidence ENTRIES (`repo.status_entries` of REPO) name
+    — a path in an area's `audits/` or `runs/`, deleted, changed or new —,
+    each once, in order."""
+    out: list[Path] = []
+    for _, rel in entries:
+        path = repo / rel
+        area = find_area(path, repo)
+        if area is None:
+            continue
+        inside = path.resolve().relative_to(area.resolve()).parts
+        if inside and inside[0] in (findings.DIR, runs.RUNS_DIR) and area not in out:
+            out.append(area)
+    return out
+
+
+#: the post-change cache's key of an area's evidence state, before the area
+EVIDENCE_KEY = "evidence:"
+
+
+def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
+    """What the stop and the commit will hold of each of AREAS' evidence,
+    told right after the tool that changed it, once per state (CACHE,
+    updated in place): every integrity problem (`attempts.area_integrity`)
+    and every change git can undo (`evidence.changes`, `evidence.ignored`),
+    as `<area>: <sentence>` with its way out. An area found clean forgets
+    its state, so a later problem of the same text is told again."""
+    out: list[str] = []
+    for area in areas:
+        lines = [
+            *attempts.area_integrity(area).problems,
+            *evidence.changes(area),
+            *evidence.ignored(area),
+        ]
+        key = f"{EVIDENCE_KEY}{area}"
+        if not lines:
+            cache.pop(key, None)
+            continue
+        digest = scope_digest("\n".join(lines).encode("utf-8"))
+        if cache.get(key) == digest:
+            continue
+        cache[key] = digest
+        shown_area = area.resolve().relative_to(repo.resolve()).as_posix()
+        out.append(
+            f"evidence of {shown_area} is gone or changed — restore it now; the "
+            "stop and the commit hold what each line names (a current handover "
+            "acknowledges a loss, never a change git can undo):\n  "
+            + "\n  ".join(f"{shown_area}: {line}" for line in lines)
+        )
+    return out
 
 
 def wants_check(path: Path) -> str | None:
@@ -493,14 +551,14 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
 
 
 def post_change(event: dict) -> int:
-    """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that discusses a run gets the report review's command (`report_review.review_hint`), once per text; the findings go back as context."""
+    """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that discusses a run gets the report review's command (`report_review.review_hint`), once per text; evidence gone or changed in an area whose `audits/` or `runs/` git status names gets what the stop and the commit will hold, with its way out (`_untold_evidence`), once per state; the findings go back as context."""
     found = session_repo(event)
     # outside git only the tool's own file is checked, shown against the
     # project directory
     repo = found if found is not None else _project_dir(event)
     candidates: list[Path] = []
-    if found is not None:
-        candidates.extend(_git_changed(repo))
+    entries = status_entries(repo) if found is not None else []
+    candidates.extend(_git_changed(repo, entries))
     fp = (event.get("tool_input") or {}).get("file_path")
     if fp:
         candidates.append(Path(fp))
@@ -510,13 +568,18 @@ def post_change(event: dict) -> int:
         for path, text in report_hold.report_files(named, repo, staged=False)
         if (hint := _report_hint(text, path, repo))
     ]
-    if not targets and not marked:
-        return 0
-
+    areas = evidence_areas(repo, entries)
     cache_file = _cache_path(event.get("session_id"))
     cache = _load_cache(cache_file)
+    before = dict(cache)
+    # an area git status no longer names is as HEAD holds it again: its
+    # state told goes, so the same loss later is told again
+    held = {f"{EVIDENCE_KEY}{area}" for area in areas}
+    for key in [k for k in cache if k.startswith(EVIDENCE_KEY) and k not in held]:
+        del cache[key]
     reports = _untold(cache, marked, targets, repo)
-    if cache_file is not None:
+    reports += _untold_evidence(cache, areas, repo)
+    if cache_file is not None and cache != before:
         cache_file.write_text(json.dumps(cache, indent=1), encoding="utf-8")
     if reports:
         _context("PostToolUse", "\n".join(reports))

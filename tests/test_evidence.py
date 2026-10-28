@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import sys
 import tempfile
@@ -301,6 +302,70 @@ class Session(unittest.TestCase):
         self._commit("run", "--amend")
         rc, err = self._stop()
         self.assertEqual(rc, 0, err)
+
+
+class Told(unittest.TestCase):
+    """The post-change hook says right after the tool what the stop and the
+    commit will hold of an area's evidence; it holds nothing itself."""
+
+    def setUp(self):
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.area = self.root / "experiments" / "01-x"
+        (self.area / "scripts").mkdir(parents=True)
+        (self.area / "PROTOCOL-x.md").write_text(head(), encoding="utf-8")
+        self.record = _record(self.area)
+        self.closed = _run_dir(self.area, CLOSED, closed=True)
+        _git(self.root, "init", "-q", ".")
+        _git(self.root, "config", "user.email", "t@t")
+        _git(self.root, "config", "user.name", "t")
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "evidence")
+        self.event = {
+            "session_id": "s-" + os.urandom(4).hex(),
+            "cwd": str(self.root),
+            "tool_name": "Bash",
+            "tool_input": {"command": "rm …"},
+        }
+
+    def _told(self) -> str:
+        rc, out, _ = _run(claude_hooks.post_change, self.event)
+        self.assertEqual(rc, 0)  # it tells, never holds
+        if not out:
+            return ""
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"]
+
+    def test_a_deleted_record_is_told_once_with_its_restore(self):
+        self.record.unlink()
+        ctx = self._told()
+        self.assertIn("evidence of experiments/01-x is gone or changed", ctx)
+        self.assertIn(f"audits/{self.record.name} is committed and gone", ctx)
+        self.assertIn("git checkout HEAD --", ctx)
+        self.assertEqual(self._told(), "")  # the same state, told already
+
+    def test_a_closed_runs_file_changed_is_told(self):
+        (self.closed / "metrics.json").write_text('{"acc": 0.99}\n', encoding="utf-8")
+        ctx = self._told()
+        self.assertIn(f"runs/{CLOSED}: the closed run's metrics.json (changed)", ctx)
+
+    def test_a_decision_and_a_new_run_are_silent(self):
+        findings.write_decision(self.record, 1, "accepted", "noted", "stands")
+        _run_dir(self.area, OPEN, closed=False)
+        self.assertEqual(self._told(), "")
+
+    def test_a_restore_forgets_the_state_so_the_next_loss_is_told_again(self):
+        self.record.unlink()
+        self.assertNotEqual(self._told(), "")
+        _git(
+            self.root,
+            "checkout",
+            "HEAD",
+            "--",
+            f"experiments/01-x/audits/{self.record.name}",
+        )
+        self.assertEqual(self._told(), "")
+        self.record.unlink()
+        self.assertNotEqual(self._told(), "")
 
 
 def _head(root: Path) -> str:
