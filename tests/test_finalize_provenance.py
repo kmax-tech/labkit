@@ -178,6 +178,64 @@ class Provenance(unittest.TestCase):
         self.assertNotIn("git ignores", line)
         self.assertIn(f"commit it (`git add {self.src}`)", line)
 
+    def _directory_source(self) -> tuple[Path, dict]:
+        """A source directory the run read: a note and two data files."""
+        geo = self.repo / "data" / "raw" / "geo"
+        geo.mkdir(parents=True)
+        (geo / "SOURCE.md").write_text("where the files come from\n")
+        (geo / "roads.geojson").write_text("{}\n")
+        (geo / "area.geojson").write_text("{}\n")
+        return geo, {"geo": {"path": str(geo), "rows": 3, "sha256": "cd"}}
+
+    def _blocker_line(self) -> str:
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        return next(x for x in out.splitlines() if "not tracked in git" in x)
+
+    def test_a_directory_with_one_file_tracked_is_not_tracked(self):
+        # pilot t21: benchmark/ excluded, only SOURCE.md committed (with -f),
+        # and finalize said "source and output tracked in git … all clear"
+        (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
+        geo, data = self._directory_source()
+        self._run(SHORT, data, commit=True)  # `git add -A` skips data/raw/
+        _git(self.repo, "add", "-f", str(geo / "SOURCE.md"))
+        _git(self.repo, "commit", "-qm", "the note")
+        line = self._blocker_line()
+        self.assertIn("2 file(s) under it are not (area.geojson, roads.geojson)", line)
+        self.assertIn(
+            "git ignores files under it (.git/info/exclude:1:data/raw/)", line
+        )
+        command = line.split("past the rule (`", 1)[1].split("`", 1)[0]
+        self.assertEqual(
+            command,
+            f"git add -f -- {(geo / 'area.geojson').resolve()} "
+            f"{(geo / 'roads.geojson').resolve()}",
+        )
+        subprocess.run(command.split(), cwd=self.repo, check=True)
+        _git(self.repo, "commit", "-qm", "the data")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("source frozen in the run; source and output tracked", out)
+
+    def test_an_untracked_directory_is_committed_file_by_file(self):
+        geo, data = self._directory_source()
+        self._run(SHORT, data, commit=True)
+        _git(self.repo, "rm", "-q", "--cached", str(geo / "roads.geojson"))
+        _git(self.repo, "commit", "-qm", "one file out")
+        line = self._blocker_line()
+        self.assertIn("1 file(s) under it are not (roads.geojson)", line)
+        self.assertNotIn("git ignores", line)
+        self.assertIn(
+            f"commit it (`git add -- {(geo / 'roads.geojson').resolve()}`)", line
+        )
+
+    def test_a_hidden_file_under_a_directory_source_is_none_it_read(self):
+        geo, data = self._directory_source()
+        self._run(SHORT, data, commit=True)
+        (geo / ".DS_Store").write_text("x")  # outside the run's digest
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+
     def test_the_printed_handover_is_the_one_agents_md_gives(self):
         agents = (PACKAGE_DIR / "templates" / "AGENTS.md.template").read_text(
             encoding="utf-8"

@@ -403,6 +403,18 @@ pins (`requirements.txt` / `requirements.lock`).
   yields; what only the prompt skeleton's adds is the data-profile aid,
   and the sentence now says that. Pilot of labkit-paper area 15 on
   c2c5da2 (t71, t15), defect 12.
+- **A source directory counts as tracked only when each of its files is.**
+  finalize asked `git ls-files --error-unmatch <dir>`, which succeeds once
+  one file under the directory is tracked: with only a `SOURCE.md`
+  committed it said "source and output tracked in git … all clear" while
+  both GeoJSON files the number read stayed untracked (labkit-paper area
+  15, pilot t21). A directory source is now held file by file: each
+  visible file under it — the files the run's digest and row count cover
+  (`provenance.visible_files`, now public; the record keeps no list of
+  them) — must be tracked, and the blocker names the untracked ones; a
+  hidden file is none the run read. The commit names each of those files
+  (`git add -- …`, `-f` under an ignore rule), so no file the run did not
+  read goes in.
 - **finalize's way out for an ignored source leads out.** Its `git add
   <source>` was refused for a path git ignores ("The following paths are
   ignored by one of your .gitignore files"; labkit-paper area 15, pilot

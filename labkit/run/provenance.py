@@ -312,9 +312,11 @@ def resolve_models(config: dict) -> dict:
     return out
 
 
-def _visible_files(directory: Path) -> list[Path]:
+def visible_files(directory: Path) -> list[Path]:
     """Every regular file below `directory` that no hidden path component
-    hides — `.DS_Store` once moved a mean by a whole document (2026-10-05)."""
+    hides — the files a directory source's digest and row count cover
+    (`source_digest`, `_data_rows`), and so the ones finalize holds to git.
+    `.DS_Store` once moved a mean by a whole document (2026-10-05)."""
     return sorted(
         p
         for p in directory.rglob("*")
@@ -337,7 +339,7 @@ def source_digest(path: Path) -> str:
         return tree_digest(
             (
                 (f.relative_to(path).as_posix(), f.read_bytes())
-                for f in _visible_files(path)
+                for f in visible_files(path)
             ),
             chars=None,
         )
@@ -352,7 +354,7 @@ def _data_rows(path: Path) -> int:
     tests).
     """
     if path.is_dir():
-        return len(_visible_files(path))
+        return len(visible_files(path))
     count = 0
     with path.open(encoding="utf-8") as fh:
         for line in fh:
