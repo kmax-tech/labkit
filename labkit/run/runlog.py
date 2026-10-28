@@ -221,6 +221,30 @@ def _index_lock(base_dir: Path) -> Iterator[None]:
             os.close(fd)
 
 
+def index_row(
+    run_id: str,
+    git: str,
+    script: str,
+    data: object,
+    config: object,
+    metrics: object,
+    note: str,
+    protocol_id: str,
+) -> list[str]:
+    """One row of the run index in RUN_INDEX_COLS order — the one layout
+    for a run's end (`Run.finish`) and `reindex`, which each built it."""
+    return [
+        run_id,
+        git,
+        script,
+        json.dumps(data, ensure_ascii=False, sort_keys=True),
+        json.dumps(config, ensure_ascii=False, sort_keys=True),
+        json.dumps(metrics, ensure_ascii=False, sort_keys=True),
+        note,
+        protocol_id,
+    ]
+
+
 def _append_row(index: Path, row: list[str]) -> None:
     """One row onto the run index, header created if absent. Callers hold
     the index lock — header creation reads the file too."""
@@ -628,16 +652,16 @@ class Run:
                 indent=2,
             ),
         )
-        row = [
+        row = index_row(
             self.run_id,
             git_end,
             self.script,
-            json.dumps(self._data, ensure_ascii=False, sort_keys=True),
-            json.dumps(self._config, ensure_ascii=False, sort_keys=True),
-            json.dumps(self._metrics, ensure_ascii=False, sort_keys=True),
+            self._data,
+            self._config,
+            self._metrics,
             self._note,
             self._protocol.get("id") or "",
-        ]
+        )
         with _index_lock(self.base):
             _append_row(self.base / "runs.tsv", row)
         dur = self._metrics.get("duration_s", 0)
@@ -762,72 +786,97 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
     return lines[0].split("\t"), [ln.split("\t") for ln in lines[1:] if ln]
 
 
-def reindex(base_dir: Path) -> int:  # noqa: C901 complexity baseline 2026-10-08
+@dataclass(frozen=True)
+class Unindexed:
+    """What the run folders hold that the run index does not
+    (`unindexed`): the ROWS of completed runs without one, the INCOMPLETE
+    runs' ids, and the UNREADABLE runs' errors (damaged, or written before
+    schema 4)."""
+
+    rows: list[list[str]]
+    incomplete: list[str]
+    unreadable: list[str]
+
+
+def index_refusal(index: Path, header: list[str], rows: list[list[str]]) -> str | None:
+    """Why the run index INDEX (its HEADER and ROWS) may not be appended to,
+    or None: old columns, or a run id listed more than once."""
+    if header and header != RUN_INDEX_COLS:
+        return (
+            f"{index} has old columns {header} — migrate it "
+            f"with labkit 0.47 (`runlog migrate-index`) first."
+        )
+    seen: dict[str, int] = {}
+    for row in rows:
+        if row:
+            seen[row[0]] = seen.get(row[0], 0) + 1
+    dupes = sorted(rid for rid, n in seen.items() if n > 1)
+    if dupes:
+        return (
+            f"{index} lists {len(dupes)} run_id(s) more than "
+            f"once: {', '.join(dupes[:5])} — repair by hand; a run "
+            f"belongs in the index exactly once."
+        )
+    return None
+
+
+def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
+    """The runs of BASE_DIR not among INDEXED (`Unindexed`): a completed one
+    as its index row, read from its record; reads, writes nothing."""
+    rows: list[list[str]] = []
+    incomplete: list[str] = []
+    unreadable: list[str] = []
+    for rd in run_dirs(base_dir):
+        d, cfg = rd.dir, rd.config
+        if d.name in indexed:
+            continue
+        if rd.error is not None:
+            unreadable.append(rd.error)
+            continue
+        if cfg is None:
+            continue
+        if run_state(d, alive=False) != COMPLETED:
+            incomplete.append(d.name)
+            continue
+        comp = read_completion(d)
+        rows.append(
+            index_row(
+                d.name,
+                str(comp.get("git", "")),
+                cfg.script or "",
+                cfg.data,
+                cfg.config,
+                read_metrics(metrics_path(d)),
+                str(comp.get("note", "")),
+                cfg.protocol.id or "",
+            )
+        )
+    return Unindexed(rows, incomplete, unreadable)
+
+
+def reindex(base_dir: Path) -> int:
     """Rebuild the run index (runs.tsv) from the run folders: append a row for
-    every completed run that has none. Never rewrites.
+    every completed run that has none (`unindexed`). Never rewrites.
 
     A row that exists stays untouched. Only runs with both completion
     markers are indexed; a run whose metadata cannot be read (damaged, or
-    written before schema 4) is reported, never indexed — exit 2.
+    written before schema 4) is reported, never indexed — exit 2. An index
+    with old columns or a run listed twice is refused (`index_refusal`),
+    exit 2.
     """
     index = base_dir / "runs.tsv"
     with _index_lock(base_dir):
         header, rows = _read_index(index)
-        if header and header != RUN_INDEX_COLS:
-            console.refuse(
-                "runlog",
-                f"{index} has old columns {header} — migrate it "
-                f"with labkit 0.47 (`runlog migrate-index`) first.",
-            )
+        why = index_refusal(index, header, rows)
+        if why is not None:
+            console.refuse("runlog", why)
             return 2
-        seen: dict[str, int] = {}
-        for row in rows:
-            if row:
-                seen[row[0]] = seen.get(row[0], 0) + 1
-        dupes = sorted(rid for rid, n in seen.items() if n > 1)
-        if dupes:
-            console.refuse(
-                "runlog",
-                f"{index} lists {len(dupes)} run_id(s) more than "
-                f"once: {', '.join(dupes[:5])} — repair by hand; a run "
-                f"belongs in the index exactly once.",
-            )
-            return 2
-
-        added, incomplete, unreadable = 0, [], []
-        for rd in run_dirs(base_dir):
-            d, cfg = rd.dir, rd.config
-            if d.name in seen:
-                continue
-            if rd.error is not None:
-                unreadable.append(rd.error)
-                continue
-            if cfg is None:
-                continue
-            state = run_state(d, alive=False)
-            if state != COMPLETED:
-                incomplete.append(d.name)
-                continue
-            comp = read_completion(d)
-            metrics = read_metrics(metrics_path(d))
-            _append_row(
-                index,
-                [
-                    d.name,
-                    str(comp.get("git", "")),
-                    cfg.script or "",
-                    json.dumps(cfg.data, ensure_ascii=False, sort_keys=True),
-                    json.dumps(cfg.config, ensure_ascii=False, sort_keys=True),
-                    json.dumps(metrics, ensure_ascii=False, sort_keys=True),
-                    str(comp.get("note", "")),
-                    cfg.protocol.id or "",
-                ],
-            )
-            added += 1
-
-    print(f"runlog: {added} row(s) appended to {index}.")
-    for name in incomplete:
+        found = unindexed(base_dir, {row[0] for row in rows if row})
+        for row in found.rows:
+            _append_row(index, row)
+    print(f"runlog: {len(found.rows)} row(s) appended to {index}.")
+    for name in found.incomplete:
         print(f"  {name}: not completed — nothing to index.")
-    for err in unreadable:
+    for err in found.unreadable:
         print(f"  NOT INDEXED: {err}")
-    return 2 if unreadable else 0
+    return 2 if found.unreadable else 0

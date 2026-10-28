@@ -35,6 +35,11 @@ class RebuiltIndex(unittest.TestCase):
             appended = index.read_text(encoding="utf-8")
             self.assertEqual(len(appended.splitlines()), 3)  # header + two runs
             index.unlink()
+            # the reading writes nothing; reindex appends what it found
+            # (audit 2026-10-27, third, M4)
+            found = runlog.unindexed(area, set())
+            self.assertEqual((len(found.rows), found.unreadable), (2, []))
+            self.assertFalse(index.exists())
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(runlog.reindex(area), 0)
             rebuilt = index.read_text(encoding="utf-8").splitlines()
@@ -43,6 +48,16 @@ class RebuiltIndex(unittest.TestCase):
             # of them started first (`runs.run_dirs`)
             self.assertEqual(rebuilt[0], appended.splitlines()[0])
             self.assertEqual(sorted(rebuilt[1:]), sorted(appended.splitlines()[1:]))
+
+
+class IndexRefusal(unittest.TestCase):
+    def test_a_run_listed_twice_is_refused_old_columns_too(self):
+        row = ["2026-10-27T10-00-00_ab12"] + [""] * (len(runlog.RUN_INDEX_COLS) - 1)
+        index = Path("runs.tsv")
+        why = runlog.index_refusal(index, runlog.RUN_INDEX_COLS, [row, row])
+        self.assertIn("more than once", why or "")
+        self.assertIn("old columns", runlog.index_refusal(index, ["run_id"], []) or "")
+        self.assertIsNone(runlog.index_refusal(index, runlog.RUN_INDEX_COLS, [row]))
 
 
 class IgnoredByTheStamp(unittest.TestCase):

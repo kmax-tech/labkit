@@ -1113,6 +1113,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One layout of a run-index row; `runlog reindex` reads, appends and
+  prints in steps.** A run's end and `reindex` each built the row; both
+  use `runlog.index_row`. `reindex` read the folders, appended and
+  printed in one body; `index_refusal` (old columns, a run listed twice)
+  and `unindexed` (writes nothing) are its steps now. Audit 2026-10-27
+  (third), M4.
 - **A function named `write_*` writes.** Four pure functions that return
   a report's text with a block in it were named as writers;
   `report_blocks.with_block`, `with_discussion`,
