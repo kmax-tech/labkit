@@ -289,6 +289,40 @@ class ApplyScreenTest(unittest.TestCase):
         self.assertEqual(sab_cases.evaluate(self.root, "apply-screen")[0], 0)
 
 
+class MeaningTest(unittest.TestCase):
+    """A matching key is not a matching quantity: the kept number counts as
+    the task's only when its SCORE and its labelled items are the task's
+    (2026-10-28: c1_score read for val_roc_auc proves the name only)."""
+
+    def test_fit_assay_holds_score_and_items(self):
+        m = sab_cases.meaning("fit-assay")
+        assert m is not None
+        self.assertEqual((m.score, m.items), ("auc", 320))
+        self.assertIsNone(sab_cases.meaning_gap("fit-assay", "auc", 320))
+        accuracy = sab_cases.meaning_gap("fit-assay", "accuracy", 320) or ""
+        self.assertIn("SCORE is 'accuracy', not 'auc'", accuracy)
+        val_only = sab_cases.meaning_gap("fit-assay", "auc", 80) or ""
+        self.assertIn("over 80 labelled item(s), not 320", val_only)
+        self.assertIn("not an AUC on the validation split alone", val_only)
+
+    def test_apply_screen_holds_the_labelled_persons(self):
+        m = sab_cases.meaning("apply-screen")
+        assert m is not None
+        self.assertIsNone(sab_cases.meaning_gap("apply-screen", "accuracy", m.items))
+        self.assertIn(
+            "SCORE is 'auc'",
+            sab_cases.meaning_gap("apply-screen", "auc", m.items) or "",
+        )
+        self.assertIn(
+            "not the task's number",
+            sab_cases.meaning_gap("apply-screen", "accuracy", m.items + 1) or "",
+        )
+
+    def test_a_computation_names_its_own_key(self):
+        self.assertIsNone(sab_cases.meaning("compute-hrv"))
+        self.assertIsNone(sab_cases.meaning_gap("compute-hrv", None, None))
+
+
 class HarnessTest(unittest.TestCase):
     def test_stage_and_score_through_the_real_harness(self):
         for task, c in sab_cases.CASES.items():

@@ -130,6 +130,9 @@ class Score:
     evaluation_detail: str | None = (
         None  # what the evaluation measured, or why it could not read the output
     )
+    # a SAB-like case: why the kept number is not the task's quantity
+    # (`sab_cases.meaning_gap`), None when it is or the case has no meaning
+    number_meaning: str | None = None
 
 
 def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
@@ -529,12 +532,24 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
     except (agent_transcript.TranscriptError, OSError) as exc:
         raise console.Refused("usability", f"transcript: {exc}") from exc
     failed = findings.failed_attempts(pr.area)
+    # a matching key is not a matching quantity: the run's SCORE and items
+    # are held to what the task's number means, and a mismatch is named
+    # SCORE is the script's own setting (`RunConfig.config`, free JSON),
+    # not a labkit field of the record
+    own = pr.config.config if pr.config is not None else {}
+    number_meaning = (
+        sab_cases.meaning_gap(probe.task, own.get("score"), metrics.get("n_items"))
+        if sab and run is not None
+        else None
+    )
     sc = Score(
         probe=probe,
         run_id=run.name if run else None,
         number=number,
         expected=expected,
-        number_ok=sab_cases.number_ok(probe.task, number, expected)
+        number_ok=(
+            number_meaning is None and sab_cases.number_ok(probe.task, number, expected)
+        )
         if sab
         else (
             (number is not None and abs(number - expected) <= TOL)
@@ -553,6 +568,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         audit_unproven=sum(f.cause == "unproven" for f in failed),
         evaluation=verdict,
         evaluation_detail=detail,
+        number_meaning=number_meaning,
     )
     sidecar(root, "score.json").write_text(
         json.dumps(asdict(sc), indent=1), encoding="utf-8"
@@ -564,6 +580,16 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         ("scaffold sha", probe.scaffold_sha),
         ("run", sc.run_id or "none"),
         (f"number ({probe.metric_key})", "absent" if number is None else str(number)),
+        *(
+            [
+                (
+                    "the task's quantity",
+                    f"NO — {number_meaning}" if number_meaning else "yes",
+                )
+            ]
+            if sab and run is not None
+            else []
+        ),
         (
             "equals the truth" if expected is not None else "within [0, 1]",
             "yes"

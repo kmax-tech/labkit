@@ -434,6 +434,63 @@ def truth(root: Path, task: str) -> float | None:
     return None
 
 
+@dataclass(frozen=True)
+class Meaning:
+    """What a case's kept number is, held beside its key: the skeleton's
+    SCORE, the labelled ITEMS it is scored over (metrics' `n_items`), and
+    the quantity in words (SAID). A key that matches proves the name only;
+    SCORE and ITEMS show whether the number is the task's (2026-10-28:
+    fit-assay's `c1_score` is an out-of-fold AUC over train and val, never
+    an AUC on the validation split alone)."""
+
+    score: str
+    items: int
+    said: str
+
+
+def meaning(task: str) -> Meaning | None:
+    """What TASK's kept number means (`Meaning`); None for a computation,
+    whose sheet names its own key and whose number has its own truth.
+    Refuses a task that is no SAB-like case."""
+    if task == "fit-assay":
+        return Meaning(
+            "auc",
+            ASSAY_SPLITS["train"] + ASSAY_SPLITS["val"],
+            "the out-of-fold ROC-AUC over the train and val compounds, the "
+            "skeleton's held-out score — not an AUC on the validation split alone",
+        )
+    if task == "apply-screen":
+        return Meaning(
+            "accuracy",
+            sum(1 for r in cohort_rows() if r["clinician_label"] != ""),
+            "the agreement (accuracy) of the flag with the clinician's label "
+            "over the labelled persons",
+        )
+    case(task)
+    return None
+
+
+def meaning_gap(task: str, score: object, n_items: object) -> str | None:
+    """Why the kept number is not the quantity TASK means (`meaning`), or
+    None: the run's SCORE (its config.json) and the labelled items it is
+    over (metrics' N_ITEMS) against the case's. A sentence naming each
+    difference, never a number that only looks valid."""
+    m = meaning(task)
+    if m is None:
+        return None
+    off = []
+    if score != m.score:
+        off.append(f"its SCORE is {score!r}, not {m.score!r}")
+    if n_items != m.items:
+        off.append(f"it is over {n_items!r} labelled item(s), not {m.items}")
+    if not off:
+        return None
+    return (
+        f"{case(task).metric_key} is not the task's number — {'; '.join(off)}; "
+        f"the task's number is {m.said}"
+    )
+
+
 def number_ok(task: str, number: float | None, expected: float | None) -> bool:
     """The kept number against the truth within the case's relative tolerance,
     or — without a truth — present and within [0, 1]."""
