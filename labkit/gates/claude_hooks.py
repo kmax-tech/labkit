@@ -245,6 +245,78 @@ def _capture(fn: Callable[..., int], *args: object) -> tuple[int, str]:
 # ---------------------------------------------------------------- pre-run
 
 
+def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
+    """What stands before SCRIPT opens a full run, as (blocks, line): the
+    area above it (searched up to STOP), its protocol's head, then the
+    lane's gate — the registration at low repeat cost
+    (`_low_registration_line`), else preflight with the stations' findings
+    as data. Blocks only a frozen protocol with preflight blockers; every
+    other case is a note. One script per call: `pre_run` held all of this
+    inline (audit 2026-10-27, third, M7)."""
+    area = find_area(script, stop)
+    if area is None:
+        return False, (
+            f"{script.name}: opens a run, but no PROTOCOL-*.md "
+            f"above it — unbound runs keep no number (LAB-003 No run without an intent paragraph)."
+        )
+    protocol = protocol_named_in(script, area)
+    texts = [
+        p.read_text(encoding="utf-8")
+        for p in ([protocol] if protocol else area_protocols(area))
+    ]
+    head = f"preflight {area.name}" + (
+        f" --protocol {protocol.name}" if protocol else ""
+    )
+    try:
+        heads = [protocol_block.head(t) for t in texts]
+    except protocol_block.BlockError as exc:
+        return False, f"{head}: protocol head unreadable — {exc}"
+    # which gate stands before a full run is the lane's answer: the
+    # registration (low) or preflight (`standard_contract.lane`)
+    if all(standard_contract.lane(h.repeat_cost).registration for h in heads):
+        return False, _low_registration_line(head, texts)
+    # the stations' findings as data (`preflight_area`'s collector), not
+    # the printed report read back; stdout is kept off the hook's own
+    found = Findings(tell=None)
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc = preflight.preflight_area(area, protocol, found)
+    said = "\n".join(found.summary("preflight", "freezing"))
+    if rc == 1 and any(h.frozen for h in heads):
+        return True, (
+            f"{head}: BLOCKED — the protocol is frozen and "
+            f"preflight reports blockers:\n{said}"
+        )
+    if rc == 1:
+        return False, (
+            f"{head}: blockers, protocol not frozen (pilot) — "
+            f"the full run will not start until they are fixed:\n{said}"
+        )
+    if rc == 2:
+        return (
+            False,
+            f"{head}: could not run preflight — no protocol to hold the area to",
+        )
+    return False, f"{head}: {said.splitlines()[0]}"
+
+
+def _low_registration_line(head: str, texts: list[str]) -> str:
+    """The note for a full run at low repeat cost: no gate runs, and runlog
+    refuses the run while a registration field of TEXTS is open."""
+    missing = sorted(
+        {m for t in texts for m in protocol_check.low_registration_missing(t)}
+    )
+    if not missing:
+        return (
+            f"{head}: repeat cost low — gate not run, the rerun is "
+            f"the probe; registration written (LAB-017 The number of audits follows the cost tier)."
+        )
+    return (
+        f"{head}: repeat cost low, but {', '.join(missing)} still "
+        f"empty or a placeholder — runlog refuses a full run "
+        f"until the registration is written (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)."
+    )
+
+
 def executed_py(words: list[str]) -> list[str]:
     """The .py paths one simple command (WORDS, a `shell.segments` entry)
     RUNS, in order: preceded by an interpreter (flags in between allowed),
@@ -315,7 +387,7 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
     return p if p.is_file() else None
 
 
-def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
+def pre_run(event: dict) -> int:
     """PreToolUse hook on Bash: the session's stop base is kept before its first command (`keep_stop_base`); a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
     if event.get("tool_name", "Bash") != "Bash":
         return 0
@@ -345,67 +417,8 @@ def pre_run(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
     blocked: list[str] = []
     notes: list[str] = []
     for script in scripts:
-        area = find_area(script, stop)
-        if area is None:
-            notes.append(
-                f"{script.name}: opens a run, but no PROTOCOL-*.md "
-                f"above it — unbound runs keep no number (LAB-003 No run without an intent paragraph)."
-            )
-            continue
-        protocol = protocol_named_in(script, area)
-        texts = [
-            p.read_text(encoding="utf-8")
-            for p in ([protocol] if protocol else area_protocols(area))
-        ]
-        head = f"preflight {area.name}" + (
-            f" --protocol {protocol.name}" if protocol else ""
-        )
-        try:
-            heads = [protocol_block.head(t) for t in texts]
-        except protocol_block.BlockError as exc:
-            notes.append(f"{head}: protocol head unreadable — {exc}")
-            continue
-        # which gate stands before a full run is the lane's answer: the
-        # registration (low) or preflight (`standard_contract.lane`)
-        if all(standard_contract.lane(h.repeat_cost).registration for h in heads):
-            missing = sorted(
-                {m for t in texts for m in protocol_check.low_registration_missing(t)}
-            )
-            if not missing:
-                notes.append(
-                    f"{head}: repeat cost low — gate not run, the rerun is "
-                    f"the probe; registration written (LAB-017 The number of audits follows the cost tier)."
-                )
-            else:
-                notes.append(
-                    f"{head}: repeat cost low, but {', '.join(missing)} still "
-                    f"empty or a placeholder — runlog refuses a full run "
-                    f"until the registration is written (LAB-003 No run without an intent paragraph, LAB-017 The number of audits follows the cost tier)."
-                )
-            continue
-        # the stations' findings as data (`preflight_area`'s collector), not
-        # the printed report read back; stdout is kept off the hook's own
-        found = Findings(tell=None)
-        with contextlib.redirect_stdout(io.StringIO()):
-            rc = preflight.preflight_area(area, protocol, found)
-        said = "\n".join(found.summary("preflight", "freezing"))
-        frozen = any(h.frozen for h in heads)
-        if rc == 1 and frozen:
-            blocked.append(
-                f"{head}: BLOCKED — the protocol is frozen and "
-                f"preflight reports blockers:\n{said}"
-            )
-        elif rc == 1:
-            notes.append(
-                f"{head}: blockers, protocol not frozen (pilot) — "
-                f"the full run will not start until they are fixed:\n{said}"
-            )
-        elif rc == 2:
-            notes.append(
-                f"{head}: could not run preflight — no protocol to hold the area to"
-            )
-        else:
-            notes.append(f"{head}: {said.splitlines()[0]}")
+        blocks, line = before_run(script, stop)
+        (blocked if blocks else notes).append(line)
     if blocked:
         sys.stderr.write("\n\n".join(blocked) + "\n")
         if notes:
@@ -471,7 +484,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
         return f"{shown(path, repo)}: {exc}"
 
 
-def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-08
+def post_change(event: dict) -> int:
     """PostToolUse hook: a protocol or a measurement note just written gets its checker; a changed report that discusses a run gets the report review's command (`report_review.review_hint`), once per text; the findings go back as context."""
     found = session_repo(event)
     # outside git only the tool's own file is checked, shown against the
@@ -483,10 +496,34 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
     fp = (event.get("tool_input") or {}).get("file_path")
     if fp:
         candidates.append(Path(fp))
+    named, targets = _changed(candidates, repo)
+    marked = [
+        (path, hint)
+        for path, text in report_hold.report_files(named, repo, staged=False)
+        if (hint := _report_hint(text, path, repo))
+    ]
+    if not targets and not marked:
+        return 0
+
+    cache_file = _cache_path(event.get("session_id"))
+    cache = _load_cache(cache_file)
+    reports = _untold(cache, marked, targets, repo)
+    if cache_file is not None:
+        cache_file.write_text(json.dumps(cache, indent=1), encoding="utf-8")
+    if reports:
+        _context("PostToolUse", "\n".join(reports))
+    return 0
+
+
+def _changed(
+    candidates: list[Path], repo: Path
+) -> tuple[list[Path], list[tuple[str, Path]]]:
+    """Of CANDIDATES (relative to REPO or absolute): every path as the repo
+    names it, a link kept where it lies (`repo.own_path`) — as the stop and
+    the commit hold reports; resolved, a linked report would be read where
+    it points —, and the (kind, file) pairs a checker wants
+    (`wants_check`), each existing file once."""
     seen: set[Path] = set()
-    # the reports as the repo names them, a link kept where it lies
-    # (`repo.own_path`), as the stop and the commit hold them: resolved, a
-    # linked report would be read where it points
     named: list[Path] = []
     targets: list[tuple[str, Path]] = []
     for c in candidates:
@@ -500,20 +537,22 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
         kind = wants_check(c)
         if kind:
             targets.append((kind, c))
-    marked = [
-        (path, hint)
-        for path, text in report_hold.report_files(named, repo, staged=False)
-        if (hint := _report_hint(text, path, repo))
-    ]
-    if not targets and not marked:
-        return 0
+    return named, targets
 
-    cache_file = _cache_path(event.get("session_id"))
-    cache = _load_cache(cache_file)
+
+def _untold(
+    cache: dict,
+    marked: list[tuple[Path, str]],
+    targets: list[tuple[str, Path]],
+    repo: Path,
+) -> list[str]:
+    """What the post hook tells, each piece once per state (CACHE, updated
+    in place): a report's review hint (MARKED) once per text and hint — a
+    hint repeated on every edit of the same state is noise; a changed text,
+    or another hint for the same bytes (a link replaced by its copy is then
+    a report), is told again —, and each target's checker output once per
+    file content."""
     reports = []
-    # once per report text and hint: a hint repeated on every edit of the
-    # same state is noise; a changed text, or another hint for the same
-    # bytes (a link replaced by its copy is then a report), is told again
     for path, hint in marked:
         key = f"report-review:{path}"
         digest = f"{file_digest(path)}:{scope_digest(hint.encode('utf-8'))}"
@@ -534,11 +573,7 @@ def post_change(event: dict) -> int:  # noqa: C901 complexity baseline 2026-10-0
             _, out = _capture(fn, [shown(path, repo)])
         if out:
             reports.append(out)
-    if cache_file is not None:
-        cache_file.write_text(json.dumps(cache, indent=1), encoding="utf-8")
-    if reports:
-        _context("PostToolUse", "\n".join(reports))
-    return 0
+    return reports
 
 
 def session_log(repo: Path) -> Path | None:

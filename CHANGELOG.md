@@ -1113,6 +1113,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The pre-run and post-change hooks read in named steps.** `pre_run`
+  judged every run script inline (`before_run`, `_low_registration_line`
+  now), `post_change` found the changed files and told them in one body
+  (`_changed`, `_untold`); both lost their complexity exception. No
+  behaviour changed. Audit 2026-10-27 (third), M7.
 - **`usability score` reads, writes and shows in three steps.** One
   193-line body computed the score, wrote `<dir>.score.json` and printed
   it; `probe_score` reads (writes nothing), `write_score` keeps it,
