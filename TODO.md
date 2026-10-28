@@ -1332,6 +1332,41 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+- **Offen nach den Reparaturen aus dem labkit-Piloten (labkit-paper
+  Bereich 15, Runde 1 auf c2c5da2, 2026-10-28; Commits `24b9349` bis
+  `0ed2699`).** Repariert wurde nur, wo labkit nicht tat, was es
+  dokumentiert; diese Entscheidungen ließen die Texte offen:
+  1. *Große oder geschützte Eingaben:* `finalize` blockt jede nicht
+     eingecheckte Quelle weiter; der Ausweg nennt jetzt beide Wege des
+     Standards. Offen: was die Erklärung in Data / scope nennen muss, damit
+     ein Gate sie an Quelle und `sha256` des Laufs bindet; ob `finalize`
+     dann durchlässt, warnt oder einen Blocker hält, den ein Mensch löst;
+     wer „groß oder geschützt“ entscheidet; und der Widerspruch zwischen
+     `standard.md:118-124` und LAB-017 (`:523-524`, „source outside git“).
+     Bis dahin endet ein Lauf auf solchen Daten in einer Übergabe.
+  2. *Ignorierte Quelle:* der Ausweg ist `git add -f -- <dateien>` statt
+     „Regel entfernen“ wie in `evidence.py`. Eine Quelle außerhalb des
+     Repos bekommt weiter ein `git add`, das git verweigert.
+  3. *Binärdateien in `data=`:* sie werden deklariert (`BinaryInput`),
+     nicht erkannt; ob runlog sie selbst erkennen soll, ist offen.
+  4. *`stands` bei `compute`:* der einzige verbleibende Effekt heißt „die
+     Urteile halten“, eine Berechnung hat keine Urteile; eigener Wortlaut?
+     Dazu: mehrere Protokolle ohne `--protocol` oder ein unlesbarer Block
+     bieten `<ID> not assessable` weiter an.
+  5. *Bericht unter Übergabe:* ein Bericht, der einen Lauf eines
+     übergebenen Bereichs zitiert, kommt nur heraus, wenn er keinen Lauf
+     mehr zitiert. Soll ein Report-Review, das vom Verlust weiß, unter
+     einer Übergabe laufen dürfen?
+  6. *Platzhalter-Prompt:* `prompt_check.py:240` überspringt weiter jeden
+     Block, der mit `<` beginnt (ein Prompt mit XML-Tag bekommt keine
+     Drift-Prüfung); dieselbe Erkennung wie `is_stamp_placeholder_block`?
+     `--render` und das Audit-Bündel schreiben weiter nur die lesbaren
+     PROMPT-Konstanten, ein von `ast.parse` abgelehntes Skript bleibt stumm.
+  7. *Kleinere Ränder:* bei detached HEAD gilt ein gestagter, nie
+     committeter, dann gelöschter Record als verloren, obwohl `git checkout
+     -- <pfad>` ihn zurückholt; die Verlustmeldung von report-check zeigt
+     nur die erste Lücke.
+
 - ~~**Ein konfliktfreier Merge umgeht die Gates des pre-commit**~~ —
   entschieden und gebaut 2026-10-28: `pre-merge-commit` führt den
   pre-commit auf dem Index des Merges aus; ein gehaltener Merge bleibt
