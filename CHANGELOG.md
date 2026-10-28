@@ -1198,6 +1198,21 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **An audit record deleted before it was staged holds the commit, and
+  comes back from a copy.** In the fourth SAB-like draw an agent held by
+  the pre-commit ("stage it") deleted its record instead; the record had
+  never been staged, its journal neither, so the commit passed, and every
+  later audit and the report review refused the area with restores that
+  could not work (`git checkout HEAD --`, `git add`). Now an attempt's
+  end copies its record or failed attempt and its kept answer, as
+  written, beside the journal's copy in the git directory
+  (`attempts.evidence_copy`, `kept_files`); the commit holds a file the
+  tree's journal or that copy names and neither the index nor the tree
+  holds (`attempts.unstaged_losses`); and every "gone" message names the
+  one restore that works there (`attempts.restore_way`): `git add`, `git
+  checkout HEAD --`, `cp` from the copy and decide again, or the loss
+  said plainly with the handover. The copy is no check of content:
+  `--decide` rewrites a record, not its copy.
 - **A registration changed after the first measurement is held by
   finalize, every change named.** report-check alone compared the
   answering run's promise block with the first measurement's, so in the

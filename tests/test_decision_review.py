@@ -658,7 +658,9 @@ class Journal(unittest.TestCase):
         review.path.unlink()
         (gap,) = attempts.area_gaps(area).blockers
         self.assertIn(f"audits/{review.path.name}", gap)
-        self.assertIn("restore it", gap)
+        # no repository git runs in (an empty .git), so no commit and no copy:
+        # the loss is said, not a restore that cannot work
+        self.assertIn("no commit and no copy keeps it: it is lost", gap)
         # with the rejection gone nothing else holds the draw; the journal does
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual((rc, sent), (2, []))

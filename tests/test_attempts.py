@@ -315,6 +315,84 @@ class JournalCopy(unittest.TestCase):
         self.assertEqual(attempts.area_gaps(area).blockers, [])
 
 
+class EvidenceCopy(unittest.TestCase):
+    """The files an attempt ends with are copied as written beside the
+    journal's copy: in the fourth SAB-like draw an agent deleted a record
+    it had never staged, the commit passed, and the restores offered
+    (`git checkout`, `git add`) could not bring it back."""
+
+    def attempt(self, area: Path) -> tuple[str, Path]:
+        """An attempt that kept its answer and ended with a record written as
+        labkit-audit writes one; (its id, the record)."""
+        running = attempts.begin(area, "analysis", "opus", "s")
+        running.keep_answer("the answer as the model gave it")
+        record = findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
+                                       "c", cause="unavailable")  # fmt: skip
+        running.end("failed", file=record.name)
+        return running.id, record
+
+    @staticmethod
+    def restore(line: str) -> str:
+        """The command the restore names, run where it says: in the area."""
+        return line.split("restore it as the audit wrote it (`")[1].split("`")[0]
+
+    def test_the_end_keeps_the_record_and_the_answer(self):
+        area = area_in_repo()
+        aid, record = self.attempt(area)
+        kept = attempts.kept_files(area)
+        self.assertEqual(sorted(kept), sorted([f"answers/{aid}.txt", record.name]))
+        self.assertEqual(kept[record.name].read_bytes(), record.read_bytes())
+
+    def test_a_record_deleted_before_it_was_staged_holds_the_commit(self):
+        from labkit.gates import claude_hooks
+
+        area = area_in_repo()
+        root = area.parent.parent
+        _, record = self.attempt(area)
+        written = record.read_bytes()
+        record.unlink()  # the journal was never staged
+        notes = area / "notes.md"
+        notes.write_text("a later change\n", encoding="utf-8")
+        git(root, "add", str(notes.relative_to(root)))
+        line = "\n".join(claude_hooks.undecided_blockers(root, [notes], staged=True))
+        self.assertIn(
+            f"audits/{record.name}, and the file is in neither the tree nor the index",
+            line,
+        )
+        subprocess.run(self.restore(line), shell=True, cwd=area, check=True)
+        self.assertEqual(record.read_bytes(), written)
+        # the twin: the evidence staged with the change, the commit passes
+        git(root, "add", str((area / "audits").relative_to(root)))
+        self.assertEqual(
+            claude_hooks.undecided_blockers(root, [notes], staged=True), []
+        )
+
+    def test_the_next_audit_names_the_restore_that_works(self):
+        area = area_in_repo()
+        _, record = self.attempt(area)
+        record.unlink()
+        (gap,) = attempts.area_gaps(area).blockers
+        self.assertNotIn("git checkout", gap)  # never committed: no checkout
+        subprocess.run(self.restore(gap), shell=True, cwd=area, check=True)
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_a_decided_record_differs_from_its_copy_and_passes(self):
+        area = area_in_repo()
+        _, record = self.attempt(area)
+        record.write_text(record.read_text(encoding="utf-8") + "# decided\n")
+        self.assertEqual(attempts.area_gaps(area).blockers, [])
+
+    def test_without_a_copy_the_loss_is_said_not_a_restore(self):
+        area = area_in_repo()
+        git(area.parent.parent, "checkout", "-q", "--detach")
+        _, record = self.attempt(area)
+        self.assertEqual(attempts.kept_files(area), {})
+        record.unlink()
+        (gap,) = attempts.area_gaps(area).blockers
+        self.assertIn("no commit and no copy keeps it: it is lost", gap)
+        self.assertIn("handover", gap)
+
+
 class Hook(unittest.TestCase):
     def test_the_stop_and_the_commit_name_a_record_gone_and_release_its_repair(self):
         from labkit.gates import claude_hooks

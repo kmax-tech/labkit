@@ -88,14 +88,14 @@ import shlex
 import socket
 import tempfile
 from urllib.parse import quote
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
-from labkit.formats.files import write_atomic
+from labkit.formats.files import write_atomic, write_atomic_bytes
 from labkit.formats.findings import DIR
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
@@ -283,6 +283,8 @@ def gaps(
     state: str = "tree",
     *,
     hold_head: bool = True,
+    in_tree: frozenset[str] | set[str] = frozenset(),
+    kept: Mapping[str, Path] | None = None,
 ) -> Gaps:
     """What the journal and the files say together. ATTEMPTS: the journal
     in the STATE checked (`tree`, or `index` at the commit); PRESENT,
@@ -296,13 +298,17 @@ def gaps(
     on disk is gone from what was delivered. Without HOLD_HEAD (the
     commit) the state checked is what will be delivered: its journal,
     which must start with HEAD's, is held to its files, so a commit that
-    restores a record HEAD lost passes. Raises AttemptError on a HEAD
-    journal that does not read. Pure."""
+    restores a record HEAD lost passes. Each gone file names the restore
+    that works for it (`restore_way`): IN_TREE, the files on disk when the
+    state checked is the index; KEPT, the files the branch's evidence copy
+    holds (`kept_files`). Raises AttemptError on a HEAD journal that does
+    not read. Pure."""
+    kept = kept or {}
     blockers = [
         f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} {how} "
         f"{DIR}/{rel}, and the file is gone from the {state} — a record of an "
-        f"attempt is evidence; restore it (`git checkout HEAD -- {DIR}/{rel}` "
-        f"when committed, `git add` when only unstaged)"
+        f"attempt is evidence; "
+        + restore_way(rel, at_head=at_head, in_tree=in_tree, kept=kept)
         for a, rel, how in _ended_without(attempts, present)
     ]
     if hold_head and journal_at_head is not None:
@@ -319,7 +325,8 @@ def gaps(
             continue
         blockers.append(
             f"{DIR}/{rel} is committed and gone from the {state} — a record of an "
-            f"audit is evidence; restore it (`git checkout HEAD -- {DIR}/{rel}`)"
+            f"audit is evidence; "
+            + restore_way(rel, at_head=at_head, in_tree=in_tree, kept=kept)
         )
     if journal_at_head is not None and not journal_now.startswith(journal_at_head):
         blockers.append(
@@ -413,6 +420,39 @@ def alive_of(area: Path, attempts: list[Attempt]) -> dict[str, bool | None]:
     return out
 
 
+def restore_way(
+    rel: str,
+    *,
+    at_head: set[str],
+    in_tree: frozenset[str] | set[str],
+    kept: Mapping[str, Path],
+) -> str:
+    """How the evidence file `audits/REL` comes back, the one way that works
+    here: staged when it is still on disk (IN_TREE, at the commit), checked
+    out when HEAD holds it (AT_HEAD), copied from the branch's evidence
+    copy when that keeps it (KEPT, `kept_files`), else lost — never a
+    restore that cannot work: a record deleted before it was ever staged
+    was offered `git checkout` and `git add`, and neither could bring it
+    back (fourth SAB-like draw, 2026-10-28). Commands run in the area."""
+    path = f"{DIR}/{rel}"
+    if rel in in_tree:
+        return f"stage it (`git add {shlex.quote(path)}`)"
+    if rel in at_head:
+        return f"restore it (`git checkout HEAD -- {shlex.quote(path)}`)"
+    if rel in kept:
+        folder = shlex.quote(str(Path(path).parent))
+        return (
+            f"restore it as the audit wrote it (`mkdir -p {folder} && cp "
+            f"{shlex.quote(str(kept[rel]))} {shlex.quote(path)}`, in the area), then "
+            f"decide its findings again where they were decided — never "
+            f"delete a record, an outdated one included"
+        )
+    return (
+        "no commit and no copy keeps it: it is lost — acknowledge the loss in "
+        "a handover"
+    )
+
+
 def _paths_under(folder: Path) -> set[str]:
     """Every file under FOLDER, relative to it, `/`-separated."""
     if not folder.is_dir():
@@ -499,8 +539,11 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     (`git rm --cached`) is gone from the commit though it stays on disk,
     and a record HEAD lost but the index restores is delivered again —
     and HEAD; in the tree, not STAGED, also the journal's copy in the git
-    directory (`journal_copy`, `copy_gaps`); then the paths a handover
-    record keeps owed (`handovers.missing_evidence`). A handover record that does not read
+    directory (`journal_copy`, `copy_gaps`); STAGED, also every file the
+    tree's journal or the copy names that neither the index nor the tree
+    holds (`unstaged_losses`); then the paths a handover record keeps owed
+    (`handovers.missing_evidence`). Each gone file names its restore
+    (`restore_way`, from the evidence copy where it keeps one). A handover record that does not read
     is one more blocker beside the others, never in their place. Raises
     AttemptError on a journal that does not read, RuntimeError when git
     fails."""
@@ -513,20 +556,29 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         attempts = parse_journal(now, f"{DIR}/{JOURNAL}")
         present = _paths_under(area / DIR)
     at_head, journal_at_head = _git_paths(area, "HEAD")
-    # the tree only: the stop and the next audit hold the journal to its
-    # copy; the commit carries what is staged (`journal_copy`, `copy_gaps`)
-    copy = None if staged else journal_copy(area)
-    try:
+    kept = kept_files(area)
+    in_tree = _paths_under(area / DIR) if staged else set()
+    copy = journal_copy(area)
+    copy_text = _copy_text(copy)
+    if staged:
+        # the commit carries what is staged; a file the tree's journal or the
+        # copy names and neither the index nor the tree holds is gone from it
+        # all the same — a record deleted before it was ever staged passed the
+        # commit (fourth SAB-like draw, 2026-10-28)
+        lost_here = unstaged_losses(
+            attempts,
+            parse_journal(_tree_journal(area), f"{DIR}/{JOURNAL}"),
+            copy_ends(copy_text, copy) if copy is not None else [],
+            present | in_tree | at_head,
+            kept,
+        )
+    else:
+        # the tree: the stop and the next audit hold the journal to its copy
         lost_here = (
-            copy_gaps(now, copy.read_text(encoding="utf-8"), copy, present)
-            if copy is not None and copy.is_file()
+            copy_gaps(now, copy_text, copy, present, at_head=at_head, kept=kept)
+            if copy is not None and copy_text is not None
             else []
         )
-    except UnicodeError as exc:
-        assert copy is not None, "only a copy that exists is read"
-        raise AttemptError(
-            f"{copy}: the journal's copy is not UTF-8: {exc}", fix=_copy_way(copy)
-        ) from exc
     found = gaps(
         attempts,
         present,
@@ -536,6 +588,8 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         alive_of(area, attempts),
         "index" if staged else "tree",
         hold_head=not staged,
+        in_tree=in_tree,
+        kept=kept,
     )
     try:
         lost = handovers.missing_evidence(area, present, staged=staged)
@@ -544,6 +598,68 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         # 2026-10-27, third, K1)
         lost = [str(exc)]
     return Gaps([*found.blockers, *lost_here, *lost], found.notes)
+
+
+def _copy_text(copy: Path | None) -> str | None:
+    """The text of the journal's COPY, None where there is none. Raises
+    AttemptError when its bytes are not UTF-8."""
+    if copy is None or not copy.is_file():
+        return None
+    try:
+        return copy.read_text(encoding="utf-8")
+    except UnicodeError as exc:
+        raise AttemptError(
+            f"{copy}: the journal's copy is not UTF-8: {exc}", fix=_copy_way(copy)
+        ) from exc
+
+
+def copy_ends(copy_text: str | None, copy: Path) -> list[dict]:
+    """The `ended` events of the journal's copy (its text COPY_TEXT), [] for
+    none. Raises AttemptError on a line that is not a JSON object, naming
+    the copy's line."""
+    if copy_text is None:
+        return []
+    try:
+        parsed = jsonl.objects(copy_text, str(copy))
+    except ValueError as exc:
+        raise AttemptError(str(exc), fix=_copy_way(copy)) from exc
+    out = []
+    for n, event in parsed:
+        if not isinstance(event, dict):
+            raise AttemptError(f"{copy}:{n}: not a JSON object", fix=_copy_way(copy))
+        if event.get("event") == "ended":
+            out.append(event)
+    return out
+
+
+def unstaged_losses(
+    staged: list[Attempt],
+    tree: list[Attempt],
+    copied: list[dict],
+    held: set[str],
+    kept: Mapping[str, Path],
+) -> list[str]:
+    """At the commit: every file an ended attempt of the TREE's journal or
+    of the copy's ended events COPIED names, that no ended attempt of the
+    STAGED journal names already (`gaps` says those) and that HELD (index,
+    tree and HEAD together) lacks — gone before it was staged. Each with
+    its restore (`restore_way`). Pure."""
+    told = {(a.id, rel) for a, rel, _ in _ended_without(staged, set())}
+    named: dict[tuple[str, str], str] = {}
+    for a, rel, _ in _ended_without(tree, set()):
+        named.setdefault((a.id, rel), f"{a.id} ({a.mode}, {a.model})")
+    for e in copied:
+        for rel in (e.get("file"), e.get("answer")):
+            if isinstance(rel, str) and rel:
+                named.setdefault((str(e.get("id", "?")), rel), str(e.get("id", "?")))
+    return [
+        f"attempt {who} ended naming {DIR}/{rel}, and the file is in neither the "
+        f"tree nor the index — the commit would deliver the area without it, a "
+        f"record of an attempt is evidence; "
+        + restore_way(rel, at_head=set(), in_tree=set(), kept=kept)
+        for (aid, rel), who in named.items()
+        if (aid, rel) not in told and rel not in held
+    ]
 
 
 @dataclass(frozen=True)
@@ -611,18 +727,60 @@ def journal_copy(area: Path) -> Path | None:
     return base / quote(branch.stdout.strip(), safe="") / f"{quote(rel, safe='')}.jsonl"
 
 
+def evidence_copy(area: Path) -> Path | None:
+    """Where the files AREA's attempts end with are copied as written —
+    their record or failed attempt and their kept answer: the directory
+    beside the journal's copy (`journal_copy` without `.jsonl`), each file
+    under its path below `audits/`. None where no journal copy is kept.
+    The copy restores a file deleted before it was ever staged; it is no
+    check of a record's content — `--decide` rewrites a record, its copy
+    stays as the audit wrote it."""
+    copy = journal_copy(area)
+    return None if copy is None else copy.with_suffix("")
+
+
+def kept_files(area: Path) -> dict[str, Path]:
+    """The files AREA's evidence copy keeps (`evidence_copy`), by their path
+    below `audits/`; {} without one."""
+    base = evidence_copy(area)
+    if base is None or not base.is_dir():
+        return {}
+    return {p.relative_to(base).as_posix(): p for p in base.rglob("*") if p.is_file()}
+
+
+def _keep(area: Path, rels: list[str]) -> None:
+    """Copy the files `audits/<rel>` of AREA for each of RELS into its
+    evidence copy (`evidence_copy`), each written whole. Nothing where no
+    copy is kept. Raises OSError when a file cannot be read or written: an
+    attempt's file the copy misses cannot be restored from it."""
+    base = evidence_copy(area)
+    if base is None:
+        return
+    for rel in rels:
+        target = base / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        write_atomic_bytes(target, (area / DIR / rel).read_bytes())
+
+
 def copy_gaps(
-    journal_now: str, copy_text: str, copy: Path, present: set[str]
+    journal_now: str,
+    copy_text: str,
+    copy: Path,
+    present: set[str],
+    *,
+    at_head: set[str] | None = None,
+    kept: Mapping[str, Path] | None = None,
 ) -> list[str]:
     """What the tree lost against the journal's COPY (its text COPY_TEXT):
     every attempt with a line the copy keeps and JOURNAL_NOW lacks, and
     every file an end among those lines names that PRESENT (the paths under
     `audits/`) lacks. The journal is held to the copy as a set of lines — a
     merge may interleave two branches' lines, and lines older than the copy
-    are the journal's own. Pure; a lost copy line that is not a JSON object
-    raises AttemptError naming the copy and its line — the stop reports it
+    are the journal's own; each gone file names its restore (`restore_way`,
+    AT_HEAD and KEPT as `gaps` takes them). Pure; a lost copy line that is
+    not a JSON object raises AttemptError naming the copy and its line — the stop reports it
     as a problem (`area_integrity`), it does not end in a traceback."""
-    kept = set(journal_now.splitlines())
+    in_journal = set(journal_now.splitlines())
     lines = jsonl.record_lines(copy_text)
     try:
         parsed = jsonl.objects(copy_text, str(copy))  # names the copy's own line
@@ -631,7 +789,7 @@ def copy_gaps(
     lost: list[str] = []
     events: list[dict] = []
     for n, event in parsed:
-        if lines[n - 1] in kept:
+        if lines[n - 1] in in_journal:
             continue
         if not isinstance(event, dict):
             raise AttemptError(f"{copy}:{n}: not a JSON object", fix=_copy_way(copy))
@@ -654,8 +812,10 @@ def copy_gaps(
                 out.append(
                     f"attempt {e.get('id', '?')} ended naming {DIR}/{rel}, and the file "
                     f"is gone from the tree with its journal line — a record of an "
-                    f"attempt is evidence; restore it (`git add` when only unstaged), "
-                    f"or acknowledge the loss in a handover"
+                    f"attempt is evidence; "
+                    + restore_way(
+                        rel, at_head=at_head or set(), in_tree=set(), kept=kept or {}
+                    )
                 )
     return out
 
@@ -701,6 +861,8 @@ class Running:
     def end(self, outcome: str, *, file: str = "", error: str = "") -> None:
         """Write the attempt's end — OUTCOME with the FILE under audits/
         that holds it, or `none` with the ERROR — and give its lock back.
+        The FILE and the kept answer go into the evidence copy first
+        (`evidence_copy`).
         Raises AttemptError on an outcome that is none of OUTCOMES, or
         `record`/`failed` without its file."""
         if outcome not in OUTCOMES or (outcome != "none" and not file):
@@ -717,6 +879,9 @@ class Running:
         if self.answer:
             event["answer"] = self.answer
         with _area_lock(self.area):
+            # the files before the line that names them: a journal line
+            # whose file the copy lacks could not be restored from it
+            _keep(self.area, [rel for rel in (file, self.answer) if rel])
             _append(self.area, event)
         self.ended = True
         self._release()
