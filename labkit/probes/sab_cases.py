@@ -20,7 +20,7 @@ recounted from its files (`usability.recount`).
     plant(root, task)        the dataset under data/raw/<dataset>/; returns its paths
     task_text(root, task)    the task as the sheet shows it (task, knowledge, tree, previews, output)
     truth(root, task)        the kept number's true value, or None where the number has no truth (fit)
-    number_ok(task, number, expected)   the kept number against the truth or its range
+    number_within(task, number, expected)   the kept number against the truth or its range
     evaluate(root, task)     (verdict 0|1, detail): the hidden evaluation on pred_results/
 
 Why (2026-10-27): the labkit-paper main round runs six ScienceAgentBench
@@ -491,7 +491,7 @@ def meaning_gap(task: str, score: object, n_items: object) -> str | None:
     )
 
 
-def number_ok(task: str, number: float | None, expected: float | None) -> bool:
+def number_within(task: str, number: float | None, expected: float | None) -> bool:
     """The kept number against the truth within the case's relative tolerance,
     or — without a truth — present and within [0, 1]."""
     tol = case(task).tolerance

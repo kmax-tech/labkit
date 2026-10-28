@@ -566,11 +566,15 @@ def declared_labels_section(protocol: Path) -> str:
     return f"## Gate labels declared ([gate] labels)\n\n{body}\n"
 
 
-def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
+def write_bundle(
+    area: Path, repo: Path, protocol: Path, out: Path
+) -> tuple[int, list[str]]:
     """Write the audit bundle to OUT, for an agent the lab runs on it (labkit
     ships none): the severity legend, schema facts, gate labels, the labels
     the head declares, then the protocol, the area's files and the repo
-    helpers they import, in one file. Returns the number of files listed."""
+    helpers they import, in one file. Returns (files read, the files that
+    could not be read, as shown): an unreadable file stands in the bundle
+    as `not readable: …`, never left out without a word."""
     parts = [
         f"# AUDIT BUNDLE · area {area.name}\n\n",
         severity_legend(),
@@ -585,15 +589,17 @@ def write_bundle(area: Path, repo: Path, protocol: Path, out: Path) -> int:
     files = [protocol]
     files += area_files(area)
     files += imported_repo_helpers(area, repo)
+    unreadable: list[str] = []
     for f in files:
+        label = shown(f, repo)
         try:
             body = f.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        label = shown(f, repo)
+        except (OSError, UnicodeError) as exc:
+            unreadable.append(label)
+            body = f"not readable: {exc}"
         parts.append(f"\n===== FILE: {label} =====\n{body}")
     out.write_text("".join(parts), encoding="utf-8")
-    return len(files)
+    return len(files) - len(unreadable), unreadable
 
 
 # --- cli ------------------------------------------------------------------
@@ -686,11 +692,17 @@ def main(argv: list[str]) -> int:
     for finding in code_findings(area, protocol, repo):
         findings.take(finding)
     if bundle_to is not None:
-        n = write_bundle(area, repo, protocol, bundle_to)
+        n, unreadable = write_bundle(area, repo, protocol, bundle_to)
         print(
             f"bundle: {n} file(s) -> {bundle_to} "
             f"({bundle_to.stat().st_size // 1024} KB)"
         )
+        for label in unreadable:
+            findings.warn(
+                f"bundle: {label} could not be read — the reader sees "
+                f"`not readable` in its place",
+                evidence_kind=GUARANTEED,
+            )
     _not_checked(findings, protocol, bundle_to)
     return findings.report("code-check", "the run")
 

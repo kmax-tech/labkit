@@ -190,6 +190,14 @@ class ScoreVerdict(unittest.TestCase):
             self.assertEqual(rows["agent"], "fable-5.1")
             self.assertEqual(rows["bound to"], "PROTOCOL-docs-per-case.md")
 
+    def test_the_number_row_shows_the_number_not_its_meaning(self):
+        # "equals the truth: NO" was printed for a number that equals the
+        # truth but means another quantity (audit 2026-10-28, B4)
+        self.assertTrue(usability_score.number_holds("apply-screen", 0.5, 0.5))
+        self.assertFalse(usability_score.number_holds("count", None, 3.0))
+        self.assertTrue(usability_score.number_holds("judge", 0.4, None))
+        self.assertFalse(usability_score.number_holds("judge", 1.4, None))
+
     def test_the_score_carries_the_agent_the_operator_names(self):
         _, sc = self._score({"mean_docs_per_case": 3.5}, agent="fable-5.1")
         self.assertEqual(sc["agent"], "fable-5.1")

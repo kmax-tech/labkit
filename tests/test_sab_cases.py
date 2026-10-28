@@ -144,7 +144,7 @@ class ComputeHrvTest(unittest.TestCase):
         verdict, detail = sab_cases.evaluate(self.root, "compute-hrv")
         self.assertEqual(verdict, 1, detail)
         self.assertTrue(
-            sab_cases.number_ok(
+            sab_cases.number_within(
                 "compute-hrv", rmssd, sab_cases.truth(self.root, "compute-hrv")
             )
         )
@@ -154,7 +154,7 @@ class ComputeHrvTest(unittest.TestCase):
         write_pred(self.root, "hrv.csv", ["heart_rate_bpm", "rmssd_ms"], [[hr, rmssd]])
         self.assertEqual(sab_cases.evaluate(self.root, "compute-hrv")[0], 0)
         self.assertFalse(
-            sab_cases.number_ok(
+            sab_cases.number_within(
                 "compute-hrv", rmssd, sab_cases.truth(self.root, "compute-hrv")
             )
         )
@@ -217,8 +217,8 @@ class FitAssayTest(unittest.TestCase):
 
     def test_the_kept_number_has_no_truth_only_a_range(self):
         self.assertIsNone(sab_cases.truth(self.root, "fit-assay"))
-        self.assertTrue(sab_cases.number_ok("fit-assay", 0.9, None))
-        self.assertFalse(sab_cases.number_ok("fit-assay", 90.0, None))
+        self.assertTrue(sab_cases.number_within("fit-assay", 0.9, None))
+        self.assertFalse(sab_cases.number_within("fit-assay", 90.0, None))
 
 
 class ApplyScreenTest(unittest.TestCase):
@@ -256,7 +256,7 @@ class ApplyScreenTest(unittest.TestCase):
         verdict, detail, agree = self.apply(self.model)
         self.assertEqual(verdict, 1, detail)
         self.assertTrue(
-            sab_cases.number_ok(
+            sab_cases.number_within(
                 "apply-screen", agree, sab_cases.truth(self.root, "apply-screen")
             )
         )
@@ -271,7 +271,7 @@ class ApplyScreenTest(unittest.TestCase):
         verdict, detail, agree = self.apply(own)
         self.assertEqual(verdict, 0, detail)
         self.assertFalse(
-            sab_cases.number_ok(
+            sab_cases.number_within(
                 "apply-screen", agree, sab_cases.truth(self.root, "apply-screen")
             )
         )

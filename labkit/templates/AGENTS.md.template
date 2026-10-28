@@ -128,8 +128,9 @@ actually has, not commands from a different kind's skeleton.
 
 **Additional at `high`:** run
 `.venv/bin/python <area>/scripts/01_measure.py --probe` for estimator/prompt
-skeletons to check the real pipeline, keep representative raw examples in the
-protocol, and test the evaluation on synthetic extremes before freezing.
+skeletons to check the real pipeline (its rows are thrown away; Raw output
+comes from the run's kept rows after it), and test the evaluation on
+synthetic extremes before freezing.
 The probe may correct the instrument, not redefine the hypothesis or
 criteria. Compute has no `--probe`; test its calculation. At `low` there
 is no separate probe: the full measurement checks the instrument too.

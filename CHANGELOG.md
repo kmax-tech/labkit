@@ -306,6 +306,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Four faults found by the audit of 2026-10-28.** A line of the
+  journal's copy that is not JSON ended the stop hook in a traceback:
+  `attempts.copy_gaps` now raises AttemptError naming the copy's own line,
+  and the stop reports it. `code-check --bundle` skipped a file it could
+  not read without a word and still counted it; the file now stands in the
+  bundle as `not readable: …` and code-check warns with its name
+  (`write_bundle` returns the files read and those it could not). AGENTS.md
+  told high-cost agents to keep `--probe`'s rows in the protocol; the
+  probe's rows are thrown away and Raw output comes from the run. The probe
+  score printed "equals the truth: NO" for a number that equals the truth
+  but means another quantity; the row shows `number_holds` now, and
+  `sab_cases.number_ok` is `number_within`, beside `Score.number_ok`, which
+  is both checks. Register `docs/audit-2026-10-28-today.md`, B1–B4.
 - **An editable install in a git worktree is read as one.** In a worktree
   `pip freeze` writes `-e git+…#egg=labkit&subdirectory=…`, and
   `repo.EDITABLE_REQUIREMENT` stopped at the name: `usability stage` found

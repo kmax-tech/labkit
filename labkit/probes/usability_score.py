@@ -107,7 +107,9 @@ class Score:
     expected: (
         float | None
     )  # the recounted truth (count, a SAB-like case's), None for a model's number
-    number_ok: bool  # equals the truth (a SAB-like case: within its tolerance), or present and within [0, 1]
+    # the number holds (`number_holds`) and, a SAB-like case, is the task's
+    # quantity (`number_meaning` None) — the score's exit reads this
+    number_ok: bool
     null_reported: (
         bool | None
     )  # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
@@ -574,15 +576,7 @@ def probe_score(
         run_id=run.name if run else None,
         number=number,
         expected=expected,
-        number_ok=(
-            number_meaning is None and sab_cases.number_ok(probe.task, number, expected)
-        )
-        if sab
-        else (
-            (number is not None and abs(number - expected) <= TOL)
-            if expected is not None
-            else (number is not None and 0.0 <= number <= 1.0)
-        ),
+        number_ok=number_meaning is None and number_holds(probe.task, number, expected),
         null_reported=null_reported,
         bound_to=bound_to,
         frozen=frozen,
@@ -598,6 +592,21 @@ def probe_score(
         number_meaning=number_meaning,
     )
     return sc, notes
+
+
+def number_holds(task: str, number: float | None, expected: float | None) -> bool:
+    """Does NUMBER hold as a number — equal to EXPECTED within the task's
+    tolerance (a SAB-like case: its own, `sab_cases.number_within`; else
+    TOL), or without a truth present and within [0, 1]? Says nothing of
+    what the number means (`sab_cases.meaning_gap`): `Score.number_ok` is
+    both."""
+    if task in sab_cases.CASES:
+        return sab_cases.number_within(task, number, expected)
+    if number is None:
+        return False
+    if expected is not None:
+        return abs(number - expected) <= TOL
+    return 0.0 <= number <= 1.0
 
 
 def write_score(root: Path, sc: Score) -> Path:
@@ -656,7 +665,7 @@ def score_rows(sc: Score) -> list[tuple[str, str]]:
         (
             "equals the truth" if expected is not None else "within [0, 1]",
             "yes"
-            if sc.number_ok
+            if number_holds(probe.task, number, expected)
             else (f"NO (truth {expected})" if expected is not None else "NO"),
         ),
         *(

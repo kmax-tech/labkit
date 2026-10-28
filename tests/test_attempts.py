@@ -290,6 +290,22 @@ class JournalCopy(unittest.TestCase):
         journal.write_text("\n".join([*lines[2:], *lines[:2]]) + "\n", encoding="utf-8")
         self.assertEqual(attempts.area_gaps(area).blockers, [])
 
+    def test_a_broken_copy_line_is_a_problem_not_a_traceback(self):
+        # copy_gaps raised a bare ValueError the stop did not catch (audit
+        # 2026-10-28, B1)
+        area = area_in_repo()
+        self.attempt(area)
+        copy = attempts.journal_copy(area)
+        assert copy is not None
+        copy.write_text(
+            copy.read_text(encoding="utf-8") + "not json\n", encoding="utf-8"
+        )
+        attempts.journal_path(area).unlink()
+        (problem,) = [
+            p for p in attempts.area_integrity(area).problems if str(copy) in p
+        ]
+        self.assertIn(f"{copy}:3: not JSON", problem)  # the copy's own line
+
     def test_a_detached_head_keeps_no_copy(self):
         area = area_in_repo()
         git(area.parent.parent, "checkout", "-q", "--detach")
