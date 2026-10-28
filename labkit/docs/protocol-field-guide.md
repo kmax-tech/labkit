@@ -436,12 +436,14 @@ scattered in output files nobody can interpret.
 
 ### Setup (APPARATUS)
 
-- **Data / scope:** source, N, producer script — the raw data under
-  `data/raw/` and what prepared them into `data/prepared/`. Small files
-  free to share are committed; large or protected data are named by source
-  and version, and the run records the checksum of each file it reads
-  (`data=`). Look at the prepared file before running — otherwise a format
-  bug and a model failure look identical.
+- **Data / scope:** source, N, producer script — by default the raw data
+  under `data/raw/`, the inputs a script made from them under
+  `data/prepared/`. Small inputs that may legally be shared are committed;
+  for large or protected data name their source or access route and
+  version, and the run records the checksum of each file it reads
+  (`data=`): the inputs a run used stay unambiguously traceable. Look at
+  the prepared file before running — otherwise a format bug and a model
+  failure look identical.
 - **Data profile:** your judgement of the data, written before the
   measuring run: could a surface feature answer the question without the
   model? Owed whenever a model is named, at every kind. The prompt

@@ -1178,7 +1178,19 @@ Notiert, nicht geplant:
    Schwelle ist ein fit (`f2cae8b`); (d) festgelegt werden die tatsächlich
    gelesenen Dateien, Herkunft und Vorbereitung, roh und vorbereitet
    getrennt, große Daten per Quelle, Version und Prüfsumme (`a6dc065`);
-   die beiden Kleinigkeiten im folgenden Commit. Offen: ob Agenten den
+   die beiden Kleinigkeiten im folgenden Commit. Geschärft mit dem Autor
+   (2026-10-28): (a) Nachfolger nur, wenn sich die fehlende Wahl begründet
+   treffen lässt, sonst Übergabe ohne Ergebnis; ein Tippfehler in einem
+   Prosafeld wird im Protokoll korrigiert (ein Audit, das das Feld
+   beurteilt hat, ist erneut fällig), in einem Versprechen bleibt er stehen
+   (`74ac959`); (b) `confirmatory` nennt auch die Eingaben, sonst
+   `exploratory` (`6a15379`); (c) entscheidend ist, ob Daten das Verfahren
+   anpassen, nicht wann die Regel aufgeschrieben wurde — an Referenzen
+   eingestellt ist fit auch mit vorab registrierter Regel, beanspruchte
+   Erkennungsleistung an getrennten Daten (`4daca56`); (d) Maßstab
+   „eindeutig nachvollziehbar“, Zugangsweg, rechtlich teilbar,
+   `00_prepare.py` nur bei fit und apply gestempelt (folgender Commit).
+   Offen: ob Agenten den
    neuen Hinweis zum Vorlagenfehler 0,15 gegen 0,25 beim tatsächlichen
    Ausfüllen beachten — das prüft die nächste Schreibprobe, ein
    Experiment, das auf Ansage startet; ebenso, ob die verständlicheren

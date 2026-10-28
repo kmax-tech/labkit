@@ -154,14 +154,15 @@ in step 4. Put the matching record filename in the protocol head's
 A code fix changes audit coverage: audit the fixed code before freezing.
 At `low`, no freeze or preflight audit is owed.
 
-Commit the code and the registration, and fix the inputs: what must stand
-is the files the run actually reads (or their unchanged versions), where
-they come from and the steps that prepared them. Raw data lie under
-`data/raw/`, prepared inputs under `data/prepared/`, written by the area's
-`00_prepare.py`; the run records the files it reads with their checksums
-(`data=` in `config.json`). Small files free to share go into git; large or
-protected data stay out, and the area names their source and version
-beside the checksum the run recorded. Then measure with the stamped
+Commit the code and the registration, and fix the inputs: the inputs the
+run actually reads must stay unambiguously traceable. By default raw data
+lie under `data/raw/`, inputs made from them under `data/prepared/`, and
+the preparation is a script — `scripts/00_prepare.py`, which the fit and
+apply skeletons stamp; a computation whose inputs need preparing adds one.
+The run records each file it reads with its checksum (`data=` in
+`config.json`). Small inputs that may legally be shared go into git; for
+large or protected data commit their source or access route and their
+version instead, beside the checksum the run recorded. Then measure with the stamped
 script through `runlog`. At `low`, run
 `.venv/bin/python <area>/scripts/01_measure.py` in the foreground.
 At `high`, detach from the root with

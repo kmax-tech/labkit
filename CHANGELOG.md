@@ -1209,13 +1209,14 @@ pins (`requirements.txt` / `requirements.lock`).
   gold. Haiku start reading, 2026-10-28.
 - **What fixing the inputs means.** AGENTS.md said only "commit the code,
   registration and inputs", and readers asked where data lie and whether
-  they are committed. Decided 2026-10-28: what must stand is the files the
-  run actually reads or their unchanged versions, their source and the
-  steps that prepared them, raw (`data/raw/`) and prepared
-  (`data/prepared/`) apart; small files free to share go into git, large or
-  protected data are named by source and version beside the checksum the
-  run records (`data=`). AGENTS.md, the field guide's Data / scope and the
-  standard's terms say so.
+  they are committed. Decided 2026-10-28: the inputs a run actually used
+  stay unambiguously traceable. By default raw data lie under `data/raw/`,
+  inputs made from them under `data/prepared/`, and a script prepares them
+  (`00_prepare.py`, stamped for fit and apply; a computation adds one when
+  it needs it); small inputs that may legally be shared go into git, for
+  large or protected data their source or access route and version, beside
+  the checksum the run records (`data=`). AGENTS.md, the field guide's
+  Data / scope and the standard's terms say so.
 - **Where a computation ends and a fit begins, with examples.** The kind
   questions said only "a threshold or prompt chosen on performance data
   counts"; one or two readers asked in every round whether a detection
