@@ -6,7 +6,8 @@ Imports the area's script by path under a unique name (two areas in one
 pytest run must not share `01_measure`) and never copies its formula. The
 resolution check runs `evaluate_rows()` on synthetic rows in the run's real
 shape — perfect effect fires [C1], a null-like registered lane stays silent,
-too many empty answers fail [A1] and withhold the verdict. The parser cases
+too many empty answers fail [A1] and withhold the verdict, the registered
+null band holds the null lane symmetric around chance. The parser cases
 are the canonical answer forms plus the forms `--probe` prints (pasteable);
 until those are pasted the probe test is a TODO, except at repeat_cost = low.
 """
@@ -38,12 +39,24 @@ def rows(registered: list[tuple[str, str]], null: list[tuple[str, str]]) -> list
     return out
 
 
-def _twelve(correct: int) -> list[tuple[str, str]]:
-    """Twelve items, `correct` of them answered right, half of each gold label."""
-    golds = [POS] * 6 + [NEG] * 6
+def _lane(n: int, correct: int) -> list[tuple[str, str]]:
+    """`n` items (even), `correct` of them answered right, half of each gold label."""
+    golds = [POS] * (n // 2) + [NEG] * (n // 2)
     words = {POS: YES, NEG: NO}
     other = {POS: NO, NEG: YES}
     return [(words[g] if i < correct else other[g], g) for i, g in enumerate(golds)]
+
+
+def _twelve(correct: int) -> list[tuple[str, str]]:
+    """Twelve items, `correct` of them answered right, half of each gold label."""
+    return _lane(12, correct)
+
+
+def _band_lane() -> int:
+    """How many items a null lane needs so that the REGISTERED band
+    (`null_band_items`, your number, not the stamp's) has an item outside it
+    on both sides: twelve, more for a band wider than four."""
+    return max(12, 2 * measure.CONFIG.null_band_items + 4)
 
 
 def test_perfect_effect_fires_c1():
@@ -51,11 +64,16 @@ def test_perfect_effect_fires_c1():
     assert m["c1_pass"] is True and m["a2_pass"] is True and m["a1_pass"] is True
 
 
-def test_null_band_is_symmetric_at_one_item():
-    """Chance ± one item on twelve: 5, 6 and 7 correct are in, 4 and 8 are
-    out — in shares, 7/12 fell out by floating point (2026-10-06)."""
-    for correct, inside in ((4, False), (5, True), (6, True), (7, True), (8, False)):
-        m = measure.evaluate_rows(rows(_twelve(12), _twelve(correct)))
+def test_null_band_is_symmetric_at_the_registered_band():
+    """Chance ± the registered band: chance − band, chance and chance + band
+    correct are in, one item further on either side is out — at band 1 on
+    twelve items 5, 6 and 7 in, 4 and 8 out. In shares, 7/12 fell out by
+    floating point (2026-10-06)."""
+    band, n = measure.CONFIG.null_band_items, _band_lane()
+    chance = n // 2
+    for correct, inside in ((chance - band - 1, False), (chance - band, True), (chance, True),
+                            (chance + band, True), (chance + band + 1, False)):
+        m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, correct)))
         assert m["a2_pass"] is inside, correct
 
 
@@ -97,7 +115,8 @@ def test_an_empty_answer_counts_as_not_correct():
 
 
 def test_null_out_of_band_withholds_the_verdict():
-    m = measure.evaluate_rows(rows(_twelve(12), _twelve(12)))
+    n = _band_lane()  # every item right lies outside the registered band
+    m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, n)))
     assert m["a2_pass"] is False and m["c1_pass"] is None
 
 

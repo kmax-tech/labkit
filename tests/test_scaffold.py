@@ -1444,6 +1444,69 @@ class Exp(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("10 passed", r.stdout)
 
+    def test_the_stamped_area_test_holds_the_registered_null_band(self) -> None:
+        """AGENTS.md calls the stamped promise numbers examples to set; the
+        area test asserted the example band, 1, and failed at 5 — a pilot
+        agent set its band back to 1 to pass it (labkit-paper area 15, round
+        2, PubMedQA, D4). Every registered band passes the null-band tests
+        while the formula is right; the twins, a band one item narrow and a
+        one-sided band, fail at the example and at another width."""
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "foo-bar",
+            repeat_cost="high",
+            model="haiku",
+            kind="apply",
+        )
+        proto = self.area() / "PROTOCOL-foo-bar.md"
+        script = self.area() / "scripts" / "01_measure.py"
+        stamped_proto = proto.read_text(encoding="utf-8")
+        stamped_script = script.read_text(encoding="utf-8")
+        example = "constants = { null_band_items = 1 }"
+        formula = "abs(2 * correct - n) <= 2 * items"
+        self.assertEqual(stamped_proto.count(example), 1)
+        self.assertEqual(stamped_script.count(formula), 1)
+
+        def band_tests(band: int) -> subprocess.CompletedProcess[str]:
+            proto.write_text(
+                stamped_proto.replace(
+                    example, f"constants = {{ null_band_items = {band} }}"
+                ),
+                encoding="utf-8",
+            )
+            return subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "-p",
+                    "no:cacheprovider",
+                    "-k",
+                    "null_band or out_of_band or perfect_effect",
+                    str(self.root / "tests" / "test_01_foo_bar.py"),
+                ],
+                cwd=self.root,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+
+        for band in (1, 5, 7):
+            r = band_tests(band)
+            self.assertEqual(r.returncode, 0, f"band {band}: {r.stdout}{r.stderr}")
+            self.assertIn("3 passed", r.stdout)
+        for wrong in (
+            "abs(2 * correct - n) < 2 * items",  # one item too narrow
+            "2 * correct - n <= 2 * items",  # open below chance
+        ):
+            script.write_text(stamped_script.replace(formula, wrong), encoding="utf-8")
+            for band in (1, 5):
+                r = band_tests(band)
+                self.assertEqual(r.returncode, 1, f"{wrong}, band {band}: {r.stdout}")
+                self.assertIn("test_null_band_is_symmetric", r.stdout)
+
     def test_the_stamp_declares_the_model_in_the_head(self) -> None:
         """Phase 4 (2026-10-21): `--model <alias>` writes `[model] alias`, a bare
         `--model` its placeholder, no flag no table; the prose field asks for

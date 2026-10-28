@@ -442,6 +442,18 @@ pins (`requirements.txt` / `requirements.lock`).
   example is named where it is owed. Without a protocol the low cut and
   the full form's lists stay as they were. Pilot of labkit-paper area 15
   on 72507d0 (t15, t60, t21, t34), defect D9.
+- **The stamped area test holds the registered null band, not the
+  stamp's example.** AGENTS.md and the protocol head call the numbers in
+  the stamped promise tables examples to set; the prompt skeleton's test
+  (`test-area.py.template`) asserted the band of the example,
+  `null_band_items = 1` (4 and 8 of 12 out, 5–7 in), so a registered band
+  of 5 failed it, preflight graded that as a blocker, and the pilot agent
+  set its band back to 1 to pass. The symmetry test now checks chance ±
+  the registered band on a null lane long enough to have an item outside
+  it on both sides (twelve, more for a band wider than four), and the
+  out-of-band test puts the lane outside that band. A wrong band formula
+  still fails at every width. Round 2 of the labkit-paper area 15 pilot
+  on 72507d0 (PubMedQA), D4.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a
   fence that holds only `<the real prompt — …>`; the field parser read
