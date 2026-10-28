@@ -81,6 +81,14 @@ WAYS_OUT = (
         "earlier miss into a pass",
     ),
     (
+        "an incomplete registration",
+        "the commit of the first measurement lacked a choice that steers the "
+        "result or its judgement (report-check names the field): that "
+        f"measurement is exploratory — {register_anew()}, or {HANDOVER}; a new "
+        "run on the same data does not restore what stood before the number. A "
+        "completion that changes no choice is no new registration",
+    ),
+    (
         "none of these",
         f"stop and {HANDOVER} — decide each readable open BLOCKER first "
         "(deferred, with why it stays unresolved). Never hand-edit audit or "

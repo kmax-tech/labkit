@@ -134,6 +134,18 @@ evidence file under the same ID (top of this document).*
   `labkit-init exp <name>` generates it from the template; the template lives with its checker in the
   labkit package.
 
+  **Incomplete at the first measurement.** What stood is what the commit of
+  the first measurement holds. When it lacked a choice that steers the
+  result or how it is judged — the question, a criterion, a constant, the
+  data, an exclusion —, that measurement is exploratory, whatever its head
+  says. The way on is a new registration that names it in `[replaces]`, or
+  a handover; measuring the same data again does not restore what stood
+  before the number. What decides is whether a choice made afterwards
+  could steer the result or its judgement: a completion that changes no
+  choice — a typo, a sentence saying what the committed fields already
+  fixed — is no new registration. No gate tells the two apart; the
+  registration check holds every owed field to the commit.
+
 - **LAB-004 · Identifiers make the intent addressable.** *(was §2.A1a)* Every promise to
   the code carries an identifier in the protocol text, depending on its kind:
 

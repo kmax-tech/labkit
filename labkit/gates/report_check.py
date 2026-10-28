@@ -647,8 +647,12 @@ def _registration_at(
                 BLOCKER,
                 f"the registration as committed at {at} ({commit[:12]}{among}) lacks "
                 f"{', '.join(missing)} — the registration is what the commit of "
-                f"the first measurement holds, not what the tree says now "
-                f"(LAB-003 No run without an intent paragraph)",
+                f"the first measurement holds, not what the tree says now, so "
+                f"that measurement is exploratory; a new run on the same data does "
+                f"not restore what stood before the number. The way on: "
+                + ways_out.register_anew(str(ctx.head.id))
+                + f"; or {ways_out.HANDOVER} (LAB-003 No run without an intent "
+                f"paragraph)",
                 evidence_kind=GUARANTEED,
             )
         ]
