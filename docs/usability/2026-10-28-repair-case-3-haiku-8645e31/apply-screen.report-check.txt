@@ -1,0 +1,15 @@
+  PROTOCOL-apply-screen.md: read from the working tree; the head declares 2026-10-28T16-47-28_0fb5; the answering run is 2026-10-28T16-47-28_0fb5
+  PROTOCOL-apply-screen.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  PROTOCOL-apply-screen.md: finalized, audited, checked
+
+report-check: all clear.
+area exit 0
+report-check: no such area: REPORT.md (relative to /work) — give the area's path or its name as `labkit-init exp` printed it (01-<name>)
+report exit 0
+    REPORT.md:99: 0.5
+    REPORT.md:101: 0.3
+    REPORT.md:103: 2.5, 1.5, 0.5, 0.5
+  WARNING: REPORT.md: cites 2026-10-28T16-45-10_2e29, which no protocol declares as its result — a reported number is declared by `protocol-fill <PROTOCOL> --from-run`, and its block written by `--into REPORT.md`; an exploration's run is cited, not reported
+
+report-check: 0 blockers, 2 warning(s) (1 static evidence) — review the warnings above before reporting.
+report exit 0

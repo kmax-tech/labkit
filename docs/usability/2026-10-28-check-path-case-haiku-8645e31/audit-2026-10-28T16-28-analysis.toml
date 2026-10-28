@@ -1,0 +1,22 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:28"
+mode = "analysis"
+model = "opus"
+scope_sha = "abe1bf4fa21d"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-28-07_539f"
+shown_sha = "a1ce5afde558"
+blockers = 1
+warnings = 0
+notes = 0
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:196 · `ScreeningModel.probability` standardises each feature as `(v - mu) / sd**2`. The registration says the model standardises \"with the model's own mean and standard deviation\" (Setup · Data / scope), and the protocol asks whether the model is \"applied unchanged\". Dividing by the variance rescales every feature whose `std` ≠ 1 by a further 1/sd, so a different predictor produced the flags. · Every flag is affected, and so are `c1_score`, `a2_score` and `c1_threshold`, which are computed from those same flags; `c1_pass` therefore answers the question for a model nobody supplied. Whether a corrected script standardises as the model does is not visible in the code alone: the scale of the standardised features is. · LAB-015 Preflight audit before freezing (scar row Criterion ≠ code: the instrument deviates from the registered model application) · an implementation error: standardise by the standard deviation as the registration states, then measure again under the unchanged registration and audit the new run · check: z_sd — per feature in model.json's order, the standard deviation of the standardised feature over the 92 labelled persons; each lies between 0.8 and 1.25 when the run standardises as model.json states"
+check = "z_sd"
+check_note = "per feature in model.json's order, the standard deviation of the standardised feature over the 92 labelled persons; each lies between 0.8 and 1.25 when the run standardises as model.json states"
+status = "fixed"
+reason = "Fixed by correcting standardization to divide by sd not sd**2 in ScreeningModel.probability()"

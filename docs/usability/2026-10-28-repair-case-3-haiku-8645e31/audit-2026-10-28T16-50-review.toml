@@ -1,0 +1,18 @@
+# written by labkit-audit --review — a second auditor's verdicts on the accepted findings of the record named below; not edited by hand
+[review]
+date = "2026-10-28T16:50"
+model = "opus"
+record = "2026-10-28T16-49-analysis.toml"
+scope_sha = "0f3441e97449"
+shown_sha = "f877681b1893"
+claim_sha = "4577f6dfb0e2"
+again = false
+upheld = 1
+rejected = 0
+insufficient = 0
+
+[[decision]]
+finding = 1
+decision_sha = "8a25a01082c2"
+verdict = "upheld"
+why = "The reason runs the auditor's assignment: `--calibrate-null` on the fixed code gives 0.128, which rounds up to the registered 0.13, so the [A2] derivation sentence holds for the instrument measured; the run's |`a2_score` − `a2_target`| = 0.0246 lies far inside that band, so \"A2 met\" stands, and the Conclusion's C1 claim (0.7609 = 70/92 against `c1_threshold` 0.6528) does not rest on the band."

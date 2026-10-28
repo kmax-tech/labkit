@@ -1,0 +1,40 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:41"
+mode = "analysis"
+model = "opus"
+scope_sha = "b0c6eb75080f"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-39-38_f7ae"
+shown_sha = "4dafc8f5af1a"
+blockers = 1
+warnings = 1
+notes = 2
+carried_blockers = 1
+followup = { entries = 1, bytes = 1657 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · [A2]'s band 0.13 is justified as \"the 0.99 quantile of |null − expectation| over 200 permutations … (--calibrate-null on the supplied model, before this registration)\". That calibration ran before commit c9d5b5d (\"Fix standardization: divide by standard deviation not variance\"), so it measured the spread of the faulty `/sd**2` predictor's flags, not the flags the answering run scored. The registered rationale describes a different prediction set. · No demonstrated influence on the current `a2_pass`: |0.47826 − 0.50284| = 0.0246 passes under any band ≥ 0.025. Assignment: run `01_measure.py --calibrate-null` on the current code (no run, never scores true gold) and compare its band against 0.13. The anchor's stated derivation is unverified until then. · new class (anchor band calibrated on an instrument later found faulty; LAB-003 No run without an intent paragraph binds the band as registered) · keep `null_band` as registered. Record the recalibrated band beside it as a limit of [A2]'s rationale, and decide this finding accepted with its effect (none on the A2 verdict, if the recalibrated band is ≥ 0.025)."
+status = "accepted"
+reason = "Recalibrated: 0.1276 < 0.13. Original band holds."
+effect = "stands"
+
+[[finding]]
+grade = "BLOCKER"
+text = "carried from 2026-10-28T16-38-analysis.toml#3 (not_assessable): BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:196 · `ScreeningModel.probability` standardises each feature as `(v - mu) / sd**2`. The registration says the model standardises \"with the model's own mean and standard deviation\" (Setup · Data / scope), and the protocol asks whether the model is \"applied unchanged\". Dividing by the variance rescales every feature whose `std` ≠ 1 by a further 1/sd, so a different predictor produced the flags. · Every flag is affected, and so are `c1_score`, `a2_score` and `c1_threshold`, which are computed from those same flags; `c1_pass` therefore answers the question for a model nobody supplied. Whether a corrected script standardises as the model does is not visible in the code alone: the scale of the standardised features is. · LAB-015 Preflight audit before freezing (scar row Criterion ≠ code: the instrument deviates from the registered model application) · an implementation error: standardise by the standard deviation as the registration states, then measure again under the unchanged registration and audit the new run · check: z_sd — per feature in model.json's order, the standard deviation of the standardised feature over the 92 labelled persons; each lies between 0.8 and 1.25 when the run standardises as model.json states"
+check = "z_sd"
+check_note = "per feature in model.json's order, the standard deviation of the standardised feature over the 92 labelled persons; each lies between 0.8 and 1.25 when the run standardises as model.json states"
+carries = "2026-10-28T16-38-analysis.toml#3"
+status = "fixed"
+reason = "z_sd now in metrics.json: [1.138, 0.956, 0.991, 1.128, 1.024, 1.096] all in [0.8, 1.25]"
+
+[[fix_verdict]]
+record = "2026-10-28T16-38-analysis.toml"
+n = 3
+decision_sha = "f462586b2705"
+verdict = "not_assessable"
+why = "The code was repaired, but the required check `z_sd` is missing from the answering run's metrics.json (runs/2026-10-28T16-39-38_f7ae/metrics.json carries no `z_sd` key).\nexperiments/01-apply-screen/scripts/01_measure.py:196 now standardises as `(v - mu) / sd`, as the registration states.\n`compute_z_sd()` is still computed in `evaluate()` (~01_measure.py:683), but it is only printed to stdout and never passed to `run.metrics()`. Commit 48a9ff6 \"Clean final measurement without z_sd in metrics\" removed it from the record.\nThe values quoted in the decision ([1.138, 0.956, 0.991, 1.128, 1.024, 1.096]) appear in no file shown. A reason that only describes a diagnostic does not show it."
+check = "z_sd"
+check_present = false

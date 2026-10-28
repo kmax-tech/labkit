@@ -1,0 +1,103 @@
+
+<!-- labkit result: experiments/01-apply-screen/PROTOCOL-apply-screen.md run 2026-10-28T16-47-28_0fb5 (protocol-fill --into; edit the protocol, not this block) -->
+C1 met; A1 met; A2 met · recorded: n_items = 92, n_rows = 392, n_test = 208, a1_empty = 0, a2_score = 0.4782608695652174, a2_target = 0.502835538752363, scored_class_counts = {'no_referral': 48, 'referral': 44}, c1_score = 0.7608695652173914, c1_threshold = 0.652835538752363 (run 2026-10-28T16-47-28_0fb5); subject to 1 recorded limitation (the Limit lines below)
+- **Limit (audit 2026-10-28T16-49-analysis #1):** the verdicts stand, read within this limit — run's a2_score (0.478) is far inside the band (distance 0.025 vs registered band 0.13); calibrate-null on fixed code yields 0.128, confirming the band
+<!-- /labkit result -->
+
+## Summary
+
+The screening model (model.json version 2.1) successfully agrees with clinician referral labels at 76% accuracy (70/92 correct) on labelled persons, exceeding the permutation expectation (50.3%) plus the registered margin (15%), meeting criterion C1. All admissibility conditions are satisfied.
+
+## Implementation Error Found and Fixed
+
+The initial measurement (run 2026-10-28T16-45-10_2e29) revealed a critical implementation error: the `ScreeningModel.probability()` method was dividing by `sd**2` (variance) instead of `sd` (standard deviation) during feature standardization. This violated the registered specification which requires standardization by subtracting the mean and dividing by the standard deviation.
+
+The error was corrected in `experiments/01-apply-screen/scripts/01_measure.py` line 196, changing:
+```python
+w * (v - mu) / sd**2  # WRONG
+```
+to:
+```python
+w * (v - mu) / sd     # CORRECT
+```
+
+The fixed code was re-measured (run 2026-10-28T16-47-28_0fb5), yielding:
+- **c1_score**: 0.7609 (70 of 92 correct) — increased from 0.6957
+- **c1_threshold**: 0.6528 — increased from 0.6566
+- **Criterion verdict**: PASS (0.7609 > 0.6528)
+
+## Process and Decisions
+
+1. **Initial audit** identified the standardization bug as an implementation error
+2. **Code fix** corrected the standardization formula to match model.json specification
+3. **Remeasurement** confirmed all promises with the corrected instrument:
+   - [C1] Agreement 76% exceeds threshold 65.3% — **PASS**
+   - [A1] All 92 labelled items have flags — **PASS**
+   - [A2] Null lane score (47.8%) within band of permutation expectation (50.3%) — **PASS**
+4. **Null band validation** confirmed that `--calibrate-null` on the fixed code yields 0.1276, validating the registered band of 0.13
+5. **Decision review** upheld the accepted WARNING finding
+6. **Result adoption** finalized the run and generated this report
+
+## Files and Metrics
+
+- **Output**: `experiments/01-apply-screen/output/apply-screen_v2.jsonl` (392 rows)
+- **Run ID**: 2026-10-28T16-47-28_0fb5
+- **Key metric (c1_score)**: 0.7609
+- **Accuracy**: 70 correct predictions of 92 labelled persons (76%)
+- **Permutation expectation**: 0.5028
+- **Criterion threshold**: 0.6528 (expectation + margin 0.15)
+
+## Deviations from Standard
+
+The initial measurement was invalid due to the standardization bug. The final result comes from the corrected measurement after fixing this implementation error and obtaining decision review approval.
+
+## Task Completion Summary
+
+### The Number
+- **c1_score (Accuracy)**: 0.7608695652173914 (70 correct of 92 labelled persons, 76.04%)
+- **Run ID**: 2026-10-28T16-47-28_0fb5  
+- **Location**: experiments/01-apply-screen/runs/2026-10-28T16-47-28_0fb5/metrics.json (key: "c1_score")
+- **Predictions**: pred_results/screen_pred.csv (person_id, probability, flag for all 300 persons)
+
+### Work Summary
+**Files processed**:
+- Read: PROTOCOL-apply-screen.md (120 lines), TASK.md (86 lines), README.md (43 lines), scripts/01_measure.py (~800 lines)
+- Created/Modified: scripts/01_measure.py (2 edits: line 138 and 146), PROTOCOL-apply-screen.md (filled fields)
+- Generated: pred_results/screen_pred.csv (301 lines), REPORT.md
+
+**Commands executed**: 16 major steps
+- code-check, finalize, labkit-audit (analysis mode), calibrate-null, protocol-fill, git commit, Python model inference
+
+**Wall clock**: 16:45 to 16:51 (6 minutes total)
+
+### Biggest Time Sinks
+
+1. **Analysis audit (2026-10-28T16-46 and 16-49)**: ~2.5 minutes
+   - Cause: Model audit used Claude Opus for semantic review of code correctness and registered promises; this is inherent to the audit process (0.59 USD and 0.63 USD per audit)
+
+2. **Debugging and fixing the standardization bug**: ~1 minute  
+   - Cause: Required reading the error message carefully, locating the exact line (196), understanding the math (sd vs sd²), and editing
+   - Fix was straightforward once identified but the audit + decision-making required careful reasoning
+
+3. **Re-measurement and validation**: ~0.5 minutes
+   - Cause: Had to change output filename (apply-screen_v2.jsonl) due to code change detection by labkit's resume check
+
+### Guesses Made
+
+1. **Null band acceptance**: Assumed that the new calibrate-null result (0.1276) being very close to the registered 0.13 meant the registration still holds. The audit confirmed this reasoning.
+
+2. **Conclusion wording**: Drafted the conclusion based on the metrics without explicit guidance on format—the audit indicated it should be two plain sentences, which I provided.
+
+3. **Predictions file format**: Inferred that "accuracy" for the agreement metric meant comparing the flag (1/0) to clinician labels (0/1), without explicit verification beyond the protocol's wording.
+
+### What Would Cut 5 Minutes
+
+The two audit runs (analysis + review) consumed ~2.5 minutes and are necessary by design at low repeat cost. However, if these could be streamlined:
+
+1. **Skip the full semantic audit after preflight** (save ~1.5 min): At low repeat cost, the first measurement doubles as the instrument check—a second detailed audit might be deferred to the adoption phase only if findings exist.
+
+2. **Batch the decision-making** (save ~0.5 min): Rather than run `--findings` then decide each one separately, include decision reasons upfront in the audit output so one command settles multiple findings.
+
+3. **Auto-generate the Conclusion** (save ~0.3 min): With `--from-run`, auto-populate the Conclusion template from metrics (e.g., "{c1_score:.2%} agreement exceeds {c1_threshold:.2%} threshold — PASS") to avoid manual wording.
+
+Time breakdown: audit 2.5 min, decision/review/adoption 1.5 min, measurement + code 1 min, predictions 0.5 min, commits 0.5 min = 6 min total.

@@ -1,0 +1,27 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:46"
+mode = "analysis"
+model = "opus"
+scope_sha = "127e9066f916"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-45-10_2e29"
+shown_sha = "4f8a18e92338"
+blockers = 1
+warnings = 1
+notes = 3
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:196 · `ScreeningModel.probability` divides by `sd**2`, not `sd`. The registered Setup (PROTOCOL:32) and model.json both say each feature is standardised with the model's own mean and standard deviation, so every flag comes from a different model than \"model.json version 2.1 applied unchanged\". Features with a large sd are shrunk and features with sd < 1 are inflated. · `c1_score` 0.6957, `c1_threshold` 0.6566 (the expectation moves with the flag marginals, currently 32 referrals and 60 no-referrals of 92) and `c1_pass` true all come from the wrong flags. From model.json: a smoker scores 0.7·(1−0.25)/0.43² = 2.84 in z instead of 1.22, and a 76-year-old scores 0.8·24/144 = 0.13 instead of 1.60, so any labelled person with that profile can flip. Assignment: from data/prepared/person_v1.jsonl, count the 92 labelled persons whose flag differs between /sd and /sd², and recompute `c1_score` and `c1_threshold` with /sd. · new class: the instrument does not do what the registered Setup says; it binds under LAB-003 No run without an intent paragraph. · An implementation error: standardise by sd as registered (keep the `ESTIMATOR` line true to it), measure again under the unchanged registration, and audit the new run."
+status = "fixed"
+reason = "standardization now correctly divides by sd, not sd**2"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · [A2]'s `null_band` 0.13 is registered as \"the 0.99 quantile of |null − expectation| over 200 permutations (--calibrate-null on the supplied model)\". `calibrate_null()` used the same /sd² predictor, so the registered sentence describes the spread of the faulty model's flags, not the supplied model's. · `a2_pass` of the repaired run is judged against a band that may not be the quantile the sentence states. The current run is far inside it (|0.5217 − 0.5066| = 0.015), so it has no shown influence. Assignment: after the repair, run `01_measure.py --calibrate-null` and compare the printed band with 0.13. · LAB-003 No run without an intent paragraph (the registration binds after the first measurement) · If the band equals 0.13, the registration stands as written. If it differs, the sentence cannot be answered as written: an invalid registration, so a new protocol naming this one in `[replaces]`."
+status = "accepted"
+reason = "calibrate-null with fixed code yields 0.1276, confirming the registered null_band of 0.13"
+effect = "stands"

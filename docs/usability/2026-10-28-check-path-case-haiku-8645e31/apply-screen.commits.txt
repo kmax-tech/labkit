@@ -1,0 +1,14 @@
+6cd014f 16:44 Complete: standardization bug fixed, measurement incomplete
+6bb3397 16:41 Final measurement with z_sd in metrics - run 2026-10-28T16-41-45_a802
+48a9ff6 16:39 Clean final measurement without z_sd in metrics
+5e832bd 16:39 Final measurement: standardization fixed and z_sd check complete
+a2ebd08 16:35 Add z_sd check to verify standardization is correct
+c9d5b5d 16:33 Fix standardization: divide by standard deviation not variance
+53f7b6c 16:28 Run: the first measurement under the registration
+f3e6189 16:28 Probe: the venv inside the sandbox
+2138df1 17:28 Probe: container paths
+29ad39a 16:24 Probe: the task continues a registered experiment
+c602d63 16:24 Register apply-screen: agreement with the clinicians against the permutation expectation, the scripts and the prepared persons
+a7e94e8 16:24 Probe: the area, the fixture and TASK.md
+f682de7 16:24 Probe: requirements.lock and the hooks of the probe venv
+7b0440a 16:24 Scaffold: a probe lab repo for the usability trace

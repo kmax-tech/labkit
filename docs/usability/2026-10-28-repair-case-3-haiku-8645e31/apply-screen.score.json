@@ -1,0 +1,56 @@
+{
+ "probe": {
+  "staged": "2026-10-28T16:23:45",
+  "task": "apply-screen",
+  "area": "01-apply-screen",
+  "metric_key": "c1_score",
+  "labkit_installed": "labkit @ git+file:///Users/max/projects/labkit@8645e314bf523ca9302974e49fe8acd1a0b40e71",
+  "scaffold_sha": "326c241ac9b6",
+  "scaffold_flags": [
+   "lab",
+   "exp",
+   "apply-screen",
+   "--kind",
+   "apply"
+  ],
+  "target_minutes": 5,
+  "restamped": null,
+  "kept": []
+ },
+ "run_id": "2026-10-28T16-47-28_0fb5",
+ "number": 0.7608695652173914,
+ "expected": 0.7608695652173914,
+ "number_ok": true,
+ "null_reported": true,
+ "bound_to": "PROTOCOL-apply-screen.md",
+ "frozen": false,
+ "repeat_cost": "low",
+ "log": {
+  "lines": 27,
+  "wall_seconds": 377,
+  "gap_seconds": 0,
+  "monotonic": true,
+  "read": 4,
+  "run": 21,
+  "edit": 1,
+  "unsure": 0,
+  "gate": 1,
+  "untagged": 0,
+  "source_reads": 0
+ },
+ "form": {
+  "lines": 124,
+  "prose_before_first_field": 0,
+  "chains": 2,
+  "longest_field": 471,
+  "summary_codes": 0,
+  "answer_has_table": false
+ },
+ "transcript": null,
+ "agent": "haiku-4.5",
+ "audit_failed": 0,
+ "audit_unproven": 0,
+ "evaluation": 1,
+ "evaluation_detail": "0 persons off model 2.1, 0 missing",
+ "number_meaning": null
+}

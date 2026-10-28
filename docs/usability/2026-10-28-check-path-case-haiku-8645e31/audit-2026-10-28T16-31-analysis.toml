@@ -1,0 +1,21 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:31"
+mode = "analysis"
+model = "opus"
+scope_sha = "59a3b8a2c0ce"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-29-31_da39"
+shown_sha = "a308092010d1"
+blockers = 0
+warnings = 1
+notes = 1
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:199 · A non-finite feature yields NaN, not an empty flag. A \"nan\" or \"inf\" cell in cohort.csv is accepted by `float(row[f])` at scripts/00_prepare.py:69. It gives z = NaN and p = NaN, and `p >= self.threshold` (:203) is then False, so the person is silently flagged \"no_referral\". `predict()` never returns None, so [A1]'s `a1_empty` is 0 by construction and the gate has no case on which it could fire. · `a1_pass` true and `c1_score` 0.7609 (70/92) count a default as the model's flag for any labelled person with a non-finite feature. Assignment: count the rows of data/prepared/person_v1.jsonl whose `features` hold a non-finite value, labelled (gold not null) and unlabelled separately. 0 labelled rows means the current number is untouched. · LAB-015 Preflight audit before freezing (scar row \"Gate without anchor/resolution\": a gate without a positive control) · Make a non-finite probability an empty flag (None) so that [A1] counts it as `a1_empty`."
+status = "accepted"
+reason = "The number is unaffected: 0 non-finite labelled rows in the prepared data"
+effect = "stands"

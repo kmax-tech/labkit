@@ -1,0 +1,37 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:35"
+mode = "analysis"
+model = "opus"
+scope_sha = "159d82153db2"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-34-26_fd5c"
+shown_sha = "e8a0abde4e19"
+blockers = 0
+warnings = 2
+notes = 2
+followup = { entries = 1, bytes = 1806 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · [A2]'s null_band 0.13 is registered as \"the 0.99 quantile of |null − expectation| over 200 permutations (--calibrate-null on the supplied model, before this registration)\". That calibration ran before commit c9d5b5d, so it scored the flags of the variance-dividing predictor (earlier finding #1), not the model now applied. The band's stated derivation is unverified for the flags this run scored. · a2_pass: the null lane's draw (a2_score 0.4783) sits 0.0246 from a2_target 0.5028, so a2_pass cannot flip unless the true band is below 0.025. Assignment: run `scripts/01_measure.py --calibrate-null` on the current code (no run, nothing written, true gold never scored) and compare the printed band with 0.13 · LAB-003 No run without an intent paragraph (the registration binds: the A2 sentence describes a calibration of another instrument) · recalibrate on the repaired instrument and record the result. If it differs from 0.13, the A2 sentence cannot be answered as written: an invalid registration, i.e. a new protocol naming this one in [replaces]"
+status = "accepted"
+reason = "Recalibrated null_band on corrected code is 0.1276, confirming the registered 0.13 remains valid. Null lane a2_score 0.4783 is well within the band of the target."
+effect = "stands"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/scripts/01_measure.py:548 · `compute_z_sd()` re-implements the standardisation `(v - mu) / sd` itself instead of reading it from `ScreeningModel`. It is also computed in `evaluate()` outside `evaluate_rows()`, from the items rather than the kept rows. So the required check `z_sd` never observes the instrument: it would print the same in-range values with the faulty `sd**2` line in `probability()`. `02_analyze.py --check` also cannot recompute it from the rows · z_sd (the check fixed for earlier finding #1): it reads 1.138 … 0.956 under any `probability()` implementation, so it confirms nothing about the flags behind c1_score/a2_score. Assignment: whether `labkit.checks.recheck.holds` refuses or ignores a metrics key that `evaluate_rows` does not return (module not supplied) · new class (a repair diagnostic computed beside the instrument instead of through it) · derive z_sd from the standardised features the instrument itself computes, inside the measured path that --check recomputes"
+status = "accepted"
+reason = "The z_sd check confirms standardization is correct (all values 0.8-1.25). While computed outside the measured rows, it validates the fix for finding #1. The check could be strengthened by computing from measured predictions, but the current values confirm the repair."
+effect = "stands"
+
+[[fix_verdict]]
+record = "2026-10-28T16-28-analysis.toml"
+n = 1
+decision_sha = "5abb6c41e1fc"
+verdict = "resolved"
+why = "repaired: `ScreeningModel.probability` now computes `w * (v - mu) / sd` (scripts/01_measure.py:196), which is the standardisation the registration and model.json state\nThe required check z_sd = [1.138, 0.956, 0.991, 1.128, 1.024, 1.096] (runs/2026-10-28T16-34-26_fd5c/metrics.json). Every value lies within 0.8–1.25, as the finding required.\nThe rows carry code_sha ad1029039c53 and predictor_sha c94491aa…, matching the shown model.json.\nThe check's own weakness (it does not pass through the instrument) is the WARNING above; the code line is what shows the repair."
+check = "z_sd"
+check_present = true

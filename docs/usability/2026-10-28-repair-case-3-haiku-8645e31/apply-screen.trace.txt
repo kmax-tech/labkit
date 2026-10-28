@@ -1,0 +1,53 @@
+ 0:00   0.0s Read   /work/TASK.md
+ 0:05   0.1s Read   /work/experiments/01-apply-screen
+ 0:07   0.4s Bash   ls -la /work/experiments/01-apply-screen/
+ 0:11   0.2s Bash   mkdir -p /out
+ 0:12   0.0s Read   /work/experiments/01-apply-screen/PROTOCOL-apply-screen.md
+ 0:16   0.0s Read   /work/experiments/01-apply-screen/runs.tsv
+ 0:18   0.0s Read   /work/experiments/01-apply-screen/README.md
+ 0:22   0.5s Bash   .venv/bin/finalize experiments/01-apply-screen
+ 0:26  75.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --mode analysis
+ 1:45   0.2s Bash   (log only)
+ 1:48   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 1:51   0.1s Edit   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 1:54   0.2s Bash   (log only)
+ 1:56   0.4s Bash   .venv/bin/code-check experiments/01-apply-screen
+ 1:59   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 2:02   0.3s Bash   .venv/bin/python experiments/01-apply-screen/scripts/01_measure.py
+ 2:04   0.5s Bash   grep -n apply-screen.jsonl experiments/01-apply-screen/scripts/01_measure.py
+ 2:07   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 2:11   0.2s Edit   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 2:14   0.3s Bash   .venv/bin/python experiments/01-apply-screen/scripts/01_measure.py
+ 2:17   0.4s Bash   .venv/bin/finalize experiments/01-apply-screen REFUSED
+ 2:22   0.4s Bash   .venv/bin/python experiments/01-apply-screen/scripts/01_measure.py --calibrate-null
+ 2:25   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --findings
+ 2:31   0.4s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 1 fixed standardization now correctly divides by s
+ 2:34   0.4s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 2 accepted calibrate-null with fixed code yields 0
+ 2:37   0.5s Bash   .venv/bin/finalize experiments/01-apply-screen
+ 2:41 103.2s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --mode analysis 2 >& 1 | head -100
+ 4:29   0.3s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --decide 1 accepted run's a2_score (0.478) is far inside th
+ 4:35   0.4s Bash   .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md Conclusion=Yes, the screening mod
+ 4:39   0.8s Bash   .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --from-run 2026-10-28T16-47-28_0f
+ 4:42  14.6s Bash   .venv/bin/labkit-audit experiments/01-apply-screen --review --record experiments/01-apply-screen/audits/2026-1
+ 4:59   0.3s Bash   git add experiments/01-apply-screen/output/apply-screen_v2.jsonl experiments/01-apply-screen/scripts/01_measur
+ 5:01   0.2s Bash   git add experiments/01-apply-screen/runs/
+ 5:04   0.3s Bash   .venv/bin/protocol-fill experiments/01-apply-screen/PROTOCOL-apply-screen.md --into REPORT.md
+ 5:06   0.0s Read   /work/REPORT.md
+ 5:16   0.1s Edit   /work/REPORT.md
+ 5:21   1.1s Bash   git add REPORT.md && git commit -m $(cat <<'EOF' ; )
+ 5:26   0.2s Bash   head -5 experiments/01-apply-screen/output/apply-screen_v2.jsonl
+ 5:31   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:33   0.4s Bash   grep -n def apply_rows experiments/01-apply-screen/scripts/01_measure.py
+ 5:36   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:38   0.2s Bash   grep -n def lane_row experiments/01-apply-screen/scripts/01_measure.py
+ 5:41   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:43   0.2s Bash   grep -n def predict_all experiments/01-apply-screen/scripts/01_measure.py
+ 5:45   0.0s Read   /work/experiments/01-apply-screen/scripts/01_measure.py
+ 5:53   0.2s Bash   python3 << SCRIPT
+ 5:57   0.2s Bash   head -10 pred_results/screen_pred.csv && wc -l pred_results/screen_pred.csv
+ 6:01   0.4s Bash   git add pred_results/screen_pred.csv && git commit -m Add screening model predictions ;  ; Generate prediction
+ 6:03   0.0s Read   /out/probe.log.md
+ 6:19   0.2s Edit   /work/REPORT.md
+ 6:23   0.8s Bash   git add REPORT.md && git commit -m Add detailed task completion summary to REPORT.md ;  ; Document the number 
+ 6:27   0.2s Bash   (log only)
+tokens: 108 calls · output 210 · context max 69,027 · cache read 5,051,869

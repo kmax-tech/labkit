@@ -1,0 +1,28 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:49"
+mode = "analysis"
+model = "opus"
+scope_sha = "0f3441e97449"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-47-28_0fb5"
+shown_sha = "f877681b1893"
+blockers = 0
+warnings = 1
+notes = 0
+followup = { entries = 1, bytes = 1417 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · The [A2] band 0.13 was derived with `--calibrate-null` before the registration, so from the code as it stood then. That code standardised by sd² (decided BLOCKER 2026-10-28T16-46-analysis.toml#1), so the sentence \"0.99 quantile of \\|null − expectation\\| over 200 permutations\" (PROTOCOL:115) describes flags the run no longer produces. The permutation's spread depends on the flags' marginals. Those marginals moved from 32 to 40 referrals of 92: back-solved from metrics.json `a2_target` 0.502836 = (44·r + 48·(92−r))/92² gives r = 40. · `a2_pass` is judged against a band whose stated derivation does not hold for the instrument measured. Assignment: run `scripts/01_measure.py --calibrate-null` on the current code (no run, nothing written), compare its band against 0.13, and compare that band against the run's \\|`a2_score` − `a2_target`\\| = \\|0.47826 − 0.50284\\| = 0.0246. A normal approximation, not measured, puts the rule's band near 0.13–0.14, so the verdict likely holds either way. · new class: a registered constant's derivation rule run on an instrument the registration no longer describes; binds under LAB-003 No run without an intent paragraph · Leave the registration unchanged: run the calibration on the fixed instrument, then decide the finding `accepted` with its effect on [A2] stated from that number. `none` if the run's offset lies inside the recomputed band, else \"A2 not assessable\"."
+status = "accepted"
+reason = "run's a2_score (0.478) is far inside the band (distance 0.025 vs registered band 0.13); calibrate-null on fixed code yields 0.128, confirming the band"
+effect = "stands"
+
+[[fix_verdict]]
+record = "2026-10-28T16-46-analysis.toml"
+n = 1
+decision_sha = "c14a7b42d6cf"
+verdict = "resolved"
+why = "repaired: `ScreeningModel.probability` now computes `w * (v - mu) / sd` (01_measure.py:196). This matches model.json's mean/std and the `ESTIMATOR` line (\"dividing by standard deviation\"). The finding asked for the measurement to be redone under the unchanged registration. Run 2026-10-28T16-47-28_0fb5 shows it was:\n`c1_score` 0.76087 (70/92) and `c1_threshold` 0.65284, against the finding's 0.6957 / 0.6566.\nThe flag marginal moved from 32 to 40 referrals of 92, derived exactly from `a2_target` and `scored_class_counts` {no_referral 48, referral 44}.\nEvery shown row carries one `code_sha` 05f21c341510 and `_prov` run 0fb5 (apply-screen_v2.jsonl:1–50, 373–392).\nLabels are spelled only `referral` / `no_referral`, and `gold` is null on the test lane.\n`n_rows` 392 = 92 registered + 92 null + 208 test."

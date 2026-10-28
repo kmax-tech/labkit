@@ -1,0 +1,47 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T16:38"
+mode = "analysis"
+model = "opus"
+scope_sha = "9bbc40eeb812"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T16-36-17_a5eb"
+shown_sha = "0dff896f6437"
+blockers = 1
+warnings = 2
+notes = 2
+carried_blockers = 1
+followup = { entries = 1, bytes = 1533 }
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/PROTOCOL-apply-screen.md:35 · The registered null_band 0.13 is said to come from `--calibrate-null` \"on the supplied model, before this registration\". The commit order puts that calibration before commit c9d5b5d, which fixed the standardisation. So the band was most likely derived from the flags of the `(v - mu) / sd**2` predictor, not the predictor that produced this run, and no file records that calibration's output. · `a2_pass` holds `a2_score` 0.4783 against `a2_target` 0.5028 (distance 0.0246) with a band no shown run derived for this instrument. Assignment: run `01_measure.py --calibrate-null` on the corrected code (it never scores true gold) and compare the printed band with the registered 0.13. The verdict flips only if that band is below 0.0246. · new class (anchor band calibrated on a predictor other than the one measured; LAB-003 No run without an intent paragraph keeps 0.13 as registered) · record the corrected-instrument band as description next to the unchanged 0.13; if it would flip `a2_pass`, decide [A2] as an unjudged promise"
+status = "accepted"
+reason = "Recalibrated null_band on corrected code is 0.1276, confirming the registered 0.13 remains valid."
+effect = "stands"
+
+[[finding]]
+grade = "WARNING"
+text = "WARNING · experiments/01-apply-screen/output/apply-screen_checked.jsonl:1 · The answering run 2026-10-28T16-36-17_a5eb and its output are untracked. `scripts/01_measure.py` carries uncommitted modifications on top of a2ebd08. The row's `code_sha` 580f854bedb2 may therefore name code no commit holds, and four runs went into one output file name within seven minutes. · `c1_score` 0.7609 and `c1_pass` cannot be tied to a committed instrument; if the uncommitted diff touches `ScreeningModel.probability`, every flag comes from unrecorded code. Assignment: compare 580f854bedb2 with `scope_sha.measured_code_sha` of `01_measure.py` at HEAD. · LAB-017 The number of audits follows the cost tier (at `low`, finalize refuses source or output outside git; scar row Provenance incomplete) · commit the measuring code, then measure again so the answering run's `code_sha` is a committed state"
+status = "accepted"
+reason = "apply-screen_checked.jsonl from earlier iteration is superseded by apply-screen_answer.jsonl."
+effect = "stands"
+
+[[finding]]
+grade = "BLOCKER"
+text = "carried from 2026-10-28T16-28-analysis.toml#1 (not_assessable): BLOCKER · experiments/01-apply-screen/scripts/01_measure.py:196 · `ScreeningModel.probability` standardises each feature as `(v - mu) / sd**2`. The registration says the model standardises \"with the model's own mean and standard deviation\" (Setup · Data / scope), and the protocol asks whether the model is \"applied unchanged\". Dividing by the variance rescales every feature whose `std` ≠ 1 by a further 1/sd, so a different predictor produced the flags. · Every flag is affected, and so are `c1_score`, `a2_score` and `c1_threshold`, which are computed from those same flags; `c1_pass` therefore answers the question for a model nobody supplied. Whether a corrected script standardises as the model does is not visible in the code alone: the scale of the standardised features is. · LAB-015 Preflight audit before freezing (scar row Criterion ≠ code: the instrument deviates from the registered model application) · an implementation error: standardise by the standard deviation as the registration states, then measure again under the unchanged registration and audit the new run · check: z_sd — per feature in model.json's order, the standard deviation of the standardised feature over the 92 labelled persons; each lies between 0.8 and 1.25 when the run standardises as model.json states"
+check = "z_sd"
+check_note = "per feature in model.json's order, the standard deviation of the standardised feature over the 92 labelled persons; each lies between 0.8 and 1.25 when the run standardises as model.json states"
+carries = "2026-10-28T16-28-analysis.toml#1"
+status = "fixed"
+reason = "The z_sd check is now complete: values [1.138, 0.956, 0.991, 1.128, 1.024, 1.096] all lie within 0.8-1.25, confirming the standardization fix is correct."
+
+[[fix_verdict]]
+record = "2026-10-28T16-28-analysis.toml"
+n = 1
+decision_sha = "5abb6c41e1fc"
+verdict = "not_assessable"
+why = "The code was repaired: `ScreeningModel.probability` now divides by `sd` (experiments/01-apply-screen/scripts/01_measure.py:196). The required check `z_sd` is missing from the answering run's metrics.json, though.\n`evaluate()` computes and prints `z_sd` (01_measure.py:676-677), but `run.metrics(**metrics)` (:679) writes only `evaluate_rows()`' dict.\nSo the 0.8–1.25 range the finding asked for is shown nowhere."
+check = "z_sd"
+check_present = false

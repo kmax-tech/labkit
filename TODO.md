@@ -1306,6 +1306,19 @@ Notiert, nicht geplant:
    Prüfkennzahl-Auftrags — ein gezielter Fall, dessen Fehler nur eine
    Kennzahl zeigen kann; danach derselbe Reparaturfall erneut, ob C1/A1/A2
    jetzt beurteilbar sind (ein Experiment, startet auf Ansage).
+   Stand 2026-10-28, Branch `check-path`: Bestätigung aus einer Datei
+   gebaut (`· check: file:<pfad>`, `8645e31`). Reparaturfall, dritter
+   Versuch ([Notiz](docs/usability/2026-10-28-repair-case-3-haiku-8645e31.md)):
+   richtige Zahl übernommen, „C1 met; A1 met; A2 met“, report-check im
+   Image sauber — ein Versuch, keine Rate. Prüfkennzahl-Fall
+   ([Notiz](docs/usability/2026-10-28-check-path-case-haiku-8645e31.md)):
+   das Folge-Audit urteilte mit `z_sd` `resolved`, die Übernahme scheiterte
+   am Nachrechen-Check (`vanished ['z_sd']`, die Kennzahl lag neben den
+   gespeicherten Zeilen), der Agent strich sie, keine Zahl. Behoben
+   (`64040f2`): der Prüfauftrag sagt jetzt, die Zeilen tragen, was die
+   Kennzahl braucht, und `evaluate_rows()` rechnet sie daraus. Offen: die
+   Abnahme dieser Behebung — derselbe Prüfkennzahl-Fall erneut (ein
+   Experiment, startet auf Ansage).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

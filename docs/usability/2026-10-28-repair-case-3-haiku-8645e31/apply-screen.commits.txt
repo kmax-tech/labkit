@@ -1,0 +1,11 @@
+5365e3d 16:51 Add detailed task completion summary to REPORT.md
+0d3bbd2 16:51 Add screening model predictions
+3b35ffe 16:50 Fix standardization bug and complete apply-screen analysis
+b9c0b04 16:45 Run: the first measurement under the registration
+3ef388a 16:45 Probe: the venv inside the sandbox
+d4c9d5b 17:45 Probe: container paths
+4608292 16:23 Probe: the task continues a registered experiment
+89e9fb0 16:23 Register apply-screen: agreement with the clinicians against the permutation expectation, the scripts and the prepared persons
+241109b 16:23 Probe: the area, the fixture and TASK.md
+046bf96 16:23 Probe: requirements.lock and the hooks of the probe venv
+8bb80c3 16:23 Scaffold: a probe lab repo for the usability trace
