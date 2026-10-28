@@ -1074,11 +1074,12 @@ The **analysis is the experiment** and stays in the script: criteria (success as
 
 - **LAB-077 · Own commits, others' state stays with the user.** *(was §3.4)* Before the first
   change of your own, run `git status`. A dirty state found there belongs to the
-  user: report it, never include it in your commit. Your own commits take only your own paths,
-  staged and committed in one step (`git commit -m … -- <path>`, never `-A`), so
-  that the starting state and your own change remain separable: after a separate
-  `git add`, a parallel session's commit takes the staged path along, while a
-  commit with paths holds the index until its hook is done. If the task must touch a dirty file, first give the
+  user: report it, never include it in your commit. Your own commits take only your own paths
+  and name them at the commit (`git add <path> && git commit -m … -- <path>`; the
+  `add` makes new files known; never `-A`), so that the starting state and your own
+  change remain separable: a bare `git commit` takes whatever is staged and leaves the
+  index open while its hook runs, so a parallel session's commit can take a staged
+  path along; a commit with paths holds the index until its hook is done. If the task must touch a dirty file, first give the
   user the commit command for the existing state. After that, one commit per
   completed step, as soon as tests and linter are clean; never several
   plan steps in one commit. LAB-010 Commit before the run is the special case that applies before a run.
@@ -1368,8 +1369,9 @@ Dated changes that alter no rule; a change to a rule or a field is the next
 version of the standard.
 
 - 2026-10-28 — LAB-077 Own commits, others' state stays with the user: own
-  paths are committed as `git commit -m … -- <path>`, no longer staged with
-  `git add` first. A parallel session in the same checkout committed while
+  paths are named at the commit (`git add <path> && git commit -m … --
+  <path>`), never committed by a bare `git commit` after a separate
+  `git add`. A parallel session in the same checkout committed while
   this repo's hook ran and took a staged `standard.md` along; a commit with
   paths holds the index to its end, so the other session's `git add` or
   `git commit` fails loudly instead. What the rule asks — own paths only,
