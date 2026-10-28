@@ -131,8 +131,8 @@ assignments were fixed. This information was not supplied to readers.
   output is preserved in [gate-replay.txt](2026-10-26-instruction-reading-probe/gate-replay.txt),
   with the [old report](2026-10-26-instruction-reading-probe/report-old-marker.md) and
   [new report](2026-10-26-instruction-reading-probe/report-discussion-block.md). The fixture was synthetic, not a copied round-8 result;
-  its output and report texts are archived here, while the disposable
-  fixture repository remains in the isolated worktree. It contains no contradictory success claim and cannot
+  its output and report texts are archived here; the disposable
+  fixture repository itself was not kept. It contains no contradictory success claim and cannot
   establish that t3's actual report would pass semantic review.
 - The snapshot still prints the report-review command as a nonblocking
   hint. The proposed instructions do not claim that the pending mandatory
