@@ -1300,7 +1300,7 @@ reason, the scar the evidence. **Pruning rule:** a row without a house case
 that produces false alarms in the audit is removed — the legend is never
 sharpened to keep it (the rule of LAB-015 Preflight audit before freezing, "refine by count", applied
 before the first count). Column *Audit* as in the scar table;
-*Rule* "new" means no rule of this standard asks for it yet — half of
+*Rule* "new" means no rule of this standard asks for it yet — five of
 those are registration fields for the protocol (a development set apart
 from the evaluation set, the unit of independence, the data's date against
 the model's cut-off, the baseline's justification, metric and averaging),
@@ -1333,10 +1333,14 @@ them.
 | Statistics | Non-significance over-read | no effect found read as no effect | analysis | LAB-016 Resolution check before freezing (resolution only) | Makin 9 |
 | Statistics | Over-generalising | the claim reaches beyond the data and the test population; correlation read as cause | analysis | new (intent paragraph and report) | REFORMS 1a, 8a–8b; Lones p. 13; Makin 10 |
 | Instrument | Evaluation not isolated from gold | the evaluated side can read or change what grades it | preflight | new (limit of a code audit) | ABC T.4, T.5 |
+| Instrument | Gold unchecked | errors in the gold labels are never sampled or counted; the number carries their noise unmeasured | preflight | new (LAB-006 Does the gold label measure what you are measuring? asks for the property, not for labelling errors) | ABC T.7 |
 | Instrument | Environment not frozen | external sites or data change after release | preflight | LAB-019 The stamp covers everything that determines the number (code and data only) | ABC T.6 |
 | Instrument | Parser with a silent format assumption | answers outside the expected form drop out | beide | scar row "Parser without fixture test" | ABC O.h.1 |
+| Instrument | Matcher misreads the answer | a string or substring match scores an equivalent wording or an answer with extra words as wrong, or a negated answer ("not X") as right | beide | scar row "Parser without fixture test" (only where the fixtures hold such answers) | ABC O.a.1, O.a.2, O.b.1 |
 | Instrument | Judge unvalidated | accuracy and consistency of an LLM judge never measured | preflight | LAB-052 Instance gate before registered use | ABC O.c.1 |
+| Instrument | Judge open to manipulation | the judged answer steers the judge — an instruction addressed to it, a claim of being correct, sheer length — and scores high without solving the task | preflight | new (LAB-052 Instance gate before registered use measures accuracy, not resistance) | ABC O.c.2 |
 | Instrument | Test cases insufficient | wrong solutions pass the tests | preflight | new | ABC O.d.1, O.e.1–3; Lones p. 12 |
+| Instrument | Metric rewards the wrong thing | a quality metric rises under a strategy other than solving the task — length, keywords or format alone lift it (metric hacking) | preflight | new (LAB-008 Instrument check before freezing asks it of a validator battery only) | ABC O.i.1 |
 | Reporting | Provenance incomplete | prompt, format or hyperparameters that set the number are not recorded | beide | scar row "Provenance incomplete"; LAB-019 The stamp covers everything that determines the number | Biderman 3.1, App. D 1; Wicherts R1, R2 |
 | Reporting | Number copied from elsewhere | another implementation's result reported as one's own | analysis | LAB-041 Generate numbers, don't retype them (own numbers only) | Biderman App. D 2 |
 | Reporting | Failed runs unreported | only the fitting run is shown | analysis | LAB-042 Log the outcome — failures too | Wicherts R4 |
@@ -1360,6 +1364,14 @@ pitfalls, *Patterns* 5:101046 (pages).
 
 Dated changes that alter no rule; a change to a rule or a field is the next
 version of the standard.
+
+- 2026-10-28 — Section 8: four classes from ABC that no row held — "Gold
+  unchecked" (T.7), "Matcher misreads the answer" (O.a.1, O.a.2, O.b.1),
+  "Judge open to manipulation" (O.c.2), "Metric rewards the wrong thing"
+  (O.i.1). The checks for agents that write code or change state (O.d.2,
+  O.f, O.g.1–2) and those for publishing a benchmark (R.1, R.2, R.4, R.6)
+  stay out: labkit measures model answers. Draft, outside the audit; no rule
+  changed.
 
 - 2026-10-25 — Protocol standard 0.23: the head's `cost = "seconds" |
   "minutes" | "hours"` becomes `repeat_cost = "low" | "high"`. The gates
