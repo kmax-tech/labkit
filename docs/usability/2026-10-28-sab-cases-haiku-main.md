@@ -68,8 +68,9 @@ unexplained.
 
 ## Next
 
-- The probe harness: accept the skeleton's key or name the task's key in
-  the skeleton — fit and apply never used the task's key in three draws.
+- ~~The probe harness: accept the skeleton's key~~ — done (b3737c6): fit
+  and apply read `c1_score`; rescored, this draw's fit-assay keeps 0.8675
+  (within [0, 1]) and apply-screen 0.76087 (equals the truth).
 - The null band: whether the estimator skeleton should derive `null_band`
   from the null lane's spread instead of stamping 0.1.
 - More than one draw per case before any rate is read from these.
