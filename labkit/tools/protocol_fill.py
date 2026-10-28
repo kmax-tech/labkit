@@ -863,14 +863,14 @@ def _prompts_file(protocol: Path, text: str) -> int:
 def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str, str]:
     """`--into`: REPORT with the declared result as a generated block — the
     protocol's Recorded results and Limit lines as rendered (`report_blocks.block_body`),
-    replaced in place or appended (`report_blocks.write_block`).
+    replaced in place or appended (`report_blocks.with_block`).
     PROTOCOL is the protocol's path relative to the report, the block's
     owner: its blocks are replaced whichever run they showed. (report text,
     run id). Raises ValueError without a declared run or its metrics.json,
     and on a block in REPORT that does not read."""
     run = declared_run_dir(text, area, "a report shows a declared result only")
     body = report_blocks.block_body(rendering(area, text, run))
-    return report_blocks.write_block(report, protocol, run.name, body), run.name
+    return report_blocks.with_block(report, protocol, run.name, body), run.name
 
 
 def _into_file(protocol: Path, text: str, report: Path) -> int:
@@ -901,7 +901,7 @@ def discuss_into(
     """`--discuss RUN_ID --why WHY --into`: REPORT with the block discussing
     RUN_ID of the protocol whose TEXT is given — its head holding PROTOCOL
     (the protocol's path relative to the report), the run and WHY, its
-    line written from them (`report_blocks.write_discussion`): the block of
+    line written from them (`report_blocks.with_discussion`): the block of
     that protocol and run replaced in place, or one appended; other
     discussions stay. Raises ValueError when the protocol declares RUN_ID
     as its result (the result block shows it: `--into` without
@@ -919,7 +919,7 @@ def discuss_into(
             f"no runs/{run_id}/ in {area.name} — a discussion names a run of the "
             f"protocol's area"
         )
-    return report_blocks.write_discussion(report, protocol, run_id, why)
+    return report_blocks.with_discussion(report, protocol, run_id, why)
 
 
 def _discuss_file(
@@ -1024,7 +1024,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
     findings left open or deferred, known losses and the protocol
     (`handovers.build`); the report gets the record's handover block, the
     one of this protocol replaced in place, its result blocks in that
-    report withdrawn, everything else kept (`handovers.write_handover_block`,
+    report withdrawn, everything else kept (`handovers.with_handover_block`,
     `report_blocks.withdraw_result_blocks`). Other reports are not written.
     Write the immutable record first, protocol
     projection second, report last: interruption cannot grant permission
@@ -1073,7 +1073,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         )
         before = state_text(root, report, staged=False) or ""
         before = report_blocks.withdraw_result_blocks(before, protocol, report)
-        written = handovers.write_handover_block(before, record, root, path)
+        written = handovers.with_handover_block(before, record, root, path)
         handovers.write_record(path, record)
         done.append(shown(path, Path.cwd()))
         if new != text:

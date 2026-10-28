@@ -35,9 +35,9 @@ class Blocks(unittest.TestCase):
         mine = "../experiments/01-x/PROTOCOL-x.md"
         alias = "../experiments/01-x/../01-x/PROTOCOL-x.md"
         other = "../experiments/02-y/PROTOCOL-y.md"
-        text = report_blocks.write_block("# Report\n\nProse.\n", mine, RUN, "a = 1")
-        text = report_blocks.write_block(text, alias, RUN, "a = 2")
-        text = report_blocks.write_block(text, other, RUN, "b = 1")
+        text = report_blocks.with_block("# Report\n\nProse.\n", mine, RUN, "a = 1")
+        text = report_blocks.with_block(text, alias, RUN, "a = 2")
+        text = report_blocks.with_block(text, other, RUN, "b = 1")
         kept = report_blocks.withdraw_result_blocks(text, owner, report)
         self.assertTrue(kept.startswith("# Report\n\nProse.\n"), kept)
         self.assertEqual(
@@ -50,24 +50,24 @@ class Blocks(unittest.TestCase):
 
     def test_write_appends_then_replaces_in_place(self):
         text = "# Report\n\nprose\n"
-        once = report_blocks.write_block(text, P, RUN, "a = 1 (run x)")
+        once = report_blocks.with_block(text, P, RUN, "a = 1 (run x)")
         self.assertEqual(
             [(b.protocol, b.run_id, b.body) for b in report_blocks.blocks(once)],
             [(P, RUN, "a = 1 (run x)")],
         )
-        self.assertEqual(report_blocks.write_block(once, P, RUN, "a = 1 (run x)"), once)
+        self.assertEqual(report_blocks.with_block(once, P, RUN, "a = 1 (run x)"), once)
         moved = once.replace("prose\n", "prose\n\nafter\n") + "tail\n"
-        again = report_blocks.write_block(moved, P, RUN, "a = 2 (run x)")
+        again = report_blocks.with_block(moved, P, RUN, "a = 2 (run x)")
         self.assertEqual(again, moved.replace("a = 1 (run x)", "a = 2 (run x)"))
 
     def test_a_new_run_replaces_the_protocols_block_and_no_other(self):
         """A run change: the protocol's block is replaced, not joined by a
         second (review 2026-10-22); another protocol's block stays."""
         other = "experiments/02-y/PROTOCOL-y.md"
-        text = report_blocks.write_block("", P, RUN, "a = 1")
-        text = report_blocks.write_block(text, other, RUN, "b = 1")
+        text = report_blocks.with_block("", P, RUN, "a = 1")
+        text = report_blocks.with_block(text, other, RUN, "b = 1")
         new = "2026-10-08T10-00-00_cd34"
-        text = report_blocks.write_block(text, P, new, "a = 2")
+        text = report_blocks.with_block(text, P, new, "a = 2")
         self.assertEqual(
             [(b.protocol, b.run_id, b.body) for b in report_blocks.blocks(text)],
             [(P, new, "a = 2"), (other, RUN, "b = 1")],
@@ -84,7 +84,7 @@ class Blocks(unittest.TestCase):
                 report_blocks.blocks(text)
 
     def test_block_gaps_hold_the_declared_run_and_equality(self):
-        found = report_blocks.blocks(report_blocks.write_block("", P, RUN, "a = 1"))
+        found = report_blocks.blocks(report_blocks.with_block("", P, RUN, "a = 1"))
         BlockSource = report_blocks.BlockSource
         report = Path.cwd() / "REPORT.md"
         self.assertEqual(
@@ -123,7 +123,7 @@ class Blocks(unittest.TestCase):
             "1. step one of 5 folds\n"
             "see https://x.org/a/2024/12\n"
             "| 2464-18-8 | `experiments/01-x/runs/` `n=100` |\n"
-            + report_blocks.write_block("", P, RUN, "auc = 0.69 (run x)")
+            + report_blocks.with_block("", P, RUN, "auc = 0.69 (run x)")
         )
         self.assertEqual(report_blocks.unsourced_numbers(text), [(1, ["28", "0.449"])])
 
@@ -133,9 +133,9 @@ class Discussions(unittest.TestCase):
 
     def test_write_appends_then_replaces_and_keeps_other_discussions(self):
         other = "2026-10-08T10-00-00_cd34"
-        text = report_blocks.write_discussion("# R\n", P, RUN, "one")
-        text = report_blocks.write_discussion(text, P, other, "other")
-        text = report_blocks.write_discussion(text, P, RUN, "two — 12 of 30")
+        text = report_blocks.with_discussion("# R\n", P, RUN, "one")
+        text = report_blocks.with_discussion(text, P, other, "other")
+        text = report_blocks.with_discussion(text, P, RUN, "two — 12 of 30")
         found = report_blocks.discussions(text)
         self.assertEqual(
             [(d.protocol, d.run_id, d.why) for d in found],
@@ -148,9 +148,7 @@ class Discussions(unittest.TestCase):
 
     def test_quotes_in_the_why_survive_the_head(self):
         why = 'the "best" fold \\ backslash'
-        (d,) = report_blocks.discussions(
-            report_blocks.write_discussion("", P, RUN, why)
-        )
+        (d,) = report_blocks.discussions(report_blocks.with_discussion("", P, RUN, why))
         self.assertEqual(d.why, why)
 
     def test_a_why_that_cannot_stand_is_refused(self):
@@ -187,7 +185,7 @@ class Discussions(unittest.TestCase):
         ):
             with self.subTest(why=why), tempfile.TemporaryDirectory() as d:
                 report = Path(d) / "REPORT.md"
-                text = report_blocks.write_discussion("# R\n", P, RUN, why)
+                text = report_blocks.with_discussion("# R\n", P, RUN, why)
                 report.write_text(text, encoding="utf-8")
                 found = report_blocks.discussions(report.read_text(encoding="utf-8"))
                 self.assertEqual([x.why for x in found], [why])
@@ -215,7 +213,7 @@ class Discussions(unittest.TestCase):
         self.assertIn("line 9: the discussion of run", gap)
         self.assertIn("repeats the block at line 1", gap)
         with self.assertRaisesRegex(report_blocks.ReportBlockError, "in 2 blocks"):
-            report_blocks.write_discussion(text, P, RUN, "b")
+            report_blocks.with_discussion(text, P, RUN, "b")
 
     def test_a_block_that_does_not_read_raises_with_its_line(self):
         lines = report_blocks.discussion_lines(P, RUN, "a")
@@ -244,7 +242,7 @@ class Discussions(unittest.TestCase):
                 report_blocks.discussions(text)
 
     def test_numbers_in_and_beside_stop_at_a_blank_line_and_a_block(self):
-        result = report_blocks.write_block("", P, RUN, "auc = 0.69")
+        result = report_blocks.with_block("", P, RUN, "auc = 0.69")
         block = "\n".join(report_blocks.discussion_lines(P, RUN, "12 of 30 kept"))
         text = (
             f"# Report\n\nstated 12 before\n{block}\nAUC 0.80 after\n"
@@ -317,7 +315,7 @@ class ReportFiles(unittest.TestCase):
         root = area.parent.parent
         report = root / "REPORT.md"
         report.write_text(
-            report_blocks.write_block(
+            report_blocks.with_block(
                 "", P, self.RUN, f"C1 met · recorded: (run {self.RUN})"
             ),
             encoding="utf-8",
@@ -337,7 +335,7 @@ class ReportFiles(unittest.TestCase):
         root = area.parent.parent
         report = root / "REPORT.md"
         report.write_text(
-            report_blocks.write_block(
+            report_blocks.with_block(
                 "", P, self.RUN, f"C1 met · recorded: (run {self.RUN})"
             ),
             encoding="utf-8",

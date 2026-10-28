@@ -76,7 +76,7 @@ from labkit.formats.comment_blocks import (
     closer,
     comment_blocks,
     opener,
-    write_comment_block,
+    with_comment_block,
 )
 from labkit.formats.protocol_block import toml_string
 from labkit.formats.repo import into_command
@@ -165,7 +165,7 @@ def blocks(text: str) -> list[Block]:
     return out
 
 
-def write_block(text: str, protocol: str, run_id: str, body: str) -> str:
+def with_block(text: str, protocol: str, run_id: str, body: str) -> str:
     """TEXT with PROTOCOL's block showing RUN_ID with BODY (`block_body`):
     every block of PROTOCOL replaced in place, whichever run it showed — a
     newly adopted run replaces the old one —, or one appended at the end
@@ -425,10 +425,10 @@ def discussions(text: str) -> list[Discussion]:
     ]
 
 
-def write_discussion(text: str, protocol: str, run_id: str, why: str) -> str:
+def with_discussion(text: str, protocol: str, run_id: str, why: str) -> str:
     """TEXT with the block discussing RUN_ID of PROTOCOL with WHY: the one
     block of that protocol and run replaced in place, or one appended at
-    the end; other discussions stay (`write_comment_block`). Raises
+    the end; other discussions stay (`with_comment_block`). Raises
     ReportBlockError on a block that does not read or on two blocks of the
     same protocol and run (the gate names that too), ValueError on a why
     that cannot stand (`discussion_lines`)."""
@@ -439,7 +439,7 @@ def write_discussion(text: str, protocol: str, run_id: str, why: str) -> str:
         if (d.protocol, d.run_id) == (protocol, run_id)
     }
     try:
-        return write_comment_block(
+        return with_comment_block(
             text,
             new,
             comment_blocks(text, DISCUSSED, "discussion block"),

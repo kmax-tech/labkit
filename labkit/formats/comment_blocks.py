@@ -108,7 +108,7 @@ def comment_blocks(
     return out
 
 
-def write_comment_block(
+def with_comment_block(
     text: str,
     new: list[str],
     found: list[CommentBlock],

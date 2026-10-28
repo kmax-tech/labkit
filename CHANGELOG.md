@@ -1113,6 +1113,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A function named `write_*` writes.** Four pure functions that return
+  a report's text with a block in it were named as writers;
+  `report_blocks.with_block`, `with_discussion`,
+  `handovers.with_handover_block` and `comment_blocks.with_comment_block`
+  now. Audit 2026-10-27 (third), M4.
 - **One estimator sentence in the next steps.** What the estimator's
   `01_measure.py` asks to be filled stood twice in `next_steps`, once per
   cut; `scaffold.estimator_fill` says it for both. Audit 2026-10-27

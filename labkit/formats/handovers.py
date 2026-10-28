@@ -42,7 +42,7 @@ from labkit.formats.comment_blocks import (
     closer,
     comment_blocks,
     opener,
-    write_comment_block,
+    with_comment_block,
 )
 from labkit.formats.repo import (
     PROTOCOL_NAME,
@@ -401,15 +401,15 @@ def _block_head(head: list[str], at: int) -> tuple[str, str]:
     return data["protocol"], data["record"]
 
 
-def write_handover_block(text: str, record: Handover, root: Path, path: Path) -> str:
+def with_handover_block(text: str, record: Handover, root: Path, path: Path) -> str:
     """TEXT with RECORD's handover block: the one block of its protocol
     replaced in place, or one appended at the end; everything else stays
-    (`write_comment_block`). Raises HandoverError on a block that does not
+    (`with_comment_block`). Raises HandoverError on a block that does not
     read or on two blocks of the same protocol."""
     protocol = _shown(record, root, path)[0]
     matching = {b.first for b in handover_blocks(text) if b.protocol == protocol}
     try:
-        return write_comment_block(
+        return with_comment_block(
             text,
             handover_lines(record, root, path),
             comment_blocks(text, KIND, "handover block"),
