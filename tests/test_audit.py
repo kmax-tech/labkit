@@ -1771,6 +1771,265 @@ class UnrecordedCall(unittest.TestCase):
         self.assertNotIn(review, out)
 
 
+#: how many reports of the fixed-followup pilots docs/usability keeps
+PILOT_REPORTS = 27
+
+
+def read_as_before(answer: str) -> list[tuple[str, str]]:
+    """The findings of ANSWER as `parse` read them until findings kept
+    their lines below the grade line: each finding line alone, stripped —
+    the old reading frozen here on purpose, so the twin compares against
+    it and not against the code under test."""
+    body = answer[: list(audit.VERDICT.finditer(answer))[-1].start()]
+    return [
+        (f.group(1), line.strip())
+        for line in body.splitlines()
+        if (f := audit.FINDING.match(line))
+    ]
+
+
+LAB015 = "LAB-015 Preflight audit before freezing"
+#: synthetic answers, no task content, in the three shapes the pilots'
+#: auditors wrote a finding below its line (round 2, t21 and t71; area 12):
+#: (answer, number of the finding, its lines as the record must keep them,
+#: its check and check note)
+#: — bullets right below the line, effect, rule and repair after a blank
+BULLETS = (
+    f"WARNING · a.py:10 · one finding on one line · a value drifts · {LAB015} · fix it\n"
+    "\n"
+    "WARNING · a.py:20 · the head of a finding that lists its parts below:\n"
+    "- part one\n"
+    "- part two\n"
+    "- part three\n"
+    "\n"
+    f"· the effect, after a blank line · {LAB015} · the smallest change\n"
+    "\n"
+    "NOTE · a.py:30 · a note · no number changes · new class · none\n"
+    "\n"
+    "verdict: 0 blockers, 2 warnings, 1 notes\n"
+    "scope:\n"
+    "scripts/01_measure.py"
+)
+BULLETS_LINES = [
+    "WARNING · a.py:20 · the head of a finding that lists its parts below:",
+    "- part one",
+    "- part two",
+    "- part three",
+    f"· the effect, after a blank line · {LAB015} · the smallest change",
+]
+#: — several findings, one whose check closes it nine lines below its grade
+#: line, and check notes closed by a period
+CHECK_BELOW = (
+    f"BLOCKER · p.md:13 · a first blocker · a value is wrong · {LAB015} · align them\n"
+    "\n"
+    f"BLOCKER · a.py:5 · a second blocker · a value is wrong · {LAB015} · count them · "
+    "check: b2_count (per group; it must be zero).\n"
+    "\n"
+    "BLOCKER · a.py:40 · the head of a finding with two causes:\n"
+    "- cause one\n"
+    "- cause two\n"
+    "\n"
+    "A paragraph of evidence. · the effect, with an assignment:\n"
+    "- step one\n"
+    "- step two\n"
+    "- step three\n"
+    "\n"
+    f"· {LAB015} · the smallest change · check: a2_value (what the value must show; "
+    "it holds for every group).\n"
+    "\n"
+    f"WARNING · a.py:50 · a warning · a value moves · {LAB015} · fix it\n"
+    "\n"
+    "NOTE · a.py:60 · a note · nothing moves · new class · none\n"
+    "\n"
+    "verdict: 3 blockers, 1 warnings, 1 notes"
+)
+CHECK_BELOW_LINES = [
+    "BLOCKER · a.py:40 · the head of a finding with two causes:",
+    "- cause one",
+    "- cause two",
+    "A paragraph of evidence. · the effect, with an assignment:",
+    "- step one",
+    "- step two",
+    "- step three",
+    f"· {LAB015} · the smallest change · check: a2_value (what the value must show; "
+    "it holds for every group).",
+]
+#: — indented bullets, a line of spaces, an indented paragraph, then more
+#: findings, the notes tally and READ lines
+INDENTED = (
+    f"BLOCKER · a.py:1 · a blocker · a value is wrong · {LAB015} · fix it\n"
+    "\n"
+    "WARNING · a.py:2 · the head of a finding with indented evidence:\n"
+    "  - evidence one\n"
+    "  - evidence two\n"
+    "  - evidence three\n"
+    "  \n"
+    "  An indented paragraph. Assignment: the number to compute.\n"
+    "\n"
+    f"WARNING · a.py:3 · a warning · a value moves · {LAB015} · fix it\n"
+    "\n"
+    "notes: 2 (not listed — repeat cost low)\n"
+    "\n"
+    "READ · p.md:5 · a placeholder still stands · write it back\n"
+    "\n"
+    "verdict: 1 blockers, 2 warnings, 2 notes"
+)
+INDENTED_LINES = [
+    "WARNING · a.py:2 · the head of a finding with indented evidence:",
+    "- evidence one",
+    "- evidence two",
+    "- evidence three",
+    "An indented paragraph. Assignment: the number to compute.",
+]
+
+
+class WholeFinding(unittest.TestCase):
+    """A finding may go on below its grade line and is recorded whole: it
+    ends at the next finding line or a section (a FIX, READ, notes tally,
+    verdict or scope line, a code fence), a blank line does not end it
+    (pilot round 2, t21: a WARNING stored as its first 136 characters, its
+    bullets, effect, rule and repair only in the kept answer). The one
+    shape that does not read — text below a blank line after the last
+    finding — is refused with its way out. The twin: the kept pilot
+    reports read exactly as before. The answers here are synthetic, in
+    the shapes the pilots' auditors wrote; the pilots' own answers were
+    compared outside this repository."""
+
+    SHAPES = {
+        "bullets": (BULLETS, 2, BULLETS_LINES, "", ""),
+        "check below": (
+            CHECK_BELOW,
+            3,
+            CHECK_BELOW_LINES,
+            "a2_value",
+            "what the value must show; it holds for every group",
+        ),
+        "indented": (INDENTED, 2, INDENTED_LINES, "", ""),
+    }
+    LAB015 = LAB015
+
+    def test_each_shape_is_recorded_whole(self):
+        for name, (answer, n, lines, check, note) in self.SHAPES.items():
+            with self.subTest(name):
+                area = repo_with()
+                rc, out, err, _ = run(area, answer)
+                self.assertEqual(rc, 1, err)
+                (record,) = findings.area_records(area)
+                got = record.findings[n - 1]
+                # every line the auditor wrote for the finding, in order:
+                # its effect, rule, repair and check note included
+                self.assertEqual(got.text.splitlines(), lines)
+                self.assertEqual((got.check, got.check_note), (check, note))
+                # the other findings as their one line, as before
+                before = read_as_before(answer)
+                self.assertEqual(len(record.findings), len(before))
+                for i, (f, (_, line)) in enumerate(zip(record.findings, before), 1):
+                    if i != n:
+                        self.assertEqual(f.text, line)
+                # the decision list gives it one line
+                self.assertIn(f"  {n} · {got.one_line[:159]}", out)
+                self.assertNotIn(f"  {n} · {lines[0]}\n", out)
+
+    def test_a_check_note_closed_by_a_period_on_its_own_line(self):
+        area = repo_with()
+        run(area, CHECK_BELOW)
+        second = findings.area_records(area)[0].findings[1]
+        self.assertEqual(
+            (second.check, second.check_note),
+            ("b2_count", "per group; it must be zero"),
+        )
+
+    def test_the_kept_pilot_reports_read_as_before(self):
+        reports = sorted(
+            PILOT2.parent.glob("2026-10-26-fixed-followup-pilot*/*.report.txt")
+        )
+        self.assertEqual(len(reports), PILOT_REPORTS)
+        for path in reports:
+            with self.subTest(path.name):
+                answer = path.read_text(encoding="utf-8")
+                self.assertEqual(
+                    audit.parse(answer)["findings"], read_as_before(answer)
+                )
+
+    def test_text_after_the_last_finding_below_a_blank_line_is_refused(self):
+        line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
+        verdict = "verdict: 1 blockers, 0 warnings, 0 notes"
+        area = repo_with()
+        answer = f"{line}\n\nOverall, fix the blocker first.\n{verdict}"
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("after the last finding, below a blank line", err)
+        self.assertIn(f"— way out: {ways_out.ANSWER_AGAIN}; the answer is kept", err)
+        self.assertEqual(findings.area_records(area), [])
+        # the twins: directly below the last finding, or below a blank line
+        # before another finding, the text is the finding's
+        for answer, text in (
+            (f"{line}\n- the rows show it\n{verdict}", f"{line}\n- the rows show it"),
+            (
+                f"{line}\n\n- the rows show it\n\nNOTE · b.py:2 · n\n"
+                "verdict: 1 blockers, 0 warnings, 1 notes",
+                f"{line}\n- the rows show it",
+            ),
+        ):
+            with self.subTest(answer=answer):
+                area = repo_with()
+                rc, _, err, _ = run(area, answer)
+                self.assertEqual(rc, 1, err)
+                self.assertEqual(findings.area_records(area)[0].findings[0].text, text)
+
+    def test_a_verdict_quoted_in_a_bullet_does_not_end_the_finding(self):
+        line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
+        bullet = "- the report says verdict: 1 blockers, 0 warnings — wrong"
+        area = repo_with()
+        answer = f"{line}\n{bullet}\n· more\nverdict: 1 blockers, 0 warnings, 0 notes"
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 1, err)
+        (f,) = findings.area_records(area)[0].findings
+        self.assertEqual(f.text, f"{line}\n{bullet}\n· more")
+
+    def test_the_check_still_closes_the_finding(self):
+        """One check per finding, read from its text as before: it closes
+        the finding — on its last line when it goes on below its first."""
+        line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
+        area = repo_with()
+        answer = (
+            f"{line} · check: a2_spread\n- per seed\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("check field that does not read", err)
+        area = repo_with()
+        answer = (
+            f"{line}\n- per seed · check: a2_spread (each seed).\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 1, err)
+        (f,) = findings.area_records(area)[0].findings
+        self.assertEqual((f.check, f.check_note), ("a2_spread", "each seed"))
+
+    def test_a_gate_names_a_whole_finding_on_one_line(self):
+        """The record keeps the lines; a gate's line and the decision list
+        give the finding one line (`Finding.one_line`)."""
+        area = repo_with()
+        answer = (
+            "BLOCKER · a.py:1 · two causes:\n- one\n- two\n· y · z\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 1, err)
+        (record,) = findings.area_records(area)
+        (u,) = findings.open_blockers([record])
+        self.assertEqual(
+            u.finding.text, "BLOCKER · a.py:1 · two causes:\n- one\n- two\n· y · z"
+        )
+        self.assertEqual(
+            u.line,
+            f"{record.path.name}: BLOCKER · a.py:1 · two causes: - one - two · y · z",
+        )
+
+
 class AuditorRefusal(unittest.TestCase):
     """The preflight auditor answers an unfilled protocol with one line,
     `refused: protocol not filled …` (`experiment-preflight.agent.md`);

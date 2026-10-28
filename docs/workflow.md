@@ -161,7 +161,10 @@ Reads: the protocol, the scripts and the repo-local modules they import,
 the answering run's rows and `metrics.json`, the files it declared as
 dependencies (a predictor's weights: small text whole, others by digest),
 the cited rules of the standard — one model call. Writes: `audits/<minute>-analysis.toml`, one
-`[[finding]]` per line, each `open`, bound to the code (`scope_sha`), the
+`[[finding]]` per finding — its grade line and the lines the auditor wrote
+below it, up to the next finding or section (a FIX, READ, notes tally,
+verdict or scope line, a code fence; a blank line ends none), kept whole
+in `text` —, each `open`, bound to the code (`scope_sha`), the
 promise block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`; the report
 fields written later do not move it) — the run and what the auditor was

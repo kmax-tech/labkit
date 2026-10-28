@@ -458,7 +458,7 @@ def check_deferred_elsewhere(
         else:
             how = "set aside for later work"
         findings.note(
-            f"  deferred in {other.name} ({r.date}), {how}: {f.text} — {f.reason}"
+            f"  deferred in {other.name} ({r.date}), {how}: {f.one_line} — {f.reason}"
         )
     if elsewhere:
         findings.note(

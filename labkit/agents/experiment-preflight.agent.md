@@ -206,10 +206,18 @@ worst first; they carry no failure scenario and do not enter the verdict:
 
 ## Report format
 
-One line per finding, most severe first, nothing else. Write a line only
-for a finding you stand by: every BLOCKER and WARNING line counts, the
-verdict must count exactly them, and a line withdrawn in prose below it
-makes the audit unrecordable.
+One finding per entry, most severe first, nothing else. A finding starts
+on its own line with its grade and its fields in the order below; it may
+go on below that line — bullets, a few lines of evidence — and it ends at
+the next finding line or at the next section: a `FIX`, `READ`, `notes:`,
+`verdict:` or `scope:` line, or a code fence. A blank line does not end
+it, and all of it is recorded: between two findings, text below a blank
+line belongs to the finding above. After the last finding, text below a
+blank line, before the next section, makes the audit unrecordable: it
+reads as the finding's or as a remark on the whole audit. Write a
+finding only if you stand by it: every BLOCKER and
+WARNING line counts, the verdict must count exactly them, and a finding
+withdrawn in prose below it makes the audit unrecordable.
 
 ```
 BLOCKER|WARNING|NOTE · <file>:<line> · <what is wrong> · <which reported number
@@ -238,7 +246,7 @@ it there.
 
 **A repair that only a diagnostic can show names it.** When a BLOCKER's
 repair cannot be seen in the code alone — a leak, a contamination, a
-denominator — end its line with ` · check: <metrics key>`: the key the
+denominator — end the finding with ` · check: <metrics key>`: the key the
 measuring code must write to metrics.json so that a later audit can see the
 repair hold (lowercase snake_case). When the repair is confirmed by a
 file the run reads — a model's weights, a mapping, a lexicon — not by a
@@ -248,7 +256,8 @@ shows it under `DEPENDENCY <path>` (a binary or large file is named by its
 digest only and cannot answer a check). Say what its value must show in the
 finding's own fields, before the check; if you add it after the key, write
 it as ` (<what it must show>)` or ` — <what it must show>` to the end of
-the line, nothing else. One check per finding. It is fixed with the
+the line, nothing else — the check closes the finding: on its last line
+when it goes on below its first. One check per finding. It is fixed with the
 finding; nobody chooses it when closing.
 
 **No finding without a failure scenario** (LAB-015 Preflight audit before freezing). The fourth field must name

@@ -188,6 +188,9 @@ VERDICT = re.compile(
     r"(?:,\s*(\d+)\s*notes?(?:\(s\))?)?",
     re.I,
 )
+#: a verdict line as a section of a report: VERDICT at the line's start —
+#: a finding's bullet that quotes a verdict mid-line does not end it
+VERDICT_LINE = re.compile(LEAD + r"\**" + VERDICT.pattern, re.I)
 #: the auditor's refusal to audit — the one line its instructions give it for
 #: an unfilled protocol (`experiment-preflight.agent.md`); an answer without a
 #: verdict line that carries it is shown as that refusal
@@ -684,22 +687,32 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
     return out
 
 
+def section_line(line: str) -> bool:
+    """Does LINE open a section of a report — a FIX or READ line, the
+    verdict or scope line, a code fence? Such a line ends a finding
+    (`finding_entries`) and a FIX entry (`fix_block`)."""
+    return bool(
+        FIX_OPEN.match(line)
+        or READ_HINT.match(line)
+        or VERDICT_LINE.match(line)
+        or line.strip().startswith("scope:")
+        or protocol_block.FENCE.match(line)
+    )
+
+
+#: the closing tally of the notes not listed at repeat cost low
+#: (`notes: K (not listed — repeat cost low)`, `experiment-preflight.agent.md`):
+#: a section of the report too, which ends the finding above it
+NOTES_TALLY = re.compile(LEAD + r"\**notes\**\s*:\s*\d+", re.I)
+
+
 def fix_block(lines: list[str], at: int) -> list[str]:
     """The lines that continue the FIX entry at LINES[AT]: every line right
-    below it up to the first blank line or the first line that opens
-    another entry — a FIX, a finding, a READ, the verdict or scope line, a
-    code fence."""
+    below it up to the first blank line, finding line or section line
+    (`section_line`)."""
     out: list[str] = []
     for line in lines[at + 1 :]:
-        if (
-            not line.strip()
-            or FIX_OPEN.match(line)
-            or FINDING.match(line)
-            or READ_HINT.match(line)
-            or VERDICT.search(line)
-            or line.strip().startswith("scope:")
-            or protocol_block.FENCE.match(line)
-        ):
+        if not line.strip() or FINDING.match(line) or section_line(line):
             break
         out.append(line)
     return out
@@ -802,10 +815,14 @@ def parse_clarity(text: str) -> dict:
 
 
 def parse(text: str) -> dict:
-    """{"verdict": (blockers, warnings, notes), "findings": [(grade, line)]} from
-    the LAST verdict line, findings from the text before it (that the two
-    agree is the writer's check, `findings.verdict_disagrees`). Raises AuditError when no verdict line is readable — quoting the auditor's
-    `refused:` line when the answer is its refusal (`REFUSED`)."""
+    """{"verdict": (blockers, warnings, notes), "findings": [(grade, text)]}
+    from the LAST verdict line, the findings from the lines before it, each
+    whole (`finding_entries`: its grade line and the lines that continue
+    it). That the verdict counts exactly the finding lines is the writer's
+    check (`findings.verdict_disagrees`). Raises AuditError when no verdict
+    line is readable — quoting the auditor's `refused:` line when the
+    answer is its refusal (`REFUSED`) — and where the lines after the last
+    finding cannot be told apart (`finding_entries`)."""
     refusal = REFUSED.search(text or "")
     if refusal is not None and VERDICT.search(text or "") is None:
         raise AuditError(
@@ -813,17 +830,69 @@ def parse(text: str) -> dict:
             fix="answer what it names, then run the audit again",
         )
     m = last_verdict(VERDICT, text, "the report", "an audit")
-    body = (text or "")[: m.start()]
-    findings = [
-        (f.group(1), line.strip())
-        for line in body.splitlines()
-        if (f := FINDING.match(line))
-    ]
+    # the lines before the verdict's own line: what stands before `verdict:`
+    # on that line (a bullet, a bold mark) belongs to no finding
+    body = (text or "")[: (text or "").rfind("\n", 0, m.start()) + 1]
     return {
         "verdict": (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)),
-        "findings": findings,
+        "findings": finding_entries(body.splitlines()),
         "scope": scope_list((text or "")[m.end() :]),
     }
+
+
+def finding_entries(lines: list[str]) -> list[tuple[str, str]]:
+    """(grade, text) of every finding in LINES — a report's lines before its
+    verdict line — in order. A finding is its grade line (FINDING) and every
+    line below it up to the next finding line or section line
+    (`section_line`, or the notes tally NOTES_TALLY); a blank line does not
+    end it. Its text is those lines stripped, the blank ones dropped,
+    joined by line breaks — the record keeps the finding whole: effect,
+    rule, repair and check included (pilot round 2, t21: a WARNING stored
+    as its first 136 characters). Lines before the first finding and after
+    a section line belong to no finding and are not read, as before.
+
+    Raises AuditError (ANSWER_AGAIN) on the one shape that does not read:
+    a line that a blank line separates from the last finding before a
+    section line or the verdict — between two findings it can only be the
+    first one's, after the last it may be that finding's or a remark on
+    the whole audit, and a guess would put a remark in a finding or drop
+    part of one."""
+    entries: list[tuple[str, list[str]]] = []
+    after_blank = ""  # the current finding's first line below a blank line
+    blank = False
+    current: list[str] | None = None
+    for line in lines:
+        if f := FINDING.match(line):
+            current, after_blank, blank = [line.strip()], "", False
+            entries.append((f.group(1), current))
+        elif section_line(line) or NOTES_TALLY.match(line):
+            if after_blank:
+                raise _after_the_last(entries[-1][1][0], after_blank)
+            current = None
+        elif current is None:
+            continue  # before the first finding, or after a section line
+        elif not line.strip():
+            blank = True
+        else:
+            if blank and not after_blank:
+                after_blank = line.strip()
+            current.append(line.strip())
+    if after_blank:
+        raise _after_the_last(entries[-1][1][0], after_blank)
+    return [(grade, "\n".join(lines_of)) for grade, lines_of in entries]
+
+
+def _after_the_last(finding: str, line: str) -> AuditError:
+    """The refusal of LINE, which a blank line separates from FINDING, the
+    last finding before a section line or the verdict."""
+    return AuditError(
+        f"after the last finding, below a blank line: {finding[:120]!r} is "
+        f"followed by {line[:120]!r} — that reads as the finding's or as a remark "
+        f"on the whole audit, and which cannot be told; the last finding goes on "
+        f"below its line without a blank line, and nothing else stands before "
+        f"the verdict. Nothing is recorded",
+        fix=ANSWER_AGAIN,
+    )
 
 
 def scope_list(tail: str) -> list[str]:
@@ -1475,9 +1544,9 @@ def decision_lines(
             out.extend(ways_out.blocker_routes(promised, full=False))
         for n, f in enumerate(record.findings, 1):
             text = (
-                f.text
-                if len(f.text) <= DECISION_TEXT_WIDTH
-                else f.text[: DECISION_TEXT_WIDTH - 1] + "…"
+                f.one_line
+                if len(f.one_line) <= DECISION_TEXT_WIDTH
+                else f.one_line[: DECISION_TEXT_WIDTH - 1] + "…"
             )
             out.append(f"  {n} · {text}")
             out.append(

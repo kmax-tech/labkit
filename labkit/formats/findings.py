@@ -21,6 +21,8 @@ area, one file per audit:
     [[finding]]
     grade = "BLOCKER"
     text = "BLOCKER · scripts/01_measure.py:42 · … · LAB-038 What the prompt demands · …"
+                         # the finding whole: its grade line and the lines the
+                         # auditor wrote below it, joined by line breaks (\n)
     status = "open"      # open | fixed | accepted | deferred | dismissed
     reason = ""          # owed for accepted, deferred and dismissed
     # effect = "C1 not assessable"  — an accepted BLOCKER or WARNING: see EFFECT
@@ -188,6 +190,9 @@ class Finding:
     """One finding of one audit and what the person decided about it."""
 
     grade: str
+    # the finding whole, as the auditor wrote it: its grade line and the
+    # lines below it up to the next finding or section, stripped, joined by
+    # "\n" (`audit.finding_entries`); its closing field is the check
     text: str
     status: str
     reason: str
@@ -204,6 +209,13 @@ class Finding:
     # never by a person ("" for the auditor's own findings); its origin is
     # found by following the chain (`followup.origin_of`)
     carries: str = ""
+
+    @property
+    def one_line(self) -> str:
+        """TEXT on one line, its lines joined by a space — how a view that
+        gives each finding one line shows it (the decision list, a gate's
+        line, a reminder); the record and the prompts keep TEXT."""
+        return " ".join(self.text.splitlines())
 
     @property
     def effect_owed(self) -> bool:
@@ -281,21 +293,26 @@ def check_of(text: str) -> tuple[str, str]:
     after the key in one of the two forms of CHECK_FORM (a period closing
     the line is part of a dash note and no part of a parenthesis note) —
     or ("", "") when it requires none. Only the key is machine-read; the note is kept whole.
-    Raises ValueError on a field that does not read and on two check
-    fields in one line: a requirement half-read, or one of two, would be
-    one nobody can be held to (second fixed-followup pilot: six records
-    lost to `check: <key> (<note>)` while only the bare key was read)."""
+    TEXT is the finding whole, all its lines searched: one check per
+    finding, closing it — on its last line when it goes on below its
+    first. Raises ValueError on a field that does not read and on two
+    check fields in one finding, quoting the line that holds the last
+    one: a requirement half-read, or one of two, would be one nobody can
+    be held to (second fixed-followup pilot: six records lost to
+    `check: <key> (<note>)` while only the bare key was read)."""
     if not CHECK_FIELD.search(text):
         return "", ""
+    # the line that holds the last check field, as the refusals quote it
+    held = next(x for x in reversed(text.splitlines()) if CHECK_FIELD.search(x))
     if len(CHECK_FIELD.findall(text)) > 1:
         raise ValueError(
-            f"two check fields in one finding: {text.strip()[-160:]!r} — one "
+            f"two check fields in one finding: {held.strip()[-160:]!r} — one "
             f"finding requires one diagnostic; {CHECK_FORM}"
         )
     m = _CHECK.search(text.rstrip())
     if m is None:
         raise ValueError(
-            f"a check field that does not read: {text.strip()[-160:]!r} — the form "
+            f"a check field that does not read: {held.strip()[-160:]!r} — the form "
             f"is {CHECK_FORM}"
         )
     return m["key"], (m["paren"] or m["dash"] or "").strip()
@@ -498,8 +515,8 @@ class OpenFinding:
 
     @property
     def line(self) -> str:
-        """`<record file>: <text>` — how every gate names it."""
-        return f"{self.record.path.name}: {self.finding.text}"
+        """`<record file>: <text on one line>` — how every gate names it."""
+        return f"{self.record.path.name}: {self.finding.one_line}"
 
 
 def number_of(record: Record, finding: Finding) -> int:

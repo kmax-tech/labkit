@@ -156,6 +156,7 @@ def named_files(
     the snapshot holds code."""
     out: list[Path] = []
     for _, f in decided:
+        # the second field stands on the grade line, the finding's first
         fields = f.text.split(" · ")
         if len(fields) < 2:
             continue

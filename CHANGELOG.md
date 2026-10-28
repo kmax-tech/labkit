@@ -513,6 +513,35 @@ pins (`requirements.txt` / `requirements.lock`).
   out-of-band test puts the lane outside that band. A wrong band formula
   still fails at every width. Round 2 of the labkit-paper area 15 pilot
   on 72507d0 (PubMedQA), D4.
+- **A finding that goes on below its line is recorded whole.** labkit
+  stores an audit's findings as data the person decides, and the parser
+  kept each finding's first line and dropped what followed without a
+  word: in pilot round 2 (t21) a WARNING was recorded as its
+  136-character head and decided on that, its bullets, effect, rule and
+  repair only in the kept answer. A
+  finding is now its grade line and every line below it up to the next
+  finding line or section — a FIX, READ, notes tally, verdict or scope
+  line, a code fence, each at the line's start (a verdict quoted in a
+  bullet ends nothing); a blank line does not end it — and its record
+  `text` keeps those lines, stripped and joined by line breaks
+  (`audit.finding_entries`). The check is read from that text as before:
+  one per finding, closing it (on its last line when it goes on below its
+  first); the verdict counts the finding lines as before. The one shape
+  that does not read is refused with the way out of an answer that did
+  not keep the form: text that a blank line separates from the last
+  finding before a section or the verdict, which reads as that finding's
+  or as a remark on the whole audit; between two findings such text is
+  the first one's. The decision list, a gate's line and
+  the preflight reminder give a finding one line (`Finding.one_line`);
+  the record and the prompts keep its lines. The auditor's instructions
+  ("Report format") and the record format in `findings.py` and
+  `docs/workflow.md` state the rule. Read against 60 kept auditor
+  answers (the labkit-paper pilots' 33, compared outside this repository,
+  and the 27 pilot reports in `docs/usability/`): the three with such a
+  finding are recorded whole, every line of the finding and its check
+  note included; the 57 others read exactly as before. The tests use
+  synthetic answers in the three shapes. Pilot round 2 of labkit-paper
+  area 15 on 72507d0 (t21), defect D5.
 - **A check note closed by a period no longer voids the audit, and an
   answer that does not read names its way out.** The auditor's
   instructions allow ` (<what it must show>)` or ` — <what it must show>`
