@@ -316,7 +316,8 @@ def gaps(
         blockers += [
             f"attempt {a.id} ({a.mode}, {a.model}) ended as {a.outcome} {how} "
             f"{DIR}/{rel}, and HEAD's journal names it while HEAD lacks the "
-            f"file — the delivered state lost its evidence; restore and commit it"
+            f"file — the delivered state lost its evidence; "
+            + _commit_way(rel, on_disk=present, kept=kept)
             for a, rel, how in _ended_without(head, at_head)
         ]
     notes = _open_notes(attempts, alive)
@@ -335,6 +336,16 @@ def gaps(
             f"(`git checkout -- {DIR}/{JOURNAL}`)"
         )
     return Gaps(blockers, notes)
+
+
+def _commit_way(rel: str, *, on_disk: set[str], kept: Mapping[str, Path]) -> str:
+    """How `audits/REL`, which HEAD's journal names and HEAD lacks, gets back
+    into a commit: staged when ON_DISK holds it, restored from the evidence
+    copy (KEPT); LOST_WAY when nothing keeps it. Reached in the tree state
+    only (`gaps` holds HEAD's journal there, not at the commit), so ON_DISK
+    is the state's own files, and HEAD by definition cannot restore it."""
+    way = restore_command(rel, at_head=set(), in_tree=on_disk, kept=kept)
+    return f"bring it back and commit it — {way}" if way else LOST_WAY
 
 
 def _ended_without(
@@ -420,6 +431,11 @@ def alive_of(area: Path, attempts: list[Attempt]) -> dict[str, bool | None]:
     return out
 
 
+#: what a gone file's line says when nothing restores it
+NOTHING_KEEPS = "no commit and no copy keeps it: it is lost"
+LOST_WAY = f"{NOTHING_KEEPS} — acknowledge the loss in a handover"
+
+
 def restore_way(
     rel: str,
     *,
@@ -427,10 +443,22 @@ def restore_way(
     in_tree: frozenset[str] | set[str],
     kept: Mapping[str, Path],
 ) -> str:
+    """How the evidence file `audits/REL` comes back (`restore_command`), or
+    LOST_WAY when nothing restores it."""
+    return restore_command(rel, at_head=at_head, in_tree=in_tree, kept=kept) or LOST_WAY
+
+
+def restore_command(
+    rel: str,
+    *,
+    at_head: set[str],
+    in_tree: frozenset[str] | set[str],
+    kept: Mapping[str, Path],
+) -> str | None:
     """How the evidence file `audits/REL` comes back, the one way that works
-    here: staged when it is still on disk (IN_TREE, at the commit), checked
-    out when HEAD holds it (AT_HEAD), copied from the branch's evidence
-    copy when that keeps it (KEPT, `kept_files`), else lost — never a
+    here: staged when it is still on disk (IN_TREE), checked out when HEAD
+    holds it (AT_HEAD), copied from the branch's evidence copy when that
+    keeps it (KEPT, `kept_files`); None when nothing keeps it — never a
     restore that cannot work: a record deleted before it was ever staged
     was offered `git checkout` and `git add`, and neither could bring it
     back (fourth SAB-like draw, 2026-10-28). Commands run in the area."""
@@ -447,10 +475,7 @@ def restore_way(
             f"decide its findings again where they were decided — never "
             f"delete a record, an outdated one included"
         )
-    return (
-        "no commit and no copy keeps it: it is lost — acknowledge the loss in "
-        "a handover"
-    )
+    return None
 
 
 def _paths_under(folder: Path) -> set[str]:
@@ -542,8 +567,10 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     directory (`journal_copy`, `copy_gaps`); STAGED, also every file the
     tree's journal or the copy names that neither the index nor the tree
     holds (`unstaged_losses`); then the paths a handover record keeps owed
-    (`handovers.missing_evidence`). Each gone file names its restore
-    (`restore_way`, from the evidence copy where it keeps one). A handover record that does not read
+    (`handovers.missing_paths`). Each gone file names its restore
+    (`restore_way`, from the evidence copy where it keeps one; a loss a
+    handover recorded its `restore_command`, or NOTHING_KEEPS — the
+    handover is written already). A handover record that does not read
     is one more blocker beside the others, never in their place. Raises
     AttemptError on a journal that does not read, RuntimeError when git
     fails."""
@@ -592,7 +619,20 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
         kept=kept,
     )
     try:
-        lost = handovers.missing_evidence(area, present, staged=staged)
+        lost = [
+            f"{DIR}/{name}: lost, as a handover recorded — "
+            + (
+                f"{way}; until it is back audits and adoption stay refused"
+                if (
+                    way := restore_command(
+                        name, at_head=at_head, in_tree=in_tree, kept=kept
+                    )
+                )
+                else f"{NOTHING_KEEPS}, and audits and adoption stay refused"
+            )
+            + " (a current handover lets only the stop and the commit pass)"
+            for name in handovers.missing_paths(area, present, staged=staged)
+        ]
     except handovers.HandoverError as exc:
         # raised as AttemptError it replaced every gap found above (audit
         # 2026-10-27, third, K1)
@@ -679,11 +719,35 @@ def area_integrity(area: Path, *, staged: bool = False) -> Integrity:
     record. The one assembly the stop/commit, `labkit-audit --findings` and
     the handover read. Raises RuntimeError when git fails."""
     status = findings.record_status(area, staged=staged)
+    return Integrity(
+        status.records, [*evidence_gaps(area, staged=staged), *status.errors]
+    )
+
+
+def evidence_gaps(area: Path, *, staged: bool = False) -> list[str]:
+    """Why AREA's audit evidence does not stand in the tree or, STAGED, the
+    index, one sentence each with its restore: every file gone
+    (`area_gaps`), or the journal that does not read. In the tree these are
+    what `begin` refuses every new attempt on — an audit, a decision review
+    and a report review alike — so a gate whose way out is such an attempt
+    names them instead. Raises RuntimeError when git fails."""
     try:
-        gaps = area_gaps(area, staged=staged).blockers
+        return area_gaps(area, staged=staged).blockers
     except AttemptError as exc:
-        gaps = [str(exc)]
-    return Integrity(status.records, [*gaps, *status.errors])
+        return [str(exc)]
+
+
+def gone_line(gaps: list[str]) -> str:
+    """The sentence that labkit-audit starts no audit or review while the
+    area's audit evidence is gone — the cause a gate names when its way out
+    needs such an attempt (`begin`): GAPS (`evidence_gaps`, not empty), the
+    first with its restore, how many more `labkit-audit <area> --findings`
+    lists."""
+    more = f" (and {len(gaps) - 1} more)" if len(gaps) > 1 else ""
+    return (
+        "labkit-audit starts no audit or review while the area's audit "
+        f"evidence is gone: {gaps[0]}{more}"
+    )
 
 
 def _append(area: Path, event: dict[str, str]) -> None:

@@ -377,6 +377,141 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An unfilled, stamped Prompt block is a hole wherever the field is
+  owed.** The stamp writes the Prompt label with an empty value and a
+  fence that holds only `<the real prompt — …>`; the field parser read
+  that fence as the value, and `prompt_check` skips the block as the
+  template's, so protocol-check (the commit hook), the post-change hook,
+  finalize's open fields and `protocol-fill --list` let an unfilled
+  Prompt through — which `--contract` says the hook holds for a protocol
+  with a `[model]` table. A fence whose body is exactly the template's
+  placeholder (`protocol_check.stamp_block_placeholders`,
+  `is_stamp_placeholder_block`) is no content now; a written block, also
+  one below the stamped fence, fills the field. Pilot of labkit-paper
+  area 15 on c2c5da2 (PubMedQA), defect 6.
+- **`protocol-fill --prompts` names an unreadable PROMPT constant and
+  writes nothing.** It copied the constants the static reader computes
+  and dropped the others without a word: with the registered prompt
+  unreadable (`', '.join(ANSWERS.keys())`, a call) it wrote the null
+  prompt alone and printed "filled", against the rule of the same reader
+  that a prompt it cannot compute is said aloud. Now any constant it
+  cannot compute to a string (`prompt_check.unreadable_prompt_constants`,
+  new) is named with its script, nothing is written and the exit is 2,
+  as when none reads. Pilot of labkit-paper area 15 on c2c5da2 (PubMedQA), defect 11.
+- **AGENTS.md no longer says only the prompt skeleton has `00_prepare.py
+  --audit`.** The estimator stamp has it too, printing the filters'
+  yields; what only the prompt skeleton's adds is the data-profile aid,
+  and the sentence now says that. Pilot of labkit-paper area 15 on
+  c2c5da2 (t71, t15), defect 12.
+- **A source directory counts as tracked only when each of its files is.**
+  finalize asked `git ls-files --error-unmatch <dir>`, which succeeds once
+  one file under the directory is tracked: with only a `SOURCE.md`
+  committed it said "source and output tracked in git … all clear" while
+  both GeoJSON files the number read stayed untracked (labkit-paper area
+  15, pilot t21). A directory source is now held file by file: each
+  visible file under it — the files the run's digest and row count cover
+  (`provenance.visible_files`, now public; the record keeps no list of
+  them) — must be tracked, and the blocker names the untracked ones; a
+  hidden file is none the run read. The commit names each of those files
+  (`git add -- …`, `-f` under an ignore rule), so no file the run did not
+  read goes in.
+- **finalize's way out for an ignored source leads out.** Its `git add
+  <source>` was refused for a path git ignores ("The following paths are
+  ignored by one of your .gitignore files"; labkit-paper area 15, pilot
+  t60, t34 and t21: the sandbox's `.git/info/exclude` held `benchmark/`).
+  The blocker now names the rule as `git check-ignore -v` gives it
+  (`<file>:<line>:<pattern>`, as the evidence check's way out does), and
+  the commit adds the file past it (`git add -f`), the rule kept for the
+  rest; a `!` pattern that un-ignores the path is no such rule. When git
+  cannot answer, finalize ends in its `GitError`.
+- **finalize's blocker for an untracked source names both routes the
+  standard allows.** The standard's Fixed inputs makes traceable the rule,
+  not "commit the inputs": small inputs that may legally be shared are
+  committed, and for large or protected data the repository holds their
+  source or access route, version and checksum (the field guide: in the
+  protocol's Data / scope). finalize offered `git add` alone, and an agent
+  that wrote the declaration stayed blocked without a word (labkit-paper
+  area 15, pilot t34 and t21). The way out now names both routes and the
+  sha256 the run recorded, and says first that finalize still blocks
+  large or protected data — it does not read the declaration — so such a
+  run is handed over without a number (`run_record_check.HANDOVER_COMMAND`,
+  held by a test to the stamped AGENTS.md's command). The gate itself is
+  unchanged: no labkit text says where a gate reads the declaration or
+  what it must name.
+- **A binary file under `data=` is a refusal that names its way.** The
+  prepare stamps and AGENTS.md ask for every file a run reads under
+  `data=`; runlog reads an ordinary path as a text dataset, and a `.npz`
+  or `.npy` stopped the run with a bare `UnicodeDecodeError` — no key, no
+  file, no way. The agents dropped the file from `data=`, so the features
+  carried no checksum (labkit-paper area 15, pilot t15 and t71). The
+  decode error now names the key, the file and `provenance.BinaryInput`
+  (`provenance.BINARY_INPUT_WAY`; still a `UnicodeDecodeError`, through
+  `repo.not_text`, now public), and both prepare stamps and AGENTS.md
+  name the wrapper where they ask for every file. A binary file is still
+  declared, not recognised: the decode decides, not the file type, so
+  one whose bytes happen to decode is read as text, and guessing it from
+  the failure would excuse a corrupt text dataset.
+- **The audit summary asks to decide what the record lists.** At repeat
+  cost low the auditor counts its notes and lists none, and the record
+  holds none; the stamp line still said "6 findings (0 blockers, 3
+  warnings, 3 notes — decide each …)" beside "3 to decide" (pilot of
+  labkit-paper area 15, t15 and PubMedQA). `audit.stamp_facts` now counts
+  the record's findings by grade (carried ones included, as `--decide`
+  numbers them) and names the notes the auditor tallied beyond them
+  apart, "nothing to decide"; it takes the record's grades and the
+  tallied notes in place of the verdict triple.
+- **Every line of a gone audit file names the restore that works there,
+  the two left over included.** f751938 made the tree, index and copy
+  lines state-specific (`git add` only for a file still on disk); the line
+  for a file HEAD's journal names and HEAD lacks still said "restore and
+  commit it", and a loss a handover recorded "restore it", whether or not
+  anything could (pilot of labkit-paper area 15, t60, where nothing kept
+  the record). Both now name the one way that works — the HEAD line
+  stages the file or copies it from the evidence copy and commits it, the
+  handover's also checks it out from HEAD — or say that nothing keeps it
+  (`attempts.restore_command`, None when nothing restores;
+  `attempts.NOTHING_KEEPS`, `attempts.LOST_WAY`). `handovers.missing_evidence` is
+  `handovers.missing_paths` and returns the paths; `attempts.area_gaps`
+  writes their sentences.
+- **Under lost audit evidence the texts name the one route that leads
+  out of a report citing a run.** protocol-fill (after a refused
+  adoption), the handover's list of citing reports and AGENTS.md
+  prescribed `--discuss`, whose report review labkit-audit refuses while
+  the area's audit evidence is gone, and report-check held the commit for
+  that review: under a handover for a lost record the route had no exit
+  (pilot of labkit-paper area 15, t60). The review stays owed and stays
+  refused; now report-check's hold of a discussion and of an undiscussed
+  citation, `--report-review`'s refusal, the adoption's refusal and the
+  handover say so and name what works — bring the evidence back, or the
+  report cites no run of the area, its handover block kept, naming the
+  protocol (`report_hold.lost_evidence`, the one selection they read, with
+  `ways_out.report_way_while_lost` and `attempts.gone_line`;
+  `report_hold.review_hold` chooses the review's blocker).
+- **report-check names a lost audit record as lost, not as an audit that
+  never ran.** After an analysis audit's record was deleted, report-check
+  said "none has run yet" and named `labkit-audit --mode analysis`, which
+  labkit-audit refuses while the journal names a record that is gone
+  (pilot of labkit-paper area 15, t60). When no record covers the run and
+  the area's audit evidence is gone (`attempts.evidence_gaps`, the lines
+  `attempts.begin` refuses every attempt on, now also what
+  `area_integrity` reads), the analysis station names the loss with its
+  restore and, where nothing restores it, the handover; a covering record
+  with findings open still asks for the decisions, which need no attempt.
+- **`--effect "<ID> not assessable"` is offered only where the protocol
+  registers a promise.** A computation has no [[promise]] table, and
+  `--decide` refuses every id an effect names there; the decision list,
+  the ways out shown to the analysis auditor, the decision review after
+  a rejection and on a contested state, and report-check's command for an
+  effect owed all offered the route anyway (pilot of labkit-paper area 15,
+  t34 and t21, 2026-10-28). For a protocol without promises they name
+  what works — `--effect stands` with the limit in the Conclusion, a fix,
+  or `deferred` and the handover (`ways_out.NO_PROMISE_ROUTE`,
+  `ways_out.blocker_routes(promised)`, which replaces the constant
+  `BLOCKER_ROUTES`) — and `--decide`'s refusals of an effect's form
+  (`findings.EffectFormError`, raised for an effect owed and missing or
+  malformed) or of an id say so too. `promises.table_ids` is the one rule
+  `--decide` and the texts read; the stamped AGENTS.md says it under "an
+  unjudged promise".
 - **Four faults found by the audit of 2026-10-28.** A line of the
   journal's copy that is not JSON ended the stop hook in a traceback:
   `attempts.copy_gaps` now raises AttemptError naming the copy's own line,

@@ -411,7 +411,7 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     try:
         r = git_run(["show", f"{rev}:{rel}"], repo)
     except UnicodeDecodeError as exc:
-        raise _not_text(exc, f"{rev}:{rel}") from exc
+        raise not_text(exc, f"{rev}:{rel}") from exc
     return r.stdout if r.returncode == 0 else None
 
 
@@ -431,12 +431,14 @@ def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
-        raise _not_text(exc, str(path)) from exc
+        raise not_text(exc, str(path)) from exc
 
 
-def _not_text(exc: UnicodeDecodeError, where: str) -> UnicodeDecodeError:
-    """EXC with WHERE in its reason: still a UnicodeError for every caller
-    that catches one, and its sentence names the file that did not decode."""
+def not_text(exc: UnicodeDecodeError, where: str) -> UnicodeDecodeError:
+    """EXC with "in WHERE" appended to its reason: still a UnicodeError for
+    every caller that catches one, and its sentence names the file that did
+    not decode. WHERE is that file's name, or a sentence that locates it
+    and may carry the way out (`provenance.describe_data`)."""
     return UnicodeDecodeError(
         exc.encoding, exc.object, exc.start, exc.end, f"{exc.reason} in {where}"
     )

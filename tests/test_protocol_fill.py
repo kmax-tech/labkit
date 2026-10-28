@@ -117,6 +117,14 @@ SCRIPT = (
     'PROMPT_NULL = ("Is this text written in English?\\n\\n"\n'
     '               "Text: {text}\\n\\n" + ANSWER_LINE + "\\n\\nAnswer:")\n'
 )
+# The PubMedQA pilot's form: the registered prompt joins `ANSWERS.keys()`,
+# a call the static reader does not compute; the null prompt is literal.
+HALF_READABLE_SCRIPT = (
+    'ANSWERS = {"Yes": "yes", "No": "no"}\n'
+    "ANSWER_LINE = f\"Answer with a single word: {', '.join(ANSWERS.keys())}.\"\n"
+    'PROMPT = "Does the study support the claim?\\n\\n{text}\\n\\n" + ANSWER_LINE\n'
+    'PROMPT_NULL = "Is this text written in English?\\n\\n{text}\\n\\nAnswer Yes or No."\n'
+)
 
 
 class HeadType(unittest.TestCase):
@@ -352,6 +360,39 @@ class Prompts(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             protocol_fill.fill_prompts(TEMPLATE, {})
         self.assertIn("no PROMPT constant", str(cm.exception))
+
+    def prompts_cli(self, protocol: Path) -> tuple[int, str, str]:
+        """`protocol-fill PROTOCOL --prompts`: (exit code, stdout, stderr)."""
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = protocol_fill.main([str(protocol), "--prompts"])
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_an_unreadable_constant_is_named_and_nothing_is_written(self):
+        """The PubMedQA pilot's answer line joined `ANSWERS.keys()`, a call
+        the static reader does not compute: `--prompts` wrote the null
+        prompt alone and said "filled" (repro on labkit c2c5da2, 2026-10-28)."""
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self.area(d)
+            (protocol.parent / "scripts" / "01_measure.py").write_text(
+                HALF_READABLE_SCRIPT
+            )
+            readable = prompt_check.prompt_constants(protocol.parent)
+            self.assertEqual(sorted(readable), ["PROMPT_NULL"])  # the case holds
+            rc, out, err = self.prompts_cli(protocol)
+            self.assertEqual(protocol.read_text(), TEMPLATE)
+        self.assertEqual(rc, 2)
+        self.assertNotIn("filled", out)
+        self.assertIn("01_measure.py:PROMPT ", err)
+
+    def test_readable_constants_are_filled(self):
+        """Twin: every constant read, the block is written and said so."""
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self.area(d)
+            rc, out, _ = self.prompts_cli(protocol)
+            self.assertIn("── PROMPT_NULL ──", protocol.read_text())
+        self.assertEqual(rc, 0)
+        self.assertIn("filled: Prompt", out)
 
 
 class OneCallFill(unittest.TestCase):

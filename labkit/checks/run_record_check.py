@@ -33,6 +33,7 @@ from labkit.formats.scope_sha import (
     measured_code,
 )
 from labkit.run import batch
+from labkit.run.provenance import visible_files
 from labkit.formats import jsonl, promises, protocol_block
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.runs import (
@@ -56,12 +57,15 @@ from labkit.formats.repo import (
     commit_known,
     git_root,
     git_run,
+    own_path,
     shown,
 )
 
 
 def _tracked(repo: Path, path: Path) -> bool:
-    """Is `path` tracked in `repo`? The exit code is the answer."""
+    """Is `path` tracked in `repo`? The exit code is the answer — for a
+    directory, yes once one file under it is (`_untracked_files` holds a
+    directory source file by file)."""
     return git_run(["ls-files", "--error-unmatch", str(path)], repo).returncode == 0
 
 
@@ -410,7 +414,12 @@ def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
 def provenance_findings(
     area: Path, answering_run: Path
 ) -> tuple[list[GateFinding], list[str]]:
-    """(blockers, warnings) for a run at low repeat cost: source frozen, files tracked."""
+    """(blockers, warnings) for a run at low repeat cost: source frozen, files
+    tracked (a directory source file by file, `_untracked_files`). Raises
+    GitError when git cannot list a directory source's tracked files or say
+    whether an untracked source is ignored (`_ignore_rules`): finalize then
+    ends in that error, not in a blocker with a way out that may not lead
+    out."""
     blockers: list[GateFinding] = []
     warnings: list[str] = []
     cfg = read_run_config(answering_run)
@@ -424,7 +433,7 @@ def provenance_findings(
             )
         )
     sources = [
-        resolve_recorded(v["path"], answering_run)
+        (resolve_recorded(v["path"], answering_run), v.get("sha256"))
         for v in data.values()
         if isinstance(v, dict) and v.get("path")
     ]
@@ -440,17 +449,13 @@ def provenance_findings(
             "not a git repository — cannot tell whether source and output are committed"
         )
         return blockers, warnings
-    for f in sources:
+    for f, sha in sources:
         if not f.exists():
             blockers.append(_gone(f))
-        elif not _tracked(repo, f):
-            blockers.append(
-                blocker(
-                    f"source {f} is not tracked in git — the number cannot be "
-                    f"re-derived",
-                    fix=f"commit it (`git add {shlex.quote(str(f))}`)",
-                )
-            )
+            continue
+        untracked = _untracked_files(repo, f)  # a directory: file by file
+        if untracked:
+            blockers.append(_untracked_source(repo, f, untracked, sha))
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
     # blocker that sends the agent round the loop (2026-10-05, five probes).
@@ -463,6 +468,117 @@ def provenance_findings(
                 f"the commit that cites the number"
             )
     return blockers, warnings
+
+
+#: the command that ends an area without a number while finalize stays
+#: blocked — the handover as the stamped AGENTS.md gives it (a test holds
+#: the two together); its <…> parts are the agent's to fill
+HANDOVER_COMMAND = (
+    'protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried '
+    '"<what you tried>" --into REPORT.md'
+)
+
+
+#: how many untracked files under a directory source its blocker names
+NAMED_UNTRACKED = 3
+
+
+def _untracked_files(repo: Path, source: Path) -> list[Path]:
+    """The files of SOURCE that git does not track in REPO, [] when it tracks
+    them all: SOURCE itself for a file; for a directory each visible file
+    under it (`provenance.visible_files`) — the files the run's digest and
+    row count covered, since the record keeps no list of them. A directory
+    is tracked only when every one of them is: `git ls-files --error-unmatch
+    DIR` succeeds once one file under it is (pilot t21: a committed
+    SOURCE.md passed two untracked GeoJSON files). An empty or all-hidden
+    directory passes — the run read no file of it. A symbolic link under it
+    counts as tracked when git holds the link, not its target's content.
+    The directory is resolved first; one outside REPO holds no tracked
+    file. Raises GitError when git fails."""
+    if not source.is_dir():
+        return [] if _tracked(repo, source) else [source]
+    base = source.resolve()
+    files = visible_files(base)
+    if base != repo and repo not in base.parents:
+        return files
+    # both sides resolved: git lists paths under REPO (git_root resolves it)
+    # and BASE is resolved, so a file is the same Path in either set
+    listed = git_run(["ls-files", "-z", "--", str(base)], repo)
+    if listed.returncode != 0:
+        raise GitError(f"git ls-files in {repo}: {listed.stderr.strip()}")
+    tracked = {repo / p for p in listed.stdout.split("\0") if p}
+    return [f for f in files if f not in tracked]
+
+
+def _untracked_source(
+    repo: Path, source: Path, untracked: list[Path], sha: object
+) -> GateFinding:
+    """The blocker `provenance_findings` raises for a SOURCE of the run whose
+    files UNTRACKED git does not track in REPO (at repeat cost low), its way
+    out the two routes the standard's Fixed inputs names: a small input that
+    may legally be shared is committed; for large or protected data the
+    protocol's Data / scope names its source or access route and version
+    (the field guide), beside the checksum SHA the run recorded. No labkit
+    text says how a gate holds that declaration, so finalize reads none:
+    the blocker stays, and the second route ends in a handover without a
+    number. A directory names its untracked files (`NAMED_UNTRACKED` of
+    them), and its commit lists each of them, so no file the run did not
+    read goes in. When git ignores any of them the sentence names the rule
+    (`_ignore_rules`) and the commit adds them past it (`git add -f`): a
+    plain `git add` of an ignored path is refused (pilot t60). Raises
+    GitError when git fails."""
+    rules = _ignore_rules(repo, untracked)
+    what, them = f"source {source} is not tracked in git", "it"
+    if source.is_dir():
+        names = ", ".join(shown(f, source) for f in untracked[:NAMED_UNTRACKED])
+        more = ", …" if len(untracked) > NAMED_UNTRACKED else ""
+        what += f": {len(untracked)} file(s) under it are not ({names}{more})"
+        them = "files under it"
+    ignored = f", and git ignores {them} ({'; '.join(rules)})" if rules else ""
+    force = " -f" if rules else ""
+    if source.is_dir():
+        add = f"git add{force} -- " + " ".join(shlex.quote(str(f)) for f in untracked)
+    else:
+        add = f"git add{force} {shlex.quote(str(source))}"
+    past = " past the rule" if rules else ""
+    checksum = (
+        f"the checksum this run recorded (sha256 {sha})"
+        if isinstance(sha, str)
+        else "the checksum (this run recorded none)"
+    )
+    return blocker(
+        f"{what}{ignored} — the number cannot be re-derived from the repository",
+        fix=f"if it is small and may legally be shared, commit it{past} "
+        f"(`{add}`); large or protected data stay out, but "
+        f"finalize still blocks them: it does not read the declaration — name "
+        f"the source or access route and version in the protocol's Data / "
+        f"scope beside {checksum}, then hand over without a number "
+        f"(`{HANDOVER_COMMAND}`, the <…> parts filled)",
+    )
+
+
+def _ignore_rules(repo: Path, paths: list[Path]) -> list[str]:
+    """The rules under which git ignores any of PATHS in REPO, each once, as
+    `git check-ignore -v` names them (`<file>:<line>:<pattern>`); [] when no
+    rule ignores one. A path outside REPO is left out: no rule of REPO's
+    applies, and check-ignore refuses it. Raises GitError when git fails."""
+    own = (own_path(p) for p in paths)
+    inside = [p for p in own if repo in p.parents]
+    if not inside:
+        return []
+    r = git_run(
+        ["check-ignore", "-v", "-z", "--stdin"],
+        repo,
+        stdin="".join(f"{p}\0" for p in inside),
+    )
+    if r.returncode not in (0, 1):  # 1: no path is ignored
+        raise GitError(f"git check-ignore in {repo}: {r.stderr.strip()}")
+    # -z -v: four fields per matched path — rule file, line, pattern, path;
+    # a pattern starting with `!` matched to un-ignore the path, so it is no
+    # rule that ignores it
+    fields = r.stdout.split("\0")
+    records = [fields[i : i + 3] for i in range(0, len(fields) - 3, 4)]
+    return sorted({":".join(rec) for rec in records if not rec[2].startswith("!")})
 
 
 def _gone(f: Path) -> GateFinding:

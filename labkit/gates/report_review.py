@@ -71,6 +71,7 @@ from labkit.formats.repo import (
 from labkit.formats.runs import run_path
 from labkit.formats.prompts import prompt_body
 from labkit.gates import audit
+from labkit.gates import report_hold
 from labkit.gates.ways_out import ANSWER_AGAIN
 
 REPORT_REVIEW = "report"
@@ -249,6 +250,14 @@ def review_report(
                 f"({standing.on_state[-1].path.name}) — nothing to do"
             )
             return 0
+        # `attempts.begin` refuses it all the same; its refusal named
+        # `--findings` and the handover, already written in that state, and
+        # not the removal that leads out (pilot of labkit-paper area 15, t60)
+        lost = report_hold.lost_evidence(chosen)
+        if lost is not None:
+            raise AuditError(
+                f"no report review of {report_key} — {lost.cause}", fix=lost.fix
+            )
         console.progress(
             "labkit-audit",
             f"report review · {report.name} · {len(discussed)} discussed run(s) · "

@@ -26,10 +26,12 @@ from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_dirs, run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
 from labkit.formats import (
+    attempts,
     findings,
     protocol_block,
     report_reviews,
 )
+from labkit.gates.ways_out import report_way_while_lost
 from labkit.checks.audit_binding import (
     AuditError,
     audited_run,
@@ -41,6 +43,7 @@ from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
     REPORT_SUFFIX,
     adopt_command,
+    audit_command,
     into_command,
     git_root,
     under_root,
@@ -727,34 +730,85 @@ def report_review_owed(
         if stands.released:
             continue
         runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
-        if stands.claims:
-            out.append(
-                blocker(
-                    f"{rel}: the report review holds this state on the discussion "
-                    f"of {runs_named} — {held_by(stands)}",
-                    fix=f"change the report, or a source the reviewer read, so that "
-                    f"no claim holds, then review that state: {command} (another "
-                    f"draw on this state, `--again` included, releases nothing)",
-                )
-            )
-            continue
-        since = (
-            f"; the last review ({stands.earlier.path.name}) read another state — "
-            f"changed since: {', '.join(report_reviews.changed_parts(stands.earlier, parts))}"
-            if stands.earlier is not None
-            else ""
-        )
-        out.append(
-            blocker(
-                f"{rel}: discusses {runs_named} as not reported and has no clean "
-                f"report review of this state (one naming no claim){since} — a cold "
-                f"reader checks that the report states none of their numbers as "
-                f"results",
-                fix=f"{command} (one model call) — last, after the report's text and "
-                f"its discussion block are final: a change after it owes another",
-            )
-        )
+        # lost audit evidence, then claims, then no clean review (`review_hold`)
+        out.append(review_hold(rel, protocol, runs_named, stands, parts, command))
     return out
+
+
+@dataclass(frozen=True)
+class LostEvidence:
+    """Why no audit or review can start on an area now (CAUSE,
+    `attempts.gone_line`) and the way out a report citing its runs has then
+    (FIX, `ways_out.report_way_while_lost`)."""
+
+    cause: str
+    fix: str
+
+
+def lost_evidence(protocol: Path) -> LostEvidence | None:
+    """While the audit evidence of PROTOCOL's area is gone
+    (`attempts.evidence_gaps`), the cause and the way out a report citing
+    its runs has — `attempts.begin` refuses every audit and review then, so
+    neither an adoption nor a discussion's review can pass; None while the
+    evidence stands. The one selection the report holds, `--report-review`
+    and protocol-fill's adoption and handover read. Raises RuntimeError
+    when git fails."""
+    area = protocol.parent
+    gaps = attempts.evidence_gaps(area)
+    if not gaps:
+        return None
+    return LostEvidence(
+        attempts.gone_line(gaps),
+        report_way_while_lost(audit_command(area, "--findings", protocol=protocol)),
+    )
+
+
+def review_hold(
+    rel: str,
+    protocol: Path,
+    runs_named: str,
+    stands: report_reviews.Standing,
+    parts: dict[str, str],
+    command: str,
+) -> GateFinding:
+    """The BLOCKER of a report whose discussion no review releases: first,
+    while the area's audit evidence is gone, that no review can run and the
+    way out that works (`lost_evidence` — before any claims of this state,
+    since no review can answer them then); else the claims that hold this
+    state; else that it has no clean review. REL is the report, RUNS_NAMED
+    the discussed runs of PROTOCOL's area, STANDS where the report stands,
+    PARTS the state's fingerprint parts, COMMAND the review to run."""
+    # `--discuss` under a handover for a lost record had no exit: the
+    # review it owes was refused (pilot of labkit-paper area 15, t60)
+    lost = lost_evidence(protocol)
+    if lost is not None:
+        return blocker(
+            f"{rel}: discusses {runs_named} and has no clean report review of "
+            f"this state — and none can run: {lost.cause}",
+            fix=lost.fix,
+        )
+    if stands.claims:
+        return blocker(
+            f"{rel}: the report review holds this state on the discussion "
+            f"of {runs_named} — {held_by(stands)}",
+            fix=f"change the report, or a source the reviewer read, so that "
+            f"no claim holds, then review that state: {command} (another "
+            f"draw on this state, `--again` included, releases nothing)",
+        )
+    since = (
+        f"; the last review ({stands.earlier.path.name}) read another state — "
+        f"changed since: {', '.join(report_reviews.changed_parts(stands.earlier, parts))}"
+        if stands.earlier is not None
+        else ""
+    )
+    return blocker(
+        f"{rel}: discusses {runs_named} as not reported and has no clean "
+        f"report review of this state (one naming no claim){since} — a cold "
+        f"reader checks that the report states none of their numbers as "
+        f"results",
+        fix=f"{command} (one model call) — last, after the report's text and "
+        f"its discussion block are final: a change after it owes another",
+    )
 
 
 def undeclared_findings(
@@ -806,6 +860,20 @@ def undeclared_findings(
         ]
     for run_id, protocol in promoted:
         named = report_blocks.path_from_report(protocol, path)
+        # adoption and discussion both owe an audit or a review, which no
+        # lost evidence lets start: then the way out is the restore or the
+        # removal, in place of the blocker below
+        lost = lost_evidence(protocol)
+        if lost is not None:
+            out.append(
+                blocker(
+                    f"{rel}: cites {run_id}, the answering run of {named}, which "
+                    f"declares no result — and neither its adoption nor a "
+                    f"discussion can pass: {lost.cause}",
+                    fix=lost.fix,
+                )
+            )
+            continue
         out.append(
             blocker(
                 f"{rel}: cites {run_id}, the answering run of {named}, which declares "

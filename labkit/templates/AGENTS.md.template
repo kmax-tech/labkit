@@ -148,7 +148,7 @@ code means what the question says.
 
 With `[model]`, judge whether surface features could answer the question
 without the intended capability; record that judgement in Data profile.
-Only the prompt skeleton supplies `00_prepare.py --audit` as an aid;
+Only the prompt skeleton's `00_prepare.py --audit` adds a data-profile aid;
 its counts are hints, not the judgement. Use the scripts your area
 actually has, not commands from a different kind's skeleton.
 
@@ -177,7 +177,10 @@ lie under `data/raw/`, inputs made from them under `data/prepared/`, and
 the preparation is a script — `scripts/00_prepare.py`, which the fit and
 apply skeletons stamp; a computation whose inputs need preparing adds one.
 The run records each file it reads with its checksum (`data=` in
-`config.json`). Small inputs that may legally be shared go into git; for
+`config.json`); declare a binary file (.npz, .npy, model weights) as
+`provenance.BinaryInput(path)`, which records its checksum without
+reading it as text — runlog reads any other path as text. Small inputs
+that may legally be shared go into git; for
 large or protected data commit their source or access route and their
 version instead, beside the checksum the run recorded. Then measure with the stamped
 script through `runlog`. At `low`, run
@@ -292,6 +295,10 @@ unadopted run, use `protocol-fill <PROTOCOL> --discuss <run_id> --why
 "<what refused adoption, what you found>" --into REPORT.md`. Explain
 that the question remains open; discussion is no success claim. It owes
 `labkit-audit <area> --report-review REPORT.md` of the finished report.
+While the area's audit evidence is gone (a lost record, handed over or
+not), labkit-audit runs no review: restore the evidence first, or the
+report cites no run of that area — remove the run ids and the discussion
+block, and keep the handover block, which names the protocol.
 The review reads the report as it stands, with its discussion block, the
 protocol, the discussed runs' metrics and the audit records, so it comes
 last: write the whole report, then `--discuss`, then the review, then the
@@ -324,7 +331,10 @@ prints these same recovery choices with each decision list:
   Lowering the margin is not a repair.
 - **an unjudged promise** — a fault you cannot fix: decide it accepted
   with `--effect "<ID> not assessable"`; report descriptive values and
-  the promise as not assessable, not a pass.
+  the promise as not assessable, not a pass. A protocol without promises
+  (a `compute`) has none to leave unjudged, and `--decide` refuses every
+  id: there the fault limits the claim (`--effect stands`, the limit in
+  the Conclusion) or is decided `deferred` and handed over.
 - **an invalid registration** — the question cannot be answered as
   written, not merely missed. Example: incompatible definitions of what
   the criterion must judge. Explain the conflict before registering anew
@@ -359,7 +369,9 @@ prints these same recovery choices with each decision list:
   result blocks in the chosen report are withdrawn; other text and other
   protocols' blocks stay. Citations in prose or other reports still need
   removal or explicit discussion; the handover names each such report
-  with its `--discuss` command. Use no run ids in the reason or attempted steps. Stage
+  with its `--discuss` command — after a loss of audit evidence the
+  restore or the removal instead, since no review runs then. Use no run ids in the reason or
+  attempted steps. Stage
   the report, protocol, new handover record and remaining audit evidence
   together. New evidence or a changed block requires a new handover.
   This permits only the unresolved stop/commit, never a number or audit

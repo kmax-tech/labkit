@@ -83,7 +83,7 @@ from labkit.checks.result_render import Rendering, rendering
 from labkit.formats.repo import GitError, audit_command, git_root, shown, state_text
 from labkit.checks import recheck, report_blocks
 from labkit.gates import report_check, report_hold
-from labkit.checks.prompt_check import prompt_constants
+from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     BEFORE_RUN_CLAIMS,
@@ -677,14 +677,22 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     if rc == 0:
         return 0
     files.write_atomic(protocol, before)
+    # the discussion owes a report review, which `attempts.begin` refuses
+    # while the area's evidence is gone (pilot t60)
+    lost = report_hold.lost_evidence(protocol)
+    mention = (
+        f"a report cannot discuss this run now — {lost.fix}"
+        if lost is not None
+        else f"a report that mentions this run without adopting it discusses it "
+        f"— `{report_blocks.discuss_command(shown(protocol, Path.cwd()), '<run_id>', '<REPORT>')}` "
+        f"— and leaves the question open; the run's numbers are not the result"
+    )
     print(
         f"protocol-fill: not adopted — report-check refuses the written result "
         f"(above); {protocol.name} is as it was. Pass the checks first, or leave "
         f"the number a sketch in runs/ (an exploration reports no result). A "
-        f"refusal is a finding to report, not an obstacle to route around: a "
-        f"report that mentions this run without adopting it discusses it — "
-        f"`{report_blocks.discuss_command(shown(protocol, Path.cwd()), '<run_id>', '<REPORT>')}` "
-        f"— and leaves the question open; the run's numbers are not the result."
+        f"refusal is a finding to report, not an obstacle to route around: "
+        f"{mention}."
     )
     return 1
 
@@ -850,9 +858,23 @@ def fill_many(
 
 
 def _prompts_file(protocol: Path, text: str) -> int:
-    """`--prompts` on PROTOCOL: the Prompt block from the scripts' PROMPT constants."""
+    """`--prompts` on PROTOCOL: the Prompt block from the PROMPT constants
+    of the area's scripts that parse — all of them or none. A constant the
+    static reader cannot compute to a string (`unreadable_prompt_constants`)
+    is named and nothing is written (exit 2): a block with one variant of
+    two reads as filled to every gate."""
+    area = protocol.resolve().parent
+    unreadable = unreadable_prompt_constants(area)
+    if unreadable:
+        console.refuse(
+            "protocol-fill",
+            f"{', '.join(unreadable)} not statically readable as a string — "
+            "nothing written; write the Prompt block by hand from the "
+            "script's `--show`",
+        )
+        return 2
     try:
-        new = fill_prompts(text, prompt_constants(protocol.resolve().parent))
+        new = fill_prompts(text, prompt_constants(area))
     except ValueError as exc:
         console.refuse("protocol-fill", str(exc))
         return 2
@@ -1111,11 +1133,23 @@ def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
     """After a handover withdrew RUN_ID: every report that still cites it
     (`report_hold.reports_citing`), each with the `--discuss` command that
     keeps the citation honestly — or remove it; each holds the stop and the
-    commit until then. Silent when none does."""
+    commit until then. While the area's audit evidence is gone the
+    discussion's review cannot run (`attempts.begin`), so the restore or
+    the removal is named instead (`report_hold.lost_evidence`). Silent when
+    none cites it."""
     held = report_hold.reports_citing(run_id, root)
     if not held:
         return
     here = Path.cwd()
+    lost = report_hold.lost_evidence(protocol)
+    if lost is not None:
+        print(
+            f"{len(held)} report(s) still cite the withdrawn run {run_id} and hold "
+            f"the commit — {lost.fix}:"
+        )
+        for path in held:
+            print(f"  {shown(path, here)}")
+        return
     print(
         f"{len(held)} report(s) still cite the withdrawn run {run_id} and hold "
         "the commit until the citation is removed or discussed:"

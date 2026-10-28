@@ -461,10 +461,10 @@ def record_paths(area: Path, *, staged: bool = False) -> list[Path]:
     return sorted(folder.glob("*.json"))
 
 
-def missing_evidence(
-    area: Path, present: set[str], *, staged: bool = False
-) -> list[str]:
-    """Losses acknowledged by retained handovers still block normal audits.
+def missing_paths(area: Path, present: set[str], *, staged: bool = False) -> list[str]:
+    """The paths below `audits/` a retained handover expects and PRESENT
+    lacks, sorted — losses acknowledged by a handover still block normal
+    audits (`attempts.area_gaps` says each with its restore).
 
     This preserves a lost committed path even after the handover commit
     itself becomes HEAD. Restoring the original evidence removes the gap.
@@ -476,12 +476,7 @@ def missing_evidence(
     for path in record_paths(area, staged=staged):
         record = read_record(root, path, staged=staged) if root else read_handover(path)
         missing.update(set(record.expected) - present)
-    return [
-        f"{findings.DIR}/{name}: lost, as a handover recorded — restore it; until "
-        "then audits and adoption stay refused (a current handover lets only the "
-        "stop and the commit pass)"
-        for name in sorted(missing)
-    ]
+    return sorted(missing)
 
 
 def _protocols(area: Path, root: Path, *, staged: bool) -> list[Path]:

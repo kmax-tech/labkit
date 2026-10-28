@@ -54,6 +54,19 @@ class Decide(unittest.TestCase):
             findings.write_decision(self.path, 1, "accepted", "kept")
         self.assertEqual(self.path.read_bytes(), before)
 
+    def test_a_refusal_of_the_effects_form_is_told_apart(self):
+        """`--decide` completes these for a protocol without promises, whose
+        form example (`C1`) cannot hold there; another refusal is not one."""
+        for effect in ("", "4 not assessable"):
+            with (
+                self.subTest(effect=effect),
+                self.assertRaises(findings.EffectFormError),
+            ):
+                findings.write_decision(self.path, 1, "accepted", "kept", effect)
+        with self.assertRaises(findings.FindingsError) as caught:
+            findings.write_decision(self.path, 1, "dismissed", "no", "stands")
+        self.assertNotIsInstance(caught.exception, findings.EffectFormError)
+
     def test_the_effect_is_stored_and_read_back(self):
         rec = findings.write_decision(
             self.path, 1, "accepted", "kept", "C1 not assessable"

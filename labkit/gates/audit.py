@@ -76,7 +76,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Sequence
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
@@ -104,10 +104,10 @@ from labkit.formats.standard_contract import (
     PREFLIGHT_AUDIT,
     lane,
 )
+from labkit.gates import ways_out
 from labkit.gates.ways_out import (
     ANSWER_AGAIN,
     AUDIT_AGAIN,
-    BLOCKER_ROUTES,
     HANDOVER,
     PROTOCOL_NAMED,
 )
@@ -508,7 +508,13 @@ def render(
             # them: an auditor that proposed a new constant after the first
             # measurement sent two agents into report-check's refusal
             # (fourth SAB-like draw, 2026-10-28)
-            pieces.append((WAYS_OUT_LABEL, "\n".join(BLOCKER_ROUTES)))
+            # the protocol as shown: its block read when the audit stamped
+            # it (`promises.block_stamp` raises first), so no PromiseError
+            # here; the audit holds one protocol, as `--decide` does
+            routes = ways_out.blocker_routes(
+                bool(promises.table_ids(source.protocol_text))
+            )
+            pieces.append((WAYS_OUT_LABEL, "\n".join(routes)))
     body = prompt_body(pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
@@ -909,15 +915,30 @@ class Stamp(NamedTuple):
     files: list[Path]
 
 
-def stamp_facts(stamp: Stamp, verdict: tuple[int, int, int]) -> str:
-    """The stamp's facts, for the person reading the report beside the
-    record: the sha is `scope_sha.area_stamp`, the same a later `scope-sha`
-    recomputes and the record carries as `scope_sha`."""
-    sha = stamp.sha
-    b, w, n = verdict
+def stamp_facts(stamp: Stamp, grades: Sequence[str], counted_notes: int) -> str:
+    """The stamp summary line: date, scope sha, the findings to decide as
+    the record lists them, and the notes the auditor tallied but did not
+    list. The sha is `scope_sha.area_stamp`, the same a later `scope-sha`
+    recomputes and the record carries as `scope_sha`. GRADES are the
+    record's findings' grades in the order `--decide` numbers them (carried
+    ones included); COUNTED_NOTES the notes of the auditor's verdict line —
+    at repeat cost low a tally only, never listed or recorded
+    (`experiment-preflight.agent.md`, LAB-017 The number of audits follows
+    the cost tier), so nothing to decide."""
+    b, w, n = (sum(1 for g in grades if g == grade) for grade in findings.GRADES)
+    # the auditor counts notes loosely and no gate holds the tally
+    # (`findings.verdict_disagrees`): fewer tallied than listed adds nothing
+    unlisted = counted_notes - n
     return (
-        f"{time.strftime('%Y-%m-%d')} · scope sha {sha} · {b + w + n} findings "
-        f"({b} blockers, {w} warnings, {n} notes — decide each: {findings.DECIDED_LIST})"
+        f"{time.strftime('%Y-%m-%d')} · scope sha {stamp.sha} · {len(grades)} "
+        f"findings to decide ({b} blockers, {w} warnings, {n} notes — decide "
+        f"each: {findings.DECIDED_LIST})"
+        + (
+            f" · {unlisted} more note(s) tallied by the auditor, not listed or "
+            "recorded — nothing to decide"
+            if unlisted > 0
+            else ""
+        )
     )
 
 
@@ -1362,10 +1383,12 @@ def _stamp_report(
     area: Path, mode: str, stamp: Stamp, verdict: tuple[int, int, int], recorded: Path
 ) -> None:
     """What the person copies and watches, on stderr after the report: the
-    stamp's facts; in mode preflight the head field that names the record
+    stamp's facts, counted from the record written (RECORDED); in mode
+    preflight the head field that names the record
     (`preflight_audit = "<record>"`, once every finding is decided); and a
     NOTE when the code changed while the auditor read it."""
-    print(f"\nstamp: {stamp_facts(stamp, verdict)}", file=sys.stderr)
+    grades = [f.grade for f in findings.read(recorded).findings]
+    print(f"\nstamp: {stamp_facts(stamp, grades, verdict[2])}", file=sys.stderr)
     if mode == PREFLIGHT_AUDIT:
         print(
             f'head: preflight_audit = "{recorded.name}" — once every finding is '
@@ -1398,7 +1421,9 @@ def decision_lines(
     command that decides it (`--record` named, so a later audit cannot
     shift it), then the READ lines of REPORT apart: printed, not recorded,
     nothing to decide. Five of six sandbox probes (2026-10-21) numbered the
-    printed lines and decided findings the record does not hold."""
+    printed lines and decided findings the record does not hold. The effect
+    `<ID> not assessable` is named only where the protocol registers a
+    promise (`may_leave_unassessed`)."""
     here = Path.cwd()
     where = shown(record.path, here)
     out: list[str] = []
@@ -1411,8 +1436,9 @@ def decision_lines(
             f"({findings.DECIDED_LIST}; a reason "
             f"owed for {owed}):"
         )
+        promised = may_leave_unassessed(area, protocol)
         if any(f.grade == "BLOCKER" for f in record.findings):
-            out.extend(BLOCKER_ROUTES)
+            out.extend(ways_out.blocker_routes(promised))
         for n, f in enumerate(record.findings, 1):
             text = (
                 f.text
@@ -1441,13 +1467,20 @@ def decision_lines(
                     "hold, read within it; a second auditor must uphold it before the "
                     f"number leaves: `"
                     f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
-                    f"`) or "
-                    '--effect "<ID> not assessable"'
+                    f"`)"
+                    + (
+                        ' or --effect "<ID> not assessable"'
+                        if promised
+                        else " — no promise is registered to leave not assessable; "
+                        "a fault the claim cannot be read within: decide it "
+                        "`deferred` and hand over"
+                    )
                 )
             elif f.grade == "WARNING":
                 out.append(
                     "      accepted may name its effect when it limits what the "
-                    'result allows: --effect stands | --effect "<ID> not assessable"'
+                    "result allows: --effect stands"
+                    + (' | --effect "<ID> not assessable"' if promised else "")
                 )
     hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
     if hints:
@@ -1690,7 +1723,10 @@ def _decide(
     area's newest record without it) through `findings.write_decision`,
     with EFFECT for an accepted BLOCKER — its ids held to the promises the
     protocol registers; print what was written and how many findings stay
-    open. Exit 2 on a decision that cannot be stored, the file untouched."""
+    open. Exit 2 on a decision that cannot be stored, the file untouched; a
+    refusal that names the effect's form (`findings.EFFECT_FORM`, its
+    example an id) adds, for a protocol without promises, the routes that
+    work there (`ways_out.NO_PROMISE_ROUTE`)."""
     n_text, status, reason = decide
     try:
         if not n_text.isdigit():
@@ -1700,7 +1736,13 @@ def _decide(
         record = _newest_record(area) if record is None else record_path(area, record)
         rec = findings.write_decision(record, int(n_text), status, reason, effect)
     except findings.FindingsError as exc:
-        console.refuse("labkit-audit", str(exc))
+        why = str(exc)
+        # an effect missing or malformed: its form's example is a promise id
+        if isinstance(exc, findings.EffectFormError) and not may_leave_unassessed(
+            area, protocol
+        ):
+            why += f" — {ways_out.NO_PROMISE_ROUTE}"
+        console.refuse("labkit-audit", why)
         return 2
     print(
         f"decided: {record.name} finding {n_text}: {status}"
@@ -1712,25 +1754,47 @@ def _decide(
 
 
 def _registered(area: Path, protocol: Path | None, effect: str) -> None:
-    """FindingsError unless every id EFFECT names is a promise of the area's protocol."""
+    """FindingsError unless every id EFFECT names is a promise of the area's
+    protocol (`promises.table_ids`) — EffectFormError when EFFECT is not in
+    `findings.EFFECT_FORM`."""
     try:
         ids = findings.effect_ids(effect)
     except ValueError as exc:
-        raise findings.FindingsError(str(exc)) from exc
+        raise findings.EffectFormError(str(exc)) from exc
     if not ids:
         return
     try:
         chosen = the_protocol(area, protocol)
     except ProtocolChoiceError as exc:
         raise findings.FindingsError(f"the effect's ids: {exc}") from exc
-    block = promises.parse_block(chosen.read_text(encoding="utf-8"))
-    known = set(block.by_id()) if block is not None else set()
+    known = promises.table_ids(chosen.read_text(encoding="utf-8"))
     unknown = [i for i in ids if i not in known]
+    if unknown and not known:
+        raise findings.FindingsError(
+            f"effect names {', '.join(unknown)} — {chosen.name}: "
+            f"{ways_out.NO_PROMISE_ROUTE}"
+        )
     if unknown:
         raise findings.FindingsError(
             f"effect names {', '.join(unknown)} — {chosen.name} registers "
-            f"{', '.join(sorted(known)) or 'no promise'}"
+            f"{', '.join(sorted(known))}"
         )
+
+
+def may_leave_unassessed(area: Path, protocol: Path | None) -> bool:
+    """Whether to offer the effect `<ID> not assessable` — False only when the
+    protocol is known to register no promise; True when it registers one,
+    and when that is not known here (no one protocol to choose, or its
+    block does not read), so the route stays named and `--decide` says why
+    it refuses. The protocol is the one `--decide` holds an effect to
+    (`_registered`): PROTOCOL, else the area's only one. False means a
+    protocol without [[promise]] tables — a computation —, where `--decide`
+    refuses every id (protocol-check names a block's fault)."""
+    try:
+        chosen = the_protocol(area, protocol)
+        return bool(promises.table_ids(chosen.read_text(encoding="utf-8")))
+    except (ProtocolChoiceError, promises.PromiseError):
+        return True
 
 
 def _clarity(args: argparse.Namespace) -> int:

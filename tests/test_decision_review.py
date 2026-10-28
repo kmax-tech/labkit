@@ -52,10 +52,15 @@ INSUFFICIENT = (
 
 
 def area_with(
-    rows: list[tuple[str, str]], decide: dict[int, tuple[str, str, str]]
+    rows: list[tuple[str, str]],
+    decide: dict[int, tuple[str, str, str]],
+    *,
+    promise_block: str | None = "",
 ) -> tuple[Path, Path]:
     """(area, record) — a low-lane area whose one run is audited with ROWS,
-    each finding N decided as DECIDE[N] = (status, reason, effect)."""
+    each finding N decided as DECIDE[N] = (status, reason, effect); its
+    protocol's [[promise]] tables PROMISE_BLOCK (`head`'s `promises`: the
+    default tables, None for none — a computation's)."""
     root = Path(tempfile.mkdtemp())
     (root / ".git").mkdir()  # the layout root, so paths show repo-relative
     area = root / "experiments" / "01-x"
@@ -64,7 +69,7 @@ def area_with(
     scope_file(area)
     proto = area / "PROTOCOL-x.md"
     proto.write_text(
-        head(repeat_cost="low", result=RUN)
+        head(repeat_cost="low", result=RUN, promises=promise_block)
         + "- **Question / hypothesis:** does it hold?\n"
         + "- **Conclusion:** the fit is in-sample; nothing more is claimed.\n"
         + f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {RUN})\n",
@@ -246,6 +251,52 @@ class TheCall(unittest.TestCase):
         self.assertIn(
             "`stands` on an accepted BLOCKER rejected: the reason restates", out
         )
+
+    def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
+        """A computation registers no promise and `--decide` refuses every id
+        an effect names; the review offered `--effect "<ID> not assessable"`
+        there all the same (pilot t34, t21, 2026-10-28). Its routes name
+        what works instead; the twin keeps the route."""
+        for block, offered in ((None, False), ("", True)):
+            with self.subTest(promises="none" if block is None else "default"):
+                area, _ = area_with(
+                    [BLOCKER],
+                    {1: ("accepted", "Finding noted", "stands")},
+                    promise_block=block,
+                )
+                rc, out, _, _ = run_review(area, REJECTED)
+                self.assertEqual(rc, 1, out)
+                (line,) = [ln for ln in out.splitlines() if "  rejected: " in ln]
+                self.assertEqual("<ID> not assessable" in line, offered, line)
+                self.assertEqual("`deferred` and hand over" in line, not offered)
+                rc, _, err, sent = run_review(area, UPHELD)  # contested: refused
+                self.assertEqual((rc, sent), (2, []))
+                self.assertEqual("effect `not assessable`" in err, offered, err)
+                self.assertEqual("`deferred` and hand over" in err, not offered)
+
+    def test_report_check_asks_a_computation_for_stands_alone(self):
+        """An accepted BLOCKER without its effect (a record decided before
+        effects were owed): report-check's `--decide` command offers
+        `"<ID> not assessable"` only where the protocol registers a promise."""
+        for block, offered in ((None, False), ("", True)):
+            with self.subTest(promises="none" if block is None else "default"):
+                area, record = area_with([BLOCKER], {}, promise_block=block)
+                text = record.read_text(encoding="utf-8")
+                record.write_text(
+                    text.replace(
+                        'status = "open"\nreason = ""',
+                        'status = "accepted"\nreason = "kept"',
+                        1,
+                    )
+                )
+                _, out = gate(area)
+                (line,) = [
+                    ln
+                    for ln in out.splitlines()
+                    if "BLOCKER:" in ln and "owes its effect" in ln
+                ]
+                self.assertIn("--effect", line)
+                self.assertEqual("<ID> not assessable" in line, offered, line)
 
     def test_the_twin_a_warnings_stands_without_a_review_only_warns(self):
         """The scope, narrow at first: the release does not hang on every

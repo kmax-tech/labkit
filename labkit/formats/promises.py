@@ -357,6 +357,17 @@ def registered_ids(text: str) -> set[str]:
     return ids_in_prose(text) | declared
 
 
+def table_ids(text: str) -> set[str]:
+    """The ids the protocol's [[promise]] tables declare, as written (`C1`):
+    the ids an audit decision's effect may leave not assessable
+    (`labkit-audit --decide … --effect "<ID> not assessable"`). Empty for a
+    protocol without tables — a computation registers none. Unlike
+    `registered_ids`, an id named only in the prose does not count. Raises
+    PromiseError on a malformed block."""
+    block = parse_block(text)
+    return set(block.by_id()) if block is not None else set()
+
+
 def load(protocol: Path) -> PromiseTables:
     """The promise block of `protocol`; raises if it has none.
 

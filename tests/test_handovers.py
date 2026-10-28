@@ -9,13 +9,14 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import unittest
 
 import test_counter_cases as cases
 import test_end_to_end as e2e
 from labkit.formats import attempts, findings, handovers, protocol_block
 from labkit.checks import report_blocks
-from labkit.gates import audit, claude_hooks
+from labkit.gates import audit, claude_hooks, report_check
 from labkit.tools import protocol_fill
 
 #: a simulated analysis answer holding one BLOCKER
@@ -87,6 +88,168 @@ class HandoverRecovery(cases._Chain):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = audit.main([str(self.area), "--findings"])
         return rc, out.getvalue()
+
+    def report_check(self) -> tuple[int, str]:
+        """`report-check AREA`, its output captured."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = report_check.main([str(self.area)])
+        return rc, out.getvalue()
+
+    @staticmethod
+    def analysis_blocker(out: str) -> str:
+        """report-check's one analysis-audit BLOCKER line in OUT."""
+        (line,) = [
+            ln for ln in out.splitlines() if ln.startswith("  BLOCKER: analysis audit:")
+        ]
+        return line
+
+    def test_report_check_names_a_lost_record_and_the_restore_that_works(self):
+        """report-check said "none has run yet" and named `--mode analysis`
+        after an audit's record was deleted, though the journal holds the
+        attempt and labkit-audit refuses every audit until the record is
+        back (pilot of labkit-paper area 15, t60). The twin: an area never
+        audited is told so."""
+        rc, out = self.report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("none has run yet", self.analysis_blocker(out))
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        written = record.path.read_bytes()
+        record.path.unlink()
+        rc, out = self.report_check()
+        self.assertEqual(rc, 1, out)
+        line = self.analysis_blocker(out)
+        self.assertNotIn("none has run yet", line)
+        self.assertIn(f"ended as record in audits/{record.path.name}", line)
+        self.assertIn(
+            "starts no audit or review while the area's audit evidence is gone", line
+        )
+        self.assertIn("--findings", line)
+        self.assertIn("hand over", line)
+        self.assertEqual(self.audit(cases.CLEAN)[0], 2)  # refused, as it says
+        # the restore it names (`attempts.restore_way`, from the evidence
+        # copy: the record was never committed) brings the record back
+        restore = line.split("restore it as the audit wrote it (`")[1].split("`")[0]
+        subprocess.run(restore, shell=True, cwd=self.area, check=True)
+        self.assertEqual(record.path.read_bytes(), written)
+        rc, out = self.report_check()
+        self.assertNotIn("BLOCKER: analysis audit", out)
+
+    def test_a_covering_record_with_an_open_finding_is_decided_despite_a_loss(self):
+        """The twin: deciding needs no attempt, so a loss elsewhere in the
+        area does not replace the open finding's way out."""
+        rc, out = self.audit(BLOCKED)
+        self.assertEqual(rc, 1, out)
+        (answer,) = (self.area / "audits" / "answers").iterdir()
+        answer.unlink()
+        self.assertTrue(attempts.evidence_gaps(self.area))
+        rc, out = self.report_check()
+        line = self.analysis_blocker(out)
+        self.assertIn("still `open` — decide each", line)
+        self.assertNotIn("audit evidence is gone", line)
+
+    def test_after_a_lost_record_a_discussion_names_the_way_that_leads_out(self):
+        """Pilot of labkit-paper area 15, t60: under a handover for a lost
+        record, protocol-fill and AGENTS.md prescribed `--discuss`, which
+        owes a report review; the review was refused (no attempt starts
+        while evidence is gone) and the commit demanded it — no exit. Now
+        every text names the route that works: restore, or the report cites
+        no run of the area. The twin: with the evidence intact the
+        discussion still owes its review."""
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = protocol_fill.main(
+                [str(self.protocol), "--discuss", self.run_id, "--why",
+                 "the adoption was refused", "--into", str(self.report)]
+            )  # fmt: skip
+        self.assertEqual(rc, 0, out.getvalue())
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.report, self.protocol)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("--report-review", out)  # the twin: the review is owed
+        # the record is lost: deleted, its evidence copy too
+        record.path.unlink()
+        attempts.kept_files(self.area)[record.path.name].unlink()
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.report, self.protocol)
+        self.assertEqual(rc, 1, out)
+        (line,) = [ln for ln in out.splitlines() if ln.startswith("  BLOCKER: ")]
+        self.assertIn("none can run: labkit-audit starts no audit or review", line)
+        self.assertIn("remove the run ids and the discussion block", line)
+        self.assertIn("keep its handover block", line)
+        self.assertNotIn("--report-review", line)
+        review = io.StringIO()
+        with contextlib.redirect_stdout(review), contextlib.redirect_stderr(review):
+            rc = audit.main([str(self.area), "--report-review", str(self.report)])
+        self.assertEqual(rc, 2, review.getvalue())
+        self.assertIn("remove the run ids and the discussion block", review.getvalue())
+        rc, out = self.lab.adopt(self.protocol, self.run_id)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("a report cannot discuss this run now", out)
+        self.assertNotIn("--discuss", out.split("protocol-fill: not adopted")[1])
+        # the route named leads out: the discussion block removed, the
+        # handover's block stands alone and the commit passes
+        text = self.report.read_text(encoding="utf-8")
+        start = text.index("<!-- labkit discussed")
+        end = text.index("<!-- /labkit discussed -->") + len(
+            "<!-- /labkit discussed -->\n"
+        )
+        self.report.write_text(text[:start] + text[end:], encoding="utf-8")
+        self.staged_release()
+
+    def test_after_a_lost_record_a_citation_names_the_way_that_leads_out(self):
+        """The same for the answering run cited undiscussed: its ways out,
+        adoption and discussion, both owe an attempt (t60's first refusal)."""
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        self.report.write_text(f"We looked at {self.run_id}.\n", encoding="utf-8")
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.report, self.protocol)
+        self.assertIn("--discuss", out)  # the twin: evidence intact
+        record.path.unlink()
+        attempts.kept_files(self.area)[record.path.name].unlink()
+        self.lab.git("add", "-A")
+        rc, out = self.lab.pre_commit(self.report, self.protocol)
+        self.assertEqual(rc, 1, out)
+        (line,) = [
+            ln
+            for ln in out.splitlines()
+            if ln.startswith("  BLOCKER: ") and f"cites {self.run_id}" in ln
+        ]
+        self.assertIn("neither its adoption nor a discussion can pass", line)
+        self.assertIn("remove the run ids", line)
+        self.assertNotIn("--discuss", line)
+
+    def test_a_loss_a_handover_recorded_names_the_restore_that_works(self):
+        """It said "restore it" whether or not anything could (pilot of
+        labkit-paper area 15, t60, where nothing kept the record)."""
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        self.lab.commit("the audit")
+        record.path.unlink()
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        name = f"audits/{record.path.name}: lost, as a handover recorded — "
+        (line,) = [g for g in attempts.evidence_gaps(self.area) if name in g]
+        self.assertIn(
+            f"restore it (`git checkout HEAD -- audits/{record.path.name}`)", line
+        )
+        # the twin: nothing keeps it — said so, no restore offered
+        self.lab.commit("the handover")  # HEAD no longer holds the record
+        attempts.kept_files(self.area)[record.path.name].unlink()
+        (line,) = [g for g in attempts.evidence_gaps(self.area) if name in g]
+        self.assertIn(f"{attempts.NOTHING_KEEPS}, and audits and adoption stay", line)
+        self.assertNotIn("restore it", line)
+        self.assertNotIn("until it is back", line)
 
     def test_findings_offer_the_handover_only_where_something_stands(self):
         # It printed the handover command in a clean area and, before its

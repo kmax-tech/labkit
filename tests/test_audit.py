@@ -561,6 +561,34 @@ class Audit(unittest.TestCase):
             err, r"stamp: \d{4}-\d\d-\d\d · scope sha [0-9a-f]{12} · 1 findings"
         )
 
+    def test_the_summary_asks_to_decide_what_the_record_lists(self):
+        """At repeat cost low notes are counted, not listed or recorded; the
+        summary asked to decide them all the same ("6 findings (… 3 notes —
+        decide each …)" beside "3 to decide", pilot of labkit-paper area 15,
+        t15 and PubMedQA). The twin: listed notes are recorded and decided."""
+        counted = WARN.replace("0 notes", "3 notes")
+        _, out, err, _ = run(repo_with(), counted)
+        self.assertIn(
+            "1 findings to decide (0 blockers, 1 warnings, 0 notes — decide each", err
+        )
+        self.assertIn(
+            "3 more note(s) tallied by the auditor, not listed or recorded — "
+            "nothing to decide",
+            err,
+        )
+        self.assertIn("— 1 to decide", out)  # the decision list agrees
+        listed = (
+            "WARNING · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\n"
+            "NOTE · a.py:2 · x · y · LAB-015 Preflight audit before freezing · z\n"
+            "verdict: 0 blockers, 1 warnings, 1 notes"
+        )
+        _, out, err, _ = run(repo_with(), listed)
+        self.assertIn(
+            "2 findings to decide (0 blockers, 1 warnings, 1 notes — decide each", err
+        )
+        self.assertNotIn("tallied by the auditor", err)
+        self.assertIn("— 2 to decide", out)
+
 
 class OneSnapshot(unittest.TestCase):
     """Acceptance of the audit snapshot (2026-10-20): a file changed between
@@ -784,6 +812,58 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(
             len(list((area / "audits").glob("*.toml"))), 1
         )  # no new record
+
+    def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
+        """A computation registers no promise, and `--decide` refuses every id
+        an effect names: its decision list named `--effect "<ID> not
+        assessable"` anyway (pilot t34, t21, 2026-10-28). The twin: a
+        protocol with a [[promise]] table keeps the route."""
+        bare = repo_with()  # PROTOCOL: no [[promise]] table
+        rc, out, err, _ = run(bare, BLOCK)
+        self.assertEqual(rc, 1, err)
+        self.assertNotIn("<ID> not assessable", out)
+        self.assertIn(
+            "no promise is registered to leave not assessable; a fault the claim "
+            "cannot be read within: decide it `deferred` and hand over",
+            out,
+        )
+        self.assertIn("this protocol registers no promise", out)
+        # and the refusal it spares: --decide holds the effect to the tables
+        decided = io.StringIO()
+        with contextlib.redirect_stderr(decided):
+            effect = ["--effect", "C1 not assessable"]
+            rc = audit.main([str(bare), "--decide", "1", "accepted", "r", *effect])
+        self.assertEqual(rc, 2)
+        self.assertIn(
+            f"effect names C1 — PROTOCOL-x0.md: {ways_out.NO_PROMISE_ROUTE}",
+            decided.getvalue(),
+        )
+        # a refusal of the effect's form, whose example is an id, names the
+        # routes that work for a protocol without promises
+        for effect in ([], ["--effect", "1 not assessable"]):
+            with self.subTest(effect=effect):
+                decided = io.StringIO()
+                with contextlib.redirect_stderr(decided):
+                    rc = audit.main(
+                        [str(bare), "--decide", "1", "accepted", "r", *effect]
+                    )
+                self.assertEqual(rc, 2)
+                self.assertIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
+
+        promised = repo_with()
+        (promised / "PROTOCOL-x0.md").write_text(
+            fixture.head(promises=fixture.C1_BLOCK) + PROTOCOL, encoding="utf-8"
+        )
+        rc, out, err, _ = run(promised, BLOCK)
+        self.assertEqual(rc, 1, err)
+        self.assertIn('or --effect "<ID> not assessable"', out)
+        self.assertNotIn("this protocol registers no promise", out)
+        decided = io.StringIO()
+        with contextlib.redirect_stderr(decided):
+            rc = audit.main([str(promised), "--decide", "1", "accepted", "r"])
+        self.assertEqual(rc, 2)
+        self.assertIn("owes its effect", decided.getvalue())
+        self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
     def test_findings_without_a_record_and_with_mode_are_refused(self):
         area = repo_with()

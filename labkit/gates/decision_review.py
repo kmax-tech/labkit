@@ -27,8 +27,9 @@ a claim since changed. The call is an attempt in the area's journal
 (`attempts.attempt`, mode `review`): the answer kept before it is read,
 the end naming the review file or why there is none — so a review
 deleted before the commit is named. After `rejected` the person decides again first —
-limits the claim, changes the effect to `not assessable`, or fixes the
-fault; a new audit is due when its basis changes or the finding is
+limits the claim, changes the effect to `not assessable` (where the
+protocol registers a promise; else decides it `deferred` and hands
+over), or fixes the fault (`rejected_way`); a new audit is due when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
 `insufficient` the missing evidence is supplied and the review run again.
 Closing the finding instead — `dismissed`, `fixed`, `deferred`
@@ -339,12 +340,19 @@ def contested_gap(
     ]
     if not held:
         return None
+    decide_again = (
+        "decide again (`--decide N …`, the reason naming the evidence, or the "
+        "effect `not assessable`) or limit the claim, then review"
+        if audit.may_leave_unassessed(area, protocol)
+        else "decide again (`--decide N …`, the reason naming the evidence) or "
+        "limit the claim, then review — or decide it `deferred` and hand over "
+        "(no promise is registered to leave not assessable)"
+    )
     return AuditError(
         f"{record.path.name}: finding(s) {', '.join(map(str, held))} were reviewed as "
         f"decided and claimed now and not upheld — another draw settles nothing",
-        fix="decide again (`--decide N …`, the reason naming the evidence, or the "
-        "effect `not assessable`) or limit the claim, then review; `--again` "
-        "draws once more: its verdicts count, and it never releases this state",
+        fix=f"{decide_again}; `--again` draws once more: its verdicts count, and it "
+        "never releases this state",
     )
 
 
@@ -424,19 +432,33 @@ def review(
         )
     )
     if r:
-        print(
-            "  rejected: decide the finding again first — limit the claim (the "
-            'Conclusion), change the effect (`--decide N accepted "REASON" --effect '
-            '"<ID> not assessable"`) or fix the fault; a new audit only when its '
-            "basis changes or the finding itself is disputed — auditing again does "
-            "not settle a rejection"
-        )
+        print(f"  rejected: {rejected_way(audit.may_leave_unassessed(area, chosen))}")
     if i:
         print(
             "  insufficient: supply the evidence the reviewer names (in the "
             "protocol or the run's outputs) and review again"
         )
     return 1 if held else 0
+
+
+def rejected_way(promised: bool) -> str:
+    """What a decision a review rejected owes first: limit the claim, change
+    the effect (`<ID> not assessable` only where the protocol registers a
+    promise, PROMISED — else decide it `deferred` and hand over) or fix the
+    fault; never another audit that settles nothing."""
+    routes = (
+        'limit the claim (the Conclusion), change the effect (`--decide N accepted "REASON" '
+        '--effect "<ID> not assessable"`) or fix the fault'
+        if promised
+        else "limit the claim (the Conclusion) or fix the fault — or decide it "
+        "`deferred` and hand over (no promise is registered to leave not "
+        "assessable)"
+    )
+    return (
+        f"decide the finding again first — {routes}; a new audit only when its "
+        "basis changes or the finding itself is disputed — auditing again does "
+        "not settle a rejection"
+    )
 
 
 def held_after(

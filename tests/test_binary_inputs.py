@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit import PACKAGE_DIR
 from labkit.run import provenance, runlog
 from protocol_fixture import head
 
@@ -39,6 +40,36 @@ class BinaryInputs(unittest.TestCase):
     def test_invalid_utf8_as_an_ordinary_dataset_still_raises(self):
         with self.assertRaises(UnicodeDecodeError):
             provenance.describe_data({"train": self.weights}, self.area)
+
+    def test_the_refusal_names_key_file_and_the_binary_route(self):
+        # the pilot's agents met a bare decode error for a .npz and dropped
+        # the file from data= (labkit-paper area 15, t15 and t71)
+        features = self.area / "train.npz"
+        features.write_bytes(b"PK\x03\x04\x8e\xc7\xff")
+        with self.assertRaises(UnicodeDecodeError) as caught:
+            provenance.describe_data({"features": features}, self.area)
+        said = str(caught.exception)
+        self.assertIn("data['features']", said)
+        self.assertIn(str(features), said)
+        self.assertIn("way out: ", said)
+        self.assertIn("provenance.BinaryInput(path)", said)
+        recorded = provenance.describe_data(
+            {"features": provenance.BinaryInput(features)}, self.area
+        )
+        self.assertIsNone(recorded["features"]["rows"])
+
+    def test_every_stamp_that_asks_for_each_file_names_the_binary_route(self):
+        for name in (
+            "AGENTS.md.template",
+            "prepare-estimator-script.py.template",
+            "prepare-script.py.template",
+        ):
+            with self.subTest(name):
+                text = (PACKAGE_DIR / "templates" / name).read_text(encoding="utf-8")
+                self.assertTrue(
+                    "provenance.BinaryInput(path)" in text,
+                    f"{name} asks for every file a run reads and names no binary route",
+                )
 
     def test_text_leakage_is_still_refused_beside_binary_weights(self):
         train, test = self.area / "train.jsonl", self.area / "test.jsonl"
