@@ -1399,6 +1399,17 @@ class CheckNote(unittest.TestCase):
                 "a2_spread",
                 "the score per seed",
             ),
+            # a sentence's closing period: kept in a dash note, and after the
+            # parenthesis it voids nothing (pilot round 2, t71: the whole
+            # answer was refused)
+            "x · check: a2_spread — the score per seed.": (
+                "a2_spread",
+                "the score per seed.",
+            ),
+            "x · check: a2_spread (per seed; the band (0.15) must hold).": (
+                "a2_spread",
+                "per seed; the band (0.15) must hold",
+            ),
             "x · no check here": ("", ""),
         }
         for line, want in cases.items():
@@ -1409,7 +1420,10 @@ class CheckNote(unittest.TestCase):
         for line in (
             "x · check: a2 spread",
             "x · check: a2_spread (per seed) and more",
+            "x · check: a2_spread (per seed). And more",
+            "x · check: a2_spread (per seed)..",
             "x · check: a2_spread ()",
+            "x · check: a2_spread ().",
             "x · check: a2_spread: per seed",
             "x · check: a2_spread · check: a2_mean",
             "x · check: A2_Spread",
@@ -1417,6 +1431,29 @@ class CheckNote(unittest.TestCase):
             with self.subTest(line):
                 with self.assertRaises(ValueError):
                     findings.check_of(line)
+
+    def test_a_period_after_the_note_records_the_whole_answer(self):
+        """A line in the shape labkit's auditor wrote in pilot round 2 (t71):
+        a note in parentheses with a semicolon, closed by a period; its twin,
+        the same line without the period, reads as before."""
+        line = (
+            "BLOCKER · a.py:1 · a count misses some values · one passes · LAB-015 "
+            "Preflight audit before freezing · count them in every group · check: "
+            "b1_count (the values counted per group; it must be zero when b1_pass "
+            "is true)"
+        )
+        for ending in (".", ""):
+            with self.subTest(ending=ending):
+                area = repo_with()
+                answer = f"{line}{ending}\nverdict: 1 blockers, 0 warnings, 0 notes"
+                rc, _, err, _ = run(area, answer)
+                self.assertEqual(rc, 1, err)
+                (record,) = findings.area_records(area)
+                (f,) = record.findings
+                self.assertEqual(f.check, "b1_count")
+                self.assertTrue(
+                    f.check_note.endswith("it must be zero when b1_pass is true")
+                )
 
     def test_the_note_is_bound_with_the_check(self):
         def f(note: str) -> findings.Finding:
@@ -1540,6 +1577,58 @@ class KeptAnswer(unittest.TestCase):
         self.assertIn("check field that does not read", attempt.error)
         self.assertEqual(attempt.answer, f"{attempts.ANSWERS}/{attempt.id}.txt")
         self.assertEqual(path.read_text(encoding="utf-8"), answer)
+
+    def test_an_answer_that_does_not_read_names_its_way_out(self):
+        """A refusal of an answer that ends its attempt without a record
+        names the way on: draw again (or the refusal's own fix), the kept
+        answer, and `--findings` with its handover (pilot round 2, t71:
+        "a check field that does not read" and nothing after it)."""
+        unreadable = (
+            f"{BLOCK.splitlines()[0]} · check: a2 spread\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        cases = {
+            "a field": (unreadable, ways_out.ANSWER_AGAIN),
+            "no verdict": ("I read it; it looks fine.", ways_out.ANSWER_AGAIN),
+            "the auditor refused": (
+                "refused: protocol not filled",
+                "answer what it names, then run the audit again",
+            ),
+        }
+        for name, (answer, fix) in cases.items():
+            with self.subTest(name):
+                area = repo_with()
+                rc, _, err, _ = run(area, answer)
+                self.assertEqual(rc, 2, err)
+                attempt, path = self.kept(area)
+                self.assertEqual(attempt.outcome, "none")
+                findings_command = audit.audit_command(area, "--findings")
+                self.assertIn(
+                    f"— way out: {fix}; the answer is kept in "
+                    f"{path.resolve().as_posix()}; `{findings_command}` names this "
+                    "call and offers the handover",
+                    err,
+                )
+
+    def test_a_record_that_does_not_read_names_its_restore_not_a_draw(self):
+        """The refusal's first way follows its cause: a readable answer
+        refused because another record of the area does not read is not
+        drawn again — the record is restored (`findings.record_way`)."""
+        area = repo_with()
+        (area / "audits").mkdir()
+        (area / "audits" / "2026-01-01T00-00-preflight.toml").write_text(
+            "not toml [", encoding="utf-8"
+        )
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 2, err)
+        attempt, path = self.kept(area)
+        self.assertEqual(attempt.outcome, "none")
+        self.assertIn(
+            f"— way out: {findings.record_way(area)}; the answer is kept in "
+            f"{path.resolve().as_posix()}",
+            err,
+        )
+        self.assertNotIn(ways_out.ANSWER_AGAIN, err)
 
     def test_a_recorded_answer_is_kept_too(self):
         area = repo_with()

@@ -97,7 +97,7 @@ from labkit.formats import (
     rules,
     scope_sha,
 )
-from labkit.formats.gate import WARNING, GateFinding, coded
+from labkit.formats.gate import WARNING, GateFinding, coded, with_way_out
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
     COMPUTE_KIND,
@@ -1303,7 +1303,8 @@ def _record(
     person decides. Exit 1 on a blocker or a warning, 0 on none, 2 when the
     report does not read, its FIX lines do not (`parse_fixes`), or a shown
     decision changed while the auditor read it (`decisions_moved`) — the
-    attempt ends without a record, said why."""
+    attempt ends without a record, said why and with the way on
+    (`_refusal_without_record`)."""
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
     try:
         result = parse(report)
@@ -1317,7 +1318,7 @@ def _record(
             )
     except (AuditError, ValueError) as exc:
         running.end("none", error=str(exc))
-        console.refuse("labkit-audit", str(exc).strip(chr(39)))
+        console.refuse("labkit-audit", _refusal_without_record(exc, args, running))
         return 2
     print(report)
     if args.out:
@@ -1341,9 +1342,10 @@ def _record(
             if args.mode == ANALYSIS
             else None,
         )
-    except ValueError as exc:  # verdict and finding lines disagree
+    # verdict and finding lines disagree, or a finding's field does not read
+    except ValueError as exc:
         running.end("none", error=str(exc))
-        console.refuse("labkit-audit", str(exc))
+        console.refuse("labkit-audit", _refusal_without_record(exc, args, running))
         return 2
     running.end("record", file=recorded.name)
     _stamp_report(args.area, args.mode, bound.stamp, result["verdict"], recorded)
@@ -1363,6 +1365,35 @@ def _record(
     for line in fix_lines(bound.earlier_repairs.blockers, fixes):
         print(line)
     return 1 if b or w or carried_of(bound.earlier_repairs, fixes) else 0
+
+
+def _refusal_without_record(
+    exc: AuditError | ValueError, args: argparse.Namespace, running: attempts.Running
+) -> str:
+    """The refusal `_record` prints when it writes no record (RUNNING ends
+    `none`): EXC's cause and the ways on — the first by the cause, then the
+    answer RUNNING kept, then `labkit-audit <area> --findings`, which names
+    the call and offers the handover. The first way by the cause: an
+    AuditError's own fix (each raised in `_record` carries one); for an
+    area record that does not read (FindingsError, from `decisions_moved`)
+    `findings.record_way`, which names `--findings` itself; for any other
+    ValueError — the answer's lines, refused by `findings.write`: the
+    verdict count, a finding's field — ANSWER_AGAIN. ARGS gives the area
+    and the protocol the command was run with."""
+    answer = args.area / findings.DIR / running.answer
+    kept = f"the answer is kept in {shown(answer, Path.cwd())}"
+    listing = (
+        f"`{audit_command(args.area, '--findings', protocol=args.protocol)}` "
+        "names this call and offers the handover"
+    )
+    if isinstance(exc, AuditError):
+        ways = [exc.fix, kept, listing] if exc.fix else [kept, listing]
+        return with_way_out(exc.why, "; ".join(ways))
+    if isinstance(exc, findings.FindingsError):
+        return with_way_out(
+            str(exc), f"{findings.record_way(args.area, args.protocol)}; {kept}"
+        )
+    return with_way_out(str(exc), f"{ANSWER_AGAIN}; {kept}; {listing}")
 
 
 def fix_lines(

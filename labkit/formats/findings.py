@@ -254,10 +254,13 @@ class FixVerdict:
 #: `· check: <metrics key>` — the auditor's, fixed when the finding is written
 CHECK_FIELD = re.compile(r"·\s*check\s*:")
 #: the whole field: the key, then nothing, or a note in one of two forms
-#: running to the end of the line — `(<note>)` or `— <note>`
+#: running to the end of the line — `(<note>)` or `— <note>`. Either may
+#: end the line with a sentence's closing period: a dash note keeps it as
+#: its last character, after the parenthesis it closes the line and is no
+#: part of the note (a whole audit answer was refused for `(…).`)
 _CHECK = re.compile(
     r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*|file:[^\s`()]+)`?"
-    r"(?:\s*\((?P<paren>.*\S.*)\)|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
+    r"(?:\s*\((?P<paren>.*\S.*)\)\.?|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
 )
 CHECK_KEY = re.compile(r"^(?:[a-z][a-z0-9_]*|file:[^\s`()]+)$")
 #: a check that asks for a file's content, not a computed value: the run
@@ -275,8 +278,9 @@ CHECK_FORM = (
 def check_of(text: str) -> tuple[str, str]:
     """(key, note) of the diagnostic a finding line requires for its repair
     — its closing `· check: <key>` field, the note what the auditor wrote
-    after the key in one of the two forms of CHECK_FORM — or ("", "") when
-    it requires none. Only the key is machine-read; the note is kept whole.
+    after the key in one of the two forms of CHECK_FORM (a period closing
+    the line is part of a dash note and no part of a parenthesis note) —
+    or ("", "") when it requires none. Only the key is machine-read; the note is kept whole.
     Raises ValueError on a field that does not read and on two check
     fields in one line: a requirement half-read, or one of two, would be
     one nobody can be held to (second fixed-followup pilot: six records

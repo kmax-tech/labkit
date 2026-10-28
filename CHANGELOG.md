@@ -513,6 +513,23 @@ pins (`requirements.txt` / `requirements.lock`).
   out-of-band test puts the lane outside that band. A wrong band formula
   still fails at every width. Round 2 of the labkit-paper area 15 pilot
   on 72507d0 (PubMedQA), D4.
+- **A check note closed by a period no longer voids the audit, and an
+  answer that does not read names its way out.** The auditor's
+  instructions allow ` (<what it must show>)` or ` — <what it must show>`
+  after `· check: <key>`; the dash note took a closing period, the
+  parenthesis refused one, and the refusal ended the attempt without a
+  record and with no step after it. In pilot round 2 an 84 s, 0.46 USD
+  preflight answer with three BLOCKERs was lost so. A period after the
+  parenthesis now closes the line like the dash note's (`findings._CHECK`;
+  the note is the parenthesis' content, and what the field must hold is
+  unchanged: a key, then nothing or one of the two notes). Every refusal
+  in which `labkit-audit` writes no record (`_record`, the attempt ends
+  `none`) names its way out: first by the cause — the refusal's own fix,
+  for an area record that does not read `findings.record_way`, for the
+  answer's lines the draw again (`ANSWER_AGAIN`) —, then the kept answer
+  under `audits/answers/` and `labkit-audit <area> --findings`, which names
+  the call and offers the handover. Pilot round 2 of labkit-paper area 15
+  on 72507d0 (t71), defect D2.
 - **`labkit-audit --findings` names an audit that ended without a
   record.** The stamped AGENTS.md says that for an audit call that failed
   and that no completed audit of the same mode covers, `--findings` names
