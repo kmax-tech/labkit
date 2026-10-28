@@ -1672,9 +1672,12 @@ class UnrecordedCall(unittest.TestCase):
     answer that did not read, its answer kept) is a failed call for
     `--findings`, as the stamped AGENTS.md says: named with its kept
     answer, the handover offered, exit 2 — until a completed audit of its
-    mode on the same code covers it. Pilot round 2 (labkit-paper area 15,
-    t71): `--findings` said "no audit record yet" after an unrecordable
-    preflight answer, and named neither the call nor a way on."""
+    mode, on the same code and promise block, comes after it in the
+    journal; a `-failed.toml` by the same rule. Pilot round 2 (labkit-paper
+    area 15, t71): `--findings` said "no audit record yet" after an
+    unrecordable preflight answer, and named neither the call nor a way
+    on; then an earlier successful audit hid a later failed call, exit 0
+    (review of the repair, 2026-10-28)."""
 
     UNREADABLE = (
         f"{BLOCK.splitlines()[0]} · check: a2 spread\n"
@@ -1705,42 +1708,181 @@ class UnrecordedCall(unittest.TestCase):
         self.assertNotIn("--decide", out)
         self.assertNotIn("no audit record yet", out)
 
-    def test_a_completed_audit_of_its_mode_and_code_covers_it(self):
+    def test_an_earlier_audit_covers_no_later_failed_call(self):
+        """The reproduced case: a completed audit, then a failed call on the
+        same code and promises — the call stands, exit 2."""
+        area = repo_with()
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        rc, _, err, _ = run(area, self.UNREADABLE)
+        self.assertEqual(rc, 2, err)
+        late = attempts.read_journal(area)[-1]
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"audit did not complete: attempt {late.id}", out)
+        self.assertIn("--handover", out)
+        # and a backend that did not answer, by the same rule
+        err = io.StringIO()
+        with (
+            mock.patch.object(
+                audit.llm,
+                "complete",
+                side_effect=audit.llm_backends.BackendError("down"),
+            ),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = audit.main([str(area), "--mode", "preflight"])
+        self.assertEqual(rc, 2, err.getvalue())
+        (tried,) = findings.failed_attempts(area)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"audit did not complete: {tried.path.name}", out)
+
+    def test_a_later_audit_of_its_mode_code_and_promise_block_covers_it(self):
         area, attempt = self.unrecorded()
-        registration = {"kind": "fit"}
-        # another mode on the same code, the same mode on other code: no cover
-        findings.write(
+        protocol = area / "PROTOCOL-x0.md"
+        registered = protocol.read_text(encoding="utf-8")
+        # a later audit under another promise block: no cover
+        protocol.write_text(
+            fixture.head(promises=fixture.C1_BLOCK) + registered, encoding="utf-8"
+        )
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        (other,) = findings.area_records(area)
+        self.assertEqual(other.scope_sha, attempt.scope_sha)
+        self.assertNotEqual(other.block_sha, attempt.block_sha)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"attempt {attempt.id}", out)
+        # a later record of another mode, journaled, on the same code and block
+        later = attempts.begin(
+            area, "analysis", "opus", attempt.scope_sha, block_sha=attempt.block_sha
+        )
+        analysis = findings.write(
             area,
             "analysis",
             "opus",
             attempt.scope_sha,
-            "b" * 12,
+            attempt.block_sha,
             (0, 0, 0),
             [],
-            registration=registration,
+            registration={"kind": "fit"},
             run_id=findings.NO_RUN,
             shown_sha="s" * 12,
         )
-        findings.write(
-            area,
-            "preflight",
-            "opus",
-            "f" * 12,
-            "b" * 12,
-            (0, 0, 0),
-            [],
-            registration=registration,
-        )
+        later.end("record", file=analysis.name)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
         self.assertIn(f"attempt {attempt.id}", out)
-        # the audit run again on the same code, recorded: the call is covered
+        # the audit run again on the registered promises: the call is covered
+        protocol.write_text(registered, encoding="utf-8")
         rc, _, err, _ = run(area, WARN)
         self.assertEqual(rc, 1, err)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 0, out)
         self.assertNotIn(f"attempt {attempt.id}", out)
         self.assertNotIn("--handover", out)
+
+    def as_historical(self, area: Path, attempt: attempts.Attempt) -> str:
+        """Rewrite ATTEMPT's start in AREA's journal (and its copy) as labkit
+        0.103.0 wrote it, without `block_sha`; return the journal's text."""
+        journal = attempts.journal_path(area)
+        rows = [json.loads(x) for x in journal.read_text(encoding="utf-8").splitlines()]
+        (start,) = [
+            r for r in rows if r["event"] == "started" and r["id"] == attempt.id
+        ]
+        self.assertEqual(start.pop("block_sha"), attempt.block_sha)
+        old = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+        journal.write_text(old, encoding="utf-8")
+        copy = attempts.journal_copy(area)
+        if copy is not None:  # the copy keeps the lines as written
+            copy.write_text(old, encoding="utf-8")
+        return old
+
+    def test_a_historical_call_names_the_audit_that_settles_it(self):
+        """A start of labkit 0.103.0 or earlier names no promise block: the
+        call is named as historical with the command that settles it, the
+        audit run again now in the current format — not the handover alone —
+        and that audit settles it, on whatever code it reads; the old
+        evidence stays byte for byte."""
+        area, attempt = self.unrecorded()
+        old = self.as_historical(area, attempt)
+        answer = area / "audits" / attempt.answer
+        kept = answer.read_bytes()
+        (read,) = attempts.read_journal(area)
+        self.assertEqual(read.block_sha, "")
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(
+            f"audit did not complete, historical: attempt {attempt.id} (preflight, "
+            "opus) ended without a record",
+            out,
+        )
+        self.assertIn("its start, written by labkit 0.103.0 or earlier, names no", out)
+        self.assertIn(
+            "Run the audit again in the current format, which settles it: "
+            f"`{audit.audit_command(area, '--mode', 'preflight')}`",
+            out,
+        )
+        # the code moved on since: the audit run again now settles it all the same
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(SCRIPT + "# changed\n", encoding="utf-8")
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        self.assertNotEqual(findings.area_records(area)[0].scope_sha, attempt.scope_sha)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(attempt.id, out)
+        # the old evidence as it was: the journal only grew, the answer kept
+        journal = attempts.journal_path(area).read_text(encoding="utf-8")
+        self.assertTrue(journal.startswith(old))
+        self.assertEqual(answer.read_bytes(), kept)
+
+    def test_an_earlier_audit_settles_no_historical_call(self):
+        area = repo_with()
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        rc, _, err, _ = run(area, self.UNREADABLE)
+        self.assertEqual(rc, 2, err)
+        late = attempts.read_journal(area)[-1]
+        self.as_historical(area, late)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"audit did not complete, historical: attempt {late.id}", out)
+
+    def test_a_failed_file_no_attempt_names_is_historical(self):
+        """A `-failed.toml` from before the journal: its order is not known,
+        and an audit of its mode run again now settles it."""
+        area = repo_with()
+        failed = findings.write_failed(
+            area, "preflight", "opus", "s" * 12, "b" * 12, 60, "down", "c",
+            cause="unavailable",
+        )  # fmt: skip
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"audit did not complete, historical: {failed.name}", out)
+        self.assertIn("no attempt of the journal names it", out)
+        self.assertIn(f"`{audit.audit_command(area, '--mode', 'preflight')}`", out)
+        rc, _, err, _ = run(area, WARN)
+        self.assertEqual(rc, 1, err)
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(failed.name, out)
+
+    def test_without_a_readable_journal_no_failed_file_is_called_historical(self):
+        area = repo_with()
+        failed = findings.write_failed(
+            area, "preflight", "opus", "s" * 12, "b" * 12, 60, "down", "c",
+            cause="unavailable",
+        )  # fmt: skip
+        attempts.journal_path(area).write_text("not json\n", encoding="utf-8")
+        rc, out = findings_listing(area)
+        self.assertEqual(rc, 2, out)
+        self.assertIn("audit evidence incomplete:", out)
+        self.assertIn(f"audit did not complete: {failed.name}", out)
+        self.assertNotIn("historical", out)
 
     def test_a_review_that_ended_without_a_record_is_no_audit_call(self):
         area, attempt = self.unrecorded()

@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.formats import findings, protocol_check, standard_contract
+from labkit.formats import attempts, findings, protocol_check, standard_contract
 from labkit.checks import protocol_report
 from labkit.gates import audit
 from labkit.tools import scaffold
@@ -123,6 +123,9 @@ class WorkflowOrientation(unittest.TestCase):
                 [],
                 registration=registration,
             )
+            # the failed call and the later audit as labkit-audit makes them:
+            # each an attempt of the journal, ended with its file
+            tried = attempts.begin(area, "analysis", "auditor", "abc", block_sha="none")
             failed = findings.write_failed(
                 area,
                 "analysis",
@@ -134,13 +137,15 @@ class WorkflowOrientation(unittest.TestCase):
                 "labkit-audit example --mode analysis",
                 cause="unavailable",
             )
+            tried.end("failed", file=failed.name)
             out = io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
                 rc = audit.main([str(area), "--findings"])
             self.assertEqual(rc, 2, out.getvalue())
             self.assertIn(failed.name, out.getvalue())
             self.assertIn("--handover", out.getvalue())
-            findings.write(
+            later = attempts.begin(area, "analysis", "auditor", "abc", block_sha="none")
+            covering = findings.write(
                 area,
                 "analysis",
                 "auditor",
@@ -152,6 +157,7 @@ class WorkflowOrientation(unittest.TestCase):
                 run_id=findings.NO_RUN,
                 shown_sha="none",
             )
+            later.end("record", file=covering.name)
             out = io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
                 rc = audit.main([str(area), "--findings"])

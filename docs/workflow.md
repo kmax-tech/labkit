@@ -313,12 +313,15 @@ an exploration's run is looked at.
 
 To end a protocol without a result (a handover), use `labkit-audit <AREA> --findings`
 first: it reads all open BLOCKER records and evidence errors without a
-model call and prints complete commands. For a failed audit call that no
-completed audit of the same mode covers — a `-failed.toml` (covered on the
-same code and promises) or an attempt the journal ended without a record
-(covered on the same code; its answer kept under `audits/answers/`) — it
-names the call, its error and its kept answer and offers the handover,
-exit 2; that call left no findings to decide. Explicitly decide readable
+model call and prints complete commands. For a failed audit call — a
+`-failed.toml` or an attempt the journal ended without a record (its
+answer kept under `audits/answers/`) — that no completed audit of the
+same mode, code and promise block made after it covers (the journal's
+order), it names the call, its error and its kept answer and offers the
+handover, exit 2; that call left no findings to decide. A historical
+call (a start of labkit 0.103.0 or earlier, which names no promise block,
+or a `-failed.toml` no journal attempt names) is named as such with the
+audit, run again now in the current format, that settles it. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
 REPORT.md` command. It withdraws the result declaration, keeps an

@@ -166,7 +166,7 @@ class Gaps(unittest.TestCase):
 class Begin(unittest.TestCase):
     def test_begin_end_and_the_area_as_it_is_now(self):
         area = area_in_repo()
-        running = attempts.begin(area, "analysis", "opus", "s")
+        running = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         (path := area / "audits" / "r.toml").write_text("x", encoding="utf-8")
         running.end("record", file=path.name)
         (a,) = attempts.read_journal(area)
@@ -176,18 +176,20 @@ class Begin(unittest.TestCase):
         (gap,) = attempts.area_gaps(area).blockers
         self.assertIn("ended as record in audits/r.toml, and the file is gone", gap)
         with self.assertRaisesRegex(attempts.AttemptError, "the file is gone"):
-            attempts.begin(area, "analysis", "opus", "s")
+            attempts.begin(area, "analysis", "opus", "s", block_sha="b")
 
     def test_a_running_attempt_refuses_a_second_and_an_ended_one_does_not(self):
         area = area_in_repo()
-        first = attempts.begin(area, "analysis", "opus", "s")
+        first = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         with self.assertRaisesRegex(
             attempts.AttemptError,
             "is running — way out: wait for it to end, then run this",
         ):
-            attempts.begin(area, "analysis", "opus", "s")
+            attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         first.end("none", error="no answer")
-        attempts.begin(area, "analysis", "opus", "s").end("none", error="again")
+        attempts.begin(area, "analysis", "opus", "s", block_sha="b").end(
+            "none", error="again"
+        )
 
     def test_a_committed_record_removed_refuses_the_next_attempt(self):
         area = area_in_repo()
@@ -198,7 +200,7 @@ class Begin(unittest.TestCase):
         for f in (area / "audits").glob("*.toml"):
             f.unlink()  # `rm audits/*.toml`, as t18 ran it
         with self.assertRaisesRegex(attempts.AttemptError, "committed and gone"):
-            attempts.begin(area, "analysis", "opus", "s")
+            attempts.begin(area, "analysis", "opus", "s", block_sha="b")
 
     def test_a_killed_attempt_is_marked_interrupted_by_the_next(self):
         """A real process holds the attempt's lock; while it lives a second
@@ -211,7 +213,7 @@ class Begin(unittest.TestCase):
                 "-c",
                 "import sys, time; from pathlib import Path;"
                 "from labkit.formats import attempts;"
-                "r = attempts.begin(Path(sys.argv[1]), 'analysis', 'opus', 's');"
+                "r = attempts.begin(Path(sys.argv[1]), 'analysis', 'opus', 's', block_sha='b');"
                 "print('begun', flush=True); time.sleep(60)",
                 str(area),
             ],
@@ -222,11 +224,11 @@ class Begin(unittest.TestCase):
             assert child.stdout is not None
             self.assertEqual(child.stdout.readline().strip(), "begun")
             with self.assertRaisesRegex(attempts.AttemptError, "is running"):
-                attempts.begin(area, "analysis", "opus", "s")
+                attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         finally:
             os.kill(child.pid, signal.SIGKILL)
             child.wait()
-        running = attempts.begin(area, "analysis", "opus", "s")
+        running = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         self.assertEqual(len(running.notes), 1)
         self.assertIn("ended without a record — interrupted", running.notes[0])
         running.end("none", error="test")
@@ -240,7 +242,7 @@ class Begin(unittest.TestCase):
         code = (
             "import sys, time; from pathlib import Path;"
             "from labkit.formats import attempts;"
-            "\ntry:\n r = attempts.begin(Path(sys.argv[1]), 'analysis', 'opus', 's')"
+            "\ntry:\n r = attempts.begin(Path(sys.argv[1]), 'analysis', 'opus', 's', block_sha='b')"
             "\n print('begun', flush=True); time.sleep(5)"
             "\nexcept attempts.AttemptError:\n print('refused', flush=True)"
         )
@@ -261,8 +263,8 @@ class Begin(unittest.TestCase):
     def test_another_hosts_attempt_is_named_and_does_not_block(self):
         area = area_in_repo()
         with mock.patch.object(attempts.socket, "gethostname", lambda: "elsewhere"):
-            attempts.begin(area, "analysis", "opus", "s")  # never ended
-        running = attempts.begin(area, "analysis", "opus", "s")
+            attempts.begin(area, "analysis", "opus", "s", block_sha="b")  # never ended
+        running = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         self.assertIn("started on elsewhere and has no end", running.notes[0])
         running.end("none", error="test")
 
@@ -274,7 +276,7 @@ class JournalCopy(unittest.TestCase):
     SAB-like draw and ninth haiku round t5 deleted `audits/` whole)."""
 
     def attempt(self, area: Path, record: str = "r.toml") -> str:
-        running = attempts.begin(area, "analysis", "opus", "s")
+        running = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         (area / "audits" / record).write_text("x", encoding="utf-8")
         running.end("record", file=record)
         return running.id
@@ -346,7 +348,7 @@ class EvidenceCopy(unittest.TestCase):
     def attempt(self, area: Path) -> tuple[str, Path]:
         """An attempt that kept its answer and ended with a record written as
         labkit-audit writes one; (its id, the record)."""
-        running = attempts.begin(area, "analysis", "opus", "s")
+        running = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         running.keep_answer("the answer as the model gave it")
         record = findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
                                        "c", cause="unavailable")  # fmt: skip
@@ -421,7 +423,7 @@ class Hook(unittest.TestCase):
 
         area = area_in_repo()
         root = area.parent.parent
-        running = attempts.begin(area, "analysis", "opus", "s")
+        running = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         failed = findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
                                        "c", cause="unavailable")  # fmt: skip
         running.end("failed", file=failed.name)  # as labkit-audit journals it
@@ -495,7 +497,7 @@ class OneBlock(unittest.TestCase):
 
     def test_a_refused_start_makes_no_attempt(self):
         area = area_in_repo()
-        first = attempts.begin(area, "analysis", "opus", "s")
+        first = attempts.begin(area, "analysis", "opus", "s", block_sha="b")
         with self.assertRaisesRegex(attempts.AttemptError, "is running"):
             with attempts.attempt(area, "review", "opus", "s"):
                 self.fail("the block must not run")

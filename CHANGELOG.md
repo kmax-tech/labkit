@@ -34,6 +34,31 @@ pins (`requirements.txt` / `requirements.lock`).
   the generated lines of the run declared. 0.103.0 is the last version
   that replaces.
 
+- **A failed audit call is covered only by a later audit of its mode,
+  code and promise block; the journal's start names the block.** An
+  earlier completed audit hid a later failed call from `labkit-audit
+  --findings`, exit 0 (review of the D3 repair, 2026-10-28): a
+  `-failed.toml` was covered by any record of its mode, code and promises,
+  and an attempt that ended without a record by any record of its mode
+  and code, whenever made. Now both are covered by one rule
+  (`attempts.covered_by_later_record`): a record of the same mode, code
+  and promise block written by an attempt the journal started after the
+  call. An audit's start event records the promise block it read
+  (`block_sha`; `attempts.begin` takes it as a keyword, None for a
+  review, whose start names none; `Attempt.block_sha`). A `-failed.toml`
+  carries its block in its file, as before; an attempt that ended without
+  a record takes it from its start. A record no attempt names covers
+  nothing. A historical call — an attempt whose start names no block
+  (written by 0.103.0 or earlier; it reads as it stands, and no block is
+  supplied after the fact) or a `-failed.toml` no attempt of the journal
+  names — has a binding or order the journal cannot give (`historical_call`):
+  `--findings` names it as historical, exit 2, with the step that settles
+  it. Migration, that step: run the audit of its mode again now, in the
+  current format — `labkit-audit <area> --mode <preflight|analysis>`, the
+  command `--findings` prints; the later record of its mode settles the
+  historical call on whatever code and promises it reads, as it binds
+  today's. Journal, answers and records stay as written. 0.103.0 is the
+  last version whose starts name no block.
 - **The analysis audit and the decision review see the run's declared
   dependencies.** In the second repair case the follow-up could not
   confirm a correct repair against `model.json` — "that result is in no
@@ -567,11 +592,9 @@ pins (`requirements.txt` / `requirements.lock`).
   outcome `none`, the answer kept under `audits/answers/`) left it saying
   "no audit record yet". Such an attempt of mode preflight or analysis is
   now a failed call there: named by its id with its error and its kept
-  answer, the handover offered, exit 2 — until a completed audit of its
-  mode on the same code covers it (the journal names no promises, so the
-  code alone is compared; a `-failed.toml` is still covered on code and
-  promises). Pilot round 2 of labkit-paper area 15 on 72507d0 (t71),
-  defect D3.
+  answer, the handover offered, exit 2 — until a later completed audit
+  covers it (Breaking, above: one rule for both kinds). Pilot round 2 of
+  labkit-paper area 15 on 72507d0 (t71), defect D3.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a
   fence that holds only `<the real prompt — …>`; the field parser read
