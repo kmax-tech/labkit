@@ -8,7 +8,8 @@ handle; this tool matches it, replaces the `<...>` value (multi-line
 placeholders included) and leaves everything else byte-identical.
 
     protocol-fill PROTOCOL-x.md --list
-    protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."
+    protocol-fill PROTOCOL-x.md "Meaning of the gold label=positive = ..."   the form AGENTS.md shows; several fields in one call
+    protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."   the same, one field
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md type=exploratory repeat_cost=low kind=fit "model alias=haiku"   the TOML head's stamped placeholders

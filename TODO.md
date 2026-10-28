@@ -1150,6 +1150,21 @@ Notiert, nicht geplant:
    werden („code, registration and inputs“). Klein: `protocol-fill` in
    zwei Schreibweisen gezeigt; `chance_of()` im gestempelten Null-Satz
    nirgends erklärt.
+   Entschieden und eingetragen 2026-10-28: (a) die erste Messung bleibt
+   Exploration, weiter mit `[replaces]` oder Übergabe, Maßstab ist, ob eine
+   nachträgliche Wahl Ergebnis oder Bewertung steuern kann (`72e71ca`);
+   (b) kein neuer Typ, `confirmatory` = Frage und Auswertungsplan vorab,
+   das Kriterium dort, wo eine Vorhersage beurteilt wird (`f2f2c71`); (c)
+   eine vorab festgelegte Regel, die einen Parameter aus jeder Eingabe
+   selbst bestimmt, bleibt Berechnung, eine nach Sichtung gewählte
+   Schwelle ist ein fit (`f2cae8b`); (d) festgelegt werden die tatsächlich
+   gelesenen Dateien, Herkunft und Vorbereitung, roh und vorbereitet
+   getrennt, große Daten per Quelle, Version und Prüfsumme (`a6dc065`);
+   die beiden Kleinigkeiten im folgenden Commit. Offen: ob Agenten den
+   neuen Hinweis zum Vorlagenfehler 0,15 gegen 0,25 beim tatsächlichen
+   Ausfüllen beachten — das prüft die nächste Schreibprobe, ein
+   Experiment, das auf Ansage startet; ebenso, ob die verständlicheren
+   Texte zu zuverlässig durchgeführten Experimenten führen.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und

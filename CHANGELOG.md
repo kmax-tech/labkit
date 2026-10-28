@@ -1131,6 +1131,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One preferred `protocol-fill` form; the stamped null explains
+  chance.** `protocol-check --contract` showed `"<label>" "<value>"` where
+  AGENTS.md shows `"<Label>=<value>"`; the contract's hint and the module
+  text now lead with the `=` form, one call for several fields, the
+  two-word form named as the same for one field. The estimator stamp's
+  null field and [A2] sentence said "chance_of()" without saying what it
+  is; they now say chance is the score of an instrument that learned
+  nothing, which `chance_of()` in `scripts/01_measure.py` computes from the
+  gold. Haiku start reading, 2026-10-28.
 - **What fixing the inputs means.** AGENTS.md said only "commit the code,
   registration and inputs", and readers asked where data lie and whether
   they are committed. Decided 2026-10-28: what must stand is the files the
