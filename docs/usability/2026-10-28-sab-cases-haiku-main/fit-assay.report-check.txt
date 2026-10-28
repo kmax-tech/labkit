@@ -1,0 +1,10 @@
+  PROTOCOL-fit-assay.md: read from the working tree; the head declares no run; the answering run is 2026-10-27T23-11-56_d0c0
+  PROTOCOL-fit-assay.md: repeat_cost = "low" — no freeze and no preflight audit owed (LAB-017 The number of audits follows the cost tier); the registration as committed at the first measurement, the full run, the analysis audit and the check are owed instead
+  BLOCKER: finalize: intent-check: 2026-10-27T23-11-56_d0c0: ran under promise block d37c134869ce, the protocol now carries f571a17d2fc6 — the promises changed after the run.
+  BLOCKER: scripts/02_analyze.py --check exits 1: recheck: run 2026-10-27T23-11-56_d0c0 ran under promise block d37c134869ce, the protocol now carries f571a17d2fc6 — the promises changed after the run (LAB-041 Generate numbers, don't retype them)
+  WARNING: Limit (audit 2026-10-27T23-21-analysis #1): `stands` on an accepted WARNING not reviewed — no decision review upholds that the reported claim stands within this limit: `labkit-audit experiments/01-fit-assay --review --record 2026-10-27T23-21-analysis.toml` asks a second auditor; after a rejection, decide again (LAB-015 Preflight audit before freezing)
+  WARNING: Limit (audit 2026-10-27T23-21-analysis #2): `stands` on an accepted WARNING not reviewed — no decision review upholds that the reported claim stands within this limit: `labkit-audit experiments/01-fit-assay --review --record 2026-10-27T23-21-analysis.toml` asks a second auditor; after a rejection, decide again (LAB-015 Preflight audit before freezing)
+
+report-check: 2 blocker(s), 2 warning(s) — fix the blockers before reporting:
+  - finalize: intent-check: 2026-10-27T23-11-56_d0c0: ran under promise block d37c134869ce, the protocol now carries f571a17d2fc6 — the promises changed after the run.
+  - scripts/02_analyze.py --check exits 1: recheck: run 2026-10-27T23-11-56_d0c0 ran under promise block d37c134869ce, the protocol now carries f571a17d2fc6 — the promises changed after the run (LAB-041 Generate numbers, don't retype them)

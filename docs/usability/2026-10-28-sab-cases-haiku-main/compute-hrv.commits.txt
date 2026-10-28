@@ -1,0 +1,11 @@
+6c714fd 22:44:06 Add sub-sample peak refinement with parabolic interpolation
+5e62c92 22:41:52 Decide final audit findings: rr_outlier_fraction and quantization resolution accepted
+2205682 22:39:36 Add RR outlier detection and validate measurement
+6f73cd5 22:36:52 Fix R-peak detection and decide audit findings
+3653ae7 22:33:35 Implement compute-hrv measurement: R-peak detection and RR interval analysis
+3c1f92d 22:33:19 Register compute-hrv protocol: exploratory compute task with low repeat cost
+96df396 22:29:00 Probe: the venv inside the sandbox
+4efc9ef 23:28:56 Probe: container paths
+5a26bd3 23:28:44 Probe: the area, the fixture and TASK.md
+1519eed 23:28:44 Probe: requirements.lock and the hooks of the probe venv
+27a3fe2 23:28:42 Scaffold: a probe lab repo for the usability trace

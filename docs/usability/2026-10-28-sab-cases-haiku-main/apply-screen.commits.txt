@@ -1,0 +1,8 @@
+df8fc3f 23:56:29 Generate result block in REPORT.md
+ad26b2c 23:45:59 Complete apply-screen measurement and audit.
+2f7f067 23:35:02 Register apply-screen protocol and prepare screening data.
+4121bfb 23:28:37 Probe: the venv inside the sandbox
+fb6b5b7 00:28:19 Probe: container paths
+7b098ff 23:28:48 Probe: the area, the fixture and TASK.md
+9488859 23:28:48 Probe: requirements.lock and the hooks of the probe venv
+b881eee 23:28:47 Scaffold: a probe lab repo for the usability trace
