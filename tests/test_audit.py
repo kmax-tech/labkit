@@ -25,7 +25,7 @@ import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import registration_of, run_record  # noqa: E402
 from labkit.gates import audit, decision_review, report_check, ways_out  # noqa: E402
 from labkit.checks import audit_binding, result_render  # noqa: E402
-from labkit.formats import attempts, findings, followup, promises, scope_sha  # noqa: E402
+from labkit.formats import attempts, findings, followup, promises, runs, scope_sha  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
@@ -1360,6 +1360,81 @@ class CheckNote(unittest.TestCase):
         self.assertIn(
             'check_note = "every column named"', earlier.read_text(encoding="utf-8")
         )
+
+
+class FileCheck(unittest.TestCase):
+    """A repair that a file confirms — a model's weights, not a computed
+    value — is required as `· check: file:<path>` (repair case, 2026-10-28:
+    the follow-up asked to confirm `std` from model.json, which no piece
+    showed, and the agent had no way to hand it over). The check stands
+    where the run declares the file as a dependency shown whole; a file
+    named only by its digest does not answer it. Each with its twin."""
+
+    MODEL = "experiments/01-x/data/model.json"
+    CHECKED = (
+        FixVerdicts.LEAK + f" · check: file:{MODEL} — std holds standard deviations"
+    )
+
+    def declare(self, area: Path, content: bytes) -> None:
+        """The answering run reads data/model.json (CONTENT) as a predictor."""
+        model = area / "data" / "model.json"
+        model.parent.mkdir(exist_ok=True)
+        model.write_bytes(content)
+        path = area / "runs" / "2026-01-01T00-00-00_0001" / "config.json"
+        cfg = json.loads(path.read_text(encoding="utf-8"))
+        digest = scope_sha.file_digest(model)[: runs.RECORD_SHA_CHARS]
+        cfg["data"] = {
+            "predictor_primary": {"path": self.MODEL, "sha256": digest, "rows": None}
+        }
+        path.write_text(json.dumps(cfg), encoding="utf-8")
+
+    def test_the_file_form_reads_and_a_loose_one_refuses(self):
+        self.assertEqual(
+            findings.check_of(self.CHECKED),
+            (f"file:{self.MODEL}", "std holds standard deviations"),
+        )
+        with self.assertRaises(ValueError):
+            findings.check_of(FixVerdicts.LEAK + " · check: file: data/model.json")
+
+    def test_the_work_order_asks_to_declare_the_file(self):
+        order = findings.check_order(f"file:{self.MODEL}", "std holds sds")
+        self.assertIn(f"declare `{self.MODEL}` (std holds sds)", order)
+        self.assertIn("PREDICTOR_FILES", order)
+        self.assertNotIn("metrics.json", order)
+
+    def test_a_declared_text_file_answers_the_check_and_a_binary_does_not(self):
+        rc = RequiredCheck()
+        rc.setUp()
+        area, earlier = rc.fv.area(self.CHECKED)
+        self.declare(area, b'{"std": [12.0, 16.0]}')
+        v, prompt, _ = rc.verdict(area, earlier)
+        self.assertIn(
+            f"required check `file:{self.MODEL}` (std holds standard deviations): "
+            f"shown above under `DEPENDENCY {self.MODEL} (predictor_primary",
+            prompt,
+        )
+        self.assertIn('{"std": [12.0, 16.0]}', prompt)
+        self.assertEqual((v.check, v.check_present), (f"file:{self.MODEL}", True))
+        area, earlier = rc.fv.area(self.CHECKED)
+        self.declare(area, b"\x80\x04\xff\xfe")
+        v, prompt, _ = rc.verdict(area, earlier)
+        self.assertIn(
+            f"required check `file:{self.MODEL}`: not among the answering run's "
+            f"dependencies shown whole",
+            prompt,
+        )
+        self.assertEqual(v.check_present, False)
+
+    def test_report_check_finds_the_file_where_the_follow_up_did(self):
+        g = FollowupGate()
+        g.setUp()
+        area, r1 = g.fv.area(self.CHECKED)
+        g.follow_up(area, f"FIX · {r1.name}#1 · resolved · std holds sds")
+        (line,) = g.gate(area)
+        self.assertIn(f"declare `{self.MODEL}`", line)
+        self.declare(area, b'{"std": [12.0, 16.0]}')
+        g.follow_up(area, f"FIX · {r1.name}#1 · resolved · std holds sds")
+        self.assertEqual(g.gate(area), [])
 
 
 class KeptAnswer(unittest.TestCase):

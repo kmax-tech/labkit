@@ -579,10 +579,20 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
             f"{f.reason or '(no reason given)'}"
         )
         present = shown.check_present(e)
-        if present is True:
+        note = f" ({f.check_note})" if f.check_note else ""
+        if present is True and f.check.startswith(findings.FILE_CHECK):
+            entry += (
+                f"\n  required check `{f.check}`{note}: shown above under "
+                f"`{(shown.metrics or {})[f.check]}`"
+            )
+        elif present is True:
             value = json.dumps((shown.metrics or {})[f.check], ensure_ascii=False)
-            note = f" ({f.check_note})" if f.check_note else ""
             entry += f"\n  required check `{f.check}`{note} = {value}"
+        elif present is False and f.check.startswith(findings.FILE_CHECK):
+            entry += (
+                f"\n  required check `{f.check}`: not among the answering run's "
+                f"dependencies shown whole"
+            )
         elif present is False:
             entry += (
                 f"\n  required check `{f.check}`: missing in the answering "
@@ -1105,7 +1115,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
         return r.mode == ANALYSIS and r.state == state
 
     earlier_repairs = (
-        earlier_of(area, current, shown.metrics() if shown else None)
+        earlier_of(area, current, shown.evidence() if shown else None)
         if mode == ANALYSIS
         else Followup([], None, {})
     )

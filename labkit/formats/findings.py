@@ -250,16 +250,19 @@ CHECK_FIELD = re.compile(r"·\s*check\s*:")
 #: the whole field: the key, then nothing, or a note in one of two forms
 #: running to the end of the line — `(<note>)` or `— <note>`
 _CHECK = re.compile(
-    r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*)`?"
+    r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*|file:[^\s`()]+)`?"
     r"(?:\s*\((?P<paren>.*\S.*)\)|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
 )
-CHECK_KEY = re.compile(r"^[a-z][a-z0-9_]*$")
+CHECK_KEY = re.compile(r"^(?:[a-z][a-z0-9_]*|file:[^\s`()]+)$")
+#: a check that asks for a file's content, not a computed value: the run
+#: declares the file as a dependency, so the follow-up is shown it
+FILE_CHECK = "file:"
 #: how a carried finding names the one it continues: `<record file>#<n>`
 CARRIES_REF = re.compile(r"^[^\s#/]+\.toml#[1-9]\d*$")
 CHECK_FORM = (
-    "a closing `· check: <metrics key>` (lowercase snake_case), optionally "
-    "followed by ` (<what its value must show>)` or ` — <what its value must "
-    "show>` to the end of the line"
+    "a closing `· check: <metrics key>` (lowercase snake_case) or `· check: "
+    "file:<repository path>`, optionally followed by ` (<what it must show>)` "
+    "or ` — <what it must show>` to the end of the line"
 )
 
 
@@ -292,11 +295,22 @@ def check_order(check: str, note: str = "") -> str:
     """What a finding's required CHECK asks of the measuring code — the one
     wording of the decision list, the follow-up's holds and AGENTS.md: the
     script computes the value while it measures and writes it to
-    metrics.json under CHECK; NOTE, what it must show. A key alone shows
+    metrics.json under CHECK; NOTE, what it must show. A `file:<path>`
+    check asks for the file declared as the run's dependency instead. A key alone shows
     nothing: the follow-up judges the computed value. In the repair case
     (2026-10-28) the check went unwritten, and every follow-up judged the
     repair not assessable."""
     shows = f" ({note})" if note else ""
+    if check.startswith(FILE_CHECK):
+        # a file's content, not a computed value: shown once the run declares
+        # it (the repair case's model.json, which no audit piece showed)
+        path = check.removeprefix(FILE_CHECK)
+        return (
+            f"declare `{path}`{shows} among the files the run reads as a dependency "
+            f"— in the estimator skeleton `PREDICTOR_FILES`, else runlog's `data=` "
+            f"with `provenance.BinaryInput` — so that the run records its digest "
+            f"and the analysis audit is shown its content"
+        )
     return (
         f"extend the measuring script so that it computes `{check}`{shows} from "
         f"what the run measures and writes the computed value to metrics.json "
@@ -956,7 +970,8 @@ def _check_fields(path: Path, i: int, row: dict) -> tuple[str, str]:
     check = row.get("check", "")
     if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
         raise FindingsError(
-            f"{path}: finding {i}: check {check!r} is no metrics key (lowercase snake_case)"
+            f"{path}: finding {i}: check {check!r} is no metrics key (lowercase "
+            f"snake_case) and no `file:<path>`"
         )
     note = row.get("check_note", "")
     if not isinstance(note, str) or (note and not check):

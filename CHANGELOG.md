@@ -1212,6 +1212,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A required check can name a file: `· check: file:<path>`.** In the
+  repair case (2026-10-28) the follow-up asked to confirm from
+  `model.json` that `std` holds standard deviations; a check could only
+  name a metrics key, so the agent had no way to hand the file over. A
+  finding now ends in `· check: file:<repository path>` where a file the
+  run reads confirms the repair; the work order asks to declare it as the
+  run's dependency (`PREDICTOR_FILES`, else runlog's `data=`), and the
+  check stands where that dependency is shown whole — the follow-up's
+  prompt points to its `DEPENDENCY` piece, and report-check looks it up
+  the same way (`audit_binding.check_evidence`, one home). A file named
+  only by its digest (binary, above `DEPENDENCY_SHOW_MAX`, changed since
+  the run) does not answer it. The auditor's instructions and AGENTS.md
+  name the form.
 - **At fit the C1 bar is the mean of five permuted-label refits.** The
   fit null lane was one refit on permuted labels, and its draw decided a
   verdict (fourth SAB-like draw: fit-assay passed with `c1_score` =

@@ -136,7 +136,9 @@ from labkit.checks.audit_binding import (
     AuditError,
     analysis_now,
     audited_run,
+    check_evidence,
     covering_analysis,
+    dependency_pieces,
 )
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
@@ -809,8 +811,9 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         metrics: dict | None = runs.read_metrics(runs.metrics_path(ctx.run))
     except (OSError, ValueError):
         metrics = None
+    evidence = check_evidence(metrics, dependency_pieces(ctx.run))
     try:
-        held = followup.release_holds(records, covering, metrics)
+        held = followup.release_holds(records, covering, evidence)
     except findings.FindingsError as exc:
         return [
             blocker(

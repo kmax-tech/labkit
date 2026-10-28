@@ -238,7 +238,12 @@ it there.
 repair cannot be seen in the code alone — a leak, a contamination, a
 denominator — end its line with ` · check: <metrics key>`: the key the
 measuring code must write to metrics.json so that a later audit can see the
-repair hold (lowercase snake_case). Say what its value must show in the
+repair hold (lowercase snake_case). When the repair is confirmed by a
+file the run reads — a model's weights, a mapping, a lexicon — not by a
+computed value, end it with ` · check: file:<repository path>` instead:
+the caller declares that file as the run's dependency, and the follow-up
+shows it under `DEPENDENCY <path>` (a binary or large file is named by its
+digest only and cannot answer a check). Say what its value must show in the
 finding's own fields, before the check; if you add it after the key, write
 it as ` (<what it must show>)` or ` — <what it must show>` to the end of
 the line, nothing else. One check per finding. It is fixed with the

@@ -15,6 +15,7 @@ Reads only; the records themselves are `findings`'.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 
 from pathlib import Path
 from typing import NamedTuple
@@ -127,6 +128,36 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
 DEPENDENCY_SHOW_MAX = 64_000
 
 
+#: how a dependency piece's label opens, and how a piece not shown whole opens
+DEPENDENCY_LABEL = "DEPENDENCY "
+NOT_SHOWN = "not shown:"
+
+
+def shown_files(pieces: Iterable[tuple[str, str]]) -> dict[str, str]:
+    """`file:<recorded path>` → its piece's label, for every dependency piece
+    of PIECES (`dependency_pieces`) shown whole — what a required `check:
+    file:<path>` is found in. A file named but not shown is not there."""
+    out: dict[str, str] = {}
+    for label, text in pieces:
+        if label.startswith(DEPENDENCY_LABEL) and not text.startswith(NOT_SHOWN):
+            recorded = label.removeprefix(DEPENDENCY_LABEL).split(" (", 1)[0]
+            out[f"{findings.FILE_CHECK}{recorded}"] = label
+    return out
+
+
+def check_evidence(
+    metrics: dict | None, pieces: Iterable[tuple[str, str]]
+) -> dict | None:
+    """Where a finding's required check is looked up: METRICS (the run's
+    metrics.json) and the files of PIECES shown whole (`shown_files`) —
+    None when there is neither. One home for MODE analysis and
+    report-check, so both find a check in the same place."""
+    files = shown_files(pieces)
+    if metrics is None and not files:
+        return None
+    return {**(metrics or {}), **files}
+
+
 def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
     """RUN_DIR's declared dependencies — its `data=` inputs recorded without
     rows (`provenance.BinaryInput`: a predictor, its weights) — as MODE
@@ -149,18 +180,18 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
         ):
             continue
         recorded, digest = str(entry.get("path")), str(entry.get("sha256"))
-        label = f"DEPENDENCY {recorded} ({key}, the run recorded sha {digest})"
+        label = f"{DEPENDENCY_LABEL}{recorded} ({key}, the run recorded sha {digest})"
         path = runs.resolve_recorded(recorded, run_dir)
         if not path.is_file():
             why = "a directory" if path.is_dir() else "gone from the tree"
-            out.append((label, f"not shown: {why}"))
+            out.append((label, f"{NOT_SHOWN} {why}"))
             continue
         now = scope_sha.file_digest(path)[: len(digest)]
         if now != digest:
             out.append(
                 (
                     label,
-                    f"not shown: changed since the run (sha {now} now), so not "
+                    f"{NOT_SHOWN} changed since the run (sha {now} now), so not "
                     f"what the run read",
                 )
             )
@@ -169,11 +200,11 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
-            out.append((label, "not shown: not text — named by its digest"))
+            out.append((label, f"{NOT_SHOWN} not text — named by its digest"))
             continue
         if len(data) > DEPENDENCY_SHOW_MAX:
             out.append(
-                (label, f"not shown: {len(data)} bytes, above {DEPENDENCY_SHOW_MAX}")
+                (label, f"{NOT_SHOWN} {len(data)} bytes, above {DEPENDENCY_SHOW_MAX}")
             )
             continue
         out.append((label, text))
@@ -189,6 +220,12 @@ class RunShown(NamedTuple):
 
     pieces: tuple[tuple[str, str], ...]
     sha: str
+
+    def evidence(self) -> dict | None:
+        """Where this snapshot holds a required check (`check_evidence`):
+        its metrics and its dependencies shown whole. Raises AuditError
+        like `metrics`."""
+        return check_evidence(self.metrics(), self.pieces)
 
     def metrics(self) -> dict | None:
         """The run's metrics.json as this snapshot shows it — the very text
