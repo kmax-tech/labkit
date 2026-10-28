@@ -451,6 +451,19 @@ pins (`requirements.txt` / `requirements.lock`).
   declared, not recognised: the decode decides, not the file type, so
   one whose bytes happen to decode is read as text, and guessing it from
   the failure would excuse a corrupt text dataset.
+- **Every line of a gone audit file names the restore that works there,
+  the two left over included.** f751938 made the tree, index and copy
+  lines state-specific (`git add` only for a file still on disk); the line
+  for a file HEAD's journal names and HEAD lacks still said "restore and
+  commit it", and a loss a handover recorded "restore it", whether or not
+  anything could (pilot of labkit-paper area 15, t60, where nothing kept
+  the record). Both now name the one way that works — the HEAD line
+  stages the file or copies it from the evidence copy and commits it, the
+  handover's also checks it out from HEAD — or say that nothing keeps it
+  (`attempts.restore_command`, None when nothing restores;
+  `attempts.NOTHING_KEEPS`, `attempts.LOST_WAY`). `handovers.missing_evidence` is
+  `handovers.missing_paths` and returns the paths; `attempts.area_gaps`
+  writes their sentences.
 - **Under lost audit evidence the texts name the one route that leads
   out of a report citing a run.** protocol-fill (after a refused
   adoption), the handover's list of citing reports and AGENTS.md

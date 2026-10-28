@@ -228,6 +228,29 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("remove the run ids", line)
         self.assertNotIn("--discuss", line)
 
+    def test_a_loss_a_handover_recorded_names_the_restore_that_works(self):
+        """It said "restore it" whether or not anything could (pilot of
+        labkit-paper area 15, t60, where nothing kept the record)."""
+        rc, out = self.audit(cases.CLEAN)
+        self.assertEqual(rc, 0, out)
+        (record,) = findings.area_records(self.area)
+        self.lab.commit("the audit")
+        record.path.unlink()
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        name = f"audits/{record.path.name}: lost, as a handover recorded — "
+        (line,) = [g for g in attempts.evidence_gaps(self.area) if name in g]
+        self.assertIn(
+            f"restore it (`git checkout HEAD -- audits/{record.path.name}`)", line
+        )
+        # the twin: nothing keeps it — said so, no restore offered
+        self.lab.commit("the handover")  # HEAD no longer holds the record
+        attempts.kept_files(self.area)[record.path.name].unlink()
+        (line,) = [g for g in attempts.evidence_gaps(self.area) if name in g]
+        self.assertIn(f"{attempts.NOTHING_KEEPS}, and audits and adoption stay", line)
+        self.assertNotIn("restore it", line)
+        self.assertNotIn("until it is back", line)
+
     def test_findings_offer_the_handover_only_where_something_stands(self):
         # It printed the handover command in a clean area and, before its
         # own refusal, in an area never audited (audit 2026-10-27, H1).

@@ -116,6 +116,28 @@ class Gaps(unittest.TestCase):
         (gap,) = self._gaps([], present={"r.toml"}, now=head, head=head).blockers
         self.assertIn("HEAD's journal names it while HEAD lacks the file", gap)
 
+    def test_heads_lost_file_names_the_restore_that_works_there(self):
+        """It said "restore and commit it" whether or not anything could
+        (pilot of labkit-paper area 15, t60): on disk it is staged, else
+        it is lost — never a restore that cannot work."""
+        head = START + "\n" + END_R + "\n"
+        (gap,) = self._gaps([], present={"r.toml"}, now=head, head=head).blockers
+        self.assertIn(
+            "bring it back and commit it — stage it (`git add audits/r.toml`)", gap
+        )
+        copy = Path("/copy/r.toml")
+        (gap,) = attempts.gaps(
+            [], set(), set(), head, head, {}, kept={"r.toml": copy}
+        ).blockers
+        self.assertIn(
+            "bring it back and commit it — restore it as the audit wrote", gap
+        )
+        self.assertIn(f"cp {copy} audits/r.toml", gap)
+        (gap,) = self._gaps([], now=head, head=head).blockers
+        self.assertIn(attempts.LOST_WAY, gap)
+        self.assertNotIn("git add", gap)
+        self.assertNotIn("commit it", gap)
+
     def test_a_file_an_ended_attempt_names_that_is_gone_blocks(self):
         ended = Attempt(**{**A.__dict__, "outcome": "failed", "file": "f-failed.toml"})
         (gap,) = self._gaps([ended]).blockers
