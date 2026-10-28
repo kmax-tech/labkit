@@ -442,6 +442,17 @@ pins (`requirements.txt` / `requirements.lock`).
   example is named where it is owed. Without a protocol the low cut and
   the full form's lists stay as they were. Pilot of labkit-paper area 15
   on 72507d0 (t15, t60, t21, t34), defect D9.
+- **The pre-run hook lets every stamped no-run stage pass.** The stamped
+  producers document `00_prepare.py --audit` as "no write" and the
+  estimator's `--calibrate-null` as "No run, nothing written", but the
+  hook knew only `--show`, `--probe` and `--eval-only`, so on a frozen
+  protocol with preflight blockers it blocked `--audit` like a run start
+  (exit 2). The list now has one home,
+  `standard_contract.NO_RUN_FLAGS`, from which the hook builds its
+  pattern; a test holds every flag a run-opening stamp defines to that
+  list or to the run's own flags (`--seed`, `--repeat-of`, `--model`).
+  The producer's and the measurement's own runs stay gated. Round 2 of
+  the labkit-paper area 15 pilot on 72507d0 (t15), D7.
 - **The stamped area test holds the registered null band, not the
   stamp's example.** AGENTS.md and the protocol head call the numbers in
   the stamped promise tables examples to set; the prompt skeleton's test

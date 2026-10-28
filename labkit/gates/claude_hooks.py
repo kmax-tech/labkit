@@ -26,8 +26,9 @@ docs/notes/2026-10-19-hooks-and-report-check.md.
 pre-run
     The command is a run start when it names a .py file that opens a run
     (`runlog.run(` / `runlog.Run(`, or `lanes.Lanes(`, whose `main` opens
-    it: the prompt skeleton) and is not one of the throwaway stages
-    (`--show`, `--probe`, `--eval-only`). For that script's area (the
+    it: the prompt skeleton) and is not one of the stamps' throwaway stages
+    (`standard_contract.NO_RUN_FLAGS`: `--show`, `--probe`, `--eval-only`,
+    `00_prepare.py --audit`, `--calibrate-null`). For that script's area (the
     nearest directory above it with a PROTOCOL-*.md) `preflight` runs:
       · protocol frozen (`frozen = true`) + blockers           → exit 2, blocked
       · protocol unfrozen (a pilot by declaration) + blockers  → context only
@@ -184,9 +185,12 @@ from labkit.formats.repo import (
 from labkit.formats.scope_sha import areas_touched, file_digest
 from labkit.formats.scope_sha import digest as scope_digest
 
-# The template's throwaway stages: none of them opens a run, and the probe
-# is what comes BEFORE preflight, so gating it would invert the order.
-THROWAWAY_FLAGS = re.compile(r"(^|\s)--(show|probe|eval-only)\b")
+# The stamps' throwaway stages (`standard_contract.NO_RUN_FLAGS`): none of
+# them opens a run, and the probe is what comes BEFORE preflight, so gating
+# it would invert the order.
+THROWAWAY_FLAGS = re.compile(
+    r"(^|\s)(" + "|".join(map(re.escape, standard_contract.NO_RUN_FLAGS)) + r")\b"
+)
 PY_TOKEN = re.compile(r"[\w./~-]+\.py")
 # A .py file is RUN when an interpreter precedes it (`python`, `python3.12`,
 # `.venv/bin/python`, flags between allowed), when it starts a command
@@ -363,8 +367,8 @@ def executed_py(words: list[str]) -> list[str]:
 def run_scripts(command: str, cwd: Path) -> list[Path]:
     """The .py files the command runs that open a run — resolved against the
     directory the command stands in at that point (a `cd` is followed) and
-    existing; a segment with a throwaway flag (`--show`, `--probe`,
-    `--eval-only`) opens no run. Each simple command of the line
+    existing; a segment with a throwaway flag (`THROWAWAY_FLAGS`) opens no
+    run. Each simple command of the line
     (`shell.segments`) is judged on its own: read as one, `cd AREA && python
     scripts/01_measure.py` found no script, and one `--probe` freed every
     command of the line (audit 2026-10-15)."""

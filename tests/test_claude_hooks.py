@@ -294,6 +294,47 @@ class PreRun(unittest.TestCase):
             )
             self.assertEqual((rc, out, err), (0, "", ""), flag)
 
+    def test_every_stamped_no_run_stage_passes_and_the_runs_stay_gated(self):
+        """The stamped producer documents `00_prepare.py --audit` as "no
+        write", and the estimator's `--calibrate-null` as "No run, nothing
+        written"; the hook knew only --show, --probe and --eval-only and
+        blocked `--audit` on a frozen protocol with blockers (labkit-paper
+        area 15, round 2, t15, D7). The twins: the producer's and the
+        measurement's own runs stay blocked."""
+        from labkit.tools import scaffold
+
+        root = Path(tempfile.mkdtemp())
+        with contextlib.redirect_stdout(io.StringIO()):
+            scaffold.stamp_lab(root, "lab")
+            scaffold.stamp_area(root, "fit", repeat_cost="high", kind="fit")
+            scaffold.stamp_area(
+                root, "judge", repeat_cost="high", model="haiku", kind="apply"
+            )
+            scaffold.stamp_area(root, "local", repeat_cost="high", kind="apply")
+        _git(root, "init", "-q", ".")
+        for proto in root.glob("experiments/*/PROTOCOL-*.md"):
+            text = proto.read_text(encoding="utf-8")
+            self.assertEqual(text.count("frozen = false"), 1, proto)
+            proto.write_text(text.replace("frozen = false", "frozen = true"))
+        python = "python experiments"
+        for cmd in (
+            f"{python}/01-fit/scripts/00_prepare.py",
+            f"{python}/02-judge/scripts/00_prepare.py",
+            f"{python}/03-local/scripts/01_measure.py",
+        ):
+            rc, _, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual(rc, 2, cmd)
+            self.assertIn("BLOCKED", err)
+        for cmd in (
+            f"{python}/01-fit/scripts/00_prepare.py --audit",
+            f"{python}/01-fit/scripts/00_prepare.py --show",
+            f"{python}/02-judge/scripts/00_prepare.py --audit",
+            f"{python}/03-local/scripts/01_measure.py --calibrate-null",
+            f"{python}/03-local/scripts/01_measure.py --calibrate-null 50",
+        ):
+            rc, out, err = _run(claude_hooks.pre_run, _bash(root, cmd))
+            self.assertEqual((rc, out, err), (0, "", ""), cmd)
+
     def test_script_without_run_passes_silently(self):
         root = _repo(True, script="print('analysis only')\n")
         rc, out, err = _run(

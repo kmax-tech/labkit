@@ -272,6 +272,14 @@ MODEL = Skeleton(
 )
 SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
 
+#: The stamped scripts' stages that open no run: each script's usage says
+#: so ("no write", "no fit", "throwaway output", "No run, nothing
+#: written"). The prompt skeleton's are `lanes.Lanes`'s, the estimator's
+#: and the producers' their templates'. The pre-run hook lets a command
+#: carrying one pass (`claude_hooks.THROWAWAY_FLAGS`); a test holds every
+#: flag those scripts define to this list or to the run's own flags.
+NO_RUN_FLAGS = ("--show", "--probe", "--eval-only", "--audit", "--calibrate-null")
+
 
 def criterion_key(sk: Skeleton) -> str:
     """The key SK's measure script keeps [C1]'s number under

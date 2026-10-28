@@ -134,6 +134,32 @@ class Skeletons(unittest.TestCase):
             [sk.instrument for sk in sc.SKELETONS if not sk.probe], ["compute"]
         )
 
+    def test_every_flag_of_a_run_opening_stamp_is_a_run_or_a_no_run_stage(self):
+        """NO_RUN_FLAGS is the one list of the stamps' stages that open no
+        run; the hook knew three of five, and `00_prepare.py --audit`, which
+        the producer documents as no write, was gated like a run start
+        (labkit-paper area 15, round 2, D7). A flag a run-opening stamp adds
+        must be put in one of the two lists here."""
+        import re
+
+        from labkit.gates import claude_hooks
+        from labkit.run import lanes
+
+        run_flags = {"--seed", "--repeat-of", "--model"}  # each starts a run
+        defines = re.compile(r"add_argument\(\s*\"(--[\w-]+)\"")
+        sources = [Path(lanes.__file__)] + [
+            p
+            for p in sorted(scaffold.TEMPLATES.glob("*.py.template"))
+            if claude_hooks.OPENS_RUN.search(p.read_text(encoding="utf-8"))
+        ]
+        seen: set[str] = set()
+        for path in sources:
+            flags = set(defines.findall(path.read_text(encoding="utf-8")))
+            self.assertEqual(flags - run_flags - set(sc.NO_RUN_FLAGS), set(), path)
+            seen |= flags
+        self.assertEqual(set(sc.NO_RUN_FLAGS) - seen, set())
+        self.assertEqual(run_flags - seen, set())
+
 
 class Described(unittest.TestCase):
     def test_every_tier_names_its_check_and_what_comes_before_the_run(self):
