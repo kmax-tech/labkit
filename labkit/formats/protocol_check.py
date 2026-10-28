@@ -13,7 +13,7 @@ What lives here, each stated as its current rule:
 
   * **The fields** (`fields`, `FieldLine`): every `- **<label>:**` line
     with its value, span and whether it is still a placeholder.
-  * **What a protocol owes** (`owed`, `check_fields`): two tiers, one
+  * **What a protocol owes** (`owed_fields`, `owed`, `check_fields`): two tiers, one
     template. MUST is the pilot minimum; SHOULD is what a REPORTABLE run
     owes on top. `frozen = true` escalates every SHOULD field to MUST and
     needs the preflight audit line and the promise tables; `repeat_cost =
@@ -449,14 +449,13 @@ INSTRUMENT_CHECK = "Instrument check"
 def example_owed(repeat_cost: str | None, kind: str | None, model: bool) -> bool:
     """Does `frozen = true` owe a rendered example — a fenced block other than
     the TOML head — for a protocol of REPEAT_COST and KIND, a model named or
-    not (MODEL)? Exactly where its full form owes the Instrument check
-    (`full_owed`): a fit, an apply, a model named, an undecided kind. A
+    not (MODEL)? Exactly where it owes the Instrument check (`owed_fields`):
+    the full form of a fit, an apply, a model named, an undecided kind. A
     computation without a model has no probe, its run is the instrument
-    check (the compute skeleton), and the low lane freezes nothing."""
-    if standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT:
-        return False
-    check = next(f for f in FIELDS if f.label == INSTRUMENT_CHECK)
-    return full_owed(check, kind, model)
+    check (the compute skeleton), and the low cut freezes nothing."""
+    return any(
+        f.label == INSTRUMENT_CHECK for f in owed_fields(repeat_cost, kind, model)
+    )
 
 
 def not_owed(text: str) -> set[str]:
@@ -486,6 +485,20 @@ def in_cut(f: Field, kind: str | None, model: bool) -> bool:
     if f.low_cut == "lb":
         return bar_owed(f, kind)
     return f.low_cut == "lm" and model
+
+
+def owed_fields(
+    repeat_cost: str | None, kind: str | None, model: bool
+) -> tuple[Field, ...]:
+    """Every field a protocol of REPEAT_COST and KIND, a model named or not
+    (MODEL), owes, each at its level's occasion (`Field.level`): the low
+    cut's marked fields (`in_cut`; nothing graduates there, and no report
+    field is owed), else the full form's (`full_owed`). The one answer
+    `owed`, protocol-check's result check and `protocol-check PROTOCOL
+    --contract` read."""
+    if standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT:
+        return tuple(f for f in FIELDS if in_cut(f, kind, model))
+    return tuple(f for f in FIELDS if full_owed(f, kind, model))
 
 
 def kind_gap(text: str, head: protocol_block.Head) -> str | None:
@@ -573,28 +586,22 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
 def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]]:
     """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
-    The low cut owes its marked fields and nothing graduates — nothing
-    freezes (LAB-017 The number of audits follows the cost tier). The full form owes every must
-    its kind owes (`bar_owed`: a computation no bar field); `frozen = true` turns
-    every should into a must (the graduation gate, in ONE place), and once a
+    Which fields, by its repeat cost, kind and model, is `owed_fields`'s
+    answer; here, when. The low cut owes its marked fields and nothing
+    graduates — nothing freezes (LAB-017 The number of audits follows the
+    cost tier). The full form owes its musts; `frozen = true` turns every
+    should into a must (the graduation gate, in ONE place), and once a
     result is declared a frozen protocol owes its report fields too."""
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.low_cut`) are this module's
+    owed_here = owed_fields(head.repeat_cost, head.kind, model_named(text))
     if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
-        model = model_named(text)
-        must = [
-            f
-            for f in FIELDS
-            if f.level in ("must", "should") and in_cut(f, head.kind, model)
-        ]
-        return must, []
-    model = model_named(text)
-    full = [f for f in FIELDS if full_owed(f, head.kind, model)]
-    must = [f for f in full if f.level == "must"]
-    should = [f for f in full if f.level == "should"]
+        return [f for f in owed_here if f.level in ("must", "should")], []
+    must = [f for f in owed_here if f.level == "must"]
+    should = [f for f in owed_here if f.level == "should"]
     if not head.frozen:
         return must, should
-    report = [f for f in full if f.level == "report"] if result_due(text) else []
+    report = [f for f in owed_here if f.level == "report"] if result_due(text) else []
     return must + should + report, []
 
 

@@ -41,10 +41,10 @@ from labkit.formats.protocol_check import (
     DASHES_ONLY,
     HTML_COMMENT,
     STAMPED_ITEM,
-    in_cut,
     example_owed,
     field_label,
     model_named,
+    owed_fields,
     recorded_results_without_run,
     check_fields,
     fields,
@@ -53,23 +53,18 @@ from labkit.formats.protocol_check import (
 )
 
 
-def unreported(text: str, low_cut: bool = False) -> list[str]:
-    """The result fields still missing, a placeholder or only dashes. A
-    model-only field (`lm`, Raw output) is owed only with a model named — a
-    computation has no prompt+answer pair to show; at LOW only the cut's fields
-    are owed (the Summary requires Conclusion, 2026-10-12)."""
+def unreported(text: str, head: protocol_block.Head) -> list[str]:
+    """The result fields still missing, a placeholder or only dashes, of
+    those HEAD's protocol owes after the run (`owed_fields`): a model-only
+    field (`lm`, Raw output) only with a model named — a computation has no
+    prompt+answer pair to show; at low repeat cost only the cut's fields (the
+    Summary requires Conclusion, 2026-10-12)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
-    model = model_named(text)
-    try:
-        kind = protocol_block.head(text).kind
-    except protocol_block.BlockError:
-        kind = None  # the head check names it; here the most is owed
     owed = [
         f
-        for f in FIELDS
+        for f in owed_fields(head.repeat_cost, head.kind, model_named(text))
         if f.level == "after"
-        and (in_cut(f, kind, model) if low_cut else f.low_cut != "lm" or model)
     ]
     return [
         f.label.casefold()
@@ -218,17 +213,23 @@ def find_field_guide() -> Path | None:
     return here if here.exists() else None
 
 
-def print_contract(protocol: Path | None = None) -> None:
-    """The checker's contract in one screen (2026-10-05: two cold agents
-    learnt the budgets from the pre-commit hook and the field words from
-    the checker's source, four rewrite rounds each). The low cut and the
-    fill command come first: last, five of six agents found them only after
-    reading the whole list, and none found protocol-fill (2026-10-07).
-    With PROTOCOL, the tier table is that protocol's one row — its
-    repeat_cost, kind (the most a kind owes while undecided) and model
-    (`model_named`) —, else the common rows. Raises OSError, UnicodeError
-    or protocol_block.BlockError when PROTOCOL does not read."""
-    print(
+#: the tier table's rows `protocol-check --contract` prints without a
+#: protocol: (repeat_cost, kind, model named)
+COMMON_ROWS = (
+    (standard_contract.LOW, standard_contract.COMPUTE_KIND, False),
+    (standard_contract.LOW, standard_contract.FIT_KIND, False),
+    (standard_contract.LOW, standard_contract.APPLY_KIND, True),
+    (standard_contract.LOW, standard_contract.APPLY_KIND, False),
+    (standard_contract.HIGH, standard_contract.COMPUTE_KIND, False),
+    (standard_contract.HIGH, standard_contract.FIT_KIND, False),
+    (standard_contract.HIGH, standard_contract.APPLY_KIND, True),
+)
+
+
+def low_cut_line() -> str:
+    """The low cut in one sentence, its conditions spelled out — the first
+    line of `protocol-check --contract` without a protocol."""
+    return (
         'at repeat_cost = "low" (nothing freezes, no SHOULD) the protocol owes: '
         + ", ".join(
             f.label
@@ -248,39 +249,157 @@ def print_contract(protocol: Path | None = None) -> None:
         + ", ".join(f.label for f in FIELDS if f.low_cut == "lm" and f.level == "after")
         + "."
     )
+
+
+def full_form_lines() -> list[str]:
+    """Every field of the full form by level, unfiltered by kind and model —
+    the last lines of `protocol-check --contract` without a protocol."""
+    out: list[str] = []
+    for level, title in (
+        ("must", "MUST (every pilot of the full form)"),
+        ("should", "SHOULD (MUST once frozen = true)"),
+        ("after", "after the run (owed once a result is declared)"),
+        ("report", "report (owed once frozen = true and a result is declared)"),
+    ):
+        out += ["", f"  {title}"] + [
+            f"    {f.label}" for f in FIELDS if f.level == level
+        ]
+    return out
+
+
+@dataclass(frozen=True)
+class OwedFields:
+    """The field labels one protocol owes, by occasion — `owed_fields` split
+    by `Field.level` and the lane — and whether the freeze owes it a
+    rendered example (`example_owed`).
+
+    Attributes:
+        low: The low cut: nothing freezes, what it marks is owed now.
+        now: Owed at every commit (protocol-check's must).
+        once_frozen: Owed on top once `frozen = true` (the shoulds).
+        after_run: Owed once the head declares a result (`[result] run`).
+        once_reported: Owed once frozen and a result is declared.
+        example: `frozen = true` owes a fenced block besides the TOML head.
+    """
+
+    low: bool
+    now: list[str]
+    once_frozen: list[str]
+    after_run: list[str]
+    once_reported: list[str]
+    example: bool
+
+
+def owed_by_occasion(head: protocol_block.Head, model: bool) -> OwedFields:
+    """What a protocol of HEAD, a model named or not (MODEL), owes by
+    occasion — the fields protocol-check holds it to."""
+    owed_here = owed_fields(head.repeat_cost, head.kind, model)
+    low = standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT
+
+    def labels(level: str) -> list[str]:
+        return [f.label for f in owed_here if f.level == level]
+
+    return OwedFields(
+        low=low,
+        now=labels("must") + (labels("should") if low else []),
+        once_frozen=[] if low else labels("should"),
+        after_run=labels("after"),
+        once_reported=labels("report"),
+        example=example_owed(head.repeat_cost, head.kind, model),
+    )
+
+
+#: the rendered example as `protocol-check PROTOCOL --contract` names it
+RENDERED_EXAMPLE = (
+    "a rendered example (a fenced block besides the TOML head: the instrument "
+    "check's real input and its output, LAB-014 One fully rendered example "
+    "pair per gold class; `n/a` does not stand in for it)"
+)
+
+
+def owed_field_lines(name: str, head: protocol_block.Head, model: bool) -> list[str]:
+    """What protocol NAME owes field by field (`owed_by_occasion`), one line
+    per occasion — what `protocol-check NAME --contract` prints first. An
+    occasion that owes nothing is left out."""
+    owed_here = owed_by_occasion(head, model)
+    occasions = (
+        (
+            "now — protocol-check refuses the commit without them"
+            + (" (nothing freezes at low repeat cost)" if owed_here.low else ""),
+            owed_here.now,
+        ),
+        (
+            "once frozen = true also (the † ones come with "
+            "`labkit-init exp <name> --report`)",
+            owed_here.once_frozen + ([RENDERED_EXAMPLE] if owed_here.example else []),
+        ),
+        (
+            "after the run, once the head declares a result (`[result] run`)",
+            owed_here.after_run,
+        ),
+        (
+            "once frozen = true and a result is declared also",
+            owed_here.once_reported,
+        ),
+    )
+    return [
+        f"the fields {name} owes — its repeat_cost, kind"
+        + ("" if head.kind else " (undecided: the most a kind owes)")
+        + " and model, the ones protocol-check holds it to:"
+    ] + [f"  {when}: {', '.join(what)}" for when, what in occasions if what]
+
+
+def print_contract(protocol: Path | None = None) -> None:
+    """The checker's contract in one screen (2026-10-05: two cold agents
+    learnt the budgets from the pre-commit hook and the field words from
+    the checker's source, four rewrite rounds each). The fields owed and
+    the fill command come first: last, five of six agents found the low cut
+    only after reading the whole list, and none found protocol-fill
+    (2026-10-07). With PROTOCOL, the fields that protocol owes by occasion
+    (`owed_field_lines`) and the tier table's one row of its repeat_cost,
+    kind (the most a kind owes while undecided) and model (`model_named`);
+    else the low cut, the common rows and the full form's field lists.
+    Raises OSError, UnicodeError or protocol_block.BlockError when PROTOCOL
+    does not read."""
+    if protocol is not None:
+        text = protocol.read_text(encoding="utf-8")
+        head = protocol_block.head(text)
+        model = model_named(text)
+        top = owed_field_lines(protocol.name, head, model)
+        rows_title = (
+            f"what {protocol.name} owes, by occasion — its repeat_cost, kind"
+            + ("" if head.kind else " (undecided: the most a kind owes)")
+            + " and model, from the one table every gate reads (standard_contract):"
+        )
+        rows = [(head.repeat_cost, head.kind or standard_contract.APPLY_KIND, model)]
+        fields_where = (
+            f" The fields {protocol.name} owes stand in the first lines of this output."
+        )
+        tail: list[str] = []
+    else:
+        top = [low_cut_line()]
+        rows_title = (
+            "what each tier owes, by occasion — the one table every gate reads "
+            "(standard_contract); `protocol-check PROTOCOL --contract` prints "
+            "one protocol's row:"
+        )
+        rows = list(COMMON_ROWS)
+        fields_where = (
+            ' The lists below are the FULL form (repeat_cost = "high"); at '
+            'repeat_cost = "low" only the first line of this output counts:'
+        )
+        tail = full_form_lines()
+    for line in top:
+        print(line)
     print(
         "fill a field by its label, multi-line placeholders included: "
         'protocol-fill PROTOCOL-x.md "<Label>=<value>" ["<Label>=<value>" …]; what is still open: '
         "protocol-fill PROTOCOL-x.md --list; the Prompt block from the scripts' "
         "PROMPT constants: protocol-fill PROTOCOL-x.md --prompts\n"
     )
-    rows = [
-        (standard_contract.LOW, standard_contract.COMPUTE_KIND, False),
-        (standard_contract.LOW, standard_contract.FIT_KIND, False),
-        (standard_contract.LOW, standard_contract.APPLY_KIND, True),
-        (standard_contract.LOW, standard_contract.APPLY_KIND, False),
-        (standard_contract.HIGH, standard_contract.COMPUTE_KIND, False),
-        (standard_contract.HIGH, standard_contract.FIT_KIND, False),
-        (standard_contract.HIGH, standard_contract.APPLY_KIND, True),
-    ]
-    if protocol is not None:
-        text = protocol.read_text(encoding="utf-8")
-        head = protocol_block.head(text)
-        kind = head.kind or standard_contract.APPLY_KIND
-        rows = [(head.repeat_cost, kind, model_named(text))]
-        print(
-            f"what {protocol.name} owes, by occasion — its repeat_cost, kind"
-            + ("" if head.kind else " (undecided: the most a kind owes)")
-            + " and model, from the one table every gate reads (standard_contract):"
-        )
-    else:
-        print(
-            "what each tier owes, by occasion — the one table every gate reads "
-            "(standard_contract); `protocol-check PROTOCOL --contract` prints "
-            "one protocol's row:"
-        )
-    for repeat_cost, kind, model in rows:
-        first, *rest = standard_contract.describe(repeat_cost, kind, model)
+    print(rows_title)
+    for repeat_cost, kind, with_model in rows:
+        first, *rest = standard_contract.describe(repeat_cost, kind, with_model)
         print(f"  {first}")
         for line in rest:
             print(f"    {line}")
@@ -307,19 +426,10 @@ def print_contract(protocol: Path | None = None) -> None:
         "\nfields, by their exact template label (`- **<label>:** <value>`; a "
         "parenthesised gloss and † may follow the label; `n/a — <the reason>` "
         "counts as filled, `<…>`, `TODO`, an empty label and a bare `n/a — <why>` do not)."
-        ' The lists below are the FULL form (repeat_cost = "high"); at '
-        'repeat_cost = "low" only the first line of this output counts:'
+        + fields_where
     )
-    for level, title in (
-        ("must", "MUST (every pilot of the full form)"),
-        ("should", "SHOULD (MUST once frozen = true)"),
-        ("after", "after the run (owed once a result is declared)"),
-        ("report", "report (owed once frozen = true and a result is declared)"),
-    ):
-        print(f"\n  {title}")
-        for f in FIELDS:
-            if f.level == level:
-                print(f"    {f.label}")
+    for line in tail:
+        print(line)
 
 
 def code_blocks(text: str) -> int:
@@ -551,11 +661,7 @@ def check_protocol(
         big=oversized_sections(text),
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],
         declared=declared,
-        run_unreported=(
-            unreported(text, low_cut=lane.cut == standard_contract.LOW_CUT)
-            if declared
-            else []
-        ),
+        run_unreported=unreported(text, head) if declared else [],
         history=[(n, s) for n, s in numbered if CHANGELOG.search(s)],
         bare_refs=[
             (fl.line, fl.label)

@@ -245,7 +245,7 @@ labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] 
 labkit-init exp NAME --kind KIND --change-kind # another kind before the first measurement, written fields kept
 labkit-init numbers [--staged]      # one number per area (--staged: the index); the next free one over every branch and worktree
 protocol-check PROTOCOL             # check required fields and promise tables
-protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: its own row) or field-guide path
+protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: the fields it owes and its row) or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
 protocol-fill PROTOCOL --into REPORT.md # the declared result as a generated block in a report

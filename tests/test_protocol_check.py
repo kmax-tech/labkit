@@ -211,6 +211,124 @@ class TestFlagsAnywhere(unittest.TestCase):
                 )
 
 
+class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
+    """`protocol-check PROTOCOL --contract` names what that protocol owes —
+    the fields protocol-check holds it to. It printed the full form's lists
+    unfiltered under "what PROTOCOL owes": criterion, admissibility, Model
+    I/O, Prompt and Data profile for a computation without a model, and not
+    the rendered example the freeze owes (labkit-paper area 15, round 2,
+    t15, t60, t21, t34)."""
+
+    LABELS = {f.label for f in protocol_check.FIELDS}
+    RUN = "2026-09-06T10-00-00_aa11"  # a run id in runlog's shape
+
+    def contract(self, text: str) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(text, encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_report.main([str(protocol), "--contract"]), 0)
+            return out.getvalue()
+
+    def test_a_computation_is_not_listed_the_full_forms_fields(self):
+        out = self.contract(head(repeat_cost="high", kind="compute"))
+        owed = "\n".join(
+            ln
+            for ln in out.splitlines()
+            if ln.startswith("  now")
+            or ln.startswith("  once")
+            or ln.startswith("  after")
+        )
+        for label in (
+            "Success / failure criterion",
+            "Admissibility condition",
+            "Data profile",
+            "Model I/O",
+            "Prompt",
+            "Null condition / anchors",
+            "Instrument check",
+            "Resolution check",
+            "Raw output",
+        ):
+            self.assertNotIn(label, owed)
+        self.assertIn("Question / hypothesis", owed)
+        self.assertNotIn("MUST (every pilot of the full form)", out)
+        self.assertNotIn("a rendered example", out)
+
+    def test_the_freeze_owes_the_example_where_the_check_holds_it(self):
+        out = self.contract(head(repeat_cost="high", kind="apply", model="haiku"))
+        (frozen_line,) = [
+            ln for ln in out.splitlines() if ln.startswith("  once frozen = true also")
+        ]
+        self.assertIn("Instrument check", frozen_line)
+        self.assertIn("a rendered example", frozen_line)
+
+    def test_without_a_protocol_the_full_form_is_listed(self):
+        # the twin: the generic printout keeps the low cut and every field
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(protocol_report.main(["--contract"]), 0)
+        self.assertTrue(out.getvalue().startswith('at repeat_cost = "low"'))
+        self.assertIn("MUST (every pilot of the full form)", out.getvalue())
+        for label in MUST + SHOULD:
+            self.assertIn(f"    {label}\n", out.getvalue())
+
+    def missing(self, text: str) -> set[str]:
+        return set(protocol_check.check_fields(text).missing_must) & self.LABELS
+
+    def test_each_occasion_names_what_the_check_holds_then(self):
+        for repeat_cost, kind, model in (
+            (cost, kind, model)
+            for cost in ("low", "high")
+            for kind in ("compute", "fit", "apply")
+            for model in (None, "haiku")
+        ):
+            with self.subTest(repeat_cost=repeat_cost, kind=kind, model=model):
+                text = head(repeat_cost=repeat_cost, kind=kind, model=model)
+                h = protocol_block.head(text)
+                owed = protocol_report.owed_by_occasion(
+                    h, protocol_check.model_named(text)
+                )
+                self.assertEqual(self.missing(text), set(owed.now))
+                declared = head(
+                    repeat_cost=repeat_cost, kind=kind, model=model, result=self.RUN
+                )
+                self.assertEqual(
+                    protocol_report.unreported(declared, protocol_block.head(declared)),
+                    [label.casefold() for label in owed.after_run],
+                )
+                if repeat_cost == "low":
+                    self.assertEqual((owed.once_frozen, owed.once_reported), ([], []))
+                    self.assertFalse(owed.example)
+                    continue
+                frozen_text, reported = (
+                    head(
+                        repeat_cost=repeat_cost,
+                        kind=kind,
+                        model=model,
+                        frozen=True,
+                        preflight_audit=AUDIT_LINE,
+                        result=result,
+                    )
+                    for result in (None, self.RUN)
+                )
+                self.assertEqual(
+                    self.missing(frozen_text), set(owed.now + owed.once_frozen)
+                )
+                self.assertEqual(
+                    self.missing(reported),
+                    set(owed.now + owed.once_frozen + owed.once_reported),
+                )
+                with tempfile.TemporaryDirectory() as d:
+                    path = Path(d) / "PROTOCOL-x.md"
+                    path.write_text(frozen_text, encoding="utf-8")
+                    report = protocol_report.check_protocol(
+                        path, frozen_text, set(), {}
+                    )
+                self.assertIs(report.frozen_without_io, owed.example)
+
+
 class TestFixtures(unittest.TestCase):
     """The shared fixtures are what they claim: a clean pilot, a clean freeze."""
 

@@ -427,6 +427,21 @@ pins (`requirements.txt` / `requirements.lock`).
   a record's name; a path is read as before), and a refusal names the
   area it looked in too. Pilot of labkit-paper area 15 on 72507d0 (t71,
   t21), defect D8.
+- **`protocol-check PROTOCOL --contract` names the fields that protocol
+  owes.** Under "what PROTOCOL owes" it printed the full form's field
+  lists unfiltered by kind and model — for a computation without a model
+  the criterion, admissibility condition, Data profile, Model I/O, Prompt,
+  the instrument and resolution checks, which its cut never stamps and
+  protocol-check never asks — and not the rendered example the freeze
+  owes. With a protocol it now opens with that protocol's fields by
+  occasion (now, once frozen, after the run, once frozen and reported;
+  `protocol_report.owed_field_lines`), read from the one answer
+  protocol-check's own checks read (`protocol_check.owed_fields`, which
+  `owed`, the result check — `protocol_report.unreported(text, head)` —
+  and `example_owed` now share); the rendered
+  example is named where it is owed. Without a protocol the low cut and
+  the full form's lists stay as they were. Pilot of labkit-paper area 15
+  on 72507d0 (t15, t60, t21, t34), defect D9.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a
   fence that holds only `<the real prompt — …>`; the field parser read
