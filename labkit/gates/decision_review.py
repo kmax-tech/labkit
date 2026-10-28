@@ -66,10 +66,9 @@ from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import conclusion_written
-from labkit.formats.repo import ProtocolChoiceError, layout_root, shown, the_protocol
+from labkit.formats.repo import layout_root, shown, the_protocol
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.gates import audit
-from labkit.run import llm, llm_backends
 
 #: the review's mode: its instructions, the prompt's MODE line and its
 #: attempts in the area's journal (`attempts`)
@@ -371,17 +370,9 @@ def review(
         )
         # journaled like an audit: a review deleted before the commit is
         # noticed by the attempt that names it (ninth haiku round, t5)
-        with attempts.attempt(area, REVIEW, model, evidence.scope_sha) as running:
-            for note in running.notes:
-                console.progress("labkit-audit", note)
-            report = llm.complete(
-                model,
-                evidence.prompt,
-                timeout=timeout,
-                max_tokens=audit._report_room(model),
-            )
-            running.keep_answer(report)
-            console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
+        with audit.journaled_answer(
+            area, REVIEW, model, evidence.scope_sha, evidence.prompt, timeout
+        ) as (running, report):
             lines = parse_review(report, evidence.numbers)
             print(report)
             if out:
@@ -403,18 +394,7 @@ def review(
                 again=again,
             )
             running.end("record", file=attempts.under_audits(area, written))
-    except (
-        AuditError,
-        ProtocolChoiceError,
-        findings.FindingsError,
-        reviews.ReviewError,
-        llm_backends.BackendError,
-        llm_backends.PromptTruncated,
-        KeyError,  # llm.resolve on an alias models.toml does not know
-        FileNotFoundError,
-        ValueError,  # nothing to stamp; an attempt refused (AttemptError)
-        RuntimeError,  # git failed while the attempt was checked
-    ) as exc:
+    except audit.REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     u, r, i = reviews.counts_of(decisions)

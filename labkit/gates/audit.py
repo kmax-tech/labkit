@@ -67,6 +67,7 @@ the prose can still change.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import ast
 import os
@@ -75,7 +76,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
@@ -981,6 +982,38 @@ def _report_room(alias: str) -> int | None:
     return REPORT_TOKENS if llm.takes_max_tokens(alias) else None
 
 
+#: what the audit and both reviewers refuse with exit 2 and a sentence
+#: instead of a traceback: their own errors (AuditError, BackendError,
+#: PromptTruncated are RuntimeErrors; FindingsError, ReviewError,
+#: ReportReviewError, AttemptError, ProtocolChoiceError, PromiseError are
+#: ValueErrors), git failing (RuntimeError), an alias models.toml does not
+#: know (KeyError), a file gone. Each command listed its own; the report
+#: review's lacked ValueError (audit 2026-10-27, third, M7).
+REFUSAL_ERRORS = (ValueError, RuntimeError, KeyError, FileNotFoundError)
+
+
+@contextlib.contextmanager
+def journaled_answer(
+    area: Path, mode: str, model: str, fingerprint: str, prompt: str, timeout: int
+) -> Generator[tuple[attempts.Running, str]]:
+    """A reviewer's model call as an attempt of MODE on AREA started on
+    FINGERPRINT (`attempts.attempt`): the alias resolved first (an unknown
+    one is a usage error, not an attempt), the attempt's notes told, the
+    answer kept before anything reads it, its tokens told. The block reads
+    and records the answer and ends the attempt (`Running.end`); a block
+    that raises ends it `none`. The decision and the report review use it —
+    the call was written twice; the audit ends its attempt across two steps
+    itself (`_answer_or_record`)."""
+    room = _report_room(model)
+    with attempts.attempt(area, mode, model, fingerprint) as running:
+        for note in running.notes:
+            console.progress("labkit-audit", note)
+        answer = llm.complete(model, prompt, timeout=timeout, max_tokens=room)
+        running.keep_answer(answer)
+        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
+        yield running, answer
+
+
 @dataclass(frozen=True)
 class BoundPrompt:
     """An audit prompt and what its record binds, from one reading
@@ -1199,18 +1232,7 @@ def main(argv: list[str]) -> int:
         report, running = _answer_or_record(
             args, argv, bound.prompt, bound.stamp, bound.block_sha
         )
-    except (
-        AuditError,
-        llm_backends.PromptTruncated,
-        KeyError,
-        FileNotFoundError,
-        ValueError,
-        RuntimeError,
-    ) as exc:
-        # KeyError: llm.resolve on an alias models.toml does not know;
-        # FileNotFoundError, ValueError: the area cannot be stamped;
-        # ValueError also: the promise block cannot be read (PromiseError),
-        # an attempt refused (AttemptError); RuntimeError: git failed
+    except REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     try:

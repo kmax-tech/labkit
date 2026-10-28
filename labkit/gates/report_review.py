@@ -58,11 +58,10 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
-from labkit.formats import attempts, console, findings, report_reviews
+from labkit.formats import attempts, console, report_reviews
 from labkit.formats.report_reviews import ReportClaim, held_by
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.repo import (
-    ProtocolChoiceError,
     audit_command,
     layout_root,
     report_review_command,
@@ -71,7 +70,6 @@ from labkit.formats.repo import (
 )
 from labkit.formats.runs import run_path
 from labkit.gates import audit
-from labkit.run import llm, llm_backends
 
 REPORT_REVIEW = "report"
 #: the mode of its attempts in the area's journal (`attempts`)
@@ -248,14 +246,9 @@ def review_report(
         # journaled like an audit, started on the inputs' fingerprint: a
         # review with claims deleted before the commit is noticed by the
         # attempt that names it (ninth haiku round, t5)
-        with attempts.attempt(area, ATTEMPT_MODE, model, whole) as running:
-            for note in running.notes:
-                console.progress("labkit-audit", note)
-            reply = llm.complete(
-                model, prompt, timeout=timeout, max_tokens=audit._report_room(model)
-            )
-            running.keep_answer(reply)
-            console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
+        with audit.journaled_answer(
+            area, ATTEMPT_MODE, model, whole, prompt, timeout
+        ) as (running, reply):
             claims = parse_claims(
                 reply, len(report.read_text(encoding="utf-8").split("\n"))
             )
@@ -270,18 +263,7 @@ def review_report(
                 again=again,
             )
             running.end("record", file=attempts.under_audits(area, written))
-    except (
-        AuditError,
-        ProtocolChoiceError,
-        findings.FindingsError,
-        report_reviews.ReportReviewError,
-        llm_backends.BackendError,
-        llm_backends.PromptTruncated,
-        attempts.AttemptError,  # another attempt runs, or a record is gone
-        RuntimeError,  # git failed while the attempt was checked
-        KeyError,  # llm.resolve on an alias models.toml does not know
-        FileNotFoundError,
-    ) as exc:
+    except audit.REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     print(reply)

@@ -227,7 +227,7 @@ class Command(unittest.TestCase):
 
         out, err = io.StringIO(), io.StringIO()
         with (
-            mock.patch.object(report_review.llm, "complete", fake),
+            mock.patch.object(audit.llm, "complete", fake),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(err),
@@ -386,7 +386,7 @@ class Command(unittest.TestCase):
             raise llm_backends.BackendError("claude-cli: exit 1, empty stderr")
 
         with (
-            mock.patch.object(report_review.llm, "complete", down),
+            mock.patch.object(audit.llm, "complete", down),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(io.StringIO()),
@@ -396,6 +396,27 @@ class Command(unittest.TestCase):
         (a,) = attempts.read_journal(self.a.area)
         self.assertEqual((a.outcome, a.file, a.answer), ("none", "", ""))
         self.assertIn("exit 1, empty stderr", a.error)
+
+    def test_a_plain_value_error_is_refused_not_a_traceback(self):
+        # the report review listed no ValueError among its refusals; one
+        # list serves the audit and both reviewers now (audit 2026-10-27,
+        # third, M7)
+        report = self.a.report(MARKED)
+
+        def broken(*args, **kw):
+            raise ValueError("a line that does not read")
+
+        with (
+            mock.patch.object(audit.llm, "complete", broken),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()) as err,
+        ):
+            rc = report_review.review_report(self.a.area, report, None, "m", 60, None)
+        self.assertEqual(rc, 2)
+        self.assertIn("a line that does not read", err.getvalue())
+        (a,) = attempts.read_journal(self.a.area)
+        self.assertEqual(a.outcome, "none")
 
     def test_no_call_no_attempt(self):
         """A state already judged makes no call, and so no attempt."""

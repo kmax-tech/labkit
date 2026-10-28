@@ -1113,6 +1113,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One journaled model call and one refusal list for the reviewers.**
+  The decision review and the report review each wrote the attempt, the
+  call, the kept answer and the token line, and each listed its own
+  errors to refuse; the report review's lacked `ValueError`, and one
+  ended in a traceback. `audit.journaled_answer` makes the call (the alias
+  resolved before the attempt begins), `audit.REFUSAL_ERRORS` serves the
+  audit and both reviewers. Audit 2026-10-27 (third), M7.
 - **`audit.bound_prompt` returns a `BoundPrompt`.** It returned an
   8-tuple that `labkit-audit` unpacked and passed on to `_record` as ten
   arguments; the fields are named now. Audit 2026-10-27 (third), M7.
