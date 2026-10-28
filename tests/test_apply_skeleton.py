@@ -135,6 +135,36 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual(metrics["c1_score"], 1.0)
         self.assertLess(metrics["a2_score"], 1.0)
 
+    def test_calibrate_null_measures_the_permutation_spread_before_registration(self):
+        # the stamped null_band 0.1 was kept although the skeleton asked to
+        # derive it, and --probe had no way at low (SAB-like draw 3,
+        # 2026-10-28): the band comes from permutations of the gold with the
+        # predictions fixed, by a rule fixed before calibration
+        area, measure = self.measure_module("apply")
+        primary = mock.Mock()
+        primary.predict.side_effect = lambda xs: [x[0] for x in xs]
+        with mock.patch.object(measure, "make_estimator", return_value=primary):
+            cal = measure.calibrate_null(measure.CONFIG, self.items(), 50)
+            again = measure.calibrate_null(measure.CONFIG, self.items(), 50)
+        primary.fit.assert_not_called()
+        self.assertEqual(primary.predict.call_count, 2)  # once per calibration
+        self.assertEqual(len(cal["null_scores"]), 50)
+        self.assertEqual(cal, again)  # seeded: the same band each time
+        off = sorted(abs(s - cal["chance"]) for s in cal["null_scores"])
+        self.assertEqual(cal["band"], off[49])  # the 0.99 quantile of 50
+        self.assertLess(cal["band"], 1 - cal["chance"])  # no permutation is the truth
+
+    def test_calibrate_null_has_no_free_path_at_fit_or_for_a_fixed_null(self):
+        _, fit = self.measure_module("fit")
+        with self.assertRaisesRegex(ValueError, "apply only"):
+            fit.calibrate_null(fit.CONFIG, self.items())
+        _, measure = self.measure_module("apply")
+        with (
+            mock.patch.object(measure, "make_null_predictor", return_value=mock.Mock()),
+            self.assertRaisesRegex(ValueError, "fixed null predictor"),
+        ):
+            measure.calibrate_null(measure.CONFIG, self.items())
+
     def test_apply_refuses_a_missing_prediction_instead_of_dropping_an_item(self):
         area, measure = self.measure_module("apply")
         primary = mock.Mock()

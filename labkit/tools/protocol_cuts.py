@@ -459,7 +459,7 @@ ESTIMATOR_PROMISES = (
 APPLY_FIELDS = {
     "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` in scripts/01_measure.py",
     "Model I/O": "<in · the feature fields per item · out · one prediction from each unchanged instrument without fitting>",
-    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, expected at chance_of() within null_band — or the registered fixed null of make_null_predictor() and why it targets chance>",
+    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, expected at chance_of() within null_band · null_band from --calibrate-null before the registration · or the registered fixed null of make_null_predictor() and why it targets chance>",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged predictor on N labelled items, both lanes · scores read, never reported>",
 }
 

@@ -1626,6 +1626,24 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`01_measure.py --calibrate-null` derives an apply null's band before
+  the registration.** The estimator skeleton asked to derive `null_band`
+  from the null lane's spread over seeds on the probe, but `--probe` draws
+  one seed and is not offered at `repeat_cost = "low"`; in the third
+  SAB-like draw apply-screen (low, 92 items) kept the stamped 0.1 and [A2]
+  failed by chance. At apply the predictions are fixed and only the gold
+  is permuted, so the spread is cheap: `calibrate_null` scores the
+  unchanged predictor's predictions against 200 permutations of the gold
+  and derives the band by a rule fixed in the skeleton (the 0.99 quantile
+  of |null − chance|, `NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). It
+  measures the permutation's spread, not a refit or new model answers; it
+  makes no run, writes nothing and never scores a prediction against its
+  true gold. At fit the null refits, so there is no free path and the
+  command refuses; so does a registered fixed null predictor. A band
+  changed after the first measurement stays refused
+  (`report_check.registration_changes`). The printed next steps and the
+  apply stamp name the step; `--probe` no longer offers its rows for the
+  Raw output field.
 - **finalize holds a null lane that did not move, from the kept rows.**
   An instrument that ignores its labels predicts the same in both lanes,
   and a null that answers the registered lane on every item measures no

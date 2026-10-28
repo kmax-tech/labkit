@@ -1273,6 +1273,15 @@ def _first_steps(
             f"split   ({rel}/scripts)",
             f"scripts/01_measure.py: {estimator_fill(kind)}; --show 3 reads the "
             "config and feature rows",
+            *(
+                [
+                    "scripts/01_measure.py --calibrate-null  null_band from 200 "
+                    "permutations of the gold, predictions fixed — register it before "
+                    "the first run"
+                ]
+                if kind == standard_contract.APPLY_KIND
+                else []
+            ),
             f"{probe}; {code_check}.",
             f"{test}: the resolution check as a test (LAB-016 Resolution check before freezing).",
         ]
@@ -1307,7 +1316,13 @@ def _low_steps(
     elif sk is standard_contract.MODEL:
         fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
     else:
-        fill = f"{estimator_fill(kind)}; --show 3, then the run"
+        # the apply null calibrates before its run; at fit the null refits
+        calibrate = (
+            "--calibrate-null for null_band (register it), "
+            if kind == standard_contract.APPLY_KIND
+            else ""
+        )
+        fill = f"{estimator_fill(kind)}; --show 3, {calibrate}then the run"
     return title, [
         f"{protocol}: fill the low cut — `type` in the head, then\n"
         f"     {fields}; `protocol-check --contract` names the labels.",
