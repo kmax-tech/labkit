@@ -1466,6 +1466,29 @@ Forschung und Benchmark-Fallliste liegen in
      ungefiltert nach Art und Modell (Kriterium und Prompt für `compute`
      ohne Modell; t15, t60, t21, t34).
 
+  *Repariert 2026-10-28 auf Branch `r2-fixes`* (drei Worktrees, von Max
+  geprüft): D1 `example_owed`, D8 `repo.given_or_in`, D9 `owed_fields`;
+  D4 Template, D7 `standard_contract.NO_RUN_FLAGS` (auch
+  `--calibrate-null`), D6 Startvermerk mit Überwacher und Exit-Status,
+  Quittung nur für Gelesenes; D3 `--findings` nennt Aufrufe ohne Record,
+  Abdeckung nach Art, Code, Versprechensblock und Reihenfolge, Journal
+  mit `block_sha` (Breaking), historische Aufrufe mit eigenem Ausweg;
+  D2 Punkt nach der Prüfnotiz; D5 ganzer Befund im Record nach der
+  dokumentierten Endregel. Offen aus den Reparaturen, keine Mängel:
+  - Ein heute fehlgeschlagener Aufruf auf seither geändertem Code bleibt
+    gemeldet, bis ein Audit genau dieses Codes läuft — praktisch nur über
+    die Übergabe lösbar (dieselbe Sackgasse, die für historische Aufrufe
+    ausgeschlossen wurde).
+  - Ein unterbrochener Audit-Aufruf ohne Ende nennt erst der nächste Start,
+    nicht `--findings`; Text vor dem ersten Befund wird weiter ignoriert.
+  - `compute` mit `[model]` schuldet weiter ein Codebeispiel; der Schlusssatz
+    von protocol-check bietet `n/a` auch für Block-Pflichten an; preflight
+    prüft die Pflichten beim Einfrieren (Beispiel, Überlänge) nicht;
+    `--contract` nennt die geschuldeten `[[promise]]`-Tabellen nicht.
+  - Der gestempelte Test hält `max_empty` am Beispielwert fest wie zuvor das
+    Null-Band; `runlog --wait` schläft ein volles Intervall über
+    `--max-seconds` hinaus.
+
   *Prüfung von audit/decide (Max, 2026-10-28) — Bestand, Verletzung, neu:*
   - **(a) Ein Befund sagt, was zu korrigieren ist, welcher Nachweis gilt
     und welcher Schritt folgt.** Bestand: das Berichtsformat des Auditors
@@ -1484,9 +1507,11 @@ Forschung und Benchmark-Fallliste liegen in
     Übernahme und `--from-run`, bis ein Folge-Analyseaudit den Befund am
     gezeigten Lauf `resolved` nennt und den geforderten `check` im Lauf
     sieht (Runde 2, t34: das Analyseaudit trug vier `fixed`-BLOCKER als
-    `unresolved` weiter). Wie ein `fixed`-BLOCKER zum deklarierten Lauf
-    frei wird, ist offen: die Bindung dafür ist zurückgenommen (`b2da352`),
-    die zwei Wege stehen oben. Lücken: `--decide N fixed` nimmt ein `fixed` ohne jede Änderung
+    `unresolved` weiter). Ein BLOCKER zum deklarierten Lauf selbst wird
+    seit `84f6812` über den Rückzug der Deklaration frei (`protocol-fill
+    --withdraw`, dann Folgeaudit und Übernahme ohne `--force`; Abnahmefall
+    `357a08c`, ein Versuch) — nicht in labkit `72507d0`, auf dem Runde 2
+    lief. Lücken: `--decide N fixed` nimmt ein `fixed` ohne jede Änderung
     an (in vier von sechs Versuchen ein `fixed` mit unverändertem Code
     oder fremder Begründung); WARNINGs werden nicht nachgeprüft; und die
     Bestätigung umfasst nicht die Ergebnisdatei der Aufgabe (neu, c).
