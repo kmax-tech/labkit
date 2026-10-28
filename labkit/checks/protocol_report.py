@@ -42,6 +42,7 @@ from labkit.formats.protocol_check import (
     HTML_COMMENT,
     STAMPED_ITEM,
     in_cut,
+    example_owed,
     field_label,
     model_named,
     recorded_results_without_run,
@@ -372,6 +373,7 @@ class FileReport:
     left: list[str] = field(default_factory=list)
     runs_stamped: bool = False
     no_block: bool = False
+    #: frozen without a rendered example where one is owed (`example_owed`)
     frozen_without_io: bool = False
     n_lines: int = 0
     big: list[tuple[str, int, int]] = field(default_factory=list)
@@ -542,7 +544,9 @@ def check_protocol(
         left=left,
         runs_stamped=runs_stamped,
         no_block=no_block,
-        frozen_without_io=frozen and not examples,
+        frozen_without_io=frozen
+        and not examples
+        and example_owed(head.repeat_cost, head.kind, model_named(text)),
         n_lines=n_lines,
         big=oversized_sections(text),
         series=[(n, s) for n, s in numbered if SERIES_HEAD.match(s)],

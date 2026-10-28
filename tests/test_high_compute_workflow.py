@@ -16,6 +16,7 @@ import unittest
 from unittest import mock
 
 import test_end_to_end as e2e
+from labkit.checks import protocol_report
 from labkit.formats import protocol_block, standard_contract
 from labkit.gates import preflight, report_check
 from labkit.run import runlog_command
@@ -84,6 +85,13 @@ class HighComputeWorkflow(unittest.TestCase):
             ],
         )
         self.assertNotIn("[[promise]]", protocol.read_text(encoding="utf-8"))
+        # the freeze commit: the lab's pre-commit runs protocol-check on the
+        # staged protocol, which held the compute lane to an example its
+        # skeleton never makes (labkit-paper area 15, round 2, t21 and t34)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            rc = protocol_report.main([str(protocol)])
+        self.assertEqual(rc, 0, output.getvalue())
         lab.commit("Freeze the audited computation")
         output = io.StringIO()
         children: list[subprocess.Popen] = []

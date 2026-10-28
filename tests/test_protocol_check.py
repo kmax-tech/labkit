@@ -683,6 +683,40 @@ class TestFrozenWithoutExample(unittest.TestCase):
         _, out = run_main(pilot().replace(*self.NO_EXAMPLE))
         self.assertNotIn("not a single", out)
 
+    def test_a_computation_without_a_model_owes_no_example(self):
+        # The compute skeleton has no --show and no --probe: its run is the
+        # instrument check, and the freeze comes before it. The must
+        # refused every frozen high computation at the commit (labkit-paper
+        # area 15, round 2, t21 and t34: three --no-verify commits).
+        text = frozen(model=None, kind="compute").replace(*self.NO_EXAMPLE)
+        self.assertEqual(protocol_report.code_blocks(text), 0)
+        _, out = run_main(text)
+        self.assertNotIn("not a single", out)
+        self.assertNotIn("a rendered example", out)
+
+    def test_a_fit_without_a_model_still_owes_its_example(self):
+        # the twin: the estimator skeleton has a --probe, and its example
+        # stays owed at the freeze
+        _, out = run_main(frozen(model=None, kind="fit").replace(*self.NO_EXAMPLE))
+        self.assertIn("not a single", out)
+        self.assertIn("a rendered example (frozen)", out)
+
+    def test_the_example_is_owed_where_the_instrument_check_is(self):
+        for repeat_cost, kind, model, owed in (
+            ("high", "compute", False, False),
+            ("high", "compute", True, True),
+            ("high", "fit", False, True),
+            ("high", "apply", False, True),
+            ("high", "apply", True, True),
+            ("high", None, False, True),  # undecided: the most is owed
+            ("low", "apply", True, False),  # nothing freezes at low
+            ("low", "compute", False, False),
+        ):
+            with self.subTest(repeat_cost=repeat_cost, kind=kind, model=model):
+                self.assertIs(
+                    protocol_check.example_owed(repeat_cost, kind, model), owed
+                )
+
 
 class TestGraduationGate(unittest.TestCase):
     """`frozen = true` escalates should to must (2026-08-18) — pilot light, report heavy."""

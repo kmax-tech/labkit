@@ -439,6 +439,26 @@ def full_owed(f: Field, kind: str | None, model: bool) -> bool:
     return has_bar if f.needs == "bar" else has_bar or model
 
 
+#: the field a rendered example is the evidence of: the instrument check
+#: puts one real input and its output into the protocol as a fenced block
+#: (LAB-008 Instrument check before freezing, LAB-014 One fully rendered
+#: example pair per gold class)
+INSTRUMENT_CHECK = "Instrument check"
+
+
+def example_owed(repeat_cost: str | None, kind: str | None, model: bool) -> bool:
+    """Does `frozen = true` owe a rendered example — a fenced block other than
+    the TOML head — for a protocol of REPEAT_COST and KIND, a model named or
+    not (MODEL)? Exactly where its full form owes the Instrument check
+    (`full_owed`): a fit, an apply, a model named, an undecided kind. A
+    computation without a model has no probe, its run is the instrument
+    check (the compute skeleton), and the low lane freezes nothing."""
+    if standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT:
+        return False
+    check = next(f for f in FIELDS if f.label == INSTRUMENT_CHECK)
+    return full_owed(check, kind, model)
+
+
 def not_owed(text: str) -> set[str]:
     """The labels of the must, should and after-run fields this protocol's
     full form does not owe (`full_owed`, by its kind and model: Raw output

@@ -402,6 +402,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A frozen computation without a model owes no rendered example.**
+  protocol-check held every frozen protocol to a fenced block besides
+  the TOML head ("Instrument check first, then freeze"), whatever its
+  kind. The compute lane freezes before its run, and that run is its
+  instrument check: the skeleton has no `--show` and no `--probe`, the
+  `--report` cut stamps no Instrument check, and `n/a` cannot stand in
+  for a block. So the lab's pre-commit refused the freeze commit that
+  labkit-init's Next block and AGENTS.md ask for, while preflight passed
+  the same file. The example is now owed exactly where the full form owes
+  the Instrument check (`protocol_check.example_owed`, read off
+  `full_owed`): a fit, an apply, a model named, an undecided kind; at low
+  repeat cost nothing freezes. Pilot of labkit-paper area 15 on 72507d0
+  (t21, t34), defect D1.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a
   fence that holds only `<the real prompt — …>`; the field parser read
