@@ -1182,6 +1182,19 @@ def step_fields(sk: standard_contract.Skeleton, kind: str, model: bool) -> str:
     return bar
 
 
+def estimator_fill(kind: str) -> str:
+    """What the estimator skeleton's `01_measure.py` asks to be filled, by
+    KIND: at apply the unchanged predictor, at fit the estimator. One
+    sentence for both cuts — it stood twice in `next_steps` (audit
+    2026-10-27, third, M7)."""
+    if kind == standard_contract.APPLY_KIND:
+        return (
+            "make_estimator() loads the unchanged predictor (the null lane permutes "
+            "the labels); SCORE, FEATURES_FIELD"
+        )
+    return "make_estimator(), SCORE, FEATURES_FIELD"
+
+
 def next_steps(
     rel: Path, slug: str, nn: str, repeat_cost: str | None, kind: str, model: bool
 ) -> str:
@@ -1211,12 +1224,7 @@ def next_steps(
         elif sk is standard_contract.MODEL:
             fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
         else:
-            fill = (
-                "make_estimator() loads the unchanged predictor (the null lane permutes "
-                "the labels); SCORE, FEATURES_FIELD; --show 3, then the run"
-                if kind == standard_contract.APPLY_KIND
-                else "make_estimator(), SCORE, FEATURES_FIELD; --show 3, then the run"
-            )
+            fill = f"{estimator_fill(kind)}; --show 3, then the run"
         steps = [
             f"{protocol}: fill the low cut — `type` in the head, then\n"
             f"     {fields}; `protocol-check --contract` names the labels.",
@@ -1253,13 +1261,8 @@ def next_steps(
             "scripts/00_prepare.py: raw -> prepared"
             + (", gold null for the unlabelled split" if estimator else "")
             + f"   ({rel}/scripts)",
-            (
-                "scripts/01_measure.py: make_estimator() loads the unchanged predictor "
-                "(the null lane permutes the labels); SCORE, FEATURES_FIELD; --show 3 "
-                if kind == standard_contract.APPLY_KIND
-                else "scripts/01_measure.py: make_estimator(), SCORE, FEATURES_FIELD; --show 3 "
-            )
-            + "reads the config and feature rows"
+            f"scripts/01_measure.py: {estimator_fill(kind)}; --show 3 reads the "
+            "config and feature rows"
             if estimator
             else "scripts/01_measure.py --show 3    read the prompts, no call",
             (

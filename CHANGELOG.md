@@ -1113,6 +1113,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **One estimator sentence in the next steps.** What the estimator's
+  `01_measure.py` asks to be filled stood twice in `next_steps`, once per
+  cut; `scaffold.estimator_fill` says it for both. Audit 2026-10-27
+  (third), M7.
 - **The pre-run and post-change hooks read in named steps.** `pre_run`
   judged every run script inline (`before_run`, `_low_registration_line`
   now), `post_change` found the changed files and told them in one body
