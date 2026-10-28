@@ -677,6 +677,8 @@ class Withdraw(unittest.TestCase):
         rc, out = self.withdraw("the measuring code changed after the adoption")
         self.assertEqual(rc, 0, out)
         self.assertIsNone(self.declared())
+        # the next step as a command that runs: two words, not one quoted token
+        self.assertRegex(out, r"next: `labkit-audit \S+ --mode analysis`")
         text = self.protocol.read_text(encoding="utf-8")
         self.assertRegex(
             text,

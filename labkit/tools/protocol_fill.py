@@ -1154,7 +1154,7 @@ def _withdraw_file(args: argparse.Namespace, text: str) -> int:
         )
     )
     print(
-        f"next: `{audit_command(area, '--mode analysis', protocol=protocol)}` audits "
+        f"next: `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` audits "
         f"the state as it is now (earlier decided BLOCKERs are followed up), decide "
         f"its findings, then `{adopt_command(protocol)}` adopts the run that answers"
     )
