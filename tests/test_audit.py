@@ -251,7 +251,7 @@ class Audit(unittest.TestCase):
         # the prompt, and the record's shown_sha is its digest, the one
         # report-check recomputes for the answering run
         shown = audit_binding.run_shown(
-            area, area / "runs" / "2026-01-01T00-00-00_0001", "", None
+            area, area / "runs" / "2026-01-01T00-00-00_0001", ""
         )
         for label, text in shown.pieces:
             self.assertIn(f"===== {label} =====\n{text}\n", prompt)
@@ -1677,7 +1677,7 @@ class Carried(unittest.TestCase):
             [("BLOCKER", FixVerdicts.LEAK)],
             registration=registration_of(area),
             run_id=run.name,
-            shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+            shown_sha=audit_binding.run_shown(area, run, "").sha,
             now=60,
         )
         findings.write_decision(same, 1, "dismissed", "does not apply")
@@ -1892,9 +1892,7 @@ class FollowupGate(unittest.TestCase):
         for step in (
             followup.STEP_AUDIT,
             f"a run that writes `x` to metrics.json, then {followup.STEP_AUDIT}",
-            "change what the finding names — the code, then a new run; the declared "
-            "run, `protocol-fill <PROTOCOL> --from-run <run_id> --force` — and "
-            f"{followup.FOLLOWUP_AUDIT}",
+            f"change what the finding names, then a new run and {followup.FOLLOWUP_AUDIT}",
         ):
             self.assertTrue(followup.Hold("r#1", "w", step).needs_followup_audit, step)
         self.assertFalse(
@@ -2077,100 +2075,6 @@ class FollowupGate(unittest.TestCase):
 
 #: the follow-up records of the pilots and the earlier records they judged
 GATE = PILOT2 / "gate"
-
-
-class DeclaredRun(unittest.TestCase):
-    """A BLOCKER on the protocol's declared run, fixed by re-adopting, is
-    followed up like any repair: the declaration a record saw is part of
-    the state it binds (`audit_binding.declared_piece`), so re-adopting
-    moves the state and the next audit judges the finding — re-adopting
-    alone settles nothing. File-check case, 2026-10-28: the re-adoption
-    left the state as it was, the BLOCKER stayed held as fixed in the
-    state audited, and the agent committed past the hook. Each step with
-    its twin: a head still wrong stays held; a first adoption of the run
-    audited moves no state."""
-
-    PID = "p-0123456789abcdef"
-    RUN = "2026-01-01T00-00-00_0001"
-    OTHER = "2026-01-01T00-00-00_0000"
-    WRONG = (
-        "BLOCKER · PROTOCOL-x0.md:1 · the head declares run 2026-01-01T00-00-00_0000, "
-        "the rows shown are run 2026-01-01T00-00-00_0001 · c1 · new class · declare "
-        "the run shown"
-    )
-
-    def setUp(self) -> None:
-        self.gate = FollowupGate()
-        self.gate.setUp()
-
-    def declare(self, area: Path, run: str | None) -> str:
-        """The area's protocol with `[result] run = RUN` (None: none); its text."""
-        text = fixture.head(id=self.PID, result=run) + PROTOCOL
-        (area / "PROTOCOL-x0.md").write_text(text, encoding="utf-8")
-        return text
-
-    def wrongly_declared(self) -> tuple[Path, findings.Record]:
-        """An area whose head declares another run than the one audited, and
-        the analysis record whose BLOCKER names that, decided `fixed`."""
-        area = OneSnapshot.area(OneSnapshot())
-        self.declare(area, self.OTHER)
-        rc, _, err, sent = self.gate.fv.audit(
-            area, f"{self.WRONG}\nverdict: 1 blockers, 0 warnings, 0 notes"
-        )
-        self.assertEqual(rc, 1, err)
-        self.assertIn(
-            f"the protocol's [result] declares run {self.OTHER}, not the run shown",
-            sent[0],
-        )
-        (record,) = findings.area_records(area)
-        findings.write_decision(record.path, 1, "fixed", "declared the run shown")
-        return area, findings.read(record.path)
-
-    def test_re_adopting_moves_the_state_and_the_follow_up_releases(self):
-        area, r1 = self.wrongly_declared()
-        (line,) = self.gate.gate(area)
-        self.assertIn("decided `fixed` in the state audited", line)
-        self.assertIn("--from-run", line)  # the hold names the re-adoption
-        self.declare(area, self.RUN)
-        (line,) = self.gate.gate(area)
-        self.assertNotIn("in the state audited", line)  # now an earlier record
-        self.assertIn("never followed up", line)
-        self.gate.follow_up(
-            area, f"FIX · {r1.path.name}#1 · resolved · the head declares the run shown"
-        )
-        self.assertEqual(self.gate.gate(area), [])
-
-    def test_a_head_still_wrong_stays_held_through_another_audit(self):
-        area, r1 = self.wrongly_declared()
-        self.gate.follow_up(area, "")  # the same state audited again
-        (line,) = self.gate.gate(area)
-        self.assertIn("decided `fixed` in the state audited", line)
-
-    def test_a_head_moved_to_another_wrong_run_is_carried_open(self):
-        """The state moved, so the follow-up judges the finding; `unresolved`
-        carries it open into the new record, where it is decided again (an
-        open BLOCKER holds the number there, not in the follow-up)."""
-        area, r1 = self.wrongly_declared()
-        self.declare(area, "2026-01-01T00-00-00_0002")
-        r2 = self.gate.follow_up(
-            area, f"FIX · {r1.path.name}#1 · unresolved · still another run"
-        )
-        (carried,) = [f for f in r2.findings if f.carries == f"{r1.path.name}#1"]
-        self.assertEqual((carried.grade, carried.status), ("BLOCKER", "open"))
-
-    def test_a_first_adoption_of_the_run_audited_moves_no_state(self):
-        area = OneSnapshot.area(OneSnapshot())
-        text = self.declare(area, None)
-        rc, _, err, _ = self.gate.fv.audit(area, CLEAN)
-        self.assertEqual(rc, 0, err)
-        run = area / "runs" / self.RUN
-        before = audit_binding.covering_analysis(area, text, run)
-        self.assertEqual(len(before), 1)
-        text = self.declare(area, self.RUN)
-        self.assertEqual(
-            [r.path for r in audit_binding.covering_analysis(area, text, run)],
-            [r.path for r in before],
-        )
 
 
 class PilotRecords(unittest.TestCase):

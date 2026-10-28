@@ -358,12 +358,6 @@ prints these same recovery choices with each decision list:
   over without a result. A pure typo in a prose field you correct in the
   protocol itself (an audit that judged the field is owed again); a
   promise's sentence, key or constant stays as registered.
-- **a wrong declaration** — the measurement stands, but the protocol's
-  head declares another run than the one the finding judged. Declare that
-  run with `protocol-fill <PROTOCOL> --from-run <run_id> --force`, decide
-  the BLOCKER `fixed` naming that, and run the analysis audit again: the
-  follow-up judges the declaration. No new measurement, and never past a
-  hook with `--no-verify`.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the

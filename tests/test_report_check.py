@@ -87,7 +87,7 @@ class ReportCheck(unittest.TestCase):
             (0, 0, 0),
             [],
             run_id=run.name,
-            shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+            shown_sha=audit_binding.run_shown(area, run, "").sha,
             registration=registration_of(area),
         )
 
@@ -556,7 +556,7 @@ class IfReported(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=run.name,
-                shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+                shown_sha=audit_binding.run_shown(area, run, "").sha,
                 registration=registration_of(area),
             )
         if git:

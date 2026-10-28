@@ -162,7 +162,7 @@ class Lab:
             [],
             run_id=run_id,
             shown_sha=(
-                audit_binding.run_shown(area, area / "runs" / run_id, "", None).sha
+                audit_binding.run_shown(area, area / "runs" / run_id, "").sha
                 if run_id is not None
                 else None
             ),
@@ -646,7 +646,7 @@ class Judge(unittest.TestCase):
             (1, 0, 0),
             [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · the prompt asks more than the gold scores")],
             run_id=self.run_id,
-            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "", None).sha, registration=registration_of(self.area),)  # fmt: skip
+            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "").sha, registration=registration_of(self.area),)  # fmt: skip
 
     def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
         out = io.StringIO()
@@ -786,7 +786,7 @@ class Judge(unittest.TestCase):
             (0, 1, 0),
             [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
             run_id=self.run_id,
-            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "", None).sha, registration=registration_of(self.area),)  # fmt: skip
+            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "").sha, registration=registration_of(self.area),)  # fmt: skip
         label = f"Limit (audit {record.stem} #1)"
         reason = "C1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
         rc, out = self._decide(record, "accepted", reason, "--effect", "stands")

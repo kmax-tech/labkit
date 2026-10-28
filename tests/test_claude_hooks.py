@@ -679,7 +679,7 @@ class Stop(unittest.TestCase):
                 [],
                 run_id=self.RUN,
                 shown_sha=audit_binding.run_shown(
-                    self.area, self.area / "runs" / self.RUN, "", None
+                    self.area, self.area / "runs" / self.RUN, ""
                 ).sha,
                 registration=registration_of(self.area),
             )
