@@ -787,6 +787,27 @@ class Withdraw(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertNotIn("withdraw the declaration first", out)
 
+    # -- what holds a BLOCKER dismissed in the state reported (observed, not a rule)
+    def test_a_first_dismissal_in_the_state_reported_is_not_reviewed(self):
+        """OBSERVED: a BLOCKER decided `dismissed` with a reason in the
+        record of the state reported releases the adoption without a second
+        auditor — `decision_review.reviewable` takes a dismissal only after a
+        review did not uphold it, or of a carried finding. Whether a first
+        dismissal owes a review is an open decision (TODO 15); this test
+        holds today's rule so that a change of it is a decision, not a slip."""
+        run_a = self.measure()
+        rc, out, _ = self.analysis(
+            "BLOCKER · scripts/01_measure.py:1 · hidden files are counted · the mean "
+            "· LAB-050 Analysis audit before reporting · skip them\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        self.assertEqual(rc, 1, out)
+        assert self.record is not None
+        self.decide(self.record, 1, "dismissed", "visible() skips hidden files at :40")
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("--review", out)
+
     # -- a withdrawal releases nothing
     def test_a_withdrawal_releases_nothing(self):
         run_a = self.measure()
