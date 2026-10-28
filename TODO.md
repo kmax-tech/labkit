@@ -1136,6 +1136,20 @@ Notiert, nicht geplant:
    Bedeutungslücke), acht Doku-Drifts (D2 korrigiert eine eigene falsche
    Begründung zu „lane“), neun doppelte Heimaten, fünf Klarheitszeilen.
    Alle sechs Punkte erledigt (`3a7cba3` bis `86945a2`, Stand im Register).
+12. **Haiku-Leseproben Steckenbleiben und Start (2026-10-28)**
+   ([Steckenbleiben](docs/usability/2026-10-28-haiku-stuck-reading.md),
+   [Start](docs/usability/2026-10-28-haiku-start-reading.md)): die
+   gemeinsamen Zweifel an den Werkzeugtexten sind behoben und von frischen
+   Lesern bestätigt. Offen, je eine Entscheidung über den Standard:
+   (a) eine bei der ersten Messung unvollständige Registrierung — neu
+   registrieren mit `[replaces]` oder übergeben, report-check und AGENTS.md
+   nennen keinen Weg; (b) `type` einer Berechnung — `confirmatory` ist über
+   „question and criterion“ definiert, eine Berechnung hat kein Kriterium;
+   (c) Grenze compute/fit bei einer am Signal oder an Referenzen gewählten
+   Erkennungsschwelle; (d) wo Eingabedaten liegen und ob sie committet
+   werden („code, registration and inputs“). Klein: `protocol-fill` in
+   zwei Schreibweisen gezeigt; `chance_of()` im gestempelten Null-Satz
+   nirgends erklärt.
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
