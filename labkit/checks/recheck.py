@@ -263,7 +263,8 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
     if missing and ANSWER_OPEN.search(text):
         raise SystemExit(
             f"recheck: {note.name} has no answer yet — "
-            f"`{adopt_command(note, run_id)}` writes it"
+            f"`{adopt_command(note, run_id)}` writes it once that run's "
+            f"analysis audit is decided and report-check shows no other blocker"
         )
     if missing:
         raise SystemExit(f"recheck: numbers not in {note.name}: {missing}")

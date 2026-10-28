@@ -145,10 +145,15 @@ def declared_run_mismatch(text: str, answering_run: Path, protocol: Path) -> str
     declared = protocol_block.declared_run(text)
     if declared is None or declared == answering_run.name:
         return None
+    # the command is the last step, not the fix: printed bare beside an open
+    # BLOCKER on that very run, three of three Haiku readers were told to
+    # adopt the faulty run (stuck-state probe 2026-10-28)
     return (
         f"[result] declares {declared}, but the run that answers is "
-        f"{answering_run.name} — `{adopt_command(protocol, answering_run.name)} "
-        f"--force` declares the run the checks hold, or rerun"
+        f"{answering_run.name} — once that run's checks hold (its analysis "
+        f"audit decided, no open BLOCKER on it), "
+        f"`{adopt_command(protocol, answering_run.name)} --force` declares it; "
+        f"if the fault is in that run, fix the code and measure again first"
     )
 
 
