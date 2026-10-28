@@ -343,7 +343,7 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             area = root / "experiments" / "01-judge"
             reading = audit.gather(area, None)
-            prompt = audit.bound_prompt("preflight", area, reading)[0]
+            prompt = audit.bound_prompt("preflight", area, reading).prompt
         for needle in (
             "ANSWERS = {",
             "PROMPT = (",

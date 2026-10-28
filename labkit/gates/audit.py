@@ -981,21 +981,29 @@ def _report_room(alias: str) -> int | None:
     return REPORT_TOKENS if llm.takes_max_tokens(alias) else None
 
 
-def bound_prompt(
-    mode: str, area: Path, reading: Reading
-) -> tuple[
-    str,
-    Stamp,
-    str,
-    str | None,
-    str | None,
-    list[Path],
-    dict[str, str],
-    Followup,
-]:
-    """(prompt, stamp, block sha, run id, shown sha, indexed files,
-    registration, what is shown of the earlier repairs — `Followup`) from
-    ONE reading:
+@dataclass(frozen=True)
+class BoundPrompt:
+    """An audit prompt and what its record binds, from one reading
+    (`bound_prompt`): the PROMPT; the code STAMP; the promise block's sha
+    (BLOCK_SHA) and the REGISTRATION it carries; in MODE analysis the
+    RUN_ID it shows (NO_RUN when none answers) and the SHOWN_SHA of what it
+    shows of that run; the INDEXED files (stamped, not read in full); and
+    SHOWN_NOW, the earlier repairs shown (`Followup`). It replaced an
+    8-tuple passed on as ten arguments (audit 2026-10-27, third, M7)."""
+
+    prompt: str
+    stamp: Stamp
+    block_sha: str
+    run_id: str | None
+    shown_sha: str | None
+    indexed: list[Path]
+    registration: dict[str, str]
+    shown_now: Followup
+
+
+def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
+    """The prompt and what its record binds (`BoundPrompt`) from ONE
+    reading:
     the record binds what the prompt shows. The code is one snapshot: its
     bytes render the prompt, its sha goes in the record, and every stamped
     file the reading does not take in full is indexed — so the prompt shows
@@ -1071,7 +1079,7 @@ def bound_prompt(
         raise AuditError(f"{area}: {changed}")
     stamp = Stamp(snap.sha, list(snap.files))
     shown_sha = shown.sha if shown else None
-    return (
+    return BoundPrompt(
         prompt,
         stamp,
         promises.block_stamp(text),
@@ -1181,23 +1189,16 @@ def main(argv: list[str]) -> int:
         protocol, code = reading.protocol, reading.code
         for finding in early_for_tier(args.area, protocol, args.mode):
             console.progress("labkit-audit", finding.line)
-        (
-            prompt,
-            stamp,
-            block_sha,
-            run_id,
-            shown_sha,
-            indexed,
-            registration,
-            shown_now,
-        ) = bound_prompt(args.mode, args.area, reading)
+        bound = bound_prompt(args.mode, args.area, reading)
         console.progress(
             "labkit-audit",
             f"{args.mode} · {protocol.name} · {len(code)} code file(s) "
-            f"in full, {len(indexed)} indexed · "
-            f"{args.model} · {len(prompt) // 1000} kB",
+            f"in full, {len(bound.indexed)} indexed · "
+            f"{args.model} · {len(bound.prompt) // 1000} kB",
         )
-        report, running = _answer_or_record(args, argv, prompt, stamp, block_sha)
+        report, running = _answer_or_record(
+            args, argv, bound.prompt, bound.stamp, bound.block_sha
+        )
     except (
         AuditError,
         llm_backends.PromptTruncated,
@@ -1213,18 +1214,7 @@ def main(argv: list[str]) -> int:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     try:
-        return _record(
-            args,
-            report,
-            running,
-            stamp,
-            block_sha,
-            run_id,
-            shown_sha,
-            indexed,
-            registration,
-            shown_now,
-        )
+        return _record(args, report, running, bound)
     finally:
         if not running.ended:
             running.end("none", error="the command ended before the record")
@@ -1234,15 +1224,10 @@ def _record(
     args: argparse.Namespace,
     report: str,
     running: attempts.Running,
-    stamp: Stamp,
-    block_sha: str,
-    run_id: str | None,
-    shown_sha: str | None,
-    indexed: list[Path],
-    registration: dict[str, str],
-    shown_now: Followup,
+    bound: BoundPrompt,
 ) -> int:
-    """Read REPORT, write its record and end RUNNING with it; print what the
+    """Read REPORT, written to BOUND's prompt, write its record (bound to
+    what BOUND shows) and end RUNNING with it; print what the
     person decides. Exit 1 on a blocker or a warning, 0 on none, 2 when the
     report does not read, its FIX lines do not (`parse_fixes`), or a shown
     decision changed while the auditor read it (`decisions_moved`) — the
@@ -1250,8 +1235,8 @@ def _record(
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
     try:
         result = parse(report)
-        fixes = parse_fixes(report, shown_now)
-        moved = decisions_moved(shown_now.blockers, args.area)
+        fixes = parse_fixes(report, bound.shown_now)
+        moved = decisions_moved(bound.shown_now.blockers, args.area)
         if moved:
             raise AuditError(
                 f"the decision on {', '.join(moved)} changed while the auditor read "
@@ -1271,27 +1256,29 @@ def _record(
             args.area,
             args.mode,
             args.model,
-            stamp.sha,
-            block_sha,
+            bound.stamp.sha,
+            bound.block_sha,
             result["verdict"],
             result["findings"],
-            registration=registration,
-            run_id=run_id,
-            shown_sha=shown_sha,
+            registration=bound.registration,
+            run_id=bound.run_id,
+            shown_sha=bound.shown_sha,
             fix_verdicts=fixes,
-            carried=carried_of(shown_now, fixes),
-            followup_size=followup_size(shown_now) if args.mode == ANALYSIS else None,
+            carried=carried_of(bound.shown_now, fixes),
+            followup_size=followup_size(bound.shown_now)
+            if args.mode == ANALYSIS
+            else None,
         )
     except ValueError as exc:  # verdict and finding lines disagree
         running.end("none", error=str(exc))
         console.refuse("labkit-audit", str(exc))
         return 2
     running.end("record", file=recorded.name)
-    _stamp_report(args.area, args.mode, stamp, result["verdict"], recorded)
+    _stamp_report(args.area, args.mode, bound.stamp, result["verdict"], recorded)
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)
-    listed_scope = result["scope"] + [str(p) for p in indexed]
-    for gap in scope_mismatch(args.area, listed_scope, stamp.files):
+    listed_scope = result["scope"] + [str(p) for p in bound.indexed]
+    for gap in scope_mismatch(args.area, listed_scope, bound.stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     # last, on stdout after the report: what the person acts on. On stderr
     # it came out before the buffered report in a pipe, and `| tail` cut it
@@ -1301,9 +1288,9 @@ def _record(
         findings.read(recorded), args.area, report, args.protocol
     ):
         print(line)
-    for line in fix_lines(shown_now.blockers, fixes):
+    for line in fix_lines(bound.shown_now.blockers, fixes):
         print(line)
-    return 1 if b or w or carried_of(shown_now, fixes) else 0
+    return 1 if b or w or carried_of(bound.shown_now, fixes) else 0
 
 
 def fix_lines(

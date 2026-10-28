@@ -1113,6 +1113,9 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`audit.bound_prompt` returns a `BoundPrompt`.** It returned an
+  8-tuple that `labkit-audit` unpacked and passed on to `_record` as ten
+  arguments; the fields are named now. Audit 2026-10-27 (third), M7.
 - **Every start check refuses itself.** `registration_refusal` and
   `reseed_refusal` returned the sentence for `runlog.Run` to raise, while
   every other check at a run's start (`foreground_refusal`, `freeze_gate`,
