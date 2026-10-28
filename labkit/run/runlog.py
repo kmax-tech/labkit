@@ -107,7 +107,9 @@ from labkit.formats.runs import (
     RunConfig,
     RunConfigError,
     RunState,
+    completion_state,
     is_alive,
+    next_output_name,
     now_stamp,
     read_completion,
     write_failure,
@@ -297,6 +299,33 @@ def _runs_held(path: Path) -> set[str] | None:
         return set(batch.row_runs(path).runs)
     except ValueError:
         return None
+
+
+def _completed_among(runs_dir: Path, ids: set[str]) -> list[str]:
+    """The runs among IDS whose directory under RUNS_DIR holds a completed
+    run (`runs.completion_state`), sorted; a run without a directory is not
+    known to be completed. Raises RunConfigError on a run record that does
+    not read."""
+    return sorted(
+        rid
+        for rid in ids
+        if (runs_dir / rid / CONFIG_FILE).is_file()
+        and completion_state(runs_dir / rid) == COMPLETED
+    )
+
+
+def continued_warning(path: Path, done: list[str]) -> str:
+    """What a run that writes into PATH, holding rows of the completed runs
+    DONE, is told: those rows count as its own, and the way to a
+    measurement of its own."""
+    return (
+        f"runlog: WARNING — {path.name} holds the rows of the completed run(s) "
+        f"{', '.join(done)}: this run continues it, and those rows count as its "
+        f"own. A new measurement that must not reuse them — the code that wrote "
+        f"them was repaired — writes an output file of its own (a new name for "
+        f"the output in the measuring script, e.g. `{next_output_name(path)}`), "
+        f"and {path.name} and its runs stay as they are."
+    )
 
 
 def _repeat_parent(base_dir: Path, repeat_of: str) -> RunConfig:
@@ -581,12 +610,25 @@ class Run:
         A .jsonl output's rows of other runs are read HERE, at registration:
         those are the rows the run continues (`continues`). A foreign row
         that appears later was written during the run by something else,
-        and stays foreign for finalize to hold.
+        and stays foreign for finalize to hold. Continuing a completed run
+        is said, never silent (`continued_warning`): its rows count as this
+        run's. Where those rows depend on code, the row identity refuses a
+        resume across a change (the estimator skeleton's `instrument()`
+        carries the code) — a repair measured again into the faulty run's
+        file appended nothing and reported its rows as its own (repair case,
+        2026-10-28). A model's answers do not depend on the parser: a parser
+        fix measured again re-reads them, and that stays possible. A derived
+        run re-reads its parent's rows by design and is not told.
         """
         for p in map(Path, paths):
+            held = _runs_held(p) if p.suffix == ".jsonl" else set()
+            if held and self._derived_from is None:
+                done = _completed_among(self.dir.parent, held - {self.run_id})
+                if done:
+                    print(continued_warning(p, done))
             self._outputs.append(p)
             if p.suffix == ".jsonl":
-                self._held_before[p] = _runs_held(p)
+                self._held_before[p] = held
 
     def save_raw(self, name: str, content: str) -> Path:
         """Write a raw text artefact into the run's directory and return its path."""

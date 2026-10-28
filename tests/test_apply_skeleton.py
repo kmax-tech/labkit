@@ -268,6 +268,29 @@ class ApplySkeleton(unittest.TestCase):
         self.assertIsNotNone(problem)
         self.assertIn("predictor_sha", str(problem))
 
+    def test_a_code_change_refuses_to_resume_the_rows_of_the_old_code(self):
+        """The row identity carries the measuring code: a repair measured
+        again kept the faulty rows while it held only the estimator line
+        (repair case, 2026-10-28). The twin: the same code resumes."""
+        area, measure = self.measure_module("apply")
+        predictor = mock.Mock()
+        predictor.predict.side_effect = lambda xs: [0 for _ in xs]
+        output = area / "output" / "kept.jsonl"
+        script = area / "scripts" / "01_measure.py"
+        with (
+            mock.patch.object(measure, "make_estimator", return_value=predictor),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            measure.measure(measure.CONFIG, self.items(), output)
+            # the same code and items resume: nothing is pending, nothing refused
+            measure.measure(measure.CONFIG, self.items(), output)
+            script.write_text(script.read_text(encoding="utf-8") + "# repaired\n")
+            with self.assertRaises(batch.InstrumentError) as cm:
+                measure.measure(measure.CONFIG, self.items(), output)
+        said = str(cm.exception)
+        self.assertIn("code_sha", said)
+        self.assertIn("`kept_v2.jsonl`", said)
+
     def test_changed_artifact_after_config_snapshot_refuses_before_predictions(self):
         area, measure = self.measure_module("apply")
         model = area / "primary.model"

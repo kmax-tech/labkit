@@ -215,8 +215,20 @@ class Ledger:
         )
 
 
+def _instrument_change(written: object, now: object) -> str:
+    """What differs between the instrument a row was WRITTEN with and the
+    one NOW: per key of two mappings `key old → new`, else both whole."""
+    if isinstance(written, dict) and isinstance(now, dict):
+        keys = sorted(
+            k for k in written.keys() | now.keys() if written.get(k) != now.get(k)
+        )
+        return "; ".join(f"{k} {written.get(k)!r} → {now.get(k)!r}" for k in keys)
+    return f"{written!r} → {now!r}"
+
+
 class InstrumentError(ValueError):
-    """A resumed output holds rows of another instrument (prompt, model)."""
+    """A resumed output holds rows of another instrument (prompt, model,
+    measuring code)."""
 
 
 class Store:
@@ -413,11 +425,24 @@ class Store:
                 if runs.as_stored(r.get("_instrument")) != self._instrument_stored
             ]
             if other:
+                written = other[0].get("_instrument")
+                held = sorted(
+                    {
+                        str(r["_prov"]["run"])
+                        for r in other
+                        if isinstance(r.get("_prov"), dict) and r["_prov"].get("run")
+                    }
+                )
                 raise InstrumentError(
-                    f"{self.path}: {len(other)} row(s) were measured with another "
-                    f"instrument ({other[0].get('_instrument')!r}), this run's is "
-                    f"{self.instrument!r} — a changed prompt or model is a new "
-                    f"measurement: write a new output file, never resume into this one"
+                    f"{self.path}: {len(other)} row(s)"
+                    + (f" of {', '.join(held)}" if held else "")
+                    + f" were measured with another instrument "
+                    f"({_instrument_change(written, self.instrument)}) — a "
+                    f"changed prompt, model or measuring code is a new measurement, "
+                    f"and resuming would count those rows as this run's: measure into "
+                    f"a new output file — a new name for the output in the measuring "
+                    f"script, e.g. `{runs.next_output_name(self.path)}` —, keep "
+                    f"{self.path.name} and its runs as they are, never resume into it"
                 )
         done = {_key(i) for i in self.done_ids()}
         for rec in records:

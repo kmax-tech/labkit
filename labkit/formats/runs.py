@@ -565,6 +565,15 @@ def recorded_commit(cfg: RunConfig) -> str | None:
     return cfg.git_full or None
 
 
+def next_output_name(path: Path) -> str:
+    """The name a new measurement's own output takes beside PATH:
+    `<stem>_v<N+1>` after a `_v<N>` stem, else `<stem>_v2` — the name the
+    refusal of a continued finished run and finalize's hold suggest."""
+    m = re.fullmatch(r"(.*_v)(\d+)", path.stem)
+    stem = f"{m.group(1)}{int(m.group(2)) + 1}" if m else f"{path.stem}_v2"
+    return f"{stem}{path.suffix}"
+
+
 def completion_state(run_dir: Path) -> RunState:
     """`run_state` of a run directory read from disk, liveness not asked.
 

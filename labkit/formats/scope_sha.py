@@ -219,6 +219,23 @@ def measured_code(script: Path, repo: Path) -> list[Path]:
     return sorted({script, *_import_closure([script], repo, (script.parent,))})
 
 
+def measured_code_sha(script: Path, repo: Path) -> str:
+    """One digest over the code a measurement SCRIPT runs (`measured_code`):
+    each file's path under REPO and its bytes. What a measurement's rows
+    depend on beside their inputs — the estimator skeleton's row identity
+    (`instrument()`) carries it, so a resume never continues rows another
+    code wrote (repair case, 2026-10-28: a fix measured again kept the
+    faulty rows). Raises SourceError like the stamp, ValueError for a file
+    outside REPO."""
+    base = repo.resolve()
+    return digest(
+        b"\0\0".join(
+            f.resolve().relative_to(base).as_posix().encode() + b"\0" + f.read_bytes()
+            for f in measured_code(script, repo)
+        )
+    )
+
+
 def _import_closure(
     start: list[Path], repo: Path, more_roots: tuple[Path, ...] = ()
 ) -> list[Path]:

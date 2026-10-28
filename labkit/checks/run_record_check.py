@@ -40,6 +40,7 @@ from labkit.formats.runs import (
     RunConfigError,
     read_metrics,
     read_outputs,
+    next_output_name,
     read_run_config,
     resolve_recorded,
 )
@@ -538,7 +539,9 @@ def row_provenance_findings(
     it continues (a resumed file, named in outputs.json), or — for a
     derived run — from its derived_from lineage. Rows from any other run
     are a blocker: a file of two measurements. Rows without `_prov` are a
-    note (a Store without `prov`), not proof of anything (2026-10-09). A
+    note (a Store without `prov`), not proof of anything (2026-10-09). Rows
+    of a continued run whose script differs from this run's are a blocker
+    too (`_continued_with_other_code`): the number is that code's. A
     broken lineage (`answering_run.lineage`) is the one blocker: without
     it no row can be held to a run."""
     blockers: list[GateFinding] = []
@@ -576,12 +579,59 @@ def row_provenance_findings(
                 f"{entry.path.name}: continues {', '.join(entry.continues)} "
                 f"({', '.join(f'{r}: {n}' for r, n in sorted(rr.runs.items()))} rows)"
             )
+            blockers += _continued_with_other_code(
+                answering_run, entry.path, rr.runs, entry.continues
+            )
         if rr.unstamped:
             notes.append(
                 f"{entry.path.name}: {rr.unstamped} row(s) without _prov — written "
                 f"outside a run or by a Store without prov; their run is unknown"
             )
     return blockers, notes
+
+
+def _continued_with_other_code(
+    answering_run: Path, path: Path, rows: dict[str, int], continued: tuple[str, ...]
+) -> list[GateFinding]:
+    """A blocker per run ANSWERING_RUN continues in PATH whose recorded
+    script (`script_sha`) is not the answering run's, where the rows declare
+    that they depend on code (`_instrument` carries `code_sha`, the
+    estimator skeleton's): its ROWS were written by other code, and the
+    number counts them as this run's. A fix measured again into the faulty
+    run's file kept every faulty row, and finalize said only "continues"
+    (repair case, 2026-10-28). Rows without it — a model's answers — do not
+    depend on the script: a parser fix re-reads them. A run whose record
+    does not read is left to the record checks."""
+    own = read_run_config(answering_run)
+    if own is None or not _rows_carry_code(path):
+        return []
+    out: list[GateFinding] = []
+    for rid in continued:
+        other = read_run_config(answering_run.parent / rid)
+        if other is None or other.script_sha == own.script_sha:
+            continue
+        out.append(
+            blocker(
+                f"{path.name}: {rows.get(rid, 0)} row(s) come from {rid}, which ran "
+                f"other code (script {other.script_sha}, this run's "
+                f"{own.script_sha}) — {answering_run.name}'s number counts that "
+                f"code's rows as its own",
+                fix=f"measure anew into an output file of its own — a new name for "
+                f"the output in the measuring script, e.g. "
+                f"`{next_output_name(path)}` — keep {path.name} and its runs, "
+                f"then audit that run",
+            )
+        )
+    return out
+
+
+def _rows_carry_code(path: Path) -> bool:
+    """Does a row of PATH name the code that wrote it (`_instrument` with a
+    `code_sha`)? Raises ValueError on a file that does not read."""
+    return any(
+        isinstance(r.get("_instrument"), dict) and "code_sha" in r["_instrument"]
+        for r in batch.Store(path).records()
+    )
 
 
 def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:

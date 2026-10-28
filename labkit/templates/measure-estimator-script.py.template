@@ -106,7 +106,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
-from labkit.formats import promises, protocol_block, standard_contract
+from labkit.formats import promises, protocol_block, scope_sha, standard_contract
 from labkit.formats.repo import next_after_run
 
 KIND = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).kind
@@ -121,7 +121,9 @@ ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"
 # Fit hashes no model files unless they are explicitly declared here.
 PREDICTOR_FILES: dict[str, Path] = {}
 # One run, one output file; a new measurement — other estimator, other
-# features, other items — gets a new file name, never two measurements in one.
+# features, other items, the code repaired — gets a new file name, never two
+# measurements in one: the row identity (`instrument()`) refuses a resume
+# across a code change, and runlog says when a run continues a finished one.
 OUT = AREA / "output" / "<name>.jsonl"
 FEATURES_FIELD = "features"                     # TODO: the item field holding the numeric features
 GOLD_FIELD = "gold"
@@ -269,12 +271,16 @@ def fit_predict(cfg: MeasureConfig, fit: list[dict], predict: list[dict],
 
 
 def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
-    """What makes two predictions comparable: the estimator line, the score,
-    declared predictor dependencies as they read now, the seed, folds and
-    items. Filesystem errors from reading dependencies propagate. Every row carries it; a resume refuses
-    rows of another (batch.Store `instrument`). The items as one fingerprint,
-    not one per item: an edited item changes the fit, so every prediction."""
-    return {"estimator_sha": cfg.estimator_sha, "predictor_sha": predictor_digests(), "score": cfg.score,
+    """What makes two predictions comparable: the measuring code (this
+    script and the local modules it imports), the estimator line, the
+    score, declared predictor dependencies as they read now, the seed,
+    folds and items. Filesystem errors from reading dependencies propagate.
+    Every row carries it; a resume refuses rows of another (batch.Store
+    `instrument`) — without the code, a fix measured again kept the faulty
+    rows. The items as one fingerprint, not one per item: an edited item
+    changes the fit, so every prediction."""
+    return {"code_sha": scope_sha.measured_code_sha(Path(__file__).resolve(), REPO),
+            "estimator_sha": cfg.estimator_sha, "predictor_sha": predictor_digests(), "score": cfg.score,
             "seed": cfg.seed, "n_folds": cfg.n_folds, "items_sha": batch.content_sha(items)}
 
 

@@ -1198,6 +1198,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A repair measured again never counts the faulty run's rows.** In
+  the repair case the fix, measured again into the same output, appended
+  nothing — the estimator skeleton's row identity held the estimator
+  line, not the code — and reported the faulty run's rows as its own;
+  finalize only noted "continues". Now the estimator skeleton's
+  `instrument()` carries the measuring code (`scope_sha.measured_code_sha`:
+  the script and the local modules it imports), so `batch.Store` refuses a
+  resume across a code change, naming the runs, what differs (`code_sha
+  …`) and a new output name (`runs.next_output_name`, e.g.
+  `<stem>_v2.jsonl`); `runlog.Run.output` says when a run continues a
+  completed run's file (its rows count as its own); and finalize holds
+  rows that carry their code and were written by another script
+  (`run_record_check.row_provenance_findings`). A model's answers carry
+  no code: a parser fix measured again still re-reads them. The earlier
+  file and its runs stay; AGENTS.md says the new measurement writes an
+  output of its own.
 - **fit-assay's sheet names ROC-AUC; a sheet that named none is the
   probe's gap.** The SAB-like fit case asked for predicted probabilities
   and named no metric, while its meaning check holds the kept number to

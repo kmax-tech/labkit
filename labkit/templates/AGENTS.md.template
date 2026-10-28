@@ -199,7 +199,11 @@ Decide each finding using that command. READ lines are hints, not findings
 to decide. `fixed` means the whole named fault was corrected and its
 requested diagnostic run and assessed; the status records a decision,
 not proof. After a measurement-code fix, repeat steps 2–4: test, commit,
-new measurement, finalize and analysis audit. The new audit follows up
+new measurement, finalize and analysis audit. The new measurement writes
+an output file of its own — a new name for the output in the measuring
+script —, and the earlier file and its runs stay: the old file's rows
+were written by the old code. labkit refuses a resume across a code change
+and says when a run continues a finished one. The new audit follows up
 earlier decided BLOCKERs; unresolved ones are carried into its record
 and must be decided there. Editing code does not repair an old run.
 At `high`, before that repair cycle set `frozen = false` without changing
