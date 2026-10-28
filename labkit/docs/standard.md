@@ -111,6 +111,12 @@ written with. The following applies:
 - **Yield** — expected vs. obtained per processing step.
 - **Producer** — the script that produces a dataset (`data/raw` →
   `data/prepared`).
+- **Fixed inputs** — what reproduces a run's data: the files it actually read
+  or their unchanged versions, where they come from, and the producer steps
+  that prepared them; raw and prepared inputs kept apart. Small files free to
+  share are committed; large or protected data are named by source and
+  version beside the checksum the run records (`data=`). "Commit the inputs"
+  is not the rule — fixing them is.
 - **run_id** — identifier of a run from `runlog`; every reported number carries
   one.
 - **Confound (rival explanation)** — another cause that would produce the same number.

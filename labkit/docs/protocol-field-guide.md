@@ -432,9 +432,12 @@ scattered in output files nobody can interpret.
 
 ### Setup (APPARATUS)
 
-- **Data / scope:** source, N, producer script. Look at
-  the prepared file before running — otherwise a format bug and a model
-  failure look identical.
+- **Data / scope:** source, N, producer script — the raw data under
+  `data/raw/` and what prepared them into `data/prepared/`. Small files
+  free to share are committed; large or protected data are named by source
+  and version, and the run records the checksum of each file it reads
+  (`data=`). Look at the prepared file before running — otherwise a format
+  bug and a model failure look identical.
 - **Data profile:** your judgement of the data, written before the
   measuring run: could a surface feature answer the question without the
   model? Owed whenever a model is named, at every kind. The prompt
