@@ -403,6 +403,19 @@ pins (`requirements.txt` / `requirements.lock`).
   yields; what only the prompt skeleton's adds is the data-profile aid,
   and the sentence now says that. Pilot of labkit-paper area 15 on
   c2c5da2 (t71, t15), defect 12.
+- **A binary file under `data=` is a refusal that names its way.** The
+  prepare stamps and AGENTS.md ask for every file a run reads under
+  `data=`; runlog reads an ordinary path as a text dataset, and a `.npz`
+  or `.npy` stopped the run with a bare `UnicodeDecodeError` — no key, no
+  file, no way. The agents dropped the file from `data=`, so the features
+  carried no checksum (labkit-paper area 15, pilot t15 and t71). The
+  decode error now names the key, the file and `provenance.BinaryInput`
+  (`provenance.BINARY_INPUT_WAY`; still a `UnicodeDecodeError`, through
+  `repo.not_text`, now public), and both prepare stamps and AGENTS.md
+  name the wrapper where they ask for every file. A binary file is still
+  declared, not recognised: the decode decides, not the file type, so
+  one whose bytes happen to decode is read as text, and guessing it from
+  the failure would excuse a corrupt text dataset.
 - **Four faults found by the audit of 2026-10-28.** A line of the
   journal's copy that is not JSON ended the stop hook in a traceback:
   `attempts.copy_gaps` now raises AttemptError naming the copy's own line,

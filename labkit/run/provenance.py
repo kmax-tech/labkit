@@ -20,6 +20,7 @@ from pathlib import Path
 
 from labkit.formats import jsonl, repo
 from labkit.formats.files import write_atomic_bytes
+from labkit.formats.gate import with_way_out
 from labkit.formats.scope_sha import (
     DIGEST_CHARS,
     digest,
@@ -408,13 +409,26 @@ class BinaryInput:
     path: Path
 
 
+#: the way out of an ordinary data= input that is not UTF-8 text — the
+#: decode decides, not the file type: a binary file whose bytes decode is
+#: read as text, so a binary input is declared, never recognised
+BINARY_INPUT_WAY = (
+    "if the file is binary (.npz, .npy, model weights), pass it as "
+    "`provenance.BinaryInput(path)` (`from labkit.run import provenance`): "
+    "its sha256 is recorded, its rows stay null; a text dataset that does "
+    "not decode is repaired, not wrapped"
+)
+
+
 def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity baseline 2026-10-08
     """path (as `runs.recorded_path` writes it, against BASE_DIR's repo) +
     sha256 + rows per split, and the leakage verdict across splits.
 
     BinaryInput values record bytes only, with rows None; ordinary path
     values remain text datasets and are checked for row-id overlap.
-    Missing inputs and text decoding failures propagate before a run starts.
+    Missing inputs and text decoding failures propagate before a run starts;
+    a decoding failure names the key, the file and `BinaryInput`
+    (`BINARY_INPUT_WAY`).
     """
     out: dict = {}
     text_paths = {}
@@ -423,10 +437,22 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
         p = Path(value.path if binary else value)
         if not p.exists():
             raise FileNotFoundError(f"data[{key!r}] does not exist: {p}")
+        try:
+            rows = None if binary else _data_rows(p)
+        except UnicodeDecodeError as exc:
+            # refused, not guessed binary: that would excuse a corrupt text
+            # dataset (docs/notes/2026-10-27-workflow-stages.md)
+            raise repo.not_text(
+                exc,
+                with_way_out(
+                    f"data[{key!r}] = {p}, an ordinary input runlog reads as text",
+                    BINARY_INPUT_WAY,
+                ),
+            ) from exc
         out[key] = {
             "path": recorded_path(p, base_dir),
             "sha256": source_digest(p)[:RECORD_SHA_CHARS],
-            "rows": None if binary else _data_rows(p),
+            "rows": rows,
         }
         if not binary:
             text_paths[key] = p

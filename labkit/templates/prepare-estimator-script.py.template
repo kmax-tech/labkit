@@ -101,7 +101,10 @@ def main() -> None:
     # data= records SOURCE's path, sha256 and row count in the run — the raw
     # file this dataset came from stays answerable (the stamped run recorded
     # none, audit 2026-10-21). SOURCE is the file build() reads; a build()
-    # reading several files lists each under its own key.
+    # reading several files lists each under its own key — a binary one
+    # (.npz, .npy, model weights) declared as provenance.BinaryInput(path)
+    # (`from labkit.run import provenance`): its sha256 is recorded, its
+    # rows stay null; runlog reads any other path as text.
     with runlog.run("prepare", config=config, data={"source": SOURCE},
                     base_dir=AREA, run_kind="preparation") as run:
         # A producer REPLACES its file, never appends. write_dataset does;

@@ -141,8 +141,13 @@ and conditions visible in `Run.__init__`:
 `provenance.BinaryInput(path)` explicitly marks a binary dependency in a
 run's `data` mapping: its bytes are hashed, `rows` is null, and dataset
 decoding and row-id leakage checks do not apply to that input. Ordinary
-dataset paths retain those checks. The local apply template marks its
-declared predictor artifacts this way.
+dataset paths retain those checks; one that is not UTF-8 text is refused
+with a decode error naming the key, the file and this wrapper
+(`provenance.BINARY_INPUT_WAY`). The decode decides, not the file type:
+a binary file whose bytes happen to decode is read as text, so a binary
+input is declared, never recognised. The local apply template marks its
+declared predictor artifacts this way; the prepare stamps and AGENTS.md
+name it where they ask for every file a run reads.
 `runlog` writes the run and index; `runlog_command` implements the console
 command. `batch` manages resumable output. `lanes` is the run mechanics of
 the stamped two-lane judge — jobs per item and lane, batches, resume, the
