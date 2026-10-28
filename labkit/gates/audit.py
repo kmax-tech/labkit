@@ -577,7 +577,7 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     return ((EARLIER_LABEL, text),)
 
 
-def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
+def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdict]:
     """The report's `FIX · <record>#<n> · <verdict> · <why>` entries before
     the last verdict line, each bound to the decision EARLIER showed for
     that finding (`findings.decision_digest`) — labkit attaches the digest,
@@ -595,7 +595,7 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
     a `resolved` on a missing key is kept as the auditor wrote it."""
     m = list(VERDICT.finditer(text or ""))
     lines = ((text or "")[: m[-1].start()] if m else (text or "")).splitlines()
-    shown = {e.ref: e for e in shown_now.blockers}
+    shown = {e.ref: e for e in earlier_repairs.blockers}
     out: list[findings.FixVerdict] = []
     for i, line in enumerate(lines):
         if not FIX_OPEN.match(line):
@@ -629,7 +629,7 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
                 f["verdict"],
                 "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
                 e.finding.check,
-                shown_now.check_present(e),
+                earlier_repairs.check_present(e),
             )
         )
     problem = findings.fix_verdict_problem(out)
@@ -1024,7 +1024,7 @@ class BoundPrompt:
     stamp: Stamp
     state: findings.AuditedState
     indexed: list[Path]
-    shown_now: Followup
+    earlier_repairs: Followup
 
 
 def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
@@ -1070,7 +1070,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
         """Is R a record of the state this prompt shows?"""
         return r.mode == ANALYSIS and r.state == state
 
-    shown_now = (
+    earlier_repairs = (
         earlier_of(area, current, shown.metrics() if shown else None)
         if mode == ANALYSIS
         else Followup([], None, {})
@@ -1089,7 +1089,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
                 snap.text,
                 shown.pieces if shown else (),
                 validity_evidence(area, text),
-                earlier_piece(shown_now) if mode == ANALYSIS else (),
+                earlier_piece(earlier_repairs) if mode == ANALYSIS else (),
             ),
         )
     except KeyError as exc:
@@ -1102,7 +1102,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
     ):
         raise AuditError(f"{area}: {changed}")
     return BoundPrompt(
-        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, shown_now
+        prompt, Stamp(snap.sha, list(snap.files)), state, indexed, earlier_repairs
     )
 
 
@@ -1239,8 +1239,8 @@ def _record(
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
     try:
         result = parse(report)
-        fixes = parse_fixes(report, bound.shown_now)
-        moved = decisions_moved(bound.shown_now.blockers, args.area)
+        fixes = parse_fixes(report, bound.earlier_repairs)
+        moved = decisions_moved(bound.earlier_repairs.blockers, args.area)
         if moved:
             raise AuditError(
                 f"the decision on {', '.join(moved)} changed while the auditor read "
@@ -1268,8 +1268,8 @@ def _record(
             run_id=bound.state.run_id,
             shown_sha=bound.state.shown_sha,
             fix_verdicts=fixes,
-            carried=carried_of(bound.shown_now, fixes),
-            followup_size=followup_size(bound.shown_now)
+            carried=carried_of(bound.earlier_repairs, fixes),
+            followup_size=followup_size(bound.earlier_repairs)
             if args.mode == ANALYSIS
             else None,
         )
@@ -1292,9 +1292,9 @@ def _record(
         findings.read(recorded), args.area, report, args.protocol
     ):
         print(line)
-    for line in fix_lines(bound.shown_now.blockers, fixes):
+    for line in fix_lines(bound.earlier_repairs.blockers, fixes):
         print(line)
-    return 1 if b or w or carried_of(bound.shown_now, fixes) else 0
+    return 1 if b or w or carried_of(bound.earlier_repairs, fixes) else 0
 
 
 def fix_lines(

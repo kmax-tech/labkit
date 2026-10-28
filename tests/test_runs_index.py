@@ -39,6 +39,12 @@ class RebuiltIndex(unittest.TestCase):
             # (audit 2026-10-27, third, M4)
             found = runlog.unindexed(area, set())
             self.assertEqual((len(found.rows), found.unreadable), (2, []))
+            # a folder without config.json was dropped without a word
+            # (audit 2026-10-28, C4)
+            stray = area / "runs" / "2026-10-28T10-00-00_abcd"
+            stray.mkdir()
+            self.assertEqual(runlog.unindexed(area, set()).no_record, [stray.name])
+            stray.rmdir()
             self.assertFalse(index.exists())
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(runlog.reindex(area), 0)

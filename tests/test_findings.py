@@ -1046,6 +1046,18 @@ class AuditedStateMatch(unittest.TestCase):
             a, findings.AuditedState("c", "b", {"kind": "fit", "q": "1"})
         )
         self.assertEqual(a.words(), f"code c, promises b, run {RUN}, shown {SHOWN}")
+        # hashable as it compares (audit 2026-10-28, C5)
+        self.assertEqual(
+            len(
+                {
+                    a,
+                    findings.AuditedState(
+                        "c", "b", {"q": "1", "kind": "fit"}, RUN, SHOWN
+                    ),
+                }
+            ),
+            1,
+        )
 
     def test_a_record_covers_the_state_it_was_written_for(self):
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"

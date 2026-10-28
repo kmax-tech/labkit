@@ -1131,6 +1131,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Clarity of the 2026-10-28 audit.** The start checks that raise are
+  `require_registration`, `require_valid_reseed` and `require_detached`
+  (were `registration_refusal`, `reseed_refusal`, `foreground_refusal`); a
+  `*_refusal` returns its sentence. `BoundPrompt.shown_now` is
+  `earlier_repairs`, apart from the state's `shown_sha`. finalize's
+  null-lane note tells a check that applied (`the null lane moved in N kept
+  output(s)`) from one that did not (`n/a`): `null_lane_findings` returns
+  `NullLanes` with the outputs examined. `runlog reindex` names a folder
+  under `runs/` without `config.json` instead of dropping it. `post_change`,
+  `before_run` and `score` say what their docstrings left out, and
+  `AuditedState` hashes as it compares. Register
+  `docs/audit-2026-10-28-today.md`, C1–C5.
 - **The skeletons' criterion keys and lanes have one home.** The probes
   named `c1_score` and `c1_accuracy` by hand; `Skeleton.criterion_key`
   (`standard_contract.criterion_key`) holds them, a test holds each

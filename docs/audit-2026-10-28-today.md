@@ -69,3 +69,13 @@ historical registers.
 4. The homes across layers or modules: H3, H5, H8.
 5. The probe homes H6, H7.
 6. The clarity rows C1–C5 (C1, C2 are renames).
+
+## State (2026-10-28, after the fixes)
+
+All six points done, one commit each: B1–B4 `3a7cba3`, D1–D8 (D2
+corrects a reason given the day before) the documentation commit after
+it, H1, H2, H4, H9 `2754205`, H3, H5, H8 `3a6874e`, H6, H7 `a3cdfd2`,
+C1–C5 the clarity commit. New `tests/test_one_home.py` rules hold the run
+index's name, the audit modes, the experiments folder, a `file://` read
+and the criterion keys.
+

@@ -15,6 +15,7 @@ their grade. Read-only.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 import shlex
 from pathlib import Path
 
@@ -277,18 +278,37 @@ def null_lane_unmoved(rows: list[dict]) -> bool:
     return all(registered.get(item) == said for item, said in null.items())
 
 
-def null_lane_findings(answering_run: Path) -> list[str]:
-    """One sentence per output of ANSWERING_RUN (`runs.read_outputs`, its
-    JSONL files) whose null lane did not move (`null_lane_unmoved`) — read
-    from the rows the run kept, not from a check in the editable script: a
-    cold agent deleted the script's own guard before it first ran (SAB-like
-    apply case, 2026-10-27). Raises ValueError on an output that does not
-    read."""
+def has_null_lanes(rows: list[dict]) -> bool:
+    """Do ROWS hold both NULL_LANES — is there a null comparison to hold?"""
+    return {r.get("lane") for r in rows} >= set(NULL_LANES)
+
+
+@dataclass(frozen=True)
+class NullLanes:
+    """What `null_lane_findings` found: one sentence per output whose null
+    lane did not move (UNMOVED), and how many outputs held both lanes
+    (EXAMINED) — 0 says the check did not apply, not that it passed."""
+
+    unmoved: list[str]
+    examined: int
+
+
+def null_lane_findings(answering_run: Path) -> NullLanes:
+    """The outputs of ANSWERING_RUN (`runs.read_outputs`, its JSONL files)
+    held to their null lane (`NullLanes`): an output with both lanes whose
+    null did not move (`null_lane_unmoved`) is named — read from the rows
+    the run kept, not from a check in the editable script: a cold agent
+    deleted the script's own guard before it first ran (SAB-like apply
+    case, 2026-10-27). Raises ValueError on an output that does not read."""
     out: list[str] = []
+    examined = 0
     for entry in read_outputs(answering_run) or []:
         if entry.path.suffix != ".jsonl" or not entry.path.is_file():
             continue
         rows = jsonl.data_rows(entry.path.read_text(encoding="utf-8"), str(entry.path))
+        if not has_null_lanes(rows):
+            continue
+        examined += 1
         if null_lane_unmoved(rows):
             out.append(
                 f"{entry.path.name}: the null lane answers what the registered lane "
@@ -297,7 +317,7 @@ def null_lane_findings(answering_run: Path) -> list[str]:
                 f"instrument a null of its own, e.g. its predictions against "
                 f"permuted gold (LAB-034 Null condition in the same run)"
             )
-    return out
+    return NullLanes(out, examined)
 
 
 def criterion_n_input_mismatches(answering_run: Path) -> list[str]:

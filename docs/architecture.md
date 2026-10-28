@@ -120,7 +120,7 @@ and conditions visible in `Run.__init__`:
 
 1. `start_check.prepare` resolves the protocol binding, takes the promise
    snapshot and freezes the config — a reseeded repeat's seed excepted,
-   which runlog derives under its lock (`start_check.reseed_refusal` holds
+   which runlog derives under its lock (`start_check.require_valid_reseed` holds
    the conditions first).
 2. The start checks cover registration, detachment, the index header,
    data leakage and the freeze gate where required. These refusals occur

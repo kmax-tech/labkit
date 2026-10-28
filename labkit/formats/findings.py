@@ -344,6 +344,10 @@ class AuditedState:
             other.registration
         )
 
+    def __hash__(self) -> int:
+        # what __eq__ compares, the registration as sorted pairs
+        return hash((self.bound, tuple(sorted(dict(self.registration).items()))))
+
     @property
     def bound(self) -> tuple[str, str, str | None, str | None]:
         """(code, promises, run, shown) — the state, its registration aside."""

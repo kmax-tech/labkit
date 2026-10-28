@@ -134,11 +134,11 @@ from labkit.run.provenance import (
 from labkit.run.start_check import (
     Prepared,
     completed_parent,
-    foreground_refusal,
+    require_detached,
     freeze_gate,
     prepare,
-    registration_refusal,
-    reseed_refusal,
+    require_registration,
+    require_valid_reseed,
     foreground_timeout,
 )
 
@@ -323,7 +323,7 @@ def _repeat_draw(
     this area again, comparable in protocol, promise block, config and
     inputs (`answering_run.repeat_mismatch`) — else a refusal. Draw 1 is the
     run itself; its repeats count on from 2. RESEED (its conditions held
-    before, `start_check.reseed_refusal`) sets the config's REPEAT_SEED_KEY
+    before, `start_check.require_valid_reseed`) sets the config's REPEAT_SEED_KEY
     to `repeat_seed(repeat_of, draw)`, and the comparison holds it to that
     value. (None, None, the config) for a run that repeats none."""
     if repeat_of is None:
@@ -432,18 +432,18 @@ class Run:
         prepared = prepare(base_dir, config, run_kind, protocol, derived_from)
         # 2. the start check — the order and every skip are visible here;
         #    helpers check the facts without reading a partly built Run
-        registration_refusal(
+        require_registration(
             prepared.bound,
             prepared.block,
             prepared.config,
             prepared.run_kind == "measurement",
         )
-        reseed_refusal(prepared, repeat_of, reseed)
+        require_valid_reseed(prepared, repeat_of, reseed)
         obligations = lane(prepared.repeat_cost)
         if prepared.run_kind == "measurement" and not obligations.foreground:
             limit = foreground_timeout()
             if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
-                foreground_refusal(base_dir, limit)
+                require_detached(base_dir, limit)
         _check_run_index(base_dir)
         described = describe_data(data, base_dir) if data else {}
         unfrozen_ack, audit_failed = False, None
@@ -801,12 +801,13 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
 class Unindexed:
     """What the run folders hold that the run index does not
     (`unindexed`): the ROWS of completed runs without one, the INCOMPLETE
-    runs' ids, and the UNREADABLE runs' errors (damaged, or written before
-    schema 4)."""
+    runs' ids, the UNREADABLE runs' errors (damaged, or written before
+    schema 4), and NO_RECORD, folders that hold no config.json."""
 
     rows: list[list[str]]
     incomplete: list[str]
     unreadable: list[str]
+    no_record: list[str]  # folders under runs/ without config.json: no run
 
 
 def index_refusal(index: Path, header: list[str], rows: list[list[str]]) -> str | None:
@@ -836,6 +837,7 @@ def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
     rows: list[list[str]] = []
     incomplete: list[str] = []
     unreadable: list[str] = []
+    no_record: list[str] = []
     for rd in run_dirs(base_dir):
         d, cfg = rd.dir, rd.config
         if d.name in indexed:
@@ -844,6 +846,7 @@ def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
             unreadable.append(rd.error)
             continue
         if cfg is None:
+            no_record.append(d.name)
             continue
         if run_state(d, alive=False) != COMPLETED:
             incomplete.append(d.name)
@@ -861,7 +864,7 @@ def unindexed(base_dir: Path, indexed: set[str]) -> Unindexed:
                 cfg.protocol.id or "",
             )
         )
-    return Unindexed(rows, incomplete, unreadable)
+    return Unindexed(rows, incomplete, unreadable, no_record)
 
 
 def reindex(base_dir: Path) -> int:
@@ -889,4 +892,6 @@ def reindex(base_dir: Path) -> int:
         print(f"  {name}: not completed — nothing to index.")
     for err in found.unreadable:
         print(f"  NOT INDEXED: {err}")
+    for name in found.no_record:
+        print(f"  {name}: no config.json — no run record, nothing to index.")
     return 2 if found.unreadable else 0

@@ -488,7 +488,9 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
 def score(root: Path, transcript: Path | None = None, agent: str | None = None) -> int:
     """Score a staged probe and tell it: `probe_score` reads it,
     `write_score` keeps it as `<dir>.score.json`, `score_rows` shows it.
-    Exit 0 when the number holds and the run is bound, else 1. It
+    Exit 0 when the number holds as the task's (`Score.number_ok`) and the
+    run is bound, else 1 — the hidden evaluation and the null condition
+    are shown, they do not change the exit. It
     computed, wrote and printed in one 193-line body (audit 2026-10-27,
     third, M4/M7)."""
     sc, notes = probe_score(root, transcript, agent)

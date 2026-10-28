@@ -419,14 +419,16 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
     """Station 7b: the kept rows' null lane moved (`null_lane_findings`) —
     a gate over the run's own output, not the editable script's guard."""
     try:
-        unmoved = null_lane_findings(answering_run)
+        held = null_lane_findings(answering_run)
     except (ValueError, OSError) as exc:
         findings.block(f"the outputs of {answering_run.name} do not read: {exc}")
         return
-    for line in unmoved:
+    for line in held.unmoved:
         findings.block(line)
-    if not unmoved:
-        findings.note("  the null lane moved, or the run keeps no two lanes")
+    if held.examined == 0:
+        findings.note("  n/a — no kept output holds a registered and a null lane")
+    elif not held.unmoved:
+        findings.note(f"  the null lane moved in {held.examined} kept output(s)")
 
 
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
