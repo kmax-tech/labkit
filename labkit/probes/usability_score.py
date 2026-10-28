@@ -462,15 +462,42 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
     return 0 if got.correct == got.checkable else 1
 
 
-def score(  # noqa: C901 complexity baseline 2026-10-08
-    root: Path, transcript: Path | None = None, agent: str | None = None
-) -> int:
-    """Score a staged probe: its latest run's number against the truth, the binding, the log; write `<dir>.score.json`.
+def score(root: Path, transcript: Path | None = None, agent: str | None = None) -> int:
+    """Score a staged probe and tell it: `probe_score` reads it,
+    `write_score` keeps it as `<dir>.score.json`, `score_rows` shows it.
+    Exit 0 when the number holds and the run is bound, else 1. It
+    computed, wrote and printed in one 193-line body (audit 2026-10-27,
+    third, M4/M7)."""
+    sc, notes = probe_score(root, transcript, agent)
+    for note in notes:
+        print(f"  {note}")
+    written = write_score(root, sc)
+    rows = score_rows(sc)
+    width = max(len(k) for k, _ in rows)
+    for k, v in rows:
+        print(f"  {k:<{width}}  {v}")
+    print(
+        f"  target: one kept number under {sc.probe.target_minutes} min"
+        + (" — MISSED" if target_missed(sc) else "")
+    )
+    print(f"→ {written}")
+    return 0 if sc.number_ok and sc.bound_to else 1
 
-    `agent` names the model that drew (`fable-5.1`, `sonnet-5.5`): a cloud
+
+def probe_score(
+    root: Path, transcript: Path | None = None, agent: str | None = None
+) -> tuple[Score, list[str]]:
+    """The Score of a staged probe — its latest run's number against the
+    truth, the binding, the log, the TRANSCRIPT when given — and the notes
+    of its reading (a protocol head that does not read). Reads files,
+    writes nothing. Raises console.Refused for a transcript that does not
+    read.
+
+    AGENT names the model that drew (`fable-5.1`, `sonnet-5.5`): a cloud
     session leaves no transcript, so the operator states it and the score
     carries it — twelve score files named the model only in their file name
     (2026-10-13)."""
+    notes: list[str] = []
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics
     expected = recount(root) if probe.task == "count" else None
@@ -500,7 +527,7 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
                     else None
                 )
             except protocol_block.BlockError as exc:
-                print(f"  protocol head unreadable — {exc}")
+                notes.append(f"protocol head unreadable — {exc}")
                 frozen = None
     log = sidecar(root, "log.md")
     trace = parse_log(log.read_text(encoding="utf-8")) if log.is_file() else None
@@ -532,10 +559,39 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
         audit_failed=len(failed),
         audit_unproven=sum(f.cause == "unproven" for f in failed),
     )
-    sidecar(root, "score.json").write_text(
-        json.dumps(asdict(sc), indent=1), encoding="utf-8"
+    return sc, notes
+
+
+def write_score(root: Path, sc: Score) -> Path:
+    """Write SC as the probe's `<dir>.score.json`; returns its path."""
+    path = sidecar(root, "score.json")
+    path.write_text(json.dumps(asdict(sc), indent=1), encoding="utf-8")
+    return path
+
+
+def target_missed(sc: Score) -> bool:
+    """Did the probe's log span, its silences taken off, exceed the
+    probe's target minutes? False without a log or a span."""
+    trace = sc.log
+    return (
+        trace is not None
+        and trace.wall_seconds is not None
+        and trace.wall_seconds - trace.gap_seconds > sc.probe.target_minutes * 60
     )
 
+
+def score_rows(sc: Score) -> list[tuple[str, str]]:
+    """SC as (label, value) rows, in the order `score` shows them: the
+    number and its binding, then the log, the protocol's form and the
+    transcript where each was read."""
+    probe, number, expected = sc.probe, sc.number, sc.expected
+    null_reported, bound_to, frozen, tier = (
+        sc.null_reported,
+        sc.bound_to,
+        sc.frozen,
+        sc.repeat_cost,
+    )
+    trace, form, measured, agent = sc.log, sc.form, sc.transcript, sc.agent
     rows = [
         ("agent", agent or "not stated (--agent)"),
         ("labkit in probe", probe.labkit_installed),
@@ -641,17 +697,4 @@ def score(  # noqa: C901 complexity baseline 2026-10-08
                 ),
             ),
         ]
-    width = max(len(k) for k, _ in rows)
-    for k, v in rows:
-        print(f"  {k:<{width}}  {v}")
-    over = (
-        trace is not None
-        and trace.wall_seconds is not None
-        and trace.wall_seconds - trace.gap_seconds > probe.target_minutes * 60
-    )
-    print(
-        f"  target: one kept number under {probe.target_minutes} min"
-        + (" — MISSED" if over else "")
-    )
-    print(f"→ {sidecar(root, 'score.json')}")
-    return 0 if sc.number_ok and bound_to else 1
+    return rows

@@ -174,6 +174,22 @@ class ScoreVerdict(unittest.TestCase):
                 rc = usability_score.score(root, agent=agent)
             return rc, json.loads(usability.sidecar(root, "score.json").read_text())
 
+    def test_reading_the_score_writes_nothing(self):
+        # score computed, wrote and printed in one body; the reading is its
+        # own step now (audit 2026-10-27, third, M4/M7)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "probe"
+            root.mkdir()
+            usability.plant_fixture(root)
+            _probe(root, {"mean_docs_per_case": 3.5})
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                sc, notes = usability_score.probe_score(root, agent="fable-5.1")
+            self.assertEqual((out.getvalue(), notes), ("", []))
+            self.assertFalse(usability.sidecar(root, "score.json").exists())
+            rows = dict(usability_score.score_rows(sc))
+            self.assertEqual(rows["agent"], "fable-5.1")
+            self.assertEqual(rows["bound to"], "PROTOCOL-docs-per-case.md")
+
     def test_the_score_carries_the_agent_the_operator_names(self):
         _, sc = self._score({"mean_docs_per_case": 3.5}, agent="fable-5.1")
         self.assertEqual(sc["agent"], "fable-5.1")

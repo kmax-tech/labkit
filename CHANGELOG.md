@@ -1113,6 +1113,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **`usability score` reads, writes and shows in three steps.** One
+  193-line body computed the score, wrote `<dir>.score.json` and printed
+  it; `probe_score` reads (writes nothing), `write_score` keeps it,
+  `score_rows` gives the rows `score` prints. Audit 2026-10-27 (third),
+  M4, M7.
 - **One journaled model call and one refusal list for the reviewers.**
   The decision review and the report review each wrote the attempt, the
   call, the kept answer and the token line, and each listed its own
