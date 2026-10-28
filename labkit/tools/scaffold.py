@@ -1242,8 +1242,8 @@ def _first_steps(
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
     if ln.cut == standard_contract.LOW_CUT:
         return _low_steps(ln, sk, protocol, fields, kind, code_check)
-    # repeat_cost, not "lane": a lane is a scored lane of the run
-    # (registered, null) everywhere else (audit 2026-10-27, third, I12)
+    # the key the head carries, `repeat_cost`, rather than "lane": the
+    # reader fills the head, not `standard_contract.lane` (I12)
     title = f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report'
     if sk is standard_contract.COMPUTE:
         return title + " — a computation, the run is the instrument check", [

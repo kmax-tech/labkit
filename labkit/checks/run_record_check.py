@@ -7,7 +7,8 @@ tracked in git (`provenance_findings`), a model that answered named in
 the record (`model_provenance_gap`), a single draw where a model was
 asked (`single_draw`), every JSONL row held to the runs that wrote it
 (`row_provenance_findings`), every arm the protocol names present
-(`arm_findings`). Each returns findings; finalize's stations decide
+(`arm_findings`), a null lane that moved in the kept rows
+(`null_lane_findings`). Each returns findings; finalize's stations decide
 their grade. Read-only.
 """
 

@@ -271,7 +271,7 @@ claude-hook sessions [--run RUN_ID] # session records
 labkit-check [REPO] [--offline]     # report pin, installation and hook drift
 notes-check PATH                   # check measurement-note declarations
 labkit-calltree [--depth N] [--out FILE] COMMAND [-- ARGS] # inspect calls
-usability stage|log|score|trace     # prepare and measure an agent's workflow (--task count|judge|fit, fit with --data)
+usability stage|log|score|trace     # prepare and measure an agent's workflow (--task count|judge|fit|compute-hrv|fit-assay|apply-screen, fit with --data)
 usability reader|read-score|glance|glance-score|terms # protocol reading probes
 usability nav|nav-score|human       # code navigation probes
 ```

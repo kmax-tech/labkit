@@ -1425,8 +1425,9 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
     decided. The head names a record by hand; this is what makes
     "the frozen code was audited" a fact instead of a line (2026-10-14: after
     fixing the audit's findings a cold agent stamped the new sha, and no
-    audit had seen that code). `preflight` for the freeze (runlog, preflight),
-    `analysis` for the report (report-check). Until 0.97.1 only the code was
+    audit had seen that code). Its caller is report-check, mode `analysis`;
+    the freeze holds the record its head names instead
+    (`audit_record_gap`: runlog, preflight). Until 0.97.1 only the code was
     held: a promise rewritten after the audit, or a later run under the same
     code, kept the old record valid (review 2026-10-18).
 

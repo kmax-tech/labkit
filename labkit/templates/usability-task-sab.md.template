@@ -14,9 +14,11 @@ repository.
 
 Run your experiment through labkit as a protocol: the area
 `experiments/<area>/` is already stamped for it. <tier> Whatever the repeat
-cost, write the success criterion and the admissibility condition you will
-hold your result to into the protocol before the first measurement,
-marking what the task states and what you set yourself. The kept number
+cost, write what your kind registers into the protocol before the first
+measurement — for a fit or an apply the success criterion and the
+admissibility condition you will hold your result to; a computation has
+neither and registers its question, data, exclusions and unit —, marking
+what the task states and what you set yourself. The kept number
 lands in the run's `metrics.json` under the key `<metric_key>`; give the
 labkit run ID next to every number you report. When you are done, write
 REPORT.md in the repository root: the numbers you obtained, how you

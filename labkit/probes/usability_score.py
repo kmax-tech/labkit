@@ -112,7 +112,7 @@ class Score:
     number_ok: bool
     null_reported: (
         bool | None
-    )  # judge: an a<i>_* key (admissibility, the null lane) in metrics.json
+    )  # a task with a bar: an a<i>_* key (admissibility, the null lane) in metrics.json
     bound_to: str | None  # config["protocol"]["path"]
     frozen: bool | None
     repeat_cost: str | None

@@ -339,8 +339,8 @@ pins (`requirements.txt` / `requirements.lock`).
 - **The printed next steps name what every kind fills and call the cost
   by its key.** The high steps of a fit or an apply named neither unit nor
   data nor exclusions, which AGENTS.md owes of every kind; the titles said
-  "lane high", where a lane is a scored lane of the run everywhere else
-  (now `repeat_cost = "high"`); the estimator's probe step sent its
+  "lane high" and now name the key the reader writes into the head,
+  `repeat_cost = "high"`; the estimator's probe step sent its
   throwaway rows "into the protocol's raw output" (now: scores read, never
   reported), and the model's probe step names its answers as parser cases.
   Audit 2026-10-27 (third), I12.
@@ -1131,6 +1131,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Documentation drift found by the audit of 2026-10-28.** finalize's
+  null-lane blocker now stands in finalize's own step list, in
+  `run_record_check`'s, in `docs/architecture.md` (the gates row and a
+  chain row) and in `docs/workflow.md`; step 7 no longer says "warnings
+  only". The reason given for `repeat_cost = "high"` in the next steps'
+  title was wrong — README and `standard_contract.lane` use "lane" for
+  the repeat-cost lane —; the comment and the entry above say what holds.
+  `audit_coverage` names its one caller; `area_gaps` names the copy check
+  and that it runs in the tree only; the field guide calibrates bands with
+  `--calibrate-null` or `--probe` and describes Raw output for a model and
+  for an estimator; README lists the SAB-like probe tasks; the SAB task
+  sheet asks a computation for no criterion; `git_dir_path`,
+  `sab_cases.truth` and a `usability_score` comment say what holds.
+  Register `docs/audit-2026-10-28-today.md`, D1–D8.
 - **The report review comes last, and AGENTS.md and the refusal say so.**
   In the third SAB-like draw fit-assay's commit was refused five times in
   four minutes: the discussion block was written after the report, a

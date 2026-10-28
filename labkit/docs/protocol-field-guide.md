@@ -384,8 +384,9 @@ scattered in output files nobody can interpret.
   ```text
   - **Recorded results:** C1 met · recorded: c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
-- **Raw output:** one real prompt+answer pair per finding, read from the
-  run's kept output after the run — never `--probe`'s, which is thrown
+- **Raw output:** one real output per finding — a prompt+answer pair, or
+  an estimator's registered and null row —, read from the run's kept
+  output after the run — never `--probe`'s, which is thrown
   away. Owed only with a model; without one the stamp leaves it out.
 - **Interpretation / next step:** one sentence; keep instrument findings
   apart from findings about the subject.
@@ -516,8 +517,9 @@ scattered in output files nobody can interpret.
 - **Validation †:** anchor items, second model or self-consistency, cross-check.
 - **Noise ceiling → threshold †:** measure repetition spread; the threshold
   comes from the null condition of THIS run. Calibrate bands on the null
-  lane or on a subset (`--probe`), never on the registered lane over all
-  items before the freeze: a registered number seen before `frozen = true`
+  lane, never on the registered lane over all items before the freeze —
+  at apply `--calibrate-null` (permutations of the gold, predictions
+  fixed), at high repeat cost `--probe` over a few seeds: a registered number seen before `frozen = true`
   makes the freeze empty, and the prediction for the follow-up run a
   reading. Where it happened anyway, it stands here with the numbers and
   the seeds (Sonnet v3 t3 and t5, 2026-10-16, wrote it under Randomness

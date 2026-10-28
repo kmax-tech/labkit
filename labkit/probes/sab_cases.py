@@ -423,8 +423,8 @@ def truth(root: Path, task: str) -> float | None:
     """The kept number's true value — regenerated from the seed, never read
     from a file the agent could write; None for the fit (a fitted model's
     validation score has no single true value). apply-screen's `c1_score` is
-    the agreement when the skeleton's SCORE is accuracy; another SCORE shows
-    as a wrong number — a finding about the attempt, not the harness."""
+    the agreement when the skeleton's SCORE is accuracy; another SCORE is
+    named by `meaning_gap`, not taken for a wrong number."""
     del root  # the truth depends on the seed alone; the probe directory is not read
     if task == "compute-hrv":
         return hrv_truth()["rmssd_ms"]

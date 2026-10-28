@@ -39,6 +39,11 @@ each step's condition):
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
                     was 31 of 171 audit findings)
+     null lane      an output the run kept with a registered and a null
+                    lane: the null answers otherwise on some item, gold
+                    included — a blocker (`null_lane_findings`, LAB-034
+                    Null condition in the same run); without both lanes, a
+                    note
   8. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
@@ -471,7 +476,8 @@ def finalize_area(
        stamped `<…>` placeholders left in the area's README.
     5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
-    7. criterion n — only with a run; warnings only.
+    7. criterion n and the null lane — only with a run; criterion n
+       warns, a null lane that did not move blocks.
     8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
 
     A blocker never stops a step: all of them run, then the summary lists

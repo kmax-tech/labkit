@@ -737,8 +737,8 @@ def git_dir_path(repo: Path, name: str, *, common: bool = False) -> Path | None:
     """NAME inside REPO's git directory — this worktree's own (each worktree
     has its own HEAD), or with COMMON the main repository's, which every
     worktree shares —; None outside a repository git takes. Local, never
-    committed: where labkit keeps the audit locks, the stop base and the
-    session log."""
+    committed: where labkit keeps the audit locks, the stop base, the
+    session log and the attempt journals' copies (`attempts.journal_copy`)."""
     r = git_run(["rev-parse", "--git-common-dir" if common else "--git-dir"], repo)
     if r.returncode != 0:
         return None
