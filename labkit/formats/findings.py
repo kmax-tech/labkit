@@ -1130,6 +1130,25 @@ def _decision_lines(
     return at if {"status", "reason"} <= set(at) else None
 
 
+def without_decisions(text: str) -> str | None:
+    """TEXT, a record's, with every finding's decision lines removed —
+    `status`, `reason` and `effect`, a multi-line value whole: what
+    `write_decision` keeps byte for byte. Two versions of one record whose
+    results are equal differ in decisions alone (`evidence.changes`). None
+    when a finding lacks the status and reason lines labkit-audit writes,
+    or a multi-line value never closes. Pure."""
+    lines = text.splitlines(keepends=True)
+    count = sum(1 for line in lines if _FINDING_HEADER.match(line))
+    dropped: set[int] = set()
+    for n in range(1, count + 1):
+        at = _decision_lines(lines, n)
+        if at is None:
+            return None
+        for first, end, _, _ in at.values():
+            dropped.update(range(first, end))
+    return "".join(line for i, line in enumerate(lines) if i not in dropped)
+
+
 def write_decision(
     path: Path, n: int, status: str, reason: str, effect: str = ""
 ) -> Record:
@@ -1288,7 +1307,7 @@ def written_order(path: Path) -> tuple[str, int, str]:
     return (m.group(1), int(m.group("n") or 1), path.name)
 
 
-def _is_record_name(name: str) -> bool:
+def is_record_name(name: str) -> bool:
     """Whether a file directly in `audits/` named NAME is a record of
     findings: TOML, neither a failed attempt nor a decision review."""
     return (
@@ -1323,14 +1342,12 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
         held = None if root is None else files_at(root, folder, INDEX_REV)
         if root is None or held is None:
             return RecordStatus([], [f"{folder}: no git repository holds its index"])
-        paths = [
-            folder / rel for rel in held if "/" not in rel and _is_record_name(rel)
-        ]
+        paths = [folder / rel for rel in held if "/" not in rel and is_record_name(rel)]
         names = {p.name for p in paths}
         left = sorted(
             p
             for p in folder.glob("*.toml")
-            if _is_record_name(p.name) and p.name not in names
+            if is_record_name(p.name) and p.name not in names
         )
         if left:
             errors.append(
@@ -1339,7 +1356,7 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
                 f"(`git add {' '.join(shlex.quote(shown(p, Path.cwd())) for p in left)}`)"
             )
     else:
-        paths = [p for p in folder.glob("*.toml") if _is_record_name(p.name)]
+        paths = [p for p in folder.glob("*.toml") if is_record_name(p.name)]
     records: list[Record] = []
     order: dict[Path, tuple[str, int, str]] = {}
     for path in sorted(paths):

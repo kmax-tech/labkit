@@ -142,6 +142,7 @@ from types import FrameType
 from labkit.formats import (
     attempts,
     console,
+    evidence,
     files,
     findings,
     jsonl,
@@ -735,12 +736,18 @@ class SessionCommits(NamedTuple):
     gone or off HEAD's line), UNCHECKED when commits of the session may be
     among none of those paths — then the stop's base must not move past
     them, or no later stop would ever check them — and HOLD when no check
-    of them could run at all: a check that cannot run is not clean."""
+    of them could run at all: a check that cannot run is not clean. SINCE
+    is the commit the session's commits come after ("" from the first
+    commit; None when none are told), STARTED when the session began —
+    its stop base kept, else its transcript's first record; None unknown
+    (`session_evidence` reads both)."""
 
     paths: list[Path]
     note: str
     unchecked: bool = False
     hold: bool = False
+    since: str | None = None
+    started: datetime | None = None
 
 
 def committed_in_session(repo: Path, event: dict) -> SessionCommits:
@@ -755,11 +762,17 @@ def committed_in_session(repo: Path, event: dict) -> SessionCommits:
     if path is None or not path.is_file():
         return committed_since_transcript(repo, event)
     base = path.read_text(encoding="utf-8").strip()
+    # the base is kept before the session's first Bash command
+    began = datetime.fromtimestamp(path.stat().st_mtime)
     if not base:
-        return SessionCommits(paths_committed_since(repo, ""), "")
+        return SessionCommits(
+            paths_committed_since(repo, ""), "", since="", started=began
+        )
     start = fork_point(repo, base)
     if start == base:
-        return SessionCommits(paths_committed_since(repo, base), "")
+        return SessionCommits(
+            paths_committed_since(repo, base), "", since=base, started=began
+        )
     if start is None:
         return SessionCommits(
             [],
@@ -767,12 +780,16 @@ def committed_in_session(repo: Path, event: dict) -> SessionCommits:
             f"shares no commit with it — the commits of this session are not "
             f"checked here, and the base stays; the commit gate still holds",
             unchecked=True,
+            since=None,
+            started=began,
         )
     return SessionCommits(
         paths_committed_since(repo, start),
         f"the session's stop base {base[:12]} is no ancestor of HEAD (rebase "
         f"or reset) — the commits since {start[:12]}, the newest shared one, "
         f"are checked",
+        since=start,
+        started=began,
     )
 
 
@@ -798,10 +815,12 @@ def committed_since_transcript(repo: Path, event: dict) -> SessionCommits:
             "them), then any Bash command keeps a stop base for the next stop",
             unchecked=True,
             hold=True,
+            since=None,
+            started=None,
         )
     base = head_before(repo, start)
     if base is None or base == head_sha(repo):
-        return SessionCommits([], "")
+        return SessionCommits([], "", since=None, started=start)
     return SessionCommits(
         paths_committed_since(repo, base),
         (
@@ -810,6 +829,8 @@ def committed_since_transcript(repo: Path, event: dict) -> SessionCommits:
             f"dated since the transcript began ({start:%Y-%m-%d %H:%M:%S}) are "
             f"checked instead, since {base[:12] or 'the first commit'}"
         ),
+        since=base,
+        started=start,
     )
 
 
@@ -940,11 +961,11 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     state = undecided_state(repo, changed)
     for line in state.acknowledged:
         print(f"claude-hook stop: {line}", file=sys.stderr)
-    undecided = state.blockers
+    undecided = state.blockers + session_evidence(repo, changed, session)
     if undecided:
         print(
             "an audit of an area this session worked in found BLOCKER(s) nobody "
-            "decided, or audit evidence is gone or does not read — "
+            "decided, or evidence is gone, changed or does not read — "
             f"{UNDECIDED_WAY}; a number measured past them cannot be reported, "
             "and a commit would be refused the same way "
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
@@ -974,15 +995,40 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     )
 
 
+def session_evidence(
+    repo: Path, paths: list[Path], session: SessionCommits
+) -> list[str]:
+    """What the session's own commits did to evidence and the tree has not
+    undone: per area PATHS touch, every change a commit since
+    `session.since` made against its parent (`evidence.commit_changes`, as
+    `<area>: <sentence>`) — the pre-commit's rule for a commit past it —,
+    and every closed run a commit HEAD's reflog held since `session.started`
+    left behind (`evidence.orphaned_runs`, named by its own path). Nothing
+    where the session cannot be told: `committed_in_session` says so and
+    holds there itself."""
+    out: list[str] = []
+    if session.since is not None:
+        for area in areas_touched(paths, repo):
+            shown_area = area.relative_to(repo.resolve()).as_posix()
+            out += [
+                f"{shown_area}: {line}"
+                for line in evidence.commit_changes(area, session.since)
+            ]
+    if session.started is not None:
+        out += evidence.orphaned_runs(repo, session.started)
+    return out
+
+
 #: the way out the stop and the pre-commit print for `undecided_blockers`
 UNDECIDED_WAY = (
     f"decide each BLOCKER ({findings.DECIDED_LIST}; accepted, deferred and "
     "dismissed owe a reason) with the `--decide` command `labkit-audit <AREA> "
     "--findings` prints for it (AREA: the path each line starts with), never by "
-    "rewriting the record; restore evidence that is gone; when the area cannot "
+    "rewriting the record; restore evidence that is gone or changed (a line "
+    "that names its `git checkout` restores from git); when the area cannot "
     "be finished, hand it over with the `protocol-fill <PROTOCOL> --handover` "
     "command `--findings` prints (it acknowledges the loss at the stop and the "
-    "commit only, never an open BLOCKER)"
+    "commit only, never an open BLOCKER nor a change git can undo)"
 )
 
 
@@ -1028,7 +1074,10 @@ def undecided_state(
     BLOCKERs. At commit, its audit evidence must also match the working
     tree, so new unstaged evidence cannot borrow an earlier
     acknowledgement. Where the gaps stand and a handover record of the area
-    does not count, a line per record says why (`handovers.mismatch`)."""
+    does not count, a line per record says why (`handovers.mismatch`).
+    Evidence changed against HEAD in that state, or ignored by git
+    (`evidence.changes`, `evidence.ignored`), holds as well, and no
+    handover acknowledges it: a restore from git undoes it."""
     out: list[str] = []
     acknowledged: list[str] = []
     for area in areas_touched(paths, repo):
@@ -1050,6 +1099,9 @@ def undecided_state(
                 for name, why in handed_over.refused.items()
             ]
         out += [f"{shown}: {u.line}" for u in findings.open_blockers(state.records)]
+        # undone from git, so never a handover's to acknowledge
+        changed = evidence.changes(area, staged=staged) + evidence.ignored(area)
+        out += [f"{shown}: {line}" for line in changed]
     return Undecided(out, acknowledged)
 
 
@@ -1078,7 +1130,7 @@ def undecided(argv: list[str]) -> int:
         return 0
     print(
         "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided "
-        "in the index, or audit evidence is gone or does not read — "
+        "in the index, or evidence is gone, changed or does not read — "
         f"{UNDECIDED_WAY}; stage the decided record (the commit carries the "
         "decision the index holds) "
         "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(lines)

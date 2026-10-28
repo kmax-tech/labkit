@@ -9,6 +9,27 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Committed evidence stays as written: the stop and the commit hold a
+  change git can undo.** labkit noticed evidence that went missing; a
+  record rewritten in place was seen only where the rewrite broke its
+  format (ninth Haiku round, t5), and a committed run's files could change
+  under its run id. Now a record may change in its findings' decision
+  lines alone (`status`, `reason`, `effect`, as `--decide` writes them;
+  `findings.without_decisions`), another file under `audits/` never, and a
+  run committed closed (`completion.json` or `failure.json`) never; a
+  version back as labkit first committed it is no change
+  (`evidence.original`). The stop holds the tree and the commit the index
+  against HEAD (`evidence.changes`), both a file of labkit's that git
+  ignores (`evidence.ignored`), and the stop also each session commit
+  against its parent — a commit past the pre-commit — and a closed run a
+  reset or an amend left in HEAD's reflog (`evidence.commit_changes`,
+  `evidence.orphaned_runs`, `claude_hooks.session_evidence`). Every line
+  names the `git checkout` that undoes it, and no handover acknowledges
+  it. `labkit-audit <area> --findings` shows the changes first and exits 2.
+  `findings.is_record_name` is public. Note:
+  docs/notes/2026-10-28-evidence-changes.md. Migration: restore what a line
+  names; 0.103.0 is the last version that let a rewritten record or run
+  pass.
 - **Every BLOCKER names its way out, as data.** The ways past the gates
   came where an agent saw no admissible next step, and a held step that
   named its command was followed (docs/notes/2026-10-27-standard-way-out.md);
@@ -19,8 +40,8 @@ pins (`requirements.txt` / `requirements.lock`).
   takes it as a required keyword, `Findings.warn` may. Every site that
   builds a blocker passes one (`tests/test_ways_out_data.py` reads them
   all), worded where the cause is known and built from the shared command
-  builders — new: `repo.measure_command`, `ways_out.decide_way`,
-  `ways_out.record_way`, `gate.blocker`. The pure checks that fed blockers
+  builders — new: `repo.measure_command`, `findings.decide_way`,
+  `findings.record_way`, `gate.blocker`. The pure checks that fed blockers
   as sentences return findings now, the step split from the cause:
   `run_record_check.code_since_run`, `provenance_findings`,
   `row_provenance_findings`, `null_lane_findings`,

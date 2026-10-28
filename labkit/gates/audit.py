@@ -87,6 +87,7 @@ from labkit.run.llm import model_entry
 from labkit.formats import (
     attempts,
     console,
+    evidence,
     findings,
     followup,
     promises,
@@ -1524,13 +1525,16 @@ def _newest_record(area: Path) -> Path:
 
 @dataclass(frozen=True)
 class _Listing:
-    """The shown RECORDS, evidence ERRORS, HIDDEN record count and FAILED
-    calls without a completed audit of their mode, code and promises."""
+    """The shown RECORDS, evidence ERRORS, HIDDEN record count, FAILED
+    calls without a completed audit of their mode, code and promises, and
+    the evidence CHANGED against git (`evidence.changes`,
+    `evidence.ignored`) — undone by a restore, never by a handover."""
 
     records: list[findings.Record]
     errors: list[str]
     hidden: int
     failed: tuple[findings.Failed, ...] = ()
+    changed: tuple[str, ...] = ()
 
 
 def _recovery_records(area: Path, record: Path | None) -> _Listing:
@@ -1543,11 +1547,13 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     """
     state = attempts.area_integrity(area)
     errors = list(state.problems)
+    changed = (*evidence.changes(area), *evidence.ignored(area))
     if record is not None:
         try:
-            return _Listing([findings.read(record_path(area, record))], errors, 0)
+            read = findings.read(record_path(area, record))
+            return _Listing([read], errors, 0, changed=changed)
         except findings.FindingsError as exc:
-            return _Listing([], [*errors, str(exc)], 0)
+            return _Listing([], [*errors, str(exc)], 0, changed=changed)
     failed: tuple[findings.Failed, ...] = ()
     try:
         completed = {(r.mode, r.scope_sha, r.block_sha) for r in state.records}
@@ -1562,7 +1568,7 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     records = [r for r in state.records if r.path in opened]
     if state.records and state.records[-1] not in records:
         records.append(state.records[-1])
-    return _Listing(records, errors, len(state.records) - len(records), failed)
+    return _Listing(records, errors, len(state.records) - len(records), failed, changed)
 
 
 def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> int:
@@ -1580,12 +1586,19 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
         exit 0   nothing failed: the decisions shown are all there is
         exit 2   no audit record and no attempt (refused, nothing to
                  decide); an evidence error of the area (also with
-                 RECORD); a failed call no completed audit covers
+                 RECORD); a failed call no completed audit covers;
+                 evidence changed against git (`evidence.changes`,
+                 `evidence.ignored`, shown first with its restore — a
+                 handover does not settle it)
     """
     listing = _recovery_records(area, record)
     records, errors = listing.records, listing.errors
-    failed = listing.failed
+    failed, changed = listing.failed, listing.changed
+    for line in changed:
+        print(f"evidence changed: {line}")
     if not records and not errors and not failed:
+        if changed:
+            return 2
         console.refuse(
             "labkit-audit",
             f"{area}: no audit record yet — nothing to decide; the area's "
@@ -1593,14 +1606,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
             "AGENTS.md name the next step",
         )
         return 2
-    for error in dict.fromkeys(errors):
-        print(f"audit evidence incomplete: {error}")
-    for attempt in failed:
-        print(
-            f"audit did not complete: {attempt.path.name} ({attempt.mode}, "
-            f"{attempt.model}): {attempt.error} — no findings to decide; "
-            "the failed call approves no result"
-        )
+    _print_problems(errors, failed)
     blockers: list[findings.OpenFinding] = []
     for rec in records:
         for line in decision_lines(rec, area, "", protocol):
@@ -1612,7 +1618,29 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
             "shown — `--record FILE` shows one"
         )
     if not blockers and not errors and not failed:
-        return 0
+        return 2 if changed else 0
+    _print_handover_steps(area, blockers, protocol)
+    return 2 if errors or failed or changed else 0
+
+
+def _print_problems(errors: list[str], failed: tuple[findings.Failed, ...]) -> None:
+    """`--findings`' lines for the area's evidence ERRORS, each once, and
+    for the FAILED calls no completed audit covers."""
+    for error in dict.fromkeys(errors):
+        print(f"audit evidence incomplete: {error}")
+    for attempt in failed:
+        print(
+            f"audit did not complete: {attempt.path.name} ({attempt.mode}, "
+            f"{attempt.model}): {attempt.error} — no findings to decide; "
+            "the failed call approves no result"
+        )
+
+
+def _print_handover_steps(
+    area: Path, blockers: list[findings.OpenFinding], protocol: Path | None
+) -> None:
+    """`--findings`' way to end AREA unresolved: decide each open BLOCKER
+    `deferred` (step 1), then the handover command per protocol (step 2)."""
     print(
         "if the area cannot be finished, hand it over unresolved (no model call; "
         "it records the loss and approves no result):"
@@ -1631,7 +1659,6 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     step = "2. " if blockers else ""
     for chosen in selected:
         print(f"  {step}hand over: {handover_command(chosen)}")
-    return 2 if errors or failed else 0
 
 
 def _decide(
