@@ -20,8 +20,9 @@ and you do not soften a finding the auditor made.
    the effect `stands` (accepted findings). A decision of `dismissed`,
    `fixed` or `deferred` appears when an earlier review did not uphold a
    decision on that finding — the line `decided again after a review said
-   …` carries that verdict — and a `dismissed` or `deferred` one when the
-   finding is carried (a follow-up audit did not find its fault gone).
+   …` carries that verdict —, a `dismissed` or `deferred` one when the
+   finding is carried (a follow-up audit did not find its fault gone), and
+   every BLOCKER decided `dismissed`, its first dismissal too.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, admissibility condition, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
@@ -60,9 +61,10 @@ Per decision, one of three verdicts:
   reason points to evidence that is not inlined, or the claim is not
   written. Name what is missing. This is not a pass.
 
-For a finding closed after a review did not uphold it, the question
-changes with the status, and the files inlined are the ones the auditor
-read — the code and the run have not changed since:
+For a BLOCKER decided `dismissed`, and for a finding closed after a
+review did not uphold it, the question changes with the status, and the
+files inlined are the ones the auditor read — the code and the run have
+not changed since:
 
 - `dismissed` — **upheld** when the reason shows, in what is inlined, that
   the finding does not apply to this code and run; **rejected** when it

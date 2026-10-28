@@ -1388,7 +1388,9 @@ Notiert, nicht geplant:
    im berichteten Zustand erstmals `dismissed` entschiedener BLOCKER gibt
    die Übernahme ohne Zweitprüfer frei. Entscheidung offen: soll eine
    erste Verwerfung eines BLOCKERs eine Zweitprüfung schulden? Noch ohne
-   Logbeleg eines Missbrauchs.
+   Logbeleg eines Missbrauchs. Entschieden: ja, als neue Designanforderung
+   — ein BLOCKER `dismissed` schuldet einen Zweitprüfer, eine WARNING
+   nicht (`findings.dismissed_blocker`, Breaking).
    Leseprobe (`docs/usability/2026-10-28-haiku-decision-reading.md`):
    drei Haiku-Leser wählen an den vier Logstellen den richtigen Schritt
    — Rückzug vor dem nächsten Audit, `fixed` erst nach der Reparatur,

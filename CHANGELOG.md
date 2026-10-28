@@ -9,6 +9,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A BLOCKER decided `dismissed` owes a decision review, its first
+  dismissal too.** Until now a BLOCKER dismissed in the record of the
+  state reported released the number on its reason alone; a review was
+  owed only after a review had not upheld a decision on it, or for a
+  carried finding. Decided by the author as a design requirement (no log
+  showed misuse): the deciding agent's own decision does not release a
+  blocking finding. report-check holds such a BLOCKER until `labkit-audit
+  <area> --review --record <record>` upholds that the reason shows it does
+  not apply to the code and run as audited (`findings.dismissed_blocker`,
+  read by `decision_review.reviewable` and `report_check.review_findings`).
+  A dismissed WARNING owes none. Areas with a BLOCKER dismissed in the
+  state reported are held until reviewed; 0.103.0 is the last version that
+  releases them without one.
+
 - **`protocol-fill --from-run --force` no longer replaces a declared
   result.** A `[result]` naming another run is refused, `--force` or not.
   The declaration is withdrawn (`protocol-fill PROTOCOL --withdraw --why

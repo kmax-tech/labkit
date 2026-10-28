@@ -634,6 +634,18 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
     return None
 
 
+def dismissed_blocker(f: Finding) -> bool:
+    """Is F a BLOCKER decided `dismissed`? Its first dismissal owes a
+    decision review before the number leaves: the deciding agent's own
+    decision would otherwise release a blocking finding, and a second
+    auditor judges whether it does not apply to the code and run as
+    audited. A WARNING's dismissal owes none. The one rule the gate
+    (`report_check.review_findings`) and the review
+    (`decision_review.reviewable`) both read; decided by the author,
+    2026-10-28, as a design requirement — no log showed misuse."""
+    return f.grade == "BLOCKER" and f.status == "dismissed"
+
+
 def carried_and_closed(f: Finding) -> bool:
     """Is F a carried finding (`carries`: a follow-up did not find its fault
     gone) closed `dismissed` or `deferred` (CARRIED_CLOSING)? Such a

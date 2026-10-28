@@ -788,14 +788,30 @@ class Withdraw(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertNotIn("withdraw the declaration first", out)
 
-    # -- what holds a BLOCKER dismissed in the state reported (observed, not a rule)
-    def test_a_first_dismissal_in_the_state_reported_is_not_reviewed(self):
-        """OBSERVED: a BLOCKER decided `dismissed` with a reason in the
-        record of the state reported releases the adoption without a second
-        auditor — `decision_review.reviewable` takes a dismissal only after a
-        review did not uphold it, or of a carried finding. Whether a first
-        dismissal owes a review is an open decision (TODO 15); this test
-        holds today's rule so that a change of it is a decision, not a slip."""
+    # -- a dismissed BLOCKER owes a second auditor; a dismissed WARNING does not
+    def review(self, record: Path, verdict: str) -> tuple[int, str]:
+        """`labkit-audit AREA --review --record RECORD`, the model faked to
+        VERDICT the one decision under review."""
+        answer = (
+            f"DECISION #1 · {verdict} · visible() skips dotfiles at :12\n"
+            f"verdict: {int(verdict == 'upheld')} upheld, "
+            f"{int(verdict == 'rejected')} rejected, 0 insufficient\n"
+        )
+        out = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", lambda *a, **k: answer),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(out),
+        ):
+            rc = audit.main([str(self.area), "--review", "--record", str(record)])
+        return rc, out.getvalue()
+
+    def test_a_dismissed_blocker_is_held_until_a_second_auditor_upholds_it(self):
+        """The deciding agent's own `dismissed` does not release a blocking
+        finding, its first dismissal too (decided 2026-10-28; until then it
+        released the number on its reason alone). The twin: a review that
+        upholds it releases the adoption."""
         run_a = self.measure()
         rc, out, _ = self.analysis(
             "BLOCKER · scripts/01_measure.py:1 · hidden files are counted · the mean "
@@ -803,11 +819,33 @@ class Withdraw(unittest.TestCase):
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         self.assertEqual(rc, 1, out)
-        assert self.record is not None
-        self.decide(self.record, 1, "dismissed", "visible() skips hidden files at :40")
+        record = self.record
+        assert record is not None
+        self.decide(record, 1, "dismissed", "visible() skips hidden files at :12")
+        self.lab.fill(
+            self.protocol, "Conclusion=Three documents hold 3.0 lines on average."
+        )
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"{record.stem} #1: `dismissed` on a BLOCKER", out)
+        self.assertIn("--review", out)
+        rc, out = self.review(record, "upheld")
+        self.assertEqual(rc, 0, out)
         rc, out = self.lab.adopt(self.protocol, run_a)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("--review", out)
+
+    def test_a_dismissed_warning_owes_no_review(self):
+        run_a = self.measure()
+        rc, out, _ = self.analysis(
+            "WARNING · scripts/01_measure.py:1 · hidden files might be counted · the "
+            "mean · LAB-050 Analysis audit before reporting · check visible()\n"
+            "verdict: 0 blockers, 1 warnings, 0 notes"
+        )
+        record = self.record
+        assert record is not None
+        self.decide(record, 1, "dismissed", "visible() skips hidden files at :12")
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 0, out)
 
     # -- a withdrawal releases nothing
     def test_a_withdrawal_releases_nothing(self):
@@ -1090,13 +1128,19 @@ class Judge(unittest.TestCase):
         # but `fixed` in the state audited: no follow-up has seen a repair, the
         # code is the audited code — report-check holds it (fixed-followup
         # pilots, 2026-10-26); the twin, the finding dismissed as not applying
-        # to this state, passes
+        # to this state, passes once a second auditor upholds the dismissal
+        # (a dismissed BLOCKER owes a review, 2026-10-28)
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)
         self.assertIn("decided `fixed` in the state audited", out)
         rc, out = self._decide(
             record, "dismissed", "the gold codes the prompt's three cases after all"
         )
+        self.assertEqual(rc, 0, out)
+        rc, out = self._report_check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("`dismissed` on a BLOCKER not reviewed", out)
+        rc, out = self._review(record)
         self.assertEqual(rc, 0, out)
 
     def test_05_an_accepted_warning_that_names_its_effect_reaches_the_result(self):

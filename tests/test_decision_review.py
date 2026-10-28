@@ -518,11 +518,28 @@ class TheCall(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertNotIn("decision review", out)
 
-    def test_the_twin_a_dismissal_nobody_contested_owes_no_review(self):
-        """A finding dismissed without any review on it was never contested:
-        it is decided, not under review, and the gate is silent."""
+    def test_a_first_dismissal_of_a_blocker_owes_a_review(self):
+        """A BLOCKER dismissed without any review on it: the deciding
+        agent's own decision does not release it (decided 2026-10-28); a
+        review that upholds the dismissal does."""
         area, record = area_with(
             [BLOCKER], {1: ("dismissed", "the threshold is read from the config", "")}
+        )
+        code, out = gate(area)
+        self.assertEqual(code, 1, out)
+        self.assertIn("`dismissed` on a BLOCKER not reviewed", out)
+        rec = findings.read(record)
+        self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1])
+        rc, _, err, sent = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, err)
+        code, out = gate(area)
+        self.assertEqual(code, 0, out)
+
+    def test_the_twin_a_dismissed_warning_nobody_contested_owes_no_review(self):
+        """A WARNING dismissed without any review on it was never contested:
+        it is decided, not under review, and the gate is silent."""
+        area, record = area_with(
+            [WARNING], {1: ("dismissed", "the threshold is read from the config", "")}
         )
         code, out = gate(area)
         self.assertEqual(code, 0, out)

@@ -816,6 +816,39 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     evidence_kind=GUARANTEED,
                 )
             )
+        out += first_dismissals(ctx, r, found)
+    return out
+
+
+def first_dismissals(
+    ctx: Checked, r: findings.Record, found: list[reviews.Review]
+) -> list[GateFinding]:
+    """A BLOCKER of record R decided `dismissed` (`findings.dismissed_blocker`)
+    that no review among FOUND upholds — held as a BLOCKER: the deciding
+    agent's own decision would release a blocking finding. A carried one is
+    the follow-up's (`followup_findings`), one a review once did not uphold
+    the closing rule's (`review_findings`); each is held once."""
+    out: list[GateFinding] = []
+    for n, f in enumerate(r.findings, 1):
+        if (
+            not findings.dismissed_blocker(f)
+            or f.carries
+            or reviews.once_not_upheld(r, n, found) is not None
+            or reviews.upholding(r, n, found, ctx.text)
+        ):
+            continue
+        out.append(
+            GateFinding(
+                BLOCKER,
+                f"audit {r.path.stem} #{n}: `dismissed` on a BLOCKER "
+                f"{reviews.state(r, n, found, ctx.text)} — a blocking finding is not "
+                f"released by the deciding agent's own decision (LAB-015 Preflight "
+                f"audit before freezing)",
+                fix=f"{_review_step(ctx, r)} asks a second auditor whether the reason "
+                f"shows it {_closing_question('dismissed')}",
+                evidence_kind=GUARANTEED,
+            )
+        )
     return out
 
 
