@@ -1389,6 +1389,14 @@ Notiert, nicht geplant:
    die Übernahme ohne Zweitprüfer frei. Entscheidung offen: soll eine
    erste Verwerfung eines BLOCKERs eine Zweitprüfung schulden? Noch ohne
    Logbeleg eines Missbrauchs.
+   Leseprobe (`docs/usability/2026-10-28-haiku-decision-reading.md`):
+   drei Haiku-Leser wählen an den vier Logstellen den richtigen Schritt
+   — Rückzug vor dem nächsten Audit, `fixed` erst nach der Reparatur,
+   Übergabe nur bei fehlender Voraussetzung, die vier Status richtig.
+   Eine Abweichung lag im Text: die Statustabelle verlangte für jedes
+   `accepted … stands` einen Zweitprüfer, Schritt 5 nur für einen
+   BLOCKER; nachgeschärft. Offen: ob ein laufender Agent den Hinweis
+   „withdraw first“ unter sechs Blockern findet — nur ein Lauf zeigt das.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
