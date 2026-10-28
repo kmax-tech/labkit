@@ -416,7 +416,7 @@ ESTIMATOR_FIELDS = {
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
-    "Null condition / anchors (in the same run)": "<the same estimator on labels permuted inside each fitting fold · expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>",
+    "Null condition / anchors (in the same run)": "<the same estimator refitted NULL_REFITS (5) times on labels permuted inside each fitting fold · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>",
     # filled after the run from its kept rows, owed only with a model
     # (`protocol_check.not_owed`); --probe's rows are thrown away — the
     # stamp asked for them here (audit 2026-10-27, third, I11)
@@ -441,7 +441,7 @@ NO_MODEL_FIELDS = (
 ESTIMATOR_PROMISES = (
     (
         r'sentence = "<the criterion in one sentence:[^"]*"',
-        "sentence = \"<the criterion · the registered lane's out-of-fold SCORE is at least the null lane's plus margin>\"",
+        "sentence = \"<the criterion · the registered lane's out-of-fold SCORE is at least the mean of the null lane's permuted-label refits plus margin>\"",
     ),
     (
         r'sentence = "<the yield condition:[^"]*"',
@@ -450,7 +450,7 @@ ESTIMATOR_PROMISES = (
     (r"constants = \{ max_empty = 2 \}", "constants = { max_empty = 0 }"),
     (
         r'sentence = "<the null condition:[^"]*"',
-        'sentence = "<the null condition · the permuted-label lane scores within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"',
+        'sentence = "<the null condition · the mean of the permuted-label refits scores within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold>"',
     ),
     (r"constants = \{ null_band_items = 1 \}", "constants = { null_band = 0.1 }"),
 )

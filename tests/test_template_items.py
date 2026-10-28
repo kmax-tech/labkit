@@ -92,8 +92,10 @@ class Pairing(unittest.TestCase):
         m = self.estimator
         with self._predicting(short_by=0):
             rows = m.measure(m.CONFIG, self.ITEMS, self.out)
-        self.assertEqual(len(rows), 2 * 10 + 2)  # registered + null, then test
-        self.assertEqual(_lines(self.out), 2 * 10 + 2)
+        # registered, NULL_REFITS null draws, then test (the estimator here is a fit)
+        per_item = 1 + len(m.null_draws())
+        self.assertEqual(len(rows), per_item * 10 + 2)
+        self.assertEqual(_lines(self.out), per_item * 10 + 2)
 
     # -- the judge: one answer per prompt from llm.complete_many
     JOBS_FROM = [{"id": f"x{i}", "text": f"item {i}"} for i in range(5)]

@@ -1343,7 +1343,7 @@ class Exp(unittest.TestCase):
         consts = promises.all_constants(block)
         self.assertEqual(consts, {"margin": 0.25, "max_empty": 0, "null_band": 0.1})
         self.assertNotIn("null_band_items", proto)
-        self.assertIn("permuted-label lane", proto)
+        self.assertIn("the mean of the permuted-label refits", proto)
         # protocol-check reads the stamp as a clean pilot with placeholders only
         self.assertEqual(
             protocol_cuts.estimator_placeholders.__name__, "estimator_placeholders"

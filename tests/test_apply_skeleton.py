@@ -388,6 +388,56 @@ class ApplySkeleton(unittest.TestCase):
         with self.assertRaisesRegex(FileNotFoundError, "missing.model"):
             measure.predictor_digests()
 
+    def test_fit_holds_the_bar_to_the_mean_of_its_refits(self):
+        """One permuted-label refit decided a fit's verdict (fourth SAB-like
+        draw: c1_score = c1_threshold). The bar and [A2] read the mean of
+        NULL_REFITS refits, each draw kept and named; the twin: a null of one
+        unnumbered draw keeps its score as the bar."""
+        _, measure = self.measure_module("fit")
+        golds = ["pos"] * 6 + ["neg"] * 6
+        flip = {"pos": "neg", "neg": "pos"}
+        reg = [
+            measure.lane_row("registered", {"id": str(i)}, g, g)
+            for i, g in enumerate(golds)
+        ]
+
+        def draw(d, correct: int) -> list[dict]:
+            return [
+                measure.lane_row(
+                    "null", {"id": str(i)}, g if i < correct else flip[g], g, draw=d
+                )
+                for i, g in enumerate(golds)
+            ]
+
+        nulls = [draw(d, c) for d, c in enumerate((4, 5, 6, 7, 8))]
+        m = measure.evaluate_rows(reg + [r for rows in nulls for r in rows])
+        self.assertEqual(m["a2_draw_scores"], [c / 12 for c in (4, 5, 6, 7, 8)])
+        self.assertEqual(m["a2_score"], 0.5)  # the mean of 4..8 of 12
+        self.assertEqual(m["c1_threshold"], 0.5 + measure.CONFIG.margin)
+        single = [
+            measure.lane_row("null", {"id": str(i)}, g if i < 7 else flip[g], g)
+            for i, g in enumerate(golds)
+        ]
+        one = measure.evaluate_rows(reg + single)
+        self.assertNotIn("a2_draw_scores", one)
+        self.assertEqual(one["c1_threshold"], 7 / 12 + measure.CONFIG.margin)
+
+    def test_the_fit_refits_draw_different_permutations(self):
+        _, measure = self.measure_module("fit")
+        seen: list[list] = []
+        instrument = mock.Mock()
+        instrument.fit.side_effect = lambda xs, ys: seen.append(list(ys))
+        instrument.predict.side_effect = lambda xs: [x[0] for x in xs]
+        with mock.patch.object(measure, "make_estimator", return_value=instrument):
+            rows = measure.fit_rows(measure.CONFIG, self.items(), probe=False)
+        per_fold = 1 + measure.NULL_REFITS
+        first_fold = seen[:per_fold]
+        permuted = first_fold[1:]
+        self.assertEqual(len({tuple(ys) for ys in permuted}), measure.NULL_REFITS)
+        nulls = [r for r in rows if r["lane"] == "null"]
+        self.assertEqual({r["draw"] for r in nulls}, set(range(measure.NULL_REFITS)))
+        self.assertEqual(len({r["id"] for r in rows}), len(rows))  # ids stay unique
+
     def test_fit_still_trains_registered_and_permuted_label_lanes(self):
         area, measure = self.measure_module("fit")
         instrument = mock.Mock()
@@ -399,7 +449,12 @@ class ApplySkeleton(unittest.TestCase):
             measure.measure(
                 measure.CONFIG, self.items(), area / "output" / "kept.jsonl"
             )
-        self.assertEqual(instrument.fit.call_count, 2 * measure.CONFIG.n_folds + 1)
+        # per fold the registered fit and NULL_REFITS permuted-label refits,
+        # then one fit on every labelled item for the test lane
+        self.assertEqual(
+            instrument.fit.call_count,
+            (1 + measure.NULL_REFITS) * measure.CONFIG.n_folds + 1,
+        )
 
 
 if __name__ == "__main__":

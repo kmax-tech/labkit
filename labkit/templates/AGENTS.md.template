@@ -130,9 +130,11 @@ what the predictions reach on average against randomly assigned labels,
 from which [C1]'s bar also starts —, and you derive the band with
 `.venv/bin/python <area>/scripts/01_measure.py --calibrate-null` before
 the commit: it scores the unchanged predictions against permuted gold by
-a rule fixed in the script and starts no run. At `fit` the null refits, so the band is a
-reasoned value, or at `high` the null's spread over a few `--seed` values
-of `--probe`. After the first measurement none of these changes; a
+a rule fixed in the script and starts no run. At `fit` the null lane
+refits five times on permuted labels (`NULL_REFITS`), and [C1]'s bar
+starts from the mean of their scores; the band is a reasoned value, or at
+`high` the spread of those refits over a few `--seed` values of
+`--probe`. After the first measurement none of these changes; a
 finding about them is decided by the ways under "When you are stuck".
 
 ### 2. Implement and test the instrument

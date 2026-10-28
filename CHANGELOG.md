@@ -1212,6 +1212,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **At fit the C1 bar is the mean of five permuted-label refits.** The
+  fit null lane was one refit on permuted labels, and its draw decided a
+  verdict (fourth SAB-like draw: fit-assay passed with `c1_score` =
+  `c1_threshold`). Decided by the author (2026-10-28): the null lane
+  refits `NULL_REFITS` = 5 times in the run, each draw seeded from the
+  run's seed, its fold and its number (`fit-null:<seed>:<fold>:<draw>`);
+  [C1]'s bar is the mean of their scores plus `margin`, [A2] holds that
+  mean within `null_band` of `chance_of()`, and the draws' scores stand in
+  metrics.json (`a2_draw_scores`). Null rows carry their `draw` and the id
+  `null:<draw>:<item>`. A fit costs five more refits per fold. Stamped fit
+  sentences, the null field, AGENTS.md and the field guide follow.
 - **At apply the C1 bar is the exact permutation expectation, not one
   draw.** The estimator skeleton passed [C1] when the registered lane
   reached the null lane plus `margin`, and at apply the null lane is one

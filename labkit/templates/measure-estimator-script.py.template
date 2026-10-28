@@ -50,9 +50,12 @@ model answers), by a rule fixed here (`NULL_PERMUTATIONS`,
 `NULL_BAND_QUANTILE`). A protocol that registers a fixed null predictor
 returns it from `make_null_predictor()` instead; its score plus `margin`
 is the bar, and [A2] holds it within `null_band` of `chance_of()`. At fit
-the null refits on permuted labels, [A2] holds it within `null_band` of
-`chance_of()`, and its spread costs refits — at high repeat cost `--probe`
-over a few `--seed` values shows it. A band changed after the first measurement is
+the null lane refits on permuted labels `NULL_REFITS` times, each draw
+seeded from the run's seed, its fold and its number: [C1]'s bar is the
+mean of their scores plus `margin`, [A2] holds that mean within
+`null_band` of `chance_of()`, and the draws' scores (`a2_draw_scores`)
+show how far one strays — one refit's draw decided a fit's verdict
+(fourth SAB-like draw: `c1_score` = `c1_threshold`). A band changed after the first measurement is
 refused (report-check). All lanes are
 recorded in the same run (LAB-034 Null condition in the same run).
 Unlabelled predictions are never scored.
@@ -65,7 +68,8 @@ Measurement contract:
     or as the mean (r2) and is counted on its own as `a1_empty`.
   - [C1] passes when the registered lane's score is at least the bar plus
     `margin`: at apply with the permuted null its exact expectation
-    (`permutation_expectation`), otherwise the null lane's score.
+    (`permutation_expectation`), at fit the mean of the `NULL_REFITS`
+    permuted-label refits, with a fixed null predictor its score.
   - [A1] checks the yield (at most `max_empty` labelled items without a
     prediction); [A2] that the null lane scores within `null_band` of its
     target — the permutation expectation at apply, chance otherwise
@@ -149,6 +153,10 @@ LANES = (*SCORED_LANES, "test")
 #: rule that turns their spread into null_band — fixed before any
 #: calibration, so the band is derived, never chosen after seeing it
 NULL_PERMUTATIONS = 200
+#: fit: how many permuted-label refits the null lane takes in the run —
+#: fixed before any run; [C1]'s bar and [A2] read their mean (null-lane
+#: decision, 2026-10-28: one refit's draw decided a verdict)
+NULL_REFITS = 5
 NULL_BAND_QUANTILE = 0.99  # null_band = this quantile of |null − permutation expectation|
 
 
@@ -215,7 +223,7 @@ class MeasureConfig:
     """
 
     margin: float               # [C1]: registered score ≥ bar + margin, in score units (apply:
-                                # the permutation expectation; else the null score)
+                                # the permutation expectation; fit: the refits' mean)
     max_empty: int              # [A1]: at most this many labelled items without a prediction
     null_band: float            # [A2]: the null lane scores within this of its target, in score units;
                                 # apply: `--calibrate-null` derives it before the registration
@@ -292,10 +300,18 @@ def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
             "seed": cfg.seed, "n_folds": cfg.n_folds, "items_sha": batch.content_sha(items)}
 
 
+def null_draws() -> list[int | None]:
+    """The draws of the null lane, as its rows number them: at fit the
+    `NULL_REFITS` refits (0, 1, …), at apply one unnumbered draw."""
+    return list(range(NULL_REFITS)) if KIND == "fit" else [None]
+
+
 def expected(items: list[dict]) -> list[dict]:
-    """The rows a complete run holds, by id: both scored lanes over the
-    labelled items, the test lane over the unlabelled ones."""
-    return ([{"id": f"{lane}:{it['id']}"} for lane in SCORED_LANES for it in labelled(items)]
+    """The rows a complete run holds, by id: the registered lane and each
+    null draw over the labelled items, the test lane over the unlabelled
+    ones."""
+    return ([{"id": f"registered:{it['id']}"} for it in labelled(items)]
+            + [{"id": row_id("null", it, d)} for d in null_draws() for it in labelled(items)]
             + [{"id": f"test:{it['id']}"} for it in unlabelled(items)])
 
 
@@ -338,11 +354,22 @@ def predict_all(predictor, part: list[dict], who: str) -> list:
     return [_plain(a) for a in answers]
 
 
-def lane_row(lane: str, it: dict, pred, gold, fold: int | None = None, **more) -> dict:
+def row_id(lane: str, it: dict, draw: int | None = None) -> str:
+    """A kept row's id: `<lane>:<item>`, `<lane>:<draw>:<item>` for a
+    numbered null draw."""
+    return f"{lane}:{it['id']}" if draw is None else f"{lane}:{draw}:{it['id']}"
+
+
+def lane_row(lane: str, it: dict, pred, gold, fold: int | None = None,
+             draw: int | None = None, **more) -> dict:
     """One kept row: item IT predicted PRED in LANE, scored against GOLD
-    (None for the test lane), with its FOLD and MORE (`gold_of`)."""
-    return {"id": f"{lane}:{it['id']}", "lane": lane, "item": it["id"],
-            "fold": fold, "pred": pred, "gold": gold, **more}
+    (None for the test lane), with its FOLD, its null DRAW (fit) and MORE
+    (`gold_of`)."""
+    row = {"id": row_id(lane, it, draw), "lane": lane, "item": it["id"],
+           "fold": fold, "pred": pred, "gold": gold, **more}
+    if draw is not None:
+        row["draw"] = draw
+    return row
 
 
 def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
@@ -376,8 +403,9 @@ def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]
 
 
 def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
-    """Out-of-fold registered/permuted-label rows and unlabelled test rows;
-    every lane fits a fresh estimator. Returns rows without writing them.
+    """Out-of-fold registered rows, `NULL_REFITS` draws of out-of-fold
+    permuted-label rows, and unlabelled test rows; every lane and draw fits
+    a fresh estimator. Returns rows without writing them.
     """
     train, test = labelled(items), unlabelled(items)
     rows: list[dict] = []
@@ -385,12 +413,14 @@ def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
         held_set = set(held)
         fit = [train[i] for i in range(len(train)) if i not in held_set]
         out_items = [train[i] for i in held]
-        for lane, permute in (("registered", None),
-                              ("null", random.Random((cfg.seed + 1) * 1000 + k))):
+        draws = [("registered", None, None)] + [
+            ("null", d, random.Random(f"fit-null:{cfg.seed}:{k}:{d}")) for d in range(NULL_REFITS)
+        ]
+        for lane, d, permute in draws:
             preds = fit_predict(cfg, fit, out_items, permute, probe)
             # strict: a fit_predict that returns fewer predictions is refused,
             # never cut to the shorter list (the missing items would vanish)
-            rows += [lane_row(lane, it, p, it[GOLD_FIELD], fold=k)
+            rows += [lane_row(lane, it, p, it[GOLD_FIELD], fold=k, draw=d)
                      for it, p in zip(out_items, preds, strict=True)]
     if test:
         preds = fit_predict(cfg, train, test, None, probe)
@@ -452,8 +482,9 @@ def calibrate_null(cfg: MeasureConfig, items: list[dict], k: int = NULL_PERMUTAT
     if KIND != "apply":
         raise ValueError(
             "calibrate_null(): kind apply only — at fit the null lane refits on permuted "
-            "labels, so its spread costs refits; at high repeat cost --probe over a few "
-            "--seed values shows it")
+            f"labels {NULL_REFITS} times in the run, and its draws' scores (a2_draw_scores) "
+            "show the spread; the band is a reasoned value, or at high repeat cost the "
+            "draws of --probe over a few --seed values")
     if make_null_predictor(cfg.seed) is not None:
         raise ValueError(
             "calibrate_null(): a fixed null predictor is registered — its spread is no "
@@ -545,7 +576,8 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     Returns every registered id's keys on every evaluation:
       a1_empty · a1_pass                 admissibility: yield of the registered lane
       a2_score · a2_target · a2_pass     admissibility: the null lane inside its band around its target
-                                         (apply, permuted null: the permutation expectation; else chance)
+                                         (apply, permuted null: the permutation expectation; else chance);
+                                         at fit a2_score is the mean of the draws, a2_draw_scores each
       c1_score · c1_threshold · c1_pass  criterion: registered lane against the bar + cfg.margin
                                          (apply, permuted null: the permutation expectation; else the null)
       n_items · n_rows · n_test          yield (→ LAB-023 No silent loss)
@@ -565,7 +597,12 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if any(r["gold"] is None for r in reg + null):
         raise ValueError("evaluate_rows(): a scored lane carries an item without gold — a withheld label is no label")
     reg_score, reg_empty = score_of(cfg, reg)
-    null_score, _ = score_of(cfg, null)
+    # numbered draws (fit): the null's score is their mean, each kept
+    draws: dict = {}
+    for r in null:
+        draws.setdefault(r.get("draw"), []).append(r)
+    draw_scores = [score_of(cfg, draws[d])[0] for d in sorted(draws, key=str)]
+    null_score = sum(draw_scores) / len(draw_scores)
     # a permuted null (its rows name the donor of their label): the bar and
     # [A2]'s target are the exact permutation expectation, the draw only the
     # anchor; a fitted or fixed null: chance is the target, its score the bar
@@ -580,6 +617,8 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
                      "a1_empty": reg_empty, "a1_pass": reg_empty <= cfg.max_empty,
                      "a2_score": float(null_score), "a2_target": float(target),
                      "a2_pass": abs(null_score - target) <= band}
+    if len(draw_scores) > 1:
+        metrics["a2_draw_scores"] = [float(s) for s in draw_scores]
     if cfg.score != "r2":
         metrics["scored_class_counts"] = scored_class_counts(reg)
     if not (metrics["a1_pass"] and metrics["a2_pass"]):
