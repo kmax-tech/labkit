@@ -56,7 +56,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import protocol_block, runs, scope_sha
+from labkit.formats import files, protocol_block, runs, scope_sha
 
 #: the letters of the promise block, and what each one is
 KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
@@ -399,6 +399,41 @@ def all_constants(block: PromiseTables) -> dict[str, int | float | str | bool]:
     for p in block.promises:
         out.update(p.constants)
     return out
+
+
+def with_constant(text: str, name: str, value: float) -> str:
+    """TEXT with the registered constant NAME set to VALUE in the one
+    `constants = { … }` line of the TOML block that holds it — every other
+    byte kept, the block read back and holding exactly VALUE. Raises
+    PromiseError when the block does not read, no table or more than one
+    line holds NAME, or the read-back differs."""
+    span = protocol_block.toml_block_span(text)
+    if span is None:
+        raise PromiseError("no ```toml block to set a constant in")
+    lines = text.split("\n")
+    pattern = re.compile(
+        rf"(\bconstants\s*=\s*\{{[^}}]*\b{re.escape(name)}\s*=\s*)[-+0-9.eE]+"
+    )
+    hits = [i for i in range(*span) if pattern.search(lines[i])]
+    if len(hits) != 1:
+        raise PromiseError(
+            f"{len(hits)} constants lines hold {name!r} — one table registers a constant"
+        )
+    lines[hits[0]] = pattern.sub(
+        lambda m: m.group(1) + repr(value), lines[hits[0]], count=1
+    )
+    new = "\n".join(lines)
+    block = parse_block(new)
+    if block is None or all_constants(block).get(name) != value:
+        raise PromiseError(f"{name} did not read back as {value!r}")
+    return new
+
+
+def write_constant(protocol: Path, name: str, value: float) -> None:
+    """PROTOCOL with the registered constant NAME set to VALUE
+    (`with_constant`), written in place. Raises PromiseError as it does."""
+    text = protocol.read_text(encoding="utf-8")
+    files.write_atomic(protocol, with_constant(text, name, value))
 
 
 def placeholder_sentences(block: PromiseTables) -> list[str]:

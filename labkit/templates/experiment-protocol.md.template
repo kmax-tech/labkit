@@ -205,9 +205,11 @@ preflight_audit = ""
 # success, chosen from the question, never from a result. `null_band`: how
 # far the null lane may stray from its target — at an apply with the
 # estimator skeleton the exact permutation expectation, from which the bar
-# also starts, and `scripts/01_measure.py --calibrate-null` derives the band
-# before the commit; elsewhere chance. After the first measurement none of
-# them changes.
+# also starts, and the band follows the rule registered beside it
+# (`null_band_quantile`, `null_permutations`): `scripts/01_measure.py
+# --calibrate-null --write` registers it before the first measurement,
+# which refuses another; elsewhere chance. After the first measurement none
+# of them changes.
 [[promise]]
 id = "C1"
 key = "c1_pass"

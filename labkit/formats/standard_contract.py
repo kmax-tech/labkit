@@ -278,7 +278,14 @@ SKELETONS = (COMPUTE, ESTIMATOR, MODEL)
 #: and the producers' their templates'. The pre-run hook lets a command
 #: carrying one pass (`claude_hooks.THROWAWAY_FLAGS`); a test holds every
 #: flag those scripts define to this list or to the run's own flags.
-NO_RUN_FLAGS = ("--show", "--probe", "--eval-only", "--audit", "--calibrate-null")
+NO_RUN_FLAGS = (
+    "--show",
+    "--probe",
+    "--eval-only",
+    "--audit",
+    "--calibrate-null",
+    "--write",
+)
 
 
 def criterion_key(sk: Skeleton) -> str:

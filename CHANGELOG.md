@@ -1600,6 +1600,27 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **At apply [A2]'s band follows a registered rule, and the first
+  measurement holds it.** In the fifth SAB-like draw the agent registered
+  `null_band = 0.05`, calibrated over 50 permutations, read 0.1276, meant
+  to change the band and committed 0.05; the fourth draw kept the stamp's
+  example. The apply stamp now registers the rule beside the band in
+  [A2]'s table (`null_band_quantile = 0.99`, `null_permutations = 200`),
+  read into the config like every constant. One function applies it
+  (`band_by_rule` in the estimator skeleton: the quantile of |null −
+  permutation expectation| over the permutations, seeded from the run's
+  seed, rounded up to two places). `--calibrate-null` uses the registered
+  rule and refuses another count; `--calibrate-null --write` registers the
+  band, before the first measurement only (`promises.write_constant`). A
+  measurement with no first measurement before it checks the band against
+  the rule before its run opens — a started measurement binds the
+  registration — and reuses the predictions; it refuses a band the rule
+  does not give and never changes it (`band_check`). After the first
+  measurement there is no check: a repair changes the predictions, while
+  the registered band stands. Without a registered rule (a fit, or a
+  reasoned band) nothing is held. The check shows that the band is what
+  the registered rule gives, not that the rule suits the question.
+
 - **The agent's decisions and ways out say when, what next and when to
   stop.** Four changes from the day's cases:
   - After an adoption, every hold names the withdrawal first in its own way

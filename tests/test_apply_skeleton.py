@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import asdict, replace
+from dataclasses import replace
+import math
+from dataclasses import asdict
 import importlib.util
 import io
 import pickle
@@ -144,16 +146,156 @@ class ApplySkeleton(unittest.TestCase):
         primary = mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
         with mock.patch.object(measure, "make_estimator", return_value=primary):
-            cal = measure.calibrate_null(measure.CONFIG, self.items(), 50)
-            again = measure.calibrate_null(measure.CONFIG, self.items(), 50)
+            cal = measure.calibrate_null(measure.CONFIG, self.items())
+            again = measure.calibrate_null(measure.CONFIG, self.items())
         primary.fit.assert_not_called()
         self.assertEqual(primary.predict.call_count, 2)  # once per calibration
-        self.assertEqual(len(cal["null_scores"]), 50)
+        # the stamp registers the rule beside the band: 0.99 over 200
+        self.assertEqual(len(cal["null_scores"]), 200)
         self.assertEqual(cal, again)  # seeded: the same band each time
         # the band is the spread around the exact permutation expectation
         off = sorted(abs(s - cal["target"]) for s in cal["null_scores"])
-        self.assertEqual(cal["band"], off[49])  # the 0.99 quantile of 50
+        self.assertEqual(
+            cal["band"], off[197]
+        )  # the 0.99 quantile of 200, its exact rank
+        self.assertEqual(cal["registered"], math.ceil(cal["band"] * 100) / 100)
         self.assertLess(cal["band"], 1 - cal["target"])  # no permutation is the truth
+
+    # -- [A2]'s band and its registered rule
+    def primary(self):
+        primary = mock.Mock()
+        primary.predict.side_effect = lambda xs: [x[0] for x in xs]
+        return primary
+
+    def test_another_count_than_the_registered_rule_is_refused(self):
+        """The fifth SAB-like draw calibrated over 50 permutations while the
+        rule said 200: with the rule registered, 50 answers another rule. The
+        twin: without a registered rule the count is free."""
+        _, measure = self.measure_module("apply")
+        with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
+            with self.assertRaisesRegex(ValueError, "null_permutations = 200"):
+                measure.calibrate_null(measure.CONFIG, self.items(), 50)
+            free = replace(
+                measure.CONFIG, null_band_quantile=None, null_permutations=None
+            )
+            self.assertEqual(
+                len(measure.calibrate_null(free, self.items(), 50)["null_scores"]), 50
+            )
+
+    def test_the_first_measurement_refuses_a_band_its_rule_does_not_give(self):
+        """The fifth draw registered 0.05 while the rule gave 0.13; the check
+        runs before the run opens (a started measurement binds the
+        registration) and never changes the band. The twin: the band the
+        rule gives passes, and its predictions are reused."""
+        _, measure = self.measure_module("apply")
+        primary = self.primary()
+        with (
+            mock.patch.object(measure, "make_estimator", return_value=primary),
+            mock.patch.object(measure, "first_measurements", return_value=[]),
+        ):
+            rule = measure.band_rule(measure.CONFIG)
+            assert rule is not None
+            golds = [it["gold"] for it in measure.labelled(self.items())]
+            preds = [it["features"][0] for it in measure.labelled(self.items())]
+            right = measure.band_by_rule(measure.CONFIG, preds, golds, *rule)[
+                "registered"
+            ]
+            wrong = replace(measure.CONFIG, null_band=right + 0.05)
+            with self.assertRaises(SystemExit) as cm:
+                measure.band_check(wrong, self.items())
+            self.assertIn(f"its registered rule gives {right}", str(cm.exception))
+            self.assertIn("--calibrate-null --write", str(cm.exception))
+            held = replace(measure.CONFIG, null_band=right)
+            self.assertEqual(measure.band_check(held, self.items()), preds)
+
+    def test_the_measurement_reuses_the_checks_predictions(self):
+        area, measure = self.measure_module("apply")
+        primary = self.primary()
+        preds = [it["features"][0] for it in measure.labelled(self.items())]
+        with (
+            mock.patch.object(measure, "make_estimator", return_value=primary),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            measure.measure(
+                measure.CONFIG,
+                self.items(),
+                area / "output" / "kept.jsonl",
+                registered=preds,
+            )
+        # one call: the unlabelled item's test lane; the labelled ones came reused
+        self.assertEqual(primary.predict.call_count, 1)
+
+    def test_after_the_first_measurement_the_band_is_not_held_to_the_rule(self):
+        """A repair changes the predictions and so the rule's band, while the
+        registered band stands: no check after the first measurement."""
+        _, measure = self.measure_module("apply")
+        with (
+            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
+            mock.patch.object(measure, "first_measurements", return_value=["a run"]),
+        ):
+            self.assertIsNone(measure.band_check(measure.CONFIG, self.items()))
+
+    def test_no_rule_no_check_and_fit_no_check(self):
+        _, measure = self.measure_module("apply")
+        free = replace(measure.CONFIG, null_band_quantile=None, null_permutations=None)
+        self.assertIsNone(measure.band_check(free, self.items()))
+        _, fit = self.measure_module("fit")
+        self.assertIsNone(fit.band_check(fit.CONFIG, self.items()))
+
+    def test_write_registers_the_band_before_the_first_measurement_only(self):
+        area, measure = self.measure_module("apply")
+        protocol = measure.PROTOCOL
+        argv = ["01_measure.py", "--calibrate-null", "--write"]
+        with (
+            mock.patch.object(sys, "argv", argv),
+            mock.patch.object(measure, "read_jsonl", return_value=self.items()),
+            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
+            mock.patch.object(measure, "first_measurements", return_value=[]),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            measure.main()
+        from labkit.formats import promises
+
+        written = promises.all_constants(promises.load(protocol))["null_band"]
+        cal = measure.band_by_rule(
+            measure.CONFIG,
+            [it["features"][0] for it in measure.labelled(self.items())],
+            [it["gold"] for it in measure.labelled(self.items())],
+            0.99,
+            200,
+        )
+        self.assertEqual(written, cal["registered"])
+        before = protocol.read_text(encoding="utf-8")
+        with (
+            mock.patch.object(sys, "argv", argv),
+            mock.patch.object(measure, "read_jsonl", return_value=self.items()),
+            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
+            mock.patch.object(measure, "first_measurements", return_value=["a run"]),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit),
+        ):
+            measure.main()
+        self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+        with (
+            mock.patch.object(sys, "argv", ["01_measure.py", "--write"]),
+            contextlib.redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit),
+        ):
+            measure.main()
+
+    def test_main_refuses_before_the_run_opens(self):
+        _, measure = self.measure_module("apply")
+        with (
+            mock.patch.object(sys, "argv", ["01_measure.py"]),
+            mock.patch.object(measure, "read_jsonl", return_value=self.items()),
+            mock.patch.object(measure, "make_estimator", return_value=self.primary()),
+            mock.patch.object(measure, "first_measurements", return_value=[]),
+            mock.patch.object(measure.runlog, "run") as start,
+            self.assertRaises(SystemExit),
+        ):
+            measure.main()
+        start.assert_not_called()
 
     def test_the_permutation_expectation_is_exact(self):
         """The bar at apply: the mean score over EVERY permutation of the gold,
@@ -370,6 +512,7 @@ class ApplySkeleton(unittest.TestCase):
         with (
             mock.patch.object(sys, "argv", ["01_measure.py"]),
             mock.patch.object(measure, "read_jsonl", return_value=self.items()),
+            mock.patch.object(measure, "band_check", return_value=None),
             mock.patch.object(
                 measure.runlog, "run", side_effect=RuntimeError("captured")
             ) as start,

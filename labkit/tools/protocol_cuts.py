@@ -463,13 +463,16 @@ ESTIMATOR_PROMISES = (
 APPLY_PROMISES = {
     r'sentence = "<the criterion in one sentence:[^"]*"': 'sentence = "<the criterion · the registered lane\'s SCORE is at least the permutation expectation plus margin>"',
     r'sentence = "<the null condition:[^"]*"': 'sentence = "<the null condition · the permuted-label lane scores within null_band of the permutation expectation, what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly>"',
+    # the band's rule registered beside it: the first measurement refuses a
+    # band the rule does not give, `--calibrate-null --write` registers it
+    r"constants = \{ null_band_items = 1 \}": "constants = { null_band = 0.1, null_band_quantile = 0.99, null_permutations = 200 }",
 }
 
 
 APPLY_FIELDS = {
     "Model / tool": "n/a — no model call; the unchanged predictor is loaded by `make_estimator()` in scripts/01_measure.py",
     "Model I/O": "<in · the feature fields per item · out · one prediction from each unchanged instrument without fitting>",
-    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, one draw kept as the anchor, expected within null_band of the permutation expectation — what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly and the criterion's bar starts from · null_band from --calibrate-null before the registration · or the registered fixed null of make_null_predictor() and why it targets chance>",
+    "Null condition / anchors (in the same run)": "<the unchanged predictor's predictions scored against the gold labels permuted with the seed, one draw kept as the anchor, expected within null_band of the permutation expectation — what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly and the criterion's bar starts from · null_band by the registered rule null_band_quantile over null_permutations, written by --calibrate-null --write before the first measurement · or the registered fixed null of make_null_predictor() and why it targets chance>",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · the unchanged predictor on N labelled items, both lanes · scores read, never reported>",
 }
 

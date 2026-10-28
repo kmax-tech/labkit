@@ -541,7 +541,10 @@ scattered in output files nobody can interpret.
   lane, never on the registered lane over all items before the freeze —
   at apply `--calibrate-null` (permutations of the gold, predictions
   fixed; the band around the exact permutation expectation, which is also
-  where [C1]'s bar starts, so the verdict does not ride on one draw); at
+  where [C1]'s bar starts, so the verdict does not ride on one draw), by
+  the rule [A2] registers beside the band (`null_band_quantile` over
+  `null_permutations`) — `--write` registers the band before the first
+  measurement, which refuses another; at
   fit the null lane refits `NULL_REFITS` times in the run and the bar
   starts from their mean, their scores (`a2_draw_scores`) showing the
   spread; at high repeat cost `--probe` over a few seeds: a registered number seen before `frozen = true`
