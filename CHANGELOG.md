@@ -1131,6 +1131,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Where a computation ends and a fit begins, with examples.** The kind
+  questions said only "a threshold or prompt chosen on performance data
+  counts"; one or two readers asked in every round whether a detection
+  threshold set on the signal or on reference annotations makes a fit.
+  Decided 2026-10-28: a rule fixed before the data is seen that derives a
+  parameter from each input itself is part of a computation (a threshold at
+  k times each signal's own noise level, k fixed); a threshold, window or k
+  chosen after seeing results, so that detections look plausible or agree
+  with reference annotations, adjusts a procedure: fit. The kind questions,
+  AGENTS.md, the field guide and the standard's terms give both examples.
 - **`confirmatory` is defined without a criterion a computation lacks.**
   AGENTS.md defined it as "a question and criterion specified before the
   relevant results", and a computation has no criterion; two of three

@@ -58,6 +58,12 @@ procedure? Choose `fit`, even if the deliverable is predictions without
 gold labels; evaluate it on held-out labelled rows. Otherwise, does the
 number judge predictive performance? Choose `apply`; otherwise `compute`.
 A RandomForest fitted in seconds is `fit`, usually at `low` repeat cost.
+A rule fixed before the data is seen that derives a parameter from each
+input itself belongs to a computation — a detection threshold at k
+times each signal's own noise level, k fixed in advance. Choosing a
+threshold, a window or k after seeing results, so that detections look
+plausible or agree with reference annotations, adjusts a procedure:
+`fit`.
 An unchanged LLM judged against labels is `apply`, not a computation.
 Neither `low` nor `exploratory` removes a fit/apply's criterion or audits.
 

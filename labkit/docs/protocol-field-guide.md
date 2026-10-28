@@ -159,7 +159,12 @@ The same block may hold the `[[promise]]` tables (labkit
 - **kind** — what the kept number asserts: `"compute"` judges no prediction
   (a measurement that cannot pass trivially: no criterion, no promise
   tables); `"fit"` judges a model trained or adjusted in this experiment;
-  `"apply"` judges a model used unchanged. A fit or an apply registers the
+  `"apply"` judges a model used unchanged. A rule fixed before the data is
+  seen that derives a parameter from each input itself belongs to a
+  computation — a detection threshold at k times each signal's own noise
+  level, k fixed in advance; choosing a threshold, a window or k after
+  seeing results, so that detections look plausible or agree with reference
+  annotations, is adjusting a procedure: `"fit"`. A fit or an apply registers the
   bar (criterion), what must hold before it is read (admissibility) and
   what it is held against (null condition / anchors, computed in the same
   run), and carries promise tables; with a `[model]` table also the data

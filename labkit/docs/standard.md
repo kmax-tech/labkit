@@ -101,6 +101,13 @@ written with. The following applies:
 - **Gold label** — the label in the data that is taken to be correct.
 - **Free knobs** — every selectable parameter: threshold, filter, wording,
   answer form.
+- **Fit or computation** (`kind`) — choosing a knob with the results in view
+  makes a procedure adjusted, a fit: a threshold, a window or a factor picked
+  so that detections look plausible or agree with reference annotations. A
+  rule fixed before the data is seen that derives a parameter from each input
+  itself stays a computation: a detection threshold at k times each signal's
+  own noise level, k fixed in advance (LAB-035 Thresholds belong to the run,
+  not to the measure).
 - **Yield** — expected vs. obtained per processing step.
 - **Producer** — the script that produces a dataset (`data/raw` →
   `data/prepared`).
