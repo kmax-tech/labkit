@@ -1396,7 +1396,7 @@ class Exp(unittest.TestCase):
         ]
         m = measure.evaluate_rows(lane("registered", 12) + lane("null", 6) + test_rows)
         self.assertEqual(
-            (m["c1_pass"], m["a2_pass"], m["n_test"], m["a2_chance"]),
+            (m["c1_pass"], m["a2_pass"], m["n_test"], m["a2_target"]),
             (True, True, 1, 0.5),
         )
         # the scored items per gold; the test lane's item has none and is no class

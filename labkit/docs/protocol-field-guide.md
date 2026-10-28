@@ -536,7 +536,9 @@ scattered in output files nobody can interpret.
   comes from the null condition of THIS run. Calibrate bands on the null
   lane, never on the registered lane over all items before the freeze —
   at apply `--calibrate-null` (permutations of the gold, predictions
-  fixed), at high repeat cost `--probe` over a few seeds: a registered number seen before `frozen = true`
+  fixed; the band around the exact permutation expectation, which is also
+  where [C1]'s bar starts, so the verdict does not ride on one draw), at
+  high repeat cost `--probe` over a few seeds: a registered number seen before `frozen = true`
   makes the freeze empty, and the prediction for the follow-up run a
   reading. Where it happened anyway, it stands here with the numbers and
   the seeds (Sonnet v3 t3 and t5, 2026-10-16, wrote it under Randomness

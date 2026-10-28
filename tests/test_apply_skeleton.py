@@ -150,9 +150,69 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual(primary.predict.call_count, 2)  # once per calibration
         self.assertEqual(len(cal["null_scores"]), 50)
         self.assertEqual(cal, again)  # seeded: the same band each time
-        off = sorted(abs(s - cal["chance"]) for s in cal["null_scores"])
+        # the band is the spread around the exact permutation expectation
+        off = sorted(abs(s - cal["target"]) for s in cal["null_scores"])
         self.assertEqual(cal["band"], off[49])  # the 0.99 quantile of 50
-        self.assertLess(cal["band"], 1 - cal["chance"])  # no permutation is the truth
+        self.assertLess(cal["band"], 1 - cal["target"])  # no permutation is the truth
+
+    def test_the_permutation_expectation_is_exact(self):
+        """The bar at apply: the mean score over EVERY permutation of the gold,
+        computed in closed form — checked against all 720 orderings of six
+        items, for accuracy (with a missing prediction), auc and r2."""
+        import itertools
+        from fractions import Fraction
+
+        _, measure = self.measure_module("apply")
+        cases = {
+            "accuracy": (
+                ["a", "a", "b", None, "b", "a"],
+                ["a", "b", "b", "a", "a", "b"],
+            ),
+            "auc": ([0.9, 0.2, 0.7, 0.4, None, 0.1], [1, 0, 1, 0, 1, 0]),
+            "r2": ([1.0, 2.5, 0.5, None, 3.0, 2.0], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+        }
+        for score, (preds, golds) in cases.items():
+            with self.subTest(score=score):
+                draws = [
+                    measure.SCORES[score](list(zip(preds, perm)))
+                    for perm in itertools.permutations(golds)
+                ]
+                exact = measure.permutation_expectation(score, list(zip(preds, golds)))
+                if score == "r2":
+                    self.assertAlmostEqual(exact, sum(draws) / len(draws), places=12)
+                else:
+                    self.assertEqual(exact, sum(draws, Fraction(0)) / len(draws))
+
+    def test_apply_holds_the_bar_and_the_null_to_the_expectation(self):
+        """A permuted null's draw is the anchor, not the bar: the same
+        registered lane passes or fails by the expectation alone, whatever
+        the draw — one draw put the bar anywhere between 0.54 and 0.78
+        (null-lane decision, 2026-10-28). The twin: a fitted null (no
+        donors) keeps its score as the bar and chance as [A2]'s target."""
+        _, measure = self.measure_module("apply")
+        golds = ["pos"] * 6 + ["neg"] * 6
+        reg = [
+            measure.lane_row("registered", {"id": str(i)}, g, g)
+            for i, g in enumerate(golds)
+        ]
+
+        def null(correct: int, permuted: bool) -> list[dict]:
+            rows = []
+            for i, g in enumerate(golds):
+                pred = g if i < correct else ("neg" if g == "pos" else "pos")
+                more = {"gold_of": str(i)} if permuted else {}
+                rows.append(measure.lane_row("null", {"id": str(i)}, pred, g, **more))
+            return rows
+
+        cfg = measure.CONFIG
+        for drawn in (5, 6, 7):
+            m = measure.evaluate_rows(reg + null(drawn, True), cfg)
+            self.assertEqual(m["a2_target"], 0.5)  # q = p = 1/2: 1/4 + 1/4
+            self.assertEqual(
+                m["c1_threshold"], 0.5 + cfg.margin
+            )  # the draw moves nothing
+        fitted = measure.evaluate_rows(reg + null(7, False), cfg)
+        self.assertEqual(fitted["c1_threshold"], 7 / 12 + cfg.margin)
 
     def test_the_scored_lanes_are_the_ones_finalize_reads(self):
         # the skeleton's lane names and finalize's null-lane station must

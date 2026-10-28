@@ -124,11 +124,13 @@ The numbers in the stamped promise tables are examples. Set each one
 yourself before that commit, and state its value in its sentence:
 `margin` is the smallest lead over the null lane that you would call
 success, chosen from the question and never from a result. `null_band`
-is how far the null lane may stray from chance. At `apply` with the
-estimator skeleton, derive it with `.venv/bin/python
-<area>/scripts/01_measure.py --calibrate-null` before the commit: it
-scores the unchanged predictions against permuted gold by a rule fixed in
-the script and starts no run. At `fit` the null refits, so the band is a
+is how far the null lane may stray from its target. At `apply` with the
+estimator skeleton the target is the exact permutation expectation —
+what the predictions reach on average against randomly assigned labels,
+from which [C1]'s bar also starts —, and you derive the band with
+`.venv/bin/python <area>/scripts/01_measure.py --calibrate-null` before
+the commit: it scores the unchanged predictions against permuted gold by
+a rule fixed in the script and starts no run. At `fit` the null refits, so the band is a
 reasoned value, or at `high` the null's spread over a few `--seed` values
 of `--probe`. After the first measurement none of these changes; a
 finding about them is decided by the ways under "When you are stuck".

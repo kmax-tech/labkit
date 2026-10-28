@@ -1212,6 +1212,23 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **At apply the C1 bar is the exact permutation expectation, not one
+  draw.** The estimator skeleton passed [C1] when the registered lane
+  reached the null lane plus `margin`, and at apply the null lane is one
+  permutation of the gold: on the screening case a single draw spans
+  0.39–0.63, so the bar 0.54–0.78 decided by the seed whether the true
+  agreement 0.76 passed; every analysis audit of the fourth draw and both
+  repair cases named it. Decided by the author (2026-10-28,
+  `docs/notes/2026-10-28-null-lane-spec.md`): with a permuted null the
+  bar is `permutation_expectation()` plus `margin` — exact, no count, no
+  seed, no aggregation (accuracy Σ q·p, auc 1/2, r2 −Σ(ŷ − ȳ)²/Σ(y −
+  ȳ)²) —; the one draw stays as the anchor in the same run and [A2] holds
+  it within `null_band` of that expectation; `--calibrate-null` takes the
+  0.99 quantile of |null − expectation|. A fixed null predictor and fit
+  keep their score as the bar and chance as [A2]'s target. The metrics key
+  `a2_chance` is `a2_target` (what [A2] holds the null to); the stamped
+  apply [C1]/[A2] sentences, the null field, AGENTS.md and the field guide
+  say so. Areas stamped before keep the script they were stamped with.
 - **A finding's required check is a work order where it is decided.** In
   the repair case a BLOCKER asked for `check: n_rows_other_run — must be
   0`; AGENTS.md said only "its requested diagnostic run and assessed",

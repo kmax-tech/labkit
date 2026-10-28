@@ -203,9 +203,11 @@ preflight_audit = ""
 # examples, not your design: set each, before the commit, to the value its
 # sentence states. `margin`: the smallest lead over the null lane you call
 # success, chosen from the question, never from a result. `null_band`: how
-# far the null lane may stray from chance — at an apply with the estimator
-# skeleton, `scripts/01_measure.py --calibrate-null` derives it before the
-# commit. After the first measurement none of them changes.
+# far the null lane may stray from its target — at an apply with the
+# estimator skeleton the exact permutation expectation, from which the bar
+# also starts, and `scripts/01_measure.py --calibrate-null` derives the band
+# before the commit; elsewhere chance. After the first measurement none of
+# them changes.
 [[promise]]
 id = "C1"
 key = "c1_pass"
