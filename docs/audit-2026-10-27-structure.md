@@ -174,12 +174,14 @@ eight already raised, and the module text said so. Plan (2) is half done:
 `BoundPrompt` names the bound state, but `audit.current` still matches a
 record field by field instead of one named type in `findings`.
 
+Plan (2) finished after it (`25b1f51`): `findings.AuditedState` is the
+state a record binds — `bound_prompt` binds it, `Record.state` reads it
+back, `covering_records`, `audit_coverage` and `analysis_now` take or
+return it. `scaffold.next_steps` reads in three parts (`9f3e5bd`), its
+text unchanged for every repeat cost, kind and model.
+
 Still open:
 
-- **Plan (2) rest** — one named audited-state type in `findings`, used
-  by `bound_prompt`'s `current` and the record.
-- **`scaffold.next_steps`** — 142 lines; the doubled sentence is gone,
-  the length is not.
 - **Test session (3)** — the task's key against the skeleton's
   `c1_score` is a decision in the probe module of `sab-like-cases` /
   `sab-cases-on-main` (another session's branches): name the key in the

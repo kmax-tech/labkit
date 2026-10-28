@@ -1078,10 +1078,10 @@ Notiert, nicht geplant:
    der Test-Session; die Kreuzung ist befristet dokumentiert.
    Dritte Runde 2026-10-27/28 (`fddb01b` bis `c1d0a7b`): restliche S-Zeilen
    mit Grep-Regeln, I11, Rest von I12, Rest von M4, M7. Plan (7) andersherum
-   gelöst: jede Startprüfung löst aus, statt Text zurückzugeben. Offen:
-   ein benannter Typ für den auditierten Zustand in `findings` (Plan 2,
-   `audit.current`); `scaffold.next_steps` noch 142 Zeilen; Test-Session
-   (3) Aufgaben-Schlüssel gegen `c1_score` — Entscheidung im Probe-Modul
+   gelöst: jede Startprüfung löst aus, statt Text zurückzugeben. Danach
+   (`25b1f51`, `9f3e5bd`): `findings.AuditedState` als ein Typ für den
+   auditierten Zustand, `scaffold.next_steps` in drei Teilen. Offen:
+   Test-Session (3) Aufgaben-Schlüssel gegen `c1_score` — Entscheidung im Probe-Modul
    der Branches `sab-like-cases`/`sab-cases-on-main` einer anderen Sitzung;
    (4) Laufzeit, keine Gate-Frage.
    Regelkonflikt gemeldet: eine neue bekannte Kern→Doktrin-Kreuzung
