@@ -201,7 +201,11 @@ preflight_audit = ""
 # `frozen = true` owes these tables, and no run starts whose config lacks a
 # constant or carries another value. The numbers below are the stamp's
 # examples, not your design: set each, before the commit, to the value its
-# sentence states.
+# sentence states. `margin`: the smallest lead over the null lane you call
+# success, chosen from the question, never from a result. `null_band`: how
+# far the null lane may stray from chance — at an apply with the estimator
+# skeleton, `scripts/01_measure.py --calibrate-null` derives it before the
+# commit. After the first measurement none of them changes.
 [[promise]]
 id = "C1"
 key = "c1_pass"

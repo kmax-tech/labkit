@@ -95,7 +95,9 @@ class Undecided(unittest.TestCase):
         # the way to decide is the command, not an edit of the record
         # (ninth haiku round, t5 rewrote records field by field)
         self.assertIn("`labkit-audit <AREA> --findings`", err)
-        self.assertIn("never by rewriting the record", err)
+        self.assertIn("never by rewriting or deleting the record", err)
+        # an outdated record stays (fourth SAB-like draw: "stale, let me remove")
+        self.assertIn("one a later change made outdated stays and is decided", err)
 
     def test_the_committed_record_blocks_once_the_area_is_touched_again(self):
         self._record(self.area, [BLOCKER])
@@ -235,6 +237,7 @@ class Undecided(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn("in the tree, not in the index", out)
         self.assertIn(f"git add experiments/01-x/audits/{path.name}", out)
+        self.assertIn("a record a later change made outdated is staged too", out)
         findings.write_decision(path, 1, "deferred", "measured in area 02")
         _git(self.root, "add", str(path))
         self.assertEqual(commit_gate(), (0, ""))

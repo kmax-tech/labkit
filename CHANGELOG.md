@@ -1198,6 +1198,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Where `margin` and `null_band` come from, and that an outdated audit
+  stays, stand where they are not overwritten.** In the fourth SAB-like
+  draw "null_band from --calibrate-null before the registration" stood
+  only in the [A2] placeholder, which the agent replaced with its own
+  sentence, and an agent deleted a record it called "stale". AGENTS.md now
+  says, beside the registration commit, that the stamped numbers are
+  examples: `margin` the smallest lead over the null lane you call
+  success, chosen from the question; `null_band` at an estimator apply
+  from `01_measure.py --calibrate-null` before the commit, at fit a
+  reasoned value or the null's spread over seeds at high repeat cost;
+  none changes after the first measurement. The stamped protocol's
+  comment above the promise tables says the same. AGENTS.md, the
+  commit's hold for an unstaged record and the stop's and commit's way
+  out say that an audit a later change made outdated stays: its BLOCKERs
+  decided — `fixed`, naming the change, where it repaired them — staged,
+  then measured and audited again; never deleted.
 - **An audit record deleted before it was staged holds the commit, and
   comes back from a copy.** In the fourth SAB-like draw an agent held by
   the pre-commit ("stage it") deleted its record instead; the record had

@@ -1359,6 +1359,9 @@ def record_status(area: Path, *, staged: bool = False) -> RecordStatus:
                 f"{', '.join(shown(p, Path.cwd()) for p in left)}: in the tree, not in the "
                 f"index — the commit would leave the audit record behind; stage it "
                 f"(`git add {' '.join(shlex.quote(shown(p, Path.cwd())) for p in left)}`)"
+                f" — a record a later change made outdated is staged too, its "
+                f"BLOCKERs decided (`fixed`, naming the change, where it repaired "
+                f"them), never deleted"
             )
     else:
         paths = [p for p in folder.glob("*.toml") if is_record_name(p.name)]
