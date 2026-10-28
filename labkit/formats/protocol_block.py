@@ -614,10 +614,17 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     if not isinstance(standard, str):
         raise BlockError(f'[protocol] standard = {standard!r} — a string, "{STANDARD}"')
     if standard != STANDARD:
+        # A protocol with runs is history: AGENTS.md keeps it at its commit and
+        # pin and never converts it; only one not yet run may take the
+        # migration (the refusal offered "update the protocol" to every
+        # protocol alike, against AGENTS.md — review 2026-10-28).
         raise BlockError(
             f"[protocol] standard = {standard!r}, this labkit reads "
-            f"{STANDARD!r} — use the labkit release the protocol was "
-            f"written for, or update the protocol ({MIGRATION})"
+            f"{STANDARD!r} — a protocol with runs is reproduced with the "
+            f"labkit release it was written for (a checkout of its commit "
+            f"with a venv from its own requirements.lock), never converted; "
+            f"new work gets a fresh area; only a protocol not yet run may "
+            f"be updated ({MIGRATION})"
         )
     missing = [f for f in PROTOCOL_HEAD_KEYS if f not in table]
     if missing:

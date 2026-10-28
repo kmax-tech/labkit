@@ -281,7 +281,8 @@ prints these same recovery choices with each decision list:
   a miss included, such as another model on the same data — is a protocol
   of its own, without `[replaces]`; when it builds on what an earlier
   protocol showed, its Question / hypothesis names that protocol and what
-  it showed, and its type is `exploratory`.
+  it showed, and its type is `exploratory`. No gate checks this naming or
+  the type; keeping it is your part, and a green gate says nothing about it.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the
