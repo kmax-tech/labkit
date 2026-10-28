@@ -21,11 +21,11 @@ existing repos never got a newer one).
                              repo's own .githooks/pre-commit.local, if any
                              (the repo owns it, labkit-hooks never writes it)
     .githooks/pre-merge-commit
-                             the area numbers in the merge's index — git
-                             runs this hook, never pre-commit, for a merge
-                             it completes on its own, and the merge is where
-                             two branches' areas meet; then
-                             .githooks/pre-merge-commit.local, if any
+                             runs .githooks/pre-commit on the merge's index:
+                             git runs this hook, never pre-commit, for a
+                             merge it completes on its own, and a merge
+                             without a text conflict can still bring a
+                             reported number and a changed analysis together
     git core.hooksPath       set to .githooks (it used to be a manual step
                              per clone, and the hook silently did nothing)
     .claude/settings.json    claude-hook pre-run · post-change · stop
@@ -55,30 +55,6 @@ def labkit_version() -> str:
         return "unknown"
 
 
-def numbers_step(hook: str) -> str:
-    """The shell step that holds the index to one number per area
-    (`labkit-init numbers --staged`), as HOOK runs it; quiet when it holds.
-    Only when a staged path lies under `experiments/`: nothing else can
-    give two areas one number."""
-    return f"""\
-staged_areas=$(git diff --cached --name-only -- experiments)
-if [ -n "$staged_areas" ]; then
-    if [ ! -x .venv/bin/labkit-init ]; then
-        echo "{hook}: .venv/bin/labkit-init missing — the area numbers cannot be"
-        echo "checked; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
-        fail=1
-    else
-        out=$(.venv/bin/labkit-init numbers --staged 2>&1) || {{
-            echo "$out"
-            echo ""
-            echo "{hook}: two areas carry one number (see above)."
-            fail=1
-        }}
-    fi
-fi
-"""
-
-
 def pre_commit() -> str:
     """The pre-commit script of this labkit version."""
     return f"""#!/bin/sh
@@ -104,9 +80,24 @@ if [ -n "$staged_protocols" ]; then
 fi
 
 # 1b. One number per area: two branches that each stamped their next area
-#     carry one number twice. A merge with conflicts is committed here; one
-#     git completes on its own runs pre-merge-commit.
-{numbers_step("pre-commit")}
+#     carry one number twice. Only when a staged path lies under
+#     experiments/: nothing else can give two areas one number.
+staged_areas=$(git diff --cached --name-only -- experiments)
+if [ -n "$staged_areas" ]; then
+    if [ ! -x .venv/bin/labkit-init ]; then
+        echo "pre-commit: .venv/bin/labkit-init missing — the area numbers cannot be"
+        echo "checked; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
+        fail=1
+    else
+        out=$(.venv/bin/labkit-init numbers --staged 2>&1) || {{
+            echo "$out"
+            echo ""
+            echo "pre-commit: two areas carry one number (see above)."
+            fail=1
+        }}
+    fi
+fi
+
 # 2. A number written back: every protocol of an area a staged file touches
 #    whose head declares a result ([result] run) goes through report-check —
 #    the whole release check at every repeat cost (finalize clean, a full run,
@@ -169,25 +160,27 @@ exit $fail
 
 
 def pre_merge_commit() -> str:
-    """The pre-merge-commit script of this labkit version: the area numbers
-    in the merge's index. git runs it, never pre-commit, for a merge it
-    completes on its own — the merge is where two branches' areas meet."""
+    """The pre-merge-commit script of this labkit version: the commit's
+    checks (`.githooks/pre-commit`) on the merge's index. git runs it,
+    never pre-commit, for a merge it completes on its own; a merge without
+    a text conflict can still bring a number reported on one branch and
+    its analysis changed on the other together (probed 2026-10-28 on the
+    count walkthrough: the merge went through, report-check on its state
+    exits 1). A merge with conflicts is committed through pre-commit."""
     return f"""#!/bin/sh
 {MARK} {labkit_version()} — reinstall: .venv/bin/labkit-hooks install
 # Escape hatch for a deliberate exception: git merge --no-verify
-# git runs this hook, not pre-commit, for a merge it completes on its own;
-# a merge with conflicts is committed through pre-commit.
 
-fail=0
-
-# 1. One number per area: the merge brings two branches' areas together.
-{numbers_step("pre-merge-commit")}
-# 2. The repo's own checks, as .githooks/pre-commit.local for a commit.
-if [ -x .githooks/pre-merge-commit.local ]; then
-    .githooks/pre-merge-commit.local || fail=1
+if [ ! -x .githooks/pre-commit ]; then
+    echo "pre-merge-commit: .githooks/pre-commit missing — the merge's checks cannot"
+    echo "run; reinstall: .venv/bin/labkit-hooks install"
+    exit 1
 fi
-
-exit $fail
+.githooks/pre-commit && exit 0
+echo ""
+echo "pre-merge-commit: the commit's checks above hold this merge; it stays"
+echo "uncommitted — fix what they name, then git commit; or git merge --abort."
+exit 1
 """
 
 

@@ -1220,17 +1220,13 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
-- **Ein konfliktfreier Merge umgeht die Gates des pre-commit:** git ruft
-  für einen Merge, den es selbst abschließt, nur `pre-merge-commit` auf,
-  nie `pre-commit` (Probe 2026-10-27). `pre-merge-commit` prüft seit der
-  Nummernvergabe über alle Branches nur die Bereichsnummern;
-  protocol-check, `report-check --if-reported --staged` und `claude-hook
-  undecided` laufen bei einem solchen Merge nicht, bei einem Merge mit
-  Konflikten dagegen schon (sein `git commit` geht durch pre-commit).
-  Offen für den Autor: soll `pre-merge-commit` den ganzen pre-commit
-  ausführen (gits eigenes Beispiel tut das)? Dann hält ein Merge auch
-  berichtete Zahlen des anderen Branches. Beleg:
-  `tests/test_install_hooks.py`, `AreaNumbers`.
+- ~~**Ein konfliktfreier Merge umgeht die Gates des pre-commit**~~ —
+  entschieden und gebaut 2026-10-28: `pre-merge-commit` führt den
+  pre-commit auf dem Index des Merges aus; ein gehaltener Merge bleibt
+  uncommittet (`tests/test_install_hooks.py`, `MergeChecks`). Probe auf
+  dem Count-Walkthrough: der geänderte `02_analyze.py` des anderen
+  Branches wird jetzt am fehlenden Analyse-Audit gehalten. Labor-Repos
+  bekommen den Hook mit gehobenem Pin und `labkit-hooks install`.
 - **Gleicher Bereichsname auf zwei Branches:** `labkit-init exp` lehnt
   einen vorhandenen Namen nur im eigenen Baum ab; auf einem anderen Branch
   entsteht derselbe Name unter anderer Nummer, und der Merge bringt

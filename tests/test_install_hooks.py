@@ -29,7 +29,8 @@ class Install(unittest.TestCase):
         self.assertIn("report-check --if-reported", hook.read_text())
         merge_hook = repo / ".githooks" / "pre-merge-commit"
         self.assertTrue(merge_hook.stat().st_mode & 0o100)
-        self.assertIn("labkit-init numbers --staged", merge_hook.read_text())
+        self.assertIn(".githooks/pre-commit && exit 0", merge_hook.read_text())
+        self.assertIn("labkit-init numbers --staged", hook.read_text())
         merge_hook.unlink()
         self.assertEqual(
             install_hooks.check(repo), [".githooks/pre-merge-commit is missing"]
@@ -303,8 +304,10 @@ class AreaNumbers(unittest.TestCase):
             "experiments/12-on-main, experiments/12-on-side",
             r.stdout + r.stderr,
         )
+        self.assertIn("pre-commit: two areas carry one number", r.stdout + r.stderr)
         self.assertIn(
-            "pre-merge-commit: two areas carry one number", r.stdout + r.stderr
+            "pre-merge-commit: the commit's checks above hold this merge",
+            r.stdout + r.stderr,
         )
         # the merge is not committed, and its commit by hand meets pre-commit
         self.assertEqual(
@@ -318,6 +321,66 @@ class AreaNumbers(unittest.TestCase):
         self.diverge("12-on-side", "13-on-main")
         r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class MergeChecks(unittest.TestCase):
+    """A merge without a text conflict meets the commit's checks: a number
+    reported on one branch and its analysis changed on the other merged
+    cleanly and nothing held it (probed 2026-10-28 on the count
+    walkthrough). report-check is a stand-in here; the walkthrough probe
+    ran the real one."""
+
+    def setUp(self):
+        self.repo = git_repo()
+        install_hooks.install(self.repo)
+        gate_shims(self.repo)
+        (self.repo / "scripts").mkdir()
+        (self.repo / "scripts" / "02_analyze.py").write_text("print('x')\n")
+        run_git(self.repo, "add", "scripts")
+        self.assertEqual(commit(self.repo).returncode, 0)
+        self.main = run_git(self.repo, "branch", "--show-current").stdout.strip()
+        run_git(self.repo, "checkout", "-qb", "side")
+        (self.repo / "scripts" / "02_analyze.py").write_text("print('y')\n")
+        run_git(self.repo, "add", "scripts")
+        self.assertEqual(commit(self.repo).returncode, 0)
+        run_git(self.repo, "checkout", "-q", self.main)
+        (self.repo / "REPORT.md").write_text("# Report\n")
+        run_git(self.repo, "add", "REPORT.md")
+        self.assertEqual(commit(self.repo).returncode, 0)
+
+    def test_a_clean_merge_report_check_holds_stays_uncommitted(self):
+        holding = self.repo / ".venv" / "bin" / "report-check"
+        holding.write_text(
+            '#!/bin/sh\necho "$@" > report-check.argv\n'
+            'echo "report-check: 1 blocker(s)"\nexit 1\n'
+        )
+        r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
+        self.assertNotEqual(r.returncode, 0)
+        out = r.stdout + r.stderr
+        self.assertIn("pre-commit: report-check reports blockers", out)
+        self.assertIn(
+            "pre-merge-commit: the commit's checks above hold this merge", out
+        )
+        self.assertIn("git merge --abort", out)
+        # the merged path, as the merge stages it against the first parent
+        self.assertEqual(
+            (self.repo / "report-check.argv").read_text().split(),
+            ["--if-reported", "--staged", "scripts/02_analyze.py"],
+        )
+        self.assertEqual(
+            run_git(self.repo, "rev-list", "--count", "HEAD").stdout.strip(), "2"
+        )
+        self.assertTrue((self.repo / ".git" / "MERGE_HEAD").is_file())
+
+    def test_a_clean_merge_the_checks_pass_is_committed(self):
+        r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(
+            run_git(self.repo, "rev-list", "--count", "HEAD").stdout.strip(), "4"
+        )
+        self.assertIn(
+            "scripts/02_analyze.py", (self.repo / "report-check.argv").read_text()
+        )
 
 
 def run_git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:

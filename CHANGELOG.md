@@ -1883,18 +1883,21 @@ pins (`requirements.txt` / `requirements.lock`).
   a null (`run_record_check.null_lane_unmoved`, `null_lane_findings`): a
   fitted null that predicts otherwise, or a local apply's null on permuted
   gold, moved. LAB-034 Null condition in the same run.
-- **`labkit-init numbers` and a pre-merge-commit hook: one number per
-  area.** `labkit-init numbers [--staged]` names every number two areas
-  carry — in the working tree, or in the index with `--staged` — a living
-  and an archived area alike, with the next free number; exit 1 when one
-  is shared. The pre-commit runs it where a staged path lies under
-  `experiments/`, and `labkit-hooks install` now also writes
-  `.githooks/pre-merge-commit`, which runs it on the merge's index: git
-  runs that hook, never pre-commit, for a merge it completes without
-  conflicts — the merge where two branches' areas meet went unchecked.
-  `labkit-hooks check` reports the hook missing until `install` runs
-  again; `.githooks/pre-merge-commit.local` is the repo's own, as
-  `pre-commit.local`.
+- **`labkit-init numbers` and a pre-merge-commit hook: a merge meets the
+  commit's checks.** `labkit-init numbers [--staged]` names every number
+  two areas carry — in the working tree, or in the index with `--staged` —
+  a living and an archived area alike, with the next free number; exit 1
+  when one is shared. The pre-commit runs it where a staged path lies
+  under `experiments/`. `labkit-hooks install` now also writes
+  `.githooks/pre-merge-commit`, which runs the pre-commit on the merge's
+  index: git runs that hook, never pre-commit, for a merge it completes
+  without conflicts, and such a merge went unchecked. Probed on the count
+  walkthrough: a branch that changed `02_analyze.py` merged cleanly into
+  the branch that reported its number, and report-check on the merged
+  state exits 1; the merge now stays uncommitted with report-check's
+  blocker and the way out (fix, then `git commit`; or `git merge
+  --abort`). `labkit-hooks check` reports the hook missing until
+  `install` runs again.
 - **Ask for recovery steps instead of memorizing them.**
   `labkit-audit AREA --findings` makes no model call and lists readable open
   BLOCKERs even behind a damaged journal or an invalid record name, explicit
