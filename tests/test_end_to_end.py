@@ -1001,6 +1001,103 @@ class CorrectedDescription(CountCommands):
         self.assertEqual(self.records(), records)
 
 
+class DataCounts(unittest.TestCase):
+    """The counts of Data / scope come from the preparation run, through the
+    real commands: the stamped 00_prepare.py records them, `protocol-fill
+    --data-counts` writes them as the field's end, finalize holds that part
+    to the run. Fifth SAB-like draw, 2026-10-28: two agents typed counts the
+    data did not hold after a prepare script that printed the total alone.
+    The twin: a count typed over the written part is held."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = points_area(self.lab, "low", "fit")
+        self.out = self.lab.script(self.area, "00_prepare.py")
+
+    def data_scope(self) -> str:
+        from labkit.formats.protocol_check import fields
+
+        text = self.protocol.read_text(encoding="utf-8")
+        return next(f.value for f in fields(text) if f.name == "data / scope")
+
+    def counts(self, *args: str) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = protocol_fill.main([str(self.protocol), "--data-counts", *args])
+        return rc, out.getvalue()
+
+    def finalized(self) -> tuple[int, str]:
+        return self.lab.finalize(self.area)
+
+    def test_the_prepare_run_records_and_the_field_carries_its_counts(self):
+        self.assertIn("12 labelled", self.out)
+        prepared = next(
+            r
+            for r in sorted((self.area / "runs").iterdir())
+            if json.loads((r / "config.json").read_text())["run_kind"] == "preparation"
+        )
+        metrics = json.loads((prepared / "metrics.json").read_text())
+        self.assertEqual(
+            {
+                k: metrics[k]
+                for k in ("n_items", "n_labelled", "n_unlabelled", "gold_counts")
+            },
+            {
+                "n_items": 16,
+                "n_labelled": 12,
+                "n_unlabelled": 4,
+                "gold_counts": {"neg": 6, "pos": 6},
+            },
+        )
+        self.lab.fill(
+            self.protocol, "Data / scope=data/raw/points.jsonl by 00_prepare.py"
+        )
+        rc, out = self.counts()
+        self.assertEqual(rc, 0, out)
+        value = self.data_scope()
+        self.assertTrue(
+            value.startswith(
+                "data/raw/points.jsonl by 00_prepare.py · counts (prepare run "
+            ),
+            value,
+        )
+        self.assertIn(
+            "points.jsonl 16 lines; 16 items prepared — 12 labelled (neg 6, pos 6), 4 unlabelled",
+            value,
+        )
+        rc, out = self.counts()  # again: replaced in place, not appended
+        self.assertEqual(self.data_scope(), value)
+        rc, out = self.finalized()
+        self.assertNotIn("the counts differ", out)
+        self.assertNotIn("names prepare run", out)
+
+    def test_a_count_typed_over_the_written_part_is_held(self):
+        self.lab.fill(
+            self.protocol, "Data / scope=data/raw/points.jsonl by 00_prepare.py"
+        )
+        self.assertEqual(self.counts()[0], 0)
+        typed = self.data_scope().replace("12 labelled", "10 labelled")
+        self.lab.fill(self.protocol, "--force", f"Data / scope={typed}")
+        rc, out = self.finalized()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("the counts differ from what prepare run", out)
+        self.assertIn("--data-counts", out)
+        self.assertEqual(self.counts()[0], 0)  # written again from the run
+        rc, out = self.finalized()
+        self.assertNotIn("the counts differ", out)
+
+    def test_no_preparation_run_is_refused(self):
+        other = Lab()
+        self.addCleanup(other.close)
+        area, protocol = stamp_count(other)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = protocol_fill.main([str(protocol), "--data-counts"])
+        self.assertEqual(rc, 2, out.getvalue())
+        self.assertIn("no completed preparation run", out.getvalue())
+
+
 class Judge(unittest.TestCase):
     """The prompt skeleton at low repeat cost, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
@@ -1330,6 +1427,50 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out)  # the twin: the declared run exists
 
 
+def points_area(lab: "Lab", repeat_cost: str, kind: str) -> tuple[Path, Path]:
+    """A stamped estimator area in LAB over sixteen points — twelve labelled
+    (pos 6, neg 6), four unlabelled — its 00_prepare.py filled to read them.
+    Returns (area, protocol)."""
+    raw = lab.root / "data" / "raw" / "points.jsonl"
+    raw.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for i in range(16):
+        gold = "pos" if i % 2 == 0 else "neg"
+        x = 1.0 + i if gold == "pos" else -1.0 - i
+        rows.append(
+            {
+                "id": f"p{i}",
+                "text": f"point {i}",
+                "gold": gold if i < 12 else None,
+                "features": [x, 0.5],
+            }
+        )
+    raw.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    area, protocol = lab.exp("threshold", repeat_cost=repeat_cost, kind=kind)
+    _replace(
+        area / "scripts" / "00_prepare.py",
+        [
+            (
+                'SOURCE = REPO / "data" / "TODO"',
+                'SOURCE = REPO / "data" / "raw" / "points.jsonl"',
+            ),
+            (
+                'OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
+                'OUT = AREA / "data" / "prepared" / "points_v1.jsonl"',
+            ),
+            (
+                'ABOUT = "TODO: one sentence — what one row is and what this dataset is for."',
+                'ABOUT = "one point with its features; gold null on the test split"',
+            ),
+            (
+                '"gold": "TODO: every gold value spelled out, e.g. causal | not_causal",',
+                '"gold": "pos | neg | null (test split)",\n    "features": "two floats",',
+            ),
+        ],
+    )
+    return area, protocol
+
+
 class Estimator(unittest.TestCase):
     """The estimator skeleton at high repeat cost, through the freeze: a threshold on
     one feature, which the gold follows; the null lane permuted."""
@@ -1337,47 +1478,8 @@ class Estimator(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.lab = Lab()
-        root = cls.lab.root
-        raw = root / "data" / "raw" / "points.jsonl"
-        raw.parent.mkdir(parents=True, exist_ok=True)
-        rows = []
-        for i in range(16):
-            gold = "pos" if i % 2 == 0 else "neg"
-            x = 1.0 + i if gold == "pos" else -1.0 - i
-            rows.append(
-                {
-                    "id": f"p{i}",
-                    "text": f"point {i}",
-                    "gold": gold if i < 12 else None,
-                    "features": [x, 0.5],
-                }
-            )
-        raw.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
-        cls.area, cls.protocol = cls.lab.exp(
-            "threshold", repeat_cost="high", kind="fit"
-        )
+        cls.area, cls.protocol = points_area(cls.lab, "high", "fit")
         scripts = cls.area / "scripts"
-        _replace(
-            scripts / "00_prepare.py",
-            [
-                (
-                    'SOURCE = REPO / "data" / "TODO"',
-                    'SOURCE = REPO / "data" / "raw" / "points.jsonl"',
-                ),
-                (
-                    'OUT = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
-                    'OUT = AREA / "data" / "prepared" / "points_v1.jsonl"',
-                ),
-                (
-                    'ABOUT = "TODO: one sentence — what one row is and what this dataset is for."',
-                    'ABOUT = "one point with its features; gold null on the test split"',
-                ),
-                (
-                    '"gold": "TODO: every gold value spelled out, e.g. causal | not_causal",',
-                    '"gold": "pos | neg | null (test split)",\n    "features": "two floats",',
-                ),
-            ],
-        )
         cls.measure = scripts / "01_measure.py"
         _replace(
             cls.measure,

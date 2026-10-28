@@ -438,7 +438,11 @@ scattered in output files nobody can interpret.
 
 - **Data / scope:** source, N, producer script — by default the raw data
   under `data/raw/`, the inputs a script made from them under
-  `data/prepared/`. Small inputs that may legally be shared are committed;
+  `data/prepared/`. The counts are generated, never typed: after the
+  preparation run, `protocol-fill <PROTOCOL> --data-counts` writes them as
+  the field's end (`counts (prepare run <id>): …` — the files read, the
+  items, labelled, unlabelled, per gold value), and finalize holds that
+  part to the run. Small inputs that may legally be shared are committed;
   for large or protected data name their source or access route and
   version, and the run records the checksum of each file it reads
   (`data=`): the inputs a run used stay unambiguously traceable. Look at

@@ -413,6 +413,7 @@ ESTIMATOR_FIELDS = {
     # as filled, and protocol-check let the hole through (BERT example on
     # the branch, 2026-10-18); its parameters and seed are owed in the report
     # fields Free knobs and Randomness controls (`--report`, C1)
+    "Data / scope": "<the source files and the producer script in your words · then the counts protocol-fill --data-counts writes after 00_prepare.py · never typed>",
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",

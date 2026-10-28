@@ -32,6 +32,7 @@ REPO = AREA.parent.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, runlog
+from labkit.checks.data_counts import item_counts
 from labkit.formats import promises
 
 SOURCE = REPO / "data" / "TODO"                 # raw input (record sha256 via runlog data=)
@@ -114,8 +115,12 @@ def main() -> None:
         batch.write_dataset(OUT, items, about=ABOUT, fields=FIELDS,
                             producer=Path(__file__).name)
         os.chmod(OUT, 0o444)
-        print(f"{len(items)} items -> {OUT}")
-        run.metrics(n_items=len(items))
+        # the counts the protocol's Data / scope carries: `protocol-fill
+        # <PROTOCOL> --data-counts` writes them from this run, never typed
+        counts = item_counts(items)
+        print(f"{len(items)} items -> {OUT}: {counts['n_labelled']} labelled "
+              f"{counts['gold_counts'] or ''}, {counts['n_unlabelled']} unlabelled")
+        run.metrics(**counts)
 
 
 if __name__ == "__main__":

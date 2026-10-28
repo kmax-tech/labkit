@@ -2440,6 +2440,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The counts of Data / scope are generated: `protocol-fill --data-counts`.**
+  In the fifth SAB-like draw two agents registered counts the data did not
+  hold (108 labelled persons for 92; 118/60/60 compounds for 240/80/80)
+  after a prepare script that printed the total alone. The estimator
+  skeleton's `00_prepare.py` now records its items' counts in the
+  preparation run's metrics (`data_counts.item_counts`: `n_items`,
+  `n_labelled`, `n_unlabelled`, `gold_counts` per gold value for a class
+  label). `protocol-fill <PROTOCOL> --data-counts [RUN_ID]` writes them,
+  with the files the run read and their lines, as the generated end of
+  Data / scope (`counts (prepare run <id>): …`), keeping the author's words
+  before it. finalize holds that part to the run (`data_counts.counts_gap`):
+  a count typed over it, or a part left stale, blocks with the command
+  that writes it again. AGENTS.md, the field guide and the estimator stamp
+  say the counts are never typed. A Data / scope without the generated
+  part is not checked.
+
 - **The post-change hook tells evidence gone or changed right after the
   tool.** An agent learnt that a record it deleted or rewrote was evidence
   only at the stop or the commit, after its next steps rested on it. Now,

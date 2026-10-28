@@ -117,8 +117,11 @@ from labkit.gates.ways_out import (
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
+    field_name,
+    fields,
     open_holes,
 )
+from labkit.checks import data_counts
 from labkit.checks.run_record_check import (
     arm_findings,
     code_since_run,
@@ -609,8 +612,31 @@ def check_open_fields(
     route = readme_route(protocol.parent, protocol.name)
     for line in route:
         findings.warn(line, evidence_kind=GUARANTEED)
-    if not holes and not stale and not route:
+    counted = check_data_counts(findings, protocol, text)
+    if not holes and not stale and not route and counted:
         findings.note("  all fields filled")
+
+
+def check_data_counts(findings: Findings, protocol: Path, text: str) -> bool:
+    """Station 4, the generated counts of Data / scope: where the field
+    holds them (`counts (prepare run <id>): …`), they are what that run
+    recorded (`data_counts.counts_gap`) — a part typed by hand or left
+    stale blocks, with the command that writes it again. True when they
+    hold or there are none."""
+    value = next(
+        (f.value for f in fields(text) if f.name == field_name(data_counts.FIELD)),
+        "",
+    )
+    gap = data_counts.counts_gap(protocol.parent, value)
+    if gap is None:
+        return True
+    why, run_id = gap
+    findings.block(
+        why,
+        fix=f"`protocol-fill {shown(protocol, Path.cwd())} --data-counts {run_id}` "
+        f"writes them from the run — never typed",
+    )
+    return False
 
 
 def check_provenance(findings: Findings, area: Path, answering_run: Path) -> None:

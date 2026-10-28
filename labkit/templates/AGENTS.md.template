@@ -104,7 +104,12 @@ Run `protocol-fill <PROTOCOL> --list` and `protocol-check <PROTOCOL>
 --contract`. Fill the before-run fields, including `type` and each
 promise's sentence; leave the after-run fields for after the run.
 
-- Every kind: question, data/scope, exclusions and unit.
+- Every kind: question, data/scope, exclusions and unit. In data/scope
+  write the source and the producer script in your words; the counts —
+  the files read, the items, labelled, unlabelled, per gold value — come
+  from the preparation run: after `scripts/00_prepare.py`, `protocol-fill
+  <PROTOCOL> --data-counts` writes them as the field's end. Never type a
+  count: finalize holds the written counts to the run.
 - Fit/apply: also criterion, admissibility condition and null condition
   computed in the same run. A criterion judges the outcome; an
   admissibility condition says whether that judgement is meaningful.

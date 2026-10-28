@@ -38,6 +38,12 @@ placeholders included) and leaves everything else byte-identical.
                                                blocks in REPORT withdrawn; audit
                                                records and findings untouched, no
                                                result released
+    protocol-fill PROTOCOL-x.md --data-counts [RUN_ID]
+                                               the counts a preparation run recorded
+                                               (the newest by default) as the
+                                               generated end of Data / scope —
+                                               the files it read, its items:
+                                               labelled, unlabelled, per gold value
     protocol-fill PROTOCOL-x.md --from-run [RUN_ID]   adopt the run as the result: `[result] run`
                                                in the TOML head (the declaration), Recorded results and
                                                Runs lines from its metrics.json (by default the
@@ -97,7 +103,7 @@ from labkit.formats.repo import (
     shown,
     state_text,
 )
-from labkit.checks import recheck, report_blocks
+from labkit.checks import data_counts, recheck, report_blocks
 from labkit.gates import report_check, report_hold
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
@@ -1012,20 +1018,27 @@ def _render_file(protocol: Path, text: str) -> int:
     return 0
 
 
+def _list_file(text: str) -> int:
+    """`--list`: the open fields, or a refusal naming an unreadable block."""
+    try:
+        return _list_open(text)
+    except promises.PromiseError as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+
+
 def _run_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the mode ARGS name (--handover, --list, --prompts,
-    --render, --discuss, --into, --from-run), or None when they name none:
-    a field fill."""
+    """The exit code of the mode ARGS name (--withdraw, --data-counts,
+    --handover, --list, --prompts, --render, --discuss, --into, --from-run),
+    or None when they name none: a field fill."""
     if args.withdraw:
         return _withdraw_file(args, text)
+    if args.data_counts is not None:
+        return _data_counts_file(args, text)
     if args.handover:
         return _handover_file(args, text)
     if args.list:
-        try:
-            return _list_open(text)
-        except promises.PromiseError as exc:
-            console.refuse("protocol-fill", str(exc))
-            return 2
+        return _list_file(text)
     if args.prompts:
         return _prompts_file(args.protocol, text)
     if args.render:
@@ -1062,6 +1075,52 @@ def without_result(text: str) -> str:
     if protocol_block.declared_run(result) is not None:
         raise ValueError("[result] declaration could not be withdrawn")
     return result
+
+
+def newest_preparation(area: Path) -> Path:
+    """AREA's newest completed preparation run. Raises ValueError when it
+    has none."""
+    prepared = [
+        r
+        for r in runs.completed_runs(area, with_repeats=False)
+        if (cfg := runs.read_run_config(r)) is not None
+        and cfg.run_kind == "preparation"
+    ]
+    if not prepared:
+        raise ValueError(
+            f"{area.name} has no completed preparation run — run scripts/00_prepare.py first"
+        )
+    return prepared[-1]
+
+
+def _data_counts_file(args: argparse.Namespace, text: str) -> int:
+    """`--data-counts`: the counts of a preparation run (ARGS.data_counts, the
+    newest by default) written as the generated end of Data / scope
+    (`data_counts.with_counts`), the author's words before it kept."""
+    protocol = args.protocol.resolve()
+    area = protocol.parent
+    try:
+        run = (
+            newest_preparation(area)
+            if args.data_counts == "newest"
+            else runs.run_path(area, args.data_counts)
+        )
+        counts = data_counts.counts_text(run)
+        value = next(
+            (f.value for f in fields(text) if f.name == field_name(data_counts.FIELD)),
+            None,
+        )
+        if value is None:
+            raise ValueError(f"{protocol.name} has no `{data_counts.FIELD}` field")
+        new = fill(
+            text, data_counts.FIELD, data_counts.with_counts(value, counts), force=True
+        )
+    except ValueError as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+    files.write_atomic(protocol, new)
+    print(f"{data_counts.FIELD}: {counts}")
+    return 0
 
 
 def withdrawn_runs_entry(text: str, run_id: str, day: str, why: str) -> str:
@@ -1300,6 +1359,25 @@ def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
         print(f"  {shown(path, here)}: {command}")
 
 
+def _check_data_counts_args(
+    ap: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """Refuse --data-counts beside another operation: it writes the end of
+    Data / scope and nothing else."""
+    if args.data_counts is not None and (
+        args.withdraw
+        or args.handover
+        or args.discuss is not None
+        or args.from_run is not None
+        or args.list
+        or args.prompts
+        or args.render
+        or args.into is not None
+        or args.field is not None
+    ):
+        ap.error("--data-counts goes alone: it writes the end of Data / scope")
+
+
 def _check_report_mode_args(
     ap: argparse.ArgumentParser, args: argparse.Namespace
 ) -> None:
@@ -1412,6 +1490,17 @@ def main(argv: list[str]) -> int:
         "--tried", help="with --handover: what was tried — one line, no run ids"
     )
     ap.add_argument(
+        "--data-counts",
+        nargs="?",
+        const="newest",
+        default=None,
+        metavar="RUN_ID",
+        help="write the counts a preparation run recorded (the newest by default) "
+        "as the generated end of Data / scope: the files it read and its items — "
+        "labelled, unlabelled, per gold value; the words before it stay yours; "
+        "finalize holds the part to the run, so it is never typed",
+    )
+    ap.add_argument(
         "--withdraw",
         action="store_true",
         help="with --why (and --into REPORT): withdraw the result declaration — "
@@ -1443,6 +1532,7 @@ def main(argv: list[str]) -> int:
         "run is withdrawn first (--withdraw), never replaced",
     )
     args = ap.parse_args(argv)
+    _check_data_counts_args(ap, args)
     _check_report_mode_args(ap, args)
     if not args.protocol.is_file():
         console.refuse("protocol-fill", f"no such file: {args.protocol}")
