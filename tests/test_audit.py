@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import registration_of, run_record  # noqa: E402
-from labkit.gates import audit, decision_review, report_check  # noqa: E402
+from labkit.gates import audit, decision_review, report_check, ways_out  # noqa: E402
 from labkit.checks import audit_binding, result_render  # noqa: E402
 from labkit.formats import attempts, findings, followup, promises, scope_sha  # noqa: E402
 
@@ -119,8 +119,8 @@ class Audit(unittest.TestCase):
         self.assertIn("Experiment preflight audit", prompt)  # the shipped instructions
         # the standard: the cited rules' text, not the whole document
         self.assertIn(
-            "===== FILE: labkit/docs/standard.md (LAB-103, LAB-015, LAB-017, LAB-004, LAB-050 — "
-            "the rules this audit cites) =====",
+            "===== FILE: labkit/docs/standard.md (LAB-103, LAB-015, LAB-017, LAB-004, LAB-050, "
+            "LAB-003 — the rules this audit cites) =====",
             prompt,
         )
         for head in (
@@ -135,8 +135,12 @@ class Audit(unittest.TestCase):
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
             audit.cited_rules("preflight"),
-            ["LAB-103", "LAB-015", "LAB-017", "LAB-004", "LAB-050"],
+            ["LAB-103", "LAB-015", "LAB-017", "LAB-004", "LAB-050", "LAB-003"],
         )
+        # what binds after the first measurement comes with its rule
+        self.assertIn("Incomplete at the first measurement", prompt)
+        # the ways out come as a piece in MODE analysis only
+        self.assertNotIn("before deciding a BLOCKER, name which of these it is", prompt)
 
     def test_declared_scope_and_direct_imports_in_full_deeper_modules_as_index(self):
         # LAB-103 The audit reads by declared scope, not by import graph: scripts/01_measure imports lib/scoring (direct → full);
@@ -220,6 +224,12 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 0)
         prompt = sent[0]
         self.assertIn("MODE: analysis", prompt)
+        # after a measurement the auditor names the ways the gates print, not
+        # a new registration value (fourth SAB-like draw, 2026-10-28)
+        self.assertIn("After the first measurement the registration binds", prompt)
+        routes = prompt.split("===== WAYS OUT OF A BLOCKER =====\n")[1]
+        for name, _ in ways_out.WAYS_OUT:
+            self.assertIn(f"    {name}: ", routes)
         # the record names the run whose rows the auditor read (review 2026-10-18)
         record = next((area / "audits").glob("*-analysis.toml")).read_text()
         self.assertIn('run_id = "2026-01-01T00-00-00_0001"', record)

@@ -29,8 +29,10 @@ restate them from memory.
    as shipped with labkit — LAB-103 The audit reads by declared scope, not
    by import graph (item 3), LAB-015 Preflight audit before freezing with the
    scar table and the severity legend, LAB-017 The number of audits follows
-   the cost tier, LAB-004 Identifiers make the intent addressable, and
-   LAB-050 Analysis audit before reporting. They are all of the standard you get.
+   the cost tier, LAB-004 Identifiers make the intent addressable,
+   LAB-050 Analysis audit before reporting, and LAB-003 No run without an
+   intent paragraph (what binds after the first measurement). They are all
+   of the standard you get.
    Every finding cites the rule it violates as code + name (LAB-nnn <title>);
    a defect none of them names is a finding of a new class, say so.
 5. For a computation whose number claims a property of the data through a
@@ -157,9 +159,21 @@ a finding you do not judge stays unchecked. A still-present fault needs no
 second BLOCKER line of its own: on `unresolved` or `not_assessable` labkit
 carries the finding into this audit's record, where it is decided again.
 
-In MODE analysis the frozen criterion is fixed. If the code would need a
-different criterion to be correct, that IS the finding — never a
-recommendation to change the registration.
+**After the first measurement the registration binds** — at every repeat
+cost, frozen or not (LAB-003 No run without an intent paragraph). In MODE
+analysis a measurement exists: its question, sentences, keys, constants
+and scopes stand as its commit held them, a constant still at the stamp's
+example value included. Where code and registration disagree, the repair
+is the code, made to do what the registration says, then measured again.
+Where the registration itself cannot be answered as written, or lacked a
+choice at the first measurement, the repair is a new registration that
+names this one in `[replaces]`. `accepted` with an effect, and the
+handover, stay open; neither changes the registration. So the last field
+of a finding about the registration never proposes a new sentence, value,
+key or scope for this protocol — report-check refuses that change. It
+names one of the ways under `===== WAYS OUT OF A BLOCKER =====`: the ways
+labkit prints with every decision. If the code would need a different
+criterion to be correct, that IS the finding.
 
 **In MODE analysis, read the protocol's result part as a stranger would.**
 After the findings, one pass over Summary, Result, Runs and Follow-up for

@@ -504,6 +504,11 @@ def render(
         if mode == ANALYSIS:
             pieces += source.run
             pieces += source.fixes
+            # the ways the gates print, so a finding's repair names one of
+            # them: an auditor that proposed a new constant after the first
+            # measurement sent two agents into report-check's refusal
+            # (fourth SAB-like draw, 2026-10-28)
+            pieces.append((WAYS_OUT_LABEL, "\n".join(BLOCKER_ROUTES)))
     body = prompt_body(pieces)
     return (
         f"{instructions(mode)}\n\nMODE: {mode} · AREA: {rel(area)}\n\n"
@@ -513,6 +518,8 @@ def render(
 
 #: the label of the piece that shows the earlier decided BLOCKERs
 EARLIER_LABEL = "EARLIER DECIDED BLOCKERS"
+#: the label of the piece that shows the ways out of a BLOCKER (MODE analysis)
+WAYS_OUT_LABEL = "WAYS OUT OF A BLOCKER"
 #: operating limits of that piece, not thresholds of meaning: past either
 #: the audit refuses, loudly, rather than show a cut list (decided
 #: 2026-10-26 after the follow-up pilots, whose pieces held one entry of

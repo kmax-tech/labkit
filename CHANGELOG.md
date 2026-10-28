@@ -1198,6 +1198,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The analysis audit names the gates' way out after the first
+  measurement.** In the fourth SAB-like draw both registration changes
+  started with the agents' own analysis audit: after the first
+  measurement it named `null_band` "not derived" and a criterion stated
+  three ways, the agents changed the registration in place, and
+  report-check refused it. The audit's instructions said only that "the
+  frozen criterion is fixed" — at low repeat cost nothing freezes. They
+  now say that after the first measurement the registration binds at
+  every repeat cost: a disagreement is repaired in the code and measured
+  again, an invalid or incomplete registration gets a new one with
+  `[replaces]`, `accepted` with an effect and the handover stay open, and
+  a finding never proposes a new sentence, value, key or scope. The
+  auditor reads LAB-003 No run without an intent paragraph with its
+  other rules, and in MODE analysis the prompt shows the ways out the
+  decision list prints (`===== WAYS OUT OF A BLOCKER =====`, from
+  `ways_out.BLOCKER_ROUTES`).
 - **One preferred `protocol-fill` form; the stamped null explains
   chance.** `protocol-check --contract` showed `"<label>" "<value>"` where
   AGENTS.md shows `"<Label>=<value>"`; the contract's hint and the module
