@@ -1391,6 +1391,21 @@ Notiert, nicht geplant:
    Logbeleg eines Missbrauchs. Entschieden: ja, als neue Designanforderung
    — ein BLOCKER `dismissed` schuldet einen Zweitprüfer, eine WARNING
    nicht (`findings.dismissed_blocker`, Breaking).
+   Fünfte SAB-Ziehung auf `28c22f9`
+   ([Notiz](docs/usability/2026-10-28-sab-cases-haiku-28c22f9.md)): alle
+   drei versteckten Prüfungen bestanden, zwei übernommen (fit-assay mit C1
+   not assessable), keine Hook-Umgehung. Neue Lücke, Entscheidung offen:
+   eine korrigierte Prosazeile des Protokolls (Data / scope) kann nie
+   nachverfolgt werden — der Record bindet nur die beurteilten
+   Registrierungsfelder, AGENTS.md verlangt nach einer Tippfehler-
+   Korrektur aber ein erneutes Audit; der Auditor wertet dieselbe
+   Korrektur als „not one of the ways out“. Wege: (A) der Record bindet
+   die vor dem Lauf geschriebenen Prosafelder, die das Audit las (ohne
+   die nach dem Lauf erzeugten), dann bewegt eine Korrektur den Zustand
+   und das Folge-Audit beurteilt sie; dazu eine Regel, was als
+   Tippfehler-Korrektur gilt, gleich in AGENTS.md und beim Auditor.
+   (B) Korrekturen von Prosafeldern nach der ersten Messung nur über
+   eine neue Registrierung. Empfehlung: (A).
    Leseprobe (`docs/usability/2026-10-28-haiku-decision-reading.md`):
    drei Haiku-Leser wählen an den vier Logstellen den richtigen Schritt
    — Rückzug vor dem nächsten Audit, `fixed` erst nach der Reparatur,
