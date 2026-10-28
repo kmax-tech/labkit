@@ -451,6 +451,20 @@ pins (`requirements.txt` / `requirements.lock`).
   declared, not recognised: the decode decides, not the file type, so
   one whose bytes happen to decode is read as text, and guessing it from
   the failure would excuse a corrupt text dataset.
+- **Under lost audit evidence the texts name the one route that leads
+  out of a report citing a run.** protocol-fill (after a refused
+  adoption), the handover's list of citing reports and AGENTS.md
+  prescribed `--discuss`, whose report review labkit-audit refuses while
+  the area's audit evidence is gone, and report-check held the commit for
+  that review: under a handover for a lost record the route had no exit
+  (pilot of labkit-paper area 15, t60). The review stays owed and stays
+  refused; now report-check's hold of a discussion and of an undiscussed
+  citation, `--report-review`'s refusal, the adoption's refusal and the
+  handover say so and name what works — bring the evidence back, or the
+  report cites no run of the area, its handover block kept, naming the
+  protocol (`report_hold.lost_evidence`, the one selection they read, with
+  `ways_out.report_way_while_lost` and `attempts.gone_line`;
+  `report_hold.review_hold` chooses the review's blocker).
 - **report-check names a lost audit record as lost, not as an audit that
   never ran.** After an analysis audit's record was deleted, report-check
   said "none has run yet" and named `labkit-audit --mode analysis`, which

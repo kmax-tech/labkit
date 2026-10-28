@@ -39,6 +39,26 @@ HANDOVER = (
 )
 
 
+def report_way_while_lost(findings_command: str) -> str:
+    """The way out of a report that cites or discusses a run of an area
+    whose audit evidence is gone (`attempts.evidence_gaps`): labkit-audit
+    starts no attempt there (`attempts.begin`), so neither the audit an
+    adoption owes nor the report review a discussion owes can run — bring
+    the evidence back (FINDINGS_COMMAND lists each loss with its restore),
+    or the report cites no run of the area. The one wording report-check's
+    report holds, `--report-review`'s refusal, the adoption's refusal and
+    the handover print."""
+    return (
+        "while the area's audit evidence is gone labkit-audit starts no audit "
+        "and no review, so neither the audit an adoption owes nor the report "
+        "review a discussion owes can run: (a) bring the evidence back "
+        f"(`{findings_command}` lists each loss with its restore); (b) where "
+        "nothing restores it, the report cites no run of the area — remove "
+        "the run ids and the discussion block, keep its handover block (it "
+        "names the protocol, not its runs)"
+    )
+
+
 #: the way out of a protocol choice a command cannot make for itself
 PROTOCOL_NAMED = "name the protocol: `--protocol PROTOCOL-<name>.md`"
 #: the way out of a model answer that did not keep the form labkit reads

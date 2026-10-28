@@ -697,6 +697,19 @@ def evidence_gaps(area: Path, *, staged: bool = False) -> list[str]:
         return [str(exc)]
 
 
+def gone_line(gaps: list[str]) -> str:
+    """The sentence that labkit-audit starts no audit or review while the
+    area's audit evidence is gone — the cause a gate names when its way out
+    needs such an attempt (`begin`): GAPS (`evidence_gaps`, not empty), the
+    first with its restore, how many more `labkit-audit <area> --findings`
+    lists."""
+    more = f" (and {len(gaps) - 1} more)" if len(gaps) > 1 else ""
+    return (
+        "labkit-audit starts no audit or review while the area's audit "
+        f"evidence is gone: {gaps[0]}{more}"
+    )
+
+
 def _append(area: Path, event: dict[str, str]) -> None:
     """Append EVENT as one line to AREA's journal and to its copy in the
     git directory (`journal_copy`, none on a detached HEAD or outside

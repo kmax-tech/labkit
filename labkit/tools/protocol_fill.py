@@ -677,14 +677,22 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     if rc == 0:
         return 0
     files.write_atomic(protocol, before)
+    # the discussion owes a report review, which `attempts.begin` refuses
+    # while the area's evidence is gone (pilot t60)
+    lost = report_hold.lost_evidence(protocol)
+    mention = (
+        f"a report cannot discuss this run now — {lost.fix}"
+        if lost is not None
+        else f"a report that mentions this run without adopting it discusses it "
+        f"— `{report_blocks.discuss_command(shown(protocol, Path.cwd()), '<run_id>', '<REPORT>')}` "
+        f"— and leaves the question open; the run's numbers are not the result"
+    )
     print(
         f"protocol-fill: not adopted — report-check refuses the written result "
         f"(above); {protocol.name} is as it was. Pass the checks first, or leave "
         f"the number a sketch in runs/ (an exploration reports no result). A "
-        f"refusal is a finding to report, not an obstacle to route around: a "
-        f"report that mentions this run without adopting it discusses it — "
-        f"`{report_blocks.discuss_command(shown(protocol, Path.cwd()), '<run_id>', '<REPORT>')}` "
-        f"— and leaves the question open; the run's numbers are not the result."
+        f"refusal is a finding to report, not an obstacle to route around: "
+        f"{mention}."
     )
     return 1
 
@@ -1125,11 +1133,23 @@ def _print_still_citing(protocol: Path, run_id: str, root: Path) -> None:
     """After a handover withdrew RUN_ID: every report that still cites it
     (`report_hold.reports_citing`), each with the `--discuss` command that
     keeps the citation honestly — or remove it; each holds the stop and the
-    commit until then. Silent when none does."""
+    commit until then. While the area's audit evidence is gone the
+    discussion's review cannot run (`attempts.begin`), so the restore or
+    the removal is named instead (`report_hold.lost_evidence`). Silent when
+    none cites it."""
     held = report_hold.reports_citing(run_id, root)
     if not held:
         return
     here = Path.cwd()
+    lost = report_hold.lost_evidence(protocol)
+    if lost is not None:
+        print(
+            f"{len(held)} report(s) still cite the withdrawn run {run_id} and hold "
+            f"the commit — {lost.fix}:"
+        )
+        for path in held:
+            print(f"  {shown(path, here)}")
+        return
     print(
         f"{len(held)} report(s) still cite the withdrawn run {run_id} and hold "
         "the commit until the citation is removed or discussed:"

@@ -668,12 +668,10 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     # were printed after an audit's record was deleted (pilot t60)
     lost = attempts.evidence_gaps(ctx.area) if not covering else []
     if lost:
-        more = f" (and {len(lost) - 1} more)" if len(lost) > 1 else ""
         findings_command = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
         return blocker(
-            f"no analysis audit covers the area as it is now, and labkit-audit "
-            f"starts none while the area's audit evidence is gone (an attempt of "
-            f"any mode): {lost[0]}{more}",
+            f"no analysis audit covers the area as it is now, and none can run — "
+            f"{attempts.gone_line(lost)}",
             fix=f"(a) bring the evidence back — the line names the first "
             f"restore, `{findings_command}` lists every loss with its restore —, "
             f"then {audit}; (b) where nothing restores it, no audit covers the "

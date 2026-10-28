@@ -290,6 +290,10 @@ unadopted run, use `protocol-fill <PROTOCOL> --discuss <run_id> --why
 "<what refused adoption, what you found>" --into REPORT.md`. Explain
 that the question remains open; discussion is no success claim. It owes
 `labkit-audit <area> --report-review REPORT.md` of the finished report.
+While the area's audit evidence is gone (a lost record, handed over or
+not), labkit-audit runs no review: restore the evidence first, or the
+report cites no run of that area — remove the run ids and the discussion
+block, and keep the handover block, which names the protocol.
 The review reads the report as it stands, with its discussion block, the
 protocol, the discussed runs' metrics and the audit records, so it comes
 last: write the whole report, then `--discuss`, then the review, then the
@@ -360,7 +364,9 @@ prints these same recovery choices with each decision list:
   result blocks in the chosen report are withdrawn; other text and other
   protocols' blocks stay. Citations in prose or other reports still need
   removal or explicit discussion; the handover names each such report
-  with its `--discuss` command. Use no run ids in the reason or attempted steps. Stage
+  with its `--discuss` command — after a loss of audit evidence the
+  restore or the removal instead, since no review runs then. Use no run ids in the reason or
+  attempted steps. Stage
   the report, protocol, new handover record and remaining audit evidence
   together. New evidence or a changed block requires a new handover.
   This permits only the unresolved stop/commit, never a number or audit

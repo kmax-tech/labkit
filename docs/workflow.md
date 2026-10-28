@@ -279,6 +279,10 @@ discussion block owes a report review of its state: `labkit-audit <AREA>
 with the fingerprint of the inputs it read, and the gate holds the report
 until a review of the state it reads names no claim; a claim holds that
 state, and only a changed report or source and a review of it release it.
+While the area's audit evidence is gone (`attempts.evidence_gaps`) no
+review can start, so the hold, the review's refusal, the adoption's and
+the handover name the route that works: restore the evidence, or the
+report cites no run of the area (`report_hold.lost_evidence`).
 `--again` draws once more on a judged state: its claims hold the state
 like any review's, and it releases nothing. The command prints this
 draw's claims and the state apart, and its exit code is the state's — 0
