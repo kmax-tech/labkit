@@ -15,6 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit import PACKAGE_DIR  # noqa: E402
+from labkit.checks import run_record_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import promises  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
@@ -129,6 +131,33 @@ class Provenance(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("source", out)
         self.assertIn("not tracked in git", out)
+
+    def test_untracked_source_way_out_names_both_documented_routes(self):
+        # the standard's Fixed inputs: small shareable inputs are committed,
+        # large or protected data are named by source or access route and
+        # version beside the run's checksum (pilot t34: the blocker named
+        # `git add` alone, and a committed DATA_SOURCE.md did not lift it)
+        self._run(SHORT, self._frozen(), commit=False)
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1)
+        line = next(x for x in out.splitlines() if "not tracked in git" in x)
+        self.assertIn("way out: if it is small and may legally be shared", line)
+        self.assertIn(f"`git add {self.src}`", line)
+        self.assertIn(
+            "large or protected data stay out, but finalize still blocks", line
+        )
+        self.assertIn("source or access route and version in the protocol's Data", line)
+        self.assertIn("the checksum this run recorded (sha256 ab)", line)
+        self.assertIn("protocol-fill <PROTOCOL> --handover --why", line)
+
+    def test_the_printed_handover_is_the_one_agents_md_gives(self):
+        agents = (PACKAGE_DIR / "templates" / "AGENTS.md.template").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            " ".join(run_record_check.HANDOVER_COMMAND.split()),
+            " ".join(agents.split()),
+        )
 
     def test_untracked_output_after_the_run_is_a_warning_naming_git_add(self):
         d = self._run(SHORT, self._frozen(), commit=True)

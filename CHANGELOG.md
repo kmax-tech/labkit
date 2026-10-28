@@ -403,6 +403,20 @@ pins (`requirements.txt` / `requirements.lock`).
   yields; what only the prompt skeleton's adds is the data-profile aid,
   and the sentence now says that. Pilot of labkit-paper area 15 on
   c2c5da2 (t71, t15), defect 12.
+- **finalize's blocker for an untracked source names both routes the
+  standard allows.** The standard's Fixed inputs makes traceable the rule,
+  not "commit the inputs": small inputs that may legally be shared are
+  committed, and for large or protected data the repository holds their
+  source or access route, version and checksum (the field guide: in the
+  protocol's Data / scope). finalize offered `git add` alone, and an agent
+  that wrote the declaration stayed blocked without a word (labkit-paper
+  area 15, pilot t34 and t21). The way out now names both routes and the
+  sha256 the run recorded, and says first that finalize still blocks
+  large or protected data — it does not read the declaration — so such a
+  run is handed over without a number (`run_record_check.HANDOVER_COMMAND`,
+  held by a test to the stamped AGENTS.md's command). The gate itself is
+  unchanged: no labkit text says where a gate reads the declaration or
+  what it must name.
 - **A binary file under `data=` is a refusal that names its way.** The
   prepare stamps and AGENTS.md ask for every file a run reads under
   `data=`; runlog reads an ordinary path as a text dataset, and a `.npz`

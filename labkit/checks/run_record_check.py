@@ -424,7 +424,7 @@ def provenance_findings(
             )
         )
     sources = [
-        resolve_recorded(v["path"], answering_run)
+        (resolve_recorded(v["path"], answering_run), v.get("sha256"))
         for v in data.values()
         if isinstance(v, dict) and v.get("path")
     ]
@@ -440,17 +440,11 @@ def provenance_findings(
             "not a git repository — cannot tell whether source and output are committed"
         )
         return blockers, warnings
-    for f in sources:
+    for f, sha in sources:
         if not f.exists():
             blockers.append(_gone(f))
         elif not _tracked(repo, f):
-            blockers.append(
-                blocker(
-                    f"source {f} is not tracked in git — the number cannot be "
-                    f"re-derived",
-                    fix=f"commit it (`git add {shlex.quote(str(f))}`)",
-                )
-            )
+            blockers.append(_untracked_source(f, sha))
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
     # blocker that sends the agent round the loop (2026-10-05, five probes).
@@ -463,6 +457,42 @@ def provenance_findings(
                 f"the commit that cites the number"
             )
     return blockers, warnings
+
+
+#: the command that ends an area without a number while finalize stays
+#: blocked — the handover as the stamped AGENTS.md gives it (a test holds
+#: the two together); its <…> parts are the agent's to fill
+HANDOVER_COMMAND = (
+    'protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried '
+    '"<what you tried>" --into REPORT.md'
+)
+
+
+def _untracked_source(source: Path, sha: object) -> GateFinding:
+    """The blocker `provenance_findings` raises for a SOURCE of the run that
+    git does not track (in a repository, at repeat cost low), its way out
+    the two routes the standard's Fixed inputs names: a small input that may
+    legally be shared is committed; for large or protected data the
+    protocol's Data / scope names its source or access route and version
+    (the field guide), beside the checksum SHA the run recorded. No labkit
+    text says how a gate holds that declaration, so finalize reads none:
+    the blocker stays, and the second route ends in a handover without a
+    number."""
+    checksum = (
+        f"the checksum this run recorded (sha256 {sha})"
+        if isinstance(sha, str)
+        else "the checksum (this run recorded none)"
+    )
+    return blocker(
+        f"source {source} is not tracked in git — the number cannot be "
+        f"re-derived from the repository",
+        fix=f"if it is small and may legally be shared, commit it (`git add "
+        f"{shlex.quote(str(source))}`); large or protected data stay out, but "
+        f"finalize still blocks them: it does not read the declaration — name "
+        f"the source or access route and version in the protocol's Data / "
+        f"scope beside {checksum}, then hand over without a number "
+        f"(`{HANDOVER_COMMAND}`, the <…> parts filled)",
+    )
 
 
 def _gone(f: Path) -> GateFinding:
