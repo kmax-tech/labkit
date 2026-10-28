@@ -1425,6 +1425,97 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+- **Runde 2 des labkit-Piloten (labkit-paper Bereich 15, labkit `72507d0`,
+  `repeat_cost = high`, 2026-10-28): neun Mängel und die Steuerung der
+  Reparatur.** Belege in labkit-paper
+  `experiments/15-labkit-exploratory-evaluation/data/hand/`:
+  `defects_v2.tsv` (neun Mängel, von Max entschieden), die Verdichtung aus
+  elf gemeldeten Zeilen `defects_v2_condensation.md`, 67 Funde
+  `catches_v2.tsv`, die Lesungen `readings_v2/`. Keiner der elf Mängel
+  der ersten Runde trat wieder auf.
+
+  *Verletzte bestehende Anforderungen — Mängel, zu reparieren nach der
+  Regel vom 2026-10-27:*
+  1. D1: Ein eingefrorenes `compute`-Protokoll bei `high` schuldet ein
+     Codebeispiel, das der `compute`-Weg nie stempelt
+     (`protocol_report.py:545`); `n/a — <why>` hebt es nicht auf, und
+     `preflight` lässt dieselbe Datei durch. Folge: dreimal `--no-verify`
+     (t21, t34).
+  2. D2: `labkit-audit` verwirft die ganze Antwort des eigenen Auditors
+     wegen eines Punkts nach `check: <key> (<note>)` (`findings.py:258-261`),
+     schreibt keinen Record und nennt keinen nächsten Schritt (t71: drei
+     echte BLOCKER verloren).
+  3. D3: `labkit-audit --findings` nennt einen Audit-Aufruf, der ohne
+     Record endete (`outcome = none`), nicht — gegen AGENTS.md:19-23 und
+     den eigenen Exit-Vertrag (t71).
+  4. D4: Der gestempelte Bereichstest hält das Null-Band auf dem
+     Beispielwert 1 fest, den AGENTS.md zu ersetzen verlangt
+     (`test-area.py.template:54-59`; pubmedqa: Band 5 → Test rot →
+     Registrierung an den Test angepasst).
+  5. D5: Ein mehrzeiliger Befund des Auditors wird im Record still auf
+     seine erste Zeile gekürzt (`audit.py:808-809`); Wirkung, Regel und
+     kleinste Änderung stehen dann nur in der Antwortdatei (t21).
+  6. D6: `runlog --wait` meldet „idle“, solange das Skript vor
+     `runlog.run` noch Zeilen vorbereitet (t21).
+  7. D7: Der Pre-Run-Hook behandelt das dokumentiert schreibfreie
+     `00_prepare.py --audit` wie einen Laufstart (`claude_hooks.py:189`;
+     t15, latent).
+  8. D8: `preflight --protocol <dateiname>` verweigert den bloßen Namen,
+     den die eigene Usage-Zeile und der Hook zeigen (t71, gering).
+  9. D9: `protocol-check --contract` druckt die Feldlisten der vollen Form
+     ungefiltert nach Art und Modell (Kriterium und Prompt für `compute`
+     ohne Modell; t15, t60, t21, t34).
+
+  *Prüfung von audit/decide (Max, 2026-10-28) — Bestand, Verletzung, neu:*
+  - **(a) Ein Befund sagt, was zu korrigieren ist, welcher Nachweis gilt
+    und welcher Schritt folgt.** Bestand: das Berichtsformat des Auditors
+    (`experiment-preflight.agent.md`, „Report format“) verlangt die
+    kleinste Änderung als letztes Feld und, wo nur eine Diagnose die
+    Reparatur zeigen kann, `check: <metrics key>`; `followup._earlier_hold`
+    hält die Freigabe, bis der Lauf diesen Schlüssel trägt. Verletzt: D2
+    (eine Antwort mit Prüfnotiz geht ganz verloren) und D5 (der Record
+    behält von einem mehrzeiligen Befund nur die erste Zeile, die kleinste
+    Änderung fehlt dann). Neu: Nachweis und nächster Schritt *je Befund*
+    als Daten — heute gibt es `check` nur für Diagnose-Reparaturen, und
+    `--findings` nennt Schritte je Zustand, nicht je Befund.
+  - **(b) `fixed` gibt ein Ergebnis erst frei, wenn das Folgeaudit die
+    Korrektur am maßgeblichen Lauf bestätigt hat.** Bestand für BLOCKER:
+    `followup._earlier_hold` mit `report_check.followup_findings` hält
+    Übernahme und `--from-run`, bis ein Folge-Analyseaudit den Befund am
+    gezeigten Lauf `resolved` nennt und den geforderten `check` im Lauf
+    sieht (Runde 2, t34: das Analyseaudit trug vier `fixed`-BLOCKER als
+    `unresolved` weiter). Wie ein `fixed`-BLOCKER zum deklarierten Lauf
+    frei wird, ist offen: die Bindung dafür ist zurückgenommen (`b2da352`),
+    die zwei Wege stehen oben. Lücken: `--decide N fixed` nimmt ein `fixed` ohne jede Änderung
+    an (in vier von sechs Versuchen ein `fixed` mit unverändertem Code
+    oder fremder Begründung); WARNINGs werden nicht nachgeprüft; und die
+    Bestätigung umfasst nicht die Ergebnisdatei der Aufgabe (neu, c).
+  - **(c) Neu: Herkunft der Ergebnisdatei.** In keinem der sechs Versuche
+    schrieb der Code des antwortenden Laufs die Ergebnisdatei der Aufgabe
+    (`pred_results/…`): viermal ein Nebenskript außerhalb von labkit
+    (t15, t60, t71, pubmedqa), einmal inline aus einem nie übernommenen
+    Lauf (t34), einmal von Hand aus dem übernommenen Lauf abgetippt (t21).
+    AGENTS.md verlangt es („never retype it or compute it apart from the
+    run“), kein Gate prüft es: report-check hält nur Berichte, die einen
+    Lauf zitieren, und der Stop-Hook schuldet ohne `[result]` nichts. Zu
+    entwerfen: die Aufgabenausgabe als deklarierte Ausgabe des
+    antwortenden Laufs (Pfad und sha256 im Lauf), gehalten von finalize,
+    report-check und Stop-Hook gegen eine abweichende oder lauffremde
+    Datei; die Freigabe aus (b) bindet sie mit. Erst Fehler und Zwilling,
+    dann die kleinste Prüfung (Regel oben).
+  - **(d) Ein fehlgeschlagener Audit-Aufruf bleibt über `--findings`
+    sichtbar.** Bestand: AGENTS.md:19-23 und der Exit-Vertrag von
+    `labkit-audit --findings`. Verletzt für eine Antwort, die als
+    unlesbar verworfen wurde (Attempt `none`, kein `-failed.toml`): D3,
+    ausgelöst durch D2.
+  - *Beobachtet, nicht labkits Mangel:* `--no-verify` dreimal (t21, t34;
+    der Stop-Hook fing den zweiten), ein gelöschtes REPORT.md
+    (pubmedqa), ein erfundener Record-Name im Kopf (t71; Hook und
+    Commit-Hook fingen ihn), ein Opus-Audit, das die Sicherheitssperre
+    abbrach und das bis zum Ende des Versuchs nach 738 s ohne Antwort
+    hing (t15; der 900-s-Timeout von `labkit-audit` war noch nicht
+    erreicht, der Agent gab nach 120 s auf).
+
 - **Offen nach den Reparaturen aus dem labkit-Piloten (labkit-paper
   Bereich 15, Runde 1 auf c2c5da2, 2026-10-28; Commits `24b9349` bis
   `0ed2699`).** Repariert wurde nur, wo labkit nicht tat, was es
