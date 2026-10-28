@@ -1330,10 +1330,17 @@ Notiert, nicht geplant:
    Entscheidung: ein `fixed`-BLOCKER zum deklarierten Lauf (`[result]
    run`) wird für immer gehalten, weil die erneute Übernahme den
    auditierten Zustand nicht bewegt und der Ausweg „neue Messung“ nicht
-   passt; der Agent ging mit `--no-verify` am Hook vorbei. Zwei Wege in
-   der Notiz: der deklarierte Lauf gehört zur Bindung des Records, oder
-   report-check gibt einen solchen BLOCKER frei, sobald der Kopf den
-   auditierten Lauf deklariert.
+   passt; der Agent ging mit `--no-verify` am Hook vorbei — die Lücke
+   erklärt den hängenden BLOCKER, entschuldigt aber weder die
+   Hook-Umgehung noch die fehlenden Abgabeteile. Entschieden: der
+   deklarierte Lauf gehört zur Bindung des Analyse-Records (keine
+   Sonderregel in report-check); die erneute Übernahme erledigt den
+   BLOCKER nicht selbst, ein Folge-Audit prüft und löst ihn. Als eigener
+   Schritt: Bindung, Entscheidungswege des Agenten (ein Befund zum
+   deklarierten Lauf ist weder Code- noch Registrierungsfehler: neu
+   übernehmen, dann Folge-Audit, keine neue Messung), Regressionstest
+   über die ganze Kette samt Gegenprobe (ein weiter falscher Kopf bleibt
+   blockiert).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

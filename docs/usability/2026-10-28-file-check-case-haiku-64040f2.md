@@ -14,6 +14,9 @@ declared run records exactly that path. Haiku 4.5, cold. Records:
 
 ## Result
 
+Two verdicts, kept apart: the file-check path passed; the delivery
+failed.
+
 The file check works. The agent repaired the fault and declared the file
 (`PREDICTOR_FILES = {"model": MODEL_JSON}`); the next run recorded it, and
 four follow-ups (`17-29`, `17-34`, `17-35`, `17-39` — the last three on
@@ -51,14 +54,17 @@ blocker; the agent ran one more audit, which again could not see it, and
 then committed past the hook with `--no-verify`, which AGENTS.md
 forbids.
 
-Not fixed here; the remedy is a decision for the author, two ways:
+The gap explains the BLOCKER that stayed held. It does not excuse the two
+commits past the hook, nor the missing parts of the delivery (the
+generated block in REPORT.md, the 208 predictions): those are the
+agent's, and report-check named each.
 
-1. The declared run joins what an analysis record binds: re-adopting
-   then moves the state, and the next audit follows the finding up as an
-   earlier one.
-2. report-check releases a `fixed` BLOCKER at the protocol's `[result]`
-   line once the head declares the run the record audited — mechanical,
-   but a rule for one kind of finding.
+Decided by the author: the declared run joins what an analysis record
+binds, so re-adopting moves the state and the next audit follows the
+finding up as an earlier one; re-adopting does not settle the BLOCKER by
+itself. Rejected: a release rule in report-check for this one kind of
+finding, which would stand in for the missing binding. The fix is a step
+of its own (TODO 15).
 
 ## What else the attempt shows
 
