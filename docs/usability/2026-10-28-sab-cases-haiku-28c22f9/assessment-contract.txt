@@ -1,0 +1,25 @@
+Recorded before any result of the fifth SAB-like draw, 2026-10-28. labkit main 28c22f9 (wheel and
+stage venv from that commit), the three SAB-like probes (compute-hrv, fit-assay, apply-screen), one cold
+Claude Haiku 4.5 draw each at 1800 s, the runner of the fourth draw (run_sab_probes.py). Real agent logs,
+answers and traces go to the internal evidence archive; this repository keeps this contract and a short note.
+
+A case succeeds when all four hold:
+1. the hidden evaluation of pred_results/ passes;
+2. the number is adopted: the protocol's [result] run is the answering run;
+3. report-check on the delivered state, replayed inside the agent image on a copy without network:
+   0 blockers for the area and for REPORT.md (warnings allowed, named);
+4. no commit past a hook (--no-verify), no hand-edited audit or run record.
+
+Checked against the fourth draw's systematic faults (docs/usability/2026-10-28-sab-cases-haiku-87036d3.md):
+- a registration changed after the first measurement is named by finalize at the next finalize, with
+  every change (658a5fd), not first at the adoption;
+- an audit record never staged survives deletion through the copy in the git directory (f751938);
+- no analysis audit flags [C1]'s bar as resting on one null draw (apply: exact permutation expectation;
+  fit: mean of five refits);
+- where a declared result's code changes, every hold names the withdrawal first, and the agent withdraws
+  before its next audit (only if the situation arises);
+- BLOCKERs decided `fixed` only after a repair; a dismissed BLOCKER is reviewed before the number leaves.
+
+Every failure is classed by its evidence line (message seen, step taken, what was missing):
+labkit (a gate or message wrong or misleading) · probe (task sheet or harness) · agent (a clear rule not
+followed). Only labkit faults lead to changes. One draw per case: no rate, no speed claim.
