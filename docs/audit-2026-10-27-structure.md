@@ -157,18 +157,32 @@ collector, the split, the stamp, the rests):
 | test session (1) | finalize holds an unmoved null lane from the kept rows | `8b500c6` |
 | K5, S3 | finding numbers by identity; one report suffix | `2497092` |
 
+Done in the third round (2026-10-27/28):
+
+| Rows | Done | Commit |
+|---|---|---|
+| S rest | minute stamp, answer-line grammar and prompt join, parent run (S4), area-test rendering (S7), "ref → commit" (S8), each with its `test_one_home` rule | `fddb01b`, `073f1f8`, `e3c6279`, `79dc96b`, `df0e9a9` |
+| I11 | Raw output: one real output per finding, from the run's rows, owed only with a model (`not_owed` covers the after-run fields) | `af49126` |
+| I12 rest | the next steps name every kind's fields and say `repeat_cost`, not "lane"; finalize no longer offers `--metrics FILE`; a fit with a model is not stamped "no model call" | `d009626`, `493b745`, `10a8e96` |
+| M4 rest | the post hook runs the checkers from the repo root; every start check raises; `usability score` and `runlog reindex` read, write and show in steps; pure `write_*` renamed `with_*` | `afd2c3a`, `bfe8a00`, `92d2daa`, `c1d0a7b`, `f991d84` |
+| M7 | `BoundPrompt`; one journaled call and one refusal list for the reviewers; the hook handlers in named steps; one estimator sentence | `352341f`, `67a3b4c`, `bfe9865`, `6dc1cb6` |
+| — | the stop-budget test under load (3 s → 10 s) | `8a2248b` |
+
+Plan (7) went the other way: every start check now raises
+(`SystemExit` with its sentence) instead of returning text — six of the
+eight already raised, and the module text said so. Plan (2) is half done:
+`BoundPrompt` names the bound state, but `audit.current` still matches a
+record field by field instead of one named type in `findings`.
+
 Still open:
 
-- **S rest** — minute stamp, answer-line grammar, prompt assembly,
-  parent run (S4), area-test rendering (S7), git outside `repo` (S8),
-  and their `test_one_home` rules.
-- **I11, I12 rest** — Raw output's two jobs; finalize passing
-  intent-check's `--metrics FILE`; `--change-kind` compute+model → fit;
-  the per-kind field lists of the "Next" steps; "lane high" beside
-  `repeat_cost`.
-- **M4 rest, M7** — `post_change` still reads `protocol-check`'s printed
-  text; `start_check` mixes returned refusals with `SystemExit`; the long
-  hook handlers, `next_steps`, `bound_prompt`'s 8-tuple.
-- **Test session (3), (4)** — the task's key against `c1_score` lives in
-  the probe module of branch `sab-like-cases`; the run time is the
-  agent's, not a gate's.
+- **Plan (2) rest** — one named audited-state type in `findings`, used
+  by `bound_prompt`'s `current` and the record.
+- **`scaffold.next_steps`** — 142 lines; the doubled sentence is gone,
+  the length is not.
+- **Test session (3)** — the task's key against the skeleton's
+  `c1_score` is a decision in the probe module of `sab-like-cases` /
+  `sab-cases-on-main` (another session's branches): name the key in the
+  skeleton's output, or accept the skeleton's key in the score.
+- **Test session (4)** — 724–1238 s against ten minutes; the agent's
+  time, no gate's.

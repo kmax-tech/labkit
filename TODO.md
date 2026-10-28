@@ -1075,11 +1075,15 @@ Notiert, nicht geplant:
    K9, I11, Rest von I12; restliche S-Zeilen und ihre Grep-Regeln.
    Zweite Runde 2026-10-27 (`a589b33` bis `2497092`): M1, M4, M5, M3,
    Stempel nach Modell und Kriterium, K9, K5, S3, die Null-Lane-Station aus
-   der Test-Session; die Kreuzung ist befristet dokumentiert. Offen: Rest
-   der S-Zeilen samt Grep-Regeln, I11, Rest von I12, `post_change` liest
-   noch Druckausgabe, `start_check` mischt Ablehnungsformen, M7; aus der
-   Test-Session (3) Aufgaben-Schlüssel gegen `c1_score` (nur auf dem
-   Branch `sab-like-cases`) und (4) Laufzeit.
+   der Test-Session; die Kreuzung ist befristet dokumentiert.
+   Dritte Runde 2026-10-27/28 (`fddb01b` bis `c1d0a7b`): restliche S-Zeilen
+   mit Grep-Regeln, I11, Rest von I12, Rest von M4, M7. Plan (7) andersherum
+   gelöst: jede Startprüfung löst aus, statt Text zurückzugeben. Offen:
+   ein benannter Typ für den auditierten Zustand in `findings` (Plan 2,
+   `audit.current`); `scaffold.next_steps` noch 142 Zeilen; Test-Session
+   (3) Aufgaben-Schlüssel gegen `c1_score` — Entscheidung im Probe-Modul
+   der Branches `sab-like-cases`/`sab-cases-on-main` einer anderen Sitzung;
+   (4) Laufzeit, keine Gate-Frage.
    Regelkonflikt gemeldet: eine neue bekannte Kern→Doktrin-Kreuzung
    (`start_check`→`protocol_history`, `5760496`), obwohl die Liste „not
    extended in passing“ sagt — bewusst, gleiche Doktrin wie die Zeile
