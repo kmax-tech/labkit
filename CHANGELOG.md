@@ -9,6 +9,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **An analysis record binds the setup's prose; a corrected description
+  is followed up.** In the fifth SAB-like draw (2026-10-28) two agents
+  registered data counts in Data / scope that the data did not hold. The
+  audits found them; one agent corrected the count in place, as AGENTS.md
+  says, decided `fixed` and audited again. Since the record bound only the
+  registration's judged fields, the new audit covered the same state, and
+  report-check held the BLOCKER for good as fixed in the state audited.
+  `shown_sha` now also covers the setup's prose the audit read
+  (`protocol_check.audited_texts`: Terms, Data / scope, Model / tool,
+  Model I/O, Exclusions / filters, Unit — not the Prompt block, which is
+  written from the code, not the registration's own fields, which
+  `registration` binds field by field, not what is written after the
+  audit). A corrected description therefore moves the state, and the next
+  audit follows the finding up. AGENTS.md and the auditor name the rule:
+  a description of unchanged data or code is corrected in place; a change
+  of the data or code used is measured anew. The hold of a BLOCKER fixed
+  in the state audited names the correction. Every analysis record written
+  before covers no state any more: audit again. 0.103.0 is the last
+  version without the binding.
+
 - **A BLOCKER decided `dismissed` owes a decision review, its first
   dismissal too.** Until now a BLOCKER dismissed in the record of the
   state reported released the number on its reason alone; a review was

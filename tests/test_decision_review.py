@@ -19,9 +19,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from protocol_fixture import registration_of, completed_run, head, scope_file
+from protocol_fixture import registration_of, completed_run, head, scope_file, shown_sha
 
-from labkit.checks import audit_binding
 from labkit.formats import attempts, findings, promises, reviews, scope_sha
 from labkit.gates import audit, decision_review, report_check
 from labkit.run import llm_backends
@@ -97,7 +96,7 @@ def area_with(
         ),
         rows,
         run_id=RUN,
-        shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+        shown_sha=shown_sha(area, run),
         registration=registration_of(area),
     )
     for n, (status, reason, effect) in decide.items():

@@ -66,6 +66,25 @@ def registration_of(area: Path) -> dict[str, str]:
     return {protocol_check.REGISTRATION_KIND: protocol_check.REGISTRATION_ABSENT}
 
 
+def protocol_text_of(area: Path) -> str:
+    """AREA's `PROTOCOL-x.md` (else its one protocol) as it stands now, ""
+    without one — the text a record a test writes was audited on."""
+    named = area / "PROTOCOL-x.md"
+    found = [named] if named.is_file() else sorted(area.glob("PROTOCOL-*.md"))
+    return found[0].read_text(encoding="utf-8") if len(found) == 1 else ""
+
+
+def shown_sha(area: Path, run_dir: Path | None) -> str:
+    """What a record a test writes binds as `shown_sha`: what MODE analysis
+    shows of RUN_DIR under AREA's protocol as it stands now
+    (`audit_binding.run_shown`) — the one home of that digest in the tests,
+    so a record written right after the protocol covers it, as one
+    `labkit-audit` writes would."""
+    from labkit.checks import audit_binding
+
+    return audit_binding.run_shown(area, run_dir, "", protocol_text_of(area)).sha
+
+
 def scope_file(area: Path) -> Path:
     """The script the default block's scopes name, written if absent."""
     script = area / "scripts" / "01_measure.py"

@@ -209,7 +209,7 @@ to decide. The four statuses:
 
 | status | when | what follows |
 |---|---|---|
-| `fixed` | after you made the repair — the named fault is gone from the files (code, data or the declaration); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
+| `fixed` | after you made the repair — the named fault is gone from the files (code, data, a description in the setup, or the declaration); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
 | `accepted` | the fault stays and you report within it | `--effect stands` (the verdict holds within the limit; for a BLOCKER a second auditor must uphold it, for a WARNING its missing review stays a warning) or `--effect "<ID> not assessable"` |
 | `dismissed` | the finding does not apply to the code and run as audited — the auditor misread them | the reason shows from the files why; a dismissed BLOCKER needs a second auditor (`labkit-audit <area> --review --record <record>`) before the number leaves, a dismissed WARNING does not |
 | `deferred` | the fault is real but not this result's to fix — someone else's task, or the area is handed over | the reason names who or why; a carried one needs a second auditor |
@@ -375,9 +375,16 @@ prints these same recovery choices with each decision list:
   exploratory, and a new run on the same data does not restore what stood
   before the number. If you can make the missing choice on grounds you
   state, register a successor with `[replaces]` as above; if not, hand
-  over without a result. A pure typo in a prose field you correct in the
-  protocol itself (an audit that judged the field is owed again); a
-  promise's sentence, key or constant stays as registered.
+  over without a result. A description in the setup that does not match
+  the data or code the run used — a count, a path, a name in Terms, Data /
+  scope, Model / tool, Model I/O, Exclusions / filters or Unit — you
+  correct in the protocol itself while that data and code stay as they
+  were: decide the finding `fixed` naming the correction, then run the
+  analysis audit again; the corrected text is part of what it binds, so
+  it follows the finding up and judges it. A change of the data or code
+  the run used is no such correction: measure anew. A promise's sentence,
+  key or constant, and the registration's question, criterion,
+  admissibility and null condition, stay as registered.
 - **a wrong declaration** — the measurement stands, but the protocol's
   head declares another run than the one the finding judged. Withdraw the
   declaration (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`),

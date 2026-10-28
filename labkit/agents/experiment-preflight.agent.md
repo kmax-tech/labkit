@@ -154,6 +154,16 @@ FIX · <record>#<n> · resolved|unresolved|not_assessable · <why, citing file:l
   is in no file you were given, or it belongs to an older run. A diagnostic
   the reason only describes is not shown.
 
+A finding on a description in the protocol's setup — a count, a path, a
+name in Terms, Data / scope, Model / tool, Model I/O, Exclusions / filters
+or Unit — is repaired by correcting that description in place, while the
+data and code the run used stay as they were: judge it `resolved` when the
+text now matches the run's recorded inputs and rows, `unresolved` when it
+still does not. That is not a registration change. A change of the data
+or code the run used is no such correction: it owes a new measurement. The
+registration's own fields (question, criterion, admissibility, null
+condition) are not corrected in place.
+
 When the entry shows a `required check`, it is the diagnostic the finding
 fixed for its repair: judge its value as shown. A check marked missing
 leaves the repair `not_assessable`, whatever the code shows.

@@ -32,7 +32,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit.checks import report_blocks  # noqa: E402
 from labkit.gates import claude_hooks  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
-from labkit.checks import audit_binding  # noqa: E402
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
     registration_of,
@@ -43,6 +42,7 @@ from protocol_fixture import (
     head_commit,
     scope_file,
     script_sha_of,
+    shown_sha,
 )  # noqa: E402
 
 BODY = """\
@@ -719,9 +719,7 @@ class Stop(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=self.RUN,
-                shown_sha=audit_binding.run_shown(
-                    self.area, self.area / "runs" / self.RUN, "", None
-                ).sha,
+                shown_sha=shown_sha(self.area, self.area / "runs" / self.RUN),
                 registration=registration_of(self.area),
             )
 

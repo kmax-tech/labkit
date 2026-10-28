@@ -64,7 +64,7 @@ from typing import NamedTuple
 from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
 from labkit.checks.result_render import rendering
-from labkit.formats import attempts, console, findings, protocol_block, reviews
+from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import conclusion_written
 from labkit.formats.repo import audit_command, layout_root, shown, the_protocol
@@ -259,13 +259,13 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         area,
         run_dir,
         "no completed bound run when the record was written",
-        protocol_block.declared_run_shown(text),
+        text,
     )
     if seen.sha != record.shown_sha:
         raise AuditError(
             f"the run shows {seen.sha} now, the record's auditor was shown "
-            f"{record.shown_sha} — rows, metrics or the declared run changed "
-            f"after the audit",
+            f"{record.shown_sha} — rows, metrics, the declared run or the audited "
+            f"protocol text changed after the audit",
             fix="audit again and decide again",
         )
     label, rules_text = audit.standard_excerpt(REVIEW)

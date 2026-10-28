@@ -148,6 +148,43 @@ FIELDS = (
     Field("Analysis audit", "report"),
 )
 
+#: the fields an analysis record binds besides the registration: what the
+#: protocol says before the run, which the audit reads and may judge — every
+#: field owed before a pilot (`must`) but the Prompt block, which
+#: `protocol-fill --prompts` writes from the code the record binds already,
+#: and the registration's own fields, which `registration_stamp` binds field
+#: by field (so a rewritten question is named as one). The fields written
+#: after the audit (the Summary, Recorded results, the Limit lines, the run
+#: list) and the reportable run's further fields are not in it, so writing
+#: them leaves the audit standing. Why: a corrected Data / scope could never
+#: be followed up (fifth SAB-like draw, 2026-10-28)
+_REGISTERED = (
+    standard_contract.REGISTRATION_FIELDS
+    + standard_contract.REGISTRATION_FIELDS_WITH_BAR
+    + standard_contract.REGISTRATION_FIELDS_WITH_MODEL
+)
+AUDITED_FIELDS = tuple(
+    f.label
+    for f in FIELDS
+    if f.level == "must" and f.label != "Prompt" and f.label not in _REGISTERED
+)
+
+
+def audited_texts(text: str) -> str:
+    """The values of TEXT's AUDITED_FIELDS as one canonical string — `label:
+    value` per field in AUDITED_FIELDS' order, whitespace collapsed so a
+    reflowed line moves nothing, REGISTRATION_ABSENT for a field the text
+    lacks — what an analysis record binds of the protocol's prose
+    (`audit_binding.run_shown`)."""
+    values: dict[str, str] = {}
+    for f in fields(text):
+        values.setdefault(f.name, f.value)
+    return "\n".join(
+        f"{label}: {' '.join(values[field_name(label)].split()) if field_name(label) in values else REGISTRATION_ABSENT}"
+        for label in AUDITED_FIELDS
+    )
+
+
 #: a bold field label opening a line: `- **Label (gloss) †:** value`
 _BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"  # `- `, `* `, `1. `, `1) ` or none
 _FIELD_OPEN = re.compile(

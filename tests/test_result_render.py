@@ -17,9 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
-from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
-from protocol_fixture import registration_of, completed_run, head, scope_file  # noqa: E402
+from protocol_fixture import registration_of, completed_run, head, scope_file, shown_sha  # noqa: E402
 
 RUN = "2026-10-21T10-00-00_abcd"
 BODY = "\n## Result\n\n- **Recorded results:** <per registered id its verdict…>\n- **Raw output:** r\n\n## Runs\n\n- <run_id> — <one sentence>\n"
@@ -57,7 +56,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         (0, 1, 0),
         items,
         run_id=run.name,
-        shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+        shown_sha=shown_sha(area, run),
         registration=registration_of(area),
     )
     if limit_reason is not None:

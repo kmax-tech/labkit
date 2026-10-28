@@ -274,13 +274,22 @@ def declared_piece(run_dir: Path | None, declared: str | None) -> list[tuple[str
     ]
 
 
-def run_shown(
-    area: Path, run_dir: Path | None, why: str, declared: str | None
-) -> RunShown:
-    """`run_rows` of RUN_DIR and the protocol's DECLARED run
-    (`declared_piece`) as one snapshot with its digest."""
-    pieces = tuple([*run_rows(area, run_dir, why), *declared_piece(run_dir, declared)])
-    return RunShown(pieces, scope_sha.digest(runs.as_stored(pieces).encode("utf-8")))
+def run_shown(area: Path, run_dir: Path | None, why: str, text: str) -> RunShown:
+    """`run_rows` of RUN_DIR and the declared run of the protocol TEXT
+    (`declared_piece`) as one snapshot, its digest taken over those pieces
+    and the protocol's audited prose (`protocol_check.audited_texts`). The
+    prose is not a piece: the prompt inlines the protocol whole. Binding it
+    makes a corrected description (a count in Data / scope) a new state the
+    next audit follows earlier findings up in; the fields written after the
+    audit are not in it."""
+    pieces = tuple(
+        [
+            *run_rows(area, run_dir, why),
+            *declared_piece(run_dir, protocol_block.declared_run_shown(text)),
+        ]
+    )
+    bound = runs.as_stored(pieces) + "\n" + protocol_check.audited_texts(text)
+    return RunShown(pieces, scope_sha.digest(bound.encode("utf-8")))
 
 
 def rows_excerpt(path: Path, name: str) -> tuple[str, str]:
@@ -319,7 +328,7 @@ def analysis_now(area: Path, text: str, run: Path) -> findings.AuditedState:
         promises.block_stamp(text),
         protocol_check.registration_stamp(text),
         run.name,
-        run_shown(area, run, "", protocol_block.declared_run_shown(text)).sha,
+        run_shown(area, run, "", text).sha,
     )
 
 

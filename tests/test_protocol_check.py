@@ -140,6 +140,47 @@ def run_main(text: str) -> tuple[int, str]:
         return rc, buf.getvalue()
 
 
+class AuditedTexts(unittest.TestCase):
+    """What an analysis record binds of the protocol's prose: the setup it
+    read before the run, not the registration's own fields (bound field by
+    field), not the Prompt block (written from the code), not what is
+    written after the audit."""
+
+    def test_the_setup_is_bound_and_the_report_fields_are_not(self):
+        text = (
+            "- **Data / scope:** data/raw, 3 documents\n"
+            "- **Unit:** one document\n"
+            "- **Question / hypothesis:** how many lines?\n"
+            "- **Conclusion:** three lines on average\n"
+            "- **Recorded results:** lines_mean = 3.0\n"
+        )
+        bound = protocol_check.audited_texts(text)
+        self.assertIn("Data / scope: data/raw, 3 documents", bound)
+        self.assertIn("Unit: one document", bound)
+        for not_bound in ("how many lines", "three lines on average", "lines_mean"):
+            self.assertNotIn(not_bound, bound)
+        for label in (
+            "Prompt",
+            "Question / hypothesis",
+            "Conclusion",
+            "Recorded results",
+        ):
+            self.assertNotIn(label, protocol_check.AUDITED_FIELDS)
+
+    def test_a_corrected_count_moves_the_texts_and_a_reflow_does_not(self):
+        before = protocol_check.audited_texts(
+            "- **Data / scope:** data/raw, 4 documents\n"
+        )
+        after = protocol_check.audited_texts(
+            "- **Data / scope:** data/raw, 3 documents\n"
+        )
+        reflowed = protocol_check.audited_texts(
+            "- **Data / scope:** data/raw,\n  4 documents\n"
+        )
+        self.assertNotEqual(before, after)
+        self.assertEqual(before, reflowed)
+
+
 class TestFrozenNeedsTheAudit(unittest.TestCase):
     """`frozen = true` means audited first (LAB-015 Preflight audit before freezing): the old checker failed a
     frozen protocol whose audit field was still a placeholder."""

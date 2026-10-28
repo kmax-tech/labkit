@@ -39,11 +39,11 @@ from protocol_fixture import (
     head,
     scope_file,
     started_at,
+    shown_sha,
 )
 
 from labkit.formats import findings, promises, scope_sha, standard_contract
 from labkit.gates import report_check
-from labkit.checks import audit_binding  # noqa: E402
 
 
 class ReportCheck(unittest.TestCase):
@@ -87,7 +87,7 @@ class ReportCheck(unittest.TestCase):
             (0, 0, 0),
             [],
             run_id=run.name,
-            shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+            shown_sha=shown_sha(area, run),
             registration=registration_of(area),
         )
 
@@ -556,7 +556,7 @@ class IfReported(unittest.TestCase):
                 (0, 0, 0),
                 [],
                 run_id=run.name,
-                shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+                shown_sha=shown_sha(area, run),
                 registration=registration_of(area),
             )
         if git:

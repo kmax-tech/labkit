@@ -30,7 +30,6 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.gates import audit, claude_hooks, finalize, preflight, report_check
-from labkit.checks import audit_binding  # noqa: E402
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import (
     answering_run,
@@ -40,7 +39,7 @@ from labkit.formats import (
     scope_sha,
     standard_contract as sc,
 )
-from protocol_fixture import registration_of  # noqa: E402
+from protocol_fixture import registration_of, shown_sha  # noqa: E402
 
 
 def _replace(path: Path, pairs: list[tuple[str, str]]) -> None:
@@ -162,9 +161,7 @@ class Lab:
             [],
             run_id=run_id,
             shown_sha=(
-                audit_binding.run_shown(area, area / "runs" / run_id, "", None).sha
-                if run_id is not None
-                else None
+                shown_sha(area, area / "runs" / run_id) if run_id is not None else None
             ),
             registration=registration_of(area),
         )
@@ -537,17 +534,10 @@ def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
     return area, protocol
 
 
-class Withdraw(unittest.TestCase):
-    """Replacing a declared result goes through the real commands: withdraw
-    the declaration (`protocol-fill --withdraw`), audit the run that
-    answers, adopt it (`--from-run`). An analysis record binds the run the
-    head declared when it was another one (`audit_binding.declared_piece`),
-    so a withdrawal moves the state and the next audit follows earlier
-    findings up. File-check case, 2026-10-28: a BLOCKER on the declared run,
-    fixed by re-adopting, stayed held, and the agent committed past the
-    hook; a first fix bound the declaration but left `--from-run --force`
-    as the way, which then could never pass. No test here writes a
-    protocol head by hand."""
+class CountCommands(unittest.TestCase):
+    """The commands an agent runs on a fresh count area (`stamp_count`):
+    measure, labkit-audit with the model's answer given, --decide,
+    --withdraw, the adoption. A base without tests of its own."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -642,6 +632,19 @@ class Withdraw(unittest.TestCase):
                 )
             ],
         )
+
+
+class Withdraw(CountCommands):
+    """Replacing a declared result goes through the real commands: withdraw
+    the declaration (`protocol-fill --withdraw`), audit the run that
+    answers, adopt it (`--from-run`). An analysis record binds the run the
+    head declared when it was another one (`audit_binding.declared_piece`),
+    so a withdrawal moves the state and the next audit follows earlier
+    findings up. File-check case, 2026-10-28: a BLOCKER on the declared run,
+    fixed by re-adopting, stayed held, and the agent committed past the
+    hook; a first fix bound the declaration but left `--from-run --force`
+    as the way, which then could never pass. No test here writes a
+    protocol head by hand."""
 
     # -- the repair case
     def test_a_wrong_declaration_is_withdrawn_followed_up_and_replaced(self):
@@ -894,6 +897,110 @@ class Withdraw(unittest.TestCase):
         self.assertIsNone(self.declared())
 
 
+class CorrectedDescription(CountCommands):
+    """A description in the protocol's setup that the data did not hold —
+    the count in Data / scope — corrected in place, is followed up like any
+    repair: an analysis record binds the setup's prose
+    (`protocol_check.audited_texts`), so the correction moves the state and
+    the next audit judges the finding. Fifth SAB-like draw, 2026-10-28: a
+    corrected count could never be followed up, the BLOCKER stayed held as
+    fixed in the state audited. Both directions, through the real commands:
+    the correction alone releases after the follow-up; an unchanged or an
+    insufficient description releases nothing. No test writes a head by
+    hand."""
+
+    RIGHT = "data/raw/docs, 3 documents, read directly"
+
+    def setUp(self) -> None:
+        super().setUp()
+        # registered with a count the data does not hold, before any run
+        self.lab.fill(
+            self.protocol,
+            "--force",
+            "Data / scope=data/raw/docs, 4 documents, read directly",
+        )
+        self.lab.commit("the count, registered with a wrong document count")
+        self.run_a = self.measure()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        line = next(
+            n
+            for n, ln in enumerate(self.protocol.read_text().splitlines(), 1)
+            if "**Data / scope:**" in ln
+        )
+        rc, out, _ = self.analysis(
+            f"BLOCKER · PROTOCOL-lines.md:{line} · Data / scope says 4 documents, the "
+            f"run read 3 · the mean's denominator as described · LAB-050 Analysis "
+            f"audit before reporting · correct the description\n"
+            f"verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        self.assertEqual(rc, 1, out)
+        assert self.record is not None
+        self.blocking = self.record
+
+    def describe(self, value: str) -> None:
+        self.lab.fill(self.protocol, "--force", f"Data / scope={value}")
+
+    def test_the_corrected_description_is_followed_up_and_released(self):
+        self.describe(self.RIGHT)
+        self.decide(self.blocking, 1, "fixed", "Data / scope now says 3 documents")
+        # the correction moved the state: the finding owes its follow-up
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"{self.blocking.name}#1: decided `fixed`, never followed up", out
+        )
+        rc, out, prompt = self.analysis(
+            f"FIX · {self.blocking.name}#1 · resolved · Data / scope says 3 documents, "
+            f"as the run read\n\n{self.clean}"
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertIn("3 documents", prompt)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 0, out)
+
+    def test_an_unchanged_description_stays_held_through_another_audit(self):
+        self.decide(self.blocking, 1, "fixed", "corrected")  # but nothing changed
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("decided `fixed` in the state audited", out)
+        self.assertIn("a description in the protocol's setup, corrected in place", out)
+        rc, out, _ = self.analysis(self.clean)  # the same state audited again
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("decided `fixed` in the state audited", out)
+
+    def test_an_insufficient_correction_is_judged_and_carried_open(self):
+        self.describe("data/raw/docs, 5 documents, read directly")
+        self.decide(self.blocking, 1, "fixed", "Data / scope corrected")
+        rc, out, _ = self.analysis(
+            f"FIX · {self.blocking.name}#1 · unresolved · Data / scope says 5 documents, "
+            f"the run read 3\n\n{self.clean}"
+        )
+        assert self.record is not None
+        carried = [
+            f
+            for f in findings.read(self.record).findings
+            if f.carries == f"{self.blocking.name}#1"
+        ]
+        self.assertEqual([(f.grade, f.status) for f in carried], [("BLOCKER", "open")])
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+
+    def test_writing_the_report_fields_leaves_the_audit_standing(self):
+        """The twin of the binding: the Conclusion and the adoption's own
+        lines are not bound, so the usual audit-then-adopt order holds."""
+        self.describe(self.RIGHT)
+        rc, out, _ = self.analysis(self.clean)
+        self.lab.fill(
+            self.protocol, "Conclusion=Three documents hold 3.0 lines on average."
+        )
+        records = self.records()
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertNotIn("no analysis audit saw the area as it is now", out)
+        self.assertEqual(self.records(), records)
+
+
 class Judge(unittest.TestCase):
     """The prompt skeleton at low repeat cost, the model faked: twelve texts, a
     registered question the text answers, a placebo for the null lane."""
@@ -1012,7 +1119,7 @@ class Judge(unittest.TestCase):
             (1, 0, 0),
             [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · the prompt asks more than the gold scores")],
             run_id=self.run_id,
-            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "", None).sha, registration=registration_of(self.area),)  # fmt: skip
+            shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
 
     def _decide(self, record: Path, *argv: str) -> tuple[int, str]:
         out = io.StringIO()
@@ -1158,7 +1265,7 @@ class Judge(unittest.TestCase):
             (0, 1, 0),
             [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
             run_id=self.run_id,
-            shown_sha=audit_binding.run_shown(self.area, self.area / "runs" / self.run_id, "", None).sha, registration=registration_of(self.area),)  # fmt: skip
+            shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
         label = f"Limit (audit {record.stem} #1)"
         reason = "C1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
         rc, out = self._decide(record, "accepted", reason, "--effect", "stands")

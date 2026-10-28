@@ -171,7 +171,11 @@ fields written later do not move it) — the run and what the auditor was
 shown of it (`shown_sha`) — with the run the protocol declares when that
 is another one, so withdrawing that declaration moves the state and the
 next audit follows earlier findings up, while the first adoption of the
-run audited moves nothing. The person decides every finding; labkit stores the
+run audited moves nothing; and with the setup's prose the audit read
+(Terms, Data / scope, Model / tool, Model I/O, Exclusions / filters,
+Unit), so a description corrected in place is followed up too. The fields
+written after the audit (the Summary, Recorded results, the Limit lines,
+the run list) are not bound. The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
 named promise (`not assessable`) — where the protocol registers one: a

@@ -22,7 +22,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
-from protocol_fixture import registration_of, run_record  # noqa: E402
+from protocol_fixture import protocol_text_of, registration_of, run_record, shown_sha  # noqa: E402
 from labkit.gates import audit, decision_review, report_check, ways_out  # noqa: E402
 from labkit.checks import audit_binding, result_render  # noqa: E402
 from labkit.formats import attempts, findings, followup, promises, runs, scope_sha  # noqa: E402
@@ -251,7 +251,10 @@ class Audit(unittest.TestCase):
         # the prompt, and the record's shown_sha is its digest, the one
         # report-check recomputes for the answering run
         shown = audit_binding.run_shown(
-            area, area / "runs" / "2026-01-01T00-00-00_0001", "", None
+            area,
+            area / "runs" / "2026-01-01T00-00-00_0001",
+            "",
+            protocol_text_of(area),
         )
         for label, text in shown.pieces:
             self.assertIn(f"===== {label} =====\n{text}\n", prompt)
@@ -2353,7 +2356,7 @@ class Carried(unittest.TestCase):
             [("BLOCKER", FixVerdicts.LEAK)],
             registration=registration_of(area),
             run_id=run.name,
-            shown_sha=audit_binding.run_shown(area, run, "", None).sha,
+            shown_sha=shown_sha(area, run),
             now=60,
         )
         findings.write_decision(same, 1, "dismissed", "does not apply")
