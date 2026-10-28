@@ -14,6 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import finalize  # noqa: E402
 from labkit.gates.report_check import adoption_order_note  # noqa: E402
+from labkit.formats import protocol_block  # noqa: E402
+from labkit.run import start_check  # noqa: E402
 
 ADOPT = "finalize: [result] declares A, but the run that answers is B — once that run's checks hold, `protocol-fill P --from-run B --force` declares it"
 RENDER = "result section: the Recorded results line differs from its rendering — `protocol-fill <PROTOCOL> --render` writes it again"
@@ -45,6 +47,32 @@ class AdoptionOrder(unittest.TestCase):
         assert msg is not None
         self.assertIn("once that run's checks hold", msg)
         self.assertIn("fix the code and measure again first", msg)
+
+
+HEAD = '```toml\n[protocol]\nstandard = "0.23"\nid = "p-0123456789abcdef"\ntype = "exploratory"\nrepeat_cost = "{cost}"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'
+
+
+class FirstStepBeforeARun(unittest.TestCase):
+    """runlog's refusal names the freeze only where the repeat cost owes one
+    (Haiku start reading, 2026-10-28: two of three readers called "Freeze
+    first" at low repeat cost a contradiction)."""
+
+    def first_step(self, cost: str) -> str:
+        text = HEAD.format(cost=cost)
+        bound = start_check._Bound(  # noqa: SLF001
+            {"id": "p-0123456789abcdef", "path": "PROTOCOL-x.md"},
+            text,
+            protocol_block.head(text),
+        )
+        return start_check._first_step(bound)  # noqa: SLF001
+
+    def test_low_names_the_registration_not_the_freeze(self):
+        step = self.first_step("low")
+        self.assertIn("nothing freezes", step)
+        self.assertNotIn("Freeze first", step)
+
+    def test_high_names_the_freeze(self):
+        self.assertIn("Freeze first", self.first_step("high"))
 
 
 if __name__ == "__main__":

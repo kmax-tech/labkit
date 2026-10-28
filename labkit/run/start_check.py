@@ -150,6 +150,21 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     return []
 
 
+def _first_step(bound: _Bound) -> str:
+    """What comes before a full run, by the bound protocol's repeat cost: the
+    registration at a lane that owes no freeze, else the freeze. One line
+    named the freeze at every cost and corrected itself in parentheses; two
+    of three Haiku readers called that a contradiction (2026-10-28)."""
+    head = bound.head
+    if head is not None and lane(head.repeat_cost).registration:
+        return (
+            f'At repeat_cost = "{head.repeat_cost}" nothing freezes: write and commit '
+            "the registration the kind owes (`protocol-check --contract` names it), "
+            "then start the run again."
+        )
+    return "Freeze first: `preflight <AREA>` clean, audit stamped, `frozen = true`."
+
+
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     """Why a FULL run may not start on this protocol — empty means it may."""
     from labkit.formats.protocol_check import low_registration_missing
@@ -605,10 +620,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             f"runlog: {declares}, but its "
             "protocol is not ready for one:\n  "
             + "\n  ".join(gaps)
-            + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
-            "`frozen = true` "
-            '(at repeat_cost = "low": the registration the kind owes suffices — '
-            "`protocol-check --contract` names it). "
+            + f"\n{_first_step(prepared.bound)} "
             "No other run yields a reported number: a probe (run_kind='probe') "
             "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
             "high repeat cost only over an audit the backend refused, "

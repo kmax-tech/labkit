@@ -1583,21 +1583,53 @@ class Report(unittest.TestCase):
 
 
 class NextStepFields(unittest.TestCase):
-    """The first next step names what every kind fills (question, unit,
-    data, exclusions — AGENTS.md's "every kind"), at both costs, and the
-    title says repeat_cost, not "lane" (audit 2026-10-27, third, I12)."""
+    """The first next step names what every kind fills (terms, question,
+    unit, data, exclusions — AGENTS.md's "every kind"), at both costs, and
+    the title says repeat_cost, not "lane" (audit 2026-10-27, third, I12).
+    A kind with a bar names its [[promise]] constants as the agent's to set,
+    the low cut names 00_prepare.py where the skeleton has one, and the
+    adoption step puts the Conclusion first and the task's output file
+    after it (Haiku start reading, 2026-10-28)."""
 
-    def test_every_kind_names_question_unit_data_exclusions(self):
+    def steps(self, cost: str, kind: str, model: bool) -> str:
+        return scaffold.next_steps(
+            Path("experiments/01-x"), "x", "01", cost, kind, model
+        )
+
+    def test_every_kind_names_terms_question_unit_data_exclusions(self):
         for cost in ("low", "high"):
             for kind in ("compute", "fit", "apply"):
                 for model in (False, True):
                     with self.subTest(cost=cost, kind=kind, model=model):
-                        out = scaffold.next_steps(
-                            Path("experiments/01-x"), "x", "01", cost, kind, model
-                        )
-                        self.assertIn("question, unit, data, exclusions", out)
+                        out = self.steps(cost, kind, model)
+                        self.assertIn("terms, question, unit, data, exclusions", out)
                         self.assertNotIn("lane high", out)
                         self.assertNotIn("into the protocol's raw output", out)
+                        self.assertIn("the Conclusion, then `protocol-fill", out)
+                        self.assertIn(
+                            "output file is written from that run only after", out
+                        )
+
+    def test_a_bar_names_its_constants_a_computation_none(self):
+        for cost in ("low", "high"):
+            for model in (False, True):
+                with self.subTest(cost=cost, model=model):
+                    self.assertNotIn(
+                        "[[promise]] constants", self.steps(cost, "compute", model)
+                    )
+                    for kind in ("fit", "apply"):
+                        self.assertIn(
+                            "[[promise]] constants", self.steps(cost, kind, model)
+                        )
+
+    def test_the_low_cut_names_the_prepare_script_where_the_skeleton_has_one(self):
+        self.assertNotIn("00_prepare.py", self.steps("low", "compute", False))
+        for kind in ("fit", "apply"):
+            for model in (False, True):
+                with self.subTest(kind=kind, model=model):
+                    self.assertIn(
+                        "scripts/00_prepare.py", self.steps("low", kind, model)
+                    )
 
 
 class OwedCut(unittest.TestCase):

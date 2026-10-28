@@ -115,7 +115,7 @@ answer the original registered question.
 ### 2. Implement and test the instrument
 
 Fill the stamped scripts and area test. For estimator/prompt skeletons,
-read `.venv/bin/python <area>/scripts/01_measure.py --show 2` before
+read `.venv/bin/python <area>/scripts/01_measure.py --show 3` before
 measuring; compute has no `--show`.
 Run `code-check <area>` after code changes and run the area test on
 hand-checked cases. Checks of names and structure do not prove that the

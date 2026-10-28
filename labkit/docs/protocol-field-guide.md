@@ -424,7 +424,7 @@ scattered in output files nobody can interpret.
 
 ### Setup (APPARATUS)
 
-- **Data / scope:** source, N, producer script; pilot subset first. Look at
+- **Data / scope:** source, N, producer script. Look at
   the prepared file before running — otherwise a format bug and a model
   failure look identical.
 - **Data profile:** your judgement of the data, written before the

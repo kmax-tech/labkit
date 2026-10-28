@@ -1139,26 +1139,36 @@ def check_stamped_head(
         raise ValueError("labkit-init: --model asked, the stamped head has no [model]")
 
 
+# The stamp writes example numbers into the [[promise]] constants; a fit kept
+# the stamped margin 0.25 while its sentence said 0.15 (SAB-like draw,
+# 2026-10-27), and three of three readers asked whether they may stand.
+CONSTANTS = (
+    ", the [[promise]] constants (the stamp's numbers are examples — set each "
+    "to the value its sentence states)"
+)
+
+
 def step_fields(sk: standard_contract.Skeleton, kind: str, model: bool) -> str:
     """The protocol fields the first next step names: what every kind
-    fills (question, unit, data, exclusions — AGENTS.md's "every kind";
+    fills (terms, question, unit, data, exclusions — AGENTS.md's "every kind";
+    terms left out until 2026-10-28, when the pre-commit hook refused it;
     the high steps of a fit or an apply named neither unit nor data, audit
     2026-10-27, third, I12), then the bar by KIND
     (`standard_contract.has_bar`), the prompt and the data profile whenever
     a model is named — the low cut's marks (`protocol_check.in_cut`). Only
     the prompt skeleton's `00_prepare.py --audit` prints a data-profile
     aid; elsewhere the step names none."""
-    every = "question, unit, data, exclusions"
+    every = "terms, question, unit, data, exclusions"
     if not standard_contract.has_bar(kind):
         bar = (
             f"{every} — no criterion, no promise table: a computation "
             "judges no prediction, so it has no bar to clear"
         )
     elif sk is standard_contract.MODEL:
-        bar = f"{every}, criterion, admissibility condition, prompt, null condition"
+        bar = f"{every}, criterion, admissibility condition, prompt, null condition{CONSTANTS}"
     else:
         bar = (
-            f"{every}, criterion, admissibility condition, null condition — "
+            f"{every}, criterion, admissibility condition, null condition{CONSTANTS} — "
             f"kind = {kind!r}: "
             "the number judges a prediction, so it has a bar and its reference"
         )
@@ -1242,7 +1252,7 @@ def _first_steps(
     code_check = f"after every code change `code-check {rel}`"
     test = f"tests/test_{nn}_{slug.replace('-', '_')}.py"
     if ln.cut == standard_contract.LOW_CUT:
-        return _low_steps(ln, sk, protocol, fields, kind, code_check)
+        return _low_steps(ln, sk, protocol, fields, kind, code_check, test)
     # the key the head carries, `repeat_cost`, rather than "lane": the
     # reader fills the head, not `standard_contract.lane` (I12)
     title = f'repeat_cost = "{ln.repeat_cost}": light pilot, heavy report'
@@ -1304,10 +1314,11 @@ def _low_steps(
     fields: str,
     kind: str,
     code_check: str,
+    test: str,
 ) -> tuple[str, list[str]]:
-    """(title, steps) of the low cut before its run: fill the cut, fill
-    the skeleton's script — no freeze, no audit, the run is the instrument
-    check."""
+    """(title, steps) of the low cut before its run: fill the cut, prepare
+    the data where the skeleton reads prepared rows, fill the script and
+    the area test — no freeze, no audit, the run is the instrument check."""
     title = (
         f'repeat_cost = "{ln.repeat_cost}" — no freeze, no audit before the run, '
         "the run is the instrument check"
@@ -1315,7 +1326,7 @@ def _low_steps(
     if sk is standard_contract.COMPUTE:
         fill = "expected_ids(), rows(), evaluate_rows()"
     elif sk is standard_contract.MODEL:
-        fill = "PROMPT, parse_answer(), evaluate_rows(); --show 2, then the run"
+        fill = "PROMPT, parse_answer(), evaluate_rows(); --show 3, then the run"
     else:
         # the apply null calibrates before its run; at fit the null refits
         calibrate = (
@@ -1324,10 +1335,24 @@ def _low_steps(
             else ""
         )
         fill = f"{estimator_fill(kind)}; --show 3, {calibrate}then the run"
+    prepare = (
+        []
+        if sk is standard_contract.COMPUTE
+        else [
+            "scripts/00_prepare.py: raw -> data/prepared/, which 01_measure.py reads"
+            + (
+                " — gold null for the unlabelled split"
+                if sk is standard_contract.ESTIMATOR
+                else ""
+            )
+            + "; run it before the measurement."
+        ]
+    )
     return title, [
         f"{protocol}: fill the low cut — `type` in the head, then\n"
         f"     {fields}; `protocol-check --contract` names the labels.",
-        f"scripts/01_measure.py: {fill}; {code_check}.",
+        *prepare,
+        f"scripts/01_measure.py: {fill}; {code_check}; {test} on hand-checked cases.",
     ]
 
 
@@ -1380,8 +1405,9 @@ def _closing_steps(ln: standard_contract.Lane, rel: Path, protocol: str) -> list
         )
     return [
         after + ".",
-        f"`{adopt_command(rel / protocol)}` adopts the number: it runs "
-        "report-check, whose last station is scripts/02_analyze.py --check.",
+        f"the Conclusion, then `{adopt_command(rel / protocol)}` adopts the "
+        "number: it runs report-check, whose last station is scripts/02_analyze.py "
+        "--check; a task's output file is written from that run only after it.",
     ]
 
 
