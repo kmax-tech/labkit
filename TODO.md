@@ -1241,7 +1241,8 @@ Notiert, nicht geplant:
    Probe nennt ROC-AUC und trennt interne Validierung von der versteckten
    Testbewertung, eine Accuracy unter altem Blatt gilt als Lücke der
    Probe (10) — `5daa0ae`.
-   Offen: (4) die Null-Spur als eigene Standardentscheidung — mehrere
+   Offen: (4) die Null-Spur als eigene Standardentscheidung
+   ([Vorschlag](docs/notes/2026-10-28-null-lane-spec.md)) — mehrere
    Permutationen allein sind keine Spezifikation: Anzahl, Seeds,
    Aggregation und Bedeutung der C1-Schwelle stehen vorab fest; für apply
    liegt ein Vorschlag vor (die festen Vorhersagen gegen K Permutationen
