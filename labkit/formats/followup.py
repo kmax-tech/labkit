@@ -41,6 +41,7 @@ from labkit.formats.findings import (
     FindingsError,
     FixVerdict,
     Record,
+    check_order,
     decision_digest,
 )
 
@@ -276,7 +277,7 @@ def _earlier_hold(
             return Hold(
                 m.ref,
                 f"no follow-up, and the run lacks the required check `{f.check}`",
-                f"a run that writes `{f.check}` to metrics.json, then {STEP_AUDIT}",
+                f"{check_order(f.check, f.check_note)}; then a new run, and {STEP_AUDIT}",
             )
         return Hold(m.ref, f"decided `{f.status}`, never followed up", STEP_AUDIT)
     if not valid:
@@ -289,6 +290,6 @@ def _earlier_hold(
         return Hold(
             m.ref,
             f"`resolved`, but the required check `{f.check}` was not in the run shown",
-            f"a run that writes `{f.check}` to metrics.json, then {STEP_AUDIT}",
+            f"{check_order(f.check, f.check_note)}; then a new run, and {STEP_AUDIT}",
         )
     return None

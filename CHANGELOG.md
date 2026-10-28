@@ -1198,6 +1198,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A finding's required check is a work order where it is decided.** In
+  the repair case a BLOCKER asked for `check: n_rows_other_run — must be
+  0`; AGENTS.md said only "its requested diagnostic run and assessed",
+  the agent never wrote the key, and every follow-up judged the repair
+  not assessable until a decision review found `accepted`/`stands`
+  insufficient. One wording now says what the check asks
+  (`findings.check_order`): extend the measuring script so that it
+  computes the key from what the run measures and writes the computed
+  value to metrics.json — a key written as a constant shows nothing. The
+  decision list (`--findings`, after an audit) prints it under the
+  finding's `--decide` command with what follows (measure again, the
+  analysis audit, which judges `fixed` by that value); the follow-up's
+  holds at report-check and `--from-run` name it as their way out; and
+  AGENTS.md states it, held to the same wording by a test.
 - **A repair measured again never counts the faulty run's rows.** In
   the repair case the fix, measured again into the same output, appended
   nothing — the estimator skeleton's row identity held the estimator

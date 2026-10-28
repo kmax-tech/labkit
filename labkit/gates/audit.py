@@ -1416,6 +1416,15 @@ def decision_lines(
                     area, n, "STATUS", "REASON", where, protocol=protocol, base=here
                 )
             )
+            if f.check:
+                # where the decision is made: in the repair case the check went
+                # unwritten and every follow-up judged the repair not assessable
+                out.append(
+                    f"      check owed before `fixed` holds: "
+                    f"{findings.check_order(f.check, f.check_note)}; then measure "
+                    f"again and run `{audit_command(area, '--mode', 'analysis', protocol=protocol, base=here)}` "
+                    f"— the follow-up judges `fixed` by that value"
+                )
             if f.grade == "BLOCKER":
                 out.append(
                     "      accepted owes its effect: --effect stands (the verdicts "

@@ -33,6 +33,18 @@ class TemplateTies(unittest.TestCase):
         search = jsonc("vscode-settings.json.template")["search.exclude"]
         self.assertEqual({k for k, v in search.items() if v}, pyright)
 
+    def test_agents_states_a_required_check_as_the_decision_list_does(self):
+        """The work order of a finding's `check:` is one wording: the
+        decision list and the follow-up's holds print `findings.check_order`,
+        AGENTS.md states it (repair case, 2026-10-28: "its requested
+        diagnostic run and assessed" left the check unwritten)."""
+        from labkit.formats import findings
+
+        agents = " ".join(
+            (TEMPLATES / "AGENTS.md.template").read_text(encoding="utf-8").split()
+        )
+        self.assertIn(findings.check_order("<key>", "what it must show"), agents)
+
     def test_models_toml_defines_the_audit_default_alias(self):
         text = (TEMPLATES / "models.toml.template").read_text(encoding="utf-8")
         self.assertIn(audit.DEFAULT_MODEL, tomllib.loads(text)["models"])

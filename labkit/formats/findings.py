@@ -288,6 +288,22 @@ def check_of(text: str) -> tuple[str, str]:
     return m["key"], (m["paren"] or m["dash"] or "").strip()
 
 
+def check_order(check: str, note: str = "") -> str:
+    """What a finding's required CHECK asks of the measuring code — the one
+    wording of the decision list, the follow-up's holds and AGENTS.md: the
+    script computes the value while it measures and writes it to
+    metrics.json under CHECK; NOTE, what it must show. A key alone shows
+    nothing: the follow-up judges the computed value. In the repair case
+    (2026-10-28) the check went unwritten, and every follow-up judged the
+    repair not assessable."""
+    shows = f" ({note})" if note else ""
+    return (
+        f"extend the measuring script so that it computes `{check}`{shows} from "
+        f"what the run measures and writes the computed value to metrics.json "
+        f"under that key — a key written as a constant shows nothing"
+    )
+
+
 def decision_digest(f: Finding) -> str:
     """The digest of F as decided — grade, text, status, reason, effect, and
     the required check and its note and the finding a carried one continues

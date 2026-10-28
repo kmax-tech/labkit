@@ -1141,6 +1141,27 @@ class RequiredCheck(unittest.TestCase):
         (f,) = findings.read(earlier).findings
         self.assertEqual((f.status, f.check), ("fixed", "feature_sources"))
 
+    def test_the_decision_list_gives_the_check_as_a_work_order(self):
+        """Where the person decides: a finding that names a check says what
+        the measuring script owes and what follows — in the repair case the
+        check went unwritten and every follow-up judged the repair not
+        assessable. The twin: a finding without a check names none."""
+        area, earlier = self.fv.area(self.CHECKED)
+        record = findings.read(earlier)
+        lines = "\n".join(audit.decision_lines(record, area, ""))
+        self.assertIn(
+            "check owed before `fixed` holds: extend the measuring script so that it "
+            "computes `feature_sources`",
+            lines,
+        )
+        self.assertIn("--mode analysis", lines)
+        self.assertIn("the follow-up judges `fixed` by that value", lines)
+        plain, plain_record = self.fv.area(FixVerdicts.LEAK)
+        self.assertNotIn(
+            "check owed",
+            "\n".join(audit.decision_lines(findings.read(plain_record), plain, "")),
+        )
+
     def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
         area, earlier = self.fv.area(self.CHECKED)
         sources = {"space_group": "column space_group", "n_sites": "structure text"}
@@ -1747,7 +1768,9 @@ class FollowupGate(unittest.TestCase):
         self.assertIn(
             "the required check `feature_sources` was not in the run shown", line
         )
-        self.assertIn("a run that writes `feature_sources`", line)
+        self.assertIn(
+            "extend the measuring script so that it computes `feature_sources`", line
+        )
         RequiredCheck().with_metrics(
             area, {"c1_pass": True, "feature_sources": {"a": ["b"]}}
         )
