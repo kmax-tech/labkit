@@ -1,0 +1,24 @@
+Recorded before reader answers, 2026-10-28 (second round). Instructions: labkit/templates/AGENTS.md.template on
+branch agents-clarity (labkit main ea8d060 plus the answering-run copy rule and four clarifications: the pin,
+the follow-up question, the empty analysis audit, the Conclusion after adoption). Readers: three independent
+Claude Haiku 4.5 subagents, fresh context, instructions.md and cases.txt only. Judge per reader and case:
+supported / incomplete / wrong / documentation gap; record ambiguities, not only mistakes.
+
+Cases 1-12: as in 2026-10-28-haiku-instruction-reading/assessment-contract.txt (branch sab-cases-on-main) —
+the 2026-10-27 contract with case 9 (documented handover or --discuss with --report-review) and case 11
+(the task's output written at its path from the answering run; a green gate guarantees nothing about it;
+copying the run's own output file is fine, retyping or recomputing apart from the run is not).
+
+13 The pin is the labkit line of requirements.lock (else requirements.txt), for the whole repository;
+   labkit-check prints it; standard = "…" is the protocol format, not the package version. Reproduce the old
+   area at its original commit and pin; do not edit its head to pass current gates; the new question gets a
+   fresh area under the current pin. After the pin was raised no earlier audit covers any area.
+14 Not a replacement (A was answerable and missed); a new protocol of its own without [replaces]; its
+   Question / hypothesis names protocol A and what it showed; type exploratory; A's reported miss stays —
+   the new approach does not turn it into a pass.
+15 Yes, it covers the run: nothing to decide. An earlier BLOCKER still needs its fix confirmed in that
+   record before adoption.
+16 protocol-fill <PROTOCOL> "Conclusion=…" --force. The adopted result and the REPORT.md block stay valid
+   (no re-adoption, no re-render needed for the Conclusion alone); every decision review becomes stale and is
+   redone where one is owed (labkit-audit <area> --review --record <record>); the report's explanation must
+   match the new Conclusion.

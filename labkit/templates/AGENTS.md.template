@@ -34,8 +34,10 @@ scientifically justified remains your responsibility.
 
 When an external task names its outputs (a file such as
 `pred_results/<name>`, a report), those files are the deliverable; the
-run's metrics in the area do not replace them. Write each output from the
-measurement, at the path the task names. When a result no longer holds —
+run's metrics in the area do not replace them. Write each output at the
+path the task names from the answering run: its measurement script writes
+it there, or you copy that run's own output file; never retype it or
+compute it apart from the run. When a result no longer holds —
 a gate refuses it, or an audit BLOCKER against the code or data that
 produced it is not fixed — rewrite the output from a measurement run after
 the fix; if there is none, remove the output file. The report says which
@@ -60,8 +62,14 @@ Neither `low` nor `exploratory` removes a fit/apply's criterion or audits.
 
 These settings are independent. Get the exact obligations for this area
 from `protocol-check <PROTOCOL> --contract`, not from an older lab's
-instructions. Preserve historical protocols and runs with their original
-commit and package pin; do not convert them to make current gates pass.
+instructions. The pin is the `labkit` line of `requirements.lock` (else
+`requirements.txt`) and holds for the whole repository; `labkit-check`
+prints it beside the installed version. The head's `standard = "…"` names
+the protocol format, not the package version. Raising the pin changes
+every area's stamp, so no earlier audit covers an area afterwards.
+Preserve historical protocols and runs with their original commit and
+package pin; do not convert them to make current gates pass — reproduce
+them at that commit and pin, and stamp a fresh area for new work.
 
 ## One workflow — every kind and both repeat costs
 
@@ -180,7 +188,11 @@ Write `protocol-fill <PROTOCOL> "Conclusion=<answer within the limits>"`
 before adoption: at most two plain sentences answering the question,
 not a list of metric keys. Fill the other after-run fields; with a model,
 Raw output includes one real prompt/answer pair per finding, read from
-the kept output the finding names.
+the kept output the finding names. To change the Conclusion after
+adoption, add `--force`: the adopted result and the REPORT.md block stay
+valid (they are rendered from the run, not from the Conclusion), every
+decision review becomes stale and is redone where one is owed, and the
+report's own explanation must still match.
 
 A BLOCKER accepted with `stands` requires
 `labkit-audit <area> --review --record <record>`. A rejected review means
@@ -202,6 +214,9 @@ never supplies missing approval or overrules an earlier rejection.
 it writes `[result] run`, Recorded results and the run entry, checks them
 with `report-check` and restores the protocol if refused. The measurement,
 decided covering analysis audit and `02_analyze.py --check` must hold.
+An analysis audit with no findings covers the run when it saw the current
+code, promises and run: there is nothing to decide, but an earlier
+BLOCKER still needs its fix confirmed in that record.
 Recorded results derives each promise's reportable verdict before its
 measured values; raw metrics in the run remain unchanged. A failed
 criterion under valid admissibility is a reportable miss.
@@ -259,9 +274,11 @@ prints these same recovery choices with each decision list:
   `[replaces] protocol = "<id>"`, with one `[[replaces.change]]` (what,
   from, to, why) per change and the predecessor's open BLOCKERs decided
   `deferred`. Its verdict is rendered first; a new approach never turns an
-  earlier miss into a pass. A deliberately changed follow-up question
-  must disclose what was already observed; an independent question is
-  not a replacement just because it comes later.
+  earlier miss into a pass. Only a new attempt at the same question is a
+  replacement. Any other later question is a protocol of its own, without
+  `[replaces]`; when it builds on what an earlier protocol showed, its
+  Question / hypothesis names that protocol and what it showed, and its
+  type is `exploratory`.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the
