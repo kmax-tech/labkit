@@ -520,7 +520,8 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
         findings.note("  fix with  .venv/bin/labkit-hooks install")
     else:
         findings.note(
-            "  installed (this labkit's pre-commit, core.hooksPath, claude-hook)"
+            "  installed (this labkit's pre-commit and pre-merge-commit, "
+            "core.hooksPath, claude-hook)"
         )
 
 

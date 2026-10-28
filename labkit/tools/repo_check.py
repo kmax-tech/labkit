@@ -351,7 +351,9 @@ def hook_line(repo: Path, installed: str) -> Line:
     if hook:
         more = f" (+{len(hook) - 1} more)" if len(hook) > 1 else ""
         return Line("hook", hook[0] + more, STALE, ".venv/bin/labkit-hooks install")
-    return Line("hook", f".githooks/pre-commit from labkit {installed}", OK)
+    return Line(
+        "hook", f".githooks/pre-commit and pre-merge-commit from labkit {installed}", OK
+    )
 
 
 def refs_line(repo: Path) -> Line:

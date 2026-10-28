@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,6 +27,13 @@ class Install(unittest.TestCase):
         hook = repo / ".githooks" / "pre-commit"
         self.assertTrue(hook.stat().st_mode & 0o100)
         self.assertIn("report-check --if-reported", hook.read_text())
+        merge_hook = repo / ".githooks" / "pre-merge-commit"
+        self.assertTrue(merge_hook.stat().st_mode & 0o100)
+        self.assertIn("labkit-init numbers --staged", merge_hook.read_text())
+        merge_hook.unlink()
+        self.assertEqual(
+            install_hooks.check(repo), [".githooks/pre-merge-commit is missing"]
+        )
 
     def test_foreign_hooks_and_keys_are_kept(self):
         repo = git_repo()
@@ -256,6 +264,79 @@ class RepoOwnSteps(unittest.TestCase):
         local.write_text("#!/bin/sh\nexit 0\n")
         r = commit(repo)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class AreaNumbers(unittest.TestCase):
+    """Two branches each stamped their next area as 12 (labkit-paper,
+    2026-10-27). git completes a merge without conflicts on its own and
+    runs pre-merge-commit for it, never pre-commit."""
+
+    def setUp(self):
+        self.repo = git_repo()
+        install_hooks.install(self.repo)
+        gate_shims(self.repo)
+        numbers_shim(self.repo)
+        self.add_area("11-base")
+        self.assertEqual(commit(self.repo).returncode, 0)
+        self.main = run_git(self.repo, "branch", "--show-current").stdout.strip()
+
+    def add_area(self, name: str) -> None:
+        area = self.repo / "experiments" / name
+        area.mkdir(parents=True)
+        (area / "README.md").write_text(f"# {name}\n")
+        run_git(self.repo, "add", "experiments")
+
+    def diverge(self, on_side: str, on_main: str) -> None:
+        run_git(self.repo, "checkout", "-qb", "side")
+        self.add_area(on_side)
+        self.assertEqual(commit(self.repo).returncode, 0)
+        run_git(self.repo, "checkout", "-q", self.main)
+        self.add_area(on_main)
+        self.assertEqual(commit(self.repo).returncode, 0)
+
+    def test_a_merge_that_brings_one_number_twice_is_refused(self):
+        self.diverge("12-on-side", "12-on-main")
+        r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn(
+            "number 12 is carried by 2 areas in the index: "
+            "experiments/12-on-main, experiments/12-on-side",
+            r.stdout + r.stderr,
+        )
+        self.assertIn(
+            "pre-merge-commit: two areas carry one number", r.stdout + r.stderr
+        )
+        # the merge is not committed, and its commit by hand meets pre-commit
+        self.assertEqual(
+            run_git(self.repo, "rev-list", "--count", "HEAD").stdout.strip(), "2"
+        )
+        r = commit(self.repo)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("pre-commit: two areas carry one number", r.stdout + r.stderr)
+
+    def test_a_merge_of_distinct_numbers_passes(self):
+        self.diverge("12-on-side", "13-on-main")
+        r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+def run_git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        capture_output=True,
+        text=True,
+        check=check,
+    )
+
+
+def numbers_shim(repo: Path) -> None:
+    """`.venv/bin/labkit-init` running this labkit's scaffold, as the
+    installed command would."""
+    shim = repo / ".venv" / "bin" / "labkit-init"
+    shim.write_text(
+        f'#!/bin/sh\nexec "{sys.executable}" -m labkit.tools.scaffold "$@"\n'
+    )
+    shim.chmod(0o755)
 
 
 def gate_shims(repo: Path) -> None:

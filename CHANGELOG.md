@@ -516,6 +516,16 @@ pins (`requirements.txt` / `requirements.lock`).
   reason; it now names `--decide` through `--findings`, `fixed` owing none
   and an accepted BLOCKER owing `--effect`; its `--review --again` line
   says the exit is the state's. Audit 2026-10-27 (second), H6–H9.
+- **A new area's number counts every branch and worktree.** `labkit-init
+  exp` took one above the numbers in its own tree, so two branches of one
+  repo each handed out the same next number: in labkit-paper (2026-10-27)
+  `round7-haiku` held 12 and 13 while a worktree on `main-round` stamped
+  its next area as 12 again, renamed to 14 by hand. The number is now one
+  above every number this tree, `_archiv/`, every local and
+  remote-tracking branch and every other worktree hold (an area stamped
+  there and not yet committed counts); the stamp log names the places that
+  leave a gap. A branch the clone never fetched stays unseen — the
+  pre-merge-commit below holds that merge.
 - **finalize's command for a mismatched `[result]` runs.** It printed
   `protocol-fill --from-run <run> --force` without the protocol, which
   argparse refuses; it now names the protocol (`repo.adopt_command`), and
@@ -1864,6 +1874,18 @@ pins (`requirements.txt` / `requirements.lock`).
   a null (`run_record_check.null_lane_unmoved`, `null_lane_findings`): a
   fitted null that predicts otherwise, or a local apply's null on permuted
   gold, moved. LAB-034 Null condition in the same run.
+- **`labkit-init numbers` and a pre-merge-commit hook: one number per
+  area.** `labkit-init numbers [--staged]` names every number two areas
+  carry — in the working tree, or in the index with `--staged` — a living
+  and an archived area alike, with the next free number; exit 1 when one
+  is shared. The pre-commit runs it where a staged path lies under
+  `experiments/`, and `labkit-hooks install` now also writes
+  `.githooks/pre-merge-commit`, which runs it on the merge's index: git
+  runs that hook, never pre-commit, for a merge it completes without
+  conflicts — the merge where two branches' areas meet went unchecked.
+  `labkit-hooks check` reports the hook missing until `install` runs
+  again; `.githooks/pre-merge-commit.local` is the repo's own, as
+  `pre-commit.local`.
 - **Ask for recovery steps instead of memorizing them.**
   `labkit-audit AREA --findings` makes no model call and lists readable open
   BLOCKERs even behind a damaged journal or an invalid record name, explicit

@@ -1208,6 +1208,23 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+- **Ein konfliktfreier Merge umgeht die Gates des pre-commit:** git ruft
+  für einen Merge, den es selbst abschließt, nur `pre-merge-commit` auf,
+  nie `pre-commit` (Probe 2026-10-27). `pre-merge-commit` prüft seit der
+  Nummernvergabe über alle Branches nur die Bereichsnummern;
+  protocol-check, `report-check --if-reported --staged` und `claude-hook
+  undecided` laufen bei einem solchen Merge nicht, bei einem Merge mit
+  Konflikten dagegen schon (sein `git commit` geht durch pre-commit).
+  Offen für den Autor: soll `pre-merge-commit` den ganzen pre-commit
+  ausführen (gits eigenes Beispiel tut das)? Dann hält ein Merge auch
+  berichtete Zahlen des anderen Branches. Beleg:
+  `tests/test_install_hooks.py`, `AreaNumbers`.
+- **Gleicher Bereichsname auf zwei Branches:** `labkit-init exp` lehnt
+  einen vorhandenen Namen nur im eigenen Baum ab; auf einem anderen Branch
+  entsteht derselbe Name unter anderer Nummer, und der Merge bringt
+  `12-x` und `14-x` zusammen (`areas_named` weigert sich dann, den Namen
+  aufzulösen). Notiert, nicht geplant; `areas_elsewhere` liefert die
+  Namen schon mit.
 - **Auditdauer bei `seconds`:** Die Fit-Probe verfehlte das
   Fünf-Minuten-Ziel (14m20s); zwei Analyse-Audits brauchten 75 % der Zeit
   und 86 % der Kosten, alles bis finalize 2m36s. Offen für den Autor:
@@ -1651,6 +1668,12 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
 ## Rollout und Aufgaben außerhalb dieses Repos
+
+labkit-paper (Pin 0.85.0): die Nummernvergabe über alle Branches und der
+`pre-merge-commit` kommen erst mit gehobenem Pin und `labkit-hooks
+install`. Bis dahin vergibt `lib exp` in `~/projects/labkit-paper`
+(`main`) wieder 12, die `round7-haiku` schon trägt; `14-…` in
+`main-round` ist von Hand ausgewichen (2026-10-27).
 
 labkit-paper: `lib/sandboxlab/standard_check.py:117`
 (`registration_at_first_measurement`) bestimmt die erste Messung selbst
