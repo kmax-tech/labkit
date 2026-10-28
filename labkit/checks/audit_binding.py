@@ -90,9 +90,10 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
     """What MODE analysis is told to read of RUN_DIR, the answering run as
     `audited_run` chose it ONCE for both the prompt and the record: `(label,
     text)` per piece — the first ROWS_HEAD and last ROWS_TAIL lines of every
-    output the run registered, numbered as `<n>: <row>`, and its
-    metrics.json. One `(label, note)` pair says why there is nothing: WHY
-    (no protocol id, no completed bound run), or no registered output."""
+    output the run registered, numbered as `<n>: <row>`, its metrics.json,
+    and its declared dependencies (`dependency_pieces`). One `(label, note)`
+    pair says why there is nothing: WHY (no protocol id, no completed bound
+    run), or no registered output."""
     repo = layout_root(area)
     if run_dir is None:
         return [("ROWS", f"no rows: {why}")]
@@ -117,6 +118,65 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
         out.append(
             (f"FILE: {rel_run}/metrics.json", metrics.read_text(encoding="utf-8"))
         )
+    out += dependency_pieces(run_dir)
+    return out
+
+
+#: how large a declared dependency may be to be shown whole: a JSON model of
+#: a few weights is read, a pickled forest is named by its digest
+DEPENDENCY_SHOW_MAX = 64_000
+
+
+def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
+    """RUN_DIR's declared dependencies — its `data=` inputs recorded without
+    rows (`provenance.BinaryInput`: a predictor, its weights) — as MODE
+    analysis shows them: a UTF-8 file of at most DEPENDENCY_SHOW_MAX bytes
+    whole while its digest is the one the run recorded; any other named
+    with its digest and why it is not shown. In the repair case
+    (2026-10-28) the follow-up could not confirm a repair against
+    model.json, which no piece showed, and three decision reviews said
+    insufficient. [] for a run without such inputs or a record that does
+    not read (the record checks name that)."""
+    cfg = runs.read_run_config(run_dir)
+    if cfg is None:
+        return []
+    out: list[tuple[str, str]] = []
+    for key, entry in sorted(cfg.data.items()):
+        if (
+            not isinstance(entry, dict)
+            or "rows" not in entry
+            or entry["rows"] is not None
+        ):
+            continue
+        recorded, digest = str(entry.get("path")), str(entry.get("sha256"))
+        label = f"DEPENDENCY {recorded} ({key}, the run recorded sha {digest})"
+        path = runs.resolve_recorded(recorded, run_dir)
+        if not path.is_file():
+            why = "a directory" if path.is_dir() else "gone from the tree"
+            out.append((label, f"not shown: {why}"))
+            continue
+        now = scope_sha.file_digest(path)[: len(digest)]
+        if now != digest:
+            out.append(
+                (
+                    label,
+                    f"not shown: changed since the run (sha {now} now), so not "
+                    f"what the run read",
+                )
+            )
+            continue
+        data = path.read_bytes()
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            out.append((label, "not shown: not text — named by its digest"))
+            continue
+        if len(data) > DEPENDENCY_SHOW_MAX:
+            out.append(
+                (label, f"not shown: {len(data)} bytes, above {DEPENDENCY_SHOW_MAX}")
+            )
+            continue
+        out.append((label, text))
     return out
 
 

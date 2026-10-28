@@ -9,6 +9,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The analysis audit and the decision review see the run's declared
+  dependencies.** In the second repair case the follow-up could not
+  confirm a correct repair against `model.json` — "that result is in no
+  file shown here" — three decision reviews said `insufficient`, and the
+  adopted result read C1, A1 and A2 not assessable though the number was
+  the true one. The run's `data=` inputs recorded without rows
+  (`provenance.BinaryInput`: a predictor, its weights) are now shown
+  under `===== DEPENDENCY <path> … =====` (`audit_binding.dependency_pieces`):
+  a UTF-8 file of at most 64 kB whole while its digest is the one the run
+  recorded; a changed, binary or larger one named with its digest and why
+  it is not shown. The pieces are part of what the record binds
+  (`shown_sha`): an analysis record made before this change, of a run
+  with such inputs, no longer covers it — run the analysis audit again.
+  Runs without such inputs keep their coverage.
 - **Committed evidence stays as written: the stop and the commit hold a
   change git can undo.** labkit noticed evidence that went missing; a
   record rewritten in place was seen only where the rewrite broke its

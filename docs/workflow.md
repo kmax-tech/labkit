@@ -153,8 +153,9 @@ labkit-audit experiments/NN-<name> --decide N STATUS "REASON" [--effect stands |
 ```
 
 Reads: the protocol, the scripts and the repo-local modules they import,
-the answering run's rows and `metrics.json`, the cited rules of the
-standard — one model call. Writes: `audits/<minute>-analysis.toml`, one
+the answering run's rows and `metrics.json`, the files it declared as
+dependencies (a predictor's weights: small text whole, others by digest),
+the cited rules of the standard — one model call. Writes: `audits/<minute>-analysis.toml`, one
 `[[finding]]` per line, each `open`, bound to the code (`scope_sha`), the
 promise block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`; the report

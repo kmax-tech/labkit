@@ -120,7 +120,12 @@ looked at the data (coding-style.md CODE-011 Verify against the real system).
 Quote the row (file:line) as the trigger input in the fourth field. A count
 you cannot take from the sample becomes an assignment, as below. When the
 `ROWS` line says there are none (no completed bound run, no registered
-output), say so in one line and audit the code alone.
+output), say so in one line and audit the code alone. Under `===== DEPENDENCY
+<path> … =====` stand the files the run declared as its dependencies — a
+predictor's weights, a model file — as the run read them: whole when small
+text, else named with their digest and why they are not shown. Judge the
+instrument against them; a finding that needs a dependency shown nowhere
+says which file and what it must show.
 
 **In MODE analysis, judge every earlier decided BLOCKER.** Under
 `===== EARLIER DECIDED BLOCKERS =====` stand the area's BLOCKERs that a
