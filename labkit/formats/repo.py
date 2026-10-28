@@ -777,6 +777,15 @@ def git_dir_path(repo: Path, name: str, *, common: bool = False) -> Path | None:
     return (d if d.is_absolute() else repo / d) / name
 
 
+def local_dir(path: Path, name: str) -> Path:
+    """The directory NAME for labkit's local state about PATH: in the git
+    directory of PATH's repository (`git_dir_path`, local, never
+    committed), else in the system's temp dir. Not created here."""
+    root = git_root(path)
+    inside = None if root is None else git_dir_path(root, name)
+    return inside or Path(tempfile.gettempdir()) / name
+
+
 def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
     """The files REV holds under FOLDER (inside REPO), relative to FOLDER,
     `/`-separated — the index when REV is INDEX_REV (`ls-files --cached`,

@@ -85,3 +85,17 @@ start` returns once the run's directory holds its record, reports a
 command that ended first (exit 0 without a run, 2 on failure, with the
 log's tail) and gives up after `--max-seconds` with exit 3
 (`tests/test_runlog_wait.py`, `TestStartWaitsForTheRun`).
+
+That repair covered the first `--max-seconds` only. A stamped script
+computes its rows before `runlog.run` opens the record, so a computation
+longer than the start's wait fell into the same gap: in round 2 of the
+labkit-paper area 15 pilot (t21, 2026-10-28) `runlog start` gave up at
+17:23:29 with "pid 1814 is still starting", `runlog --wait` said "no open
+runs" (exit 0) at 17:23:32, and the run opened at 17:23:36. Since then
+`runlog start` keeps a record of the command it detached
+(`labkit/run/detached.py`), and the command inherits the lock on it:
+`runlog AREA` lists it and `--wait` waits for it until the command ends,
+its run record open or not. A lock, not the pid, because the system
+reuses pids (as for the audit attempts, `attempts.py`). Open: a command that dies
+before it opens its run record leaves only its log; `--wait` then reads
+the area as idle, exit 0.

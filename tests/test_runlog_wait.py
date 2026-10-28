@@ -276,6 +276,105 @@ class TestStartWaitsForTheRun(unittest.TestCase):
             self.assertIn("still starting", out)
 
 
+class TestWaitSeesADetachedStart(unittest.TestCase):
+    """`runlog start` stopped waiting after --max-seconds while its command
+    still prepared rows before `runlog.run` opened the record; `runlog AREA
+    --wait` then saw no open run and said "no open runs", exit 0, four
+    seconds before the run opened (labkit-paper area 15, round 2, t21, D6).
+    A command `runlog start` detached counts until it ends."""
+
+    def _start(self, d: str, script: Path) -> tuple[int, str]:
+        cwd = os.getcwd()
+        argv = ["start", d, "--log", str(Path(d) / "l.log"), "--max-seconds", "0.3"]
+        try:
+            os.chdir(d)
+            code, out = _run_main([*argv, "--", sys.executable, str(script)])
+        finally:
+            os.chdir(cwd)
+        return code, out
+
+    def test_the_area_is_not_idle_while_the_started_command_has_no_record(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "01_measure.py"
+            script.write_text("import time\ntime.sleep(2.5)\n", encoding="utf-8")
+            code, out = self._start(d, script)
+            self.assertEqual(code, 3, out)  # still starting, no run yet
+            pid = out.split("pid=")[1].split()[0]
+            code, out = _run_main(
+                [d, "--wait", "--max-seconds", "0.4", "--interval", "0.1"]
+            )
+            self.assertEqual(code, 3, out)
+            self.assertIn("still running", out)
+            self.assertIn(f"pid={pid}", out)
+            code, out = _run_main([d])
+            self.assertEqual(code, 0, out)
+            self.assertNotIn("no open runs", out)
+            self.assertIn(f"pid={pid}", out)
+            self.assertIn("no run record yet", out)
+            # the twin: once the command ended, the area is idle again
+            code, out = _run_main(
+                [d, "--wait", "--max-seconds", "20", "--interval", "0.1"]
+            )
+            self.assertEqual(code, 0, out)
+            self.assertIn("no open runs", out)
+            code, out = _run_main([d])
+            self.assertIn("no open runs", out)
+
+    def test_a_record_reads_while_held_and_ended_ones_are_removed(self):
+        """A held record that does not read is named, never skipped; a
+        record whose lock is free is an ended command — read as nothing,
+        removed by the next start."""
+        import fcntl
+
+        from labkit.run import detached
+
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            path = detached.HeldStart(area).record(4242, ["python", "x.py"], area)
+            self.assertEqual(detached.running(area), [])  # no command holds it
+            path.write_text('{"pid": "4242"}', encoding="utf-8")
+            with path.open("rb") as fh:
+                fcntl.flock(fh, fcntl.LOCK_EX)
+                with self.assertRaisesRegex(RuntimeError, "pid is '4242'"):
+                    detached.running(area)
+            detached.HeldStart(area).abandon()
+            self.assertFalse(path.exists())
+            # a command that cannot start leaves no record behind
+            with self.assertRaises(FileNotFoundError):
+                _run_main(["start", d, "--", str(area / "no-such-command")])
+            self.assertEqual(
+                list(detached._folder(area).glob(f"{detached._key(area)}-*")), []
+            )
+
+    def test_a_started_command_whose_run_is_open_is_that_run(self):
+        """The twin: once the run names the started pid, status shows the
+        run and nothing beside it, and --wait still waits for it."""
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "01_measure.py"
+            run_dir = Path(d) / "runs" / "2026-10-28T17-23-36_open"
+            record = run_record({"run_kind": "measurement", "script": "01_measure.py"})
+            script.write_text(
+                "import json, os, pathlib, time\n"
+                f"d = pathlib.Path({str(run_dir)!r}); d.mkdir(parents=True)\n"
+                f"record = {record!r}\n"
+                "record['pid'] = os.getpid()\n"
+                "(d / 'config.json').write_text(json.dumps(record))\n"
+                "time.sleep(2)\n",
+                encoding="utf-8",
+            )
+            code, out = self._start(d, script)
+            self.assertEqual(code, 0, out)
+            self.assertIn(f"run: {run_dir.name}", out)
+            code, out = _run_main([d])
+            self.assertIn(run_dir.name, out)
+            self.assertNotIn("no run record yet", out)
+            code, out = _run_main(
+                [d, "--wait", "--max-seconds", "0.3", "--interval", "0.1"]
+            )
+            self.assertEqual(code, 3, out)
+            self.assertIn(run_dir.name, out)
+
+
 class TestTheLabRootIsNoArea(unittest.TestCase):
     def test_runlog_on_the_lab_root_refuses(self):
         # `runlog .` from the root read the repo as an area: "no open runs",

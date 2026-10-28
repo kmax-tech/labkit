@@ -21,7 +21,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
 | 1 · formats and places · `labkit/formats/` | `protocol_block`, `comment_blocks`, `prompts`, `promises`, `protocol_check`, `protocol_history`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `console`, `gate`, `shell`, `files`, `jsonl` | `protocol_check`, `protocol_history`, `standard_contract`, `rules`, `findings`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence` |
-| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
+| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `report_hold`, `claude_hooks`, `audit`, `decision_review`, `report_review`, `install_hooks`, `ways_out` | `preflight`, `finalize`, `report_check`, `report_hold`, `claude_hooks`, `audit`, `decision_review`, `report_review`, `install_hooks`, `ways_out` |
 | tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree` |
@@ -149,7 +149,9 @@ input is declared, never recognised. The local apply template marks its
 declared predictor artifacts this way; the prepare stamps and AGENTS.md
 name it where they ask for every file a run reads.
 `runlog` writes the run and index; `runlog_command` implements the console
-command. `batch` manages resumable output. `lanes` is the run mechanics of
+command; `detached` keeps the record of a command `runlog start` detached,
+locked while the command runs, so `runlog AREA --wait` sees it before its
+run opens a record. `batch` manages resumable output. `lanes` is the run mechanics of
 the stamped two-lane judge — jobs per item and lane, batches, resume, the
 probe, the balance, the area's command line — doctrine, since the two lanes
 and the probe policy per tier are how the lab chooses to measure; the
@@ -300,7 +302,7 @@ evidence** (warns), **agent audit** (semantic).
 | Where is the repo? Where is the lab? | `repo.git_root` (git), `repo.layout_root` (git, else stamped tree); `repo.lab_root` (the nearest `models.toml`) |
 | Run git | `repo.git` (output, loud on failure), `repo.git_run` (exit code is the answer) |
 | Print a `labkit-audit` step a person or agent runs next | `repo.audit_command` (quoted, `--protocol` where the area holds several); a check that does not know the working directory names `labkit-audit <area>` and report-check fills it (`gate.Findings(audit=…)`) |
-| Ask git about the repository — HEAD, a dirty tree, a path in the git directory, the files a state holds under a folder | `repo.head_sha` (short form, "" outside a repo or unborn), `repo.tree_dirty` (untracked counted or not), `repo.git_dir_path` (this worktree's or the common git dir: locks, stop base, session log), `repo.files_at` (the index's or a revision's files, None where there is no such state — by exit code, not git's words), `repo.branch_refs` (every local and remote-tracking branch), `repo.worktree_roots` (every worktree's directory), `repo.head_before` (the commit HEAD's line stood on before a time, by commit dates) |
+| Ask git about the repository — HEAD, a dirty tree, a path in the git directory, the files a state holds under a folder | `repo.head_sha` (short form, "" outside a repo or unborn), `repo.tree_dirty` (untracked counted or not), `repo.git_dir_path` (this worktree's or the common git dir: locks, stop base, session log), `repo.local_dir` (labkit's local state about a path: in the git dir, else the temp dir — the audit locks, the detached starts), `repo.files_at` (the index's or a revision's files, None where there is no such state — by exit code, not git's words), `repo.branch_refs` (every local and remote-tracking branch), `repo.worktree_roots` (every worktree's directory), `repo.head_before` (the commit HEAD's line stood on before a time, by commit dates) |
 | Which directories does an area's `runs/` hold, and what does each say? | `runs.run_dirs` (one walk, metadata read once; an unreadable run is data — the caller refuses, reports or skips) |
 | Is this run finished? Which runs are? | `runs.completion_state`, `runs.completed_runs` |
 | Where is an area's `runs/`, a run's directory, its metrics file? | `runs.runs_path`, `runs.run_path`, `runs.metrics_path` (`RUNS_DIR`, `METRICS_FILE` are the spelling; a message names the path through them too) |

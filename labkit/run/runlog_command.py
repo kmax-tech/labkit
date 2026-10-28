@@ -2,8 +2,9 @@
 
 `runlog start AREA -- CMD` starts a run detached and returns once its
 directory exists (or the command ended first, said so); `runlog [AREA]` shows what an area's runs are doing and
-how they ended, `--wait` and `--follow` block until it is idle; `runlog
-reindex` rebuilds
+how they ended, `--wait` and `--follow` block until it is idle — no open
+run and no command `runlog start` detached still running (`detached`);
+`runlog reindex` rebuilds
 runs.tsv from the run directories (`runlog.reindex`). The run itself is
 written by `runlog.Run`; this module only reads it and starts processes.
 """
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import time
 from pathlib import Path
@@ -29,6 +31,8 @@ from labkit.formats.runs import (
     summarize,
 )
 from labkit.formats.answering_run import newest_completed
+from labkit.run import detached
+from labkit.run.detached import DetachedStart
 from labkit.run.runlog import ActiveRun, active, notify_desktop, reindex
 
 
@@ -50,8 +54,19 @@ def _newest_output(area: Path) -> str:
     return f"output: {newest.name} {lines} line(s), last write {age}s ago"
 
 
-def _print_status(area: str, live: list[ActiveRun]) -> None:
-    if not live:
+def _unopened(area: Path, live: list[ActiveRun]) -> list[DetachedStart]:
+    """The commands `runlog start` detached in AREA that still run and that
+    no open run of LIVE names by its pid: a stamped script prepares its
+    rows before `runlog.run` opens the record. A wrapper shell's run
+    records another pid and is listed beside its run."""
+    pids = {r.config.pid for r in live if r.config is not None}
+    return [s for s in detached.running(area) if s.pid not in pids]
+
+
+def _print_status(
+    area: str, live: list[ActiveRun], pending: list[DetachedStart]
+) -> None:
+    if not live and not pending:
         print(f"{area}: no open runs")
     for r in live:
         pid, script = (r.config.pid, r.config.script) if r.config else (None, None)
@@ -61,6 +76,11 @@ def _print_status(area: str, live: list[ActiveRun]) -> None:
         else:
             shown = r.config.as_record()["config"]  # as stored: key order, null
             print(f"    {json.dumps(shown, ensure_ascii=False)[:160]}")
+    for s in pending:
+        print(f"(detached)  {'starting':12s} pid={s.pid}  {shlex.join(s.command)}")
+        print(
+            f"    started {s.started} by runlog start, no run record yet — log: {s.log}"
+        )
 
 
 def _print_finished(area: Path) -> None:
@@ -117,16 +137,18 @@ def _finished_line(area: Path) -> str:
 def _wait(
     area: str, max_seconds: float | None, interval: float, follow: bool, notify: bool
 ) -> int:
-    """Block until the area has no open runs. Exit codes are the contract:
-    0 = no open runs (finished) · 2 = a run crashed · 3 = still running at
-    --max-seconds. The waiter only OBSERVES — the run owns its process group
-    and its lock, so a killed waiter is harmless (verified in the detach
-    probe: killing the waiter left run and lock untouched)."""
+    """Block until the area is idle: no open runs and no command `runlog
+    start` detached that still runs without one (`_unopened`). Exit codes
+    are the contract: 0 = idle (finished) · 2 = a run crashed · 3 = still
+    running at --max-seconds. The waiter only OBSERVES — the run owns its
+    process group and its lock, so a killed waiter is harmless (verified in
+    the detach probe: killing the waiter left run and lock untouched)."""
     t0 = time.monotonic()
     apath = Path(area)
     while True:
         live = active(area)
-        if not live:
+        pending = _unopened(apath, live)
+        if not live and not pending:
             print(f"{area}: no open runs — {_finished_line(apath)}")
             if notify:
                 notify_desktop("runlog --wait", f"{area}: no open runs")
@@ -156,12 +178,13 @@ def _wait(
             if notify:
                 notify_desktop("runlog --wait", f"{area}: run {failed[0].state}")
             return 2
+        starting = [f"pid={s.pid} (detached, no run record yet)" for s in pending]
         if follow:
             stamp = time.strftime("%H:%M:%S")
             extra = _newest_output(apath)
             print(
                 f"[{stamp}] {len(live)} open run(s): "
-                + ", ".join(r.run_id for r in live)
+                + ", ".join([r.run_id for r in live] + starting)
                 + (f" · {extra}" if extra else ""),
                 flush=True,
             )
@@ -170,7 +193,11 @@ def _wait(
             print(
                 f"{area}: still running after {int(max_seconds)}s — "
                 + ", ".join(
-                    f"{r.run_id} pid={r.config.pid if r.config else None}" for r in live
+                    [
+                        f"{r.run_id} pid={r.config.pid if r.config else None}"
+                        for r in live
+                    ]
+                    + starting
                 )
                 + (f" · {extra}" if extra else "")
                 + "\nre-check: runlog "
@@ -198,8 +225,8 @@ def _await_run(
     directory not in BEFORE): exit 0, the run named. The command ending
     first: exit 0 when it ended cleanly without a run (nothing to wait for),
     2 when it failed, with the log's last lines. Still alive after
-    MAX_SECONDS without one: exit 3. Until then `runlog AREA --wait` right
-    after the start saw no open run and returned 0 (review 2026-10-27)."""
+    MAX_SECONDS without one: exit 3, and `runlog AREA --wait` waits for
+    the command (`detached`)."""
     t0 = time.monotonic()
     while True:
         code = proc.poll()  # before the look, so a run made just before exit is seen
@@ -234,7 +261,7 @@ def _await_run(
         if time.monotonic() - t0 >= max_seconds:
             print(
                 f"no run in {area} after {int(max_seconds)}s; pid {proc.pid} is still "
-                f"starting — `runlog {area}` shows the run once it exists"
+                f"starting — `runlog {area} --wait` waits for it"
             )
             return 3
         time.sleep(interval)
@@ -256,6 +283,9 @@ def _start(argv: list[str]) -> int:
     started it — and any tool timeout that kills that shell's group — cannot
     take the run down with it (scar 2026-08-13). LABKIT_DETACHED=1 tells the
     `run_kind='measurement'` gate inside the script that the detach already happened.
+    The command inherits the lock of its start record (`detached.HeldStart`),
+    so `runlog AREA` and `--wait` see it until it ends, its run record
+    open or not.
     """
     import argparse
 
@@ -305,15 +335,22 @@ def _start(argv: list[str]) -> int:
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
     before = {rd.dir.name for rd in run_dirs(area)}
+    held = detached.HeldStart(area)
     with log.open("ab") as fh:
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=fh,
-            stderr=fh,
-            start_new_session=True,
-            env=env,
-        )
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=fh,
+                stderr=fh,
+                start_new_session=True,
+                env=env,
+                pass_fds=(held.fd,),
+            )
+        except OSError:
+            held.abandon()
+            raise
+    held.record(proc.pid, cmd, log)
     print(f"started detached: pid={proc.pid}  log={log}", flush=True)
     print(f"status:  runlog {area}        wait:  runlog {area} --wait", flush=True)
     return _await_run(area, before, proc, log, args.max_seconds)
@@ -344,7 +381,9 @@ def main(argv: list[str]) -> int:
         "and the command that started it. "
         "'Nachsehen statt nachfragen' — "
         "check this before starting a run in a shared repo. "
-        "`--wait` blocks until the area is idle (exit 0), a run "
+        "`--wait` blocks until the area is idle — no open run and no "
+        "command `runlog start` detached still running without one "
+        "(exit 0), a run "
         "crashed (exit 2) or --max-seconds passed (exit 3); "
         "`--follow` prints a status line per interval until idle; "
         "`runlog start <area> -- <cmd>` detaches a run (own session, "
@@ -362,8 +401,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--wait",
         action="store_true",
-        help="block until no open runs; exit 0/2/3 (idle/crashed/"
-        "still running at --max-seconds)",
+        help="block until no open runs and no detached command still "
+        "starting; exit 0/2/3 (idle/crashed/still running at --max-seconds)",
     )
     ap.add_argument(
         "--follow",
@@ -412,7 +451,8 @@ def main(argv: list[str]) -> int:
         return _wait(shown, None, args.interval or 5.0, True, args.notify)
     if args.wait:
         return _wait(shown, args.max_seconds, args.interval or 2.0, False, args.notify)
-    _print_status(shown, active(area))
+    live = active(area)
+    _print_status(shown, live, _unopened(area, live))
     _print_finished(area)
     return 0
 

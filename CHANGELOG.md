@@ -442,6 +442,22 @@ pins (`requirements.txt` / `requirements.lock`).
   example is named where it is owed. Without a protocol the low cut and
   the full form's lists stay as they were. Pilot of labkit-paper area 15
   on 72507d0 (t15, t60, t21, t34), defect D9.
+- **`runlog AREA --wait` waits for a command `runlog start` detached,
+  also before its run opens a record.** AGENTS.md says to detach with
+  `runlog start` and monitor with `runlog <area> --wait`, but `--wait`
+  looked at open run records only, and a stamped script computes its
+  rows before `runlog.run` opens one; once `runlog start` stopped waiting
+  (`--max-seconds`, 60 s), `--wait` said "no open runs", exit 0, while
+  the run was still to come. `runlog start` now keeps a record of the
+  command it detached (`labkit/run/detached.py`, new: pid, command, log,
+  start time, in the git directory's `labkit-run-starts/`, else the temp
+  dir), and the command inherits the lock on it, which the kernel
+  releases when the command ends. `runlog AREA` lists such a command
+  ("starting", "no run record yet"), and `--wait` and `--follow` count it
+  until it ends, its run record open or not; idle is no open run and no
+  such command. `repo.local_dir` (new) is the one home of "the git
+  directory, else the temp dir", the audit locks' too. Round 2 of the
+  labkit-paper area 15 pilot on 72507d0 (t21), D6.
 - **The pre-run hook lets every stamped no-run stage pass.** The stamped
   producers document `00_prepare.py --audit` as "no write" and the
   estimator's `--calibrate-null` as "No run, nothing written", but the

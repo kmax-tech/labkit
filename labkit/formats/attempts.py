@@ -86,7 +86,6 @@ import os
 import secrets
 import shlex
 import socket
-import tempfile
 from urllib.parse import quote
 from collections.abc import Generator, Mapping
 from dataclasses import dataclass
@@ -105,6 +104,7 @@ from labkit.formats.repo import (
     git_dir_path,
     git_root,
     git_run,
+    local_dir,
     text_at,
 )
 from labkit.formats.runs import name_minute, now_stamp
@@ -390,10 +390,8 @@ def _open_notes(attempts: list[Attempt], alive: dict[str, bool | None]) -> list[
 
 def _lock_dir(area: Path) -> Path:
     """Where the area's locks live: the git dir of its repository (local,
-    never committed), else the system's temp dir."""
-    root = git_root(area)
-    locks = None if root is None else git_dir_path(root, "labkit-audit-locks")
-    return locks or Path(tempfile.gettempdir()) / "labkit-audit-locks"
+    never committed), else the system's temp dir (`repo.local_dir`)."""
+    return local_dir(area, "labkit-audit-locks")
 
 
 def _lock_file(area: Path, name: str) -> Path:
