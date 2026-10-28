@@ -67,8 +67,10 @@ not convert, not that this labkit reads only its own standard).
 
 ## For labkit to decide
 
-- The refusal of another standard (`protocol_block.py:613-621`) offers
-  "update the protocol"; AGENTS.md says not to convert a historical
-  protocol. One of them should give way.
+- ~~The refusal of another standard offers "update the protocol" against
+  AGENTS.md~~ — resolved (091ff61): the refusal and the field guide say a
+  protocol with runs is reproduced at its commit and pin, never converted;
+  only a protocol not yet run may take the migration. The follow-up rule now
+  says that no gate checks it.
 - The follow-up rule is a place for a duty no gate checks. Whether
   `report_hold`'s hint or the analysis audit should look for it is open.
