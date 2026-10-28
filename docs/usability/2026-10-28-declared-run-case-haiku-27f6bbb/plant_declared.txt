@@ -1,0 +1,114 @@
+"""The declared-run case's start state, built in the container after the first
+measurement (run A, correct code): A's analysis audit (no findings), the
+Conclusion, A adopted with `protocol-fill --from-run` and committed; then the
+measuring code extended — every kept row carries the model's probability, a
+new output name — and measured again (run B), both left uncommitted: with A
+declared, the commit hook holds the code to A, so the change, its run and a
+new declaration commit together; then B's analysis audit, its BLOCKER naming
+the declaration (the protocol still declares A). Both audits are labkit-audit
+itself with the model call answered here; the second record stays
+uncommitted (an undecided BLOCKER does not commit). Fails loud on any step.
+
+    .venv/bin/python .wheels/plant_declared.py      # cwd: the probe repo
+"""
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+from unittest import mock
+
+from labkit.gates import audit
+
+AREA = Path("experiments/01-apply-screen")
+PROTOCOL = AREA / "PROTOCOL-apply-screen.md"
+MEASURE = AREA / "scripts" / "01_measure.py"
+SCOPE = (
+    "scope:\n"
+    "experiments/01-apply-screen/scripts/00_prepare.py\n"
+    "experiments/01-apply-screen/scripts/01_measure.py\n"
+    "experiments/01-apply-screen/scripts/02_analyze.py\n"
+)
+
+
+def sh(*cmd: str) -> str:
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"{' '.join(cmd)}: exit {r.returncode}\n{r.stdout}\n{r.stderr}")
+    return r.stdout
+
+
+def audited(answer: str, expect: int) -> None:
+    with (
+        mock.patch.object(audit.llm, "complete", lambda alias, prompt, **kw: answer),
+        mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+    ):
+        rc = audit.main([str(AREA), "--mode", "analysis"])
+    if rc != expect:
+        raise SystemExit(f"labkit-audit exited {rc}, expected {expect}")
+
+
+def newest_run() -> str:
+    return sorted(p.name for p in (AREA / "runs").iterdir() if (p / "completion.json").is_file())[-1]
+
+
+def main() -> None:
+    run_a = newest_run()
+    audited("verdict: 0 blockers, 0 warnings, 0 notes\n" + SCOPE, 0)
+    sh("git", "add", str(AREA / "audits"))
+    sh("git", "commit", "-q", "-m", "Audit: the analysis audit of the first measurement, no findings", "--", str(AREA / "audits"))
+
+    m = json.loads((AREA / "runs" / run_a / "metrics.json").read_text(encoding="utf-8"))
+    if m.get("c1_pass") is not True:
+        raise SystemExit(f"run {run_a}: c1_pass {m.get('c1_pass')!r}, the case expects a pass")
+    fill = ".venv/bin/protocol-fill"
+    sh(fill, str(PROTOCOL),
+       f"Conclusion=Yes — the supplied screening model, applied unchanged, agrees with the clinicians' referral labels on {m['c1_score']:.1%} of the 92 labelled persons, above the {m['c1_threshold']:.1%} a model that learned nothing would reach plus the registered margin.",
+       "Limits=One run on one cohort of 92 labelled persons; the clinicians' labels are the only reference.",
+       "Next step=none")
+    sh(fill, str(PROTOCOL), "--from-run", run_a)
+    sh("git", "add", str(PROTOCOL))
+    sh("git", "commit", "-q", "-m", f"Adopt run {run_a}: the agreement with the clinicians", "--", str(PROTOCOL))
+
+    text = MEASURE.read_text(encoding="utf-8")
+    for old, new in (
+        ('OUT = AREA / "output" / "apply-screen.jsonl"',
+         'OUT = AREA / "output" / "apply-screen_v2.jsonl"'),
+        ('    rows = [lane_row("registered", it, p, it[GOLD_FIELD]) for it, p in zip(train, registered)]\n',
+         '    probs = primary.probability([it[FEATURES_FIELD] for it in train]) if train else []\n'
+         '    rows = [lane_row("registered", it, p, it[GOLD_FIELD], probability=q)\n'
+         '            for it, p, q in zip(train, registered, probs, strict=True)]\n'),
+        ('        rows += [lane_row("test", it, p, None) for it, p in zip(test, predict(primary, test))]\n',
+         '        test_probs = primary.probability([it[FEATURES_FIELD] for it in test])\n'
+         '        rows += [lane_row("test", it, p, None, probability=q)\n'
+         '                 for it, p, q in zip(test, predict(primary, test), test_probs, strict=True)]\n'),
+    ):
+        if old not in text:
+            raise SystemExit(f"{MEASURE}: not found: {old[:70]!r}")
+        text = text.replace(old, new, 1)
+    MEASURE.write_text(text, encoding="utf-8")
+    sh(".venv/bin/python", str(MEASURE))
+    run_b = newest_run()
+    if run_b == run_a:
+        raise SystemExit("no second run")
+
+    lines = PROTOCOL.read_text(encoding="utf-8").splitlines()
+    at = next(i for i, ln in enumerate(lines, 1) if ln.strip() == "[result]")
+    audited(
+        f"BLOCKER · experiments/01-apply-screen/PROTOCOL-apply-screen.md:{at} · The protocol "
+        f"reports another run than the one shown. Its head declares `[result] run = "
+        f'"{run_a}"`, and Recorded results and Runs name that run; the rows and '
+        f"metrics.json shown here belong to run {run_b}, measured after the code change "
+        f"that writes each person's probability (`OUT = … apply-screen_v2.jsonl`). · The "
+        f"run_id behind c1_score, c1_threshold, a2_score and c1_pass: the protocol reports "
+        f"{run_a}, which the measuring code as it stands did not produce, so the reported "
+        f"verdicts are not shown to be those of the current instrument. · LAB-050 Analysis "
+        f"audit before reporting · declare the run the current code measured, once its checks "
+        f"hold\nverdict: 1 blockers, 0 warnings, 0 notes\n" + SCOPE,
+        1,
+    )
+    print(f"planted: A {run_a} adopted, B {run_b} measured, B's audit names the declaration")
+
+
+if __name__ == "__main__":
+    main()

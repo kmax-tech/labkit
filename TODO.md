@@ -1370,6 +1370,16 @@ Notiert, nicht geplant:
    (B) zwei Zustandsbegriffe — Deckung für „Audit fällig“ ohne die
    Deklaration, für die Nachverfolgung mit ihr — nah an der verworfenen
    Sonderregel. Empfehlung: (A).
+   Entschieden: (A). Gebaut auf Branch `withdraw`: `protocol-fill
+   --withdraw --why "…" [--into REPORT.md]` (`84f6812`, `27f6bbb`) mit
+   der Bindung von `419cef7`; Kettentests über die echten Befehle
+   (Reparaturfall, üblicher Weg, Gegenproben, Rückzug gibt nichts frei).
+   Abnahme mit kaltem Agenten bestanden
+   ([Notiz](docs/usability/2026-10-28-declared-run-case-haiku-27f6bbb.md)):
+   Rückzug, `fixed`, Folge-Audit `resolved`, Übernahme ohne `--force`,
+   Commit ohne `--no-verify`, report-check im Image sauber — ein Versuch,
+   keine Rate. Danach `--from-run --force` als Ersatzweg entfernt
+   (`4ece8eb`, Breaking).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben

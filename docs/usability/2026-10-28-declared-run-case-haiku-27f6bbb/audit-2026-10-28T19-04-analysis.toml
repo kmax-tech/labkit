@@ -1,0 +1,21 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T19:04"
+mode = "analysis"
+model = "opus"
+scope_sha = "1294633c1797"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T19-01-59_273e"
+shown_sha = "caf9477ae02b"
+blockers = 0
+warnings = 0
+notes = 3
+followup = { entries = 1, bytes = 999 }
+
+[[fix_verdict]]
+record = "2026-10-28T19-02-analysis.toml"
+n = 1
+decision_sha = "1b100fa47a21"
+verdict = "resolved"
+why = "repaired: the head's toml block (experiments/01-apply-screen/PROTOCOL-apply-screen.md:73) carries no [result] table any more, and Recorded results (:21) is withdrawn, so the protocol no longer declares 2026-10-28T19-01-57_8104\nthe rows shown are from the current instrument: code_sha 2ee7cec94e57, _prov run 2026-10-28T19-01-59_273e, with probability recorded (rows 1, 392)\nthat run's metrics.json holds c1_score 0.7609, c1_threshold 0.6528, c1_pass true\nthe leftover \"the kept run\" wording in Runs (:52) is a READ item, not this fault"

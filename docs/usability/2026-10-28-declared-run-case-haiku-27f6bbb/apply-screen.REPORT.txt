@@ -1,0 +1,90 @@
+# Screening Model Agreement Report
+
+## (1) The Number, Run ID and Location
+
+**Result:** The screening model achieves 76.1% agreement (accuracy) with clinicians' referral labels on the 92 labelled persons.
+
+- **Metric:** c1_score = 0.7608695652173914 (76.1%)
+- **Run ID:** 2026-10-28T19-01-59_273e
+- **Location:** experiments/01-apply-screen/runs/2026-10-28T19-01-59_273e/metrics.json under key `c1_score`
+- **Predictions:** pred_results/screen_pred.csv (300 persons: person_id, probability, flag)
+
+All three promises (criteria C1, A1, A2) were met:
+- **[C1]** Agreement (76.1%) exceeds permutation expectation (50.3%) plus margin (0.15), threshold 65.3% ✓
+- **[A1]** All 92 labelled persons have flags (0 missing) ✓  
+- **[A2]** Null lane agreement (47.8%) within band 0.13 of permutation expectation (50.3%) ✓
+
+<!-- labkit result: experiments/01-apply-screen/PROTOCOL-apply-screen.md run 2026-10-28T19-01-59_273e (protocol-fill --into; edit the protocol, not this block) -->
+C1 met; A1 met; A2 met · recorded: n_items = 92, n_rows = 392, n_test = 208, a1_empty = 0, a2_score = 0.4782608695652174, a2_target = 0.502835538752363, scored_class_counts = {'no_referral': 48, 'referral': 44}, c1_score = 0.7608695652173914, c1_threshold = 0.652835538752363 (run 2026-10-28T19-01-59_273e)
+<!-- /labkit result -->
+
+## (2) Files Read, Commands Run, Edits Made, Wall-Clock
+
+**Duration:** 2 minutes 32 seconds (19:02:10 to 19:04:42 UTC on 2026-10-28)
+
+### Files Read (with line counts)
+- PROTOCOL-apply-screen.md: protocol definition and earlier results (124 lines)
+- audits/2026-10-28T19-02-analysis.toml: audit findings record (21 lines)
+
+### Commands Run (13 total)
+1. `labkit-check` — repo check (failed on local wheel, but proceeded)
+2. `labkit-audit --findings` — extract BLOCKER findings (1 finding)
+3. `protocol-fill --withdraw --why "..."` — withdraw old run declaration
+4. `labkit-audit --decide 1 fixed "..."` — decide BLOCKER as fixed
+5. `finalize` — finalize the new run
+6. `labkit-audit --mode analysis` — re-audit new run (no findings)
+7. `protocol-fill --from-run 2026-10-28T19-01-59_273e` — adopt new run
+8. `protocol-fill --render` — render result
+9. `protocol-fill --into /work/REPORT.md` — generate report block
+10. Python: examine output file structure
+11. Python: count lanes in output (300 total persons)
+12. Python: create pred_results/screen_pred.csv (300 records)
+13. Usability log: record all steps
+
+### Files Edited
+- **experiments/01-apply-screen/PROTOCOL-apply-screen.md** — modified to remove old result declaration and adopt new run (3 places changed)
+- **experiments/01-apply-screen/audits/attempts.jsonl** — modified to add new audit attempt record
+- **experiments/01-apply-screen/scripts/01_measure.py** — modified to include probability in output (3 added lines, output renamed from apply-screen.jsonl to apply-screen_v2.jsonl)
+
+### Files Created
+- **pred_results/screen_pred.csv** — 300 predictions with person_id, probability, and flag (referral when prob >= 0.5)
+- **REPORT.md** — this report
+- **experiments/01-apply-screen/audits/2026-10-28T19-02-analysis.toml** — BLOCKER decision record
+- **experiments/01-apply-screen/audits/2026-10-28T19-04-analysis.toml** — final analysis audit (no findings)
+- **experiments/01-apply-screen/output/apply-screen_v2.jsonl** — 300 rows with probabilities
+- **experiments/01-apply-screen/runs/2026-10-28T19-01-59_273e/** — new measurement run directory
+
+## (3) Three Biggest Time Sinks
+
+1. **Understanding labkit audit workflow and BLOCKER recovery** (~1 minute)
+   - Cause: The BLOCKER stated "wrong declaration — measure stands, but head declares another run"
+   - Needed to understand: withdraw old declaration → decide BLOCKER → re-audit → adopt new run
+   - labkit output was verbose; filtering signal took trial
+
+2. **Extracting probabilities from output file correctly** (~0.5 minutes)
+   - Cause: Output file has multiple lanes (registered: 92 items with labels; test: 208 without)
+   - First tried to find probability field in all rows, got KeyError on gold lane
+   - Had to inspect file structure, count lanes, then handle correctly
+
+3. **Confirming code change was safe and metrics unchanged** (~0.3 minutes)
+   - Cause: New run 2026-10-28T19-01-59_273e had same c1_score as old run (2026-10-28T19-01-57_8104)
+   - Verified: code change only added probability field, didn't alter core logic
+   - Confirmed: both runs passed all three criteria (C1, A1, A2)
+
+## (4) What You Had to Guess
+
+1. **Whether test lane records have probability** — Yes, they do (checked one record)
+2. **What "probability >= 0.5" flag mapping means** — Assumed standard: flag=1 if prob >= 0.5, else 0
+3. **Whether to include unflagged persons in CSV** — Yes, included all 300 (92 labelled + 208 unlabelled), all have probabilities
+4. **Column order in output CSV** — Matched task requirement exactly: person_id, probability, flag
+5. **Whether to process old run output (apply-screen.jsonl) or new one (apply-screen_v2.jsonl)** — Used v2 (the adopted run)
+
+## (5) What Would Cut Task Duration Below 5 Minutes
+
+1. **Remove the BLOCKER recovery step** (saves ~1 minute): If code had been correct on first run and declarations aligned, no audit loop needed
+2. **Pre-generate predictions in the measurement script** (saves ~0.5 minutes): Don't require separate CSV extraction; write screen_pred.csv directly in 01_measure.py
+3. **Use a simpler output format** (saves ~0.2 minutes): Don't keep multiple output files; one JSONL is enough
+4. **Skip the analysis audit re-run** (saves ~1 minute): Trust the first audit once BLOCKER is decided
+5. **Automated CSV generation as part of protocol workflow** (saves ~0.3 minutes): labkit could offer `--output-csv format` flag
+
+**Estimated minimum time with all cuts:** ~2.5 minutes (mostly from code change review and run finalization).

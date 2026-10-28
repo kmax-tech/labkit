@@ -1,0 +1,11 @@
+5b0eafd 19:05 Finalize apply-screen experiment: adopt run 2026-10-28T19-01-59_273e with probability output
+a709a9c 19:01 Adopt run 2026-10-28T19-01-57_8104: the agreement with the clinicians
+4064820 19:01 Audit: the analysis audit of the first measurement, no findings
+4a9e630 19:01 Run: the first measurement under the registration
+148be50 19:01 Probe: the venv inside the sandbox
+a9ebba3 20:01 Probe: container paths
+e0a6368 19:01 Probe: the task continues a registered experiment
+96c3278 19:01 Register apply-screen: agreement with the clinicians against the permutation expectation, the scripts and the prepared persons
+80ee883 19:01 Probe: the area, the fixture and TASK.md
+959b50e 19:01 Probe: requirements.lock and the hooks of the probe venv
+05cc38a 19:01 Scaffold: a probe lab repo for the usability trace

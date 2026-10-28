@@ -1,0 +1,14 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T19:01"
+mode = "analysis"
+model = "opus"
+scope_sha = "4c208b9d0f1f"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T19-01-57_8104"
+shown_sha = "0f621d7b80c7"
+blockers = 0
+warnings = 0
+notes = 0
+followup = { entries = 0, bytes = 0 }

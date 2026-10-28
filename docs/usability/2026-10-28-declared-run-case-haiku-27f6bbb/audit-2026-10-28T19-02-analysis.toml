@@ -1,0 +1,20 @@
+# written by labkit-audit — decide each finding with `labkit-audit <area> --decide N STATUS REASON`; a record changed by hand is not one labkit wrote
+[audit]
+date = "2026-10-28T19:02"
+mode = "analysis"
+model = "opus"
+scope_sha = "1294633c1797"
+block_sha = "f3819c682a12"
+registration = { "kind" = "apply", "Question / hypothesis" = "8404d5d7ddc4", "Success / failure criterion" = "8b03ca3bdff8", "Admissibility condition" = "a57527719855", "Null condition / anchors" = "2c68bc14a17e" }
+run_id = "2026-10-28T19-01-59_273e"
+shown_sha = "fbfe10dcb68b"
+blockers = 1
+warnings = 0
+notes = 0
+followup = { entries = 0, bytes = 0 }
+
+[[finding]]
+grade = "BLOCKER"
+text = "BLOCKER · experiments/01-apply-screen/PROTOCOL-apply-screen.md:83 · The protocol reports another run than the one shown. Its head declares `[result] run = \"2026-10-28T19-01-57_8104\"`, and Recorded results and Runs name that run; the rows and metrics.json shown here belong to run 2026-10-28T19-01-59_273e, measured after the code change that writes each person's probability (`OUT = … apply-screen_v2.jsonl`). · The run_id behind c1_score, c1_threshold, a2_score and c1_pass: the protocol reports 2026-10-28T19-01-57_8104, which the measuring code as it stands did not produce, so the reported verdicts are not shown to be those of the current instrument. · LAB-050 Analysis audit before reporting · declare the run the current code measured, once its checks hold"
+status = "fixed"
+reason = "code was extended after first run to record probabilities into apply-screen_v2.jsonl; declaration withdrawn; new run 2026-10-28T19-01-59_273e has same core metrics"

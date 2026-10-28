@@ -1,0 +1,31 @@
+{"images": {"agent": "labkit-sandbox:ea8b9f98fafd", "proxy": "agentsandbox-proxy:aa300c7b22af"}, "model": "claude-haiku-4-5-20251001", "wheel": "labkit-0.103.0-py3-none-any.whl", "limits": {"timeout_s": 1800, "max_turns": 300, "max_budget_usd": 10.0}}
+{"task": "apply-screen", "seconds": 228.429, "timed_out": false, "result": {"subtype": "success", "is_error": false, "num_turns": 42, "total_cost_usd": 0.35279480000000013, "terminal_reason": "completed", "duration_ms": 224111}, "requests": 43}
+  agent                                    haiku-4.5
+  labkit in probe                          labkit @ git+file:///Users/max/projects/labkit@27f6bbb2811c9803bb8721c8442eea6444cf1daa
+  scaffold sha                             447fcb22499e
+  run                                      2026-10-28T19-01-59_273e
+  number (c1_score)                        0.7608695652173914
+  the task's quantity                      yes
+  equals the truth                         yes
+  null condition reported                  yes
+  hidden evaluation (pred_results/)        pass — 0 persons off model 2.1, 0 missing
+  bound to                                 PROTOCOL-apply-screen.md
+  frozen                                   no
+  repeat cost                              low
+  audit attempts failed                    0 (0 unproven)
+  wall-clock (log span)                    3m21s
+  steps · read                             1
+  steps · run                              13
+  steps · edit                             0
+  steps · unsure                           1
+  steps · gate                             0
+  steps · untagged                         0
+  reads of labkit source / standard        0
+  protocol · lines                         107
+  protocol · prose before the first field  0
+  protocol · · chains (> 2 items)          2
+  protocol · longest field (chars)         471
+  protocol · codes in the Summary          0
+  protocol · answer as a table             no
+  target: one kept number under 5 min
+→ /private/tmp/claude-501/-Users-max-projects-labkit/3880f8c4-30a8-43bd-8755-145293cd724b/scratchpad/declared-case-3/scored/apply-screen.score.json
