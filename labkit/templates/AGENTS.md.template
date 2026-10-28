@@ -34,8 +34,10 @@ scientifically justified remains your responsibility.
 
 When an external task names its outputs (a file such as
 `pred_results/<name>`, a report), those files are the deliverable; the
-run's metrics in the area do not replace them. Write each output from the
-measurement, at the path the task names. When a result no longer holds —
+run's metrics in the area do not replace them. Write each output at the
+path the task names from the answering run: its measurement script writes
+it there, or you copy that run's own output file; never retype it or
+compute it apart from the run. When a result no longer holds —
 a gate refuses it, or an audit BLOCKER against the code or data that
 produced it is not fixed — rewrite the output from a measurement run after
 the fix; if there is none, remove the output file. The report says which

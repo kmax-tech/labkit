@@ -59,7 +59,11 @@ instructions'.
 
 - The first gap is in the deliverable paragraph of this branch: say that a
   copy of the run's own output is fine and a file recomputed apart from the
-  run is not (done in the commit after this note, with a cold read).
+  run is not — done in the commit after this note. A fresh Haiku reader of
+  the revised paragraph answered all four cases as meant (copy yes, a
+  separate script reloading the model no, retyped numbers no, the
+  measurement script writing the path yes) and asked which run counts when
+  an area has several; the paragraph now says "the answering run".
 - The others go to labkit main's author: the pin question, the follow-up
   disclosure, the empty audit's coverage and the post-adoption Conclusion
   were each raised by two or three of three readers.
