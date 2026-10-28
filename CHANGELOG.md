@@ -398,6 +398,11 @@ pins (`requirements.txt` / `requirements.lock`).
   cannot compute to a string (`prompt_check.unreadable_prompt_constants`,
   new) is named with its script, nothing is written and the exit is 2,
   as when none reads. Pilot of labkit-paper area 15 on c2c5da2 (PubMedQA), defect 11.
+- **AGENTS.md no longer says only the prompt skeleton has `00_prepare.py
+  --audit`.** The estimator stamp has it too, printing the filters'
+  yields; what only the prompt skeleton's adds is the data-profile aid,
+  and the sentence now says that. Pilot of labkit-paper area 15 on
+  c2c5da2 (t71, t15), defect 12.
 - **Four faults found by the audit of 2026-10-28.** A line of the
   journal's copy that is not JSON ended the stop hook in a traceback:
   `attempts.copy_gaps` now raises AttemptError naming the copy's own line,

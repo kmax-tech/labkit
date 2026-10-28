@@ -148,7 +148,7 @@ code means what the question says.
 
 With `[model]`, judge whether surface features could answer the question
 without the intended capability; record that judgement in Data profile.
-Only the prompt skeleton supplies `00_prepare.py --audit` as an aid;
+Only the prompt skeleton's `00_prepare.py --audit` adds a data-profile aid;
 its counts are hints, not the judgement. Use the scripts your area
 actually has, not commands from a different kind's skeleton.
 
