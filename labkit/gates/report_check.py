@@ -660,7 +660,11 @@ def _registration_at(
     commit = recorded_commit(cfg)
     # what stood before the number cannot be repaired afterwards: a new
     # registration, committed before its own first run, or the handover
-    anew = f"{ways_out.register_anew(str(ctx.head.id))}; or {ways_out.HANDOVER}"
+    anew = (
+        "when the missing choices can be made on grounds the new registration "
+        f"states, {ways_out.register_anew(str(ctx.head.id))}; else "
+        f"{ways_out.HANDOVER}"
+    )
     if commit is None:
         return [
             blocker(

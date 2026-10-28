@@ -94,9 +94,11 @@ WAYS_OUT = (
         "an incomplete registration",
         "the commit of the first measurement lacked a choice that steers the "
         "result or its judgement (report-check names the field): that "
-        f"measurement is exploratory — {register_anew()}, or {HANDOVER}; a new "
-        "run on the same data does not restore what stood before the number. A "
-        "completion that changes no choice is no new registration",
+        "measurement is exploratory, and a new run on the same data does not "
+        "restore what stood before the number. When the missing choice can be "
+        f"made on grounds the new registration states, {register_anew()}; else "
+        f"{HANDOVER}. A pure typo in a prose field is corrected in the protocol "
+        "itself",
     ),
     (
         "none of these",

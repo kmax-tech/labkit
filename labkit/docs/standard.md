@@ -153,16 +153,19 @@ evidence file under the same ID (top of this document).*
   labkit package.
 
   **Incomplete at the first measurement.** What stood is what the commit of
-  the first measurement holds. When it lacked a choice that steers the
+  the first measurement holds. When it lacked a choice that could steer the
   result or how it is judged — the question, a criterion, a constant, the
   data, an exclusion —, that measurement is exploratory, whatever its head
-  says. The way on is a new registration that names it in `[replaces]`, or
-  a handover; measuring the same data again does not restore what stood
-  before the number. What decides is whether a choice made afterwards
-  could steer the result or its judgement: a completion that changes no
-  choice — a typo, a sentence saying what the committed fields already
-  fixed — is no new registration. No gate tells the two apart; the
-  registration check holds every owed field to the commit.
+  says, and measuring the same data again does not restore what stood
+  before the number. When the missing choice can be made on grounds the new
+  registration states, the way on is a successor that names this protocol
+  in `[replaces]`; when it cannot, a handover without a result. A pure
+  typo is corrected in the protocol itself: in a prose field nothing holds
+  it, though an audit that judged that field is owed again; in a promise's
+  sentence, key or constant it stays as registered, since the registration
+  check holds every change to the promises and cannot tell a typo from a
+  new choice. Whether a completion is a typo or a choice is the author's
+  judgement; no gate tells.
 
 - **LAB-004 · Identifiers make the intent addressable.** *(was §2.A1a)* Every promise to
   the code carries an identifier in the protocol text, depending on its kind:

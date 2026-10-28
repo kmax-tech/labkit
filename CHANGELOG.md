@@ -1237,14 +1237,18 @@ pins (`requirements.txt` / `requirements.lock`).
 - **A registration incomplete at its first measurement has a way on.**
   report-check held it ("the registration as committed at the first
   measurement lacks …") and named no way out; two of three readers in each
-  round were unsure. Decided 2026-10-28: that measurement is exploratory;
-  the way on is a new registration naming it in `[replaces]`, or a
-  handover, and a new run on the same data does not restore what stood
-  before the number. What decides is whether a choice made afterwards
-  could steer the result or its judgement; a completion that changes no
-  choice is no new registration. LAB-003 says so, AGENTS.md and the
-  printed ways out (`ways_out.WAYS_OUT`) name "an incomplete registration",
-  and report-check's refusal names both ways.
+  round were unsure. Decided 2026-10-28: that measurement is exploratory,
+  and a new run on the same data does not restore what stood before the
+  number. When the missing choice can be made on grounds the new
+  registration states, the way on is a successor naming it in
+  `[replaces]`; when it cannot, a handover without a result. A pure typo
+  is corrected in the protocol itself — in a prose field nothing holds it,
+  though an audit that judged the field is owed again (its record binds
+  each owed field's digest); in a promise it stays as registered, since
+  `registration_changes` holds every change there. LAB-003 says so,
+  AGENTS.md and the printed ways out (`ways_out.WAYS_OUT`) name "an
+  incomplete registration", and report-check's refusal names both ways
+  with the condition.
 - **Clarity of the 2026-10-28 audit.** The start checks that raise are
   `require_registration`, `require_valid_reseed` and `require_detached`
   (were `registration_refusal`, `reseed_refusal`, `foreground_refusal`); a

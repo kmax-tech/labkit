@@ -308,11 +308,12 @@ prints these same recovery choices with each decision list:
   the type; keeping it is your part, and a green gate says nothing about it.
 - **an incomplete registration** — report-check says the registration as
   committed at the first measurement lacks a field: that measurement is
-  exploratory. Register anew with `[replaces]` as above, or hand over; a
-  new run on the same data does not restore what stood before the number.
-  A completion that changes no choice — a typo, a sentence saying what the
-  committed fields already fixed — is no new registration; anything that
-  could steer the result or its judgement is.
+  exploratory, and a new run on the same data does not restore what stood
+  before the number. If you can make the missing choice on grounds you
+  state, register a successor with `[replaces]` as above; if not, hand
+  over without a result. A pure typo in a prose field you correct in the
+  protocol itself (an audit that judged the field is owed again); a
+  promise's sentence, key or constant stays as registered.
 - **none of these** — run `labkit-audit <area> --findings` first. Decide
   each readable open BLOCKER explicitly; if unresolved, use its printed
   `deferred` command with the reason for handing it over. Then use the
