@@ -462,7 +462,11 @@ pins (`requirements.txt` / `requirements.lock`).
   failed state: `--wait` exits 2 with its exit (or the signal, or "exit
   not recorded" when the supervisor ended first) and its log, and `runlog
   AREA` lists it, until the next `runlog start` in the area prints it
-  once more and removes it. A run record bound to the start tells its own
+  once more and removes it — exactly the records its one read held as
+  ended, each while its file still holds what was read
+  (`detached.remove_read`), so a command that ends after that read keeps
+  its record for the next display, and no log is touched. A run record
+  bound to the start tells its own
   state; an exit 0 without one is a command that opened no run. A command
   that cannot be started is refused by `runlog start` (exit 2, the
   supervisor's reason in the log's tail), and a start record that does

@@ -385,7 +385,7 @@ def _start(argv: list[str]) -> int:
     record (`detached`): `runlog AREA` and `--wait` see the command until it
     ends, its run record open or not, and an exit without a run record
     after it. Starting again prints the failed starts the area kept and
-    clears every ended one.
+    clears the ended ones it read (`detached.remove_read`).
     """
     import argparse
 
@@ -437,11 +437,14 @@ def _start(argv: list[str]) -> int:
     log.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "LABKIT_DETACHED": "1"}
     before = {rd.dir.name for rd in run_dirs(area)}
-    # starting again clears what earlier starts left: an ended command's
-    # failure is said once more here, then its record goes
-    for s in _failed_starts(area, detached.starts(area)):
+    # starting again clears what earlier starts left, from ONE read: an
+    # ended command's failure is said once more here, then exactly the
+    # records read as ended go; a command that ends after this read keeps
+    # its record for the next display
+    read = detached.starts(area)
+    for s in _failed_starts(area, read):
         print(f"earlier start, cleared now: {_failed_start_line(s)}")
-    detached.remove_ended(area)
+    detached.remove_read([s for s in read if not s.running])
     held = detached.HeldStart(area)
     with log.open("ab") as fh:
         try:

@@ -325,8 +325,9 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
     def test_a_record_runs_while_held_and_without_exit(self):
         """A record runs while its lock is held and its exit is null; it
         ended once the exit is written or the lock is free (exit not
-        recorded). One that does not read is refused with its way out; an
-        ended one is removed by the next start, a running one kept."""
+        recorded). One that does not read is refused with its way out; what
+        was read as ended is removed while its file holds what was read, a
+        running one never."""
         import fcntl
 
         from labkit.formats import console
@@ -355,9 +356,17 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
                     detached.exit_words(detached.starts(area)[2]),
                     "exit not recorded (its supervisor ended first)",
                 )
-                detached.remove_ended(area)
+                read = detached.starts(area)
+                with self.assertRaisesRegex(ValueError, "read as running"):
+                    detached.remove_read(read)  # a running one is never removed
+                ended = [s for s in read if not s.running]
+                # rewritten since the read (a new start under the same pid): kept
+                gone.write_text(
+                    gone.read_text(encoding="utf-8") + " ", encoding="utf-8"
+                )
+                detached.remove_read(ended)
                 self.assertEqual([p.exists() for p in (running, done, gone)],
-                                 [True, False, False])  # fmt: skip
+                                 [True, False, True])  # fmt: skip
                 running.write_text('{"pid": "11"}', encoding="utf-8")
                 with self.assertRaises(console.Refused) as cm:
                     detached.starts(area)
@@ -498,6 +507,72 @@ class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
             self.assertIn(
                 f"killed by signal {int(signal.SIGKILL)} without a run record", out
             )
+
+    def test_a_start_clears_only_the_failures_it_read_and_showed(self):
+        """Display and cleanup read the records apart: a command that ended
+        between the two reads lost its record unseen — an exit 7 neither
+        shown nor kept (review of 6e7e06b, 2026-10-28). The order is made
+        here: the start's display read sees the command running, then its
+        supervisor writes exit 7. It stays for the next `runlog AREA` and
+        `--wait` (exit 2), its log untouched. The twin: the failure the
+        start read and showed (exit 3) is cleared and not shown again."""
+        import fcntl
+        from unittest import mock
+
+        from labkit.formats.files import write_atomic
+        from labkit.run import detached
+
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            detached._folder(area).mkdir(parents=True, exist_ok=True)
+            log7 = area / "seven.log"
+            log7.write_text("rows failed: exit 7\n", encoding="utf-8")
+
+            def record(pid: int, exit_status: int | None, log: Path) -> Path:
+                path = detached._record_path(area, pid)
+                data = {"pid": pid, "command": ["python", f"{pid}.py"], "log": str(log),
+                        "started": "2026-10-28T17:00:00", "supervisor": 1,
+                        "exit": exit_status}  # fmt: skip
+                path.write_text(json.dumps(data), encoding="utf-8")
+                return path
+
+            record(3, 3, area / "three.log")  # ended before the start: shown, cleared
+            seven = record(7, None, log7)  # still running at the start's read
+            lock = seven.open("rb")
+            fcntl.flock(lock, fcntl.LOCK_EX)  # what the supervisor's descriptor holds
+            real = detached.starts
+            reads: list[int] = []
+
+            def starts_then_the_command_ends(at: Path) -> list[detached.DetachedStart]:
+                read = real(at)
+                reads.append(len(read))
+                if len(reads) == 1:  # the display read of `runlog start`
+                    data = json.loads(seven.read_text(encoding="utf-8"))
+                    write_atomic(seven, json.dumps({**data, "exit": 7}))
+                    lock.close()  # the supervisor ends
+                return read
+
+            with mock.patch.object(detached, "starts", starts_then_the_command_ends):
+                code, out = _start_in(
+                    d, sys.executable, "-c", "print(1)", max_seconds="5"
+                )
+            self.assertEqual(code, 0, out)
+            self.assertIn("earlier start, cleared now", out)
+            self.assertIn("exit 3 without a run record", out)
+            self.assertNotIn("exit 7", out)  # not read as ended, so not shown
+            code, out = _run_main([d])
+            self.assertIn("exit 7 without a run record", out)
+            self.assertNotIn("exit 3", out)  # the shown one is gone
+            code, out = _wait_for(d, "5")
+            self.assertEqual(code, 2, out)
+            self.assertIn(f"exit 7 without a run record — check the log: {log7}", out)
+            self.assertNotIn("exit 3", out)
+            self.assertEqual(log7.read_text(encoding="utf-8"), "rows failed: exit 7\n")
+            code, out = _start_in(d, sys.executable, "-c", "print(1)", max_seconds="5")
+            self.assertIn("earlier start, cleared now", out)  # shown now, cleared now
+            self.assertIn("exit 7 without a run record", out)
+            self.assertEqual(_wait_for(d, "5")[0], 0)
+            self.assertTrue(log7.is_file())
 
     def test_a_command_whose_run_record_names_it_tells_the_runs_state(self):
         """The twins: a bound run that completed leaves the area idle, though

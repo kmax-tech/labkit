@@ -111,8 +111,15 @@ and not with exit 0 is a failed state: `--wait` exits 2 naming the exit
 and the log, `runlog AREA` lists it. It stays until the next `runlog
 start` in the area, which prints it once more and removes it: starting
 again is the acknowledgement labkit already has (resume is the same
-command), and a process that ended can no longer open a record that
-would bind it. An exit 0 without a run is a command that opened none,
+command; acknowledged means the message was seen, not that anything was
+repaired or released), and a process that ended can no longer open a
+record that would bind it. The start acknowledges what it read and
+showed, nothing else: it reads the records once, prints the failures,
+and removes exactly the records that read held as ended, each while its
+file still holds the text read. A first version listed the records a
+second time to clean up, and a command that ended between the two reads
+lost its record unseen (an exit 7, reproduced in the review); now it
+stays for the next display. Logs are never removed. An exit 0 without a run is a command that opened none,
 as `runlog start` says when it sees it end. A wrapper process's run
 records another pid; beside an open run the wrapper reads as "started
 process still active; matched to no open run by its pid", not as a run

@@ -26,8 +26,10 @@ inherit the descriptor that holds the lock (`fcntl.flock`); the kernel
 releases it when the last of them ends — never a pid, which the system
 reuses. A record *runs* while its exit is null and its lock is held; it
 *ended* when its exit is written, or when the lock is free without one (the
-supervisor ended first: exit not recorded). An ended record stays until the
-next `runlog start` in the area removes it (`remove_ended`).
+supervisor ended first: exit not recorded). An ended record stays until a
+`runlog start` in the area has read it as ended — and shown it, when it
+is a failure — and removes exactly what it read (`remove_read`); one that
+ended after that read stays for the next display. Logs are never touched.
 Why: docs/notes/2026-10-27-workflow-stages.md ("Separate observation").
 """
 
@@ -64,7 +66,9 @@ class DetachedStart:
     """One command `runlog start` detached, as its record holds it: the
     command's pid, its command line, its log, when it started (local time,
     seconds), the supervisor's pid, the exit status once known (negative:
-    the signal that ended it), and whether it still runs."""
+    the signal that ended it), whether it still runs — and which file was
+    read, with the digest of the text read (`remove_read` removes that
+    reading, nothing written since)."""
 
     pid: int
     command: tuple[str, ...]
@@ -73,6 +77,8 @@ class DetachedStart:
     supervisor: int
     exit: int | None
     running: bool
+    record: Path
+    record_sha: str
 
 
 def exit_words(start: DetachedStart) -> str:
@@ -133,17 +139,25 @@ def starts(area: Path) -> list[DetachedStart]:
     return sorted(out, key=lambda s: (s.started, s.pid))
 
 
-def remove_ended(area: Path) -> None:
-    """Remove AREA's records of commands that ended. Side effect: deletes
-    those files."""
-    for path in _records(area):
+def remove_read(read: list[DetachedStart]) -> None:
+    """Remove the records READ holds, each only while its file still holds
+    the text that was read (`record_sha`): what a caller read as ended and
+    has shown goes, a record written since stays. Raises ValueError for a
+    start READ holds as running — its record is never removed. Side
+    effect: deletes those files, never a log."""
+    for s in read:
+        if s.running:
+            raise ValueError(f"{s.record}: read as running — its record stays")
         try:
-            text = path.read_text(encoding="utf-8")
-            start = _parse(path, text, _held(path))
+            now = s.record.read_text(encoding="utf-8")
         except FileNotFoundError:
-            continue  # removed by a concurrent start: it had ended
-        if not start.running:
-            path.unlink(missing_ok=True)
+            continue  # removed by a concurrent start that read it as well
+        if _text_sha(now) == s.record_sha:
+            s.record.unlink(missing_ok=True)
+
+
+def _text_sha(text: str) -> str:
+    return digest(text.encode(), chars=None)
 
 
 def _parse(path: Path, text: str, held: bool) -> DetachedStart:
@@ -188,6 +202,8 @@ def _parse(path: Path, text: str, held: bool) -> DetachedStart:
         supervisor=number("supervisor"),
         exit=exit_status,
         running=exit_status is None and held,
+        record=path,
+        record_sha=_text_sha(text),
     )
 
 
