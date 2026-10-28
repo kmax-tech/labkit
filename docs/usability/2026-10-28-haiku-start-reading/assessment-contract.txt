@@ -1,0 +1,44 @@
+Recorded before reader answers, 2026-10-28. Comprehension of the start of an experiment: AGENTS.md (labkit
+stuck-clarity 8c41730, rebased on main 92029c2, copied as instructions.md) plus the verbatim output labkit
+prints when an area is stamped and on the first refusals — `labkit-init exp`, `protocol-check --contract`,
+the pre-commit hook, runlog's refusal of a measurement. Outputs produced on a fresh lab in the operator's
+scratchpad (`labkit-init lab`, hooks installed, replay venv with labkit from this worktree), no model call.
+Readers: three independent Claude Haiku 4.5 subagents, instructions.md and cases.md only. Judge per reader
+and situation: supported / incomplete / wrong; record where readers name a contradiction.
+
+T1 compute stamped, low.
+  (b) Own decisions: `type`; Terms of this protocol, Question / hypothesis, Data / scope, Exclusions /
+      filters, Unit (all five are MUST in the contract's first line — the stamp's Next step 2 lists four and
+      leaves out Terms); no criterion, no promise table. The code functions.
+  (c) protocol-fill the fields → implement → code-check → commit → run in the foreground.
+  (d) No freeze, no preflight, no preflight audit at low repeat cost; no criterion for a computation; the
+      output file only from the adopted answering run.
+  Record: who leaves out Terms; who reads the FULL-form lists (SHOULD, report) as owed now; whether "fill
+  the low cut" is understood.
+
+T2 fit stamped, low.
+  (b) Supported only if the reader names the three constants (`margin = 0.25`, `max_empty = 0`,
+      `null_band = 0.1`) as values the stamp wrote and the agent must decide, kept equal to the numbers in
+      the sentences and Terms. Also own: type, Terms, Question, criterion/admissibility/null sentences, Data,
+      Exclusions, Unit; Model / tool is stamped as n/a with a reason and may stand.
+  Hypothesis of this probe (from S2 of the stuck probe: the agent wrote 0.15 in text and sentence and kept
+  the stamped 0.25): at most one of three readers names the constants as its own decision.
+  (c) as T1 plus `--show 3` before the run.
+  (d) No `<…>` left; no constant changed after results; no freeze at low.
+
+T3 commit refused after stamping.
+  (a)/(b) Fill every listed must field with protocol-fill, or `n/a — <reason>`; the Runs line is a note
+      about after the run, not a field to fill now.
+  (d) No `--no-verify`, no bare `n/a`, no committing the stamp without the registration.
+
+T4 run refused: registration not written (low).
+  (b)/(c) Fill the registration (at least Question / hypothesis; with the contract all five must fields and
+      type), commit, run again.
+  (d) No preflight, no audit, no `frozen = true` (low owes none), no LABKIT_UNFROZEN=1, no probe to get a
+      number.
+  Record: whether "Freeze first: `preflight <AREA>` clean, audit stamped, `frozen = true`" leads anyone to
+  freeze or preflight at low repeat cost.
+
+T5 run refused: protocol not committed.
+  (c) `git add` the protocol and the script (own paths), commit, run again.
+  (d) No LABKIT_UNFROZEN=1, no probe; same "Freeze first" record as T4.
