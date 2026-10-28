@@ -130,7 +130,10 @@ this protocol id that reports an intent key — a computation registers no ids,
 so for a computation it is simply the newest completed bound run. Every later
 station holds that run, and so does every other gate: nobody chooses
 twice. Then the stations: the head's declared run is the answering run
-(or no run is declared yet); the output rows were written by it; the
+(or no run is declared yet); the output rows were written by it; its
+promise block is the one the first measurement registered — a change
+after it is held here, every changed sentence, key, constant and scope
+named with the way back, and not first at the adoption; the
 promises against its metrics; the code it ran — the measurement script
 and the modules it imports, not the analysis code or the pin — and the
 declared scopes unchanged since it ran (a fix after the run means:

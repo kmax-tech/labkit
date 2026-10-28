@@ -21,6 +21,12 @@ each step's condition):
                     in its lineage (warning), the arm lines match (warning),
                     it is a full run — `run_kind='measurement'`, not acknowledged unfrozen
                     (warning here, `runs.unreportable`; report-check blocks)
+  1b. registration  the answering run's promise block is the one the first
+                    measurement registered — a blocker naming every change
+                    (sentences, keys, constants, scopes) and the way back;
+                    first measurements that recorded different blocks, a
+                    blocker (`registration_changes`, LAB-003 No run without
+                    an intent paragraph)
   2. intent-check   every registered promise has a metrics key (and vice
                     versa), and prose and promise block name the same ids;
                     skipped only when neither registers an id
@@ -74,13 +80,19 @@ from labkit.formats import console, findings as audit_findings, promises, protoc
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
+    RunDir,
+    patch_path,
+    read_run_dir,
+    recorded_commit,
     run_dirs,
     unreportable,
     read_run_config,
 )
 from labkit.formats.answering_run import (
     bound_answering_run,
+    first_registrations,
 )
+from labkit.formats import protocol_history
 from labkit.formats.repo import (
     AmbiguousArea,
     ProtocolChoiceError,
@@ -91,9 +103,10 @@ from labkit.formats.repo import (
     measure_command,
     no_such_area,
     shown,
+    git_root,
     the_protocol,
 )
-from labkit.gates.ways_out import PROTOCOL_NAMED, register_anew
+from labkit.gates.ways_out import HANDOVER, PROTOCOL_NAMED, register_anew
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
@@ -248,6 +261,174 @@ def unreportable_warnings(answering_run: Path) -> list[str]:
         f"be reported (report-check refuses it)"
         for mark in unreportable(cfg)
     ]
+
+
+def registration_changes(
+    area: Path, protocol: Path, pid: str | None, run: Path | None
+) -> list[GateFinding]:
+    """The answering RUN holds the registration its protocol's first
+    measurement recorded (K3, docs/notes/2026-10-27-new-registration-contracts.md):
+    the promise block in each run's record (`promises.snapshot`: ids, keys,
+    sentences through the block's digest, scopes, constants — not the code
+    the scopes name, so a repair measured again under the same promises
+    passes). A run whose block differs from the first measurement's is held,
+    each change named — sentences, keys, constants and scopes together,
+    from the protocol texts both runs saw (`named_changes`) — with the way
+    out: restore what was registered and measure again, or register anew.
+    Every lane: a bar moved after a result was seen answers no registered
+    question at any repeat cost. Run here, after every measurement, and not
+    first at the adoption: three runs and an audit went into a changed
+    registration before report-check named it (fourth SAB-like draw,
+    2026-10-28). The first measurements are every run at each first
+    position (`answering_run.first_registrations`), not one chosen by name;
+    when they recorded different blocks, which one stood cannot be told and
+    no run answers a registered question: held too, the ways out a new
+    registration that declares its changes against each (K1,
+    `report_check.replacement_gaps`) or a handover without a declared
+    result. Empty without an answering run, a stamped id PID, or a block in
+    the records. Raises RuntimeError when git fails."""
+    if pid is None or run is None:
+        return []
+    cfg = read_run_config(run)
+    now = cfg.promises if cfg is not None else None
+    if now is None:
+        return []
+    root = git_root(protocol)
+    registered = first_registrations(area, pid, root)
+    if len(registered) > 1:
+        named = ", ".join(
+            f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
+        )
+        return [
+            blocker(
+                f"the first measurements recorded different registrations: {named} — "
+                f"which one stood before the number cannot be told, so no run of "
+                f"this protocol answers a registered question",
+                fix="either "
+                + register_anew(
+                    pid,
+                    "per change against each of these registrations (report-check "
+                    "of the new protocol lists them)",
+                )
+                + f"; or {HANDOVER}",
+            )
+        ]
+    if not registered:
+        return []
+    ((sha, (first, snap)),) = registered.items()
+    if now["block_sha"] == sha:
+        return []
+    changes, restores = named_changes(
+        protocol, first, read_run_dir(run), snap, now, root
+    )
+    commit = recorded_commit(first.config) if first.config is not None else None
+    shown_then = ""
+    if commit and root is not None:
+        rel = protocol.resolve().relative_to(root.resolve()).as_posix()
+        shown_then = (
+            f" — `git show {commit[:12]}:{rel}` shows them as committed then"
+            + (
+                f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
+                if patch_path(first.dir).is_file()
+                else ""
+            )
+        )
+    return [
+        blocker(
+            f"the registration changed after the first measurement {first.dir.name}: "
+            f"{'; '.join(changes)} (recorded by the answering run {run.name}) — a "
+            f"bar set after a result was seen does not answer the registered "
+            f"question",
+            fix=f"restore the [[promise]] tables as {first.dir.name} "
+            f"registered them ({'; '.join(restores)}){shown_then}, "
+            f"and measure again, then audit that run (the earlier runs stay); or, "
+            f"when the registration cannot be answered as written, "
+            + register_anew(pid)
+            + " — the earlier protocol, its runs and their verdict stay",
+        )
+    ]
+
+
+def named_changes(
+    protocol: Path,
+    first: RunDir,
+    answering: RunDir,
+    was: dict,
+    now: dict,
+    root: Path | None,
+) -> tuple[list[str], list[str]]:
+    """(changes, restores): every change of the promise block from the
+    first measurement FIRST to the ANSWERING run, and what undoes each. From
+    the protocol texts both runs saw (`protocol_history.as_measured`,
+    `promise_differences`): sentences, keys, constants and scopes together —
+    the run records keep sentences only through the block's digest, and a
+    restore told only the constants left a changed sentence that held the
+    next run again (fourth SAB-like draw). Where a text cannot be read back,
+    what the records WAS and NOW hold (`promises.snapshot_changes`) and why
+    the sentences go unnamed. Raises RuntimeError when git fails."""
+    then, why_then = protocol_history.as_measured(protocol, first, root)
+    current, why_now = protocol_history.as_measured(protocol, answering, root)
+    if then is not None and current is not None:
+        diffs = protocol_history.promise_differences(then, current)
+        if diffs:
+            return (
+                [change_phrase(*d) for d in diffs],
+                [restore_phrase(*d) for d in diffs],
+            )
+    changes = promises.snapshot_changes(was, now)
+    restores = [_restored(c) for c in changes]
+    if then is None or current is None:
+        why = why_then if then is None else why_now
+        changes.append(f"the sentences unread ({why})")
+    return changes, restores
+
+
+def change_phrase(what: str, old: str, new: str) -> str:
+    """One `protocol_history.promise_differences` entry as the hold names it:
+    `[A2] null_band 0.1 → 0.15`, `[C1] sentence "…" → "…"`, `[A3] added`."""
+    pid, _, part = what.partition(" ")
+    if not part:
+        return (
+            f"[{pid}] added" if old == protocol_history.ABSENT else f"[{pid}] dropped"
+        )
+    if part == "sentence":
+        return f'[{pid}] sentence "{old}" → "{new}"'
+    return f"[{pid}] {part} {old} → {new}"
+
+
+def restore_phrase(what: str, old: str, new: str) -> str:
+    """What undoes one `promise_differences` entry: a value or a sentence
+    back, an added promise out, a dropped one back in."""
+    pid, _, part = what.partition(" ")
+    if not part:
+        return f"[{pid}] out" if old == protocol_history.ABSENT else f"[{pid}] back in"
+    if part == "sentence":
+        return f'[{pid}] sentence "{old}" back'
+    return f"[{pid}] {part} {old} back"
+
+
+def _restored(change: str) -> str:
+    """What undoes CHANGE, a phrase of `promises.snapshot_changes`: a value
+    back, an added promise out, a dropped one back in, the sentences as then
+    (the snapshot keeps them only through the block's digest)."""
+    if " → " in change:
+        return change.split(" → ")[0] + " back"
+    if change.endswith(" added"):
+        return change.removesuffix(" added") + " out"
+    if change.endswith(" dropped"):
+        return change.removesuffix(" dropped") + " back in"
+    return "every sentence as then"
+
+
+def check_registration(
+    findings: Findings, area: Path, protocol: Path, pid: str | None, run: Path
+) -> None:
+    """Hold the answering RUN to the registration of the first measurement
+    (`registration_changes`); a note when it holds."""
+    held = registration_changes(area, protocol, pid, run)
+    findings.take_all(held)
+    if not held:
+        findings.note("  the promise block is the one the first measurement registered")
 
 
 def check_open_audit_findings(findings: Findings, area: Path) -> None:
@@ -503,8 +684,11 @@ def finalize_area(
        console the reason is a refusal; in a passed collector it is kept as
        a blocker, so the caller (report-check) can name it.
     1. answering run — choose the run the later steps examine
-       (`answering_run`); none bound is a blocker, and steps 3, 5 and 7
+       (`answering_run`); none bound is a blocker, and steps 1b, 3, 5 and 7
        then skip.
+    1b. registration — only with a run: its promise block as the first
+       measurement registered it (`registration_changes`), a blocker
+       naming every change.
     2. intent-check — always; with an answering run it reads its metrics.
     3. declared scopes — only with a run.
     4. open fields — always; warnings only: protocol placeholders and
@@ -546,6 +730,13 @@ def finalize_area(
     # 1. answering run — the run every later step examines
     findings.header(f"answering run: {chosen.name}")
     answering_run = check_answering_run(findings, area, chosen, text, head.id)
+
+    # 1b. the registration as the first measurement recorded it — with a run
+    findings.header("registration since the first measurement")
+    if answering_run is None:
+        findings.note(NO_RUN)
+    else:
+        check_registration(findings, area, chosen, head.id, answering_run)
 
     # 2. intent-check — always
     findings.header("intent-check")

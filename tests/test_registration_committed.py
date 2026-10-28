@@ -32,8 +32,9 @@ from unittest import mock
 from protocol_fixture import PID, completed_run, head, scope_file
 
 from labkit.formats import answering_run, protocol_history, runs
+from labkit.formats.gate import Findings
 from labkit.formats.runs import RunKind
-from labkit.gates import report_check
+from labkit.gates import finalize, report_check
 
 RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"
@@ -289,6 +290,13 @@ def _block(null_band: float, sentence: str = "the null lane stays near chance") 
     )
 
 
+def _registration_changes(area: Path, proto: Path) -> list:
+    """finalize's registration station on the answering run report-check
+    chooses."""
+    ctx = report_check.checked(area, proto)
+    return finalize.registration_changes(ctx.area, ctx.protocol, ctx.head.id, ctx.run)
+
+
 class RegistrationAsFirstMeasured(_Repository):
     """K3 (docs/notes/2026-10-27-new-registration-contracts.md): the
     answering run holds the registration its protocol's first measurement
@@ -309,8 +317,7 @@ class RegistrationAsFirstMeasured(_Repository):
         return _git(self.root, "rev-parse", "HEAD")
 
     def _changes(self) -> list[str]:
-        ctx = report_check.checked(self.area, self.proto)
-        return [f.line for f in report_check.registration_changes(ctx)]
+        return [f.line for f in _registration_changes(self.area, self.proto)]
 
     def test_a_bar_moved_after_the_first_measurement_is_held_with_its_way_back(self):
         first = self._register(_block(0.1))
@@ -328,8 +335,6 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn("[A2] null_band 0.1 back", line)
         self.assertIn(f"git show {first[:12]}:experiments/01-x/PROTOCOL-x.md", line)
         self.assertIn("register anew", line)
-        code, out = _report_check(self.area)
-        self.assertEqual(code, 1, out)
 
     def test_the_way_back_undoes_every_change_and_then_passes(self):
         """The start state of the repair case: [A3] added and the band raised
@@ -344,8 +349,8 @@ class RegistrationAsFirstMeasured(_Repository):
         )
         self._run(self._register(_block(0.15) + a3), RUN)
         (line,) = self._changes()
-        self.assertIn("[A3] added; [A2] null_band 0.1 → 0.15", line)
-        self.assertIn("([A3] out; [A2] null_band 0.1 back)", line)
+        self.assertIn("[A2] null_band 0.1 → 0.15; [A3] added", line)
+        self.assertIn("([A2] null_band 0.1 back; [A3] out)", line)
         self.assertIn('[replaces] protocol = "', line)
         self._run(self._register(_block(0.1)), "2026-10-07T11-00-00_cd34")
         self.assertEqual(self._changes(), [])
@@ -365,13 +370,72 @@ class RegistrationAsFirstMeasured(_Repository):
         self._run(self._register(_block(0.1)), RUN)
         self.assertEqual(self._changes(), [])
 
-    def test_a_changed_sentence_is_named_though_its_old_text_is_not_kept(self):
+    def test_a_changed_sentence_is_named_from_the_texts_both_runs_saw(self):
         first = self._register(_block(0.1))
         self._run(first, self.FIRST)
         self._run(self._register(_block(0.1, "the null lane stays somewhere")), RUN)
         (line,) = self._changes()
-        self.assertIn("a promise's sentence", line)
+        self.assertIn(
+            '[A2] sentence "the null lane stays near chance" → '
+            '"the null lane stays somewhere"',
+            line,
+        )
+        self.assertIn('[A2] sentence "the null lane stays near chance" back', line)
         self.assertIn("git show", line)
+
+    def test_a_sentence_and_a_bar_changed_together_are_both_named(self):
+        """The fourth SAB-like draw: the margin and the sentences changed in
+        one edit, the hold named the constant only, the agent restored it,
+        measured again and was held again for the sentence."""
+        first = self._register(_block(0.1))
+        self._run(first, self.FIRST)
+        self._run(self._register(_block(0.15, "within the calibrated band")), RUN)
+        (line,) = self._changes()
+        self.assertIn(
+            '[A2] sentence "the null lane stays near chance" → '
+            '"within the calibrated band"; [A2] null_band 0.1 → 0.15',
+            line,
+        )
+        self.assertIn(
+            '([A2] sentence "the null lane stays near chance" back; '
+            "[A2] null_band 0.1 back)",
+            line,
+        )
+        # restored as told, nothing is left to hold
+        self._run(self._register(_block(0.1)), "2026-10-07T11-00-00_cd34")
+        self.assertEqual(self._changes(), [])
+
+    def test_unread_sentences_are_said_with_what_the_records_hold(self):
+        """A first measurement whose commit this clone does not hold: the
+        constants come from the run records, and the hold says why the
+        sentences are not named."""
+        first = self._register(_block(0.1))
+        # the first run saw a sentence its commit does not hold, and kept no patch
+        self.proto.write_text(
+            head(repeat_cost="low", result=RUN, promises=_block(0.1, "uncommitted"))
+            + REGISTRATION,
+            encoding="utf-8",
+        )
+        self._run(first, self.FIRST, dirty=True)
+        self._run(self._register(_block(0.15)), RUN)
+        (line,) = self._changes()
+        self.assertIn("[A2] null_band 0.1 → 0.15", line)
+        self.assertIn("the sentences unread (its first measurement", line)
+        self.assertIn("cannot be read back", line)
+
+    def test_finalize_holds_it_after_the_run_not_first_at_the_adoption(self):
+        first = self._register(_block(0.1))
+        self._run(first, self.FIRST)
+        self._run(self._register(_block(0.15)), RUN)
+        collected = Findings(tell=None)
+        self.assertEqual(finalize.finalize_area(self.area, self.proto, collected), 1)
+        self.assertTrue(
+            any(
+                "the registration changed after the first measurement" in line
+                for line in collected.blocked
+            ),
+            collected.blocked,
+        )
 
     def test_first_measurements_that_disagree_are_held_with_both_ways_out(self):
         """Two runs at one commit with different blocks (the tree differed):
@@ -387,9 +451,7 @@ class RegistrationAsFirstMeasured(_Repository):
         )  # not committed: the second run at the same commit saw another block
         later = self._run(sha, "2026-10-07T09-00-00_bbbb")
         self._run(sha, RUN)
-        (finding,) = report_check.registration_changes(
-            report_check.checked(self.area, self.proto)
-        )
+        (finding,) = _registration_changes(self.area, self.proto)
         self.assertEqual(finding.grade, report_check.BLOCKER)
         self.assertIn(
             "the first measurements recorded different registrations", finding.line

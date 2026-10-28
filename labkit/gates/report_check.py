@@ -109,7 +109,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED
-from labkit.formats.runs import RunDir, patch_path
+from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
     BLOCKER,
     EXIT_CONTRACT,
@@ -118,7 +118,7 @@ from labkit.formats.gate import (
     GateFinding,
     blocker,
 )
-from labkit.formats.answering_run import first_measurements, first_registrations
+from labkit.formats.answering_run import first_measurements
 from labkit.formats.protocol_history import (
     registration_differences,
     registrations_as_first_measured,
@@ -128,7 +128,6 @@ from labkit.formats import (
     console,
     findings,
     followup,
-    promises,
     protocol_block,
     reviews,
     runs,
@@ -330,97 +329,6 @@ def freeze_gaps(ctx: Checked) -> list[GateFinding]:
         for n, label in report.must_holes
     ]
     return gaps
-
-
-def registration_changes(ctx: Checked) -> list[GateFinding]:
-    """The answering run holds the registration its protocol's first
-    measurement recorded (K3, docs/notes/2026-10-27-new-registration-contracts.md):
-    the promise block in each run's record (`promises.snapshot`: ids, keys,
-    sentences through the block's digest, scopes, constants — not the code
-    the scopes name, so a repair measured again under the same promises
-    passes). A run whose block differs from the first measurement's is held,
-    each change named (`promises.snapshot_changes`), with the way out:
-    restore what was registered and measure again, or register anew. Every
-    lane: a bar moved after a result was seen answers no registered
-    question at any repeat cost. The first measurements are every run at
-    each first position (`answering_run.first_registrations`), not one
-    chosen by name; when they recorded different blocks, which one stood
-    cannot be told and no run answers a registered question: held too, the
-    ways out a new registration that declares its changes against each (K1,
-    `replacement_gaps`) or a handover without a declared result. Empty
-    without an answering run, a stamped id, or a block in the records
-    (another station names those)."""
-    if ctx.head.id is None or ctx.run is None:
-        return []
-    cfg = read_run_config(ctx.run)
-    now = cfg.promises if cfg is not None else None
-    if now is None:
-        return []
-    registered = first_registrations(ctx.area, ctx.head.id, git_root(ctx.protocol))
-    if len(registered) > 1:
-        named = ", ".join(
-            f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
-        )
-        return [
-            blocker(
-                f"the first measurements recorded different registrations: {named} — "
-                f"which one stood before the number cannot be told, so no run of "
-                f"this protocol answers a registered question",
-                fix="either "
-                + ways_out.register_anew(
-                    str(ctx.head.id),
-                    "per change against each of these registrations (report-check "
-                    "of the new protocol lists them)",
-                )
-                + f"; or {ways_out.HANDOVER}",
-            )
-        ]
-    if not registered:
-        return []
-    ((sha, (first, snap)),) = registered.items()
-    if now["block_sha"] == sha:
-        return []
-    changes = promises.snapshot_changes(snap, now)
-    commit = recorded_commit(first.config) if first.config is not None else None
-    root = git_root(ctx.protocol)
-    shown_then = ""
-    if commit and root is not None:
-        rel = ctx.protocol.resolve().relative_to(root.resolve()).as_posix()
-        shown_then = (
-            f" — `git show {commit[:12]}:{rel}` shows them as committed then"
-            + (
-                f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
-                if patch_path(first.dir).is_file()
-                else ""
-            )
-        )
-    return [
-        blocker(
-            f"the registration changed after the first measurement {first.dir.name}: "
-            f"{'; '.join(changes)} (recorded by the answering run {ctx.run.name}) — a "
-            f"bar set after a result was seen does not answer the registered "
-            f"question",
-            fix=f"restore the [[promise]] tables as {first.dir.name} "
-            f"registered them ({'; '.join(_restored(c) for c in changes)}){shown_then}, "
-            f"and measure again, then audit that run (the earlier runs stay); or, "
-            f"when the registration cannot be answered as written, "
-            + ways_out.register_anew(str(ctx.head.id))
-            + " — the earlier protocol, its runs and their verdict stay",
-        )
-    ]
-
-
-def _restored(change: str) -> str:
-    """What undoes CHANGE, a phrase of `promises.snapshot_changes`: a value
-    back, an added promise out, a dropped one back in, the sentences as then
-    (the snapshot keeps them only through the block's digest)."""
-    if " → " in change:
-        return change.split(" → ")[0] + " back"
-    if change.endswith(" added"):
-        return change.removesuffix(" added") + " out"
-    if change.endswith(" dropped"):
-        return change.removesuffix(" dropped") + " back in"
-    return "every sentence as then"
 
 
 def replacement_gaps(ctx: Checked) -> list[GateFinding]:
@@ -1126,8 +1034,6 @@ def report_check(
         )
         if ln.registration:
             findings.take_all(registration_gaps(ctx))
-    # the registration as at the first measurement — every lane (K3)
-    findings.take_all(registration_changes(ctx))
     # a declared replacement binds its changes (K1)
     findings.take_all(replacement_gaps(ctx))
 

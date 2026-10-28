@@ -1198,6 +1198,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A registration changed after the first measurement is held by
+  finalize, every change named.** report-check alone compared the
+  answering run's promise block with the first measurement's, so in the
+  fourth SAB-like draw two agents measured and audited again under a
+  changed registration with finalize clean, and learnt it at the
+  adoption. And the hold named a changed sentence only when nothing else
+  changed: apply-screen changed `margin`, `null_band` and the sentences
+  in one edit, was told the constants, restored them, measured again and
+  was held for the sentences. finalize now holds it as a station after
+  the answering run (`finalize.registration_changes`, moved from
+  report-check, which gets it through finalize), and names every changed
+  sentence, key, constant and scope from the protocol texts both runs saw
+  (`protocol_history.as_measured`, `promise_differences`, split out of
+  `registration_differences`), each with what undoes it. Where a text
+  cannot be read back, the hold names what the run records hold and why
+  the sentences go unnamed.
 - **The analysis audit names the gates' way out after the first
   measurement.** In the fourth SAB-like draw both registration changes
   started with the agents' own analysis audit: after the first

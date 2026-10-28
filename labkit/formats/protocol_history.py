@@ -307,6 +307,26 @@ def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     ka, kb = protocol_block.head(old).kind, protocol_block.head(new).kind
     if ka != kb:
         out.append(("kind", str(ka), str(kb)))
+    out += promise_differences(old, new)
+    fa = {f.label: f.value for f in fields(old)}
+    fb = {f.label: f.value for f in fields(new)}
+    for label in COMPARED_FIELDS:
+        x, y = fa.get(label) or ABSENT, fb.get(label) or ABSENT
+        if x != y:
+            out.append((label, x, y))
+    return out
+
+
+#: what a difference names where one registration has nothing
+ABSENT = "(none)"
+
+
+def promise_differences(old: str, new: str) -> list[tuple[str, str, str]]:
+    """(what, from, to) for every difference of the promise blocks of the
+    protocol texts OLD and NEW, by id in order: `<id>` alone for an id
+    added or dropped (its sentence, ABSENT on the side without it), else
+    `<id> sentence`, `<id> key`, `<id> scope` and `<id> <constant>`. Pure;
+    raises PromiseError on a block that does not read."""
     a = {
         p.id: p
         for p in (promises.parse_block(old) or promises.PromiseTables((), "")).promises
@@ -315,23 +335,18 @@ def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
         p.id: p
         for p in (promises.parse_block(new) or promises.PromiseTables((), "")).promises
     }
+    out: list[tuple[str, str, str]] = []
     for pid in sorted(set(a) | set(b)):
         if pid not in a or pid not in b:
             out.append(
                 (
                     pid,
-                    a[pid].sentence if pid in a else "(none)",
-                    b[pid].sentence if pid in b else "(none)",
+                    a[pid].sentence if pid in a else ABSENT,
+                    b[pid].sentence if pid in b else ABSENT,
                 )
             )
         else:
             out += _promise_differences(a[pid], b[pid])
-    fa = {f.label: f.value for f in fields(old)}
-    fb = {f.label: f.value for f in fields(new)}
-    for label in COMPARED_FIELDS:
-        x, y = fa.get(label) or "(none)", fb.get(label) or "(none)"
-        if x != y:
-            out.append((label, x, y))
     return out
 
 
@@ -354,8 +369,8 @@ def _promise_differences(
             out.append(
                 (
                     f"{pa.id} {name}",
-                    "(none)" if x is None else str(x),
-                    "(none)" if y is None else str(y),
+                    ABSENT if x is None else str(x),
+                    ABSENT if y is None else str(y),
                 )
             )
     return out

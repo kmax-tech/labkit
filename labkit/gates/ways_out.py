@@ -16,7 +16,7 @@ from __future__ import annotations
 #: the kind owes and the kind to the first measurement's commit
 #: (`report_check.registration_gaps`), and the promise block to the
 #: registration the first measurements recorded
-#: (`report_check.registration_changes`) — a bar lowered after it and
+#: (`finalize.registration_changes`) — a bar lowered after it and
 #: measured again is held
 #: the ways out of a BLOCKER, by its cause: (name, what to do). Printed with
 #: every decision list (BLOCKER_ROUTES) and stated in the stamped AGENTS.md
