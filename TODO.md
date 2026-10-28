@@ -1341,6 +1341,14 @@ Notiert, nicht geplant:
    übernehmen, dann Folge-Audit, keine neue Messung), Regressionstest
    über die ganze Kette samt Gegenprobe (ein weiter falscher Kopf bleibt
    blockiert).
+   Gebaut auf Branch `declared-run` (`419cef7`): MODE analysis zeigt ein
+   Stück `DECLARED RUN`, wenn der Kopf einen anderen Lauf deklariert als
+   den gezeigten, und `shown_sha` bindet es; die erste Übernahme des
+   auditierten Laufs bewegt nichts. Neuer Ausweg „a wrong declaration“
+   (gedruckte Liste und AGENTS.md). Kettentest mit drei Gegenproben grün.
+   Offen: die Abnahme mit einem kalten Agenten — ein Startzustand, in dem
+   ein Audit einen falsch deklarierten Lauf findet (ein Experiment,
+   startet auf Ansage).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
