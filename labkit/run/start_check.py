@@ -23,6 +23,7 @@ from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, repo
 from labkit.formats.answering_run import REPEAT_SEED_KEY
+from labkit.formats.gate import with_way_out
 from labkit.formats.standard_contract import COMPUTE_KIND, PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
@@ -76,9 +77,12 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
         path = path.resolve()
         if path not in [f.resolve() for f in found]:
             raise SystemExit(
-                f"runlog: protocol={protocol!r} is not one of the "
-                f"PROTOCOL-*.md in the run's area ({base_dir}):\n  "
-                + "\n  ".join(f.name for f in found or [Path("(none)")])
+                with_way_out(
+                    f"runlog: protocol={protocol!r} is not one of the "
+                    f"PROTOCOL-*.md in the run's area ({base_dir}):\n  "
+                    + "\n  ".join(f.name for f in found or [Path("(none)")]),
+                    "name one of these: `runlog.run(..., protocol=PROTOCOL)`",
+                )
             )
     elif len(found) == 1:
         path = found[0].resolve()
@@ -91,10 +95,12 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
         return _Bound({"id": None, "path": None}, None, None)
     else:
         raise SystemExit(
-            f"runlog: {len(found)} protocols in {base_dir} — nothing would "
-            f"say which one this run belongs to. Name it:\n"
-            f"  runlog.run(..., protocol=PROTOCOL)\n  "
-            + "\n  ".join(f.name for f in found)
+            with_way_out(
+                f"runlog: {len(found)} protocols in {base_dir} — nothing would "
+                f"say which one this run belongs to:\n  "
+                + "\n  ".join(f.name for f in found),
+                "name it: `runlog.run(..., protocol=PROTOCOL)`",
+            )
         )
 
     rel = repo.shown(path, base_dir)
@@ -102,7 +108,13 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
-        raise SystemExit(f"runlog: {rel}: {exc}") from exc
+        raise SystemExit(
+            with_way_out(
+                f"runlog: {rel}: {exc}",
+                f"repair the head as the sentence says (`protocol-check "
+                f"{repo.shown(path, Path.cwd())} --contract` shows its fields)",
+            )
+        ) from exc
     if head.id is None:
         print(
             f"runlog: WARNING — {rel} carries no stamped id (`id` in its "
@@ -207,7 +219,9 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
     try:
         records = findings.area_records(base_dir)
     except findings.FindingsError as exc:
-        raise SystemExit(f"runlog: {exc}") from exc
+        raise SystemExit(
+            with_way_out(f"runlog: {exc}", findings.record_way(base_dir))
+        ) from exc
     blockers, lesser = [], []
     for u in findings.open_findings(records, mode="preflight"):
         (blockers if u.grade == "BLOCKER" else lesser).append(u.line)
@@ -230,19 +244,26 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
         sha = area_stamp(base_dir)[0]
     except (FileNotFoundError, ValueError) as exc:
         raise SystemExit(
-            f"runlog: LABKIT_UNFROZEN=1 — the area cannot be stamped ({exc}), so no "
-            f"failed audit attempt can be held to its code"
+            with_way_out(
+                f"runlog: LABKIT_UNFROZEN=1 — the area cannot be stamped ({exc}), "
+                f"so no failed audit attempt can be held to its code",
+                "repair what the sentence names, then start the run again",
+            )
         ) from exc
     block_sha = None
     if bound.text is not None:
         try:
             block_sha = promises.block_stamp(bound.text)
         except promises.PromiseError as exc:
-            raise SystemExit(f"runlog: promise block: {exc}") from exc
+            raise SystemExit(
+                with_way_out(f"runlog: promise block: {exc}", PROMISE_BLOCK_WAY)
+            ) from exc
     try:
         failed = findings.audit_unavailable(base_dir, sha, "preflight", block_sha)
     except findings.FindingsError as exc:
-        raise SystemExit(f"runlog: {exc}") from exc
+        raise SystemExit(
+            with_way_out(f"runlog: {exc}", findings.record_way(base_dir))
+        ) from exc
     if failed is None:
         tried = findings.failed_attempts(base_dir)
         seen = (
@@ -254,16 +275,19 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
             or "none"
         )
         raise SystemExit(
-            "runlog: this run declares run_kind='measurement' (a full run) on a protocol not "
-            "ready for one, and LABKIT_UNFROZEN=1 acknowledges an audit that "
-            "could not run — not one nobody ran. No failed preflight attempt of "
-            f"the code as it is now (code {sha}, promises {block_sha or 'no protocol'}, at least "
-            f"{findings.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}.\n"
-            f"Run the audit: `{repo.audit_command(base_dir, '--mode', 'preflight', protocol=base_dir / bound.name if bound.head is not None else None)}`; "
-            "when the backend does not answer, it writes "
-            f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
-            "acknowledgement rests on that file — and its number cannot be "
-            "reported either (report-check refuses it)."
+            with_way_out(
+                "runlog: this run declares run_kind='measurement' (a full run) on a "
+                "protocol not ready for one, and LABKIT_UNFROZEN=1 acknowledges an "
+                "audit that could not run — not one nobody ran. No failed preflight "
+                f"attempt of the code as it is now (code {sha}, promises "
+                f"{block_sha or 'no protocol'}, at least "
+                f"{findings.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}",
+                f"run the audit: `{repo.audit_command(base_dir, '--mode', 'preflight', protocol=base_dir / bound.name if bound.head is not None else None)}`; "
+                "when the backend does not answer, it writes "
+                f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
+                "acknowledgement rests on that file — and its number cannot be "
+                "reported either (report-check refuses it)",
+            )
         )
     return failed
 
@@ -302,7 +326,18 @@ def _promise_snapshot(
             return None, None
         return block, promises.snapshot(block, base_dir)
     except promises.PromiseError as exc:
-        raise SystemExit(f"runlog: promise block: {exc}") from exc
+        raise SystemExit(
+            with_way_out(f"runlog: promise block: {exc}", PROMISE_BLOCK_WAY)
+        ) from exc
+
+
+#: the way out of a promise block that does not read or names code that is
+#: not there
+PROMISE_BLOCK_WAY = (
+    "repair the [[promise]] tables as the sentence says (`protocol-check "
+    "<PROTOCOL> --contract` shows the block's form); after the first "
+    "measurement a changed registration is registered anew"
+)
 
 
 #: the time limit, in seconds, an agent harness puts on one foreground shell
@@ -337,8 +372,12 @@ def foreground_timeout() -> tuple[float, str] | None:
             limit = -1.0
         if not limit >= 0:  # also NaN
             raise SystemExit(
-                f"runlog: {FOREGROUND_TIMEOUT_ENV}={raw!r} is not a number of "
-                f"seconds >= 0 (0: the shell has no limit)"
+                with_way_out(
+                    f"runlog: {FOREGROUND_TIMEOUT_ENV}={raw!r} is not a number of "
+                    f"seconds >= 0",
+                    f"set {FOREGROUND_TIMEOUT_ENV} to the shell's limit in seconds "
+                    f"(0: the shell has no limit)",
+                )
             )
         return (limit, FOREGROUND_TIMEOUT_ENV) if limit > 0 else None
     if os.environ.get("CLAUDECODE"):
@@ -357,21 +396,31 @@ def reseed_refusal(prepared: Prepared, repeat_of: str | None, reseed: bool) -> N
         return
     if repeat_of is None:
         raise SystemExit(
-            "runlog: reseed draws a repeat's seed anew — it goes with repeat_of"
+            with_way_out(
+                "runlog: reseed draws a repeat's seed anew — it goes with repeat_of",
+                "pass `repeat_of=<the primary run>` with `reseed=True`, or drop reseed",
+            )
         )
     seed = prepared.config.get(REPEAT_SEED_KEY)
     if not isinstance(seed, int) or isinstance(seed, bool):
         raise SystemExit(
-            f"runlog: reseed: the config holds no integer `{REPEAT_SEED_KEY}` to "
-            f"draw anew ({seed!r})"
+            with_way_out(
+                f"runlog: reseed: the config holds no integer `{REPEAT_SEED_KEY}` "
+                f"to draw anew ({seed!r})",
+                f"give the config an integer `{REPEAT_SEED_KEY}`",
+            )
         )
     registered = promises.all_constants(prepared.block) if prepared.block else {}
     if REPEAT_SEED_KEY in registered:
         raise SystemExit(
-            f"runlog: reseed: the protocol registers `{REPEAT_SEED_KEY}` = "
-            f"{registered[REPEAT_SEED_KEY]!r} — a spread over "
-            f"seeds needs a seed the protocol does not fix, and a repeat may not "
-            f"change a registered value"
+            with_way_out(
+                f"runlog: reseed: the protocol registers `{REPEAT_SEED_KEY}` = "
+                f"{registered[REPEAT_SEED_KEY]!r} — a spread over "
+                f"seeds needs a seed the protocol does not fix, and a repeat may "
+                f"not change a registered value",
+                "repeat without reseed, or register a spread over seeds in a "
+                "protocol of its own",
+            )
         )
 
 
@@ -402,11 +451,23 @@ def registration_refusal(
         registers=head.kind != COMPUTE_KIND or promises.registers_ids(bound.text),
     )
     if owed:
-        raise SystemExit(f"runlog: {name}: {owed}")
+        raise SystemExit(
+            with_way_out(
+                f"runlog: {name}: {owed}",
+                "write the [[promise]] tables in the protocol and commit them "
+                "before the run (`protocol-check <PROTOCOL> --contract` names "
+                "what the kind owes)",
+            )
+        )
     if block is not None:
         refusal = _constants_refusal(block, config)
         if refusal:
-            raise SystemExit(f"runlog: {name}: {refusal}")
+            raise SystemExit(
+                with_way_out(
+                    f"runlog: {name}: {refusal}",
+                    "read them with promises.all_constants(), not a second copy",
+                )
+            )
 
 
 def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | None:
@@ -425,7 +486,6 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
     return (
         "the registered constants are not in this run's config as registered:\n  "
         + "\n  ".join(lines)
-        + "\n  read them with promises.all_constants(), not a second copy"
     )
 
 
@@ -441,11 +501,21 @@ def completed_parent(base_dir: Path, key: str, run_id: str, why: str = "") -> Ru
         state = completion_state(parent) if parent.is_dir() else "missing"
         pcfg = read_run_config(parent) if state == COMPLETED else None
     except RunConfigError as exc:
-        raise SystemExit(f"runlog: {key}={run_id!r}: {exc}") from exc
+        raise SystemExit(
+            with_way_out(
+                f"runlog: {key}={run_id!r}: {exc}",
+                "restore the run record the sentence names as runlog wrote it "
+                "(`git checkout HEAD -- <path>` where git holds it)",
+            )
+        ) from exc
     if pcfg is None:
         raise SystemExit(
-            f"runlog: {key}={run_id!r} names no completed run under "
-            f"{runs_path(base_dir)} ({state}){why}"
+            with_way_out(
+                f"runlog: {key}={run_id!r} names no completed run under "
+                f"{runs_path(base_dir)} ({state}){why}",
+                f"name a completed run of this area by its id (its folder under "
+                f"{runs_path(base_dir)} holds a completion.json)",
+            )
         )
     return pcfg
 
@@ -457,8 +527,10 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
         return None
     if RUN_ID.fullmatch(derived_from) is None:
         raise SystemExit(
-            f"runlog: derived_from={derived_from!r} is not a run id — name a "
-            f"run of {runs_path(base_dir)} by its id, never a path"
+            with_way_out(
+                f"runlog: derived_from={derived_from!r} is not a run id",
+                f"name a run of {runs_path(base_dir)} by its id, never a path",
+            )
         )
     drawn_from = completed_parent(
         base_dir,
@@ -470,9 +542,11 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
     # best of several draws would answer through it (2026-10-15)
     if drawn_from is not None:
         raise SystemExit(
-            f"runlog: derived_from={derived_from!r} is a repeat of "
-            f"{drawn_from} — supporting evidence, never the answer; "
-            f"derive from {drawn_from}"
+            with_way_out(
+                f"runlog: derived_from={derived_from!r} is a repeat of "
+                f"{drawn_from} — supporting evidence, never the answer",
+                f"derive from {drawn_from}",
+            )
         )
     return derived_from
 
@@ -531,9 +605,11 @@ def prepare(
     # Rationale: docs/notes/2026-10-20-run-kinds.md.
     if run_kind == "probe" and not lane(repeat_cost).probe_allowed:
         raise SystemExit(
-            "runlog: run_kind='probe' is not allowed at repeat_cost='low'; "
-            "run the full measurement with run_kind='measurement' — "
-            "this repeat cost has no separate probe stage"
+            with_way_out(
+                "runlog: run_kind='probe' is not allowed at repeat_cost='low' — "
+                "this repeat cost has no separate probe stage",
+                "run the full measurement with run_kind='measurement'",
+            )
         )
     block, snapshot = _promise_snapshot(base_dir, bound.text)
     return Prepared(
@@ -555,13 +631,14 @@ def foreground_refusal(base_dir: Path, limit: tuple[float, str]) -> None:
     History: docs/notes/2026-10-19-gates-and-run-start.md.
     """
     raise SystemExit(
-        f"runlog: this run declares run_kind='measurement' and sits in a foreground "
-        f"shell an agent harness kills after {limit[0]:g} s ({limit[1]}) "
-        f"— the kill takes the process group mid-run (2026-08-13). "
-        f"Start it detached:\n"
-        f"  runlog start {shown_area(base_dir)} -- <the same command>\n"
-        "or, if the caller already detached it (run_in_background, "
-        "nohup+setsid), acknowledge with LABKIT_DETACHED=1."
+        with_way_out(
+            f"runlog: this run declares run_kind='measurement' and sits in a "
+            f"foreground shell an agent harness kills after {limit[0]:g} s "
+            f"({limit[1]}) — the kill takes the process group mid-run (2026-08-13)",
+            f"start it detached: `runlog start {shown_area(base_dir)} -- <the same "
+            f"command>`; or, if the caller already detached it (run_in_background, "
+            f"nohup+setsid), acknowledge with LABKIT_DETACHED=1",
+        )
     )
 
 
@@ -586,30 +663,33 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
     blockers, open_lesser = _undecided_findings(base_dir)
     if blockers:
         raise SystemExit(
-            f"runlog: {declares}, and a "
-            "preflight audit found BLOCKER(s) nobody decided — not an "
-            "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not pass "
-            f"it. Decide each ({findings.DECIDED_LIST}) with `labkit-audit <area> "
-            "--decide` (`--findings` prints the command per finding):\n  "
-            + "\n  ".join(blockers)
+            with_way_out(
+                f"runlog: {declares}, and a "
+                "preflight audit found BLOCKER(s) nobody decided — not an "
+                "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not "
+                "pass it:\n  " + "\n  ".join(blockers),
+                f"decide each ({findings.DECIDED_LIST}) with the command "
+                f"`{repo.audit_command(base_dir, '--findings')}` prints per finding",
+            )
         )
     gaps = _freeze_findings(base_dir, prepared.bound)
     if not gaps:
         return False, None
     if os.environ.get("LABKIT_UNFROZEN") != "1":  # "0" is no acknowledgement
         raise SystemExit(
-            f"runlog: {declares}, but its "
-            "protocol is not ready for one:\n  "
-            + "\n  ".join(gaps)
-            + "\nFreeze first: `preflight <AREA>` clean, audit stamped, "
-            "`frozen = true` "
-            '(at repeat_cost = "low": the registration the kind owes suffices — '
-            "`protocol-check --contract` names it). "
-            "No other run yields a reported number: a probe (run_kind='probe') "
-            "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
-            "high repeat cost only over an audit the backend refused, "
-            f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
-            "recorded as such, and report-check refuses their numbers."
+            with_way_out(
+                f"runlog: {declares}, but its "
+                "protocol is not ready for one:\n  " + "\n  ".join(gaps),
+                "freeze first: `preflight <AREA>` clean, audit stamped, "
+                "`frozen = true` "
+                '(at repeat_cost = "low": the registration the kind owes suffices — '
+                "`protocol-check --contract` names it). "
+                "No other run yields a reported number: a probe (run_kind='probe') "
+                "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
+                "high repeat cost only over an audit the backend refused, "
+                f"audits/*{findings.FAILED_SUFFIX} written by labkit-audit) are "
+                "recorded as such, and report-check refuses their numbers",
+            )
         )
     failed = _audit_unavailable(base_dir, prepared.bound)  # SystemExit without one
     print(

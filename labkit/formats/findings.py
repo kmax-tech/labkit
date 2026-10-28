@@ -115,7 +115,15 @@ from pathlib import Path
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import registration_drift, registration_stamp
-from labkit.formats.repo import INDEX_REV, files_at, git_root, shown, text_at
+from labkit.formats.repo import (
+    INDEX_REV,
+    audit_command,
+    decide_command,
+    files_at,
+    git_root,
+    shown,
+    text_at,
+)
 from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.scope_sha import area_stamp, digest, validation_note
 
@@ -1781,3 +1789,41 @@ def deferred_elsewhere(
         if other.resolve() != area.resolve()
         for f in rec.deferred
     ]
+
+
+def decide_way(
+    area: Path, open_finding: OpenFinding, protocol: Path | None = None
+) -> str:
+    """The way out of OPEN_FINDING, an audit finding nobody decided in AREA:
+    its `--decide` command (`repo.decide_command`, STATUS and the reason
+    left for the person), and for a BLOCKER the `--findings` command that
+    prints the ways out by cause beside it — the fix the gates that hold an
+    undecided finding name."""
+    cmd = decide_command(
+        area,
+        open_finding.number,
+        "STATUS",
+        "<why>",
+        open_finding.record.path.name,
+        protocol=protocol,
+    )
+    way = f"decide it ({DECIDED_LIST}): `{cmd}`"
+    if open_finding.grade != "BLOCKER":
+        return way
+    return (
+        f"{way} — `{audit_command(area, '--findings', protocol=protocol)}` "
+        f"prints the ways out of a BLOCKER by its cause"
+    )
+
+
+def record_way(area: Path, protocol: Path | None = None) -> str:
+    """The way out of an audit record in AREA that does not read: restore it
+    as labkit-audit wrote it or audit again, and the recovery entry
+    (`--findings`) that names what stands and the handover — never a
+    record rewritten by hand."""
+    return (
+        "restore the record as labkit-audit wrote it (`git checkout HEAD -- "
+        "<record>` where git holds it) or audit again; "
+        f"`{audit_command(area, '--findings', protocol=protocol)}` names what "
+        "stands and the handover"
+    )

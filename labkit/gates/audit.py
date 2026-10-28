@@ -97,7 +97,13 @@ from labkit.formats import (
 )
 from labkit.formats.gate import WARNING, GateFinding, coded
 from labkit.formats.standard_contract import COMPUTE_KIND, lane
-from labkit.gates.ways_out import BLOCKER_ROUTES
+from labkit.gates.ways_out import (
+    ANSWER_AGAIN,
+    AUDIT_AGAIN,
+    BLOCKER_ROUTES,
+    HANDOVER,
+    PROTOCOL_NAMED,
+)
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_path,
@@ -248,22 +254,28 @@ def gather(area: Path, protocol: Path | None) -> Reading:
     directly — in full (every other stamped file is indexed from the
     snapshot, `bound_prompt`). Refuses what is missing."""
     if not area.is_dir():
-        raise AuditError(no_such_area(area))
+        raise AuditError(
+            no_such_area(area), fix="name the area by its path or numbered name"
+        )
     try:
         chosen = the_protocol(area, protocol)
     except ProtocolChoiceError as exc:
-        raise AuditError(str(exc)) from exc
+        raise AuditError(str(exc), fix=PROTOCOL_NAMED) from exc
     repo = layout_root(area)
     scripts = area_files(area)
     if not scripts:
-        raise AuditError(f"{area}: no scripts/*.py or analysis/*.py — nothing to audit")
+        raise AuditError(
+            f"{area}: no scripts/*.py or analysis/*.py — nothing to audit",
+            fix="write the area's scripts first (`labkit-init exp` stamps them)",
+        )
     code = [p.resolve() for p in scripts]
     declared = scope_sha.declared_scope_files([chosen])
     gone = [f for f in declared if not f.is_file()]
     if gone:
         # a promise resting on a missing file is not audited around
         raise AuditError(
-            f"{chosen.name}: a promise declares scope `{os.path.relpath(gone[0], chosen.parent.resolve())}`, and it is not a file"
+            f"{chosen.name}: a promise declares scope `{os.path.relpath(gone[0], chosen.parent.resolve())}`, and it is not a file",
+            fix="name a file of the area in the promise's `scope`, or write that file",
         )
     code += [f for f in declared if f not in code]
     code += [f for f in repo_imports(code, repo) if f.resolve() not in code]
@@ -271,7 +283,8 @@ def gather(area: Path, protocol: Path | None) -> Reading:
     if not standard.is_file():
         raise AuditError(
             f"{standard} is missing — labkit was installed without its standard "
-            f"(scar table, severity legend); reinstall labkit"
+            f"(scar table, severity legend)",
+            fix="reinstall labkit from the repo's pinned `requirements.txt`",
         )
     return Reading(chosen, code, standard)
 
@@ -288,7 +301,10 @@ def module_index(files: list[Path], repo: Path, read: Callable[[Path], str]) -> 
         try:
             tree = ast.parse(source, filename=str(f))
         except SyntaxError as exc:
-            raise AuditError(f"{rel}: cannot index it ({exc})") from exc
+            raise AuditError(
+                f"{rel}: cannot index it ({exc})",
+                fix="fix the syntax error it names, then run the audit again",
+            ) from exc
         out.append(f"{rel} ({len(source.splitlines())} lines)")
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -311,7 +327,8 @@ def gather_clarity(area: Path, protocol: Path | None) -> tuple[Path, list[Path]]
     missing = [p.name for p in (readme, script) if not p.is_file()]
     if missing:
         raise AuditError(
-            f"{area}: no {', '.join(missing)} — the clarity reading starts there"
+            f"{area}: no {', '.join(missing)} — the clarity reading starts there",
+            fix="write them first (`labkit-init exp` stamps both)",
         )
     return chosen, [readme, script]
 
@@ -565,8 +582,9 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
             f"{len(entries)} earlier decided BLOCKERs, {size} bytes — past the "
             f"follow-up's operating limit ({EARLIER_MAX_ENTRIES} entries, "
             f"{EARLIER_MAX_BYTES} bytes); none is cut from what the auditor must "
-            f"judge, so the audit does not run. Settle earlier findings, or raise "
-            f"the limit in labkit with the measured sizes"
+            f"judge, so the audit does not run",
+            fix="settle earlier findings, or raise the limit in labkit with the "
+            "measured sizes",
         )
     return ((EARLIER_LABEL, text),)
 
@@ -598,14 +616,16 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
         if f is None:
             raise AuditError(
                 f"a FIX line that does not read: {line.strip()[:160]!r} — the form "
-                f"is `FIX · <record>#<n> · resolved|unresolved|not_assessable · <why>`"
+                f"is `FIX · <record>#<n> · resolved|unresolved|not_assessable · <why>`",
+                fix=ANSWER_AGAIN,
             )
         ref = f"{f['record']}#{f['n']}"
         e = shown.get(ref)
         if e is None:
             raise AuditError(
                 f"a FIX verdict on {ref}, which the prompt did not show — the shown "
-                f"ones: {', '.join(shown) or 'none'}"
+                f"ones: {', '.join(shown) or 'none'}",
+                fix=ANSWER_AGAIN,
             )
         more = fix_block(lines, i)
         others = sorted({r for r in shown if r != ref and any(r in x for x in more)})
@@ -613,7 +633,8 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
             raise AuditError(
                 f"the FIX entry on {ref} also names {', '.join(others)} below its "
                 f"line — which finding its verdict judges is not clear; one entry "
-                f"per finding, separated by a blank line"
+                f"per finding, separated by a blank line",
+                fix=ANSWER_AGAIN,
             )
         out.append(
             findings.FixVerdict(
@@ -628,7 +649,7 @@ def parse_fixes(text: str, shown_now: Followup) -> list[findings.FixVerdict]:
         )
     problem = findings.fix_verdict_problem(out)
     if problem:
-        raise AuditError(problem)
+        raise AuditError(problem, fix=ANSWER_AGAIN)
     return out
 
 
@@ -701,14 +722,15 @@ def earlier_of(
         c = followup.chain(records)
         shown = followup.earlier_blockers(records, current)
     except findings.FindingsError as exc:
-        raise AuditError(str(exc)) from exc
+        raise AuditError(str(exc), fix=findings.record_way(area)) from exc
     if shown and len(area_protocols(area)) > 1:
         raise AuditError(
             f"{len(shown)} earlier decided BLOCKER(s) and {len(area_protocols(area))} "
             f"protocols in {area.name}: the records name no protocol, so which "
             f"question an earlier finding judged is not certain — the follow-up "
             f"does not guess, and deciding an earlier finding again does not remove "
-            f"it from what is followed up; no step labkit offers clears this here yet"
+            f"it from what is followed up; no step labkit offers clears this here yet",
+            fix=HANDOVER,
         )
     origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
     return Followup(shown, metrics, origins)
@@ -724,7 +746,9 @@ def last_verdict(
     reviewers."""
     matches = list(pattern.finditer(text or ""))
     if not matches:
-        raise AuditError(f"{said} has no readable `verdict:` line — not {kind}")
+        raise AuditError(
+            f"{said} has no readable `verdict:` line — not {kind}", fix=ANSWER_AGAIN
+        )
     return matches[-1]
 
 
@@ -764,9 +788,13 @@ def parse(text: str) -> dict:
         if refusal is not None:
             raise AuditError(
                 f"no audit — the auditor refused: {refusal.group(1)}. Nothing is "
-                f"recorded; answer what it names, then run the audit again"
+                f"recorded",
+                fix="answer what it names, then run the audit again",
             )
-        raise AuditError("the report has no readable `verdict:` line — not an audit")
+        raise AuditError(
+            "the report has no readable `verdict:` line — not an audit",
+            fix=ANSWER_AGAIN,
+        )
     m = matches[-1]
     body = (text or "")[: m.start()]
     findings = [
@@ -916,8 +944,9 @@ def _answer_or_record(
             f"{stopped.path}: {args.model} did not write its {args.mode} audit of "
             f"this state whole — {stopped.error}\nlabkit-audit: no further try on "
             f"the same code, promises and model; each costs as much and was stopped "
-            f"again. Audit with another alias (--model), or leave the number "
-            f"unreported (report-check refuses it without an audit)."
+            f"again",
+            fix="audit with another alias (--model), or leave the number "
+            "unreported (report-check refuses it without an audit)",
         )
     # the alias is resolved before the attempt begins: an alias models.toml
     # does not know is a usage error (KeyError), not an attempt
@@ -947,8 +976,8 @@ def _answer_or_record(
         raise AuditError(
             f"{exc}\nlabkit-audit: no audit — {args.model} did not write the answer "
             f"whole; recorded as {tried}. Do not run it again on this state: the "
-            f"next try with {args.model} is refused. Audit with another alias "
-            f"(--model), or leave the number unreported."
+            f"next try with {args.model} is refused",
+            fix="audit with another alias (--model), or leave the number unreported",
         ) from exc
     except llm_backends.BackendError as exc:
         tried = findings.write_failed(
@@ -967,7 +996,8 @@ def _answer_or_record(
             f"{exc}\nlabkit-audit: no audit — the backend did not answer; recorded "
             f"as {tried}. A full run at high repeat cost may acknowledge it with "
             f"LABKIT_UNFROZEN=1; its number cannot be reported (report-check "
-            f"refuses it). Run the audit again when the backend answers."
+            f"refuses it)",
+            fix="run the audit again when the backend answers",
         ) from exc
     except BaseException as exc:
         running.end("none", error=f"{type(exc).__name__}: {exc}")
@@ -1079,7 +1109,7 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
         if mode == ANALYSIS
         else Followup([], None, {})
     )
-    changed = "the area changed while it was read; run the audit again"
+    changed = "the area changed while it was read"
     try:
         prompt = render(
             mode,
@@ -1097,14 +1127,14 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
             ),
         )
     except KeyError as exc:
-        raise AuditError(f"{exc.args[0]} — {changed}") from exc
+        raise AuditError(f"{exc.args[0]} — {changed}", fix=AUDIT_AGAIN) from exc
     again = gather(area, protocol)
     if (
         [c.resolve() for c in again.code] != [c.resolve() for c in reading.code]
         or area_snapshot(area).sha != snap.sha
         or protocol.read_text(encoding="utf-8") != text
     ):
-        raise AuditError(f"{area}: {changed}")
+        raise AuditError(f"{area}: {changed}", fix=AUDIT_AGAIN)
     return BoundPrompt(
         prompt, Stamp(snap.sha, list(snap.files)), state, indexed, shown_now
     )
@@ -1248,8 +1278,8 @@ def _record(
         if moved:
             raise AuditError(
                 f"the decision on {', '.join(moved)} changed while the auditor read "
-                f"it — its verdict would judge a decision that no longer stands; "
-                f"run the audit again"
+                f"it — its verdict would judge a decision that no longer stands",
+                fix=AUDIT_AGAIN,
             )
     except (AuditError, ValueError) as exc:
         running.end("none", error=str(exc))

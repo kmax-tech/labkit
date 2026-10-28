@@ -28,6 +28,7 @@ from labkit.formats import (
     scope_sha,
 )
 from labkit.formats.answering_run import bound_answering_run
+from labkit.formats.gate import with_way_out
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
@@ -37,9 +38,23 @@ ROWS_HEAD, ROWS_TAIL = 50, 20  # what the instructions tell the auditor to read
 ROW_WIDTH = 2000  # a longer row (a trace) is cut, marked, never dropped
 
 
+#: the way out of a run's metrics.json that does not read: it is the run's own
+_METRICS_AS_WRITTEN = (
+    "restore it as the run wrote it (`git checkout HEAD -- <path>` where git "
+    "holds it), or measure anew and audit that run"
+)
+
+
 class AuditError(RuntimeError):
-    """No audit could be made, or none can be held to the area — the cause is
-    in the message."""
+    """No audit could be made, or none can be held to the area. WHY is the
+    cause, FIX the way out (required where it is raised; None only at a
+    site `tests/test_ways_out_data.py` exempts, with its reason); the
+    message joins them as a gate line does (`gate.with_way_out`)."""
+
+    def __init__(self, why: str, *, fix: str | None) -> None:
+        super().__init__(with_way_out(why, fix))
+        self.why = why
+        self.fix = fix
 
 
 def audited_run(
@@ -57,13 +72,17 @@ def audited_run(
     try:
         pid = protocol_block.head(text).id
     except protocol_block.BlockError as exc:
-        raise AuditError(f"{protocol.name}: head unreadable — {exc}") from exc
+        raise AuditError(
+            f"{protocol.name}: head unreadable — {exc}",
+            fix=f"repair the head as the sentence says (`protocol-check "
+            f"{shown(protocol, Path.cwd())} --contract` shows its fields)",
+        ) from exc
     if pid is None:
         return None, "the protocol id is still a placeholder"
     choice = bound_answering_run(area, pid)
     blocker, _ = choice.explain(promises.registers_ids(text))
     if blocker or choice.run_dir is None:
-        return None, blocker.message if blocker else "no completed bound run"
+        return None, blocker.text if blocker else "no completed bound run"
     return choice.run_dir, ""
 
 
@@ -86,7 +105,11 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
         path = Path(entry.path)
         path = path if path.is_absolute() else repo / path
         if not path.is_file():
-            raise AuditError(f"{run_dir.name} registered {entry.path}, which is gone")
+            raise AuditError(
+                f"{run_dir.name} registered {entry.path}, which is gone",
+                fix="restore it as the run wrote it (`git checkout HEAD -- <path>` "
+                "where git holds it), or measure anew and audit that run",
+            )
         name = shown(path, repo)
         out.append(rows_excerpt(path, name))
     metrics = runs.metrics_path(run_dir)
@@ -117,9 +140,13 @@ class RunShown(NamedTuple):
                 try:
                     data = json.loads(text)
                 except json.JSONDecodeError as exc:
-                    raise AuditError(f"{label[6:]}: not JSON ({exc})") from exc
+                    raise AuditError(
+                        f"{label[6:]}: not JSON ({exc})", fix=_METRICS_AS_WRITTEN
+                    ) from exc
                 if not isinstance(data, dict):
-                    raise AuditError(f"{label[6:]}: not a JSON object")
+                    raise AuditError(
+                        f"{label[6:]}: not a JSON object", fix=_METRICS_AS_WRITTEN
+                    )
                 return data
         return None
 

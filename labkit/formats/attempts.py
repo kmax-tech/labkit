@@ -84,6 +84,7 @@ import fcntl
 import json
 import os
 import secrets
+import shlex
 import socket
 import tempfile
 from urllib.parse import quote
@@ -96,8 +97,10 @@ from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats.files import write_atomic
 from labkit.formats.findings import DIR
+from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     INDEX_REV,
+    audit_command,
     files_at,
     git_dir_path,
     git_root,
@@ -117,7 +120,25 @@ OUTCOMES = ("record", "failed", "none")
 
 class AttemptError(ValueError):
     """A journal line that does not read, or an attempt refused: another
-    audit of the area is running, or the journal names a missing file."""
+    audit of the area is running, or the journal names a missing file. WHY
+    is the cause, FIX the way out (required where it is raised; None only
+    at a site `tests/test_ways_out_data.py` exempts, with its reason); the
+    message joins them as a gate line does (`gate.with_way_out`)."""
+
+    def __init__(self, why: str, *, fix: str | None) -> None:
+        super().__init__(with_way_out(why, fix))
+        self.why = why
+        self.fix = fix
+
+
+#: the way out of a journal that does not read: labkit appends to it and
+#: keeps every line in its copy (`journal_copy`)
+JOURNAL_WAY = (
+    "the journal is appended to, never edited — restore it as labkit wrote it: "
+    "from its copy in the git directory (`<git dir>/labkit-attempts/<branch>/"
+    "<area>.jsonl`) or as committed (`git checkout HEAD -- <area>/audits/"
+    "attempts.jsonl`)"
+)
 
 
 @dataclass(frozen=True)
@@ -161,21 +182,29 @@ def parse_journal(text: str, where: str) -> list[Attempt]:
     try:
         rows = jsonl.objects(text, where)
     except ValueError as exc:
-        raise AttemptError(str(exc)) from exc
+        raise AttemptError(str(exc), fix=JOURNAL_WAY) from exc
     for n, row in rows:
         at = f"{where}:{n}"
         if not isinstance(row, dict) or row.get("event") not in EVENTS:
-            raise AttemptError(f"{at}: an event is one of {', '.join(EVENTS)}")
+            raise AttemptError(
+                f"{at}: an event is one of {', '.join(EVENTS)}", fix=JOURNAL_WAY
+            )
         event, aid = row["event"], row.get("id")
         if not isinstance(aid, str) or not aid:
-            raise AttemptError(f"{at}: an event names its attempt (`id`)")
+            raise AttemptError(
+                f"{at}: an event names its attempt (`id`)", fix=JOURNAL_WAY
+            )
         if event == "started":
             if aid in started:
-                raise AttemptError(f"{at}: attempt {aid} started twice")
+                raise AttemptError(
+                    f"{at}: attempt {aid} started twice", fix=JOURNAL_WAY
+                )
             started[aid] = _started(aid, row, at)
             continue
         if aid not in started:
-            raise AttemptError(f"{at}: {event} of attempt {aid}, never started")
+            raise AttemptError(
+                f"{at}: {event} of attempt {aid}, never started", fix=JOURNAL_WAY
+            )
         started[aid] = _after(started[aid], event, row, at)
     return list(started.values())
 
@@ -193,7 +222,9 @@ def _started(aid: str, row: dict, at: str) -> Attempt:
             str(row["host"]),
         )
     except KeyError as exc:
-        raise AttemptError(f"{at}: a start holds {exc.args[0]}") from exc
+        raise AttemptError(
+            f"{at}: a start holds {exc.args[0]}", fix=JOURNAL_WAY
+        ) from exc
 
 
 def _after(was: Attempt, event: str, row: dict, at: str) -> Attempt:
@@ -202,14 +233,16 @@ def _after(was: Attempt, event: str, row: dict, at: str) -> Attempt:
     a second end, an outcome none of OUTCOMES, or `record`/`failed`
     without its file."""
     if was.outcome:
-        raise AttemptError(f"{at}: attempt {was.id} ended before")
+        raise AttemptError(f"{at}: attempt {was.id} ended before", fix=JOURNAL_WAY)
     if event == "interrupted":
         return dataclasses.replace(was, interrupted=True)
     outcome = row.get("outcome")
     if outcome not in OUTCOMES:
-        raise AttemptError(f"{at}: an outcome is one of {', '.join(OUTCOMES)}")
+        raise AttemptError(
+            f"{at}: an outcome is one of {', '.join(OUTCOMES)}", fix=JOURNAL_WAY
+        )
     if outcome != "none" and not row.get("file"):
-        raise AttemptError(f"{at}: outcome {outcome} names its file")
+        raise AttemptError(f"{at}: outcome {outcome} names its file", fix=JOURNAL_WAY)
     return dataclasses.replace(
         was,
         outcome=outcome,
@@ -391,7 +424,7 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
         text = text_at(root, journal_path(area), rev)
     except UnicodeError as exc:
         raise AttemptError(
-            f"{rev}:{DIR}/{JOURNAL}: journal is not UTF-8: {exc}"
+            f"{rev}:{DIR}/{JOURNAL}: journal is not UTF-8: {exc}", fix=JOURNAL_WAY
         ) from exc
     return held, text
 
@@ -405,7 +438,9 @@ def _tree_journal(area: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeError as exc:
-        raise AttemptError(f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}") from exc
+        raise AttemptError(
+            f"{DIR}/{JOURNAL}: journal is not UTF-8: {exc}", fix=JOURNAL_WAY
+        ) from exc
 
 
 def read_journal(area: Path) -> list[Attempt]:
@@ -476,7 +511,12 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
             else []
         )
     except UnicodeError as exc:
-        raise AttemptError(f"{copy}: the journal's copy is not UTF-8: {exc}") from exc
+        raise AttemptError(
+            f"{copy}: the journal's copy is not UTF-8: {exc}",
+            fix="the copy is labkit's own, written beside every journal line: "
+            "write it again from the journal (`cp <area>/audits/attempts.jsonl "
+            f"{shlex.quote(str(copy))}`)",
+        ) from exc
     found = gaps(
         attempts,
         present,
@@ -629,7 +669,9 @@ class Running:
         remember it for the end. Returns the path. Side effect: the file;
         a second answer for one attempt raises AttemptError."""
         if self.answer:
-            raise AttemptError(f"attempt {self.id}: its answer is kept already")
+            raise AttemptError(
+                f"attempt {self.id}: its answer is kept already", fix=None
+            )
         folder = self.area / DIR / ANSWERS
         folder.mkdir(parents=True, exist_ok=True)
         path = folder / f"{self.id}.txt"
@@ -645,7 +687,8 @@ class Running:
         if outcome not in OUTCOMES or (outcome != "none" and not file):
             raise AttemptError(
                 f"attempt {self.id}: outcome {outcome!r} — one of "
-                f"{', '.join(OUTCOMES)}, record and failed with their file"
+                f"{', '.join(OUTCOMES)}, record and failed with their file",
+                fix=None,
             )
         event = {"event": "ended", "id": self.id, "outcome": outcome}
         if file:
@@ -682,13 +725,20 @@ def begin(area: Path, mode: str, model: str, scope_sha: str) -> Running:
         if running or found.blockers:
             raise AttemptError(
                 "; ".join(
-                    [
-                        f"attempt {aid} of this area is running — wait for it to "
-                        f"end, then run this again"
-                        for aid in running
-                    ]
+                    [f"attempt {aid} of this area is running" for aid in running]
                     + found.blockers
-                )
+                ),
+                fix="; ".join(
+                    (["wait for it to end, then run this again"] if running else [])
+                    + (
+                        [
+                            f"`{audit_command(area, '--findings')}` names each "
+                            f"with what restores it, and the handover"
+                        ]
+                        if found.blockers
+                        else []
+                    )
+                ),
             )
         stamp = name_minute()
         aid = f"{stamp}-{mode}-{secrets.token_hex(2)}"

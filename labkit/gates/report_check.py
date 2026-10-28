@@ -563,7 +563,7 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
         return [
             blocker(
                 f"the predecessor's audit records do not read: {exc}",
-                fix=ways_out.record_way(pred.parent, pred),
+                fix=findings.record_way(pred.parent, pred),
             )
         ]
     return [
@@ -705,23 +705,38 @@ def _registration_at(
     return []
 
 
-def analysis_audit_gap(ctx: Checked) -> str | None:
+def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     """Why no decided analysis record covers the code, the promise
     block, the answering run and what the audit was shown of it as they are
-    now, or None. Without an answering run there is nothing the audit could
-    be held to."""
+    now, as a blocker with its way out, or None. Without an answering run
+    there is nothing the audit could be held to."""
+    audit = (
+        f"audit the answering run as it stands: "
+        f"`{audit_command(ctx.area, '--mode', 'analysis', protocol=ctx.protocol)}`, "
+        f"then decide its findings"
+    )
     if ctx.run is None:
-        return f"no answering run to hold it to — {ctx.why}"
+        return blocker(
+            f"no answering run to hold it to — {ctx.why}",
+            fix=f"measure: `{measure_command(ctx.area)}`, then audit that run",
+        )
     try:
-        return findings.audit_coverage(
+        gap = findings.audit_coverage(
             ctx.area, ANALYSIS_AUDIT, analysis_now(ctx.area, ctx.text, ctx.run)
         )
     except AuditError as exc:  # a registered output is gone
-        return f"the analysis audit cannot be held to the run: {exc}"
+        return blocker(
+            f"the analysis audit cannot be held to the run: {exc.why}",
+            fix=exc.fix or audit,
+        )
     except (FileNotFoundError, ValueError) as exc:
         # ValueError: nothing to stamp, a findings file or the promise block
         # unreadable (FindingsError, PromiseError)
-        return f"the analysis audit cannot be held to the area: {exc}"
+        return blocker(
+            f"the analysis audit cannot be held to the area: {exc}",
+            fix=f"repair what the sentence names, then {audit}",
+        )
+    return blocker(gap, fix=audit) if gap else None
 
 
 def limit_gaps(ctx: Checked) -> list[GateFinding]:
@@ -886,7 +901,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
         return [
             blocker(
                 f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
-                fix=ways_out.record_way(ctx.area, ctx.protocol),
+                fix=findings.record_way(ctx.area, ctx.protocol),
             )
         ]
     # the follow-up refuses an area with several protocols (`audit.earlier_of`):
@@ -1012,14 +1027,7 @@ def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
     if gap:
-        out.append(
-            blocker(
-                f"analysis audit: {gap} ({rule})",
-                fix=f"audit the answering run as it stands: "
-                f"`{audit_command(ctx.area, '--mode', 'analysis', protocol=ctx.protocol)}`, "
-                f"then decide its findings",
-            )
-        )
+        out.append(replace(gap, text=f"analysis audit: {gap.text} ({rule})"))
     # the rendered result section is held here too, named as what it is:
     # a cold reader took "analysis audit:" on a retyped Recorded results
     # line for a record problem (reading probe 2026-10-22)

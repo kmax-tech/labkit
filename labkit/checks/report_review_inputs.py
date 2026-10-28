@@ -88,7 +88,9 @@ def review_pieces(
         if not run_dir.is_dir():
             raise AuditError(
                 f"{report.name} discusses run {run_id}, and there is no "
-                f"{run_dir.relative_to(area)}/ in {shown(area, repo)}"
+                f"{run_dir.relative_to(area)}/ in {shown(area, repo)}",
+                fix="discuss a run the area holds: `protocol-fill <PROTOCOL> "
+                "--discuss <run> --why … --into <FILE>` writes the block again",
             )
         metrics = metrics_path(run_dir)
         pieces.append(

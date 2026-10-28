@@ -90,7 +90,6 @@ from labkit.formats.repo import (
     shown,
     split_area_name,
 )
-from labkit.gates.ways_out import decide_way, record_way
 from labkit.formats.protocol_check import check_fields
 from labkit.formats.protocol_history import (
     check_annotation_validity,
@@ -390,11 +389,13 @@ def check_audit_records(
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
-        findings.block(str(exc), fix=record_way(area))
+        findings.block(str(exc), fix=audit_findings.record_way(area))
         return []
     undecided = audit_findings.open_findings(records)  # the table of the gates' rules
     for u in undecided:
-        _owed(findings, frozen)(f"undecided in {u.line}", decide_way(area, u))
+        _owed(findings, frozen)(
+            f"undecided in {u.line}", audit_findings.decide_way(area, u)
+        )
     if undecided:
         findings.note(
             f"  {len(undecided)} finding(s) still `open` — decide each ({audit_findings.DECIDED_LIST}) "

@@ -798,8 +798,9 @@ def undeclared_findings(
     except AuditError as exc:
         return out + [
             blocker(
-                f"{rel}: cites a run of a protocol whose head does not read — {exc}",
-                fix="repair the head as the sentence says (`protocol-check "
+                f"{rel}: cites a run of a protocol whose head does not read — {exc.why}",
+                fix=exc.fix
+                or "repair the head as the sentence says (`protocol-check "
                 "<PROTOCOL> --contract` shows its fields)",
             )
         ]

@@ -70,6 +70,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.runs import run_path
 from labkit.gates import audit
+from labkit.gates.ways_out import ANSWER_AGAIN
 
 REPORT_REVIEW = "report"
 #: the mode of its attempts in the area's journal (`attempts`)
@@ -152,12 +153,17 @@ def gather_report(
     try:
         discussed = discussed_under(report, text, protocol)
     except ReportBlockError as exc:
-        raise AuditError(f"{report.name}: {exc}") from exc
+        raise AuditError(
+            f"{report.name}: {exc}",
+            fix="restore the block's comment lines as `protocol-fill` wrote them "
+            "(`--discuss … --into` writes the block again)",
+        ) from exc
     if not discussed:
         raise AuditError(
-            f"{report.name}: no discussion block of a run of {protocol.name} "
-            f"(`protocol-fill … --discuss RUN --why … --into {report.name}`) — "
-            f"the report review reads reports that discuss a run; nothing to review"
+            f"{report.name}: no discussion block of a run of {protocol.name} — "
+            f"the report review reads reports that discuss a run; nothing to review",
+            fix=f"`protocol-fill … --discuss RUN --why … --into {report.name}` "
+            f"writes one, when the report looks at a run without reporting it",
         )
     pieces = review_pieces(
         area, report, text, protocol, protocol.read_text(encoding="utf-8"), discussed
@@ -183,20 +189,23 @@ def parse_claims(report: str, n_lines: int) -> list[ReportClaim]:
     numbers = [int(m.group(1)) for m in found]
     if numbers != list(range(1, len(found) + 1)):
         raise AuditError(
-            f"the claims are numbered {numbers} — one CLAIM line each, #1, #2, … in order"
+            f"the claims are numbered {numbers} — one CLAIM line each, #1, #2, … in order",
+            fix=ANSWER_AGAIN,
         )
     said = int(last.group(1))
     if said != len(found):
         raise AuditError(
             f"the closing line counts {said} claim(s), the lines above number "
-            f"{len(found)} — nothing is named; run the review again"
+            f"{len(found)} — nothing is named",
+            fix=ANSWER_AGAIN,
         )
     claims = [ReportClaim(int(m.group(2)), m.group(3), m.group(4)) for m in found]
     outside = [c.line for c in claims if not 1 <= c.line <= n_lines]
     if outside:
         raise AuditError(
             f"claim(s) cite line(s) {outside}, the report has {n_lines} — "
-            f"nothing is named"
+            f"nothing is named",
+            fix=ANSWER_AGAIN,
         )
     return claims
 
@@ -227,10 +236,11 @@ def review_report(
         if not again and standing.claims:
             raise AuditError(
                 f"{report_key}: this state is held by {held_by(standing)} — another "
-                f"draw settles nothing; change the report, or a source the reviewer "
-                f"read, so that the claim no longer holds, then run this command "
-                f"again on that state (`--again` draws once more on this one: its "
-                f"claims hold it too, and it releases nothing)"
+                f"draw settles nothing",
+                fix="change the report, or a source the reviewer read, so that the "
+                "claim no longer holds, then run this command again on that state "
+                "(`--again` draws once more on this one: its claims hold it too, "
+                "and it releases nothing)",
             )
         if not again and standing.released:
             print(

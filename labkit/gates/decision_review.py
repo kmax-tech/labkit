@@ -66,9 +66,10 @@ from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import conclusion_written
-from labkit.formats.repo import layout_root, shown, the_protocol
+from labkit.formats.repo import audit_command, layout_root, shown, the_protocol
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.gates import audit
+from labkit.gates.ways_out import ANSWER_AGAIN
 
 #: the review's mode: its instructions, the prompt's MODE line and its
 #: attempts in the area's journal (`attempts`)
@@ -218,7 +219,9 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         raise AuditError(
             f"{record.path.name}: no accepted finding with effect `stands`, no "
             f"finding closed after a review did not uphold it and no carried finding "
-            f"closed dismissed or deferred — nothing to review"
+            f"closed dismissed or deferred — nothing to review",
+            fix=f"`{audit_command(area, '--findings', protocol=protocol)}` "
+            f"shows what the area's records still owe",
         )
     repo = layout_root(area)
     text = protocol.read_text(encoding="utf-8")
@@ -226,16 +229,16 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         raise AuditError(
             f"{protocol.name}: the Conclusion is not written yet — the review judges "
             f"the claim, and a review made before it is written goes stale the moment "
-            f"it is (judge-2 on 86e38bc paid a second review for that); write the "
-            f"Conclusion, then review"
+            f"it is (judge-2 on 86e38bc paid a second review for that)",
+            fix="write the Conclusion, then review",
         )
     snap: Snapshot = area_snapshot(area)
     if snap.sha != record.scope_sha:
         raise AuditError(
             f"the code stamps {snap.sha} now, the record's auditor read "
-            f"{record.scope_sha} — the decisions were made on that code; review them "
-            f"on it, or audit the code as it is now and decide again"
-            f"{validation_note(area)}"
+            f"{record.scope_sha} — the decisions were made on that code"
+            f"{validation_note(area)}",
+            fix="review them on it, or audit the code as it is now and decide again",
         )
     run_dir: Path | None = None
     if record.run_id is not None and record.run_id != findings.NO_RUN:
@@ -243,7 +246,8 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         if not run_dir.is_dir():
             raise AuditError(
                 f"{record.path.name} names run {record.run_id}, and there is no "
-                f"{run_dir.relative_to(area)}/ in this area"
+                f"{run_dir.relative_to(area)}/ in this area",
+                fix="measure again under a new run, audit that and decide its findings",
             )
     seen = run_shown(
         area, run_dir, "no completed bound run when the record was written"
@@ -251,8 +255,8 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     if seen.sha != record.shown_sha:
         raise AuditError(
             f"the run shows {seen.sha} now, the record's auditor was shown "
-            f"{record.shown_sha} — rows or metrics changed after the audit; audit "
-            f"again and decide again"
+            f"{record.shown_sha} — rows or metrics changed after the audit",
+            fix="audit again and decide again",
         )
     label, rules_text = audit.standard_excerpt(REVIEW)
     pieces: list[tuple[str, str]] = [
@@ -290,7 +294,8 @@ def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
     if sorted(got) != sorted(numbers) or len(set(got)) != len(got):
         raise AuditError(
             f"the report decides on findings {got}, the record asked about {numbers} "
-            f"— one DECISION line per finding under review, no other"
+            f"— one DECISION line per finding under review, no other",
+            fix=ANSWER_AGAIN,
         )
     counts = tuple(
         sum(1 for _, v, _ in lines if v == verdict) for verdict in reviews.VERDICTS
@@ -299,7 +304,8 @@ def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
     if counts != said:
         raise AuditError(
             f"the closing line counts {said} (upheld, rejected, insufficient), the "
-            f"lines above count {counts} — nothing is recorded; run the review again"
+            f"lines above count {counts} — nothing is recorded",
+            fix=ANSWER_AGAIN,
         )
     return lines
 
@@ -315,11 +321,13 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     return analysis[-1]
 
 
-def contested_gap(area: Path, protocol: Path, record: findings.Record) -> str | None:
-    """Why another draw on RECORD's decisions settles nothing, or None: a
-    review of a decision as decided and claimed now already said
-    `rejected` or `insufficient` (`reviews.contested`). The sentence names
-    the way out — deciding again — not another call."""
+def contested_gap(
+    area: Path, protocol: Path, record: findings.Record
+) -> AuditError | None:
+    """Why another draw on RECORD's decisions settles nothing, as the refusal
+    to raise, or None: a review of a decision as decided and claimed now
+    already said `rejected` or `insufficient` (`reviews.contested`). Its way
+    out is deciding again, not another call."""
     text = protocol.read_text(encoding="utf-8")
     found = reviews.area_reviews(area)
     held = [
@@ -329,12 +337,12 @@ def contested_gap(area: Path, protocol: Path, record: findings.Record) -> str | 
     ]
     if not held:
         return None
-    return (
+    return AuditError(
         f"{record.path.name}: finding(s) {', '.join(map(str, held))} were reviewed as "
-        f"decided and claimed now and not upheld — another draw settles nothing; "
-        f"decide again (`--decide N …`, the reason naming the evidence, or the "
-        f"effect `not assessable`) or limit the claim, then review; `--again` "
-        f"draws once more: its verdicts count, and it never releases this state"
+        f"decided and claimed now and not upheld — another draw settles nothing",
+        fix="decide again (`--decide N …`, the reason naming the evidence, or the "
+        "effect `not assessable`) or limit the claim, then review; `--again` "
+        "draws once more: its verdicts count, and it never releases this state",
     )
 
 
@@ -361,7 +369,7 @@ def review(
         if not again:
             held = contested_gap(area, chosen, rec)
             if held:
-                raise AuditError(held)
+                raise held
         evidence = gather_review(area, chosen, rec)
         console.progress(
             "labkit-audit",

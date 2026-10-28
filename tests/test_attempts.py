@@ -160,7 +160,8 @@ class Begin(unittest.TestCase):
         area = area_in_repo()
         first = attempts.begin(area, "analysis", "opus", "s")
         with self.assertRaisesRegex(
-            attempts.AttemptError, "is running — wait for it to end, then run this"
+            attempts.AttemptError,
+            "is running — way out: wait for it to end, then run this",
         ):
             attempts.begin(area, "analysis", "opus", "s")
         first.end("none", error="no answer")

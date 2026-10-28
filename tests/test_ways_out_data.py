@@ -1,11 +1,14 @@
-"""Every BLOCKER names its way out, as data (`gate.GateFinding.fix`): the
-ways past the gates came where an agent saw no admissible next step, and a
-held step that named its command was followed
-(docs/notes/2026-10-27-standard-way-out.md). Held twice: `GateFinding`
-refuses a BLOCKER without a fix when it is built, and this test reads every
-site in labkit/ that builds one — so a site no other test reaches is held
-too. Whether a fix fits its cause is a reader's judgement; this holds that
-there is one."""
+"""Every BLOCKER names its way out, as data (`gate.GateFinding.fix`), and so
+does every refusal an agent meets outside the gates' findings — an
+`AuditError` (labkit-audit, the reviews), an `AttemptError` (the attempt
+journal) and runlog's start refusals: the ways past the gates came where an
+agent saw no admissible next step, and a held step that named its command
+was followed (docs/notes/2026-10-27-standard-way-out.md). Held twice:
+`GateFinding` refuses a BLOCKER without a fix when it is built, and this
+test reads every site in labkit/ that builds one or raises one of those
+refusals — so a site no other test reaches is held too. What stays exempt
+is listed with its reason. Whether a fix fits its cause is a reader's
+judgement; this holds that there is one."""
 
 from __future__ import annotations
 
@@ -86,6 +89,129 @@ class EverySite(unittest.TestCase):
             "blocker('x', fix='do y')\n"
         )
         self.assertEqual(blocker_sites_without_fix(tree), [1, 2, 3, 4])
+
+
+#: the refusals that carry their way out as `fix=` (`AuditError`,
+#: `AttemptError`: a required keyword, None only where exempt)
+REFUSALS = ("AuditError", "AttemptError")
+#: the modules whose start refusals are `SystemExit(with_way_out(…))`
+START_REFUSALS = ("labkit/run/runlog.py", "labkit/run/start_check.py")
+#: (module, function) → why a refusal there names no way out
+EXEMPT = {
+    ("labkit/formats/attempts.py", "keep_answer"): (
+        "a second answer for one attempt is a call labkit's own code makes "
+        "wrong, never a state an agent reaches"
+    ),
+    ("labkit/formats/attempts.py", "end"): (
+        "an outcome outside OUTCOMES is a call labkit's own code makes wrong, "
+        "never a state an agent reaches"
+    ),
+}
+
+
+def _functions(tree: ast.AST) -> dict[ast.AST, str]:
+    """Every node of TREE → the name of the function it stands in."""
+    out: dict[ast.AST, str] = {}
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for node in ast.walk(fn):
+                out.setdefault(node, fn.name)
+    return out
+
+
+def refusals_without_way_out(rel: str, tree: ast.AST) -> list[tuple[int, str]]:
+    """(line, function) of every refusal in TREE (the module REL) that names
+    no way out: an AuditError or AttemptError built without `fix=` or with
+    None or "", and — in START_REFUSALS — a `SystemExit` of a sentence not
+    joined with its way out (`gate.with_way_out`). An int exit code is no
+    refusal."""
+    where = _functions(tree)
+    out: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = _name(node.func)
+        if name in REFUSALS:
+            fix = next((k.value for k in node.keywords if k.arg == "fix"), None)
+            if fix is None or _empty(fix):
+                out.append((node.lineno, where.get(node, "<module>")))
+        elif name == "SystemExit" and rel in START_REFUSALS and node.args:
+            arg = node.args[0]
+            sentence = isinstance(arg, (ast.JoinedStr, ast.BinOp)) or (
+                isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+            )
+            if sentence:
+                out.append((node.lineno, where.get(node, "<module>")))
+            elif isinstance(arg, ast.Call) and _name(arg.func) == "with_way_out":
+                if len(arg.args) < 2 or _empty(arg.args[1]):
+                    out.append((node.lineno, where.get(node, "<module>")))
+    return out
+
+
+class EveryRefusal(unittest.TestCase):
+    def test_every_refusal_an_agent_meets_names_its_way_out(self):
+        missing, exempted = [], set()
+        for path in sorted((ROOT / "labkit").rglob("*.py")):
+            rel = path.relative_to(ROOT).as_posix()
+            tree = ast.parse(path.read_text(encoding="utf-8"), rel)
+            for n, fn in refusals_without_way_out(rel, tree):
+                if (rel, fn) in EXEMPT:
+                    exempted.add((rel, fn))
+                else:
+                    missing.append(f"{rel}:{n} ({fn})")
+        self.assertEqual(missing, [], "a refusal without its way out")
+        # an exemption that no longer matches a site is stale: drop it
+        self.assertEqual(exempted, set(EXEMPT))
+
+    def test_the_reader_finds_a_refusal_without_a_way_out(self):
+        tree = ast.parse(
+            "def f():\n"
+            "    raise AuditError('x', fix=None)\n"
+            "    raise AttemptError('x', fix='do y')\n"
+            "    raise SystemExit(f'runlog: {x}')\n"
+            "    raise SystemExit(with_way_out('runlog: x', 'do y'))\n"
+            "    raise SystemExit(2)\n"
+        )
+        self.assertEqual(
+            refusals_without_way_out("labkit/run/runlog.py", tree),
+            [(2, "f"), (4, "f")],
+        )
+
+    def test_a_refusal_tells_its_way_out_and_keeps_its_parts(self):
+        from labkit.checks.audit_binding import AuditError
+        from labkit.formats.attempts import AttemptError
+
+        for cls in (AuditError, AttemptError):
+            exc = cls("x is gone", fix="restore x")
+            self.assertEqual(str(exc), "x is gone — way out: restore x")
+            self.assertEqual((exc.why, exc.fix), ("x is gone", "restore x"))
+        self.assertEqual(gate.with_way_out("x", None), "x")
+
+
+class TheHooks(unittest.TestCase):
+    """The pre-run hook's notes name their step too; its block and the stop's
+    tell the findings above, each with its fix, and the undecided way
+    (`claude_hooks.UNDECIDED_WAY`) names `--findings`, `--decide` and the
+    handover."""
+
+    def test_a_run_outside_an_area_is_told_its_way_out(self):
+        import tempfile
+
+        from labkit.gates import claude_hooks
+
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "01_measure.py"
+            script.write_text("from labkit.run import runlog\n", encoding="utf-8")
+            blocks, line = claude_hooks.before_run(script, Path(d))
+        self.assertFalse(blocks)
+        self.assertIn("no PROTOCOL-*.md above it", line)
+        self.assertIn(f"{gate.WAY_OUT}stamp an area for it with `labkit-init exp", line)
+
+    def test_the_undecided_way_names_the_commands(self):
+        from labkit.gates import claude_hooks
+
+        for step in ("--findings", "--decide", "--handover"):
+            self.assertIn(step, claude_hooks.UNDECIDED_WAY)
 
 
 class TheFinding(unittest.TestCase):

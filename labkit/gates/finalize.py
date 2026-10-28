@@ -88,7 +88,7 @@ from labkit.formats.repo import (
     shown,
     the_protocol,
 )
-from labkit.gates.ways_out import decide_way, record_way, register_anew
+from labkit.gates.ways_out import PROTOCOL_NAMED, register_anew
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.formats.protocol_check import (
@@ -251,7 +251,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
     try:
         records = audit_findings.area_records(area)
     except audit_findings.FindingsError as exc:
-        findings.block(str(exc), fix=record_way(area))
+        findings.block(str(exc), fix=audit_findings.record_way(area))
         return
     known = {rd.dir.name for rd in run_dirs(area)}
     gone = audit_findings.records_of_gone_runs(records, known)
@@ -267,7 +267,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
         seen += 1
         line = f"{u.line} — undecided (LAB-015 Preflight audit before freezing)"
         if u.grade == "BLOCKER":
-            findings.block(line, fix=decide_way(area, u))
+            findings.block(line, fix=audit_findings.decide_way(area, u))
         elif u.grade == "WARNING":
             findings.warn(line, evidence_kind=GUARANTEED)
         else:
@@ -514,9 +514,7 @@ def finalize_area(
         if console_output:
             console.refuse("finalize", str(exc))
         else:
-            findings.block(
-                str(exc), fix="name the protocol: `--protocol PROTOCOL-<name>.md`"
-            )
+            findings.block(str(exc), fix=PROTOCOL_NAMED)
         return 2
     text = chosen.read_text(encoding="utf-8")
     try:

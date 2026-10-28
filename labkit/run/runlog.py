@@ -92,6 +92,7 @@ from labkit.formats.runs import metrics_path, patch_path, run_path
 from labkit.run import batch
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
+from labkit.formats.gate import with_way_out
 from labkit.formats.standard_contract import lane
 from labkit.formats.runs import (
     COMPLETION_FILE,
@@ -293,8 +294,10 @@ def _repeat_parent(base_dir: Path, repeat_of: str) -> RunConfig:
     pcfg = completed_parent(base_dir, "repeat_of", repeat_of)
     if pcfg.repeat_of is not None:
         raise SystemExit(
-            f"runlog: {repeat_of} is itself a repeat of {pcfg.repeat_of} — "
-            f"repeat the primary run"
+            with_way_out(
+                f"runlog: {repeat_of} is itself a repeat of {pcfg.repeat_of}",
+                f"repeat the primary run: `repeat_of={pcfg.repeat_of!r}`",
+            )
         )
     return pcfg
 
@@ -319,16 +322,24 @@ def _repeat_draw(
         return None, None, prepared.config
     if prepared.derived_from is not None:
         raise SystemExit(
-            "runlog: repeat_of and derived_from exclude each other — a repeat "
-            "asks the model again, a derived run re-reads old rows"
+            with_way_out(
+                "runlog: repeat_of and derived_from exclude each other — a repeat "
+                "asks the model again, a derived run re-reads old rows",
+                "pass the one this run is: `repeat_of=` to ask again, "
+                "`derived_from=` to re-read",
+            )
         )
     pcfg = _repeat_parent(base_dir, repeat_of)
     try:
         draw = next_draw(base_dir, repeat_of)
     except RunConfigError as exc:
         raise SystemExit(
-            f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
-            f"counted — {exc}"
+            with_way_out(
+                f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
+                f"counted — {exc}",
+                "restore the run record the sentence names as runlog wrote it "
+                "(`git checkout HEAD -- <path>` where git holds it)",
+            )
         ) from exc
     config = prepared.config
     if reseed:
@@ -346,11 +357,21 @@ def _repeat_draw(
             pcfg, mine, reseed_of=(repeat_of, draw) if reseed else None
         )
     except RunConfigError as exc:
-        raise SystemExit(f"runlog: repeat_of={repeat_of!r}: {exc}") from exc
+        raise SystemExit(
+            with_way_out(
+                f"runlog: repeat_of={repeat_of!r}: {exc}",
+                "restore the run record the sentence names as runlog wrote it "
+                "(`git checkout HEAD -- <path>` where git holds it)",
+            )
+        ) from exc
     if differs:
         raise SystemExit(
-            f"runlog: this run is no repeat of {repeat_of} — it measures "
-            f"something else:\n  " + "\n  ".join(differs)
+            with_way_out(
+                f"runlog: this run is no repeat of {repeat_of} — it measures "
+                f"something else:\n  " + "\n  ".join(differs),
+                "run it as the same measurement, or as a run of its own "
+                "without `repeat_of`",
+            )
         )
     return repeat_of, draw, config
 

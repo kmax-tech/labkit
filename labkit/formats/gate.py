@@ -69,6 +69,14 @@ EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 WAY_OUT = " — way out: "
 
 
+def with_way_out(why: str, fix: str | None) -> str:
+    """WHY with its way out FIX joined as every line tells it (`WAY_OUT`); WHY
+    alone without one — the one spelling of a sentence and its step, for a
+    finding's line and for a refusal's message (`AuditError`,
+    `AttemptError`, runlog's start refusals)."""
+    return why + (WAY_OUT + fix if fix else "")
+
+
 @dataclass(frozen=True)
 class GateFinding:
     """One finding of a gate. The grade field decides what counts, never the
@@ -144,7 +152,7 @@ class GateFinding:
             parts = (self.grade, kind, self.where, self.text, self.rule, self.fix)
             return " · ".join(p for p in parts if p)
         told = self.text if self.form == AS_WRITTEN else f"{self.grade}: {self.text}"
-        return told + (WAY_OUT + self.fix if self.fix else "")
+        return with_way_out(told, self.fix)
 
     @property
     def message(self) -> str:
@@ -153,7 +161,7 @@ class GateFinding:
         and the fix."""
         if self.form == DOTTED:
             return self.line
-        return self.text + (WAY_OUT + self.fix if self.fix else "")
+        return with_way_out(self.text, self.fix)
 
 
 def blocker(text: str, *, fix: str) -> GateFinding:

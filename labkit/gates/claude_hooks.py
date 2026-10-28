@@ -150,7 +150,7 @@ from labkit.formats import (
     runs,
     standard_contract,
 )
-from labkit.formats.gate import Findings
+from labkit.formats.gate import Findings, with_way_out
 from labkit.formats.shell import segments
 from labkit.formats import handovers
 from labkit.checks import notes_check, protocol_report
@@ -255,9 +255,11 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     inline (audit 2026-10-27, third, M7)."""
     area = find_area(script, stop)
     if area is None:
-        return False, (
-            f"{script.name}: opens a run, but no PROTOCOL-*.md "
-            f"above it — unbound runs keep no number (LAB-003 No run without an intent paragraph)."
+        return False, with_way_out(
+            f"{script.name}: opens a run, but no PROTOCOL-*.md above it — unbound "
+            f"runs keep no number (LAB-003 No run without an intent paragraph)",
+            "stamp an area for it with `labkit-init exp <name> --kind …` and "
+            "measure with the script stamped there",
         )
     protocol = protocol_named_in(script, area)
     texts = [
@@ -270,7 +272,11 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     try:
         heads = [protocol_block.head(t) for t in texts]
     except protocol_block.BlockError as exc:
-        return False, f"{head}: protocol head unreadable — {exc}"
+        return False, with_way_out(
+            f"{head}: protocol head unreadable — {exc}",
+            "repair the head as the sentence says (`protocol-check <PROTOCOL> "
+            "--contract` shows its fields)",
+        )
     # which gate stands before a full run is the lane's answer: the
     # registration (low) or preflight (`standard_contract.lane`)
     if all(standard_contract.lane(h.repeat_cost).registration for h in heads):
@@ -292,9 +298,10 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
             f"the full run will not start until they are fixed:\n{said}"
         )
     if rc == 2:
-        return (
-            False,
+        return False, with_way_out(
             f"{head}: could not run preflight — no protocol to hold the area to",
+            "name the protocol the script runs under "
+            "(`runlog.run(..., protocol=PROTOCOL)`)",
         )
     return False, f"{head}: {said.splitlines()[0]}"
 

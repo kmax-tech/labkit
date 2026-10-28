@@ -33,6 +33,18 @@ pins (`requirements.txt` / `requirements.lock`).
   caller of `Findings.block` passes `fix=`, a reader of these functions
   reads `.text` / `.fix` (or `.line`, the told form); 0.103.0 is the last
   version whose blockers carry no way out.
+- **The refusals an agent meets outside the gates name their way out
+  too.** `AuditError` (labkit-audit, the decision and report reviews) and
+  `AttemptError` (the attempt journal) take the way out as a required
+  keyword, `AuditError(why, *, fix)` — None only where
+  `tests/test_ways_out_data.py` exempts a site, with its reason — and tell
+  it as a gate line does (`gate.with_way_out`); `.why` and `.fix` keep the
+  parts. runlog's start refusals (`runlog`, `start_check`) end with theirs,
+  and the pre-run hook's notes name their step. Shared: `ways_out.ANSWER_AGAIN`,
+  `AUDIT_AGAIN`, `PROTOCOL_NAMED`, `attempts.JOURNAL_WAY`,
+  `start_check.PROMISE_BLOCK_WAY`; `findings.decide_way` and `record_way`
+  serve every layer. Migration: a caller building either error passes
+  `fix=`; 0.103.0 is the last version without.
 - **A protocol is a regular file; a symbolic link is refused.** The stop
   read a protocol link's target in the tree (`report_check.repo_sources`,
   `hold_declared` followed it) and the commit read the name the link
