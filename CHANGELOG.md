@@ -415,6 +415,18 @@ pins (`requirements.txt` / `requirements.lock`).
   `full_owed`): a fit, an apply, a model named, an undecided kind; at low
   repeat cost nothing freezes. Pilot of labkit-paper area 15 on 72507d0
   (t21, t34), defect D1.
+- **`--protocol` takes the protocol's file name.** preflight's usage
+  (`preflight <AREA> [--protocol PROTOCOL-*.md]`) and the pre-run hook's
+  label (`preflight 01-x --protocol PROTOCOL-x.md`) name the protocol by
+  its file name, but every command read `--protocol` from the working
+  directory and refused the name from the repo root ("no such protocol").
+  `repo.the_protocol`, which preflight, finalize, code-check,
+  labkit-params, report-check and labkit-audit share, now reads a bare
+  file name that is not there as given from the area
+  (`repo.given_or_in`, the rule `labkit-audit --record` already applied to
+  a record's name; a path is read as before), and a refusal names the
+  area it looked in too. Pilot of labkit-paper area 15 on 72507d0 (t71,
+  t21), defect D8.
 - **An unfilled, stamped Prompt block is a hole wherever the field is
   owed.** The stamp writes the Prompt label with an empty value and a
   fence that holds only `<the real prompt — …>`; the field parser read

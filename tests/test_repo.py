@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import io
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -162,6 +163,38 @@ class ProtocolChoice(unittest.TestCase):
         named = self.area / "PROTOCOL-b.md"
         named.write_text("")
         self.assertEqual(repo.the_protocol(self.area, named), named)
+
+    def test_a_bare_file_name_names_the_areas_protocol(self):
+        # `preflight <AREA> [--protocol PROTOCOL-*.md]` and the pre-run hook's
+        # label name it so; from the repo root the name was refused
+        # (labkit-paper area 15, round 2, t71 and t21)
+        (self.area / "PROTOCOL-a.md").write_text("")
+        named = self.area / "PROTOCOL-b.md"
+        named.write_text("")
+        elsewhere = Path(tempfile.mkdtemp())
+        with contextlib.chdir(elsewhere):
+            self.assertEqual(repo.the_protocol(self.area, Path("PROTOCOL-b.md")), named)
+            with self.assertRaisesRegex(
+                repo.ProtocolChoiceError,
+                re.escape(
+                    f"no such protocol: PROTOCOL-c.md (not in {self.area.resolve()} either)"
+                ),
+            ):
+                repo.the_protocol(self.area, Path("PROTOCOL-c.md"))
+            # a path keeps being read from the working directory
+            with self.assertRaisesRegex(repo.ProtocolChoiceError, "no such protocol"):
+                repo.the_protocol(self.area, Path("sub") / "PROTOCOL-b.md")
+
+    def test_a_name_there_as_given_is_read_as_given(self):
+        # the twin: what the working directory holds under the name is taken,
+        # as before — from inside the area that is the area's own file
+        (self.area / "PROTOCOL-a.md").write_text("")
+        (self.area / "PROTOCOL-b.md").write_text("")
+        with contextlib.chdir(self.area):
+            self.assertEqual(
+                repo.the_protocol(self.area, Path("PROTOCOL-b.md")),
+                Path("PROTOCOL-b.md"),
+            )
 
 
 class RequirementLines(unittest.TestCase):

@@ -996,18 +996,39 @@ class ProtocolChoiceError(ValueError):
     """No protocol to hold the area to: none named and none or several there."""
 
 
+def given_or_in(given: Path, directory: Path) -> Path:
+    """A file a command line names: GIVEN as given (relative to the working
+    directory) when something is there, else DIRECTORY's entry of that name
+    when GIVEN is a bare file name and DIRECTORY holds it, else GIVEN
+    unchanged — the caller's refusal names what was typed. The gates print
+    a protocol and an audit record by their file name (`preflight <AREA>
+    --protocol PROTOCOL-*.md`, `Limit (audit <record> #N)`), and the name
+    was refused from the repo root."""
+    if given.exists() or given.is_symlink() or given.parent != Path("."):
+        return given
+    inside = directory / given
+    return inside if inside.exists() or inside.is_symlink() else given
+
+
 def the_protocol(area: Path, protocol: Path | None) -> Path:
-    """The protocol a command holds the area to: the named one, else the
-    area's only one. Raises ProtocolChoiceError (the message says why and
-    lists the candidates) when there is none, or several and none is named
-    — a gate never guesses, and when the one it holds is a symbolic link
+    """The protocol a command holds the area to: the named one — a path, or
+    a bare file name inside AREA (`given_or_in`) —, else the area's only
+    one. Raises ProtocolChoiceError (the message says why and lists the
+    candidates) when there is none, or several and none is named — a gate
+    never guesses, and when the one it holds is a symbolic link
     (`protocol_link`). `choose_protocol` is the printing form."""
     if protocol is not None:
-        if protocol.is_symlink():
-            raise ProtocolChoiceError(protocol_link(protocol, "tree"))
-        if not protocol.is_file():
-            raise ProtocolChoiceError(f"no such protocol: {protocol}")
-        return protocol
+        named = given_or_in(protocol, area)
+        if named.is_symlink():
+            raise ProtocolChoiceError(protocol_link(named, "tree"))
+        if not named.is_file():
+            where = (
+                f" (not in {shown(area, Path.cwd())} either)"
+                if named.parent == Path(".")
+                else ""
+            )
+            raise ProtocolChoiceError(f"no such protocol: {named}{where}")
+        return named
     protocols = area_protocols(area)
     if not protocols:
         raise ProtocolChoiceError(f"no PROTOCOL-*.md in {area}")

@@ -220,6 +220,17 @@ class TestPreflight(unittest.TestCase):
             code, out = _run_preflight(area, protocol=p)
         self.assertEqual(code, 0, out)
 
+    def test_the_protocol_flag_takes_the_file_name_its_usage_shows(self):
+        # usage: preflight <AREA> [--protocol PROTOCOL-*.md], and the pre-run
+        # hook's label names it so; from the repo root it was "no such
+        # protocol" (labkit-paper area 15, round 2, t71)
+        with _area_dir() as d:
+            area, p = _area(d)
+            with contextlib.chdir(area.parent.parent):
+                code, out = _run_preflight(area, protocol=p.name)
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"protocol-check: {p.name}", out)
+
     def test_protocol_blocker_makes_exit_one(self):
         unstamped = _protocol(id="<protocol-id>")
         with _area_dir() as d:

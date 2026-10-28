@@ -117,6 +117,7 @@ from labkit.formats.repo import (
     area_protocols,
     audit_command,
     decide_command,
+    given_or_in,
     handover_command,
     layout_root,
     no_such_area,
@@ -1554,14 +1555,11 @@ def _without_audit(args: argparse.Namespace) -> int:
 
 def record_path(area: Path, record: Path) -> Path:
     """RECORD as given when it exists, else the file of that name under
-    AREA's audits/ — the gates name a record by its file name
-    (`Limit (audit <record> #N)`, report-check's `--record <name>`), and
-    judge-2 (round on 86e38bc, 2026-10-22) copied the name and was refused
-    with "No such file"."""
-    if record.exists():
-        return record
-    named = area / findings.DIR / record.name
-    return named if record.parent == Path(".") and named.exists() else record
+    AREA's audits/ (`repo.given_or_in`) — the gates name a record by its
+    file name (`Limit (audit <record> #N)`, report-check's `--record
+    <name>`), and judge-2 (round on 86e38bc, 2026-10-22) copied the name
+    and was refused with "No such file"."""
+    return given_or_in(record, area / findings.DIR)
 
 
 def _newest_record(area: Path) -> Path:
