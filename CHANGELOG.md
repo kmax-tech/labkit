@@ -9,6 +9,32 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A registered output is the file the run recorded, and the deliverable
+  of an external task is a registered output of the answering run.**
+  `finalize` (and `report-check` through it) holds every file in the
+  run's outputs.json to the path and the sha256 the run recorded when it
+  ended, on every lane (station 7, "registered outputs",
+  `run_record_check.output_record_findings`): a file gone, or with
+  another sha256, is a guaranteed BLOCKER with the way out "measure anew
+  and audit that run" — the tree at check time is only compared, never
+  trusted. Nothing compared the two before, and the output file an
+  external task names (`pred_results/<name>.csv`) was written outside the
+  run's record: an injection benchmark swapped it in seven delivered
+  states without a gate noticing
+  (docs/usability/2026-10-29-injection-ab4ce6d.md, M7). The stamped
+  measure skeletons (compute and estimator) carry `DELIVERABLES`, the
+  files the task names relative to the repo, and `deliverable_rows()`,
+  their rows from the kept rows and the metrics; the full run writes each
+  (`formats/deliverable.write_csv`) and registers it before it closes, a
+  repeat's draw writes none. `labkit-init exp --deliverable PATH` stamps
+  the constant (repeatable); `usability stage` stamps the SAB-like case's
+  `pred_results/<output>` and records the flag in probe.json; AGENTS.md
+  names the constant. A delivered state whose deliverable differs from
+  the answering run's record is held from now on; a run of a stamped
+  skeleton with an empty `DELIVERABLES` registers its rows as before.
+  `recheck.pin` compares through the same `output_drift`. 0.103.0 is the
+  last version without the hold.
+
 - **An analysis record binds the setup's prose; a corrected description
   is followed up.** In the fifth SAB-like draw (2026-10-28) two agents
   registered data counts in Data / scope that the data did not hold. The
@@ -462,6 +488,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The columns a task names are checked at the deliverable's write.**
+  In the pressure pilot both agents on task 34 delivered files with
+  named columns missing, and the evaluation could not read them
+  (docs/usability/2026-10-29-sab-pressure.md). The skeletons carry
+  `DELIVERABLE_COLUMNS` beside `DELIVERABLES` (`--deliverable-columns
+  A,B,C`; `usability stage` stamps the SAB-like case's evaluation
+  columns, `sab_cases.Case.columns`); `write_csv` refuses a header with a
+  column missing, unnamed or out of order, naming it, and writes nothing.
+  An empty constant holds nothing. The check is the skeleton's, not a
+  gate's.
 - **"FIX lines: none" closes the findings.** With no earlier decided
   BLOCKER the auditor wrote `FIX lines: none — the area has no earlier
   decided BLOCKER.` below the last finding; the parser read it as a remark
