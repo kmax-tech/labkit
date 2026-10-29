@@ -58,3 +58,16 @@ takes one to three seconds, parallel requests are rate-limited and take far long
 says the same), and runs two attempts at a time instead of three so that two sequential agents share the
 limit. Everything else as the first addendum. Same caveat as the third: a change decided by the agent
 running the probe after a failed pass, before any kept result; the author may strike the cells.
+
+Fifth addendum, 2026-10-30 just after midnight. The fourth pass of the pubmedqa50 cells failed too: both
+control attempts timed out at 3600 s with 254 and 374 proxy calls, no REPORT.md and no prediction file;
+the calls ran one at a time and met no 429, but took 20 to 25 s median (the same request shape as the
+second pass, about 2,000 characters and max_tokens 10 to 100 — the slowness is upstream, the subscription
+or the API at that hour). As decided by the author before this pass ("1 vormerken", TODO item 17):
+pubmedqa50 is struck from round 1. Round 1 reports five tasks; the apply kind has task 60 alone, and the
+assessment names the gap. The four pubmedqa50 passes count nowhere; their stores stay in the internal
+archive as probe failures (token stripped; 500 questions evaluated several times; parallel requests
+rate-limited; sequential requests at 20 to 25 s a call). The lab arm of pubmedqa50 was stopped before it
+started, so that it does not spend two more hours of the shared subscription. The lesson is recorded in
+TODO item 17: a task that calls a model itself gets an external model in later rounds, not the agent's
+subscription. The 71 cells complete as launched.
