@@ -1621,8 +1621,26 @@ Notiert, nicht geplant:
    Codeänderung, welcher Nachweis im nächsten Lauf, welcher Schritt zur
    Übernahme — Erfolg ist Fehler behoben, neu gemessen, korrekte Abgabe;
    weitere Entscheidungen über denselben ungelösten Befund sind kein
-   Fortschritt (Lesung der `--decide`-Episoden mit Thinking läuft,
-   `readings/decide-episodes.md`); (11) **Übergabe zeigt Evidenz ohne
+   Fortschritt. Lesung der `--decide`-Episoden mit Thinking (Archiv
+   `readings/decide-episodes.md`, 57 Aufrufe in neun Zellen): `fixed`
+   heißt für Haiku „ich habe etwas geändert" (3 vor jeder Reparatur, 3
+   vor der Neumessung; „check owed" fünfmal gedruckt, einmal befolgt);
+   `accepted --effect stands` in 11 von 30 mit bestreitender Begründung,
+   die Prüfpflicht erst bei `--from-run` bemerkt; die Syntaxweigerung
+   ohne Begründung (`unrecognized arguments: stands`) sechsmal, danach
+   acht Entscheidungen ohne Wirkung; `--findings` mit falschem Pfad als
+   Traceback; nur 21 Zug 2 ging die Schleife ganz. Gebaut (Branch
+   `decide-clarity`): Syntaxweigerung nennt die fehlende Begründung;
+   Bestätigung je Status sagt, was folgt (`fixed` = Reparatur behauptet,
+   Bestätigung ausstehend, mit Hinweis, wenn seit dem Audit nichts
+   geändert ist; `stands` = Prüfung durch zweiten Auditor; `deferred` =
+   keine Freigabe; `dismissed` = sachlich unzutreffend mit Gegenbeleg);
+   `--findings` weigert sich mit Satz. **Entschieden (Max, 2026-10-29
+   spät): kein Halt auf bloße Änderung** — ein belangloser Edit würde
+   genügen, ein Protokolledit war Teil des Fehlverhaltens; der nächste
+   Halt setzt eine konkret fehlende Nachweispflicht durch. Danach
+   dieselben belegten Fälle (34, 60) erneut durchspielen: schließen die
+   Agenten die Schleife? Text allein reicht vermutlich nicht; (11) **Übergabe zeigt Evidenz ohne
    Aufwertung**: „Lauf X berechnete 0,6086; wegen offener
    Kodierungsfehler nicht als Antwort verwendbar", und ohne passende
    Kennzahl genau das; (12) Auswertung trennt „Quelle genannt" (Kontrolle)
