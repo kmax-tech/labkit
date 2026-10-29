@@ -462,6 +462,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The pre-run hook's note carries the warnings, not only their count.**
+  Before a full measure run `claude-hook pre-run` runs preflight; without
+  a blocker it gave the summary's one line — "0 blockers, N warning(s) —
+  review the warnings above" with nothing above — so the open audit
+  finding (`undecided in …`) and every other warning vanished, and the
+  agent froze on the false "0 blockers" (SAB task 71 on 28c22f9,
+  2026-10-29). The note now lists every warning as the station told it,
+  each with its way out, then the summary (`claude_hooks.before_run`).
+  A blocker's note is as before.
+
 - **`labkit-audit <area> --findings` shows every record with an open
   finding, whatever its grade.** The listing showed the records with an
   open BLOCKER and the newest; a frozen preflight blocks on every open

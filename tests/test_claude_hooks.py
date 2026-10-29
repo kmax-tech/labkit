@@ -251,6 +251,52 @@ class PreRun(unittest.TestCase):
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("pilot", ctx)
 
+    def test_without_a_blocker_the_warnings_reach_the_context(self):
+        """On exit 0 the hook gave the summary's one line — "0 blockers, N
+        warning(s) — review the warnings above" with nothing above — and
+        an agent froze on the false "0 blockers" with its audit's finding
+        still open (SAB task 71, 2026-10-29). The warnings come with the
+        summary, the open finding among them; a blocker's note is as before."""
+        from test_preflight import CLEAN_PROTOCOL
+
+        root = _repo(False)
+        area = root / "experiments/01-x"
+        (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL, encoding="utf-8")
+        _git(root, "add", "-A")
+        _git(root, "commit", "-qm", "clean")
+        findings.write(
+            area,
+            "preflight",
+            "opus",
+            "0123456789ab",
+            promises.block_stamp(CLEAN_PROTOCOL),
+            (0, 1, 0),
+            [
+                (
+                    "WARNING",
+                    "WARNING · scripts/01_measure.py:9 · the seed is not recorded",
+                )
+            ],
+            registration=registration_of(area),
+        )
+        rc, out, err = _run(
+            claude_hooks.pre_run,
+            _bash(root, "python experiments/01-x/scripts/01_measure.py"),
+        )
+        self.assertEqual((rc, err), (0, ""))
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        lines = ctx.splitlines()
+        self.assertEqual(lines[0], "preflight 01-x --protocol PROTOCOL-x.md:")
+        undecided = [ln for ln in lines if ln.startswith("  WARNING: undecided in ")]
+        self.assertEqual(len(undecided), 1, ctx)
+        self.assertIn("the seed is not recorded", undecided[0])
+        self.assertIn("--decide", undecided[0])  # the way out comes with it
+        summary = lines[-1]
+        self.assertTrue(summary.startswith("preflight: 0 blockers, "), summary)
+        self.assertEqual(
+            len(lines), 2 + sum(ln.startswith("  WARNING") for ln in lines)
+        )
+
     def test_low_skips_preflight_even_with_blockers(self):
         root = _repo(True, repeat_cost="low")
         (root / "experiments/01-x/scripts/01_measure.py").write_text(

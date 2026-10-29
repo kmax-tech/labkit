@@ -264,8 +264,11 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     as data. Blocks only a frozen protocol with preflight blockers — an
     unreadable head or a missing protocol never blocks here, they are
     notes; every
-    other case is a note. One script per call: `pre_run` held all of this
-    inline (audit 2026-10-27, third, M7)."""
+    other case is a note. Without a blocker the note carries every
+    warning as the station told it, then the summary: the summary alone
+    counts the warnings, and an open audit finding (`undecided in …`) is
+    one of them. One script per call: `pre_run` held all of this inline
+    (audit 2026-10-27, third, M7)."""
     area = find_area(script, stop)
     if area is None:
         return False, with_way_out(
@@ -316,7 +319,11 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
             "name the protocol the script runs under "
             "(`runlog.run(..., protocol=PROTOCOL)`)",
         )
-    return False, f"{head}: {said.splitlines()[0]}"
+    if found.warned:
+        # on exit 0 every finding is a warning; the summary names only their count
+        told = "\n".join(f"  {f.line}" for f in found.found)
+        return False, f"{head}:\n{told}\n{said}"
+    return False, f"{head}: {said}"
 
 
 def _low_registration_line(head: str, texts: list[str]) -> str:
