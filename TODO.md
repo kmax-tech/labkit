@@ -1497,13 +1497,15 @@ Notiert, nicht geplant:
    von sechs stille Überansprüche (Abtastrate auf 91 Hz „kalibriert",
    Auswahl-AUC als held-out, 3-von-3-Stichprobe bei 198 „maybe"),
    Laborarm null, dafür ein Timeout (71, 5-GB-Grenze) und Standard
-   erfüllt 0 von 6. Zwei Tasks beeinträchtigt: PubMedQA kann aus der
-   Sandbox kein Modell rufen (Proxy nur für die eigene Sitzung; beide
-   Arme), 34s Evaluation liest Spalten, die eine 5-Minuten-Aufnahme
-   nicht liefert (beide Arme ungültig). Offen, je eine Entscheidung:
+   erfüllt 0 von 6. Ein Task beeinträchtigt: PubMedQA — beide Agenten fanden
+   den Weg zum Modell nicht (nur `claude -p` führt durch den Proxy;
+   Wiederholung mit `pubmedqa50` und benanntem Weg läuft). Bei 34
+   ließen beide Agenten Spalten weg, die der Aufgabentext ausdrücklich
+   verlangt — Formatverstoß, Fehlschlag nach Benchmark-Konvention, keine
+   Schwäche der Evaluation (Max fragte nach, 2026-10-29). Offen, je eine Entscheidung:
    (1) nächster Zug auf den vier sauberen Tasks mit zwei bis drei
-   Versuchen je Zelle und zweitem Richter; (2) Proxy für PubMedQA
-   öffnen und 34s Evaluation anpassen (labkit-paper); (3) die zwei
+   Versuchen je Zelle und zweitem Richter; (2) den Weg zum Modell (`claude -p`) in den
+   PubMedQA-Aufgabentext der Hauptrunde aufnehmen (labkit-paper); (3) die zwei
    Injektions-Lücken in die garantierte Stufe heben (Ergebnisdatei im
    Lauf registrieren; abgetippte Zahl neben dem Block als Blocker, wenn
    sie dem deklarierten Wert widerspricht); (4) die Standard-Quote 0/6:
