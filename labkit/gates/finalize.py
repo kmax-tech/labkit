@@ -81,8 +81,10 @@ from labkit.formats import console, findings as audit_findings, promises, protoc
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
+    ArtefactError,
     RunDir,
     patch_path,
+    read_outputs,
     read_run_dir,
     recorded_commit,
     run_dirs,
@@ -129,6 +131,7 @@ from labkit.checks.run_record_check import (
     criterion_n_input_mismatches,
     null_lane_findings,
     model_provenance_gap,
+    output_record_findings,
     provenance_findings,
     row_provenance_findings,
     single_draw,
@@ -691,6 +694,30 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
         findings.note(f"  the null lane moved in {held.examined} kept output(s)")
 
 
+def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
+    """Station 7: every output the run registered is the file the run
+    recorded (`output_record_findings`) — the number's rows and the
+    deliverable of an external task, held by path and sha256 from
+    outputs.json, on every lane."""
+    try:
+        drifted = output_record_findings(answering_run)
+    except ArtefactError as exc:
+        findings.block(
+            f"the outputs of {answering_run.name} do not read: {exc}",
+            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
+            f"and audit that run; the run's own files stay as they are",
+        )
+        return
+    findings.take_all(drifted)
+    registered = read_outputs(answering_run)
+    if registered is None:
+        findings.note("  n/a — the run registered no output file (run.output)")
+    elif not drifted:
+        findings.note(
+            f"  {len(registered)} registered output(s) as the run recorded them"
+        )
+
+
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
     w = criterion_n_input_mismatches(answering_run)
@@ -741,8 +768,10 @@ def finalize_area(
        stamped `<…>` placeholders left in the area's README.
     5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
-    7. criterion n and the null lane — only with a run; criterion n
-       warns, a null lane that did not move blocks.
+    7. registered outputs, criterion n and the null lane — only with a
+       run; an output that is not the file the run recorded (gone, or
+       another sha256 than outputs.json) blocks, criterion n warns, a null
+       lane that did not move blocks.
     8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
 
     A blocker never stops a step: all of them run, then the summary lists
@@ -821,11 +850,13 @@ def finalize_area(
     findings.header("area tests")
     check_area_tests(findings, area)
 
-    # 7. criterion n and the null lane — only with a run
-    findings.header("criterion n")
+    # 7. registered outputs, criterion n and the null lane — only with a run
+    findings.header("registered outputs")
     if answering_run is None:
         findings.note(NO_RUN)
     else:
+        check_registered_outputs(findings, answering_run)
+        findings.header("criterion n")
         check_criterion_n(findings, answering_run)
         findings.header("null lane")
         check_null_lane(findings, answering_run)

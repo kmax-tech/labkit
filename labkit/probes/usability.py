@@ -565,12 +565,20 @@ def stage(
     _sh(["git", "init", "-q", "."], root)
     _sh(["git", "add", "-A"], root)
     _commit(root, "Scaffold: a probe lab repo for the usability trace")
+    # a SAB-like case names its output file: stamped as the skeleton's
+    # deliverable, so the run writes and registers it (2026-10-29)
+    deliverables = (
+        (f"{sab_cases.PRED.as_posix()}/{sab_cases.case(task).output}",)
+        if task in sab_cases.CASES
+        else ()
+    )
     area, stamp_report = scaffold.stamp_area(
         root,
         area_name,
         repeat_cost=repeat_cost,
         kind=kind,
         model="haiku" if model else False,
+        deliverables=deliverables,
     )
     print(
         stamp_report, file=sys.stderr
@@ -619,6 +627,7 @@ def stage(
             "--kind",
             kind,
             *(["--model", "haiku"] if model else []),
+            *(arg for d in deliverables for arg in ("--deliverable", d)),
         ],
         target_minutes=TARGET_MINUTES,
     )

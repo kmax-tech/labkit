@@ -18,7 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.checks import run_record_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
-from labkit.formats import promises  # noqa: E402
+from labkit.formats import promises, scope_sha  # noqa: E402
+from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
 
 BODY = """
@@ -35,6 +36,12 @@ HIGH = (
 
 def _git(cwd, *args):
     subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=True)
+
+
+def _recorded(path: Path) -> str:
+    """The sha256 prefix outputs.json records for PATH as it is now — the
+    registered-outputs station holds the file to it."""
+    return scope_sha.file_digest(path)[:RECORD_SHA_CHARS]
 
 
 def _snapshot(area: Path, protocol: str) -> dict | None:
@@ -97,7 +104,8 @@ class Provenance(unittest.TestCase):
             encoding="utf-8",
         )
         (d / "outputs.json").write_text(
-            json.dumps([{"path": str(self.out), "sha256": "ab"}]), encoding="utf-8"
+            json.dumps([{"path": str(self.out), "sha256": _recorded(self.out)}]),
+            encoding="utf-8",
         )
         if commit:
             _git(self.repo, "add", "-A")
@@ -250,13 +258,10 @@ class Provenance(unittest.TestCase):
         self.out.write_text(
             '{"id": 1, "n": 5}\n', encoding="utf-8"
         )  # rows born after the commit
-        (d / "outputs.json").write_text(
-            json.dumps([{"path": str(self.out), "sha256": "ab"}])
-        )
         fresh = self.area / "output" / "fresh.jsonl"
         fresh.write_text("{}\n", encoding="utf-8")
         (d / "outputs.json").write_text(
-            json.dumps([{"path": str(fresh), "sha256": "ab"}])
+            json.dumps([{"path": str(fresh), "sha256": _recorded(fresh)}])
         )
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)

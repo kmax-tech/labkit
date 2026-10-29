@@ -99,6 +99,7 @@ class FillList(unittest.TestCase):
                 "INPUTS",
                 "METRIC_KEY",
                 "SOURCE",
+                "deliverable_rows",
                 "evaluate_rows",
                 "expected_ids",
                 "rows",

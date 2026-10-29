@@ -92,6 +92,13 @@ Measurement contract:
     the null lane; the registered lane on all items before the freeze makes
     the freeze empty (Sonnet v3 t3 and t5, 2026-10-16).
 
+A task that names its output file (`pred_results/<name>.csv`) is answered
+by that file: DELIVERABLES names it, deliverable_rows() gives its rows from
+the kept rows and the metrics, and the full run writes and registers it
+(`write_deliverables`; a repeat's draw writes none) — its sha256 lands in
+the run's outputs.json, and `finalize` holds the file in the tree to it.
+Never write it by hand.
+
 Why (house rules, one per line so a reference is never cut):
   LAB-034 Null condition in the same run
   LAB-035 Thresholds belong to the run
@@ -121,7 +128,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
-from labkit.formats import promises, protocol_block, scope_sha, standard_contract
+from labkit.formats import deliverable, promises, protocol_block, scope_sha, standard_contract
 from labkit.formats.repo import next_after_run
 from labkit.formats.answering_run import first_measurements
 
@@ -141,6 +148,7 @@ PREDICTOR_FILES: dict[str, Path] = {}
 # measurements in one: the row identity (`instrument()`) refuses a resume
 # across a code change, and runlog says when a run continues a finished one.
 OUT = AREA / "output" / "<name>.jsonl"
+DELIVERABLES: tuple[str, ...] = ()              # files an external task names, relative to REPO ("pred_results/<name>.csv"); written by the run from the kept rows (`deliverable_rows`), registered as its outputs
 FEATURES_FIELD = "features"                     # TODO: the item field holding the numeric features
 GOLD_FIELD = "gold"
 SPLIT_FIELD = "split"
@@ -730,6 +738,28 @@ def balance(out: Path, cfg: MeasureConfig, items: list[dict]) -> None:
                             expect={"_instrument": instrument(cfg, items)}).require_complete()
 
 
+def deliverable_rows(path: str, rows: list[dict], metrics: dict) -> list[dict]:
+    """TODO (only with DELIVERABLES): the rows of the deliverable PATH, one
+    dict per row with the task's columns as keys, in the task's order, from
+    the kept ROWS (`lane` names the lane: the test lane's predictions for
+    unlabelled items, the registered lane's for labelled ones) and the run's
+    METRICS — never computed apart from them."""
+    raise NotImplementedError(f"deliverable_rows(): the rows of {path} from rows and metrics")
+
+
+def write_deliverables(run: runlog.Run, rows: list[dict], metrics: dict) -> None:
+    """Write every DELIVERABLES file from the kept ROWS and METRICS
+    (`deliverable_rows`) and register it with RUN: the run records its
+    sha256 at the end, and `finalize` holds the file to that record. A
+    repeat's draw (`run.draw`) writes none — supporting evidence, never the
+    answer. Side effects: writes the files under REPO. No DELIVERABLES:
+    nothing."""
+    if run.draw is not None:
+        return
+    for path in DELIVERABLES:
+        run.output(deliverable.write_csv(REPO / path, deliverable_rows(path, rows, metrics)))
+
+
 def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict:
     """Balance the kept rows against ITEMS, then gates first, then the metrics on the run."""
     balance(out, cfg, items)
@@ -863,8 +893,9 @@ def main() -> None:
         cfg = MeasureConfig(**run.config)   # measure with what is recorded
         out = run.draw_output(OUT)
         run.output(out)
-        measure(cfg, items, out, prov={"run": run.run_id}, registered=registered)
-        evaluate(out, cfg, items, run)
+        rows = measure(cfg, items, out, prov={"run": run.run_id}, registered=registered)
+        metrics = evaluate(out, cfg, items, run)
+        write_deliverables(run, rows, metrics)
         if run.draw is None:
             print(f"run: {run.run_id}\n" + next_after_run(PROTOCOL, run.run_id))
         else:

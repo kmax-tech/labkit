@@ -145,10 +145,12 @@ declared scopes unchanged since it ran (a fix after the run means:
 measure anew with the fixed code and audit that run — restoring the old
 code removes the difference, not the fault; it is the way out only for a
 change not meant); no field left open; at `low` the source frozen in the run and
-source and output tracked in git; the area test; the denominators; the
-audit records — one of a deleted run is a blocker; and a kept output's
-null lane moved against its registered lane. Clean means the run
-can carry a number; it does not release one.
+source and output tracked in git; the area test; every registered
+output — the rows, and a deliverable the task names — the file the run
+recorded (gone or another sha256 than outputs.json is a blocker); the
+denominators; the audit records — one of a deleted run is a blocker; and
+a kept output's null lane moved against its registered lane. Clean means
+the run can carry a number; it does not release one.
 
 ## 5. The analysis audit and the decisions
 

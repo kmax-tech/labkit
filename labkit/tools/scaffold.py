@@ -598,6 +598,19 @@ def promote(area: Path, blocks: ProtocolBlocks) -> list[str]:
     return log
 
 
+def stamp_constant(text: str, name: str, value: tuple[str, ...]) -> str:
+    """TEXT with the empty tuple constant NAME (`NAME: tuple[str, ...] = ()`,
+    as the measure templates spell it) set to VALUE, its trailing comment
+    kept. Raises ValueError when TEXT does not carry that line exactly
+    once — a stamp that silently kept `()` would deliver nothing."""
+    pattern = re.compile(rf"^{re.escape(name)}: tuple\[str, \.\.\.\] = \(\)", re.M)
+    if len(pattern.findall(text)) != 1:
+        raise ValueError(
+            f"the template carries no single `{name}: tuple[str, ...] = ()` line to stamp"
+        )
+    return pattern.sub(f"{name}: tuple[str, ...] = {value!r}", text)
+
+
 def stamp_scripts(
     root: Path,
     area: Path,
@@ -605,11 +618,13 @@ def stamp_scripts(
     slug: str,
     skeleton: standard_contract.Skeleton,
     model: bool | str,
+    deliverables: tuple[str, ...] = (),
 ) -> list[str]:
     """Write the script skeletons and the area's test (`script_stamps`)
     where absent; a script written is made executable."""
     log: list[str] = []
-    for path, text in script_stamps(root, area, nn, slug, skeleton, model).items():
+    stamps = script_stamps(root, area, nn, slug, skeleton, model, deliverables)
+    for path, text in stamps.items():
         if write_if_absent(path, text, log) and path.parent == area / "scripts":
             path.chmod(0o755)  # a shebang nobody can run is a lint finding
     return log
@@ -622,11 +637,15 @@ def script_stamps(
     slug: str,
     skeleton: standard_contract.Skeleton,
     model: bool | str,
+    deliverables: tuple[str, ...] = (),
 ) -> dict[Path, str]:
     """{path: text} of the script skeletons and the area's test under
     tests/ — which ones is the contract's answer (`standard_contract.skeleton`:
     the compute, estimator or prompt skeleton, every one with the check).
-    Reads the templates, writes nothing."""
+    DELIVERABLES, the files an external task names (relative to ROOT), are
+    stamped into the measure script's `DELIVERABLES` constant
+    (`stamp_constant`); a skeleton whose measure script has none (the
+    prompt skeleton) refuses them. Reads the templates, writes nothing."""
     out: dict[Path, str] = {}
     alias = model if isinstance(model, str) else "TODO-alias"
     tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
@@ -634,12 +653,15 @@ def script_stamps(
         # `<NN>_<name>` first: the scripts name the area's test file too (the
         # probe's "paste into tests/test_<NN>_<name>.py" stayed unreplaced,
         # cloud judge probe 2026-10-14)
-        out[area / "scripts" / dest] = (
+        text = (
             template(tmpl)
             .replace("<NN>_<name>", tname[len("test_") : -3])
             .replace("<name>", slug)
             .replace("<model>", alias)
         )
+        if deliverables and dest == standard_contract.MEASURE_SCRIPT.name:
+            text = stamp_constant(text, "DELIVERABLES", deliverables)
+        out[area / "scripts" / dest] = text
     out[root / "tests" / tname] = (
         template(skeleton.test)
         .replace("<area>", str(area.relative_to(root)))
@@ -656,12 +678,14 @@ def stamp_area(
     kind: str | None = None,
     model: bool | str = False,
     report: bool = False,
+    deliverables: tuple[str, ...] = (),
 ) -> tuple[Path, str]:
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
     caller prints; `stamp_lab` returns its log the same way. KIND is what
     the kept number asserts (`protocol_block.KINDS`); a new area without it
     is refused — nothing falls back to a computation (standard 0.22).
+    DELIVERABLES are stamped into the measure script (`script_stamps`).
     Raises `console.Refused` too for an area of NAME that exists without
     REPORT, and with REPORT where NAME names no one area
     (`existing_area`)."""
@@ -708,7 +732,7 @@ def stamp_area(
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
-    log += stamp_scripts(root, area, nn, slug, skeleton, model)
+    log += stamp_scripts(root, area, nn, slug, skeleton, model, deliverables)
     _point_hooks_at(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
@@ -1617,6 +1641,15 @@ def main(argv: list[str]) -> int:
         "`number_describes` and the `annotation_validity` it may owe",
     )
     exp.add_argument(
+        "--deliverable",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="a file an external task names as its output, relative to the repo "
+        "(pred_results/<name>.csv), stamped into the measure script's DELIVERABLES: "
+        "the run writes it from the kept rows and registers it; repeatable",
+    )
+    exp.add_argument(
         "--report",
         action="store_true",
         help="add the † fields (now, or to an existing area)",
@@ -1701,6 +1734,7 @@ def main(argv: list[str]) -> int:
         kind=a.kind,
         model=a.model,
         report=a.report,
+        deliverables=tuple(a.deliverable),
     )
     print(report)
     return 0

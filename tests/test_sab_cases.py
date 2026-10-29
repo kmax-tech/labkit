@@ -366,13 +366,22 @@ class HarnessTest(unittest.TestCase):
                 ):
                     self.assertIn(part, sheet, task)
                 self.assertTrue((root / sab_cases.RAW / c.dataset).is_dir())
+                stamped = next(
+                    (root / "experiments").glob("*/scripts/01_measure.py")
+                ).read_text(encoding="utf-8")
                 if (
                     c.kind != "compute"
                 ):  # the key the harness reads is the one the stamped skeleton writes
-                    stamped = next(
-                        (root / "experiments").glob("*/scripts/01_measure.py")
-                    )
-                    self.assertIn(f'"{c.metric_key}"', stamped.read_text(), task)
+                    self.assertIn(f'"{c.metric_key}"', stamped, task)
+                # the task's output file is the skeleton's deliverable: the run
+                # writes and registers it (2026-10-29)
+                self.assertIn(
+                    f"DELIVERABLES: tuple[str, ...] = ('pred_results/{c.output}',)",
+                    stamped,
+                    task,
+                )
+                probe = json.loads(usability.sidecar(root, "probe.json").read_text())
+                self.assertIn(f"pred_results/{c.output}", probe["scaffold_flags"])
                 with contextlib.redirect_stdout(io.StringIO()):
                     usability_score.score(root)
                 sc = json.loads(usability.sidecar(root, "score.json").read_text())

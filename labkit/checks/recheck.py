@@ -34,10 +34,10 @@ from labkit.formats import (
     promises,
     protocol_block,
     runs,
-    scope_sha,
     answering_run,
 )
 from labkit.formats.repo import adopt_command
+from labkit.checks import run_record_check
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
@@ -125,15 +125,11 @@ def pin(run: Path, out: Path) -> None:
         raise SystemExit(
             f"recheck: run {run.name} did not register {out.name} as an output"
         )
-    if not out.is_file():
+    drift = run_record_check.output_drift(recorded)
+    if drift is not None:
         raise SystemExit(
-            f"recheck: {out} is gone — the run's rows are not here to recompute from"
-        )
-    actual = scope_sha.file_digest(out)
-    if not recorded.sha256 or not actual.startswith(recorded.sha256):
-        raise SystemExit(
-            f"recheck: {out.name} (sha {actual[: runs.RECORD_SHA_CHARS]}) is not the file run {run.name} "
-            f"recorded ({recorded.sha256}) — rerun the script or name that run"
+            f"recheck: {out.name} is not the file run {run.name} recorded — "
+            f"{drift}; rerun the script or name that run"
         )
 
 

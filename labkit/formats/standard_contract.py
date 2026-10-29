@@ -201,6 +201,9 @@ def registration_fields(kind: str, model: bool) -> tuple[str, ...]:
 #: the skeleton never wrote (audit 2026-10-19).
 CHECK_SCRIPT = Path("scripts") / "02_analyze.py"
 CHECK_FLAG = "--check"
+#: the measurement script every skeleton stamps: the one script that opens
+#: the full run and carries the `DELIVERABLES` constant the stamp fills
+MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 
 
 def check_command(area: Path) -> list[str]:

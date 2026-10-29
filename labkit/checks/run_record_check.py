@@ -37,6 +37,7 @@ from labkit.run.provenance import visible_files
 from labkit.formats import jsonl, promises, protocol_block
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.runs import (
+    OutputEntry,
     RunConfig,
     RunConfigError,
     read_metrics,
@@ -459,10 +460,9 @@ def provenance_findings(
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
     # blocker that sends the agent round the loop (2026-10-05, five probes).
+    # An output that is gone is `output_record_findings`' blocker, on every lane.
     for f in outputs:
-        if not f.exists():
-            blockers.append(_gone(f))
-        elif not _tracked(repo, f):
+        if f.exists() and not _tracked(repo, f):
             warnings.append(
                 f"output {f.name} is not yet tracked — `git add {f}` before "
                 f"the commit that cites the number"
@@ -581,8 +581,47 @@ def _ignore_rules(repo: Path, paths: list[Path]) -> list[str]:
     return sorted({":".join(rec) for rec in records if not rec[2].startswith("!")})
 
 
+def output_drift(entry: OutputEntry) -> str | None:
+    """Why the file at ENTRY.path is not the one the run recorded in
+    outputs.json, or None when it is: the file is gone, the run ended
+    without it (no sha256 recorded), or its sha256 differs from the record.
+    The record is the run's, taken after the run (`runlog.Run._finalize`);
+    the tree at check time is only compared, never trusted. Reads the file,
+    writes nothing."""
+    if not entry.path.is_file():
+        return "the file is gone"
+    if entry.sha256 is None:
+        return "the run ended without it (outputs.json records no sha256)"
+    actual = file_digest(entry.path)
+    if not actual.startswith(entry.sha256):
+        return (
+            f"its sha256 {actual[: len(entry.sha256)]} is not the recorded "
+            f"{entry.sha256}"
+        )
+    return None
+
+
+def output_record_findings(answering_run: Path) -> list[GateFinding]:
+    """A blocker per output ANSWERING_RUN registered (`runs.read_outputs`)
+    whose file is not the one the run recorded (`output_drift`): the
+    number's rows, and a deliverable the run wrote for an external task,
+    are pinned to the run by path and sha256 — a file swapped, edited or
+    removed after the run is no longer what the run produced. Seven
+    delivered states had their `pred_results/*.csv` swapped with another
+    state's and no gate noticed (injection benchmark, 2026-10-29). Raises
+    ArtefactError when outputs.json does not read."""
+    return [
+        blocker(
+            f"{entry.path}: not the file run {answering_run.name} recorded — {why}",
+            fix=MEASURE_ANEW,
+        )
+        for entry in read_outputs(answering_run) or []
+        if (why := output_drift(entry)) is not None
+    ]
+
+
 def _gone(f: Path) -> GateFinding:
-    """A file the run recorded is gone: its rows cannot be re-derived."""
+    """A source file the run recorded is gone: its rows cannot be re-derived."""
     return blocker(
         f"{f} is gone — the run's rows cannot be re-derived",
         fix=f"restore it (`git checkout HEAD -- {shlex.quote(str(f))}` where git "

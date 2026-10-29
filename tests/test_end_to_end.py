@@ -227,19 +227,32 @@ def assert_draws(
     test.assertNotIn(other, out)
 
 
-def stamp_count(lab: "Lab") -> tuple[Path, Path]:
+def stamp_count(lab: "Lab", deliverables: tuple[str, ...] = ()) -> tuple[Path, Path]:
     """The counting skeleton at low repeat cost in LAB, filled and committed:
     lines per document over three documents (1, 2, 6 lines — mean 3.0).
-    Returns (area, protocol)."""
+    With DELIVERABLES (stamped into the script) each is one row of the mean
+    under METRIC_KEY. Returns (area, protocol)."""
     root = lab.root
     docs = root / "data" / "raw" / "docs"
     docs.mkdir(parents=True)
     for name, lines in (("a.txt", 1), ("b.txt", 2), ("c.txt", 6)):
         (docs / name).write_text("x\n" * lines, encoding="utf-8")
-    area, protocol = lab.exp("lines", repeat_cost="low", kind="compute")
+    area, protocol = lab.exp(
+        "lines", repeat_cost="low", kind="compute", deliverables=deliverables
+    )
     _replace(
         area / "scripts" / "01_measure.py",
         [
+            *(
+                [
+                    (
+                        '    raise NotImplementedError(f"deliverable_rows(): the rows of {path} from items and metrics")',
+                        "    return [{METRIC_KEY: metrics[METRIC_KEY]}]",
+                    )
+                ]
+                if deliverables
+                else []
+            ),
             (
                 'SOURCE = REPO / "data" / "TODO"',
                 'SOURCE = REPO / "data" / "raw" / "docs"',
