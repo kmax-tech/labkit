@@ -145,10 +145,12 @@ def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
     reference (a comparison typed beside the number); a registered
     reference the run recorded no verdict for (the script does not read
     the head); a verdict NOT_COMPARABLE — the key absent or no finite
-    number, with the way out: write the key, measure anew; or a verdict
-    compared against another value, tolerance or relation than the head
-    registers now (the registration changed after the run). A missed
-    reference is no finding: `ref_met = false` is a valid outcome."""
+    number, with the way out: write the key, measure anew; a verdict in
+    neither state or with a `ref_met` that is not true or false (written
+    beside the number); or a verdict compared against another value,
+    tolerance or relation than the head registers now (the registration
+    changed after the run). A missed reference is no finding: `ref_met =
+    false` is a valid outcome."""
     if ref is None:
         typed = sorted(VERDICT_KEYS & set(metrics))
         if not typed:
@@ -188,6 +190,16 @@ def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
                 f"key the head's [reference] names — the compute skeleton's "
                 f"METRIC_KEY), measure anew and audit that run; a reference that "
                 f"names the wrong key is a new registration",
+            )
+        ]
+    if metrics[STATE_KEY] != COMPARED or metrics.get(MET_KEY) not in (True, False):
+        return [
+            blocker(
+                f"the verdict in metrics.json does not read: `{STATE_KEY}` = "
+                f"{metrics[STATE_KEY]!r}, `{MET_KEY}` = {metrics.get(MET_KEY)!r} — "
+                f"written beside the number, not by `reference.with_verdict`",
+                fix="let the compute skeleton's `metrics_of()` write the verdict, "
+                "measure anew and audit that run",
             )
         ]
     now = reference_verdict(0, ref)

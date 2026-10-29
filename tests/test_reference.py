@@ -446,5 +446,104 @@ def _load(path: Path, name: str):  # noqa: ANN202 — a test helper
     return module
 
 
+RUN = "2026-10-29T10-00-00_abcd"
+BODY = (
+    "\n## Result\n\n- **Recorded results:** <generated metrics, run_id and limits note>\n"
+    "- **Conclusion:** <!-- l --> <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
+)
+
+
+def area_with_run(reference_body: str | None, metrics: dict) -> tuple[Path, Path]:
+    """A low compute area whose protocol declares RUN, with REFERENCE_BODY
+    as its `[reference]` (None: a pure computation) and a completed run
+    recording METRICS."""
+    import tempfile
+
+    from protocol_fixture import completed_run, scope_file
+
+    area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+    (area / "scripts").mkdir(parents=True)
+    scope_file(area)
+    protocol = area / "PROTOCOL-x.md"
+    protocol.write_text(
+        head(
+            repeat_cost="low",
+            kind="compute",
+            promises=None,
+            result=RUN,
+            reference=reference_body,
+        )
+        + BODY,
+        encoding="utf-8",
+    )
+    completed_run(area, RUN, metrics=metrics)
+    return area, protocol
+
+
+class Rendered(unittest.TestCase):
+    """The Recorded results line carries the comparison as the run recorded
+    it — generated, bound; a typed variant differs and is refused."""
+
+    def rendered(self, reference_body: str | None, metrics: dict) -> str:
+        from labkit.checks import result_render
+
+        area, protocol = area_with_run(reference_body, metrics)
+        text = protocol.read_text(encoding="utf-8")
+        return result_render.rendering(area, text, area / "runs" / RUN).recorded_results
+
+    def test_twin_1_without_a_reference_the_line_is_as_today(self):
+        self.assertEqual(
+            self.rendered(None, {"lines_mean": 3.0}), f"lines_mean = 3.0 (run {RUN})"
+        )
+
+    def test_met_not_met_and_not_comparable(self):
+        ref = ref_of(WITHIN)
+        met = reference.with_verdict({"lines_mean": 0.625}, ref)
+        self.assertEqual(
+            self.rendered(WITHIN, met),
+            f"lines_mean = 0.625; reference 0.62 ± 0.01 (within): met, "
+            f"distance {abs(0.625 - 0.62)} (run {RUN})",
+        )
+        missed = reference.with_verdict({"lines_mean": 0.475}, ref)
+        self.assertEqual(
+            self.rendered(WITHIN, missed),
+            f"lines_mean = 0.475; reference 0.62 ± 0.01 (within): not met, "
+            f"distance {abs(0.475 - 0.62)} (run {RUN})",
+        )
+        absent_body = WITHIN.replace("lines_mean", "lines_median")
+        absent = reference.with_verdict({"lines_mean": 3.0}, ref_of(absent_body))
+        self.assertEqual(
+            self.rendered(absent_body, absent),
+            f"lines_mean = 3.0; reference 0.62 ± 0.01 (within): not comparable: "
+            f"lines_median absent (run {RUN})",
+        )
+
+    def test_a_reference_the_run_did_not_compare_renders_no_verdict(self):
+        """No "met" the run did not record: the line shows the number alone;
+        finalize names the missing verdict."""
+        self.assertEqual(
+            self.rendered(WITHIN, {"lines_mean": 3.0}), f"lines_mean = 3.0 (run {RUN})"
+        )
+
+    def test_the_written_line_is_held_and_a_typed_met_is_refused(self):
+        from labkit.checks import recheck, result_render
+        from labkit.tools import protocol_fill
+
+        ref = ref_of(WITHIN)
+        metrics = reference.with_verdict({"lines_mean": 0.475}, ref)
+        area, protocol = area_with_run(WITHIN, metrics)
+        text = protocol.read_text(encoding="utf-8")
+        expected = result_render.rendering(area, text, area / "runs" / RUN)
+        written, _, _ = protocol_fill.from_run(text, area)
+        self.assertEqual(result_render.render_gaps(written, expected), [])
+        protocol.write_text(written, encoding="utf-8")
+        # the check finds every number of the verdict in the note (twin 2)
+        recheck.cited(protocol, recheck.plain_numbers(metrics), RUN)
+        typed = written.replace("not met, distance", "met, distance")
+        self.assertNotEqual(typed, written)
+        (gap,) = result_render.render_gaps(typed, expected)
+        self.assertIn("differs from its rendering", gap.text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,11 @@ criterion not assessable, so a criterion's own `True` never reads as a
 pass beside it (the repair case, 2026-10-27, K2). The declared run's other
 reported keys follow as recorded values — descriptive; the registered
 promises' keys stay in `metrics.json`, unchanged, and are not repeated as
-values —, then the run id and one note on the limits. Each Limit line comes
+values —, then, for a computation whose head registers a `[reference]`,
+the comparison as the run recorded it (`reference 0.62 ± 0.01 (within):
+not met, distance 0.145`, or `not comparable: <key> absent` — never a
+"met" the run did not record; `comparison_phrase`), then the run id and
+one note on the limits. Each Limit line comes
 from an accepted finding with an effect in the analysis records covering
 that run (`audit_binding.covering_analysis`). `protocol-fill --from-run`
 writes them, `--render` writes them again, and report-check holds the
@@ -28,7 +32,7 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
-from labkit.formats import findings, promises, protocol_block, runs
+from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.repo import git_root
@@ -48,18 +52,46 @@ class Rendering:
 
 
 def recorded_results_line(
-    metrics: dict, run_id: str, verdict_keys: frozenset[str] = frozenset()
+    metrics: dict,
+    run_id: str,
+    verdict_keys: frozenset[str] = frozenset(),
+    comparison: str = "",
 ) -> str:
-    """`key = value, … (run <id>)` — every reported key and value as the run
-    recorded them but the registered promises' keys (VERDICT_KEYS, read as
-    `verdicts`), so `recheck.cited` finds each number and the run id."""
+    """`key = value, …; reference … (run <id>)` — every reported key and
+    value as the run recorded them but the registered promises' keys
+    (VERDICT_KEYS, read as `verdicts`) and the reference verdict's
+    (`reference.VERDICT_KEYS`, read as COMPARISON: the phrase of the
+    comparison with a stated value, `reference.phrase`, "" without one),
+    so `recheck.cited` finds each number and the run id."""
     kept = {
         k: v
         for k, v in metrics.items()
-        if k not in LABKIT_KEYS and k not in verdict_keys
+        if k not in LABKIT_KEYS
+        and k not in verdict_keys
+        and k not in reference.VERDICT_KEYS
     }
     body = ", ".join(f"{k} = {v}" for k, v in kept.items())
+    if comparison:
+        body = f"{body}; {comparison}" if body else comparison
     return f"{body} (run {run_id})" if body else f"(run {run_id})"
+
+
+def comparison_phrase(text: str, metrics: dict) -> str:
+    """The comparison with the stated value TEXT's head registers
+    (`[reference]`), as METRICS recorded its verdict (`reference.phrase`),
+    or "": no table, a table that does not read, no verdict recorded, or
+    one that does not read — finalize names each of those
+    (`reference.comparison_gaps`); the rendering shows what can be shown."""
+    try:
+        ref = protocol_block.reference(text)
+    except protocol_block.BlockError:
+        return ""
+    if ref is None or reference.STATE_KEY not in metrics:
+        return ""
+    try:
+        return reference.phrase(metrics, ref)
+    except ValueError:
+        return ""
 
 
 def verdicts(
@@ -150,12 +182,13 @@ def _verdicts_and_values(
     other recorded values with the run id) — `verdicts` and
     `recorded_results_line`."""
     metrics = runs.read_metrics(runs.metrics_path(run))
+    comparison = comparison_phrase(text, metrics)
     try:
         block = promises.parse_block(text)
     except promises.PromiseError:
         block = None  # the head station names an unreadable block
     if block is None:
-        return "", recorded_results_line(metrics, run.name)
+        return "", recorded_results_line(metrics, run.name, comparison=comparison)
     unjudged: dict[str, str] = {}
     for label, _, effect in limits:
         for pid in findings.effect_ids(effect):
@@ -163,7 +196,7 @@ def _verdicts_and_values(
     keys = frozenset(p.key for p in block.promises)
     return (
         "; ".join(verdicts(block, metrics, unjudged)),
-        recorded_results_line(metrics, run.name, keys),
+        recorded_results_line(metrics, run.name, keys, comparison),
     )
 
 
