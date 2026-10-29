@@ -1507,18 +1507,29 @@ Notiert, nicht geplant:
    Folds mal ein Fit plus fünf Null-Fits) auf 860 MB Arrays. Bei 34
    ließen beide Agenten Spalten weg, die der Aufgabentext ausdrücklich
    verlangt — Formatverstoß, Fehlschlag nach Benchmark-Konvention, keine
-   Schwäche der Evaluation (Max fragte nach, 2026-10-29). Offen, je eine Entscheidung:
-   (1) nächster Zug auf den vier sauberen Tasks mit zwei bis drei
-   Versuchen je Zelle und zweitem Richter; (2) den Weg zum Modell (`claude -p`) in den
-   PubMedQA-Aufgabentext der Hauptrunde aufnehmen (labkit-paper); (3) die zwei
-   Injektions-Lücken in die garantierte Stufe heben (Ergebnisdatei im
-   Lauf registrieren; abgetippte Zahl neben dem Block als Blocker, wenn
-   sie dem deklarierten Wert widerspricht); (5) 71: längeres Limit oder leichtere Null-Spur bei
-   großen Fits (die fünf Null-Fits des Skeletts kosten hier das
-   Fünffache); (4) die Standard-Quote 0/6:
-   die Route von behaltenem Lauf zu deklariertem Ergebnis kürzen (vier
-   Berichte ohne Run-ID, drei Registrierungen ohne Kriterium) — erst
-   die Spurlesung dieser sechs, dann bauen.
+   Schwäche der Evaluation (Max fragte nach, 2026-10-29). Tragfähige Aussage (Max' Lesung, 2026-10-29
+   nachmittags): im kleinen Druck-Piloten weniger stille Überansprüche
+   im Laborarm; eine verlässlich abgeschlossene, standardkonforme Abgabe
+   noch nicht erreicht; PubMedQA und Timeouts separat ausweisen. Drei
+   Leistungen auseinanderhalten: ehrlicher Anspruch, gebundene Zahl,
+   gültige Abgabe (34: labkit änderte die ersten zwei, nicht die
+   dritte). Reihenfolge, je eine Entscheidung: (1) die sechs
+   Laborspuren lesen und den Weg zur Ergebnisübernahme kürzen — wo
+   fehlt der nächste Schritt, wo wiederholt sich Arbeit, wo bleibt ein
+   fertiger Lauf unübernommen; die kleinste belegte Änderung bauen.
+   (2) Ergebnisdateien verbindlich registrieren (die Datei, die der
+   Auftraggeber verwendet, gehört zur gebundenen Ausgabe; bei genannten
+   Spalten zusätzlich Spalten und Reihenfolge prüfen — ein Hash bindet
+   auch eine falsch formatierte Datei). (3) Abgetippte Zahlen: ein
+   Widerspruch blockt garantiert nur, wenn dieselbe deklarierte Kennzahl
+   eindeutig zugeordnet ist; praktisch: der erzeugte Ergebnisblock
+   liefert die hervorgehobene Ergebniszahl selbst. (4) PubMedQA: den
+   Modellzugang (`claude -p`) im Aufgabentext beider Arme nennen; große
+   Fits: Zeitbudget an einem vollständigen Messlauf bemessen, weniger
+   Null-Fits nur mit fachlicher Begründung. (5) Danach drei Versuche je
+   Zelle auf den vier unbeeinträchtigten Tasks, Kriterien vorab,
+   unabhängiger zweiter Richter — weiter ein Pilot. (1) und (2) starten
+   auf Ansage.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
