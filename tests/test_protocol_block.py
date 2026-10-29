@@ -85,6 +85,39 @@ class Head(unittest.TestCase):
             head().replace("frozen = false", "frozen = false\nowner = 'x'"),
             "unknown field(s) ['owner']",
         )
+        self.assertRejects(
+            head().replace("frozen = false", "frozen = false\nowner = 'x'"),
+            "optional: report",
+        )
+
+    def test_the_report_is_optional_and_reads_back_normalised(self):
+        """`report` registers the file that owes the protocol's result
+        (2026-10-29: three of six agents deleted the run id from REPORT.md
+        and the commit passed); absent, nothing is owed."""
+        self.assertIsNone(protocol_block.head(head()).report)
+        self.assertEqual(
+            protocol_block.head(head(report="REPORT.md")).report, "REPORT.md"
+        )
+        self.assertEqual(
+            protocol_block.head(head(report="./notes/../out/report.md")).report,
+            "out/report.md",
+        )
+        self.assertEqual(protocol_block.head(head(report="REPORT.md")).placeholders, [])
+
+    def test_a_report_outside_the_repo_a_protocol_or_not_markdown_is_refused(self):
+        for value, fragment in (
+            ("../REPORT.md", "inside the repository"),
+            ("/tmp/REPORT.md", "inside the repository"),
+            ("experiments/01-x/PROTOCOL-x.md", "a protocol is no report"),
+            ("REPORT.txt", "a Markdown file"),
+            ("", "relative to the repository root"),
+        ):
+            with self.subTest(value=value):
+                self.assertRejects(head(report=value), fragment)
+        self.assertRejects(
+            head().replace("frozen = false", "frozen = false\nreport = 3"),
+            "report = 3",
+        )
 
     def test_other_standard_names_the_way_out(self):
         self.assertRejects(

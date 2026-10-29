@@ -190,6 +190,17 @@ TASKS = {
         for c in sab_cases.CASES.values()
     },
 }
+#: the report file the SAB sheet asks for, at the repository root
+SAB_REPORT = "REPORT.md"
+#: per task, the report file its sheet asks for — registered in the
+#: stamped head as the file that owes the result (`labkit-init exp
+#: --report-file`): the SAB sheet asks for REPORT.md, so a REPORT.md
+#: without the result block or the handover block is held (pressure pilot
+#: 2026-10-29: three of six agents deleted the run id instead); count,
+#: judge and fit ask for the report in the final answer and register none
+TASK_REPORT: dict[str, str | None] = {
+    task: SAB_REPORT if task in sab_cases.CASES else None for task in TASKS
+}
 #: (repeat cost, kind, model in the loop) per task: what the house route
 #: stamps for it (`labkit-init exp --repeat-cost low --kind …`, plus `--model`
 #: with a model in the loop). Staged without them, the count got the full
@@ -536,9 +547,10 @@ def stage(
     data: Path | None = None,
 ) -> int:
     """Side effects: see module docstring. `task` picks the fixture, the task
-    sheet and the default stamp (TASKS); `repeat_cost` overrides the stamped tier
-    ("unset" leaves it to the agent), `model` adds the model skeleton; the
-    fit task plants DATA (`plant_dili`)."""
+    sheet (TASKS), the default stamp (TASK_STAMP) and the report file the
+    head registers (TASK_REPORT);
+    `repeat_cost` overrides the stamped tier ("unset" leaves it to the agent),
+    `model` adds the model skeleton; the fit task plants DATA (`plant_dili`)."""
     spec = TASKS[task]
     repeat_cost, kind, model = stamp_flags(task, repeat_cost, model)
     area_name, metric_key = spec["area"], spec["metric_key"]
@@ -580,6 +592,7 @@ def stage(
         repeat_cost=repeat_cost,
         kind=kind,
         model="haiku" if model else False,
+        report_file=TASK_REPORT[task],
         deliverables=deliverables,
         deliverable_columns=deliverable_columns,
     )

@@ -12,6 +12,7 @@ holds the fields a machine reads — the head — and its optional
     kind = "compute"                # compute | fit | apply — what the kept number asserts
     frozen = false
     preflight_audit = ""            # high repeat cost: the decided preflight record, audits/<minute>-preflight.toml
+    report = "REPORT.md"            # optional: the report file, repo-relative, that owes this protocol's result
 
 One parser (`tomllib`), exact keys, typed values: a typo is a loud error
 naming the field, never a silent "not found" — `Cost: second` used to read
@@ -27,12 +28,18 @@ unfilled field instead of a malformed one.
 from __future__ import annotations
 
 import json
+import posixpath
 import re
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-from labkit.formats.repo import git_root, repo_protocols
+from labkit.formats.repo import (
+    PROTOCOL_NAME,
+    REPORT_SUFFIX,
+    git_root,
+    repo_protocols,
+)
 from labkit.formats.runs import RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
@@ -71,6 +78,11 @@ PROTOCOL_HEAD_KEYS = (
     "frozen",
     "preflight_audit",
 )
+#: the head fields a protocol may carry: `report`, the file (a path
+#: relative to the repository root) assigned as this protocol's report —
+#: once it exists, it owes the protocol's result block or its handover
+#: block (`report_hold.report_owed`); absent, no file is owed anything
+OPTIONAL_HEAD_KEYS = ("report",)
 
 
 class BlockError(ValueError):
@@ -90,6 +102,7 @@ class Head:
     preflight_audit: (
         str  # "" until the decided preflight record is named (its file name)
     )
+    report: str | None = None  # the registered report file, repo-relative; None: none
 
     @property
     def placeholders(self) -> list[str]:
@@ -616,11 +629,12 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     table = data["protocol"]
     if not isinstance(table, dict):
         raise BlockError("`protocol` must be a table: [protocol]")
-    unknown = set(table) - set(PROTOCOL_HEAD_KEYS)
+    unknown = set(table) - set(PROTOCOL_HEAD_KEYS) - set(OPTIONAL_HEAD_KEYS)
     if unknown:
         raise BlockError(
             f"[protocol]: unknown field(s) {sorted(unknown)}; "
-            f"allowed: {', '.join(PROTOCOL_HEAD_KEYS)}"
+            f"allowed: {', '.join(PROTOCOL_HEAD_KEYS)}; optional: "
+            f"{', '.join(OPTIONAL_HEAD_KEYS)}"
         )
     standard = table.get("standard")
     if not isinstance(standard, str):
@@ -667,7 +681,42 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
         kind=_choice(table, "kind", KINDS),
         frozen=frozen,
         preflight_audit=audit.strip(),
+        report=report_field(table.get("report")),
     )
+
+
+def report_field(value: object) -> str | None:
+    """The head's `report` as registered: None when the field is absent,
+    else its path relative to the repository root, `/`-separated. Raises
+    BlockError on a value that is not a string, is empty, names a path
+    outside the repository (absolute, or leading above the root), a
+    protocol file, or a file that is not Markdown (`repo.REPORT_SUFFIX`:
+    only such a file takes a result or a handover block). Pure: whether
+    the file exists is the gate's question, not the head's."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise BlockError(
+            f"[protocol] report = {value!r} — the report file as a path relative "
+            f'to the repository root, like "REPORT.md"'
+        )
+    clean = PurePosixPath(posixpath.normpath(value.strip()))
+    if clean.is_absolute() or clean.parts[:1] == ("..",):
+        raise BlockError(
+            f"[protocol] report = {value!r} — a path inside the repository, "
+            f"relative to its root"
+        )
+    if PROTOCOL_NAME.match(clean.name):
+        raise BlockError(
+            f"[protocol] report = {value!r} — a protocol is no report; the "
+            f"report is the file that carries this protocol's result block"
+        )
+    if clean.suffix != REPORT_SUFFIX:
+        raise BlockError(
+            f"[protocol] report = {value!r} — a Markdown file ({REPORT_SUFFIX}); "
+            f"only such a file takes a result or a handover block"
+        )
+    return clean.as_posix()
 
 
 def find_by_id(area: Path, pid: str) -> Path:

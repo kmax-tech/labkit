@@ -208,6 +208,7 @@ def head(
     claim: str = "",
     arms: dict[str, tuple[str, str, str | None]] | None = None,
     labels: tuple[str, ...] | None = None,
+    report: str | None = None,
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
     frozen or low head without an explicit block carries `DEFAULT_BLOCK`;
@@ -219,7 +220,8 @@ def head(
     (`number_describes`, `annotation_validity`). KIND is the head's `kind` (standard 0.22); None derives it as
     the stamp would — `apply` with a model, else `compute` — so a fixture
     states only what it varies; a literal `kind="<compute | fit | apply>"`
-    writes the placeholder."""
+    writes the placeholder. REPORT is the head's optional `report`, the
+    registered report file (standard 0.23, 2026-10-29)."""
     if kind is None:
         kind = "apply" if model is not None else "compute"
     if promises == "" and (frozen or repeat_cost == "low"):
@@ -238,6 +240,8 @@ def head(
         f"frozen = {'true' if frozen else 'false'}",
         f'preflight_audit = "{preflight_audit}"',
     ]
+    if report is not None:
+        lines.append(f'report = "{report}"')
     if result is not None:
         lines += ["", "[result]", f'run = "{result}"']
     if model is not None:

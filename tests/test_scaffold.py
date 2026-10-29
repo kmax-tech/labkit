@@ -1053,6 +1053,61 @@ class Exp(unittest.TestCase):
                 "01_measure.py: edited since the compute stamp", str(caught.exception)
             )
 
+    def test_report_file_is_registered_in_the_head_and_survives_change_kind(
+        self,
+    ) -> None:
+        """`--report-file PATH` writes `report = "PATH"` into the stamped
+        head — the file that owes the protocol's result (pressure pilot
+        2026-10-29: three of six agents deleted the run id from REPORT.md
+        and the commit passed). With a model the line stays in [protocol];
+        `--change-kind` keeps it; a path the head refuses is refused at the
+        stamp, and a promotion takes none."""
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "foo-bar",
+            "low",
+            kind="compute",
+            report_file="./REPORT.md",
+        )
+        proto = self.area() / "PROTOCOL-foo-bar.md"
+        text = proto.read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.head(text).report, "REPORT.md")
+        self.assertIn('preflight_audit = ""\nreport = "REPORT.md"\n', text)
+        quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
+        self.assertEqual(
+            protocol_block.head(proto.read_text(encoding="utf-8")).report, "REPORT.md"
+        )
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "judged",
+            "low",
+            kind="apply",
+            model="haiku",
+            report_file="notes/report.md",
+        )
+        (judged,) = (self.root / "experiments").glob("*-judged")
+        text = (judged / "PROTOCOL-judged.md").read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.head(text).report, "notes/report.md")
+        self.assertIsNotNone(protocol_block.model(text))
+        for bad, fragment in (
+            ("../REPORT.md", "inside the repository"),
+            ("experiments/PROTOCOL-x.md", "a protocol is no report"),
+        ):
+            with self.subTest(bad=bad), self.assertRaises(console.Refused) as caught:
+                scaffold.stamp_area(self.root, "other", kind="compute", report_file=bad)
+            self.assertIn(fragment, caught.exception.why)
+            self.assertEqual(list((self.root / "experiments").glob("*-other")), [])
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.stamp_area(self.root, "foo-bar", report=True, report_file="R.md")
+        self.assertIn(
+            "--report-file names the report at the area's stamp", caught.exception.why
+        )
+        self.assertEqual(
+            protocol_block.head(proto.read_text(encoding="utf-8")).report, "REPORT.md"
+        )
+
     def test_explore_refuses_the_flags_of_an_area_stamp(self) -> None:
         """`--explore` dropped `--kind`, `--repeat-cost`, `--model` and
         `--report` without a word: the person believed them stamped. Each is
@@ -1065,6 +1120,7 @@ class Exp(unittest.TestCase):
             ["--repeat-cost", "low"],
             ["--model"],
             ["--report"],
+            ["--report-file", "REPORT.md"],
         ):
             with self.subTest(extra=extra):
                 err = io.StringIO()

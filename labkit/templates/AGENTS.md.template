@@ -52,7 +52,15 @@ produced it is not fixed — remove the output file at once, and write it
 again from the new answering run once that run is adopted; until then, or
 if there is none, the file stays away. The report says which you did and
 why (2026-10-27: an output file kept the heart rate an analysis audit had
-rejected, while the report handed the question over).
+rejected, while the report handed the question over). A report the
+protocol's head registers (`report = "REPORT.md"`, stamped by
+`labkit-init exp --report-file`) is owed that protocol's result: once the
+file exists, the stop and the commit hold it until it carries the
+generated result block of the declared run (`protocol-fill <PROTOCOL>
+--into REPORT.md`) or the handover block; a number with the run id
+removed, or a run id typed in, releases nothing, and a discussion block
+does not either. General notes and input descriptions elsewhere owe
+nothing.
 
 ## Choose the experiment: three separate decisions
 

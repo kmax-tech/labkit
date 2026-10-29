@@ -2,7 +2,7 @@
 
     labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]
     labkit-init exp NAME [--repo DIR] [--repeat-cost low|high] --kind compute|fit|apply [--model [ALIAS]]
-                         [--report] [--explore]
+                         [--report] [--report-file PATH] [--explore]
     labkit-init exp NAME --kind compute|fit|apply --change-kind
     labkit-init numbers [--repo DIR] [--staged]
 
@@ -17,7 +17,9 @@ copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
 (the pilot part by default; `--report` adds the † fields, now or when the run
-graduates; `--repeat-cost low` stamps the low cut instead), the script
+graduates; `--repeat-cost low` stamps the low cut instead; `--report-file
+PATH` registers the report file, repo-relative, that owes the protocol's
+result — `report = "PATH"` in the head, `protocol_block.report_field`), the script
 skeletons the kind calls for (`standard_contract.skeleton`: a computation
 the compute skeleton, `01_measure` and `02_analyze`; a fit, and an apply
 without `--model`, the estimator skeleton; an apply with `--model` the
@@ -688,6 +690,7 @@ def stamp_area(
     kind: str | None = None,
     model: bool | str = False,
     report: bool = False,
+    report_file: str | None = None,
     deliverables: tuple[str, ...] = (),
     deliverable_columns: tuple[str, ...] = (),
 ) -> tuple[Path, str]:
@@ -696,13 +699,20 @@ def stamp_area(
     caller prints; `stamp_lab` returns its log the same way. KIND is what
     the kept number asserts (`protocol_block.KINDS`); a new area without it
     is refused — nothing falls back to a computation (standard 0.22).
+    REPORT_FILE registers the report file that owes the protocol's result
+    (the head's `report`, relative to ROOT); a new area's stamp only.
     DELIVERABLES and DELIVERABLE_COLUMNS are stamped into the measure
     script (`script_stamps`).
     Raises `console.Refused` too for an area of NAME that exists without
-    REPORT, and with REPORT where NAME names no one area
-    (`existing_area`)."""
+    REPORT, with REPORT where NAME names no one area (`existing_area`),
+    and with REPORT_FILE on a promotion."""
     slug = area_slug(name)
     experiments = root / EXPERIMENTS
+    if report_file is not None:
+        try:  # the head's own rule for the field, told before anything is written
+            report_file = protocol_block.report_field(report_file)
+        except protocol_block.BlockError as exc:
+            raise console.Refused("labkit-init", f"--report-file: {exc}") from exc
     if not (root / "models.toml").is_file() or not experiments.is_dir():
         raise console.Refused(
             "labkit-init",
@@ -710,12 +720,21 @@ def stamp_area(
         )
     # existing_area refuses a name several areas carry; None: stamp a new one
     if report and (found := existing_area(experiments, name)) is not None:
+        if report_file is not None:
+            raise console.Refused(
+                "labkit-init",
+                f"--report-file names the report at the area's stamp; {found} "
+                f"is stamped — set `report = {protocol_block.toml_string(report_file)}` "
+                f"in its protocol's head",
+            )
         _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
         return found, "\n".join(promote(found, blocks))
     kind = asked_kind(kind)
     quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
-    stamped = protocol_stamp(root, slug, repeat_cost, kind, model, report)
+    stamped = protocol_stamp(
+        root, slug, repeat_cost, kind, model, report, report_file=report_file
+    )
     existing = areas_named(experiments, slug)
     if existing:
         which = slug if len(existing) == 1 else existing[0].name
@@ -764,9 +783,11 @@ def protocol_stamp(
     model: bool | str,
     report: bool,
     pid: str | None = None,
+    report_file: str | None = None,
 ) -> str:
     """The protocol `exp` stamps for these answers: the low cut, or the
-    pilot part — with REPORT the whole — under a fresh id, or PID. Reads
+    pilot part — with REPORT the whole — under a fresh id, or PID, with
+    REPORT_FILE registered in the head. Reads
     the template (and, without PID, the ids taken under ROOT); writes
     nothing. The cut and the skeleton are the contract's answers, not read
     off the tier here (a tier compared by hand outside the contract is a
@@ -774,7 +795,14 @@ def protocol_stamp(
     quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     tmpl = stamped_head(
-        template(PROTOCOL_TEMPLATE.name), root, slug, repeat_cost, kind, model, pid
+        template(PROTOCOL_TEMPLATE.name),
+        root,
+        slug,
+        repeat_cost,
+        kind,
+        model,
+        pid,
+        report_file,
     )
     clean = CUT_MARK.sub(
         "", bar_cut(tmpl, kind)
@@ -800,7 +828,7 @@ def protocol_stamp(
     if not quick:
         stamped = owed_cut(stamped)  # the full form owes by kind and model too
     stamped = name_promise_ids(stamped, kind)
-    check_stamped_head(stamped, repeat_cost, kind, bool(model))
+    check_stamped_head(stamped, repeat_cost, kind, bool(model), report_file)
     return stamped
 
 
@@ -964,7 +992,8 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
     "differs" are measured against this labkit's stamp, unless git shows
     the file (the block) unchanged since a commit under an earlier pin
     (`earlier_pin_text`, `KindChange.earlier`). The protocol
-    keeps its id, `type`, model alias and report fields; a written field is
+    keeps its id, `type`, model alias, registered report file and report
+    fields; a written field is
     carried when it differs from the old stamp's own value. Reads files
     and git, writes nothing. Raises `console.Refused` for a protocol
     without kind or id, or already of KIND."""
@@ -998,7 +1027,9 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
         for path in after
         if path not in before and path.exists()
     ]
-    fresh_old = protocol_stamp(root, slug, rc, head.kind, model, report, head.id)
+    fresh_old = protocol_stamp(
+        root, slug, rc, head.kind, model, report, head.id, head.report
+    )
     if promises.block_stamp(old) != promises.block_stamp(fresh_old):
         found = earlier_pin_text(root, protocol)
         if found is not None and same_promises(found[1], old):
@@ -1018,7 +1049,9 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
             f"written — a {kind} has no place for them"
         )
     text, unplaced = carried_fields(
-        old, fresh_old, protocol_stamp(root, slug, rc, kind, model, report, head.id)
+        old,
+        fresh_old,
+        protocol_stamp(root, slug, rc, kind, model, report, head.id, head.report),
     )
     held += [f"{protocol.name}:{why}" for why in unplaced]
     if head.type is not None:
@@ -1281,12 +1314,14 @@ def stamped_head(
     kind: str,
     model: bool | str,
     pid: str | None = None,
+    report_file: str | None = None,
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
-    protocol id (PID when given), COST when asked, KIND always, and with MODEL a `[model]`
+    protocol id (PID when given), COST when asked, KIND always, with MODEL a `[model]`
     table after `preflight_audit` — the alias when --model named one, else
     its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21),
-    and for a computation the claim keys (`COMPUTE_CLAIM`)."""
+    and for a computation the claim keys (`COMPUTE_CLAIM`) —, and with
+    REPORT_FILE the head's `report` line after `preflight_audit`."""
     out = tmpl.replace("<name>", slug, 1).replace(
         "<protocol-id>", pid or new_protocol_id(root)
     )
@@ -1304,15 +1339,28 @@ def stamped_head(
             + claim,
             1,
         )
+    if report_file is not None:
+        # after the model table: the line stays in [protocol], the table
+        # it opens would otherwise take it
+        out = out.replace(
+            'preflight_audit = ""\n',
+            f'preflight_audit = ""\nreport = {protocol_block.toml_string(report_file)}\n',
+            1,
+        )
     return out
 
 
 def check_stamped_head(
-    text: str, repeat_cost: str | None, kind: str, model: bool = False
+    text: str,
+    repeat_cost: str | None,
+    kind: str,
+    model: bool = False,
+    report_file: str | None = None,
 ) -> None:
     """Raise ValueError unless the stamped protocol's head carries a real
-    id, the KIND asked, when COST was asked for that tier, and when MODEL was
-    asked for a `[model]` table. The stamp writes them by replacing template
+    id, the KIND asked, when COST was asked for that tier, when MODEL was
+    asked a `[model]` table, and REPORT_FILE as its `report` (None: none).
+    The stamp writes them by replacing template
     tokens; a token the template no longer carried would leave the
     placeholder without a word."""
     head = protocol_block.head(text)
@@ -1328,6 +1376,11 @@ def check_stamped_head(
         )
     if model and protocol_block.model(text) is None:
         raise ValueError("labkit-init: --model asked, the stamped head has no [model]")
+    if head.report != report_file:
+        raise ValueError(
+            f"labkit-init: the stamped head says report = {head.report!r}, "
+            f"asked {report_file!r}"
+        )
 
 
 # The stamp writes example numbers into the [[promise]] constants; a fit kept
@@ -1676,6 +1729,13 @@ def main(argv: list[str]) -> int:
         help="add the † fields (now, or to an existing area)",
     )
     exp.add_argument(
+        "--report-file",
+        metavar="PATH",
+        help="register the report file (relative to the repo root, e.g. REPORT.md) "
+        "that owes this protocol's result: once it exists, the stop and the "
+        "commit hold it to the result block or the handover block",
+    )
+    exp.add_argument(
         "--explore", action="store_true", help="only experiments/explore/<name>.py"
     )
     exp.add_argument(
@@ -1729,16 +1789,19 @@ def main(argv: list[str]) -> int:
         return code
     # before the explore branch returns, or `--explore --change-kind` stamps
     # the explore file and exits 0 (audit 2026-10-27, C13)
-    if a.change_kind and (a.repeat_cost or a.model or a.report or a.explore):
+    if a.change_kind and (
+        a.repeat_cost or a.model or a.report or a.report_file or a.explore
+    ):
         ap.error(
-            "--change-kind takes only --kind: the repeat cost, the model and "
-            "the report fields come from the protocol, and --explore stamps no area"
+            "--change-kind takes only --kind: the repeat cost, the model, the "
+            "report fields and the report file come from the protocol, and "
+            "--explore stamps no area"
         )
-    if a.explore and (a.kind or a.repeat_cost or a.model or a.report):
+    if a.explore and (a.kind or a.repeat_cost or a.model or a.report or a.report_file):
         ap.error(
             "--explore stamps only experiments/explore/<name>.py: --kind, "
-            "--repeat-cost, --model and --report belong to the area's stamp, the "
-            "step --explore prints next"
+            "--repeat-cost, --model, --report and --report-file belong to the "
+            "area's stamp, the step --explore prints next"
         )
     if a.explore:
         print("\n".join(stamp_explore(root / EXPERIMENTS, area_slug(a.name))))
@@ -1755,6 +1818,7 @@ def main(argv: list[str]) -> int:
         kind=a.kind,
         model=a.model,
         report=a.report,
+        report_file=a.report_file,
         deliverables=tuple(a.deliverable),
         deliverable_columns=tuple(
             c.strip() for c in a.deliverable_columns.split(",") if c.strip()

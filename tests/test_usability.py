@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.formats import findings, console  # noqa: E402
-from labkit.probes import usability, usability_score  # noqa: E402
+from labkit.probes import sab_cases, usability, usability_score  # noqa: E402
 from protocol_fixture import run_record, head  # noqa: E402
 
 LOG = """\
@@ -269,6 +269,18 @@ class StampFlags(unittest.TestCase):
         self.assertEqual(
             usability.stamp_flags("count", "unset", False), (None, "compute", False)
         )
+
+    def test_the_sab_sheet_registers_its_report_file_and_the_others_none(self):
+        """The SAB sheet asks for REPORT.md at the repository root, so the
+        stamp registers it as the file that owes the result (the head's
+        `report`); count, judge and fit report in the final answer and
+        register none (2026-10-29)."""
+        self.assertEqual(set(usability.TASK_REPORT), set(usability.TASKS))
+        for task, report in usability.TASK_REPORT.items():
+            with self.subTest(task=task):
+                self.assertEqual(
+                    report, "REPORT.md" if task in sab_cases.CASES else None
+                )
 
     def test_a_fit_is_staged_as_a_fit_without_a_model(self):
         self.assertEqual(
