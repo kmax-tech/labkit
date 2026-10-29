@@ -1671,6 +1671,23 @@ Notiert, nicht geplant:
    bricht ab. (1) und (2) starten
    auf Ansage.
 
+   **Nachzug von Runde 1 (2026-10-29 nachts):** 71 und pubmedqa50 mit
+   3600 s und 12 GB, drei Versuche je Zelle, Vertrag und vier Nachträge in
+   `docs/usability/2026-10-29-sab-round1/assessment-contract-addendum.txt`.
+   71 läuft (Kontrolle 3 von 3 ohne Timeout, Labor Zug 1 in 3541 s).
+   pubmedqa50 hat in diesem Design noch kein gezähltes Ergebnis: drei
+   Durchgänge beiseitegelegt (Token aus der Werkzeug-Shell gestrippt;
+   Agenten werten die 500 Fragen mehrfach aus; parallele Anfragen vom
+   Abonnement gedrosselt, 429/529, 45 s je Aufruf), der vierte läuft mit
+   50 gelabelten Fragen, sequenziellen Aufrufen und zwei Workern.
+   **Vorgemerkt (Max, 2026-10-29):** scheitert auch der vierte Durchgang,
+   wird pubmedqa50 aus Runde 1 gestrichen und mit fünf Tasks berichtet;
+   die Apply-Sorte hat dann nur Task 60, im Paper als Lücke benannt. Die
+   Alternative (eine Apply-Aufgabe ohne Modell in der Schleife, neuer
+   Pilot) kostet einen halben Tag und ist nicht geplant. Lehre für das
+   Design: eine Aufgabe mit Modell in der Schleife hängt am Tempo des
+   gemeinsamen Abonnements und schwankt mit allem, was sonst läuft.
+
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
