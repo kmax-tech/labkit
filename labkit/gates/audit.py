@@ -2144,7 +2144,9 @@ def _decide(
     area's newest record without it) through `findings.write_decision`,
     with EFFECT for an accepted BLOCKER — its ids held to the promises the
     protocol registers; print what was written and how many findings stay
-    open. Exit 2 on a decision that cannot be stored, the file untouched; a
+    open, what the status entails (`findings.decision_entails`) and, under
+    `fixed`, the hint that nothing changed since the audit (`repair_hint`).
+    Exit 2 on a decision that cannot be stored, the file untouched; a
     refusal that names the effect's form (`findings.EFFECT_FORM`, its
     example an id) adds, for a protocol without promises, the routes that
     work there (`ways_out.NO_PROMISE_ROUTE`)."""
@@ -2171,7 +2173,40 @@ def _decide(
         + (f" — {reason.strip()}" if reason.strip() else "")
         + f" · {len(rec.open)} open"
     )
+    print(
+        findings.decision_entails(rec.findings[int(n_text) - 1], area, record, protocol)
+    )
+    if status == "fixed":
+        hint = repair_hint(area, record, protocol)
+        if hint is not None:
+            print(hint)
     return 0
+
+
+def repair_hint(area: Path, record: Path, protocol: Path | None) -> str | None:
+    """The `hint:` line under a `fixed` decision on RECORD: nothing the
+    record binds — code, promise block, registration
+    (`findings.state_unchanged`) — has changed since the audit, so the
+    claimed repair is not in the area yet; or the state could not be
+    compared, naming why (no one protocol to read, nothing to stamp). None
+    when something changed. A hint, never a refusal: the decision stands as
+    given. Agents decided `fixed` on the audited state itself (SAB round 1,
+    2026-10-29)."""
+    repair = (
+        "a repair changes code, inputs or configuration — repair first, then "
+        "measure and audit again"
+    )
+    try:
+        text = the_protocol(area, protocol).read_text(encoding="utf-8")
+        unchanged = findings.state_unchanged(findings.read(record), area, text)
+    except (ValueError, FileNotFoundError) as exc:
+        return f"hint: the audited state could not be compared ({exc}); {repair}"
+    if not unchanged:
+        return None
+    return (
+        f"hint: nothing relevant changed since the audit {record.name} (code, "
+        f"promise block and registration stamp as it saw them): {repair}"
+    )
 
 
 def _registered(area: Path, protocol: Path | None, effect: str) -> None:

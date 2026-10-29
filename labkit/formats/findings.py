@@ -123,6 +123,7 @@ from labkit.formats.repo import (
     decide_command,
     files_at,
     git_root,
+    measure_command,
     shown,
     text_at,
 )
@@ -348,6 +349,95 @@ def check_order(check: str, note: str = "") -> str:
         f"(`02_analyze.py --check`) recomputes every metrics key from the kept "
         f"rows and refuses one computed beside them; a key written as a "
         f"constant shows nothing"
+    )
+
+
+def decision_entails(
+    f: Finding, area: Path, record: Path, protocol: Path | None = None
+) -> str:
+    """What F's decided status entails — the line `labkit-audit --decide`
+    prints under the decision it recorded on F, a finding of RECORD in
+    AREA, and the one home of the five texts. `fixed`: a repair is
+    claimed, confirmation pending; the follow-up audit judges it after a
+    new measurement, the check owed named when F carries one
+    (`check_order`), then the measure and analysis-audit commands.
+    `accepted` with effect `stands`: the claim stands within the finding;
+    a second auditor must uphold it (`--review --record`). `accepted` with
+    another effect: it stands in the report's Limit line; without one (a
+    WARNING or NOTE) the finding limits nothing there (`Record.limits`).
+    `deferred`: unresolved and carried; nothing but a new decision
+    releases it, and the handover ends the protocol without the number.
+    `dismissed`: factually wrong for this state; the reason names the
+    counter-evidence, and a BLOCKER's or a carried finding's dismissal is
+    held by the review (`dismissed_blocker`, `carried_and_closed`). Agents
+    used `dismissed` for "I will fix it", `deferred` for "no longer
+    relevant" and `accepted` for "repaired" (SAB round 1, 2026-10-29).
+    Raises ValueError on a status that is not decided (DECIDED)."""
+    here = Path.cwd()
+    review = audit_command(
+        area, "--review", "--record", record.name, protocol=protocol, base=here
+    )
+    if f.status == "fixed":
+        owed = (
+            f"; the check owed: {check_order(f.check, f.check_note)}" if f.check else ""
+        )
+        analysis = audit_command(
+            area, "--mode", ANALYSIS_AUDIT, protocol=protocol, base=here
+        )
+        return (
+            "fixed: a repair is claimed, confirmation pending — the follow-up audit "
+            "judges it after a new measurement; until then it releases nothing"
+            f"{owed}; then `{measure_command(area)}` and `{analysis}`"
+        )
+    if f.status == "accepted" and f.effect == EFFECT_STANDS:
+        return (
+            "accepted --effect stands: the finding holds; this says the claim "
+            "stands within it — give the effect on the claim in the reason, and a "
+            f"second auditor must uphold it before the number leaves: `{review}`"
+        )
+    if f.status == "accepted" and f.effect:
+        return (
+            f"accepted: the finding holds and limits the claim — `{f.effect}` "
+            "stands in the report's Limit line"
+        )
+    if f.status == "accepted":
+        return (
+            "accepted: the finding holds and is recorded; without an effect it "
+            "limits nothing in the report — `--effect stands` or `--effect "
+            '"<ID> not assessable"` would'
+        )
+    if f.status == "deferred":
+        return (
+            "deferred: unresolved and carried — deferring releases nothing; the "
+            "protocol ends without this number through the handover unless the "
+            "finding is decided again"
+        )
+    if f.status == "dismissed":
+        held = (
+            f"; a dismissal without it is held by the review: `{review}`"
+            if dismissed_blocker(f) or carried_and_closed(f)
+            else ""
+        )
+        return (
+            "dismissed: the finding is factually wrong for this state — the reason "
+            f"must name the counter-evidence (file, line, value){held}"
+        )
+    raise ValueError(f"status {f.status!r} is not decided — one of {DECIDED_LIST}")
+
+
+def state_unchanged(record: Record, area: Path, text: str) -> bool:
+    """Whether AREA's code, the promise block and the registration of TEXT
+    stamp now as RECORD saw them — the run aside (`AuditedState`). Under a
+    `fixed` decision this says the claimed repair changed nothing the audit
+    binds (`audit.repair_hint`). Raises FileNotFoundError or ValueError
+    (nothing to stamp) and `promises.PromiseError` (the block does not
+    read)."""
+    now = AuditedState(
+        area_stamp(area)[0], promises.block_stamp(text), registration_stamp(text)
+    )
+    return (
+        AuditedState(record.scope_sha, record.block_sha, dict(record.registration))
+        == now
     )
 
 

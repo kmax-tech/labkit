@@ -960,6 +960,120 @@ class DecisionListReachesThePerson(unittest.TestCase):
         decided = findings.area_records(area)[-1].findings[0]
         self.assertEqual((decided.status, decided.effect), ("accepted", "stands"))
 
+    def test_the_confirmation_says_what_the_status_entails(self):
+        """Agents used `dismissed` for "I will fix it", `deferred` for "no
+        longer relevant" and `accepted` for "repaired", and decided `fixed`
+        on the audited state itself (SAB round 1, 2026-10-29). Under the
+        decision, one line says what the status entails
+        (`findings.decision_entails`); under `fixed`, a hint when nothing
+        the record binds has changed. The twin: the recorded decision is
+        what was given, and a changed area draws no hint."""
+        area = repo_with()
+        checked = BLOCK.replace(" · z\n", " · z · check: leak_rate (must be 0)\n")
+        run(area, checked)
+        record = findings.area_records(area)[-1].path
+        old = Path.cwd()
+        os.chdir(area.parents[1])
+        try:
+
+            def decide(*words: str) -> str:
+                out = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(out),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    rc = audit.main(["experiments/01-x", "--decide", "1", *words])
+                self.assertEqual(rc, 0, out.getvalue())
+                return out.getvalue()
+
+            review = f"`labkit-audit experiments/01-x --review --record {record.name}`"
+            said = decide("fixed", "dropped the feature")
+            self.assertIn(
+                "fixed: a repair is claimed, confirmation pending — the follow-up "
+                "audit judges it after a new measurement; until then it releases "
+                "nothing; the check owed: extend the measuring script so that its "
+                "kept rows carry what `leak_rate` (must be 0) needs",
+                said,
+            )
+            self.assertIn(
+                "; then `.venv/bin/python experiments/01-x/scripts/01_measure.py` "
+                "and `labkit-audit experiments/01-x --mode analysis`",
+                said,
+            )
+            self.assertIn(
+                f"hint: nothing relevant changed since the audit {record.name} "
+                "(code, promise block and registration stamp as it saw them): a "
+                "repair changes code, inputs or configuration — repair first, "
+                "then measure and audit again",
+                said,
+            )
+            f = findings.read(record).findings[0]
+            self.assertEqual(
+                (f.status, f.reason, f.effect), ("fixed", "dropped the feature", "")
+            )
+            (area / "scripts" / "01_measure.py").write_text(SCRIPT + "# repaired\n")
+            self.assertNotIn("hint:", decide("fixed", "dropped the feature"))
+
+            said = decide("accepted", "the limit", "--effect", "stands")
+            self.assertIn(
+                "accepted --effect stands: the finding holds; this says the claim "
+                "stands within it — give the effect on the claim in the reason, and "
+                f"a second auditor must uphold it before the number leaves: {review}",
+                said,
+            )
+            f = findings.read(record).findings[0]
+            self.assertEqual(
+                (f.status, f.reason, f.effect), ("accepted", "the limit", "stands")
+            )
+            self.assertIn(
+                "deferred: unresolved and carried — deferring releases nothing; the "
+                "protocol ends without this number through the handover unless the "
+                "finding is decided again",
+                decide("deferred", "no time"),
+            )
+            self.assertIn(
+                "dismissed: the finding is factually wrong for this state — the "
+                "reason must name the counter-evidence (file, line, value); a "
+                f"dismissal without it is held by the review: {review}",
+                decide("dismissed", "a.py:1 reads b"),
+            )
+            f = findings.read(record).findings[0]
+            self.assertEqual((f.status, f.reason), ("dismissed", "a.py:1 reads b"))
+            self.assertEqual(
+                len(findings.area_records(area)), 1
+            )  # nothing written beside
+        finally:
+            os.chdir(old)
+        # a promise left not assessable, and a WARNING's dismissal, which no review holds
+        promised = repo_with()
+        (promised / "PROTOCOL-x0.md").write_text(
+            fixture.head(promises=fixture.C1_BLOCK) + PROTOCOL, encoding="utf-8"
+        )
+        run(promised, WARN)
+        for words, line in (
+            (
+                ["accepted", "r", "--effect", "C1 not assessable"],
+                "accepted: the finding holds and limits the claim — `C1 not "
+                "assessable` stands in the report's Limit line",
+            ),
+            (
+                ["accepted", "r"],
+                "accepted: the finding holds and is recorded; without an effect it "
+                "limits nothing in the report",
+            ),
+            (["dismissed", "r"], "(file, line, value)\n"),
+        ):
+            with self.subTest(words=words):
+                out = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(out),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    rc = audit.main([str(promised), "--decide", "1", *words])
+                self.assertEqual(rc, 0, out.getvalue())
+                self.assertIn(line, out.getvalue())
+                self.assertNotIn("--review", out.getvalue())
+
     def test_a_missing_area_is_refused_with_one_sentence_on_every_step(self):
         """`labkit-audit experiments/01-x --findings` from a subdirectory
         said "no audit record yet" where records existed, and `--review`

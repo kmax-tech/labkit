@@ -488,6 +488,28 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The confirmation after `--decide` says what the status entails.**
+  Agents used `dismissed` for "I will fix it", `deferred` for "no longer
+  relevant" and `accepted` for "repaired", and decided `fixed` on the
+  audited state itself (SAB round 1, 2026-10-29). Under the `decided:`
+  line `labkit-audit` now prints one line per status, the five texts in
+  one home (`findings.decision_entails`): `fixed` — a repair is claimed,
+  confirmation pending, the follow-up audit judges it after a new
+  measurement, the check owed when the finding carries one, then the
+  measure and `--mode analysis` commands; `accepted --effect stands` —
+  the claim stands within the finding, a second auditor must uphold it
+  (`--review --record <record>`); `accepted` with another effect — it
+  stands in the report's Limit line (without one, a WARNING limits
+  nothing there); `deferred` — unresolved and carried, the handover ends
+  the protocol without the number unless the finding is decided again;
+  `dismissed` — factually wrong for this state, the reason names the
+  counter-evidence, a BLOCKER's or a carried finding's dismissal is held
+  by the review. Under `fixed`, when the area's code, promise block and
+  registration stamp as the record saw them (`findings.state_unchanged`),
+  a `hint:` line says nothing relevant changed since the audit — repair
+  first, then measure and audit again; a hint, never a refusal, the
+  decision is recorded as given (`audit.repair_hint`).
+
 - **A `--decide` without its reason is refused naming the reason.**
   `labkit-audit <area> --decide N accepted --effect stands` was refused
   "unrecognized arguments: stands" — argparse took `--effect` for the
