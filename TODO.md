@@ -1498,8 +1498,13 @@ Notiert, nicht geplant:
    Auswahl-AUC als held-out, 3-von-3-Stichprobe bei 198 „maybe"),
    Laborarm null, dafür ein Timeout (71, 5-GB-Grenze) und Standard
    erfüllt 0 von 6. Ein Task beeinträchtigt: PubMedQA — beide Agenten fanden
-   den Weg zum Modell nicht (nur `claude -p` führt durch den Proxy;
-   Wiederholung mit `pubmedqa50` und benanntem Weg läuft). Bei 34
+   den Weg zum Modell nicht (nur `claude -p` führt durch den Proxy).
+   Wiederholung mit `pubmedqa50` und benanntem Weg: beide Arme antworten
+   mit dem Modell und bestehen die Evaluation (0,70 / 0,72), beide laufen
+   ins 40-Minuten-Limit (Kontrollarm mit fertigem ehrlichem Bericht,
+   Laborarm im Analyse-Audit, Bericht mit „[PENDING]“). 71 mit 12 GB:
+   wieder Timeout, zehn Läufe, dreißig Ridge-Fits des Skeletts (fünf
+   Folds mal ein Fit plus fünf Null-Fits) auf 860 MB Arrays. Bei 34
    ließen beide Agenten Spalten weg, die der Aufgabentext ausdrücklich
    verlangt — Formatverstoß, Fehlschlag nach Benchmark-Konvention, keine
    Schwäche der Evaluation (Max fragte nach, 2026-10-29). Offen, je eine Entscheidung:
@@ -1508,7 +1513,9 @@ Notiert, nicht geplant:
    PubMedQA-Aufgabentext der Hauptrunde aufnehmen (labkit-paper); (3) die zwei
    Injektions-Lücken in die garantierte Stufe heben (Ergebnisdatei im
    Lauf registrieren; abgetippte Zahl neben dem Block als Blocker, wenn
-   sie dem deklarierten Wert widerspricht); (4) die Standard-Quote 0/6:
+   sie dem deklarierten Wert widerspricht); (5) 71: längeres Limit oder leichtere Null-Spur bei
+   großen Fits (die fünf Null-Fits des Skeletts kosten hier das
+   Fünffache); (4) die Standard-Quote 0/6:
    die Route von behaltenem Lauf zu deklariertem Ergebnis kürzen (vier
    Berichte ohne Run-ID, drei Registrierungen ohne Kriterium) — erst
    die Spurlesung dieser sechs, dann bauen.

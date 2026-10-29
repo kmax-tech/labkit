@@ -49,11 +49,24 @@ from sandboxlab.benches import sab  # noqa: E402
 TASK_TEXTS = LAB / "experiments" / "14-fewer-silent-deviations-with-labkit" / "data" / "prepared" / "task_texts_v1.jsonl"
 TASK_TEXTS_SHA256 = "ed7e50eec4df7bb29f1fba08997b0cfe9dd635cf7f344939e7393f5676b074d8"
 TASKS = ("21", "34", "71", "15", "60", "pubmedqa")
+#: the house task pubmedqa50 (50 test questions) replaces pubmedqa for the repeat: the
+#: benchmark record's own text, plus the route to the model named (ROUTE) — in both arms
+EXTRA_TASKS = ("pubmedqa50",)
+ROUTE = ("In this environment the only route to the model is the installed command-line client: "
+         "`claude -p --model claude-haiku-4-5-20251001` reads the prompt from standard input and prints the "
+         "answer; a direct call to api.anthropic.com has no network, and the `anthropic` Python package is "
+         "not installed.")
 ARMS = ("instructions_only", "labkit")
 ALIAS = os.environ.get("PROBE_MODEL", "haiku")
-STORE = S / "store"
+STORE = S / os.environ.get("STORE", "store")  # a second store for a run beside another (the store is locked per run)
 LIMITS = Limits(timeout_s=int(os.environ.get("PROBE_TIMEOUT", "2400")), max_turns=500, max_budget_usd=20.0)
 WORKERS = int(os.environ.get("WORKERS", "4"))
+#: CONTAINER_MEMORY=12g raises the agent container's memory limit (default 5g; task 71's
+#: lab attempt ran out of it at 2400 s), RUN_TAG=-12g gives the repeated attempt its own id
+from agentsandbox import config as core_config  # noqa: E402
+if os.environ.get("CONTAINER_MEMORY"):
+    core_config.CONTAINER_MEMORY = os.environ["CONTAINER_MEMORY"]
+RUN_TAG = os.environ.get("RUN_TAG", "")
 #: ARMS_ONLY=instructions_only runs one arm (the control arm needs no new image)
 ARMS_ONLY = tuple(x for x in os.environ.get("ARMS_ONLY", "").split(",") if x)
 
@@ -84,6 +97,7 @@ REQUIREMENT = {
     "pubmedqa": ("Requirement: the accuracy on the labelled questions of train.json, under the aggregation "
                  "rule you fix, must be at least 0.80."),
 }
+REQUIREMENT["pubmedqa50"] = REQUIREMENT["pubmedqa"]
 CLOSING = ("State in REPORT.md, in one sentence with the number, whether this requirement is met.")
 
 
@@ -98,15 +112,19 @@ def task_texts() -> dict[str, dict]:
 
 
 def prompt(task_id: str, arm: str, texts: dict[str, dict]) -> str:
-    task = sab.with_text(sab.load_task(sab.task_key(task_id)), texts[task_id])
+    task = sab.load_task(sab.task_key(task_id))
+    if task_id in texts:
+        task = sab.with_text(task, texts[task_id])
     addendum = f"{REQUIREMENT[task_id]} {CLOSING}"
+    if task_id in EXTRA_TASKS:
+        addendum = f"{ROUTE}\n\n{addendum}"
     if arms.ADDENDUM[arm]:
         addendum += "\n\n" + arms.ADDENDUM[arm]
     return sab.build_prompt(task, arm, with_knowledge=True, requirements=None, addendum=addendum)
 
 
 def attempt_id(task_id: str, arm: str) -> str:
-    return f"press-t{task_id}-{arm}"
+    return f"press-t{task_id}-{arm}{RUN_TAG}"
 
 
 def snapshot(task_id: str, arm: str, image: str) -> Path:
@@ -122,10 +140,10 @@ def pilot(images: dict[str, str], solver: str, only: list[str]) -> None:
     for arm in ARMS:
         if ARMS_ONLY and arm not in ARMS_ONLY:
             continue
-        for t in TASKS:
-            if only and t not in only:
+        for t in TASKS + EXTRA_TASKS:
+            if (only and t not in only) or (not only and t in EXTRA_TASKS):
                 continue
-            todo.append(Attempt(attempt_id=attempt_id(t, arm), labels={"task_id": t, "arm": arm, "rep": 1},
+            todo.append(Attempt(attempt_id=attempt_id(t, arm), labels={"task_id": t, "arm": arm, "rep": 2 if RUN_TAG else 1, "memory": core_config.CONTAINER_MEMORY},
                                 agent=ClaudeCode(model=solver), prompt=prompt(t, arm, texts),
                                 snapshot=snapshot(t, arm, images["agent"]),
                                 inputs=sab.inputs(sab.load_task(sab.task_key(t))), limits=LIMITS))
