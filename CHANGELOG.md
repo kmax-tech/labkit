@@ -462,6 +462,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A NaN the run recorded can be cited.** `protocol-fill --from-run`
+  writes a metric whose value is not a number as `= nan` (and an infinity
+  as `inf`, `-inf`), but recheck's citation check looked for digit tokens
+  only, so the written number was never found in the protocol and
+  `02_analyze.py --check` refused the adoption for good (trace of 28c22f9
+  on ScienceAgentBench task 34, 2026-10-29). `recheck._present` now reads
+  a non-finite value as a whole word of the note, sign included, in any
+  case (`nan` is not in `nanometre`); the write-back and the check share
+  one spelling (`recheck.plain_numbers`).
+
 - **The line after a run names the report fields before the adoption.**
   The run's `next:` line, finalize's hint while no result is declared and
   labkit-init's closing step sent the agent from the decided audit and the

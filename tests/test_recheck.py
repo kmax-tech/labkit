@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol_fixture import run_record, PID, head  # noqa: E402
 
-from labkit.checks import recheck  # noqa: E402
+from labkit.checks import recheck, result_render  # noqa: E402
 
 ROWS = [{"case": "a", "n": 4}, {"case": "b", "n": 3}]
 
@@ -161,6 +161,49 @@ class Area(unittest.TestCase):
         # a hyphen between numbers is no sign: both ends are cited
         self.assertTrue(recheck._present("3", "range 3-5"))
         self.assertTrue(recheck._present("5", "range 3-5"))
+
+    def test_a_value_that_is_not_finite_is_a_word_of_the_note(self):
+        """`plain_numbers` writes NaN and the infinities as Python prints
+        them, the same spelling `protocol-fill --from-run` writes into
+        Recorded results; the check finds that word, whole and in any case,
+        never a digit run. The twin: a note without the word is refused."""
+        self.assertEqual(recheck.plain_numbers({"a": float("nan")}), ["nan"])
+        self.assertEqual(
+            result_render.recorded_results_line({"a": float("nan")}, "r"),
+            "a = nan (run r)",
+        )
+        self.assertTrue(recheck._present("nan", "mean = nan"))
+        self.assertTrue(recheck._present("nan", "mean NaN over 3 cases"))
+        self.assertTrue(recheck._present("inf", "ratio = inf"))
+        self.assertTrue(recheck._present("-inf", "log = -inf"))
+        self.assertFalse(recheck._present("nan", "3 nanometres"))
+        self.assertFalse(recheck._present("inf", "see the info line"))
+        self.assertFalse(recheck._present("inf", "log = -inf"))
+        self.assertFalse(recheck._present("-inf", "ratio = inf"))
+        self.assertFalse(recheck._present("nan", "mean = 3.5"))
+
+    def test_a_nan_the_run_recorded_is_cited_or_refused(self):
+        nan_metrics = {"mean_n": float("nan"), "n_cases": 2}
+        self._record(nan_metrics)
+        self.note.write_text(
+            "- **Recorded results:** "
+            + result_render.recorded_results_line(
+                nan_metrics, "2026-10-05T19-00-00_ab12"
+            )
+            + "\n\n"
+            + head(),
+            encoding="utf-8",
+        )
+        v = recheck.holds(self.area, self.out, lambda rows: nan_metrics, self.note)
+        self.assertEqual(v.numbers, ["nan", "2"])
+        self.note.write_text(
+            "- **Recorded results:** mean_n = 3.5, n_cases = 2 "
+            "(run 2026-10-05T19-00-00_ab12)\n\n" + head(),
+            encoding="utf-8",
+        )
+        with self.assertRaises(SystemExit) as cm:
+            recheck.holds(self.area, self.out, lambda rows: nan_metrics, self.note)
+        self.assertIn("numbers not in PROTOCOL-x.md: ['nan']", str(cm.exception))
 
     def test_a_note_with_the_wrong_sign_is_refused(self):
         self._record({"delta": -0.5})

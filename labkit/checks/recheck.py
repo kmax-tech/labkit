@@ -220,7 +220,9 @@ def agree(
 
 
 def plain_numbers(metrics: dict) -> list[str]:
-    """Default: every top-level number, written the way Python prints it."""
+    """Default: every top-level number, written the way Python prints it —
+    `nan`, `inf` and `-inf` for a value that is not finite, as
+    `result_render.recorded_results_line` writes it into the protocol."""
     return [
         str(v)
         for v in metrics.values()
@@ -242,6 +244,13 @@ _NUMBER_TOKEN = re.compile(
 )
 
 
+#: a value no digit writes — NaN and the infinities as `plain_numbers`
+#: gives them, with a sign, in any case: a whole word of the note, so `nan`
+#: is not in `nanometre` and `inf` not in `info`; a dot may follow (the
+#: note's commas are dots by the time it is read)
+_NONFINITE_TOKEN = re.compile(r"(?<![\w.])-?(?i:nan|inf)(?!\w)")
+
+
 def _present(number: str, text: str) -> bool:
     """The number as a whole token of the note, sign and exponent included,
     not as a digit run inside another number or a stamp: `3.5` is not in
@@ -249,9 +258,16 @@ def _present(number: str, text: str) -> bool:
     are not in `1e-5` (review 2026-10-20), and `10` is not in the run id
     `…T10-22-33_ab12` or the date `2026-10-05` — the run id is mandatory
     in every note, so a count equal to one of its parts passed as cited
-    (audit 2026-10-15). A leading `+` is no sign."""
+    (audit 2026-10-15). A leading `+` is no sign. A value that is not
+    finite (`nan`, `inf`, `-inf`) is a whole word of the note, in any
+    case, its sign included: the write-back and this check share one
+    spelling, so a NaN the run recorded can be cited and proven."""
     n = number.replace("−", "-").replace(",", ".").lstrip("+")
     text = _NOT_A_NUMBER.sub(" ", text.replace("−", "-").replace(",", "."))
+    if _NONFINITE_TOKEN.fullmatch(n):
+        return any(
+            t.group().lower() == n.lower() for t in _NONFINITE_TOKEN.finditer(text)
+        )
     return any(t.group().lstrip("+") == n for t in _NUMBER_TOKEN.finditer(text))
 
 
