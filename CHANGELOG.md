@@ -462,6 +462,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-audit <area> --findings` shows every record with an open
+  finding, whatever its grade.** The listing showed the records with an
+  open BLOCKER and the newest; a frozen preflight blocks on every open
+  finding (`findings.open_findings`), so an agent sent to decide an open
+  NOTE found no record that held it and froze on a false "nothing to
+  decide" (SAB task 34 on 28c22f9, 2026-10-29). The records are now
+  selected by the same table the gate reads, and the count line says
+  "without an open finding". An earlier record with nothing open stays
+  hidden, counted.
 - **The pre-commit checks the protocol the commit carries.** Its step 1
   said it checked the staged state and ran `protocol-check` on the
   working tree: a protocol frozen in the index and unfrozen in the tree

@@ -1742,8 +1742,9 @@ class _Listing:
 
 
 def _recovery_records(area: Path, record: Path | None) -> _Listing:
-    """RECORD alone; else every readable record with an open BLOCKER and
-    the newest one, the others counted. Evidence and read errors of the
+    """RECORD alone; else every readable record with an open finding of
+    any grade — what a frozen preflight blocks on (`findings.open_findings`)
+    — and the newest one, the others counted. Evidence and read errors of the
     area are kept beside them (`attempts.area_integrity`). A failed audit
     call — a `-failed.toml`, or an audit attempt the journal ended without
     a record (outcome `none`: an answer that did not read, a call that
@@ -1774,7 +1775,7 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
         except findings.FindingsError as exc:
             return _Listing([], [*errors, str(exc)], 0, changed=changed)
     calls = _open_calls(area, state.records, errors)
-    opened = {u.record.path for u in findings.open_blockers(state.records)}
+    opened = {u.record.path for u in findings.open_findings(state.records)}
     records = [r for r in state.records if r.path in opened]
     if state.records and state.records[-1] not in records:
         records.append(state.records[-1])
@@ -1915,7 +1916,8 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     mode, protocol and promise block superseded (`_recovery_records`);
     each superseded one as superseded, informational; then each
     shown record's decisions (`decision_lines`) — RECORD alone, else every
-    record with an open BLOCKER and the newest, the others counted. Where
+    record with an open finding of any grade (a NOTE still open holds a
+    frozen preflight too) and the newest, the others counted. Where
     an open BLOCKER, an evidence error or such a failed call stands, the
     way to end the area unresolved follows: decide each open BLOCKER
     `deferred` with why (step 1), then the handover command per protocol
@@ -1954,7 +1956,7 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
         blockers += findings.open_blockers([rec])
     if listing.hidden:
         print(
-            f"  {listing.hidden} earlier record(s) without an open BLOCKER not "
+            f"  {listing.hidden} earlier record(s) without an open finding not "
             "shown — `--record FILE` shows one"
         )
     if not blockers and not errors and not failed and not unrecorded:

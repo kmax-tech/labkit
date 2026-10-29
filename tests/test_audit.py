@@ -101,6 +101,11 @@ def run(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]
 CLEAN = "verdict: 0 blockers, 0 warnings, 2 notes\nscope:\nscripts/01_measure.py"
 WARN = "WARNING · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 1 warnings, 0 notes"
 BLOCK = "BLOCKER · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 1 blockers, 0 warnings, 0 notes"
+NOTE = "NOTE · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 0 warnings, 1 notes"
+
+
+def no_model_call(alias, prompt, **kw):
+    raise AssertionError("--findings called the model")
 
 
 class Audit(unittest.TestCase):
@@ -815,6 +820,34 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(
             len(list((area / "audits").glob("*.toml"))), 1
         )  # no new record
+
+    def test_findings_shows_an_earlier_record_with_an_open_note(self):
+        """A frozen preflight blocks on every open finding, whatever its
+        grade (`findings.open_findings`); the listing showed only records
+        with an open BLOCKER, so the NOTE the agent was sent to decide was
+        in a record `--findings` hid (SAB task 34, 2026-10-29). The twin:
+        an earlier record with nothing open stays hidden, counted."""
+        area = repo_with()
+        run(area, NOTE)
+        run(area, CLEAN)
+        run(area, CLEAN)
+        noted, clean, newest = sorted(
+            (area / "audits").glob("*.toml"), key=lambda p: p.stat().st_mtime_ns
+        )
+        out = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "complete", no_model_call),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            rc = audit.main([str(area), "--findings"])
+        self.assertEqual(rc, 0)
+        shown = out.getvalue()
+        self.assertIn(f"{noted.name} — 1 to decide", shown)
+        self.assertIn("  1 · NOTE · a.py:1", shown)
+        self.assertIn(f"{newest.name} — no findings to decide", shown)
+        self.assertNotIn(clean.name, shown)
+        self.assertIn("1 earlier record(s) without an open finding not shown", shown)
 
     def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
         """A computation registers no promise, and `--decide` refuses every id

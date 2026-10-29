@@ -581,7 +581,8 @@ def open_findings(
 def open_blockers(records: Iterable[Record]) -> list[OpenFinding]:
     """The open findings of RECORDS graded BLOCKER (`open_findings`): what
     the stop and the commit hold, what a handover owes decided first, what
-    `labkit-audit --findings` leads with."""
+    `labkit-audit --findings` opens its handover steps on (its listing
+    shows every record with an open finding of any grade)."""
     return [u for u in open_findings(records) if u.grade == "BLOCKER"]
 
 

@@ -270,7 +270,7 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("1. decide it:", out)
         self.assertIn("<why it stays unresolved>", out)
         self.assertIn("2. hand over: protocol-fill", out)
-        self.assertIn("1 earlier record(s) without an open BLOCKER not shown", out)
+        self.assertIn("1 earlier record(s) without an open finding not shown", out)
 
     def test_a_stop_the_handover_lets_pass_names_the_loss(self):
         # it passed in silence: "nothing wrong" instead of "loss acknowledged"
