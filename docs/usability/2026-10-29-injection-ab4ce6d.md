@@ -55,6 +55,28 @@ the commit (the delivered state exists only through `--no-verify`). The
 baseline exits are 0/0, except lab-2 fit-assay 1/0 and lab-2 apply-screen
 1/0. No mutation produced a warning without a blocker.
 
+## Why these nine, and what they do not cover
+
+The mutations were chosen by hand along the chain the harness claims to
+hold — `intent → promise → code → run → reported number`
+(docs/architecture.md, "The chain") — one change per link whose hold is
+a guaranteed check: the code after the run (M1), the registered
+constant (M3), the registration text (M6, M6b), the audit record (M4),
+the run's record (M5) and the number inside the generated block (M2b);
+plus two changes deliberately outside what the chain bound at the time,
+to see where the hold ends: the number outside every block (M2) and the
+output file (M7). The selection is targeted, not systematic: it was not
+derived from an enumeration of the chain's rows, and no coverage is
+claimed. Links the nine leave untouched include the data the run read
+(the file behind `config.json`'s data entry changed after the run), the
+prompt block of a model in the loop, the protocol's prose fields the
+analysis record binds (Terms, Data / scope, Exclusions), the decision
+records (`--decide` reasons and statuses), the review records, and a
+second run swapped in under the declared id. A systematic version
+enumerates the rows of the chain table, derives one mutation per row
+that the row's check should hold and one at its edge, and reports both
+the held and the unheld rows (2026-10-29, on the reader's objection).
+
 ## What the count rests on
 
 The mutations went into the delivered states as they were, not into

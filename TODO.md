@@ -1540,7 +1540,14 @@ Notiert, nicht geplant:
    auch eine falsch formatierte Datei). (3) Abgetippte Zahlen: ein
    Widerspruch blockt garantiert nur, wenn dieselbe deklarierte Kennzahl
    eindeutig zugeordnet ist; praktisch: der erzeugte Ergebnisblock
-   liefert die hervorgehobene Ergebniszahl selbst. (4) PubMedQA: den
+   liefert die hervorgehobene Ergebniszahl selbst. (3b) Injektion
+   systematisch: die neun Mutationen waren gezielt entlang der Kette
+   gewählt, nicht aus der Kettentabelle abgeleitet (Auswertung „Why these
+   nine"); nächste Runde: je Zeile der Kettentabelle eine Mutation, die
+   die Prüfung halten soll, und eine am Rand; unberührt bisher: Daten nach
+   dem Lauf geändert, Prompt-Block, gebundene Prosafelder,
+   Entscheidungs- und Review-Records, zweiter Lauf unter der deklarierten
+   ID; vor der Injektion die Stände auf Baseline 0 Blocker reparieren. (4) PubMedQA: den
    Modellzugang (`claude -p`) im Aufgabentext beider Arme nennen; große
    Fits: Zeitbudget an einem vollständigen Messlauf bemessen, weniger
    Null-Fits nur mit fachlicher Begründung. (5) Danach drei Versuche je
