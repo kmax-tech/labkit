@@ -890,6 +890,31 @@ class RegisteredReport(unittest.TestCase):
         self.assertEqual(gap.grade, "BLOCKER")
         self.assertIn(self.OWED, gap.text)
 
+    def test_the_adoption_is_not_held_against_itself(self):
+        """Route probe, 2026-10-29: with the registered REPORT.md already in
+        the tree (no block yet), `--from-run` ran this check on the proposed
+        protocol and was refused for the block only `--into` can write after
+        it; `--into` was refused for the missing declaration; the hook for
+        both. The adoption's own check (PROPOSED) does not hold the report;
+        the tree and the index do (the twin)."""
+        area = self._area(git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text("# Report\n\nmean = 0.69 over 12 cases\n", encoding="utf-8")
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        declared = (
+            head(repeat_cost="low", result=self.RUN, promises=C1_BLOCK)
+            + text[text.index("- **Question") :]
+        )
+        ctx = report_check.checked(
+            area, proto, state=report_check.PROPOSED, text=declared
+        )
+        self.assertEqual(report_check.report_findings(ctx), [])
+        ctx = report_check.checked(area, proto)
+        (gap,) = report_check.report_findings(ctx)
+        self.assertIn(self.OWED, gap.text)
+
     def test_the_twin_the_result_block_of_the_declared_run_passes(self):
         area = self._area(declared=self.RUN, git=True)
         root = area.parent.parent

@@ -488,6 +488,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The adoption is not held against itself.** With the registered
+  report already in the tree and no block yet, `--from-run` ran the
+  registered-report check on the protocol it was about to write and was
+  refused for the block only `--into` can write after the declaration;
+  `--into` was refused for the missing declaration; the hook for both
+  (route probe on a1ab9f0, 2026-10-29). The adoption's own check no
+  longer holds the report; the stop and the commit do.
+
 - **An adoption written but not staged is named as such.** `protocol-fill
   --from-run` writes the declaration into the tree; a commit that stages
   the report and not the protocol was told "cites <run> … which declares

@@ -1174,7 +1174,14 @@ def report_findings(ctx: Checked) -> list[GateFinding]:
     else one blocker; nothing registered or not delivered: []. The file
     is read relative to the area's layout root (`Checked.repo`: the git
     repository where there is one), from the index when the state is the
-    index."""
+    index. Not held on the PROPOSED state — the adoption's own check of the
+    protocol it is about to write: the result block can only be written
+    after the declaration (`--into`), so holding the report there held the
+    adoption against itself (route probe, 2026-10-29: `--from-run` refused
+    for the missing block, `--into` for the missing declaration); the stop
+    and the commit hold the delivered report."""
+    if ctx.state == PROPOSED:
+        return []
     gap = report_owed(
         ctx.protocol, ctx.text, ctx.declared, ctx.repo, staged=ctx.state == INDEX
     )

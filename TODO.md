@@ -1560,7 +1560,30 @@ Notiert, nicht geplant:
    gestempelten Stand (messen, fachlichen Fehler korrigieren, neu messen,
    übernehmen, gültige Ergebnisdatei und Bericht abgeben); die Bewertung
    zählt vier Dinge getrennt — ehrlicher Anspruch, gebundene Zahl,
-   gültige Abgabe, Standarderfüllung — und weist Timeouts separat aus. (1) und (2) starten
+   gültige Abgabe, Standarderfüllung — und weist Timeouts separat aus.
+   **Funktionsprobe gelaufen** (2026-10-29 abends,
+   [Bericht](docs/usability/2026-10-29-route-probe-a1ab9f0/route-probe.md)):
+   der Weg ging auf `a1ab9f0` von Hand durch — Registrierung, gepflanztes
+   AUC statt Accuracy vom ersten Audit an der richtigen Zeile benannt,
+   Reparatur, zweite Messung, Übernahme, Ergebnisdatei mit Hash in
+   outputs.json, Bericht mit Block, report-check und Hook grün, beide
+   neuen Halte halten (editierte CSV, Bericht ohne Block); 13,7 Minuten,
+   1,64 $. Fünf Knicke: (a) die Übernahme hielt sich selbst (registrierte
+   REPORT.md im Baum: `--from-run` verweigert wegen fehlendem Block,
+   `--into` wegen fehlender Deklaration) — **behoben**, der eigene Check
+   der Übernahme hält den Bericht nicht mehr; (b) der Stempel spricht
+   `high`: ein unausgefülltes `repeat_cost` lesen Nächste-Schritte-Liste
+   und `--contract` als high und verlangen Preflight, Freeze, detached
+   run; (c) `protocol-fill` ist mit einem gestempelten Feld in der Liste
+   alles-oder-nichts, `--force` auf Data / scope warf die erzeugten
+   Zahlen weg; (d) kein Kommando setzt eine Versprechenskonstante
+   (`margin` von Hand im Kopf); (e) der gestempelte Test bricht bei
+   einem Score-Wechsel (String-Golds, Klassenzähl-Schlüssel), nachdem
+   `code-check` sauber war; dazu: das Band bindet sich bei der ersten
+   Messung still an den Score (`band_check` prüft danach nicht mehr) —
+   nach einer Score-Reparatur läuft die Messung unter einem Band, das die
+   Regel nicht gibt; das Audit fand es. (b) bis (e) und das Band: je eine
+   Entscheidung, vor der nächsten Runde nur (b). (1) und (2) starten
    auf Ansage.
 
 
