@@ -1513,10 +1513,20 @@ Notiert, nicht geplant:
    noch nicht erreicht; PubMedQA und Timeouts separat ausweisen. Drei
    Leistungen auseinanderhalten: ehrlicher Anspruch, gebundene Zahl,
    gültige Abgabe (34: labkit änderte die ersten zwei, nicht die
-   dritte). Reihenfolge, je eine Entscheidung: (1) die sechs
-   Laborspuren lesen und den Weg zur Ergebnisübernahme kürzen — wo
-   fehlt der nächste Schritt, wo wiederholt sich Arbeit, wo bleibt ein
-   fertiger Lauf unübernommen; die kleinste belegte Änderung bauen.
+   dritte). Reihenfolge, je eine Entscheidung: (1) **gelesen**
+   (sechs Lesungen, Archiv `readings/`; Tabelle in der Auswertung):
+   dreimal endet die Route damit, dass der Agent die Run-ID aus
+   REPORT.md streicht, weil der Hook den Bericht für einen Lauf
+   zurückwies, der „kein Ergebnis deklariert" — ein Bericht mit Zahl
+   und ohne Lauf liegt außerhalb des Gates; viermal wird ein Befund
+   repariert statt entschieden und der auditierte Lauf bleibt zurück;
+   zweimal fehlt jede Angabe zur Uhr (71, PubMedQA). Kleinste belegte
+   Änderungen: (1a) REPORT.md mit Zahl und ohne Run-ID bei vorhandenen
+   Läufen halten, mit den drei Auswegen `--from-run`, `--discuss`,
+   `--handover` (Entscheidung: neuer Blocker); (1b) „declares no
+   result" nennt das nicht gestagte Protokoll, wenn der Baum den Lauf
+   deklariert und der Index nicht (34; bauen); (1c) „FIX lines: none"
+   öffnet die leere FIX-Sektion (21; gebaut, Commit nach `bed3bf8`).
    (2) Ergebnisdateien verbindlich registrieren (die Datei, die der
    Auftraggeber verwendet, gehört zur gebundenen Ausgabe; bei genannten
    Spalten zusätzlich Spalten und Reihenfolge prüfen — ein Hash bindet

@@ -144,6 +144,50 @@ labkit changed the first two and not the third: the protocol binds the
 number, not the form of the result file. The injection benchmark names
 the same gap from the other side (`pred_results/` pinned to no run).
 
+## The route, read in six traces
+
+Six readers (one agent per trace, the same questions: the first
+documented point at which the route from a kept run to an adopted,
+declared result breaks, with intent, command, feedback and the next
+steps; the readings are in the internal archive, `readings/`):
+
+| task | first break | what the agent did then | route's end |
+|---|---|---|---|
+| 21 | the auditor's answer refused twice on form: "FIX lines: none — the area has no earlier decided BLOCKER." read as a remark after the last finding | read the kept answer file, edited the code, measured again; three full runs with the same number, no finding decided | adopted at the third run after a rejected review, `deferred` without a review; commit passes |
+| 34 | after `--from-run` wrote the `[result]` head into the protocol in the tree, the commit staged CSV, record and report but not the protocol; the hook read the index's protocol: "cites … which declares no result" | took it for the rejected review's effect, withdrew the declaration, discussed, rewrote REPORT.md twice | deleted the run id line; commit passes |
+| 71 (5 GB) | the first full run backgrounded at 300 s, OOM-killed (exit 137) | "a simplified version … without all the labkit complexity"; six more fits, all killed | no report |
+| 71 (12 GB) | the first full run backgrounded at 120 s; "try running the measurement again" beside it | second and third runs started under a script being rewritten; eight debug runs; the final run at 2043 s, one of five folds done (239 s per fold) | no report |
+| 15 | the auditor's "score [C1] on the test lane fitted on all train items" answered with a "simpler fix" that left 0 test items; `fixed` decided before the re-audit | the second audit held it unresolved; "given the complexity … I should document this"; four commits refused ("cites … which declares no result") | deleted the run id; commit passes |
+| 60 | a registration BLOCKER ("a computation has no bar; register anew under `[replaces]`") decided `accepted … stands` with a reason that disputes it; seven decisions in one chain, all rejected by the review | `--from-run` refused four times (undecided, unreviewed), `--discuss` and `--handover` never run | "not using the protocol adoption, but just presenting the results"; run id removed; commit passes |
+| PubMedQA (50) | 550 model calls per run, about 11.5 min; the first run stopped at the background limit, the second failed the balance check, the third kept at 12:19:39 | `labkit-finalize` and `python -m labkit.finalize` (no such names; `grep -i lab` over `.venv/bin` hid `finalize`); the audit started at 12:20:03 | timed out in the audit; report "[PENDING]" |
+
+Three things recur. **The run id goes last.** In 34, 15 and 60 the
+delivered REPORT.md lost its run id deliberately, after the hook had
+refused the report for citing a run that "declares no result"; a report
+with a number and no run is outside the gate (the injection benchmark's
+second miss, now seen three times from the agent's side). **A finding is
+repaired, not decided.** 21 (three runs, no decision), 60 (five runs,
+`stands` on a BLOCKER the reason disputes), 15 (`fixed` before the
+re-audit), 34 (two runs after a WARNING): the agents answer an audit by
+changing code and measuring again, and the audited run is left behind.
+**Nothing names the clock.** 71 and PubMedQA ran their measurement in
+the foreground, backgrounded it at the harness's limit, started another
+beside it, polled; AGENTS.md's detached route (`runlog start`,
+`runlog --wait`) was not taken, and no stamped line says what one run
+costs.
+
+The smallest changes the readings support, in order: (1) a REPORT.md
+that reports a number and cites no run, in a repository that holds kept
+runs, is held by the hook and report-check with the three ways out
+(`--from-run`, `--discuss`, `--handover`) — the gate the agents walked
+around; (2) the hook's "declares no result" names the unstaged protocol
+when the tree's protocol declares the cited run and the index's does not
+(34's first break); (3) "FIX lines: none" opens the empty FIX section
+(21's first break; repaired the same day). The fix-and-rerun habit and
+the clock are the agents' and the harness's; a stamped line after the
+probe naming the detached route and the cost of one run is the candidate
+for the next reading, not a repair this one proves.
+
 ## What this means for the demonstration
 
 The two-arm draw of the morning (`2026-10-29-two-arms-haiku-ab4ce6d.md`)
