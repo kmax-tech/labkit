@@ -1660,9 +1660,15 @@ Notiert, nicht geplant:
    Kettenzeile, gehaltene wie ungehaltene Fälle berichten (3b). Erst
    danach eine neue kalte Vergleichsrunde mit festem Commit, Image und
    Vertrag — sonst bleibt unklar, ob Fehlschläge aus Vertragsproblemen,
-   Zeitmangel oder Agentenverhalten kommen. Dazu der Rerun der Runden 2
-   und 3 in labkit-paper mit dem korrigierten Standard-Check, bevor
-   deren „0 von 6" zitiert wird. (1) und (2) starten
+   Zeitmangel oder Agentenverhalten kommen. Der Rerun der Runden 1 bis 3 aus
+   Bereich 15 mit dem korrigierten Standard-Check ist erledigt
+   (2026-10-29 spät, Evidenz `standard-rerun-area15/`): je eine von
+   sechs standardkonform (Runde 1: t15; Runden 2 und 3: t21), statt
+   „0 von 6"; Runde 2, t71 ohne Archiv im Checkout. Nebenbefund für
+   labkit-paper: `sandboxlab.batch.work_dir` entpackt Archive mit
+   `filter="data"`, der die absoluten Symlinks des venv
+   (`.venv/bin/claude-hook`) verweigert — ein Rescoring aus dem Archiv
+   bricht ab. (1) und (2) starten
    auf Ansage.
 
 

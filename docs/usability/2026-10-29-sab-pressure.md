@@ -32,8 +32,10 @@ held-out or judged on a sample, the lab arm measured at the file's rate
 and said "not met", had its criterion-against-code mismatch caught by
 the audit and said "not validated", or named the deviation it took. The
 price: one lab attempt (71) ran into the 40-minute limit without a
-report, and labkit's own standard was met by none of the six lab
-states.
+report, and labkit's own standard was met by one of the six lab
+states (21) — corrected on 2026-10-29 late: the standard check had held
+computations to a criterion they do not owe, and the figure first
+reported here, none of six, is superseded (see "The standard" below).
 
 | arm | task | hidden evaluation | report on the requirement | what the state shows | class | turns | s | $ |
 |---|---|---|---|---|---|---|---|---|
@@ -59,11 +61,15 @@ repeats (after the first twelve, same day): task 71's lab attempt with
 12 GB instead of 5 GB, and PubMedQA as the house task `pubmedqa50` (50
 test questions) with the route to the model named in the task text for
 both arms. Hidden evaluation passes in the first twelve: control 1 of 6,
-lab 2 of 6; in the repeats both PubMedQA arms pass. labkit's standard met: 0
-of 6 lab states (gaps: REPORT.md cites no run id in four, the criterion
-and admissibility condition not written at the first measurement's
-commit in three, finalize or report-check blockers in four, no answering
-run in two).
+lab 2 of 6; in the repeats both PubMedQA arms pass. labkit's standard met: 1
+of 6 lab states (21) after the check's correction; as first measured, 0
+of 6 — the instrument (labkit-paper's `sandboxlab.standard_check`) held
+every protocol to "Success / failure criterion" and "Admissibility
+condition" at the first measurement, which labkit owes only where the
+kind has a bar; rerun with the labels read from labkit's contract per
+kind (labkit-paper-main 1088c0a), 21 is met and the others stay held on
+report-check blockers (four), no run id in the report (three), no
+answering run (two).
 
 ## What the pairs show
 
@@ -114,11 +120,16 @@ run in two).
    fit plus five null refits each, thirty ridge fits on the 860 MB
    arrays, where the control agent fitted once. On this task the
    skeleton's route costs more than the time limit allows.
-6. **The standard, again 0 of 6.** As in area 15's rounds 2 and 3, no
-   lab state passed labkit's own check: the agents reached the number
-   and the report but not the adoption. The nine round-3 repairs were
-   in this labkit; what remains is the length of the route from a
-   kept run to a declared result, not a defect named here.
+6. **The standard: 1 of 6 after the instrument's correction, 0 of 6
+   as first measured.** Task 21's lab attempt is standard-conforming
+   once the check stops holding a computation to a criterion; the
+   other five stay held on report-check blockers, a report without a
+   run id, or no answering run: the agents reached the number and the
+   report but not the adoption. Area 15's rounds 1 to 3 (0 of 6 each as
+   first measured) rerun with the corrected check the same night: one of
+   six met in each round (round 1: task 15; rounds 2 and 3: task 21;
+   round 2's task-71 archive absent in the checkout) — the figure to
+   cite, with the instrument named.
 
 ## Classed
 
@@ -130,7 +141,7 @@ run in two).
 | lab 71, repeat: thirty fits on the arrays do not fit 2400 s | labkit (the fit skeleton's null refits on a large task) and infrastructure (the limit) |
 | 34, both arms: a column the task names dropped from the output (`HRV_SDANN2`, `HRV_SD2d`), the evaluation cannot read it | agent, both arms (the task states the columns); the evaluation counts it as a failure, as the benchmark does |
 | lab 71: no report at 2400 s, the arrays against the 5 GB limit | infrastructure (container memory) and agent |
-| lab, 6 of 6: labkit's standard not met (no run id in the report, registration gaps, adoption blockers) | agent, on labkit's route; the route's length is the open cost |
+| lab, 5 of 6: labkit's standard not met (no run id in the report, adoption blockers); 21 met after the check's correction | agent, on labkit's route; and the instrument, corrected |
 
 ## Three things, held apart
 
@@ -208,5 +219,6 @@ on the four unimpaired tasks, criteria fixed before, a second judge
 independent of the first; PubMedQA with the route named; 71's budget
 measured on one complete run of the skeleton before the limit is set
 (fewer null refits change the statistical cover and need a reason). The lab arm's cost is the other half of the
-result: longer, about twice the turns, one timeout, and no state that
-met labkit's own standard.
+result: longer, about twice the turns, one timeout, and one state of
+six that met labkit's own standard (the figure of none, first reported,
+was the instrument's).
