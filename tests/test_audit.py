@@ -902,6 +902,50 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertIn("owes its effect", decided.getvalue())
         self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
+    def test_a_missing_area_is_refused_with_one_sentence_on_every_step(self):
+        """`labkit-audit experiments/01-x --findings` from a subdirectory
+        said "no audit record yet" where records existed, and `--review`
+        a 30-line FileNotFoundError traceback (SAB round 1, 2026-10-29):
+        a path that is no directory is refused before any step, with the
+        path as given, the working directory and the way back. The twin:
+        the area reached from the repository root is read as before."""
+        area = repo_with()
+        run(area, WARN)
+        old = Path.cwd()
+        os.chdir(area / "scripts")
+        here = Path.cwd()  # as the sentence names it (macOS: /private/var)
+        try:
+            for step in (["--findings"], ["--review"], ["--decide", "1", "fixed", ""]):
+                with self.subTest(step=step):
+                    out, err = io.StringIO(), io.StringIO()
+                    with (
+                        mock.patch.object(audit.llm, "complete", no_model_call),
+                        contextlib.redirect_stdout(out),
+                        contextlib.redirect_stderr(err),
+                    ):
+                        rc = audit.main(["experiments/01-x", *step])
+                    self.assertEqual(rc, 2)
+                    self.assertEqual(
+                        err.getvalue(),
+                        f"labkit-audit: no such area: experiments/01-x (relative to "
+                        f"{here}) — run from the repository root or give "
+                        "the path from there, or the area's name as `labkit-init "
+                        "exp` printed it (01-<name>)\n",
+                    )
+                    self.assertEqual(out.getvalue(), "")
+            os.chdir(area.parents[1])
+            out = io.StringIO()
+            with (
+                mock.patch.object(audit.llm, "complete", no_model_call),
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                rc = audit.main(["experiments/01-x", "--findings"])
+            self.assertEqual(rc, 0)
+            self.assertIn("1 to decide", out.getvalue())
+        finally:
+            os.chdir(old)
+
     def test_findings_without_a_record_and_with_mode_are_refused(self):
         area = repo_with()
         for argv in (

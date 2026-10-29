@@ -250,14 +250,22 @@ def shown(path: Path, base: Path) -> str:
 
 
 def no_such_area(area: Path) -> str:
-    """The sentence for an area path that is not a directory. A relative
-    path resolves against the working directory, so the sentence names it
-    (2026-10-07: an agent called code-check from inside the area with the
-    repo-relative path and tried four spellings)."""
-    where = "" if area.is_absolute() else f" (relative to {Path.cwd()})"
+    """The sentence for an area path that is not a directory, the one every
+    command refuses with. A relative path resolves against the working
+    directory, so the sentence names it and the way back: run from the
+    repository root or give the path from there (2026-10-07: an agent called
+    code-check from inside the area with the repo-relative path and tried
+    four spellings; 2026-10-29: `labkit-audit experiments/01-x --findings`
+    from a subdirectory)."""
+    if area.is_absolute():
+        return (
+            f"no such area: {area} — give the area's path or its name "
+            f"as `labkit-init exp` printed it (01-<name>)"
+        )
     return (
-        f"no such area: {area}{where} — give the area's path or its name "
-        f"as `labkit-init exp` printed it (01-<name>)"
+        f"no such area: {area} (relative to {Path.cwd()}) — run from the "
+        f"repository root or give the path from there, or the area's name as "
+        f"`labkit-init exp` printed it (01-<name>)"
     )
 
 

@@ -1269,7 +1269,9 @@ def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
 def main(argv: list[str]) -> int:
     """Command line of `labkit-audit`: audit one area in one mode, store a
     decision the person gives on one of its findings (`--decide`), or show
-    what there is to decide (`--findings`)."""
+    what there is to decide (`--findings`). An area path that is no
+    directory is refused first, with exit 2 and the sentence every command
+    uses (`repo.no_such_area`), whatever the step."""
     ap = argparse.ArgumentParser(
         prog="labkit-audit",
         description=(__doc__ or "").splitlines()[0],
@@ -1359,6 +1361,12 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--out", type=Path, help="also write the report here")
     args = ap.parse_args(argv)
     _check_args(ap, args)
+    if not args.area.is_dir():
+        # before any step: `--findings` from a subdirectory with the
+        # repo-relative path read "no audit record yet", `--review` a
+        # traceback (SAB round 1, 2026-10-29)
+        console.refuse("labkit-audit", no_such_area(args.area))
+        return 2
     if args.mode is None:
         return _without_audit(args)
     if args.mode == CLARITY:

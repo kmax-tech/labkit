@@ -488,6 +488,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A missing area is refused with one sentence on every `labkit-audit`
+  step.** `labkit-audit experiments/01-x --findings` from a subdirectory
+  of the repository said "no audit record yet" where records existed, and
+  `--review` there ended in a FileNotFoundError traceback (SAB round 1,
+  2026-10-29): the relative path resolved against the working directory,
+  and only `--mode` checked the area before its step. `main` now refuses
+  a path that is no directory before any step, exit 2, with the sentence
+  every command uses (`repo.no_such_area`), which for a relative path
+  names the path as given, the working directory and the way back: "run
+  from the repository root or give the path from there".
+
 - **An undeclared repeat cost is a decision to make, not a lane to walk.**
   The stamp's next-step list and `protocol-check --contract` read an
   unfilled `repeat_cost` as high (the gates do, and keep doing so) and
