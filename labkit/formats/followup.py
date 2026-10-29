@@ -220,14 +220,18 @@ def release_holds(
     decision as it stands now (`decision_digest`), with the required check
     shown (`check_present`) — and only while no covering record holds a
     verdict other than `resolved` on any finding of that origin: the state
-    is the same, so a later favourable draw does not outvote it. A head in
-    a covering record is decided there and held by that record's gates;
-    of those, one rule is this module's: a BLOCKER `fixed` in a covering
+    is the same, so a later favourable draw does not outvote it. A head
+    followed up only in a record outside COVERING is held as followed up
+    in a record that no longer covers this state, not as never followed
+    up: the follow-up happened, the state moved since. A head in a
+    covering record is decided there and held by that record's gates; of
+    those, one rule is this module's: a BLOCKER `fixed` in a covering
     record is held, since no follow-up has seen the repair. Raises what
     `chain` raises."""
     c = chain(records)
     in_cover = {r.path.name for r in covering}
     verdicts = [v for r in covering for v in r.fix_verdicts]
+    stale = [r for r in records if r.path.name not in in_cover and r.fix_verdicts]
     out: list[Hold] = []
     for m in c.heads():
         f = m.finding
@@ -249,17 +253,23 @@ def release_holds(
             continue
         if f.status not in DECIDED:
             continue
-        hold = _earlier_hold(m, c, verdicts, metrics)
+        hold = _earlier_hold(m, c, verdicts, stale, metrics)
         if hold is not None:
             out.append(hold)
     return out
 
 
 def _earlier_hold(
-    m: Member, c: Chain, verdicts: list[FixVerdict], metrics: dict | None
+    m: Member,
+    c: Chain,
+    verdicts: list[FixVerdict],
+    stale: list[Record],
+    metrics: dict | None,
 ) -> Hold | None:
     """Why the earlier head M is not released by VERDICTS (the covering
-    records'), or None."""
+    records'), or None. STALE are the records outside the cover that hold
+    follow-ups, oldest first: a follow-up of M there is named instead of
+    "never followed up"."""
     f = m.finding
     of_origin = {x.ref for x in c.of_origin(c.origin[m.ref])}
     against = [v for v in verdicts if v.ref in of_origin and v.verdict != "resolved"]
@@ -280,6 +290,14 @@ def _earlier_hold(
                 m.ref,
                 f"no follow-up, and the run lacks the required check `{f.check}`",
                 f"{check_order(f.check, f.check_note)}; then a new run, and {STEP_AUDIT}",
+            )
+        followed = [r for r in stale if any(v.ref == m.ref for v in r.fix_verdicts)]
+        if followed:
+            return Hold(
+                m.ref,
+                f"followed up in {followed[-1].path.name}, which no longer covers "
+                f"this state",
+                STEP_AUDIT,
             )
         return Hold(m.ref, f"decided `{f.status}`, never followed up", STEP_AUDIT)
     if not valid:

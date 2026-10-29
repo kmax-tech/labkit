@@ -462,6 +462,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A follow-up that no longer covers the state is named, not denied.**
+  An earlier BLOCKER followed up in an analysis record that covered the
+  state then, but not the state reported now (the run's metrics or the
+  setup's prose moved since), was held by report-check as "decided
+  `fixed`, never followed up" — the follow-up had happened, the record
+  was merely stale, and the agent read the line as a lost record (trace
+  of 28c22f9 on ScienceAgentBench task 34, 2026-10-29).
+  `followup.release_holds` now reads the follow-ups of every record of
+  the area and holds such a head with "followed up in <record>, which no
+  longer covers this state", the follow-up audit as the step; "never
+  followed up" stays for a head no record judged.
+
 - **A NaN the run recorded can be cited.** `protocol-fill --from-run`
   writes a metric whose value is not a number as `= nan` (and an infinity
   as `inf`, `-inf`), but recheck's citation check looked for digit tokens

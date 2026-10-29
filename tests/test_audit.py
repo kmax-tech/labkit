@@ -2566,6 +2566,27 @@ class FollowupGate(unittest.TestCase):
         )
         self.assertEqual(self.gate(area), [])
 
+    def test_a_follow_up_of_an_earlier_state_is_named_as_stale_not_as_missing(self):
+        """A follow-up found the BLOCKER resolved; then the state moved (a
+        new run's metrics), so its record covers no more. The hold names
+        that record as no longer covering, with the follow-up audit as the
+        step — not "never followed up", which it was. The twin: a follow-up
+        of the state reported releases."""
+        area, r1 = self.fv.area()
+        r2 = self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
+        self.assertEqual(self.gate(area), [])
+        self.cr.new_state(area, 1)
+        (line,) = self.gate(area)
+        self.assertIn(
+            f"{r1.name}#1: followed up in {r2.path.name}, which no longer covers "
+            f"this state",
+            line,
+        )
+        self.assertNotIn("never followed up", line)
+        self.assertIn("--mode analysis` follows it up", line)
+        self.follow_up(area, f"FIX · {r1.name}#1 · resolved · still gone")
+        self.assertEqual(self.gate(area), [])
+
     def test_in_an_area_of_several_protocols_no_step_names_the_refused_audit(self):
         """The follow-up audit refuses an area holding several protocols
         (`audit.earlier_of`); the hold says so instead of naming the command
