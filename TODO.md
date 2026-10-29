@@ -1521,11 +1521,18 @@ Notiert, nicht geplant:
    und ohne Lauf liegt außerhalb des Gates; viermal wird ein Befund
    repariert statt entschieden und der auditierte Lauf bleibt zurück;
    zweimal fehlt jede Angabe zur Uhr (71, PubMedQA). Kleinste belegte
-   Änderungen: (1a) REPORT.md mit Zahl und ohne Run-ID bei vorhandenen
-   Läufen halten, mit den drei Auswegen `--from-run`, `--discuss`,
-   `--handover` (Entscheidung: neuer Blocker); (1b) „declares no
+   Änderungen: (1a) gebaut (Max' Entscheidung, `7e7fbb8`, `7625d6e`, `54ed2f7`):
+   das Protokoll registriert seine Berichtsdatei (`report = "REPORT.md"`,
+   `labkit-init exp --report-file`), und ein gelieferter registrierter
+   Bericht ohne Ergebnisblock des deklarierten Laufs oder Übergabeblock
+   wird gehalten — Run-ID gestrichen oder eingetippt, Diskussionsblock
+   allein: nichts davon gibt frei; (2) ebenfalls gebaut (`54558f6`,
+   `af8ff72`, `91160b8`): die Ergebnisdatei ist registrierte Ausgabe des
+   antwortenden Laufs (DELIVERABLES im Skelett, Hash in outputs.json,
+   finalize und report-check halten eine veränderte oder fehlende Datei),
+   die SAB-Spalten werden beim Schreiben geprüft (DELIVERABLE_COLUMNS); (1b) „declares no
    result" nennt das nicht gestagte Protokoll, wenn der Baum den Lauf
-   deklariert und der Index nicht (34; bauen); (1c) „FIX lines: none"
+   deklariert und der Index nicht (34; gebaut, nach `54ed2f7`); (1c) „FIX lines: none"
    öffnet die leere FIX-Sektion (21; gebaut, Commit nach `bed3bf8`).
    (2) Ergebnisdateien verbindlich registrieren (die Datei, die der
    Auftraggeber verwendet, gehört zur gebundenen Ausgabe; bei genannten

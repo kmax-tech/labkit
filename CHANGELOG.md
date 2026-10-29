@@ -488,6 +488,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An adoption written but not staged is named as such.** `protocol-fill
+  --from-run` writes the declaration into the tree; a commit that stages
+  the report and not the protocol was told "cites <run> … which declares
+  no result", and the agent of task 34 (pressure pilot, 2026-10-29) took
+  that for a rejected review's effect, withdrew the declaration and later
+  deleted the run id. The hook now says the adoption is not staged and
+  names `git add <protocol>`.
+
 - **The columns a task names are checked at the deliverable's write.**
   In the pressure pilot both agents on task 34 delivered files with
   named columns missing, and the evaluation could not read them

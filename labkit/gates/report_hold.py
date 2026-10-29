@@ -985,6 +985,17 @@ def undeclared_findings(
         ]
     for run_id, protocol in promoted:
         named = report_blocks.path_from_report(protocol, path)
+        if adoption_unstaged(protocol, run_id, sources):
+            out.append(
+                blocker(
+                    f"{rel}: cites {run_id}, the answering run of {named}, which "
+                    f"declares it in the working tree but not in the index — the "
+                    f"adoption `protocol-fill --from-run` wrote is not staged",
+                    fix=f"`git add {named}` stages the protocol with its "
+                    f"declaration; commit the report and the protocol together",
+                )
+            )
+            continue
         # adoption and discussion both owe an audit or a review, which no
         # lost evidence lets start: then the way out is the restore or the
         # removal, in place of the blocker below
@@ -1023,6 +1034,24 @@ def undeclared_findings(
             )
         )
     return out
+
+
+def adoption_unstaged(protocol: Path, run_id: str, sources: Sources) -> bool:
+    """Does the working tree's PROTOCOL declare RUN_ID while SOURCES — the
+    index, when the gate runs staged — do not? Then the adoption was written
+    and not staged, and the hold names that instead of "declares no result"
+    (the agent of task 34, 2026-10-29, read the latter as a rejected
+    review's effect, withdrew the declaration and later deleted the run id).
+    False when SOURCES declare it, when the tree's protocol is gone or does
+    not read, or when the gate reads the tree itself."""
+    if sources.declared.get(protocol) == run_id:
+        return False
+    try:
+        return (
+            protocol_block.declared_run(protocol.read_text(encoding="utf-8")) == run_id
+        )
+    except (OSError, UnicodeError, protocol_block.BlockError):
+        return False
 
 
 #: why a report is held though no path names it: it discusses a run of an

@@ -651,6 +651,35 @@ class IfReported(unittest.TestCase):
         self.assertIn("report-check", out)
         self.assertIn("the working tree differs from the index", out)
 
+    def test_an_adoption_written_but_not_staged_is_named_as_such(self):
+        """Task 34 of the pressure pilot (2026-10-29): `--from-run` wrote the
+        declaration into the tree, the commit staged the report and not the
+        protocol, and the hook said "declares no result"; the agent took it
+        for a rejected review's effect and withdrew. The hold now names the
+        unstaged protocol and `git add`; staged, that line is gone (the twin).
+        """
+        area = self._area("C1 met", git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        prose = text[text.index("- **Question") :]
+        proto.write_text(
+            head(repeat_cost="low", result=self.RUN, promises=C1_BLOCK) + prose,
+            encoding="utf-8",
+        )
+        report = root / "REPORT.md"
+        report.write_text(f"# Report\n\nRun ID: {self.RUN}\n", encoding="utf-8")
+        self._git(root, "add", "REPORT.md")
+        code, out = self._staged_gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("declares it in the working tree but not in the index", out)
+        self.assertIn("`git add experiments/01-x/PROTOCOL-x.md`", out)
+        self.assertNotIn("which declares no result", out)
+        self._git(root, "add", "experiments/01-x/PROTOCOL-x.md")
+        code, out = self._staged_gate(root, report)
+        self.assertNotIn("not in the index", out)
+        self.assertNotIn("which declares no result", out)
+
     def test_a_shared_helper_reopens_the_areas_that_import_it(self):
         """lib/scoring.py lies in no area; an area whose script imports it is
         touched by its change, and one that does not is not."""
