@@ -1550,9 +1550,17 @@ Notiert, nicht geplant:
    ID; vor der Injektion die Stände auf Baseline 0 Blocker reparieren. (4) PubMedQA: den
    Modellzugang (`claude -p`) im Aufgabentext beider Arme nennen; große
    Fits: Zeitbudget an einem vollständigen Messlauf bemessen, weniger
-   Null-Fits nur mit fachlicher Begründung. (5) Danach drei Versuche je
-   Zelle auf den vier unbeeinträchtigten Tasks, Kriterien vorab,
-   unabhängiger zweiter Richter — weiter ein Pilot. (1) und (2) starten
+   Null-Fits nur mit fachlicher Begründung. (5) Danach zwei bis drei Versuche je
+   Zelle auf den vier unbeeinträchtigten Tasks, unabhängiger zweiter
+   Richter — weiter ein Pilot. Vorab festgezogen (Max, 2026-10-29 abends):
+   der genaue labkit-Commit und der Image-Digest stehen im Vertrag (der
+   Pin `d9449e8` trägt die Abend-Bauten nicht; neuer Pin `a1ab9f0`,
+   labkit-paper-main `sandbox/labkit.pin`); vor der Runde eine
+   Funktionsprobe des vollständigen Abschlusswegs auf einem frisch
+   gestempelten Stand (messen, fachlichen Fehler korrigieren, neu messen,
+   übernehmen, gültige Ergebnisdatei und Bericht abgeben); die Bewertung
+   zählt vier Dinge getrennt — ehrlicher Anspruch, gebundene Zahl,
+   gültige Abgabe, Standarderfüllung — und weist Timeouts separat aus. (1) und (2) starten
    auf Ansage.
 
 
