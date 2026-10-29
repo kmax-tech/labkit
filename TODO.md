@@ -1687,6 +1687,13 @@ Notiert, nicht geplant:
    Pilot) kostet einen halben Tag und ist nicht geplant. Lehre für das
    Design: eine Aufgabe mit Modell in der Schleife hängt am Tempo des
    gemeinsamen Abonnements und schwankt mit allem, was sonst läuft.
+   **Beschlossen (Max, 2026-10-29):** Aufgaben, die selbst Modellaufrufe
+   machen (PubMedQA), bekommen in künftigen Runden ein externes Modell
+   über einen eigenen Schlüssel oder Anbieter, nicht Haiku über das
+   Abonnement des Agenten — der Agent und seine Aufgabe teilen sich sonst
+   ein Rate-Limit, und das Tempo der Aufgabe wird zum Störfaktor der
+   Messung. Umsetzung in labkit-paper (Sandbox: zweiter Proxy-Weg oder
+   Schlüssel als Umgebungsvariable), eigener Auftrag.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
