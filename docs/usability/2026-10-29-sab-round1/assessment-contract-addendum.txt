@@ -21,3 +21,14 @@ valid delivery, standard met — lab only) and the timeouts apart with their cau
 on the fact sheets and the reports; counts per cell, no rate, no speed claim; real logs and states to the
 internal archive. The table reports the six tasks with their budgets in the caption; the pilot's single
 attempts on these two tasks stay the pilot's and are not added to these counts.
+
+Second addendum, 2026-10-29 late, before any result of the repeated pubmedqa50 cells. The first pass of the
+pubmedqa50 cells (three control attempts: two timed out at 3600 s, one finished in 2886 s; the lab attempts
+stopped before any result) is set aside as a probe failure and counted nowhere: the task text named the SDK
+route with the token in CLAUDE_CODE_OAUTH_TOKEN, but Claude Code strips that variable from its tool shell
+(a check attempt showed `CLAUDE_CODE_OAUTH_TOKEN` absent, `ANTHROPIC_BASE_URL` present), the agents' SDK
+calls were refused by the proxy (403, "authorization carries something other than the placeholder"), and
+all three fell back to the five-second client — 1,500 to 2,100 calls each. The repeat gives the agent the
+token under SANDBOX_MODEL_TOKEN (an extra environment variable the sandbox sets to the proxy's placeholder;
+checked visible in the tool shell) and names it in the task text; everything else as the first addendum.
+The 71 cells run on unchanged from the first launch (no model in the loop there).

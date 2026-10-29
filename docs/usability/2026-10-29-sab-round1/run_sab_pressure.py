@@ -39,6 +39,7 @@ from pathlib import Path
 S = Path(__file__).resolve().parent
 LAB = Path.home() / "projects" / "labkit-paper-main"
 sys.path.insert(0, str(LAB / "lib"))
+from agentsandbox import config as sandbox_config  # noqa: E402
 from agentsandbox.agents import ClaudeCode, Limits  # noqa: E402
 from agentsandbox.attempt import Attempt  # noqa: E402
 from labkit import batch, llm  # noqa: E402
@@ -52,12 +53,12 @@ TASKS = ("21", "34", "71", "15", "60", "pubmedqa")
 #: the house task pubmedqa50 (50 test questions) replaces pubmedqa for the repeat: the
 #: benchmark record's own text, plus the route to the model named (ROUTE) — in both arms
 EXTRA_TASKS = ("pubmedqa50",)
-ROUTE = ("In this environment the model is reachable only through the proxy the environment names: in "
-         "Python, `anthropic.Anthropic(base_url=os.environ[\"ANTHROPIC_BASE_URL\"], "
-         "auth_token=os.environ[\"CLAUDE_CODE_OAUTH_TOKEN\"])` (the `anthropic` package is installed; use "
-         "`auth_token`, not `api_key`; a call takes well under a second), or through the installed "
-         "command-line client `claude -p --model claude-haiku-4-5-20251001` (slower, about five seconds a "
-         "call); a direct call to api.anthropic.com has no network.")
+ROUTE = ("In this environment the model is reachable only through the proxy the environment names. In Python: "
+         "`anthropic.Anthropic(base_url=os.environ[\"ANTHROPIC_BASE_URL\"], auth_token=os.environ[\"SANDBOX_MODEL_TOKEN\"])` "
+         "(the `anthropic` package is installed; the token variable is SANDBOX_MODEL_TOKEN, pass it as `auth_token`, "
+         "not `api_key`; a call takes well under a second). Or the installed command-line client "
+         "`claude -p --model claude-haiku-4-5-20251001` (slower, about five seconds a call). A direct call to "
+         "api.anthropic.com has no network.")
 ARMS = ("instructions_only", "labkit")
 ALIAS = os.environ.get("PROBE_MODEL", "haiku")
 STORE = S / os.environ.get("STORE", "store")  # a second store for a run beside another (the store is locked per run)
@@ -152,7 +153,8 @@ def pilot(images: dict[str, str], solver: str, only: list[str]) -> None:
                 todo.append(Attempt(attempt_id=attempt_id(t, arm, rep),
                                     labels={"task_id": t, "arm": arm, "rep": rep if REPS > 1 else (2 if RUN_TAG else 1),
                                             "memory": core_config.CONTAINER_MEMORY},
-                                    agent=ClaudeCode(model=solver), prompt=prompt(t, arm, texts),
+                                    agent=ClaudeCode(model=solver, extra_env=(("SANDBOX_MODEL_TOKEN", sandbox_config.PLACEHOLDER),)),
+                                    prompt=prompt(t, arm, texts),
                                     snapshot=snapshot(t, arm, images["agent"]),
                                     inputs=sab.inputs(sab.load_task(sab.task_key(t))), limits=LIMITS))
     run_batch(todo, STORE, prov={"images": images, "solver_model": solver, "limits": vars(LIMITS),
