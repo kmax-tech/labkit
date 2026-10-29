@@ -315,6 +315,25 @@ holds); a plain re-run on a claimed state is refused before any call,
 exit 2. A probe's or an older run's citation stays the warning it was:
 an exploration's run is looked at.
 
+**The registered report owes its result.** A protocol whose head names
+its report file (`report = "REPORT.md"`, a path relative to the
+repository root, stamped by `labkit-init exp --report-file REPORT.md`;
+`usability stage` registers it for the SAB tasks, whose sheet asks for
+the file) is owed that result by that file, run id or not: once the
+file exists — in the tree at the stop, in the index at the commit — it
+carries the protocol's result block of the declared run or the
+protocol's handover block, else the stop, the commit and the plain
+`report-check` hold it with the three ways out: adopt the newest kept
+run and `--into`; `--discuss`, which releases nothing (the report then
+still owes the result or the handover); `--handover`. A number with the
+run id removed, a run id typed in, a discussion block, a handover block
+typed by hand without its record: all held (`report_hold.report_owed`;
+pressure pilot 2026-10-29, tasks 34, 15, 60: the hook refused the
+citation, the agents deleted the run id, the commit passed). A report
+not yet written owes nothing — the obligation is on what is delivered
+—, and a protocol that registers none holds no file to this; general
+notes and input descriptions elsewhere stay outside it.
+
 ## 9. The gate — at the stop and the commit
 
 To end a protocol without a result (a handover), use `labkit-audit <AREA> --findings`
@@ -365,7 +384,11 @@ also a committed, untouched report, when the protocol among the paths
 declares that run newly against HEAD (a report committed before the
 declaration, then the declaration committed alone, left the delivered
 state with a blocker no commit saw). A protocol that declares no result
-owes nothing: an exploration ends without a reported number.
+owes nothing but its registered report: an exploration ends without a
+reported number, and a REPORT.md its head registers, once delivered,
+carries its handover block or its result block (section 8; the
+protocols registering a file among the paths are held too, the report
+at the repository root lying in no area).
 
 ## The questions a reader should be able to answer
 

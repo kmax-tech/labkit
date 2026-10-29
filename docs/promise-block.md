@@ -78,7 +78,11 @@ R (`r1`), Q (`q1`), H (`h1`).
 ## The block
 
 The protocol's one fenced TOML block holds the head (`[protocol]`, see
-`labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`), the
+`labkit/formats/protocol_block.py` and `docs/protocol-run-binding.md`;
+its optional `report = "REPORT.md"` names the report file, relative to
+the repository root, that owes this protocol's result once it exists —
+`labkit-init exp --report-file` stamps it, `docs/workflow.md` section 8
+says what releases it), the
 `[[promise]]` tables and — once a number is reported — the `[result]` table
 naming the run (`protocol_block.declared_run`, written by `protocol-fill
 --from-run`; the binding document says what the gates hold it to):

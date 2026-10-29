@@ -2632,6 +2632,37 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **The registered report owes its result.** In the pressure pilot of
+  2026-10-29 three of six lab agents (tasks 34, 15, 60) deleted the run
+  id from REPORT.md after the hook had refused the report for citing a
+  run that declares no result, and the commit passed: report-check held
+  only reports that cite a run, so a number without one was outside the
+  gate. Decided by the author the same day: a report fixed as an area's
+  deliverable owes its result adoption, run id or not, and an inserted
+  run id is not enough. The protocol head takes an optional `report =
+  "REPORT.md"` (a path relative to the repository root, inside it, not a
+  protocol, Markdown — `protocol_block.report_field`; absent, nothing is
+  owed), stamped by `labkit-init exp --report-file PATH` (kept by
+  `--change-kind`); `usability stage` registers REPORT.md for the SAB
+  tasks, whose sheet asks for that file (count, judge and fit report in
+  the final answer and register none). Once the registered file exists
+  — in the tree at the stop, in the index at the commit — it carries
+  the protocol's result block of the declared run (`protocol-fill
+  --into`) or the protocol's handover block as its record renders it
+  (`handovers.block_mismatch`), else report-check's new station 8, the
+  stop and the commit hold it with one BLOCKER naming the protocol, the
+  file and the three ways out: adopt the newest kept run then `--into`;
+  `--discuss`, said to release nothing (the report then still owes the
+  result or the handover); `--handover`. A protocol declaring no result
+  is held to this too (`report_check.hold_registered`), and the
+  protocols registering a file among the paths are selected though the
+  file lies in no area (`report_hold.registering_protocols`). A report
+  not yet written owes nothing (the obligation is on what is
+  delivered), and general notes beside it stay outside it. One check,
+  `report_hold.report_owed`; AGENTS.md's deliverable paragraph says the
+  rule. Not breaking: a head without `report` behaves as before; only a
+  probe staged from this version for a SAB task holds its REPORT.md.
+
 - **The counts of Data / scope are generated: `protocol-fill --data-counts`.**
   In the fifth SAB-like draw two agents registered counts the data did not
   hold (108 labelled persons for 92; 118/60/60 compounds for 240/80/80)
