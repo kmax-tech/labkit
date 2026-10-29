@@ -104,6 +104,7 @@ from labkit.formats.repo import (
     measure_command,
     no_such_area,
     ProtocolChoiceError,
+    report_fields_step,
     shown,
     the_protocol,
     withdraw_command,
@@ -196,7 +197,9 @@ def declared_run_mismatch(
 
 def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | None:
     """A note while the protocol declares no result yet — the normal state
-    before adoption, so no warning: the command that declares
+    before adoption, so no warning: the steps still owed (the audit, its
+    decisions, the Conclusion and the report fields,
+    `repo.report_fields_step`) and the command that declares
     MEASUREMENT_RUN and writes its number (`repo.adopt_command`, naming
     PROTOCOL — `--from-run <run>` alone exits 2, review 2026-10-20). None
     once a run is declared."""
@@ -204,8 +207,8 @@ def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | Non
         return None
     return (
         f"no [result] declared yet — after the analysis audit "
-        f"(`{audit_command(protocol.parent, '--mode', 'analysis', protocol=protocol)}`), "
-        f"its decisions and the Conclusion, "
+        f"(`{audit_command(protocol.parent, '--mode', 'analysis', protocol=protocol)}`) "
+        f"and its decisions, {report_fields_step(protocol)}; then "
         f"`{adopt_command(protocol, answering_run.name)}` declares the run and "
         f"writes the number"
     )

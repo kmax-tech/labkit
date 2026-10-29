@@ -134,17 +134,38 @@ def measure_command(area: Path) -> str:
     return f".venv/bin/python {shlex.quote(script)}"
 
 
+def contract_command(protocol: Path) -> str:
+    """The `protocol-check … --contract` line that prints the fields PROTOCOL
+    owes by occasion, the protocol named as the working directory reaches
+    it (`shown`)."""
+    return f"protocol-check {shown(protocol, Path.cwd())} --contract"
+
+
+def report_fields_step(protocol: Path) -> str:
+    """The step between the decided analysis audit and the adoption, as
+    every line that prints the adoption names it: the Conclusion and the
+    report fields PROTOCOL owes once frozen and a result is declared
+    (`protocol_report.OwedFields.once_reported`, which the contract line
+    prints). The adoption declares the result and runs protocol-check on
+    it, which refuses a frozen protocol without them."""
+    return (
+        f"write the Conclusion and the report fields "
+        f"(`{contract_command(protocol)}`, once frozen and declared)"
+    )
+
+
 def next_after_run(protocol: Path, run_id: str) -> str:
     """The steps after a measurement of PROTOCOL, in the order the gates
     accept them: finalize, the analysis audit and its decisions, the
-    Conclusion, then the adoption of RUN_ID — what every skeleton prints
-    at the end of a run. Printing the adoption alone sent agents into its
-    refusal (audit 2026-10-27, third, I3)."""
+    Conclusion and the report fields (`report_fields_step`), then the
+    adoption of RUN_ID — what every skeleton prints at the end of a run.
+    Printing the adoption alone sent agents into its refusal (audit
+    2026-10-27, third, I3)."""
     area = protocol.parent
     return (
         f"next: finalize {shlex.quote(shown(area, Path.cwd()))} · "
         f"{audit_command(area, '--mode', 'analysis', protocol=protocol)}, then "
-        f"decide its findings · write the Conclusion · then "
+        f"decide its findings · {report_fields_step(protocol)} · then "
         f"{adopt_command(protocol, run_id)} (writes Recorded results, [result] run "
         f"and the run entry from metrics.json)"
     )

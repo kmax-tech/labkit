@@ -30,7 +30,7 @@ from labkit.formats import (
 )
 from labkit.formats.answering_run import bound_answering_run
 from labkit.formats.gate import with_way_out
-from labkit.formats.repo import layout_root, shown
+from labkit.formats.repo import contract_command, layout_root, shown
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
@@ -75,8 +75,8 @@ def audited_run(
     except protocol_block.BlockError as exc:
         raise AuditError(
             f"{protocol.name}: head unreadable — {exc}",
-            fix=f"repair the head as the sentence says (`protocol-check "
-            f"{shown(protocol, Path.cwd())} --contract` shows its fields)",
+            fix=f"repair the head as the sentence says "
+            f"(`{contract_command(protocol)}` shows its fields)",
         ) from exc
     if pid is None:
         return None, "the protocol id is still a placeholder"

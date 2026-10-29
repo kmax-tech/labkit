@@ -1792,7 +1792,12 @@ class NextStepFields(unittest.TestCase):
                         self.assertIn("terms, question, unit, data, exclusions", out)
                         self.assertNotIn("lane high", out)
                         self.assertNotIn("into the protocol's raw output", out)
-                        self.assertIn("the Conclusion, then `protocol-fill", out)
+                        self.assertIn(
+                            "the Conclusion and the report fields (`protocol-check", out
+                        )
+                        self.assertIn(
+                            "once frozen and declared), then `protocol-fill", out
+                        )
                         self.assertIn(
                             "output file is written from that run only after", out
                         )

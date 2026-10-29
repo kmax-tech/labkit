@@ -7,9 +7,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.formats import attempts, findings, protocol_check, standard_contract
+from protocol_fixture import head  # noqa: E402
+
+from labkit.formats import attempts, findings, protocol_check, repo, standard_contract
 from labkit.checks import protocol_report
-from labkit.gates import audit
+from labkit.gates import audit, finalize
 from labkit.tools import scaffold
 
 
@@ -34,8 +36,6 @@ class WorkflowOrientation(unittest.TestCase):
     def test_the_step_after_a_run_goes_through_the_audit(self):
         # every skeleton printed only the adoption, which then refused for
         # the missing audit (audit 2026-10-27, third, I3)
-        from labkit.formats import repo
-
         protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
         line = repo.next_after_run(protocol, "2026-10-27T10-00-00_ab12")
         stages = ("finalize", "--mode analysis", "decide", "Conclusion", "--from-run")
@@ -51,6 +51,35 @@ class WorkflowOrientation(unittest.TestCase):
             with self.subTest(template=template):
                 self.assertIn("next_after_run(PROTOCOL, run.run_id)", text)
                 self.assertNotIn("adopt_command(PROTOCOL, run.run_id)", text)
+
+    def test_every_line_to_the_adoption_names_the_report_fields_first(self):
+        """The adoption runs protocol-check, which refuses a frozen protocol
+        without the report fields owed once a result is declared: the step
+        stands before the adoption, from one home (`repo.report_fields_step`),
+        in the run's next line, finalize's hint and labkit-init's closing
+        steps. The twin: the step names the contract line that lists them."""
+        protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
+        run = "2026-10-27T10-00-00_ab12"
+        step = repo.report_fields_step(protocol)
+        self.assertIn("write the Conclusion and the report fields", step)
+        self.assertIn(f"`{repo.contract_command(protocol)}`", step)
+        self.assertIn("--contract", repo.contract_command(protocol))
+        self.assertIn("once frozen and declared", step)
+        hint = finalize.undeclared_hint(
+            head(repeat_cost="low"), protocol.parent / "runs" / run, protocol
+        )
+        assert hint is not None
+        closing = scaffold.next_steps(
+            Path("experiments/01-x"), "x", "01", "high", "compute", False
+        )
+        for name, line in (
+            ("next_after_run", repo.next_after_run(protocol, run)),
+            ("undeclared_hint", hint),
+            ("next_steps", closing),
+        ):
+            with self.subTest(line=name):
+                self.assertIn(step, line)
+                self.assertLess(line.index(step), line.index("--from-run"))
 
     def test_the_area_route_names_the_area_from_the_root(self):
         # `runlog .` from the root, as AGENTS.md asks, read the repo as an

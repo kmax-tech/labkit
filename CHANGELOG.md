@@ -462,6 +462,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The line after a run names the report fields before the adoption.**
+  The run's `next:` line, finalize's hint while no result is declared and
+  labkit-init's closing step sent the agent from the decided audit and the
+  Conclusion straight to `protocol-fill --from-run`; the adoption declares
+  the result and runs protocol-check on it, which refuses a frozen
+  protocol without the fields owed once a result is declared (Question,
+  Did, Outcome, Rival check, Caps/drops, Analysis audit), and the agent
+  met the refusal with no step that named them (trace of 28c22f9 on
+  ScienceAgentBench task 21, 2026-10-29). All three lines now say "write
+  the Conclusion and the report fields (`protocol-check PROTOCOL
+  --contract`, once frozen and declared)" before the adoption, from one
+  home (`repo.report_fields_step`; the contract line `repo.contract_command`,
+  which the head-unreadable refusal of the audit binding uses too).
+
 - **An indented paragraph below a blank line is the last finding's.**
   Two paid audits of the same day (apply-screen with Haiku and with
   Sonnet, 2026-10-29) closed the last finding's evidence list with a

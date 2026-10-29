@@ -69,6 +69,7 @@ from labkit.formats.repo import (
     files_at,
     first_added,
     adopt_command,
+    report_fields_step,
     AREA_NAME,
     area_protocols,
     areas_named,
@@ -1545,7 +1546,8 @@ def _run_steps(ln: standard_contract.Lane, rel: Path, slug: str) -> list[str]:
 
 def _closing_steps(ln: standard_contract.Lane, rel: Path, protocol: str) -> list[str]:
     """After the run: finalize (with the provenance where the lane owes
-    it), the analysis audit where the lane owes it, then the adoption."""
+    it), the analysis audit where the lane owes it, the Conclusion and the
+    report fields (`repo.report_fields_step`), then the adoption."""
     after = f"`finalize {rel}`" + (
         " checks the provenance (source frozen in the run, tracked in git)"
         if ln.provenance
@@ -1557,9 +1559,10 @@ def _closing_steps(ln: standard_contract.Lane, rel: Path, protocol: str) -> list
         )
     return [
         after + ".",
-        f"the Conclusion, then `{adopt_command(rel / protocol)}` adopts the "
-        "number: it runs report-check, whose last station is scripts/02_analyze.py "
-        "--check; a task's output file is written from that run only after it.",
+        f"{report_fields_step(rel / protocol)}, then "
+        f"`{adopt_command(rel / protocol)}` adopts the number: it runs "
+        "report-check, whose last station is scripts/02_analyze.py --check; a "
+        "task's output file is written from that run only after it.",
     ]
 
 
