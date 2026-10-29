@@ -462,6 +462,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The pre-commit checks the protocol the commit carries.** Its step 1
+  said it checked the staged state and ran `protocol-check` on the
+  working tree: a protocol frozen in the index and unfrozen in the tree
+  passed the hook, and the opposite was refused for a state nobody
+  committed (ScienceAgentBench task 15 on 28c22f9, 2026-10-29). Step 2
+  already read the index (`report-check --staged`). `protocol-check
+  --staged` reads each protocol as git's index holds it
+  (`protocol_report.index_text`, through `repo.state_text`); a file the
+  index does not hold, a symbolic link in the index and a file outside a
+  git repository are refused by name. The hook passes it; reinstall the
+  hooks (`labkit-hooks install`).
+
 - **The gate before the freeze names the promise sentences the freeze
   refuses.** A stamped `[[promise]]` sentence (`<…>`) passed `preflight`
   and `protocol-check` on an unfrozen protocol without a word, and the

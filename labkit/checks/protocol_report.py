@@ -12,6 +12,7 @@ path). Read-only.
 Usage:
     protocol-check PROTOCOL-foo.md [more files or directories ...]
     protocol-check --template experiment-protocol.md.template <files>
+    protocol-check --staged <files>    each as git's index holds it (the pre-commit)
 
 Directories are searched recursively for PROTOCOL-*.md. Exit code 1 if any
 MUST field is missing or unfilled in any file; SHOULD fields only warn.
@@ -24,7 +25,14 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
-from labkit.formats.repo import adopt_command, git_root, protocol_link, repo_protocols
+from labkit.formats.repo import (
+    adopt_command,
+    git_root,
+    protocol_link,
+    protocol_links,
+    repo_protocols,
+    state_text,
+)
 from labkit.formats.findings import RecordGap, audit_record_gap
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding, with_way_out
 from labkit.formats.protocol_history import (
@@ -808,21 +816,50 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         )
 
 
-def check_files(files: list[Path], tmpl: set[str]) -> bool:
+def index_text(f: Path) -> str:
+    """Protocol F as git's index holds it (`repo.state_text`), the state a
+    commit carries — what `protocol-check --staged` reads. Raises
+    ValueError naming F when it lies in no git repository, is a symbolic
+    link in the index (`repo.protocol_link`) or the index does not hold
+    it, and UnicodeDecodeError when its bytes are not UTF-8."""
+    root = git_root(f)
+    if root is None:
+        raise ValueError(
+            f"{f}: `--staged` reads git's index, and the file lies in no git repository"
+        )
+    link = protocol_links(root, [f], staged=True)
+    if link:
+        raise ValueError(link[f])
+    text = state_text(root, f, staged=True)
+    if text is None:
+        raise ValueError(
+            f"{f}: not in git's index — `--staged` checks the state a commit "
+            "carries; stage the file first (`git add`)"
+        )
+    return text
+
+
+def check_files(files: list[Path], tmpl: set[str], *, staged: bool = False) -> bool:
     """Check and print every protocol in FILES; True when any blocks, a
-    symbolic link among them too (`repo.protocol_link`). The repo's
-    protocol ids are read once per repo for this call."""
+    symbolic link among them too (`repo.protocol_link`). STAGED reads each
+    text as git's index holds it (`index_text`) — the pre-commit's state —
+    instead of the working tree. The repo's protocol ids are read once per
+    repo for this call."""
     ids_by_root: dict[Path | None, dict[str, list[Path]]] = {}
     failed = False
     for f in files:
-        if f.is_symlink():
+        if not staged and f.is_symlink():
             print(protocol_link(f, "tree"))
             failed = True
             continue
         try:
-            text = f.read_text(encoding="utf-8")
+            text = index_text(f) if staged else f.read_text(encoding="utf-8")
         except OSError as exc:
             print(f"{f}: not readable ({exc})")
+            failed = True
+            continue
+        except ValueError as exc:  # `index_text`, or bytes that are not UTF-8
+            print(str(exc))
             failed = True
             continue
         root = git_root(f)
@@ -853,9 +890,15 @@ def main(argv: list[str]) -> int:
     """Command line of `protocol-check`: check protocols against the template and their own head."""
     if argv and argv[0] in ("-h", "--help"):
         print((__doc__ or "").strip().splitlines()[0])
-        print("usage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...")
+        print(
+            "usage: protocol-check [--template PATH] [--staged] <PROTOCOL-*.md | dir> ..."
+        )
         print(
             "  --template PATH  check against this template instead of the packaged one"
+        )
+        print(
+            "  --staged         read each protocol as git's index holds it (the state "
+            "a commit carries) — the pre-commit's reading"
         )
         print("  --guide          print the path to the protocol field guide")
         print(
@@ -870,6 +913,8 @@ def main(argv: list[str]) -> int:
     # ("not readable: '--contract'", 2026-10-13): a flag is a flag anywhere.
     if "--contract" in argv:
         return _contract([a for a in argv if a != "--contract"])
+    staged = "--staged" in argv
+    argv = [a for a in argv if a != "--staged"]
     if "--guide" in argv:
         fg = find_field_guide()
         print(fg or "field guide not found")
@@ -883,7 +928,7 @@ def main(argv: list[str]) -> int:
     if not argv:
         console.refuse(
             "protocol-check",
-            "no protocol named\nusage: protocol-check [--template PATH] <PROTOCOL-*.md | dir> ...",
+            "no protocol named\nusage: protocol-check [--template PATH] [--staged] <PROTOCOL-*.md | dir> ...",
         )
         return 2
     files = collect_protocols(argv)
@@ -892,7 +937,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     tmpl = template_lines(find_template(tmpl_arg))
-    return 1 if check_files(files, tmpl) else 0
+    return 1 if check_files(files, tmpl, staged=staged) else 0
 
 
 def cli() -> None:

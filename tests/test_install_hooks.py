@@ -219,6 +219,22 @@ class RepoOwnSteps(unittest.TestCase):
             ["--if-reported", "--staged", "scripts/02_analyze.py"],
         )
 
+    def test_the_pre_commit_hands_protocol_check_the_index(self):
+        """Step 1 said it checked the staged state and ran protocol-check
+        on the tree: a protocol frozen in the index and unfrozen in the
+        tree passed the hook. The hook passes --staged."""
+        repo = git_repo()
+        install_hooks.install(repo)
+        gate_shims(repo)
+        (repo / "PROTOCOL-x.md").write_text("# x\n")
+        subprocess.run(["git", "-C", str(repo), "add", "PROTOCOL-x.md"], check=True)
+        r = commit(repo)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(
+            (repo / "protocol-check.argv").read_text().split(),
+            ["--staged", "PROTOCOL-x.md"],
+        )
+
     def test_a_staged_deletion_reaches_both_gates(self):
         """Deleting the measure script under a reported number reopens it as
         an edit does; until now --diff-filter=ACMR dropped it."""
@@ -403,11 +419,11 @@ def numbers_shim(repo: Path) -> None:
 
 
 def gate_shims(repo: Path) -> None:
-    """`.venv/bin/report-check` and `claude-hook` stand-ins that record their
-    arguments in `<tool>.argv` and pass."""
+    """`.venv/bin/protocol-check`, `report-check` and `claude-hook` stand-ins
+    that record their arguments in `<tool>.argv` and pass."""
     shim = repo / ".venv" / "bin"
     shim.mkdir(parents=True)
-    for tool in ("report-check", "claude-hook"):
+    for tool in ("protocol-check", "report-check", "claude-hook"):
         (shim / tool).write_text(f'#!/bin/sh\necho "$@" > {tool}.argv\nexit 0\n')
         (shim / tool).chmod(0o755)
 

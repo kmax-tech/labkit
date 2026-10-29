@@ -64,14 +64,15 @@ def pre_commit() -> str:
 fail=0
 staged_protocols=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)PROTOCOL-[^/]*\\.md$')
 
-# 1. Mandatory fields on every staged protocol.
+# 1. Mandatory fields on every staged protocol, as the index holds it: the
+#    commit carries the index, not the tree (--staged).
 if [ -n "$staged_protocols" ]; then
     if [ ! -x .venv/bin/protocol-check ]; then
         echo "pre-commit: .venv/bin/protocol-check missing — install labkit into .venv"
         echo "(.venv/bin/pip install -r requirements.txt)."
         fail=1
     # shellcheck disable=SC2086 # word-splitting over the file list is intended
-    elif ! .venv/bin/protocol-check $staged_protocols; then
+    elif ! .venv/bin/protocol-check --staged $staged_protocols; then
         echo ""
         echo "pre-commit: must fields missing (see above) — fill them, or justify as"
         echo "'<field>: n/a — <why>'."

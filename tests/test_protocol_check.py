@@ -16,6 +16,7 @@ anywhere in the text is gone on purpose.
 
 import contextlib
 import io
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -219,6 +220,53 @@ class TestResultAfterARun(unittest.TestCase):
         )
         rc, out = run_main(text)
         self.assertNotIn("the head declares run", out)
+
+
+class TestStagedReadsTheIndex(unittest.TestCase):
+    """`protocol-check --staged` judges the protocol as git's index holds it
+    — the state the commit carries — where the pre-commit said it checked
+    the staged state and read the tree. Twin: without the flag the tree is
+    read; a file the index does not hold is refused."""
+
+    #: frozen = true turns the pilot's should gaps into must gaps: a blocker
+    FROZEN_WITH_GAPS = pilot(frozen=True, preflight_audit=AUDIT_LINE)
+
+    def _repo(self, index: str, tree: str) -> Path:
+        d = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init", "-q", str(d)], check=True)
+        p = d / "PROTOCOL-x.md"
+        p.write_text(index, encoding="utf-8")
+        subprocess.run(["git", "-C", str(d), "add", "PROTOCOL-x.md"], check=True)
+        p.write_text(tree, encoding="utf-8")
+        return p
+
+    def _check(self, argv: list[str]) -> tuple[int, str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = protocol_report.main(argv)
+        return rc, buf.getvalue()
+
+    def test_a_frozen_index_under_an_unfrozen_tree_is_refused(self):
+        p = self._repo(index=self.FROZEN_WITH_GAPS, tree=pilot())
+        rc, out = self._check(["--staged", str(p)])
+        self.assertEqual(rc, 1, out)
+        self.assertIn("MISSING (must)", out)
+        rc, out = self._check([str(p)])  # the tree: a pilot, nothing frozen
+        self.assertEqual(rc, 0, out)
+
+    def test_a_clean_index_passes_whatever_the_tree_holds(self):
+        p = self._repo(index=pilot(), tree=self.FROZEN_WITH_GAPS)
+        rc, out = self._check([str(p), "--staged"])
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self._check([str(p)])[0], 1)
+
+    def test_a_file_the_index_does_not_hold_is_refused(self):
+        p = self._repo(index=pilot(), tree=pilot())
+        q = p.with_name("PROTOCOL-y.md")
+        q.write_text(pilot(), encoding="utf-8")
+        rc, out = self._check(["--staged", str(q)])
+        self.assertEqual(rc, 1, out)
+        self.assertIn("not in git's index", out)
 
 
 class TestFlagsAnywhere(unittest.TestCase):
