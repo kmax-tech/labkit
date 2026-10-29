@@ -90,7 +90,7 @@ import os
 import secrets
 import shlex
 import socket
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from collections.abc import Generator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -864,6 +864,29 @@ def journal_copy(area: Path) -> Path | None:
         return None
     rel = area.resolve().relative_to(root.resolve()).as_posix()
     return base / quote(branch.stdout.strip(), safe="") / f"{quote(rel, safe='')}.jsonl"
+
+
+def copied_areas(repo: Path) -> list[Path]:
+    """Every area of REPO whose journal has a copy on the current branch
+    (`journal_copy`), as a path under REPO, in name order — whether or not
+    the area still stands in the tree: an area deleted whole, its protocol
+    with it, is no area to the tree or the index, and its copy is what
+    still names the evidence it held. [] outside a repository, on a
+    detached HEAD and before the first copy. Raises GitError when git
+    cannot run."""
+    root = git_root(repo)
+    if root is None:
+        return []
+    branch = git_run(["symbolic-ref", "--short", "-q", "HEAD"], root)
+    base = git_dir_path(root, COPY_DIR, common=True)
+    if branch.returncode != 0 or base is None:
+        return []
+    folder = base / quote(branch.stdout.strip(), safe="")
+    if not folder.is_dir():
+        return []
+    return [
+        root.resolve() / unquote(copy.stem) for copy in sorted(folder.glob("*.jsonl"))
+    ]
 
 
 def evidence_copy(area: Path) -> Path | None:

@@ -462,6 +462,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An area deleted whole no longer passes the commit's evidence hold.**
+  `rm -rf <area>` took the protocol with the audit records, so the walk
+  that finds an area by its PROTOCOL-*.md (in the tree or the index)
+  found none, and the commit passed with three BLOCKERs open while the
+  journal copy in the git directory still named every record (SAB
+  PubMedQA on 28c22f9, 2026-10-29). The stop and the commit now also
+  hold every area whose journal copy on the branch names it
+  (`attempts.copied_areas`) and whose directory holds a changed path;
+  `attempts.area_integrity` then names the lost records and the cut
+  journal with their restores. An area never committed and gone whole
+  leaves no changed path, and stays the copy's knowledge alone.
+
 - **The pre-run hook's note carries the warnings, not only their count.**
   Before a full measure run `claude-hook pre-run` runs preflight; without
   a blocker it gave the summary's one line — "0 blockers, N warning(s) —

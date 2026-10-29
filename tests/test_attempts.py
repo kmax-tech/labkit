@@ -418,6 +418,63 @@ class EvidenceCopy(unittest.TestCase):
             claude_hooks.undecided_blockers(root, [notes], staged=True), []
         )
 
+    def test_an_area_deleted_whole_holds_the_commit_and_the_stop(self):
+        """`rm -rf <area>` took the protocol with the records, so no area
+        walk found the area and the commit's evidence hold passed with
+        three BLOCKERs open (SAB PubMedQA, 2026-10-29). The journal copy on
+        the branch still names the area (`attempts.copied_areas`): the
+        commit and the stop hold its lost record and cut journal. Twins: a
+        change in another area brings it in no more than before, and the
+        area restored from HEAD passes."""
+        from labkit.gates import claude_hooks
+
+        area = area_in_repo()
+        root = area.parent.parent
+        _, record = self.attempt(area)
+        other = root / "experiments" / "02-y"
+        other.mkdir()
+        (other / "PROTOCOL-y.md").write_text("# P\n", encoding="utf-8")
+        git(root, "add", "-A")
+        git(root, "commit", "-qm", "audited")
+        self.assertEqual(attempts.copied_areas(root), [area.resolve()])
+        shutil.rmtree(area)
+        (other / "notes.md").write_text("a change elsewhere\n", encoding="utf-8")
+        git(root, "add", "-A")
+        staged = [
+            root / p
+            for p in subprocess.run(
+                ["git", "diff", "--cached", "--name-only", "--no-renames"],
+                cwd=root, capture_output=True, text=True, check=True,
+            ).stdout.split()
+        ]  # fmt: skip
+        self.assertIn(area / "audits" / record.name, staged)
+        for held in (
+            claude_hooks.undecided_blockers(root, staged, staged=True),
+            claude_hooks.undecided_blockers(root, staged),
+        ):
+            line = "\n".join(held)
+            self.assertIn(
+                f"experiments/01-x: audits/{record.name} is committed and gone", line
+            )
+            self.assertIn(
+                "audits/attempts.jsonl no longer starts with the lines HEAD holds", line
+            )
+        # the twin: a change elsewhere alone names the copied area nowhere
+        self.assertEqual(
+            claude_hooks.undecided_blockers(root, [other / "notes.md"], staged=True), []
+        )
+        git(root, "checkout", "HEAD", "--", "experiments/01-x")
+        self.assertEqual(claude_hooks.undecided_blockers(root, staged, staged=True), [])
+
+    def test_copied_areas_are_none_on_a_detached_head(self):
+        area = area_in_repo()
+        root = area.parent.parent
+        self.assertEqual(attempts.copied_areas(root), [])  # no copy yet
+        self.attempt(area)
+        self.assertEqual(attempts.copied_areas(root), [area.resolve()])
+        git(root, "checkout", "-q", "--detach")
+        self.assertEqual(attempts.copied_areas(root), [])
+
     def test_the_next_audit_names_the_restore_that_works(self):
         area = area_in_repo()
         _, record = self.attempt(area)

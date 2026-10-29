@@ -1145,7 +1145,12 @@ def undecided_state(
     table): the hook says what the commit would be refused for. The area is the nearest directory above the path with a
     PROTOCOL-*.md, inside REPO, and every area whose promises declare a
     changed path in their scope or whose code imports a changed shared
-    helper (`scope_sha.areas_touched`, the stop's answer too). A
+    helper (`scope_sha.areas_touched`, the stop's answer too), and every
+    area deleted whole — its protocol with it, so no area to the tree or
+    the index — whose journal copy on the branch still names its evidence
+    (`attempts.copied_areas`) and whose directory holds a changed path —
+    an area never committed and gone whole leaves no such path, and only
+    its copy knows it. A
     path outside every area contributes nothing, and so does an area with
     no audit record and no journal in the state checked or at HEAD — an
     audits/ gone from the tree but committed is a gap: this holds the areas
@@ -1165,7 +1170,16 @@ def undecided_state(
     handover acknowledges it: a restore from git undoes it."""
     out: list[str] = []
     acknowledged: list[str] = []
-    for area in areas_touched(paths, repo):
+    areas = areas_touched(paths, repo)
+    changed = {p.resolve() for p in paths}
+    # an area removed with its protocol is found by no protocol walk; its
+    # journal copy is the one thing left that names what it held
+    areas += [
+        area
+        for area in attempts.copied_areas(repo)
+        if area not in areas and any(area in p.parents for p in changed)
+    ]
+    for area in areas:
         shown = area.relative_to(repo.resolve()).as_posix()
         # Only a current handover can acknowledge integrity gaps.
         # Open readable BLOCKERs remain owed independently below.
