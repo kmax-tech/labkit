@@ -1419,6 +1419,16 @@ Notiert, nicht geplant:
    0.0 (Erwartung 0, Streuung 0) ohne Einwand; (3) getippte Zahlen in
    Data / scope ohne erzeugten Teil prüft niemand — soll ein solches Feld
    gehalten werden? Infrastruktur: der Host schlief, 5 h statt 1800 s.
+   Dasselbe Setting mit Sonnet
+   ([Notiz](docs/usability/2026-10-29-sab-apply-screen-sonnet-56e9899.md)):
+   Vertrag erfüllt ohne bestätigte Aussage — 278 s, alle 300 vorhergesagt,
+   `--data-counts` und `--calibrate-null --write` benutzt, report-check
+   sauber; [C1] nicht beurteilbar, weil der Satz margin 0.2 sagt und die
+   Konstante beim Stamp-Beispiel 0.25 blieb (Audit-BLOCKER, ehrlich
+   akzeptiert). Offen, labkit: (4) Satz nennt eine Konstante mit anderem
+   Wert als die Tabelle — mechanisch prüfbar vor der ersten Messung,
+   bisher nur im Agenten-Audit; (1) trat erneut auf (zweiter Lauf in
+   Folge). Behoben: Fehlalarm der Konstanten-Kopie bei `= None` (`78bc969`).
    Leseprobe (`docs/usability/2026-10-28-haiku-decision-reading.md`):
    drei Haiku-Leser wählen an den vier Logstellen den richtigen Schritt
    — Rückzug vor dem nächsten Audit, `fixed` erst nach der Reparatur,
