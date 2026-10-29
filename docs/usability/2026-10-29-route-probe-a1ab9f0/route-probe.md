@@ -4,7 +4,9 @@
 
 ## Result
 
-The route went through end to end: three commits in the probe lab (registration 43ee1dc, repair e89f81a, adoption 1bc9b2b), `report-check` on the area and `--if-reported REPORT.md` all clear, the pre-commit hook green. The adopted run `2026-10-29T15-34-48_315a` lists `pred_results/screen_pred.csv` in `outputs.json` with sha256 `b1cf9ea74ef1a7ed`; the file in the tree has that digest, exactly `person_id, probability, flag`, 300 rows; protocol and report block record `c1_score` 0.7609 = 70/92, C1 met. 13.7 minutes from stage to final commit, three paid calls, 1.64 USD.
+A hand-run probe on a1ab9f0 took 13.7 minutes and met five points of friction, one of which
+(the adoption held against itself) was repaired the same day (42622ff); the state measured
+here is the one before that repair. With those interventions the route reached the end: three commits in the probe lab (registration 43ee1dc, repair e89f81a, adoption 1bc9b2b), `report-check` on the area and `--if-reported REPORT.md` all clear, the pre-commit hook green. The adopted run `2026-10-29T15-34-48_315a` lists `pred_results/screen_pred.csv` in `outputs.json` with sha256 `b1cf9ea74ef1a7ed`; the file in the tree has that digest, exactly `person_id, probability, flag`, 300 rows; protocol and report block record `c1_score` 0.7609 = 70/92, C1 met. 13.7 minutes from stage to final commit, three paid calls, 1.64 USD.
 
 The planted error — `SCORE = "auc"` on the probability where the registration says accuracy of the flag — was named by the first analysis audit as a BLOCKER at the right line, with the mechanism ("a float probability against an int gold is almost never correct"), the wrong number (0.826 is an AUC) and the repair route. The CSV was byte-identical before and after the repair.
 
