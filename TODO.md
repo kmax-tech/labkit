@@ -1645,9 +1645,24 @@ Notiert, nicht geplant:
    Kodierungsfehler nicht als Antwort verwendbar", und ohne passende
    Kennzahl genau das; (12) Auswertung trennt „Quelle genannt" (Kontrolle)
    von „maschinell gebunden" (Labor) — in der Tabelle von Runde 1
-   nachgezogen. Reihenfolge: Vertragswidersprüche klären (9), je einen
-   belegten Reparaturfall aus 34 und 60 zum Abschluss bringen (10),
-   Fit-Budget bemessen (7), dann erneut messen. (1) und (2) starten
+   nachgezogen. **Reihenfolge, festgelegt (Max, 2026-10-29 spät):** (i)
+   Vertragswidersprüche klären (9); (ii) den Anforderungssatz von der
+   fiktiven „published analysis" auf eine ausdrücklich gesetzte
+   Projektanforderung umstellen (8); (iii) 34 und 60 mit den
+   Klarheitsänderungen erneut durchspielen — Erfolg vorab: Fehler
+   verstanden, zulässige Reparatur vorgenommen, erforderlichen Nachweis
+   erzeugt, neu geprüft, korrekt abgeschlossen; nur den gemessenen
+   Ausgang berichten, eine begründete Übergabe separat zählen; der Replay
+   zeigt Reparierbarkeit bei bekannten Fällen, keine allgemeine
+   Verbesserung (10); (iv) Task 15 vollständig vermessen, Messung mit
+   Null-Fits, Audit und Abschluss, daraus Budget und Ende der
+   Modellsuche (7); (v) systematische Injektion auf sauberen Ständen je
+   Kettenzeile, gehaltene wie ungehaltene Fälle berichten (3b). Erst
+   danach eine neue kalte Vergleichsrunde mit festem Commit, Image und
+   Vertrag — sonst bleibt unklar, ob Fehlschläge aus Vertragsproblemen,
+   Zeitmangel oder Agentenverhalten kommen. Dazu der Rerun der Runden 2
+   und 3 in labkit-paper mit dem korrigierten Standard-Check, bevor
+   deren „0 von 6" zitiert wird. (1) und (2) starten
    auf Ansage.
 
 
