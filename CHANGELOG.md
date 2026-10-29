@@ -488,6 +488,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An undeclared repeat cost is a decision to make, not a lane to walk.**
+  The stamp's next-step list and `protocol-check --contract` read an
+  unfilled `repeat_cost` as high (the gates do, and keep doing so) and
+  printed the high lane's route — probe, preflight audit, freeze, detached
+  run — as if decided; a cold agent took it for the route (route probe on
+  a1ab9f0, 2026-10-29). Both now say first: declare it, `"repeat_cost=low"`
+  for a run you can repeat at will or `"repeat_cost=high"`, and that the
+  lines below are the high lane's until then.
+
 - **The adoption is not held against itself.** With the registered
   report already in the tree and no block yet, `--from-run` ran the
   registered-report check on the protocol it was about to write and was

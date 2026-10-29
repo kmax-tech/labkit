@@ -658,6 +658,21 @@ class Exp(unittest.TestCase):
         low = scaffold.next_steps(rel, "foo", "01", "low", "compute", False)
         for not_owed in ("preflight", "frozen = true", "runlog start", "--probe"):
             self.assertNotIn(not_owed, low, low)
+        # an undeclared tier: the decision comes first, both lanes named, the
+        # kind check before it at compute (route probe 2026-10-29: the printed
+        # high-lane steps were taken for the route)
+        for kind in ("compute", "fit"):
+            undeclared = scaffold.next_steps(rel, "foo", "01", None, kind, False)
+            self.assertIn("the repeat cost is not declared yet", undeclared)
+            self.assertIn('"repeat_cost=low"', undeclared)
+            self.assertIn('"repeat_cost=high"', undeclared)
+            self.assertIn("read an unfilled repeat cost as high", undeclared)
+            decide = undeclared.index("Declare the repeat cost")
+            self.assertLess(decide, undeclared.index("preflight experiments/01-foo"))
+            if kind == "compute":
+                self.assertLess(undeclared.index("Check the kind"), decide)
+        self.assertNotIn("Declare the repeat cost", low)
+        self.assertNotIn("Declare the repeat cost", text)
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
             self.assertIn(owed, low, low)
 

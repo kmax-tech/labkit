@@ -1477,6 +1477,21 @@ def next_steps(
             f"replace a file you changed.",
         )
     steps += _closing_steps(ln, rel, protocol)
+    if repeat_cost is None:
+        # the gates read an unfilled tier as high (`effective_repeat_cost`);
+        # the printed steps are then the high lane's, and a cold agent took
+        # them for the route instead of a tier to decide
+        steps.insert(
+            1 if kind == standard_contract.COMPUTE_KIND else 0,
+            f"Declare the repeat cost before the first measurement: "
+            f'`protocol-fill {rel / protocol} "repeat_cost=low"` for a run you can '
+            f"repeat at will — then the route is the registration fields, the full "
+            f"run, `finalize`, the analysis audit and the adoption, with no probe, "
+            f'no preflight audit and no freeze — or `"repeat_cost=high"` for a run '
+            f"that costs real time or money. The steps below are the high lane's: "
+            f"the gates read an unfilled repeat cost as high.",
+        )
+        title = f"{title}; the repeat cost is not declared yet"
     return f"\nNext ({title}):\n" + "\n".join(
         f"  {i}. {step}" for i, step in enumerate(steps, 1)
     )
