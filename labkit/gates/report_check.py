@@ -49,7 +49,11 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
   7. decisions      where the lane owes an analysis audit: check reviews
                     of accepted `stands` decisions. An unconfirmed BLOCKER
                     blocks; an unconfirmed WARNING warns.
-  8. summary        1 if any stage found a blocker, otherwise 0.
+  8. report         where the head registers a report file (`report`) and
+                    that file is delivered: it carries the result block of
+                    the declared run or the protocol's handover block
+                    (`report_hold.report_owed`).
+  9. summary        1 if any stage found a blocker, otherwise 0.
 
 `report_check` lists the stages and their conditions in this order. A
 blocker does not stop later applicable stages. It reads and runs checks;
@@ -70,8 +74,19 @@ select every protocol of every area one of those paths lies in
 `protocol-fill --from-run`. The area, not the protocol
 alone: a script edited after the answer was written back changes what the
 analysis audit saw and what `--check` recomputes. A protocol declaring no
-result owes nothing here: an exploration ends with no reported result,
-probes or not; a `[result]` that does not read is held and blocks.
+result owes nothing here but its registered report: an exploration ends
+with no reported result, probes or not; a `[result]` that does not read
+is held and blocks. A protocol whose head registers a report file
+(`report = "REPORT.md"`) owes that file its result once the file is
+delivered — in the tree at the stop, in the index at the commit —: the
+result block of the declared run or the protocol's handover block,
+declared or not (`report_hold.report_owed`, `hold_registered`); a
+report with the run id removed, a run id typed in, or a discussion block
+releases nothing (pressure pilot 2026-10-29: three of six agents deleted
+the run id after the hook refused the citation, and the commit passed).
+The protocols registering a file among the paths are selected too
+(`report_hold.registering_protocols`): the report at the repository root
+lies in no area.
 
 A report outside the protocol — a Markdown file among the paths that
 cites a run, not a protocol, not under `runs/` or `data/`, tested at its
@@ -155,8 +170,10 @@ from labkit.gates.report_hold import (
     held_by_reports,
     hold_report,
     reached_reports,
+    registering_protocols,
     repo_sources,
     report_files,
+    report_owed,
     tree_differs,
 )
 from labkit.formats.protocol_check import check_fields, conclusion_written
@@ -1057,7 +1074,9 @@ def report_check(
     5. Analysis: coverage and rendered results only where the lane owes it.
     6. Recomputation: always run the analysis script's `--check`.
     7. Decisions: review accepted `stands` only where analysis is owed.
-    8. Summary: return 1 with any blocker, otherwise 0.
+    8. Report: the registered report, only when the head names one and the
+       file is delivered in STATE, carries the result block or the handover.
+    9. Summary: return 1 with any blocker, otherwise 0.
 
     Every applicable stage runs despite earlier blockers. STATE and TEXT
     name the declaration's file state: the tree by default, the index for
@@ -1138,11 +1157,28 @@ def report_check(
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
 
-    # 8. summary — 1 with a blocker, otherwise 0
+    # 8. report — the file the head registers, once delivered in this state
+    findings.take_all(report_findings(ctx))
+
+    # 9. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
+
+
+def report_findings(ctx: Checked) -> list[GateFinding]:
+    """The registered report's obligation (`report_hold.report_owed`): the
+    file the head's `report` names, as the state holds it, carries the
+    result block of the declared run or the protocol's handover block —
+    else one blocker; nothing registered or not delivered: []. The file
+    is read relative to the area's layout root (`Checked.repo`: the git
+    repository where there is one), from the index when the state is the
+    index."""
+    gap = report_owed(
+        ctx.protocol, ctx.text, ctx.declared, ctx.repo, staged=ctx.state == INDEX
+    )
+    return [] if gap is None else [gap]
 
 
 def adoption_order_note(blocked: list[str]) -> str | None:
@@ -1237,9 +1273,16 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     they show became a declared result in this very state (the two-step
     commit of the sixth haiku round, 2026-10-23). A committed report that
     discusses a run of an area PATHS touch is held too
-    (`discussing_reports`): its review read that area. Returns the worst
+    (`discussing_reports`): its review read that area. A protocol whose
+    head registers a file among PATHS as its report is held too
+    (`registering_protocols`): the report lies in no area, and a change
+    of it reaches the protocol that owes it its result
+    (`report_hold.report_owed`, through `hold_declared`). Returns the worst
     exit code."""
     protocols = affected_protocols(paths, repo, staged=staged)
+    for p in registering_protocols(paths, repo, staged=staged):
+        if p not in protocols:
+            protocols.append(p)
     reports = report_files(paths, repo, staged=staged)
     reached = reached_reports(protocols, reports, repo, staged=staged)
     held = {p for p, _ in reports} | {p for p, _, _ in reached}
@@ -1267,9 +1310,10 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
 
 def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
     """`report-check` on PROTOCOL when its head declares a result, as the
-    state holds it (the index when STAGED); 0 for an exploration or a
-    protocol the commit does not hold, 2 for one that cannot be read or is
-    a symbolic link in that state (`repo.protocol_links`)."""
+    state holds it (the index when STAGED); for an exploration only its
+    registered report's obligation (`hold_registered`); 0 for a protocol
+    the commit does not hold, 2 for one that cannot be read or is a
+    symbolic link in that state (`repo.protocol_links`)."""
     link = protocol_links(repo, [protocol], staged=staged)
     if link:
         console.refuse("report-check", link[protocol])
@@ -1286,7 +1330,9 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
         return 2
     declared, gap = _declaration(text)
     if declared is None and gap is None:
-        return 0  # an exploration: nothing declared, nothing owed
+        # an exploration: nothing declared; its registered report, once
+        # delivered, is owed the handover or the result all the same
+        return hold_registered(protocol, text, repo, staged=staged)
     print(
         f"═══ report-check {protocol} (its head declares "
         f"{declared or 'a result that does not read'}) ═══"
@@ -1304,6 +1350,26 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
             )
             return 1
     return report_check(area, protocol, state=INDEX if staged else TREE, text=text)
+
+
+def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> int:
+    """The registered report's obligation of PROTOCOL, a protocol that
+    declares no result (`report_hold.report_owed` with no declared run):
+    0 when the head registers no report, the file is not delivered in the
+    state, or it carries the protocol's handover block; 1 held, the
+    blocker told under its own heading. Raises `protocol_block.BlockError`
+    on a head that does not read — the caller read the declaration off
+    the same text first."""
+    gap = report_owed(protocol, text, None, repo, staged=staged)
+    if gap is None:
+        return 0
+    print(
+        f"═══ report-check {protocol} (its head declares no result; its "
+        f"registered report is delivered) ═══"
+    )
+    out = Findings()
+    out.take(gap)
+    return out.report("report-check", "reporting")
 
 
 def main(argv: list[str]) -> int:

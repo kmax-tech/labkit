@@ -42,7 +42,7 @@ from protocol_fixture import (
     shown_sha,
 )
 
-from labkit.formats import findings, promises, scope_sha, standard_contract
+from labkit.formats import findings, handovers, promises, scope_sha, standard_contract
 from labkit.gates import report_check
 
 
@@ -504,6 +504,7 @@ class IfReported(unittest.TestCase):
         run_kind: RunKind = "measurement",
         audited: bool = True,
         git: bool = False,
+        report: str | None = None,
     ) -> Path:
         """A low-lane area (no freeze owed, so the bare fixture head passes
         station 1) whose protocol says ANSWER and declares DECLARED as its
@@ -511,7 +512,8 @@ class IfReported(unittest.TestCase):
         run a full run unless LONG says a probe; an analysis record of it
         when AUDITED. GIT: the
         root is a repository (before the record: the stamp's paths are
-        repo-relative) and everything is committed at the end."""
+        repo-relative) and everything is committed at the end. REPORT: the
+        head's registered report file (`report = "…"`)."""
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
         if git:
@@ -524,7 +526,7 @@ class IfReported(unittest.TestCase):
         scope_file(area)
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
-            head(repeat_cost="low", result=declared, promises=C1_BLOCK)
+            head(repeat_cost="low", result=declared, promises=C1_BLOCK, report=report)
             + "- **Question / hypothesis:** does it hold?\n"
             + C1_PROSE
             + f"- **Recorded results:** {answer}\n",
@@ -773,6 +775,244 @@ class IfReported(unittest.TestCase):
         )
         self.assertEqual(code, 1, out)
         self.assertIn("no analysis audit saw the area as it is now", out)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class RegisteredReport(unittest.TestCase):
+    """The registered report owes its result (Max, 2026-10-29): a protocol
+    whose head says `report = "REPORT.md"` holds that file, once it is
+    delivered, to the result block of the declared run or the protocol's
+    handover block — at the stop, the commit and the plain call. In the
+    pressure pilot of that day three of six agents deleted the run id
+    from REPORT.md after the hook refused the citation, and the commit
+    passed: a number without a run id was outside the gate."""
+
+    RUN = IfReported.RUN
+    _git = staticmethod(IfReported._git)
+    _fixture = IfReported._area  # the low-lane area, as ReportFiles reuses it
+    P = "experiments/01-x/PROTOCOL-x.md"
+
+    def _area(
+        self,
+        declared: str | None = None,
+        *,
+        report: str | None = "REPORT.md",
+        git: bool = False,
+    ) -> Path:
+        return self._fixture(
+            f"C1 met · recorded: (run {self.RUN})",
+            declared=declared,
+            git=git,
+            report=report,
+        )
+
+    def _gate(self, root: Path, *paths: Path, staged: bool = False) -> tuple[int, str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = report_check.if_reported(list(paths), root, staged=staged)
+        return code, buf.getvalue()
+
+    OWED = "carries neither"
+    WAYS = ("--into", "--discuss", "--handover")
+
+    def test_a_registered_report_without_its_block_is_held_with_the_three_ways_out(
+        self,
+    ):
+        """The delivered state of tasks 34, 15 and 60: a number, no run id.
+        Held when the report is among the paths (it lies in no area) and
+        when the protocol is; the plain call's station holds it too."""
+        area = self._area(git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text("# Report\n\nmean = 0.69 over 12 cases\n", encoding="utf-8")
+        for path in (report, area / "PROTOCOL-x.md"):
+            with self.subTest(path=path.name):
+                code, out = self._gate(root, path)
+                self.assertEqual(code, 1, out)
+                self.assertIn(
+                    "/REPORT.md carries "
+                    "neither a result block (the head declares no result) nor "
+                    "the protocol's handover block — a registered report owes "
+                    "the result or an explicit end without one; a number with "
+                    "its run id removed, or a run id typed in, releases nothing",
+                    out,
+                )
+                self.assertIn("PROTOCOL-x.md registers ", out)
+                self.assertIn(
+                    f"--from-run {self.RUN}` adopts the run (the newest kept one), then `",
+                    out,
+                )
+                self.assertIn(f"--discuss {self.RUN} --why", out)
+                self.assertIn(
+                    "releases nothing — the report then still owes the result or the handover",
+                    out,
+                )
+                self.assertIn("--handover --why", out)
+                self.assertIn("ends the protocol without a result", out)
+                self.assertIn(
+                    "its head declares no result; its registered report is delivered",
+                    out,
+                )
+        ctx = report_check.checked(area, area / "PROTOCOL-x.md")
+        (gap,) = report_check.report_findings(ctx)
+        self.assertEqual(gap.grade, "BLOCKER")
+        self.assertIn(self.OWED, gap.text)
+
+    def test_the_twin_the_result_block_of_the_declared_run_passes(self):
+        area = self._area(declared=self.RUN, git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        report = root / "REPORT.md"
+        new, _ = protocol_fill.into_report(
+            proto.read_text(encoding="utf-8"), area, "# Report\n\n", self.P
+        )
+        report.write_text(new, encoding="utf-8")
+        for path in (report, proto):
+            with self.subTest(path=path.name):
+                code, out = self._gate(root, path)
+                self.assertEqual(code, 0, out)
+                self.assertNotIn(self.OWED, out)
+        self.assertEqual(
+            report_check.report_findings(report_check.checked(area, proto)), []
+        )
+        # a block showing another run than the head declares is no release;
+        # with a result declared the way out is `--into` alone
+        report.write_text(
+            new.replace(self.RUN, "2026-10-07T11-00-00_cd34"), encoding="utf-8"
+        )
+        code, out = self._gate(root, proto)
+        self.assertEqual(code, 1, out)
+        self.assertIn(
+            f"neither the result block of run {self.RUN}, its declared result", out
+        )
+        line = next(ln for ln in out.splitlines() if "registers " in ln)
+        self.assertIn("way out: `protocol-fill ", line)
+        self.assertIn("--into ", line)
+        self.assertNotIn("--from-run", line.split("--discuss")[0])
+
+    def test_the_twin_the_handover_block_passes_and_a_typed_one_does_not(self):
+        area = self._area(git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        report = root / "REPORT.md"
+        report.write_text("# Report\n\nno result\n", encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            rc = protocol_fill.main(
+                [
+                    str(proto),
+                    "--handover",
+                    "--why",
+                    "the audit found what the data cannot answer",
+                    "--tried",
+                    "two runs",
+                    "--into",
+                    str(report),
+                ]
+            )
+        self.assertEqual(rc, 0, buf.getvalue())
+        for path in (report, proto):
+            with self.subTest(path=path.name):
+                code, out = self._gate(root, path)
+                self.assertEqual(code, 0, out)
+                self.assertNotIn(self.OWED, out)
+        self._git(root, "add", "-A")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
+        # a block typed by hand names no record that reads: held, saying so
+        typed = "\n".join(
+            [
+                "# Report",
+                "",
+                handovers.OPEN,
+                f'protocol = "{self.P}"',
+                'record = "experiments/01-x/audits/handovers/handover-00.json"',
+                "-->",
+                "Unresolved: handed over.",
+                handovers.CLOSE,
+                "",
+            ]
+        )
+        report.write_text(typed, encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(self.OWED, out)
+        self.assertIn("its handover block at line 3 names no record that reads", out)
+
+    def test_a_discussion_block_alone_is_held(self):
+        area = self._area()
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        report = root / "REPORT.md"
+        report.write_text(
+            protocol_fill.discuss_into(
+                proto.read_text(encoding="utf-8"),
+                area,
+                "# Report\n\n",
+                self.P,
+                self.RUN,
+                "looked at, not adopted",
+            ),
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(self.OWED, out)
+
+    def test_a_typed_run_id_without_the_block_is_held(self):
+        area = self._area()
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(
+            f"# Report\n\nmean = 0.69 (run {self.RUN})\n", encoding="utf-8"
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(self.OWED, out)
+        self.assertIn("a run id typed in, releases nothing", out)
+
+    def test_a_protocol_without_report_and_a_second_file_hold_nothing(self):
+        """The obligation is the registered file's alone: a protocol that
+        registers none holds REPORT.md to nothing new, and a note beside a
+        registered report owes nothing; a registered report not yet
+        written owes nothing either — the obligation is on what is
+        delivered."""
+        area = self._area(report=None)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text("# Report\n\nmean = 0.69 over 12 cases\n", encoding="utf-8")
+        code, out = self._gate(root, report, area / "PROTOCOL-x.md")
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("registers", out)
+        area = self._area()
+        root = area.parent.parent
+        code, out = self._gate(root, area / "PROTOCOL-x.md")
+        self.assertEqual(code, 0, out)  # REPORT.md not written yet
+        note = root / "notes" / "x.md"
+        note.parent.mkdir()
+        note.write_text("# Notes\n\nmean = 0.69 over 12 cases\n", encoding="utf-8")
+        code, out = self._gate(root, note)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("registers", out)
+
+    def test_staged_reads_the_report_as_the_index_holds_it(self):
+        """The commit holds the index: a REPORT.md only in the tree is not
+        delivered by the commit; staged without its block it is held."""
+        area = self._area(git=True)
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text("# Report\n\nmean = 0.69 over 12 cases\n", encoding="utf-8")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
+        self._git(root, "add", "REPORT.md")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn(self.OWED, out)
 
 
 if __name__ == "__main__":

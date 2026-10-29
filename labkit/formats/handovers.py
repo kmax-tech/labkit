@@ -54,6 +54,7 @@ from labkit.formats.repo import (
     git_root,
     indexed_blobs,
     indexed_protocols,
+    own_path,
     protocol_links,
     state_text,
     under_root,
@@ -399,6 +400,34 @@ def _block_head(head: list[str], at: int) -> tuple[str, str]:
             "each a string"
         )
     return data["protocol"], data["record"]
+
+
+def block_mismatch(
+    block: HandoverBlock, report: Path, root: Path, *, staged: bool
+) -> str | None:
+    """Why BLOCK, found in REPORT, is not the handover block its record
+    renders — the record it names lies outside ROOT, is absent in the tree
+    or, STAGED, the index, does not read (`read_record`), was written for
+    another report, or the lines differ from `handover_lines` — or None
+    when the block stands as written. The test of a block the gate found
+    in a report (`report_hold.report_owed`: a block typed by hand ends
+    nothing); `mismatch` starts from the record and holds the area too."""
+    path = own_path(report.parent / block.record)
+    if not under_root(root, path):
+        return f"names a record outside the repository ({block.record})"
+    try:
+        record = read_record(root, path, staged=staged)
+        wanted = handover_lines(record, root, path)
+    except HandoverError as exc:
+        return f"names no record that reads: {exc}"
+    if (root / record.report).resolve() != report.resolve():
+        return f"names a record written for another report ({record.report})"
+    if block.lines != wanted:
+        return (
+            "differs from its record — write it again with "
+            "`protocol-fill --handover` (prose outside the block is free)"
+        )
+    return None
 
 
 def with_handover_block(text: str, record: Handover, root: Path, path: Path) -> str:

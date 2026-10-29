@@ -6,7 +6,11 @@ Which Markdown files are reports and how the gate's state reads them
 `committed_reports`, `reached_reports`, `discussing_reports`,
 `reports_citing`), what the repo holds for them to cite (`repo_sources`),
 and what holds one (`hold_report`: result blocks owed and current,
-discussions, promotions, a report review owed). `report_check` is the
+discussions, promotions, a report review owed), and what a protocol's
+registered report owes (`report_owed`: the file the head's `report`
+names carries the result block of the declared run or the protocol's
+handover block, once it exists; `registering_protocols` finds the
+protocols a change of that file reaches). `report_check` is the
 entry: `if_reported` decides the order and the conditions — the
 protocols first, then every report — and calls into here. Split off
 `report_check` (audit 2026-10-27, third, M3): the protocol's release
@@ -28,6 +32,7 @@ from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
 from labkit.formats import (
     attempts,
     findings,
+    handovers,
     protocol_block,
     report_reviews,
 )
@@ -44,6 +49,7 @@ from labkit.formats.repo import (
     REPORT_SUFFIX,
     adopt_command,
     audit_command,
+    handover_command,
     into_command,
     git_root,
     under_root,
@@ -223,6 +229,125 @@ def report_files(
         if text is not None and report_blocks.cited_run_ids(text):
             out.append((full, text))
     return out
+
+
+def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
+    """The protocols of REPO whose head registers a file among PATHS as
+    their report (`protocol_block.Head.report`), in the repo's order — the
+    protocols a change of the report reaches though no path lies in their
+    area: REPORT.md at the repository root is the usual case. Reads every
+    protocol's head as the state holds it (the index when STAGED,
+    `repo.state_text`) only when PATHS hold a candidate, a Markdown file
+    that is not a protocol. A protocol the state does not hold, a link, or
+    a head that does not read registers nothing here: its own hold names
+    the error where it is among the paths (`report_check.hold_declared`)."""
+    root = repo.resolve()
+    candidates = {
+        own_path(p if p.is_absolute() else root / p)
+        for p in paths
+        if p.suffix == REPORT_SUFFIX and not PROTOCOL_NAME.match(p.name)
+    }
+    if not candidates:
+        return []
+    protocols = indexed_protocols(repo) if staged else repo_protocols(root)
+    out: list[Path] = []
+    for p in protocols:
+        try:
+            text = state_text(repo, p, staged=staged)
+            registered = protocol_block.head(text).report if text is not None else None
+        except (OSError, UnicodeError, protocol_block.BlockError):
+            continue  # registers nothing; held as a protocol where it is touched
+        if registered is not None and own_path(root / registered) in candidates:
+            out.append(p)
+    return out
+
+
+def report_owed(
+    protocol: Path, text: str, declared: str | None, repo: Path, *, staged: bool
+) -> GateFinding | None:
+    """Why PROTOCOL's registered report owes its result — one blocker with
+    the three ways out — or None.
+
+    The head's `report` names the file (`protocol_block.report_field`,
+    relative to REPO); none registered: None. The file is read as the
+    state holds it (`repo.state_text`: the index when STAGED, else the
+    tree); not there: None — the obligation is on what is delivered, a
+    report not yet written owes nothing, and one the commit does not carry
+    is not delivered. Released by EITHER the protocol's result block
+    showing DECLARED, the run the head declares (written by `protocol-fill
+    --into`; where the report is among the paths its body is held to the
+    rendering as well, `report_blocks.block_gaps`) OR the protocol's
+    handover block as its record renders it (`handovers.block_mismatch`).
+    Everything else is held: a number with no run id, a run id typed in
+    without the block (the id itself is held by `report_blocks.cited_gaps`
+    where the report is among the paths), a discussion block — `--discuss`
+    says a run was looked at and closes nothing —, blocks that do not
+    read, a report that is not UTF-8. The ways out name the run the gates
+    hold the protocol to (`audit_binding.audited_run`: the newest kept one;
+    DECLARED when declared) for the adoption and the discussion, and the
+    handover. Why (pressure pilot 2026-10-29, tasks 34, 15, 60): the hook
+    refused a report citing a run that declares no result, the agents
+    deleted the run id, and the commit passed."""
+    head = protocol_block.head(text)
+    if head.report is None:
+        return None
+    root = repo.resolve()
+    report = own_path(root / head.report)
+    here = Path.cwd()
+    name_p, name_r = shown(protocol, here), shown(report, here)
+    why: list[str] = []
+    try:
+        written = state_text(repo, report, staged=staged)
+    except UnicodeDecodeError as exc:
+        written = ""
+        why.append(f"it does not read: {exc}")
+    if written is None:
+        return None
+    block_owner = report_blocks.path_from_report(protocol, report)
+    try:
+        blocks = report_blocks.blocks(written)
+        handed = handovers.handover_blocks(written)
+    except (report_blocks.ReportBlockError, handovers.HandoverError) as exc:
+        blocks, handed = [], []
+        why.append(f"its blocks do not read: {exc}")
+    if declared is not None and any(
+        b.protocol == block_owner and b.run_id == declared for b in blocks
+    ):
+        return None
+    for h in handed:
+        if h.protocol != block_owner:
+            continue
+        gap = handovers.block_mismatch(h, report, root, staged=staged)
+        if gap is None:
+            return None
+        why.append(f"its handover block at line {h.first} {gap}")
+    run, _ = audited_run(protocol.parent.resolve(), protocol, text)
+    newest = declared or (run.name if run is not None else "<run_id>")
+    what = (
+        f"the result block of run {declared}, its declared result"
+        if declared is not None
+        else "a result block (the head declares no result)"
+    )
+    adopt = (
+        ""
+        if declared is not None
+        else f"`{adopt_command(protocol, newest)}` adopts the run"
+        + (" (the newest kept one)" if run is not None else "")
+        + ", then "
+    )
+    return blocker(
+        f"{name_p} registers {name_r} as its report, and {name_r} carries "
+        f"neither {what} nor the protocol's handover block"
+        + "".join(f"; {w}" for w in why)
+        + " — a registered report owes the result or an explicit end without "
+        "one; a number with its run id removed, or a run id typed in, releases "
+        "nothing",
+        fix=f"{adopt}`{into_command(protocol, report)}` writes the result block; "
+        f"`{report_blocks.discuss_command(name_p, newest, name_r)}` discusses a "
+        f"run only looked at and releases nothing — the report then still owes "
+        f"the result or the handover; `{handover_command(protocol, name_r)}` "
+        f"ends the protocol without a result",
+    )
 
 
 def newly_declared(
