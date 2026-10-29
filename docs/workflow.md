@@ -84,8 +84,14 @@ kind, not the repeat cost (`standard_contract.registration_fields(kind, model)`)
 every kind the question; a fit or an apply also the success criterion, the
 admissibility condition and the null condition / anchors; a `[model]` table
 adds the data profile, and a computation with one says in the head what its
-number describes (`number_describes`). `protocol-check` says "all must
-and should fields filled" once these stand; the Conclusion is not among
+number describes (`number_describes`). A computation a task asks to match
+a stated value registers it in the head's optional `[reference]` table
+(key — the metrics key compared —, value, tolerance, relation, source;
+`labkit-init exp --kind compute --reference KEY=VALUE[±TOL]` stamps it,
+`docs/promise-block.md`): the run writes the verdict beside the number,
+the Recorded results line carries it generated, and a `not met` is a
+valid outcome; without the table nothing is compared. `protocol-check`
+says "all must and should fields filled" once these stand; the Conclusion is not among
 them — it is owed after the run (step 7), and `--list` keeps it under
 "after the run — yours". The commit matters: the release
 holds the registration to the commit of the first measurement, not to the

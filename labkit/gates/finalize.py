@@ -51,6 +51,15 @@ each step's condition):
                     included — a blocker (`null_lane_findings`, LAB-034
                     Null condition in the same run); without both lanes, a
                     note
+     reference      a computation's comparison with the stated value its
+                    head registers (`[reference]`): the run recorded the
+                    verdict and it reads; `not comparable` — the key absent
+                    from metrics.json or no finite number — is a blocker
+                    naming the key and the way out (write the key, measure
+                    anew), so no "met" can be reported; a `ref_*` key
+                    without a registered reference, and a reference changed
+                    after the run, block too (`reference.comparison_gaps`);
+                    `not met` is a valid outcome, a note
   8. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
@@ -76,12 +85,19 @@ from dataclasses import replace
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
-from labkit.formats.runs import metrics_path, run_path
-from labkit.formats import console, findings as audit_findings, promises, protocol_block
+from labkit.formats.runs import metrics_path, read_metrics, run_path
+from labkit.formats import (
+    console,
+    findings as audit_findings,
+    promises,
+    protocol_block,
+    reference,
+)
 from labkit.formats.standard_contract import lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
     ArtefactError,
+    MetricsError,
     RunDir,
     patch_path,
     read_outputs,
@@ -123,6 +139,7 @@ from labkit.formats.protocol_check import (
     field_name,
     fields,
     open_holes,
+    reference_gap,
 )
 from labkit.checks import data_counts
 from labkit.checks.run_record_check import (
@@ -718,6 +735,57 @@ def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
         )
 
 
+def check_reference(
+    findings: Findings,
+    protocol: Path,
+    text: str,
+    head: protocol_block.Head,
+    answering_run: Path,
+) -> None:
+    """Station 7: the comparison with the stated value the head registers
+    (`[reference]`, a computation's), held to the answering run's
+    metrics.json (`reference.comparison_gaps`, each a guaranteed blocker):
+    a table that does not read, or one on a kind with a bar
+    (`reference_gap`), blocks too; metrics that do not read block as the
+    other stations' do. Without a table: a note, nothing owed — unless the
+    run wrote `ref_*` keys. `not met` is a valid outcome, told as a note."""
+    try:
+        ref = protocol_block.reference(text)
+    except protocol_block.BlockError as exc:
+        findings.block(
+            f"{protocol.name}: {exc}",
+            fix=f"repair the [reference] table as the sentence says; `protocol-check "
+            f"{shlex.quote(shown(protocol, Path.cwd()))}` shows it",
+        )
+        return
+    gap = reference_gap(text, head)
+    if gap:
+        findings.block(f"{protocol.name}: {gap}", fix="as the sentence says")
+        return
+    try:
+        metrics = runs_metrics(answering_run)
+    except MetricsError as exc:
+        findings.block(
+            f"the metrics of {answering_run.name} do not read: {exc}",
+            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
+            f"and audit that run; the run's own files stay as they are",
+        )
+        return
+    held = reference.comparison_gaps(ref, metrics)
+    findings.take_all(held)
+    if held:
+        return
+    if ref is None:
+        findings.note("  n/a — no [reference] registered: a pure computation")
+    else:
+        findings.note(f"  {reference.phrase(metrics, ref)} — as the run recorded it")
+
+
+def runs_metrics(answering_run: Path) -> dict:
+    """RUN's metrics.json (`runs.read_metrics`); raises MetricsError."""
+    return read_metrics(metrics_path(answering_run))
+
+
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     """Station 7: a criterion's denominator that matches no recorded input count."""
     w = criterion_n_input_mismatches(answering_run)
@@ -768,10 +836,12 @@ def finalize_area(
        stamped `<…>` placeholders left in the area's README.
     5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
-    7. registered outputs, criterion n and the null lane — only with a
-       run; an output that is not the file the run recorded (gone, or
-       another sha256 than outputs.json) blocks, criterion n warns, a null
-       lane that did not move blocks.
+    7. registered outputs, criterion n, the null lane and the reference
+       comparison — only with a run; an output that is not the file the
+       run recorded (gone, or another sha256 than outputs.json) blocks,
+       criterion n warns, a null lane that did not move blocks, a
+       registered reference the run cannot compare (the key absent or no
+       finite number) blocks — a missed one is a result.
     8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
 
     A blocker never stops a step: all of them run, then the summary lists
@@ -850,7 +920,8 @@ def finalize_area(
     findings.header("area tests")
     check_area_tests(findings, area)
 
-    # 7. registered outputs, criterion n and the null lane — only with a run
+    # 7. registered outputs, criterion n, the null lane and the reference
+    #    comparison — only with a run
     findings.header("registered outputs")
     if answering_run is None:
         findings.note(NO_RUN)
@@ -860,6 +931,8 @@ def finalize_area(
         check_criterion_n(findings, answering_run)
         findings.header("null lane")
         check_null_lane(findings, answering_run)
+        findings.header("reference comparison")
+        check_reference(findings, chosen, text, head, answering_run)
 
     # 8. audit findings — always
     findings.header("audit findings")

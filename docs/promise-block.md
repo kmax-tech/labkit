@@ -85,7 +85,31 @@ the repository root, that owes this protocol's result once it exists —
 says what releases it), the
 `[[promise]]` tables and — once a number is reported — the `[result]` table
 naming the run (`protocol_block.declared_run`, written by `protocol-fill
---from-run`; the binding document says what the gates hold it to):
+--from-run`; the binding document says what the gates hold it to). A
+computation (`kind = "compute"`) may carry one more optional table,
+`[reference]` — the stated value its kept number is compared with:
+
+```toml
+[reference]
+key = "deforestation_rate"   # the metrics key compared (the compute skeleton's METRIC_KEY)
+value = 0.62                 # the stated value, in the key's unit
+tolerance = 0.01             # within: |measured − value| ≤ tolerance; `relative = true` makes it a fraction of value
+relation = "within"          # within | at_least | at_most (the last two carry no tolerance)
+source = "the project's expectation (task text)"   # who states the value; optional
+```
+
+`protocol_block.reference` reads it exactly or refuses it by name; on a
+fit or an apply it is refused naming `[C]` — those kinds compare in a
+criterion (`protocol_check.reference_gap`). It is no promise and no bar:
+the compute skeleton writes the verdict (`ref_state`, `ref_met`,
+`ref_distance`, …; `formats/reference`) beside the number, `02_analyze.py
+--check` recomputes it, the Recorded results line carries it generated,
+and finalize blocks a reference the run cannot compare (the key absent
+from metrics.json, or no finite number) — a `not met` is a valid outcome.
+The registration stamp digests the table: a value changed after the audit
+is drift (docs/notes/2026-10-29-reference-comparison.md).
+
+The head and the tables:
 
 ```toml
 [protocol]
