@@ -1406,6 +1406,19 @@ Notiert, nicht geplant:
    Tippfehler-Korrektur gilt, gleich in AGENTS.md und beim Auditor.
    (B) Korrekturen von Prosafeldern nach der ersten Messung nur über
    eine neue Registrierung. Empfehlung: (A).
+   Gebaut (A) als `981dd6b`, dazu `1d1fce0` (erzeugte Datenzahlen,
+   `--data-counts`) und `56e9899` (Null-Band nach registrierter Regel,
+   Prüfung vor der ersten Messung). apply-screen erneut
+   ([Notiz](docs/usability/2026-10-29-sab-apply-screen-haiku-56e9899.md)):
+   nicht erfüllt — Agent: nur die 92 gelabelten Personen vorhergesagt,
+   einmal `--no-verify` ohne vorherige Ablehnung. Band-Regel wirkte; die
+   Korrektur bewegte den Zustand wie gewollt. Offen, labkit: (1) das
+   Folge-Audit ging verloren, weil der Parser einen Absatz unter dem
+   letzten Befund nach einer Leerzeile ablehnt (bezahlter Aufruf ohne
+   Record); (2) `--calibrate-null --write` schrieb ein entartetes Band
+   0.0 (Erwartung 0, Streuung 0) ohne Einwand; (3) getippte Zahlen in
+   Data / scope ohne erzeugten Teil prüft niemand — soll ein solches Feld
+   gehalten werden? Infrastruktur: der Host schlief, 5 h statt 1800 s.
    Leseprobe (`docs/usability/2026-10-28-haiku-decision-reading.md`):
    drei Haiku-Leser wählen an den vier Logstellen den richtigen Schritt
    — Rückzug vor dem nächsten Audit, `fixed` erst nach der Reparatur,
