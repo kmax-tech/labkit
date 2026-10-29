@@ -439,7 +439,8 @@ class StaleEvidence(Evidence):
     def _gap(self, share: Path, name: str, text: str) -> str | None:
         from labkit.formats import findings
 
-        return findings.audit_record_gap(share, name, text)
+        gap = findings.audit_record_gap(share, name, text)
+        return gap.why if gap else None
 
     def test_the_record_covers_the_area_while_nothing_changed(self):
         with tempfile.TemporaryDirectory() as d:

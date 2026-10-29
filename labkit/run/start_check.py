@@ -314,7 +314,8 @@ def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> li
     """Why the head's `preflight_audit` does not cover a full run: empty, or
     what `findings.audit_record_gap` says of the record it names — none
     named (`n/a`, refused since 0.99.0), no such record, one of other code
-    or another promise block than the area carries now, a finding open."""
+    or another promise block than the area carries now, a finding open —
+    each with its way out (`RecordGap.fix`)."""
     if not line:
         return [
             f"{path.name}: `preflight_audit` is empty — run `preflight`, then the "
@@ -322,7 +323,9 @@ def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> li
             f"findings and name its record here (LAB-015 Preflight audit before freezing)"
         ]
     gap = findings.audit_record_gap(base_dir, line, text)
-    return [f"{path.name}: preflight_audit: {gap}"] if gap else []
+    if gap is None:
+        return []
+    return [with_way_out(f"{path.name}: preflight_audit: {gap.why}", gap.fix)]
 
 
 def _promise_snapshot(

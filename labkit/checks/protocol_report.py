@@ -25,8 +25,8 @@ from pathlib import Path
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import adopt_command, git_root, protocol_link, repo_protocols
-from labkit.formats.findings import audit_record_gap
-from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding
+from labkit.formats.findings import RecordGap, audit_record_gap
+from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding, with_way_out
 from labkit.formats.protocol_history import (
     check_annotation_validity,
     check_protocol_id,
@@ -488,7 +488,7 @@ class FileReport:
     path: Path
     head_error: str | None
     frozen: bool = False
-    audit_drift: str | None = None
+    audit_drift: RecordGap | None = None  # a WARNING, with its own way out
     id_findings: list[GateFinding] = field(default_factory=list)
     repeat_cost_lowered: str | None = (
         None  # a WARNING: the tier sank since the first commit
@@ -702,7 +702,10 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         print(f"{f}: HEAD (must): {r.head_error}")
         return
     if r.audit_drift:
-        print(f"{f}: WARNING: preflight_audit: {r.audit_drift}")
+        print(
+            f"{f}: WARNING: preflight_audit: "
+            + with_way_out(r.audit_drift.why, r.audit_drift.fix)
+        )
     for finding in r.id_findings:
         print(finding.line)
     if r.repeat_cost_lowered:

@@ -110,17 +110,54 @@ class PreflightRecord(unittest.TestCase):
         text = _protocol()
         name = self._record(text)
         now = text.replace("line count", "number of causal claims")
-        gap = findings.audit_record_gap(self.area, name, now) or ""
-        self.assertIn(f"the record {name} no longer covers the protocol", gap)
+        gap = findings.audit_record_gap(self.area, name, now)
+        assert gap is not None
+        self.assertIn(f"the record {name} no longer covers the protocol", gap.why)
         self.assertIn(
-            "the registration changed after the audit (Question / hypothesis)", gap
+            "the registration changed after the audit (Question / hypothesis)",
+            gap.why,
         )
 
     def test_a_changed_kind_is_named(self):
         text = _protocol("fit")
         name = self._record(text)
-        gap = findings.audit_record_gap(self.area, name, _protocol("apply")) or ""
-        self.assertIn("(kind)", gap)
+        gap = findings.audit_record_gap(self.area, name, _protocol("apply"))
+        assert gap is not None
+        self.assertIn("(kind)", gap.why)
+
+    def test_each_gap_carries_its_own_way_out(self):
+        # an open finding is decided, not audited again; other code is
+        text = _protocol()
+        open_ = findings.write(
+            self.area,
+            "preflight",
+            "opus",
+            scope_sha.area_stamp(self.area)[0],
+            promises.block_stamp(text),
+            (0, 1, 0),
+            [
+                (
+                    "WARNING",
+                    "WARNING · scripts/01_measure.py:1 · x · y · LAB-015 Preflight audit before freezing · z",
+                )
+            ],
+            registration=protocol_check.registration_stamp(text),
+        )
+        gap = findings.audit_record_gap(self.area, open_.name, text)
+        assert gap is not None
+        self.assertIn("still `open`", gap.why)
+        self.assertEqual(
+            gap.fix,
+            findings.decide_way(
+                self.area, findings.open_findings([findings.read(open_)])[0]
+            ),
+        )
+        name = self._record(text)
+        gap = findings.audit_record_gap(
+            self.area, name, text.replace("line count", "x")
+        )
+        assert gap is not None
+        self.assertEqual(gap.fix, findings.audit_way(self.area))
 
     def test_a_record_without_the_registration_is_no_longer_read(self):
         text = _protocol()

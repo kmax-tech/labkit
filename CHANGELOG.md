@@ -511,6 +511,19 @@ pins (`requirements.txt` / `requirements.lock`).
   home (`repo.report_fields_step`; the contract line `repo.contract_command`,
   which the head-unreadable refusal of the audit binding uses too).
 
+- **The named record's open finding is decided, not audited again.**
+  preflight attached one way out to every gap of the record the head's
+  `preflight_audit` names — "audit this code and promise block" — also
+  where the record covered the state and only its findings were still
+  open; an agent audited the same state again instead of deciding
+  (ScienceAgentBench task 34 on 28c22f9, 2026-10-29). `audit_record_gap`
+  now returns the gap with its own way out (`findings.RecordGap`): the
+  decisions where findings are open (`decide_way`, one command per
+  finding), a new audit where the record saw other code, another block
+  or another registration (`audit_way`), the record restored where it
+  does not read; preflight, runlog's freeze gate and protocol-check pass
+  it through.
+
 - **An indented paragraph below a blank line is the last finding's.**
   Two paid audits of the same day (apply-screen with Haiku and with
   Sonnet, 2026-10-29) closed the last finding's evidence list with a

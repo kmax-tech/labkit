@@ -217,11 +217,11 @@ class WaivedAudit(unittest.TestCase):
             self.area, "n/a — RF model training does not require external audit", text
         )
         assert gap is not None
-        self.assertIn("names no record", gap)
-        self.assertIn("nobody waives their own", gap)
-        self.assertIn("labkit-audit <area> --mode preflight", gap)
-        self.assertIn("records the failed attempt", gap)
-        self.assertIn("the repeat cost is wrong, not the field", gap)
+        self.assertIn("names no record", gap.why)
+        self.assertIn("nobody waives their own", gap.why)
+        self.assertIn("labkit-audit <area> --mode preflight", gap.why)
+        self.assertIn("records the failed attempt", gap.why)
+        self.assertIn("the repeat cost is wrong, not the field", gap.why)
 
     def test_audit_record_gap_reads_name_existence_code_block_then_decisions(self):
         """The record named in the head, held step by step: a name of
@@ -232,11 +232,11 @@ class WaivedAudit(unittest.TestCase):
         gap = findings.audit_record_gap(
             self.area, "2026 · scope sha 000000000000 · 0", text
         )
-        self.assertIn("names no record", gap or "")
+        self.assertIn("names no record", gap.why if gap else "")
         gap = findings.audit_record_gap(
             self.area, "2026-10-07T10-00-preflight.toml", text
         )
-        self.assertIn("there is no such record", gap or "")
+        self.assertIn("there is no such record", gap.why if gap else "")
         other = findings.write(
             self.area,
             "preflight",
@@ -248,7 +248,7 @@ class WaivedAudit(unittest.TestCase):
             registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, other.name, text)
-        self.assertIn("the code now stamps", gap or "")
+        self.assertIn("the code now stamps", gap.why if gap else "")
         sha = scope_sha.area_stamp(self.area)[0]
         stale = findings.write(
             self.area,
@@ -261,7 +261,7 @@ class WaivedAudit(unittest.TestCase):
             registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, stale.name, text)
-        self.assertIn("saw the promise block otherblock00", gap or "")
+        self.assertIn("saw the promise block otherblock00", gap.why if gap else "")
         open_ = findings.write(
             self.area,
             "preflight",
@@ -278,7 +278,7 @@ class WaivedAudit(unittest.TestCase):
             registration=registration_of(self.area),
         )
         gap = findings.audit_record_gap(self.area, open_.name, text)
-        self.assertIn("still `open`", gap or "")
+        self.assertIn("still `open`", gap.why if gap else "")
         good = findings.write(
             self.area,
             "preflight",
@@ -304,7 +304,7 @@ class WaivedAudit(unittest.TestCase):
         )
         gap = findings.audit_record_gap(self.area, analysis.name, text)
         self.assertIn(
-            "names no record", gap or ""
+            "names no record", gap.why if gap else ""
         )  # an analysis record's name is not a preflight one
 
     def test_preflight_blocks_a_frozen_waiver_at_minutes_and_passes_seconds(self):
@@ -328,7 +328,8 @@ class WaivedAudit(unittest.TestCase):
         report = protocol_report.check_protocol(
             p, p.read_text(encoding="utf-8"), set(), {}
         )
-        self.assertIn("nobody waives", report.audit_drift or "")
+        assert report.audit_drift is not None
+        self.assertIn("nobody waives", report.audit_drift.why)
         p = self._protocol("high", "n/a — not needed", frozen=False)
         report = protocol_report.check_protocol(
             p, p.read_text(encoding="utf-8"), set(), {}

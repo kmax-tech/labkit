@@ -83,7 +83,6 @@ from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
     AmbiguousArea,
     area_path,
-    audit_command,
     choose_protocol,
     git_root,
     tree_dirty,
@@ -448,14 +447,15 @@ def check_audit_coverage(
     """Station 3, the record: why the record the head's AUDIT_LINE names
     does not cover a full run of this code and the promise block TEXT
     carries now (`findings.audit_record_gap`, the same answer runlog's
-    freeze gate gives — preflight must not pass a state the run refuses).
-    A gap warns, and blocks once FROZEN."""
+    freeze gate gives — preflight must not pass a state the run refuses),
+    with the gap's own way out (`RecordGap.fix`: a new audit, or the
+    decisions where the record's findings are still open). A gap warns,
+    and blocks once FROZEN."""
     gap = audit_findings.audit_record_gap(area, audit_line, text)
     if gap:
         _owed(findings, frozen)(
-            f"preflight_audit: {gap} (LAB-015 Preflight audit before freezing)",
-            f"audit this code and promise block: "
-            f"`{audit_command(area, '--mode', 'preflight')}`, then decide its findings",
+            f"preflight_audit: {gap.why} (LAB-015 Preflight audit before freezing)",
+            gap.fix,
         )
 
 

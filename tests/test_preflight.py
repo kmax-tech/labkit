@@ -469,6 +469,53 @@ class TestAuditFindings(unittest.TestCase):
             self.assertEqual(code, 1, out)
             self.assertIn("BLOCKER: undecided in", out)
 
+    def test_the_named_records_open_finding_carries_the_decide_way(self):
+        """The gap of the record the head names told "audit again" where
+        the way is to decide each finding; the twin, a record of other
+        code, keeps the audit way (`findings.audit_record_gap`)."""
+        from labkit.formats import scope_sha
+
+        with _area_dir() as d:
+            area, _ = _area(d, _protocol(frozen=True, preflight_audit="x"))
+            p = area / "PROTOCOL-x.md"
+            stale = findings.write(
+                area,
+                "preflight",
+                "opus",
+                scope_sha.area_stamp(area)[0],
+                _block(area),
+                (0, 1, 0),
+                self.ROW,
+                registration=registration_of(area),
+            )
+            p.write_text(_protocol(frozen=True, preflight_audit=stale.name))
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            (line,) = [
+                ln for ln in out.splitlines() if "BLOCKER: preflight_audit:" in ln
+            ]
+            self.assertIn(f"1 finding(s) of {stale.name} still `open`", line)
+            self.assertIn(f'--decide 1 STATUS "<why>" --record {stale.name}', line)
+            self.assertNotIn("audit this code and promise block", line)
+            other = findings.write(
+                area,
+                "preflight",
+                "opus",
+                "000000000000",
+                _block(area),
+                (0, 0, 0),
+                [],
+                registration=registration_of(area),
+            )
+            p.write_text(_protocol(frozen=True, preflight_audit=other.name))
+            code, out = _run_preflight(area)
+            self.assertEqual(code, 1, out)
+            (line,) = [
+                ln for ln in out.splitlines() if "BLOCKER: preflight_audit:" in ln
+            ]
+            self.assertIn("way out: audit this code and promise block", line)
+            self.assertNotIn("--decide", line)
+
     def test_decided_findings_pass_and_an_unreadable_file_blocks(self):
         with _area_dir() as d:
             area, path = self._recorded(d)

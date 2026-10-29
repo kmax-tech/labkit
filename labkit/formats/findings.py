@@ -1792,7 +1792,27 @@ def names_preflight_record(name: str) -> bool:
     )
 
 
-def audit_record_gap(area: Path, name: str, text: str) -> str | None:
+@dataclass(frozen=True)
+class RecordGap:
+    """Why the record a head names covers no full run (`audit_record_gap`),
+    and the step that closes it — the way out a gate tells beside the
+    sentence (`gate.with_way_out`)."""
+
+    why: str
+    fix: str
+
+
+def audit_way(area: Path) -> str:
+    """The way out of a record that saw other code, another promise block
+    or another registration than AREA carries now: the preflight audit on
+    the state as it stands, then its decisions."""
+    return (
+        f"audit this code and promise block: "
+        f"`{audit_command(area, '--mode', 'preflight')}`, then decide its findings"
+    )
+
+
+def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
     """Why the head's non-empty `preflight_audit` NAME does not cover a full
     run of AREA under the protocol TEXT, or None: it names no record (an
     `n/a`, a sentence, a path — the field is the file name of the decided
@@ -1800,9 +1820,13 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
     there is no such record in the area, the record is of another mode,
     it saw other code than the area stamps now (`scope_sha`) or another
     promise block than TEXT carries (`block_sha`), or a finding of it is
-    still open. One answer for runlog's freeze gate, `preflight` and
-    `protocol-check`; the caller decides what an empty field and `low`
-    mean. Until 0.103.0 the field was a hand-written line (`<date> · scope
+    still open — each with its own way out (`RecordGap.fix`): a new
+    audit where the record covers other code, another block or another
+    registration (`audit_way`), the decisions where its findings are
+    still open (`decide_way`), the record restored where it does not
+    read (`record_way`). One answer for runlog's freeze gate, `preflight`
+    and `protocol-check`; the caller decides what an empty field and
+    `low` mean. Until 0.103.0 the field was a hand-written line (`<date> · scope
     sha <12 hex> · N findings`) whose sha a regex read and whose record the
     sha then had to find — the record names its sha itself, so the head
     names the record (review 2026-10-22). `n/a` passed every gate until
@@ -1810,8 +1834,9 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
     external audit"); the refusal names the honest ways and offers no
     word to write instead."""
     name = name.strip()
+    audit = audit_way(area)
     if not names_preflight_record(name):
-        return (
+        return RecordGap(
             "`preflight_audit` names no record — the field is the file name of the "
             "decided preflight record under audits/ (`<minute>-preflight.toml`, "
             "printed by `labkit-audit <area> --mode preflight` when it writes one); "
@@ -1821,38 +1846,46 @@ def audit_record_gap(area: Path, name: str, text: str) -> str | None:
             "it with LABKIT_UNFROZEN=1 (its number stays unreportable). If no "
             "audit is owed at all, the repeat cost is wrong, not the field — and a "
             "tier lowered after the protocol's first commit is reported "
-            "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)"
+            "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)",
+            audit,
         )
     path = area / DIR / name
     if not path.is_file():
-        return (
+        return RecordGap(
             f"`preflight_audit` names {DIR}/{name}, and there is no such record in "
-            f"this area — name the one `labkit-audit <area> --mode preflight` wrote"
+            f"this area — name the one `labkit-audit <area> --mode preflight` wrote",
+            audit,
         )
     try:
         record = read(path)
     except FindingsError as exc:
-        return str(exc)
+        return RecordGap(str(exc), record_way(area))
     if record.mode != PREFLIGHT_AUDIT:
-        return f"{name} is a {record.mode} record — `preflight_audit` names the preflight audit"
+        return RecordGap(
+            f"{name} is a {record.mode} record — `preflight_audit` names the "
+            "preflight audit",
+            audit,
+        )
     try:
         now = area_stamp(area)[0]
     except (FileNotFoundError, ValueError) as exc:
-        return f"the area cannot be stamped now ({exc})"
+        return RecordGap(f"the area cannot be stamped now ({exc})", audit)
     if record.scope_sha != now:
-        return (
+        return RecordGap(
             f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
             f"{now} — it changed after the audit, so the change owes a new audit "
             f"(`labkit-audit <area> --mode preflight`); naming another record "
-            f"without one is refused too{validation_note(area)}"
+            f"without one is refused too{validation_note(area)}",
+            audit,
         )
     judged = _protocol_gap(record, name, text)
     if judged:
-        return judged
+        return RecordGap(judged, audit)
     if record.open:
-        return (
+        return RecordGap(
             f"{len(record.open)} finding(s) of {name} still `open` — decide each "
-            f"({DECIDED_LIST})"
+            f"({DECIDED_LIST})",
+            "; ".join(decide_way(area, OpenFinding(record, f)) for f in record.open),
         )
     return None
 
