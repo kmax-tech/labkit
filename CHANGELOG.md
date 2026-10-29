@@ -488,6 +488,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The auditor's instruction no longer asks a computation for a
+  criterion.** `experiment-preflight.agent.md` asked every registration
+  for "question, success criterion, admissibility condition" and refused
+  to audit without them; on task 60 of the pressure pilot (2026-10-29)
+  the analysis auditor held a compute protocol as a BLOCKER for "no
+  formal criterion for the 0.20 requirement", which the protocol has no
+  field for, and the attempts ended without a number. The instruction
+  now says what the kind owes: a `compute` protocol owes no criterion
+  and no promise table; a value the task states is a `[reference]`
+  comparison; where the task states one and none is registered that is
+  a WARNING ("the task states a value; no reference is registered; the
+  report cannot claim the comparison"), never a BLOCKER for a missing
+  criterion; where one is registered, the auditor judges whether the
+  code's kept number is the registered key. New audits only. The AGENTS.md
+  template's computation paragraph says the same for the agent.
+
 - **The confirmation after `--decide` says what the status entails.**
   Agents used `dismissed` for "I will fix it", `deferred` for "no longer
   relevant" and `accepted` for "repaired", and decided `fixed` on the

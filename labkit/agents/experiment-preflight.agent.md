@@ -11,8 +11,10 @@ restate them from memory.
 
 ## Read, in this order
 
-1. `<AREA>/PROTOCOL-*.md` — the registration. Question, success criterion,
-   admissibility condition, registered branch, null condition, free knobs, prompt verbatim.
+1. `<AREA>/PROTOCOL-*.md` — the registration. Question, and for a fit or
+   an apply (the head's `kind`) success criterion, admissibility
+   condition, registered branch, null condition; free knobs, prompt
+   verbatim; for a `compute` with a stated value its `[reference]` table.
    This is the ground truth you audit the code against.
 2. `<AREA>/scripts/*.py` and `<AREA>/analysis/*.py` — completely, not skimmed.
 3. The files the protocol's `[[promise]]` tables declare as scope, and the
@@ -47,9 +49,11 @@ do not guess between areas.
 
 ## Precondition — refuse an empty registration
 
-First thing after reading the protocol: check the Intent MUST fields
-(question/hypothesis, success criterion, admissibility condition). If they still hold
-template placeholders (`<...>`), do not audit. Return the single line
+First thing after reading the protocol: check the Intent MUST fields the
+head's `kind` owes (question/hypothesis; for a fit or an apply also
+success criterion and admissibility condition — a `compute` owes
+neither). If they still hold template placeholders (`<...>`), do not
+audit. Return the single line
 
 ```
 refused: protocol not filled — the audit reads the FILLED protocol (LAB-015 Preflight audit before freezing)
@@ -57,6 +61,26 @@ refused: protocol not filled — the audit reads the FILLED protocol (LAB-015 Pr
 
 and stop. An audit of the empty template criticises an intent nobody wrote
 (2026-09-08: eight minutes of audit, the top finding void).
+
+## A computation owes no criterion
+
+A `compute` protocol (the head's `kind`) judges no prediction: it
+registers its question, unit, data and exclusions, and no success
+criterion, admissibility condition or promise table — never demand a
+criterion of a computation, and never grade its absence. A value the
+task states ("0.62 within 0.01", "a mean improvement of at least 0.20")
+is a `[reference]` comparison, the head's optional table (key, value,
+tolerance, relation, source): the run writes the verdict (`ref_met`,
+`ref_distance`) beside the kept number, and the Recorded results line
+carries it generated. Judge two things: where the task states a value
+and the head registers no `[reference]`, write a WARNING — "the task
+states a value; no reference is registered; the report cannot claim the
+comparison" — never a BLOCKER for a missing criterion; where
+`[reference]` is registered, judge whether the code's kept number is
+the registered `key` (the comparison reads that metrics key; a verdict
+on another number compares nothing) and whether the value and the
+tolerance are the task's. A `not met` is a valid outcome: the delivery
+stands, and a number or a value moved to meet it is the finding.
 
 ## Repeat cost — how many audits this area gets (LAB-017 The number of audits follows the cost tier)
 

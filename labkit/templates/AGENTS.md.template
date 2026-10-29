@@ -103,7 +103,13 @@ from its own `requirements.lock`), and stamp a fresh area for new work.
 Follow the steps in order. **Additional at `high`** applies only when
 `repeat_cost = "high"`; all other steps apply to both costs. A
 computation has no prediction criterion; fill the fields its contract
-actually requests. A new area is not a way to discard an earlier result.
+actually requests. It compares with a stated reference only through the
+head's `[reference]` table (`labkit-init exp --kind compute --reference
+KEY=VALUE[±TOL]`, registered before the first measurement): the run
+writes the verdict, the Recorded results line carries it generated,
+never typed — a task that states a value the data do not support ends
+with `not met` and a valid delivery; never move the number or the value
+to meet it. A new area is not a way to discard an earlier result.
 
 ### 1. Create the area and register the question
 
@@ -128,6 +134,11 @@ promise's sentence; leave the after-run fields for after the run.
 - Fit/apply: also criterion, admissibility condition and null condition
   computed in the same run. A criterion judges the outcome; an
   admissibility condition says whether that judgement is meaningful.
+- Compute with a value the task states ("0.62 within 0.01", "at least
+  0.20"): the head's `[reference]` (key — the metrics key compared, the
+  skeleton's `METRIC_KEY` —, value, tolerance, relation, source), stamped
+  by `--reference` or written before the first measurement. No criterion,
+  no promise table: the comparison is not a bar, and a miss is a result.
 - A `[model]` table: also the data profile; when the skeleton has `PROMPT`
   constants, copy them with `protocol-fill <PROTOCOL> --prompts`.
 

@@ -545,5 +545,54 @@ class Rendered(unittest.TestCase):
         self.assertIn("differs from its rendering", gap.text)
 
 
+class AuditorInstruction(unittest.TestCase):
+    """Twin 6: the instruction text the auditor reads says a computation
+    owes no criterion, and names the WARNING for an unregistered stated
+    value — not a BLOCKER for a missing criterion (pressure pilot task 60,
+    2026-10-29). A prompt test on the text, whitespace collapsed; the
+    SAB-like compute case is audited by hand."""
+
+    @staticmethod
+    def one_line(text: str) -> str:
+        return " ".join(text.split())
+
+    def instruction(self) -> str:
+        from labkit.gates import audit
+
+        return self.one_line(audit.instructions("analysis"))
+
+    def test_a_compute_protocol_owes_no_criterion(self):
+        text = self.instruction()
+        self.assertIn("## A computation owes no criterion", text)
+        self.assertIn("never demand a criterion of a computation", text)
+        self.assertIn("a `compute` owes neither", text)
+        self.assertNotIn(
+            "(question/hypothesis, success criterion, admissibility condition)", text
+        )
+
+    def test_an_unregistered_stated_value_is_the_named_warning(self):
+        text = self.instruction()
+        self.assertIn(
+            'write a WARNING — "the task states a value; no reference is registered; '
+            'the report cannot claim the comparison" — never a BLOCKER for a '
+            "missing criterion",
+            text,
+        )
+        self.assertIn(
+            "judge whether the code's kept number is the registered `key`", text
+        )
+
+    def test_the_agents_template_says_the_same(self):
+        from labkit.tools import scaffold
+
+        text = self.one_line(scaffold.template("AGENTS.md.template"))
+        self.assertIn(
+            "compares with a stated reference only through the head's `[reference]` "
+            "table",
+            text,
+        )
+        self.assertIn("ends with `not met` and a valid delivery", text)
+
+
 if __name__ == "__main__":
     unittest.main()
