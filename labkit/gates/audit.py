@@ -852,11 +852,15 @@ def finding_entries(lines: list[str]) -> list[tuple[str, str]]:
     a section line belong to no finding and are not read, as before.
 
     Raises AuditError (ANSWER_AGAIN) on the one shape that does not read:
-    a line that a blank line separates from the last finding before a
-    section line or the verdict — between two findings it can only be the
-    first one's, after the last it may be that finding's or a remark on
-    the whole audit, and a guess would put a remark in a finding or drop
-    part of one."""
+    an unindented line that a blank line separates from the last finding
+    before a section line or the verdict — between two findings it can
+    only be the first one's, after the last it may be that finding's or a
+    remark on the whole audit, and a guess would put a remark in a finding
+    or drop part of one. An indented line is the finding's wherever it
+    stands: the auditor indented it under the finding, as it indents the
+    finding's bullets (2026-10-29: two paid audits, Haiku and Sonnet,
+    refused for an indented `Effect:` or `· LAB-nnn` paragraph below a
+    blank line inside the last finding's evidence)."""
     entries: list[tuple[str, list[str]]] = []
     after_blank = ""  # the current finding's first line below a blank line
     blank = False
@@ -874,7 +878,8 @@ def finding_entries(lines: list[str]) -> list[tuple[str, str]]:
         elif not line.strip():
             blank = True
         else:
-            if blank and not after_blank:
+            # an indented line is the finding's, blank line or not
+            if blank and not after_blank and not line[0].isspace():
                 after_blank = line.strip()
             current.append(line.strip())
     if after_blank:
@@ -889,8 +894,8 @@ def _after_the_last(finding: str, line: str) -> AuditError:
         f"after the last finding, below a blank line: {finding[:120]!r} is "
         f"followed by {line[:120]!r} — that reads as the finding's or as a remark "
         f"on the whole audit, and which cannot be told; the last finding goes on "
-        f"below its line without a blank line, and nothing else stands before "
-        f"the verdict. Nothing is recorded",
+        f"below its line without a blank line or indented, and nothing else "
+        f"stands before the verdict. Nothing is recorded",
         fix=ANSWER_AGAIN,
     )
 

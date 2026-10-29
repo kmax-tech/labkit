@@ -462,6 +462,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An indented paragraph below a blank line is the last finding's.**
+  Two paid audits of the same day (apply-screen with Haiku and with
+  Sonnet, 2026-10-29) closed the last finding's evidence list with a
+  blank line and went on indented (`  Effect: …`, `  · LAB-003 …`); the
+  parser refused both answers as ambiguous and recorded nothing. An
+  indented line is the finding's wherever it stands; an unindented
+  paragraph below a blank line after the last finding is still refused.
+
 - **The untouched apply stamp no longer warns of a constant copy.** The
   band rule's config fields default to None (no rule registered), and the
   constant-copy check (static evidence) read `null_band_quantile = None`

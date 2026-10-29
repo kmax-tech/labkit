@@ -2186,6 +2186,32 @@ class WholeFinding(unittest.TestCase):
                 self.assertEqual(rc, 1, err)
                 self.assertEqual(findings.area_records(area)[0].findings[0].text, text)
 
+    def test_an_indented_paragraph_below_a_blank_line_is_the_last_findings(self):
+        # 2026-10-29, apply-screen with Haiku and with Sonnet: the auditor
+        # closed the last finding's evidence list with a blank line and went
+        # on indented ("  Effect: …", "  · LAB-003 …"); both answers were
+        # refused and the paid audits lost. Indented, the line is the
+        # finding's; an unindented one is still refused (the test above)
+        verdict = "verdict: 1 blockers, 0 warnings, 0 notes"
+        for tail in (
+            "  Effect: the reader takes it for measured.",
+            f"  · {self.LAB015} · fix it",
+        ):
+            answer = (
+                "BLOCKER · a.py:1 · x · y:\n  - evidence one\n  - evidence two\n"
+                f"  \n{tail}\n\n{verdict}"
+            )
+            with self.subTest(tail=tail):
+                area = repo_with()
+                rc, _, err, _ = run(area, answer)
+                self.assertEqual(rc, 1, err)
+                (f,) = findings.area_records(area)[0].findings
+                self.assertEqual(
+                    f.text,
+                    "BLOCKER · a.py:1 · x · y:\n- evidence one\n- evidence two\n"
+                    + tail.strip(),
+                )
+
     def test_a_verdict_quoted_in_a_bullet_does_not_end_the_finding(self):
         line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
         bullet = "- the report says verdict: 1 blockers, 0 warnings — wrong"
