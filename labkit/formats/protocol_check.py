@@ -651,6 +651,30 @@ def kind_registers(kind: str | None, text: str) -> bool:
     return kind != standard_contract.COMPUTE_KIND or promises.registers_ids(text)
 
 
+def reference_gap(text: str, head: protocol_block.Head) -> str | None:
+    """Why the head's `kind` contradicts its `[reference]` table, or None:
+    a fit or an apply compares its number in `[C]` — a criterion with its
+    constants, judged against the null condition —, so the stated value a
+    computation compares with (`protocol_block.reference`) has no place on
+    a kind with a bar (`standard_contract.has_bar`). The one refusal of
+    the table by kind: `protocol-check`, the start of a low run
+    (`low_registration_missing`) and finalize read it. Loud, never a
+    fallback: a malformed table is the head check's."""
+    try:
+        ref = protocol_block.reference(text)
+    except protocol_block.BlockError:
+        return None
+    if ref is None or head.kind is None or not standard_contract.has_bar(head.kind):
+        return None
+    return (
+        f'[reference] with kind = "{head.kind}" — a {head.kind} compares its number '
+        f"in [C] (a criterion with its constants, held against the null condition); "
+        f"a comparison with a stated value is a computation's. Drop the table, or "
+        f"stamp the area as a compute (`labkit-init exp <name> --kind compute "
+        f"--change-kind`)"
+    )
+
+
 def check_fields(text: str) -> FieldReport:
     """The field findings of one protocol: head, missing fields, placeholders."""
     try:
@@ -662,9 +686,9 @@ def check_fields(text: str) -> FieldReport:
     missing_must = [f.label for f in must if f.label.casefold() not in present]
     missing_should = [f.label for f in should if f.label.casefold() not in present]
     missing_must += [f"[protocol] {name}" for name in head.placeholders]
-    contradiction = kind_gap(text, head)
-    if contradiction:
-        missing_must.append(contradiction)
+    for contradiction in (kind_gap(text, head), reference_gap(text, head)):
+        if contradiction:
+            missing_must.append(contradiction)
     earlier = promises.earlier_ids(text)
     if earlier:
         missing_must.append(
@@ -711,7 +735,7 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     prediction (kind fit or apply) also criterion, admissibility condition
     and null condition; with a model named also the judged data profile;
     the repeat_cost and the kind declared, and the kind not contradicting the
-    head (`kind_gap`). Returns what is missing — empty means the gate is
+    head (`kind_gap`, `reference_gap`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
     clear, 0.87.1; the kind since standard 0.22). A head that does not read
     is named as such: nothing falls back to a computation.
@@ -740,14 +764,19 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     missing += [label for label in labels if label.casefold() not in written]
     missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
-    contradiction = kind_gap(text, head)
-    return missing + ([contradiction] if contradiction else [])
+    contradictions = (kind_gap(text, head), reference_gap(text, head))
+    return missing + [c for c in contradictions if c]
 
 
 #: the key of the kind in a registration stamp, beside the field labels
 REGISTRATION_KIND = "kind"
 #: a registration field the protocol does not carry, as its stamp names it
 REGISTRATION_ABSENT = "<absent>"
+#: the key of a computation's `[reference]` in a registration stamp — only
+#: while the head carries one: a stamp without the key is a protocol
+#: without the table, so records written before the table existed drift
+#: nowhere
+REGISTRATION_REFERENCE = "reference"
 
 
 def registration_stamp(text: str) -> dict[str, str]:
@@ -757,12 +786,21 @@ def registration_stamp(text: str) -> dict[str, str]:
     is unset) the digest of its value, whitespace collapsed so a reflowed
     line moves nothing; a field the text lacks is REGISTRATION_ABSENT. The
     report fields written after a run (Conclusion, Recorded results, the
-    run list) are not in it: writing them leaves an audit standing. A head
-    that does not read counts as an unset kind — the head check names it."""
+    run list) are not in it: writing them leaves an audit standing. A
+    computation's `[reference]` is in it (REGISTRATION_REFERENCE, the
+    digest of the table as `protocol_block.reference_toml` writes it): a
+    stated value changed, added or dropped after the audit is a changed
+    registration. A head that does not read counts as an unset kind — the
+    head check names it; a `[reference]` that does not read counts as
+    none."""
     try:
         kind = protocol_block.head(text).kind
     except protocol_block.BlockError:
         kind = None
+    try:
+        ref = protocol_block.reference(text)
+    except protocol_block.BlockError:
+        ref = None
     labels = standard_contract.registration_fields(
         kind or standard_contract.APPLY_KIND, model_named(text)
     )
@@ -770,6 +808,10 @@ def registration_stamp(text: str) -> dict[str, str]:
     for f in fields(text):
         values.setdefault(f.name, f.value)
     out = {REGISTRATION_KIND: kind or REGISTRATION_ABSENT}
+    if ref is not None:
+        out[REGISTRATION_REFERENCE] = scope_sha.digest(
+            protocol_block.reference_toml(ref).encode("utf-8")
+        )
     for label in labels:
         value = values.get(field_name(label))
         out[label] = (

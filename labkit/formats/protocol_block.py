@@ -2,7 +2,9 @@
 
 A protocol carries exactly one fenced ```toml block. Its `[protocol]` table
 holds the fields a machine reads — the head — and its optional
-`[[promise]]` tables hold the promises (`promises.py`):
+`[[promise]]` tables hold the promises (`promises.py`); a computation may
+carry a `[reference]` table, the stated value its number is compared with
+(`reference`):
 
     [protocol]
     standard = "0.23"
@@ -28,6 +30,7 @@ unfilled field instead of a malformed one.
 from __future__ import annotations
 
 import json
+import math
 import posixpath
 import re
 import tomllib
@@ -65,7 +68,7 @@ KINDS = ("compute", "fit", "apply")
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
-_TOP_LEVEL = {"protocol", "promise", "result", "model", "gate", "replaces"}
+_TOP_LEVEL = {"protocol", "promise", "result", "model", "gate", "replaces", "reference"}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
@@ -454,6 +457,152 @@ def declared_labels(text: str) -> tuple[str, ...] | None:
             f"[gate] labels = {labels!r} — a non-empty list of non-empty strings"
         )
     return tuple(labels)
+
+
+#: the `[reference]` table of a computation: the stated value its kept
+#: number is compared with, and how (docs/notes/2026-10-29-reference-comparison.md)
+REFERENCE_KEYS = ("key", "value", "tolerance", "relative", "relation", "source")
+#: how the measured value is held to the reference: `within` a tolerance of
+#: it (`|measured - value| <= tolerance`), `at_least` it, `at_most` it — the
+#: last two carry no tolerance
+RELATIONS = ("within", "at_least", "at_most")
+WITHIN, AT_LEAST, AT_MOST = RELATIONS
+
+
+@dataclass(frozen=True)
+class Reference:
+    """The stated value a computation's kept number is compared with, as
+    the head's `[reference]` registers it. The verdict is
+    `reference.reference_verdict`'s; whether the head's kind may carry the
+    table is `protocol_check.reference_gap`'s answer."""
+
+    key: str  # the metrics key the comparison reads
+    value: float  # the stated value, in the key's unit (an int as written)
+    tolerance: (
+        float | None
+    )  # `within` only: absolute, or a fraction of `value` when `relative`
+    relative: bool  # `tolerance` is a fraction of `value`
+    relation: str  # one of RELATIONS
+    source: str | None  # who states the value; None while not written
+
+    @property
+    def absolute_tolerance(self) -> float | None:
+        """The tolerance in the key's unit: `tolerance` itself, or
+        `|value| * tolerance` when relative; None without one."""
+        if self.tolerance is None:
+            return None
+        return abs(self.value) * self.tolerance if self.relative else self.tolerance
+
+
+def _finite_number(value: object) -> bool:
+    """A TOML int or float that is finite — a bool is no number here."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def reference(text: str) -> Reference | None:
+    """The stated value the protocol's `[reference]` table compares the
+    kept number with — `key`, `value`, `relation`, with `within` a
+    `tolerance` (absolute, or a fraction of `value` with `relative =
+    true`), and `source`, who states the value — or None without the
+    table: a pure computation. Raises BlockError on a non-table, an
+    unknown key, a missing `key`, `value` or `relation`, a `value` or
+    `tolerance` that is not a finite number (a bool is none), a negative
+    tolerance, a `relation` outside RELATIONS, `within` without a
+    tolerance, `at_least` or `at_most` with one (or with `relative`), a
+    `relative` that is no bool, or an empty `source`."""
+    table = _table(parse_toml_block(text), "reference")
+    if table is None:
+        return None
+    _only_keys(table, "[reference]", REFERENCE_KEYS)
+    for field in ("key", "value", "relation"):
+        if field not in table:
+            raise BlockError(
+                f"[reference]: missing `{field}` — key (the metrics key compared), "
+                f"value (the stated value) and relation ({', '.join(RELATIONS)})"
+            )
+    key = table["key"]
+    if not isinstance(key, str) or not key.strip() or any(c.isspace() for c in key):
+        raise BlockError(
+            f"[reference] key = {key!r} — the metrics key the comparison reads, "
+            f"one word (the compute skeleton's METRIC_KEY)"
+        )
+    value = table["value"]
+    if not _finite_number(value):
+        raise BlockError(
+            f"[reference] value = {value!r} — a finite number in the key's unit"
+        )
+    relation = table["relation"]
+    if relation not in RELATIONS:
+        raise BlockError(
+            f"[reference] relation = {relation!r} — one of {', '.join(RELATIONS)}"
+        )
+    tolerance, relative = _reference_tolerance(table, relation)
+    source = table.get("source")
+    if source is not None and (not isinstance(source, str) or not source.strip()):
+        raise BlockError(
+            f"[reference] source = {source!r} — who states the value, a non-empty "
+            f"string (the task text, a cited analysis), or no `source` line"
+        )
+    return Reference(
+        key=key,
+        value=value,
+        tolerance=tolerance,
+        relative=relative,
+        relation=relation,
+        source=source,
+    )
+
+
+def _reference_tolerance(table: dict, relation: str) -> tuple[float | None, bool]:
+    """(tolerance, relative) of a `[reference]` TABLE under RELATION: owed
+    with `within` (a finite number >= 0; `relative` a bool, false when
+    absent), refused with `at_least` and `at_most` (`reference`)."""
+    tolerance = table.get("tolerance")
+    relative = table.get("relative", False)
+    if not isinstance(relative, bool):
+        raise BlockError(f"[reference] relative = {relative!r} — true or false")
+    if relation != WITHIN:
+        if tolerance is not None or "relative" in table:
+            raise BlockError(
+                f'[reference] relation = "{relation}" takes no tolerance (and no '
+                f"relative): the measured value is held {relation.replace('_', ' ')} "
+                f"the value itself; drop the key(s)"
+            )
+        return None, False
+    if tolerance is None:
+        raise BlockError(
+            '[reference]: missing `tolerance` — relation = "within" holds '
+            "|measured - value| <= tolerance; absolute, or a fraction of "
+            "value with relative = true"
+        )
+    if not _finite_number(tolerance) or tolerance < 0:
+        raise BlockError(
+            f"[reference] tolerance = {tolerance!r} — a finite number >= 0"
+        )
+    return tolerance, relative
+
+
+def reference_toml(ref: Reference) -> str:
+    """REF as the `[reference]` table `labkit-init exp --reference` stamps
+    — the one writer of the table, and the form the registration stamp
+    digests (`protocol_check.registration_stamp`). Reads back as REF."""
+    lines = [
+        "[reference]",
+        f"key = {toml_string(ref.key)}",
+        f"value = {ref.value!r}",
+    ]
+    if ref.tolerance is not None:
+        lines.append(f"tolerance = {ref.tolerance!r}")
+    if ref.relative:
+        lines.append("relative = true")
+    lines.append(f"relation = {toml_string(ref.relation)}")
+    if ref.source is not None:
+        lines.append(f"source = {toml_string(ref.source)}")
+    return "\n".join(lines) + "\n"
 
 
 def declared_run(text: str) -> str | None:

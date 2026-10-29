@@ -209,6 +209,7 @@ def head(
     arms: dict[str, tuple[str, str, str | None]] | None = None,
     labels: tuple[str, ...] | None = None,
     report: str | None = None,
+    reference: str | None = None,
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
     frozen or low head without an explicit block carries `DEFAULT_BLOCK`;
@@ -221,7 +222,9 @@ def head(
     the stamp would — `apply` with a model, else `compute` — so a fixture
     states only what it varies; a literal `kind="<compute | fit | apply>"`
     writes the placeholder. REPORT is the head's optional `report`, the
-    registered report file (standard 0.23, 2026-10-29)."""
+    registered report file (standard 0.23, 2026-10-29). REFERENCE is TOML
+    written into a `[reference]` table verbatim — a computation's stated
+    value (2026-10-29)."""
     if kind is None:
         kind = "apply" if model is not None else "compute"
     if promises == "" and (frozen or repeat_cost == "low"):
@@ -245,17 +248,9 @@ def head(
     if result is not None:
         lines += ["", "[result]", f'run = "{result}"']
     if model is not None:
-        lines += ["", "[model]", f'alias = "{model}"']
-        lines += claim.strip().splitlines()
-        for arm, (profile, fingerprint, alias) in (arms or {}).items():
-            lines += [
-                "",
-                f"[model.arms.{arm}]",
-                f'profile = "{profile}"',
-                f'fingerprint = "{fingerprint}"',
-            ]
-            if alias is not None:
-                lines.append(f'alias = "{alias}"')
+        lines += _model_tables(model, claim, arms)
+    if reference is not None:
+        lines += ["", "[reference]", *reference.strip().splitlines()]
     if labels is not None:
         lines += [
             "",
@@ -266,6 +261,24 @@ def head(
     if promises:
         body += "\n" + promises.strip() + "\n"
     return body + "```\n"
+
+
+def _model_tables(
+    model: str, claim: str, arms: dict[str, tuple[str, str, str | None]] | None
+) -> list[str]:
+    """The `[model]` table and its arms, as `head` writes them."""
+    lines = ["", "[model]", f'alias = "{model}"']
+    lines += claim.strip().splitlines()
+    for arm, (profile, fingerprint, alias) in (arms or {}).items():
+        lines += [
+            "",
+            f"[model.arms.{arm}]",
+            f'profile = "{profile}"',
+            f'fingerprint = "{fingerprint}"',
+        ]
+        if alias is not None:
+            lines.append(f'alias = "{alias}"')
+    return lines
 
 
 def head_commit(root: Path) -> dict[str, str]:
