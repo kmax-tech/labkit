@@ -80,7 +80,8 @@ def to_container(task: str) -> str:
     # committed while the host venv still stands: the lab probe's own pre-commit runs its gates from it
     env = {**dict(GIT_ENV), "PATH": "/usr/bin:/bin"}
     subprocess.run(["git", "add", "-A"], cwd=root, check=True, env=env)
-    subprocess.run(["git", "commit", "-q", "-m", "Probe: container paths"], cwd=root, check=True, env=env)
+    if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=root, env=env).returncode:
+        subprocess.run(["git", "commit", "-q", "-m", "Probe: container paths"], cwd=root, check=True, env=env)
     venv = root / ".venv"  # ignored by the repo's .gitignore; the setup line builds the container's
     if venv.is_symlink() or venv.exists():
         venv.unlink() if venv.is_symlink() else shutil.rmtree(venv)
@@ -108,7 +109,7 @@ def evaluate(task: str, dest: Path) -> None:
 
 def replay_report_check(task: str, dest: Path, images: dict[str, str]) -> None:
     """report-check inside the agent image on the copied-back tree, no network."""
-    area = next((dest / "experiments").glob("*"), None)
+    area = next((p for p in sorted((dest / "experiments").iterdir()) if p.is_dir()), None)
     cmd = (f"cd /work && .venv/bin/report-check experiments/{area.name if area else '?'}; "
            f"echo '--- exit' $?; .venv/bin/report-check --if-reported REPORT.md; echo '--- exit' $?")
     r = subprocess.run(["docker", "run", "--rm", "--network", "none", "-v", f"{dest}:/work",
@@ -117,14 +118,14 @@ def replay_report_check(task: str, dest: Path, images: dict[str, str]) -> None:
 
 
 def score(task: str, images: dict[str, str]) -> None:
-    src = S / f"attempts{TAG}" / task / "work"
+    src = S / f"attempts{TAG}" / f"{task}{TAG}" / "work"
     dest = S / f"scored{TAG}" / task
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(src, dest, symlinks=True)
     for suffix in ("probe.json", "prompt.md"):
         shutil.copy2(S / f"probes{TAG}" / f"{task}.{suffix}", S / f"scored{TAG}" / f"{task}.{suffix}")
-    log = S / f"attempts{TAG}" / task / "out" / "probe.log.md"
+    log = S / f"attempts{TAG}" / f"{task}{TAG}" / "out" / "probe.log.md"
     (S / f"scored{TAG}" / f"{task}.log.md").write_text(log.read_text(encoding="utf-8") if log.is_file() else "",
                                                        encoding="utf-8")
     evaluate(task, dest)
@@ -144,7 +145,10 @@ def main() -> None:
     for task in tasks:
         prompt = to_container(task)
         agent = ClaudeCode(model=model, setup=SETUP[ARM], extra_env=(*GIT_ENV, ("TMPDIR", "/work/.tmp")))
-        a = Attempt(task, {"probe": task, "arm": ARM, "draw": DRAW}, agent, prompt,
+        # the attempt id names the Docker containers and networks: unique per arm
+        # and draw, so two lanes can run side by side (the first launch of
+        # 2026-10-29 shared `sb-agent-<task>` and each lane removed the other's)
+        a = Attempt(f"{task}{TAG}", {"probe": task, "arm": ARM, "draw": DRAW}, agent, prompt,
                     S / f"probes{TAG}" / task, limits=LIMITS)
         m = run_attempt(a, images, S / f"attempts{TAG}", token)
         print(json.dumps({"task": task, "arm": ARM, "draw": DRAW, "seconds": m["container_seconds"],
