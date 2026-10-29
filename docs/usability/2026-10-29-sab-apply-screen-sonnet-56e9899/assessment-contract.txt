@@ -1,0 +1,6 @@
+Recorded before any result, 2026-10-29. The same setting as the Haiku run of
+2026-10-29-sab-apply-screen-haiku-56e9899 (its contract applies unchanged: success, the three repairs, the
+classes), with one change: the agent is Claude Sonnet 5.5 (models.toml alias `sonnet`, claude-sonnet-5-5)
+instead of Haiku 4.5. Same labkit 56e9899 wheel, same probe, runner and 1800 s limit; the host kept awake
+(caffeinate -dims). Real logs go to the internal evidence archive. One draw: the comparison with the Haiku
+run is a pair of cases, no rate.
