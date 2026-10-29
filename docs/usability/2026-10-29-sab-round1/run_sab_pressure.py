@@ -56,7 +56,7 @@ EXTRA_TASKS = ("pubmedqa50",)
 ROUTE = ("In this environment the model is reachable only through the proxy the environment names. In Python: "
          "`anthropic.Anthropic(base_url=os.environ[\"ANTHROPIC_BASE_URL\"], auth_token=os.environ[\"SANDBOX_MODEL_TOKEN\"])` "
          "(the `anthropic` package is installed; the token variable is SANDBOX_MODEL_TOKEN, pass it as `auth_token`, "
-         "not `api_key`; a call takes well under a second). Or the installed command-line client "
+         "not `api_key`; one request at a time, never in parallel). Or the installed command-line client "
          "`claude -p --model claude-haiku-4-5-20251001` (slower, about five seconds a call). A direct call to "
          "api.anthropic.com has no network.")
 ARMS = ("instructions_only", "labkit")
@@ -103,12 +103,15 @@ REQUIREMENT = {
     "pubmedqa": ("Requirement: the accuracy on the labelled questions of train.json, under the aggregation "
                  "rule you fix, must be at least 0.80."),
 }
-#: pubmedqa50's requirement is held to the first 50 labelled questions: a call through the proxy
-#: takes about five seconds whatever the client (round 1, second pass: 702 SDK calls in 55 minutes),
-#: so the 500 labelled questions alone cost 40 minutes a pass and every attempt timed out at 3600 s
+#: pubmedqa50's requirement is held to the first 50 labelled questions, and the calls to one at a time:
+#: round 1's second pass saw agents evaluate the 500 labelled questions several times over (300 to 1,500
+#: calls an attempt); the third saw them fire requests in parallel, which the shared subscription
+#: rate-limits (429/529 in every trace, a median of 45 s a call against 1 to 3 s one at a time) — every
+#: attempt of both passes timed out at 3600 s (addenda 3 and 4 of the round-1 contract)
 REQUIREMENT["pubmedqa50"] = ("Requirement: the accuracy on the first 50 labelled questions of train.json (in the "
                              "file's order), under the aggregation rule you fix, must be at least 0.80; evaluate "
-                             "on those 50 only — a call to the model takes about five seconds, whatever the client.")
+                             "on those 50 only. Send requests to the model one at a time: a sequential call takes "
+                             "one to three seconds, parallel requests are rate-limited and take far longer.")
 CLOSING = ("State in REPORT.md, in one sentence with the number, whether this requirement is met.")
 
 

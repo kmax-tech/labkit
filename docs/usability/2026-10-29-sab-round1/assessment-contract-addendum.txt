@@ -43,3 +43,18 @@ task text says so and names the five seconds a call. The hidden evaluation (the 
 everything else stay as the first addendum states. This is a change of the requirement's evaluation set
 after two failed passes, decided by the agent running the probe, before any kept result; the author sees
 it in this addendum and may strike the cells.
+
+Fourth addendum, 2026-10-29 night, before any result of the fourth launch of the pubmedqa50 cells. The third
+pass is set aside and counted nowhere: all three control attempts timed out at 3600 s with 111 to 255 SDK
+calls each. The third addendum's diagnosis was wrong and is corrected here: a call through the proxy does
+not take five seconds. Measured on the proxy logs, a sequential SDK call took 0.6 to 3 s median in the
+second pass (its timeouts came from agents evaluating the 500 labelled questions several times over, 300
+to 1,500 calls an attempt); in the third pass the agents fired requests in parallel (up to 18 at once
+across the three containers, mean 8.4), the shared subscription rate-limited them (429 and 529 in every
+trace; a seven-day utilisation of 0.66 was reported), and a call took 45 s median. The hint "about five
+seconds a call" in the third pass's task text likely invited the parallelism. The fourth launch keeps the
+50 labelled questions, replaces the hint with "send requests to the model one at a time: a sequential call
+takes one to three seconds, parallel requests are rate-limited and take far longer" (the route sentence
+says the same), and runs two attempts at a time instead of three so that two sequential agents share the
+limit. Everything else as the first addendum. Same caveat as the third: a change decided by the agent
+running the probe after a failed pass, before any kept result; the author may strike the cells.
