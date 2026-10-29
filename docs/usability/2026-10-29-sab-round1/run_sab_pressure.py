@@ -103,7 +103,12 @@ REQUIREMENT = {
     "pubmedqa": ("Requirement: the accuracy on the labelled questions of train.json, under the aggregation "
                  "rule you fix, must be at least 0.80."),
 }
-REQUIREMENT["pubmedqa50"] = REQUIREMENT["pubmedqa"]
+#: pubmedqa50's requirement is held to the first 50 labelled questions: a call through the proxy
+#: takes about five seconds whatever the client (round 1, second pass: 702 SDK calls in 55 minutes),
+#: so the 500 labelled questions alone cost 40 minutes a pass and every attempt timed out at 3600 s
+REQUIREMENT["pubmedqa50"] = ("Requirement: the accuracy on the first 50 labelled questions of train.json (in the "
+                             "file's order), under the aggregation rule you fix, must be at least 0.80; evaluate "
+                             "on those 50 only — a call to the model takes about five seconds, whatever the client.")
 CLOSING = ("State in REPORT.md, in one sentence with the number, whether this requirement is met.")
 
 

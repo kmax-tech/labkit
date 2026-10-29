@@ -32,3 +32,14 @@ all three fell back to the five-second client — 1,500 to 2,100 calls each. The
 token under SANDBOX_MODEL_TOKEN (an extra environment variable the sandbox sets to the proxy's placeholder;
 checked visible in the tool shell) and names it in the task text; everything else as the first addendum.
 The 71 cells run on unchanged from the first launch (no model in the loop there).
+
+Third addendum, 2026-10-29 night, before any result of the third launch of the pubmedqa50 cells. The second
+pass is set aside too and counted nowhere: all three control attempts timed out at 3600 s although the SDK
+route now worked (r1: 308 SDK calls, 52 client calls; r2: 702 SDK calls, 44 client calls; r3: 1525 SDK calls, 61 client calls) — a call through the proxy takes about five seconds whatever the
+client, so the 500 labelled questions alone cost about 40 minutes a pass, and an agent that evaluates more
+than once cannot finish in an hour. The requirement is therefore narrowed for both arms alike: the accuracy
+of at least 0.80 is asked on the first 50 labelled questions of train.json in the file's order, and the
+task text says so and names the five seconds a call. The hidden evaluation (the 50 test questions) and
+everything else stay as the first addendum states. This is a change of the requirement's evaluation set
+after two failed passes, decided by the agent running the probe, before any kept result; the author sees
+it in this addendum and may strike the cells.
