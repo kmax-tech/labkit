@@ -55,6 +55,25 @@ the commit (the delivered state exists only through `--no-verify`). The
 baseline exits are 0/0, except lab-2 fit-assay 1/0 and lab-2 apply-screen
 1/0. No mutation produced a warning without a blocker.
 
+## What the count rests on
+
+The mutations went into the delivered states as they were, not into
+repaired ones (contract, "Baseline"): the unmodified copy's replay is the
+reference, and a mutation counts as detected only by a new BLOCKER line
+that names the changed thing. For the five states whose baseline has no
+blocker (lab-1's three, lab-2 compute-hrv, the Sonnet draw: 45 replays,
+2 not applicable) the exit code and the hook's refusal are signals as
+well, and there the seven mutations are blocked by all three. For the
+two states that were delivered with blockers (lab-2 fit-assay with 1,
+lab-2 apply-screen with 8: 16 replays) the exit code was 1 before the
+mutation and the hook let M1, M3, M5 and M6 through — it holds declared
+numbers only, and these protocols declare none —, so there the count
+rests on the named line alone. The headline "seven of nine" is therefore
+the five clean states' result in full and the two unclean states'
+result by the weaker signal; a next round injects into states repaired
+to a clean baseline first, so that every mutation has three independent
+signals (Max, 2026-10-29).
+
 ## The detecting line per mutation class
 
 One example each, lab-1 apply-screen unless named; the other states say
