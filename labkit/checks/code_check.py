@@ -455,7 +455,9 @@ def constant_copies(
                     and node.value is not None
                 )
                 value = _literal(node.value)
-                if value is _NOT_LITERAL:
+                # None copies nothing: a TOML block cannot register null,
+                # and a dataclass default of None means "not registered"
+                if value is _NOT_LITERAL or value is None:
                     continue
                 declared = p.constants[target.id]
                 same = (

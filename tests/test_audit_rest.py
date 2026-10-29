@@ -96,6 +96,17 @@ class ConstantCopies(unittest.TestCase):
         (f,) = self.findings("min_mean = 1.5\n")
         self.assertIn("the same value", f)
 
+    def test_a_none_default_copies_nothing(self):
+        """The apply skeleton's config defaults its band rule to None (no
+        rule registered); the check warned on the untouched stamp. The twin:
+        a typed default with a value still warns."""
+        self.assertEqual(
+            self.findings("class C:\n    min_mean: float | None = None\n"),
+            [],
+        )
+        (f,) = self.findings("class C:\n    min_mean: float = 1.5\n")
+        self.assertIn("the same value", f)
+
 
 class Usability(unittest.TestCase):
     def test_an_unreadable_run_is_a_sentence(self):

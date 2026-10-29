@@ -462,6 +462,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The untouched apply stamp no longer warns of a constant copy.** The
+  band rule's config fields default to None (no rule registered), and the
+  constant-copy check (static evidence) read `null_band_quantile = None`
+  as a copy of the registered 0.99 — on every apply stamp since the band
+  rule (Sonnet on 56e9899). A None copies nothing: a TOML block cannot
+  register null. A typed default with a value still warns.
+
 - **A frozen computation without a model owes no rendered example.**
   protocol-check held every frozen protocol to a fenced block besides
   the TOML head ("Instrument check first, then freeze"), whatever its

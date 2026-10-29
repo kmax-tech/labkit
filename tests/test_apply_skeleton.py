@@ -167,6 +167,21 @@ class ApplySkeleton(unittest.TestCase):
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
         return primary
 
+    def test_the_untouched_stamp_copies_no_constant(self):
+        """The band rule's None defaults were reported as copies of the
+        registered rule on every apply stamp (Sonnet on 56e9899)."""
+        from labkit.checks import code_check
+        from labkit.formats import promises
+
+        for kind in ("apply", "fit"):
+            area, measure = self.measure_module(kind)
+            block = promises.load(measure.PROTOCOL)
+            for p in block.promises:
+                with self.subTest(kind=kind, promise=p.id):
+                    self.assertEqual(
+                        code_check.constant_copies(area, measure.PROTOCOL, p), []
+                    )
+
     def test_another_count_than_the_registered_rule_is_refused(self):
         """The fifth SAB-like draw calibrated over 50 permutations while the
         rule said 200: with the rule registered, 50 answers another rule. The
