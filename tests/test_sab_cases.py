@@ -380,8 +380,14 @@ class HarnessTest(unittest.TestCase):
                     stamped,
                     task,
                 )
+                self.assertIn(
+                    f"DELIVERABLE_COLUMNS: tuple[str, ...] = {c.columns!r}",
+                    stamped,
+                    task,
+                )
                 probe = json.loads(usability.sidecar(root, "probe.json").read_text())
                 self.assertIn(f"pred_results/{c.output}", probe["scaffold_flags"])
+                self.assertIn(",".join(c.columns), probe["scaffold_flags"])
                 with contextlib.redirect_stdout(io.StringIO()):
                     usability_score.score(root)
                 sc = json.loads(usability.sidecar(root, "score.json").read_text())

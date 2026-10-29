@@ -49,6 +49,7 @@ OUT = AREA / "output" / "<name>.jsonl"          # one row per item, written by t
 COUNT_FIELD = "TODO_count"                      # the per-item number in each row
 METRIC_KEY = "TODO_mean"                        # the kept number's key in metrics.json; the test reads both names from here
 DELIVERABLES: tuple[str, ...] = ()              # files an external task names, relative to REPO ("pred_results/<name>.csv"); written by the run from the kept rows (`deliverable_rows`), registered as its outputs
+DELIVERABLE_COLUMNS: tuple[str, ...] = ()       # the columns the task names for them, in its order; the write refuses other columns; () holds nothing
 
 
 def visible(directory: Path) -> list[Path]:
@@ -116,11 +117,14 @@ def deliverable_rows(path: str, items: list[dict], metrics: dict) -> list[dict]:
 
 def write_deliverables(run: runlog.Run, items: list[dict], metrics: dict) -> None:
     """Write every DELIVERABLES file from the kept ITEMS and METRICS
-    (`deliverable_rows`) and register it with RUN: the run records its
-    sha256 at the end, and `finalize` holds the file to that record.
-    Side effects: writes the files under REPO. No DELIVERABLES: nothing."""
+    (`deliverable_rows`), held to DELIVERABLE_COLUMNS (a column missing,
+    unnamed or out of order is refused, nothing written), and register it
+    with RUN: the run records its sha256 at the end, and `finalize` holds
+    the file to that record. Side effects: writes the files under REPO. No
+    DELIVERABLES: nothing."""
     for path in DELIVERABLES:
-        run.output(deliverable.write_csv(REPO / path, deliverable_rows(path, items, metrics)))
+        run.output(deliverable.write_csv(REPO / path, deliverable_rows(path, items, metrics),
+                                         DELIVERABLE_COLUMNS))
 
 
 def main() -> None:

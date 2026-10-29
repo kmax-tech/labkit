@@ -39,11 +39,14 @@ When an external task names its outputs (a file such as
 run's metrics in the area do not replace them. Write each output at the
 path the task names from the answering run: the measurement script's
 `DELIVERABLES` constant names it (stamped by `labkit-init exp
---deliverable <path>`, else set it), `deliverable_rows()` gives its rows
-from the kept rows and the metrics, and the run writes it and registers
-it as its output — its sha256 is in the run's record, and `finalize`
-refuses a delivered file that is not the one the run wrote. Never write,
-retype or compute it apart from the run. When a result no longer holds —
+--deliverable <path>`, else set it), `DELIVERABLE_COLUMNS` the columns
+the task names in its order (`--deliverable-columns`; the write refuses
+a file with a column missing, unnamed or out of order), `deliverable_rows()`
+gives its rows from the kept rows and the metrics, and the run writes it
+and registers it as its output — its sha256 is in the run's record, and
+`finalize` refuses a delivered file that is not the one the run wrote.
+Never write, retype or compute it apart from the run. When a result no
+longer holds —
 a gate refuses it, or an audit BLOCKER against the code or data that
 produced it is not fixed — remove the output file at once, and write it
 again from the new answering run once that run is adopted; until then, or

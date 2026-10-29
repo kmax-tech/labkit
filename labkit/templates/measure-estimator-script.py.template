@@ -149,6 +149,7 @@ PREDICTOR_FILES: dict[str, Path] = {}
 # across a code change, and runlog says when a run continues a finished one.
 OUT = AREA / "output" / "<name>.jsonl"
 DELIVERABLES: tuple[str, ...] = ()              # files an external task names, relative to REPO ("pred_results/<name>.csv"); written by the run from the kept rows (`deliverable_rows`), registered as its outputs
+DELIVERABLE_COLUMNS: tuple[str, ...] = ()       # the columns the task names for them, in its order; the write refuses other columns; () holds nothing
 FEATURES_FIELD = "features"                     # TODO: the item field holding the numeric features
 GOLD_FIELD = "gold"
 SPLIT_FIELD = "split"
@@ -749,15 +750,17 @@ def deliverable_rows(path: str, rows: list[dict], metrics: dict) -> list[dict]:
 
 def write_deliverables(run: runlog.Run, rows: list[dict], metrics: dict) -> None:
     """Write every DELIVERABLES file from the kept ROWS and METRICS
-    (`deliverable_rows`) and register it with RUN: the run records its
-    sha256 at the end, and `finalize` holds the file to that record. A
-    repeat's draw (`run.draw`) writes none — supporting evidence, never the
-    answer. Side effects: writes the files under REPO. No DELIVERABLES:
-    nothing."""
+    (`deliverable_rows`), held to DELIVERABLE_COLUMNS (a column missing,
+    unnamed or out of order is refused, nothing written), and register it
+    with RUN: the run records its sha256 at the end, and `finalize` holds
+    the file to that record. A repeat's draw (`run.draw`) writes none —
+    supporting evidence, never the answer. Side effects: writes the files
+    under REPO. No DELIVERABLES: nothing."""
     if run.draw is not None:
         return
     for path in DELIVERABLES:
-        run.output(deliverable.write_csv(REPO / path, deliverable_rows(path, rows, metrics)))
+        run.output(deliverable.write_csv(REPO / path, deliverable_rows(path, rows, metrics),
+                                         DELIVERABLE_COLUMNS))
 
 
 def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict:

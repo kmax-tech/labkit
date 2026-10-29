@@ -14,6 +14,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -44,6 +45,36 @@ class RenderCsv(unittest.TestCase):
         ):
             deliverable.render_csv([{"a": 1, "b": 2}, {"a": 1}])
 
+    def test_the_columns_the_task_names_pass_and_a_gap_is_refused_by_name(self):
+        """Task 34 of the pressure pilot: both arms dropped a column the task
+        names, and the evaluation could not read the file (2026-10-29)."""
+        columns = ("person_id", "probability", "flag")
+        row = {"person_id": "p1", "probability": 0.5, "flag": 1}
+        self.assertEqual(
+            deliverable.render_csv([row], columns),
+            "person_id,probability,flag\np1,0.5,1\n",
+        )
+        self.assertEqual(
+            deliverable.render_csv([row]), deliverable.render_csv([row], ())
+        )
+        cases = {
+            "missing the column(s) flag": {"person_id": "p1", "probability": 0.5},
+            "carrying the column(s) site the task does not name": {**row, "site": "a"},
+            "ordered flag, person_id, probability, the task orders person_id, "
+            "probability, flag": {"flag": 1, "person_id": "p1", "probability": 0.5},
+        }
+        for why, bad in cases.items():
+            with self.subTest(why):
+                with self.assertRaisesRegex(
+                    deliverable.DeliverableError, re.escape(why)
+                ):
+                    deliverable.render_csv([bad], columns)
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "x.csv"
+            with self.assertRaises(deliverable.DeliverableError):
+                deliverable.write_csv(path, [{"person_id": "p1"}], columns)
+            self.assertFalse(path.exists())  # refused: nothing written
+
     def test_write_csv_returns_the_path_it_wrote(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "pred_results" / "x.csv"
@@ -66,14 +97,17 @@ class Stamp(unittest.TestCase):
         for kind in ("compute", "apply"):
             sk = standard_contract.skeleton("low", kind, False)
             stamps = scaffold.script_stamps(
-                self.root, area, "01", "x", sk, False, (DELIVERABLE,)
+                self.root, area, "01", "x", sk, False, (DELIVERABLE,), ("a", "b")
             )
             for path, text in stamps.items():
                 if path.name == standard_contract.MEASURE_SCRIPT.name:
                     self.assertIn(line, text, kind)
                     self.assertNotIn("DELIVERABLES: tuple[str, ...] = ()", text)
+                    self.assertIn(
+                        "DELIVERABLE_COLUMNS: tuple[str, ...] = ('a', 'b')", text
+                    )
                 else:
-                    self.assertNotIn("DELIVERABLES", text, path)
+                    self.assertNotIn("DELIVERABLE", text, path)
             # the twin: without a deliverable the stamp keeps the empty tuple
             plain = scaffold.script_stamps(self.root, area, "01", "x", sk, False)
             self.assertIn(
@@ -84,6 +118,20 @@ class Stamp(unittest.TestCase):
     def test_a_text_without_the_line_is_refused(self):
         with self.assertRaisesRegex(ValueError, "no single `DELIVERABLES"):
             scaffold.stamp_constant("X = 1\n", "DELIVERABLES", ("a",))
+
+    def test_columns_without_a_deliverable_are_refused(self):
+        sk = standard_contract.skeleton("low", "compute", False)
+        with self.assertRaisesRegex(ValueError, "columns without a deliverable"):
+            scaffold.script_stamps(
+                self.root,
+                self.root / "experiments" / "01-x",
+                "01",
+                "x",
+                sk,
+                False,
+                (),
+                ("a",),
+            )
 
     def test_the_command_line_flag_is_repeatable(self):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -101,14 +149,18 @@ class Stamp(unittest.TestCase):
                     "pred_results/a.csv",
                     "--deliverable",
                     "pred_results/b.csv",
+                    "--deliverable-columns",
+                    "id, p_active",
                 ]
             )
         self.assertEqual(rc, 0)
         script = self.root / "experiments" / "01-x" / "scripts" / "01_measure.py"
+        text = script.read_text(encoding="utf-8")
         self.assertIn(
             "DELIVERABLES: tuple[str, ...] = ('pred_results/a.csv', 'pred_results/b.csv')",
-            script.read_text(encoding="utf-8"),
+            text,
         )
+        self.assertIn("DELIVERABLE_COLUMNS: tuple[str, ...] = ('id', 'p_active')", text)
 
 
 class EstimatorWrites(unittest.TestCase):
@@ -161,6 +213,28 @@ class EstimatorWrites(unittest.TestCase):
             written.unlink()
             m.write_deliverables(mock.Mock(draw=2), rows, {})
             self.assertFalse(written.exists())
+
+    def test_the_skeleton_refuses_a_column_the_task_names_and_the_rows_lack(self):
+        """The check is the skeleton's, at the write: the stamped
+        DELIVERABLE_COLUMNS against the rows deliverable_rows() gives."""
+        m = self.measure
+        rows = [{"lane": "test", "id": "u", "pred": 0.25}]
+        written = self.root / DELIVERABLE
+        with mock.patch.object(
+            m, "deliverable_rows", lambda path, rows, metrics: [{"id": "u", "p": 0.25}]
+        ):
+            with mock.patch.object(m, "DELIVERABLE_COLUMNS", ("id", "p")):
+                m.write_deliverables(mock.Mock(draw=None), rows, {})
+                self.assertTrue(written.is_file())
+                written.unlink()
+            with mock.patch.object(m, "DELIVERABLE_COLUMNS", ("id", "p", "flag")):
+                run = mock.Mock(draw=None)
+                with self.assertRaisesRegex(
+                    deliverable.DeliverableError, "missing the column\\(s\\) flag"
+                ):
+                    m.write_deliverables(run, rows, {})
+                self.assertFalse(written.exists())
+                run.output.assert_not_called()
 
     def test_without_the_todo_filled_the_run_refuses(self):
         with self.assertRaisesRegex(NotImplementedError, "deliverable_rows"):

@@ -51,6 +51,9 @@ class Case:
     kind: str  # compute | fit | apply — what the kept number asserts
     dataset: str  # directory under data/raw/
     output: str  # the file under pred_results/ the evaluation reads
+    columns: tuple[
+        str, ...
+    ]  # its columns, in the task's order — the evaluation reads them by name; stamped as the skeleton's DELIVERABLE_COLUMNS
     metric_key: str  # where the kept number lands in metrics.json — the skeleton's key, never one of the harness's own
     tolerance: (
         float | None
@@ -76,6 +79,7 @@ CASES = {
             "compute",
             "biosignals",
             "hrv.csv",
+            ("heart_rate_bpm", "rmssd_ms"),
             "rmssd_ms",
             HRV_TOLERANCE,
             ("numpy", "pandas", "scipy"),
@@ -85,6 +89,7 @@ CASES = {
             "fit",
             "assay",
             "test_pred.csv",
+            ("compound_id", "p_active"),
             CRITERION_KEY,
             None,
             ("numpy", "pandas", "scikit-learn"),
@@ -94,6 +99,7 @@ CASES = {
             "apply",
             "screening",
             "screen_pred.csv",
+            ("person_id", "probability", "flag"),
             CRITERION_KEY,
             1e-6,
             ("numpy", "pandas"),

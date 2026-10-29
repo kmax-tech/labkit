@@ -619,11 +619,14 @@ def stamp_scripts(
     skeleton: standard_contract.Skeleton,
     model: bool | str,
     deliverables: tuple[str, ...] = (),
+    deliverable_columns: tuple[str, ...] = (),
 ) -> list[str]:
     """Write the script skeletons and the area's test (`script_stamps`)
     where absent; a script written is made executable."""
     log: list[str] = []
-    stamps = script_stamps(root, area, nn, slug, skeleton, model, deliverables)
+    stamps = script_stamps(
+        root, area, nn, slug, skeleton, model, deliverables, deliverable_columns
+    )
     for path, text in stamps.items():
         if write_if_absent(path, text, log) and path.parent == area / "scripts":
             path.chmod(0o755)  # a shebang nobody can run is a lint finding
@@ -638,14 +641,19 @@ def script_stamps(
     skeleton: standard_contract.Skeleton,
     model: bool | str,
     deliverables: tuple[str, ...] = (),
+    deliverable_columns: tuple[str, ...] = (),
 ) -> dict[Path, str]:
     """{path: text} of the script skeletons and the area's test under
     tests/ — which ones is the contract's answer (`standard_contract.skeleton`:
     the compute, estimator or prompt skeleton, every one with the check).
-    DELIVERABLES, the files an external task names (relative to ROOT), are
-    stamped into the measure script's `DELIVERABLES` constant
-    (`stamp_constant`); a skeleton whose measure script has none (the
-    prompt skeleton) refuses them. Reads the templates, writes nothing."""
+    DELIVERABLES, the files an external task names (relative to ROOT), and
+    DELIVERABLE_COLUMNS, the columns it names for them, are stamped into
+    the measure script's constants of those names (`stamp_constant`); a
+    skeleton whose measure script has none (the prompt skeleton) refuses
+    them. Columns without a deliverable are refused: they would hold
+    nothing. Reads the templates, writes nothing."""
+    if deliverable_columns and not deliverables:
+        raise ValueError("deliverable columns without a deliverable to hold them to")
     out: dict[Path, str] = {}
     alias = model if isinstance(model, str) else "TODO-alias"
     tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
@@ -661,6 +669,8 @@ def script_stamps(
         )
         if deliverables and dest == standard_contract.MEASURE_SCRIPT.name:
             text = stamp_constant(text, "DELIVERABLES", deliverables)
+            if deliverable_columns:
+                text = stamp_constant(text, "DELIVERABLE_COLUMNS", deliverable_columns)
         out[area / "scripts" / dest] = text
     out[root / "tests" / tname] = (
         template(skeleton.test)
@@ -679,13 +689,15 @@ def stamp_area(
     model: bool | str = False,
     report: bool = False,
     deliverables: tuple[str, ...] = (),
+    deliverable_columns: tuple[str, ...] = (),
 ) -> tuple[Path, str]:
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
     caller prints; `stamp_lab` returns its log the same way. KIND is what
     the kept number asserts (`protocol_block.KINDS`); a new area without it
     is refused — nothing falls back to a computation (standard 0.22).
-    DELIVERABLES are stamped into the measure script (`script_stamps`).
+    DELIVERABLES and DELIVERABLE_COLUMNS are stamped into the measure
+    script (`script_stamps`).
     Raises `console.Refused` too for an area of NAME that exists without
     REPORT, and with REPORT where NAME names no one area
     (`existing_area`)."""
@@ -732,7 +744,9 @@ def stamp_area(
         pre.rename(area / "explore" / pre.name)
         log.append(f"  moved          {pre} -> {area / 'explore' / pre.name}")
     write_if_absent(area / f"PROTOCOL-{slug}.md", stamped, log)
-    log += stamp_scripts(root, area, nn, slug, skeleton, model, deliverables)
+    log += stamp_scripts(
+        root, area, nn, slug, skeleton, model, deliverables, deliverable_columns
+    )
     _point_hooks_at(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
@@ -1650,6 +1664,13 @@ def main(argv: list[str]) -> int:
         "the run writes it from the kept rows and registers it; repeatable",
     )
     exp.add_argument(
+        "--deliverable-columns",
+        default="",
+        metavar="A,B,C",
+        help="the columns the task names for its deliverable, in its order, comma "
+        "separated: stamped as DELIVERABLE_COLUMNS, the write refuses other columns",
+    )
+    exp.add_argument(
         "--report",
         action="store_true",
         help="add the † fields (now, or to an existing area)",
@@ -1735,6 +1756,9 @@ def main(argv: list[str]) -> int:
         model=a.model,
         report=a.report,
         deliverables=tuple(a.deliverable),
+        deliverable_columns=tuple(
+            c.strip() for c in a.deliverable_columns.split(",") if c.strip()
+        ),
     )
     print(report)
     return 0
