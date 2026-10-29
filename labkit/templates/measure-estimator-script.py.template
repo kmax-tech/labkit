@@ -502,7 +502,11 @@ def band_by_rule(cfg: MeasureConfig, preds: list, golds: list, q: float, k: int)
     REGISTERED the band rounded up to two places — the value [A2] registers.
     The one home of the rule: `--calibrate-null` and the first
     measurement's check both call it. Raises ValueError for K < 1 or no
-    pairs."""
+    pairs, and when no permutation moves the null (every score equals the
+    target): the predictions answer one class, or match none of the gold —
+    then there is no spread to take a band from, and 0 is no band
+    (2026-10-29, apply-screen: a first calibration on predictions that
+    matched no gold registered `null_band = 0.0` without a word)."""
     if k < 1 or not preds:
         raise ValueError(f"band_by_rule(): {k} permutation(s) of {len(preds)} labelled item(s)")
     target = permutation_expectation(cfg.score, list(zip(preds, golds)))
@@ -512,6 +516,13 @@ def band_by_rule(cfg: MeasureConfig, preds: list, golds: list, q: float, k: int)
         random.Random(f"calibrate-null:{cfg.seed}:{n}").shuffle(permuted)
         scores.append(SCORES[cfg.score](list(zip(preds, permuted))))
     off = sorted(abs(s - target) for s in scores)
+    if off[-1] == 0:
+        raise ValueError(
+            f"band_by_rule(): every one of {k} permutations of the gold scores "
+            f"{float(target):.4f}, the permutation expectation — the null does not move: "
+            f"the predictions answer one class, or match none of the gold ({len(preds)} "
+            f"labelled items). No band can be derived from no spread; check the "
+            f"predictions and the gold before registering [A2]'s null_band")
     # the quantile's rank, exact: a float 0.99 * 200 may land on either side of 198
     band = off[max(0, math.ceil(Fraction(str(q)) * len(off)) - 1)]
     registered = math.ceil(Fraction(band) * 100) / 100
@@ -559,7 +570,8 @@ def band_check(cfg: MeasureConfig, items: list[dict]) -> list | None:
     measurement of this protocol yet, the labelled items' predictions put
     through the rule must give the registered null_band. Returns those
     predictions — the measurement reuses them —, or None when no check is
-    owed. Raises SystemExit naming both values when the band differs: run
+    owed. Raises SystemExit naming both values when the band differs, or
+    naming the rule's refusal when it derives no band (`band_by_rule`): run
     before the run opens, so the registration may still be corrected (a
     started measurement binds it). Never changes the band."""
     rule = band_rule(cfg)
@@ -570,7 +582,10 @@ def band_check(cfg: MeasureConfig, items: list[dict]) -> list | None:
         return None  # registered and measured: the band stands as registered
     train = labelled(items)
     preds = predict_all(make_estimator(cfg.seed), train, "band_check()")
-    held = band_by_rule(cfg, preds, [it[GOLD_FIELD] for it in train], *rule)
+    try:
+        held = band_by_rule(cfg, preds, [it[GOLD_FIELD] for it in train], *rule)
+    except ValueError as exc:
+        raise SystemExit(f"[A2]'s band cannot be checked: {exc}") from exc
     if Fraction(str(held["registered"])) != Fraction(str(cfg.null_band)):
         raise SystemExit(
             f"[A2]'s null_band is {cfg.null_band}, and its registered rule gives "

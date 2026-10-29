@@ -470,6 +470,14 @@ pins (`requirements.txt` / `requirements.lock`).
   indented line is the finding's wherever it stands; an unindented
   paragraph below a blank line after the last finding is still refused.
 
+- **A null that does not move gives no band.** The apply skeleton's
+  `--calibrate-null --write` registered `null_band = 0.0` without a word
+  when the first calibration ran on predictions that matched no gold
+  (every permutation scored 0.0; apply-screen with Haiku, 2026-10-29).
+  `band_by_rule` refuses a spread of zero naming the two causes (one
+  predicted class, or no match with the gold); the calibration, its
+  `--write` and the first measurement's check all stop there.
+
 - **The untouched apply stamp no longer warns of a constant copy.** The
   band rule's config fields default to None (no rule registered), and the
   constant-copy check (static evidence) read `null_band_quantile = None`

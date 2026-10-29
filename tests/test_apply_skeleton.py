@@ -223,6 +223,31 @@ class ApplySkeleton(unittest.TestCase):
             held = replace(measure.CONFIG, null_band=right)
             self.assertEqual(measure.band_check(held, self.items()), preds)
 
+    def test_a_null_that_does_not_move_gives_no_band(self):
+        """2026-10-29, apply-screen with Haiku: the first calibration ran on
+        predictions that matched no gold, every permutation scored 0.0, and
+        `--calibrate-null --write` registered `null_band = 0.0` without a
+        word. A spread of zero is refused by the rule's one home, so the
+        calibration, its `--write` and the first measurement's check all
+        refuse. The twin: predictions that vary give a band as before."""
+        _, measure = self.measure_module("apply")
+        one_class = mock.Mock()
+        one_class.predict.side_effect = lambda xs: [0 for _ in xs]
+        with (
+            mock.patch.object(measure, "make_estimator", return_value=one_class),
+            mock.patch.object(measure, "first_measurements", return_value=[]),
+        ):
+            with self.assertRaises(ValueError) as cm:
+                measure.calibrate_null(measure.CONFIG, self.items())
+            self.assertIn("the null does not move", str(cm.exception))
+            with self.assertRaises(SystemExit) as ex:
+                measure.band_check(measure.CONFIG, self.items())
+            self.assertIn("cannot be checked", str(ex.exception))
+            self.assertIn("the null does not move", str(ex.exception))
+        with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
+            cal = measure.calibrate_null(measure.CONFIG, self.items())
+        self.assertGreater(cal["band"], 0)
+
     def test_the_measurement_reuses_the_checks_predictions(self):
         area, measure = self.measure_module("apply")
         primary = self.primary()
