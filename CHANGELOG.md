@@ -2701,6 +2701,40 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **A computation compared with a stated value: the head's `[reference]`
+  table, read by the compute skeleton, held by the check.** A task that
+  asks a computation to match a value ("0.62 within 0.01", "at least
+  0.20") had no place in the `compute` kind: the pressure pilot's agents
+  typed the comparison into prose, and the analysis auditor held a
+  compute protocol for a criterion it cannot carry
+  (docs/notes/2026-10-29-reference-comparison.md). The protocol head
+  takes one optional table, `compute` only: `[reference]` with `key` (the
+  metrics key compared, the skeleton's `METRIC_KEY`), `value`,
+  `tolerance` (absolute, or a fraction of `value` with `relative =
+  true`; `within` only), `relation` (`within` | `at_least` | `at_most`)
+  and `source` (who states the value; optional). `protocol_block.reference`
+  reads it exactly or refuses it by name; on a fit or an apply it is
+  refused naming `[C]` (`protocol_check.reference_gap`, by
+  `protocol-check` and the start of a low run); the registration stamp
+  digests it, so a value changed after the audit is drift. The verdict
+  has one home, `formats/reference.reference_verdict`: the compute
+  skeleton's `metrics_of()` writes `ref_state` (`compared` | `not
+  comparable`), `ref_met`, `ref_distance` (`|measured − value|`, exact
+  float arithmetic, never rounded), `ref_value`, `ref_tolerance` (the
+  absolute one used) and `ref_relation` into metrics.json after
+  `evaluate_rows()`, and `02_analyze.py --check` recomputes them with the
+  number. A protocol without the table is a pure computation: no `ref_*`
+  key, nothing owed. A missed reference is a valid outcome (`ref_met =
+  false`, the delivery stands); a key absent from the metrics or no
+  finite number is `not comparable`. `labkit-init exp --kind compute
+  --reference KEY=VALUE[±TOL] [--relation …] [--reference-source TEXT]`
+  stamps the table; `usability stage` does not — registering a stated
+  value is the agent's. Recorded results and the result block carry the
+  comparison generated (`reference 0.62 ± 0.01 (within): not met,
+  distance 0.145`; `… not comparable: <key> absent`), and finalize blocks
+  a registered reference the run cannot compare (guaranteed), naming the
+  key and the way out. Not a breaking change: old heads carry no table.
+
 - **The registered report owes its result.** In the pressure pilot of
   2026-10-29 three of six lab agents (tasks 34, 15, 60) deleted the run
   id from REPORT.md after the hook had refused the report for citing a

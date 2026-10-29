@@ -29,6 +29,16 @@ by that file: DELIVERABLES names it, deliverable_rows() gives its rows from
 the kept rows and the metrics, and the run writes and registers it
 (`write_deliverables`) — its sha256 lands in the run's outputs.json, and
 `finalize` holds the file in the tree to it. Never write it by hand.
+
+A task that states a value the number must match ("0.62 within 0.01", "at
+least 0.20") is compared through the protocol head's `[reference]` table
+(key, value, tolerance, relation, source — `labkit-init exp --reference`
+stamps it; registered before the first measurement). `metrics_of()` reads
+it and writes the verdict (`ref_state`, `ref_met`, `ref_distance`, …) into
+metrics.json after evaluate_rows(); `02_analyze.py --check` recomputes it,
+and the Recorded results line carries it. Without the table nothing is
+compared and no `ref_*` key is written. A `not met` is a valid outcome —
+never move the number or the value to meet it.
 """
 from __future__ import annotations
 
@@ -36,7 +46,7 @@ import argparse
 import json
 from pathlib import Path
 
-from labkit.formats import deliverable
+from labkit.formats import deliverable, protocol_block, reference
 from labkit.formats.repo import next_after_run
 from labkit.run import runlog
 
@@ -107,6 +117,17 @@ def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     raise NotImplementedError("evaluate_rows(): compute the number(s) from items")
 
 
+def metrics_of(items: list[dict], ids: list[str]) -> dict:
+    """The run's metrics: evaluate_rows() over ITEMS and IDS, and — when the
+    protocol head registers a `[reference]` — the verdict of the kept number
+    under its key against the stated value (`reference.with_verdict`: the one
+    home of the comparison; `02_analyze.py --check` calls this too, so the
+    verdict is held to the rows like every number). Reads PROTOCOL's head.
+    Without a `[reference]` the metrics are evaluate_rows()'s alone."""
+    ref = protocol_block.reference(PROTOCOL.read_text(encoding="utf-8"))
+    return reference.with_verdict(evaluate_rows(items, ids), ref)
+
+
 def deliverable_rows(path: str, items: list[dict], metrics: dict) -> list[dict]:
     """TODO (only with DELIVERABLES): the rows of the deliverable PATH, one
     dict per row with the task's columns as keys, in the task's order, from
@@ -145,7 +166,7 @@ def main() -> None:
                                           ensure_ascii=False) + "\n" for r in items),
                        encoding="utf-8")
         run.output(OUT)
-        metrics = evaluate_rows(items, ids)
+        metrics = metrics_of(items, ids)
         run.metrics(**metrics)
         write_deliverables(run, items, metrics)
         print(json.dumps(metrics, indent=1))

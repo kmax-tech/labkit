@@ -466,7 +466,9 @@ class Exp(unittest.TestCase):
         # asked for a file the skeleton never stamped, audit 2026-10-19)
         analyze = (area / "scripts" / "02_analyze.py").read_text(encoding="utf-8")
         self.assertIn('"--check"', analyze)
-        self.assertIn("measure.evaluate_rows(rows, ids)", analyze)
+        # the metrics recomputed are the formula's plus the reference verdict
+        # (`metrics_of`): the check holds the comparison with a stated value too
+        self.assertIn("measure.metrics_of(rows, ids)", analyze)
         self.assertIn('AREA / "scripts" / "01_measure.py"', analyze)
         script = (area / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         # one home for the check: the compute skeleton's 01_measure.py only measures

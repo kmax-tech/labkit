@@ -9,7 +9,10 @@ is written back, LAB-041 Generate numbers, don't retype them): `labkit.checks.re
 pins the output file to the run's recorded sha, recomputes `metrics.json`
 from the kept rows and holds the protocol to every number and the run_id.
 The formula is `01_measure.evaluate_rows`, imported by path under a unique
-name — a second copy here would be a second truth of the number.
+name — a second copy here would be a second truth of the number; the
+metrics recomputed are `01_measure.metrics_of`'s, the formula and, where
+the head registers a `[reference]`, the verdict against it, so the check
+holds the comparison too.
 """
 from __future__ import annotations
 
@@ -37,13 +40,13 @@ def main() -> None:
     ids = measure.expected_ids()   # the denominator comes from the source, never from the rows
     if args.check:
         # the numbers as protocol-fill --from-run writes them (recheck.plain_numbers)
-        v = recheck.holds(area=AREA, out=measure.OUT, recompute=lambda rows: measure.evaluate_rows(rows, ids),
+        v = recheck.holds(area=AREA, out=measure.OUT, recompute=lambda rows: measure.metrics_of(rows, ids),
                           note=measure.PROTOCOL)
         print(f"check: run {v.run_id} — {v.keys_compared} keys identical, "
               f"{measure.PROTOCOL.name} carries them and the run_id"
               + (f"; grown since the run: {v.grown}" if v.grown else ""))
         return
-    print(json.dumps(measure.evaluate_rows(recheck.rows_of(measure.OUT), ids), indent=1))
+    print(json.dumps(measure.metrics_of(recheck.rows_of(measure.OUT), ids), indent=1))
 
 
 if __name__ == "__main__":

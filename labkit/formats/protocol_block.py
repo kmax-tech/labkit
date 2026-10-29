@@ -494,8 +494,8 @@ class Reference:
         return abs(self.value) * self.tolerance if self.relative else self.tolerance
 
 
-def _finite_number(value: object) -> bool:
-    """A TOML int or float that is finite — a bool is no number here."""
+def finite_number(value: object) -> bool:
+    """VALUE is an int or a float that is finite — a bool is no number here, nor NaN or an infinity; the one reading of \"a number\" for the head and the verdict (`reference`)."""
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
@@ -531,7 +531,7 @@ def reference(text: str) -> Reference | None:
             f"one word (the compute skeleton's METRIC_KEY)"
         )
     value = table["value"]
-    if not _finite_number(value):
+    if not finite_number(value):
         raise BlockError(
             f"[reference] value = {value!r} — a finite number in the key's unit"
         )
@@ -579,7 +579,7 @@ def _reference_tolerance(table: dict, relation: str) -> tuple[float | None, bool
             "|measured - value| <= tolerance; absolute, or a fraction of "
             "value with relative = true"
         )
-    if not _finite_number(tolerance) or tolerance < 0:
+    if not finite_number(tolerance) or tolerance < 0:
         raise BlockError(
             f"[reference] tolerance = {tolerance!r} — a finite number >= 0"
         )
