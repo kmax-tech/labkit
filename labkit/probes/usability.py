@@ -33,7 +33,11 @@ stage
     accuracy, no truth, only a range and a null condition to report;
     `--task compute-hrv | fit-assay | apply-screen`: a ScienceAgentBench-shaped
     task with a known trap and a hidden evaluation of `pred_results/`
-    (`sab_cases`; the created venv gets the case's packages) — with a
+    (`sab_cases`; the created venv gets the case's packages); a value the
+    task states for a computation is NOT stamped as the head's
+    `[reference]` — registering it (`labkit-init exp --reference`, or the
+    table by hand before the first measurement) is the agent's, and
+    whether it does is what the probe measures (2026-10-29) — with a
     known answer (twelve cases, their input files; the answer is recounted
     from the files at score time, never written down) and TASK.md — the
     task sheet, from `usability-task-<task>.md.template`, with the log

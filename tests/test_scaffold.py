@@ -1125,6 +1125,101 @@ class Exp(unittest.TestCase):
             protocol_block.head(proto.read_text(encoding="utf-8")).report, "REPORT.md"
         )
 
+    def test_a_reference_is_stamped_into_the_head_and_refused_on_a_bar(self) -> None:
+        """`--reference KEY=VALUE[±TOL]` stamps a computation's `[reference]`
+        table — the stated value the task asks the number to match
+        (2026-10-29); with a report file the `report` line stays in
+        [protocol]; a fit or an apply is refused naming [C] with nothing
+        written, `--change-kind` to one is held by the written table, and
+        `--relation` without `--reference` is an argument error."""
+        ref = scaffold.parse_reference_flag("lines_mean=0.62±0.01", None, "the task")
+        self.assertEqual(
+            ref,
+            protocol_block.Reference(
+                "lines_mean", 0.62, 0.01, False, "within", "the task"
+            ),
+        )
+        self.assertEqual(
+            scaffold.parse_reference_flag("k=0.2", "at_least", None).relation,
+            "at_least",
+        )
+        self.assertEqual(
+            scaffold.parse_reference_flag("k=3+-0.5", None, None).tolerance, 0.5
+        )
+        for spec, relation, said in (
+            ("lines_mean", None, "KEY=VALUE"),
+            ("k=abc", None, "are numbers"),
+            ("k=0.2", None, "names no tolerance"),
+            ("k=0.2±0.1", "at_least", "takes no tolerance"),
+            ("k=0.2±-0.1", None, "finite number >= 0"),
+        ):
+            with self.subTest(spec=spec), self.assertRaises(console.Refused) as caught:
+                scaffold.parse_reference_flag(spec, relation, None)
+            self.assertIn(said, caught.exception.why)
+        argv = ["exp", "foo-bar", "--repo", str(self.root), "--repeat-cost", "low"]
+        self.assertEqual(
+            quiet(
+                scaffold.main,
+                [
+                    *argv,
+                    "--kind",
+                    "compute",
+                    "--reference",
+                    "lines_mean=0.62±0.01",
+                    "--reference-source",
+                    "the task",
+                ],
+            ),
+            0,
+        )
+        proto = self.area() / "PROTOCOL-foo-bar.md"
+        text = proto.read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.reference(text), ref)
+        self.assertIn(
+            'preflight_audit = ""\n\n[reference]\nkey = "lines_mean"\nvalue = 0.62\n'
+            'tolerance = 0.01\nrelation = "within"\nsource = "the task"\n',
+            text,
+        )
+        self.assertEqual(
+            [
+                m
+                for m in protocol_check.check_fields(text).missing_must
+                if "reference" in m
+            ],
+            [],
+        )
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "other",
+            "low",
+            kind="compute",
+            reference=ref,
+            report_file="REPORT.md",
+        )
+        (other,) = (self.root / "experiments").glob("*-other")
+        text = (other / "PROTOCOL-other.md").read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.head(text).report, "REPORT.md")
+        self.assertEqual(protocol_block.reference(text), ref)
+        for kind in ("fit", "apply"):
+            with self.subTest(kind=kind), self.assertRaises(console.Refused) as caught:
+                scaffold.stamp_area(
+                    self.root, "fitted", "low", kind=kind, reference=ref
+                )
+            self.assertIn("[C]", caught.exception.why)
+            self.assertEqual(list((self.root / "experiments").glob("*-fitted")), [])
+        with self.assertRaises(console.Refused) as caught:
+            quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
+        self.assertIn("[reference] is written", caught.exception.why)
+        self.assertEqual(
+            protocol_block.reference(proto.read_text(encoding="utf-8")), ref
+        )
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as exited:
+            quiet(scaffold.main, [*argv, "--kind", "compute", "--relation", "at_least"])
+        self.assertEqual(exited.exception.code, 2)
+        self.assertIn("go with --reference", err.getvalue())
+
     def test_explore_refuses_the_flags_of_an_area_stamp(self) -> None:
         """`--explore` dropped `--kind`, `--repeat-cost`, `--model` and
         `--report` without a word: the person believed them stamped. Each is
@@ -1138,6 +1233,7 @@ class Exp(unittest.TestCase):
             ["--model"],
             ["--report"],
             ["--report-file", "REPORT.md"],
+            ["--reference", "k=1±0.1"],
         ):
             with self.subTest(extra=extra):
                 err = io.StringIO()
