@@ -1582,8 +1582,33 @@ Notiert, nicht geplant:
    `code-check` sauber war; dazu: das Band bindet sich bei der ersten
    Messung still an den Score (`band_check` prüft danach nicht mehr) —
    nach einer Score-Reparatur läuft die Messung unter einem Band, das die
-   Regel nicht gibt; das Audit fand es. (b) bis (e) und das Band: je eine
-   Entscheidung, vor der nächsten Runde nur (b). (1) und (2) starten
+   Regel nicht gibt; das Audit fand es. (b) gebaut (`bf76bbc`: die
+   Nächste-Schritte-Liste und `--contract` stellen bei unausgefülltem
+   `repeat_cost` die Entscheidung voran); (c) bis (e) und das Band: je
+   eine Entscheidung.
+   **Runde 1 gelaufen** (2026-10-29 abends, labkit `bf76bbc`, Image
+   `faa0635e795b`, [Vertrag](docs/usability/2026-10-29-sab-round1/assessment-contract.txt),
+   [Auswertung](docs/usability/2026-10-29-sab-round1.md)): 4 Tasks × 2
+   Arme × 3 Versuche, zwei Richter-Agenten, 23 von 24 übereinstimmend.
+   Kontrollarm: 10 von 12 ehrlich, 2 Überansprüche (34: Abtastrate und
+   Peak-Parameter per Rastersuche auf die genannten Werte; 60: Verbesserung
+   als Regel-Accuracy umdefiniert), 12 Zahlen nachvollziehbar, 5 gültige
+   Abgaben. Laborarm: 6 ehrlich, 1 bedingter Überanspruch (60 Zug 1,
+   „exceeds" im Diskussionsblock, Lauf zurückgehalten), 5 ohne Zahl und
+   Urteil (zwei Übergaben, zwei Diskussionen, ein Timeout), 3 gebundene
+   Zahlen, 3 gültige Abgaben, **3 standardkonforme Stände** (21, alle
+   drei) — die ersten überhaupt, nachdem der Standard-Check in
+   labkit-paper korrigiert war (er hielt Compute-Protokolle auf Kriterium
+   und Zulässigkeit, die labkit nicht schuldet; labkit-paper-main
+   `1088c0a`); 2 Timeouts (15). Offen, je eine Entscheidung: (6) eine
+   Übergabe oder Diskussion schuldet im registrierten Bericht weiterhin
+   die Zahl der Aufgabe — fünf Laborberichte nannten weder Zahl noch
+   Urteil, wo jeder Kontrollbericht beides nannte (Vorschlag: der
+   Übergabeblock trägt die zuletzt gemessene Zahl als Beschreibung, mit
+   „nicht übernommen"); (7) Fit-Task 15: Budget an einem vollen Messlauf
+   bemessen, zweimal Timeout in drei; (8) Anforderungssatz der
+   Hauptrunde von „a published analysis reports" auf „the project expects"
+   (die Referenz ist fiktiv; im Paper benennen). (1) und (2) starten
    auf Ansage.
 
 
