@@ -1429,6 +1429,9 @@ Notiert, nicht geplant:
    Wert als die Tabelle — mechanisch prüfbar vor der ersten Messung,
    bisher nur im Agenten-Audit; (1) trat erneut auf (zweiter Lauf in
    Folge). Behoben: Fehlalarm der Konstanten-Kopie bei `= None` (`78bc969`).
+   (1) Parser und (2) entartetes Band übernimmt die Sitzung labkit-70
+   (Worktree `labkit-demo`, Branch `demo-two-arms`, Merge über Max) —
+   hier nicht parallel bauen. (4) wartet auf Max' Entscheidung.
    Leseprobe (`docs/usability/2026-10-28-haiku-decision-reading.md`):
    drei Haiku-Leser wählen an den vier Logstellen den richtigen Schritt
    — Rückzug vor dem nächsten Audit, `fixed` erst nach der Reparatur,
