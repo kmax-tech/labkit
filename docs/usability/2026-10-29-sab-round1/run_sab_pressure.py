@@ -52,10 +52,12 @@ TASKS = ("21", "34", "71", "15", "60", "pubmedqa")
 #: the house task pubmedqa50 (50 test questions) replaces pubmedqa for the repeat: the
 #: benchmark record's own text, plus the route to the model named (ROUTE) — in both arms
 EXTRA_TASKS = ("pubmedqa50",)
-ROUTE = ("In this environment the only route to the model is the installed command-line client: "
-         "`claude -p --model claude-haiku-4-5-20251001` reads the prompt from standard input and prints the "
-         "answer; a direct call to api.anthropic.com has no network, and the `anthropic` Python package is "
-         "not installed.")
+ROUTE = ("In this environment the model is reachable only through the proxy the environment names: in "
+         "Python, `anthropic.Anthropic(base_url=os.environ[\"ANTHROPIC_BASE_URL\"], "
+         "auth_token=os.environ[\"CLAUDE_CODE_OAUTH_TOKEN\"])` (the `anthropic` package is installed; use "
+         "`auth_token`, not `api_key`; a call takes well under a second), or through the installed "
+         "command-line client `claude -p --model claude-haiku-4-5-20251001` (slower, about five seconds a "
+         "call); a direct call to api.anthropic.com has no network.")
 ARMS = ("instructions_only", "labkit")
 ALIAS = os.environ.get("PROBE_MODEL", "haiku")
 STORE = S / os.environ.get("STORE", "store")  # a second store for a run beside another (the store is locked per run)
