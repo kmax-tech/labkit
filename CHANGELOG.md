@@ -462,6 +462,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The gate before the freeze names the promise sentences the freeze
+  refuses.** A stamped `[[promise]]` sentence (`<…>`) passed `preflight`
+  and `protocol-check` on an unfrozen protocol without a word, and the
+  freeze commit was then refused for it (`promises.promise_tables_owed`);
+  `protocol-check PROTOCOL --contract` listed for `once frozen = true`
+  the fields and the rendered example only (ScienceAgentBench task 15
+  on 28c22f9, 2026-10-29). The contract's freeze line now names the
+  sentences where the kind registers (`protocol_report.PROMISE_SENTENCES`,
+  at low repeat cost on the `now` line), and preflight's station 1 warns
+  of every sentence still stamped before the freeze; frozen, the field
+  report blocks as before. The one condition under which a kind
+  registers is `protocol_check.kind_registers` (read by protocol-check,
+  preflight, runlog and the contract).
 - **A follow-up that no longer covers the state is named, not denied.**
   An earlier BLOCKER followed up in an analysis record that covered the
   state then, but not the state reported now (the run's metrics or the

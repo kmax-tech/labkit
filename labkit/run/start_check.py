@@ -23,10 +23,10 @@ from pathlib import Path
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
-from labkit.formats import findings, promises, protocol_block, repo
+from labkit.formats import findings, promises, protocol_block, protocol_check, repo
 from labkit.formats.answering_run import REPEAT_SEED_KEY
 from labkit.formats.gate import with_way_out
-from labkit.formats.standard_contract import COMPUTE_KIND, PREFLIGHT_AUDIT, lane
+from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.runs import (
     COMPLETED,
@@ -466,9 +466,7 @@ def require_registration(
         block,
         frozen=head.frozen,
         full_run=full_run,
-        # a computation registers nothing unless its prose names an id; a fit or
-        # an apply registers by its kind (standard 0.22)
-        registers=head.kind != COMPUTE_KIND or promises.registers_ids(bound.text),
+        registers=protocol_check.kind_registers(head.kind, bound.text),
     )
     if owed:
         raise SystemExit(

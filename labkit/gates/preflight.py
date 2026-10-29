@@ -16,7 +16,9 @@ What it runs, in order (`preflight_area` shows each station's condition):
   0. protocol        the named PROTOCOL-*.md or the area's only one
   1. protocol-check  mandatory fields, placeholders, the stamped id, a repeat_cost
                      tier lowered since the first commit; an unparseable
-                     head ends here
+                     head ends here. Where the lane freezes and the head
+                     is not yet frozen, a [[promise]] sentence still the
+                     stamp's `<…>` is a warning: the freeze refuses it
   2. repeat cost       what the lane (`standard_contract.lane`) owes before the
                      freeze: at `low` the agent audit is OPTIONAL (one
                      audit after the first run suffices,
@@ -201,7 +203,9 @@ def preflight_area(
     1. protocol-check — fields, placeholders, id, repeat_cost. A head that does
        not parse is the one early end: the blocker is told, the summary
        follows, exit 1 — the later stations would read a head that is not
-       there.
+       there. The promise sentences the freeze owes are told as a warning
+       only where the lane freezes and the head is not yet frozen; frozen,
+       and at low repeat cost, the field report already blocks on them.
     2. repeat cost — what the lane owes before the freeze; told, never
        counted.
     3. audit findings — every record of the area, always; the audit
@@ -244,6 +248,9 @@ def preflight_area(
     frozen = head.frozen
     repo = layout_root(area)
     git_repo = git_root(area)
+
+    if lane.freeze and not frozen:  # 1, the sentences the freeze owes: a warning
+        check_promise_sentences(findings, protocol, text, head)
 
     # 2. repeat cost — told, never counted
     findings.header("repeat cost")
@@ -334,6 +341,36 @@ def check_protocol_fields(
         or report.soft_holes
     ):
         findings.note("  ok")
+
+
+def check_promise_sentences(
+    findings: Findings, protocol: Path, text: str, head: "protocol_block.Head"
+) -> None:
+    """Station 1, the sentences the freeze owes: every [[promise]] table of
+    TEXT whose `sentence` is still the stamp's `<…>` placeholder
+    (`promises.placeholder_sentences`), a warning where the kind registers
+    (`protocol_check.kind_registers`) — the freeze refuses them
+    (`promises.promise_tables_owed`, a must gap of the field report once
+    frozen = true), so the gate before the freeze names them first. A block
+    that does not read is left to the field report, which blocks on it."""
+    if not protocol_check.kind_registers(head.kind, text):
+        return
+    try:
+        block = promises.parse_block(text)
+    except promises.PromiseError:
+        return  # `check_fields` reports it as a must gap
+    if block is None:
+        return
+    open_ids = promises.placeholder_sentences(block)
+    if open_ids:
+        findings.warn(
+            f"[[promise]] {', '.join(open_ids)} still carries the stamp's `<…>` "
+            "sentence — frozen = true refuses it",
+            fix="state each promise explicitly in one sentence in its table "
+            f'(`protocol-fill {protocol.name} "<id> sentence=<the promise>"`); '
+            f"{contract_hint(protocol)}",
+            evidence_kind=GUARANTEED,
+        )
 
 
 def repeat_cost_lines(

@@ -43,6 +43,7 @@ from labkit.formats.protocol_check import (
     STAMPED_ITEM,
     example_owed,
     field_label,
+    kind_registers,
     model_named,
     owed_fields,
     recorded_results_without_run,
@@ -316,22 +317,40 @@ RENDERED_EXAMPLE = (
     "pair per gold class; `n/a` does not stand in for it)"
 )
 
+#: the promise sentences as `protocol-check PROTOCOL --contract` names them:
+#: owed once frozen where the kind registers (`protocol_check.kind_registers`)
+PROMISE_SENTENCES = (
+    "one explicit sentence per [[promise]] table (the stamp's `<…>` sentence "
+    'registers nothing; `protocol-fill PROTOCOL "<id> sentence=<the promise>"` '
+    "writes one)"
+)
 
-def owed_field_lines(name: str, head: protocol_block.Head, model: bool) -> list[str]:
+
+def owed_field_lines(
+    name: str, head: protocol_block.Head, model: bool, *, registers: bool
+) -> list[str]:
     """What protocol NAME owes field by field (`owed_by_occasion`), one line
-    per occasion — what `protocol-check NAME --contract` prints first. An
-    occasion that owes nothing is left out."""
+    per occasion — what `protocol-check NAME --contract` prints first. The
+    freeze line also names the rendered example where the freeze owes one
+    and the promise sentences where the kind REGISTERS
+    (`protocol_check.kind_registers`) — the two things the freeze refuses
+    besides the fields; at low repeat cost, where every run is the full
+    run, the sentences are owed now. An occasion that owes nothing is left
+    out."""
     owed_here = owed_by_occasion(head, model)
     occasions = (
         (
             "now — protocol-check refuses the commit without them"
             + (" (nothing freezes at low repeat cost)" if owed_here.low else ""),
-            owed_here.now,
+            owed_here.now
+            + ([PROMISE_SENTENCES] if registers and owed_here.low else []),
         ),
         (
             "once frozen = true also (the † ones come with "
             "`labkit-init exp <name> --report`)",
-            owed_here.once_frozen + ([RENDERED_EXAMPLE] if owed_here.example else []),
+            owed_here.once_frozen
+            + ([RENDERED_EXAMPLE] if owed_here.example else [])
+            + ([PROMISE_SENTENCES] if registers and not owed_here.low else []),
         ),
         (
             "after the run, once the head declares a result (`[result] run`)",
@@ -365,7 +384,9 @@ def print_contract(protocol: Path | None = None) -> None:
         text = protocol.read_text(encoding="utf-8")
         head = protocol_block.head(text)
         model = model_named(text)
-        top = owed_field_lines(protocol.name, head, model)
+        top = owed_field_lines(
+            protocol.name, head, model, registers=kind_registers(head.kind, text)
+        )
         rows_title = (
             f"what {protocol.name} owes, by occasion — its repeat_cost, kind"
             + ("" if head.kind else " (undecided: the most a kind owes)")

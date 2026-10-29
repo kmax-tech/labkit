@@ -17,6 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks.code_check import check_intent_ids  # noqa: E402
+from labkit.formats.gate import Findings  # noqa: E402
+from labkit.gates import preflight  # noqa: E402
+from protocol_fixture import head  # noqa: E402
 
 
 def intent_id_lines(area: Path, protocol: Path) -> list[str]:
@@ -160,6 +163,49 @@ class PromisePreflight(unittest.TestCase):
             *area_with(SCRIPT, PROTOCOL.replace('id = "A1"', 'id = "K1"'))
         )
         self.assertTrue(any("promise block" in f for f in findings), findings)
+
+
+class PromiseSentencesBeforeTheFreeze(unittest.TestCase):
+    """preflight names the [[promise]] sentences the freeze owes before the
+    freeze: a sentence still the stamp's `<…>` is a warning while the head
+    is unfrozen, and the field report's blocker once frozen = true — the
+    same refusal `protocol-check` gives (`promises.promise_tables_owed`).
+    Twin: a written sentence warns of nothing."""
+
+    PROSE, BLOCK = PROTOCOL.split("```toml\n")
+    BLOCK = BLOCK.split("```")[0]
+    STAMPED = BLOCK.replace('sentence = "macro-F1 >= min_f1"', 'sentence = "<…>"')
+
+    def _preflight(self, block: str, *, frozen: bool = False) -> Findings:
+        # the area under experiments/: preflight reads its siblings as the
+        # repo's other areas; no git repo, the hooks station tells n/a
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        (area / "scripts").mkdir()
+        (area / "scripts" / "01_measure.py").write_text(SCRIPT, encoding="utf-8")
+        text = self.PROSE + head(repeat_cost="high", frozen=frozen, promises=block)
+        (area / "PROTOCOL-x.md").write_text(text, encoding="utf-8")
+        found = Findings(tell=None)
+        preflight.preflight_area(area, None, found)
+        return found
+
+    def test_a_stamped_sentence_warns_before_the_freeze(self):
+        found = self._preflight(self.STAMPED)
+        (warning,) = [w for w in found.warned if "[[promise]] C1" in w]
+        self.assertIn("still carries the stamp's `<…>` sentence", warning)
+        self.assertFalse(any("[[promise]] C1" in b for b in found.blocked))
+
+    def test_a_stamped_sentence_blocks_once_frozen(self):
+        found = self._preflight(self.STAMPED, frozen=True)
+        self.assertTrue(
+            any("[[promise]] C1 still carries" in b for b in found.blocked),
+            found.blocked,
+        )
+        self.assertFalse(any("[[promise]] C1" in w for w in found.warned), found.warned)
+
+    def test_a_written_sentence_warns_of_nothing(self):
+        found = self._preflight(self.BLOCK)
+        self.assertFalse(any("[[promise]]" in w for w in found.warned), found.warned)
 
 
 if __name__ == "__main__":

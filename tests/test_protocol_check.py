@@ -305,6 +305,29 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
         self.assertIn("Instrument check", frozen_line)
         self.assertIn("a rendered example", frozen_line)
 
+    def test_the_freeze_owes_the_promise_sentences_where_the_kind_registers(self):
+        # The freeze refused the stamp's `<…>` sentences and nothing had named
+        # them before: the contract's freeze line names them where the kind
+        # registers; a computation whose prose names no id owes none.
+        out = self.contract(head(repeat_cost="high", kind="apply", model="haiku"))
+        (frozen_line,) = [
+            ln for ln in out.splitlines() if ln.startswith("  once frozen = true also")
+        ]
+        self.assertIn("one explicit sentence per [[promise]] table", frozen_line)
+        self.assertIn("protocol-fill", frozen_line)
+        out = self.contract(head(repeat_cost="high", kind="compute"))
+        self.assertNotIn("one explicit sentence per [[promise]] table", out)
+        out = self.contract(
+            head(repeat_cost="high", kind="compute") + "\n[C1] the count holds\n"
+        )
+        self.assertIn("one explicit sentence per [[promise]] table", out)
+
+    def test_at_low_repeat_cost_the_promise_sentences_are_owed_now(self):
+        out = self.contract(head(repeat_cost="low", kind="apply", model="haiku"))
+        (now_line,) = [ln for ln in out.splitlines() if ln.startswith("  now")]
+        self.assertIn("one explicit sentence per [[promise]] table", now_line)
+        self.assertNotIn("once frozen = true also", out)
+
     def test_without_a_protocol_the_full_form_is_listed(self):
         # the twin: the generic printout keeps the low cut and every field
         out = io.StringIO()

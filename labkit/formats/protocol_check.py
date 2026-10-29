@@ -642,6 +642,15 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     return must + should + report, []
 
 
+def kind_registers(kind: str | None, text: str) -> bool:
+    """Does a protocol of KIND register promises — the one condition under
+    which its [[promise]] tables are owed (`promises.promise_tables_owed`):
+    a fit or an apply registers by its kind, a computation only when its
+    prose names an id (`promises.registers_ids`, standard 0.22); an
+    undecided kind registers, the most a kind owes."""
+    return kind != standard_contract.COMPUTE_KIND or promises.registers_ids(text)
+
+
 def check_fields(text: str) -> FieldReport:
     """The field findings of one protocol: head, missing fields, placeholders."""
     try:
@@ -681,10 +690,7 @@ def check_fields(text: str) -> FieldReport:
             promises.parse_block(text),
             frozen=head.frozen,
             full_run=lane.registration,
-            # a computation registers nothing unless its prose names an id; a fit
-            # or an apply registers by its kind (standard 0.22)
-            registers=head.kind != standard_contract.COMPUTE_KIND
-            or promises.registers_ids(text),
+            registers=kind_registers(head.kind, text),
         )
     except promises.PromiseError as exc:
         tables_gap = f"[[promise]] tables: {exc}"
