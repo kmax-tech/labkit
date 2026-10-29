@@ -1608,7 +1608,28 @@ Notiert, nicht geplant:
    „nicht übernommen"); (7) Fit-Task 15: Budget an einem vollen Messlauf
    bemessen, zweimal Timeout in drei; (8) Anforderungssatz der
    Hauptrunde von „a published analysis reports" auf „the project expects"
-   (die Referenz ist fiktiv; im Paper benennen). (1) und (2) starten
+   (die Referenz ist fiktiv und löste bei 34 Arbeit über die fehlende
+   Veröffentlichung aus; im Paper benennen). Aus Max' Lesung der Runde
+   (2026-10-29 abends), je eine Entscheidung: (9) **Referenzvergleich für
+   Compute**: eine Regel, die Scaffold, AGENTS.md, Auditor und
+   Standard-Check gemeinsam tragen — ein Compute-Protokoll darf einen
+   externen Zielwert mit Toleranz und Quelle registrieren, die Messung
+   meldet „gemessen X, Referenz Y, innerhalb/außerhalb", der Auditor
+   prüft den Vergleich statt ein Kriterium zu verlangen (60: der
+   Auditor blockte „kein formales Kriterium" auf einem Compute-Protokoll,
+   das keines haben kann); (10) **Reparaturweg am Befund**: welche
+   Codeänderung, welcher Nachweis im nächsten Lauf, welcher Schritt zur
+   Übernahme — Erfolg ist Fehler behoben, neu gemessen, korrekte Abgabe;
+   weitere Entscheidungen über denselben ungelösten Befund sind kein
+   Fortschritt (Lesung der `--decide`-Episoden mit Thinking läuft,
+   `readings/decide-episodes.md`); (11) **Übergabe zeigt Evidenz ohne
+   Aufwertung**: „Lauf X berechnete 0,6086; wegen offener
+   Kodierungsfehler nicht als Antwort verwendbar", und ohne passende
+   Kennzahl genau das; (12) Auswertung trennt „Quelle genannt" (Kontrolle)
+   von „maschinell gebunden" (Labor) — in der Tabelle von Runde 1
+   nachgezogen. Reihenfolge: Vertragswidersprüche klären (9), je einen
+   belegten Reparaturfall aus 34 und 60 zum Abschluss bringen (10),
+   Fit-Budget bemessen (7), dann erneut messen. (1) und (2) starten
    auf Ansage.
 
 
