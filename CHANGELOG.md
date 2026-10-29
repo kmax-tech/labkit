@@ -462,6 +462,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **"FIX lines: none" closes the findings.** With no earlier decided
+  BLOCKER the auditor wrote `FIX lines: none — the area has no earlier
+  decided BLOCKER.` below the last finding; the parser read it as a remark
+  it could not place and refused two paid audits (task 21, 2026-10-29),
+  after which the agent changed code and measured again instead of
+  adopting the audited run. The line now opens the empty FIX section.
+
 - **An area deleted whole no longer passes the commit's evidence hold.**
   `rm -rf <area>` took the protocol with the audit records, so the walk
   that finds an area by its PROTOCOL-*.md (in the tree or the index)

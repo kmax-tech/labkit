@@ -2219,6 +2219,34 @@ class WholeFinding(unittest.TestCase):
                 self.assertEqual(rc, 1, err)
                 self.assertEqual(findings.area_records(area)[0].findings[0].text, text)
 
+    def test_an_empty_fix_section_said_in_words_ends_the_last_finding(self):
+        # task 21, 2026-10-29: the auditor closed with "FIX lines: none — the
+        # area has no earlier decided BLOCKER." below a blank line; the
+        # parser read it as a remark it could not place and refused two paid
+        # audits. The line opens the (empty) FIX section: the finding is
+        # whole, no fix entry is read, the verdict counts.
+        for closing in (
+            "FIX lines: none — the area has no earlier decided BLOCKER.",
+            "FIX: none",
+            "**FIX lines:** none (no earlier decided BLOCKER)",
+        ):
+            answer = (
+                f"WARNING · a.py:1 · x · y · {self.LAB015} · z\n  - evidence\n\n"
+                f"{closing}\n\nverdict: 0 blockers, 1 warnings, 0 notes"
+            )
+            with self.subTest(closing=closing):
+                parsed = audit.parse(answer)
+                self.assertEqual(parsed["verdict"], (0, 1, 0))
+                self.assertEqual(
+                    parsed["findings"],
+                    [
+                        (
+                            "WARNING",
+                            f"WARNING · a.py:1 · x · y · {self.LAB015} · z\n- evidence",
+                        )
+                    ],
+                )
+
     def test_an_indented_paragraph_below_a_blank_line_is_the_last_findings(self):
         # 2026-10-29, apply-screen with Haiku and with Sonnet: the auditor
         # closed the last finding's evidence list with a blank line and went

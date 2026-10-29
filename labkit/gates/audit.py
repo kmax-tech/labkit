@@ -687,12 +687,23 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
     return out
 
 
+#: the FIX section said to be empty — `FIX lines: none — …`, `FIX: none`:
+#: the auditor's own words for an area without an earlier decided BLOCKER
+#: (the prompt shows it "none: no earlier decided BLOCKER in this area");
+#: a section line, not a FIX entry and not a remark after the last finding
+#: (task 21, 2026-10-29: two paid audits refused for it, the agent then
+#: changed code and measured again instead of adopting the audited run)
+FIX_NONE = re.compile(LEAD + r"\**FIX(\s+lines?)?\**\s*:\**\s*none\b", re.I)
+
+
 def section_line(line: str) -> bool:
     """Does LINE open a section of a report — a FIX or READ line, the
-    verdict or scope line, a code fence? Such a line ends a finding
-    (`finding_entries`) and a FIX entry (`fix_block`)."""
+    verdict or scope line, a code fence, the FIX section said to be empty
+    (`FIX_NONE`)? Such a line ends a finding (`finding_entries`) and a FIX
+    entry (`fix_block`)."""
     return bool(
         FIX_OPEN.match(line)
+        or FIX_NONE.match(line)
         or READ_HINT.match(line)
         or VERDICT_LINE.match(line)
         or line.strip().startswith("scope:")
