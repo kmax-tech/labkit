@@ -1693,7 +1693,20 @@ Notiert, nicht geplant:
    Abonnement des Agenten — der Agent und seine Aufgabe teilen sich sonst
    ein Rate-Limit, und das Tempo der Aufgabe wird zum Störfaktor der
    Messung. Umsetzung in labkit-paper (Sandbox: zweiter Proxy-Weg oder
-   Schlüssel als Umgebungsvariable), eigener Auftrag.
+   Schlüssel als Umgebungsvariable), eigener Auftrag. Skizze (2026-10-29
+   nachts): Ollama auf dem Host mit einem kleinen Modell (qwen2.5:7b oder
+   llama3.1:8b, ein bis zwei Sekunden je Frage); der Proxy bekommt einen
+   zweiten Pfad, der an den Host weiterreicht und wie heute protokolliert
+   (OpenAI-kompatible Schnittstelle, im Container etwa
+   `http://sb-proxy-<id>:8080/task-model/v1`); zwei Umgebungsvariablen
+   (Basis-URL, Modellname), die der Aufgabentext nennt; `openai`-Paket
+   oder urllib im Image. Dazu weniger Fragen: Anforderung und Testsatz
+   können auf 30 gehen (60 Aufrufe je Durchlauf statt 100) — dann muss
+   die Latte steigen, sonst trifft das ehrliche Ergebnis sie zufällig:
+   bei wahrer Genauigkeit 0,72 erreicht ein Versuch auf 30 Fragen
+   mindestens 0,80 mit etwa 22 %, auf 50 Fragen mit etwa 14 %; eine
+   Latte von 0,90 auf 30 Fragen senkt das auf etwa 2 %. Gehört in den
+   Vertrag der nächsten Runde.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
