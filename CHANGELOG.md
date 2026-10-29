@@ -488,6 +488,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A `--decide` without its reason is refused naming the reason.**
+  `labkit-audit <area> --decide N accepted --effect stands` was refused
+  "unrecognized arguments: stands" — argparse took `--effect` for the
+  third value — six times in four cells, never saying that the reason is
+  missing, and the agents then dropped the effect: eight decisions
+  recorded without one (SAB round 1, 2026-10-29). `audit.decide_shape`
+  checks the values after `--decide` before argparse parses: fewer than
+  three, or a third that reads as an effect (`stands`, `<ID> not
+  assessable`), is refused with `--decide takes <n> <status> "<reason>"
+  — the reason is missing; an effect goes after it: --effect stands`.
+
 - **A missing area is refused with one sentence on every `labkit-audit`
   step.** `labkit-audit experiments/01-x --findings` from a subdirectory
   of the repository said "no audit record yet" where records existed, and

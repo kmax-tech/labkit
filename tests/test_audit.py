@@ -902,6 +902,64 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertIn("owes its effect", decided.getvalue())
         self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
+    def test_a_decide_without_its_reason_is_refused_naming_the_reason(self):
+        """`--decide 1 accepted --effect stands` was refused "unrecognized
+        arguments: stands" — argparse took `--effect` for the reason — six
+        times in four cells, and the agents then dropped the effect (SAB
+        round 1, 2026-10-29). The three shapes seen name the form, the
+        missing reason and where the effect goes; the twin: the correct
+        form decides."""
+        area = repo_with()
+        run(area, BLOCK)
+        form = '--decide takes <n> <status> "<reason>"'
+        for given, said in (
+            (
+                ["1", "accepted", "--effect", "stands"],
+                f"{form} — the reason is missing; an effect goes after it: "
+                "--effect stands",
+            ),
+            (
+                ["1", "accepted", "stands"],
+                f"{form} — the reason is missing: 'stands' is an effect, and an "
+                "effect goes after the reason: --effect stands",
+            ),
+            (
+                ["1", "accepted"],
+                f"{form} — the reason is missing; an effect goes after it: "
+                "--effect stands",
+            ),
+            (["1"], f"{form} — 1 of 3 given"),
+        ):
+            with self.subTest(given=given):
+                err = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(err),
+                ):
+                    with self.assertRaises(SystemExit) as stop:
+                        audit.main([str(area), "--decide", *given])
+                self.assertEqual(stop.exception.code, 2)
+                self.assertIn(f"labkit-audit: error: {said}\n", err.getvalue())
+                self.assertNotIn("unrecognized arguments", err.getvalue())
+        self.assertEqual(findings.area_records(area)[-1].findings[0].status, "open")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            rc = audit.main(
+                [
+                    str(area),
+                    "--decide",
+                    "1",
+                    "accepted",
+                    "the limit",
+                    "--effect",
+                    "stands",
+                ]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertIn("finding 1: accepted (stands) — the limit", out.getvalue())
+        decided = findings.area_records(area)[-1].findings[0]
+        self.assertEqual((decided.status, decided.effect), ("accepted", "stands"))
+
     def test_a_missing_area_is_refused_with_one_sentence_on_every_step(self):
         """`labkit-audit experiments/01-x --findings` from a subdirectory
         said "no audit record yet" where records existed, and `--review`

@@ -72,6 +72,7 @@ import json
 import ast
 import os
 import re
+import shlex
 import sys
 import time
 from dataclasses import dataclass, field
@@ -1359,6 +1360,11 @@ def main(argv: list[str]) -> int:
         help="seconds for the one call",
     )
     ap.add_argument("--out", type=Path, help="also write the report here")
+    # before argparse: with two values it took `--effect` for the reason and
+    # refused "unrecognized arguments: stands", never naming the reason
+    shape = decide_shape(argv)
+    if shape is not None:
+        ap.error(shape)
     args = ap.parse_args(argv)
     _check_args(ap, args)
     if not args.area.is_dir():
@@ -1625,6 +1631,43 @@ def decision_lines(
         out.append("reading hints — not recorded, nothing to decide:")
         out += [f"  {h}" for h in hints]
     return out
+
+
+#: how `--decide` takes its values, as its refusals name the form
+DECIDE_FORM = '--decide takes <n> <status> "<reason>"'
+
+
+def decide_shape(argv: list[str]) -> str | None:
+    """Why ARGV's `--decide` does not carry its three values, or None: the
+    words after `--decide` up to the next option are its values; fewer
+    than three, or a third that reads as an effect (`findings.effect_ids`:
+    `stands`, `<ID> not assessable`) given in the reason's place, is
+    refused naming the form and where the effect goes. Six calls of
+    `--decide N accepted --effect stands` in four cells were refused with
+    "unrecognized arguments: stands" — argparse took `--effect` for the
+    reason — and the agents dropped the effect (SAB round 1, 2026-10-29).
+    Checked before argparse parses, so a usage error names the reason."""
+    if "--decide" not in argv:
+        return None
+    after = argv[argv.index("--decide") + 1 :]
+    values = after[
+        : next((i for i, w in enumerate(after) if w.startswith("-")), len(after))
+    ]
+    if len(values) == 2:
+        return (
+            f"{DECIDE_FORM} — the reason is missing; an effect goes after it: "
+            "--effect stands"
+        )
+    if len(values) < 2:
+        return f"{DECIDE_FORM} — {len(values)} of 3 given"
+    try:
+        findings.effect_ids(values[2])
+    except ValueError:
+        return None  # a reason in its place
+    return (
+        f"{DECIDE_FORM} — the reason is missing: {values[2]!r} is an effect, and "
+        f"an effect goes after the reason: --effect {shlex.quote(values[2])}"
+    )
 
 
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
