@@ -1476,6 +1476,41 @@ Notiert, nicht geplant:
    räumen parallele Lanes einander die Container weg; ein Läufer im
    Sitzungsprozess stirbt mit der Sitzung, `nohup`/`disown`.
 
+17. **Runde-3-Reparaturen, Injektion und Druck-Pilot (2026-10-29, nachmittags)**:
+   die neun Mängel der Spurlesung von Runde 3 (labkit-paper Bereich 15,
+   `defects_v3`) sind in main, je ein Commit mit Zwillingstest
+   (`f1edf5b`…`d9449e8`: Berichtsfelder vor der Übernahme, NaN zitierbar,
+   veraltete Nachprüfung benannt, Versprechenssätze vor dem Freeze,
+   Entscheidungsweg am benannten Record, `protocol-check --staged` im
+   Hook, `--findings` zeigt jeden offenen Befund, Pre-run-Hook trägt die
+   Warnungen, gelöschter Bereich hält den Commit). Gepusht; Image
+   labkit-sandbox:93bf861a1b3e trägt `d9449e8` (labkit-paper-main
+   `978db42`). **Injektion** ([Auswertung](docs/usability/2026-10-29-injection-ab4ce6d.md)):
+   sieben von neun Verstößen in allen sieben gelieferten Laborständen
+   geblockt; offen: eine außerhalb des Ergebnisblocks abgetippte Zahl
+   (statische Stufe) und die ungebundene Ergebnisdatei `pred_results/`
+   (an keinen Lauf gebunden) — beides Kandidaten für die garantierte
+   Stufe, Entscheidung offen. **Druck-Pilot** auf den sechs echten Tasks
+   ([Vertrag](docs/usability/2026-10-29-sab-pressure/assessment-contract.txt),
+   [Auswertung](docs/usability/2026-10-29-sab-pressure.md)): eine Latte,
+   die das ehrliche Ergebnis verfehlt, in beiden Armen; Kontrollarm drei
+   von sechs stille Überansprüche (Abtastrate auf 91 Hz „kalibriert",
+   Auswahl-AUC als held-out, 3-von-3-Stichprobe bei 198 „maybe"),
+   Laborarm null, dafür ein Timeout (71, 5-GB-Grenze) und Standard
+   erfüllt 0 von 6. Zwei Tasks beeinträchtigt: PubMedQA kann aus der
+   Sandbox kein Modell rufen (Proxy nur für die eigene Sitzung; beide
+   Arme), 34s Evaluation liest Spalten, die eine 5-Minuten-Aufnahme
+   nicht liefert (beide Arme ungültig). Offen, je eine Entscheidung:
+   (1) nächster Zug auf den vier sauberen Tasks mit zwei bis drei
+   Versuchen je Zelle und zweitem Richter; (2) Proxy für PubMedQA
+   öffnen und 34s Evaluation anpassen (labkit-paper); (3) die zwei
+   Injektions-Lücken in die garantierte Stufe heben (Ergebnisdatei im
+   Lauf registrieren; abgetippte Zahl neben dem Block als Blocker, wenn
+   sie dem deklarierten Wert widerspricht); (4) die Standard-Quote 0/6:
+   die Route von behaltenem Lauf zu deklariertem Ergebnis kürzen (vier
+   Berichte ohne Run-ID, drei Registrierungen ohne Kriterium) — erst
+   die Spurlesung dieser sechs, dann bauen.
+
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
 gespeicherten Antworten gleich (Nachrechnen ohne Modellkosten)? Und
