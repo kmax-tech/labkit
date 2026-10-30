@@ -1581,6 +1581,11 @@ def decision_lines(
             f"owed for {owed}):"
         )
         promised = may_leave_unassessed(area, protocol)
+        # the id named with its field: an agent cannot pick `A2` unnamed
+        named = effect_ids_named(area, protocol) if promised else ""
+        unassessed = '--effect "<ID> not assessable"' + (
+            f" (<ID>: {named})" if named else ""
+        )
         if any(f.grade == "BLOCKER" for f in record.findings):
             out.extend(ways_out.blocker_routes(promised, full=False))
         for n, f in enumerate(record.findings, 1):
@@ -1613,7 +1618,7 @@ def decision_lines(
                     f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
                     f"`)"
                     + (
-                        ' or --effect "<ID> not assessable"'
+                        f" or {unassessed}"
                         if promised
                         else " — no promise is registered to leave not assessable; "
                         "a fault the claim cannot be read within: decide it "
@@ -1624,7 +1629,7 @@ def decision_lines(
                 out.append(
                     "      accepted may name its effect when it limits what the "
                     "result allows: --effect stands"
-                    + (' | --effect "<ID> not assessable"' if promised else "")
+                    + (f" | {unassessed}" if promised else "")
                 )
     hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
     if hints:
@@ -2231,9 +2236,10 @@ def _registered(area: Path, protocol: Path | None, effect: str) -> None:
             f"{ways_out.NO_PROMISE_ROUTE}"
         )
     if unknown:
+        text = chosen.read_text(encoding="utf-8")
         raise findings.FindingsError(
             f"effect names {', '.join(unknown)} — {chosen.name} registers "
-            f"{', '.join(sorted(known))}"
+            f"{protocol_check.named_ids(sorted(known), protocol_check.promise_names(text))}"
         )
 
 
@@ -2251,6 +2257,20 @@ def may_leave_unassessed(area: Path, protocol: Path | None) -> bool:
         return bool(promises.table_ids(chosen.read_text(encoding="utf-8")))
     except (ProtocolChoiceError, promises.PromiseError):
         return True
+
+
+def effect_ids_named(area: Path, protocol: Path | None) -> str:
+    """The ids an effect may leave not assessable, each with its field's
+    name (`protocol_check.named_ids`): "C1 (success / failure criterion),
+    A1 (admissibility condition)" — "" when the protocol registers none or
+    is not known here (`may_leave_unassessed` decides whether the route is
+    named at all)."""
+    try:
+        text = the_protocol(area, protocol).read_text(encoding="utf-8")
+        ids = sorted(promises.table_ids(text))
+    except (ProtocolChoiceError, promises.PromiseError):
+        return ""
+    return protocol_check.named_ids(ids, protocol_check.promise_names(text))
 
 
 def _clarity(args: argparse.Namespace) -> int:

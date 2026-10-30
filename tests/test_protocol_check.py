@@ -1482,3 +1482,24 @@ class TestRepeatCost(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PromiseNames(unittest.TestCase):
+    def test_an_id_is_named_by_the_field_it_opens(self):
+        """`promise_names` maps an id written at a field's start to that
+        field's name, and `named_ids` writes them as a message names them;
+        an id with no field stands alone (the twin: nothing is invented)."""
+        text = (
+            "- **Success / failure criterion:** [C1] accuracy >= 0.8\n"
+            "- **Null condition / anchors (in the same run):** [A2] chance\n"
+            "- **Question / hypothesis:** does [C1] hold?\n"
+        )
+        names = protocol_check.promise_names(text)
+        self.assertEqual(
+            names,
+            {"C1": "success / failure criterion", "A2": "null condition / anchors"},
+        )
+        self.assertEqual(
+            protocol_check.named_ids(["A2", "B1"], names),
+            "A2 (null condition / anchors), B1",
+        )

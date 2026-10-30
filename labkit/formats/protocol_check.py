@@ -36,7 +36,7 @@ the id against the repo — and the `protocol-check` command are
 
 import functools
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -413,6 +413,26 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
             )
         )
     return tuple(out)
+
+
+def promise_names(text: str) -> dict[str, str]:
+    """Every promise id TEXT's prose writes before a field's value, mapped to
+    that field's name: `- **Null condition / anchors (in the same run):**
+    [A2] …` → {"A2": "null condition / anchors"}. An id written nowhere at
+    a field's start has no name here. Pure."""
+    out: dict[str, str] = {}
+    for f in fields(text):
+        if m := promises.ID_PREFIX.match(f.value):
+            out.setdefault(m.group(0).strip(" []").upper(), field_name(f.label))
+    return out
+
+
+def named_ids(ids: Iterable[str], names: Mapping[str, str]) -> str:
+    """IDS as a message names them, each with its field's name from NAMES
+    (`promise_names`): "C1 (success / failure criterion), A2 (null
+    condition / anchors)" — an id without a name stands alone. An agent
+    reading `A2` alone could not tell which condition it was."""
+    return ", ".join(f"{i} ({names[i]})" if i in names else i for i in ids)
 
 
 def placeholder_fields(text: str) -> list[tuple[int, str]]:

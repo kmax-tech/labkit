@@ -160,8 +160,8 @@ success, chosen from the question and never from a result. `null_band`
 is how far the null lane may stray from its target. At `apply` with the
 estimator skeleton the target is the exact permutation expectation —
 what the predictions reach on average against randomly assigned labels,
-from which [C1]'s bar also starts —, and the band follows the rule
-[A2]'s table registers beside it (`null_band_quantile` over
+from which the bar of [C1] (success criterion) also starts —, and the band follows the rule
+the table of [A2] (null condition) registers beside it (`null_band_quantile` over
 `null_permutations`; the stamp registers 0.99 over 200). After the data
 are prepared, `.venv/bin/python <area>/scripts/01_measure.py
 --calibrate-null --write` scores the unchanged predictions against
@@ -170,7 +170,7 @@ writes only before the first measurement. Commit the registration, then
 measure: the first measurement refuses a band the rule does not give,
 before its run opens, and never changes it. A count other than the
 registered one (`--calibrate-null 50`) is refused. At `fit` the null lane
-refits five times on permuted labels (`NULL_REFITS`), and [C1]'s bar
+refits five times on permuted labels (`NULL_REFITS`), and the bar of [C1] (success criterion)
 starts from the mean of their scores; the band is a reasoned value, or at
 `high` the spread of those refits over a few `--seed` values of
 `--probe`. After the first measurement none of these changes; a

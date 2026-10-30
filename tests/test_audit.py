@@ -902,6 +902,38 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertIn("owes its effect", decided.getvalue())
         self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
+    def test_the_ids_an_effect_may_name_come_with_their_fields(self):
+        """`A2` alone does not say it is the null condition: where the
+        agent has to name an id — the effect's route in the decision list,
+        the refusal of an id the protocol does not register — each id
+        comes with the field it stands in. The twin: a registered id
+        decides."""
+        area = repo_with()
+        (area / "PROTOCOL-x0.md").write_text(
+            fixture.head(promises=fixture.C1_BLOCK) + fixture.C1_PROSE + PROTOCOL,
+            encoding="utf-8",
+        )
+        rc, out, err, _ = run(area, BLOCK)
+        self.assertEqual(rc, 1, err)
+        self.assertIn(
+            '--effect "<ID> not assessable" (<ID>: C1 (success / failure criterion))',
+            out,
+        )
+        refused = io.StringIO()
+        with contextlib.redirect_stderr(refused):
+            effect = ["--effect", "A9 not assessable"]
+            rc = audit.main([str(area), "--decide", "1", "accepted", "r", *effect])
+        self.assertEqual(rc, 2)
+        self.assertIn(
+            "effect names A9 — PROTOCOL-x0.md registers C1 (success / failure "
+            "criterion)",
+            refused.getvalue(),
+        )
+        with contextlib.redirect_stderr(io.StringIO()):
+            effect = ["--effect", "C1 not assessable"]
+            rc = audit.main([str(area), "--decide", "1", "accepted", "r", *effect])
+        self.assertEqual(rc, 0)
+
     def test_a_decide_without_its_reason_is_refused_naming_the_reason(self):
         """`--decide 1 accepted --effect stands` was refused "unrecognized
         arguments: stands" — argparse took `--effect` for the reason — six
