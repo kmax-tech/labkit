@@ -1717,6 +1717,19 @@ Notiert, nicht geplant:
    fertige Laborversuch maß außerhalb des Harness — der Pfad „Fit-Task
    mit labkit" braucht vor der nächsten Runde eine gemessene Budget- und
    Skelettfrage (Falten, Null-Refits), nicht nur mehr Zeit.
+   **Erwogen (2026-10-30, nicht beschlossen):** (a) offenes Modell hinter
+   vLLM (GPU-Server; auf dem Mac Ollama) als Modell in der Schleife der
+   Aufgabe — lohnt, kein Rate-Limit, reproduzierbar, Umbau wie oben; (b)
+   dasselbe als Agent statt Haiku — jetzt nicht: Claude Code braucht eine
+   Anthropic→OpenAI-Übersetzung im Proxy, ein 20b-Modell scheitert
+   vermutlich an der Werkzeugbedienung, und die offene Frage ist
+   Vollendung, also zuerst nach oben (Sonnet, gleiche fünf Tasks, gleicher
+   Vertrag); später als Achse „Agentenstärke" mit einem Harness, das
+   offene Modelle nativ bedient; (c) Agenten über API-Schlüssel statt
+   Abonnement (Proxy tauscht `x-api-key` statt Bearer): mehr Container,
+   kein Sieben-Tage-Fenster, etwa 30 Dollar je Runde mit 30 Versuchen.
+   Vorgeschlagene Reihenfolge: (c), (a), dann kalte Runde Sonnet und
+   Haiku.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
