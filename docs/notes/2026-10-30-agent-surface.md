@@ -78,7 +78,32 @@ the surface does.
    adopt` (inherits adoption), handover. Only a word that fails the
    context-free or the lie test is renamed; `fixed` is not. The statuses
    are a record format (`findings.STATUSES`): the rename is an announced
-   break in one release, no reader for the old values.
+   break in one release, no reader for the old values (decided
+   2026-10-30). A `false-positive` on a BLOCKER needs a second auditor
+   before the number leaves, as an accepted BLOCKER does today; on a
+   WARNING the missing review warns (decided 2026-10-30).
+
+   Replay on round 1 (the internal reading of the final audit records):
+   of 67 decided findings, 64 map onto exactly one of `fixed`, `limit`,
+   `false-positive` or the handover by what the reason says the agent
+   meant; two straddle limit and dispute or repair, and one is a repair
+   not yet made, which should have stayed open. Today's status matches
+   the meaning in 38 of 67; the drift is `accepted` used to dispute (14)
+   or to report a repair (6). The three words cover what the agents
+   meant; whether an agent picks the right one, only the cold round shows.
+
+   **Further terms on the agent's path** (naming pass over round 1's
+   agent reasoning, candidates, not decided):
+
+   | Term | What happened | Failed | Candidate |
+   |---|---|---|---|
+   | `type` beside `kind` | two head fields whose names are synonyms; agents set `confirmatory` because the task named a requirement, then flipped to `exploratory` after the number missed it (2 cells) | the neighbourhood test: the difference between the two fields is not in their names | `type` → `analysis` (`confirmatory` / `exploratory` analysis, the field's term); the flip after the first measurement refused, not only reported by the follow-up |
+   | declare / adopt / withdraw | `protocol-fill --from-run` "declares" the run, the plan calls it adoption, `--withdraw` withdraws "the declaration"; agents unsure whether there was anything to withdraw | one act, two words | adoption only: `labkit adopt`, `--withdraw` withdraws the adoption; "declared run" leaves the agent's text |
+   | admissibility condition | the distinction from the criterion had to be explained; the standard already maps it to the Registered Reports' outcome-neutral condition and quality check | a coinage where the field has a word | in agent-facing text "quality check (admissibility condition)" once, then quality check |
+   | `C1`, `A1`, `A2` | used correctly as ids, but `A2` is the null condition — an ordinal name hides which A is which | the context-free test | ids stay (the id alphabet is a format); every message prints the id with its name, "A2 (null condition)" |
+   | repeat cost `low` | twice read as a reason to skip the decision review | the description: the word is right, what `low` drops is not said where it matters | already hidden by step 1; the review line names that it holds at every repeat cost |
+   | `--review --again` | an upheld redraw that "releases nothing" read as the release | the lie test: "again" promises a repeat of the real thing | off the agent's surface (a person's tool) |
+   | carried (BLOCKER) | used as a label, no confusion seen | — | keep; the message says "unresolved since `<record>`" once |
 4. **Adoption as one step: `labkit adopt <area> <run>`.** Runs finalize, the
    fill from the run, the result block into the report and report-check in
    one command with one summary; the three commands stay for a person.
@@ -127,8 +152,9 @@ injection benchmark's measure, not round 21/60's.
 
 ## How to know it helped, before and after building
 
-Before: replay on the existing traces — of the 57 decide calls, how many
-map to one of the three outcomes without loss; of the twelve lab attempts of
+Before: replay on the existing traces — of the decided findings, how many
+map to one of the three outcomes without loss (done: 64 of 67, step 3);
+of the twelve lab attempts of
 round 1, at which state `labkit next` would have named the step the agent
 missed (handover without number: 5; no adoption after a run: 4; no run: 2).
 After: a cold round on tasks 21 and 60 (the cheap ones), Haiku, three
