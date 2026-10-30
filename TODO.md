@@ -2557,6 +2557,23 @@ Als Nächstes, in dieser Reihenfolge:
 4. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
    in den Gate-Meldungen noch nicht (dort weiter: answering run, intent
    key, repeat cost …).
+5. Weiter kürzen, was der Agent liest (Hinweis 2026-10-31): die
+   Protokollvorlage `experiment-protocol.md.template` (2.225 Wörter, rund
+   35 Felder) und `protocol-check --contract` (ein Bildschirm Prosa, der
+   nächste Schritt steht nicht oben — `labkit-next` nennt ihn, aber
+   `--contract` sollte mit ihm beginnen). Vor der kalten Runde, wenn
+   „nachher“ die gekürzte Oberfläche messen soll.
+6. Codex-Hooks im Container nachweisen (Vertrauensfreigabe im Wrapper, ein
+   Hook feuert), dann der Codex-Screen.
+7. Branch `audit-prompts` (`92a47d5`, Prompts der Audit-Agenten gekürzt,
+   Note `docs/notes/2026-10-31-audit-prompts-cut.md`): erst nach der kalten
+   Runde einmischen, am Injection-Benchmark messen; die Hauskopie
+   `~/.claude/agents/code-clarity.md` zieht der Rollout nach.
+
+Nach dem dritten Hinweis (2026-10-31): `protocol-fill` nimmt ein
+eindeutiges Präfix eines Feldnamens an und nennt bei Mehrdeutigkeit die
+Felder, sonst das nächstliegende; `labkit-init` erklärt `--type` und nennt
+für unbekannte Flags das nächstliegende (`7b93c86`, Zwillingstests).
 
 Danach, nach dem zweiten Review (je ein Commit, 2.553 Tests):
 - Schritt 5 neu gefasst und gebaut: ein ehrlicher Stopp schuldet den
@@ -2582,7 +2599,7 @@ behoben; `main` (67f44ab) eingemischt.
   jetzt wieder; die Lese-Probe lief mit Lesern, die die globale
   CLAUDE.md sahen (künftig Leser ohne Hauskontext).
 
-- **Prompts der Audit-Agenten kürzen (notiert, nicht geplant):**
+- **Prompts der Audit-Agenten kürzen — gebaut auf Branch `audit-prompts`, Einmischen siehe oben:**
   `labkit/agents/*.agent.md`, 5.657 Wörter, der Preflight allein 3.155
   mit sechs Daten. Erst nach der kalten Runde 21/60, damit deren Effekt
   zuzuordnen bleibt; derselbe Satz-Filter, gemessen am
