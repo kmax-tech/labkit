@@ -12,8 +12,8 @@ first that applies is the step:
                                    result (`handovers.valid`)
     a gap report-check holds     → its way out, the first in the chain's
                                    order (`report_check.report_gaps`)
-    no adopted run               → `protocol-fill … --from-run <run>` adopts
-                                   the run that answers
+    no adopted run               → `labkit-adopt AREA <run>` adopts the run
+                                   that answers
     adopted, nothing held        → nothing: the number may be reported
 
 Prints where the area stands, the next step, and what is held until it is
@@ -31,7 +31,6 @@ from pathlib import Path
 from labkit.formats import console, handovers, protocol_block, protocol_check
 from labkit.formats.gate import BLOCKER
 from labkit.formats.repo import (
-    adopt_command,
     area_path,
     area_protocols,
     choose_protocol,
@@ -103,14 +102,16 @@ def next_step(area: Path, protocol: Path | None) -> Step:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
         return Step(
             f"nothing holds the answering run {run}; no run is adopted yet",
-            f"`{adopt_command(protocol, run)}` adopts it: it writes the result "
-            "and checks it whole — a refusal names its step",
+            f"`labkit-adopt {shown(area, Path.cwd())} {run}` adopts it: it writes "
+            "the result and the report's block and checks them — a refusal "
+            "names its step",
             "the number in any report: a number no protocol adopted is not reported",
         )
     return Step(
         f"{protocol.name} has adopted {ctx.declared}; nothing holds it",
-        "nothing — the number may be reported (`protocol-fill … --into "
-        "REPORT.md` writes its result block into a report)",
+        "nothing — the number may be reported (`protocol-fill "
+        f"{shown(protocol, Path.cwd())} --into REPORT.md` writes its result "
+        "block into a report the head does not register)",
         "",
     )
 

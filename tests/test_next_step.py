@@ -72,7 +72,7 @@ class TheChain(unittest.TestCase):
         self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         # audited, nothing holds: adopt that run
         step = self.step()
-        self.assertIn(f"--from-run {run_id}", step.next, step)
+        self.assertIn(f"labkit-adopt experiments/01-lines {run_id}", step.next, step)
         self.assertIn("no run is adopted yet", step.where)
         rc, out = self.lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 0, out)

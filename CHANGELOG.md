@@ -9,6 +9,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`labkit-adopt AREA [RUN]`: the adoption in one step.** Runs
+  `protocol-fill --from-run` (written and kept only when report-check
+  passes on it), the result block into the report the head registers
+  (`--into`) and report-check on the tree, stopping at the first step that
+  does not pass. A run already adopted skips the first step. The three
+  commands stay; `labkit-next` and `AGENTS.md` name this one.
 - **`labkit-next AREA`: the one next step.** Prints where the area stands,
   the next command and what is held until it is taken. It adds no check:
   no protocol → `labkit-init exp`; a MUST field unfilled → `protocol-fill`;

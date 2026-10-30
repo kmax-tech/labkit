@@ -314,9 +314,12 @@ never supplies missing approval or overrules an earlier rejection.
 
 ### 6. Generate the result and deliver
 
-`protocol-fill <PROTOCOL> --from-run <run_id>` adopts the answering run:
-it writes `[result] run`, Recorded results and the run entry, checks them
-with `report-check` and restores the protocol if refused. The measurement,
+`labkit-adopt <area> <run_id>` adopts the answering run in one step: it
+writes `[result] run`, Recorded results and the run entry
+(`protocol-fill <PROTOCOL> --from-run <run_id>`), checks them with
+`report-check` and restores the protocol if refused; then it writes the
+result block into the report the head registers (`--into`) and checks the
+whole tree. The measurement,
 decided covering analysis audit and `02_analyze.py --check` must hold.
 An analysis audit with no findings covers the run when it saw the current
 code, promises and run: there is nothing to decide. It re-checks each
@@ -327,8 +330,7 @@ After a fix, withdraw the old adoption first (`protocol-fill <PROTOCOL>
 run, and an audit made while another run is adopted does not cover the
 next adoption. Then the new run is adopted the same way, in this order:
 its analysis audit and decisions, the Conclusion for it (`--force` if one
-is filled), `protocol-fill <PROTOCOL> --from-run <new run_id>`,
-`--render`, `--into REPORT.md`.
+is filled), `labkit-adopt <area> <new run_id>`.
 Adoption runs `report-check` and is refused while any other blocker
 stands: a `--from-run` line beside other blockers is the last step, not
 the fix.

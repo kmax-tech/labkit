@@ -62,6 +62,7 @@
       "type": "pickString",
       "description": "labkit command module (see [project.scripts] in pyproject.toml)",
       "options": [
+        "labkit.tools.adopt",
         "labkit.gates.audit",
         "labkit.tools.calltree",
         "labkit.gates.claude_hooks",
