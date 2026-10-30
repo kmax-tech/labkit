@@ -2459,7 +2459,31 @@ trägt, kommt aus dem Vorher-Nachher auf der Vollendung:
    zur Adoption, Überanspruch unverändert null. Agenten über API-Schlüssel,
    vier Container parallel, ein halber Tag.
 4. Sonnet einmal auf den fünf Tasks im Laborarm (obere Achse).
-5. Qwen-Stufe C auswerten (zwei Richter) und als Absatz abschließen.
+5. Qwen-Stufe C auswerten (zwei Richter) und als Absatz abschließen —
+   erledigt 2026-10-30 nachts (Nachtrag 12, Note, Evidenz): 0 von 10
+   bestehen, ein Überanspruch als getippte Zahl über leerer Datei, Laborarm
+   ohne Lauf und Bericht; Qwen rief nie `runlog` oder `finalize` auf, 23 von
+   39 `protocol-fill`-Aufrufen scheiterten an gekürzten Feldnamen („Terms"
+   statt „Terms of this protocol"), `labkit-init` einmal am erfundenen Flag
+   `--type` (gehört in den Oberflächen-Plan: Präfixe annehmen oder das
+   richtige Feld/Flag in der Meldung nennen).
+
+Entschieden 2026-10-30 abends: Hopper-Test mit gpt-oss-120b gestrichen; die
+offenen Modelle bleiben ein Absatz. Hauptagent der Druckrunde ist Haiku oder
+Codex mit einem OpenAI-Modell, beide über API-Schlüssel durch den Proxy (die
+Platzhalter-Route für `ANTHROPIC_API_KEY` ist gebaut, agentsandbox
+`88ae43d`; Codex spricht `api.openai.com` wie vLLM). Vorher ein Codex-Screen:
+Stufe A auf 21, 34, 60, ein Versuch je Task, `gpt-5-codex`; dafür ein
+Sandbox-Image mit labkit ≥ 0.104 (Codex-Hooks), die Vertrauensfreigabe für
+Projekt-Hooks im Wrapper `codex-sandbox`, und ein Nachweis im Container,
+dass ein Hook feuert; bekannte Lücke: `exec_command` mit `workdir` meldet
+dem Pre-Run-Hook nur das Sitzungsverzeichnis (Note 2026-10-30-codex-hooks).
+pubmedqa50 ist beidseitig auf 50 gekürzt (labkit-paper `5a1ba8b`), damit die
+Apply-Sorte zwei Tasks hat; der Deckel-Satz (ein Aufruf je Frage) ist offen.
+Druckrunde: vier Tasks 21, 34, 60, 15 (plus pubmedqa50, wenn der Probelauf
+die Aufrufzahl bestätigt), zehn je Zelle, 8 GB je Container; Fit-Skelett
+vorher auf drei Falten und einmalige Null-Refits bei low, mit gemessenem
+Budget auf 15; 71 bleibt draußen (EEG-Arrays, andere Messgröße).
 
 Reported preliminary study = 3 und 4; was heute vorliegt, ist die
 Pilotphase, die sagt, wo es klemmt.
