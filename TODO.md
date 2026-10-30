@@ -2430,6 +2430,16 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
 - **Allgemeine Regelbeispiele / `lib scar`:** Erst wenn fremdes Labor eigene
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
+## Agentenoberfläche vereinfachen (Plan, 2026-10-30)
+
+Note `docs/notes/2026-10-30-agent-surface.md`: sechs Begriffe statt
+zwanzig, `labkit next <area>` als ein Kommando für den nächsten Schritt,
+Decide mit drei Ausgängen, `labkit adopt` als ein Schritt, ehrlicher Stopp
+schuldet die Zahl, `AGENTS.md` unter 1.200 Wörter. Zuerst Plan (steht),
+dann Messung an den vorhandenen Spuren, dann Bau, dann kalte Runde 21/60
+alt gegen neu. Die übrigen Befunde (Fit-Skelett-Budget, Codex-Hooks)
+werden danach untersucht.
+
 ## Rollout und Aufgaben außerhalb dieses Repos
 
 labkit-paper (Pin 0.85.0): die Nummernvergabe über alle Branches und der
