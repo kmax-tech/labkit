@@ -104,6 +104,26 @@ the surface does.
    | repeat cost `low` | twice read as a reason to skip the decision review | the description: the word is right, what `low` drops is not said where it matters | already hidden by step 1; the review line names that it holds at every repeat cost |
    | `--review --again` | an upheld redraw that "releases nothing" read as the release | the lie test: "again" promises a repeat of the real thing | off the agent's surface (a person's tool) |
    | carried (BLOCKER) | used as a label, no confusion seen | — | keep; the message says "unresolved since `<record>`" once |
+
+   **Promise ids and kinds (decided 2026-10-30).** The letters go: an id
+   is the kind word and a number — `criterion-1`, `quality-check-1`,
+   `interpretation-1` — so it says its kind without a legend and asks
+   nobody to coin a name; the metrics key derives from it in one place
+   (`criterion_1_pass`). It passes the context-free test for the kind
+   only, so every message puts the condition beside it: "criterion-1:
+   ROC-AUC ≥ 0.90". `admissibility` becomes **quality check**: the
+   standard already maps it so (Registered Reports' outcome-neutral
+   condition), while "instrument check" is taken (the `--probe` field,
+   `protocol_cuts.py`); the message says its consequence — "quality-check-1
+   not met → criterion-1 gets no verdict" — since a quality check here
+   decides whether the run can answer at all, not a warning. `branch`
+   becomes **interpretation** (the Registered Reports' "interpretation
+   given different outcomes"): a B entry holds conditions and readings in
+   one sentence today, so each arm is written `<condition> → <reading>`,
+   and the run's recorded value is one of the readings. The break ships
+   in one release with the decision statuses, built as separate commits.
+   Before the format changes, a reading probe tries the words in real
+   messages (old against new, the next command as the measure).
 4. **Adoption as one step: `labkit adopt <area> <run>`.** Runs finalize, the
    fill from the run, the result block into the report and report-check in
    one command with one summary; the three commands stay for a person.
