@@ -30,8 +30,8 @@ Environment: MODEL_UPSTREAM (the vLLM root, http), MODEL_NAME (what vLLM
 serves, `--served-model-name`), MODEL_KEY (vLLM's `--api-key`; the proxy swaps
 the placeholder for it, the agent never holds it), REASONING (low|medium|high,
 Codex's model_reasoning_effort; unset leaves Codex's default), STAGE (A|B|C),
-STORE (the store directory, one per run), WORKERS (default 2), REPS (default
-1), ARMS_ONLY, PROBE_TIMEOUT and CONTAINER_MEMORY override the task budgets.
+STORE (the store directory, one per run), ATTEMPT_PREFIX (oss | qwen, in every
+attempt id), WORKERS (default 2), REPS (default 1), ARMS_ONLY, PROBE_TIMEOUT and CONTAINER_MEMORY override the task budgets.
 
 `--score`: as round 1 — the task's hidden evaluation, REPORT.md present, for
 the lab arm labkit's standard check on the delivered state in the image; rows
@@ -72,6 +72,8 @@ STORE = S / os.environ.get("STORE", "store-oss")
 WORKERS = int(os.environ.get("WORKERS", "2"))
 REPS = int(os.environ.get("REPS", "1"))
 ARMS_ONLY = tuple(x for x in os.environ.get("ARMS_ONLY", "").split(",") if x)
+#: ATTEMPT_PREFIX names the model family in every attempt id (and container name): oss for gpt-oss, qwen for Qwen3
+ATTEMPT_PREFIX = os.environ.get("ATTEMPT_PREFIX", "oss")
 
 
 def need(name: str) -> str:
@@ -131,7 +133,7 @@ def prompt(stage: str, task_id: str, arm: str, texts: dict[str, dict]) -> str:
 
 
 def attempt_id(stage: str, task_id: str, arm: str, rep: int) -> str:
-    return f"oss-{stage}-t{task_id}-{arm}" + (f"-r{rep}" if REPS > 1 else "")
+    return f"{ATTEMPT_PREFIX}-{stage}-t{task_id}-{arm}" + (f"-r{rep}" if REPS > 1 else "")
 
 
 def snapshot(task_id: str, arm: str, image: str) -> Path:
