@@ -49,7 +49,10 @@
 - **Interpretation:** <if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
   licenses, one interpretation per branch point — ask "and if [criterion-…] fails, what then?";
-  a stop rule may fire during the run or on an inadmissible one, so an interpretation is
+  written arm by arm, `<condition> → <reading>`, arms separated by `;`
+  ("criterion-… met → generalises; quality-check-… not met → noisy;
+  otherwise → no-verdict"); the run records one of the readings under its
+  key; a stop rule may fire during the run or on an inadmissible one, so an interpretation is
   decided on its own condition, not on the verdict (→ LAB-013 Registered branch when the run can answer two questions, LAB-004 Identifiers make the intent addressable);
   "n/a — only one outcome" when you have no answer yet: a decision taken
   after the run goes to Next step, labelled as taken after the run>

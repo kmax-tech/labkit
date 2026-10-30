@@ -28,9 +28,10 @@ that it computes the right thing — the semantic half stays with the
 preflight audit (LAB-015 Preflight audit before freezing), which works the same ids.
 
 The alphabet lives in `promises`: the kinds criterion, quality-check and
-interpretation, and the promise block that makes them data. With a block, three more checks run here — text and block
-name the same ids, every declared key is reported exactly, and the run
-recorded this very block.
+interpretation, and the promise block that makes them data. With a block, four more checks run here — text and block
+name the same ids, every declared key is reported exactly, the run
+recorded this very block, and an interpretation's key records one of the
+readings its arms register (`unregistered_readings`).
 
 A protocol without ids exits 0 with a note: nothing is promised.
 
@@ -50,7 +51,7 @@ from pathlib import Path
 
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
-from labkit.formats.gate import EXIT_CONTRACT, WAY_OUT
+from labkit.formats.gate import EXIT_CONTRACT, WAY_OUT, GateFinding, blocker
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
 from labkit.formats.answering_run import bound_answering_run, run_facts
 from labkit.formats.repo import layout_root, shown
@@ -70,17 +71,26 @@ def protocol_id_of(text: str) -> str | None:
     return protocol_block.head(text).id
 
 
+#: the way out of a finding where protocol and run do not name the same
+#: promises — what intent-check's sentences leave to the author
+INTENT_FIX = (
+    "make the protocol's ids, its promise block and the run's metrics.json name "
+    "the same promises: fix the code and measure again; after the first "
+    "measurement a changed registration is registered anew"
+)
+
+
 @dataclass(frozen=True)
 class Held:
     """What intent-check found for one protocol. NOTES say which run was
     chosen and on what proof — told, held against nobody; FINDINGS are the
-    guaranteed-tier mismatches, each one a blocker; SUMMARY is the one line
-    of a clean check (empty beside findings). `hold` builds it, `main`
-    prints it, `finalize` collects it as data (audit follow-up 2026-10-23,
-    F4: parsed from stdout, every note became a blocker)."""
+    guaranteed-tier mismatches, each one a blocker with its way out; SUMMARY
+    is the one line of a clean check (empty beside findings). `hold` builds
+    it, `main` prints it, `finalize` collects it as data (audit follow-up
+    2026-10-23, F4: parsed from stdout, every note became a blocker)."""
 
     notes: list[str]
-    findings: list[str]
+    findings: list[GateFinding]
     summary: str
 
 
@@ -211,8 +221,10 @@ def _main(argv: list[str]) -> int:
 
     protocol, metrics_arg = _named(argv)
     held = hold(protocol, metrics_arg)
-    for line in held.notes + held.findings:
+    for line in held.notes:
         print(line)
+    for finding in held.findings:
+        print(finding.message)
     if held.findings:
         return 1
     print(held.summary)
@@ -231,7 +243,7 @@ def hold(protocol: Path, metrics_arg: Path | None) -> Held:
     text, pid, block = _read(protocol)
     mismatch = _prose_block_mismatch(protocol, text, block)
     if mismatch:
-        return Held([], mismatch, "")
+        return Held([], [blocker(m, fix=INTENT_FIX) for m in mismatch], "")
 
     earlier = promises.earlier_ids(text)
     if earlier:
@@ -253,8 +265,14 @@ def hold(protocol: Path, metrics_arg: Path | None) -> Held:
         metrics = read_metrics(mpath)
     except ValueError as exc:  # MetricsError, RunConfigError
         raise console.Refused("intent-check", str(exc)) from exc
-    found = _key_mismatch(protocol, mpath, reg, metrics) + (
-        check_block_against_run(block, mpath, metrics) if block is not None else []
+    found = [
+        blocker(m, fix=INTENT_FIX)
+        for m in _key_mismatch(protocol, mpath, reg, metrics)
+        + (check_block_against_run(block, mpath, metrics) if block is not None else [])
+    ] + (
+        unregistered_readings(block, metrics, mpath.parent.name)
+        if block is not None
+        else []
     )
     if found:
         return Held(notes, found, "")
@@ -294,6 +312,38 @@ def check_block_against_run(
     out += promised_constant_mismatches(
         block, cfg.config if cfg else {}, mpath.parent.name
     )
+    return out
+
+
+def unregistered_readings(
+    block: promises.PromiseTables, metrics: dict, run_name: str
+) -> list[GateFinding]:
+    """Guaranteed tier: every interpretation of BLOCK whose key METRICS
+    records with a value that is none of the readings its arms register
+    (`promises.parse_arms`) — a blocker naming those readings. A reading
+    the protocol never registered is a conclusion chosen after the run;
+    the reader of the run finds no arm for it. A key the run does not
+    report is `check_block_against_run`'s finding, and a sentence still the
+    stamp's placeholder registers no readings (`promise_tables_owed` holds
+    it), so neither is one here. RUN_NAME names the run in the sentence.
+    Pure."""
+    out = []
+    for p in block.promises:
+        readings = p.readings()
+        if not readings or p.key not in metrics:
+            continue
+        value = metrics[p.key]
+        if isinstance(value, str) and value in readings:
+            continue
+        out.append(
+            blocker(
+                f"{run_name}: [{p.id}] records {p.key} = {value!r}, which is "
+                f"none of the readings its arms register",
+                fix=f"record one of {', '.join(readings)} — the reading of the "
+                f"arm whose condition holds, as [[promise]] {p.id} writes it: "
+                f"fix the code and measure again",
+            )
+        )
     return out
 
 

@@ -497,7 +497,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
     returns = (
         "**What `evaluate_rows()` returns.** <per registered promise its key, in the order\n"
         "of the decision — from the protocol's [[promise]] sentences, not from the\n"
-        "skeleton: [quality-check-1] quality_check_1_pass …, [criterion-1] criterion_1_pass …, [interpretation-1] interpretation_1_branch; what comes back when\n"
+        "skeleton: [quality-check-1] quality_check_1_pass …, [criterion-1] criterion_1_pass …, [interpretation-1] interpretation_1_branch\n"
+        "(one of its registered readings); what comes back when\n"
         "a quality check fails>. The formula lives once, in\n"
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
         "test call it there, and `intent-check` holds the protocol's ids to these keys."

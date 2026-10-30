@@ -15,6 +15,10 @@ metrics is the id with underscores and a suffix (`criterion_1_pass`).
     interpretation  binds a pre-specified condition on the results to the
                     reading or follow-up analysis it licenses
 
+An interpretation's sentence is written arm by arm, `<condition> →
+<reading>`, arms separated by `;` (`parse_arms`); the run records one of
+its readings under the promise's key, and intent-check holds it there.
+
 The kind is spelled out so that a person reading a protocol, a report or a
 run's metrics.json needs no legend. The earlier letters (C/A/B, and before
 them K/S/W/N) are not read: a protocol that carries them is refused with a
@@ -113,6 +117,23 @@ ID_LITERAL = re.compile(rf"""['"]((?:{_KEY_KIND})_\d+)(_[a-z0-9_]*)?['"]""")
 CRITERION_N_KEY = re.compile(r"^criterion_\d+_n$")
 
 _BLOCK_ID = re.compile(rf"^(?:{_KIND})-\d+$")
+
+#: an interpretation's reading — the value its run records under the key
+READING = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+#: the arrow between an arm's condition and its reading (U+2192), the one
+#: spelling: `->` is refused, not read as a second form of the same arm
+ARROW = "→"
+#: what separates an interpretation's arms
+ARM_SEPARATOR = ";"
+#: the condition of a last arm, taken when no earlier arm's condition holds
+OTHERWISE = "otherwise"
+#: the form, as every refusal of an interpretation's sentence shows it
+ARMS_FORM = (
+    "an interpretation is written arm by arm, `<condition> → <reading>`, arms "
+    "separated by `;`, a reading in lowercase letters, digits and hyphens: "
+    '"criterion-1 met and quality-check-1 met → generalises; quality-check-1 '
+    'not met → noisy; otherwise → no-verdict"'
+)
 _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 
 #: what `block_sha` is a digest of — recorded with it, so a run from an
@@ -167,6 +188,75 @@ class PromiseError(ValueError):
 
 
 @dataclass(frozen=True)
+class InterpretationArm:
+    """One arm of an interpretation: a condition on the results and the
+    reading it licenses — the value the run records under the promise's key
+    when the condition holds."""
+
+    condition: str  # "quality-check-1 not met", or OTHERWISE on the last arm
+    reading: str  # "noisy" — READING
+
+
+def parse_arms(sentence: str) -> tuple[InterpretationArm, ...]:
+    """The arms of an interpretation's SENTENCE, in order.
+
+    The form: arms separated by `;`, each `<condition> → <reading>`. The
+    arrow is `→` alone — `->` is refused with a sentence, not read as a
+    second spelling. The condition is non-empty; `otherwise` stands as the
+    condition of the last arm only. The reading matches READING and is
+    unique in the sentence: it is the value a run records. At least two
+    arms — one outcome licenses nothing to choose between. Pure; raises
+    PromiseError naming the arm and what is wrong, with ARMS_FORM.
+    """
+    parts = [part.strip() for part in sentence.split(ARM_SEPARATOR)]
+    arms: list[InterpretationArm] = []
+    for n, part in enumerate(parts, 1):
+        if not part:
+            raise PromiseError(f"arm {n} is empty — {ARMS_FORM}")
+        if part.count(ARROW) != 1:
+            ascii_arrow = (
+                " (the arrow is `→`, not `->`)"
+                if not part.count(ARROW) and "->" in part
+                else ""
+            )
+            raise PromiseError(
+                f"arm {n} {part!r} holds {part.count(ARROW)} `→`, not one"
+                f"{ascii_arrow} — {ARMS_FORM}"
+            )
+        condition, _, reading = (side.strip() for side in part.partition(ARROW))
+        if not condition:
+            raise PromiseError(f"arm {n} {part!r} has no condition — {ARMS_FORM}")
+        if condition == OTHERWISE and n != len(parts):
+            raise PromiseError(
+                f"arm {n} {part!r} is `otherwise` but not the last arm — the "
+                f"arms after it would never be taken; {ARMS_FORM}"
+            )
+        if not READING.match(reading):
+            raise PromiseError(
+                f"arm {n} {part!r}: reading {reading!r} is not lowercase "
+                f"letters, digits and hyphens — {ARMS_FORM}"
+            )
+        if reading in {a.reading for a in arms}:
+            raise PromiseError(
+                f"arm {n} {part!r}: reading {reading!r} stands in an earlier "
+                f"arm too — a recorded reading must name one arm"
+            )
+        arms.append(InterpretationArm(condition, reading))
+    if len(arms) < 2:
+        raise PromiseError(
+            f"one arm — an interpretation chooses between at least two "
+            f"readings; with one outcome, register none; {ARMS_FORM}"
+        )
+    return tuple(arms)
+
+
+def is_placeholder(sentence: str) -> bool:
+    """Is SENTENCE still the stamp's placeholder — the whole value one `<…>`,
+    as `labkit-init exp` writes it?"""
+    return sentence.startswith("<") and sentence.endswith(">")
+
+
+@dataclass(frozen=True)
 class Promise:
     """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
 
@@ -176,6 +266,14 @@ class Promise:
     sentence: str  # the promise in one sentence
     scope: tuple[str, ...]  # declared implementation region
     constants: dict[str, int | float | str | bool]
+    # an interpretation's arms (`parse_arms`); () for a criterion, a
+    # quality check, and a sentence still the stamp's placeholder
+    arms: tuple[InterpretationArm, ...]
+
+    def readings(self) -> tuple[str, ...]:
+        """The readings the promise registers, in arm order: the values its
+        run may record under `key` (none for a criterion or quality check)."""
+        return tuple(a.reading for a in self.arms)
 
 
 @dataclass(frozen=True)
@@ -242,7 +340,9 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
 
     Raises PromiseError on anything malformed: invalid TOML, an unknown
     field, an unknown kind, a key outside its id's namespace, a duplicate
-    id, an empty scope, a non-scalar constant. The digest covers the
+    id, an empty scope, a non-scalar constant, an interpretation whose
+    sentence is not arms (`parse_arms`; the stamp's `<…>` placeholder
+    passes — `promise_tables_owed` holds it). The digest covers the
     promises only, not the head: freezing or stamping the audit line must
     not read as a changed promise.
     """
@@ -300,6 +400,13 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         sentence = e["sentence"]
         if not isinstance(sentence, str) or not sentence.strip():
             raise PromiseError(f"{where}: `sentence` is empty")
+        sentence = sentence.strip()
+        arms: tuple[InterpretationArm, ...] = ()
+        if kind_of(pid) == "interpretation" and not is_placeholder(sentence):
+            try:
+                arms = parse_arms(sentence)
+            except PromiseError as exc:
+                raise PromiseError(f"{where}: `sentence`: {exc}") from exc
         scope = e["scope"]
         if (
             not isinstance(scope, list)
@@ -342,9 +449,10 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
                 id=pid,
                 kind=kind_of(pid),
                 key=key,
-                sentence=sentence.strip(),
+                sentence=sentence,
                 scope=tuple(scope),
                 constants=dict(constants),
+                arms=arms,
             )
         )
     # over the promises as read, not as spelled: a stripped sentence, a
@@ -468,11 +576,7 @@ def write_constant(protocol: Path, name: str, value: float) -> None:
 def placeholder_sentences(block: PromiseTables) -> list[str]:
     """The ids whose `sentence` is still a stamp placeholder: the whole value
     one `<…>`, as `labkit-init exp` writes it."""
-    return [
-        p.id
-        for p in block.promises
-        if p.sentence.startswith("<") and p.sentence.endswith(">")
-    ]
+    return [p.id for p in block.promises if is_placeholder(p.sentence)]
 
 
 def promise_tables_owed(

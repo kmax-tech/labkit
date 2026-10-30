@@ -72,12 +72,12 @@ Each rule names where it was observed.
 14. **Two languages, no shared word.** German prose in the protocol,
     English in tables and code — a threshold, a class or a branch named
     in one and not findable in the other; the constant's name, the
-    class name or the branch sentence appears verbatim in both. (Round 15,
+    class name or the interpretation's reading appears verbatim in both. (Round 15,
     c1 and the interpretation-1 strings.)
 15. **A value that is prose where it could be data.** A tuple of ids with
     the reason in a docstring ("33 in Wien, 140 € > ARV 117"), a branch
-    value written as the author's shorthand instead of the registered
-    sentence. (Area 17.)
+    value written as the author's shorthand instead of one of the
+    interpretation's registered readings. (Area 17.)
 16. **An ordinal where a name belongs.** "Variante B", "Mutant 36",
     "Arm 2" say where a thing stands in a list, not what it is; a reader
     needs the key for every line. Arms, variants, mutants and case

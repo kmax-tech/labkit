@@ -211,6 +211,10 @@ evidence file under the same ID (top of this document).*
   quality check says why its failure invalidates the measurement
   (instrument, never the hypothesis); an interpretation is decided on its own
   condition, "n/a" is the honest interpretation when none is known before the run.
+  An interpretation's sentence is written arm by arm, `<condition> →
+  <reading>`, arms separated by `;` ("criterion-1 met → generalises;
+  otherwise → no-verdict"); the run records one of its readings under the
+  key, and `intent-check` blocks any other value.
   `labkit-params <area>` shows every value of a run
   with its home. Contract: `~/projects/labkit/docs/promise-block.md`. The old letters
   `[K]`/`[S]`/`[W]`/`[N]` are no longer read by labkit; they cannot be translated

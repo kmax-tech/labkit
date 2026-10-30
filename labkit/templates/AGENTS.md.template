@@ -144,7 +144,9 @@ promise's sentence; leave the after-run fields for after the run.
 
 A promise's id is its kind and a number: `criterion-1` (what counts as
 success), `quality-check-1` (what must hold before the criterion is read)
-and `interpretation-1` (what follows from an outcome).
+and `interpretation-1` (what follows from an outcome, written arm by arm —
+`criterion-1 met → generalises; otherwise → no-verdict` — the run
+recording one of those readings).
 
 Use `protocol-fill <PROTOCOL> "type=exploratory" "criterion-1 sentence=<value>"
 "<Label>=<value>"` with the values your design calls for; a computation
