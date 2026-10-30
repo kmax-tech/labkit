@@ -3,7 +3,7 @@
 *Codex CLI 0.166.0 as the agent, gpt-oss-20b behind vLLM 0.32.0 on a cluster
 A100 (40 GB), reached through the sandbox's proxy; five main-round tasks (21,
 34 compute; 15, 71 fit; 60 apply), stage A of three (control arm, no
-requirement), one attempt each. Contract before any attempt and four addenda:
+requirement) and, as an exploration, stage B (lab arm), one attempt each. Contract before any attempt and four addenda:
 `2026-10-30-gptoss-pilot/assessment-contract.txt`; runner, the vLLM patch as
 diffs with e2e tests: `2026-10-30-gptoss-pilot/`. Traces, delivered states
 and the two set-aside launches in the internal evidence archive.*
@@ -41,6 +41,27 @@ minimal requests, plus a catalog entry written by the sandbox's wrapper and a
 proxy shim that replaces the tool's grammar by the text format. With all of
 it in place the harness runs end to end: `apply_patch` works, a request takes
 0.8 to 0.9 s median, the model acts instead of circling.
+
+## Stage B, run anyway as an exploration (addendum 5)
+
+At the author's word the lab arm ran after all, outside the contract's clause
+and counted as nothing but a description: five attempts, no requirement, the
+same budgets, 47 s to 3 min, all ended by themselves. Three of five (34, 60,
+15) never touched labkit — no experiment area, no protocol, no run — despite
+`AGENTS.md` and the prompt's sentence, and declared success in `REPORT.md`;
+15 even rightly (the hidden evaluation passes), 34 with 74 of 91 columns, 60
+with a wrong file. Two of five entered the route: 21 ran `labkit-init exp`,
+was turned back twice by the gates (an invalid `type`, then "no run without
+an intent paragraph … write and commit the registration"), filled the
+protocol, committed through the pre-commit hook (`protocol-check: OK`), and
+registered three measurement runs — of a wrong number (0.0 against 0.48) —
+then stopped before audit, adoption and report with "I couldn't finish the
+computation within the time limits" (no limit was near); 71 created the
+protocol, registered no run, and stopped with "memory limits". Standard met:
+none of five. The gates carried a weak model as far as a registered
+measurement; nothing made it adopt a number or write the report, and nothing
+made the three others enter the route at all. The self-set-bar question of
+stage A stays open: it needs a model that enters and finishes the route.
 
 ## What this means
 

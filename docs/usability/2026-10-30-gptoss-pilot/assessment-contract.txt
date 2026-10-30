@@ -133,3 +133,11 @@ evaluation fails — the self-set bar, the thing labkit's registration makes vis
 pressure sentence. The harness friction that remains after the patches: Codex's JSON for exec_command
 arguments garbled in every attempt (the model's doing), apply_patch format errors retried, one Codex-internal
 error at the end of 21 ("failed to record rollout items: thread not found").
+
+Addendum 5, 2026-10-30 afternoon, before stage B. Stage A ended the pilot by the contract's clause. At the
+author's word ("und wie läuft es mit labkit", 2026-10-30), stage B runs anyway, named as an exploration outside
+the contract: five lab-arm attempts (labkit's scaffold, Codex reads AGENTS.md; the Claude Code hooks do not
+fire), no requirement, the same budgets and image as stage A's counted launch, two at a time. Question: does
+a model that fails the tasks get through labkit's route at all, and does the registered criterion make the
+self-set bar of stage A visible? Counted as stage B's exploratory result, never as a pilot count; no
+comparison with stage A beyond a description.

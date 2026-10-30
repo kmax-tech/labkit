@@ -1775,9 +1775,16 @@ Notiert, nicht geplant:
    2026-10-30-gptoss-pilot/vllm-patch/`), je Schicht mit Minimalanfragen
    verifiziert. Nächste Kandidaten für die Achse „Agentenstärke":
    gpt-oss-120b (80-GB-Karte) oder ein stärkeres offenes Modell; die
-   Harness steht. Offen (Max): Vertrag gilt, oder Stufe B trotzdem als
-   Erkundung außerhalb des Vertrags (zeigt labkits Registrierung den
-   selbstgesetzten Maßstab?).
+   Harness steht. **Stufe B auf Ansage als Erkundung gefahren
+   (2026-10-30 nachmittags):** drei von fünf ignorieren labkit ganz
+   (34, 60, 15; 15 besteht die Hidden Evaluation trotzdem), zwei betreten
+   die Route (21 bis zur registrierten Messung einer falschen Zahl, drei
+   Läufe, Commit durch den Hook; 71 bis zum Protokoll) und steigen mit
+   erfundenen Limit-Begründungen vor Audit und Adoption aus; Standard null
+   von fünf. Die Frage nach dem selbstgesetzten Maßstab bleibt offen, sie
+   braucht ein Modell, das die Route betritt und beendet. Pilot
+   abgeschlossen; Server kann freigegeben werden; agentsandbox-Branch
+   `codex-agent` wartet auf Merge-Entscheidung.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
