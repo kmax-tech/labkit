@@ -809,8 +809,8 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
                     f"upholds that the reported claim stands within this limit "
                     f"(LAB-015 Preflight audit before freezing)",
-                    fix=f"{_review_step(ctx, r)} asks a second auditor; after a "
-                    f"rejection, decide again",
+                    fix=f"{_review_step(ctx, r)} asks a second auditor (owed at "
+                    f"every repeat cost); after a rejection, decide again",
                     evidence_kind=GUARANTEED,
                 )
             )

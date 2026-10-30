@@ -362,7 +362,9 @@ def decision_entails(
     new measurement, the check owed named when F carries one
     (`check_order`), then the measure and analysis-audit commands.
     `accepted` with effect `stands`: the claim stands within the finding;
-    a second auditor must uphold it (`--review --record`). `accepted` with
+    a second auditor's review is owed at every repeat cost (`--review
+    --record`) — a BLOCKER's number does not leave without it, a WARNING's
+    absent review warns. `accepted` with
     another effect: it stands in the report's Limit line; without one (a
     WARNING or NOTE) the finding limits nothing there (`Record.limits`).
     `deferred`: unresolved and carried; nothing but a new decision
@@ -390,10 +392,20 @@ def decision_entails(
             f"{owed}; then `{measure_command(area)}` and `{analysis}`"
         )
     if f.status == "accepted" and f.effect == EFFECT_STANDS:
+        # the review is owed at every repeat cost; agents read a low one as
+        # "no review needed", and a WARNING's line that said "before the
+        # number leaves" was untrue once the adoption let it through
+        held = (
+            "the number does not leave until a second auditor upholds it"
+            if f.grade == "BLOCKER"
+            else "a second auditor's review is owed; for a WARNING its absence "
+            "does not hold the number, the adoption and report-check warn "
+            "until a review upholds it"
+        )
         return (
             "accepted --effect stands: the finding holds; this says the claim "
-            "stands within it — give the effect on the claim in the reason, and a "
-            f"second auditor must uphold it before the number leaves: `{review}`"
+            "stands within it — give the effect on the claim in the reason; "
+            f"{held}, at every repeat cost: `{review}`"
         )
     if f.status == "accepted" and f.effect:
         return (

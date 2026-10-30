@@ -960,6 +960,27 @@ class DecisionListReachesThePerson(unittest.TestCase):
         decided = findings.area_records(area)[-1].findings[0]
         self.assertEqual((decided.status, decided.effect), ("accepted", "stands"))
 
+    def test_an_accepted_warning_is_told_its_review_warns_and_does_not_hold(self):
+        """Agents read a low repeat cost as "no review needed" after the
+        line under a WARNING's `stands` said the number would not leave
+        without one, and the adoption then let it through (SAB round 1,
+        2026-10-29). The line says what holds per grade, at every repeat
+        cost; the twin (the BLOCKER's line) is in the test below."""
+        f = findings.Finding(
+            grade="WARNING",
+            text="WARNING · a.py:1 · x",
+            status="accepted",
+            reason="the limit",
+            effect=findings.EFFECT_STANDS,
+        )
+        said = findings.decision_entails(
+            f, Path("experiments/01-x"), Path("experiments/01-x/audits/r.toml")
+        )
+        self.assertIn("a second auditor's review is owed", said)
+        self.assertIn("does not hold the number", said)
+        self.assertIn("at every repeat cost", said)
+        self.assertNotIn("does not leave", said)
+
     def test_the_confirmation_says_what_the_status_entails(self):
         """Agents used `dismissed` for "I will fix it", `deferred` for "no
         longer relevant" and `accepted` for "repaired", and decided `fixed`
@@ -1017,8 +1038,9 @@ class DecisionListReachesThePerson(unittest.TestCase):
             said = decide("accepted", "the limit", "--effect", "stands")
             self.assertIn(
                 "accepted --effect stands: the finding holds; this says the claim "
-                "stands within it — give the effect on the claim in the reason, and "
-                f"a second auditor must uphold it before the number leaves: {review}",
+                "stands within it — give the effect on the claim in the reason; the "
+                "number does not leave until a second auditor upholds it, at every "
+                f"repeat cost: {review}",
                 said,
             )
             f = findings.read(record).findings[0]

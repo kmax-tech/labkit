@@ -1609,7 +1609,7 @@ def decision_lines(
                 out.append(
                     "      accepted owes its effect: --effect stands (the verdicts "
                     "hold, read within it; a second auditor must uphold it before the "
-                    f"number leaves: `"
+                    f"number leaves, at every repeat cost: `"
                     f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
                     f"`)"
                     + (
