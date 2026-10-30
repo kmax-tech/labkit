@@ -9,6 +9,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`labkit-next AREA`: the one next step.** Prints where the area stands,
+  the next command and what is held until it is taken. It adds no check:
+  no protocol → `labkit-init exp`; a MUST field unfilled → `protocol-fill`;
+  a current handover → nothing; otherwise the first blocker of
+  report-check's chain (`report_check.report_gaps`, the stages now one
+  function report-check prints) with its way out; nothing held and no run
+  adopted → the adoption; adopted and clean → nothing owed. Before an
+  adoption it leaves out what the adoption writes and checks on its
+  proposal (the result section, `--check`, the report).
+
 - **Codex lifecycle hooks.** `labkit-hooks install` also writes
   `.codex/hooks.json`, preserving foreign handlers; `check` detects missing
   or stale entries. `codex-hook pre-run|post-change|stop` adapts Codex events

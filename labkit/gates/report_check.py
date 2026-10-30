@@ -1019,11 +1019,15 @@ def finalize_gaps(area: Path, protocol: Path) -> list[GateFinding]:
     ]
 
 
-def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
+def analysis_findings(
+    ctx: Checked, rule: str, *, result_section: bool = True
+) -> list[GateFinding]:
     """Coverage and rendered-result blockers for an analysis stage already due.
 
     RULE is the lane's analysis-audit rule; the entry point decides whether
-    this stage runs. Missing coverage and result differences are all kept.
+    this stage runs. Missing coverage and result differences are all kept;
+    RESULT_SECTION False leaves the rendered result out (before an adoption,
+    which writes it).
     """
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
@@ -1032,9 +1036,10 @@ def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
     # the rendered result section is held here too, named as what it is:
     # a cold reader took "analysis audit:" on a retyped Recorded results
     # line for a record problem (reading probe 2026-10-22)
-    out.extend(
-        replace(gap, text=f"result section: {gap.text}") for gap in limit_gaps(ctx)
-    )
+    if result_section:
+        out.extend(
+            replace(gap, text=f"result section: {gap.text}") for gap in limit_gaps(ctx)
+        )
     return out
 
 
@@ -1102,69 +1107,90 @@ def report_check(
         area=shown(ctx.area, Path.cwd()),
         audit=audit_command(ctx.area, protocol=ctx.protocol),
     )
-
-    # 1. declaration — a blocker does not stop the remaining stages
-    if ctx.declaration_gap:
-        findings.block(
-            f"{chosen.name}: {ctx.declaration_gap}",
-            fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
-            f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
-            f"`[result]` table for it",
-        )
-
-    # 2. registration — freeze or committed registration, as the lane owes
-    if ln.freeze:
-        findings.take_all(freeze_gaps(ctx))
-    else:
+    if not ln.freeze:
         print(
             f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
             f"audit owed (LAB-017 The number of audits follows the cost tier); the "
             f"registration as committed at the first measurement, the full run, "
             f"the analysis audit and the check are owed instead"
         )
-        if ln.registration:
-            findings.take_all(registration_gaps(ctx))
-    # a declared replacement binds its changes (K1)
-    findings.take_all(replacement_gaps(ctx))
-
-    # 3. finalize — always, with its blockers named
-    finalized = finalize_gaps(ctx.area, ctx.protocol)
-    findings.take_all(finalized)
-    # a declared run whose code changed: every later hold withdraws first
-    held_by = held_declaration(ctx, finalized)
-
-    # 4. full run — only with an answering run; finalize names its absence
-    if ctx.run is not None:
-        findings.take_all(withdrawn_first(unreportable_gaps(ctx, ln.freeze), held_by))
-
-    # 5. analysis — coverage and rendering where the lane owes the audit
-    if ANALYSIS_AUDIT in ln.audits:
-        findings.take_all(
-            withdrawn_first(analysis_findings(ctx, ln.analysis_rule), held_by)
-        )
-
-    # 6. recomputation — always, including after a failed earlier stage
-    findings.take_all(
-        withdrawn_first(recomputation_findings(ctx.area, ctx.repo), held_by)
-    )
-
-    # 7. decisions — reviews and follow-ups where the lane owes the analysis audit
-    if ANALYSIS_AUDIT in ln.audits:
-        findings.take_all(withdrawn_first(review_findings(ctx), held_by))
-        findings.take_all(withdrawn_first(followup_findings(ctx), held_by))
-
-    # 7b. adoption last — a `--from-run` line beside other blockers is the last
+    findings.take_all(report_gaps(ctx))
+    # adoption last — a `--from-run` line beside other blockers is the last
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
-
-    # 8. report — the file the head registers, once delivered in this state
-    findings.take_all(report_findings(ctx))
 
     # 9. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
+
+
+def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFinding]:
+    """Every gap report-check holds CTX to, in the order of the chain — the
+    one list `report_check` prints and `next_step` reads:
+
+    1. Declaration: an unreadable `[result]` blocks; later stages continue.
+    2. Registration: the freeze where the lane owes it, else the first
+       measurement's committed registration where owed; a declared
+       replacement's changes.
+    3. Finalize: its blockers, always.
+    4. Full run: reportability, only when an answering run exists.
+    5. Analysis: coverage and rendered results where the lane owes it.
+    6. Recomputation: the analysis script's `--check`, always.
+    7. Decisions: reviews and follow-ups where the lane owes the analysis.
+    8. Report: the registered report, once delivered in CTX's state.
+
+    Every applicable stage runs despite earlier blockers; a declared run
+    whose code changed puts the withdrawal before every later hold
+    (`withdrawn_first`). ADOPTION_PENDING (no run adopted yet, the one a
+    next step asks about): the stages the adoption writes and holds on its
+    proposal — the result section (`limit_gaps`), the recomputation, the
+    report — are left out, since the tree cannot pass them before the
+    adoption writes them; `protocol_fill.adopt` checks the whole proposal.
+    Prints nothing."""
+    ln = lane(ctx.head.repeat_cost)
+    out: list[GateFinding] = []
+    # 1. declaration
+    if ctx.declaration_gap:
+        out.append(
+            blocker(
+                f"{ctx.protocol.name}: {ctx.declaration_gap}",
+                fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
+                f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
+                f"`[result]` table for it",
+            )
+        )
+    # 2. registration
+    if ln.freeze:
+        out += freeze_gaps(ctx)
+    elif ln.registration:
+        out += registration_gaps(ctx)
+    out += replacement_gaps(ctx)
+    # 3. finalize
+    finalized = finalize_gaps(ctx.area, ctx.protocol)
+    out += finalized
+    held_by = held_declaration(ctx, finalized)
+    # 4. full run
+    if ctx.run is not None:
+        out += withdrawn_first(unreportable_gaps(ctx, ln.freeze), held_by)
+    # 5. analysis
+    if ANALYSIS_AUDIT in ln.audits:
+        analysis = analysis_findings(
+            ctx, ln.analysis_rule, result_section=not adoption_pending
+        )
+        out += withdrawn_first(analysis, held_by)
+    # 6. recomputation
+    if not adoption_pending:
+        out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), held_by)
+    # 7. decisions
+    if ANALYSIS_AUDIT in ln.audits:
+        out += withdrawn_first(review_findings(ctx), held_by)
+        out += withdrawn_first(followup_findings(ctx), held_by)
+    # 8. report
+    if not adoption_pending:
+        out += report_findings(ctx)
+    return out
 
 
 def report_findings(ctx: Checked) -> list[GateFinding]:

@@ -11,6 +11,9 @@ in commands printed by labkit rather than dropping it from the examples.
 
 ## Working loop — read once, ask for the next concrete step
 
+When unsure what comes next, run `labkit-next <area>`: it prints where the
+area stands, the one next command, and what is held until it is taken.
+
 Read the three choices below once; the workflow is a reference for your
 current step, not a checklist to memorize. For an existing area, keep its
 registered choices. `protocol-check <PROTOCOL> --contract` names what it
