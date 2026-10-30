@@ -185,3 +185,15 @@ window of 30,000 tokens (CONTEXT_WINDOW_OVERRIDE; the manifest records both the 
 context_window and the 30,000 as codex_context_window), so it compacts about four times earlier, within the
 server's window even at the worst ratio seen. A named harness difference against gpt-oss (which ran with the
 server's 131,072 told to Codex), of the kind the contract calls harness work. Everything else as addenda 6 to 8.
+
+Addendum 10, 2026-10-30 late afternoon, after Qwen's stage A (fourth launch, counted; store-qwen-A) and before
+stage B. Five control attempts, one at a time, 3 to 38 min, none timed out: 21 killed at the task's 5 GB limit
+(exit 137) while computing with GeoPandas, no output; 34 output file with 76 of 91 columns, then a repetition
+loop ("Let me create a final version of the script …", 99,193 output tokens in one reply) and no report; 60
+output file with wrong rows, the same loop (105,678 output tokens), no report; 71 valid, the hidden
+evaluation passes (Spearman 0.75 against the bar 0.6), REPORT.md claims success — rightly; 15 output file and
+report, ROC-AUC below the bar. One valid delivery of five: the contract's clause does not end the pilot, stages
+B and C run with the same settings (window 122,880 on the server, 30,000 told to Codex, one attempt at a
+time). Recorded: no garbled tool-call JSON in any Qwen attempt (gpt-oss: every attempt), eleven apply_patch
+format errors in all, two degenerate repetition loops (the model's generation_config sampling,
+temperature 0.7, top_p 0.8, top_k 20, as served; not changed for the pilot).
