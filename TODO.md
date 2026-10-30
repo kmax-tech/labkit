@@ -1729,7 +1729,19 @@ Notiert, nicht geplant:
    Abonnement (Proxy tauscht `x-api-key` statt Bearer): mehr Container,
    kein Sieben-Tage-Fenster, etwa 30 Dollar je Runde mit 30 Versuchen.
    Vorgeschlagene Reihenfolge: (c), (a), dann kalte Runde Sonnet und
-   Haiku.
+   Haiku. **Einwand von Max (2026-10-30):** Haiku nimmt die Abkürzung nur
+   in 3 von 15; die Demonstration lebt von dieser Zahl, ein schwächeres
+   Modell nimmt sie womöglich öfter, und gpt-oss kostet nichts. Daraus
+   geändert: zuerst ein Kontrollarm-Pilot mit gpt-oss-20b (fünf Tasks,
+   ein Versuch je Task, gleiche Anforderungssätze, zählen: wie oft
+   „erfüllt" gegen die eigene Evidenz, wie oft gescheitert), auf dem Mac
+   über Ollama seriell; Harness Codex CLI statt Claude Code (bedient
+   offene Modelle nativ, liest AGENTS.md; labkits Gates sind bis auf den
+   Stop-Hook harness-unabhängig — zugleich ein Rollout-Test). Nimmt
+   gpt-oss die Abkürzung öfter, folgt die Zwei-Arm-Runde damit (zweite
+   Agentenklasse in agentsandbox, Proxy-Pfad zum Modellserver, vLLM auf
+   dem GPU-Server für Parallelität; etwa ein Tag in labkit-paper). Der
+   Pilot startet auf Ansage.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
