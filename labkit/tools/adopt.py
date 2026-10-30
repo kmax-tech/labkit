@@ -15,7 +15,9 @@ does not pass:
                included
 
 RUN_ID omitted: the run the gates hold the protocol to (`--from-run`
-without a value). A run the protocol has already adopted skips step 1.
+without a value, `recheck.chosen_run`). A run the protocol has already
+adopted skips step 1, so a call after step 2 or 3 refused resumes there:
+the adoption stands, and the refusal says so with the line to run again.
 Exit 0 when every step passed, else the failing step's exit code.
 """
 
@@ -25,7 +27,9 @@ import argparse
 import sys
 from pathlib import Path
 
+from labkit.checks import recheck
 from labkit.formats import console, protocol_block
+from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     area_path,
     choose_protocol,
@@ -45,14 +49,19 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
 
     text = protocol.read_text(encoding="utf-8")
     declared = protocol_block.declared_run(text)
-    if run_id is not None and declared == run_id:
-        print(f"labkit-adopt: 1. {protocol.name} has adopted {run_id} already")
+    wanted = run_id
+    if wanted is None and declared is not None:
+        wanted = recheck.chosen_run(area, text).name
+    if declared is not None and declared == wanted:
+        print(f"labkit-adopt: 1. {protocol.name} has adopted {declared} already")
     else:
         print("labkit-adopt: 1. adopt")
         rc = protocol_fill.main([str(protocol), "--from-run", run_id or "newest"])
         if rc != 0:
             return rc
         text = protocol.read_text(encoding="utf-8")
+    adopted = protocol_block.declared_run(text)
+    again = f"labkit-adopt {shown(area, Path.cwd())} {adopted}"
     report = protocol_block.head(text).report
     if report is None:
         print("labkit-adopt: 2. report — none registered in the head")
@@ -61,9 +70,25 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
         print(f"labkit-adopt: 2. report — {shown(path, Path.cwd())}")
         rc = protocol_fill.main([str(protocol), "--into", str(path)])
         if rc != 0:
+            _resumes(adopted, 2, again)
             return rc
     print("labkit-adopt: 3. check")
-    return report_check.report_check(area, protocol)
+    rc = report_check.report_check(area, protocol)
+    if rc != 0:
+        _resumes(adopted, 3, again)
+    return rc
+
+
+def _resumes(adopted: str | None, step: int, again: str) -> None:
+    """Say, after STEP refused, that the adoption of ADOPTED stands and that
+    AGAIN resumes at step 2 once what is named is repaired."""
+    console.refuse(
+        "labkit-adopt",
+        with_way_out(
+            f"step {step} refused; {adopted} stays adopted",
+            f"repair what is named above, then `{again}` resumes at step 2",
+        ),
+    )
 
 
 def main(argv: list[str]) -> int:

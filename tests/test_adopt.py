@@ -71,6 +71,31 @@ class Adopt(unittest.TestCase):
         self.assertFalse((self.lab.root / "REPORT.md").exists())
         self.assertNotIn("2. report", out)
 
+    def test_a_refused_report_step_keeps_the_adoption_and_a_call_resumes(self):
+        """Step 2 refuses a report whose block does not read; the adoption
+        of step 1 stands and the refusal names the line to run again. Once
+        the report is repaired, the same call without a run id resumes at
+        step 2 (the twin: it passes)."""
+        area, protocol, run_id = self.measured("REPORT.md")
+        self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        report = self.lab.root / "REPORT.md"
+        report.write_text(
+            "# Report\n\n<!-- labkit result: x run y (z) -->\nunclosed\n",
+            encoding="utf-8",
+        )
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertNotEqual(rc, 0, out)
+        self.assertEqual(
+            protocol_block.declared_run(protocol.read_text(encoding="utf-8")), run_id
+        )
+        self.assertIn(f"step 2 refused; {run_id} stays adopted", out)
+        self.assertIn(f"`labkit-adopt experiments/01-lines {run_id}` resumes", out)
+        report.write_text("# Report\n", encoding="utf-8")
+        rc, out = self.labkit_adopt(area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"has adopted {run_id} already", out)
+        self.assertIn(run_id, report.read_text(encoding="utf-8"))
+
     def test_no_registered_report_skips_the_report_step(self):
         area, protocol, run_id = self.measured(None)
         self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
