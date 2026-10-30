@@ -135,6 +135,28 @@ the surface does.
    of `stands` read as covering the not-assessable route (4 of 6), and
    readers named every criterion where labkit derives it from the unjudged
    condition (5 of 6).
+
+   The break is built anyway (decided by the author, 2026-10-30): labkit's
+   readers are people too — whoever opens a protocol, a report or a run's
+   `metrics.json` reads `criterion-1` and `criterion_1_pass` without a
+   legend, `C1` and `c1_pass` not; the probe had agents as readers only.
+   Whole words, no shortened forms (`crit-1`, `qc-1`, `interp-1` weighed
+   and rejected): a key is generated, not typed, so its length costs
+   little, while a truncation brings back half the legend the letters
+   needed — for the newcomer in a thesis repo most of all. Scope: the id
+   alphabet in `promises.py` (one home: `KINDS`, the id and key
+   patterns), the stamps and field labels, the script templates, the
+   result lines, docs and about 75 test files. It ships in the one
+   Breaking release with the decision statuses, as separate commits.
+
+   The break is built anyway (decided by the author, 2026-10-30): labkit's
+   readers are people too — whoever opens a protocol, a report or a run's
+   `metrics.json` reads `criterion-1` and `criterion_1_pass` without a
+   legend, `C1` and `c1_pass` not; the probe had agents as readers only.
+   Scope: the id alphabet in `promises.py` (one home: `KINDS`, the id and
+   key patterns), the stamps and field labels, the script templates, the
+   result lines, docs and about 75 test files. It ships in the one
+   Breaking release with the decision statuses, as separate commits.
 4. **Adoption as one step: `labkit adopt <area> <run>`.** Runs finalize, the
    fill from the run, the result block into the report and report-check in
    one command with one summary; the three commands stay for a person.
