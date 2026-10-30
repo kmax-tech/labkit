@@ -45,7 +45,9 @@ import json
 import os
 import sys
 import tempfile
+import urllib.request
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -139,13 +141,33 @@ def snapshot(task_id: str, arm: str, image: str) -> Path:
     return arms.stage_arm(arm, dest, image, name=f"task-{task_id}", protocol=None, exclude=sab.EXCLUDE)
 
 
+@cache
+def served_model() -> dict:
+    """The server's own record of MODEL_NAME from `/v1/models` (asked once, from
+    the host over the VPN): its `max_model_len` is the context window Codex
+    compacts against — Codex has no metadata for a served name and would
+    guess. Refuses a server that does not list the name."""
+    req = urllib.request.Request(f"{need('MODEL_UPSTREAM')}/v1/models",
+                                 headers={"Authorization": f"Bearer {need('MODEL_KEY')}"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        listed = json.load(r)["data"]
+    hits = [m for m in listed if m.get("id") == need("MODEL_NAME")]
+    if len(hits) != 1:
+        raise SystemExit(f"{need('MODEL_UPSTREAM')} serves {[m.get('id') for m in listed]}, not {need('MODEL_NAME')!r}")
+    if not isinstance(hits[0].get("max_model_len"), int):
+        raise SystemExit(f"/v1/models names no max_model_len for {need('MODEL_NAME')!r}: {hits[0]}")
+    return hits[0]
+
+
 def agent() -> Codex:
-    return Codex(model=need("MODEL_NAME"), upstream=need("MODEL_UPSTREAM"), reasoning_effort=REASONING)
+    return Codex(model=need("MODEL_NAME"), upstream=need("MODEL_UPSTREAM"), reasoning_effort=REASONING,
+                 context_window=served_model()["max_model_len"])
 
 
 def model_identity() -> dict:
-    return {"upstream_host": urlsplit(need("MODEL_UPSTREAM")).hostname, "model_name": need("MODEL_NAME"),  # `model` is a manifest field
-            "reasoning_effort": REASONING}
+    m = served_model()
+    return {"upstream_host": urlsplit(need("MODEL_UPSTREAM")).hostname, "model_name": m["id"],  # `model` is a manifest field
+            "model_root": m.get("root"), "context_window": m["max_model_len"], "reasoning_effort": REASONING}
 
 
 @dataclass(frozen=True)

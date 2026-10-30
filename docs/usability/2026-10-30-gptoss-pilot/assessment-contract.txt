@@ -17,7 +17,15 @@ resolve in a container; probe of 2026-10-30, /v1/models 200) (Slurm job vllm-gpt
 --enable-auto-tool-choice --tool-call-parser openai --api-key), reasoning effort medium (set explicitly,
 REASONING=medium; Codex's model_reasoning_effort). Codex runs with function tools only: its multi_agent
 namespace tool and web_search are refused by vLLM's Responses API (400) and are switched off in the adapter
-(agentsandbox 2e742e1); a first Codex attempt in the sandbox (write a file, run wc) went through in 8 s. The agent never holds the server's key; the proxy swaps the placeholder.
+(agentsandbox 2e742e1); a first Codex attempt in the sandbox (write a file, run wc) went through in 8 s.
+Images: agent labkit-sandbox:fe36fb46f728 (agentsandbox base with Codex 0.166.0 and the wrapper, labkit
+bf76bbc, anthropic 2.3.0), proxy agentsandbox-proxy:ea9344c872a8; agentsandbox branch codex-agent at
+9d564d1 (the adapter names the server's context window, read from /v1/models at launch); the sandbox
+selftest held 20 of 20 on these images (twice, 2026-10-30). Known and accepted: Codex's model catalog
+has no entry for the served name and says "Model metadata for `gpt-oss-20b` not found. Defaulting to
+fallback metadata" at every start; the context window is set explicitly, the other defaults are
+Codex's fallback. The pilot venv is labkit-paper-main/.venv-pilot (labkit 0.85.0, agentsandbox from the
+branch), not the shared one. The agent never holds the server's key; the proxy swaps the placeholder.
 
 Design. Three stages, the five main-round tasks (21 and 34 compute, 15 and 71 fit, 60 apply; the sixth
 task pubmedqa50 stays struck), one attempt per cell, cold starts, the task texts of area 14 (sha held):
