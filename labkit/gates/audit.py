@@ -1583,8 +1583,15 @@ def decision_lines(
         promised = may_leave_unassessed(area, protocol)
         # the id named with its field: an agent cannot pick `A2` unnamed
         named = effect_ids_named(area, protocol) if promised else ""
-        unassessed = '--effect "<ID> not assessable"' + (
-            f" (<ID>: {named})" if named else ""
+        # what the route owes and what it does by itself: readers took the
+        # review clause of `stands` for this route too, and named every
+        # criterion an unjudged admissibility condition already voids
+        unassessed = (
+            '--effect "<ID>[, <ID>] not assessable"'
+            + (f" (<ID>: {named})" if named else "")
+            + " — no review owed; an admissibility condition left unjudged "
+            "leaves every criterion without a verdict by itself, so name the "
+            "condition, not the criteria"
         )
         if any(f.grade == "BLOCKER" for f in record.findings):
             out.extend(ways_out.blocker_routes(promised, full=False))

@@ -893,7 +893,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         )
         rc, out, err, _ = run(promised, BLOCK)
         self.assertEqual(rc, 1, err)
-        self.assertIn('or --effect "<ID> not assessable"', out)
+        self.assertIn('or --effect "<ID>[, <ID>] not assessable"', out)
         self.assertNotIn("this protocol registers no promise", out)
         decided = io.StringIO()
         with contextlib.redirect_stderr(decided):
@@ -916,7 +916,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
         rc, out, err, _ = run(area, BLOCK)
         self.assertEqual(rc, 1, err)
         self.assertIn(
-            '--effect "<ID> not assessable" (<ID>: C1 (success / failure criterion))',
+            '--effect "<ID>[, <ID>] not assessable" (<ID>: C1 (success / failure '
+            "criterion)) — no review owed; an admissibility condition left "
+            "unjudged leaves every criterion without a verdict by itself, so name "
+            "the condition, not the criteria",
             out,
         )
         refused = io.StringIO()
