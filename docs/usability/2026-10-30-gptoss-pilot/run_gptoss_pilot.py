@@ -31,7 +31,7 @@ serves, `--served-model-name`), MODEL_KEY (vLLM's `--api-key`; the proxy swaps
 the placeholder for it, the agent never holds it), REASONING (low|medium|high,
 Codex's model_reasoning_effort; unset leaves Codex's default), STAGE (A|B|C),
 STORE (the store directory, one per run), ATTEMPT_PREFIX (oss | qwen, in every
-attempt id), WORKERS (default 2), REPS (default 1), ARMS_ONLY, PROBE_TIMEOUT and CONTAINER_MEMORY override the task budgets.
+attempt id), CONTEXT_WINDOW_OVERRIDE (the window told to Codex, see the constant), WORKERS (default 2), REPS (default 1), ARMS_ONLY, PROBE_TIMEOUT and CONTAINER_MEMORY override the task budgets.
 
 `--score`: as round 1 — the task's hidden evaluation, REPORT.md present, for
 the lab arm labkit's standard check on the delivered state in the image; rows
@@ -74,6 +74,13 @@ REPS = int(os.environ.get("REPS", "1"))
 ARMS_ONLY = tuple(x for x in os.environ.get("ARMS_ONLY", "").split(",") if x)
 #: ATTEMPT_PREFIX names the model family in every attempt id (and container name): oss for gpt-oss, qwen for Qwen3
 ATTEMPT_PREFIX = os.environ.get("ATTEMPT_PREFIX", "oss")
+#: CONTEXT_WINDOW_OVERRIDE tells Codex a smaller window than the server has, so that it compacts
+#: earlier: Codex estimates tokens by its own measure, and a tokenizer that splits numbers into
+#: digits (Qwen3) counts about four times as many tokens on numeric tool output — the Qwen sessions
+#: ran over a 122,880 window Codex believed to be a quarter full (pilot contract, addendum 9). The
+#: server's true window stays in the manifest (context_window); the value told to Codex is recorded
+#: beside it (codex_context_window).
+CONTEXT_WINDOW_OVERRIDE = int(os.environ["CONTEXT_WINDOW_OVERRIDE"]) if os.environ.get("CONTEXT_WINDOW_OVERRIDE") else None
 
 
 def need(name: str) -> str:
@@ -163,13 +170,14 @@ def served_model() -> dict:
 
 def agent() -> Codex:
     return Codex(model=need("MODEL_NAME"), upstream=need("MODEL_UPSTREAM"), reasoning_effort=REASONING,
-                 context_window=served_model()["max_model_len"])
+                 context_window=CONTEXT_WINDOW_OVERRIDE or served_model()["max_model_len"])
 
 
 def model_identity() -> dict:
     m = served_model()
     return {"upstream_host": urlsplit(need("MODEL_UPSTREAM")).hostname, "model_name": m["id"],  # `model` is a manifest field
-            "model_root": m.get("root"), "context_window": m["max_model_len"], "reasoning_effort": REASONING}
+            "model_root": m.get("root"), "context_window": m["max_model_len"],
+            "codex_context_window": CONTEXT_WINDOW_OVERRIDE or m["max_model_len"], "reasoning_effort": REASONING}
 
 
 @dataclass(frozen=True)
