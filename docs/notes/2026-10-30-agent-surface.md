@@ -14,8 +14,20 @@
 > `--not-assessable`, no `deferred` — an unsettled finding stays `open`
 > and a handover records it, which the stop, the commit and a
 > replacement's report-check read. The B kind stays a registered branch
-> because it holds interpretations, actions and stop rules alike. Steps 1,
-> 2, 4–7 are not built yet; the README's Terms carry the definitions.
+> because it holds interpretations, actions and stop rules alike. The
+> README's Terms carry the definitions.
+>
+> **Built the same evening:** step 2 (`labkit-next`, reading
+> `report_check.report_gaps`), step 4 (`labkit-adopt`), step 6 (every gate
+> line `<what is refused>. Next: <fix>`, every literal BLOCKER way out
+> naming its command, held by `tests/test_ways_out_data.py`) and step 7
+> (`AGENTS.md` 1,158 words, the rest as `labkit/docs/agent-guide.md`,
+> `labkit-next --guide`, held by `tests/test_agent_surface.py`). Step 1
+> holds in `AGENTS.md`, not yet in the gate messages. Step 5 is open: a
+> stated number on a handover or a discussion block runs against the
+> design that keeps run ids out of a handover and flags numbers beside a
+> discussion (`report_blocks.numbers_beside_discussed`); it waits for that
+> decision.
 
 **Problem.** labkit's guarantees hold (injection benchmark: seven of nine
 mutations held in every state, the other two closed since), but too few

@@ -2498,14 +2498,39 @@ für 0.104.0:
   kein Unterschied in der nächsten Handlung; der Umbau stützt sich auf
   die Lesbarkeit für Menschen.
 
+Danach, gleicher Abend, gleicher Branch (je ein Commit, Hook grün,
+2.541 Tests):
+- Schritt 2: `labkit-next AREA` — Stand, ein nächster Befehl, was gehalten
+  ist; liest report-checks Kette (`report_check.report_gaps`, jetzt eine
+  Funktion), keine eigene Prüfung.
+- Schritt 4: `labkit-adopt AREA [RUN]` — `--from-run`, `--into` des
+  registrierten Berichts, report-check; hält beim ersten Schritt an, der
+  nicht besteht.
+- Schritt 6: jede Gate-Zeile `<was abgelehnt ist>. Next: <Befehl>`
+  (`gate.with_way_out`); alle 50 literalen BLOCKER-Auswege ohne Befehl
+  nennen jetzt einen (`repo.gate_command`, `repo.measure_anew`), ein Test
+  hält das.
+- Schritt 7: `AGENTS.md` 1.158 Wörter (war 4.823); der Rest unverändert
+  als `labkit/docs/agent-guide.md`, `labkit-next --guide`;
+  `tests/test_agent_surface.py` hält Grenze, keine Daten, echte Befehle.
+
 Als Nächstes, in dieser Reihenfolge:
 1. `main` auf `id-words` vorspulen (Kommando im Chat), Release 0.104.0
    (`just release 0.104.0`), Worktrees `id-words` und `interp-arms`
    entfernen.
-2. Plan-Schritte 1, 2, 4, 5, 6, 7 der Note: `labkit next`, `labkit
-   adopt`, ehrlicher Stopp schuldet die Zahl, Gate-Meldungen im Muster,
-   `AGENTS.md` unter 1.200 Wörter.
-3. Kalte Runde 21/60 alt gegen neu.
+2. Schritt 5 („ehrlicher Stopp schuldet die Zahl“) wartet auf eine
+   Entscheidung: er widerspricht dem bisherigen Entwurf — die Übergabe
+   nennt bewusst keine Lauf-IDs (`handovers._message`), und Zahlen in oder
+   neben einem Diskussionsblock meldet `numbers_beside_discussed` als
+   Hinweis, weil sie als Ergebnis gelesen werden. Vorschlag: eine
+   erzeugte Zeile „Measured: …“ aus `metrics.json` (bzw. „not measurable
+   because …“ per `--not-measurable`), von den Gates gegen die Quelle
+   gehalten und vom Zahlen-Hinweis ausgenommen; Übergabe-Schema 2
+   (Breaking).
+3. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
+   in den Gate-Meldungen noch nicht (dort weiter: answering run, intent
+   key, repeat cost …).
+4. Kalte Runde 21/60 alt gegen neu — ein Experiment, startet auf Ansage.
 - Offen, notiert: LAB-013 trägt noch „Registered branch“ im Titel — passt
   jetzt wieder; die Lese-Probe lief mit Lesern, die die globale
   CLAUDE.md sahen (künftig Leser ohne Hauskontext).
