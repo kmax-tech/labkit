@@ -19,6 +19,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -63,6 +64,17 @@ key = "quality_check_1_anchor_ok"
 sentence = "the anchor items come out at 1.0, else no verdict"
 scope = ["scripts/01_measure.py"]
 """
+
+B1 = """[[promise]]
+id = "interpretation-1"
+key = "interpretation_1_branch"
+sentence = "criterion-1 met → generalises; quality-check-1 not met → noisy; otherwise → no-verdict"
+scope = ["scripts/01_measure.py"]
+"""
+ARMS = (
+    "criterion-1 met and quality-check-1 met → generalises; "
+    "quality-check-1 not met → noisy; otherwise → no-verdict"
+)
 
 
 def parsed(text: str) -> promises.PromiseTables:
@@ -411,6 +423,67 @@ class Chain(unittest.TestCase):
         rc, out = self.check()
         self.assertEqual(rc, 0, out)
 
+    def with_interpretation(self) -> None:
+        self.protocol.write_text(
+            protocol_text(
+                C1,
+                A1,
+                B1,
+                prose="Criterion [criterion-1]; quality check [quality-check-1]; "
+                "interpretation [interpretation-1].\n",
+            ),
+            encoding="utf-8",
+        )
+
+    def test_a_registered_reading_passes(self):
+        """The twin: the reading of an arm passes, whichever arm."""
+        self.with_interpretation()
+        for reading in ("generalises", "no-verdict"):
+            with self.subTest(reading=reading):
+                if (self.area / "runs").exists():
+                    shutil.rmtree(self.area / "runs")
+                self.complete(
+                    self.start(), {**self.GOOD, "interpretation_1_branch": reading}
+                )
+                rc, out = self.check()
+                self.assertEqual(rc, 0, out)
+
+    def test_an_unregistered_reading_is_a_blocker_naming_the_readings(self):
+        """Free text recorded as the interpretation's value: no arm holds it."""
+        self.with_interpretation()
+        self.complete(
+            self.start(),
+            {**self.GOOD, "interpretation_1_branch": "generalises if criterion-1 met"},
+        )
+        rc, out = self.check()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            "[interpretation-1] records interpretation_1_branch = "
+            "'generalises if criterion-1 met', which is none of the readings "
+            "its arms register — way out: record one of generalises, noisy, "
+            "no-verdict",
+            out,
+        )
+
+    def test_unregistered_readings_is_pure_and_type_strict(self):
+        block = parsed(protocol_text(C1, B1))
+        for value in (True, None, 1, ["noisy"], "Noisy"):
+            with self.subTest(value=value):
+                (finding,) = intent_check.unregistered_readings(
+                    block, {"interpretation_1_branch": value}, "r1"
+                )
+                self.assertEqual(finding.grade, "BLOCKER")
+                self.assertEqual(finding.evidence_kind, "guaranteed")
+                self.assertIn("generalises, noisy, no-verdict", finding.fix or "")
+        self.assertEqual(
+            intent_check.unregistered_readings(
+                block, {"interpretation_1_branch": "noisy"}, "r1"
+            ),
+            [],
+        )
+        # an unreported key is check_block_against_run's finding, not this one
+        self.assertEqual(intent_check.unregistered_readings(block, {}, "r1"), [])
+
     def test_declared_key_must_be_reported_exactly(self):
         self.complete(
             self.start(), {"criterion_1_debug": 1, "quality_check_1_anchor_ok": True}
@@ -645,6 +718,116 @@ class Constants(unittest.TestCase):
                         None, frozen=frozen, full_run=full_run, registers=False
                     )
                 )
+
+
+class Arms(unittest.TestCase):
+    """An interpretation's sentence is arms, `<condition> → <reading>`;
+    `parse_arms` reads them or refuses them by name."""
+
+    def assertRefused(self, sentence: str, fragment: str, *, shows_form: bool = True):
+        with self.assertRaises(promises.PromiseError) as cm:
+            promises.parse_arms(sentence)
+        self.assertIn(fragment, str(cm.exception))
+        if shows_form:
+            self.assertIn(promises.ARMS_FORM, str(cm.exception))
+
+    def test_the_form_reads_arm_by_arm(self):
+        self.assertEqual(
+            promises.parse_arms(ARMS),
+            (
+                promises.InterpretationArm(
+                    "criterion-1 met and quality-check-1 met", "generalises"
+                ),
+                promises.InterpretationArm("quality-check-1 not met", "noisy"),
+                promises.InterpretationArm("otherwise", "no-verdict"),
+            ),
+        )
+        # two arms without `otherwise`, digits in a reading, tight spacing
+        self.assertEqual(
+            [
+                a.reading
+                for a in promises.parse_arms("n >= 50→full;n < 50 → coverage-2")
+            ],
+            ["full", "coverage-2"],
+        )
+
+    def test_a_sentence_without_an_arrow_is_refused(self):
+        """The free text of 0.103.0: nothing held the recorded value to it."""
+        self.assertRefused(
+            "generalises if criterion-1 met; noisy if quality-check-1 not met",
+            "arm 1 'generalises if criterion-1 met' holds 0 `→`, not one",
+        )
+
+    def test_the_ascii_arrow_is_refused_by_name(self):
+        self.assertRefused("a -> yes; b → no", "(the arrow is `→`, not `->`)")
+
+    def test_two_arrows_in_one_arm_are_refused(self):
+        self.assertRefused("a → b → c; d → e", "holds 2 `→`, not one")
+
+    def test_an_empty_arm_is_refused(self):
+        self.assertRefused("a → yes; ; b → no", "arm 2 is empty")
+        self.assertRefused("a → yes; b → no;", "arm 3 is empty")
+
+    def test_an_empty_condition_is_refused(self):
+        self.assertRefused("→ yes; b → no", "arm 1 '→ yes' has no condition")
+
+    def test_a_reading_that_is_not_a_slug_is_refused(self):
+        for reading in ("Yes", "no verdict", "-no", "", "réussi"):
+            with self.subTest(reading=reading):
+                self.assertRefused(
+                    f"a → {reading}; b → other",
+                    "is not lowercase letters, digits and hyphens",
+                )
+
+    def test_a_reading_twice_is_refused(self):
+        self.assertRefused(
+            "a → yes; b → yes",
+            "reading 'yes' stands in an earlier arm too",
+            shows_form=False,
+        )
+
+    def test_one_arm_is_refused(self):
+        self.assertRefused("a → yes", "one arm — an interpretation chooses")
+
+    def test_otherwise_before_the_last_arm_is_refused(self):
+        self.assertRefused(
+            "otherwise → yes; b → no", "is `otherwise` but not the last arm"
+        )
+
+    def test_parse_block_refuses_a_free_text_interpretation_by_id(self):
+        free = B1.replace(
+            "criterion-1 met → generalises; quality-check-1 not met → noisy; "
+            "otherwise → no-verdict",
+            "generalises if criterion-1 met, noisy otherwise",
+        )
+        with self.assertRaises(promises.PromiseError) as cm:
+            promises.parse_block(protocol_text(C1, free))
+        self.assertIn(
+            "[[promise]] interpretation-1: `sentence`: arm 1", str(cm.exception)
+        )
+        self.assertIn(promises.ARMS_FORM, str(cm.exception))
+
+    def test_parse_block_reads_the_arms_and_leaves_other_kinds_free(self):
+        b = parsed(protocol_text(C1, A1, B1))
+        self.assertEqual(
+            b.by_id()["interpretation-1"].readings(),
+            ("generalises", "noisy", "no-verdict"),
+        )
+        # a criterion's sentence is no arm form, and none is asked of it
+        self.assertEqual(b.by_id()["criterion-1"].arms, ())
+        self.assertEqual(b.by_id()["quality-check-1"].readings(), ())
+
+    def test_a_stamp_placeholder_interpretation_parses_without_arms(self):
+        """An unfrozen pilot may carry the stamp's `<…>`; `promise_tables_owed`
+        holds it once frozen or a full run."""
+        stamped = B1.replace(
+            "criterion-1 met → generalises; quality-check-1 not met → noisy; "
+            "otherwise → no-verdict",
+            "<the arms of the reading>",
+        )
+        b = parsed(protocol_text(C1, stamped))
+        self.assertEqual(b.by_id()["interpretation-1"].arms, ())
+        self.assertEqual(promises.placeholder_sentences(b), ["interpretation-1"])
 
 
 class KeyKind(unittest.TestCase):

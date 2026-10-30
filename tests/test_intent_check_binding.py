@@ -245,7 +245,7 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertEqual(len(held.notes), 1, held)
         self.assertIn("unbound", held.notes[0])
         self.assertTrue(held.findings, held)
-        self.assertTrue(all("registered" in f for f in held.findings), held)
+        self.assertTrue(all("registered" in f.text for f in held.findings), held)
         self.assertEqual(held.summary, "")
 
     def test_pre_schema_run_is_rejected(self):

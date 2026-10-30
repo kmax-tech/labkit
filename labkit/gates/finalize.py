@@ -515,20 +515,12 @@ def _registers(text: str) -> bool:
         return True
 
 
-#: the way out of an intent-check finding: the registration and the run name
-#: different promises
-INTENT_FIX = (
-    "make the protocol's ids, its promise block and the run's metrics.json name "
-    "the same promises: fix the code and measure again; after the first "
-    "measurement a changed registration is registered anew"
-)
-
-
 def check_intent_keys_in_metrics(
     findings: Findings, protocol: Path, text: str, answering_run: Path | None
 ) -> None:
     """Station 2: every registered intent id reports as a key of the answering
-    run's metrics.json (intent-check). Not code_check.check_intent_ids, which
+    run's metrics.json, an interpretation as one of its registered readings
+    (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
     if not _registers(text):
         findings.note("  no intent ids registered — nothing to check")
@@ -548,8 +540,8 @@ def check_intent_keys_in_metrics(
     # notes — which run, on what proof — stay notes (follow-up F4).
     for line in held.notes:
         findings.note(f"  {line}")
-    for line in held.findings:
-        findings.block(f"intent-check: {line}", fix=INTENT_FIX)
+    for finding in held.findings:
+        findings.take(replace(finding, text=f"intent-check: {finding.text}"))
     if not held.findings:
         findings.note(f"  {held.summary}")
 
