@@ -12,6 +12,8 @@ from __future__ import annotations
 import contextlib
 import io
 import os
+import re
+import shlex
 import sys
 import tempfile
 import unittest
@@ -21,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import standard_contract as sc  # noqa: E402
-from labkit.tools import next_step  # noqa: E402
+from labkit.tools import next_step, protocol_fill  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
 
 
@@ -69,6 +71,8 @@ class TheChain(unittest.TestCase):
         step = self.step()
         self.assertIn("labkit-audit", step.next, step)
         self.assertIn("--mode analysis", step.next, step)
+        # the slot a check leaves is filled, as a gate fills it
+        self.assertNotIn("<area>", step.where + step.next)
         self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         # audited, nothing holds: adopt that run
         step = self.step()
@@ -111,13 +115,34 @@ class BeforeTheChain(unittest.TestCase):
             os.chdir(lab.root)
             try:
                 step = next_step.next_step(area, protocol.resolve())
+                before = step.where
+                # the named line fills the first field, its first value taken
+                line = step.next.split("`")[1]
+                argv = shlex.split(re.sub(r"<([^|>]+)[^>]*>", r"\1", line))[1:]
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(protocol_fill.main(argv), 0, line)
+                after = next_step.next_step(area, protocol.resolve()).where
             finally:
                 os.chdir(old)
         finally:
             lab.close()
-        self.assertIn("MUST field(s)", step.where)
-        self.assertIn("protocol-fill", step.next)
+        self.assertIn("MUST field(s)", before)
+        self.assertIn("--list", step.next)
         self.assertIn("--contract", step.next)
+        self.assertNotEqual(before, after)
+
+    def test_a_fill_line_is_named_only_where_one_fill_closes_the_gap(self):
+        line = next_step._fill_line
+        self.assertEqual(line("P.md", "Unit"), 'protocol-fill P.md "Unit=<value>"')
+        self.assertEqual(
+            line("P.md", "[protocol] kind"),
+            'protocol-fill P.md "kind=<compute|fit|apply>"',
+        )
+        for gap in (
+            "[protocol] preflight_audit (frozen = true without the record named)",
+            "[protocol] frozen",
+        ):
+            self.assertIsNone(line("P.md", gap), gap)
 
     def test_no_such_area_is_refused(self):
         with tempfile.TemporaryDirectory() as d:

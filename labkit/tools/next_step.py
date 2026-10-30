@@ -35,9 +35,10 @@ from pathlib import Path
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, handovers, protocol_block, protocol_check
-from labkit.formats.gate import BLOCKER
+from labkit.formats.gate import BLOCKER, Findings
 from labkit.formats.repo import (
     area_path,
+    audit_command,
     area_protocols,
     choose_protocol,
     no_such_area,
@@ -80,13 +81,14 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
     if report.missing_must:
-        first = report.missing_must[0]
+        named = shown(protocol, Path.cwd())
+        fill = _fill_line(named, report.missing_must[0])
         return Step(
             f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
             + ", ".join(report.missing_must),
-            f'`protocol-fill {shown(protocol, Path.cwd())} "{first}=<value>"` fills '
-            f"the first; `protocol-check {shown(protocol, Path.cwd())} --contract` "
-            "names what each one owes",
+            (f"`{fill}` fills the first; " if fill else "")
+            + f"`protocol-fill {named} --list` names every open field with its "
+            f"values, `protocol-check {named} --contract` what each one owes",
             "the first measurement: what the registration lacks then cannot be "
             "added in place",
         )
@@ -100,7 +102,14 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     ctx = report_check.checked(area, protocol)
     pending = ctx.declared is None and ctx.run is not None
     gaps = report_check.report_gaps(ctx, adoption_pending=pending)
-    held = [g for g in gaps if g.grade == BLOCKER]
+    # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
+    filled = Findings(
+        None,
+        area=shown(area, Path.cwd()),
+        audit=audit_command(area, protocol=protocol),
+    )
+    filled.take_all(g for g in gaps if g.grade == BLOCKER)
+    held = filled.found
     if held:
         first = held[0]
         return Step(
@@ -124,6 +133,25 @@ def next_step(area: Path, protocol: Path | None) -> Step:
         "block into a report the head does not register)",
         "",
     )
+
+
+def _fill_line(protocol: str, missing: str) -> str | None:
+    """The `protocol-fill` line that fills MISSING, a MUST gap as
+    `protocol_check.check_fields` names it — a field label, or a head key as
+    `[protocol] <key>` with its allowed values (`protocol_fill.HEAD_KEYS`) —
+    or None for a gap no single fill closes (a contradiction, a freeze key)."""
+    from labkit.tools.protocol_fill import HEAD_KEYS
+
+    if missing.startswith("[protocol] "):
+        key = missing.removeprefix("[protocol] ")
+        for label, (head_key, choices) in HEAD_KEYS.items():
+            if head_key == key:
+                value = "|".join(choices) if choices else "value"
+                return f'protocol-fill {protocol} "{label}=<{value}>"'
+        return None
+    if missing.startswith("[") or "(" in missing:
+        return None
+    return f'protocol-fill {protocol} "{missing}=<value>"'
 
 
 def main(argv: list[str]) -> int:
