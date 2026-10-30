@@ -338,7 +338,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
 | **criterion** | Promise kind `criterion` (`[criterion-1]`): success or failure decided from the run. |
 | **quality check** | Promise kind `quality-check` (`[quality-check-1]`): prerequisite for reading a criterion; failure withholds every criterion's verdict. |
-| **interpretation** | Promise kind `interpretation` (`[interpretation-1]`): the registered reading of an outcome, recorded as `interpretation_1_branch`, etc. |
+| **interpretation** | Promise kind `interpretation` (`[interpretation-1]`): the registered readings of an outcome, written arm by arm as `<condition> → <reading>`; the run records the reading taken as `interpretation_1_branch`, etc. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
 | **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |

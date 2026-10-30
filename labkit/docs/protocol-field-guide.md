@@ -101,7 +101,7 @@ lowercase key in the run's metrics:
 |---|---|---|---|
 | `[criterion-1]` | criterion 1 — which value of which metric supports the hypothesis | `[criterion-1] accuracy >= 0.80` | `r.metrics(criterion_1_pass=True)` |
 | `[quality-check-1]` | quality check 1 — an outcome-neutral check that must pass before any criterion verdict | `[quality-check-1] parse failures <= 10%` · `[quality-check-2] shuffled labels show no effect` | `quality_check_1_pass`, `quality_check_2_pass` |
-| `[interpretation-1]` | interpretation 1 — what a result licenses next | `[interpretation-1] if < 50 usable cases, report coverage only` | `interpretation_1_branch` |
+| `[interpretation-1]` | interpretation 1 — what a result licenses next, arm by arm (`<condition> → <reading>`) | `[interpretation-1] ≥ 50 usable cases → full-report; otherwise → coverage-only` | `interpretation_1_branch` = one of its readings (`coverage-only`) |
 
 The separation rule: **a criterion judges, a quality check releases the
 judgement, an interpretation says what follows from it.** Does the condition depend on whether the hypothesis
@@ -356,16 +356,23 @@ derives from the detail below and carries no fact that isn't there.
   analysis, register it BEFORE the run: condition + what each branch
   licenses, [interpretation-1] per branch point. The test: "and if [criterion-…] fails — what
   then?" An answer you have now is a branch; no answer yet is "n/a — only
-  one outcome", and a decision taken after the run goes to Next step,
-  labelled as taken after the run (exploratory, not registered). A branch
+  one outcome" (no [interpretation-…] id), and a decision taken after the
+  run goes to Next step, labelled as taken after the run (exploratory, not
+  registered). The sentence is written arm by arm, `<condition> →
+  <reading>`, arms separated by `;`, at least two, `otherwise` allowed as
+  the last condition: "criterion-1 met and quality-check-1 met →
+  generalises; quality-check-1 not met → noisy; otherwise → no-verdict". A
+  reading is lowercase letters, digits and hyphens, unique in the sentence;
+  a protocol whose interpretation is not in this form is refused. A branch
   is decided on its own condition, not on the verdict: a stop rule fires
   during the run or on an inadmissible one too. The value the run records
-  under `interpretation_1_branch` is the registered sentence, verbatim — one wording in
-  the prose, the [[promise]] table and the code, so a reader of
-  metrics.json finds the branch in the protocol by searching it. It says
-  which branch and what follows; how to interpret votes or reasons is the
-  protocol's business (rival explanations), not the branch value's
-  (round 15: "extrem technisch — da muss ich erst nachschauen").
+  under `interpretation_1_branch` is one of the registered readings —
+  `intent-check` and `finalize` block any other value — so a reader of
+  metrics.json finds the arm in the protocol by searching it. It says
+  which branch was taken; what follows stands in the arm, and how to
+  interpret votes or reasons is the protocol's business (rival
+  explanations), not the reading's (round 15: "extrem technisch — da muss
+  ich erst nachschauen").
 - **Why this design †:** choice of model, dataset, method — one sentence.
 - **Rival explanations †:** per confound: what OTHER than the hypothesis
   produces the same number · error direction (does it push for or against

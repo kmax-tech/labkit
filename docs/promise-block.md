@@ -64,8 +64,34 @@ condition, not on the verdict: a stop rule fires during the run or on an
 inadmissible one too (`verdict()` sets the criterion keys to None, never
 the interpretation's). "n/a — only one outcome" is the honest
 interpretation when the answer to "and if [criterion-…] fails?" is not
-known before the run; a decision taken afterwards is reported as taken
-afterwards.
+known before the run — then no `[interpretation-…]` id is written; a
+decision taken afterwards is reported as taken afterwards.
+
+**An interpretation's arms.** Its sentence is written arm by arm,
+`<condition> → <reading>`, arms separated by `;`:
+
+```toml
+[[promise]]
+id = "interpretation-1"
+key = "interpretation_1_branch"
+sentence = "criterion-1 met and quality-check-1 met → generalises; quality-check-1 not met → noisy; otherwise → no-verdict"
+scope = ["scripts/01_measure.py:evaluate"]
+```
+
+`promises.parse_arms` reads it; `parse_block` refuses an interpretation
+whose sentence is not in this form, naming the promise and the arm. The
+rules: at least two arms (one outcome registers no interpretation); each
+arm holds exactly one `→` (U+2192 — `->` is refused, not read as a second
+spelling) with a non-empty condition before it; `otherwise` stands as the
+condition of the last arm only; a reading is lowercase letters, digits
+and hyphens (`[a-z0-9][a-z0-9-]*`) and unique in the sentence. The
+condition is the author's words; nothing evaluates it. The reading is
+data: the run records one of them under the promise's key, and
+`intent-check` (so `finalize`) blocks any other value, naming the
+registered readings — a reading chosen after the run has no arm the
+reader could find. The stamp's `<…>` placeholder parses without arms;
+`promise_tables_owed` refuses it once frozen or in a full run. Criteria
+and quality checks keep a free sentence.
 
 **Earlier letters.** The letters `C`, `A`, `B` (labkit 0.48 to 0.103.0)
 and, before them, `K`, `S`, `W`, `N` (up to 0.47) are not read: a protocol
@@ -138,7 +164,7 @@ constants = { min_f1 = 0.70 }
 |---|---|
 | `id` | `criterion-<n>`, `quality-check-<n>` or `interpretation-<n>`, unique; also named in the prose |
 | `key` | the metrics key reporting it: the id with underscores (`quality_check_2`) or that stem and `_<suffix>` |
-| `sentence` | the promise in one sentence |
+| `sentence` | the promise in one sentence; an interpretation's as arms, `<condition> → <reading>; …` (above) |
 | `scope` | non-empty list of `file` or `file:function` (top-level function or class), relative to the protocol's directory |
 | `constants` | scalars the code reads from here instead of a second copy in the script — `promises.all_constants(promises.load(PROTOCOL))` into the script's config object; a name is lowercase snake_case and stands in exactly one promise (0.71.0) |
 

@@ -57,6 +57,25 @@ pins (`requirements.txt` / `requirements.lock`).
   questions) is unchanged: a rule's name is cited across repositories, and
   renaming it is a rollout of its own.
 
+- **An interpretation is written arm by arm, and the run records one of
+  its readings.** An `[interpretation-…]` promise's sentence is
+  `<condition> → <reading>; …` — at least two arms, one `→` each (`->` is
+  refused), `otherwise` as the last condition only, a reading in
+  lowercase letters, digits and hyphens, unique in the sentence
+  ("criterion-1 met and quality-check-1 met → generalises; quality-check-1
+  not met → noisy; otherwise → no-verdict"). `promises.parse_arms` reads it
+  in one home; `parse_block` refuses a protocol whose interpretation is
+  free text, naming the promise, the arm and the form. `intent-check`, and
+  `finalize` through it, block a run whose interpretation key records a
+  value that is none of the registered readings, the way out naming them
+  (`intent_check.unregistered_readings`; until now nothing held the
+  recorded value to what was registered). Intent-check's findings are
+  gate findings with their own way out (`Held.findings`), printed with it.
+  The stamp's `<…>` placeholder still parses for an unfrozen pilot.
+  **0.103.0 is the last labkit that reads a free-text interpretation**;
+  re-register it in arms, or reproduce such a run with its repo's commit
+  and that pin.
+
 - **A registered output is the file the run recorded, and the deliverable
   of an external task is a registered output of the answering run.**
   `finalize` (and `report-check` through it) holds every file in the
