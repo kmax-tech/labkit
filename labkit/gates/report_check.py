@@ -137,7 +137,12 @@ from labkit.formats.gate import (
     GateFinding,
     blocker,
 )
-from labkit.formats.answering_run import first_measurements
+from labkit.formats.answering_run import (
+    bound_answering_run,
+    bound_runs,
+    first_measurements,
+    is_measurement,
+)
 from labkit.formats.protocol_history import (
     registration_differences,
     registrations_as_first_measured,
@@ -1197,6 +1202,59 @@ def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFin
     if not adoption_pending:
         out += report_findings(ctx)
     return out
+
+
+def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccount:
+    """Where PROTOCOL of AREA, as TEXT holds it, stands for an adoption —
+    the account a handover records (`handovers.RunAccount`):
+
+    - NOT_MEASURED: no measurement bound to it (completed or not) and none
+      unreadable — a preparation or probe run measures nothing;
+    - UNUSABLE: a measurement of it, and no number from it — the run choice
+      holds (no completed run, an unreadable or same-second rival:
+      `answering_run.bound_answering_run`), it chose a run that is no
+      measurement, or the metrics.json does not read; the run is the newest
+      measurement, WHY the sentences that put it there;
+    - HELD: the answering run, and the blockers report-check holds its
+      adoption with (`report_gaps`, the adoption pending; an audit that
+      cannot be held to the run among them);
+    - ADOPTABLE: the answering run, and nothing holds it.
+
+    Prints nothing. Raises `protocol_block.BlockError` on a head that does
+    not read, `runs.RunConfigError` from a run's config.json."""
+    pid = protocol_block.head(text).id
+    if not pid:
+        return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
+    taken, rest = bound_runs(area, pid)
+    ours = [f for f in rest if f.binding.id == pid or f.state == runs.UNREADABLE]
+    measured = [f for f in [*taken, *ours] if is_measurement(f)]
+    if not measured:
+        return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
+    choice = bound_answering_run(area, pid)
+    if choice.run_dir is None or not any(f.dir == choice.run_dir for f in measured):
+        why = [f"{f.dir.name}: {f.why or f.state}" for f in measured if f in ours]
+        why += [choice.blocker] if choice.blocker else []
+        if choice.run_dir is not None:
+            why.append(f"{choice.run_dir.name}, the run chosen, is no measurement")
+        newest = max(f.dir.name for f in measured)
+        return handovers.RunAccount(newest, handovers.UNUSABLE, tuple(why))
+    run = choice.run_dir.name
+    try:
+        runs.read_metrics(runs.metrics_path(choice.run_dir))
+    except runs.MetricsError as exc:
+        return handovers.RunAccount(run, handovers.UNUSABLE, (str(exc),))
+    try:
+        ctx = checked(area, protocol, text=text)
+    except AuditError as exc:
+        # the audit cannot be held to the run: that holds the adoption too
+        return handovers.RunAccount(run, handovers.HELD, (str(exc),))
+    held = tuple(
+        g.text
+        for g in report_gaps(ctx, adoption_pending=ctx.declared is None)
+        if g.grade == BLOCKER
+    )
+    state = handovers.HELD if held else handovers.ADOPTABLE
+    return handovers.RunAccount(run, state, held)
 
 
 def report_findings(ctx: Checked) -> list[GateFinding]:

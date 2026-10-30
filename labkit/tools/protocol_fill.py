@@ -95,6 +95,7 @@ from labkit.formats import (
     runs,
 )
 from labkit.checks.result_render import Rendering, rendering
+from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     GitError,
     adopt_command,
@@ -1270,6 +1271,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
                 "cannot also release another protocol's result"
             )
         expected, errors = attempts.expected_evidence(area)
+        account = report_check.adoption_state(area, protocol, new)
         path = handovers.new_path(area)
         record = handovers.build(
             root,
@@ -1282,6 +1284,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             records=state.records,
             expected=expected,
             problems=[*state.problems, *errors],
+            account=account,
         )
         before = state_text(root, report, staged=False) or ""
         before = report_blocks.withdraw_result_blocks(before, protocol, report)
@@ -1309,6 +1312,20 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         f"handover: its block in {shown(report, Path.cwd())}; "
         f"record: {shown(path, Path.cwd())}"
     )
+    print(
+        f"run: {account.run or 'none'} — {handovers.RUN_SENTENCE[account.state]}"
+        + "".join(f"\n  {why}" for why in account.why)
+    )
+    if account.state == handovers.ADOPTABLE:
+        print(
+            "WARNING: "
+            + with_way_out(
+                f"nothing held the adoption of run {account.run}: a missed "
+                "criterion is a result, not a reason to hand over",
+                f"`labkit-adopt {shown(area, Path.cwd())} {account.run}` "
+                "reports it (the adoption ends this handover)",
+            )
+        )
     print(
         "stage the report, protocol, handover record and all remaining audit "
         "evidence together; this releases no number and approves no audit"

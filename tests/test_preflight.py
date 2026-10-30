@@ -624,6 +624,9 @@ class TestAuditFindings(unittest.TestCase):
                     [],
                     [handovers.entry(record, 1)],
                     [],
+                    None,
+                    handovers.NOT_MEASURED,
+                    [],
                 ),
             )
             code, over = _run_preflight(area)

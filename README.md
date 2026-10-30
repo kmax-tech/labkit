@@ -193,8 +193,10 @@ again now (`labkit-audit <area> --mode <mode>`), of any protocol of the
 area, since the old start names none. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
-immutable handover record of the remaining evidence, losses and the
-findings left open, and writes the record's handover block
+immutable handover record of the remaining evidence, losses, the
+findings left open and the run the protocol stands at — none measured,
+measured without a number, held by checks, or adoptable, with the
+reasons — and writes the record's handover block (the state, no run id)
 into the report — one block per protocol, replaced in place. It withdraws
 that protocol's result blocks in the chosen report and keeps other text
 and other protocols' blocks. Citations in prose and other reports still
@@ -327,7 +329,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **repeat cost** | `repeat_cost` in the protocol head, `low` or `high`: the price of repeating the run. It selects the lane — what the area owes before and after the run (the table above, `standard_contract.lane`). |
 | **probe** | Instrument check before a measurement at high repeat cost; its number is not reported. |
 | **measurement** | Run of the registered question, eligible for result release after the required checks. |
-| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open) and writes its handover block into the report. The stop and the commit then accept the loss it records, never an open BLOCKER; audits and adoption stay refused until the evidence is restored. |
+| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open, the run it stands at and what held its adoption) and writes its handover block into the report. The stop and the commit then accept the loss and the open findings it records; audits and adoption stay refused until the evidence is restored, and a measurement after the handover ends it. |
 | **run metadata** | Start and completion records: `config.json` and `completion.json`. |
 | **run index** | Searchable overview in `runs.tsv`. |
 | **metrics** | Measured values recorded in `metrics.json`. |

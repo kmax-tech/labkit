@@ -15,9 +15,15 @@ or block:
 
     - Why: …
     - Tried: …
+    - Run: a run was measured, and checks hold its adoption (…)
     - Findings left open (in `experiments/01-x/audits`): …
     - Evidence and recorded losses: [handover record](<…>)
     <!-- /labkit handover -->
+
+The record names the run the protocol stands at and what kept it from
+being adopted (`RunAccount`, computed by labkit, not typed); the block
+says which of the four states holds and no run id — a run id in a report
+reads as its number.
 
 Only the stop/commit's integrity refusal may use this acknowledgement, and
 only while the block, the protocol and the audit files match the record
@@ -35,7 +41,14 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
-from labkit.formats import files, findings, protocol_block, runs, scope_sha
+from labkit.formats import (
+    answering_run,
+    files,
+    findings,
+    protocol_block,
+    runs,
+    scope_sha,
+)
 from labkit.formats.comment_blocks import (
     HEAD_END,
     CommentBlockError,
@@ -61,7 +74,9 @@ from labkit.formats.repo import (
 )
 
 DIRECTORY = "handovers"
-SCHEMA = 1
+SCHEMA = 2
+#: the last labkit that reads a schema-1 record (no run account)
+SCHEMA_1_READ_BY = "0.103.0"
 
 KIND = "handover"
 OPEN = opener(KIND)
@@ -69,6 +84,34 @@ CLOSE = closer(KIND)
 HEAD_KEYS = ("protocol", "record")
 #: the decisions a handover lists as left over: nothing settled them
 UNSETTLED = ("open",)
+
+
+#: where the protocol stands when it is handed over, as labkit finds it
+NOT_MEASURED = "not-measured"  # no run bound to the protocol
+UNUSABLE = "unusable"  # a run bound to it, and its record gives no number
+HELD = "held"  # a run with a number, and the checks hold its adoption
+ADOPTABLE = "adoptable"  # a run with a number, and nothing held its adoption
+RUN_STATES = (NOT_MEASURED, UNUSABLE, HELD, ADOPTABLE)
+#: the block's sentence per state — no run id
+RUN_SENTENCE = {
+    NOT_MEASURED: "no run of it was measured",
+    UNUSABLE: "a run was measured, and its record gives no number",
+    HELD: "a run was measured, and checks hold its adoption",
+    ADOPTABLE: "a run was measured, and nothing held its adoption",
+}
+
+
+@dataclass(frozen=True)
+class RunAccount:
+    """The run a protocol stands at when it is handed over: RUN, its id
+    (None when NOT_MEASURED; for UNUSABLE the newest run of it), STATE, one
+    of RUN_STATES, and WHY, the sentences that put it there — the run
+    choice's or the metrics' error, the blockers that hold the adoption;
+    none for ADOPTABLE."""
+
+    run: str | None
+    state: str
+    why: tuple[str, ...]
 
 
 class HandoverError(ValueError):
@@ -91,6 +134,9 @@ class Handover:
     expected: list[str]
     remaining: list[str]
     problems: list[str]
+    run: str | None
+    run_state: str
+    run_why: list[str]
 
 
 def protocol_fingerprint(text: str) -> str:
@@ -176,12 +222,13 @@ def build(
     records: list[findings.Record],
     expected: Iterable[str],
     problems: Iterable[str],
+    account: RunAccount,
 ) -> Handover:
     """The record a handover at PATH writes: PROTOCOL as PROTOCOL_TEXT
     will stand (no result), REPORT, WHY and TRIED, the findings RECORDS
     leave unsettled, the area's audit files as the tree holds them now,
-    the EXPECTED paths and the PROBLEMS found. Raises HandoverError on a
-    field the record cannot hold (`read_handover`)."""
+    the EXPECTED paths, the PROBLEMS found and the run ACCOUNT. Raises
+    HandoverError on a field the record cannot hold (`read_handover`)."""
     record = Handover(
         SCHEMA,
         protocol.relative_to(root).as_posix(),
@@ -193,6 +240,9 @@ def build(
         sorted(expected),
         remaining(records),
         list(dict.fromkeys(problems)),
+        account.run,
+        account.state,
+        list(account.why),
     )
     read_handover(path, _json(record))
     return record
@@ -221,7 +271,25 @@ def read_handover(path: Path, text: str | None = None) -> Handover:
         or type(raw.get("schema")) is not int
         or raw["schema"] != SCHEMA
     ):
-        raise HandoverError(f"{path}: handover fields must match schema {SCHEMA}")
+        older = (
+            f" (a schema-1 record, without the run account, is read by labkit "
+            f"{SCHEMA_1_READ_BY})"
+            if isinstance(raw, dict) and raw.get("schema") == 1
+            else ""
+        )
+        raise HandoverError(
+            f"{path}: handover fields must match schema {SCHEMA}{older}"
+        )
+    run, state = raw["run"], raw["run_state"]
+    if state not in RUN_STATES:
+        raise HandoverError(
+            f"{path}: handover run_state {state!r} is not one of {', '.join(RUN_STATES)}"
+        )
+    if (run is None) != (state == NOT_MEASURED):
+        raise HandoverError(
+            f"{path}: handover run {run!r} with run_state {state!r} — a run is "
+            f"named unless none was measured"
+        )
     return Handover(
         SCHEMA,
         _relative(raw["protocol"], "protocol"),
@@ -236,6 +304,9 @@ def read_handover(path: Path, text: str | None = None) -> Handover:
         ],
         _strings(raw["remaining"], "remaining"),
         _strings(raw["problems"], "problems"),
+        None if run is None else _string(run, "run"),
+        state,
+        _strings(raw["run_why"], "run_why"),
     )
 
 
@@ -361,6 +432,8 @@ def handover_lines(record: Handover, root: Path, path: Path) -> list[str]:
         "",
         f"- Why: {record.why}",
         f"- Tried: {record.tried}",
+        f"- Run: {RUN_SENTENCE[record.run_state]}"
+        + (" (the reasons are in the record)" if record.run_why else ""),
         f"- Findings left open (in `{audits}`): {left}",
         f"- Evidence and recorded losses: [handover record](<{link}>)",
         CLOSE,
@@ -556,7 +629,28 @@ def _protocol_mismatch(
     declaring = declared_results(area, root, staged=staged)
     if declaring:
         return f"{declaring[0].relative_to(root).as_posix()} has adopted a result"
+    pid = protocol_block.head(text).id
+    later = runs_since(area, pid, record.run) if pid else []
+    if later:
+        return (
+            f"run {later[-1]} was measured after the handover — the record no "
+            "longer says where the protocol stands; a new handover binds it"
+        )
     return None
+
+
+def runs_since(area: Path, pid: str, run: str | None) -> list[str]:
+    """The measurements of AREA bound to PID, or unreadable, newer than RUN
+    (all of them when RUN is None), oldest first — a run id sorts by its
+    start (`answering_run.is_measurement`)."""
+    taken, rest = answering_run.bound_runs(area, pid)
+    ours = [
+        f.dir.name
+        for f in [*taken, *rest]
+        if (f.binding.id == pid or f.state == runs.UNREADABLE)
+        and answering_run.is_measurement(f)
+    ]
+    return sorted(r for r in ours if run is None or r > run)
 
 
 def mismatch(area: Path, root: Path, path: Path, *, staged: bool) -> str | None:

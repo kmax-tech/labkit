@@ -460,7 +460,7 @@ audit saw, cannot be recomputed and is what the records hold.
 | `audits/attempts.jsonl`, `audits/answers/<attempt id>.txt` | `attempts.begin` (`Running.keep_answer`, the journal lines) | every model call of `labkit-audit`, its kept answer and how it ended |
 | `<git common dir>/labkit-attempts/<branch>/<area>.jsonl` | `attempts._append`, beside every journal line (`attempts.journal_copy`) | the journal's copy outside the working tree, never committed |
 | `<git common dir>/labkit-attempts/<branch>/<area>/<path under audits/>` | `attempts.Running.end`, before the end line that names them (`attempts.evidence_copy`) | the record or failed attempt and the kept answer each attempt ended with, as written — the restore of a file deleted before it was staged, never a check of a record's content (`--decide` rewrites the record, not its copy) |
-| `audits/handovers/handover-<hex>.json` | `handovers.write_record` | a protocol's end without a result: the audit files by blob id, losses, findings left unsettled; the report's handover block is its projection |
+| `audits/handovers/handover-<hex>.json` | `handovers.write_record` | a protocol's end without a result: the audit files by blob id, losses, findings left unsettled, and the run it stands at with what kept that run from adoption (`handovers.RunAccount`, computed by `report_check.adoption_state`: not measured, unusable, held, adoptable); the report's handover block is its projection, without run ids; a measurement after it ends its acknowledgement |
 | `runs/<id>/*.json`, `runs.tsv` | `runlog`, `runs.write_failure` | the run: config, outputs, metrics, completion or failure |
 | `.git/labkit-sessions.jsonl` | `agent_hooks.record_session` | which runs a session started (no verdict) |
 

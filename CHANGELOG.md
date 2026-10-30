@@ -72,6 +72,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A handover records the run it stands at (handover schema 2).** The
+  record gains `run`, `run_state` and `run_why`, computed when the
+  handover is written (`report_check.adoption_state`): `not-measured` (no
+  measurement bound to the protocol), `unusable` (a measurement, and no
+  number from it), `held` (the blockers that hold its adoption) or
+  `adoptable` (nothing held it — the handover is written, with a warning
+  naming `labkit-adopt`: a missed criterion is a result). The report's
+  block says which state holds, without a run id. A measurement bound to
+  the protocol after the handover ends its acknowledgement. A schema-1
+  record no longer reads; labkit 0.103.0 is the last that reads it — hand
+  the protocol over again.
+
 - **Promise ids are their kind and a number.** `[criterion-1]`,
   `[quality-check-2]`, `[branch-1]` replace `[C1]`, `[A2]`, `[B1]`;
   a metrics key is the id with underscores and a suffix

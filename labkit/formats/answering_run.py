@@ -332,6 +332,16 @@ def _shown(cfg: JsonObject, key: str) -> str:
     return as_stored(cfg[key]) if key in cfg else "(absent)"
 
 
+def is_measurement(facts: RunFacts) -> bool:
+    """Is the run FACTS names a measurement — `run_kind = "measurement"` in
+    its config.json, or a config.json that cannot be read (it may be one)?
+    A preparation or probe run measures nothing."""
+    if facts.state == UNREADABLE:
+        return True
+    cfg = read_run_config(facts.dir)
+    return cfg is not None and cfg.run_kind == "measurement"
+
+
 def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
     """(runs bound to `pid` and completed, everything else with its `why`),
     oldest first.

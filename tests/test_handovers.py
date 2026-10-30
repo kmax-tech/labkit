@@ -417,6 +417,90 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 1)
         self.assertTrue(handovers.valid(self.area))
 
+    def record_of_handover(self) -> handovers.Handover:
+        (path,) = handovers.record_paths(self.area)
+        return handovers.read_handover(path)
+
+    def test_a_handover_names_the_run_and_what_holds_it_but_the_block_no_id(self):
+        """The record says where the protocol stands — the run, computed,
+        and the blockers that hold its adoption (here: no analysis audit);
+        the report's block says which state, with no run id in it."""
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        record = self.record_of_handover()
+        self.assertEqual((record.run, record.run_state), (self.run_id, handovers.HELD))
+        self.assertTrue(any("analysis audit" in w for w in record.run_why), record)
+        (block,) = handovers.handover_blocks(self.report.read_text(encoding="utf-8"))
+        told = "\n".join(block.lines)
+        self.assertIn(f"- Run: {handovers.RUN_SENTENCE[handovers.HELD]}", told)
+        self.assertNotIn(self.run_id, told)
+        self.assertIn(f"run: {self.run_id} — ", out)
+
+    def test_a_run_measured_after_the_handover_ends_its_acknowledgement(self):
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        self.assertTrue(handovers.valid(self.area))
+        later = self.run_measure(e2e.Judge._model)
+        ack = handovers.acknowledgement(self.area)
+        self.assertFalse(ack.valid)
+        self.assertIn(f"run {later} was measured after the handover", str(ack.refused))
+
+    def test_an_audited_run_nothing_holds_is_named_with_the_adoption(self):
+        """Handed over although nothing held the adoption: the record says
+        so (ADOPTABLE), and the output names the adoption — a missed
+        criterion is a result."""
+        self.lab.record(self.area, self.protocol, "analysis", self.run_id)
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        record = self.record_of_handover()
+        self.assertEqual(
+            (record.run, record.run_state, record.run_why),
+            (self.run_id, handovers.ADOPTABLE, []),
+        )
+        self.assertIn("a missed criterion is a result", out)
+        self.assertRegex(out, rf"`labkit-adopt \S+01-judge {self.run_id}`")
+
+    def test_a_protocol_never_measured_is_handed_over_as_not_measured(self):
+        area, protocol = e2e.judge_area(self.lab, "unmeasured")
+        self.lab.commit("registered, not measured")
+        report = self.lab.root / "OTHER.md"
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = protocol_fill.main(
+                [
+                    str(protocol),
+                    "--handover",
+                    "--why",
+                    "the data cannot be obtained",
+                    "--tried",
+                    "asked the provider",
+                    "--into",
+                    str(report),
+                ]
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+        (path,) = handovers.record_paths(area)
+        record = handovers.read_handover(path)
+        self.assertEqual((record.run, record.run_state), (None, handovers.NOT_MEASURED))
+        self.assertIn(
+            handovers.RUN_SENTENCE[handovers.NOT_MEASURED],
+            report.read_text(encoding="utf-8"),
+        )
+
+    def test_a_record_without_a_consistent_run_account_does_not_read(self):
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        (path,) = handovers.record_paths(self.area)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        for change, said in (
+            ({"run": None}, "a run is named unless none was measured"),
+            ({"run_state": "measured"}, "is not one of"),
+            ({"schema": 1}, f"read by labkit {handovers.SCHEMA_1_READ_BY}"),
+        ):
+            with self.subTest(change):
+                with self.assertRaisesRegex(handovers.HandoverError, said):
+                    handovers.read_handover(path, json.dumps({**raw, **change}))
+
     def test_a_handover_ends_its_own_protocol_not_one_beside_it(self):
         """labkit-next says `nothing` only for the protocol the handover
         names; a second protocol of the same area is not ended by it."""
