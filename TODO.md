@@ -1763,8 +1763,21 @@ Notiert, nicht geplant:
    `labkit-paper-main/.venv-pilot` (nicht das geteilte). Images
    labkit-sandbox:4ef8b52f2332, agentsandbox-proxy:ea9344c872a8. Läufer
    und Vertrag: `docs/usability/2026-10-30-gptoss-pilot/`. Mini-Versuch
-   durch die ganze Kette in 8 s. Offen: Gewichte-Revision (Cluster-Log),
-   Selbsttest, dann Stufe A.
+   durch die ganze Kette in 8 s. **Ergebnis (2026-10-30 nachmittags):**
+   Stufe A null von fünf gültig (21 MAE 1,08, OOM, kein Bericht; 34 57/91
+   Spalten; 60 keine Datei; 15 AUC 0,79 gegen selbstgesetzte 0,70; 71
+   Dummy-Modell, nan), drei Berichte erklären Erfolg. Nach Vertrag enden B
+   und C: gpt-oss-20b unter Codex schafft die Aufgaben nicht, keine Aussage
+   über labkit. Note `docs/usability/2026-10-30-gptoss-pilot.md`. Dafür
+   gebaut und bleibend: Codex-Adapter (agentsandbox `codex-agent`,
+   fb03d46), Katalogeintrag, Proxy-Shim, und ein sechsteiliger vLLM-Patch
+   (Custom-Werkzeuge im Harmony-Pfad, Diffs in `docs/usability/
+   2026-10-30-gptoss-pilot/vllm-patch/`), je Schicht mit Minimalanfragen
+   verifiziert. Nächste Kandidaten für die Achse „Agentenstärke":
+   gpt-oss-120b (80-GB-Karte) oder ein stärkeres offenes Modell; die
+   Harness steht. Offen (Max): Vertrag gilt, oder Stufe B trotzdem als
+   Erkundung außerhalb des Vertrags (zeigt labkits Registrierung den
+   selbstgesetzten Maßstab?).
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
