@@ -96,6 +96,39 @@ class Adopt(unittest.TestCase):
         self.assertIn(f"has adopted {run_id} already", out)
         self.assertIn(run_id, report.read_text(encoding="utf-8"))
 
+    def test_a_refused_check_step_keeps_the_written_report_and_a_call_resumes(self):
+        """Step 3 refuses after step 2 wrote the report's block — another
+        state than a refused step 2: the adoption and the block stand, the
+        refusal says so; the next call skips the adoption, finds the block
+        unchanged and checks again (the twin: it passes)."""
+        from unittest import mock
+
+        from labkit.gates import report_check
+
+        area, protocol, run_id = self.measured("REPORT.md")
+        self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        report = self.lab.root / "REPORT.md"
+        real = report_check.report_check
+        calls: list[str] = []
+
+        def refusing_on_the_tree(*args, **kw):
+            if kw.get("state", report_check.TREE) == report_check.TREE:
+                calls.append("tree")
+                return 1
+            return real(*args, **kw)
+
+        with mock.patch.object(report_check, "report_check", refusing_on_the_tree):
+            rc, out = self.labkit_adopt(area, run_id)
+        self.assertEqual((rc, calls), (1, ["tree"]), out)
+        self.assertIn(f"step 3 refused; {run_id} stays adopted", out)
+        written = report.read_text(encoding="utf-8")
+        self.assertIn(run_id, written)
+        rc, out = self.labkit_adopt(area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"has adopted {run_id} already", out)
+        self.assertIn("unchanged", out)
+        self.assertEqual(report.read_text(encoding="utf-8"), written)
+
     def test_no_registered_report_skips_the_report_step(self):
         area, protocol, run_id = self.measured(None)
         self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
