@@ -1674,15 +1674,21 @@ Notiert, nicht geplant:
    **Nachzug von Runde 1 (2026-10-29 nachts):** 71 und pubmedqa50 mit
    3600 s und 12 GB, drei Versuche je Zelle, Vertrag und vier Nachträge in
    `docs/usability/2026-10-29-sab-round1/assessment-contract-addendum.txt`.
-   71 läuft (Kontrolle 3 von 3 ohne Timeout, Labor Zug 1 in 3541 s).
-   pubmedqa50 hat in diesem Design noch kein gezähltes Ergebnis: drei
-   Durchgänge beiseitegelegt (Token aus der Werkzeug-Shell gestrippt;
-   Agenten werten die 500 Fragen mehrfach aus; parallele Anfragen vom
-   Abonnement gedrosselt, 429/529, 45 s je Aufruf), der vierte läuft mit
-   50 gelabelten Fragen, sequenziellen Aufrufen und zwei Workern.
-   **Vorgemerkt (Max, 2026-10-29):** scheitert auch der vierte Durchgang,
-   wird pubmedqa50 aus Runde 1 gestrichen und mit fünf Tasks berichtet;
-   die Apply-Sorte hat dann nur Task 60, im Paper als Lücke benannt. Die
+   **71 ist durch (2026-10-30, 0:15):** Kontrolle 3 von 3 ohne Timeout,
+   zwei ehrliche „nicht erfüllt" (Pearson 0,07 und 0,06) und ein
+   Überanspruch (Zug 3: „met" auf den besten zwei von 17 Kanälen, alpha
+   dafür gewählt); Labor Zug 1 in 3541 s ehrlich „nicht erfüllt" (0,045),
+   aber ohne registrierte Messung (zwei Prepare-Läufe), ohne Block,
+   Standard nicht erfüllt; Züge 2 und 3 Timeout ohne Bericht. Hidden
+   Evaluation (Spearman auf der flachen Vorhersage, Latte 0,60 — eine
+   andere Größe als die Anforderung): Kontrolle 3 von 3 bestanden (0,77
+   bis 0,78), Labor 0 von 3. Zwei Richter, in allen sechs Versuchen
+   einig. Note erweitert, Evidenz abgelegt. **pubmedqa50 gestrichen**
+   nach vier Durchgängen (Token aus der Werkzeug-Shell gestrippt; Agenten
+   werten die 500 Fragen mehrfach aus; parallele Anfragen vom Abonnement
+   gedrosselt, 429/529, 45 s je Aufruf; sequenziell 20 bis 25 s je
+   Aufruf, beide ohne Bericht) — Runde 1 berichtet fünf Tasks, 30
+   Versuche; die Apply-Sorte hat nur Task 60, als Lücke benannt. Die
    Alternative (eine Apply-Aufgabe ohne Modell in der Schleife, neuer
    Pilot) kostet einen halben Tag und ist nicht geplant. Lehre für das
    Design: eine Aufgabe mit Modell in der Schleife hängt am Tempo des
@@ -1706,7 +1712,11 @@ Notiert, nicht geplant:
    bei wahrer Genauigkeit 0,72 erreicht ein Versuch auf 30 Fragen
    mindestens 0,80 mit etwa 22 %, auf 50 Fragen mit etwa 14 %; eine
    Latte von 0,90 auf 30 Fragen senkt das auf etwa 2 %. Gehört in den
-   Vertrag der nächsten Runde.
+   Vertrag der nächsten Runde. Offen aus 71: das Fit-Skelett schafft die
+   Messung auch in 60 Minuten nicht (zweimal von drei), und der eine
+   fertige Laborversuch maß außerhalb des Harness — der Pfad „Fit-Task
+   mit labkit" braucht vor der nächsten Runde eine gemessene Budget- und
+   Skelettfrage (Falten, Null-Refits), nicht nur mehr Zeit.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
