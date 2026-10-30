@@ -34,6 +34,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A label typed short names its field; an unknown flag names the one
+  meant.** `protocol-fill PROTOCOL "Terms=…"` fills `Terms of this
+  protocol` when no other field begins the same, and says so
+  (`filled: Terms → terms of this protocol`); a prefix of several fields
+  names them, a near miss names the nearest (`protocol_fill.field_for`).
+  `labkit-init exp --type` is told that `type` is a protocol field set
+  with `protocol-fill <PROTOCOL> type=…` and that the kind is `--kind`;
+  another unknown flag names the nearest one.
+
 - **Every message names `labkit-adopt` for the adoption.**
   `repo.adopt_command` builds `labkit-adopt <area> <run_id>` (with
   `--protocol` where the area holds several protocols), so finalize,

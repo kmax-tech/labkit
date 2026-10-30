@@ -57,6 +57,8 @@ install), `lab` stamps only templates that ref holds unchanged
 from __future__ import annotations
 
 import argparse
+import difflib
+from typing import NoReturn
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 import importlib.metadata
@@ -1780,9 +1782,53 @@ def _closing_steps(ln: standard_contract.Lane, rel: Path, protocol: str) -> list
 # --- command line -------------------------------------------------------------
 
 
+#: flags agents pass that labkit-init does not take, with what they meant
+MEANT_FLAGS = {
+    "--type": (
+        "`type` (confirmatory | exploratory) is a field of the protocol, set "
+        "after the stamp: `protocol-fill <PROTOCOL> type=exploratory`; what "
+        "the number asserts is `--kind compute|fit|apply`"
+    ),
+}
+
+
+class _HintingParser(argparse.ArgumentParser):
+    """An ArgumentParser whose refusal of an unknown flag names the flag
+    meant: a known mistake from MEANT_FLAGS, else the nearest flag this
+    command takes (`difflib`). The subcommands' parsers are of this class
+    too (argparse makes them so)."""
+
+    def error(self, message: str) -> NoReturn:
+        if "unrecognized arguments" in message:
+            known = self._flags()
+            hints = []
+            for word in message.split(":", 1)[1].split():
+                flag = word.split("=", 1)[0]
+                if not flag.startswith("--"):
+                    continue
+                if flag in MEANT_FLAGS:
+                    hints.append(f"{flag}: {MEANT_FLAGS[flag]}")
+                    continue
+                near = difflib.get_close_matches(flag, sorted(known), n=1)
+                if near:
+                    hints.append(f"{flag}: did you mean {near[0]}?")
+            if hints:
+                message += " — " + "; ".join(hints)
+        super().error(message)
+
+    def _flags(self) -> set[str]:
+        """Every flag of this parser and of its subcommands."""
+        flags = set(self._option_string_actions)
+        for action in self._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for parser in action.choices.values():
+                    flags |= set(parser._option_string_actions)
+        return {f for f in flags if f.startswith("--")}
+
+
 def main(argv: list[str]) -> int:
     """`labkit-init lab|exp` — see the module docstring."""
-    ap = argparse.ArgumentParser(
+    ap = _HintingParser(
         prog="labkit-init", description=(__doc__ or "").split("\n\n")[0]
     )
     sub = ap.add_subparsers(dest="cmd", required=True)

@@ -80,6 +80,7 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
+import difflib
 import re
 from datetime import date
 from pathlib import Path
@@ -121,6 +122,42 @@ from labkit.formats.protocol_check import (
 _LEAD = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)?")
 
 
+def field_for(text: str, field: str, line_no: int | None = None) -> str:
+    """The field name (`field_name`) FIELD means in TEXT: its own when a field
+    has it, else the one field whose name it begins (`Terms` → `terms of
+    this protocol`) — a label typed short names its field when no other
+    begins the same. Raises ValueError naming the fields a prefix begins
+    when several do, else the nearest names (`difflib`) and the open
+    placeholder fields. LINE_NO restricts the fields to that line."""
+    want = field_name(field)
+    names = sorted(
+        {f.name for f in fields(text) if line_no is None or f.line == line_no}
+    )
+    if want in names:
+        return want
+    begun = [n for n in names if want and n.startswith(want)]
+    if len(begun) == 1:
+        return begun[0]
+    where = f" at line {line_no}" if line_no else ""
+    if begun:
+        raise ValueError(
+            f"{field!r}{where} begins {len(begun)} fields: "
+            + " · ".join(begun)
+            + " — name one in full"
+        )
+    near = difflib.get_close_matches(want, names, n=3, cutoff=0.6)
+    labels = sorted({lbl for _, lbl in placeholder_fields(text)})
+    raise ValueError(
+        f"no field labelled {field!r}{where}"
+        + (f" — did you mean {' · '.join(near)}?" if near else "")
+        + (
+            " Open placeholder fields: " + " · ".join(labels)
+            if labels
+            else " No placeholder fields left."
+        )
+    )
+
+
 def fill(
     text: str, field: str, value: str, line_no: int | None = None, force: bool = False
 ) -> str:
@@ -136,23 +173,12 @@ def fill(
     Raises ValueError with a human-readable reason (unknown label, ambiguous
     label, already filled without force) — the CLI prints it verbatim.
     """
-    want = field_name(field)
+    want = field_for(text, field, line_no)
     hits = [
         f
         for f in fields(text)
         if f.name == want and (line_no is None or f.line == line_no)
     ]
-    if not hits:
-        labels = sorted({lbl for _, lbl in placeholder_fields(text)})
-        raise ValueError(
-            f"no field labelled {field!r}"
-            + (f" at line {line_no}" if line_no else "")
-            + (
-                ". Open placeholder fields: " + " · ".join(labels)
-                if labels
-                else ". No placeholder fields left."
-            )
-        )
     if len(hits) > 1:
         where = ", ".join(str(f.line) for f in hits)
         raise ValueError(
@@ -1562,8 +1588,18 @@ def main(argv: list[str]) -> int:
         console.refuse("protocol-fill", str(exc))
         return 2
     files.write_atomic(args.protocol, new)
-    print("filled: " + ", ".join(label for label, _ in assignments))
+    print("filled: " + ", ".join(_as_filled(text, label) for label, _ in assignments))
     return 0
+
+
+def _as_filled(text: str, label: str) -> str:
+    """LABEL as the fill line tells it: with the field a prefix named
+    (`Terms → terms of this protocol`), else as typed."""
+    try:
+        meant = field_for(text, label)
+    except ValueError:
+        return label  # a head key or a promise's sentence: not a prose field
+    return label if meant == field_name(label) else f"{label} → {meant}"
 
 
 def cli() -> None:
