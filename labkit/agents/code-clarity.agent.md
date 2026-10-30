@@ -73,7 +73,7 @@ Each rule names where it was observed.
     English in tables and code — a threshold, a class or a branch named
     in one and not findable in the other; the constant's name, the
     class name or the branch's outcome appears verbatim in both. (Round 15,
-    c1 and the branch-1 strings.)
+    c1 and the B1 strings.)
 15. **A value that is prose where it could be data.** A tuple of ids with
     the reason in a docstring ("33 in Wien, 140 € > ARV 117"), a branch
     value written as the author's shorthand instead of one of the

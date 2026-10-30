@@ -236,7 +236,7 @@ class Skeleton:
     test: str
     probe: bool
     # the metrics.json key the measure script keeps [criterion-1]'s number under
-    # (its `C1_VALUE_KEY`); None for the compute skeleton, which has no
+    # (its `CRITERION_VALUE_KEY`); None for the compute skeleton, which has no
     # criterion. One home for the probes, which named it by hand and scored
     # three draws "absent" (2026-10-28); tests hold each template to it
     criterion_key: str | None = None

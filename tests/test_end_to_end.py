@@ -217,7 +217,7 @@ def assert_draws(
     test: unittest.TestCase, lab: "Lab", area: Path, run_id: str, key: str, other: str
 ) -> None:
     """`02_analyze.py --draws` on the kept run prints its criterion value
-    under the measure skeleton's key (`C1_VALUE_KEY`): the value metrics.json
+    under the measure skeleton's key (`CRITERION_VALUE_KEY`): the value metrics.json
     holds, never the other skeleton's key. The analysis skeleton is shared;
     it read the model's key for every skeleton and printed `criterion_1_accuracy
     None` for a fit (2026-10-22)."""

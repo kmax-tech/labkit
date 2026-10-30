@@ -495,7 +495,7 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
 
 #: the prose field that states each stamped promise — its id is written
 #: before the placeholder, because the cut placeholder loses the template's
-#: `[criterion-…]` hint and a cold agent then writes `criterion-1:`, which no check reads
+#: `[criterion-…]` hint and a cold agent then writes `C1:` (labkit 0.103.0), which no check reads
 PROMISE_FIELDS = {
     "Inference criterion": "criterion-1",
     "Quality check": "quality-check-1",

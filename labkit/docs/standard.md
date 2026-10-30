@@ -81,9 +81,9 @@ written with. The following applies:
 
 *Terms of this section, coined once (everyday word first):*
 
-- **Intent** — the intention before the run: question, success criterion,
-  quality checks (English field label: *quality check*) and
-  branches (LAB-004 Identifiers make the intent addressable).
+- **Intent** — the intention before the run: question, inference criterion,
+  quality checks and registered branches (LAB-004 Identifiers make the
+  intent addressable).
 - **Render check** — only look at finished prompts, zero model calls (`--show`).
 - **Instrument check** — ~10 real calls through the real pipeline (`--probe`).
 - **Area** — one experiment directory under `experiments/`: protocol, scripts,

@@ -55,7 +55,7 @@
   ("quality-check-… not met → noisy: no verdict, the parser is repaired first;
   criterion-… met → generalises: used on the next cohort; otherwise → misses:
   reported as a miss, no further analysis"); the run records the outcome's
-  name under its key; a stop rule may fire during the run or on an inadmissible one, so a branch is
+  name under its key; a stop rule may fire during the run or on a run whose quality check failed, so a branch is
   decided on its own condition, not on the verdict (→ LAB-013 Registered branch when the run can answer two questions, LAB-004 Identifiers make the intent addressable);
   "n/a — only one outcome" when you have no answer yet: a decision taken
   after the run goes to Next step, labelled as taken after the run>

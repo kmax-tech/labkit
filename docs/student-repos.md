@@ -69,7 +69,9 @@ would be a new registration.
 ## The example experiment
 
 `experiments/example-stance/` in the starter carries the TOML head and
-C/A/B ids; its script reports `c1_pass` and `a1_pass`. Its two runs from
+C/A/B ids; its script reports `c1_pass` and `a1_pass` — labkit after
+0.103.0 refuses those ids, so the example is read with its 0.103.0 pin
+or registered anew with `criterion-1` / `quality-check-1`. Its two runs from
 2026-08-25 were recorded before runs carried their protocol and a completion
 record: labkit lists them as `unreadable` with the reason and never picks
 them (read them with labkit 0.47). A student's first `run_experiment.py`

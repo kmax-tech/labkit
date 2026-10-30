@@ -418,7 +418,7 @@ class ApplySkeleton(unittest.TestCase):
             with self.subTest(sk=sk.instrument):
                 measure = next(t for t, dest in sk.scripts if dest == "01_measure.py")
                 key = standard_contract.criterion_key(sk)
-                self.assertIn(f'C1_VALUE_KEY = "{key}"', template(measure))
+                self.assertIn(f'CRITERION_VALUE_KEY = "{key}"', template(measure))
         with self.assertRaises(ValueError):
             standard_contract.criterion_key(standard_contract.COMPUTE)
 

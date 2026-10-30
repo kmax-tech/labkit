@@ -368,7 +368,7 @@ derives from the detail below and carries no fact that isn't there.
   consequence — an interpretation, an action or a non-action with its
   reason — is owed and holds no `;`. A protocol whose branch is not in this
   form is refused. A branch is decided on its own condition, not on the
-  verdict: a stop rule fires during the run or on an inadmissible one too.
+  verdict: a stop rule fires during the run or on a run whose quality check failed too.
   The name the run records under `branch_1_outcome` is one of the
   registered outcomes — `intent-check` and `finalize` block any other — so
   a reader of metrics.json finds the outcome, and what it permits, in the

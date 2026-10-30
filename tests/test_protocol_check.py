@@ -1135,11 +1135,13 @@ class TestTerms(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("MISSING (must): Terms of this protocol", out)
 
-    def test_only_the_admissibility_label_satisfies_the_field(self):
-        """The field is "Quality check" (TODO 7); its earlier labels
-        "Stop rule", "Kill", "Abbruch" no longer pass (TODO 8)."""
+    def test_only_the_quality_check_label_satisfies_the_field(self):
+        """The field is "Quality check"; its earlier labels "Admissibility
+        condition" (labkit 0.103.0), "Stop rule", "Kill", "Abbruch" no
+        longer pass (TODO 8)."""
         adm = "- **Quality check:** [quality-check-1] yield >= 90%\n"
         for wording in (
+            "- **Admissibility condition:** [quality-check-1] yield >= 90%\n",
             "- **Stop rule:** LR stays at 1.\n",
             "- **Kill:** LR stays at 1.\n",
             "- **Abbruchkriterium:** LR bleibt bei 1.\n",

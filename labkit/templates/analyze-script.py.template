@@ -35,12 +35,12 @@ _spec.loader.exec_module(measure)
 def draws() -> list[str]:
     """The kept run and its repeats (`01_measure.py --repeat-of`): every draw
     held like the kept number (`recheck.verified`: its file pinned, scopes
-    and block unchanged, its metrics recomputed from its rows), then c1 per
+    and block unchanged, its metrics recomputed from its rows), then criterion-1 per
     draw, its range, and the items whose parsed answer differs. The answer
     stays draw 1; this is the spread around it (LAB-036 Validate)."""
     primary = recheck.run_dir(AREA, NOTE)
     seen: dict[str, dict[int, object]] = {}
-    key = measure.C1_VALUE_KEY
+    key = measure.CRITERION_VALUE_KEY
     lines, accs = [], []
     for n, d in answering_run.draws(AREA, primary.name):
         rows = [o.path for o in runs.read_outputs(d) or [] if o.path.suffix == ".jsonl"]
@@ -67,7 +67,7 @@ def main() -> None:
     ap.add_argument("--check", action="store_true",
                     help="pin OUT to the answering run, recompute, hold NOTE to it")
     ap.add_argument("--draws", action="store_true",
-                    help="the kept run and its repeats: c1 per draw, range, flipped items")
+                    help="the kept run and its repeats: criterion-1 per draw, range, flipped items")
     args = ap.parse_args()
     if args.draws:
         print("\n".join(draws()))

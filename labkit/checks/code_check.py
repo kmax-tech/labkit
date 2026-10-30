@@ -64,7 +64,7 @@ Protocol placeholders are neither checked nor extracted here: `protocol-check`
 owns the template contract, and the bundle carries the protocol whole.
 
 Where each lives: 1 and 1a here (`promise_block_findings`,
-`admissibility_reads`, `constant_copies`); 1b and 1c in `prompt_check`; 1d
+`quality_check_reads`, `constant_copies`); 1b and 1c in `prompt_check`; 1d
 in `import_check`; the facts 2 and 3 from `code_scan` and
 `gate_label_scan`. This module runs them all (`code_findings`, which
 preflight's code station reads too) and writes the bundle.
@@ -233,7 +233,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
         return []
     out: list[GateFinding] = []
     keys = code_keys(area)
-    out += admissibility_reads(area, protocol, block, keys)
+    out += quality_check_reads(area, protocol, block, keys)
     for p in block.promises:
         try:
             promises.declared_scope_sha(area, p.scope)
@@ -291,7 +291,7 @@ def _loop_keys(
 ) -> list[str]:
     """The string literals the loop variable NAME runs over, for the nearest
     enclosing `for` or comprehension that binds it: an inline tuple, list or
-    set, or a name this file binds to one (`ADMISSIBILITY = ("quality_check_1_pass", …)`)."""
+    set, or a name this file binds to one (`QUALITY_CHECKS = ("quality_check_1_pass", …)`)."""
     here = parents.get(id(node))
     while here is not None:
         loops = (
@@ -359,7 +359,7 @@ def _key_reads(path: Path) -> set[str]:
     return reads
 
 
-def admissibility_reads(
+def quality_check_reads(
     area: Path, protocol: Path, block: "promises.PromiseTables", keys: dict
 ) -> list[GateFinding]:
     """Every quality-check key the code writes must also be read (static evidence).

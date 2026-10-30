@@ -145,7 +145,7 @@ class MeasureConfig:
 # `--model` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
 #: the metrics key of the criterion's value — 02_analyze.py reads this name
-C1_VALUE_KEY = "criterion_1_accuracy"
+CRITERION_VALUE_KEY = "criterion_1_accuracy"
 
 
 def parse_answer(text: str) -> str | None:
@@ -220,9 +220,9 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
                      "quality_check_2_pass": _within_chance(null, cfg.null_band_items)}
     admissible = metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]
     if not admissible:
-        metrics.update({C1_VALUE_KEY: reg_acc, "criterion_1_threshold": None, "criterion_1_pass": None})
+        metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
-    metrics.update({C1_VALUE_KEY: reg_acc, "criterion_1_threshold": null_acc + cfg.margin,
+    metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": null_acc + cfg.margin,
                     "criterion_1_pass": _at_least(reg, null, cfg.margin)})
     return metrics
 

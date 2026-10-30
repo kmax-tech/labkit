@@ -496,7 +496,7 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     metrics.json as `"criterion_1_pass"` however it is assembled, and a literal is
     what every assembly path has in common.
 
-    `suffixed_only` keeps `"quality_check_1_pass"` and drops a bare `"quality-check-65"`. A bare id in
+    `suffixed_only` keeps `"quality_check_1_pass"` and drops a bare `"quality_check_65"`. A bare id in
     the namespace is ambiguous — area 72 named its source sessions `"s65"`,
     `"s68"`, `"s69"` after the areas they came from, and reading those as
     unregistered promises produced three findings and no defect (2026-09-10).
@@ -506,7 +506,7 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     Keyword arguments count too: `r.metrics(criterion_1_pass=acc >= MIN)` reaches
     metrics.json as `"criterion_1_pass"` without ever being a string literal, and
     reading literals only reported a correct script as "no script mentions
-    'criterion-1'" — a blocker against correct code (2026-10-06, found in the first
+    'c1'" — a blocker against correct code (2026-10-06, found in the first
     promise-block run). Only
     keyword names in CALLS count, not assignments: a local `criterion_1_pass = …`
     is not yet a reported key. An area file that does not parse keeps its

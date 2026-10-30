@@ -262,7 +262,7 @@ class MeasureConfig:
 # `--seed` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
 #: the metrics key of the criterion's value — 02_analyze.py reads this name
-C1_VALUE_KEY = "criterion_1_score"
+CRITERION_VALUE_KEY = "criterion_1_score"
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -721,10 +721,10 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if cfg.score != "r2":
         metrics["scored_class_counts"] = scored_class_counts(reg)
     if not (metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]):
-        metrics.update({C1_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
+        metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
     bar = base + Fraction(str(cfg.margin))
-    metrics.update({C1_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
+    metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
                     "criterion_1_pass": reg_score >= bar})
     return metrics
 

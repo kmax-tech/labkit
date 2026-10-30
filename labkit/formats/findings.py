@@ -479,7 +479,10 @@ def effect_ids(effect: str) -> tuple[str, ...]:
     m = _EFFECT_NOT.match(effect.strip())
     ids = tuple(i.strip() for i in m.group(1).split(",")) if m else ()
     if not ids or not all(promises.is_block_id(i) for i in ids):
-        raise ValueError(f"effect {effect!r} — {EFFECT_FORM}")
+        # an id in the letters of 0.103.0 names the version that reads it
+        earlier = any(promises.EARLIER_ID.match(f"[{i}]") for i in ids)
+        help_ = f"; {promises.EARLIER_IDS_HELP}" if earlier else ""
+        raise ValueError(f"effect {effect!r} — {EFFECT_FORM}{help_}")
     return ids
 
 

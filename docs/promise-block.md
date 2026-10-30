@@ -64,8 +64,8 @@ needs: that threshold is a criterion, and filed as a quality check it
 would turn a clean negative result into "no verdict". A failed quality
 check withholds the verdict, not the data: descriptive readings may
 follow, labelled as such. A branch is decided on its own
-condition, not on the verdict: a stop rule fires during the run or on an
-inadmissible one too (`verdict()` sets the criterion keys to None, never
+condition, not on the verdict: a stop rule fires during the run or on a
+run whose quality check failed too (`verdict()` sets the criterion keys to None, never
 the branch's). "n/a — only one outcome" is the honest
 branch when the answer to "and if [criterion-…] fails?" is not
 known before the run — then no `[branch-…]` id is written; a
