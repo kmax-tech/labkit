@@ -2439,6 +2439,31 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
 - **Allgemeine Regelbeispiele / `lib scar`:** Erst wenn fremdes Labor eigene
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
+## Evaluation für das Paper — Reihenfolge (2026-10-30 abends)
+
+Belegt und berichtbar: der Druckvergleich (Haiku, fünf Tasks, 30
+Versuche: Kontrolle 3 stille Überansprüche von 15, Labor keiner
+unqualifiziert), der Injektionsbenchmark (7 von 9 gehalten, 2 geschlossen,
+Wiederholung offen), die Vollendung als Einschränkung (3 von 15 gebundene
+Zahlen, 7 ohne bewertbare Antwort, Fit-Skelett zu teuer). Die offenen
+Modelle (gpt-oss-20b, Qwen3-30B-A3B) sind ein Absatz: Harness übertragbar,
+Agenten dieser Stärke erreichen den Punkt nicht, an dem labkit wirkt, und
+erklären Erfolg gegen selbstgesetzte Kriterien. Die Aussage, die das Paper
+trägt, kommt aus dem Vorher-Nachher auf der Vollendung:
+
+1. Agentenoberfläche abschließen (andere Sitzung; Plan-Note oben).
+2. Injektion auf den neuen Gates wiederholen (sieben saubere Zustände).
+3. Vorher-Nachher-Runde: 21 und 60, zwei Arme, drei Versuche je Zelle,
+   alte gegen neue Oberfläche, Haiku, gleicher Vertrag wie Runde 1; Maß:
+   gebundene Zahlen je Versuch, Eintritt, geschlossene Befunde, Zeit bis
+   zur Adoption, Überanspruch unverändert null. Agenten über API-Schlüssel,
+   vier Container parallel, ein halber Tag.
+4. Sonnet einmal auf den fünf Tasks im Laborarm (obere Achse).
+5. Qwen-Stufe C auswerten (zwei Richter) und als Absatz abschließen.
+
+Reported preliminary study = 3 und 4; was heute vorliegt, ist die
+Pilotphase, die sagt, wo es klemmt.
+
 ## Agentenoberfläche vereinfachen (Plan, 2026-10-30)
 
 Note `docs/notes/2026-10-30-agent-surface.md`: sechs Begriffe statt
