@@ -124,6 +124,17 @@ the surface does.
    in one release with the decision statuses, built as separate commits.
    Before the format changes, a reading probe tries the words in real
    messages (old against new, the next command as the measure).
+
+   Reading probe (2026-10-30, internal record; three Haiku readers per
+   arm, two moments: an audit's decision list and a run's verdicts): no
+   question separated HEAD's wording (letters with field names) from the
+   decided words — both arms found the same next actions, and both missed
+   alike where one was missed. The format break buys no measured gain in
+   finding the next action; it rests on the naming pass. The probe found
+   two faults outside the words, fixed in `--findings`: the review clause
+   of `stands` read as covering the not-assessable route (4 of 6), and
+   readers named every criterion where labkit derives it from the unjudged
+   condition (5 of 6).
 4. **Adoption as one step: `labkit adopt <area> <run>`.** Runs finalize, the
    fill from the run, the result block into the report and report-check in
    one command with one summary; the three commands stay for a person.
