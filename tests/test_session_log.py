@@ -12,7 +12,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from labkit.gates import claude_hooks
+from labkit.gates import agent_hooks
 
 
 class SessionLog(unittest.TestCase):
@@ -39,11 +39,11 @@ class SessionLog(unittest.TestCase):
     def test_runs_since_the_previous_stop_only(self):
         self.run_dir("09-59-00")  # before the session
         self.run_dir("10-05-00")
-        first = claude_hooks.record_session(
+        first = agent_hooks.record_session(
             self.repo, self.event, now=datetime(2026, 10, 7, 10, 10)
         )
         self.run_dir("10-20-00")
-        second = claude_hooks.record_session(
+        second = agent_hooks.record_session(
             self.repo, self.event, now=datetime(2026, 10, 7, 10, 30)
         )
         assert first is not None and second is not None
@@ -53,13 +53,13 @@ class SessionLog(unittest.TestCase):
         self.assertEqual(
             second["runs"], ["experiments/01-x/runs/2026-10-07T10-20-00_ab12"]
         )
-        log = claude_hooks.session_log(self.repo)
+        log = agent_hooks.session_log(self.repo)
         assert log is not None
         self.assertEqual(log.parent.name, ".git")  # local, never committed
 
     def test_a_run_finds_its_session(self):
         self.run_dir("10-05-00")
-        claude_hooks.record_session(
+        agent_hooks.record_session(
             self.repo, self.event, now=datetime(2026, 10, 7, 10, 10)
         )
         old = os.environ.get("CLAUDE_PROJECT_DIR")
@@ -67,9 +67,9 @@ class SessionLog(unittest.TestCase):
         try:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                rc = claude_hooks.sessions(["--run", "2026-10-07T10-05-00_ab12"])
+                rc = agent_hooks.sessions(["--run", "2026-10-07T10-05-00_ab12"])
             with contextlib.redirect_stdout(io.StringIO()):
-                miss = claude_hooks.sessions(["--run", "2026-10-07T11-00-00_ffff"])
+                miss = agent_hooks.sessions(["--run", "2026-10-07T11-00-00_ffff"])
         finally:
             if old is None:
                 os.environ.pop("CLAUDE_PROJECT_DIR", None)
@@ -80,7 +80,7 @@ class SessionLog(unittest.TestCase):
         self.assertEqual(miss, 1)
 
     def test_no_session_id_writes_nothing(self):
-        self.assertIsNone(claude_hooks.record_session(self.repo, {}))
+        self.assertIsNone(agent_hooks.record_session(self.repo, {}))
 
 
 if __name__ == "__main__":

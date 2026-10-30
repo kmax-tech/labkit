@@ -558,7 +558,7 @@ def check_hooks(findings: Findings, git_repo: Path) -> None:
     else:
         findings.note(
             "  installed (this labkit's pre-commit and pre-merge-commit, "
-            "core.hooksPath, claude-hook)"
+            "core.hooksPath, Claude/Codex live hooks)"
         )
 
 

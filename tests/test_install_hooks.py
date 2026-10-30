@@ -17,6 +17,88 @@ def git_repo() -> Path:
 
 
 class Install(unittest.TestCase):
+    def test_codex_direct_check_commands_belong_to_the_user(self):
+        repo = git_repo()
+        path = repo / ".codex/hooks.json"
+        path.parent.mkdir()
+        foreign = {
+            "hooks": {
+                "PostToolUse": [
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "protocol-check PROTOCOL-x.md",
+                            },
+                            {"type": "command", "command": "notes-check notes/"},
+                        ]
+                    }
+                ]
+            }
+        }
+        path.write_text(json.dumps(foreign))
+        install_hooks.install(repo)
+        current = json.loads(path.read_text())
+        self.assertIn(
+            foreign["hooks"]["PostToolUse"][0], current["hooks"]["PostToolUse"]
+        )
+        self.assertEqual(install_hooks.check(repo), [])
+
+    def test_codex_hooks_are_checked_and_foreign_entries_survive_reinstall(self):
+        repo = git_repo()
+        path = repo / ".codex/hooks.json"
+        path.parent.mkdir()
+        foreign = {
+            "description": "local checks",
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Bash",
+                        "hooks": [{"type": "command", "command": "local-check"}],
+                    }
+                ]
+            },
+        }
+        path.write_text(json.dumps(foreign))
+        install_hooks.install(repo)
+        current = json.loads(path.read_text())
+        self.assertEqual(current["description"], "local checks")
+        self.assertIn(foreign["hooks"]["PreToolUse"][0], current["hooks"]["PreToolUse"])
+        hook = current["hooks"]["Stop"][0]["hooks"][0]
+        self.assertIn(str(repo / ".venv/bin/codex-hook"), hook["command"])
+        hook["timeout"] = 1
+        path.write_text(json.dumps(current))
+        self.assertTrue(
+            any(".codex/hooks.json" in gap for gap in install_hooks.check(repo))
+        )
+        install_hooks.install(repo)
+        self.assertEqual(install_hooks.check(repo), [])
+        self.assertEqual(
+            install_hooks.install(repo), ["git core.hooksPath = .githooks"]
+        )
+        path.unlink()
+        self.assertTrue(
+            any(".codex/hooks.json" in gap for gap in install_hooks.check(repo))
+        )
+
+    def test_invalid_codex_config_refuses_before_any_hook_is_written(self):
+        for invalid in (
+            [],
+            {"hooks": []},
+            {"hooks": {"Stop": {}}},
+            {"hooks": {"Stop": [{"hooks": [None]}]}},
+        ):
+            with self.subTest(invalid=invalid):
+                repo = git_repo()
+                path = repo / ".codex/hooks.json"
+                path.parent.mkdir()
+                original = json.dumps(invalid)
+                path.write_text(original)
+                with self.assertRaisesRegex(SystemExit, "hooks.json"):
+                    install_hooks.install(repo)
+                self.assertEqual(path.read_text(), original)
+                self.assertFalse((repo / ".githooks").exists())
+
     def test_install_then_check_is_clean_and_idempotent(self):
         repo = git_repo()
         self.assertTrue(install_hooks.check(repo))  # nothing installed yet

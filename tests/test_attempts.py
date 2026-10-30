@@ -395,7 +395,7 @@ class EvidenceCopy(unittest.TestCase):
         self.assertEqual(kept[record.name].read_bytes(), record.read_bytes())
 
     def test_a_record_deleted_before_it_was_staged_holds_the_commit(self):
-        from labkit.gates import claude_hooks
+        from labkit.gates import agent_hooks
 
         area = area_in_repo()
         root = area.parent.parent
@@ -405,7 +405,7 @@ class EvidenceCopy(unittest.TestCase):
         notes = area / "notes.md"
         notes.write_text("a later change\n", encoding="utf-8")
         git(root, "add", str(notes.relative_to(root)))
-        line = "\n".join(claude_hooks.undecided_blockers(root, [notes], staged=True))
+        line = "\n".join(agent_hooks.undecided_blockers(root, [notes], staged=True))
         self.assertIn(
             f"audits/{record.name}, and the file is in neither the tree nor the index",
             line,
@@ -414,9 +414,7 @@ class EvidenceCopy(unittest.TestCase):
         self.assertEqual(record.read_bytes(), written)
         # the twin: the evidence staged with the change, the commit passes
         git(root, "add", str((area / "audits").relative_to(root)))
-        self.assertEqual(
-            claude_hooks.undecided_blockers(root, [notes], staged=True), []
-        )
+        self.assertEqual(agent_hooks.undecided_blockers(root, [notes], staged=True), [])
 
     def test_an_area_deleted_whole_holds_the_commit_and_the_stop(self):
         """`rm -rf <area>` took the protocol with the records, so no area
@@ -426,7 +424,7 @@ class EvidenceCopy(unittest.TestCase):
         commit and the stop hold its lost record and cut journal. Twins: a
         change in another area brings it in no more than before, and the
         area restored from HEAD passes."""
-        from labkit.gates import claude_hooks
+        from labkit.gates import agent_hooks
 
         area = area_in_repo()
         root = area.parent.parent
@@ -449,8 +447,8 @@ class EvidenceCopy(unittest.TestCase):
         ]  # fmt: skip
         self.assertIn(area / "audits" / record.name, staged)
         for held in (
-            claude_hooks.undecided_blockers(root, staged, staged=True),
-            claude_hooks.undecided_blockers(root, staged),
+            agent_hooks.undecided_blockers(root, staged, staged=True),
+            agent_hooks.undecided_blockers(root, staged),
         ):
             line = "\n".join(held)
             self.assertIn(
@@ -461,10 +459,10 @@ class EvidenceCopy(unittest.TestCase):
             )
         # the twin: a change elsewhere alone names the copied area nowhere
         self.assertEqual(
-            claude_hooks.undecided_blockers(root, [other / "notes.md"], staged=True), []
+            agent_hooks.undecided_blockers(root, [other / "notes.md"], staged=True), []
         )
         git(root, "checkout", "HEAD", "--", "experiments/01-x")
-        self.assertEqual(claude_hooks.undecided_blockers(root, staged, staged=True), [])
+        self.assertEqual(agent_hooks.undecided_blockers(root, staged, staged=True), [])
 
     def test_copied_areas_are_none_on_a_detached_head(self):
         area = area_in_repo()
@@ -503,7 +501,7 @@ class EvidenceCopy(unittest.TestCase):
 
 class Hook(unittest.TestCase):
     def test_the_stop_and_the_commit_name_a_record_gone_and_release_its_repair(self):
-        from labkit.gates import claude_hooks
+        from labkit.gates import agent_hooks
 
         area = area_in_repo()
         root = area.parent.parent
@@ -515,24 +513,24 @@ class Hook(unittest.TestCase):
         running.end("failed", file=failed.name)  # as labkit-audit journals it
         git(root, "add", "-A")
         git(root, "commit", "-qm", "failed attempt")
-        self.assertEqual(claude_hooks.undecided_blockers(root, [failed]), [])
+        self.assertEqual(agent_hooks.undecided_blockers(root, [failed]), [])
         failed.unlink()
-        line = "\n".join(claude_hooks.undecided_blockers(root, [failed]))
+        line = "\n".join(agent_hooks.undecided_blockers(root, [failed]))
         self.assertIn(f"audits/{failed.name} is committed and gone from the tree", line)
         # the commit: deleted on disk only, the index still carries it — fine;
         # removed from the index while it stays on disk — gone from the commit
         git(root, "checkout", "HEAD", "--", str(failed.relative_to(root)))
         self.assertEqual(
-            claude_hooks.undecided_blockers(root, [failed], staged=True), []
+            agent_hooks.undecided_blockers(root, [failed], staged=True), []
         )
         git(root, "rm", "-q", "--cached", str(failed.relative_to(root)))
         self.assertTrue(failed.is_file())
-        line = "\n".join(claude_hooks.undecided_blockers(root, [failed], staged=True))
+        line = "\n".join(agent_hooks.undecided_blockers(root, [failed], staged=True))
         self.assertIn("is committed and gone from the index", line)
         out = io.StringIO()
         # the pre-commit's paths are read at the repo git runs it in
         with contextlib.redirect_stdout(out), contextlib.chdir(root):
-            rc = claude_hooks.undecided([str(failed.relative_to(root))])
+            rc = agent_hooks.undecided([str(failed.relative_to(root))])
         self.assertEqual(rc, 1)
         self.assertIn("evidence is gone, changed or does not read", out.getvalue())
         # the deletion committed past the pre-commit: HEAD's journal names a
@@ -540,14 +538,14 @@ class Hook(unittest.TestCase):
         # the repair commit, and after it the stop is clean again
         git(root, "commit", "-qm", "drop the record", "--no-verify")
         self.assertTrue(failed.is_file())
-        line = "\n".join(claude_hooks.undecided_blockers(root, [failed]))
+        line = "\n".join(agent_hooks.undecided_blockers(root, [failed]))
         self.assertIn("HEAD's journal names it while HEAD lacks the file", line)
         git(root, "add", str(failed.relative_to(root)))
         self.assertEqual(
-            claude_hooks.undecided_blockers(root, [failed], staged=True), []
+            agent_hooks.undecided_blockers(root, [failed], staged=True), []
         )
         git(root, "commit", "-qm", "restore the record")
-        self.assertEqual(claude_hooks.undecided_blockers(root, [failed]), [])
+        self.assertEqual(agent_hooks.undecided_blockers(root, [failed]), [])
 
 
 class OneBlock(unittest.TestCase):

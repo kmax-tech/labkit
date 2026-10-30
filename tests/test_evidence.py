@@ -26,9 +26,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import evidence, findings  # noqa: E402
-from labkit.gates import audit, claude_hooks  # noqa: E402
+from labkit.gates import audit, agent_hooks  # noqa: E402
 from protocol_fixture import head, registration_of  # noqa: E402
-from test_claude_hooks import _dated, _git, _run, _transcript  # noqa: E402
+from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
 
 WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
 CLOSED = "2026-10-28T10-00-00_ab12"
@@ -196,11 +196,11 @@ class Committed(unittest.TestCase):
         self.record.write_text(text.replace("seed", "SEED"), encoding="utf-8")
         _git(self.root, "add", "-A")
         with mock.patch.object(
-            claude_hooks.handovers,
+            agent_hooks.handovers,
             "acknowledgement",
-            return_value=claude_hooks.handovers.Acknowledgement(True, {}),
+            return_value=agent_hooks.handovers.Acknowledgement(True, {}),
         ):
-            state = claude_hooks.undecided_state(self.root, [self.record], staged=True)
+            state = agent_hooks.undecided_state(self.root, [self.record], staged=True)
         (line,) = state.blockers
         self.assertTrue(line.startswith("experiments/01-x: audits/"))
         self.assertIn("in the index since HEAD", line)
@@ -244,10 +244,10 @@ class Session(unittest.TestCase):
             "stop_hook_active": False,
             "transcript_path": str(self.transcript),
         }
-        claude_hooks.keep_stop_base(self.root, self.event)  # the first Bash command
+        agent_hooks.keep_stop_base(self.root, self.event)  # the first Bash command
 
     def _stop(self) -> tuple[int, str]:
-        rc, _, err = _run(claude_hooks.stop, self.event)
+        rc, _, err = _run(agent_hooks.stop, self.event)
         return rc, err
 
     def _commit(self, message: str, *args: str) -> None:
@@ -329,7 +329,7 @@ class Told(unittest.TestCase):
         }
 
     def _told(self) -> str:
-        rc, out, _ = _run(claude_hooks.post_change, self.event)
+        rc, out, _ = _run(agent_hooks.post_change, self.event)
         self.assertEqual(rc, 0)  # it tells, never holds
         if not out:
             return ""
@@ -369,7 +369,7 @@ class Told(unittest.TestCase):
 
 
 def _head(root: Path) -> str:
-    return claude_hooks.head_sha(root)
+    return agent_hooks.head_sha(root)
 
 
 if __name__ == "__main__":

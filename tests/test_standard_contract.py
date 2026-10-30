@@ -142,7 +142,7 @@ class Skeletons(unittest.TestCase):
         must be put in one of the two lists here."""
         import re
 
-        from labkit.gates import claude_hooks
+        from labkit.gates import agent_hooks
         from labkit.run import lanes
 
         run_flags = {"--seed", "--repeat-of", "--model"}  # each starts a run
@@ -150,7 +150,7 @@ class Skeletons(unittest.TestCase):
         sources = [Path(lanes.__file__)] + [
             p
             for p in sorted(scaffold.TEMPLATES.glob("*.py.template"))
-            if claude_hooks.OPENS_RUN.search(p.read_text(encoding="utf-8"))
+            if agent_hooks.OPENS_RUN.search(p.read_text(encoding="utf-8"))
         ]
         seen: set[str] = set()
         for path in sources:

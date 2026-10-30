@@ -29,7 +29,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.gates import audit, claude_hooks, finalize, preflight, report_check
+from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import (
     answering_run,
@@ -196,7 +196,7 @@ class Lab:
             contextlib.redirect_stderr(err),
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            rc = claude_hooks.stop(
+            rc = agent_hooks.stop(
                 {
                     "cwd": str(self.root),
                     "session_id": "e2e",

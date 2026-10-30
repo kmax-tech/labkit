@@ -101,7 +101,7 @@ def review_hint(text: str, report: Path, repo: Path) -> str | None:
     it discusses no run: per protocol a discussion block names whose area
     holds the discussed run (`runs/<id>/`), the command to run
     (`repo.audit_command`, `--protocol` where the area holds several),
-    paths as `shown` from REPO. The hint the post-change hook gives (`claude_hooks.post_change`);
+    paths as `shown` from REPO. The hint the post-change hook gives (`agent_hooks.post_change`);
     it runs nothing — a model call is the agent's to start; report-check
     holds the report until the review is done (`report_hold.report_review_owed`).
     A discussed run no area holds names no command (report-check holds it

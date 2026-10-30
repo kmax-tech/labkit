@@ -2452,6 +2452,18 @@ werden danach untersucht.
 
 ## Rollout und Aufgaben außerhalb dieses Repos
 
+- **labkit-Hooks für Codex CLI (Auftrag 2026-10-30):** In diesem Repo
+  umgesetzt: `.codex/hooks.json`, `codex-hook` und gemeinsam
+  genutzte Prüfungen für `PreToolUse`, `PostToolUse` und `Stop`. Vertrag und
+  Abnahme: [Codex-Hooks](docs/codex-hooks.md). Die Installation erteilt kein
+  Vertrauen; Projekt und Hooks werden in Codex über `/hooks` geprüft.
+  Echtprobe mit Codex 0.165.0: Laufstart-Verweigerung, Patch-Kontext,
+  Stop-Fortsetzung und korrekter Gegenfall geprüft. Offene Harness-Grenze:
+  Codex lässt `exec_command.workdir` im Hook-Ereignis weg; relative
+  Skriptpfade brauchen deshalb explizites `cd` oder einen Pfad vom
+  Sitzungs-Root. Übernahme in Pilot-Images und andere Repos bleibt
+  externer Rollout.
+
 labkit-paper (Pin 0.85.0): die Nummernvergabe über alle Branches und der
 `pre-merge-commit` kommen erst mit gehobenem Pin und `labkit-hooks
 install`. Bis dahin vergibt `lib exp` in `~/projects/labkit-paper`

@@ -16,7 +16,7 @@ import test_counter_cases as cases
 import test_end_to_end as e2e
 from labkit.formats import attempts, findings, handovers, protocol_block
 from labkit.checks import report_blocks
-from labkit.gates import audit, claude_hooks, report_check
+from labkit.gates import audit, agent_hooks, report_check
 from labkit.tools import protocol_fill
 
 #: a simulated analysis answer holding one BLOCKER
@@ -74,7 +74,7 @@ class HandoverRecovery(cases._Chain):
         rc, out = self.lab.pre_commit(self.report, self.protocol)
         self.assertEqual(rc, 0, out)
         self.assertEqual(
-            claude_hooks.undecided_blockers(
+            agent_hooks.undecided_blockers(
                 self.lab.root,
                 [self.protocol],
                 staged=True,
@@ -285,7 +285,7 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(rc, 0, out)
         self.assertIn("a handover acknowledges this loss", out)
         self.assertIn(record.path.name, out)
-        state = claude_hooks.undecided_state(self.lab.root, [self.protocol])
+        state = agent_hooks.undecided_state(self.lab.root, [self.protocol])
         self.assertEqual(state.blockers, [])
         self.assertEqual(len(state.acknowledged), 1)
 
@@ -337,7 +337,7 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(self.lab.stop_hook()[0], 2)
         self.lab.git("add", "-A")
         self.assertTrue(
-            claude_hooks.undecided_blockers(self.lab.root, [self.protocol], staged=True)
+            agent_hooks.undecided_blockers(self.lab.root, [self.protocol], staged=True)
         )
         # Restoration is distinct from acknowledgement and actually repairs loss.
         record.path.write_bytes(original)
@@ -379,7 +379,7 @@ class HandoverRecovery(cases._Chain):
         self.lab.git("add", "-A")
         self.assertFalse(handovers.valid(self.area, staged=True))
         self.assertTrue(
-            claude_hooks.undecided_blockers(self.lab.root, [self.protocol], staged=True)
+            agent_hooks.undecided_blockers(self.lab.root, [self.protocol], staged=True)
         )
 
     def test_binary_journal_is_preserved_and_only_terminal_handover_passes(self):
@@ -522,7 +522,7 @@ class HandoverRecovery(cases._Chain):
         self.assertTrue(findings.record_status(self.area, staged=True).errors)
         self.assertFalse(handovers.valid(self.area, staged=True))
         self.assertTrue(
-            claude_hooks.undecided_blockers(
+            agent_hooks.undecided_blockers(
                 self.lab.root,
                 [self.protocol],
                 staged=True,
@@ -537,7 +537,7 @@ class HandoverRecovery(cases._Chain):
         self.lab.git("add", "-A")
         for staged in (False, True):
             with self.subTest(staged=staged):
-                lines = claude_hooks.undecided_blockers(
+                lines = agent_hooks.undecided_blockers(
                     self.lab.root, [self.protocol], staged=staged
                 )
                 self.assertTrue(any(broken.name in line for line in lines), lines)
@@ -566,7 +566,7 @@ class HandoverRecovery(cases._Chain):
         link.parent.mkdir(parents=True)
         link.symlink_to(self.protocol)
         self.lab.git("add", "-A")
-        lines = claude_hooks.undecided_blockers(
+        lines = agent_hooks.undecided_blockers(
             self.lab.root, [self.protocol], staged=True
         )
         self.assertTrue(any("regular, merged index file" in ln for ln in lines), lines)

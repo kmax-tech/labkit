@@ -22,10 +22,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.gates import claude_hooks  # noqa: E402
+from labkit.gates import agent_hooks, claude_hooks  # noqa: E402
 from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import registration_of, head  # noqa: E402
-from test_claude_hooks import _dated, _git, _run, _transcript  # noqa: E402
+from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
 
 BLOCKER = ("BLOCKER", "BLOCKER · scripts/01_measure.py:3 · the target leaks")
 WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
@@ -74,7 +74,7 @@ class Undecided(unittest.TestCase):
         if not hasattr(self, "transcript"):
             self.transcript = _transcript()
         return _run(
-            claude_hooks.stop,
+            agent_hooks.stop,
             {
                 "session_id": "s1",
                 "cwd": str(self.root),
@@ -248,7 +248,7 @@ class Undecided(unittest.TestCase):
         bad.write_text("no = [toml\n", encoding="utf-8")
         _git(self.root, "add", "-A")
         bad.unlink()  # the tree lost it, the commit carries it
-        lines = claude_hooks.undecided_blockers(
+        lines = agent_hooks.undecided_blockers(
             self.root, [self.area / "scripts" / "01_measure.py"], staged=True
         )
         self.assertTrue(
@@ -273,13 +273,13 @@ class Undecided(unittest.TestCase):
         }
         self._touch(self.area)
         _git(self.root, "commit", "-qam", "the session's work", "--no-verify")
-        rc, _, err = _run(claude_hooks.stop, event)
+        rc, _, err = _run(agent_hooks.stop, event)
         self.assertEqual(rc, 0, err)
         self.assertIn("the session has no stop base", err)
         self.assertNotIn("the target leaks", err)
         self._touch(self.other)
         _git(self.root, "commit", "-qam", "into the old area", "--no-verify")
-        rc, _, err = _run(claude_hooks.stop, event)
+        rc, _, err = _run(agent_hooks.stop, event)
         self.assertEqual(rc, 2, err)
         self.assertIn("experiments/02-y", err)
         self.assertIn("the target leaks", err)
@@ -300,7 +300,7 @@ class Undecided(unittest.TestCase):
             "transcript_path": str(_transcript()),
         }
         try:
-            rc, _, err = _run(claude_hooks.stop, event)
+            rc, _, err = _run(agent_hooks.stop, event)
             self.assertEqual(rc, 2, err)
             self.assertIn(f"experiments/01-x: {path.name}", err)
             _git(self.root, "add", "-A")
@@ -321,7 +321,7 @@ class Undecided(unittest.TestCase):
                 _git(self.root, "add", "-A")
                 _git(self.root, "commit", "-qm", "audit")
             self._touch(self.other)
-            rc, _, err = _run(claude_hooks.stop, event)
+            rc, _, err = _run(agent_hooks.stop, event)
             self.assertEqual(rc, 0, err)
         finally:
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
@@ -333,13 +333,13 @@ class Undecided(unittest.TestCase):
         if repo.git_root(d) is not None:
             self.skipTest(f"the temp directory {d} lies inside a git repository")
         rc, _, err = _run(
-            claude_hooks.stop,
+            agent_hooks.stop,
             {"session_id": "s1", "cwd": str(d), "stop_hook_active": False},
         )
         self.assertEqual(rc, 2)
         self.assertIn("lies in no git repository", err)
         rc, _, err = _run(
-            claude_hooks.stop,
+            agent_hooks.stop,
             {"session_id": "s1", "cwd": str(d), "stop_hook_active": True},
         )
         self.assertEqual(rc, 0)

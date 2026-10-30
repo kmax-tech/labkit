@@ -30,7 +30,7 @@ Three witnesses, each git's own and exact for what it saw:
 
 Every change found is undone from git, and its way out names the commit
 to restore from — so a handover does not acknowledge it: the handover
-binds `audits/` as it stands (`claude_hooks.undecided_state`).
+binds `audits/` as it stands (`agent_hooks.undecided_state`).
 
 Limits: a record or a run no commit ever held has no witness here (the
 attempt journal's copy covers the audit attempts); the session's

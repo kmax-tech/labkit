@@ -7,6 +7,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Added
+
+- **Codex lifecycle hooks.** `labkit-hooks install` also writes
+  `.codex/hooks.json`, preserving foreign handlers; `check` detects missing
+  or stale entries. `codex-hook pre-run|post-change|stop` adapts Codex events
+  to the shared checks in `gates/agent_hooks.py`. Claude Code retains its
+  adapter and commands. Codex project and hook trust are reviewed in
+  `/hooks`; installation does not grant trust. See `docs/codex-hooks.md`.
+
 ### Breaking
 
 - **A registered output is the file the run recorded, and the deliverable

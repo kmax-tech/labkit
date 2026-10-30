@@ -241,11 +241,15 @@ including a decided analysis audit and the area's recomputation check.
 perform that review.
 
 The run writer and git hooks enforce checks independently of an agent.
-Claude Code's live hooks add feedback during a session. Install the pinned
+Claude Code and Codex live hooks add feedback during a session. Install the pinned
 hooks with `labkit-hooks install`, and repeat that after raising the pin.
 Start Claude Code in the repository root: a session started in a directory
 below it loads none of the hooks the root's `.claude/settings.json` holds
 (the pre-commit still holds every commit).
+Codex uses `.codex/hooks.json`: trust the project and review the installed
+hooks with `/hooks` before they run. Reinstall after moving the repository,
+since its Codex commands name the repo venv by absolute path.
+See [Codex hooks](docs/codex-hooks.md) for the event contract and limits.
 
 ## Command reference
 
@@ -284,6 +288,7 @@ runlog reindex AREA                # recover missing index rows
 labkit-params AREA [--run ID]       # values and provenance of a run
 labkit-hooks install|check [REPO]   # install or check hooks
 claude-hook pre-run|post-change|stop # live Claude Code hook adapter
+codex-hook pre-run|post-change|stop  # live Codex hook adapter
 claude-hook undecided PATH...      # unresolved audit blockers in touched areas
 claude-hook sessions [--run RUN_ID] # session records
 labkit-check [REPO] [--offline]     # report pin, installation and hook drift

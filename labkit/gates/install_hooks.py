@@ -29,6 +29,7 @@ existing repos never got a newer one).
     git core.hooksPath       set to .githooks (it used to be a manual step
                              per clone, and the hook silently did nothing)
     .claude/settings.json    claude-hook pre-run · post-change · stop
+    .codex/hooks.json        codex-hook pre-run · post-change · stop (trust via /hooks)
 
 Each hook names the labkit version that wrote it; `check` compares.
 """
@@ -37,12 +38,15 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 
 from labkit.formats import console
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import TypedDict
 
 from labkit.formats.repo import git_root, git_run
+from labkit.formats.files import write_atomic
 
 MARK = "# installed by labkit-hooks"
 
@@ -190,7 +194,19 @@ def git_hooks() -> dict[str, str]:
     return {"pre-commit": pre_commit(), "pre-merge-commit": pre_merge_commit()}
 
 
-def _hook(name: str, timeout: int, message: str) -> dict:
+class _CommandHook(TypedDict):
+    """Generated command handler shared by the two harness configs."""
+
+    type: str
+    command: str
+    timeout: int
+    statusMessage: str
+
+
+HookEntries = dict[str, tuple[str | None, _CommandHook]]
+
+
+def _hook(name: str, timeout: int, message: str) -> _CommandHook:
     return {
         "type": "command",
         "command": f'"${{CLAUDE_PROJECT_DIR:-.}}/.venv/bin/claude-hook" {name}',
@@ -200,12 +216,12 @@ def _hook(name: str, timeout: int, message: str) -> dict:
 
 
 #: the seconds Claude Code gives the stop hook; past them it cancels the
-#: hook, and a cancelled stop holds nothing (`claude_hooks.STOP_BUDGET_S`
+#: hook, and a cancelled stop holds nothing (`agent_hooks.STOP_BUDGET_S`
 #: ends the checks before)
 STOP_TIMEOUT_S = 120
 
 #: event -> (matcher or None, hook)
-CLAUDE_HOOKS = {
+CLAUDE_HOOKS: HookEntries = {
     "PreToolUse": ("Bash", _hook("pre-run", 120, "preflight before a run")),
     "PostToolUse": ("Bash|Write|Edit", _hook("post-change", 60, "check what changed")),
     "Stop": (None, _hook("stop", STOP_TIMEOUT_S, "finalize a written-back number")),
@@ -219,50 +235,72 @@ CLAUDE_HOOKS = {
 #: labkit command (`console.command_names`): a foreign hook that calls
 #: `runlog` is not one an install wrote, and an install must not erase it.
 HOOK_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
+
+
 #: one of labkit's commands as a word of the hook's command line — at the
 #: start, after a space, a `/` or a quote, and not inside a longer name: a
 #: foreign `./bin/my-protocol-checker` was taken for ours and erased by an
 #: install (audit 2026-10-15)
-_LABKIT_COMMAND = re.compile(
-    r"""(?:^|[\s/"'])(?:""" + "|".join(HOOK_COMMANDS) + r""")(?=$|[\s"'])"""
-)
+def _hook_command_pattern(commands: tuple[str, ...]) -> re.Pattern[str]:
+    """Match an installed command word, including a quoted executable path."""
+    return re.compile(
+        r"""(?:^|[\s/"'])(?:""" + "|".join(commands) + r""")(?=$|[\s"'])"""
+    )
 
 
-def _ours(hook: dict) -> bool:
-    """Whether one hook command was written by a labkit install."""
-    return _LABKIT_COMMAND.search(hook.get("command", "")) is not None
+_LABKIT_COMMAND = _hook_command_pattern(HOOK_COMMANDS)
+# Codex has no labkit-installed one-liner history: its direct check commands
+# belong to the user and must survive installation.
+_CODEX_COMMAND = _hook_command_pattern(("codex-hook",))
 
 
-def stale_entries(current: dict) -> list[str]:
+def _ours(hook: dict, codex: bool = False) -> bool:
+    """Whether this harness's installer owns the handler.
+
+    Claude also owns its earlier direct check commands; Codex owns only
+    codex-hook, since its direct check commands were never generated here.
+    """
+    pattern = _CODEX_COMMAND if codex else _LABKIT_COMMAND
+    return pattern.search(hook.get("command", "")) is not None
+
+
+def stale_entries(
+    current: dict, desired: HookEntries | None = None, *, codex: bool = False
+) -> list[str]:
     """Every hook in `current` a labkit install wrote that is not this
     version's — one line per hook: event and the command's first 70 chars."""
-    wanted = {json.dumps(hook, sort_keys=True) for _, hook in CLAUDE_HOOKS.values()}
+    desired = CLAUDE_HOOKS if desired is None else desired
+    wanted = {json.dumps(hook, sort_keys=True) for _, hook in desired.values()}
     out = []
     for event, entries in (current.get("hooks") or {}).items():
         for entry in entries:
             for h in entry.get("hooks", []):
-                if _ours(h) and json.dumps(h, sort_keys=True) not in wanted:
+                if _ours(h, codex) and json.dumps(h, sort_keys=True) not in wanted:
                     out.append(f"{event}: {h.get('command', '')[:70]}")
     return out
 
 
-def merged_settings(current: dict) -> dict:
+def merged_settings(
+    current: dict, desired: HookEntries | None = None, *, codex: bool = False
+) -> dict:
     """`current` with labkit's hooks — this version's and any earlier
     install's (`HOOK_COMMANDS`) — replaced by this version's; every other
     key and every foreign hook kept, also one that shares an entry (and its
     matcher) with a labkit hook: the filter takes single commands, and an
-    entry left without any is dropped."""
+    entry left without any is dropped. With codex=True, only codex-hook
+    handlers are replaced; direct protocol/notes-check handlers are foreign."""
+    desired = CLAUDE_HOOKS if desired is None else desired
     out = dict(current)
     hooks = {
         event: [
             {**e, "hooks": kept}
             for e in entries
-            if (kept := [h for h in e.get("hooks", []) if not _ours(h)])
+            if (kept := [h for h in e.get("hooks", []) if not _ours(h, codex)])
         ]
         for event, entries in (out.get("hooks") or {}).items()
     }
     hooks = {event: entries for event, entries in hooks.items() if entries}
-    for event, (matcher, hook) in CLAUDE_HOOKS.items():
+    for event, (matcher, hook) in desired.items():
         entry: dict = {"hooks": [hook]}
         if matcher:
             entry = {"matcher": matcher, **entry}
@@ -271,12 +309,71 @@ def merged_settings(current: dict) -> dict:
     return out
 
 
-def _settings(repo: Path) -> tuple[Path, dict]:
-    path = repo / ".claude" / "settings.json"
+def _hook_configs(repo: Path) -> dict[str, HookEntries]:
+    """Desired hook entries by config path; Codex commands use the repo venv.
+
+    Absolute commands keep using the installed repository when a tool works
+    in a different directory. Moving the repository requires reinstalling.
+    """
+    command = shlex.quote(str(repo / ".venv" / "bin" / "codex-hook"))
+    codex: HookEntries = {}
+    for event, (matcher, hook) in CLAUDE_HOOKS.items():
+        action = {
+            "PreToolUse": "pre-run",
+            "PostToolUse": "post-change",
+            "Stop": "stop",
+        }[event]
+        codex[event] = (
+            "^(Bash|apply_patch)$"
+            if event == "PostToolUse"
+            else "^Bash$"
+            if matcher
+            else None,
+            {
+                **hook,
+                "command": f"{command} {action}",
+                "statusMessage": hook["statusMessage"].replace(
+                    "claude-hook", "codex-hook"
+                ),
+            },
+        )
+    return {".claude/settings.json": CLAUDE_HOOKS, ".codex/hooks.json": codex}
+
+
+def _validate_settings(value: object, path: Path) -> None:
+    """Refuse malformed hook containers before an install changes files."""
+    if not isinstance(value, dict):
+        raise SystemExit(f"labkit-hooks: {path} must be a JSON object")
+    hooks = value.get("hooks", {})
+    if not isinstance(hooks, dict):
+        raise SystemExit(f"labkit-hooks: {path}: hooks must be an object")
+    for event, entries in hooks.items():
+        if not isinstance(entries, list):
+            raise SystemExit(f"labkit-hooks: {path}: hooks.{event} must be an array")
+        for entry in entries:
+            if not isinstance(entry, dict) or not isinstance(entry.get("hooks"), list):
+                raise SystemExit(
+                    f"labkit-hooks: {path}: hooks.{event} entry needs a hooks array"
+                )
+            for hook in entry["hooks"]:
+                if not isinstance(hook, dict):
+                    raise SystemExit(
+                        f"labkit-hooks: {path}: hooks.{event} handler must be an object"
+                    )
+                if "command" in hook and not isinstance(hook["command"], str):
+                    raise SystemExit(
+                        f"labkit-hooks: {path}: hooks.{event} command must be a string"
+                    )
+
+
+def _settings(repo: Path, relative: str = ".claude/settings.json") -> tuple[Path, dict]:
+    path = repo / relative
     if not path.is_file():
         return path, {}
     try:
-        return path, json.loads(path.read_text(encoding="utf-8"))
+        current = json.loads(path.read_text(encoding="utf-8"))
+        _validate_settings(current, path)
+        return path, current
     except json.JSONDecodeError as exc:
         raise SystemExit(
             f"labkit-hooks: {path} is not valid JSON ({exc}) — repair it first"
@@ -311,6 +408,10 @@ def point_hooks_at(repo: Path) -> None:
 
 def install(repo: Path) -> list[str]:
     """Write the hooks; returns what was done."""
+    configs = [
+        (*_settings(repo, relative), desired)
+        for relative, desired in _hook_configs(repo).items()
+    ]
     done = []
     (repo / HOOKS_DIR).mkdir(exist_ok=True)
     for name, text in git_hooks().items():
@@ -339,14 +440,16 @@ def install(repo: Path) -> list[str]:
     except RuntimeError as exc:
         raise SystemExit(f"labkit-hooks: {exc}") from exc
     done.append("git core.hooksPath = .githooks")
-    path, current = _settings(repo)
-    wanted = merged_settings(current)
-    if wanted != current:
-        path.parent.mkdir(exist_ok=True)
-        path.write_text(json.dumps(wanted, indent=2) + "\n", encoding="utf-8")
-        done.append(
-            f"wrote {path.relative_to(repo)} (claude-hook pre-run · post-change · stop)"
+    for path, current, desired in configs:
+        wanted = merged_settings(
+            current, desired, codex=path == repo / ".codex/hooks.json"
         )
+        if wanted != current:
+            path.parent.mkdir(exist_ok=True)
+            write_atomic(path, json.dumps(wanted, indent=2) + "\n")
+            done.append(
+                f"wrote {path.relative_to(repo)} (pre-run · post-change · stop)"
+            )
     return done
 
 
@@ -377,12 +480,17 @@ def check(repo: Path) -> list[str]:
         out.append(
             "git core.hooksPath is not .githooks — the pre-commit hook never runs"
         )
-    _, current = _settings(repo)
-    stale = stale_entries(current)
-    for line in stale:
-        out.append(f".claude/settings.json: a hook from an earlier labkit — {line}")
-    if not stale and merged_settings(current) != current:
-        out.append(".claude/settings.json lacks this labkit's claude-hook entries")
+    for relative, desired in _hook_configs(repo).items():
+        _, current = _settings(repo, relative)
+        stale = stale_entries(current, desired, codex=relative == ".codex/hooks.json")
+        for line in stale:
+            out.append(f"{relative}: a hook from an earlier labkit — {line}")
+        if (
+            not stale
+            and merged_settings(current, desired, codex=relative == ".codex/hooks.json")
+            != current
+        ):
+            out.append(f"{relative} lacks this labkit's hook entries")
     return out
 
 
@@ -403,6 +511,10 @@ def main(argv: list[str]) -> int:
         for line in install(repo):
             print(f"labkit-hooks: {line}")
         print(f"labkit-hooks: {START_IN_ROOT.format(root=repo)}")
+        print(
+            "labkit-hooks: in Codex, trust the project and review the new or "
+            "changed hooks with /hooks; install/check do not grant hook trust"
+        )
         return 0
     if cmd == "check":
         gaps = check(repo)
