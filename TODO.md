@@ -2546,15 +2546,37 @@ Als Nächstes, in dieser Reihenfolge:
    Entscheidung: er widerspricht dem bisherigen Entwurf — die Übergabe
    nennt bewusst keine Lauf-IDs (`handovers._message`), und Zahlen in oder
    neben einem Diskussionsblock meldet `numbers_beside_discussed` als
-   Hinweis, weil sie als Ergebnis gelesen werden. Vorschlag: eine
-   erzeugte Zeile „Measured: …“ aus `metrics.json` (bzw. „not measurable
-   because …“ per `--not-measurable`), von den Gates gegen die Quelle
-   gehalten und vom Zahlen-Hinweis ausgenommen; Übergabe-Schema 2
-   (Breaking).
+   Hinweis, weil sie als Ergebnis gelesen werden. Erster Vorschlag war
+   eine erzeugte Zeile „Measured: …“ aus `metrics.json`. Einwand im Review
+   (2026-10-30): sie verbreitet gerade die Zahl, deren Berechnung noch
+   beanstandet sein kann. Gegenvorschlag: ein ehrlicher Stopp schuldet den
+   nachvollziehbaren Stand, nicht die Zahl — kein Lauf → warum nicht
+   gemessen; Lauf ohne brauchbare Metriken → Laufbezug und Fehler; Metriken
+   da, Freigabe offen → Evidenzverweis, offene Befunde, ausdrücklich keine
+   Freigabe; gültiges Ergebnis mit verfehltem Kriterium → regulär
+   übernehmen. Zuerst den Evidenzverweis verpflichtend machen; Zahlen nur
+   mit eigenem, gekennzeichnetem und geprüftem Formatvertrag.
 3. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
    in den Gate-Meldungen noch nicht (dort weiter: answering run, intent
    key, repeat cost …).
 4. Kalte Runde 21/60 alt gegen neu — ein Experiment, startet auf Ansage.
+   Die Wortzahl belegt nichts; erst derselbe Praxisfall wie zuvor zeigt,
+   ob Agenten mit der kurzen `AGENTS.md` zuverlässiger arbeiten.
+5. Die Gate-Meldungen nennen für die Übernahme weiter `protocol-fill …
+   --from-run` (`repo.adopt_command`, auch in der Schrittliste von
+   `labkit-init exp` und im Bereichs-README), `AGENTS.md` und
+   `labkit-next` nennen `labkit-adopt`. Beides funktioniert; vereinheitlichen
+   heißt `adopt_command` umstellen, und `tell_adoption_order` erkennt die
+   Übernahme heute am `--from-run`.
+
+Nach dem Review (gleicher Abend, je ein Commit, 2.544 Tests): Übergabe an
+das Protokoll gebunden (`handovers.protocol_handed_over`);
+`labkit-adopt` setzt nach abgelehntem Schritt 2 oder 3 wieder auf und sagt,
+dass die Übernahme steht; ein Gang nach der kurzen `AGENTS.md` (Zählaufgabe,
+an jeder Station `labkit-next`, Audit als Stand-in ohne Modell) lief bis
+„next: nothing“ durch und fand zwei Fehler in `labkit-next` (falscher
+Füllbefehl für Kopffelder, ungefüllter `<area>`-Platzhalter), beide
+behoben; `main` (67f44ab) eingemischt.
 - Offen, notiert: LAB-013 trägt noch „Registered branch“ im Titel — passt
   jetzt wieder; die Lese-Probe lief mit Lesern, die die globale
   CLAUDE.md sahen (künftig Leser ohne Hauskontext).
