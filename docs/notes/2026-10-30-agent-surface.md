@@ -148,15 +148,6 @@ the surface does.
    patterns), the stamps and field labels, the script templates, the
    result lines, docs and about 75 test files. It ships in the one
    Breaking release with the decision statuses, as separate commits.
-
-   The break is built anyway (decided by the author, 2026-10-30): labkit's
-   readers are people too — whoever opens a protocol, a report or a run's
-   `metrics.json` reads `criterion-1` and `criterion_1_pass` without a
-   legend, `C1` and `c1_pass` not; the probe had agents as readers only.
-   Scope: the id alphabet in `promises.py` (one home: `KINDS`, the id and
-   key patterns), the stamps and field labels, the script templates, the
-   result lines, docs and about 75 test files. It ships in the one
-   Breaking release with the decision statuses, as separate commits.
 4. **Adoption as one step: `labkit adopt <area> <run>`.** Runs finalize, the
    fill from the run, the result block into the report and report-check in
    one command with one summary; the three commands stay for a person.
