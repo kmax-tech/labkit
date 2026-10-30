@@ -152,3 +152,13 @@ for the served name, the proxy's grammar-to-text shim; the vLLM patch of addenda
 does not act on Qwen, which takes vLLM's chat-template path (custom tools supported there as shipped). Stages
 A, B, C and their clause as in the contract; two attempts at a time (two server sequences). Stores
 store-qwen-A/B/C; counts per cell, no rate; the gpt-oss counts stay the gpt-oss counts.
+
+Addendum 7, 2026-10-30 afternoon, before the second Qwen launch. The first Qwen launch of stage A is set aside
+and counted nowhere: with --max-model-len 32768 the server refused task 21's session after 16 s ("maximum
+context length is 32768 tokens … your prompt contains at least 32769 input tokens"); the gpt-oss attempts had
+needed up to 55,000 tokens a request (task 21), 33,000 to 50,000 on the others, because every tool output
+grows the context. The Qwen server is restarted with --max-model-len 65536, --max-num-seqs 2 and
+--kv-cache-dtype fp8 (the 40 GB card holds 64,864 bf16 KV tokens, twice that in fp8); the window is read from
+/v1/models at launch as before. The attempt ids now carry the model family (qwen-A-…). Everything else as
+addendum 6. A Qwen session that still outgrows 65k ends as a timeout-like failure of that attempt, counted as
+such.
