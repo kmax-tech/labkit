@@ -81,7 +81,7 @@ class Lane:
         registration: A full run owes the written registration instead of
             the freeze — the question; for a number that judges a
             prediction (`kind` fit or apply) also the criterion, the
-            admissibility condition and the null condition; with a model
+            quality check and the null condition; with a model
             also the data profile (`registration_fields`); and the repeat_cost
             declared (LAB-003 No run without an intent paragraph).
             runlog reads it off the tree at the start; the release holds
@@ -157,7 +157,7 @@ def lane(repeat_cost: str | None) -> Lane:
 #: it starts, by what the kept number asserts (`protocol_block.KINDS`): a
 #: computation registers its question — it judges no prediction, so it has no bar
 #: to clear (0.87.1); a fit or an apply registers the bar (criterion), what
-#: must hold before it is read (admissibility) and what it is held against
+#: must hold before it is read (quality check) and what it is held against
 #: (the null condition or anchors, computed in the same run); with a model
 #: answering through `models.toml` also the judged data profile — read
 #: before the model is asked, or a cue in the data answers in its place
@@ -167,7 +167,7 @@ def lane(repeat_cost: str | None) -> Lane:
 REGISTRATION_FIELDS = ("Question / hypothesis",)
 REGISTRATION_FIELDS_WITH_BAR = (
     "Success / failure criterion",
-    "Admissibility condition",
+    "Quality check",
     "Null condition / anchors",
 )
 REGISTRATION_FIELDS_WITH_MODEL = ("Data profile",)

@@ -54,7 +54,7 @@ class AreaFixture:
 
 PROTOCOL_TWO = (
     "- **Success / failure criterion:** [criterion-1] trifft und [criterion-2] haelt.\n"
-    "- **Admissibility condition:** [quality-check-1] Ausbeute > 90%.\n"
+    "- **Quality check:** [quality-check-1] Ausbeute > 90%.\n"
 )
 CLEAN_CODE = 'm = {"criterion_1_pass": True, "criterion_2_pass": False, "quality_check_1_pass": True}\n'
 

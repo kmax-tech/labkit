@@ -55,7 +55,7 @@ Each rule names where it was observed.
     data is another area's symlink, a usage line with an argument the
     script does not take (`--probe N`). (Area 18 audit, 2026-10-09.)
 10. **A term before its definition.** A house word (arm, lane, draw,
-    gap case, uncovered rule, admissibility) used in the Intent and
+    gap case, uncovered rule, quality check) used in the Intent and
     defined only in Terms ninety lines later, or nowhere; a first use
     carries the everyday word once in parentheses (LAB-092 Term layering). (Round 15.)
 11. **The question and its answer are not next to each other.** The
@@ -63,7 +63,7 @@ Each rule names where it was observed.
     above it. (Round 15, p1.)
 12. **The formula's first sentence omits a conjunct.** The docstring of
     `evaluate_rows` names every [criterion-…], [quality-check-…] and [interpretation-…] it decides, with the
-    id, and says what comes back when admissibility fails; a summary that
+    id, and says what comes back when a quality check fails; a summary that
     leaves one out is read as complete. (Area 18: [criterion-3] missing.)
 13. **A case id without its kind.** "32, 33, -05" in a comment or a
     protocol: the type is gone; shorten the kind, never drop it

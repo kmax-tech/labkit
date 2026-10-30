@@ -1585,11 +1585,11 @@ def decision_lines(
         named = effect_ids_named(area, protocol) if promised else ""
         # what the route owes and what it does by itself: readers took the
         # review clause of `stands` for this route too, and named every
-        # criterion an unjudged admissibility condition already voids
+        # criterion an unjudged quality check already voids
         unassessed = (
             '--effect "<ID>[, <ID>] not assessable"'
             + (f" (<ID>: {named})" if named else "")
-            + " — no review owed; an admissibility condition left unjudged "
+            + " — no review owed; a quality check left unjudged "
             "leaves every criterion without a verdict by itself, so name the "
             "condition, not the criteria"
         )
@@ -2269,7 +2269,7 @@ def may_leave_unassessed(area: Path, protocol: Path | None) -> bool:
 def effect_ids_named(area: Path, protocol: Path | None) -> str:
     """The ids an effect may leave not assessable, each with its field's
     name (`protocol_check.named_ids`): "criterion-1 (success / failure criterion),
-    quality-check-1 (admissibility condition)" — "" when the protocol registers none or
+    quality-check-1 (quality check)" — "" when the protocol registers none or
     is not known here (`may_leave_unassessed` decides whether the route is
     named at all)."""
     try:

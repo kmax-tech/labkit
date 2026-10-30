@@ -34,7 +34,7 @@ constants = { min_acc = 0.7 }
 """
 BODY = (
     "\n- **Question / hypothesis:** q\n- **Success / failure criterion:** [criterion-1] c\n"
-    "- **Admissibility condition:** none\n"
+    "- **Quality check:** none\n"
 )
 
 

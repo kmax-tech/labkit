@@ -76,7 +76,7 @@ cheaply you can repeat the measurement:
 registration follow it: `compute` judges no prediction (the compute
 skeleton; question, scope, exclusions, unit); `fit` judges a model trained
 or adjusted in the experiment (the estimator skeleton; also criterion,
-admissibility condition, null condition); `apply` judges a model used
+quality check, null condition); `apply` judges a model used
 unchanged (with `--model <alias>` the prompt skeleton, else the unchanged
 predictor's `predict(X)`, never trained; its null lane scores the same
 predictions against labels permuted with the seed, or a fixed null
@@ -94,8 +94,8 @@ repo root.
 
 1. **Register the question.** Fill the protocol's open fields. For a computation,
    describe the data, unit and exclusions; the stamped form lists what is
-   owed. A fit or an apply also registers its criterion, admissibility
-   condition and null condition; with a model named, the prompt and the
+   owed. A fit or an apply also registers its criterion, quality
+   check and null condition; with a model named, the prompt and the
    judged data profile follow (the prompt skeleton's `00_prepare.py --audit`
    prints an aid; read before the run).
 
@@ -337,13 +337,13 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with an adopted result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |
 | **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
 | **criterion** | Promise kind `criterion` (`[criterion-1]`): success or failure decided from the run. |
-| **admissibility** | Promise kind `quality-check` (`[quality-check-1]`): prerequisite for reading a criterion; failure withholds every criterion's verdict. |
-| **branch** | Promise kind `interpretation` (`[interpretation-1]`): the registered reading of an outcome, recorded as `interpretation_1_branch`, etc. |
+| **quality check** | Promise kind `quality-check` (`[quality-check-1]`): prerequisite for reading a criterion; failure withholds every criterion's verdict. |
+| **interpretation** | Promise kind `interpretation` (`[interpretation-1]`): the registered reading of an outcome, recorded as `interpretation_1_branch`, etc. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
 | **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
-| **recorded results** | Generated verdicts of the registered promises (an admissibility condition not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
+| **recorded results** | Generated verdicts of the registered promises (a quality check not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
 | **report result block** | Generated section in a separate report containing the recorded results and full Limit lines; written by `protocol-fill --into` and checked against the same sources. |
 | **discussion block** | Generated section in a separate report for a run it looks at without reporting it: protocol, run and why as TOML in the head, the line `Run <id> — discussed, not reported: <why>` written from them; written by `protocol-fill --discuss … --into`. |
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |

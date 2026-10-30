@@ -131,9 +131,9 @@ promise's sentence; leave the after-run fields for after the run.
   from the preparation run: after `scripts/00_prepare.py`, `protocol-fill
   <PROTOCOL> --data-counts` writes them as the field's end. Never type a
   count: finalize holds the written counts to the run.
-- Fit/apply: also criterion, admissibility condition and null condition
+- Fit/apply: also criterion, quality check and null condition
   computed in the same run. A criterion judges the outcome; an
-  admissibility condition says whether that judgement is meaningful.
+  quality check says whether that judgement is meaningful.
 - Compute with a value the task states ("0.62 within 0.01", "at least
   0.20"): the head's `[reference]` (key — the metrics key compared, the
   skeleton's `METRIC_KEY` —, value, tolerance, relation, source), stamped
@@ -142,8 +142,9 @@ promise's sentence; leave the after-run fields for after the run.
 - A `[model]` table: also the data profile; when the skeleton has `PROMPT`
   constants, copy them with `protocol-fill <PROTOCOL> --prompts`.
 
-Promises use `C` for a criterion, `A` for admissibility and `B` for a
-registered branch saying what follows from an outcome.
+A promise's id is its kind and a number: `criterion-1` (what counts as
+success), `quality-check-1` (what must hold before the criterion is read)
+and `interpretation-1` (what follows from an outcome).
 
 Use `protocol-fill <PROTOCOL> "type=exploratory" "criterion-1 sentence=<value>"
 "<Label>=<value>"` with the values your design calls for; a computation
@@ -279,8 +280,8 @@ preflight with the old frozen, stale audit would hold the repair.
 An accepted BLOCKER owes an effect; an accepted WARNING that limits the
 claim names one too. Use `--effect stands` only if the registered verdict
 still holds within the limit, or `--effect "<ID> not assessable"` when
-that promise cannot be judged. An unassessable or unmet admissibility
-condition leaves every criterion not assessable. Measured values remain
+that promise cannot be judged. An unassessable or unmet quality
+check leaves every criterion not assessable. Measured values remain
 description, not a success claim. See the recovery choices below.
 
 ### 5. Write the claim and obtain any decision review
@@ -331,7 +332,7 @@ stands: a `--from-run` line beside other blockers is the last step, not
 the fix.
 Recorded results derives each promise's reportable verdict before its
 measured values; raw metrics in the run remain unchanged. A failed
-criterion under valid admissibility is a reportable miss.
+criterion under passed quality checks is a reportable miss.
 
 `protocol-fill <PROTOCOL> --into REPORT.md` writes the generated result
 block and limits. Never retype those values. After changed audit decisions,
@@ -421,7 +422,7 @@ prints these same recovery choices with each decision list:
   it follows the finding up and judges it. A change of the data or code
   the run used is no such correction: measure anew. A promise's sentence,
   key or constant, and the registration's question, criterion,
-  admissibility and null condition, stay as registered.
+  quality checks and null condition, stay as registered.
 - **a wrong adoption** — the measurement stands, but the protocol's
   head has adopted another run than the one the finding judged. Withdraw the
   adoption (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`),

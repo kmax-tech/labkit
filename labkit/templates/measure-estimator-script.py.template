@@ -673,8 +673,8 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
     Returns every registered id's keys on every evaluation:
-      quality_check_1_empty · quality_check_1_pass                 admissibility: yield of the registered lane
-      quality_check_2_score · quality_check_2_target · quality_check_2_pass     admissibility: the null lane inside its band around its target
+      quality_check_1_empty · quality_check_1_pass                 quality check: yield of the registered lane
+      quality_check_2_score · quality_check_2_target · quality_check_2_pass     quality check: the null lane inside its band around its target
                                          (apply, permuted null: the permutation expectation; else chance);
                                          at fit quality_check_2_score is the mean of the draws, quality_check_2_draw_scores each
       criterion_1_score · criterion_1_threshold · criterion_1_pass  criterion: registered lane against the bar + cfg.margin

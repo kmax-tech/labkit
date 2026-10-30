@@ -30,7 +30,7 @@ from protocol_fixture import registration_of, completed_run, head, run_record  #
 BODY = """\
 - **Question / hypothesis:** does it hold?
 - **Success / failure criterion:** [criterion-1] p < .05
-- **Admissibility condition:** [quality-check-1] parse yield above 80%
+- **Quality check:** [quality-check-1] parse yield above 80%
 - **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 - **Raw output:** one real example
 - **Outcome:** 0.03

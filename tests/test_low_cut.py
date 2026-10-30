@@ -1,6 +1,6 @@
 """The low cut (2026-10-05): one template, tagged `<!-- l -->`; the
 checker's FIELDS name exactly the tagged fields as the cut; the registration
-gate asks for question, criterion, admissibility condition and cost."""
+gate asks for question, criterion, quality check and cost."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ class Cut(unittest.TestCase):
             + """
 - **Question / hypothesis:** how many?
 - **Success / failure criterion:** the mean is reported
-- **Admissibility condition:** n/a — deterministic
+- **Quality check:** n/a — deterministic
 - **Terms of this protocol:** n/a
 - **Data / scope:** data/raw/cases.jsonl
 - **Unit:** one file
@@ -69,7 +69,7 @@ class Cut(unittest.TestCase):
             + """
 - **Question / hypothesis:** does it hold?
 - **Success / failure criterion:** [criterion-1] accuracy > 0.5
-- **Admissibility condition:** [quality-check-1] at most two empty answers
+- **Quality check:** [quality-check-1] at most two empty answers
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Data / scope:** data/raw/claims.jsonl, 12 rows
 - **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
@@ -97,7 +97,7 @@ class Cut(unittest.TestCase):
             + """
 - **Question / hypothesis:** q
 - **Success / failure criterion:** c
-- **Admissibility condition:** a
+- **Quality check:** a
 - **Terms of this protocol:** n/a
 - **Data / scope:** d
 - **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
@@ -130,7 +130,7 @@ class Registration(unittest.TestCase):
             protocol_check.low_registration_missing(text),
             [
                 "Success / failure criterion",
-                "Admissibility condition",
+                "Quality check",
                 "Null condition / anchors",
             ],
         )
@@ -164,7 +164,7 @@ class Registration(unittest.TestCase):
         text = (
             head(repeat_cost="low", model="haiku")
             + self.QUESTION
-            + "- **Admissibility condition:** a\n"
+            + "- **Quality check:** a\n"
         )
         self.assertEqual(protocol_check.low_registration_missing(text), [])
 
@@ -172,11 +172,11 @@ class Registration(unittest.TestCase):
         text = (
             head(repeat_cost="low", model="haiku")
             + self.QUESTION
-            + "- **Admissibility condition:** <what must hold…>\n"
+            + "- **Quality check:** <what must hold…>\n"
         )
         self.assertEqual(
             protocol_check.low_registration_missing(text),
-            ["Admissibility condition"],
+            ["Quality check"],
         )
 
     def test_with_a_model_the_judged_data_profile_is_owed(self):
@@ -185,7 +185,7 @@ class Registration(unittest.TestCase):
         text = (
             head(repeat_cost="low", model="haiku")
             + self.QUESTION.replace("- **Data profile:** 6 and 6 items; 'because' in both classes\n", "")
-            + "- **Admissibility condition:** a\n"
+            + "- **Quality check:** a\n"
             + "- **Data profile:** <what `00_prepare.py --audit` shows>\n"
         )  # fmt: skip
         self.assertEqual(
@@ -200,14 +200,14 @@ class Registration(unittest.TestCase):
         )
         self.assertEqual(
             protocol_check.low_registration_missing(text),
-            ["Admissibility condition"],
+            ["Quality check"],
         )
 
     def test_cost_is_read_from_the_head(self):
         text = (
             head(repeat_cost="<low | high>")
             + self.QUESTION
-            + "- **Admissibility condition:** a\n- **Cost:** seconds\n"
+            + "- **Quality check:** a\n- **Cost:** seconds\n"
         )
         self.assertEqual(
             protocol_check.low_registration_missing(text), ["[protocol] repeat_cost"]
@@ -248,7 +248,7 @@ class PromiseIds(unittest.TestCase):
                 'scope = ["scripts/01_measure.py"]\n'
             )
             + "- **Success / failure criterion:** <c>\n"
-            + "- **Admissibility condition:** <a>\n"
+            + "- **Quality check:** <a>\n"
             + "- **Null condition / anchors (in the same run):** <n>\n"
         )
         with self.assertRaisesRegex(ValueError, "declares no quality-check-1"):

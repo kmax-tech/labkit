@@ -476,7 +476,7 @@ def cmd_read_score(root: Path, transcript: Path | None) -> int:
     )
     print(
         f"  {got.correct}/{got.checkable} checkable answers right (number "
-        f"{got.number_ok}, criterion {got.criterion_ok}, admissibility "
+        f"{got.number_ok}, criterion {got.criterion_ok}, quality check "
         f"{got.admissible_ok}) · "
         f"effort {got.effort} · unclear {len(got.unclear)}"
         + (f" · {seconds}s" if seconds is not None else "")

@@ -2,7 +2,7 @@
 
 The Recorded results line and the Limit lines are generated. Recorded
 results opens with the reportable verdict of every registered promise
-(`verdicts`, one derivation for every reader): an admissibility condition
+(`verdicts`, one derivation for every reader): a quality check
 not assessable — an accepted limit names it — or not met leaves every
 criterion not assessable, so a criterion's own `True` never reads as a
 pass beside it (the repair case, 2026-10-27, K2). The declared run's other
@@ -100,7 +100,7 @@ def verdicts(
     """The reportable verdict of every promise of BLOCK, in its order, one
     phrase each, from the run's METRICS read through each promise's key and
     UNJUDGED (an id an accepted limit leaves not assessable → that limit's
-    label). Every admissibility condition conditions every criterion (each
+    label). Every quality check conditions every criterion (each
     `[quality-check-…]` says why its failure voids the verdict): one not assessable or
     not met makes each criterion `not assessable`, with why; a criterion
     otherwise `met` or `missed` as recorded, `not assessable` when a limit
@@ -122,7 +122,7 @@ def _verdict(
     p: promises.Promise, value: object, unjudged: dict[str, str], blocked: list[str]
 ) -> str:
     """`verdicts` for one promise P, its recorded VALUE; BLOCKED the
-    admissibility conditions that leave a criterion unjudged."""
+    quality checks that leave a criterion unjudged."""
     if p.kind == "interpretation":
         return f"{p.id} {value}"
     if p.id in unjudged:

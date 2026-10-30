@@ -567,7 +567,7 @@ class AuditorInstruction(unittest.TestCase):
         self.assertIn("never demand a criterion of a computation", text)
         self.assertIn("a `compute` owes neither", text)
         self.assertNotIn(
-            "(question/hypothesis, success criterion, admissibility condition)", text
+            "(question/hypothesis, success criterion, quality check)", text
         )
 
     def test_an_unregistered_stated_value_is_the_named_warning(self):

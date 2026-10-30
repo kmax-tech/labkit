@@ -99,7 +99,7 @@ FIELDS = (
     Field(
         "Success / failure criterion", "must", "lb"
     ),  # a computation has no bar to clear (2026-10-12); a fit or an apply has (0.104)
-    Field("Admissibility condition", "must", "lb"),
+    Field("Quality check", "must", "lb"),
     Field("Data / scope", "must", "l"),
     # read and judged before the measuring run, not just printed (review
     # 2026-10-21: a class-exclusive cue went unexamined in three judge probes)
@@ -752,7 +752,7 @@ def check_fields(text: str) -> FieldReport:
 def low_registration_missing(text: str, kind_now: str | None = None) -> list[str]:
     """The registration a run at low repeat cost owes before its number counts:
     the question written (not a placeholder); for a number that judges a
-    prediction (kind fit or apply) also criterion, admissibility condition
+    prediction (kind fit or apply) also criterion, quality check
     and null condition; with a model named also the judged data profile;
     the repeat_cost and the kind declared, and the kind not contradicting the
     head (`kind_gap`, `reference_gap`). Returns what is missing — empty means the gate is

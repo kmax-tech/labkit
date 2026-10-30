@@ -11,8 +11,8 @@ first sentence for a person, ids and keys in the summary, results as
   the longest field, intent ids / metric keys / run_ids inside the Summary,
   whether the answer carries a table;
 - **reader** (an agent that sees only the protocol): `reader_prompt` asks
-  what was found, its number, whether the criterion and the admissibility
-  conditions held, how far it holds, what comes next and what it could not
+  what was found, its number, whether the criterion and the quality
+  checks held, how far it holds, what comes next and what it could not
   place; `score_reader_answer` holds the checkable answers to the run;
 - **glance** (an agent that sees only the first lines of the file):
   `glance`, `glance_prompt`, `score_glance_answer` — what a reader who
@@ -130,7 +130,7 @@ READER_QUESTIONS = (
     ),
     (
         "admissible",
-        "Did every admissibility condition (the checks that must pass before any verdict) hold — true, false, or null?",
+        "Did every quality check (the checks that must pass before any verdict) hold — true, false, or null?",
     ),
     ("holds", "How far does the result hold — what limits it? One sentence."),
     ("next", "What happens next, according to the protocol? One sentence, or null."),

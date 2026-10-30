@@ -16,8 +16,8 @@ are not). `scikit-learn`, `pandas`, `numpy` and `rdkit` are installed in
 **out-of-fold accuracy** over the labelled molecules, in the run's
 `metrics.json` under the key `<metric_key>`, alongside whatever the
 repo's rules demand of a number that judges a fitted model (a null lane
-in the same run, the registered criterion against it, the admissibility
-condition). A fit of a few hundred trees on 923 molecules takes well
+in the same run, the registered criterion against it, the quality
+check). A fit of a few hundred trees on 923 molecules takes well
 under a minute. The area `experiments/<area>/` is already stamped for
 it. <tier>
 

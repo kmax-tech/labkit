@@ -245,8 +245,8 @@ def low_cut_line() -> str:
             for f in FIELDS
             if f.low_cut == "l" and f.level in ("must", "should")
         )
-        + "; with a bar (kind fit or apply) also the criterion, the admissibility "
-        "condition, the null condition and Model / tool; with a `[model]` table also "
+        + "; with a bar (kind fit or apply) also the criterion, the quality "
+        "check, the null condition and Model / tool; with a `[model]` table also "
         + ", ".join(
             f.label
             for f in FIELDS

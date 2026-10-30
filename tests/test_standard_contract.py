@@ -60,7 +60,7 @@ class Registration(unittest.TestCase):
         bar = (
             "Question / hypothesis",
             "Success / failure criterion",
-            "Admissibility condition",
+            "Quality check",
             "Null condition / anchors",
         )
         self.assertEqual(sc.registration_fields("fit", False), bar)

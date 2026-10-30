@@ -8,7 +8,7 @@
   plain sentences: whether the bar set before the run was met ("Yes — the
   class descriptions kept the cable set out of the framework class in all
   five cases, as required") — or that no verdict was possible because an
-  admissibility condition failed, and what was still read descriptively;
+  quality check failed, and what was still read descriptively;
   the result, not the procedure; no intent ids, metric keys or run_ids,
   they are below>
 - **Limits:** <how far it holds, one sentence — the sample, a
@@ -39,14 +39,14 @@
   `after`") — Terms below is the home of the definition, this line its
   first use (LAB-092 Term layering)
   (→ LAB-003 No run without an intent paragraph, LAB-004 Identifiers make the intent addressable)>
-- **Admissibility condition:** <!-- lb --> <what must hold in the same run before
+- **Quality check:** <!-- lb --> <what must hold in the same run before
   any verdict is issued — yield, coverage, a control showing its expected
   value; one A per condition, each with WHY its failure makes the measurement
   uninterpretable (not merely less likely to succeed — a threshold the
   hypothesis needs is a criterion, never a quality check); if one fails, there is no criterion verdict,
   only the finding that the instrument failed; what is still read
   descriptively is labelled so (→ LAB-004 Identifiers make the intent addressable)>
-- **Registered branch:** <if a result decides the conclusion or the next
+- **Interpretation:** <if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
   licenses, one interpretation per branch point — ask "and if [criterion-…] fails, what then?";
   a stop rule may fire during the run or on an inadmissible one, so an interpretation is
@@ -150,7 +150,7 @@
   the parser test — this is where they exist for the first time>
 - **Clarified terms:** <what was ambiguous, and what is it called now?>
 - **Changed — and in which class:** <instrument (wording, answer form,
-  parser, field names) is allowed; hypothesis, criterion, admissibility condition are not
+  parser, field names) is allowed; hypothesis, criterion, quality check are not
   — changes BEFORE the freeze, from the render and instrument checks
   (→ LAB-008 Instrument check before freezing); what moved after the freeze is
   "Deviations after freeze" under Result>

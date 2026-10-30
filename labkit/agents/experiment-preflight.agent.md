@@ -12,8 +12,8 @@ restate them from memory.
 ## Read, in this order
 
 1. `<AREA>/PROTOCOL-*.md` — the registration. Question, and for a fit or
-   an apply (the head's `kind`) success criterion, admissibility
-   condition, registered branch, null condition; free knobs, prompt
+   an apply (the head's `kind`) success criterion, quality
+   check, interpretation, null condition; free knobs, prompt
    verbatim; for a `compute` with a stated value its `[reference]` table.
    This is the ground truth you audit the code against.
 2. `<AREA>/scripts/*.py` and `<AREA>/analysis/*.py` — completely, not skimmed.
@@ -51,7 +51,7 @@ do not guess between areas.
 
 First thing after reading the protocol: check the Intent MUST fields the
 head's `kind` owes (question/hypothesis; for a fit or an apply also
-success criterion and admissibility condition — a `compute` owes
+success criterion and quality check — a `compute` owes
 neither). If they still hold template placeholders (`<...>`), do not
 audit. Return the single line
 
@@ -66,7 +66,7 @@ and stop. An audit of the empty template criticises an intent nobody wrote
 
 A `compute` protocol (the head's `kind`) judges no prediction: it
 registers its question, unit, data and exclusions, and no success
-criterion, admissibility condition or promise table — never demand a
+criterion, quality check or promise table — never demand a
 criterion of a computation, and never grade its absence. A value the
 task states ("0.62 within 0.01", "a mean improvement of at least 0.20")
 is a `[reference]` comparison, the head's optional table (key, value,
@@ -108,8 +108,8 @@ ONLY to extract which fields and keys they consume. Cutting depth instead
 of scope is the wrong trade — full severity inside the cut scope.
 
 **Work the intent identifiers first.** Where the protocol carries ids
-(`[criterion-1]` criterion, `[quality-check-1]` admissibility condition — yield, control,
-anchor — and `[interpretation-1]` registered branch — LAB-004 Identifiers make the intent addressable), audit identifier by identifier: name the code
+(`[criterion-1]` criterion, `[quality-check-1]` quality check — yield, control,
+anchor — and `[interpretation-1]` interpretation — LAB-004 Identifiers make the intent addressable), audit identifier by identifier: name the code
 site that implements each id and the metrics key that reports it (`c1_*`, …),
 or report the gap as a finding. Counting the sets is the caller's job
 (`intent-check` does it mechanically); yours is whether the implementation
@@ -185,7 +185,7 @@ data and code the run used stay as they were: judge it `resolved` when the
 text now matches the run's recorded inputs and rows, `unresolved` when it
 still does not. That is not a registration change. A change of the data
 or code the run used is no such correction: it owes a new measurement. The
-registration's own fields (question, criterion, admissibility, null
+registration's own fields (question, criterion, quality check, null
 condition) are not corrected in place.
 
 When the entry shows a `required check`, it is the diagnostic the finding
@@ -315,7 +315,7 @@ lack of an exact figure — and never present an estimate as measured.
 - Code style, naming, type annotations, refactoring, test coverage in the
   abstract. (The protocol's readability is in scope in MODE analysis, as
   `READ` lines only.)
-- Touching hypothesis, success criterion or admissibility condition.
+- Touching hypothesis, success criterion or quality check.
 - Editing anything: you have no write tools, and that is the design — the
   human decides and repairs.
 - Model calls: this audit costs no money and produces no data.

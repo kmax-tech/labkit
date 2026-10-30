@@ -124,7 +124,7 @@ def low_cut(tmpl: str, kind: str, model: bool = False) -> str:
 
 def bar_cut(tmpl: str, kind: str) -> str:
     """TMPL as a KIND without a bar is stamped at every tier: the fields a
-    bar owes (tagged `<!-- lb -->`: criterion, admissibility condition,
+    bar owes (tagged `<!-- lb -->`: criterion, quality check,
     Model / tool, null condition) and the promise tables go — a computation owes
     its question (standard 0.22). A fit or an apply comes back unchanged.
     The low cut keeps fewer fields still (`low_cut`)."""
@@ -498,7 +498,7 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
 #: `[criterion-…]` hint and a cold agent then writes `criterion-1:`, which no check reads
 PROMISE_FIELDS = {
     "Success / failure criterion": "criterion-1",
-    "Admissibility condition": "quality-check-1",
+    "Quality check": "quality-check-1",
     "Null condition / anchors (in the same run)": "quality-check-2",
 }
 

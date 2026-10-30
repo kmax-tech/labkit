@@ -199,8 +199,8 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
     Returns every registered id's keys on every lane:
-      quality_check_1_empty · quality_check_1_pass           admissibility: yield of the registered lane
-      quality_check_2_accuracy · quality_check_2_pass        admissibility: the null lane inside its band
+      quality_check_1_empty · quality_check_1_pass           quality check: yield of the registered lane
+      quality_check_2_accuracy · quality_check_2_pass        quality check: the null lane inside its band
       criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against null + cfg.margin
       n_items · n_rows             yield (→ LAB-023 No silent loss)
     A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None)."""

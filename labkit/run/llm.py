@@ -500,7 +500,7 @@ def _complete_once(
     used = spec(alias)
     # A serving endpoint is ONE model slot: a second alias against it makes
     # both stages swap the model back and forth, and the timeouts come back as
-    # empty answers that an admissibility condition counts as a parser finding. The lease sits
+    # empty answers that a quality check counts as a parser finding. The lease sits
     # HERE and not in the calling script on purpose — a rule a script has to
     # remember is an intention (endpoint_lease's docstring carries the chain).
     endpoint_lease.acquire(

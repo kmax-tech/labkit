@@ -454,7 +454,7 @@ class Exp(unittest.TestCase):
         # a computation has no bar to clear: no promise tables, no criterion, no admissibility
         self.assertNotIn("[[promise]]", proto)
         self.assertNotIn("Success / failure criterion", proto)
-        self.assertNotIn("Admissibility condition", proto)
+        self.assertNotIn("Quality check", proto)
         # the Summary at low repeat cost is the Result line
         self.assertIn("- **Conclusion:**", proto)
         self.assertNotIn("- **Limits:**", proto)
@@ -511,7 +511,7 @@ class Exp(unittest.TestCase):
             "constants = { max_empty = 2 }",
             "constants = { null_band_items = 1 }",
             "Success / failure criterion",
-            "Admissibility condition",
+            "Quality check",
             "Raw output",
         ):
             self.assertIn(needle, proto, needle)

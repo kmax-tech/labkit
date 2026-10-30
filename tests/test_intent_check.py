@@ -23,9 +23,9 @@ PROTOCOL = (
     + """# 66 — x
 - **Success / failure criterion:** [criterion-1] null holds (p > 0,20) AND
   [criterion-2] opened > bare (p < 0,05) AND [criterion-3] both cells agree
-- **Admissibility condition:** [quality-check-1] at most 2 of 96 rounds unparsed AND
+- **Quality check:** [quality-check-1] at most 2 of 96 rounds unparsed AND
   [quality-check-2] placebo in the same run shows its expected value
-- **Registered branch:** [interpretation-1] on "mixed", report closed - echo
+- **Interpretation:** [interpretation-1] on "mixed", report closed - echo
 """
 )
 

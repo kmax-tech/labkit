@@ -7,7 +7,7 @@ with LABKIT_UNFROZEN=1 over an audit the backend refused (the failed
 attempt `labkit-audit` wrote, 0.99.0) and the acknowledgement lands in
 config.json with that attempt; `run_kind` is recorded for every run. At
 `repeat_cost = "low"` the gate is the written registration (question,
-criterion, admissibility condition), not the freeze (LAB-017 The number of audits follows the cost tier); the tier
+criterion, quality check), not the freeze (LAB-017 The number of audits follows the cost tier); the tier
 lands in config.json as `repeat_cost`.
 """
 
@@ -50,7 +50,7 @@ REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [criterion-1] accuracy above the trivial decider
-- **Admissibility condition:** [quality-check-1] every case parsed
+- **Quality check:** [quality-check-1] every case parsed
 - **Null condition / anchors:** [quality-check-2] the shuffled-label lane stays at chance
 - **Data profile:** 6 and 6 cases, mean words alike; no marker only in one class
 """

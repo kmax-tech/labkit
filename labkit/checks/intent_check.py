@@ -2,15 +2,15 @@
 
 The most frequent blocker class of the first audits (2026-09-08, areas
 62-65) was "registered without implementation": a fork with no branch in
-the code, an admissibility condition printed but never compared to its threshold, a
+the code, a quality check printed but never compared to its threshold, a
 three-conjunct criterion implemented as one conjunct, gate metrics written
 next to the content numbers the gate was meant to suppress. Reading catches
 this late; a set comparison catches it mechanically.
 
 The contract (LAB-004 Identifiers make the intent addressable): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
-in the protocol text (`[criterion-1]` criterion, `[quality-check-1]` admissibility condition,
-`[interpretation-1]` registered branch; the alphabet is `promises`), and every id
+in the protocol text (`[criterion-1]` criterion, `[quality-check-1]` quality check,
+`[interpretation-1]` interpretation; the alphabet is `promises`), and every id
 reappears as a lowercase key in the reportable run's metrics.json
 (`criterion_1_pass`, `quality_check_1_pass`, `interpretation_1_branch`, or the bare id). This command checks the two sets
 against each other, in both directions:
@@ -27,9 +27,8 @@ Existence, not correctness: a key `quality_check_1_pass` proves the stage report
 that it computes the right thing — the semantic half stays with the
 preflight audit (LAB-015 Preflight audit before freezing), which works the same ids.
 
-Since 2026-10-06 the alphabet lives in `promises`: the letters C
-(criterion), A (admissibility), B (branch), and the promise block that
-makes them data. With a block, three more checks run here — text and block
+The alphabet lives in `promises`: the kinds criterion, quality-check and
+interpretation, and the promise block that makes them data. With a block, three more checks run here — text and block
 name the same ids, every declared key is reported exactly, and the run
 recorded this very block.
 

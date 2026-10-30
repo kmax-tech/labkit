@@ -49,7 +49,7 @@ BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
 - **Success / failure criterion:** [criterion-1] p < .05
-- **Admissibility condition:** [quality-check-1] parse yield above 80%
+- **Quality check:** [quality-check-1] parse yield above 80%
 - **Model I/O:** in: text · out: a label, parsed by parse()
 - **Prompt (verbatim, per variant):**
 

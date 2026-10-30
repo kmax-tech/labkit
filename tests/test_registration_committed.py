@@ -6,7 +6,7 @@ holds; the tree now says nothing about it, and runlog's start gate reads
 the tree. A run id is local time, so it orders only runs at one commit.
 
 Why (labkit-paper area 09, fifth haiku round, 2026-10-22): none of the
-three labkit agents had committed criterion and admissibility condition
+three labkit agents had committed criterion and quality check
 before the first measurement, and every gate was green. The order (A11,
 audit 2026-10-27): a run started under `TZ=Etc/GMT+12` sorted before an
 earlier one at a commit without the registration and became the first
@@ -40,7 +40,7 @@ RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"
 BAR = (
     "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
-    "- **Admissibility condition:** [quality-check-1] no empty answer\n"
+    "- **Quality check:** [quality-check-1] no empty answer\n"
     "- **Null condition / anchors:** [quality-check-2] shuffled labels near chance\n"
 )
 #: the local time zones a counter-test starts its second run under: twelve
@@ -211,7 +211,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertIn(
             f"the registration as committed at the first measurement {RUN} "
             f"({sha[:12]}) lacks [protocol] kind = 'fit' (it said 'compute' then), "
-            f"Success / failure criterion, Admissibility condition, Null "
+            f"Success / failure criterion, Quality check, Null "
             f"condition / anchors",
             out,
         )
@@ -525,7 +525,7 @@ class FirstMeasurementInGitOrder(_Repository):
     def test_diverged_history_holds_the_first_of_each_branch(self):
         """A side branch without the registration: neither commit is an
         ancestor of the other, so git cannot say which run came first, and
-        the run on the unregistered branch is held — though it sorts later."""
+        the run on the uninterpretation is held — though it sorts later."""
         base = self._commit("")
         left = self._commit(REGISTRATION)
         _git(self.root, "checkout", "-q", base)

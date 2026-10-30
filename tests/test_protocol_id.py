@@ -36,7 +36,7 @@ PILOT = """# Experiment protocol: x
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
 - **Success / failure criterion:** [criterion-1] p < .05
-- **Admissibility condition:** [quality-check-1] fewer than 20% errors
+- **Quality check:** [quality-check-1] fewer than 20% errors
 - **Model I/O:** in: claim · out: yes/no, parsed by parse()
 - **Prompt:** see block
 

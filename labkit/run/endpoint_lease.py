@@ -195,7 +195,7 @@ def _refuse(endpoint: str, alias: str, other: dict) -> None:
         f"refusing to run '{alias}' against it.\n"
         f"  This endpoint is ONE model slot: a second alias makes both stages "
         f"swap the model back and forth (~5 min each), the timeouts come back "
-        f"as empty answers, and an admissibility condition counts them as a parser finding.\n"
+        f"as empty answers, and a quality check counts them as a parser finding.\n"
         f"  Let that stage finish, use the same alias, or — if you really mean "
         f"to share the slot — set LABKIT_NO_ENDPOINT_LEASE=1."
     )

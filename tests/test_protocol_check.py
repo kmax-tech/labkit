@@ -78,7 +78,7 @@ PILOT_FIELDS = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does A beat B?
 - **Success / failure criterion:** [criterion-1] AUC > 0.6
-- **Admissibility condition:** [quality-check-1] yield >= 90%
+- **Quality check:** [quality-check-1] yield >= 90%
 - **Model I/O:** in: claim · out: yes/no, parsed by parse()
 - **Prompt:** see block
 
@@ -331,7 +331,7 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
         )
         for label in (
             "Success / failure criterion",
-            "Admissibility condition",
+            "Quality check",
             "Data profile",
             "Model I/O",
             "Prompt",
@@ -1040,7 +1040,7 @@ class TestPromptAndExample(unittest.TestCase):
             ln
             for ln in base.splitlines()
             if not ln.startswith(
-                ("- **Success / failure criterion:**", "- **Admissibility condition:**")
+                ("- **Success / failure criterion:**", "- **Quality check:**")
             )
         ]
         text = (
@@ -1053,7 +1053,7 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         for label in (
             "Success / failure criterion",
-            "Admissibility condition",
+            "Quality check",
             "Limits",
             "Next step",
             "Raw output",
@@ -1138,9 +1138,9 @@ class TestTerms(unittest.TestCase):
         self.assertIn("MISSING (must): Terms of this protocol", out)
 
     def test_only_the_admissibility_label_satisfies_the_field(self):
-        """The field is "Admissibility condition" (TODO 7); its earlier labels
+        """The field is "Quality check" (TODO 7); its earlier labels
         "Stop rule", "Kill", "Abbruch" no longer pass (TODO 8)."""
-        adm = "- **Admissibility condition:** [quality-check-1] yield >= 90%\n"
+        adm = "- **Quality check:** [quality-check-1] yield >= 90%\n"
         for wording in (
             "- **Stop rule:** LR stays at 1.\n",
             "- **Kill:** LR stays at 1.\n",
@@ -1149,7 +1149,7 @@ class TestTerms(unittest.TestCase):
         ):
             with self.subTest(wording):
                 report = protocol_check.check_fields(pilot().replace(adm, wording))
-                self.assertEqual(report.missing_must, ["Admissibility condition"])
+                self.assertEqual(report.missing_must, ["Quality check"])
 
     def test_a_half_sentence_suffices(self):
         text = pilot().replace(

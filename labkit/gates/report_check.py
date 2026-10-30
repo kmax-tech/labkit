@@ -560,7 +560,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
     Empty without a measurement (finalize names the missing run) and
     without a stamped id. Why (labkit-paper area 09, fifth haiku round,
     2026-10-22): none of the three labkit agents had committed criterion
-    and admissibility condition before the first measurement."""
+    and quality check before the first measurement."""
     if ctx.head.id is None:
         return []
     root = git_root(ctx.protocol)

@@ -74,7 +74,7 @@ path to this file.
   `low` cut: head, terms, question, data, unit, exclusions, and after
   the run the Recorded results line (`protocol-fill --from-run` writes it) and the
   Conclusion, your two sentences — with `--kind fit` or `apply` also
-  criterion, admissibility condition, model / tool and null condition; with
+  criterion, quality check, model / tool and null condition; with
   `--model` also data profile, prompt and raw output. A computation registers
   no criterion, and unfrozen with no promise id in its prose no promise
   either (its number is held by `--check` and `finalize`). Every stamped placeholder is one line;
@@ -100,8 +100,8 @@ lowercase key in the run's metrics:
 | id | means | example in the field | key in metrics |
 |---|---|---|---|
 | `[criterion-1]` | criterion 1 — which value of which metric supports the hypothesis | `[criterion-1] accuracy >= 0.80` | `r.metrics(criterion_1_pass=True)` |
-| `[quality-check-1]` | admissibility condition 1 — an outcome-neutral check that must pass before any criterion verdict | `[quality-check-1] parse failures <= 10%` · `[quality-check-2] shuffled labels show no effect` | `quality_check_1_pass`, `quality_check_2_pass` |
-| `[interpretation-1]` | registered branch 1 — what a result licenses next | `[interpretation-1] if < 50 usable cases, report coverage only` | `interpretation_1_branch` |
+| `[quality-check-1]` | quality check 1 — an outcome-neutral check that must pass before any criterion verdict | `[quality-check-1] parse failures <= 10%` · `[quality-check-2] shuffled labels show no effect` | `quality_check_1_pass`, `quality_check_2_pass` |
+| `[interpretation-1]` | interpretation 1 — what a result licenses next | `[interpretation-1] if < 50 usable cases, report coverage only` | `interpretation_1_branch` |
 
 The separation rule: **a criterion judges, a quality check releases the
 judgement, an interpretation says what follows from it.** Does the condition depend on whether the hypothesis
@@ -169,7 +169,7 @@ The same block may hold the `[[promise]]` tables (labkit
   advance, and so is one set by hand after seeing results — a detection
   performance it then claims is judged on rows kept apart from the
   tuning. A fit or an apply registers the
-  bar (criterion), what must hold before it is read (admissibility) and
+  bar (criterion), what must hold before it is read (quality check) and
   what it is held against (null condition / anchors, computed in the same
   run), and carries promise tables; with a `[model]` table also the data
   profile and the prompt. The kind describes the number, not every
@@ -324,13 +324,13 @@ derives from the detail below and carries no fact that isn't there.
   word that links the prose (German or English), the table and the
   script's name; without it a person found no way from the sentence to
   the threshold (round 15, 2026-10-08).
-- **Admissibility condition:** what must hold in the same run before any
+- **Quality check:** what must hold in the same run before any
   verdict is issued, fixed beforehand — e.g. "at most 10% unparsed answers",
   "the model is above chance on the hand-checked sanity examples", "the
   shuffled control shows no effect". If one fails, there is no criterion verdict,
   only the finding that the instrument failed — a bad outcome becomes a
   finding instead of weeks of tweaking. It complements the Timebox: the
-  Timebox stops you on time, an admissibility condition on results.
+  Timebox stops you on time, a quality check on results.
   Result-based, not time-based — a deadline belongs in Timebox. Intent id:
   [quality-check-1] per condition. Each condition says WHY its failure makes the
   measurement uninterpretable: an A is about the instrument (yield,
@@ -342,7 +342,7 @@ derives from the detail below and carries no fact that isn't there.
   then log a blocker and ask". NOT a result-based condition with a
   deadline — "if the pipeline doesn't run by tomorrow" is a result
   condition that happens to have a clock, not a timebox. The distinction
-  matters: an admissibility condition fires when you see a bad result and
+  matters: a quality check fires when you see a bad result and
   saves you from tweaking; a timebox
   fires when you've been stuck without any result and saves you from silent
   stuckness.
@@ -352,7 +352,7 @@ derives from the detail below and carries no fact that isn't there.
   must say `dev`. The moment a `test` run decides something — a threshold, a
   variant, a checkpoint — the result is tuned, not held out, and must be
   reported that way.
-- **Registered branch:** if a result decides the conclusion or the next
+- **Interpretation:** if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
   licenses, [interpretation-1] per branch point. The test: "and if [criterion-…] fails — what
   then?" An answer you have now is a branch; no answer yet is "n/a — only
@@ -381,7 +381,7 @@ that ends before the result is only a plan, and the results then live
 scattered in output files nobody can interpret.
 
 - **Recorded results:** the reportable verdict of every registered
-  promise — an admissibility condition not assessable or not met leaves
+  promise — a quality check not assessable or not met leaves
   each criterion not assessable, never a bare pass —, then every other
   reported key and value of the declared run as its `metrics.json`
   recorded them, the run_id, and one note on the recorded limits — written
@@ -518,7 +518,7 @@ scattered in output files nobody can interpret.
 - **Null condition / anchors (in the same run):** what runs along in THIS run
   and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation in
-  half a sentence. Intent id: [quality-check-1] per control (an admissibility condition).
+  half a sentence. Intent id: [quality-check-1] per control (a quality check).
   A placebo question is safest when its true answer is the same for every
   item ("Is this text written in English?"): the expected accuracy is the
   gold share of the class that answer maps to, derived before any call. A
@@ -583,7 +583,7 @@ to `true`.
   the parser test.
 - **Clarified terms:** what was ambiguous, and what is it called now?
 - **Changed — and in which class:** instrument changes (wording, answer form,
-  parser, field names) are allowed; hypothesis, criterion, admissibility
+  parser, field names) are allowed; hypothesis, criterion, quality check
   condition are not.
 - **Pilot:** N items checked against hand analysis or anchors, before scaling.
 
@@ -631,10 +631,10 @@ Delete this section if everything was prompted.
 |--------------------|---|
 | Intent ids         | LAB-004 Identifiers make the intent addressable |
 | Success criterion  | LAB-003 No run without an intent paragraph |
-| Admissibility      | LAB-004 Identifiers make the intent addressable |
+| Quality check      | LAB-004 Identifiers make the intent addressable |
 | Timebox            | — |
 | Split touched      | — |
-| Registered branch  | LAB-013 Registered branch when the run can answer two questions |
+| Interpretation  | LAB-013 Registered branch when the run can answer two questions |
 | Preflight audit    | LAB-015 Preflight audit before freezing |
 | Instrument check   | LAB-014 One fully rendered example pair per gold class |
 | Resolution check   | LAB-016 Resolution check before freezing |

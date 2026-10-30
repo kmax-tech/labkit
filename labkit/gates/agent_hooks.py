@@ -42,7 +42,7 @@ pre-run
     does not run before a command — a rerun at low repeat cost is the probe — and
     the hook only says whether the registration is written
     (`protocol_check.low_registration_missing`: the question; for a fit or
-    an apply also criterion, admissibility condition and null condition;
+    an apply also criterion, quality check and null condition;
     with a model the data profile), which is
     what `runlog` will demand of a full run there. A `high`/
     undeclared protocol keeps the gate above.

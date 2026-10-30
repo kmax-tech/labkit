@@ -24,7 +24,7 @@ and you do not soften a finding the auditor made.
    finding is carried (a follow-up audit did not find its fault gone), and
    every BLOCKER decided `dismissed`, its first dismissal too.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
-   criterion, admissibility condition, the `[[promise]]` tables) and the
+   criterion, quality check, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
    the Recorded results line and the Limit lines as `protocol-fill
    --from-run` renders them for this run and these decisions — the

@@ -82,8 +82,8 @@ written with. The following applies:
 *Terms of this section, coined once (everyday word first):*
 
 - **Intent** — the intention before the run: question, success criterion,
-  admissibility conditions (English field label: *admissibility condition*) and
-  registered branches (LAB-004 Identifiers make the intent addressable).
+  quality checks (English field label: *quality check*) and
+  interpretations (LAB-004 Identifiers make the intent addressable).
 - **Render check** — only look at finished prompts, zero model calls (`--show`).
 - **Instrument check** — ~10 real calls through the real pipeline (`--probe`).
 - **Area** — one experiment directory under `experiments/`: protocol, scripts,
@@ -130,7 +130,7 @@ written with. The following applies:
 - **Research** — collecting, reading, organizing ideas; produces notes, not
   protocols. Not an experiment, even if a prompt or a taxonomy stands at the end.
 - **Promise** — a registration that the code must honor:
-  a criterion, an admissibility condition or a branch (LAB-004 Identifiers make the intent addressable).
+  a criterion, a quality check or a branch (LAB-004 Identifiers make the intent addressable).
 - **Head** — the TOML block of the protocol (`[protocol]`: `standard`,
   `id`, `type`, `repeat_cost`, `frozen`, `preflight_audit`): the fields that a
   machine reads, as data instead of prose; plus the `[[promise]]` tables.
@@ -152,7 +152,7 @@ evidence file under the same ID (top of this document).*
 ### 2A · Before the run — setting and freezing the intent
 
 - **LAB-003 · No run without an intent paragraph:** *(was §2.A1)* before every experiment, 5 lines — hypothesis,
-  success criterion, admissibility condition — as `PROTOCOL-<task>.md` next to the
+  success criterion, quality check — as `PROTOCOL-<task>.md` next to the
   script, if need be in the docstring. Intent first, then code.
   `labkit-init exp <name>` generates it from the template; the template lives with its checker in the
   labkit package.
@@ -178,8 +178,8 @@ evidence file under the same ID (top of this document).*
   | Identifier | Kind          | what it fixes                                                                                                                     |
   |------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------|
   | `[criterion-1]`…    | Criterion     | which value of which metric supports the hypothesis                                                                               |
-  | `[quality-check-1]`…    | Admissibility | whether a criterion verdict may be issued at all: an outcome-neutral check in the same run (control, anchor, yield, coverage, resolution) |
-  | `[interpretation-1]`…    | Branch        | what follows from a result: which conclusion or which follow-up analysis                                                          |
+  | `[quality-check-1]`…    | Quality check | whether a criterion verdict may be issued at all: an outcome-neutral check in the same run (control, anchor, yield, coverage, resolution) |
+  | `[interpretation-1]`…    | Interpretation | what follows from a result: which conclusion or which follow-up analysis                                                          |
 
   The separation rule: **a criterion judges, a quality check permits the
   verdict, an interpretation says what follows from it.** If a condition depends on the outcome of the hypothesis,
@@ -208,9 +208,9 @@ evidence file under the same ID (top of this document).*
   script reads it with `promises.all_constants()`, never as a copy, and
   `runlog` refuses, before creating the run directory, a run
   whose config omits a registered constant or records a different value. An
-  admissibility condition says why its failure invalidates the measurement
-  (instrument, never the hypothesis); a registered branch is decided on its own
-  condition, "n/a" is the honest registered branch when none is known before the run.
+  quality check says why its failure invalidates the measurement
+  (instrument, never the hypothesis); an interpretation is decided on its own
+  condition, "n/a" is the honest interpretation when none is known before the run.
   `labkit-params <area>` shows every value of a run
   with its home. Contract: `~/projects/labkit/docs/promise-block.md`. The old letters
   `[K]`/`[S]`/`[W]`/`[N]` are no longer read by labkit; they cannot be translated
@@ -251,7 +251,7 @@ evidence file under the same ID (top of this document).*
   for. This also applies to self-built tools: opened, not just written.
 
   What it may change: prompt wording, answer form, parser, field names,
-  terms. What it may not: hypothesis, success criterion, admissibility conditions,
+  terms. What it may not: hypothesis, success criterion, quality checks,
   primary contrast. If this happens anyway, the run is exploratory, and that belongs
   in `type` of the head.
   Its numbers are **never reported** (throwaway test), otherwise looking
@@ -330,7 +330,7 @@ evidence file under the same ID (top of this document).*
 
 - **LAB-013 · Registered branch when the run can answer two questions.** *(was §2.A10)*
   If a precondition decides which question the run actually answers
-  (e.g. "does the evidence vary enough to measure hardness?"), the registered branch
+  (e.g. "does the evidence vary enough to measure hardness?"), the interpretation
   belongs BEFORE the run: the condition, and which question each branch answers. Then
   both outcomes are findings and neither is a failure.
 
@@ -647,7 +647,7 @@ evidence file under the same ID (top of this document).*
 
 - **LAB-025 · Two-user rule: the computation is shared, not the verdict.** *(was §2.B6)*
   Experiment-specific material (rendering, construction, evaluation — success and
-  admissibility conditions, contrasts) stays in the script of its area: the analysis IS the
+  quality checks, contrasts) stays in the script of its area: the analysis IS the
   experiment. Mechanically neutral material — statistics, parser cores,
   text normalization, a prompt wording that a second area needs
   verbatim — moves to `lib/` on the SECOND use, with a test first: an
@@ -787,7 +787,7 @@ evidence file under the same ID (top of this document).*
   (the same logic as for shared prompts, LAB-067 A prompt has one home, which the run freezes). Two versions of the same
   rule in one script are the two-truths trap in miniature.
 
-- **LAB-039 · Anchors include the near cases.** *(was §2.C11)* A gate that was checked only on clear cases counts as unchecked, because the errors happen at the boundary. Anchor sets therefore carry boundary cases (ideally, verbatim, the cases on which the last version failed), and the report separates near from clear: A missed near anchor is a resolution limit (registered branch, LAB-013 Registered branch when the run can answer two questions), a missed clear anchor an instrument defect.
+- **LAB-039 · Anchors include the near cases.** *(was §2.C11)* A gate that was checked only on clear cases counts as unchecked, because the errors happen at the boundary. Anchor sets therefore carry boundary cases (ideally, verbatim, the cases on which the last version failed), and the report separates near from clear: A missed near anchor is a resolution limit (interpretation, LAB-013 Registered branch when the run can answer two questions), a missed clear anchor an instrument defect.
 
 ### 2D · Afterwards — analyzing and reporting
 
@@ -1020,7 +1020,7 @@ LAB-065 No worktree per experiment govern how a growing area stays readable.
 Shared and tested are **question form and recording**: labkit provides `llm`, `batch` and `runlog` (pinned, imported directly: `from labkit.run import
 runlog`), and repo-local helpers such as `elicit`, `stats` and `prompts` grow in `lib/`. No script ever writes an HTTP call, a logprob sum or an AUC itself.
 
-The **analysis is the experiment** and stays in the script: criteria (success as well as admissibility) and contrasts do not become framework options. Whoever opens the script reads the experiment.
+The **analysis is the experiment** and stays in the script: criteria (success as well as quality checks) and contrasts do not become framework options. Whoever opens the script reads the experiment.
 
 - **LAB-066 · Extract only for the second user** *(was §2.G1)*, with tests as a condition —
   the two-user rule, spelled out in LAB-025 Two-user rule: the computation is shared, not the verdict.
@@ -1139,7 +1139,7 @@ definition note.
   there is a term, it is used,
   even if one's own sounds catchier: shared vocabulary is worth more
   than a better individual name. (2) *Lab stock:*
-  `grep -ri <candidate + synonyms> notes/`; if a lab term exists, it is inherited, never coined twice. **Four homes, one per kind of term:** *Method* (criterion, admissibility condition, registered branch, arm, draw) →
+  `grep -ri <candidate + synonyms> notes/`; if a lab term exists, it is inherited, never coined twice. **Four homes, one per kind of term:** *Method* (criterion, quality check, interpretation, arm, draw) →
   the vocabulary table of this standard; *Tool* (answering run, derived
   run, stamp) → labkit README "Terms"; *Lab* (rival, gap case,
   coverage per case) → `notes/theorie/terms.md` of the repo, per line
@@ -1185,7 +1185,7 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
 | Labkit term                          | Established term                                                     | Source / note                                                                                                                                            |
 |--------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Area                                 | no fixed term; closest: study folder                                 | one directory under `experiments/`: protocol, scripts, data references, runs — the unit every labkit check works on                                      |
-| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[criterion-…]`, an admissibility condition `[quality-check-…]` or a registered branch `[interpretation-…]` — that the code must keep     |
+| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[criterion-…]`, a quality check `[quality-check-…]` or an interpretation `[interpretation-…]` — that the code must keep     |
 | Scar table                           | taxonomy of known failure modes; checklist                           | the error classes of LAB-015 Preflight audit before freezing that the audit checks, each an error that has happened before, with the rule that forbids it |
 | Intent · freeze (frozen)             | preregistration; study protocol                                      | Nosek et al. 2018 (PNAS)                                                                                                                                 |
 | Render check · instrument check      | instrument pretest (survey methodology)                              | Dev language as secondary term: dry run / smoke test                                                                                                     |
@@ -1198,8 +1198,8 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
 | Polarity symmetry                    | framing/valence effect; prompt polarity sensitivity                  | NOT positional bias — that is the swap control                                                                                                           |
 | Anchor gate                          | validation gate; sanity checks                                       | Software QA / ML eval                                                                                                                                    |
 | Producer                             | build step / pipeline stage                                          | Data engineering                                                                                                                                         |
-| Registered branch (`[interpretation-…]`) | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — criteria and quality checks also decide                                                                                              |
-| Admissibility condition (`[quality-check-…]`) | outcome-neutral condition; quality check                             | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility                                                                     |
+| Interpretation (`[interpretation-…]`) | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — criteria and quality checks also decide                                                                                              |
+| Quality check (`[quality-check-…]`) | outcome-neutral condition; quality check                             | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility                                                                     |
 | Throwaway test                       | no fixed term; closest: exploratory scratch run                      | —                                                                                                                                                        |
 | Judge instance                       | judge configuration                                                  | LLM-as-judge literature                                                                                                                                  |
 | Two-user rule                        | rule of three                                                        | Fowler 1999; Metz: "duplication is cheaper than the wrong abstraction"                                                                                   |

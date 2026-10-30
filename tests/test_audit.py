@@ -919,7 +919,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(rc, 1, err)
         self.assertIn(
             '--effect "<ID>[, <ID>] not assessable" (<ID>: criterion-1 (success / failure '
-            "criterion)) — no review owed; an admissibility condition left "
+            "criterion)) — no review owed; a quality check left "
             "unjudged leaves every criterion without a verdict by itself, so name "
             "the condition, not the criteria",
             out,

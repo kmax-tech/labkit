@@ -32,7 +32,7 @@ in no item is "checked, no hit".
 
 An LLM inside the producer (rendering, rewriting)? Three rules: cache per
 unique input (identical inputs must stay textually identical downstream),
-register an EYEBALL admissibility condition in the protocol (does the render preserve what the
+register an EYEBALL quality check in the protocol (does the render preserve what the
 experiment needs? affected rows fall out via the producer, never by editing
 the file), and never let the render "repair" the property under test — a
 renderer once resolved the very contradiction the experiment measured

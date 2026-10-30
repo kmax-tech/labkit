@@ -107,7 +107,7 @@ class Rendering(unittest.TestCase):
 
 class ReportableVerdicts(unittest.TestCase):
     """K2 (docs/notes/2026-10-27-new-registration-contracts.md): every
-    admissibility condition conditions every criterion. The repair case
+    quality check conditions every criterion. The repair case
     (2026-10-27) rendered `criterion_1_pass = True` beside "quality-check-3 not assessable"; the
     primary verdict is now the derived one, the run's metrics unchanged."""
 
@@ -151,7 +151,7 @@ class ReportableVerdicts(unittest.TestCase):
         self.assertEqual(said[2], "quality-check-2 not met")
 
     def test_the_twins_a_miss_stays_a_miss_and_a_pass_a_pass(self):
-        """A failed criterion under satisfied admissibility conditions is a
+        """A failed criterion under satisfied quality checks is a
         result, not unjudged; without a limit a pass renders as met."""
         missed = {
             "criterion_1_pass": False,

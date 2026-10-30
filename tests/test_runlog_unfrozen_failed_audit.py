@@ -34,7 +34,7 @@ REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
 - **Success / failure criterion:** [criterion-1] accuracy above the trivial decider
-- **Admissibility condition:** [quality-check-1] every case parsed
+- **Quality check:** [quality-check-1] every case parsed
 """
 LOW_NO_CRITERION = (head(repeat_cost="low", model="haiku") + REGISTRATION).replace(
     "[criterion-1] accuracy above the trivial decider", "<the criterion>"

@@ -48,6 +48,15 @@ pins (`requirements.txt` / `requirements.lock`).
   repo's commit and that pin. Stamped protocols, the script skeletons and
   their tests, the docs and the agents' prompts use the new ids.
 
+- **The kind words in the protocol's fields.** The field `Admissibility
+  condition` is now `Quality check`, `Registered branch` is
+  `Interpretation`; the prose of the docs, templates, prompts and messages
+  says quality check and interpretation throughout. A protocol with the old
+  labels no longer has these fields — read it with labkit 0.103.0. The
+  title of LAB-013 (Registered branch when the run can answer two
+  questions) is unchanged: a rule's name is cited across repositories, and
+  renaming it is a rollout of its own.
+
 - **A registered output is the file the run recorded, and the deliverable
   of an external task is a registered output of the answering run.**
   `finalize` (and `report-check` through it) holds every file in the

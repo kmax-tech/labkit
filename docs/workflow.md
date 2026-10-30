@@ -82,7 +82,7 @@ Reads and changes: the protocol's prose fields, by exact label
 (`protocol-fill --list` names what is still open). Which fields follow the
 kind, not the repeat cost (`standard_contract.registration_fields(kind, model)`):
 every kind the question; a fit or an apply also the success criterion, the
-admissibility condition and the null condition / anchors; a `[model]` table
+quality check and the null condition / anchors; a `[model]` table
 adds the data profile, and a computation with one says in the head what its
 number describes (`number_describes`). A computation a task asks to match
 a stated value registers it in the head's optional `[reference]` table
@@ -234,7 +234,7 @@ analysis records whose code, promise and run stamps are the area's now).
 Changes: **the protocol file only** — the head's `[result] run =
 "<run_id>"` (the one adoption that this protocol reports a number: the
 **adopted run**), the `Recorded results` line (the reportable verdict of
-every registered promise — an admissibility condition not assessable or
+every registered promise — a quality check not assessable or
 not met leaves each criterion not assessable —, then the other metric keys
 and values as recorded, the run id, a note on the limits), one `Limit (audit <record>
 #N)` line per decided limit, and the run's entry in the protocol run

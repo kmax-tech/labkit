@@ -205,7 +205,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"written: {', '.join(missing)} (the commit also owes the other fields "
             f"`protocol-check --contract` names) — at low repeat cost the gate is the "
             f"registration the kind owes (a computation its question; a fit or an apply "
-            f"also criterion · admissibility condition · null condition; with a "
+            f"also criterion · quality check · null condition; with a "
             f"model the data profile), not the freeze (LAB-003 No run without an "
             f"intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
