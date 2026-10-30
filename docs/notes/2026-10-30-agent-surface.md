@@ -63,14 +63,44 @@ the surface does.
    carry the measured value or the line "not measurable because …";
    report-check holds a report without either. Saying nothing is no longer
    a clean exit.
-6. **`AGENTS.md` under 1,200 words.** The loop, the kinds table, the six
+6. **Gate messages in one pattern, before the prose is cut.** The
+   refusals are the text agents follow, so they are rewritten first:
+   `<what is refused>. <why, one clause>. Next: <command>` — the command
+   verbatim, the condition before the command. All of them pass through
+   `gate.with_way_out` (one home), so one test can hold every way out to
+   ending in a command. Once a message carries a rule, the prose may drop
+   it (step 7).
+7. **`AGENTS.md` under 1,200 words.** The loop, the kinds table, the six
    terms, `labkit next`, the stop rule. Everything else is reference under
    `labkit/docs/`, reachable by `labkit explain <term>` and cited in the
-   gate messages.
+   gate messages. The cut is a deletion, not a rewording; each sentence of
+   today's 4,774 words goes through one filter:
+
+   | The sentence … | Then |
+   |---|---|
+   | states a rule a gate already enforces, with a way out | delete; the message carries it |
+   | says how labkit checks (hash, promise table, TOML fields, superseded calls) | move to `labkit/docs/`, for the person |
+   | carries a date or an incident | move to a note under `docs/notes/` |
+   | names an action no gate can check, and the agent acts differently for it | keep, as one instruction |
+
+   Only the kept rest is then edited for style, in the procedural register
+   of the SimpleEnglish skill (`~/projects/SimpleEnglish`,
+   `references/use-cases.md`, "Instructions for AI agents"): one
+   instruction per sentence, one word one meaning (the six terms), the
+   condition before the command, "must" instead of "should". Its reply
+   rules (no lists, no tables) do not apply — the kinds table stays. The
+   skill is an authoring tool, not a dependency (stdlib only); what labkit
+   holds lastingly is its own test: the template's word limit, no date in
+   agent-facing text, every way out ending in a command.
 
 Out of this plan, separate: the fit skeleton's budget (five folds with five
 null refits do not finish in 60 minutes on 15 or 71), the hooks for Codex,
-the SAB pressure design itself.
+the SAB pressure design itself, and the prompts of the audit agents
+(`labkit/agents/*.agent.md`, 5,657 words, the preflight alone 3,155 with
+six dates). Their reader is a model labkit calls, not the working agent;
+cut in the same round, a change in the cold round could not be told apart
+from a change in the audits, and whether the guaranteed tier holds is the
+injection benchmark's measure, not round 21/60's.
 
 ## How to know it helped, before and after building
 
@@ -86,7 +116,7 @@ and on adoption without a loss on the overclaim count is the bar.
 
 ## Cost
 
-Terms and the `AGENTS.md` cut one day; `labkit next` one day (it reads what
+Gate messages and their test 0.5; terms and the `AGENTS.md` cut one day; `labkit next` one day (it reads what
 `finalize`, `report_check` and the audit already compute — one home, no new
 check); decide 0.5; adopt 0.5; the stop rule 0.5. Core first; the rollout to
 student repos and the house doctrine is a separate task (LAB-098).
