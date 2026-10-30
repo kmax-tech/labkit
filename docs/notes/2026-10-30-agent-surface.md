@@ -49,13 +49,36 @@ the surface does.
    one; decided → adopt this run; adopted → the report line owed) prints
    exactly one next command and what will be refused if it is skipped.
    `AGENTS.md` says: when unsure, run `labkit next`. The six-step prose goes.
-3. **Decide with three outcomes.** `fixed` (I changed code or protocol; a
-   new measurement follows — the gate refuses the old run), `accepted` (the
-   finding stands and is reported as a limitation — the gate writes the
-   limit line), `wrong <reason>` (the finding is mistaken). `deferred` and
-   `dismissed` fold into these; the effect `stands` is what `accepted`
-   means. After every decision the consequence is printed in one sentence
-   (partly built, 2026-10-29).
+3. **Decide with three outcomes, named by their consequence.**
+   `labkit-audit <area> --decide N <outcome> --why "<reason>"`:
+   `fixed` (the fault is repaired; a new measurement and a follow-up audit
+   check it — the gate refuses the old run), `limit` (the finding is true
+   and the number carries it as a Limit line in the report),
+   `false-positive` (the auditor misread; a second auditor checks the
+   reason). `deferred` goes: a fault the claim cannot be read within ends
+   in a handover, not in a status. `--effect stands` goes: `limit` means
+   it; the rare "these promises are not judged" becomes its own flag,
+   `--not-assessable C1`. After every decision the consequence is printed
+   in one sentence with the next command (partly built, 2026-10-29).
+
+   Naming pass over the 57 decide calls of round 1 (the internal reading
+   of the twelve lab-arm traces) — per word, whether the word or its
+   description failed:
+
+   | Today | How agents used it | Failed | Becomes |
+   |---|---|---|---|
+   | `fixed` | for any change that touched the finding: 15 decisions, one naming the change as the template asks; 3 before any repair, 2 of them by editing the registration in place | the description: the word holds (Bugzilla's RESOLVED FIXED, verified later), but the agent did not know a follow-up checks it | `fixed`, the consequence printed at once; refused while the declared scope is unchanged since the audit |
+   | `accepted` | as "the result is fine as is": 11 of the 30 `stands` reasons dispute the finding, 6 `accepted` reasons describe a repair | the word: accepted what, the finding or the result? | `limit` (inherits the house's Limit line) |
+   | `dismissed` | once, for a true finding the agent meant to handle later | the word: it names no direction | `false-positive` (the triage term of static analysis; the plan's `wrong` fails the context-free test, since the code could be what is wrong) |
+   | `deferred` | three times as "later, by me" | the word: it claims a later the format does not have | gone, into the handover |
+   | `--effect stands` | syntax guessed: 6 refusals in 4 cells, 8 findings left without effect | the shape: a missing positional REASON is reported by argparse as an unrecognized `stands` | gone; the reason as `--why` (the handover's flag), its absence refused with a sentence |
+   | `--discuss` beside `--handover` | once run when the agent meant the handover | two exits with one purpose | one handover that carries the number or why there is none (step 5) |
+
+   Kept: `--decide` (the act is the agent's), `labkit next`, `labkit
+   adopt` (inherits adoption), handover. Only a word that fails the
+   context-free or the lie test is renamed; `fixed` is not. The statuses
+   are a record format (`findings.STATUSES`): the rename is an announced
+   break in one release, no reader for the old values.
 4. **Adoption as one step: `labkit adopt <area> <run>`.** Runs finalize, the
    fill from the run, the result block into the report and report-check in
    one command with one summary; the three commands stay for a person.
