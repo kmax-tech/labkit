@@ -230,7 +230,8 @@ def block_gaps(
             gaps.append(
                 blocker(
                     f"{at}: {s.why} — a block shows an adopted result only",
-                    fix="remove it, or adopt a run in the protocol (`--from-run`) "
+                    fix="remove it, or adopt a run in the protocol "
+                    "(`labkit-adopt <area> <run_id>`) "
                     "and write it again",
                 )
             )

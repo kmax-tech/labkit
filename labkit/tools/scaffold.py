@@ -533,8 +533,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
 through `runlog` · `finalize` · `labkit-audit <area> --mode analysis` ·
 decide its findings (`labkit-audit <area> --findings` prints the commands) ·
 write the Conclusion and obtain any required decision review ·
-`protocol-fill --from-run` writes the number back and runs {recheck} through
-`report-check`. `AGENTS.md` explains each step and the recovery choices.
+`labkit-adopt <area> <run_id>` writes the number back and runs {recheck}
+through `report-check`. `AGENTS.md` explains each step and the recovery choices.
 
 ## State
 
@@ -542,7 +542,7 @@ write the Conclusion and obtain any required decision review ·
 - [ ] {state}
 - [ ] Run and `finalize` green
 - [ ] Analysis audit decided; Conclusion written; required reviews upheld
-- [ ] `protocol-fill --from-run` and `report-check` green
+- [ ] `labkit-adopt` green
 """
 
 

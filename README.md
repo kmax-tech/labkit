@@ -145,7 +145,7 @@ repo root.
 5. **Adopt the result.** Replace `<run-id>` with the recorded run ID:
 
    ```bash
-   .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md --from-run <run-id>
+   .venv/bin/labkit-adopt experiments/01-document-count <run-id>
    ```
 
    This writes the answer and run reference from `metrics.json`, runs
@@ -350,7 +350,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **consequence** | What the selected outcome permits: an interpretation, an action, or an explicitly justified non-action. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
-| **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
+| **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`labkit-adopt`, through `protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
 | **recorded results** | Generated verdicts of the registered promises (a quality check not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
 | **report result block** | Generated section in a separate report containing the recorded results and full Limitation lines; written by `protocol-fill --into` and checked against the same sources. |

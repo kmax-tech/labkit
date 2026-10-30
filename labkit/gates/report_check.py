@@ -184,6 +184,7 @@ from labkit.gates.report_hold import (
 )
 from labkit.formats.protocol_check import check_fields, conclusion_written
 from labkit.formats.repo import (
+    ADOPT_TOOL,
     adopt_command,
     area_path,
     area_protocols,
@@ -1126,7 +1127,7 @@ def report_check(
             f"the analysis audit and the check are owed instead"
         )
     findings.take_all(report_gaps(ctx))
-    # adoption last — a `--from-run` line beside other blockers is the last
+    # adoption last — an adoption line beside other blockers is the last
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
 
@@ -1280,20 +1281,22 @@ def report_findings(ctx: Checked) -> list[GateFinding]:
 
 def adoption_order_note(blocked: list[str]) -> str | None:
     """The order to tell when BLOCKED (the blocker messages) names an adoption
-    (`--from-run`) beside blockers that are not themselves projections of
-    one (`--from-run`, `--render`): adoption runs this check and is refused
-    while any of them stands, so they come first. None otherwise — then the
-    adoption line is the way out as printed. Why: printed bare, `--from-run
-    <run> --force` beside an open BLOCKER on that run read as the fix to
-    three of three Haiku readers (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
-    adoption = [m for m in blocked if "--from-run" in m]
-    other = [m for m in blocked if "--from-run" not in m and "--render" not in m]
+    (a `labkit-adopt` line, `repo.ADOPT_TOOL`) beside blockers that are not
+    themselves projections of one (an adoption, a `--from-run` or `--render`
+    rewrite): adoption runs this check and is refused while any of them
+    stands, so they come first. None otherwise — then the adoption line is
+    the way out as printed. Why: printed bare, the adoption line beside an
+    open BLOCKER on that run read as the fix to three of three Haiku readers
+    (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
+    projections = (ADOPT_TOOL, "--from-run", "--render")
+    adoption = [m for m in blocked if ADOPT_TOOL in m]
+    other = [m for m in blocked if not any(p in m for p in projections)]
     if not adoption or not other:
         return None
     return (
-        f"  adoption comes last: `--from-run` runs report-check itself and is "
+        f"  adoption comes last: `{ADOPT_TOOL}` runs report-check itself and is "
         f"refused while any of the {len(other)} other blocker(s) above stands — "
-        f"clear them first, or hand the area over; the `--from-run` line names "
+        f"clear them first, or hand the area over; the `{ADOPT_TOOL}` line names "
         f"the last step, not the fix"
     )
 

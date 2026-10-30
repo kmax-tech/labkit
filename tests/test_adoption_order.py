@@ -17,7 +17,7 @@ from labkit.gates.report_check import adoption_order_note  # noqa: E402
 from labkit.formats import protocol_block  # noqa: E402
 from labkit.run import start_check  # noqa: E402
 
-ADOPT = "finalize: [result] names A, but the run that answers is B. Next: once that run's checks hold, `protocol-fill P --from-run B --force` adopts it"
+ADOPT = "finalize: [result] names A, but the run that answers is B. Next: once that run's checks hold, `labkit-adopt E B` adopts it"
 RENDER = "result section: the Recorded results line differs from its rendering — `protocol-fill <PROTOCOL> --render` writes it again"
 OPEN = "finalize: 2026-10-27T22-45-analysis.toml: BLOCKER · scripts/01_measure.py:113 · the refinement is truncated"
 

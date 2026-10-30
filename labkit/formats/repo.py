@@ -111,12 +111,26 @@ def area_path(arg: str) -> Path:
     return hits.pop() if hits else given
 
 
+#: the command that adopts a run — what every printed adoption line starts
+#: with, and what `report_check.adoption_order_note` recognises one by
+ADOPT_TOOL = "labkit-adopt"
+
+
 def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
-    """The `protocol-fill … --from-run` line that adopts RUN_ID into PROTOCOL,
-    the protocol named as the working directory reaches it (`shown`): a bare
-    file name failed from the repo root, where agents run the scripts
-    (count probe, 2026-10-20)."""
-    return f"protocol-fill {shown(protocol, Path.cwd())} --from-run {run_id}"
+    """The `labkit-adopt` line that adopts RUN_ID as PROTOCOL's result — the
+    adoption, the registered report's block and report-check in one step
+    (`tools.adopt`) — the area named as the working directory reaches it,
+    and `--protocol PROTOCOL` when the area holds more than one protocol
+    (as `audit_command`). The single steps (`protocol-fill --from-run`,
+    `--into`) stay for a targeted repair."""
+    area = protocol.parent
+    here = Path.cwd()
+    # the run id is runlog's or a `<run_id>` slot: quoted, the slot reads as
+    # part of the command
+    line = f"{ADOPT_TOOL} {shlex.quote(shown(area, here))} {run_id}"
+    if len(area_protocols(area)) > 1:
+        line += f" --protocol {shlex.quote(shown(protocol, here))}"
+    return line
 
 
 def withdraw_command(protocol: Path) -> str:
@@ -181,7 +195,7 @@ def next_after_run(protocol: Path, run_id: str) -> str:
         f"{audit_command(area, '--mode', 'analysis', protocol=protocol)}, then "
         f"decide its findings · {report_fields_step(protocol)} · then "
         f"{adopt_command(protocol, run_id)} (writes Recorded results, [result] run "
-        f"and the run entry from metrics.json)"
+        f"and the run entry from metrics.json, and the registered report's block)"
     )
 
 

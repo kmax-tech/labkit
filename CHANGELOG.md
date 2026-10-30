@@ -34,6 +34,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Every message names `labkit-adopt` for the adoption.**
+  `repo.adopt_command` builds `labkit-adopt <area> <run_id>` (with
+  `--protocol` where the area holds several protocols), so finalize,
+  report-check, the report holds, recheck, protocol-check, the ways out,
+  `labkit-init exp`'s steps and the area README name one command; where
+  the report is registered, its way out no longer adds `--into` after it
+  (the adoption writes the block). The order note before an adoption
+  recognises the line by `repo.ADOPT_TOOL`. `protocol-fill --from-run`
+  and `--into` stay for a targeted repair.
+
 - **The stamped `AGENTS.md` is 1,158 words (was 4,823).** It keeps the
   loop around `labkit-next`, six words (protocol, run, criterion, audit,
   decision, adoption), the kinds table, the decisions, the stop rule and

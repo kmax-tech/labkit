@@ -709,8 +709,7 @@ class Withdraw(CountCommands):
                 " --findings`",
                 "  2. `labkit-audit ",
                 " --mode analysis`",
-                "  3. `protocol-fill ",
-                " --from-run ",
+                "  3. `labkit-adopt ",
             )
         ]
         self.assertEqual(steps, sorted(steps))

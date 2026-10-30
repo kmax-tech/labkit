@@ -885,7 +885,8 @@ class RegisteredReport(unittest.TestCase):
                 )
                 self.assertIn("PROTOCOL-x.md registers ", out)
                 self.assertIn(
-                    f"--from-run {self.RUN}` adopts the run (the newest kept one), then `",
+                    f" {self.RUN}` adopts the run (the newest kept one) and writes "
+                    "its result block",
                     out,
                 )
                 self.assertIn(f"--discuss {self.RUN} --why", out)

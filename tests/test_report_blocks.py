@@ -523,7 +523,8 @@ class ReportFiles(unittest.TestCase):
             f"../experiments/01-x/PROTOCOL-x.md, which has adopted no result",
             out,
         )
-        self.assertIn(f"PROTOCOL-x.md --from-run {self.RUN}` (it names what the", out)
+        self.assertIn("`labkit-adopt ", out)
+        self.assertIn(f" {self.RUN}` (it names what the", out)
         self.assertIn(
             f'PROTOCOL-x.md --discuss {self.RUN} --why "<what refused the adoption, '
             f'what you found>" --into notes/REPORT.md`',
@@ -907,7 +908,7 @@ class ReportFiles(unittest.TestCase):
         proto.write_text(text, encoding="utf-8")
         _, out = self._gate(root, report)
         self.assertIn(f"the protocol has adopted run {new} now", out)
-        self.assertNotIn(f"--from-run {self.RUN}", out)
+        self.assertNotIn(f" {self.RUN}` (it names what the", out)
         written, _ = protocol_fill.into_report(
             text, area, report.read_text(encoding="utf-8"), P
         )

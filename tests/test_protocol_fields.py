@@ -286,7 +286,7 @@ class StampedLeftovers(unittest.TestCase):
             "## Runs\n\n- <run_id> — <one sentence: what this run was>\n\n"
             "## Notes\n\n- <…>\n"
         )
-        self.assertIn("--from-run", out)
+        self.assertIn("labkit-adopt", out)
         self.assertNotIn("- <run_id> — <one sentence: what this run was>", out)
         self.assertIn("- <…>", out)  # a bare item is still a leftover
 

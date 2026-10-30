@@ -323,7 +323,7 @@ next adoption. Then the new run is adopted the same way, in this order:
 its analysis audit and decisions, the Conclusion for it (`--force` if one
 is filled), `labkit-adopt <area> <new run_id>`.
 Adoption runs `report-check` and is refused while any other blocker
-stands: a `--from-run` line beside other blockers is the last step, not
+stands: an adoption line beside other blockers is the last step, not
 the fix.
 Recorded results derives each promise's reportable verdict before its
 measured values; raw metrics in the run remain unchanged. A failed
@@ -423,7 +423,7 @@ prints these same recovery choices with each decision list:
   adoption (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`),
   decide the BLOCKER `fixed` naming that, and run the analysis audit
   again: the follow-up judges the finding. Then adopt the run that
-  answers (`--from-run`). No new measurement, and never past a hook with
+  answers (`labkit-adopt`). No new measurement, and never past a hook with
   `--no-verify`.
 - **none of these** — a way out above cannot be taken because a
   prerequisite it names is missing; say which. Run `labkit-audit <area>

@@ -665,14 +665,9 @@ class AdoptCommand(unittest.TestCase):
                 above = repo.adopt_command(proto)
             finally:
                 os.chdir(old)
-        self.assertEqual(
-            at_root, "protocol-fill experiments/01-x/PROTOCOL-x.md --from-run R1"
-        )
-        self.assertEqual(in_area, "protocol-fill PROTOCOL-x.md --from-run <run_id>")
-        self.assertEqual(
-            above,
-            f"protocol-fill {root.name}/experiments/01-x/PROTOCOL-x.md --from-run <run_id>",
-        )
+        self.assertEqual(at_root, "labkit-adopt experiments/01-x R1")
+        self.assertEqual(in_area, "labkit-adopt . <run_id>")
+        self.assertEqual(above, f"labkit-adopt {root.name}/experiments/01-x <run_id>")
 
 
 if __name__ == "__main__":
