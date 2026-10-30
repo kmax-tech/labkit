@@ -1741,7 +1741,17 @@ Notiert, nicht geplant:
    gpt-oss die Abkürzung öfter, folgt die Zwei-Arm-Runde damit (zweite
    Agentenklasse in agentsandbox, Proxy-Pfad zum Modellserver, vLLM auf
    dem GPU-Server für Parallelität; etwa ein Tag in labkit-paper). Der
-   Pilot startet auf Ansage.
+   Pilot startet auf Ansage. **Aufteilung (Max, 2026-10-30):** gpt-oss
+   hinter vLLM auf einer A100 im Cluster (Slurm-Job, bei Max), die
+   Container bleiben auf dem Mac; Verbindung über SSH-Port-Forward
+   (autossh) zum Knoten, der Proxy erreicht ihn über
+   `host.docker.internal:<port>` und leitet `/v1/chat/completions` bzw.
+   `/v1/responses` ohne Token-Tausch weiter, protokolliert wie heute;
+   Codex CLI im Image mit eigenem Provider auf den Proxy; zweite
+   Agentenklasse in agentsandbox; Modellidentität (Gewichte-Revision,
+   vLLM-Version, Sampling) in attempts.jsonl. Auf 80 GB passt auch
+   gpt-oss-120b — Achse „Agentenstärke" mit 20b, 120b, Haiku. Mac-Seite
+   baut die Sitzung auf Ansage; gebraucht werden Port und Modellname.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
