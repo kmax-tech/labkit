@@ -1,5 +1,22 @@
 # The agent-facing surface: fewer terms, one next step (plan, 2026-10-30)
 
+> **Built, 2026-10-30 (CHANGELOG 0.104.0, Breaking): the ids, the field
+> words and the decisions of step 3.** The final vocabulary supersedes the
+> intermediate words in step 3 below (`interpretation-1`, `limit`,
+> `Meaning`, an outcome without consequence): promise ids `criterion-1`,
+> `quality-check-1`, `branch-1` (keys `criterion_1_pass`,
+> `branch_1_outcome`); fields `Inference criterion`, `Quality check`,
+> `Registered branch` — its outcomes `<condition> → <outcome>:
+> <consequence>`, the first condition that holds selects —,
+> `Interpretation` after the run (CONSORT 2010 item 22), `Expected or
+> surprising †`, `Limitations`, the next step in the Summary only;
+> decisions `fixed` / `limitation` / `false-positive` with `--why` and
+> `--not-assessable`, no `deferred` — an unsettled finding stays `open`
+> and a handover records it, which the stop, the commit and a
+> replacement's report-check read. The B kind stays a registered branch
+> because it holds interpretations, actions and stop rules alike. Steps 1,
+> 2, 4–7 are not built yet; the README's Terms carry the definitions.
+
 **Problem.** labkit's guarantees hold (injection benchmark: seven of nine
 mutations held in every state, the other two closed since), but too few
 agents reach the point where they apply: in round 1 the lab arm bound a

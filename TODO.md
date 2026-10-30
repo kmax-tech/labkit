@@ -2478,6 +2478,38 @@ dann Messung an den vorhandenen Spuren, dann Bau, dann kalte Runde 21/60
 alt gegen neu. Die übrigen Befunde (Fit-Skelett-Budget, Codex-Hooks)
 werden danach untersucht.
 
+**Stand 2026-10-30 abends — Branch `id-words` (Worktree
+`.claude/worktrees/id-words`), noch nicht in `main`, nicht veröffentlicht.**
+Gebaut, je ein Commit, Hook grün (2.522 Tests), CHANGELOG „Breaking“
+für 0.104.0:
+- IDs als Typwort + Zahl: `criterion-1`, `quality-check-1`, `branch-1`,
+  Schlüssel `criterion_1_pass`, `branch_1_outcome`; C/A/B wird mit
+  Verweis auf 0.103.0 abgelehnt.
+- Felder: `Inference criterion`, `Quality check`, `Registered branch`
+  (Form `<condition> → <outcome>: <consequence>; …`, erste passende
+  Bedingung gilt), `Interpretation` (nach dem Lauf, CONSORT 22),
+  `Expected or surprising †`, `Limitations`; Next step nur in der
+  Zusammenfassung.
+- Entscheidungen: `fixed` / `limitation` / `false-positive`, `--why`,
+  `--not-assessable`; `deferred` entfällt — offene Befunde bleiben
+  `open`, die Übergabe hält sie fest, Stop/Commit/Ersetzung lesen sie.
+- Meldungen: adopt statt declare, IDs mit Namen, Prüfpflicht je Grad.
+- Lese-Probe (`labkit-evidence/usability/2026-10-30-words-reading/`):
+  kein Unterschied in der nächsten Handlung; der Umbau stützt sich auf
+  die Lesbarkeit für Menschen.
+
+Als Nächstes, in dieser Reihenfolge:
+1. `main` auf `id-words` vorspulen (Kommando im Chat), Release 0.104.0
+   (`just release 0.104.0`), Worktrees `id-words` und `interp-arms`
+   entfernen.
+2. Plan-Schritte 1, 2, 4, 5, 6, 7 der Note: `labkit next`, `labkit
+   adopt`, ehrlicher Stopp schuldet die Zahl, Gate-Meldungen im Muster,
+   `AGENTS.md` unter 1.200 Wörter.
+3. Kalte Runde 21/60 alt gegen neu.
+- Offen, notiert: LAB-013 trägt noch „Registered branch“ im Titel — passt
+  jetzt wieder; die Lese-Probe lief mit Lesern, die die globale
+  CLAUDE.md sahen (künftig Leser ohne Hauskontext).
+
 - **Prompts der Audit-Agenten kürzen (notiert, nicht geplant):**
   `labkit/agents/*.agent.md`, 5.657 Wörter, der Preflight allein 3.155
   mit sechs Daten. Erst nach der kalten Runde 21/60, damit deren Effekt
