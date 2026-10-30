@@ -92,8 +92,24 @@ class EverySite(unittest.TestCase):
 
 
 #: a field of an f-string way out that builds a command: its expression
-#: names one (`audit_command(…)`, `findings.decide_way(…)`, `measure`)
-COMMAND_FIELD = ("command", "way", "WAY", "measure", "again", "HANDOVER")
+#: names one (`audit_command(…)`, `findings.decide_way(…)`, `measure`,
+#: `preflight.contract_hint(…)`, `ways_out.register_anew(…)`)
+COMMAND_FIELD = (
+    "command",
+    "way",
+    "WAY",
+    "measure",
+    "again",
+    "HANDOVER",
+    "audit",
+    "contract_hint",
+    "fields",
+    "register_anew",
+    "_review_step",
+    "into",
+    "RENDER",
+    "AGAIN",
+)
 
 
 def _part_names_command(part: ast.expr) -> bool:
@@ -153,57 +169,17 @@ def commandless_blocker_ways(tree: ast.AST) -> list[tuple[int, str]]:
     return out
 
 
-#: (module, function) → how many of its BLOCKER way outs name no command
-#: today. The list only shrinks: a new way out names its command, and a
-#: rewritten one leaves the list (agent-surface plan, step 6).
-COMMANDLESS = {
-    ("labkit/checks/code_check.py", "_intent_id_findings"): 1,
-    ("labkit/checks/code_check.py", "promise_block_findings"): 3,
-    ("labkit/checks/code_scan.py", "unreadable_source"): 1,
-    ("labkit/checks/intent_check.py", "unregistered_outcomes"): 1,
-    ("labkit/checks/notes_check.py", "check_file"): 3,
-    ("labkit/checks/notes_check.py", "main"): 1,
-    ("labkit/checks/prompt_check.py", "check_parser_fixtures"): 2,
-    ("labkit/checks/report_blocks.py", "block_gaps"): 3,
-    ("labkit/checks/report_blocks.py", "cited_gaps"): 1,
-    ("labkit/checks/report_blocks.py", "discussion_gaps"): 1,
-    ("labkit/checks/result_render.py", "render_gaps"): 4,
-    ("labkit/checks/run_record_check.py", "_helpers_since_run"): 2,
-    ("labkit/checks/run_record_check.py", "_run_code"): 2,
-    ("labkit/checks/run_record_check.py", "null_lane_findings"): 1,
-    ("labkit/checks/run_record_check.py", "provenance_findings"): 1,
-    ("labkit/checks/run_record_check.py", "row_provenance_findings"): 1,
-    ("labkit/formats/reference.py", "comparison_gaps"): 2,
-    ("labkit/gates/finalize.py", "check_declared_scopes"): 1,
-    ("labkit/gates/finalize.py", "check_open_audit_findings"): 1,
-    ("labkit/gates/finalize.py", "check_reference"): 1,
-    ("labkit/gates/preflight.py", "check_protocol_fields"): 2,
-    ("labkit/gates/preflight.py", "preflight_area"): 1,
-    ("labkit/gates/report_check.py", "_predecessor"): 3,
-    ("labkit/gates/report_check.py", "_undeclared_changes"): 2,
-    ("labkit/gates/report_check.py", "analysis_audit_gap"): 1,
-    ("labkit/gates/report_check.py", "first_dismissals"): 1,
-    ("labkit/gates/report_check.py", "followup_findings"): 1,
-    ("labkit/gates/report_check.py", "freeze_gaps"): 2,
-    ("labkit/gates/report_check.py", "review_findings"): 2,
-    ("labkit/gates/report_hold.py", "report_review_owed"): 1,
-    ("labkit/gates/report_hold.py", "undeclared_findings"): 1,
-}
-
-
 class EveryWayOut(unittest.TestCase):
-    def test_no_new_way_out_without_a_command(self):
-        found: dict[tuple[str, str], int] = {}
+    def test_every_literal_way_out_names_its_command(self):
+        """`<what is refused>. Next: <command>` (agent-surface plan, step 6):
+        the step after a repair by hand is the check run again
+        (`repo.gate_command`)."""
+        missing = []
         for path in sorted((ROOT / "labkit").rglob("*.py")):
             rel = path.relative_to(ROOT).as_posix()
             tree = ast.parse(path.read_text(encoding="utf-8"), rel)
-            for _, fn in commandless_blocker_ways(tree):
-                found[(rel, fn)] = found.get((rel, fn), 0) + 1
-        grown = {k: v for k, v in found.items() if v > COMMANDLESS.get(k, 0)}
-        self.assertEqual(grown, {}, "a BLOCKER way out that names no command")
-        # a site rewritten to name its command leaves the list
-        shrunk = {k: v for k, v in COMMANDLESS.items() if found.get(k, 0) < v}
-        self.assertEqual(shrunk, {}, "lower these counts in COMMANDLESS")
+            missing += [f"{rel}:{n} ({fn})" for n, fn in commandless_blocker_ways(tree)]
+        self.assertEqual(missing, [], "a BLOCKER way out that names no command")
 
     def test_the_reader_tells_a_command_from_a_sentence(self):
         tree = ast.parse(

@@ -49,6 +49,7 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.gate import AREA_SLOT
 from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.gate import EXIT_CONTRACT, GateFinding, blocker, with_way_out
@@ -341,7 +342,7 @@ def unregistered_outcomes(
                 f"none of its outcomes' names",
                 fix=f"record one of {', '.join(outcomes)} — the name of the "
                 f"outcome whose condition holds, as [[promise]] {p.id} writes it: "
-                f"fix the code and measure again",
+                f"fix the code, then `.venv/bin/python {AREA_SLOT}/scripts/01_measure.py`",
             )
         )
     return out

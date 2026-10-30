@@ -134,6 +134,20 @@ def measure_command(area: Path) -> str:
     return f".venv/bin/python {shlex.quote(script)}"
 
 
+def measure_anew(area: Path) -> str:
+    """The way out where a run cannot be held to its code, rows or record:
+    a new run of AREA (`measure_command`), then its analysis audit."""
+    return f"measure anew (`{measure_command(area)}`) and audit that run"
+
+
+def gate_command(tool: str, target: Path) -> str:
+    """The line that runs the check TOOL (`code-check`, `finalize`,
+    `report-check`, `preflight`, `notes-check`) on TARGET, named as the
+    working directory reaches it — the last step of a way out whose repair
+    is by hand."""
+    return f"{tool} {shlex.quote(shown(target, Path.cwd()))}"
+
+
 def contract_command(protocol: Path) -> str:
     """The `protocol-check … --contract` line that prints the fields PROTOCOL
     owes by occasion, the protocol named as the working directory reaches

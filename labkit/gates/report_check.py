@@ -126,6 +126,7 @@ import subprocess
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
@@ -412,20 +413,23 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
     if pid == ctx.head.id:
         return blocker(
             "[replaces] protocol is its own id",
-            fix="name the protocol it replaces",
+            fix=f"name the protocol it replaces in [replaces] protocol, then "
+            f"`{gate_command('report-check', ctx.area)}`",
         )
     hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
     if len(hits) != 1:
         return blocker(
             f"[replaces] protocol = {pid} names "
             + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
-            fix="name the one protocol of this repo it replaces, kept as it is",
+            fix="name the one protocol of this repo it replaces, kept as it "
+            f"is, then `{gate_command('report-check', ctx.area)}`",
         )
     circle = _replacement_circle(str(ctx.head.id), hits[0])
     if circle:
         return blocker(
             f"the replacements run in a circle ({circle})",
-            fix="let each name the one before it",
+            fix=f"let each name the one before it, then "
+            f"`{gate_command('report-check', ctx.area)}`",
         )
     return hits[0]
 
@@ -471,7 +475,8 @@ def _undeclared_changes(
             f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
             f"{y}",
             fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
-            f'{s(x)}, to = {s(y)}, why = "…"',
+            f'{s(x)}, to = {s(y)}, why = "…"; then '
+            f"`{gate_command('report-check', ctx.area)}`",
         )
         for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
@@ -481,7 +486,8 @@ def _undeclared_changes(
         blocker(
             f"declares a change the registrations do not show: {what} {x} → {y} "
             f"(the predecessor {against}, this protocol {new_where})",
-            fix="remove that [[replaces.change]]",
+            fix=f"remove that [[replaces.change]], then "
+            f"`{gate_command('report-check', ctx.area)}`",
         )
         for what, x, y in sorted(listed - set(computed))
     ]

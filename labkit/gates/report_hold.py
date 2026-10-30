@@ -825,7 +825,8 @@ def report_review_owed(
                         f"{shown(area, sources.repo)}, whose working tree differs "
                         f"from the index ({', '.join(differs)}) — the commit would "
                         f"not hold what the review saw",
-                        fix="stage these too, or stash them",
+                        fix=f"stage these too: `git add -- "
+                        f"{shlex.quote(shown(area, sources.repo))}`",
                     )
                 )
                 continue
@@ -960,8 +961,8 @@ def undeclared_findings(
                 blocker(
                     f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
                     f"reported, but {named} has adopted it as its result",
-                    fix="remove the discussion block; the generated result block "
-                    "shows the number",
+                    fix="remove the discussion block — the generated result block "
+                    f"shows the number —, then `report-check --if-reported {rel}`",
                 )
             )
     said_so = {d.run_id for d in discussed}

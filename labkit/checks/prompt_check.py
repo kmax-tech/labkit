@@ -11,10 +11,12 @@ the protocol's prompt block (`check_prompt_drift`), read through
 
 from __future__ import annotations
 
+import shlex
 import ast
 import re
 from pathlib import Path
 
+from labkit.formats.repo import gate_command, shown
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
 from labkit.formats import protocol_block
@@ -57,7 +59,8 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     BLOCKER,
                     t.name,
                     f"cannot be parsed ({exc}) · which parsers it calls cannot be told",
-                    fix="fix the test file",
+                    fix=f"repair it until `.venv/bin/python -m pytest "
+                    f"{shlex.quote(shown(t, Path.cwd()))}` collects it",
                     evidence_kind=GUARANTEED,
                 )
             )
@@ -77,7 +80,8 @@ def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
                     f"{name}() has no test under {tests_dir.name}/ · a parser "
                     f"fails silently into a wrong number",
                     rule="LAB-016 Resolution check before freezing",
-                    fix="give it a fixture with real raw answers",
+                    fix=f"give it a test with real raw answers under {tests_dir.name}/, "
+                    f"then `{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
                 )
             )

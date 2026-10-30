@@ -84,6 +84,7 @@ import shlex
 from dataclasses import replace
 from pathlib import Path
 
+from labkit.formats.repo import gate_command, measure_anew
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
 from labkit.formats.runs import metrics_path, read_metrics, run_path
 from labkit.formats import (
@@ -484,7 +485,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
             f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run, "
             f"and nothing restores its rows (LAB-043 Runs go through `runlog`)",
-            fix="measure again under a new run and audit that",
+            fix=measure_anew(area),
         )
     seen = len(gone)
     for u in audit_findings.open_findings(records):
@@ -751,7 +752,11 @@ def check_reference(
         return
     gap = reference_gap(text, head)
     if gap:
-        findings.block(f"{protocol.name}: {gap}", fix="as the sentence says")
+        findings.block(
+            f"{protocol.name}: {gap}",
+            fix=f"repair the head as the sentence says, then "
+            f"`{gate_command('finalize', protocol.parent)}`",
+        )
         return
     try:
         metrics = runs_metrics(answering_run)
