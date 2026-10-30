@@ -46,6 +46,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import console
+from labkit.formats.gate import with_way_out
 from labkit.formats.files import write_atomic
 from labkit.formats.repo import local_dir
 from labkit.formats.runs import now_stamp
@@ -168,9 +169,12 @@ def _parse(path: Path, text: str, held: bool) -> DetachedStart:
     def bad(why: str) -> console.Refused:
         return console.Refused(
             "runlog",
-            f"{path}: the record of a command `runlog start` detached does not "
-            f"read — {why}; it is labkit's local note in the git directory, not "
-            f"evidence — way out: remove it (`rm {shlex.quote(str(path))}`)",
+            with_way_out(
+                f"{path}: the record of a command `runlog start` detached does "
+                f"not read — {why}; it is labkit's local note in the git "
+                f"directory, not evidence",
+                f"remove it: `rm {shlex.quote(str(path))}`",
+            ),
         )
 
     def number(key: str) -> int:

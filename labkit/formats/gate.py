@@ -64,17 +64,21 @@ GUARANTEED = "guaranteed"
 STATIC_EVIDENCE = "static evidence"
 EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 
-#: how a prefixed or as-written line joins its fix to its text; a dotted
-#: line gives the fix its own ` · ` part
-WAY_OUT = " — way out: "
+#: how every line joins its fix to its text — `<what is refused and why>.
+#: Next: <fix>`, the fix a command where one exists; a dotted line gives it
+#: its own ` · Next: ` part (agent-surface plan, step 6)
+WAY_OUT = ". Next: "
 
 
 def with_way_out(why: str, fix: str | None) -> str:
-    """WHY with its way out FIX joined as every line tells it (`WAY_OUT`); WHY
-    alone without one — the one spelling of a sentence and its step, for a
-    finding's line and for a refusal's message (`AuditError`,
-    `AttemptError`, runlog's start refusals)."""
-    return why + (WAY_OUT + fix if fix else "")
+    """WHY with its way out FIX joined as every line tells it (`WAY_OUT`,
+    WHY's own closing full stop dropped first); WHY alone without one — the
+    one spelling of a sentence and its step, for a finding's line and for a
+    refusal's message (`AuditError`, `AttemptError`, runlog's start
+    refusals)."""
+    if not fix:
+        return why
+    return why.rstrip().removesuffix(".") + WAY_OUT + fix
 
 
 @dataclass(frozen=True)
@@ -145,11 +149,12 @@ class GateFinding:
         form names static evidence (`WARNING · static evidence · …`) so a
         reader of a code check's line sees it is an indication; a prefixed
         line stays `WARNING: …`, and the summary counts the kind. The fix
-        ends the line in every form: its own dotted part, else after
-        `WAY_OUT`."""
+        ends the line in every form: its own dotted part (`Next: …`), else
+        after `WAY_OUT`."""
         if self.form == DOTTED:
             kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
-            parts = (self.grade, kind, self.where, self.text, self.rule, self.fix)
+            fix = f"Next: {self.fix}" if self.fix else None
+            parts = (self.grade, kind, self.where, self.text, self.rule, fix)
             return " · ".join(p for p in parts if p)
         told = self.text if self.form == AS_WRITTEN else f"{self.grade}: {self.text}"
         return with_way_out(told, self.fix)

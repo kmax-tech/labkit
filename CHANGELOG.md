@@ -34,6 +34,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Every gate line in one pattern: `<what is refused>. Next: <fix>`.**
+  `gate.with_way_out` joins a sentence and its way out with `. Next: `
+  (was ` — way out: `), the sentence's own full stop dropped; a dotted
+  line's last part reads `Next: <fix>`. A literal BLOCKER way out names
+  its command; the ones that do not yet are counted per function in
+  `tests/test_ways_out_data.py`, a list that only shrinks. A reader that
+  matched ` — way out: ` in a gate's output matches `. Next: ` now.
+
 - **The agent-facing wording leads to the next action** (plan:
   `docs/notes/2026-10-30-agent-surface.md`). The run a protocol reports is
   the *adopted* run in every message, `AGENTS.md`, the README and

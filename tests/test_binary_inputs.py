@@ -51,7 +51,7 @@ class BinaryInputs(unittest.TestCase):
         said = str(caught.exception)
         self.assertIn("data['features']", said)
         self.assertIn(str(features), said)
-        self.assertIn("way out: ", said)
+        self.assertIn("Next: ", said)
         self.assertIn("provenance.BinaryInput(path)", said)
         recorded = provenance.describe_data(
             {"features": provenance.BinaryInput(features)}, self.area

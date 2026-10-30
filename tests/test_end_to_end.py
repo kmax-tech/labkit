@@ -801,7 +801,7 @@ class Withdraw(CountCommands):
         holds = [ln for ln in out.splitlines() if ln.startswith("  BLOCKER: ")]
         self.assertGreaterEqual(len(holds), 2, out)
         for hold in holds:
-            self.assertIn("— way out: withdraw the adoption first (`", hold)
+            self.assertIn(". Next: withdraw the adoption first (`", hold)
         self.assertIn(f"changed since {run_a}", out)
         self.assertEqual(self.withdraw("the measuring code changes")[0], 0)
         self.lab.git("add", str(self.protocol))

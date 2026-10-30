@@ -189,7 +189,7 @@ class Begin(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             attempts.AttemptError,
-            "is running — way out: wait for it to end, then run this",
+            "is running. Next: wait for it to end, then run this",
         ):
             attempts.begin(
                 area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"

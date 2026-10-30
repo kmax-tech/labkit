@@ -149,7 +149,7 @@ class Provenance(unittest.TestCase):
         rc, out = self._finalize()
         self.assertEqual(rc, 1)
         line = next(x for x in out.splitlines() if "not tracked in git" in x)
-        self.assertIn("way out: if it is small and may legally be shared", line)
+        self.assertIn("Next: if it is small and may legally be shared", line)
         self.assertIn(f"`git add {self.src}`", line)
         self.assertIn(
             "large or protected data stay out, but finalize still blocks", line
