@@ -636,6 +636,24 @@ def acknowledgement(area: Path, *, staged: bool = False) -> Acknowledgement:
     return Acknowledgement(False, refused)
 
 
+def protocol_handed_over(area: Path, protocol: Path) -> bool:
+    """Whether a current handover of AREA in the tree (`mismatch` None)
+    ends PROTOCOL — the record names that protocol, not only one beside it
+    in the same area. False outside a git repository. Raises HandoverError
+    when the area's handover records cannot be listed."""
+    area = area.resolve()
+    root = git_root(area)
+    if root is None:
+        return False
+    rel = protocol.resolve().relative_to(root).as_posix()
+    for path in record_paths(area):
+        if mismatch(area, root, path, staged=False) is not None:
+            continue
+        if read_record(root, path).protocol == rel:
+            return True
+    return False
+
+
 def valid(area: Path, *, staged: bool = False) -> bool:
     """Whether an exact, current handover permits an unresolved stop/commit
     of AREA (`acknowledgement`)."""

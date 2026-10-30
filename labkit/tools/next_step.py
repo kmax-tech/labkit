@@ -13,8 +13,8 @@ first that applies is the step:
     no protocol in the area      → `labkit-init exp …` registers the question
     a MUST field still unfilled  → `protocol-fill …` fills it
                                    (`protocol_check.check_fields`)
-    a current handover           → nothing: the protocol ended without a
-                                   result (`handovers.valid`)
+    a current handover of it     → nothing: the protocol ended without a
+                                   result (`handovers.protocol_handed_over`)
     a gap report-check holds     → its way out, the first in the chain's
                                    order (`report_check.report_gaps`)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
@@ -90,7 +90,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "the first measurement: what the registration lacks then cannot be "
             "added in place",
         )
-    if handovers.valid(area):
+    if handovers.protocol_handed_over(area, protocol):
         return Step(
             f"{protocol.name} is handed over: it ended without a result, its open "
             "findings recorded in the handover",

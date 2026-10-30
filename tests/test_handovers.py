@@ -417,6 +417,22 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(len(handovers.handover_blocks(self.report.read_text())), 1)
         self.assertTrue(handovers.valid(self.area))
 
+    def test_a_handover_ends_its_own_protocol_not_one_beside_it(self):
+        """labkit-next says `nothing` only for the protocol the handover
+        names; a second protocol of the same area is not ended by it."""
+        from labkit.tools import next_step
+
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        self.assertTrue(handovers.valid(self.area))
+        self.assertTrue(handovers.protocol_handed_over(self.area, self.protocol))
+        step = next_step.next_step(self.area, self.protocol)
+        self.assertIn("is handed over", step.where)
+        # the twin: another protocol of the area, the area's handover current
+        other = self.area / "PROTOCOL-s2-other.md"
+        other.write_text(self.protocol.read_text(encoding="utf-8"), encoding="utf-8")
+        self.assertFalse(handovers.protocol_handed_over(self.area, other))
+
     def test_a_handover_withdraws_the_earlier_report_result_block(self):
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
