@@ -17,18 +17,18 @@ and you do not soften a finding the auditor made.
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
-   the effect `stands` (findings decided `limitation`). A decision of `false-positive`,
-   `fixed` appears when an earlier review did not uphold a
-   decision on that finding — the line `decided again after a review said
-   …` carries that verdict —, a `false-positive` one when the
-   finding is carried (a follow-up audit did not find its fault gone), and
-   every BLOCKER decided `false-positive`.
+   the effect `stands` (findings decided `limitation`). Three more kinds
+   appear: every BLOCKER decided `false-positive`; a `false-positive` on a
+   carried finding (a follow-up audit did not find its fault gone); and a
+   `false-positive` or `fixed` decided again after an earlier review did not
+   uphold it — the line `decided again after a review said …` carries that
+   verdict.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, quality check, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
-   the Recorded results line and the Limitation lines as `protocol-fill
-   --from-run` renders them for this run and these decisions — the
-   protocol may not carry them yet. The claim is what a reader takes
+   the Recorded results line and the Limitation lines as the adoption
+   renders them for this run and these decisions — the protocol may not
+   carry them yet. The claim is what a reader takes
    away; the Limitation line is how the decision reaches them.
 3. The files the findings name, inlined in full, as the auditor read them.
 4. The answering run's rows and `metrics.json` under `===== ROWS … =====`
@@ -97,8 +97,8 @@ The counts must equal the lines above them; a line withdrawn in prose
 below it makes the review unrecordable. Write every decision's line, even
 when the answer is the same for several.
 
-## Out of scope — do not report, do not do
+## Out of scope
 
 - New findings, repair proposals, style, the auditor's severity.
 - Editing anything: you have no write tools; the person decides.
-- Model calls: this review costs no money and produces no data.
+- Model calls.
