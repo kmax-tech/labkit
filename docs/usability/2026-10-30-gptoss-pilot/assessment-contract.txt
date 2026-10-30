@@ -197,3 +197,19 @@ B and C run with the same settings (window 122,880 on the server, 30,000 told to
 time). Recorded: no garbled tool-call JSON in any Qwen attempt (gpt-oss: every attempt), eleven apply_patch
 format errors in all, two degenerate repetition loops (the model's generation_config sampling,
 temperature 0.7, top_p 0.8, top_k 20, as served; not changed for the pilot).
+
+Addendum 11, 2026-10-30 evening, after Qwen's stage B and before stage C. Stage B (lab arm, one at a time,
+store-qwen-B): five attempts, 2 to 36 min, none timed out, none registered a run, none wrote REPORT.md. Four of
+five entered the route — `labkit-init exp`, a protocol filled, 21 also a measurement script and 60 a prepared
+dataset (41 labkit commands of 181) — and stopped before the first `runlog` run: 21 with an announcement and
+no tool call (the turn ends, nothing holds it: the stop hook does not fire under Codex), 34, 60, 71 in the
+repetition loop seen in stage A; 15 never ran a labkit command and looped as well. Delivered output files: 60
+only (accuracies.csv, outside a run). Against gpt-oss (three of five never entered), Qwen follows AGENTS.md but
+does not reach a registered measurement; the route's length before the first run is where it is lost.
+Instrument finding, labkit (guaranteed tier): the standard check on 21's state crashed — finalize's
+check_open_fields calls readme_route, which parses the measurement script with ast.parse, and the agent's
+script (edited with sed) has an IndentationError; the check ends in a traceback instead of a BLOCKER naming
+file and line. A labkit defect to fix (fail loud is a sentence, not a stack); the pilot runner records such a
+crash per attempt as "standard check crashed" and scores on. Stage C runs as announced: both arms with round
+1's requirement sentence, one at a time, the same settings; two degenerate loops per arm would be no surprise,
+and they are counted as the attempt's end.

@@ -251,10 +251,18 @@ def score(images: dict[str, str]) -> None:
                "dir": rec["dir"], "timed_out": rec["timed_out"], "has_report": (work / "REPORT.md").exists(),
                "valid": s["valid"], "success": s["verdict"], "line": s["line"], **effort(rec)}
         if rec["arm"] == "labkit":
-            with tempfile.TemporaryDirectory(dir=S) as tmp:
-                std = standard_check.check_attempt(rec["images"]["agent"], work, Path(tmp),
-                                                   inputs=sab.inputs(task), inputs_sha256=rec["inputs_sha256"])
-            row.update(standard_met=std["met"], repeat_cost=std.get("repeat_cost"), gaps=std["gaps"])
+            # A crash of the standard check is the instrument's result, kept as data: the check
+            # could not judge this state (seen 2026-10-30: finalize's readme_route parses the
+            # agent's measurement script with ast.parse and a syntax error in it is a traceback,
+            # not a gap — a labkit defect, recorded in the pilot contract, addendum 11).
+            try:
+                with tempfile.TemporaryDirectory(dir=S) as tmp:
+                    std = standard_check.check_attempt(rec["images"]["agent"], work, Path(tmp),
+                                                       inputs=sab.inputs(task), inputs_sha256=rec["inputs_sha256"])
+                row.update(standard_met=std["met"], repeat_cost=std.get("repeat_cost"), gaps=std["gaps"])
+            except (SystemExit, Exception) as exc:  # noqa: BLE001 — the probe records what the check could not do
+                row.update(standard_met=False, repeat_cost=None, gaps=[f"standard check crashed: {str(exc)[:400]}"],
+                           standard_check_crashed=True)
         rows.append(row)
         print(json.dumps({k: row[k] for k in ("attempt_id", "success", "valid", "line", "seconds", "turns")
                           if k in row} | ({"standard_met": row["standard_met"]} if "standard_met" in row else {})),
