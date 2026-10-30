@@ -2435,10 +2435,20 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
 Note `docs/notes/2026-10-30-agent-surface.md`: sechs Begriffe statt
 zwanzig, `labkit next <area>` als ein Kommando für den nächsten Schritt,
 Decide mit drei Ausgängen, `labkit adopt` als ein Schritt, ehrlicher Stopp
-schuldet die Zahl, `AGENTS.md` unter 1.200 Wörter. Zuerst Plan (steht),
+schuldet die Zahl, Gate-Meldungen in einem Muster (`<was verweigert
+wird>. <warum>. Next: <Befehl>`) vor dem Kürzen der Prosa, `AGENTS.md`
+unter 1.200 Wörter durch Streichen nach einem Satz-Filter (Gate trägt es →
+weg, Mechanik → `labkit/docs/`, Datum → Note), erst der Rest im
+prozeduralen Register des SimpleEnglish-Skills. Zuerst Plan (steht),
 dann Messung an den vorhandenen Spuren, dann Bau, dann kalte Runde 21/60
 alt gegen neu. Die übrigen Befunde (Fit-Skelett-Budget, Codex-Hooks)
 werden danach untersucht.
+
+- **Prompts der Audit-Agenten kürzen (notiert, nicht geplant):**
+  `labkit/agents/*.agent.md`, 5.657 Wörter, der Preflight allein 3.155
+  mit sechs Daten. Erst nach der kalten Runde 21/60, damit deren Effekt
+  zuzuordnen bleibt; derselbe Satz-Filter, gemessen am
+  Injection-Benchmark (hält die Garantie-Stufe?), nicht an der Runde.
 
 ## Rollout und Aufgaben außerhalb dieses Repos
 
