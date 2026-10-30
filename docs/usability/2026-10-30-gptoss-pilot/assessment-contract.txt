@@ -141,3 +141,14 @@ fire), no requirement, the same budgets and image as stage A's counted launch, t
 a model that fails the tasks get through labkit's route at all, and does the registered criterion make the
 self-set bar of stage A visible? Counted as stage B's exploratory result, never as a pilot count; no
 comparison with stage A beyond a description.
+
+Addendum 6, 2026-10-30 late afternoon, before any attempt with the second model. At the author's word the same
+pilot design runs with Qwen/Qwen3-30B-A3B-Instruct-2507-FP8 (served as qwen3-30b-a3b; a 30B mixture-of-experts
+model with 3B active parameters, instruct variant without a thinking mode, FP8 weights run as W8A16 through
+Marlin kernels on the A100 — Ampere has no FP8 units) behind the same vLLM 0.32.0 on gammaweb09: --max-model-len
+32768, --max-num-seqs 2, --tool-call-parser hermes, the same key. Weights revision 5a5a776300a41aaa681dd7ff0106608ef2bc90db
+(Hugging Face, last modified 2025-09-17, the only revision a fresh download could load). Harness as before: Codex 0.166.0 through the proxy, the catalog entry written
+for the served name, the proxy's grammar-to-text shim; the vLLM patch of addenda 1 to 3 is harmony-only and
+does not act on Qwen, which takes vLLM's chat-template path (custom tools supported there as shipped). Stages
+A, B, C and their clause as in the contract; two attempts at a time (two server sequences). Stores
+store-qwen-A/B/C; counts per cell, no rate; the gpt-oss counts stay the gpt-oss counts.
