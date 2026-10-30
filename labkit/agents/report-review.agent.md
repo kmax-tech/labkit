@@ -38,7 +38,7 @@ A **claim** is a line that does one of these:
 
 - **result** — states a number, a pass/fail verdict or a comparison of a
   discussed run as what the experiment found: in a results table, a summary,
-  a conclusion, "C1 PASS", "AUROC 0.78 on the test set". The mark beside
+  a conclusion, "criterion-1 PASS", "AUROC 0.78 on the test set". The mark beside
   it does not change what the line tells a reader.
 - **contradiction** — states something the audits contradict: a verdict
   on a promise a decision calls `not assessable`, a check called passed

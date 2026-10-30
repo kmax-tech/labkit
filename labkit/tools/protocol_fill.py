@@ -11,7 +11,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md "Meaning of the gold label=positive = ..."   the form AGENTS.md shows; several fields in one call
     protocol-fill PROTOCOL-x.md "Meaning of the gold label" "positive = ..."   the same, one field
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
-    protocol-fill PROTOCOL-x.md "C1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
+    protocol-fill PROTOCOL-x.md "criterion-1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md type=exploratory repeat_cost=low kind=fit "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
@@ -129,7 +129,7 @@ def fill(
     and placeholders; a second one here mis-read a wrapped label as
     `extremes)` (usability probe 2026-10-07). The label line and its
     continuation lines become one line; everything else stays byte-identical.
-    An id the stamp wrote before the placeholder (`[C1] <…>`) stays when
+    An id the stamp wrote before the placeholder (`[criterion-1] <…>`) stays when
     VALUE names no id; a VALUE with its own ids replaces it.
 
     Raises ValueError with a human-readable reason (unknown label, ambiguous
@@ -249,7 +249,7 @@ def fill_head(text: str, key: str, value: str) -> str:
 
 
 #: a promise's sentence as `--list` names it and a fill addresses it:
-#: `C1 sentence` — the word before "sentence" is a promise id
+#: `criterion-1 sentence` — the word before "sentence" is a promise id
 #: (`promises.is_block_id`), else the label is a prose field's
 SENTENCE_LABEL = re.compile(r"^\s*(\S+)\s+sentence\s*$", re.I)
 #: a one-line `sentence = <string>` with an optional comment, the key bare
@@ -316,7 +316,7 @@ def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
     hand); reads the block back and raises unless it holds exactly VALUE."""
     block = promises.parse_block(text)
     ids = [p.id for p in block.promises] if block is not None else []
-    match = [i for i in ids if i == pid.upper()]
+    match = [i for i in ids if i == pid]
     if not match:
         raise ValueError(
             f"no [[promise]] {pid!r} in the TOML head"
@@ -860,7 +860,7 @@ def fill_many(
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
         sentence = SENTENCE_LABEL.match(label)
-        if sentence and not promises.is_block_id(sentence.group(1).upper()):
+        if sentence and not promises.is_block_id(sentence.group(1)):
             sentence = None  # a prose label such as "Key sentence"
         if label.strip().lower() in FREEZE_KEYS:
             raise ValueError(

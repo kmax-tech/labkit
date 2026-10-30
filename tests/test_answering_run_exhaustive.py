@@ -57,7 +57,7 @@ class Kind:
     keys: bool = True
 
 
-KEYS = {"c1_pass": True}
+KEYS = {"criterion_1_pass": True}
 KINDS = (
     Kind("answer", metrics=KEYS),
     Kind("probe", metrics={"n_rows": 3}, keys=False),
@@ -213,7 +213,7 @@ class EveryArrangement(unittest.TestCase):
 
 
 #: a protocol that registers an id, so a probe-only area is no answer
-PROTOCOL_TEXT = "- **Recorded results:** [C1] holds\n\n" + head(id=PID)
+PROTOCOL_TEXT = "- **Recorded results:** [criterion-1] holds\n\n" + head(id=PID)
 BLOCKED = "<blocked>"
 
 

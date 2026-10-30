@@ -192,7 +192,7 @@ def quick_block(tmpl: str, kind: str) -> str:
     if has_bar(kind):
         return tmpl
     # a deterministic computation has no bar to clear: no promise tables, no
-    # criterion — five cold agents each invented a tautological [C1]
+    # criterion — five cold agents each invented a tautological [criterion-1]
     # (cloud probes 2026-10-12); the number is held by --check and finalize
     return without_promise_tables(tmpl)
 
@@ -412,7 +412,7 @@ ESTIMATOR_FIELDS = {
     # a filled value, no `<…>` tail: an "n/a — …" line ending in a hole read
     # as filled, and protocol-check let the hole through (BERT example on
     # the branch, 2026-10-18); its parameters and seed are owed in the report
-    # fields Free knobs and Randomness controls (`--report`, C1)
+    # fields Free knobs and Randomness controls (`--report`, criterion-1)
     "Data / scope": "<the source files and the producer script in your words · then the counts protocol-fill --data-counts writes after 00_prepare.py · never typed>",
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
@@ -457,7 +457,7 @@ ESTIMATOR_PROMISES = (
 )
 
 
-#: the promise sentences that read otherwise at apply: the bar and [A2]'s
+#: the promise sentences that read otherwise at apply: the bar and [quality-check-2]'s
 #: target are the exact permutation expectation, not one permuted draw
 #: (null-lane decision, 2026-10-28)
 APPLY_PROMISES = {
@@ -495,18 +495,18 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
 
 #: the prose field that states each stamped promise — its id is written
 #: before the placeholder, because the cut placeholder loses the template's
-#: `[C…]` hint and a cold agent then writes `C1:`, which no check reads
+#: `[criterion-…]` hint and a cold agent then writes `criterion-1:`, which no check reads
 PROMISE_FIELDS = {
-    "Success / failure criterion": "C1",
-    "Admissibility condition": "A1",
-    "Null condition / anchors (in the same run)": "A2",
+    "Success / failure criterion": "criterion-1",
+    "Admissibility condition": "quality-check-1",
+    "Null condition / anchors (in the same run)": "quality-check-2",
 }
 
 
 def name_promise_ids(text: str, kind: str) -> str:
     """The stamped promise ids written before the placeholders of the fields
     that state them (PROMISE_FIELDS): `- **Success / failure criterion:**
-    [C1] <…>` — for a KIND with a bar; a computation's text comes back unchanged
+    [criterion-1] <…>` — for a KIND with a bar; a computation's text comes back unchanged
     (an id in its prose would register a promise). Raises ValueError when a
     field is not stamped or the stamped block does not declare its id: the
     prose names only what the block already promises."""

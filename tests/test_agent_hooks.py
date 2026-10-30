@@ -48,8 +48,8 @@ from protocol_fixture import (
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [C1] p < .05
-- **Admissibility condition:** [A1] parse yield above 80%
+- **Success / failure criterion:** [criterion-1] p < .05
+- **Admissibility condition:** [quality-check-1] parse yield above 80%
 - **Model I/O:** in: text · out: a label, parsed by parse()
 - **Prompt (verbatim, per variant):**
 
@@ -57,7 +57,7 @@ BODY = """\
   prompt
   ```
 
-- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 - **Exclusions / filters:** none
 """
 
@@ -77,7 +77,7 @@ def _protocol(frozen: bool, repeat_cost: str = "high") -> str:
 RUN_SCRIPT = (
     "from labkit.run import runlog\n"
     'with runlog.run("t", {}, protocol="PROTOCOL-x.md") as r:\n'
-    '    metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n'
+    '    metrics = {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n'
 )
 
 
@@ -457,7 +457,7 @@ class PreRun(unittest.TestCase):
         """The prompt skeleton opens its run inside `lanes.Lanes.main`
         (`run/lanes.py`): its own text names no `runlog.run(`, and the hook
         let every LLM measurement pass without preflight (audit 2026-10-27,
-        C5). Its full run, a repeat and a run under another model get
+        criterion-5). Its full run, a repeat and a run under another model get
         preflight — frozen with blockers is held, unfrozen only told; its
         throwaway stages and its analysis stay free; the compute skeleton
         keeps its gate."""
@@ -530,7 +530,7 @@ class PostChange(unittest.TestCase):
         p = self.root / "experiments/01-x/PROTOCOL-x.md"
         p.write_text(
             _protocol(False).replace(
-                "- **Null condition / anchors (in the same run):** [A2] shuffled labels "
+                "- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels "
                 "stay at chance\n",
                 "",
             ),
@@ -557,7 +557,7 @@ class PostChange(unittest.TestCase):
         p = self.root / "experiments/01-x/PROTOCOL-x.md"
         p.write_text(
             _protocol(False).replace(
-                "- **Null condition / anchors (in the same run):** [A2] shuffled labels "
+                "- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels "
                 "stay at chance\n",
                 "",
             ),
@@ -748,7 +748,13 @@ class Stop(unittest.TestCase):
             )
         )
         (d / "metrics.json").write_text(
-            json.dumps({"c1_pass": True, "a1_pass": True, "a2_pass": True})
+            json.dumps(
+                {
+                    "criterion_1_pass": True,
+                    "quality_check_1_pass": True,
+                    "quality_check_2_pass": True,
+                }
+            )
         )
         (d / "completion.json").write_text(
             json.dumps({"schema_version": 4, "run_kind": "measurement"})
@@ -775,7 +781,7 @@ class Stop(unittest.TestCase):
         # that does not exist
         p.write_text(
             protocol_fill.fill_result_run(p.read_text(), run_id)
-            + f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {run_id})\n"
+            + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {run_id})\n"
         )
 
     def _stop(self, active: bool = False) -> tuple[int, str, str]:

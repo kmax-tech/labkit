@@ -49,9 +49,9 @@ NO_FIELD = FROZEN.replace(f'preflight_audit = "{AUDIT}"\n', "")
 REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
-- **Success / failure criterion:** [C1] accuracy above the trivial decider
-- **Admissibility condition:** [A1] every case parsed
-- **Null condition / anchors:** [A2] the shuffled-label lane stays at chance
+- **Success / failure criterion:** [criterion-1] accuracy above the trivial decider
+- **Admissibility condition:** [quality-check-1] every case parsed
+- **Null condition / anchors:** [quality-check-2] the shuffled-label lane stays at chance
 - **Data profile:** 6 and 6 cases, mean words alike; no marker only in one class
 """
 # a computation: no model, no id, the question only — the gate owes nothing more (0.87.1)
@@ -61,7 +61,7 @@ SECONDS_COMPUTE = (
 )
 LOW = head(repeat_cost="low", model="haiku") + REGISTRATION
 LOW_NO_CRITERION = LOW.replace(
-    "[C1] accuracy above the trivial decider", "<the criterion>"
+    "[criterion-1] accuracy above the trivial decider", "<the criterion>"
 )
 HOURS_UNFROZEN = head(repeat_cost="high", promises=DEFAULT_BLOCK) + REGISTRATION
 PROSE_HEAD = """\

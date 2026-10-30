@@ -296,7 +296,7 @@ class FieldLine:
         (review 2026-10-07: it read as a placeholder, while `TODO` read as
         filled and let a freeze through); a placeholder the author coins
         (`<fill later>`) inside their own prose is not recognised. The id a
-        stamp writes before a placeholder (`[C1] <…>`) is not a value: the
+        stamp writes before a placeholder (`[criterion-1] <…>`) is not a value: the
         field is read without it, and an id alone is still a hole.
 
         A fence that holds only the stamp's placeholder (`<the real prompt
@@ -418,20 +418,20 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
 def promise_names(text: str) -> dict[str, str]:
     """Every promise id TEXT's prose writes before a field's value, mapped to
     that field's name: `- **Null condition / anchors (in the same run):**
-    [A2] …` → {"A2": "null condition / anchors"}. An id written nowhere at
+    [quality-check-2] …` → {"quality-check-2": "null condition / anchors"}. An id written nowhere at
     a field's start has no name here. Pure."""
     out: dict[str, str] = {}
     for f in fields(text):
         if m := promises.ID_PREFIX.match(f.value):
-            out.setdefault(m.group(0).strip(" []").upper(), field_name(f.label))
+            out.setdefault(m.group(0).strip(" []"), field_name(f.label))
     return out
 
 
 def named_ids(ids: Iterable[str], names: Mapping[str, str]) -> str:
     """IDS as a message names them, each with its field's name from NAMES
-    (`promise_names`): "C1 (success / failure criterion), A2 (null
+    (`promise_names`): "criterion-1 (success / failure criterion), quality-check-2 (null
     condition / anchors)" — an id without a name stands alone. An agent
-    reading `A2` alone could not tell which condition it was."""
+    reading `quality-check-2` alone could not tell which condition it was."""
     return ", ".join(f"{i} ({names[i]})" if i in names else i for i in ids)
 
 
@@ -673,7 +673,7 @@ def kind_registers(kind: str | None, text: str) -> bool:
 
 def reference_gap(text: str, head: protocol_block.Head) -> str | None:
     """Why the head's `kind` contradicts its `[reference]` table, or None:
-    a fit or an apply compares its number in `[C]` — a criterion with its
+    a fit or an apply compares its number in a criterion — one with its
     constants, judged against the null condition —, so the stated value a
     computation compares with (`protocol_block.reference`) has no place on
     a kind with a bar (`standard_contract.has_bar`). The one refusal of
@@ -688,7 +688,7 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
         return None
     return (
         f'[reference] with kind = "{head.kind}" — a {head.kind} compares its number '
-        f"in [C] (a criterion with its constants, held against the null condition); "
+        f"in a criterion (`[criterion-…]`, with its constants, held against the null condition); "
         f"a comparison with a stated value is a computation's. Drop the table, or "
         f"stamp the area as a compute (`labkit-init exp <name> --kind compute "
         f"--change-kind`)"

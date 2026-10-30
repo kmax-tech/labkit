@@ -177,15 +177,15 @@ def metric_number(metrics: dict[str, object], key: str) -> float | None:
 
 def truth_from_metrics(metrics: dict[str, object], number_key: str | None) -> Truth:
     """What the run says, to hold a reader to: whether the criterion held
-    (`criterion_pass` when the run reports it, else every `c<i>_pass`),
-    whether every admissibility condition held (`a<i>_pass`), and the number
+    (`criterion_pass` when the run reports it, else every `criterion_<i>_pass`),
+    whether every quality check held (`quality_check_<i>_pass`), and the number
     under `number_key`. Raises ValueError when a pass flag is not true/false
     or the named number is missing — a verdict from a subset of the
     conjuncts, or a probe whose number key has a typo, would score nothing
     and look clean."""
-    flags: dict[str, list[bool]] = {"criterion": [], "admissibility": []}
+    flags: dict[str, list[bool]] = {"criterion": [], "quality-check": []}
     for key, value in metrics.items():
-        kind = promises.key_kind(key)  # `c<i>_pass`, `a<i>_pass`: the id's letter
+        kind = promises.key_kind(key)  # `criterion_<i>_pass`, `quality_check_<i>_pass`
         if kind in flags and key.endswith("_pass"):
             if not isinstance(value, bool):
                 raise ValueError(f"metrics: {key} is {value!r}, not true/false")
@@ -200,7 +200,7 @@ def truth_from_metrics(metrics: dict[str, object], number_key: str | None) -> Tr
         number = metric_number(metrics, number_key)
         if number is None:
             raise ValueError(f"metrics: no number under {number_key!r}")
-    admissible = flags["admissibility"]
+    admissible = flags["quality-check"]
     return Truth(number, crit, all(admissible) if admissible else None)
 
 

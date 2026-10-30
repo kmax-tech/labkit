@@ -33,6 +33,21 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Promise ids are their kind and a number.** `[criterion-1]`,
+  `[quality-check-2]`, `[interpretation-1]` replace `[C1]`, `[A2]`, `[B1]`;
+  a metrics key is the id with underscores and a suffix
+  (`criterion_1_pass`, `quality_check_2_pass`) instead of `c1_pass`. A
+  person reading a protocol, a report or a run's metrics.json needs no
+  legend (plan: `docs/notes/2026-10-30-agent-surface.md`). The alphabet
+  has one home (`promises.KINDS`, `key_stem`, `id_of_stem`); a promise's
+  `kind` is the kind word (`quality-check` was `admissibility`,
+  `interpretation` was `branch`). A protocol in the letters is not read:
+  an id `C1`/`A1`/`B1` (or the earlier `K`/`S`/`W`/`N`) is refused with a
+  sentence naming the version that reads it — **0.103.0 is the last
+  labkit that reads the C/A/B letters**; reproduce such a run with its
+  repo's commit and that pin. Stamped protocols, the script skeletons and
+  their tests, the docs and the agents' prompts use the new ids.
+
 - **A registered output is the file the run recorded, and the deliverable
   of an external task is a registered output of the answering run.**
   `finalize` (and `report-check` through it) holds every file in the

@@ -10,7 +10,7 @@ cold agents got two of them wrong on the first try (2026-10-05):
    (runlog keeps a `runs.RECORD_SHA_CHARS`-hex sha256 prefix; the comparison
    is `startswith`, not equality — a full digest never matches a prefix).
 2. **agree** — `recompute(rows)` equals `metrics.json`: intent keys
-   (`c1_…`, `a1_…`, `b1_…`) present on both sides or neither,
+   (`criterion_1_…`, `quality_check_1_…`, `interpretation_1_…`) present on both sides or neither,
    nothing the run reported vanishes (runlog's own keys excepted), every
    shared value identical. Keys the recomputation gained are a derived
    run, reported, not a failure (LAB-041 Generate numbers, don't retype them).

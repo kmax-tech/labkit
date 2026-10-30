@@ -23,7 +23,7 @@ from labkit.gates import audit, report_review  # noqa: E402
 from labkit.run import llm_backends  # noqa: E402
 
 RUN = "2026-10-25T20-57-42_9ae7"
-PROTOCOL = "# Protocol\n\n**Question:** does C1 hold?\n"
+PROTOCOL = "# Protocol\n\n**Question:** does criterion-1 hold?\n"
 P = "experiments/01-x/PROTOCOL-x.md"
 
 
@@ -32,9 +32,7 @@ def discussed(run: str, why: str) -> str:
     return "\n".join(discussion_lines(P, run, why))
 
 
-MARKED = (
-    f"# Report\n\n{discussed(RUN, 'analysis audit failed')}\n\nC1 PASS, AUROC 0.7795\n"
-)
+MARKED = f"# Report\n\n{discussed(RUN, 'analysis audit failed')}\n\ncriterion-1 PASS, AUROC 0.7795\n"
 HONEST = (
     "# Report\n\n"
     f"{discussed(RUN, 'analysis audit failed — no audit saw its numbers')}\n\n"
@@ -44,7 +42,7 @@ HONEST = (
 
 class Area:
     """A temporary area: a protocol, one run with metrics, one analysis
-    record whose BLOCKER is accepted with C1 not assessable, one failed
+    record whose BLOCKER is accepted with criterion-1 not assessable, one failed
     attempt."""
 
     def __init__(self, d: str) -> None:
@@ -54,7 +52,8 @@ class Area:
         (Path(d) / "CLAUDE.md").write_text("# repo\n", encoding="utf-8")
         (self.area / "PROTOCOL-x.md").write_text(PROTOCOL, encoding="utf-8")
         (self.area / "runs" / RUN / "metrics.json").write_text(
-            json.dumps({"c1_score": 0.7795, "c1_pass": True}), encoding="utf-8"
+            json.dumps({"criterion_1_score": 0.7795, "criterion_1_pass": True}),
+            encoding="utf-8",
         )
         rec = findings.write(
             self.area,
@@ -66,15 +65,15 @@ class Area:
             [
                 (
                     "BLOCKER",
-                    "scripts/m.py:3 · test rows in the fit · C1 · LAB-050 · split",
+                    "scripts/m.py:3 · test rows in the fit · criterion-1 · LAB-050 · split",
                 )
             ],
-            registration={"question": "does C1 hold?"},
+            registration={"question": "does criterion-1 hold?"},
             run_id=RUN,
             shown_sha="0" * 12,
         )
         findings.write_decision(
-            rec, 1, "accepted", "the leak stays", "C1 not assessable"
+            rec, 1, "accepted", "the leak stays", "criterion-1 not assessable"
         )
         findings.write_failed(
             self.area,
@@ -102,10 +101,10 @@ class Gather(unittest.TestCase):
                 a.area, a.report(MARKED), a.area / "PROTOCOL-x.md"
             )
         self.assertEqual([m.run_id for m in marked], [RUN])
-        self.assertIn("11: C1 PASS, AUROC 0.7795", prompt)  # numbered lines
+        self.assertIn("11: criterion-1 PASS, AUROC 0.7795", prompt)  # numbered lines
         self.assertIn(f"line 3: run {RUN} — why: analysis audit failed", prompt)
-        self.assertIn('"c1_pass": true', prompt)
-        self.assertIn("effect: C1 not assessable", prompt)
+        self.assertIn('"criterion_1_pass": true', prompt)
+        self.assertIn("effect: criterion-1 not assessable", prompt)
         self.assertIn("reason: the leak stays", prompt)
         self.assertIn("FAILED (unproven) · opus", prompt)
         self.assertIn("LAB-011", prompt)  # the cited rules are inlined
@@ -173,7 +172,7 @@ class Parse(unittest.TestCase):
 
     def test_claims_in_order(self):
         reply = (
-            "CLAIM #1 · line 5 · contradiction · C1 PASS against C1 not assessable\n"
+            "CLAIM #1 · line 5 · contradiction · criterion-1 PASS against criterion-1 not assessable\n"
             "CLAIM #2 · line 5 · result · AUROC of the marked run\n"
             "verdict: 2 claim(s)\n"
         )
@@ -208,7 +207,7 @@ class Command(unittest.TestCase):
     the review as a hint was passed over)."""
 
     CLAIMED = (
-        "CLAIM #1 · line 5 · contradiction · C1 PASS against C1 not assessable\n"
+        "CLAIM #1 · line 5 · contradiction · criterion-1 PASS against criterion-1 not assessable\n"
         "verdict: 1 claim(s)\n"
     )
     CLEAN = "verdict: 0 claim(s)\n"
@@ -255,7 +254,10 @@ class Command(unittest.TestCase):
         rc, _, err, calls = self.review(MARKED, self.CLEAN)
         self.assertEqual((rc, calls), (2, 0))
         self.assertIn("another draw settles nothing", err)
-        self.assertIn("line 5 (contradiction): C1 PASS against C1 not assessable", err)
+        self.assertIn(
+            "line 5 (contradiction): criterion-1 PASS against criterion-1 not assessable",
+            err,
+        )
         # --again draws and records the draw, releases nothing — and says so,
         # the draw and the state apart: a clean draw on a held state printed
         # "released" while the commit stayed refused (ninth haiku round, t5),
@@ -309,7 +311,9 @@ class Command(unittest.TestCase):
         protocol is an input the reviewer read."""
         self.review(MARKED, self.CLAIMED)
         proto = self.a.area / "PROTOCOL-x.md"
-        proto.write_text(PROTOCOL + "\n**Conclusion:** C1 is not assessable.\n")
+        proto.write_text(
+            PROTOCOL + "\n**Conclusion:** criterion-1 is not assessable.\n"
+        )
         rc, _, _, calls = self.review(MARKED, self.CLEAN)
         self.assertEqual((rc, calls), (0, 1))
         stands = report_reviews.standing(

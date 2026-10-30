@@ -101,7 +101,7 @@ def verdicts(
     phrase each, from the run's METRICS read through each promise's key and
     UNJUDGED (an id an accepted limit leaves not assessable → that limit's
     label). Every admissibility condition conditions every criterion (each
-    `[A…]` says why its failure voids the verdict): one not assessable or
+    `[quality-check-…]` says why its failure voids the verdict): one not assessable or
     not met makes each criterion `not assessable`, with why; a criterion
     otherwise `met` or `missed` as recorded, `not assessable` when a limit
     names it. A key not recorded as true or false gives no verdict and says
@@ -112,7 +112,7 @@ def verdicts(
         if p.id in unjudged
         else f"{p.id} not met"
         for p in block.promises
-        if p.kind == "admissibility"
+        if p.kind == "quality-check"
         and (p.id in unjudged or metrics.get(p.key) is False)
     ]
     return [_verdict(p, metrics.get(p.key), unjudged, blocked) for p in block.promises]
@@ -123,7 +123,7 @@ def _verdict(
 ) -> str:
     """`verdicts` for one promise P, its recorded VALUE; BLOCKED the
     admissibility conditions that leave a criterion unjudged."""
-    if p.kind == "branch":
+    if p.kind == "interpretation":
         return f"{p.id} {value}"
     if p.id in unjudged:
         return f"{p.id} not assessable ({unjudged[p.id]})"

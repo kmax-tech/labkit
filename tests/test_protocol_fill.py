@@ -465,21 +465,23 @@ class OneCallFill(unittest.TestCase):
 
 
 class StampedId(unittest.TestCase):
-    TEXT = "- **Success / failure criterion:** [C1] <how do we recognise…>\n"
+    TEXT = "- **Success / failure criterion:** [criterion-1] <how do we recognise…>\n"
 
     def test_a_value_without_an_id_keeps_the_stamped_one(self):
         out = protocol_fill.fill(self.TEXT, "Success / failure criterion", "acc >= 0.8")
-        self.assertEqual(out, "- **Success / failure criterion:** [C1] acc >= 0.8\n")
+        self.assertEqual(
+            out, "- **Success / failure criterion:** [criterion-1] acc >= 0.8\n"
+        )
 
     def test_a_value_with_its_own_ids_replaces_it(self):
         out = protocol_fill.fill(
             self.TEXT,
             "Success / failure criterion",
-            "[C1] acc >= 0.8 and [C2] f1 >= 0.5",
+            "[criterion-1] acc >= 0.8 and [criterion-2] f1 >= 0.5",
         )
         self.assertEqual(
             out,
-            "- **Success / failure criterion:** [C1] acc >= 0.8 and [C2] f1 >= 0.5\n",
+            "- **Success / failure criterion:** [criterion-1] acc >= 0.8 and [criterion-2] f1 >= 0.5\n",
         )
 
 
@@ -545,7 +547,7 @@ class TestFromRun(unittest.TestCase):
             {
                 "mean_docs_per_case": 3.5,
                 "n_cases": 12,
-                "a1_pass": True,
+                "quality_check_1_pass": True,
                 "duration_s": 0.02,
             }
         )
@@ -555,7 +557,7 @@ class TestFromRun(unittest.TestCase):
             filled, ["Recorded results", protocol_fill.RESULT_LABEL, "Runs"]
         )
         line = (
-            "mean_docs_per_case = 3.5, n_cases = 12, a1_pass = True (run "
+            "mean_docs_per_case = 3.5, n_cases = 12, quality_check_1_pass = True (run "
             + self.RUN
             + ")"
         )
@@ -709,7 +711,7 @@ class Adopt(unittest.TestCase):
         ):
             subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
         run = completed_run(
-            area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
+            area, self.RUN, metrics={"criterion_1_pass": True}, run_kind=run_kind
         )
         started_at(run, root)
         cfg = run / "config.json"
@@ -742,7 +744,7 @@ class Adopt(unittest.TestCase):
         rc, out, text = self._adopt(self._area())
         self.assertEqual(rc, 0, out)
         self.assertIn("report-check: all clear", out)
-        self.assertIn(f"C1 met · recorded: (run {self.RUN})", text)
+        self.assertIn(f"criterion-1 met · recorded: (run {self.RUN})", text)
         self.assertEqual(protocol_block.declared_run(text), self.RUN)
 
     def test_a_probe_is_refused_and_the_file_is_as_it_was(self):
@@ -806,7 +808,7 @@ class Adopt(unittest.TestCase):
             rc = protocol_fill.main([str(proto), "--from-run"])
         self.assertEqual(rc, 0)
         self.assertEqual(seen["state"], protocol_fill.report_check.PROPOSED)
-        self.assertIn(f"C1 met · recorded: (run {self.RUN})", seen["text"])
+        self.assertIn(f"criterion-1 met · recorded: (run {self.RUN})", seen["text"])
         self.assertEqual(atomic.call_count, 1)
         self.assertEqual(proto.read_text(encoding="utf-8"), seen["text"])
         self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])
@@ -911,15 +913,15 @@ class PromiseSentences(unittest.TestCase):
 
     BLOCK = (
         "[[promise]]\n"
-        'id = "C1"\n'
-        'key = "c1_pass"\n'
+        'id = "criterion-1"\n'
+        'key = "criterion_1_pass"\n'
         'sentence = "<the criterion in one sentence>"\n'
         'scope = ["scripts/01_measure.py"]\n'
         "constants = { margin = 0.25 }\n"
         "\n"
         "[[promise]]\n"
-        'id = "A1"\n'
-        'key = "a1_pass"\n'
+        'id = "quality-check-1"\n'
+        'key = "quality_check_1_pass"\n'
         'sentence = "at most max_empty empty answers"\n'
         'scope = ["scripts/01_measure.py"]\n'
         "constants = { max_empty = 2 }\n"
@@ -940,17 +942,19 @@ class PromiseSentences(unittest.TestCase):
             .splitlines()
             .index('sentence = "<the criterion in one sentence>"')
         )
-        self.assertIn(f"{line + 1:4d}  C1 sentence", out.getvalue())
-        self.assertNotIn("A1 sentence", out.getvalue())
+        self.assertIn(f"{line + 1:4d}  criterion-1 sentence", out.getvalue())
+        self.assertNotIn("quality-check-1 sentence", out.getvalue())
 
     def test_a_fill_writes_a_toml_string_that_reads_back(self):
         value = 'registered accuracy >= null + margin; "empty" counts as wrong \\ ok'
-        new = protocol_fill.fill_many(self.text(), [("c1 sentence", value)])
+        new = protocol_fill.fill_many(self.text(), [("criterion-1 sentence", value)])
         from labkit.formats import promises
 
         block = promises.parse_block(new)
         assert block is not None
-        self.assertEqual({p.id: p.sentence for p in block.promises}["C1"], value)
+        self.assertEqual(
+            {p.id: p.sentence for p in block.promises}["criterion-1"], value
+        )
         self.assertEqual(promises.placeholder_sentences(block), [])
         self.assertEqual(
             [ln for ln in new.splitlines() if not ln.startswith("sentence")],
@@ -959,11 +963,16 @@ class PromiseSentences(unittest.TestCase):
 
     def test_a_written_sentence_needs_force_and_an_unknown_id_is_named(self):
         with self.assertRaisesRegex(ValueError, "already written"):
-            protocol_fill.fill_many(self.text(), [("A1 sentence", "x")])
-        new = protocol_fill.fill_many(self.text(), [("A1 sentence", "y")], force=True)
+            protocol_fill.fill_many(self.text(), [("quality-check-1 sentence", "x")])
+        new = protocol_fill.fill_many(
+            self.text(), [("quality-check-1 sentence", "y")], force=True
+        )
         self.assertIn('sentence = "y"', new)
-        with self.assertRaisesRegex(ValueError, r"no \[\[promise\]\] 'B9'.*C1, A1"):
-            protocol_fill.fill_many(self.text(), [("B9 sentence", "x")])
+        with self.assertRaisesRegex(
+            ValueError,
+            r"no \[\[promise\]\] 'interpretation-9'.*criterion-1, quality-check-1",
+        ):
+            protocol_fill.fill_many(self.text(), [("interpretation-9 sentence", "x")])
 
     def test_one_call_fills_a_field_and_a_sentence_or_nothing(self):
         text = self.text() + "\n- **Unit:** <the unit>\n"
@@ -971,11 +980,15 @@ class PromiseSentences(unittest.TestCase):
             p = Path(d) / "PROTOCOL-x.md"
             p.write_text(text, encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                rc = protocol_fill.main([str(p), "Unit=one case", "B9 sentence=x"])
+                rc = protocol_fill.main(
+                    [str(p), "Unit=one case", "interpretation-9 sentence=x"]
+                )
             self.assertEqual(rc, 2)
             self.assertEqual(p.read_text(encoding="utf-8"), text)
             with contextlib.redirect_stdout(io.StringIO()):
-                rc = protocol_fill.main([str(p), "Unit=one case", "C1 sentence=s"])
+                rc = protocol_fill.main(
+                    [str(p), "Unit=one case", "criterion-1 sentence=s"]
+                )
             self.assertEqual(rc, 0)
             self.assertIn('sentence = "s"', p.read_text(encoding="utf-8"))
 
@@ -987,11 +1000,11 @@ class PromiseSentencesReview(unittest.TestCase):
     `str.splitlines` cuts broke the written string, and a prose label of
     one word plus "sentence" was taken for a promise id."""
 
-    def text(self, id_line: str = 'id = "C1"', prose: str = "") -> str:
+    def text(self, id_line: str = 'id = "criterion-1"', prose: str = "") -> str:
         block = (
             "[[promise]]\n"
             f"{id_line}\n"
-            'key = "c1_pass"\n'
+            'key = "criterion_1_pass"\n'
             'sentence = "<the criterion>"\n'
             'scope = ["scripts/01_measure.py"]\n'
         )
@@ -1010,13 +1023,18 @@ class PromiseSentencesReview(unittest.TestCase):
         return 1 + text.splitlines().index('sentence = "<the criterion>"')
 
     def test_every_valid_id_spelling_lists_and_fills(self):
-        for id_line in ('id = "C1"  # the criterion', "id = 'C1'", '"id" = "C1"'):
+        for id_line in (
+            'id = "criterion-1"  # the criterion',
+            "id = 'criterion-1'",
+            '"id" = "criterion-1"',
+        ):
             with self.subTest(id_line=id_line):
                 text = self.text(id_line)
                 self.assertIn(
-                    f"{self.sentence_line(text):4d}  C1 sentence", self.listed(text)
+                    f"{self.sentence_line(text):4d}  criterion-1 sentence",
+                    self.listed(text),
                 )
-                new = protocol_fill.fill_many(text, [("C1 sentence", "s")])
+                new = protocol_fill.fill_many(text, [("criterion-1 sentence", "s")])
                 self.assertIn('sentence = "s"', new)
 
     def test_a_line_break_character_in_the_prose_keeps_the_line(self):
@@ -1024,9 +1042,10 @@ class PromiseSentencesReview(unittest.TestCase):
             with self.subTest(mark=repr(mark)):
                 text = self.text(prose=f"a{mark}b\n")
                 self.assertIn(
-                    f"{self.sentence_line(text):4d}  C1 sentence", self.listed(text)
+                    f"{self.sentence_line(text):4d}  criterion-1 sentence",
+                    self.listed(text),
                 )
-                new = protocol_fill.fill_many(text, [("C1 sentence", "s")])
+                new = protocol_fill.fill_many(text, [("criterion-1 sentence", "s")])
                 self.assertIn(f"a{mark}b", new)
                 self.assertIn('sentence = "s"', new)
 
@@ -1034,14 +1053,14 @@ class PromiseSentencesReview(unittest.TestCase):
         from labkit.formats import promises
 
         value = "a b c\x85d\x7fe\nf\tg\\h\"i'"
-        new = protocol_fill.fill_many(self.text(), [("C1 sentence", value)])
+        new = protocol_fill.fill_many(self.text(), [("criterion-1 sentence", value)])
         block = promises.parse_block(new)
         assert block is not None
         self.assertEqual(block.promises[0].sentence, value)
 
     def test_a_lone_surrogate_is_refused_by_name(self):
         with self.assertRaisesRegex(ValueError, "surrogate"):
-            protocol_fill.fill_many(self.text(), [("C1 sentence", "a\udcffb")])
+            protocol_fill.fill_many(self.text(), [("criterion-1 sentence", "a\udcffb")])
 
     def test_a_prose_label_ending_in_sentence_stays_a_prose_field(self):
         text = self.text() + "\n- **Key sentence:** <the one sentence>\n"
@@ -1050,4 +1069,6 @@ class PromiseSentencesReview(unittest.TestCase):
 
     def test_line_is_refused_for_a_promise_sentence(self):
         with self.assertRaisesRegex(ValueError, "--line"):
-            protocol_fill.fill_many(self.text(), [("C1 sentence", "s")], line_no=3)
+            protocol_fill.fill_many(
+                self.text(), [("criterion-1 sentence", "s")], line_no=3
+            )

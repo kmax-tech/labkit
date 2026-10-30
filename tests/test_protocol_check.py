@@ -77,8 +77,8 @@ Instrument nichts.**
 PILOT_FIELDS = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does A beat B?
-- **Success / failure criterion:** [C1] AUC > 0.6
-- **Admissibility condition:** [A1] yield >= 90%
+- **Success / failure criterion:** [criterion-1] AUC > 0.6
+- **Admissibility condition:** [quality-check-1] yield >= 90%
 - **Model I/O:** in: claim · out: yes/no, parsed by parse()
 - **Prompt:** see block
 
@@ -86,7 +86,7 @@ PILOT_FIELDS = """\
   Is this fallacious?
   ```
 
-- **Null condition / anchors:** [A2] shuffled labels at chance
+- **Null condition / anchors:** [quality-check-2] shuffled labels at chance
 - **Exclusions / filters:** none
 - **Data / scope:** data/prepared/claims.jsonl, 50 items
 - **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
@@ -366,7 +366,8 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
         out = self.contract(head(repeat_cost="high", kind="compute"))
         self.assertNotIn("one explicit sentence per [[promise]] table", out)
         out = self.contract(
-            head(repeat_cost="high", kind="compute") + "\n[C1] the count holds\n"
+            head(repeat_cost="high", kind="compute")
+            + "\n[criterion-1] the count holds\n"
         )
         self.assertIn("one explicit sentence per [[promise]] table", out)
 
@@ -720,7 +721,7 @@ class TestPlaceholders(unittest.TestCase):
 
     def test_pipeline_exits_one_on_must_placeholder(self):
         rc, out = run_main(
-            pilot().replace("[C1] AUC > 0.6", "<how do we recognise it?>")
+            pilot().replace("[criterion-1] AUC > 0.6", "<how do we recognise it?>")
         )
         self.assertEqual(rc, 1)
         self.assertIn("PLACEHOLDER ONLY (must): Success / failure criterion", out)
@@ -1139,12 +1140,12 @@ class TestTerms(unittest.TestCase):
     def test_only_the_admissibility_label_satisfies_the_field(self):
         """The field is "Admissibility condition" (TODO 7); its earlier labels
         "Stop rule", "Kill", "Abbruch" no longer pass (TODO 8)."""
-        adm = "- **Admissibility condition:** [A1] yield >= 90%\n"
+        adm = "- **Admissibility condition:** [quality-check-1] yield >= 90%\n"
         for wording in (
             "- **Stop rule:** LR stays at 1.\n",
             "- **Kill:** LR stays at 1.\n",
             "- **Abbruchkriterium:** LR bleibt bei 1.\n",
-            "- **Zulassungsbedingung:** [A1] Ausbeute >= 90 %.\n",
+            "- **Zulassungsbedingung:** [quality-check-1] Ausbeute >= 90 %.\n",
         ):
             with self.subTest(wording):
                 report = protocol_check.check_fields(pilot().replace(adm, wording))
@@ -1490,16 +1491,19 @@ class PromiseNames(unittest.TestCase):
         field's name, and `named_ids` writes them as a message names them;
         an id with no field stands alone (the twin: nothing is invented)."""
         text = (
-            "- **Success / failure criterion:** [C1] accuracy >= 0.8\n"
-            "- **Null condition / anchors (in the same run):** [A2] chance\n"
-            "- **Question / hypothesis:** does [C1] hold?\n"
+            "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
+            "- **Null condition / anchors (in the same run):** [quality-check-2] chance\n"
+            "- **Question / hypothesis:** does [criterion-1] hold?\n"
         )
         names = protocol_check.promise_names(text)
         self.assertEqual(
             names,
-            {"C1": "success / failure criterion", "A2": "null condition / anchors"},
+            {
+                "criterion-1": "success / failure criterion",
+                "quality-check-2": "null condition / anchors",
+            },
         )
         self.assertEqual(
-            protocol_check.named_ids(["A2", "B1"], names),
-            "A2 (null condition / anchors), B1",
+            protocol_check.named_ids(["quality-check-2", "interpretation-1"], names),
+            "quality-check-2 (null condition / anchors), interpretation-1",
         )

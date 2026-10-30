@@ -459,7 +459,7 @@ def as_stored(value: object) -> str:
 def read_metrics(path: Path) -> dict[str, object]:
     """A run's metrics.json as a JSON object. Raises MetricsError naming the
     file when it is unreadable, not JSON, or not an object — a list such as
-    `["c1_pass"]` read as metrics once satisfied the guaranteed intent check
+    `["criterion_1_pass"]` read as metrics once satisfied the guaranteed intent check
     (review 2026-10-08). Skipping an unreadable file chose the next older run
     as if the newer had reported no intent keys (review 2026-10-06)."""
     try:

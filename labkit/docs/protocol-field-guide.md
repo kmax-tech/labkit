@@ -90,7 +90,7 @@ path to this file.
 - **Budgets.** The HEAD (Summary, Context, Intent, Setup) is read and has a
   prose-line budget per section; `protocol-check --contract` prints it.
 
-## Intent IDs [C/A/B]
+## Intent IDs
 
 Small machine-readable anchors — they exist so a tool can later verify that
 what the protocol promised actually shows up in the code and in the run's
@@ -99,12 +99,12 @@ lowercase key in the run's metrics:
 
 | id | means | example in the field | key in metrics |
 |---|---|---|---|
-| `[C1]` | criterion 1 — which value of which metric supports the hypothesis | `[C1] accuracy >= 0.80` | `r.metrics(c1_pass=True)` |
-| `[A1]` | admissibility condition 1 — an outcome-neutral check that must pass before any C verdict | `[A1] parse failures <= 10%` · `[A2] shuffled labels show no effect` | `a1_pass`, `a2_pass` |
-| `[B1]` | registered branch 1 — what a result licenses next | `[B1] if < 50 usable cases, report coverage only` | `b1_branch` |
+| `[criterion-1]` | criterion 1 — which value of which metric supports the hypothesis | `[criterion-1] accuracy >= 0.80` | `r.metrics(criterion_1_pass=True)` |
+| `[quality-check-1]` | admissibility condition 1 — an outcome-neutral check that must pass before any criterion verdict | `[quality-check-1] parse failures <= 10%` · `[quality-check-2] shuffled labels show no effect` | `quality_check_1_pass`, `quality_check_2_pass` |
+| `[interpretation-1]` | registered branch 1 — what a result licenses next | `[interpretation-1] if < 50 usable cases, report coverage only` | `interpretation_1_branch` |
 
-The separation rule: **C judges, A releases the judgement, B says what
-follows from it.** Does the condition depend on whether the hypothesis
+The separation rule: **a criterion judges, a quality check releases the
+judgement, an interpretation says what follows from it.** Does the condition depend on whether the hypothesis
 holds? Then it is C; otherwise A. A baseline without a target value is no
 promise — it belongs in the text of the C it serves.
 
@@ -315,7 +315,7 @@ derives from the detail below and carries no fact that isn't there.
   expected effect bigger than the run-to-run noise? Differences below the
   noise are not interpretable. (4) Could the run answer two *different*
   questions depending on a precondition? Then register that branch beforehand.
-  Using intent ids: one [C1], [C2] … per conjunct, [B1] per branch point. Cases the criterion singles out are named by their
+  Using intent ids: one [criterion-1], [criterion-2] … per conjunct, [interpretation-1] per branch point. Cases the criterion singles out are named by their
   class ("every case over its ceiling"), and `data/prepared/case_classes.toml`
   says which cases that is and from which facts — not a list of ids with a
   prose reason in the script (uniagent 17: "33 in Wien, 140 € > ARV 117" as a
@@ -327,12 +327,12 @@ derives from the detail below and carries no fact that isn't there.
 - **Admissibility condition:** what must hold in the same run before any
   verdict is issued, fixed beforehand — e.g. "at most 10% unparsed answers",
   "the model is above chance on the hand-checked sanity examples", "the
-  shuffled control shows no effect". If one fails, there is no C verdict,
+  shuffled control shows no effect". If one fails, there is no criterion verdict,
   only the finding that the instrument failed — a bad outcome becomes a
   finding instead of weeks of tweaking. It complements the Timebox: the
   Timebox stops you on time, an admissibility condition on results.
   Result-based, not time-based — a deadline belongs in Timebox. Intent id:
-  [A1] per condition. Each condition says WHY its failure makes the
+  [quality-check-1] per condition. Each condition says WHY its failure makes the
   measurement uninterpretable: an A is about the instrument (yield,
   anchor, control), never about the hypothesis — a threshold the
   hypothesis needs is a C; as an A it would turn a clean negative result
@@ -354,13 +354,13 @@ derives from the detail below and carries no fact that isn't there.
   reported that way.
 - **Registered branch:** if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
-  licenses, [B1] per branch point. The test: "and if [C…] fails — what
+  licenses, [interpretation-1] per branch point. The test: "and if [criterion-…] fails — what
   then?" An answer you have now is a branch; no answer yet is "n/a — only
   one outcome", and a decision taken after the run goes to Next step,
   labelled as taken after the run (exploratory, not registered). A branch
   is decided on its own condition, not on the verdict: a stop rule fires
   during the run or on an inadmissible one too. The value the run records
-  under `b1_branch` is the registered sentence, verbatim — one wording in
+  under `interpretation_1_branch` is the registered sentence, verbatim — one wording in
   the prose, the [[promise]] table and the code, so a reader of
   metrics.json finds the branch in the protocol by searching it. It says
   which branch and what follows; how to interpret votes or reasons is the
@@ -394,7 +394,7 @@ scattered in output files nobody can interpret.
   line):
 
   ```text
-  - **Recorded results:** C1 met · recorded: c1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
+  - **Recorded results:** criterion-1 met · recorded: criterion_1_accuracy = 0.83 (run 2026-10-22T09-13-08_0dc3)
   ```
 - **Raw output:** one real output per finding — a prompt+answer pair, or
   an estimator's registered and null row —, read from the run's kept
@@ -518,7 +518,7 @@ scattered in output files nobody can interpret.
 - **Null condition / anchors (in the same run):** what runs along in THIS run
   and must show null — anchors of known rate, placebo, swap; not "was
   validated earlier". Per anchor its expected outcome WITH the derivation in
-  half a sentence. Intent id: [A1] per control (an admissibility condition).
+  half a sentence. Intent id: [quality-check-1] per control (an admissibility condition).
   A placebo question is safest when its true answer is the same for every
   item ("Is this text written in English?"): the expected accuracy is the
   gold share of the class that answer maps to, derived before any call. A
@@ -541,12 +541,12 @@ scattered in output files nobody can interpret.
   lane, never on the registered lane over all items before the freeze —
   at apply `--calibrate-null` (permutations of the gold, predictions
   fixed; the band around the exact permutation expectation, which is also
-  where [C1]'s bar starts, so the verdict does not ride on one draw), by
-  the rule [A2] registers beside the band (`null_band_quantile` over
+  where [criterion-1]'s bar starts, so the verdict does not ride on one draw), by
+  the rule [quality-check-2] registers beside the band (`null_band_quantile` over
   `null_permutations`) — `--write` registers the band before the first
   measurement, which refuses another; at
   fit the null lane refits `NULL_REFITS` times in the run and the bar
-  starts from their mean, their scores (`a2_draw_scores`) showing the
+  starts from their mean, their scores (`quality_check_2_draw_scores`) showing the
   spread; at high repeat cost `--probe` over a few seeds: a registered number seen before `frozen = true`
   makes the freeze empty, and the prediction for the follow-up run a
   reading. Where it happened anyway, it stands here with the numbers and

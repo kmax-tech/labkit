@@ -41,7 +41,7 @@ each step's condition):
   6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
                     its resolution check), a missing one no finding here
-  7. criterion n    every `c<i>_n` key in metrics.json equals some input
+  7. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
                     alarm rate is known (2026-10-05; the denominator class
@@ -418,7 +418,7 @@ def named_changes(
 
 def change_phrase(what: str, old: str, new: str) -> str:
     """One `protocol_history.promise_differences` entry as the hold names it:
-    `[A2] null_band 0.1 → 0.15`, `[C1] sentence "…" → "…"`, `[A3] added`."""
+    `[quality-check-2] null_band 0.1 → 0.15`, `[criterion-1] sentence "…" → "…"`, `[quality-check-3] added`."""
     pid, _, part = what.partition(" ")
     if not part:
         return (
@@ -791,7 +791,9 @@ def check_criterion_n(findings: Findings, answering_run: Path) -> None:
     for line in w:
         findings.warn(line, evidence_kind=STATIC_EVIDENCE)
     if not w:
-        findings.note("  every c<i>_n equals a recorded input count (or there is none)")
+        findings.note(
+            "  every criterion_<i>_n equals a recorded input count (or there is none)"
+        )
 
 
 def report(findings: Findings) -> int:

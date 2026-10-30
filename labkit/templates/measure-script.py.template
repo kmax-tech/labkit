@@ -15,18 +15,18 @@ Usage:
 
 Terms: a *lane* is one way of asking — the *registered lane* asks the
 question under test, the *null lane* asks one the data cannot answer (the
-noise floor of this run). *Admissibility* ([A…]) is what must hold before
-any verdict; the *criterion* ([C1]) is the verdict.
+noise floor of this run). *Quality checks* ([quality-check-…]) are what must hold before
+any verdict; the *criterion* ([criterion-1]) is the verdict.
 
 Measurement contract:
   - Every item runs once in each lane, in the same call.
   - Accuracy is correct answers over EVERY item of the lane: an empty or
     unreadable answer counts as not correct (else a model would gain
     accuracy by not answering) and is counted on its own as `*_empty`.
-  - [C1] passes when the registered lane's accuracy is at least the null
+  - [criterion-1] passes when the registered lane's accuracy is at least the null
     lane's plus `margin`.
-  - [A1] checks the registered lane's readable yield, [A2] that the null
-    lane sits near chance. If either fails, [C1] has no verdict (None).
+  - [quality-check-1] checks the registered lane's readable yield, [quality-check-2] that the null
+    lane sits near chance. If either fails, [criterion-1] has no verdict (None).
   - Every registered id produces its metric key in every evaluation.
   - `evaluate_rows()` is the only implementation of these formulas;
     `02_analyze.py` and the test import it, never copy it.
@@ -98,9 +98,9 @@ PROMPT = ("TODO: the question about this text.\n\n"
 PROMPT_NULL = ("TODO: a question about this text that has nothing to do with the gold label.\n\n"
                "Text: {text}\n\n" + ANSWER_LINE + "\n\nAnswer:")
 
-# Cases the criterion singles out, as DATA, when [C…] names case classes:
+# Cases the criterion singles out, as DATA, when [criterion-…] names case classes:
 # one [[case]] per such item in this file — `id` (the item's id in ITEMS),
-# `cls` (a class [C…] speaks of), `facts` (what the class follows from).
+# `cls` (a class [criterion-…] speaks of), `facts` (what the class follows from).
 # The stamped test recomputes each class from its facts (CLASS_RULE there);
 # the probe takes one case per class. No file: no classes.
 CASE_CLASSES = AREA / "data" / "prepared" / "case_classes.toml"
@@ -129,12 +129,12 @@ class MeasureConfig:
     does not know fails at import (TypeError: unexpected keyword).
     """
 
-    margin: float               # [C1]: registered accuracy ≥ null accuracy + margin
-    max_empty: int              # [A1]: at most this many empty/unreadable answers on the registered lane;
+    margin: float               # [criterion-1]: registered accuracy ≥ null accuracy + margin
+    max_empty: int              # [quality-check-1]: at most this many empty/unreadable answers on the registered lane;
                                 # the stamped value is a placeholder: derive it for THIS item count, from how
                                 # many empty answers still leave the number readable (LAB-028 An endpoint is a
                                 # model slot) — and again when ITEMS changes
-    null_band_items: int        # [A2]: the null lane sits at chance ± this many ITEMS (counted, not a share)
+    null_band_items: int        # [quality-check-2]: the null lane sits at chance ± this many ITEMS (counted, not a share)
     model: str = MODEL          # alias from models.toml; runlog resolves it into models_resolved
     # the instrument's version: both prompts, so a reworded prompt is a
     # different config even when every threshold stays
@@ -145,7 +145,7 @@ class MeasureConfig:
 # `--model` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
 #: the metrics key of the criterion's value — 02_analyze.py reads this name
-C1_VALUE_KEY = "c1_accuracy"
+C1_VALUE_KEY = "criterion_1_accuracy"
 
 
 def parse_answer(text: str) -> str | None:
@@ -187,7 +187,7 @@ def _within_chance(rows: list[dict], items: int) -> bool:
 
 
 def _at_least(reg: list[dict], null: list[dict], margin: float) -> bool:
-    """[C1] exactly: correct/items of the registered lane >= that of the null
+    """[criterion-1] exactly: correct/items of the registered lane >= that of the null
     lane + margin, in fractions (margin as written, 0.25 = 1/4) — in floats
     a lane exactly at null + margin failed by one ulp."""
     rc, rn, _ = _counts(reg)
@@ -199,11 +199,11 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
     Returns every registered id's keys on every lane:
-      a1_empty · a1_pass           admissibility: yield of the registered lane
-      a2_accuracy · a2_pass        admissibility: the null lane inside its band
-      c1_accuracy · c1_threshold · c1_pass   criterion: registered lane against null + cfg.margin
+      quality_check_1_empty · quality_check_1_pass           admissibility: yield of the registered lane
+      quality_check_2_accuracy · quality_check_2_pass        admissibility: the null lane inside its band
+      criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against null + cfg.margin
       n_items · n_rows             yield (→ LAB-023 No silent loss)
-    A failed [A] reports its keys and no criterion verdict (`c1_pass` None)."""
+    A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None)."""
     if not rows:
         raise ValueError("evaluate_rows(): no rows — refusing a number over nothing")
     reg = [r for r in rows if r["lane"] == "registered"]
@@ -213,17 +213,17 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     reg_acc, reg_empty = _accuracy(reg)
     null_acc, null_empty = _accuracy(null)
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows),
-                     "a1_empty": reg_empty, "a1_pass": reg_empty <= cfg.max_empty,
-                     "a2_accuracy": null_acc, "a2_empty": null_empty,
+                     "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
+                     "quality_check_2_accuracy": null_acc, "quality_check_2_empty": null_empty,
                      # TODO: the band the protocol derived for the null — cfg.null_band_items
                      # items around chance; a different expected rate needs its own count rule
-                     "a2_pass": _within_chance(null, cfg.null_band_items)}
-    admissible = metrics["a1_pass"] and metrics["a2_pass"]
+                     "quality_check_2_pass": _within_chance(null, cfg.null_band_items)}
+    admissible = metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]
     if not admissible:
-        metrics.update({C1_VALUE_KEY: reg_acc, "c1_threshold": None, "c1_pass": None})
+        metrics.update({C1_VALUE_KEY: reg_acc, "criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
-    metrics.update({C1_VALUE_KEY: reg_acc, "c1_threshold": null_acc + cfg.margin,
-                    "c1_pass": _at_least(reg, null, cfg.margin)})
+    metrics.update({C1_VALUE_KEY: reg_acc, "criterion_1_threshold": null_acc + cfg.margin,
+                    "criterion_1_pass": _at_least(reg, null, cfg.margin)})
     return metrics
 
 

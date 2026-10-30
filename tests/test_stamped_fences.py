@@ -73,7 +73,7 @@ class WithoutPromiseTables(unittest.TestCase):
 
         text = (
             '# P\n\n```toml\n[protocol]\n# the head\nid = "p-1"\n\n'
-            '# the promises\n[[promise]]\nid = "C1"\n\n[[promise]]\nid = "A1"\n'
+            '# the promises\n[[promise]]\nid = "criterion-1"\n\n[[promise]]\nid = "quality-check-1"\n'
             "```\n\nafter\n"
         )
         new = protocol_cuts.without_promise_tables(text)
@@ -84,7 +84,9 @@ class WithoutPromiseTables(unittest.TestCase):
     def test_a_protocol_table_after_the_promises_is_kept(self):
         from labkit.tools import protocol_cuts
 
-        text = '```toml\n[[promise]]\nid = "C1"\n\n[protocol]\nid = "p-1"\n```\n'
+        text = (
+            '```toml\n[[promise]]\nid = "criterion-1"\n\n[protocol]\nid = "p-1"\n```\n'
+        )
         new = protocol_cuts.without_promise_tables(text)
         self.assertEqual(new, '```toml\n[protocol]\nid = "p-1"\n```\n')
 

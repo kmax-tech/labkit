@@ -149,7 +149,7 @@ class RepairUnderUnchangedPromises(_Chain):
         rc, out = self.audit(
             SIMULATED
             + "BLOCKER · scripts/01_measure.py:82 · ANSWERS reads Yes as not_causal · "
-            "c1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
+            "criterion_1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
             "demands · map Yes to causal\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
         )
@@ -162,13 +162,14 @@ class RepairUnderUnchangedPromises(_Chain):
         rc, out = self.audit(
             SIMULATED
             + f"FIX · {record.path.name}#1 · resolved · scripts/01_measure.py:82 maps Yes "
-            f"to causal; c1_accuracy 1.0 in run {second}\n"
+            f"to causal; criterion_1_accuracy 1.0 in run {second}\n"
             + CLEAN.removeprefix(SIMULATED)
         )
         self.assertEqual(rc, 0, out)
         text = self.released(second)
         self.assertIn(
-            "- **Recorded results:** C1 met; A1 met; A2 met · recorded: ", text
+            "- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: ",
+            text,
         )
         self.assertIn(f"(run {second})", text)
 
@@ -188,8 +189,8 @@ class SupersededCallReleasesNothing(_Chain):
         rc, out = self.audit(
             SIMULATED
             + "BLOCKER · scripts/01_measure.py:82 · ANSWERS reads Yes as not_causal · "
-            "c1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
-            "demands · map Yes to causal · check: c1_accuracy\n"
+            "criterion_1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
+            "demands · map Yes to causal · check: criterion_1_accuracy\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
         )
         self.assertEqual(rc, 1, out)
@@ -220,7 +221,7 @@ class SupersededCallReleasesNothing(_Chain):
         rc, out = self.audit(
             SIMULATED
             + f"FIX · {record.path.name}#1 · resolved · scripts/01_measure.py:82 maps "
-            f"Yes to causal; c1_accuracy 1.0 in run {second}\n"
+            f"Yes to causal; criterion_1_accuracy 1.0 in run {second}\n"
             + CLEAN.removeprefix(SIMULATED)
         )
         self.assertEqual(rc, 0, out)
@@ -248,7 +249,8 @@ class HonestMiss(_Chain):
         self.assertEqual(rc, 0, out)
         text = self.released(run_id)
         self.assertIn(
-            "- **Recorded results:** C1 missed; A1 met; A2 met · recorded: ", text
+            "- **Recorded results:** criterion-1 missed; quality-check-1 met; quality-check-2 met · recorded: ",
+            text,
         )
 
 
@@ -314,7 +316,7 @@ class ConflictRegisteredAnew(_Chain):
         )
         self.assertIn(f"as its first measurement {second} saw it", gap.line)
         self.assertIn("with its uncommitted.patch", gap.line)
-        self.assertIn("not declared: C1 margin 0.3 → 0.2", gap.line)
+        self.assertIn("not declared: criterion-1 margin 0.3 → 0.2", gap.line)
         self._declare(_change("0.3"))
         self.lab.commit("registered anew, against each")
         run_id = self.run_measure(e2e.Judge._model)
@@ -323,7 +325,7 @@ class ConflictRegisteredAnew(_Chain):
         text = self.released(run_id)
         self.assertIn(
             f"- **Recorded results:** replaces {pid} (01-judge/PROTOCOL-judge.md): "
-            "no result adopted — unresolved · this question: C1 met; A1 met; A2 met",
+            "no result adopted — unresolved · this question: criterion-1 met; quality-check-1 met; quality-check-2 met",
             text,
         )
 
@@ -340,7 +342,7 @@ class ConflictRegisteredAnew(_Chain):
 def _change(was: str) -> str:
     """One [[replaces.change]]: the margin from WAS to 0.2."""
     return (
-        f'\n[[replaces.change]]\nwhat = "C1 margin"\nfrom = "{was}"\nto = "0.2"\n'
+        f'\n[[replaces.change]]\nwhat = "criterion-1 margin"\nfrom = "{was}"\nto = "0.2"\n'
         f'why = "the first measurements saw {was}"\n'
     )
 

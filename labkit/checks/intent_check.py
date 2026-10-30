@@ -9,10 +9,10 @@ this late; a set comparison catches it mechanically.
 
 The contract (LAB-004 Identifiers make the intent addressable): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
-in the protocol text (`[C1]` criterion, `[A1]` admissibility condition,
-`[B1]` registered branch; the alphabet is `promises`), and every id
+in the protocol text (`[criterion-1]` criterion, `[quality-check-1]` admissibility condition,
+`[interpretation-1]` registered branch; the alphabet is `promises`), and every id
 reappears as a lowercase key in the reportable run's metrics.json
-(`c1_pass`, `a1_pass`, `b1_branch`, or the bare id). This command checks the two sets
+(`criterion_1_pass`, `quality_check_1_pass`, `interpretation_1_branch`, or the bare id). This command checks the two sets
 against each other, in both directions:
 
 - an id with no metrics key: the promise has no implementation evidence;
@@ -23,7 +23,7 @@ Letters that are metric names (F, P, R, Q, H) are never ids: in the F
 namespace an `f1_score` in the metrics would "satisfy" a registered promise
 that has no implementation at all.
 
-Existence, not correctness: a key `a1_pass` proves the stage reports, not
+Existence, not correctness: a key `quality_check_1_pass` proves the stage reports, not
 that it computes the right thing — the semantic half stays with the
 preflight audit (LAB-015 Preflight audit before freezing), which works the same ids.
 
@@ -154,13 +154,13 @@ def _key_mismatch(
     """Registered ids without a key, keys without a registered id."""
     led = reported_intent_ids(metrics)
     return [
-        f"{protocol}: [{i.upper()}] registered, but {mpath.name} has no "
-        f"'{i}'/'{i}_*' key — the promise has no implementation "
+        f"{protocol}: [{i}] registered, but {mpath.name} has no "
+        f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key — the promise has no implementation "
         f"evidence in the metrics."
         for i in sorted(reg - led)
     ] + [
-        f"{mpath}: key '{i}'/'{i}_*' is in the intent-id namespace, but "
-        f"the protocol registers no [{i.upper()}] — built without a "
+        f"{mpath}: key '{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' is in the intent-id namespace, but "
+        f"the protocol registers no [{i}] — built without a "
         f"registration."
         for i in sorted(led - reg)
     ]
@@ -245,7 +245,7 @@ def hold(protocol: Path, metrics_arg: Path | None) -> Held:
         return Held(
             [],
             [],
-            "intent-check: no intent ids registered ([C1]/[A1]/[B1] — "
+            "intent-check: no intent ids registered ([criterion-1]/[quality-check-1]/[interpretation-1] — "
             "LAB-004 Identifiers make the intent addressable); nothing to hold the metrics against.",
         )
 
@@ -276,7 +276,7 @@ def check_block_against_run(
     """Guaranteed-tier findings for a protocol WITH a promise block.
 
     Two things the prose check cannot see: every declared key is reported
-    exactly (a `c1_pass` promise is not answered by `c1_debug`), and the
+    exactly (a `criterion_1_pass` promise is not answered by `criterion_1_debug`), and the
     run recorded THIS block — same constants, same scopes, same keys. A
     block edited after the run would otherwise hold today's thresholds
     against yesterday's number.
@@ -444,22 +444,22 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     """Intent ids the area's source mentions, mapped id -> ["file:line", ...].
 
     Reads the string literals, not the syntax: a metric key reaches
-    metrics.json as `"c1_pass"` however it is assembled, and a literal is
+    metrics.json as `"criterion_1_pass"` however it is assembled, and a literal is
     what every assembly path has in common.
 
-    `suffixed_only` keeps `"a1_pass"` and drops a bare `"a65"`. A bare id in
+    `suffixed_only` keeps `"quality_check_1_pass"` and drops a bare `"quality-check-65"`. A bare id in
     the namespace is ambiguous — area 72 named its source sessions `"s65"`,
     `"s68"`, `"s69"` after the areas they came from, and reading those as
     unregistered promises produced three findings and no defect (2026-09-10).
     For "registered but absent from the code" every literal counts; for the
     reverse direction only an unmistakable metric key does.
 
-    Keyword arguments count too: `r.metrics(c1_pass=acc >= MIN)` reaches
-    metrics.json as `"c1_pass"` without ever being a string literal, and
+    Keyword arguments count too: `r.metrics(criterion_1_pass=acc >= MIN)` reaches
+    metrics.json as `"criterion_1_pass"` without ever being a string literal, and
     reading literals only reported a correct script as "no script mentions
-    'c1'" — a blocker against correct code (2026-10-06, found in the first
+    'criterion-1'" — a blocker against correct code (2026-10-06, found in the first
     promise-block run). Only
-    keyword names in CALLS count, not assignments: a local `c1_pass = …`
+    keyword names in CALLS count, not assignments: a local `criterion_1_pass = …`
     is not yet a reported key. An area file that does not parse keeps its
     literal hits and loses only the keyword half; with a `lib/` or `src/` in
     the repo the import walk needs its syntax tree and raises
@@ -468,11 +468,11 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     """
     hits: dict[str, list[str]] = {}
     for key, where in code_keys(area).items():
-        if suffixed_only and "_" not in key:
+        if suffixed_only and not promises.INTENT_KEY.match(key):
             continue
         m = ID_KEY.match(key)
         assert m is not None, f"code_keys returned a non-id key {key!r}"
-        hits.setdefault(m.group(1), []).extend(where)
+        hits.setdefault(promises.id_of_stem(m.group(1)), []).extend(where)
     for locs in hits.values():
         locs.sort()
     return hits
@@ -482,8 +482,8 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     """Full intent keys the area's source mentions, key -> ["file:line", ...].
 
     The same scan as `code_ids` (string literals, keyword arguments in
-    calls), but keeping the whole key: a promise block declares `c1_pass`,
-    and `"c1_passed"` in the code answers the id, not the key. Preflight
+    calls), but keeping the whole key: a promise block declares `criterion_1_pass`,
+    and `"criterion_1_passed"` in the code answers the id, not the key. Preflight
     holds the block's keys to this, before any run (Durchstich 2026-10-06:
     a renamed key surfaced only after the run).
     """

@@ -249,7 +249,7 @@ class Exp(unittest.TestCase):
         return area
 
     def test_a_bar_names_its_stamped_ids_and_a_count_names_none(self) -> None:
-        """A fit or an apply stamps `[C1]`, `[A1]`, `[A2]` before the fields
+        """A fit or an apply stamps `[criterion-1]`, `[quality-check-1]`, `[quality-check-2]` before the fields
         that state them — the ids its block declares, nothing added; the
         fields stay open. A computation is stamped without those fields and without
         promise tables at every tier, so its prose names no id."""
@@ -287,7 +287,7 @@ class Exp(unittest.TestCase):
                 block = promises.parse_block(text)
                 assert block is not None
                 self.assertEqual(
-                    {i.upper() for i in promises.ids_in_prose(text)},
+                    promises.ids_in_prose(text),
                     {p.id for p in block.promises},
                 )
                 by_label = {f.label: f for f in protocol_check.fields(text)}
@@ -504,9 +504,9 @@ class Exp(unittest.TestCase):
         )
         proto = (self.area() / "PROTOCOL-foo-bar.md").read_text(encoding="utf-8")
         for needle in (
-            'id = "C1"',
-            'id = "A1"',
-            'id = "A2"',
+            'id = "criterion-1"',
+            'id = "quality-check-1"',
+            'id = "quality-check-2"',
             "constants = { margin = 0.25 }",
             "constants = { max_empty = 2 }",
             "constants = { null_band_items = 1 }",
@@ -595,7 +595,7 @@ class Exp(unittest.TestCase):
     def test_the_stamped_criterion_holds_a_lane_exactly_at_null_plus_margin(
         self,
     ) -> None:
-        """[C1] compared floats: 5/12 + 0.25 is 0.6666666666666667, 8/12 is
+        """[criterion-1] compared floats: 5/12 + 0.25 is 0.6666666666666667, 8/12 is
         0.6666666666666666, so a lane exactly at null + margin failed (the
         preflight audit of a cold Sonnet probe, 2026-10-14). The twin: one
         item below the bar still fails."""
@@ -620,17 +620,18 @@ class Exp(unittest.TestCase):
             ]
 
         at_bar = measure.evaluate_rows(lane("registered", 8) + lane("null", 5))
-        self.assertTrue(at_bar["a2_pass"])  # 5/12 is chance ± one item
-        self.assertIs(at_bar["c1_pass"], True)
+        self.assertTrue(at_bar["quality_check_2_pass"])  # 5/12 is chance ± one item
+        self.assertIs(at_bar["criterion_1_pass"], True)
         below = measure.evaluate_rows(lane("registered", 7) + lane("null", 5))
-        self.assertIs(below["c1_pass"], False)
+        self.assertIs(below["criterion_1_pass"], False)
         # every item is in the denominator: two empty answers are not correct
         empty = lane("registered", 10)
         for row in empty[10:]:
             row["answer"] = ""
         two_empty = measure.evaluate_rows(empty + lane("null", 6))
         self.assertEqual(
-            (two_empty["a1_empty"], two_empty["c1_accuracy"]), (2, 10 / 12)
+            (two_empty["quality_check_1_empty"], two_empty["criterion_1_accuracy"]),
+            (2, 10 / 12),
         )
 
     def test_the_next_steps_are_the_lane_with_its_gates(self) -> None:
@@ -686,7 +687,7 @@ class Exp(unittest.TestCase):
         script only when the skeleton stamps it, a probe only when the lane
         allows one, the data profile whenever a model is named; the detached
         command names its script from the repo root, where `runlog start`
-        runs it (C3)."""
+        runs it (criterion-3)."""
         rel = Path("experiments/01-foo")
         for kind in ("compute", "fit", "apply"):
             for cost in ("low", "high"):
@@ -888,7 +889,7 @@ class Exp(unittest.TestCase):
         """ "Edited since the stamp" compared the area with the INSTALLED
         labkit's templates: after a pin raise an unedited stamp read as the
         user's edit, and `--change-kind` held for nothing (audit 2026-10-27,
-        C13). Unchanged since the commit that added it, under another pin,
+        criterion-13). Unchanged since the commit that added it, under another pin,
         it is the earlier labkit's stamp: replaced, the commit named. The
         twin: an edit since that commit still holds."""
         measure = dict(
@@ -1206,7 +1207,7 @@ class Exp(unittest.TestCase):
                 scaffold.stamp_area(
                     self.root, "fitted", "low", kind=kind, reference=ref
                 )
-            self.assertIn("[C]", caught.exception.why)
+            self.assertIn("in a criterion", caught.exception.why)
             self.assertEqual(list((self.root / "experiments").glob("*-fitted")), [])
         with self.assertRaises(console.Refused) as caught:
             quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
@@ -1388,7 +1389,12 @@ class Exp(unittest.TestCase):
         frozen = text.replace("frozen = false", "frozen = true", 1)
         gaps = protocol_check.check_fields(frozen).missing_must
         self.assertTrue(
-            any("C1, A1, A2 still carries the stamp's" in g for g in gaps), gaps
+            any(
+                "criterion-1, quality-check-1, quality-check-2 still carries the stamp's"
+                in g
+                for g in gaps
+            ),
+            gaps,
         )
 
     def test_the_stamped_measure_refuses_rows_of_another_prompt(self) -> None:
@@ -1520,7 +1526,7 @@ class Exp(unittest.TestCase):
 
     def test_the_stamped_estimator_formula_holds_the_contract(self) -> None:
         """The stamped `evaluate_rows` runs without any estimator library:
-        perfect against chance fires [C1] exactly at the bar (fractions), a
+        perfect against chance fires [criterion-1] exactly at the bar (fractions), a
         lane without gold is refused, the test lane is counted, never scored."""
         import importlib.util
         import sys
@@ -1565,7 +1571,12 @@ class Exp(unittest.TestCase):
         ]
         m = measure.evaluate_rows(lane("registered", 12) + lane("null", 6) + test_rows)
         self.assertEqual(
-            (m["c1_pass"], m["a2_pass"], m["n_test"], m["a2_target"]),
+            (
+                m["criterion_1_pass"],
+                m["quality_check_2_pass"],
+                m["n_test"],
+                m["quality_check_2_target"],
+            ),
             (True, True, 1, 0.5),
         )
         # the scored items per gold; the test lane's item has none and is no class
@@ -1580,7 +1591,7 @@ class Exp(unittest.TestCase):
         )
         wide = replace(measure.CONFIG, null_band=0.25)
         at_bar = measure.evaluate_rows(lane("registered", 8) + lane("null", 5), wide)
-        self.assertIs(at_bar["c1_pass"], True)  # 8/12 >= 5/12 + 1/4 exactly
+        self.assertIs(at_bar["criterion_1_pass"], True)  # 8/12 >= 5/12 + 1/4 exactly
         with self.assertRaisesRegex(ValueError, "without gold"):
             measure.evaluate_rows(
                 lane("registered", 12, gold_none=True) + lane("null", 6)

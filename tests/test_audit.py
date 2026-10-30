@@ -27,13 +27,13 @@ from labkit.gates import audit, decision_review, report_check, ways_out  # noqa:
 from labkit.checks import audit_binding, result_render  # noqa: E402
 from labkit.formats import attempts, findings, followup, promises, runs, scope_sha  # noqa: E402
 
-PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
+PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [criterion-1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
 
 
 def completed_run(area: Path, pid: str, output: str) -> Path:
     """A completed run bound to PID that registered OUTPUT (a repo-relative
-    path) and reports c1_pass — the run MODE analysis reads."""
+    path) and reports criterion_1_pass — the run MODE analysis reads."""
     d = area / "runs" / "2026-01-01T00-00-00_0001"
     d.mkdir(parents=True)
     cfg = {
@@ -47,7 +47,9 @@ def completed_run(area: Path, pid: str, output: str) -> Path:
         "config": {},
     }
     (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
-    (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
+    (d / "metrics.json").write_text(
+        json.dumps({"criterion_1_pass": True}), encoding="utf-8"
+    )
     (d / "outputs.json").write_text(
         json.dumps([{"path": output, "sha256": None, "lines": None}]), encoding="utf-8"
     )
@@ -165,7 +167,7 @@ class Audit(unittest.TestCase):
         )
         (area / "scripts" / "helpers.py").write_text("def foo():\n    return 1\n")
         block = (
-            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "holds"\n'
+            '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "holds"\n'
             'scope = ["scripts/helpers.py:foo"]\n'
         )
         (area / "PROTOCOL-x0.md").write_text(
@@ -195,7 +197,7 @@ class Audit(unittest.TestCase):
     def test_a_declared_scope_file_that_is_missing_refuses(self):
         area = repo_with()
         block = (
-            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "holds"\n'
+            '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "holds"\n'
             'scope = ["scripts/gone.py"]\n'
         )
         (area / "PROTOCOL-x0.md").write_text(
@@ -251,7 +253,7 @@ class Audit(unittest.TestCase):
         )  # cut, not dropped
         self.assertNotIn('\n51: {"i": 51,', prompt)
         self.assertIn("runs/2026-01-01T00-00-00_0001/metrics.json =====", prompt)
-        self.assertIn('"c1_pass": true', prompt)
+        self.assertIn('"criterion_1_pass": true', prompt)
         # what the prompt showed is one snapshot: every shown piece stands in
         # the prompt, and the record's shown_sha is its digest, the one
         # report-check recomputes for the answering run
@@ -728,7 +730,7 @@ class OneSnapshot(unittest.TestCase):
         other = area.parents[1] / "lib" / "other.py"
         other.write_text("def helper():\n    return 1\n", encoding="utf-8")
         block = (
-            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "s"\n'
+            '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "s"\n'
             'scope = ["../../lib/other.py"]\n'
         )
         (area / "PROTOCOL-x1.md").write_text(
@@ -868,11 +870,11 @@ class DecisionListReachesThePerson(unittest.TestCase):
         # and the refusal it spares: --decide holds the effect to the tables
         decided = io.StringIO()
         with contextlib.redirect_stderr(decided):
-            effect = ["--effect", "C1 not assessable"]
+            effect = ["--effect", "criterion-1 not assessable"]
             rc = audit.main([str(bare), "--decide", "1", "accepted", "r", *effect])
         self.assertEqual(rc, 2)
         self.assertIn(
-            f"effect names C1 — PROTOCOL-x0.md: {ways_out.NO_PROMISE_ROUTE}",
+            f"effect names criterion-1 — PROTOCOL-x0.md: {ways_out.NO_PROMISE_ROUTE}",
             decided.getvalue(),
         )
         # a refusal of the effect's form, whose example is an id, names the
@@ -903,7 +905,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
     def test_the_ids_an_effect_may_name_come_with_their_fields(self):
-        """`A2` alone does not say it is the null condition: where the
+        """`quality-check-2` alone does not say it is the null condition: where the
         agent has to name an id — the effect's route in the decision list,
         the refusal of an id the protocol does not register — each id
         comes with the field it stands in. The twin: a registered id
@@ -916,7 +918,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         rc, out, err, _ = run(area, BLOCK)
         self.assertEqual(rc, 1, err)
         self.assertIn(
-            '--effect "<ID>[, <ID>] not assessable" (<ID>: C1 (success / failure '
+            '--effect "<ID>[, <ID>] not assessable" (<ID>: criterion-1 (success / failure '
             "criterion)) — no review owed; an admissibility condition left "
             "unjudged leaves every criterion without a verdict by itself, so name "
             "the condition, not the criteria",
@@ -924,16 +926,16 @@ class DecisionListReachesThePerson(unittest.TestCase):
         )
         refused = io.StringIO()
         with contextlib.redirect_stderr(refused):
-            effect = ["--effect", "A9 not assessable"]
+            effect = ["--effect", "quality-check-9 not assessable"]
             rc = audit.main([str(area), "--decide", "1", "accepted", "r", *effect])
         self.assertEqual(rc, 2)
         self.assertIn(
-            "effect names A9 — PROTOCOL-x0.md registers C1 (success / failure "
+            "effect names quality-check-9 — PROTOCOL-x0.md registers criterion-1 (success / failure "
             "criterion)",
             refused.getvalue(),
         )
         with contextlib.redirect_stderr(io.StringIO()):
-            effect = ["--effect", "C1 not assessable"]
+            effect = ["--effect", "criterion-1 not assessable"]
             rc = audit.main([str(area), "--decide", "1", "accepted", "r", *effect])
         self.assertEqual(rc, 0)
 
@@ -1109,8 +1111,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
         run(promised, WARN)
         for words, line in (
             (
-                ["accepted", "r", "--effect", "C1 not assessable"],
-                "accepted: the finding holds and limits the claim — `C1 not "
+                ["accepted", "r", "--effect", "criterion-1 not assessable"],
+                "accepted: the finding holds and limits the claim — `criterion-1 not "
                 "assessable` stands in the report's Limit line",
             ),
             (
@@ -1288,7 +1290,8 @@ class FixVerdicts(unittest.TestCase):
         area, earlier = self.area()
         run = area / "runs" / "2026-01-01T00-00-00_0001"
         (run / "metrics.json").write_text(
-            json.dumps({"c1_pass": True, "identity_r2_kept": 0.31}), encoding="utf-8"
+            json.dumps({"criterion_1_pass": True, "identity_r2_kept": 0.31}),
+            encoding="utf-8",
         )
         answer = f"FIX · {earlier.name}#1 · resolved · metrics.json identity_r2_kept 0.31\n{CLEAN}"
         rc, _, err, sent = self.audit(area, answer)
@@ -1303,7 +1306,8 @@ class FixVerdicts(unittest.TestCase):
 
         self.assertIn(record.path, covering())
         (run / "metrics.json").write_text(
-            json.dumps({"c1_pass": True, "identity_r2_kept": 0.99}), encoding="utf-8"
+            json.dumps({"criterion_1_pass": True, "identity_r2_kept": 0.99}),
+            encoding="utf-8",
         )
         self.assertNotIn(record.path, covering())
 
@@ -1323,7 +1327,7 @@ class FixVerdicts(unittest.TestCase):
         "FIX · {ref} · unresolved · The leaked feature is still produced:\n"
         "- 00_prepare.py:66 and :83 still append `float(row['poisson_ratio'])` to train and test features.\n"
         "- 00_prepare.py:118 refuses to overwrite compounds_v1.jsonl.\n"
-        "- The new run's `c1_score` 0.9792 equals the 0.979 of the flagged run.\n"
+        "- The new run's `criterion_1_score` 0.9792 equals the 0.979 of the flagged run.\n"
         "- The closed-form probe R² the finding assigned is in no shown file.\n"
         "\n"
         "READ · PROTOCOL-bulk-modulus.md:16 · Recorded results still holds the stamp · fill it\n"
@@ -1556,7 +1560,7 @@ class RequiredCheck(unittest.TestCase):
     def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
         area, earlier = self.fv.area(self.CHECKED)
         sources = {"space_group": "column space_group", "n_sites": "structure text"}
-        self.with_metrics(area, {"c1_pass": True, "feature_sources": sources})
+        self.with_metrics(area, {"criterion_1_pass": True, "feature_sources": sources})
         v, prompt, _ = self.verdict(area, earlier)
         self.assertIn(
             f"  required check `feature_sources` = {json.dumps(sources)}", prompt
@@ -1698,25 +1702,25 @@ class CheckNote(unittest.TestCase):
 
     def test_the_forms_that_read(self):
         cases = {
-            "x · check: a2_spread": ("a2_spread", ""),
-            "x · check: `a2_spread`": ("a2_spread", ""),
-            "x · check: a2_spread (per seed; the band (0.15) must hold)": (
-                "a2_spread",
+            "x · check: quality_check_2_spread": ("quality_check_2_spread", ""),
+            "x · check: `quality_check_2_spread`": ("quality_check_2_spread", ""),
+            "x · check: quality_check_2_spread (per seed; the band (0.15) must hold)": (
+                "quality_check_2_spread",
                 "per seed; the band (0.15) must hold",
             ),
-            "x · check: a2_spread — the score per seed": (
-                "a2_spread",
+            "x · check: quality_check_2_spread — the score per seed": (
+                "quality_check_2_spread",
                 "the score per seed",
             ),
             # a sentence's closing period: kept in a dash note, and after the
             # parenthesis it voids nothing (pilot round 2, t71: the whole
             # answer was refused)
-            "x · check: a2_spread — the score per seed.": (
-                "a2_spread",
+            "x · check: quality_check_2_spread — the score per seed.": (
+                "quality_check_2_spread",
                 "the score per seed.",
             ),
-            "x · check: a2_spread (per seed; the band (0.15) must hold).": (
-                "a2_spread",
+            "x · check: quality_check_2_spread (per seed; the band (0.15) must hold).": (
+                "quality_check_2_spread",
                 "per seed; the band (0.15) must hold",
             ),
             "x · no check here": ("", ""),
@@ -1728,13 +1732,13 @@ class CheckNote(unittest.TestCase):
     def test_the_forms_that_do_not_read(self):
         for line in (
             "x · check: a2 spread",
-            "x · check: a2_spread (per seed) and more",
-            "x · check: a2_spread (per seed). And more",
-            "x · check: a2_spread (per seed)..",
-            "x · check: a2_spread ()",
-            "x · check: a2_spread ().",
-            "x · check: a2_spread: per seed",
-            "x · check: a2_spread · check: a2_mean",
+            "x · check: quality_check_2_spread (per seed) and more",
+            "x · check: quality_check_2_spread (per seed). And more",
+            "x · check: quality_check_2_spread (per seed)..",
+            "x · check: quality_check_2_spread ()",
+            "x · check: quality_check_2_spread ().",
+            "x · check: quality_check_2_spread: per seed",
+            "x · check: quality_check_2_spread · check: quality_check_2_mean",
             "x · check: A2_Spread",
         ):
             with self.subTest(line):
@@ -1748,7 +1752,7 @@ class CheckNote(unittest.TestCase):
         line = (
             "BLOCKER · a.py:1 · a count misses some values · one passes · LAB-015 "
             "Preflight audit before freezing · count them in every group · check: "
-            "b1_count (the values counted per group; it must be zero when b1_pass "
+            "interpretation_1_count (the values counted per group; it must be zero when interpretation_1_pass "
             "is true)"
         )
         for ending in (".", ""):
@@ -1759,14 +1763,18 @@ class CheckNote(unittest.TestCase):
                 self.assertEqual(rc, 1, err)
                 (record,) = findings.area_records(area)
                 (f,) = record.findings
-                self.assertEqual(f.check, "b1_count")
+                self.assertEqual(f.check, "interpretation_1_count")
                 self.assertTrue(
-                    f.check_note.endswith("it must be zero when b1_pass is true")
+                    f.check_note.endswith(
+                        "it must be zero when interpretation_1_pass is true"
+                    )
                 )
 
     def test_the_note_is_bound_with_the_check(self):
         def f(note: str) -> findings.Finding:
-            return findings.Finding("BLOCKER", "x", "fixed", "r", "", "a2_spread", note)
+            return findings.Finding(
+                "BLOCKER", "x", "fixed", "r", "", "quality_check_2_spread", note
+            )
 
         self.assertNotEqual(
             findings.decision_digest(f("per seed")), findings.decision_digest(f("mean"))
@@ -2338,7 +2346,7 @@ CHECK_BELOW = (
     f"BLOCKER · p.md:13 · a first blocker · a value is wrong · {LAB015} · align them\n"
     "\n"
     f"BLOCKER · a.py:5 · a second blocker · a value is wrong · {LAB015} · count them · "
-    "check: b2_count (per group; it must be zero).\n"
+    "check: interpretation_2_count (per group; it must be zero).\n"
     "\n"
     "BLOCKER · a.py:40 · the head of a finding with two causes:\n"
     "- cause one\n"
@@ -2349,7 +2357,7 @@ CHECK_BELOW = (
     "- step two\n"
     "- step three\n"
     "\n"
-    f"· {LAB015} · the smallest change · check: a2_value (what the value must show; "
+    f"· {LAB015} · the smallest change · check: quality_check_2_value (what the value must show; "
     "it holds for every group).\n"
     "\n"
     f"WARNING · a.py:50 · a warning · a value moves · {LAB015} · fix it\n"
@@ -2366,7 +2374,7 @@ CHECK_BELOW_LINES = [
     "- step one",
     "- step two",
     "- step three",
-    f"· {LAB015} · the smallest change · check: a2_value (what the value must show; "
+    f"· {LAB015} · the smallest change · check: quality_check_2_value (what the value must show; "
     "it holds for every group).",
 ]
 #: — indented bullets, a line of spaces, an indented paragraph, then more
@@ -2416,7 +2424,7 @@ class WholeFinding(unittest.TestCase):
             CHECK_BELOW,
             3,
             CHECK_BELOW_LINES,
-            "a2_value",
+            "quality_check_2_value",
             "what the value must show; it holds for every group",
         ),
         "indented": (INDENTED, 2, INDENTED_LINES, "", ""),
@@ -2451,7 +2459,7 @@ class WholeFinding(unittest.TestCase):
         second = findings.area_records(area)[0].findings[1]
         self.assertEqual(
             (second.check, second.check_note),
-            ("b2_count", "per group; it must be zero"),
+            ("interpretation_2_count", "per group; it must be zero"),
         )
 
     def test_the_kept_pilot_reports_read_as_before(self):
@@ -2562,7 +2570,7 @@ class WholeFinding(unittest.TestCase):
         line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
         area = repo_with()
         answer = (
-            f"{line} · check: a2_spread\n- per seed\n"
+            f"{line} · check: quality_check_2_spread\n- per seed\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         rc, _, err, _ = run(area, answer)
@@ -2570,13 +2578,15 @@ class WholeFinding(unittest.TestCase):
         self.assertIn("check field that does not read", err)
         area = repo_with()
         answer = (
-            f"{line}\n- per seed · check: a2_spread (each seed).\n"
+            f"{line}\n- per seed · check: quality_check_2_spread (each seed).\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 1, err)
         (f,) = findings.area_records(area)[0].findings
-        self.assertEqual((f.check, f.check_note), ("a2_spread", "each seed"))
+        self.assertEqual(
+            (f.check, f.check_note), ("quality_check_2_spread", "each seed")
+        )
 
     def test_a_gate_names_a_whole_finding_on_one_line(self):
         """The record keeps the lines; a gate's line and the decision list
@@ -2647,7 +2657,9 @@ class Carried(unittest.TestCase):
     def new_state(self, area: Path, value: int) -> None:
         """Another answering run's metrics: the next audit sees a new state."""
         run = area / "runs" / "2026-01-01T00-00-00_0001"
-        (run / "metrics.json").write_text(json.dumps({"c1_pass": True, "v": value}))
+        (run / "metrics.json").write_text(
+            json.dumps({"criterion_1_pass": True, "v": value})
+        )
 
     def audit_with(self, area: Path, lines: str) -> findings.Record:
         rc, _, err, _ = self.fv.audit(area, f"{lines}\n\n{CLEAN}")
@@ -2667,7 +2679,7 @@ class Carried(unittest.TestCase):
             (f"{r1.name}#1", "feature_sources", "every column"),
         )
         findings.write_decision(
-            r2.path, n2, "accepted", "kept as a limit", "C1 not assessable"
+            r2.path, n2, "accepted", "kept as a limit", "criterion-1 not assessable"
         )
         self.new_state(area, 2)
         rc, _, err, sent = self.fv.audit(
@@ -2806,7 +2818,7 @@ class Carried(unittest.TestCase):
         x0.write_text(
             fixture.head(
                 id=pid.group(1),
-                promises='[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "holds"\n'
+                promises='[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "holds"\n'
                 'scope = ["scripts/01_measure.py"]\n',
             )
             + PROTOCOL,
@@ -2835,7 +2847,7 @@ class Carried(unittest.TestCase):
             words = shlex.split(line)
             filled = [w if w != "STATUS" else "accepted" for w in words[1:]]
             filled = [w if w != "REASON" else "known limit" for w in filled]
-            effect = ["--effect", "C1 not assessable"]
+            effect = ["--effect", "criterion-1 not assessable"]
             without = [
                 w
                 for i, w in enumerate(filled)
@@ -2850,7 +2862,9 @@ class Carried(unittest.TestCase):
         self.assertEqual(refused, 2)
         self.assertIn("name one with --protocol", err.getvalue())
         self.assertEqual(rc, 0, err.getvalue())
-        self.assertEqual(findings.read(r1).findings[0].effect, "C1 not assessable")
+        self.assertEqual(
+            findings.read(r1).findings[0].effect, "criterion-1 not assessable"
+        )
 
     def test_past_the_operating_limit_the_audit_refuses(self):
         area, _ = self.fv.area()
@@ -2988,7 +3002,7 @@ class FollowupGate(unittest.TestCase):
         )
         self.assertIn("`evaluate_rows()` computes it from them", line)
         RequiredCheck().with_metrics(
-            area, {"c1_pass": True, "feature_sources": {"a": ["b"]}}
+            area, {"criterion_1_pass": True, "feature_sources": {"a": ["b"]}}
         )
         self.follow_up(area, f"FIX · {r1.name}#1 · resolved · gone")
         self.assertEqual(self.gate(area), [])
@@ -3059,13 +3073,13 @@ class FollowupGate(unittest.TestCase):
 
     def test_an_old_accepted_limit_is_carried_and_renders_in_the_current_result(self):
         area, r1 = self.fv.area()
-        findings.write_decision(r1, 1, "accepted", "kept", "C1 not assessable")
+        findings.write_decision(r1, 1, "accepted", "kept", "criterion-1 not assessable")
         self.assertEqual(len(self.gate(area)), 1)  # never followed up
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
         findings.write_decision(
-            r2.path, n, "accepted", "kept as a limit", "C1 not assessable"
+            r2.path, n, "accepted", "kept as a limit", "criterion-1 not assessable"
         )
         self.assertEqual(self.gate(area), [])
         text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
@@ -3114,7 +3128,9 @@ class FollowupGate(unittest.TestCase):
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n2, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
-        findings.write_decision(r2.path, n2, "accepted", "kept", "C1 not assessable")
+        findings.write_decision(
+            r2.path, n2, "accepted", "kept", "criterion-1 not assessable"
+        )
         for verdict, limits in (("unresolved", 1), ("resolved", 0)):
             with self.subTest(verdict):
                 for p in (area / "audits").glob("*-analysis*.toml"):
@@ -3126,7 +3142,7 @@ class FollowupGate(unittest.TestCase):
                 carried = [(n, f) for n, f in enumerate(r3.findings, 1) if f.carries]
                 for n, _ in carried:
                     findings.write_decision(
-                        r3.path, n, "accepted", "kept", "C1 not assessable"
+                        r3.path, n, "accepted", "kept", "criterion-1 not assessable"
                     )
                 text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
                 run = area / "runs" / "2026-01-01T00-00-00_0001"

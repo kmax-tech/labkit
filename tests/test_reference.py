@@ -137,7 +137,7 @@ class OnAKindWithABar(unittest.TestCase):
                 text = head(repeat_cost="low", kind=kind, reference=WITHIN)
                 gap = protocol_check.reference_gap(text, protocol_block.head(text))
                 assert gap is not None
-                self.assertIn("[C]", gap)
+                self.assertIn("in a criterion", gap)
                 self.assertIn(f'kind = "{kind}"', gap)
                 report = protocol_check.check_fields(text)
                 self.assertIn(gap, report.missing_must)

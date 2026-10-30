@@ -353,7 +353,7 @@ class Repeats(unittest.TestCase):
         first = self._run()
         run = self.area / "runs" / first
         (run / "metrics.json").write_text(
-            json.dumps({"c1_pass": True, "model_calls": 2}), encoding="utf-8"
+            json.dumps({"criterion_1_pass": True, "model_calls": 2}), encoding="utf-8"
         )
         self.assertIn("is one draw", run_record_check.single_draw(self.area, run) or "")
         bad = self.area / "runs" / "2026-10-15T00-00-00_dead"

@@ -34,9 +34,9 @@ from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  #
 BODY = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
-- **Success / failure criterion:** [C1] accuracy above the trivial decider
-- **Admissibility condition:** [A1] every case parsed
-- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Success / failure criterion:** [criterion-1] accuracy above the trivial decider
+- **Admissibility condition:** [quality-check-1] every case parsed
+- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 """
 
 

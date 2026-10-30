@@ -121,7 +121,7 @@ class Score:
     number_ok: bool
     null_reported: (
         bool | None
-    )  # a task with a bar: an a<i>_* key (admissibility, the null lane) in metrics.json
+    )  # a task with a bar: a quality_check_<i>_* key (the null lane) in metrics.json
     bound_to: str | None  # config["protocol"]["path"]
     frozen: bool | None
     repeat_cost: str | None
@@ -544,7 +544,7 @@ def probe_score(
             TASK_STAMP[probe.task][1]
         ):  # a computation owes no null
             null_reported = any(
-                promises.key_kind(k) == "admissibility" for k in metrics
+                promises.key_kind(k) == "quality-check" for k in metrics
             )
         if pr.bound and pr.protocol is not None:
             from labkit.formats import (

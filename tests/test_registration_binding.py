@@ -21,9 +21,9 @@ from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** what is the mean line count per case?
-- **Success / failure criterion:** [C1] above the trivial decider
-- **Admissibility condition:** [A1] every case parsed
-- **Null condition / anchors (in the same run):** [A2] shuffled labels at chance
+- **Success / failure criterion:** [criterion-1] above the trivial decider
+- **Admissibility condition:** [quality-check-1] every case parsed
+- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels at chance
 """
 
 

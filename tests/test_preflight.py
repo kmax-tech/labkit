@@ -25,8 +25,8 @@ from protocol_fixture import registration_of, head  # noqa: E402
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [C1] p < .05
-- **Admissibility condition:** [A1] parse yield above 80%
+- **Success / failure criterion:** [criterion-1] p < .05
+- **Admissibility condition:** [quality-check-1] parse yield above 80%
 - **Model I/O:** in: text · out: a label, parsed by parse()
 - **Prompt (verbatim, per variant):**
 
@@ -34,7 +34,7 @@ BODY = """\
   prompt
   ```
 
-- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 - **Exclusions / filters:** none
 - **Data / scope:** data/x.jsonl, 12 items
 - **Data profile:** 6 and 6 items, mean words 9 and 9; no marker only in one class
@@ -68,7 +68,7 @@ def _area(d, protocol_text=CLEAN_PROTOCOL, scripts=True, git=True):
     if scripts:
         (area / "scripts").mkdir(exist_ok=True)
         (area / "scripts" / "01_measure.py").write_text(
-            'metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
+            'metrics = {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n',
             encoding="utf-8",
         )
     if git:
@@ -144,7 +144,7 @@ class TellTestRun(unittest.TestCase):
     """preflight and finalize render the area-test run alike (S7)."""
 
     def test_a_failed_run_carries_its_counts_into_the_blocker(self):
-        # the 10-23 B1 fix stood in finalize only; preflight's blocker lost
+        # the 10-23 interpretation-1 fix stood in finalize only; preflight's blocker lost
         # pytest's counts for a collecting caller
         tests = preflight.AreaTests(
             "tests/test_01_x.py",
@@ -300,7 +300,7 @@ class TestPreflight(unittest.TestCase):
         with _area_dir() as d:
             area, _ = _area(d)
             (area / "scripts" / "01_measure.py").write_text(
-                'metrics = {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n'
+                'metrics = {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n'
                 'PROMPT = "Is it causal?"\n'
                 "def parse_answer(raw):\n    return raw\n",
                 encoding="utf-8",

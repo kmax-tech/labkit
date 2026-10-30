@@ -26,14 +26,14 @@ from labkit.formats import protocol_check
 
 AUDIT = "n/a — contract test, no code to audit"
 C1 = """[[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "accuracy >= min_acc"
 scope = ["scripts/01_measure.py"]
 constants = { min_acc = 0.7 }
 """
 BODY = (
-    "\n- **Question / hypothesis:** q\n- **Success / failure criterion:** [C1] c\n"
+    "\n- **Question / hypothesis:** q\n- **Success / failure criterion:** [criterion-1] c\n"
     "- **Admissibility condition:** none\n"
 )
 
@@ -72,7 +72,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 _start(area, {"model": "m"})
             self.assertIn(
-                "[C1] min_acc = 0.7 is registered, the config carries no such key",
+                "[criterion-1] min_acc = 0.7 is registered, the config carries no such key",
                 str(cm.exception),
             )
             self.assertIn("promises.all_constants()", str(cm.exception))
@@ -157,7 +157,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
     ) -> None:
         registered = (
             head(repeat_cost="low", promises=None)
-            + "- **Success / failure criterion:** [C1] x\n"
+            + "- **Success / failure criterion:** [criterion-1] x\n"
         )
         report = protocol_check.check_fields(registered)
         self.assertTrue(

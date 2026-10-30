@@ -37,10 +37,10 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         area,
         RUN,
         metrics={
-            "c1_pass": True,
-            "a1_pass": True,
-            "a2_pass": True,
-            "c1_accuracy": 0.83,
+            "criterion_1_pass": True,
+            "quality_check_1_pass": True,
+            "quality_check_2_pass": True,
+            "criterion_1_accuracy": 0.83,
         },
     )
     text = protocol.read_text(encoding="utf-8")
@@ -73,12 +73,12 @@ class Rendering(unittest.TestCase):
         section = guide.split("- **Recorded results:**", 1)[1]
         example = section.split("```text\n", 1)[1].split("```", 1)[0].strip()
         expected = result_render.recorded_results_line(
-            {"c1_pass": True, "c1_accuracy": 0.83},
+            {"criterion_1_pass": True, "criterion_1_accuracy": 0.83},
             "2026-10-22T09-13-08_0dc3",
-            frozenset({"c1_pass"}),
+            frozenset({"criterion_1_pass"}),
         )
         self.assertEqual(
-            example, f"- **Recorded results:** C1 met · recorded: {expected}"
+            example, f"- **Recorded results:** criterion-1 met · recorded: {expected}"
         )
 
     def test_the_rendering_is_the_answer_line_with_its_note_and_the_limit_lines(self):
@@ -87,7 +87,7 @@ class Rendering(unittest.TestCase):
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
             r.recorded_results,
-            f"C1 met; A1 met; A2 met · recorded: c1_accuracy = 0.83 (run {RUN}); "
+            f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: criterion_1_accuracy = 0.83 (run {RUN}); "
             "subject to 1 recorded limitation (the Limit lines below)",
         )
         ((label, value),) = r.limits
@@ -100,7 +100,7 @@ class Rendering(unittest.TestCase):
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
             r.recorded_results,
-            f"C1 met; A1 met; A2 met · recorded: c1_accuracy = 0.83 (run {RUN})",
+            f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: criterion_1_accuracy = 0.83 (run {RUN})",
         )
         self.assertEqual(r.limits, ())
 
@@ -108,7 +108,7 @@ class Rendering(unittest.TestCase):
 class ReportableVerdicts(unittest.TestCase):
     """K2 (docs/notes/2026-10-27-new-registration-contracts.md): every
     admissibility condition conditions every criterion. The repair case
-    (2026-10-27) rendered `c1_pass = True` beside "A3 not assessable"; the
+    (2026-10-27) rendered `criterion_1_pass = True` beside "quality-check-3 not assessable"; the
     primary verdict is now the derived one, the run's metrics unchanged."""
 
     def block(self) -> promises.PromiseTables:
@@ -119,62 +119,85 @@ class ReportableVerdicts(unittest.TestCase):
     def test_an_admissibility_not_assessable_leaves_the_criterion_unjudged(self):
         said = result_render.verdicts(
             self.block(),
-            {"c1_pass": True, "a1_pass": True, "a2_pass": True},
-            {"A2": "Limit (audit x #1)"},
+            {
+                "criterion_1_pass": True,
+                "quality_check_1_pass": True,
+                "quality_check_2_pass": True,
+            },
+            {"quality-check-2": "Limit (audit x #1)"},
         )
         self.assertEqual(
             said,
             [
-                "C1 not assessable — A2 not assessable (Limit (audit x #1))",
-                "A1 met",
-                "A2 not assessable (Limit (audit x #1))",
+                "criterion-1 not assessable — quality-check-2 not assessable (Limit (audit x #1))",
+                "quality-check-1 met",
+                "quality-check-2 not assessable (Limit (audit x #1))",
             ],
         )
 
     def test_an_admissibility_not_met_leaves_the_criterion_unjudged(self):
         said = result_render.verdicts(
-            self.block(), {"c1_pass": True, "a1_pass": True, "a2_pass": False}, {}
+            self.block(),
+            {
+                "criterion_1_pass": True,
+                "quality_check_1_pass": True,
+                "quality_check_2_pass": False,
+            },
+            {},
         )
-        self.assertEqual(said[0], "C1 not assessable — A2 not met")
-        self.assertEqual(said[2], "A2 not met")
+        self.assertEqual(
+            said[0], "criterion-1 not assessable — quality-check-2 not met"
+        )
+        self.assertEqual(said[2], "quality-check-2 not met")
 
     def test_the_twins_a_miss_stays_a_miss_and_a_pass_a_pass(self):
         """A failed criterion under satisfied admissibility conditions is a
         result, not unjudged; without a limit a pass renders as met."""
-        missed = {"c1_pass": False, "a1_pass": True, "a2_pass": True}
+        missed = {
+            "criterion_1_pass": False,
+            "quality_check_1_pass": True,
+            "quality_check_2_pass": True,
+        }
         self.assertEqual(
-            result_render.verdicts(self.block(), missed, {})[0], "C1 missed"
+            result_render.verdicts(self.block(), missed, {})[0], "criterion-1 missed"
         )
-        met = {"c1_pass": True, "a1_pass": True, "a2_pass": True}
-        self.assertEqual(result_render.verdicts(self.block(), met, {})[0], "C1 met")
+        met = {
+            "criterion_1_pass": True,
+            "quality_check_1_pass": True,
+            "quality_check_2_pass": True,
+        }
+        self.assertEqual(
+            result_render.verdicts(self.block(), met, {})[0], "criterion-1 met"
+        )
 
     def test_a_key_not_recorded_gives_no_verdict_and_says_so(self):
         """A missing required key is an input error intent-check holds, never
         a benign not assessable."""
         said = result_render.verdicts(
-            self.block(), {"c1_pass": True, "a2_pass": True}, {}
+            self.block(), {"criterion_1_pass": True, "quality_check_2_pass": True}, {}
         )
         self.assertEqual(
-            said[1], "A1: no verdict — `a1_pass` not recorded as true or false"
+            said[1],
+            "quality-check-1: no verdict — `quality_check_1_pass` not recorded as true or false",
         )
 
     def test_the_rendering_leaves_the_runs_metrics_as_recorded(self):
         area, protocol = area_with_record(limit_reason=None)
         rec = findings.area_records(area)[0]
         findings.write_decision(
-            rec.path, 1, "accepted", "one draw", "A2 not assessable"
+            rec.path, 1, "accepted", "one draw", "quality-check-2 not assessable"
         )
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertTrue(
             r.recorded_results.startswith(
-                "C1 not assessable — A2 not assessable (Limit"
+                "criterion-1 not assessable — quality-check-2 not assessable (Limit"
             )
         )
-        self.assertNotIn("c1_pass", r.recorded_results)
-        self.assertIn("c1_accuracy = 0.83", r.recorded_results)
+        self.assertNotIn("criterion_1_pass", r.recorded_results)
+        self.assertIn("criterion_1_accuracy = 0.83", r.recorded_results)
         metrics = (area / "runs" / RUN / "metrics.json").read_text(encoding="utf-8")
-        self.assertIn('"c1_pass": true', metrics)
+        self.assertIn('"criterion_1_pass": true', metrics)
 
 
 class RenderGaps(unittest.TestCase):
@@ -208,9 +231,9 @@ class RenderGaps(unittest.TestCase):
 
     def test_a_retyped_answer_and_a_changed_limit_are_named_and_rendered_back(self):
         text = self.written()
-        edited = text.replace("c1_accuracy = 0.83", "c1_accuracy = 0.85").replace(
-            "— one draw", "— one draw, fine"
-        )
+        edited = text.replace(
+            "criterion_1_accuracy = 0.83", "criterion_1_accuracy = 0.85"
+        ).replace("— one draw", "— one draw, fine")
         gaps = result_render.render_gaps(edited, self.expected)
         self.assertEqual(len(gaps), 2, gaps)
         self.assertIn("Recorded results line differs from its rendering", gaps[0].text)
@@ -226,7 +249,7 @@ class RenderGaps(unittest.TestCase):
         results below the generated one — passed. Every line of a label is
         held."""
         exp = result_render.Rendering(
-            "c1_pass = True (run r1)",
+            "criterion_1_pass = True (run r1)",
             (
                 (
                     "Limit (audit a #1)",
@@ -235,7 +258,7 @@ class RenderGaps(unittest.TestCase):
             ),
         )
         good = (
-            "- **Recorded results:** c1_pass = True (run r1)\n"
+            "- **Recorded results:** criterion_1_pass = True (run r1)\n"
             "- **Limit (audit a #1):** the verdicts stand, read within this limit — ok\n"
         )
         self.assertEqual(result_render.render_gaps(good, exp), [])
@@ -244,7 +267,7 @@ class RenderGaps(unittest.TestCase):
         )
         self.assertIn('"Limit (audit a #1)" is written 2 times', gap.text)
         (gap,) = result_render.render_gaps(
-            good + "- **Recorded results:** c1_pass = False (run r1)\n", exp
+            good + "- **Recorded results:** criterion_1_pass = False (run r1)\n", exp
         )
         self.assertIn('"Recorded results" is written 2 times', gap.text)
 

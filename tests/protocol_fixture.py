@@ -21,28 +21,28 @@ PID = "p-0123456789abcdef"
 #: script `scope_file` writes.
 DEFAULT_BLOCK = """\
 [[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "the criterion holds"
 scope = ["scripts/01_measure.py"]
 
 [[promise]]
-id = "A1"
-key = "a1_pass"
+id = "quality-check-1"
+key = "quality_check_1_pass"
 sentence = "the yield suffices"
 scope = ["scripts/01_measure.py"]
 
 [[promise]]
-id = "A2"
-key = "a2_pass"
+id = "quality-check-2"
+key = "quality_check_2_pass"
 sentence = "the null lane sits at chance"
 scope = ["scripts/01_measure.py"]
 """
 #: one criterion and the prose that names it — a protocol whose run
-#: reports `c1_pass` alone; a block id the prose does not name, or a
+#: reports `criterion_1_pass` alone; a block id the prose does not name, or a
 #: metrics key a block id lacks, fails intent-check
 C1_BLOCK = DEFAULT_BLOCK.split("\n\n")[0] + "\n"
-C1_PROSE = "- **Success / failure criterion:** [C1] the criterion holds\n"
+C1_PROSE = "- **Success / failure criterion:** [criterion-1] the criterion holds\n"
 
 
 def registration_of(area: Path) -> dict[str, str]:
@@ -91,7 +91,7 @@ def scope_file(area: Path) -> Path:
     if not script.is_file():
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text(
-            'def evaluate_rows(rows):\n    return {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
+            'def evaluate_rows(rows):\n    return {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n',
             encoding="utf-8",
         )
     return script

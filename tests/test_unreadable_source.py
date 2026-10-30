@@ -32,7 +32,8 @@ class UnreadableSource(unittest.TestCase):
         scope_file(self.area)
         self.protocol = self.area / "PROTOCOL-x.md"
         self.protocol.write_text(
-            head(promises=DEFAULT_BLOCK) + "\n- **Question / hypothesis:** [C1] q\n",
+            head(promises=DEFAULT_BLOCK)
+            + "\n- **Question / hypothesis:** [criterion-1] q\n",
             encoding="utf-8",
         )
         (self.area / "analysis").mkdir()
@@ -92,13 +93,13 @@ class UnreadableSourceWithoutLib(unittest.TestCase):
         self.script = scope_file(self.area)
         self.script.write_text("margin = 0.25\ndef f(:\n    pass\n", encoding="utf-8")
         block = DEFAULT_BLOCK.replace(
-            'scope = ["scripts/01_measure.py"]\n\n[[promise]]\nid = "A1"',
+            'scope = ["scripts/01_measure.py"]\n\n[[promise]]\nid = "quality-check-1"',
             'scope = ["scripts/01_measure.py"]\nconstants = { margin = 0.25 }\n\n'
-            '[[promise]]\nid = "A1"',
+            '[[promise]]\nid = "quality-check-1"',
         )
         self.protocol = self.area / "PROTOCOL-x.md"
         self.protocol.write_text(
-            head(promises=block) + "\n- **Question / hypothesis:** [C1] q\n",
+            head(promises=block) + "\n- **Question / hypothesis:** [criterion-1] q\n",
             encoding="utf-8",
         )
 
@@ -112,7 +113,7 @@ class UnreadableSourceWithoutLib(unittest.TestCase):
 
     def test_twin_the_fixed_script_passes(self):
         self.script.write_text(
-            'margin = 0.25\ndef evaluate_rows(rows):\n    return {"c1_pass": True, "a1_pass": True, "a2_pass": True}\n',
+            'margin = 0.25\ndef evaluate_rows(rows):\n    return {"criterion_1_pass": True, "quality_check_1_pass": True, "quality_check_2_pass": True}\n',
             encoding="utf-8",
         )
         findings = [

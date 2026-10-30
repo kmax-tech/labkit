@@ -219,11 +219,11 @@ def assert_draws(
     """`02_analyze.py --draws` on the kept run prints its criterion value
     under the measure skeleton's key (`C1_VALUE_KEY`): the value metrics.json
     holds, never the other skeleton's key. The analysis skeleton is shared;
-    it read the model's key for every skeleton and printed `c1_accuracy
+    it read the model's key for every skeleton and printed `criterion_1_accuracy
     None` for a fit (2026-10-22)."""
     metrics = json.loads((area / "runs" / run_id / "metrics.json").read_text())
     out = lab.script(area, "02_analyze.py", "--draws")
-    test.assertIn(f"draw 1  {run_id}  {key} {metrics[key]}  c1_pass True", out)
+    test.assertIn(f"draw 1  {run_id}  {key} {metrics[key]}  criterion_1_pass True", out)
     test.assertNotIn(other, out)
 
 
@@ -533,12 +533,12 @@ def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
         "type=exploratory",
         "Terms of this protocol=n/a — no coinage",
         "Question / hypothesis=Does the model read a causal claim off one sentence?",
-        "Success / failure criterion=[C1] registered accuracy at least the null lane's plus margin",
-        "Admissibility condition=[A1] at most max_empty empty answers; [A2] the null lane at chance within null_band_items",
+        "Success / failure criterion=[criterion-1] registered accuracy at least the null lane's plus margin",
+        "Admissibility condition=[quality-check-1] at most max_empty empty answers; [quality-check-2] the null lane at chance within null_band_items",
         "Data / scope=data/prepared/sentences_v1.jsonl, 12 sentences, 00_prepare.py",
         "Data profile=6 and 6 sentences, the marker 'because' in both classes",
         "Model / tool=haiku",
-        "Null condition / anchors (in the same run)=[A2] the placebo question (English?) answers Yes for every item: expected accuracy 6 of 12",
+        "Null condition / anchors (in the same run)=[quality-check-2] the placebo question (English?) answers Yes for every item: expected accuracy 6 of 12",
         "Exclusions / filters=none",
         "Unit=one sentence",
     )
@@ -1178,7 +1178,7 @@ class Judge(unittest.TestCase):
             _load(self.measure, "e2e_judge_measure").main()
         run_id = lab.run_id_of(out.getvalue())
         cls.run_id = run_id
-        self.assertIn("c1_pass       True", out.getvalue())
+        self.assertRegex(out.getvalue(), r"criterion_1_pass +True")
         rc, out_text = lab.finalize(self.area)
         self.assertEqual(rc, 0, out_text)
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
@@ -1187,10 +1187,13 @@ class Judge(unittest.TestCase):
         self.assertIn("finalized, audited, checked", out_text)
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(
-            "- **Recorded results:** C1 met; A1 met; A2 met · recorded: ", text
+            "- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: ",
+            text,
         )
         self.assertIn(f"(run {run_id})", text)
-        assert_draws(self, lab, self.area, run_id, "c1_accuracy", "c1_score")
+        assert_draws(
+            self, lab, self.area, run_id, "criterion_1_accuracy", "criterion_1_score"
+        )
         yours = out_text.partition("still yours")[2]
         self.assertIn("output/", yours)  # the run's rows, where the pair is read
         self.assertIn("Raw output", yours)
@@ -1265,7 +1268,7 @@ class Judge(unittest.TestCase):
 
     def test_04_an_accepted_blocker_reaches_the_protocol_as_its_limit(self):
         """Review 2026-10-21 (judge-2): an accepted BLOCKER may carry a
-        number read within it, but an instrument unfit for C1 leaves C1
+        number read within it, but an instrument unfit for criterion-1 leaves criterion-1
         unjudged — the decision says which, the protocol carries it as a
         Limit line, report-check holds the two together."""
         self._adopted()
@@ -1277,15 +1280,17 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 2, out)  # the effect is owed
         self.assertIn("owes its effect", out)
         rc, out = self._decide(
-            record, "accepted", reason, "--effect", "C9 not assessable"
+            record, "accepted", reason, "--effect", "criterion-9 not assessable"
         )
         self.assertEqual(rc, 2, out)  # an id the protocol does not register
-        self.assertIn("C9", out)
+        self.assertIn("criterion-9", out)
         rc, out = self._decide(
-            record, "accepted", reason, "--effect", "C1 not assessable"
+            record, "accepted", reason, "--effect", "criterion-1 not assessable"
         )
         self.assertEqual(rc, 0, out)
-        self.assertEqual(findings.read(record).findings[0].effect, "C1 not assessable")
+        self.assertEqual(
+            findings.read(record).findings[0].effect, "criterion-1 not assessable"
+        )
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)  # the record says so, the protocol not yet
         self.assertIn(label, out)
@@ -1293,11 +1298,15 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(
-            f"- **{label}:** C1 not assessable with this run — {reason}", text
+            f"- **{label}:** criterion-1 not assessable with this run — {reason}", text
         )
         # the verdict the Recorded results state: the criterion unjudged, no pass
-        self.assertIn(f"- **Recorded results:** C1 not assessable ({label})", text)
-        self.assertIn("c1_accuracy = 1.0", text)  # the measurement stays reported
+        self.assertIn(
+            f"- **Recorded results:** criterion-1 not assessable ({label})", text
+        )
+        self.assertIn(
+            "criterion_1_accuracy = 1.0", text
+        )  # the measurement stays reported
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
         # a limit line taken out by hand is missed
@@ -1322,7 +1331,7 @@ class Judge(unittest.TestCase):
         self.assertIn("the Conclusion is not written yet", out)
         lab.fill(
             self.protocol,
-            "Conclusion=C1 is met as one draw on twelve items; nothing more is claimed.",
+            "Conclusion=criterion-1 is met as one draw on twelve items; nothing more is claimed.",
         )
         rc, out = self._review(record)
         self.assertEqual(rc, 0, out)
@@ -1362,7 +1371,7 @@ class Judge(unittest.TestCase):
 
     def test_05_an_accepted_warning_that_names_its_effect_reaches_the_result(self):
         """Review 2026-10-21 (judge-2/3): the cue that limits how the number
-        reads was a WARNING, accepted, and the Answer said `c1_pass = True`
+        reads was a WARNING, accepted, and the Answer said `criterion_1_pass = True`
         alone. A WARNING may name its effect; named, it reaches the result."""
         self._adopted()
         lab = type(self).lab
@@ -1377,7 +1386,7 @@ class Judge(unittest.TestCase):
             run_id=self.run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
         label = f"Limit (audit {record.stem} #1)"
-        reason = "C1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
+        reason = "criterion-1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
         rc, out = self._decide(record, "accepted", reason, "--effect", "stands")
         self.assertEqual(rc, 0, out)
         rc, out = self._report_check()
@@ -1530,8 +1539,8 @@ class Estimator(unittest.TestCase):
             **{
                 "Terms of this protocol": "n/a — no coinage",
                 "Question / hypothesis": "Does a threshold on feature 0 predict the label out of fold?",
-                "Success / failure criterion": "[C1] registered accuracy at least the null lane's plus margin",
-                "Admissibility condition": "[A1] at most max_empty items without a prediction; [A2] the null lane within null_band of chance",
+                "Success / failure criterion": "[criterion-1] registered accuracy at least the null lane's plus margin",
+                "Admissibility condition": "[quality-check-1] at most max_empty items without a prediction; [quality-check-2] the null lane within null_band of chance",
                 "Split touched": "train",
                 "Timebox": "1h",
                 "Data / scope": "data/prepared/points_v1.jsonl, 12 labelled and 4 test points, 00_prepare.py",
@@ -1593,11 +1602,14 @@ class Estimator(unittest.TestCase):
         self.assertNotIn("Raw output", out)  # filled already: not named again
         text = self.protocol.read_text(encoding="utf-8")
         self.assertIn(
-            "- **Recorded results:** C1 met; A1 met; A2 met · recorded: ", text
+            "- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: ",
+            text,
         )
         self.assertIn(f"(run {run_id})", text)
         self.assertEqual(protocol_block.declared_run(text), run_id)
-        assert_draws(self, lab, self.area, run_id, "c1_score", "c1_accuracy")
+        assert_draws(
+            self, lab, self.area, run_id, "criterion_1_score", "criterion_1_accuracy"
+        )
         self._a_repeat_draws_a_derived_seed_and_never_answers(run_id)
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)
@@ -1639,7 +1651,7 @@ class Estimator(unittest.TestCase):
             {answering_run.repeat_seed(run_id, 2)},
         )
         out = lab.script(self.area, "02_analyze.py", "--draws")
-        self.assertIn(f"draw 2  {repeat}  c1_score", out)
+        self.assertIn(f"draw 2  {repeat}  criterion_1_score", out)
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
         pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id

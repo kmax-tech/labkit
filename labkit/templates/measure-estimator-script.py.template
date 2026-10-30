@@ -42,10 +42,10 @@ the same predictions against the gold labels permuted with the seed —
 each null row names whose label it carries (`gold_of`) —, so the noise
 floor needs no second instrument. What those predictions reach against
 randomly assigned labels on average is exact, no draw
-(`permutation_expectation()`): [C1]'s bar is it plus `margin`, and [A2]
+(`permutation_expectation()`): [criterion-1]'s bar is it plus `margin`, and [quality-check-2]
 holds the one permuted draw — the anchor in the same run — within
 `null_band` of it. The band comes from the spread the permutation brings
-(not a refit, not new model answers), by the rule [A2] registers beside it
+(not a refit, not new model answers), by the rule [quality-check-2] registers beside it
 (`null_band_quantile` over `null_permutations`, seeded from the run's
 seed; `band_by_rule`): `--calibrate-null --write` registers it before the
 first measurement, and the first measurement refuses a band the rule does
@@ -53,13 +53,13 @@ not give, before its run opens. Without a registered rule the band is a
 reasoned value, and `--calibrate-null` shows the fixed rule here
 (`NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). A protocol that registers a fixed null predictor
 returns it from `make_null_predictor()` instead; its score plus `margin`
-is the bar, and [A2] holds it within `null_band` of `chance_of()`. At fit
+is the bar, and [quality-check-2] holds it within `null_band` of `chance_of()`. At fit
 the null lane refits on permuted labels `NULL_REFITS` times, each draw
-seeded from the run's seed, its fold and its number: [C1]'s bar is the
-mean of their scores plus `margin`, [A2] holds that mean within
-`null_band` of `chance_of()`, and the draws' scores (`a2_draw_scores`)
+seeded from the run's seed, its fold and its number: [criterion-1]'s bar is the
+mean of their scores plus `margin`, [quality-check-2] holds that mean within
+`null_band` of `chance_of()`, and the draws' scores (`quality_check_2_draw_scores`)
 show how far one strays — one refit's draw decided a fit's verdict
-(fourth SAB-like draw: `c1_score` = `c1_threshold`). A band changed after the first measurement is
+(fourth SAB-like draw: `criterion_1_score` = `criterion_1_threshold`). A band changed after the first measurement is
 refused (report-check). All lanes are
 recorded in the same run (LAB-034 Null condition in the same run).
 Unlabelled predictions are never scored.
@@ -69,15 +69,15 @@ Measurement contract:
     `fit` uses out-of-fold fitting, `apply` uses unchanged predictors.
   - The score (`SCORE`: accuracy · r2 · auc) is over EVERY labelled item of
     the lane: an item without a prediction scores as wrong (accuracy, auc)
-    or as the mean (r2) and is counted on its own as `a1_empty`.
-  - [C1] passes when the registered lane's score is at least the bar plus
+    or as the mean (r2) and is counted on its own as `quality_check_1_empty`.
+  - [criterion-1] passes when the registered lane's score is at least the bar plus
     `margin`: at apply with the permuted null its exact expectation
     (`permutation_expectation`), at fit the mean of the `NULL_REFITS`
     permuted-label refits, with a fixed null predictor its score.
-  - [A1] checks the yield (at most `max_empty` labelled items without a
-    prediction); [A2] that the null lane scores within `null_band` of its
+  - [quality-check-1] checks the yield (at most `max_empty` labelled items without a
+    prediction); [quality-check-2] that the null lane scores within `null_band` of its
     target — the permutation expectation at apply, chance otherwise
-    (`chance_of`, derived, not guessed). If either fails, [C1] has no
+    (`chance_of`, derived, not guessed). If either fails, [criterion-1] has no
     verdict (None).
   - A withheld label is no label: the prepare step writes `gold: null` for
     the unlabelled split (a test file storing 0 or -999 is a placeholder),
@@ -169,7 +169,7 @@ LANES = (*SCORED_LANES, "test")
 #: `null_band_quantile`) beside null_band, which the first measurement holds
 NULL_PERMUTATIONS = 200
 #: fit: how many permuted-label refits the null lane takes in the run —
-#: fixed before any run; [C1]'s bar and [A2] read their mean (null-lane
+#: fixed before any run; [criterion-1]'s bar and [quality-check-2] read their mean (null-lane
 #: decision, 2026-10-28: one refit's draw decided a verdict)
 NULL_REFITS = 5
 NULL_BAND_QUANTILE = 0.99  # null_band = this quantile of |null − permutation expectation|
@@ -237,12 +237,12 @@ class MeasureConfig:
     registered constant or carries another value.
     """
 
-    margin: float               # [C1]: registered score ≥ bar + margin, in score units (apply:
+    margin: float               # [criterion-1]: registered score ≥ bar + margin, in score units (apply:
                                 # the permutation expectation; fit: the refits' mean)
-    max_empty: int              # [A1]: at most this many labelled items without a prediction
-    null_band: float            # [A2]: the null lane scores within this of its target, in score units;
+    max_empty: int              # [quality-check-1]: at most this many labelled items without a prediction
+    null_band: float            # [quality-check-2]: the null lane scores within this of its target, in score units;
                                 # apply: `--calibrate-null --write` derives it before the first measurement
-    # [A2]'s band rule, registered beside null_band (apply): the quantile of
+    # [quality-check-2]'s band rule, registered beside null_band (apply): the quantile of
     # |null − permutation expectation| over this many permutations; with
     # both, the first measurement refuses a band the rule does not give
     null_band_quantile: float | None = None
@@ -262,7 +262,7 @@ class MeasureConfig:
 # `--seed` replaces one field.
 CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
 #: the metrics key of the criterion's value — 02_analyze.py reads this name
-C1_VALUE_KEY = "c1_score"
+C1_VALUE_KEY = "criterion_1_score"
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -492,7 +492,7 @@ SCORES = {"accuracy": _accuracy, "r2": _r2, "auc": _auc}
 
 
 def band_rule(cfg: MeasureConfig) -> tuple[float, int] | None:
-    """[A2]'s registered band rule (quantile, permutations) — None when the
+    """[quality-check-2]'s registered band rule (quantile, permutations) — None when the
     protocol registers none (`null_band_quantile`, `null_permutations`),
     then the band is a reasoned value. Raises ValueError when one is
     registered without the other."""
@@ -508,7 +508,7 @@ def band_by_rule(cfg: MeasureConfig, preds: list, golds: list, q: float, k: int)
     as the registered lane is; the Q quantile of |null − target| by its
     exact rank. Returns {"target", "null_scores", "band", "registered"}:
     TARGET the permutation expectation (`permutation_expectation`),
-    REGISTERED the band rounded up to two places — the value [A2] registers.
+    REGISTERED the band rounded up to two places — the value [quality-check-2] registers.
     The one home of the rule: `--calibrate-null` and the first
     measurement's check both call it. Raises ValueError for K < 1 or no
     pairs, and when no permutation moves the null (every score equals the
@@ -531,7 +531,7 @@ def band_by_rule(cfg: MeasureConfig, preds: list, golds: list, q: float, k: int)
             f"{float(target):.4f}, the permutation expectation — the null does not move: "
             f"the predictions answer one class, or match none of the gold ({len(preds)} "
             f"labelled items). No band can be derived from no spread; check the "
-            f"predictions and the gold before registering [A2]'s null_band")
+            f"predictions and the gold before registering [quality-check-2]'s null_band")
     # the quantile's rank, exact: a float 0.99 * 200 may land on either side of 198
     band = off[max(0, math.ceil(Fraction(str(q)) * len(off)) - 1)]
     registered = math.ceil(Fraction(band) * 100) / 100
@@ -553,7 +553,7 @@ def calibrate_null(cfg: MeasureConfig, items: list[dict], k: int | None = None) 
     if KIND != "apply":
         raise ValueError(
             "calibrate_null(): kind apply only — at fit the null lane refits on permuted "
-            f"labels {NULL_REFITS} times in the run, and its draws' scores (a2_draw_scores) "
+            f"labels {NULL_REFITS} times in the run, and its draws' scores (quality_check_2_draw_scores) "
             "show the spread; the band is a reasoned value, or at high repeat cost the "
             "draws of --probe over a few --seed values")
     if make_null_predictor(cfg.seed) is not None:
@@ -574,7 +574,7 @@ def calibrate_null(cfg: MeasureConfig, items: list[dict], k: int | None = None) 
 
 
 def band_check(cfg: MeasureConfig, items: list[dict]) -> list | None:
-    """The first measurement's check of [A2]'s band at apply: with a
+    """The first measurement's check of [quality-check-2]'s band at apply: with a
     registered rule (`band_rule`), no fixed null predictor and no first
     measurement of this protocol yet, the labelled items' predictions put
     through the rule must give the registered null_band. Returns those
@@ -594,10 +594,10 @@ def band_check(cfg: MeasureConfig, items: list[dict]) -> list | None:
     try:
         held = band_by_rule(cfg, preds, [it[GOLD_FIELD] for it in train], *rule)
     except ValueError as exc:
-        raise SystemExit(f"[A2]'s band cannot be checked: {exc}") from exc
+        raise SystemExit(f"[quality-check-2]'s band cannot be checked: {exc}") from exc
     if Fraction(str(held["registered"])) != Fraction(str(cfg.null_band)):
         raise SystemExit(
-            f"[A2]'s null_band is {cfg.null_band}, and its registered rule gives "
+            f"[quality-check-2]'s null_band is {cfg.null_band}, and its registered rule gives "
             f"{held['registered']} (the {rule[0]} quantile of |null - expectation| over "
             f"{rule[1]} permutations, seed {cfg.seed}: {float(held['band']):.4f}, rounded up) "
             f"— before the first measurement `{Path(__file__).name} --calibrate-null --write` "
@@ -632,7 +632,7 @@ def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction | float:
     over classes of the predictions' share times the gold's (a missing
     prediction is never correct); auc — 1/2; r2 — −Σ(ŷ − ȳ)² / Σ(y − ȳ)²,
     since the total sum of squares does not move under a permutation (a
-    missing prediction counts as the mean). [C1]'s bar and [A2]'s target at
+    missing prediction counts as the mean). [criterion-1]'s bar and [quality-check-2]'s target at
     apply with the permuted null: one permutation's draw put the bar
     anywhere between 0.54 and 0.78 on a screening model whose agreement
     is 0.76 (null-lane decision, 2026-10-28)."""
@@ -673,16 +673,16 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
     Returns every registered id's keys on every evaluation:
-      a1_empty · a1_pass                 admissibility: yield of the registered lane
-      a2_score · a2_target · a2_pass     admissibility: the null lane inside its band around its target
+      quality_check_1_empty · quality_check_1_pass                 admissibility: yield of the registered lane
+      quality_check_2_score · quality_check_2_target · quality_check_2_pass     admissibility: the null lane inside its band around its target
                                          (apply, permuted null: the permutation expectation; else chance);
-                                         at fit a2_score is the mean of the draws, a2_draw_scores each
-      c1_score · c1_threshold · c1_pass  criterion: registered lane against the bar + cfg.margin
+                                         at fit quality_check_2_score is the mean of the draws, quality_check_2_draw_scores each
+      criterion_1_score · criterion_1_threshold · criterion_1_pass  criterion: registered lane against the bar + cfg.margin
                                          (apply, permuted null: the permutation expectation; else the null)
       n_items · n_rows · n_test          yield (→ LAB-023 No silent loss)
       scored_class_counts                accuracy/auc: items per gold value in the scored
                                          rows — not the class distribution of the input file
-    A failed [A] reports its keys and no criterion verdict (`c1_pass` None).
+    A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None).
     A number about the inputs the report states belongs in this dict, computed
     from the kept rows; one the rows cannot give owes rows that keep what it
     needs — never a count typed into the report."""
@@ -703,7 +703,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     draw_scores = [score_of(cfg, draws[d])[0] for d in sorted(draws, key=str)]
     null_score = sum(draw_scores) / len(draw_scores)
     # a permuted null (its rows name the donor of their label): the bar and
-    # [A2]'s target are the exact permutation expectation, the draw only the
+    # [quality-check-2]'s target are the exact permutation expectation, the draw only the
     # anchor; a fitted or fixed null: chance is the target, its score the bar
     if all("gold_of" in r for r in null):
         target = permutation_expectation(cfg.score, [(r["pred"], r["gold"]) for r in reg])
@@ -713,19 +713,19 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
         base = null_score
     band = Fraction(str(cfg.null_band))
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
-                     "a1_empty": reg_empty, "a1_pass": reg_empty <= cfg.max_empty,
-                     "a2_score": float(null_score), "a2_target": float(target),
-                     "a2_pass": abs(null_score - target) <= band}
+                     "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
+                     "quality_check_2_score": float(null_score), "quality_check_2_target": float(target),
+                     "quality_check_2_pass": abs(null_score - target) <= band}
     if len(draw_scores) > 1:
-        metrics["a2_draw_scores"] = [float(s) for s in draw_scores]
+        metrics["quality_check_2_draw_scores"] = [float(s) for s in draw_scores]
     if cfg.score != "r2":
         metrics["scored_class_counts"] = scored_class_counts(reg)
-    if not (metrics["a1_pass"] and metrics["a2_pass"]):
-        metrics.update({C1_VALUE_KEY: float(reg_score), "c1_threshold": None, "c1_pass": None})
+    if not (metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]):
+        metrics.update({C1_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
     bar = base + Fraction(str(cfg.margin))
-    metrics.update({C1_VALUE_KEY: float(reg_score), "c1_threshold": float(bar),
-                    "c1_pass": reg_score >= bar})
+    metrics.update({C1_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
+                    "criterion_1_pass": reg_score >= bar})
     return metrics
 
 
@@ -767,8 +767,8 @@ def evaluate(out: Path, cfg: MeasureConfig, items: list[dict], run=None) -> dict
     """Balance the kept rows against ITEMS, then gates first, then the metrics on the run."""
     balance(out, cfg, items)
     metrics = evaluate_rows(read_jsonl(out), cfg)
-    for key in ("a1_pass", "a1_empty", "a2_score", "a2_target", "a2_pass",
-                "c1_score", "c1_threshold", "c1_pass"):
+    for key in ("quality_check_1_pass", "quality_check_1_empty", "quality_check_2_score", "quality_check_2_target", "quality_check_2_pass",
+                "criterion_1_score", "criterion_1_threshold", "criterion_1_pass"):
         print(f"  {key:<13} {metrics[key]}")
     if run is not None:
         run.metrics(**metrics)
@@ -795,7 +795,7 @@ def main() -> None:
                            "one over K; no run; with --write the band is registered")
     ap.add_argument("--write", action="store_true",
                     help="with --calibrate-null, before the first measurement only: register "
-                         "the derived band as [A2]'s null_band (the registered rule owed)")
+                         "the derived band as [quality-check-2]'s null_band (the registered rule owed)")
     mode.add_argument("--eval-only", action="store_true")
     mode.add_argument("--repeat-of", metavar="RUN_ID",
                       help="draw the kept run RUN_ID again with a derived seed: a run of its own "
@@ -846,7 +846,7 @@ def main() -> None:
             return
         if rule is None:
             ap.error("--write registers the band of a registered rule: name null_band_quantile "
-                     "and null_permutations beside null_band in [A2]'s constants first")
+                     "and null_permutations beside null_band in [quality-check-2]'s constants first")
         pid = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).id
         if first_measurements(AREA, pid, REPO):
             ap.error("--write: this protocol has a first measurement — the registered band "
@@ -868,7 +868,7 @@ def main() -> None:
         few = labelled(items)[:args.probe] + unlabelled(items)[:5]
         rows = measure(cfg, few, out, probe=True)
         m = evaluate_rows(rows, cfg)
-        print(f"probe: registered {m['c1_score']}  null {m['a2_score']}  target {m['a2_target']}  — not reported")
+        print(f"probe: registered {m['criterion_1_score']}  null {m['quality_check_2_score']}  target {m['quality_check_2_target']}  — not reported")
         print("\n# one row per lane, as the run will keep them (Raw output comes from the run):")
         for lane in LANES:
             first = next((r for r in rows if r["lane"] == lane), None)
@@ -887,7 +887,7 @@ def main() -> None:
     # A repeat (`--repeat-of`): runlog holds every key but the seed to the
     # kept run's, derives the seed from that run and the draw and records it
     # (`reseed`) — the seed passed here is not used.
-    # [A2]'s band against its registered rule, before the run opens (a
+    # [quality-check-2]'s band against its registered rule, before the run opens (a
     # started measurement binds the registration); its predictions are reused
     registered = band_check(cfg, items) if args.repeat_of is None else None
     with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data=data_files(),

@@ -73,7 +73,7 @@ def _run_dir(
         cfg["protocol"] = {"id": protocol_id, "path": "PROTOCOL-x.md"}
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics:
-        (d / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
+        (d / "metrics.json").write_text('{"criterion_1_pass": true}', encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
             json.dumps(

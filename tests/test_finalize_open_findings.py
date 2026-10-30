@@ -29,9 +29,9 @@ from protocol_fixture import registration_of, completed_run, head, run_record  #
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [C1] p < .05
-- **Admissibility condition:** [A1] parse yield above 80%
-- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Success / failure criterion:** [criterion-1] p < .05
+- **Admissibility condition:** [quality-check-1] parse yield above 80%
+- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 - **Raw output:** one real example
 - **Outcome:** 0.03
 
@@ -40,7 +40,11 @@ prompt
 ```
 """
 PROTOCOL = "# Experiment protocol: x\n\n" + head(frozen=True) + "\n" + BODY
-METRICS = {"c1_pass": True, "a1_pass": True, "a2_pass": True}
+METRICS = {
+    "criterion_1_pass": True,
+    "quality_check_1_pass": True,
+    "quality_check_2_pass": True,
+}
 BLOCKER = ("BLOCKER", "BLOCKER · scripts/01_measure.py:3 · the target leaks")
 WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
 

@@ -108,12 +108,12 @@ ONLY to extract which fields and keys they consume. Cutting depth instead
 of scope is the wrong trade — full severity inside the cut scope.
 
 **Work the intent identifiers first.** Where the protocol carries ids
-(`[C1]` criterion, `[A1]` admissibility condition — yield, control,
-anchor — and `[B1]` registered branch — LAB-004 Identifiers make the intent addressable), audit identifier by identifier: name the code
+(`[criterion-1]` criterion, `[quality-check-1]` admissibility condition — yield, control,
+anchor — and `[interpretation-1]` registered branch — LAB-004 Identifiers make the intent addressable), audit identifier by identifier: name the code
 site that implements each id and the metrics key that reports it (`c1_*`, …),
 or report the gap as a finding. Counting the sets is the caller's job
 (`intent-check` does it mechanically); yours is whether the implementation
-MEANS what the registration says — an `a1_pass` that never compares against
+MEANS what the registration says — an `quality_check_1_pass` that never compares against
 its registered threshold is a finding, not compliance.
 
 Work the scar table of LAB-015 Preflight audit before freezing row by row, filtered by its *Audit* column:

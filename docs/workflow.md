@@ -162,7 +162,7 @@ the run can carry a number; it does not release one.
 
 ```
 labkit-audit experiments/NN-<name> --mode analysis
-labkit-audit experiments/NN-<name> --decide N STATUS "REASON" [--effect stands | "C1 not assessable"] --record <file>
+labkit-audit experiments/NN-<name> --decide N STATUS "REASON" [--effect stands | "criterion-1 not assessable"] --record <file>
 ```
 
 Reads: the protocol, the scripts and the repo-local modules they import,

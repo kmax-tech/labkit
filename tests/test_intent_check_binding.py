@@ -29,11 +29,15 @@ A_ID = "p-aaaaaaaaaaaaaaaa"
 B_ID = "p-bbbbbbbbbbbbbbbb"
 #: Both protocols promise exactly this — only the binding can separate them.
 SAME_IDS = (
-    "- **Success / failure criterion:** [C1] holds and [C2] holds\n"
-    "- **Admissibility condition:** [A1] yield above 90%\n"
+    "- **Success / failure criterion:** [criterion-1] holds and [criterion-2] holds\n"
+    "- **Admissibility condition:** [quality-check-1] yield above 90%\n"
 )
 #: Every promise of SAME_IDS reported.
-FULL = {"c1_pass": True, "c2_pass": True, "a1_pass": True}
+FULL = {
+    "criterion_1_pass": True,
+    "criterion_2_pass": True,
+    "quality_check_1_pass": True,
+}
 
 
 def _protocol(area: Path, name: str, pid: str | None, body=SAME_IDS) -> Path:
@@ -112,7 +116,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
             self.area,
             "2026-01-01T00-00-01_bbbb",
             pid=B_ID,
-            metrics={"c1_pass": True, "a1_pass": True},
+            metrics={"criterion_1_pass": True, "quality_check_1_pass": True},
         )
 
         code_a, out_a = _check([self.a])
@@ -121,7 +125,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
 
         code_b, out_b = _check([self.b])
         self.assertEqual(code_b, 1, out_b)
-        self.assertIn("[C2] registered", out_b)
+        self.assertIn("[criterion-2] registered", out_b)
 
     def test_a_newer_run_of_the_other_protocol_does_not_shadow(self):
         """Recency must not beat the binding: B's run is newer and would win
@@ -131,7 +135,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
             self.area,
             "2026-01-01T09-00-00_bbbb",
             pid=B_ID,
-            metrics={"nothing": 1, "c1_pass": True},
+            metrics={"nothing": 1, "criterion_1_pass": True},
         )
         # B's run reports neither c2 nor a1, so picking it would fail the
         # check — exit 0 is itself the proof that A's run was used.
@@ -146,7 +150,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
             self.area,
             "2026-01-01T00-00-01_unfi",
             pid=A_ID,
-            metrics={"c1_pass": True},
+            metrics={"criterion_1_pass": True},
             completion=False,
         )
         _run(
@@ -156,7 +160,12 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
             metrics={},
             with_metrics=False,
         )
-        _run(self.area, "2026-01-01T00-00-03_unbd", pid=None, metrics={"c1_pass": True})
+        _run(
+            self.area,
+            "2026-01-01T00-00-03_unbd",
+            pid=None,
+            metrics={"criterion_1_pass": True},
+        )
         code, out = _check([self.a])
         self.assertEqual(code, 2, out)
         self.assertIn(f"no completed run bound to {A_ID}", out)
@@ -231,7 +240,7 @@ class TestExplicitMetrics(unittest.TestCase):
         """`hold` keeps the choice's lines apart from the findings: finalize
         made every printed line a blocker, the unbound warning among them
         (audit follow-up 2026-10-23, F4)."""
-        d = _run(self.area, "r1", pid=None, metrics={"c1_pass": True})
+        d = _run(self.area, "r1", pid=None, metrics={"criterion_1_pass": True})
         held = intent_check.hold(self.a, d / "metrics.json")
         self.assertEqual(len(held.notes), 1, held)
         self.assertIn("unbound", held.notes[0])

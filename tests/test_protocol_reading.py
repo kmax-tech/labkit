@@ -12,15 +12,15 @@ from protocol_fixture import head
 DENSE = (
     "# Experiment protocol: x\n\n*legend line one*\n- legend bullet\n\n"
     + head()
-    + "\n## Summary\n\n- **Conclusion †:** [C1] met, c1_pass True, run "
+    + "\n## Summary\n\n- **Conclusion †:** [criterion-1] met, criterion_1_pass True, run "
     "`2026-10-07T14-11-17_5b06`\n\n## Result\n\n"
-    "- **Recorded results:** c1_pass True · c2_pass False · a1_pass True\n"
+    "- **Recorded results:** criterion_1_pass True · criterion_2_pass False · quality_check_1_pass True\n"
 )
 CLEAR = (
     "# Experiment protocol: x\n\n"
     + head()
     + "\n## Summary\n\n- **Conclusion †:** The model arm missed the criterion on one wrongly "
-    "rejected case.\n\n## Result\n\n- **Recorded results:** no — [C2] missed; run "
+    "rejected case.\n\n## Result\n\n- **Recorded results:** no — [criterion-2] missed; run "
     "`2026-10-07T14-11-17_5b06`.\n\n  | arm | right |\n  |---|---|\n  | model | 21 |\n"
 )
 
@@ -76,16 +76,21 @@ class Reader(unittest.TestCase):
     def test_the_whole_criterion_wins_over_its_conjuncts(self):
         t = pr.truth_from_metrics(
             {
-                "c1_pass": True,
-                "c2_pass": False,
+                "criterion_1_pass": True,
+                "criterion_2_pass": False,
                 "criterion_pass": False,
-                "a1_pass": True,
+                "quality_check_1_pass": True,
             },
             None,
         )
         self.assertEqual((t.criterion_held, t.admissible), (False, True))
         t = pr.truth_from_metrics(
-            {"c1_pass": True, "a1_pass": True, "a2_pass": False}, None
+            {
+                "criterion_1_pass": True,
+                "quality_check_1_pass": True,
+                "quality_check_2_pass": False,
+            },
+            None,
         )
         self.assertEqual((t.criterion_held, t.admissible), (True, False))
 
@@ -295,11 +300,13 @@ class AuditFixes(unittest.TestCase):
 
     def test_a_pass_flag_that_is_not_a_bool_is_refused(self):
         with self.assertRaises(ValueError):
-            pr.truth_from_metrics({"c1_pass": True, "c2_pass": None}, None)
+            pr.truth_from_metrics(
+                {"criterion_1_pass": True, "criterion_2_pass": None}, None
+            )
 
     def test_a_named_number_that_is_missing_is_refused(self):
         with self.assertRaises(ValueError):
-            pr.truth_from_metrics({"c1_pass": True}, "accuracy")
+            pr.truth_from_metrics({"criterion_1_pass": True}, "accuracy")
         self.assertEqual(pr.truth_from_metrics({"acc": 0.5}, "acc").number, 0.5)
 
 

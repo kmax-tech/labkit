@@ -17,11 +17,11 @@ class ReadMetrics(unittest.TestCase):
 
     def test_an_object_is_read(self):
         with tempfile.TemporaryDirectory() as d:
-            got = runs.read_metrics(self._file(d, '{"c1_pass": true}'))
-            self.assertEqual(promises.reported_ids(got), {"c1"})
+            got = runs.read_metrics(self._file(d, '{"criterion_1_pass": true}'))
+            self.assertEqual(promises.reported_ids(got), {"criterion-1"})
 
     def test_a_list_a_string_or_null_is_refused(self):
-        for content in ('["c1_pass"]', '"c1_pass"', "null"):
+        for content in ('["criterion_1_pass"]', '"criterion_1_pass"', "null"):
             with tempfile.TemporaryDirectory() as d, self.subTest(content=content):
                 with self.assertRaises(runs.MetricsError):
                     runs.read_metrics(self._file(d, content))
@@ -36,13 +36,13 @@ class CriterionNIsNoBool(unittest.TestCase):
     def test_true_is_not_a_count(self):
         with tempfile.TemporaryDirectory() as d:
             run = Path(d)
-            (run / "metrics.json").write_text(json.dumps({"c1_n": True}))
+            (run / "metrics.json").write_text(json.dumps({"criterion_1_n": True}))
             self.assertEqual(run_record_check.criterion_n_input_mismatches(run), [])
 
     def test_an_int_is_still_held_to_the_counts(self):
         with tempfile.TemporaryDirectory() as d:
             run = Path(d)
-            (run / "metrics.json").write_text(json.dumps({"c1_n": 12}))
+            (run / "metrics.json").write_text(json.dumps({"criterion_1_n": 12}))
             self.assertTrue(run_record_check.criterion_n_input_mismatches(run))
 
 

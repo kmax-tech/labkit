@@ -122,13 +122,13 @@ class TwoProtocols(unittest.TestCase):
         self.assertIn("no stamped id", str(cm.exception))
 
     def test_a_producer_run_without_intent_keys_is_no_answer(self):
-        """The protocol registers [C1]; the newest bound run reports no intent
+        """The protocol registers [criterion-1]; the newest bound run reports no intent
         key — finalize skips it, and so does recheck (not: picks it)."""
         self.a.write_text(
-            "- **Question:** does [C1] hold?\n\n" + BODY + head(id=PID_A),
+            "- **Question:** does [criterion-1] hold?\n\n" + BODY + head(id=PID_A),
             encoding="utf-8",
         )
-        self._run("2026-10-15T12-00-00_cccc", PID_A, {"c1_pass": True})
+        self._run("2026-10-15T12-00-00_cccc", PID_A, {"criterion_1_pass": True})
         self._run("2026-10-15T13-00-00_dddd", PID_A, {"rows_written": 5})
         self.assertEqual(
             recheck.run_dir(self.area, self.a).name, "2026-10-15T12-00-00_cccc"

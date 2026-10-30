@@ -645,7 +645,7 @@ CHANGE_KEYS = ("what", "from", "to", "why")
 @dataclass(frozen=True)
 class Change:
     """One difference a replacing protocol declares against its predecessor:
-    WHAT (`C1 margin`, `C1 sentence`, `kind`, `Data profile`, …), FROM and TO
+    WHAT (`criterion-1 margin`, `criterion-1 sentence`, `kind`, `Data profile`, …), FROM and TO
     as the registrations read, and WHY — the reason, owed."""
 
     what: str

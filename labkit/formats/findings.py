@@ -25,7 +25,7 @@ area, one file per audit:
                          # auditor wrote below it, joined by line breaks (\n)
     status = "open"      # open | fixed | accepted | deferred | dismissed
     reason = ""          # owed for accepted, deferred and dismissed
-    # effect = "C1 not assessable"  — an accepted BLOCKER or WARNING: see EFFECT
+    # effect = "criterion-1 not assessable"  — an accepted BLOCKER or WARNING: see EFFECT
 
 The person decides each finding with `labkit-audit AREA --decide N STATUS
 REASON`, which validates the decision the person typed and stores it
@@ -85,7 +85,7 @@ instead of read.
 An accepted finding is a fault the person keeps: the number may still be
 reported, read within the fault, but a fault in the instrument can leave
 a promise unjudged by the run. The decision says which (`effect`):
-`stands` — the verdicts hold, read within the limit — or `C1 not
+`stands` — the verdicts hold, read within the limit — or `criterion-1 not
 assessable` (ids comma-separated) — this run does not judge them. How
 severe a finding is and what the result still allows are two questions:
 an accepted BLOCKER owes its effect, an accepted WARNING may name one
@@ -97,7 +97,7 @@ and a note in Recorded results (`protocol-fill --from-run` writes both from the
 record), and report-check holds them to it (`limit_line`, `answer_note`). Whether the
 named limit is enough stays the audit's question, not this check's
 (judge probe, 2026-10-21: a prompt broader than the gold, accepted, and
-"C1 not met" reported with the limit in the record only).
+"criterion-1 not met" reported with the limit in the record only).
 
 Reading is loud: an unknown status, a decided status without a reason, a
 file without its `[audit]` table raise FindingsError naming the file and
@@ -168,7 +168,9 @@ CARRIED_CLOSING = ("dismissed", "deferred")
 EFFECT_STANDS = "stands"
 EFFECT_GRADES = ("BLOCKER", "WARNING")
 _EFFECT_NOT = re.compile(r"^(\S+(?:\s*,\s*\S+)*)\s+not assessable$")
-EFFECT_FORM = '`stands` or `<ID>[, <ID>] not assessable` (e.g. "C1 not assessable")'
+EFFECT_FORM = (
+    '`stands` or `<ID>[, <ID>] not assessable` (e.g. "criterion-1 not assessable")'
+)
 GRADES = ("BLOCKER", "WARNING", "NOTE")
 MODES = (PREFLIGHT_AUDIT, ANALYSIS_AUDIT)
 #: what an analysis record names as its run when no completed run was

@@ -132,7 +132,7 @@ class Head(unittest.TestCase):
     def test_no_block_or_no_table(self):
         self.assertRejects("# P\n- **Standard:** 0.16\n", "no [protocol] table")
         self.assertRejects(
-            '```toml\n[[promise]]\nid = "C1"\n```\n', "no [protocol] table"
+            '```toml\n[[promise]]\nid = "criterion-1"\n```\n', "no [protocol] table"
         )
 
     def test_two_blocks(self):

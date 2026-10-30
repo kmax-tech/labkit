@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 from labkit.checks import intent_check  # noqa: E402
 from protocol_fixture import run_record, PID, head  # noqa: E402
 
-CRITERION = "- **Success / failure criterion:** [C1] holds\n"
+CRITERION = "- **Success / failure criterion:** [criterion-1] holds\n"
 
 
 def _run(area: Path, rid: str, metrics: dict) -> Path:
@@ -83,7 +83,7 @@ class TestMetricsChoice(unittest.TestCase):
             proto = _area(
                 d,
                 {
-                    "2026-09-09T10-00-00_gate": {"c1": True},
+                    "2026-09-09T10-00-00_gate": {"criterion_1": True},
                     "2026-09-09T11-00-00_producer": {"calls": 1080},
                 },
             )
@@ -115,7 +115,7 @@ class TestMetricsChoice(unittest.TestCase):
             proto = _area(
                 d,
                 {
-                    "2026-09-09T10-00-00_gate": {"c1": True},
+                    "2026-09-09T10-00-00_gate": {"criterion_1": True},
                     "2026-09-09T11-00-00_other": {"calls": 1},
                 },
             )
@@ -123,7 +123,7 @@ class TestMetricsChoice(unittest.TestCase):
             other = Path(d) / "runs/2026-09-09T11-00-00_other/metrics.json"
             code, out = _run_main([str(proto), "--metrics", str(other)])
             self.assertEqual(code, 1)
-            self.assertIn("no 'c1'", out)
+            self.assertIn("no 'criterion_1'", out)
 
 
 class TestSeriesArea(unittest.TestCase):
@@ -133,7 +133,7 @@ class TestSeriesArea(unittest.TestCase):
 
     def test_explicit_metrics_works_in_a_series_area(self):
         with tempfile.TemporaryDirectory() as d:
-            proto = _area(d, {"2026-09-09T10-00-00_gate": {"c1": True}})
+            proto = _area(d, {"2026-09-09T10-00-00_gate": {"criterion_1": True}})
             (Path(d) / "PROTOCOL-s2-later.md").write_text(
                 head(id="p-bbbbbbbbbbbbbbbb") + CRITERION, encoding="utf-8"
             )
@@ -144,7 +144,7 @@ class TestSeriesArea(unittest.TestCase):
 
     def test_a_second_protocol_does_not_block_the_bound_choice(self):
         with tempfile.TemporaryDirectory() as d:
-            proto = _area(d, {"2026-09-09T10-00-00_gate": {"c1": True}})
+            proto = _area(d, {"2026-09-09T10-00-00_gate": {"criterion_1": True}})
             (Path(d) / "PROTOCOL-s2-later.md").write_text(
                 head(id="p-bbbbbbbbbbbbbbbb") + CRITERION, encoding="utf-8"
             )

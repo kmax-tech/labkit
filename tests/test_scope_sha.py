@@ -242,7 +242,7 @@ class TestDeclaredScopeIsStamped(unittest.TestCase):
             "import deep\n\ndef score():\n    return 2\n"
         )
         block = (
-            '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "s"\n'
+            '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "s"\n'
             'scope = ["helper.py:score"]\n'
         )
         (self.area / "PROTOCOL-x.md").write_text("# x\n" + head(promises=block))

@@ -18,7 +18,7 @@ from protocol_fixture import head
 def _block(*scope: str) -> str:
     entries = ", ".join(f'"{s}"' for s in scope)
     return (
-        '[[promise]]\nid = "C1"\nkey = "c1_pass"\n'
+        '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\n'
         f'sentence = "the criterion holds"\nscope = [{entries}]\n'
     )
 
@@ -65,7 +65,7 @@ class DeclaredScope(unittest.TestCase):
         c = self.root / "experiments" / "03-c"
         c.mkdir()
         (c / "PROTOCOL-x.md").write_text(
-            head(promises='[[promise]]\nid = "C1"\n'), encoding="utf-8"
+            head(promises='[[promise]]\nid = "criterion-1"\n'), encoding="utf-8"
         )
         self.assertEqual(sorted(areas_touched([self.rubric], self.root)), [self.a, c])
         stray = self.root / "lib" / "notes.md"

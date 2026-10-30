@@ -150,11 +150,11 @@ class WaysOut(unittest.TestCase):
     def test_the_replaces_table_described_is_one_the_head_reads(self):
         text = head(
             promises='\n[replaces]\nprotocol = "p-aaaaaaaaaaaaaaaa"\n\n[[replaces.change]]\n'
-            'what = "C1 margin"\nfrom = "0.25"\nto = "0.15"\nwhy = "the band was wrong"\n'
+            'what = "criterion-1 margin"\nfrom = "0.25"\nto = "0.15"\nwhy = "the band was wrong"\n'
         )
         rep = protocol_block.replaces(text)
         assert rep is not None
-        self.assertEqual([c.what for c in rep.changes], ["C1 margin"])
+        self.assertEqual([c.what for c in rep.changes], ["criterion-1 margin"])
         for field in protocol_block.CHANGE_KEYS:
             self.assertIn(field, dict(ways_out.WAYS_OUT)["an invalid registration"])
 

@@ -31,7 +31,7 @@ kept number to match (`protocol_block.reference`; `KEY` is the metrics key
 compared, the skeleton's `METRIC_KEY`; `±TOL`, also written `+-TOL`, the
 absolute tolerance of `within`; `--relation at_least|at_most` without a
 tolerance; `--reference-source` who states the value) — refused with a kind
-that has a bar, which compares in `[C]`. `--explore` stamps only
+that has a bar, which compares in a criterion. `--explore` stamps only
 `experiments/explore/<name>.py`, the entry before an area exists; the plain
 command later moves it into the area. `--change-kind` restamps an area under
 another kind before its first measurement (`change_kind`).
@@ -497,7 +497,7 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
     returns = (
         "**What `evaluate_rows()` returns.** <per registered promise its key, in the order\n"
         "of the decision — from the protocol's [[promise]] sentences, not from the\n"
-        "skeleton: [A1] a1_pass …, [C1] c1_pass …, [B1] b1_branch; what comes back when\n"
+        "skeleton: [quality-check-1] quality_check_1_pass …, [criterion-1] criterion_1_pass …, [interpretation-1] interpretation_1_branch; what comes back when\n"
         "an admissibility condition fails>. The formula lives once, in\n"
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
         "test call it there, and `intent-check` holds the protocol's ids to these keys."
@@ -717,7 +717,7 @@ def stamp_area(
     REPORT, with REPORT where NAME names no one area (`existing_area`),
     with REPORT_FILE on a promotion, and with REFERENCE on a kind with a
     bar (`protocol_check.reference_gap`: a fit or an apply compares in
-    [C]) — before anything is written."""
+    a criterion) — before anything is written."""
     slug = area_slug(name)
     experiments = root / EXPERIMENTS
     if report_file is not None:
@@ -1075,7 +1075,7 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
         )
     if protocol_block.reference(old) is not None and standard_contract.has_bar(kind):
         held.append(
-            f"{protocol.name}: [reference] is written — a {kind} compares in [C] and "
+            f"{protocol.name}: [reference] is written — a {kind} compares in a criterion and "
             f"has no place for it"
         )
     text, unplaced = carried_fields(
@@ -1833,7 +1833,7 @@ def main(argv: list[str]) -> int:
         "METRIC_KEY), the value the task states, with ±TOL (or +-TOL) the "
         "tolerance of `within`; stamped as the head's [reference] table, which "
         "the run compares and the Recorded results line carries; refused with "
-        "--kind fit|apply (they compare in [C])",
+        "--kind fit|apply (they compare in a criterion)",
     )
     exp.add_argument(
         "--relation",

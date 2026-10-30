@@ -373,7 +373,7 @@ def null_lane_findings(answering_run: Path) -> NullLanes:
 
 
 def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
-    """Warnings: a criterion's denominator (`c<i>_n` in metrics.json) that
+    """Warnings: a criterion's denominator (`criterion_<i>_n` in metrics.json) that
     matches no input count the run recorded — the size of what was counted,
     not a promised constant (that is `intent_check.promised_constant_mismatches`)."""
     metrics_file = metrics_path(answering_run)

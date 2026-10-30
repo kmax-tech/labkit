@@ -16,8 +16,8 @@ from labkit.checks import protocol_report
 from protocol_fixture import PID, head
 
 C1 = """[[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "accuracy >= min_acc"
 scope = ["scripts/m.py:evaluate"]
 constants = { min_acc = 0.7 }
@@ -29,7 +29,7 @@ def area_with_run(tmp: Path) -> tuple[Path, Path]:
     (tmp / "scripts").mkdir()
     (tmp / "scripts" / "m.py").write_text("def evaluate(rows):\n    return 1\n")
     protocol = tmp / "PROTOCOL-x.md"
-    protocol.write_text(head(promises=C1) + "\nCriterion [C1].\n")
+    protocol.write_text(head(promises=C1) + "\nCriterion [criterion-1].\n")
     with contextlib.redirect_stdout(io.StringIO()):
         with runlog.run("t", {"min_acc": 0.7}, base_dir=tmp) as r:
             r.metrics(c1_pass=True)

@@ -44,7 +44,9 @@ class TestWait(unittest.TestCase):
             (done / "config.json").write_text(
                 json.dumps(run_record()), encoding="utf-8"
             )
-            (done / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
+            (done / "metrics.json").write_text(
+                '{"criterion_1_pass": true}', encoding="utf-8"
+            )
             (done / "completion.json").write_text("{}", encoding="utf-8")
             code, out = _run_main([d, "--wait", "--max-seconds", "1"])
             self.assertEqual(code, 0)

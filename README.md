@@ -329,16 +329,16 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **metrics** | Measured values recorded in `metrics.json`. |
 | **protocol run list** | The protocol's `## Runs` section: references to runs; listing a run does not select or release its result. |
 | **run entry** | One reference in the protocol run list: a run id and a sentence describing the run. |
-| **intent id** | Identifier of a checked promise: `[C1]`, `[A1]`, `[B1]`, etc. |
+| **intent id** | Identifier of a checked promise: `[criterion-1]`, `[quality-check-1]`, `[interpretation-1]`, etc. |
 | **bundle** | Protocol, code and extracted facts packed by `code-check --bundle` for an agent the lab runs on it; labkit ships none. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
 | **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
 | **number_describes** | `[model]` key of a `compute` with a model in the loop: `model_outputs` (the number describes what the model marked) or `target_property` (a property of the data, the model as annotator). |
 | **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with an adopted result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |
 | **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
-| **criterion** | Kind C promise: success or failure decided from the run. |
-| **admissibility** | Kind A promise: prerequisite for reading a criterion; failure withholds all C verdicts. |
-| **branch** | Kind B promise: the registered interpretation for an outcome, recorded as `b1_branch`, etc. |
+| **criterion** | Promise kind `criterion` (`[criterion-1]`): success or failure decided from the run. |
+| **admissibility** | Promise kind `quality-check` (`[quality-check-1]`): prerequisite for reading a criterion; failure withholds every criterion's verdict. |
+| **branch** | Promise kind `interpretation` (`[interpretation-1]`): the registered reading of an outcome, recorded as `interpretation_1_branch`, etc. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
 | **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |

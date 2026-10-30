@@ -22,13 +22,13 @@ TEXT = (
 class EarlierIds(unittest.TestCase):
     def test_found_as_written(self):
         self.assertEqual(promises.earlier_ids(TEXT), ["K1", "S1"])
-        self.assertEqual(promises.earlier_ids(head() + "[C1] and [A2]"), [])
+        self.assertEqual(
+            promises.earlier_ids(head() + "[criterion-1] and [quality-check-2]"), []
+        )
 
     def test_protocol_check_makes_them_a_must_finding(self):
         missing = protocol_check.check_fields(TEXT).missing_must
-        self.assertTrue(
-            any("K1, S1" in m and "labkit 0.47" in m for m in missing), missing
-        )
+        self.assertTrue(any("K1, S1" in m and "0.47" in m for m in missing), missing)
 
     def test_intent_check_refuses_instead_of_passing(self):
         with tempfile.TemporaryDirectory() as d:
@@ -41,7 +41,10 @@ class EarlierIds(unittest.TestCase):
         self.assertIn("K1, S1", buf.getvalue())
 
     def test_new_letters_are_untouched(self):
-        text = head() + "- **Success / failure criterion:** [C1] accuracy >= 0.8\n"
+        text = (
+            head()
+            + "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
+        )
         missing = protocol_check.check_fields(text).missing_must
         self.assertFalse(any("intent ids" in m for m in missing), missing)
 

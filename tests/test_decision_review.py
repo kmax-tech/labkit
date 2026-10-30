@@ -30,7 +30,7 @@ RUN = "2026-10-07T10-00-00_ab12"
 BLOCKER = (
     "BLOCKER",
     "BLOCKER · experiments/01-x/scripts/01_measure.py:1 · the threshold is fit "
-    "in-sample · c1_pass reads True for any rows · LAB-050 Analysis audit before "
+    "in-sample · criterion_1_pass reads True for any rows · LAB-050 Analysis audit before "
     "reporting · fit it out of sample",
 )
 WARNING = (
@@ -40,7 +40,7 @@ WARNING = (
 )
 UPHELD = "DECISION #1 · upheld · the Conclusion claims an in-sample fit and no more\nverdict: 1 upheld, 0 rejected, 0 insufficient\n"
 REJECTED = (
-    "DECISION #1 · rejected · the reason restates the finding; c1_pass as reported "
+    "DECISION #1 · rejected · the reason restates the finding; criterion_1_pass as reported "
     "rests on the in-sample fit\nverdict: 0 upheld, 1 rejected, 0 insufficient\n"
 )
 INSUFFICIENT = (
@@ -71,11 +71,17 @@ def area_with(
         head(repeat_cost="low", result=RUN, promises=promise_block)
         + "- **Question / hypothesis:** does it hold?\n"
         + "- **Conclusion:** the fit is in-sample; nothing more is claimed.\n"
-        + f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {RUN})\n",
+        + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {RUN})\n",
         encoding="utf-8",
     )
     run = completed_run(
-        area, RUN, metrics={"c1_pass": True, "a1_pass": True, "a2_pass": True}
+        area,
+        RUN,
+        metrics={
+            "criterion_1_pass": True,
+            "quality_check_1_pass": True,
+            "quality_check_2_pass": True,
+        },
     )
     src = area / "data.jsonl"
     src.write_text('{"id": 1}\n', encoding="utf-8")
@@ -158,7 +164,11 @@ class Reviewable(unittest.TestCase):
             [BLOCKER, BLOCKER, WARNING, WARNING],
             {
                 1: ("accepted", "an in-sample fit, said so", "stands"),
-                2: ("accepted", "the run cannot judge it", "C1 not assessable"),
+                2: (
+                    "accepted",
+                    "the run cannot judge it",
+                    "criterion-1 not assessable",
+                ),
                 3: ("accepted", "one seed", "stands"),
                 4: ("accepted", "noted", ""),
             },
@@ -316,7 +326,7 @@ class TheCall(unittest.TestCase):
             f"- **Limit (audit {record.stem} #1):** the verdicts stand", sent[0]
         )
         self.assertIn(
-            f"- **Recorded results:** C1 met; A1 met; A2 met · recorded: (run {RUN})",
+            f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {RUN})",
             sent[0],
         )
 
@@ -363,7 +373,7 @@ class TheCall(unittest.TestCase):
         self.assertEqual([k for k, _ in reviews.reported_claim(text)], ["Conclusion"])
         self.assertEqual(
             reviews.claim_digest(text),
-            reviews.claim_digest(text.replace("C1 met", "C1 missed")),
+            reviews.claim_digest(text.replace("criterion-1 met", "criterion-1 missed")),
         )
 
     def test_a_rejection_before_a_claim_edit_stays_in_the_sentence(self):
@@ -378,7 +388,7 @@ class TheCall(unittest.TestCase):
             proto = area / "PROTOCOL-x.md"
             text = proto.read_text(encoding="utf-8").replace(
                 "the fit is in-sample; nothing more is claimed.",
-                "the fit is in-sample; C1 is not assessable with this run.",
+                "the fit is in-sample; criterion-1 is not assessable with this run.",
             )
             proto.write_text(text, encoding="utf-8")
             state = reviews.state(

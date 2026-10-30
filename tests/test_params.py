@@ -19,8 +19,8 @@ from labkit.formats import gate
 from labkit.tools import params
 
 C1 = """[[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "accuracy >= min_acc"
 scope = ["scripts/01_measure.py"]
 constants = { min_acc = 0.7 }
@@ -67,7 +67,7 @@ def _run(
         ),
         encoding="utf-8",
     )
-    (d / "metrics.json").write_text('{"c1_pass": true}', encoding="utf-8")
+    (d / "metrics.json").write_text('{"criterion_1_pass": true}', encoding="utf-8")
     (d / "completion.json").write_text(
         json.dumps(
             {
@@ -108,7 +108,9 @@ class Table(unittest.TestCase):
                 {r.evidence_kind for r in rows.values()}, {gate.GUARANTEED}
             )
             self.assertEqual(rows["min_acc"].in_run, "0.7")
-            self.assertEqual(rows["min_acc"].home, "PROTOCOL-x.md [C1] constants")
+            self.assertEqual(
+                rows["min_acc"].home, "PROTOCOL-x.md [criterion-1] constants"
+            )
             self.assertEqual(rows["model m"].value, "m → A @ http://a")
             self.assertEqual(rows["model m"].in_run, "recorded")
             self.assertNotIn(

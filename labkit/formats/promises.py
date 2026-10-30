@@ -1,34 +1,33 @@
 """promises — the one home of the promise alphabet and the promise block.
 
 A promise is one checked registration of a protocol: a criterion that
-judges, an admissibility condition that releases or withholds the verdict,
-a branch that says what follows from it. Each has an id in the protocol
-text (`[C1]`) and a key in the run's metrics (`c1_pass`).
+judges, a quality check that releases or withholds the verdict, an
+interpretation that says what follows from it. Its id is its kind and a
+number, in the protocol text (`[criterion-1]`); its key in the run's
+metrics is the id with underscores and a suffix (`criterion_1_pass`).
 
-    C  criterion      constrains the reported outcome: which value of which
-                      metric counts as support for the hypothesis
-    A  admissibility  determines whether any C verdict may be issued,
-                      conditional on an outcome-neutral check (control,
-                      anchor, yield, coverage, resolution) passing in the
-                      same run
-    B  branch         binds a pre-specified condition on the results to the
-                      conclusion or follow-up analysis it licenses
+    criterion       constrains the reported outcome: which value of which
+                    metric counts as support for the hypothesis
+    quality-check   determines whether any criterion's verdict may be
+                    issued, conditional on an outcome-neutral check
+                    (control, anchor, yield, coverage, resolution) passing
+                    in the same run
+    interpretation  binds a pre-specified condition on the results to the
+                    reading or follow-up analysis it licenses
 
-The earlier letters K, S, W and N are not read (labkit 0.48 broke with
-them; protocols that carry them are read with labkit 0.47). They do not map
-one-to-one onto C/A/B, so nothing translates them.
-
-Letters chosen against collision with metric names: F (`f1`), P (`p1`),
-R (`r1`), Q (`q1`), H (`h1`) are standard metric or hypothesis names and
-are never ids.
+The kind is spelled out so that a person reading a protocol, a report or a
+run's metrics.json needs no legend. The earlier letters (C/A/B, and before
+them K/S/W/N) are not read: a protocol that carries them is refused with a
+sentence (`earlier_ids`) and read with labkit 0.103.0 (C/A/B) or 0.47
+(K/S/W/N). Nothing translates them.
 
 **The promise block** — promises as data instead of prose. The protocol's
 one fenced ```toml block (`protocol_block.py`; its `[protocol]` table is the
 head) may carry `[[promise]]` tables:
 
     [[promise]]
-    id = "C1"
-    key = "c1_pass"
+    id = "criterion-1"
+    key = "criterion_1_pass"
     sentence = "macro-F1 of the judge >= min_f1 on the test split"
     scope = ["scripts/01_measure.py:evaluate", "lib/text.py"]
     constants = { min_f1 = 0.70 }
@@ -58,18 +57,37 @@ from pathlib import Path
 
 from labkit.formats import files, protocol_block, runs, scope_sha
 
-#: the letters of the promise block, and what each one is
-KINDS = {"C": "criterion", "A": "admissibility", "B": "branch"}
+#: the kinds of promise — each one an id's stem: `criterion-1`
+KINDS = ("criterion", "quality-check", "interpretation")
 #: A constant is named like the config key it is recorded under — lowercase
 #: snake_case, so the name IS the mapping between protocol and run record
 #: (2026-10-08: `min_f1` in the block against `min_f1` in the record would
 #: need a second table nobody checks).
 CONSTANT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
-_LETTERS = "".join(KINDS)
-#: an id anywhere in protocol prose: `[C1]`, `[k2]`
-ID_IN_PROTOCOL = re.compile(rf"\[([{_LETTERS}]\d+)\]", re.I)
-#: an id the stamp writes before a field's placeholder: `[C1] <…>`
-ID_PREFIX = re.compile(rf"^\[[{_LETTERS}]\d+\]\s*", re.I)
+_KIND = "|".join(re.escape(k) for k in KINDS)
+#: the kinds as a metrics key spells them: `quality_check`
+_KEY_KIND = "|".join(k.replace("-", "_") for k in KINDS)
+#: an id anywhere in protocol prose: `[criterion-1]`
+ID_IN_PROTOCOL = re.compile(rf"\[((?:{_KIND})-\d+)\]")
+#: an id the stamp writes before a field's placeholder: `[criterion-1] <…>`
+ID_PREFIX = re.compile(rf"^\[(?:{_KIND})-\d+\]\s*")
+
+
+def key_stem(pid: str) -> str:
+    """The metrics-key namespace of the id PID: `quality-check-2` →
+    `quality_check_2` (its key is that stem or `<stem>_<suffix>`)."""
+    return pid.replace("-", "_")
+
+
+def id_of_stem(stem: str) -> str:
+    """The id whose key stem is STEM (`key_stem` reversed): a kind holds
+    hyphens only, so `quality_check_2` → `quality-check-2`."""
+    return stem.replace("_", "-")
+
+
+def kind_of(pid: str) -> str:
+    """The kind of the id PID: `quality-check-2` → `quality-check`."""
+    return pid.rpartition("-")[0]
 
 
 def registers_ids(text: str) -> bool:
@@ -78,21 +96,23 @@ def registers_ids(text: str) -> bool:
     return ID_IN_PROTOCOL.search(text) is not None
 
 
-#: an id in the letters labkit 0.47 read — detected, never read: a protocol
-#: carrying them would otherwise pass every id check with nothing checked
-EARLIER_ID = re.compile(r"\[([KSWN]\d+)\]")
-#: a metrics key in the id namespace: bare `c1` or `c1_<suffix>`
-ID_KEY = re.compile(rf"^([{_LETTERS.lower()}]\d+)(?:_.*)?$")
+#: an id in the letters earlier labkits read (C/A/B up to 0.103.0, K/S/W/N
+#: up to 0.47) — detected, never read: a protocol carrying them would
+#: otherwise pass every id check with nothing checked
+EARLIER_ID = re.compile(r"\[([CABKSWN]\d+)\]")
+#: a metrics key in the id namespace: the bare stem `criterion_1` or
+#: `criterion_1_<suffix>`; group 1 is the stem
+ID_KEY = re.compile(rf"^((?:{_KEY_KIND})_\d+)(?:_.*)?$")
 #: a metrics key that is unmistakably an intent key (suffix required)
-INTENT_KEY = re.compile(rf"^[{_LETTERS.lower()}]\d+_")
-#: an id as a string literal in source: `"c1_pass"`, `'s1'`
-ID_LITERAL = re.compile(rf"""['"]([{_LETTERS.lower()}]\d+)(_[a-z0-9_]*)?['"]""")
+INTENT_KEY = re.compile(rf"^(?:{_KEY_KIND})_\d+_")
+#: a key stem as a string literal in source: `"criterion_1_pass"`
+ID_LITERAL = re.compile(rf"""['"]((?:{_KEY_KIND})_\d+)(_[a-z0-9_]*)?['"]""")
 
-#: a criterion's denominator key: `c1_n` — the count a criterion was
-#: computed over, held by `finalize` to the recorded inputs
-CRITERION_N_KEY = re.compile(r"^c\d+_n$")
+#: a criterion's denominator key: `criterion_1_n` — the count a criterion
+#: was computed over, held by `finalize` to the recorded inputs
+CRITERION_N_KEY = re.compile(r"^criterion_\d+_n$")
 
-_BLOCK_ID = re.compile(rf"^[{''.join(KINDS)}]\d+$")
+_BLOCK_ID = re.compile(rf"^(?:{_KIND})-\d+$")
 _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 
 #: what `block_sha` is a digest of — recorded with it, so a run from an
@@ -106,7 +126,8 @@ NO_BLOCK = "none"
 def snapshot_changes(was: dict, now: dict) -> list[str]:
     """What differs between two promise snapshots runs recorded (`snapshot`):
     one phrase per change of the registration — an id added or dropped, its
-    key, a constant (`[A2] null_band 0.1 → 0.15`), its declared scope. Not
+    key, a constant (`[quality-check-2] null_band 0.1 → 0.15`), its declared
+    scope. Not
     the declared-scope digests: changed code under an unchanged declaration
     is a repair, no change of the registration. [] for the same block
     (`block_sha`); a block that differs in nothing the snapshot holds
@@ -149,8 +170,8 @@ class PromiseError(ValueError):
 class Promise:
     """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
 
-    id: str  # "C1"
-    kind: str  # "criterion" | "admissibility" | "branch"
+    id: str  # "criterion-1"
+    kind: str  # one of KINDS: "criterion" | "quality-check" | "interpretation"
     key: str  # metrics key that reports it
     sentence: str  # the promise in one sentence
     scope: tuple[str, ...]  # declared implementation region
@@ -170,48 +191,49 @@ class PromiseTables:
 
 
 def ids_in_prose(text: str) -> set[str]:
-    """Ids written anywhere in the protocol prose (`[C1]`), lowercased — the
+    """Ids written anywhere in the protocol prose (`[criterion-1]`) — the
     prose side; the data side is the [[promise]] tables (`PromiseTables`).
     `reported_ids` is the metrics side."""
-    return {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
+    return {m.group(1) for m in ID_IN_PROTOCOL.finditer(text)}
 
 
 def earlier_ids(text: str) -> list[str]:
-    """Ids in the earlier letters K/S/W/N, as written — each one a promise
-    no check reads. Callers refuse them; nothing translates them (the
-    letters do not map one-to-one onto C/A/B)."""
+    """Ids in the earlier letters (C/A/B, K/S/W/N), as written — each one a
+    promise no check reads. Callers refuse them; nothing translates them."""
     return sorted(set(EARLIER_ID.findall(text)))
 
 
 EARLIER_IDS_HELP = (
-    "the letters K/S/W/N are not read since labkit 0.48 — "
-    "re-register the promises as [C]/[A]/[B] by the separation "
-    "rule (docs/promise-block.md), or check this protocol with labkit 0.47"
+    "promise ids are written as their kind and a number since labkit "
+    "0.104.0 — [criterion-1], [quality-check-1], [interpretation-1] "
+    "(docs/promise-block.md); re-register the promises so, or check this "
+    "protocol with labkit 0.103.0 (C/A/B) or 0.47 (K/S/W/N)"
 )
 
 
 def key_kind(key: str) -> str | None:
-    """The kind a metrics key belongs to by its letter — "criterion",
-    "admissibility", "branch" — or None outside the id namespace. The one
-    way to ask "is this an [A] key": two tools re-spelled the letters
-    (`^a\\d+_`, `[ca]`) and would have gone silent on the next change of the
-    alphabet, as 0.48.0 was (audit 2026-10-15)."""
+    """The kind a metrics key belongs to — one of KINDS — or None outside
+    the id namespace. The one way to ask "is this a quality-check key":
+    two tools once re-spelled the alphabet and would have gone silent on its
+    next change."""
     m = ID_KEY.match(key)
-    return KINDS[m.group(1)[0].upper()] if m else None
+    return kind_of(id_of_stem(m.group(1))) if m else None
 
 
 def reported_ids(metrics: Mapping[str, object]) -> set[str]:
-    """Ids a metrics dict reports (bare id or id_suffix keys), lowercased."""
+    """Ids a metrics dict reports (a bare stem or `<stem>_<suffix>` key), as
+    ids (`criterion_1_pass` → `criterion-1`)."""
     out: set[str] = set()
     for key in metrics:
         m = ID_KEY.match(str(key))
         if m:
-            out.add(m.group(1))
+            out.add(id_of_stem(m.group(1)))
     return out
 
 
 def is_block_id(name: str) -> bool:
-    """Is NAME a promise id as a [[promise]] table spells it (`C1`, `A2`)?"""
+    """Is NAME a promise id as a [[promise]] table spells it
+    (`criterion-1`, `quality-check-2`)?"""
     return bool(_BLOCK_ID.match(name))
 
 
@@ -219,7 +241,7 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
     """The protocol's promises, or None if its block declares none.
 
     Raises PromiseError on anything malformed: invalid TOML, an unknown
-    field, an unknown letter, a key outside its id's namespace, a duplicate
+    field, an unknown kind, a key outside its id's namespace, a duplicate
     id, an empty scope, a non-scalar constant. The digest covers the
     promises only, not the head: freezing or stamping the audit line must
     not read as a changed promise.
@@ -255,19 +277,25 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
                 raise PromiseError(f"{where}: missing `{field}`")
         pid = e["id"]
         if not isinstance(pid, str) or not _BLOCK_ID.match(pid):
-            raise PromiseError(f"{where}: id {pid!r} is not C<n>, A<n> or B<n>")
+            hint = (
+                f" — {EARLIER_IDS_HELP}"
+                if isinstance(pid, str) and EARLIER_ID.match(f"[{pid}]")
+                else ""
+            )
+            raise PromiseError(
+                f"{where}: id {pid!r} is not criterion-<n>, quality-check-<n> "
+                f"or interpretation-<n>{hint}"
+            )
         where = f"[[promise]] {pid}"
         if pid in seen:
             raise PromiseError(f"{where}: duplicate id")
         seen.add(pid)
         key = e["key"]
-        if not isinstance(key, str) or (
-            key != pid.lower() and not key.startswith(pid.lower() + "_")
-        ):
+        stem = key_stem(pid)
+        if not isinstance(key, str) or (key != stem and not key.startswith(stem + "_")):
             raise PromiseError(
                 f"{where}: key {key!r} is outside the id's "
-                f"namespace — expected '{pid.lower()}' or "
-                f"'{pid.lower()}_<suffix>'"
+                f"namespace — expected '{stem}' or '{stem}_<suffix>'"
             )
         sentence = e["sentence"]
         if not isinstance(sentence, str) or not sentence.strip():
@@ -312,7 +340,7 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         out.append(
             Promise(
                 id=pid,
-                kind=KINDS[pid[0]],
+                kind=kind_of(pid),
                 key=key,
                 sentence=sentence.strip(),
                 scope=tuple(scope),
@@ -341,24 +369,24 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
 
 
 def prose_mismatch(text: str, block: PromiseTables) -> tuple[list[str], list[str]]:
-    """(new-letter ids in prose but not in the block, block ids not in prose)."""
-    prose = {i.upper() for i in ids_in_prose(text)}
+    """(ids in prose but not in the block, block ids not in prose)."""
+    prose = ids_in_prose(text)
     ids = {p.id for p in block.promises}
     return sorted(prose - ids), sorted(ids - prose)
 
 
 def registered_ids(text: str) -> set[str]:
-    """Ids the protocol registers, lowercased: named in the prose (`[C1]`)
+    """Ids the protocol registers: named in the prose (`[criterion-1]`)
     or declared as a [[promise]] table. A table the prose does not name
     still registers its id — `prose_mismatch` reports that; it is no reason
     to check nothing. Raises PromiseError on a malformed block."""
     block = parse_block(text)
-    declared = {p.id.lower() for p in block.promises} if block is not None else set()
+    declared = {p.id for p in block.promises} if block is not None else set()
     return ids_in_prose(text) | declared
 
 
 def table_ids(text: str) -> set[str]:
-    """The ids the protocol's [[promise]] tables declare, as written (`C1`):
+    """The ids the protocol's [[promise]] tables declare (`criterion-1`):
     the ids an audit decision's effect may leave not assessable
     (`labkit-audit --decide … --effect "<ID> not assessable"`). Empty for a
     protocol without tables — a computation registers none. Unlike
@@ -371,7 +399,8 @@ def table_ids(text: str) -> set[str]:
 def load(protocol: Path) -> PromiseTables:
     """The promise block of `protocol`; raises if it has none.
 
-    For scripts: `promises.load(PROTOCOL).by_id()["C1"].constants["min_f1"]`
+    For scripts:
+    `promises.load(PROTOCOL).by_id()["criterion-1"].constants["min_f1"]`
     reads the threshold from the frozen protocol instead of a second copy
     in the code.
     """
@@ -453,7 +482,7 @@ def promise_tables_owed(
     the rule (standard 0.19) for protocol-check, preflight, runlog and
     finalize. The table:
 
-        registers = False (the prose names no [C]/[A]/[B] id — a
+        registers = False (the prose names no promise id — a
             computation, 0.87.1) → not owed, frozen or not: it judges no
             prediction, and its stamp carries no table (`protocol_cuts.bar_cut`)
         frozen = true            → owed (the freeze is the registration)
@@ -500,7 +529,7 @@ class ConstantRecord:
     """One registered constant held against a run's config.
 
     Attributes:
-        promise_id: The promise that declares it ("C1").
+        promise_id: The promise that declares it ("criterion-1").
         name: The constant's name — the config key of the same name.
         promised: The value the protocol registers.
         recorded: The value the run's config carries under that name, None if none.
@@ -662,7 +691,7 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
 
 
 def scope_drift(recorded: dict | None, base: Path) -> list[str]:
-    """`[C1] old → new` for every promise whose declared scope changed since
+    """`[criterion-1] old → new` for every promise whose declared scope changed since
     the run. `recorded` is the run's config.json `promises` (None: the run
     predates the block — nothing to compare)."""
     if recorded is None:

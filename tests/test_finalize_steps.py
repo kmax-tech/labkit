@@ -128,7 +128,7 @@ class ModelProvenanceGap(unittest.TestCase):
 
     def test_a_model_run_without_models_resolved_is_named(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(d, {"c1_pass": True, "llm_retries": 0}, {})
+            run = self._run(d, {"criterion_1_pass": True, "llm_retries": 0}, {})
             gap = run_record_check.model_provenance_gap(run) or ""
             self.assertIn(
                 "called a model, but no run in its lineage recorded models_resolved",
@@ -138,13 +138,13 @@ class ModelProvenanceGap(unittest.TestCase):
     def test_a_model_run_with_models_resolved_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
             run = self._run(
-                d, {"c1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
+                d, {"criterion_1_pass": True, "model_calls": 3}, {"m": {"model": "A"}}
             )
             self.assertIsNone(run_record_check.model_provenance_gap(run))
 
     def test_a_run_without_model_calls_is_quiet(self):
         with tempfile.TemporaryDirectory() as d:
-            run = self._run(d, {"c1_pass": True, "n_rows": 4}, {})
+            run = self._run(d, {"criterion_1_pass": True, "n_rows": 4}, {})
             self.assertIsNone(run_record_check.model_provenance_gap(run))
 
 

@@ -68,7 +68,9 @@ class Placeholders(unittest.TestCase):
 
     def test_content_starting_with_a_bracket_is_content(self):
         self.assertFalse(
-            self.one("- **Admissibility condition:** <10% unparsed [A1]\n").placeholder
+            self.one(
+                "- **Admissibility condition:** <10% unparsed [quality-check-1]\n"
+            ).placeholder
         )
 
     def test_unfilled_forms_are_placeholders(self):
@@ -125,7 +127,7 @@ class Fields(unittest.TestCase):
         multi-line placeholder stays a placeholder (review 2026-10-07)."""
         written = (
             head(repeat_cost="low") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
-            "- **Success / failure criterion:** [C1] x\n- **Admissibility condition:** [A1] y\n"
+            "- **Success / failure criterion:** [criterion-1] x\n- **Admissibility condition:** [quality-check-1] y\n"
         )
         self.assertEqual(protocol_check.low_registration_missing(written), [])
         unwritten = written.replace(

@@ -101,7 +101,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # runlog's repeat_of and start_check's derived_from each read their
     # parent run (audit 2026-10-27, third, S4); `start_check.completed_parent`
     ("a parent run read by hand", r"names no completed run", {"start_check"}),
-    # finalize and preflight each rendered the area-test run; the 10-23 B1
+    # finalize and preflight each rendered the area-test run; the 10-23 interpretation-1
     # fix landed in one (audit 2026-10-27, third, S7); `preflight.tell_test_run`
     (
         "an area-test run rendered by hand",
@@ -112,7 +112,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # draws "absent" (audit 2026-10-28, H6); `standard_contract.criterion_key`
     (
         "a criterion key named by hand",
-        r"\"c1_(?:score|accuracy)\"",
+        r"\"criterion_1_(?:score|accuracy)\"",
         {"standard_contract"},
     ),
     # audit modes, the experiments folder and a file:// URL were spelled by
@@ -329,7 +329,7 @@ class OneHome(unittest.TestCase):
             "an --into command spelled by hand": 'f"protocol-fill {protocol} --into {rel}"',
             "a run record read by key": "cfg = read_run_config(run) or {}",
             "a record time spelled by hand": 'started = time.strftime("%Y-%m-%dT%H:%M:%S")',
-            "a criterion key named by hand": '"metric_key": "c1_score",',
+            "a criterion key named by hand": '"metric_key": "criterion_1_score",',
             "an audit mode spelled by hand": 'if record.mode == "analysis":',
             "the experiments folder named by hand": 'experiments = root / "experiments"',
             "a file:// URL read by hand": "return Path(url[7:])",

@@ -99,9 +99,14 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual([r["pred"] for r in rows if r["lane"] == "null"], [0] * 12)
         metrics = measure.evaluate_rows(rows)
         self.assertEqual(
-            (metrics["c1_score"], metrics["a2_score"], metrics["n_test"]), (1.0, 0.5, 1)
+            (
+                metrics["criterion_1_score"],
+                metrics["quality_check_2_score"],
+                metrics["n_test"],
+            ),
+            (1.0, 0.5, 1),
         )
-        self.assertTrue(metrics["c1_pass"])
+        self.assertTrue(metrics["criterion_1_pass"])
         self.assertTrue(all(r["fold"] is None for r in rows))
 
     def test_apply_null_scores_the_same_predictions_against_permuted_labels(self):
@@ -134,8 +139,8 @@ class ApplySkeleton(unittest.TestCase):
             [r["gold_of"] for r in again if r["lane"] == "null"],
         )
         metrics = measure.evaluate_rows(rows)
-        self.assertEqual(metrics["c1_score"], 1.0)
-        self.assertLess(metrics["a2_score"], 1.0)
+        self.assertEqual(metrics["criterion_1_score"], 1.0)
+        self.assertLess(metrics["quality_check_2_score"], 1.0)
 
     def test_calibrate_null_measures_the_permutation_spread_before_registration(self):
         # the stamped null_band 0.1 was kept although the skeleton asked to
@@ -161,7 +166,7 @@ class ApplySkeleton(unittest.TestCase):
         self.assertEqual(cal["registered"], math.ceil(cal["band"] * 100) / 100)
         self.assertLess(cal["band"], 1 - cal["target"])  # no permutation is the truth
 
-    # -- [A2]'s band and its registered rule
+    # -- [quality-check-2]'s band and its registered rule
     def primary(self):
         primary = mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
@@ -370,7 +375,7 @@ class ApplySkeleton(unittest.TestCase):
         registered lane passes or fails by the expectation alone, whatever
         the draw — one draw put the bar anywhere between 0.54 and 0.78
         (null-lane decision, 2026-10-28). The twin: a fitted null (no
-        donors) keeps its score as the bar and chance as [A2]'s target."""
+        donors) keeps its score as the bar and chance as [quality-check-2]'s target."""
         _, measure = self.measure_module("apply")
         golds = ["pos"] * 6 + ["neg"] * 6
         reg = [
@@ -389,12 +394,12 @@ class ApplySkeleton(unittest.TestCase):
         cfg = measure.CONFIG
         for drawn in (5, 6, 7):
             m = measure.evaluate_rows(reg + null(drawn, True), cfg)
-            self.assertEqual(m["a2_target"], 0.5)  # q = p = 1/2: 1/4 + 1/4
+            self.assertEqual(m["quality_check_2_target"], 0.5)  # q = p = 1/2: 1/4 + 1/4
             self.assertEqual(
-                m["c1_threshold"], 0.5 + cfg.margin
+                m["criterion_1_threshold"], 0.5 + cfg.margin
             )  # the draw moves nothing
         fitted = measure.evaluate_rows(reg + null(7, False), cfg)
-        self.assertEqual(fitted["c1_threshold"], 7 / 12 + cfg.margin)
+        self.assertEqual(fitted["criterion_1_threshold"], 7 / 12 + cfg.margin)
 
     def test_the_scored_lanes_are_the_ones_finalize_reads(self):
         # the skeleton's lane names and finalize's null-lane station must
@@ -573,7 +578,7 @@ class ApplySkeleton(unittest.TestCase):
 
     def test_fit_holds_the_bar_to_the_mean_of_its_refits(self):
         """One permuted-label refit decided a fit's verdict (fourth SAB-like
-        draw: c1_score = c1_threshold). The bar and [A2] read the mean of
+        draw: criterion_1_score = criterion_1_threshold). The bar and [quality-check-2] read the mean of
         NULL_REFITS refits, each draw kept and named; the twin: a null of one
         unnumbered draw keeps its score as the bar."""
         _, measure = self.measure_module("fit")
@@ -594,16 +599,18 @@ class ApplySkeleton(unittest.TestCase):
 
         nulls = [draw(d, c) for d, c in enumerate((4, 5, 6, 7, 8))]
         m = measure.evaluate_rows(reg + [r for rows in nulls for r in rows])
-        self.assertEqual(m["a2_draw_scores"], [c / 12 for c in (4, 5, 6, 7, 8)])
-        self.assertEqual(m["a2_score"], 0.5)  # the mean of 4..8 of 12
-        self.assertEqual(m["c1_threshold"], 0.5 + measure.CONFIG.margin)
+        self.assertEqual(
+            m["quality_check_2_draw_scores"], [c / 12 for c in (4, 5, 6, 7, 8)]
+        )
+        self.assertEqual(m["quality_check_2_score"], 0.5)  # the mean of 4..8 of 12
+        self.assertEqual(m["criterion_1_threshold"], 0.5 + measure.CONFIG.margin)
         single = [
             measure.lane_row("null", {"id": str(i)}, g if i < 7 else flip[g], g)
             for i, g in enumerate(golds)
         ]
         one = measure.evaluate_rows(reg + single)
-        self.assertNotIn("a2_draw_scores", one)
-        self.assertEqual(one["c1_threshold"], 7 / 12 + measure.CONFIG.margin)
+        self.assertNotIn("quality_check_2_draw_scores", one)
+        self.assertEqual(one["criterion_1_threshold"], 7 / 12 + measure.CONFIG.margin)
 
     def test_the_fit_refits_draw_different_permutations(self):
         _, measure = self.measure_module("fit")

@@ -62,9 +62,9 @@ Each rule names where it was observed.
     Summary's Conclusion must read as the answer to a question stated right
     above it. (Round 15, p1.)
 12. **The formula's first sentence omits a conjunct.** The docstring of
-    `evaluate_rows` names every [C…], [A…] and [B…] it decides, with the
+    `evaluate_rows` names every [criterion-…], [quality-check-…] and [interpretation-…] it decides, with the
     id, and says what comes back when admissibility fails; a summary that
-    leaves one out is read as complete. (Area 18: [C3] missing.)
+    leaves one out is read as complete. (Area 18: [criterion-3] missing.)
 13. **A case id without its kind.** "32, 33, -05" in a comment or a
     protocol: the type is gone; shorten the kind, never drop it
     (`dienstreise-32`); bare numbers only under a table header that
@@ -73,7 +73,7 @@ Each rule names where it was observed.
     English in tables and code — a threshold, a class or a branch named
     in one and not findable in the other; the constant's name, the
     class name or the branch sentence appears verbatim in both. (Round 15,
-    c1 and the B1 strings.)
+    c1 and the interpretation-1 strings.)
 15. **A value that is prose where it could be data.** A tuple of ids with
     the reason in a docstring ("33 in Wien, 140 € > ARV 117"), a branch
     value written as the author's shorthand instead of the registered

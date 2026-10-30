@@ -44,7 +44,9 @@ def make_run(area: Path, name: str) -> Path:
         ),
         encoding="utf-8",
     )
-    (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
+    (d / "metrics.json").write_text(
+        json.dumps({"criterion_1_pass": True}), encoding="utf-8"
+    )
     (d / "completion.json").write_text(
         json.dumps(
             {
@@ -107,7 +109,7 @@ class BrokenMetrics(unittest.TestCase):
         broken = make_run(self.area, NEW)
         (broken / "metrics.json").write_text("{broken", encoding="utf-8")
         self.protocol = self.area / "PROTOCOL-x.md"
-        self.protocol.write_text(head() + "[C1] holds\n", encoding="utf-8")
+        self.protocol.write_text(head() + "[criterion-1] holds\n", encoding="utf-8")
 
     def test_newer_unreadable_metrics_is_not_skipped_for_the_older(self):
         rc, out = quiet(intent_check.main, [str(self.protocol)])

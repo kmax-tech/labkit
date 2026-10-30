@@ -65,7 +65,9 @@ def make_run(
         ),
         encoding="utf-8",
     )
-    (d / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
+    (d / "metrics.json").write_text(
+        json.dumps({"criterion_1_pass": True}), encoding="utf-8"
+    )
     if completion:
         (d / "completion.json").write_text(
             json.dumps({"schema_version": 4, "run_kind": "measurement"}),

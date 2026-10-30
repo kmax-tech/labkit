@@ -12,8 +12,8 @@ from labkit.formats import console, promises, protocol_block, protocol_check
 from protocol_fixture import head
 
 C1 = """[[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "mean >= min_mean"
 scope = ["scripts/m.py:evaluate"]
 constants = { min_mean = 1.5 }
@@ -87,7 +87,7 @@ class ConstantCopies(unittest.TestCase):
         self.assertEqual(
             self.findings(
                 "from labkit.formats import promises\n"
-                "min_mean = promises.constants(PROTOCOL, 'C1')['min_mean']\n"
+                "min_mean = promises.constants(PROTOCOL, 'criterion-1')['min_mean']\n"
             ),
             [],
         )

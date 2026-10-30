@@ -24,9 +24,9 @@ command:
      key in the intent-id namespace has a registered id (a WARNING).
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
-  1a. **[A] keys decide something** (STATIC EVIDENCE, 2026-10-14; with a
-     promise block only). An admissibility key the code writes and never
-     tests (`if`, `and`, `all()`, …) permits nothing: the C verdict is
+  1a. **Quality-check keys decide something** (STATIC EVIDENCE, 2026-10-14; with a
+     promise block only). A quality-check key the code writes and never
+     tests (`if`, `and`, `all()`, …) permits nothing: the criterion verdict is
      reported either way. A test is not proof of a branch, so each finding
      is a WARNING. In the same pass, **constant copies** (STATIC EVIDENCE):
      a script that sets a registered constant's value itself instead of
@@ -158,7 +158,7 @@ def check_intent_ids(area: Path, protocol: Path) -> list[GateFinding]:
 
 def code_findings(area: Path, protocol: Path, repo: Path) -> list[GateFinding]:
     """The automated checks 1–1d, in order, as finding lines: the promise
-    block and the intent ids (with the [A]-key reads and constant copies),
+    block and the intent ids (with the quality-check key reads and constant copies),
     parser fixtures, prompt drift, stamp coverage. The one list both
     `code-check` and preflight's code station report, each finding with its
     grade and evidence kind as data."""
@@ -173,7 +173,7 @@ def code_findings(area: Path, protocol: Path, repo: Path) -> list[GateFinding]:
 def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
     text = protocol.read_text(encoding="utf-8")
     findings = promise_block_findings(area, protocol, text)
-    registered = {m.group(1).lower() for m in ID_IN_PROTOCOL.finditer(text)}
+    registered = {m.group(1) for m in ID_IN_PROTOCOL.finditer(text)}
     if not registered:
         return findings
     in_code = code_ids(area)
@@ -183,8 +183,8 @@ def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
             coded(
                 BLOCKER,
                 protocol.name,
-                f"[{i.upper()}] is registered, but no script mentions a "
-                f"'{i}'/'{i}_*' key · the run reports nothing for this promise "
+                f"[{i}] is registered, but no script mentions a "
+                f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key · the run reports nothing for this promise "
                 f"and the metrics check fails after the tokens are spent",
                 rule=ID_RULE,
                 fix="implement the key or drop the id",
@@ -196,8 +196,8 @@ def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
             coded(
                 WARNING,
                 unmistakable[i][0],
-                f"key '{i}_*' is in the intent-id namespace, but the protocol "
-                f"registers no [{i.upper()}] · a number gets reported that "
+                f"key '{promises.key_stem(i)}_*' is in the intent-id namespace, but the protocol "
+                f"registers no [{i}] · a number gets reported that "
                 f"nobody registered",
                 rule=ID_RULE,
                 fix="register it or rename the key",
@@ -213,8 +213,8 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
     Three things a run would otherwise discover after the tokens are spent:
     the block does not parse, a declared scope names code that is not there
     (runlog refuses the run), a declared key appears nowhere in the code
-    (intent-check fails after the run). Exact key, not id: `"c1_passed"`
-    does not answer a promise declaring `c1_pass` (Durchstich 2026-10-06).
+    (intent-check fails after the run). Exact key, not id: `"criterion_1_passed"`
+    does not answer a promise declaring `criterion_1_pass` (Durchstich 2026-10-06).
     """
     try:
         block = promises.parse_block(text)
@@ -249,7 +249,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
             )
         out += constant_copies(area, protocol, p)
         if p.key not in keys:
-            near = sorted(k for k in keys if k.startswith(p.id.lower()))
+            near = sorted(k for k in keys if k.startswith(promises.key_stem(p.id)))
             hint = f" (the code has {', '.join(near)})" if near else ""
             out.append(
                 coded(
@@ -291,7 +291,7 @@ def _loop_keys(
 ) -> list[str]:
     """The string literals the loop variable NAME runs over, for the nearest
     enclosing `for` or comprehension that binds it: an inline tuple, list or
-    set, or a name this file binds to one (`ADMISSIBILITY = ("a1_pass", …)`)."""
+    set, or a name this file binds to one (`ADMISSIBILITY = ("quality_check_1_pass", …)`)."""
     here = parents.get(id(node))
     while here is not None:
         loops = (
@@ -315,8 +315,8 @@ def _loop_keys(
 
 def _key_reads(path: Path) -> set[str]:
     """The keys this file reads where a decision is taken (`_decides`):
-    `m["a1_pass"]`, `m.get("a1_pass")`, `m[k]` with `k` running over a
-    collection of key literals, and a bare name `a1_pass`. A read anywhere
+    `m["quality_check_1_pass"]`, `m.get("quality_check_1_pass")`, `m[k]` with `k` running over a
+    collection of key literals, and a bare name `quality_check_1_pass`. A read anywhere
     else — a print, a copy into another dict — decides nothing.
 
     Raises:
@@ -362,10 +362,10 @@ def _key_reads(path: Path) -> set[str]:
 def admissibility_reads(
     area: Path, protocol: Path, block: "promises.PromiseTables", keys: dict
 ) -> list[GateFinding]:
-    """Every [A] key the code writes must also be read (static evidence).
+    """Every quality-check key the code writes must also be read (static evidence).
 
-    An admissibility condition permits the C verdict — C judges, A permits
-    the verdict (LAB-004 Identifiers make the intent addressable). A key
+    A quality check permits the criterion verdict — a criterion judges, a
+    quality check permits the verdict (LAB-004 Identifiers make the intent addressable). A key
     that is computed and never read is a label without effect: the
     criterion is reported whether the condition held or not (Opus audit,
     probe 11: "[N1] was a label without effect"; class C, 24 findings over
@@ -376,7 +376,7 @@ def admissibility_reads(
     somewhere". A key the code does not mention at all is the blocker
     `promise_block_findings` already reports.
     """
-    owed = [p for p in block.promises if p.kind == "admissibility" and p.key in keys]
+    owed = [p for p in block.promises if p.kind == "quality-check" and p.key in keys]
     if not owed:
         return []
     root = layout_root(area)
@@ -388,7 +388,7 @@ def admissibility_reads(
             coded(
                 WARNING,
                 protocol.name,
-                f"[A] keys: read check not done — {exc}",
+                f"quality-check keys: read check not done — {exc}",
                 fix="fix the file",
                 evidence_kind=GUARANTEED,
             )
@@ -398,7 +398,7 @@ def admissibility_reads(
             WARNING,
             keys[p.key][0],
             f"[{p.id}] key '{p.key}' is written but nothing decides on it · "
-            f"the C verdict is reported whether [{p.id}] held or not",
+            f"the criterion verdict is reported whether [{p.id}] held or not",
             rule=ID_RULE,
             fix=f'withhold the verdict when it fails (`if not m["{p.key}"]: …`)',
             evidence_kind=STATIC_EVIDENCE,

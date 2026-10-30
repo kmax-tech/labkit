@@ -1,7 +1,7 @@
 """An accepted finding's effect on the verdicts, as the record holds it.
 
-`stands` keeps the verdicts, read within the limit; `C1 not assessable`
-says the run does not judge C1. An accepted BLOCKER owes one (`--decide`
+`stands` keeps the verdicts, read within the limit; `criterion-1 not assessable`
+says the run does not judge criterion-1. An accepted BLOCKER owes one (`--decide`
 refuses it without), an accepted WARNING may name one — severity and
 what the result still allows are two questions — and nothing else
 carries one (review 2026-10-21).
@@ -33,11 +33,22 @@ def record(area: Path) -> Path:
 class EffectGrammar(unittest.TestCase):
     def test_stands_and_not_assessable(self):
         self.assertEqual(findings.effect_ids("stands"), ())
-        self.assertEqual(findings.effect_ids("C1 not assessable"), ("C1",))
-        self.assertEqual(findings.effect_ids("C1, A2 not assessable"), ("C1", "A2"))
+        self.assertEqual(
+            findings.effect_ids("criterion-1 not assessable"), ("criterion-1",)
+        )
+        self.assertEqual(
+            findings.effect_ids("criterion-1, quality-check-2 not assessable"),
+            ("criterion-1", "quality-check-2"),
+        )
 
     def test_anything_else_is_refused(self):
-        for bad in ("", "C1", "c1 not assessable", "C1 not met", "holds"):
+        for bad in (
+            "",
+            "criterion-1",
+            "c1 not assessable",
+            "criterion-1 not met",
+            "holds",
+        ):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 findings.effect_ids(bad)
 
@@ -56,7 +67,7 @@ class Decide(unittest.TestCase):
 
     def test_a_refusal_of_the_effects_form_is_told_apart(self):
         """`--decide` completes these for a protocol without promises, whose
-        form example (`C1`) cannot hold there; another refusal is not one."""
+        form example (`criterion-1`) cannot hold there; another refusal is not one."""
         for effect in ("", "4 not assessable"):
             with (
                 self.subTest(effect=effect),
@@ -69,9 +80,9 @@ class Decide(unittest.TestCase):
 
     def test_the_effect_is_stored_and_read_back(self):
         rec = findings.write_decision(
-            self.path, 1, "accepted", "kept", "C1 not assessable"
+            self.path, 1, "accepted", "kept", "criterion-1 not assessable"
         )
-        self.assertEqual(rec.findings[0].effect, "C1 not assessable")
+        self.assertEqual(rec.findings[0].effect, "criterion-1 not assessable")
         self.assertEqual(rec.limits(), [(1, rec.findings[0])])
         again = findings.write_decision(self.path, 1, "accepted", "kept", "stands")
         self.assertEqual(again.findings[0].effect, "stands")
@@ -108,13 +119,15 @@ class Decide(unittest.TestCase):
             "; subject to 1 recorded limitation (the Limit lines below)",
         )
         self.assertEqual(
-            findings.answer_note([(a, "stands"), (b, "C1, A2 not assessable")]),
+            findings.answer_note(
+                [(a, "stands"), (b, "criterion-1, quality-check-2 not assessable")]
+            ),
             "; subject to 2 recorded limitations (the Limit lines below)",
         )
 
     def test_a_hand_written_effect_is_held_on_reading(self):
         text = self.path.read_text(encoding="utf-8").replace(
-            'status = "open"\nreason = ""', 'status = "accepted"\nreason = "k"\neffect = "C1 not met"', 1
+            'status = "open"\nreason = ""', 'status = "accepted"\nreason = "k"\neffect = "criterion-1 not met"', 1
         )  # fmt: skip
         self.path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "finding 1: effect"):

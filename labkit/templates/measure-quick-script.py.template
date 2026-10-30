@@ -102,7 +102,7 @@ def rows(ids: list[str]) -> list[dict]:
 def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     """TODO: the number(s) from the rows, over the ids SOURCE lists — and,
     only if the protocol registers ids (a model in the loop), one key per id
-    (`c1_pass`); a plain count registers none. Every key lands in
+    (`criterion_1_pass`); a plain count registers none. Every key lands in
     metrics.json, and `02_analyze.py --check` demands each verbatim in the protocol's
     "Recorded results" line — keep the dict to what that line carries.
     A number about the inputs the report states (records, a median, a derived

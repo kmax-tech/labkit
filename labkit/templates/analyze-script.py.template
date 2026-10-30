@@ -48,7 +48,7 @@ def draws() -> list[str]:
             raise SystemExit(f"draws: {d.name} registered {len(rows)} JSONL outputs, not one")
         m, _ = recheck.verified(d, AREA, rows[0], measure.evaluate_rows)
         accs.append(m[key])
-        lines.append(f"draw {n}  {d.name}  {key} {m[key]}  c1_pass {m.get('c1_pass')}")
+        lines.append(f"draw {n}  {d.name}  {key} {m[key]}  criterion_1_pass {m.get('criterion_1_pass')}")
         for r in measure.read_jsonl(rows[0]):
             seen.setdefault(r["id"], {})[n] = measure.answer_of(r)
     if len(accs) == 1:

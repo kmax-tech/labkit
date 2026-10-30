@@ -34,9 +34,9 @@ def block(
     margin: float, sentence: str = "out-of-fold R² beats the null by margin"
 ) -> str:
     return (
-        f'[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "{sentence}"\n'
+        f'[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "{sentence}"\n'
         f'scope = ["scripts/01_measure.py"]\nconstants = {{ margin = {margin} }}\n\n'
-        '[[promise]]\nid = "A1"\nkey = "a1_pass"\nsentence = "every item predicted"\n'
+        '[[promise]]\nid = "quality-check-1"\nkey = "quality_check_1_pass"\nsentence = "every item predicted"\n'
         'scope = ["scripts/01_measure.py"]\n'
     )
 
@@ -62,20 +62,21 @@ def _git(cwd: Path, *args: str) -> str:
 class Parse(unittest.TestCase):
     def test_a_replaces_table_reads_and_a_malformed_one_is_named(self):
         text = head(
-            promises=block(0.25) + replaces(A_ID, ("C1 margin", "0.25", "0.15"))
+            promises=block(0.25)
+            + replaces(A_ID, ("criterion-1 margin", "0.25", "0.15"))
         )
         rep = protocol_block.replaces(text)
         assert rep is not None
         self.assertEqual(rep.protocol, A_ID)
         self.assertEqual(
             [(c.what, c.from_, c.to) for c in rep.changes],
-            [("C1 margin", "0.25", "0.15")],
+            [("criterion-1 margin", "0.25", "0.15")],
         )
         self.assertIsNone(protocol_block.replaces(head(promises=block(0.25))))
         for bad, said in (
             (replaces("p-1"), "the id of the protocol"),
             (
-                replaces(A_ID, ("C1 margin", "0.25", "0.15")).replace(
+                replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")).replace(
                     "the band was wrong", " "
                 ),
                 "`why` is empty",
@@ -100,11 +101,11 @@ class Differences(unittest.TestCase):
             [
                 ("kind", "compute", "fit"),
                 (
-                    "C1 sentence",
+                    "criterion-1 sentence",
                     "out-of-fold R² beats the null by margin",
                     "R² beats the null",
                 ),
-                ("C1 margin", "0.25", "0.15"),
+                ("criterion-1 margin", "0.25", "0.15"),
                 ("Data profile", "944 compounds", "232 compounds"),
             ],
         )
@@ -119,7 +120,11 @@ class _Areas(unittest.TestCase):
         _git(self.root, "init", "-q")
         self.a = self.root / "experiments" / "01-a"
         self.b = self.root / "experiments" / "02-b"
-        self.a_metrics = {"c1_pass": False, "a1_pass": True, "c1_score": 0.7}
+        self.a_metrics = {
+            "criterion_1_pass": False,
+            "quality_check_1_pass": True,
+            "criterion_1_score": 0.7,
+        }
         self._area(self.a, A_ID, block(0.25), A_RUN, self.a_metrics)
 
     def _area(
@@ -144,7 +149,7 @@ class _Areas(unittest.TestCase):
             B_ID,
             block(0.15) + extra,
             B_RUN,
-            {"c1_pass": True, "a1_pass": True},
+            {"criterion_1_pass": True, "quality_check_1_pass": True},
             **kw,
         )
 
@@ -159,9 +164,10 @@ class Gate(_Areas):
         self._b(replaces(A_ID))
         (gap,) = self.gaps()
         self.assertIn("changed against PROTOCOL-x.md", gap)
-        self.assertIn("not declared: C1 margin 0.25 → 0.15", gap)
+        self.assertIn("not declared: criterion-1 margin 0.25 → 0.15", gap)
         self.assertIn(
-            '[[replaces.change]] what = "C1 margin", from = "0.25", to = "0.15"', gap
+            '[[replaces.change]] what = "criterion-1 margin", from = "0.25", to = "0.15"',
+            gap,
         )
 
     def test_report_check_runs_the_replacement_station(self):
@@ -170,23 +176,30 @@ class Gate(_Areas):
         with contextlib.redirect_stdout(out):
             code = report_check.main([str(self.b)])
         self.assertEqual(code, 1)
-        self.assertIn("not declared: C1 margin 0.25 → 0.15", out.getvalue())
+        self.assertIn("not declared: criterion-1 margin 0.25 → 0.15", out.getvalue())
 
     def test_the_twin_every_change_declared_passes(self):
-        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         self.assertEqual(self.gaps(), [])
 
     def test_a_declared_change_that_is_none_is_held(self):
         self._b(
-            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("A1 sentence", "x", "y"))
+            replaces(
+                A_ID,
+                ("criterion-1 margin", "0.25", "0.15"),
+                ("quality-check-1 sentence", "x", "y"),
+            )
         )
         (gap,) = self.gaps()
         self.assertIn(
-            "declares a change the registrations do not show: A1 sentence x → y", gap
+            "declares a change the registrations do not show: quality-check-1 sentence x → y",
+            gap,
         )
 
     def test_a_replacement_is_exploratory(self):
-        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")), type="confirmatory")
+        self._b(
+            replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")), type="confirmatory"
+        )
         (gap,) = self.gaps()
         self.assertIn('type = "exploratory"', gap)
 
@@ -210,7 +223,7 @@ class Gate(_Areas):
         a.write_text(
             text.replace("[[promise]]", replaces(B_ID).strip() + "\n\n[[promise]]", 1)
         )
-        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         self.assertTrue(any("in a circle" in g for g in self.gaps()), self.gaps())
 
     def test_the_predecessors_open_blocker_is_decided_first(self):
@@ -231,7 +244,7 @@ class Gate(_Areas):
             shown_sha="2" * 12,
             registration=registration_of(self.a),
         )
-        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         (gap,) = self.gaps()
         self.assertIn("its predecessor's BLOCKER is still open", gap)
         self.assertIn(f'--decide 1 deferred "replaced by {B_ID}: <why>"', gap)
@@ -241,14 +254,14 @@ class Gate(_Areas):
         self.assertEqual(self.gaps(), [])
 
     def test_the_predecessors_verdict_is_rendered_first(self):
-        proto = self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        proto = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         text = proto.read_text(encoding="utf-8")
         line = result_render.rendering(
             self.b, text, self.b / "runs" / B_RUN
         ).recorded_results
         self.assertTrue(
             line.startswith(
-                f"replaces {A_ID} (01-a/PROTOCOL-x.md): C1 missed; A1 met · this question: C1 met; A1 met"
+                f"replaces {A_ID} (01-a/PROTOCOL-x.md): criterion-1 missed; quality-check-1 met · this question: criterion-1 met; quality-check-1 met"
             ),
             line,
         )
@@ -257,7 +270,7 @@ class Gate(_Areas):
         )
         self.assertTrue(
             plain.recorded_results.startswith(
-                "C1 missed; A1 met · recorded: c1_score = 0.7"
+                "criterion-1 missed; quality-check-1 met · recorded: criterion_1_score = 0.7"
             )
         )
 
@@ -281,7 +294,7 @@ class ConflictingRegistrations(_Areas):
         proto.write_text(head(id=A_ID, promises=block(0.25)) + BODY, encoding="utf-8")
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "register 01-a")
-        metrics = {"c1_pass": True, "a1_pass": True}
+        metrics = {"criterion_1_pass": True, "quality_check_1_pass": True}
         started_at(completed_run(self.a, A_RUN, pid=A_ID, metrics=metrics), self.root)
         proto.write_text(
             head(id=A_ID, result=self.A2_RUN, promises=block(0.3)) + BODY,
@@ -304,22 +317,30 @@ class ConflictingRegistrations(_Areas):
         self.assertIn("recorded different registrations", finding.line)
 
     def test_a_change_owed_against_one_of_them_is_held_naming_that_run(self):
-        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         (gap,) = self.gaps()
         self.assertIn(f"as its first measurement {self.A2_RUN} saw it", gap)
         self.assertIn("with its uncommitted.patch", gap)
-        self.assertIn("not declared: C1 margin 0.3 → 0.15", gap)
+        self.assertIn("not declared: criterion-1 margin 0.3 → 0.15", gap)
 
     def test_the_twin_declared_against_each_passes(self):
         self._b(
-            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("C1 margin", "0.3", "0.15"))
+            replaces(
+                A_ID,
+                ("criterion-1 margin", "0.25", "0.15"),
+                ("criterion-1 margin", "0.3", "0.15"),
+            )
         )
         self.assertEqual(self.gaps(), [])
 
     def test_a_registration_that_cannot_be_read_back_hands_over(self):
         (self.a / "runs" / self.A2_RUN / "uncommitted.patch").unlink()
         self._b(
-            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("C1 margin", "0.3", "0.15"))
+            replaces(
+                A_ID,
+                ("criterion-1 margin", "0.25", "0.15"),
+                ("criterion-1 margin", "0.3", "0.15"),
+            )
         )
         (gap,) = self.gaps()
         self.assertIn(f"its first measurement {self.A2_RUN} recorded block", gap)
@@ -332,7 +353,11 @@ class ConflictingRegistrations(_Areas):
 
     def test_the_predecessor_renders_no_verdict(self):
         proto = self._b(
-            replaces(A_ID, ("C1 margin", "0.25", "0.15"), ("C1 margin", "0.3", "0.15"))
+            replaces(
+                A_ID,
+                ("criterion-1 margin", "0.25", "0.15"),
+                ("criterion-1 margin", "0.3", "0.15"),
+            )
         )
         line = result_render.rendering(
             self.b, proto.read_text(encoding="utf-8"), self.b / "runs" / B_RUN
@@ -360,13 +385,16 @@ class MovedPredecessor(_Areas):
         _git(self.root, "commit", "-qam", "the margin lowered after the first run")
         started_at(
             completed_run(
-                self.a, later, pid=A_ID, metrics={"c1_pass": True, "a1_pass": True}
+                self.a,
+                later,
+                pid=A_ID,
+                metrics={"criterion_1_pass": True, "quality_check_1_pass": True},
             ),
             self.root,
         )
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "run again")
-        proto_b = self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        proto_b = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         line = result_render.rendering(
             self.b, proto_b.read_text(encoding="utf-8"), self.b / "runs" / B_RUN
         ).recorded_results
@@ -413,7 +441,7 @@ class Hint(_Areas):
         report = self._report(A_RUN)
         _git(self.root, "add", "REPORT.md")
         _git(self.root, "commit", "-qm", "report A")
-        self._b(replaces(A_ID, ("C1 margin", "0.25", "0.15")))
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         self._report(B_RUN)
         self.assertEqual(self.hints(report), [])
         self._report(A_RUN, B_RUN)  # both questions answered: nothing dropped

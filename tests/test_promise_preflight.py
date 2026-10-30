@@ -3,7 +3,7 @@ any run (Durchstich 2026-10-06: a renamed key surfaced only after the run,
 in intent-check, when the tokens were spent).
 
 Twin pair: the clean script passes; renaming the reported key from the
-declared `c1_pass` to `c1_passed` is a blocker, though the id `c1` is still
+declared `criterion_1_pass` to `criterion_1_passed` is a blocker, though the id `c1` is still
 in the code. A scope naming a missing function is a blocker too.
 """
 
@@ -29,22 +29,22 @@ def intent_id_lines(area: Path, protocol: Path) -> list[str]:
 
 SCRIPT = """def evaluate(rows):
     macro = 0.7
-    m = {"c1_macro_f1": macro, "a1_anchor_ok": True}
-    m["c1_pass"] = macro >= 0.6 if m["a1_anchor_ok"] else None
+    m = {"criterion_1_macro_f1": macro, "quality_check_1_anchor_ok": True}
+    m["criterion_1_pass"] = macro >= 0.6 if m["quality_check_1_anchor_ok"] else None
     return m
 """
-PROTOCOL = """Criterion [C1], admissibility [A1].
+PROTOCOL = """Criterion [criterion-1], admissibility [quality-check-1].
 
 ```toml
 [[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "macro-F1 >= min_f1"
 scope = ["scripts/01_measure.py:evaluate"]
 
 [[promise]]
-id = "A1"
-key = "a1_anchor_ok"
+id = "quality-check-1"
+key = "quality_check_1_anchor_ok"
 sentence = "anchors hold"
 scope = ["scripts/01_measure.py:evaluate"]
 ```
@@ -66,25 +66,25 @@ class PromisePreflight(unittest.TestCase):
 
     def test_renamed_key_blocks_though_the_id_is_present(self):
         findings = intent_id_lines(
-            *area_with(SCRIPT.replace('"c1_pass"', '"c1_passed"'))
+            *area_with(SCRIPT.replace('"criterion_1_pass"', '"criterion_1_passed"'))
         )
         self.assertEqual(len(findings), 1, findings)
-        self.assertIn("declares key 'c1_pass'", findings[0])
-        self.assertIn("c1_passed", findings[0])
+        self.assertIn("declares key 'criterion_1_pass'", findings[0])
+        self.assertIn("criterion_1_passed", findings[0])
 
     def test_keyword_argument_answers_the_key(self):
         script = (
-            "a1_anchor_ok = True\n"
-            "r.metrics(c1_pass=True if a1_anchor_ok else None, a1_anchor_ok=a1_anchor_ok)\n"
+            "quality_check_1_anchor_ok = True\n"
+            "r.metrics(criterion_1_pass=True if quality_check_1_anchor_ok else None, quality_check_1_anchor_ok=quality_check_1_anchor_ok)\n"
             "def evaluate(rows):\n    return 1\n"
         )
         self.assertEqual(intent_id_lines(*area_with(script)), [])
 
     def test_an_admissibility_key_never_read_is_a_warning(self):
-        """[A1] computed, reported, and nothing hangs on it: the C verdict
+        """[quality-check-1] computed, reported, and nothing hangs on it: the C verdict
         is reported whether the anchors held or not (probe 11, "a label
         without effect"). Static evidence, so a WARNING."""
-        label_only = SCRIPT.replace(' if m["a1_anchor_ok"] else None', "")
+        label_only = SCRIPT.replace(' if m["quality_check_1_anchor_ok"] else None', "")
         findings = intent_id_lines(*area_with(label_only))
         self.assertEqual(len(findings), 1, findings)
         self.assertTrue(
@@ -92,14 +92,15 @@ class PromisePreflight(unittest.TestCase):
             findings,
         )
         self.assertIn(
-            "[A1] key 'a1_anchor_ok' is written but nothing decides on it", findings[0]
+            "[quality-check-1] key 'quality_check_1_anchor_ok' is written but nothing decides on it",
+            findings[0],
         )
 
     def test_passing_the_value_into_its_own_key_is_not_a_read(self):
         script = (
-            "a1_anchor_ok = True\n"
-            "r.metrics(c1_pass=True, a1_anchor_ok=a1_anchor_ok)\n"
-            "row = {'a1_anchor_ok': a1_anchor_ok}\n"
+            "quality_check_1_anchor_ok = True\n"
+            "r.metrics(criterion_1_pass=True, quality_check_1_anchor_ok=quality_check_1_anchor_ok)\n"
+            "row = {'quality_check_1_anchor_ok': quality_check_1_anchor_ok}\n"
             "def evaluate(rows):\n    return 1\n"
         )
         findings = intent_id_lines(*area_with(script))
@@ -110,7 +111,7 @@ class PromisePreflight(unittest.TestCase):
         script = (
             "from lib.gate import admissible\n"
             "def evaluate(rows):\n"
-            "    m = {'a1_anchor_ok': True, 'c1_pass': True}\n"
+            "    m = {'quality_check_1_anchor_ok': True, 'criterion_1_pass': True}\n"
             "    return admissible(m)\n"
         )
         area, protocol = area_with(script)
@@ -119,8 +120,8 @@ class PromisePreflight(unittest.TestCase):
         (repo / "lib").mkdir()
         (repo / "lib" / "gate.py").write_text(
             "def admissible(m):\n"
-            "    if not m.get('a1_anchor_ok'):\n"
-            "        m['c1_pass'] = None\n"
+            "    if not m.get('quality_check_1_anchor_ok'):\n"
+            "        m['criterion_1_pass'] = None\n"
             "    return m\n",
             encoding="utf-8",
         )
@@ -130,11 +131,11 @@ class PromisePreflight(unittest.TestCase):
         """uniagent 16: `if not all(metrics[k] for k in ADMISSIBILITY)` holds
         the verdict; the first version of the check called it unread."""
         script = (
-            "ADMISSIBILITY = ('a1_anchor_ok',)\n"
+            "ADMISSIBILITY = ('quality_check_1_anchor_ok',)\n"
             "def evaluate(rows):\n"
-            "    metrics = {'a1_anchor_ok': True, 'c1_pass': True}\n"
+            "    metrics = {'quality_check_1_anchor_ok': True, 'criterion_1_pass': True}\n"
             "    if not all(metrics[k] for k in ADMISSIBILITY):\n"
-            "        metrics['c1_pass'] = None\n"
+            "        metrics['criterion_1_pass'] = None\n"
             "    return metrics\n"
         )
         self.assertEqual(intent_id_lines(*area_with(script)), [])
@@ -142,10 +143,10 @@ class PromisePreflight(unittest.TestCase):
     def test_a_print_is_not_a_decision(self):
         script = (
             "def evaluate(rows):\n"
-            "    m = {'a1_anchor_ok': True, 'c1_pass': True}\n"
-            "    for k in ('a1_anchor_ok', 'c1_pass'):\n"
+            "    m = {'quality_check_1_anchor_ok': True, 'criterion_1_pass': True}\n"
+            "    for k in ('quality_check_1_anchor_ok', 'criterion_1_pass'):\n"
             "        print(k, m[k])\n"
-            "    print(m['a1_anchor_ok'])\n"
+            "    print(m['quality_check_1_anchor_ok'])\n"
             "    return m\n"
         )
         findings = intent_id_lines(*area_with(script))
@@ -160,7 +161,7 @@ class PromisePreflight(unittest.TestCase):
 
     def test_malformed_block_blocks(self):
         findings = intent_id_lines(
-            *area_with(SCRIPT, PROTOCOL.replace('id = "A1"', 'id = "K1"'))
+            *area_with(SCRIPT, PROTOCOL.replace('id = "quality-check-1"', 'id = "K1"'))
         )
         self.assertTrue(any("promise block" in f for f in findings), findings)
 
@@ -191,17 +192,19 @@ class PromiseSentencesBeforeTheFreeze(unittest.TestCase):
 
     def test_a_stamped_sentence_warns_before_the_freeze(self):
         found = self._preflight(self.STAMPED)
-        (warning,) = [w for w in found.warned if "[[promise]] C1" in w]
+        (warning,) = [w for w in found.warned if "[[promise]] criterion-1" in w]
         self.assertIn("still carries the stamp's `<…>` sentence", warning)
-        self.assertFalse(any("[[promise]] C1" in b for b in found.blocked))
+        self.assertFalse(any("[[promise]] criterion-1" in b for b in found.blocked))
 
     def test_a_stamped_sentence_blocks_once_frozen(self):
         found = self._preflight(self.STAMPED, frozen=True)
         self.assertTrue(
-            any("[[promise]] C1 still carries" in b for b in found.blocked),
+            any("[[promise]] criterion-1 still carries" in b for b in found.blocked),
             found.blocked,
         )
-        self.assertFalse(any("[[promise]] C1" in w for w in found.warned), found.warned)
+        self.assertFalse(
+            any("[[promise]] criterion-1" in w for w in found.warned), found.warned
+        )
 
     def test_a_written_sentence_warns_of_nothing(self):
         found = self._preflight(self.BLOCK)

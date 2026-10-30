@@ -28,8 +28,8 @@
   "n/a — standard vocabulary" only if nothing is coined>
 - **Question / hypothesis:** <!-- l --> <the one question — what do we expect?>
 - **Success / failure criterion:** <!-- lb --> <how do we recognise whether it worked?
-  One id per conjunct, written `[C…]` with its number in the brackets
-  (C1 → the key `c1_pass`), each reappearing as a lowercase key in the reportable
+  One id per conjunct, written `[criterion-…]` with its number in the brackets
+  (criterion-1 → the key `criterion_1_pass`), each reappearing as a lowercase key in the reportable
   run's metrics.json; where a number stands, name its constant from the
   [[promise]] table ("in at least `min_draws` = 2 of 3 draws") — the one
   word that links this sentence, the table and the script (a person
@@ -43,13 +43,13 @@
   any verdict is issued — yield, coverage, a control showing its expected
   value; one A per condition, each with WHY its failure makes the measurement
   uninterpretable (not merely less likely to succeed — a threshold the
-  hypothesis needs is a C, never an A); if one fails, there is no C verdict,
+  hypothesis needs is a criterion, never a quality check); if one fails, there is no criterion verdict,
   only the finding that the instrument failed; what is still read
   descriptively is labelled so (→ LAB-004 Identifiers make the intent addressable)>
 - **Registered branch:** <if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
-  licenses, one B per branch point — ask "and if [C…] fails, what then?";
-  a stop rule may fire during the run or on an inadmissible one, so a B is
+  licenses, one interpretation per branch point — ask "and if [criterion-…] fails, what then?";
+  a stop rule may fire during the run or on an inadmissible one, so an interpretation is
   decided on its own condition, not on the verdict (→ LAB-013 Registered branch when the run can answer two questions, LAB-004 Identifiers make the intent addressable);
   "n/a — only one outcome" when you have no answer yet: a decision taken
   after the run goes to Next step, labelled as taken after the run>
@@ -211,22 +211,22 @@ preflight_audit = ""
 # which refuses another; elsewhere chance. After the first measurement none
 # of them changes.
 [[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "<the criterion in one sentence: registered accuracy >= null accuracy + margin; accuracy over all items of the lane, an empty answer counts as not correct>"
 scope = ["scripts/01_measure.py"]
 constants = { margin = 0.25 }
 
 [[promise]]
-id = "A1"
-key = "a1_pass"
+id = "quality-check-1"
+key = "quality_check_1_pass"
 sentence = "<the yield condition: at most max_empty empty or unreadable answers on the registered lane>"
 scope = ["scripts/01_measure.py"]
 constants = { max_empty = 2 }
 
 [[promise]]
-id = "A2"
-key = "a2_pass"
+id = "quality-check-2"
+key = "quality_check_2_pass"
 sentence = "<the null condition: the null lane sits at chance, within null_band_items items>"
 scope = ["scripts/01_measure.py"]
 constants = { null_band_items = 1 }

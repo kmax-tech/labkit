@@ -20,9 +20,9 @@ from protocol_fixture import PID, completed_run, head  # noqa: E402
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [C1] p < .05
-- **Admissibility condition:** [A1] parse yield above 80%
-- **Null condition / anchors (in the same run):** [A2] shuffled labels stay at chance
+- **Success / failure criterion:** [criterion-1] p < .05
+- **Admissibility condition:** [quality-check-1] parse yield above 80%
+- **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 - **Raw output:** one real example
 - **Outcome:** 0.03
 
@@ -39,7 +39,11 @@ def _protocol(**head_fields) -> str:
 
 
 CLEAN_PROTOCOL = _protocol()
-CLEAN_METRICS = {"c1_pass": True, "a1_pass": True, "a2_pass": True}
+CLEAN_METRICS = {
+    "criterion_1_pass": True,
+    "quality_check_1_pass": True,
+    "quality_check_2_pass": True,
+}
 
 PROTOCOL_WITH_HOLES = CLEAN_PROTOCOL.replace(
     "- **Outcome:** 0.03", "- **Outcome:** <result here>"
@@ -58,7 +62,7 @@ def _run_finalize(area, protocol=None):
 
 class TestIntentStationReadsTheBlock(unittest.TestCase):
     """Station 2 runs whenever the block declares promises, not only when
-    the prose brackets their ids: a fit probe wrote `C1:` beside three
+    the prose brackets their ids: a fit probe wrote `criterion-1:` beside three
     [[promise]] tables, and finalize read "no intent ids registered"
     (round on d549696, 2026-10-22)."""
 
@@ -76,25 +80,29 @@ class TestIntentStationReadsTheBlock(unittest.TestCase):
 
     def test_block_ids_unbracketed_in_prose_block(self):
         proto = (
-            CLEAN_PROTOCOL.replace("[C1] ", "C1: ")
-            .replace("[A1] ", "A1: ")
-            .replace("[A2] ", "A2: ")
+            CLEAN_PROTOCOL.replace("[criterion-1] ", "criterion-1: ")
+            .replace("[quality-check-1] ", "quality-check-1: ")
+            .replace("[quality-check-2] ", "quality-check-2: ")
         )
         code, out = self._finalize(proto, CLEAN_METRICS)
         self.assertEqual(code, 1, out)
         self.assertNotIn("no intent ids registered", out)
-        self.assertIn("[C1] is in the promise block but never named in the text", out)
+        self.assertIn(
+            "[criterion-1] is in the promise block but never named in the text", out
+        )
 
     def test_a_block_key_missing_from_the_metrics_blocks(self):
-        code, out = self._finalize(CLEAN_PROTOCOL, {"c1_pass": True, "a1_pass": True})
+        code, out = self._finalize(
+            CLEAN_PROTOCOL, {"criterion_1_pass": True, "quality_check_1_pass": True}
+        )
         self.assertEqual(code, 1, out)
-        self.assertIn("[A2] registered", out)
+        self.assertIn("[quality-check-2] registered", out)
 
 
 class TestOneRunForEveryStation(unittest.TestCase):
     """A probe run after the measurement must not become the run finalize
     judges: intent-check skips it (no intent keys), so the other stations
-    must too (review 2026-10-07: scope drift and the c1_n check ran on the
+    must too (review 2026-10-07: scope drift and the criterion_1_n check ran on the
     probe and finalize said all clear)."""
 
     def test_stations_check_the_run_intent_check_chose(self):
@@ -102,12 +110,14 @@ class TestOneRunForEveryStation(unittest.TestCase):
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
             completed_run(
-                area, "2026-10-07T10-00-00_meas", metrics={**CLEAN_METRICS, "c1_n": 7}
+                area,
+                "2026-10-07T10-00-00_meas",
+                metrics={**CLEAN_METRICS, "criterion_1_n": 7},
             )
             completed_run(area, "2026-10-07T11-00-00_prob", metrics={"rows_seen": 2})
             code, out = _run_finalize(area)
         self.assertIn("2026-10-07T10-00-00_meas: completed (skipped 1 newer", out)
-        self.assertIn("c1_n", out)  # the warning names the measurement's key
+        self.assertIn("criterion_1_n", out)  # the warning names the measurement's key
         self.assertNotIn("2026-10-07T11-00-00_prob: completed", out)
 
 
@@ -164,7 +174,9 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            completed_run(area, "r1", metrics={"c1_pass": True}, completion=False)
+            completed_run(
+                area, "r1", metrics={"criterion_1_pass": True}, completion=False
+            )
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
         self.assertIn("no completed run bound to", out)
@@ -178,7 +190,9 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            completed_run(area, "r1", metrics={"c1_pass": True}, completion=False)
+            completed_run(
+                area, "r1", metrics={"criterion_1_pass": True}, completion=False
+            )
             collected = gate.Findings(tell=None)
             finalize.finalize_area(area, None, collected)
         (blocker,) = [
@@ -193,7 +207,11 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            completed_run(area, "r1", metrics={"c1_pass": True, "a1_pass": True})
+            completed_run(
+                area,
+                "r1",
+                metrics={"criterion_1_pass": True, "quality_check_1_pass": True},
+            )
             collected = gate.Findings(tell=None)
             code = finalize.finalize_area(area, None, collected)
         self.assertEqual(code, 1)
@@ -201,9 +219,13 @@ class TestFinalize(unittest.TestCase):
         self.assertEqual(
             len(intent), 2, collected.blocked
         )  # the prose's line, the block's
-        self.assertIn("[A2] registered, but metrics.json has no 'a2'", intent[0])
         self.assertIn(
-            "[A2] declares key 'a2_pass', which the run does not report", intent[1]
+            "[quality-check-2] registered, but metrics.json has no 'quality_check_2'",
+            intent[0],
+        )
+        self.assertIn(
+            "[quality-check-2] declares key 'quality_check_2_pass', which the run does not report",
+            intent[1],
         )
         self.assertNotIn("see its lines above", "\n".join(collected.blocked))
 
@@ -229,10 +251,14 @@ class TestFinalize(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-            completed_run(area, "r1", metrics={"c1_pass": True, "a1_pass": True})
+            completed_run(
+                area,
+                "r1",
+                metrics={"criterion_1_pass": True, "quality_check_1_pass": True},
+            )
             code, out = _run_finalize(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("[A2] registered", out)
+        self.assertIn("[quality-check-2] registered", out)
 
     def test_open_fields_are_warnings(self):
         with tempfile.TemporaryDirectory() as d:
@@ -266,9 +292,9 @@ class TestFinalize(unittest.TestCase):
         """Neither prose nor block registers an id: nothing to hold."""
         proto = (
             _protocol(promises=None)
-            .replace("[C1] ", "")
-            .replace("[A1] ", "")
-            .replace("[A2] ", "")
+            .replace("[criterion-1] ", "")
+            .replace("[quality-check-1] ", "")
+            .replace("[quality-check-2] ", "")
         )
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
@@ -313,7 +339,7 @@ class AreaTestsBeforeReporting(unittest.TestCase):
     def area(self, d: str, test_body: str | None) -> Path:
         area = Path(d)
         (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
-        completed_run(area, "r1", metrics={"c1_pass": True})
+        completed_run(area, "r1", metrics={"criterion_1_pass": True})
         if test_body is not None:
             (area / "tests").mkdir()
             (area / "tests" / f"test_{area.name}.py").write_text(test_body)

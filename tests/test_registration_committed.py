@@ -39,9 +39,9 @@ from labkit.gates import finalize, report_check
 RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"
 BAR = (
-    "- **Success / failure criterion:** [C1] accuracy >= 0.8\n"
-    "- **Admissibility condition:** [A1] no empty answer\n"
-    "- **Null condition / anchors:** [A2] shuffled labels near chance\n"
+    "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
+    "- **Admissibility condition:** [quality-check-1] no empty answer\n"
+    "- **Null condition / anchors:** [quality-check-2] shuffled labels near chance\n"
 )
 #: the local time zones a counter-test starts its second run under: twelve
 #: hours behind UTC (its id sorts before a run started a moment earlier
@@ -130,7 +130,7 @@ class _Repository(unittest.TestCase):
         repository), recorded as runlog records it: `git` the short form,
         `+dirty` with DIRTY, `git_full` the full sha."""
         run = completed_run(
-            self.area, name, metrics={"c1_pass": True}, run_kind=run_kind
+            self.area, name, metrics={"criterion_1_pass": True}, run_kind=run_kind
         )
         cfg = run / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
@@ -279,13 +279,13 @@ class RegistrationAtTheFirstMeasurement(_Repository):
 
 
 def _block(null_band: float, sentence: str = "the null lane stays near chance") -> str:
-    """A promise block whose [A2] carries NULL_BAND, as the repair case's did."""
+    """A promise block whose [quality-check-2] carries NULL_BAND, as the repair case's did."""
     return (
-        '[[promise]]\nid = "C1"\nkey = "c1_pass"\nsentence = "the criterion holds"\n'
+        '[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "the criterion holds"\n'
         'scope = ["scripts/01_measure.py"]\n\n'
-        '[[promise]]\nid = "A1"\nkey = "a1_pass"\nsentence = "the yield suffices"\n'
+        '[[promise]]\nid = "quality-check-1"\nkey = "quality_check_1_pass"\nsentence = "the yield suffices"\n'
         'scope = ["scripts/01_measure.py"]\n\n'
-        f'[[promise]]\nid = "A2"\nkey = "a2_pass"\nsentence = "{sentence}"\n'
+        f'[[promise]]\nid = "quality-check-2"\nkey = "quality_check_2_pass"\nsentence = "{sentence}"\n'
         f'scope = ["scripts/01_measure.py"]\nconstants = {{ null_band = {null_band} }}\n'
     )
 
@@ -300,7 +300,7 @@ def _registration_changes(area: Path, proto: Path) -> list:
 class RegistrationAsFirstMeasured(_Repository):
     """K3 (docs/notes/2026-10-27-new-registration-contracts.md): the
     answering run holds the registration its protocol's first measurement
-    recorded. The repair case (2026-10-27): run 98dd failed [A2] at
+    recorded. The repair case (2026-10-27): run 98dd failed [quality-check-2] at
     null_band 0.1, the band became 0.15 "to accommodate observed null
     score", and the next run passed."""
 
@@ -328,29 +328,33 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn(
             f"the registration changed after the first measurement {self.FIRST}", line
         )
-        self.assertIn("[A2] null_band 0.1 → 0.15", line)
+        self.assertIn("[quality-check-2] null_band 0.1 → 0.15", line)
         self.assertIn(
             f"way out: restore the [[promise]] tables as {self.FIRST} registered", line
         )
-        self.assertIn("[A2] null_band 0.1 back", line)
+        self.assertIn("[quality-check-2] null_band 0.1 back", line)
         self.assertIn(f"git show {first[:12]}:experiments/01-x/PROTOCOL-x.md", line)
         self.assertIn("register anew", line)
 
     def test_the_way_back_undoes_every_change_and_then_passes(self):
-        """The start state of the repair case: [A3] added and the band raised
+        """The start state of the repair case: [quality-check-3] added and the band raised
         after the first measurement. The way back names both, and taken, it
         releases the protocol — a restore that named only the band left
-        [A3] and was held again."""
+        [quality-check-3] and was held again."""
         first = self._register(_block(0.1))
         self._run(first, self.FIRST)
         a3 = (
-            '\n[[promise]]\nid = "A3"\nkey = "a3_pass"\nsentence = "no leak"\n'
+            '\n[[promise]]\nid = "quality-check-3"\nkey = "quality_check_3_pass"\nsentence = "no leak"\n'
             'scope = ["scripts/01_measure.py"]\n'
         )
         self._run(self._register(_block(0.15) + a3), RUN)
         (line,) = self._changes()
-        self.assertIn("[A2] null_band 0.1 → 0.15; [A3] added", line)
-        self.assertIn("([A2] null_band 0.1 back; [A3] out)", line)
+        self.assertIn(
+            "[quality-check-2] null_band 0.1 → 0.15; [quality-check-3] added", line
+        )
+        self.assertIn(
+            "([quality-check-2] null_band 0.1 back; [quality-check-3] out)", line
+        )
         self.assertIn('[replaces] protocol = "', line)
         self._run(self._register(_block(0.1)), "2026-10-07T11-00-00_cd34")
         self.assertEqual(self._changes(), [])
@@ -376,11 +380,13 @@ class RegistrationAsFirstMeasured(_Repository):
         self._run(self._register(_block(0.1, "the null lane stays somewhere")), RUN)
         (line,) = self._changes()
         self.assertIn(
-            '[A2] sentence "the null lane stays near chance" → '
+            '[quality-check-2] sentence "the null lane stays near chance" → '
             '"the null lane stays somewhere"',
             line,
         )
-        self.assertIn('[A2] sentence "the null lane stays near chance" back', line)
+        self.assertIn(
+            '[quality-check-2] sentence "the null lane stays near chance" back', line
+        )
         self.assertIn("git show", line)
 
     def test_a_sentence_and_a_bar_changed_together_are_both_named(self):
@@ -392,13 +398,13 @@ class RegistrationAsFirstMeasured(_Repository):
         self._run(self._register(_block(0.15, "within the calibrated band")), RUN)
         (line,) = self._changes()
         self.assertIn(
-            '[A2] sentence "the null lane stays near chance" → '
-            '"within the calibrated band"; [A2] null_band 0.1 → 0.15',
+            '[quality-check-2] sentence "the null lane stays near chance" → '
+            '"within the calibrated band"; [quality-check-2] null_band 0.1 → 0.15',
             line,
         )
         self.assertIn(
-            '([A2] sentence "the null lane stays near chance" back; '
-            "[A2] null_band 0.1 back)",
+            '([quality-check-2] sentence "the null lane stays near chance" back; '
+            "[quality-check-2] null_band 0.1 back)",
             line,
         )
         # restored as told, nothing is left to hold
@@ -419,7 +425,7 @@ class RegistrationAsFirstMeasured(_Repository):
         self._run(first, self.FIRST, dirty=True)
         self._run(self._register(_block(0.15)), RUN)
         (line,) = self._changes()
-        self.assertIn("[A2] null_band 0.1 → 0.15", line)
+        self.assertIn("[quality-check-2] null_band 0.1 → 0.15", line)
         self.assertIn("the sentences unread (its first measurement", line)
         self.assertIn("cannot be read back", line)
 
@@ -588,7 +594,7 @@ class OutsideARepository(unittest.TestCase):
         (area / "PROTOCOL-x.md").write_text(
             head(repeat_cost="low", result=RUN) + REGISTRATION, encoding="utf-8"
         )
-        run = completed_run(area, RUN, metrics={"c1_pass": True})
+        run = completed_run(area, RUN, metrics={"criterion_1_pass": True})
         code, out = _report_check(area)
         self.assertEqual(code, 0, out)
         self.assertIn(

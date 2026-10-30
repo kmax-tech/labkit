@@ -292,7 +292,7 @@ class ApplyScreenTest(unittest.TestCase):
 class MeaningTest(unittest.TestCase):
     """A matching key is not a matching quantity: the kept number counts as
     the task's only when its SCORE and its labelled items are the task's
-    (2026-10-28: c1_score read for val_roc_auc proves the name only)."""
+    (2026-10-28: criterion_1_score read for val_roc_auc proves the name only)."""
 
     def test_fit_assay_holds_score_and_items(self):
         m = sab_cases.meaning("fit-assay")

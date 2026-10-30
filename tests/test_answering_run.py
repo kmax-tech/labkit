@@ -40,7 +40,8 @@ def _run(
         config_text if config_text is not None else json.dumps(cfg), encoding="utf-8"
     )
     (d / "metrics.json").write_text(
-        json.dumps({"c1_pass": True} if metrics is None else metrics), encoding="utf-8"
+        json.dumps({"criterion_1_pass": True} if metrics is None else metrics),
+        encoding="utf-8",
     )
     if completion:
         (d / "completion.json").write_text(

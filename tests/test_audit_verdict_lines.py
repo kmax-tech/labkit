@@ -17,7 +17,7 @@ from unittest import mock
 
 from labkit.gates import audit
 
-PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [C1].\n"
+PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [criterion-1].\n"
 
 
 def _area() -> Path:

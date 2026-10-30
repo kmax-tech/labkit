@@ -68,7 +68,7 @@ class ReportCheck(unittest.TestCase):
 
     def _answered(self, area: Path, name: str = "2026-01-01T00-00-00_0001") -> Path:
         """The completed run bound to the fixture's protocol that answers it."""
-        return completed_run(area, name, metrics={"c1_pass": True})
+        return completed_run(area, name, metrics={"criterion_1_pass": True})
 
     def _audited(self, area: Path, run: Path | None = None) -> None:
         """A decided analysis record of the area's code, promises and RUN
@@ -259,7 +259,9 @@ class ReportCheck(unittest.TestCase):
         the gate said "nothing owed here"."""
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
-        completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
+        completed_run(
+            area, run.name, metrics={"criterion_1_pass": True}, run_kind="probe"
+        )
         self._audited(area, run)
         code, out = self._run(area)
         self.assertEqual(code, 1, out)
@@ -270,7 +272,9 @@ class ReportCheck(unittest.TestCase):
     def test_at_low_an_acknowledged_run_is_refused(self):
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
-        completed_run(area, run.name, metrics={"c1_pass": True}, unfrozen_ack=True)
+        completed_run(
+            area, run.name, metrics={"criterion_1_pass": True}, unfrozen_ack=True
+        )
         self._audited(area, run)
         code, out = self._run(area)
         self.assertEqual(code, 1, out)
@@ -456,7 +460,9 @@ class ReportCheck(unittest.TestCase):
         read only `freeze` off the contract)."""
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
-        completed_run(area, run.name, metrics={"c1_pass": True}, run_kind="probe")
+        completed_run(
+            area, run.name, metrics={"criterion_1_pass": True}, run_kind="probe"
+        )
         low = standard_contract.lane("low")
         with mock.patch.object(report_check, "lane", return_value=low):
             code, out = self._run(area)
@@ -537,7 +543,7 @@ class IfReported(unittest.TestCase):
             self._git(area.parent.parent, "add", "-A")
             self._git(area.parent.parent, "commit", "-qm", "registration")
         run = completed_run(
-            area, self.RUN, metrics={"c1_pass": True}, run_kind=run_kind
+            area, self.RUN, metrics={"criterion_1_pass": True}, run_kind=run_kind
         )
         if git:
             started_at(run, area.parent.parent)
@@ -582,7 +588,7 @@ class IfReported(unittest.TestCase):
         reopened — the hook read the tree and passed the commit (audit
         2026-10-19)."""
         area = self._area(
-            f"C1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
         )
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
@@ -609,7 +615,7 @@ class IfReported(unittest.TestCase):
 
     def test_staged_names_the_index_as_the_state_held(self):
         area = self._area(
-            f"C1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
         )
         code, out = self._staged_gate(area.parent.parent, area / "PROTOCOL-x.md")
         self.assertEqual(code, 0, out)
@@ -619,7 +625,7 @@ class IfReported(unittest.TestCase):
         """A script modified and one untracked under a reported number: the
         stations would judge a state the commit does not hold."""
         area = self._area(
-            f"C1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
         )
         root = area.parent.parent
         (area / "scripts" / "02_analyze.py").write_text(
@@ -639,7 +645,7 @@ class IfReported(unittest.TestCase):
         not in the index: the commit keeps the protocol, so the gate holds
         it — the search for protocols read the tree and found none."""
         area = self._area(
-            f"C1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
         )
         root = area.parent.parent
         script = area / "scripts" / "02_analyze.py"
@@ -658,7 +664,7 @@ class IfReported(unittest.TestCase):
         for a rejected review's effect and withdrew. The hold now names the
         unstaged protocol and `git add`; staged, that line is gone (the twin).
         """
-        area = self._area("C1 met", git=True)
+        area = self._area("criterion-1 met", git=True)
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
         text = proto.read_text(encoding="utf-8")
@@ -684,7 +690,9 @@ class IfReported(unittest.TestCase):
         """lib/scoring.py lies in no area; an area whose script imports it is
         touched by its change, and one that does not is not."""
         area = self._area(
-            f"C1 met · recorded: (run {self.RUN})", declared=self.RUN, git=False
+            f"criterion-1 met · recorded: (run {self.RUN})",
+            declared=self.RUN,
+            git=False,
         )
         root = area.parent.parent
         (root / "lib").mkdir()
@@ -726,7 +734,9 @@ class IfReported(unittest.TestCase):
     def test_a_changed_script_reopens_the_areas_reported_number(self):
         """The protocol untouched, a script under it edited: the analysis
         audit saw other code, and both hooks passed it (audit 2026-10-19)."""
-        area = self._area(f"C1 met · recorded: (run {self.RUN})", declared=self.RUN)
+        area = self._area(
+            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+        )
         script = area / "scripts" / "02_analyze.py"
         code, out = self._gate(area, script)
         self.assertEqual(code, 0, out)  # the twin: unchanged, the gate holds
@@ -769,7 +779,9 @@ class IfReported(unittest.TestCase):
 
     def test_a_reported_full_run_passes(self):
         code, out = self._gate(
-            self._area(f"C1 met · recorded: (run {self.RUN})", declared=self.RUN)
+            self._area(
+                f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+            )
         )
         self.assertEqual(code, 0, out)
         self.assertIn(f"its head has adopted {self.RUN}", out)
@@ -779,7 +791,7 @@ class IfReported(unittest.TestCase):
         """Third haiku round, t3 and t5: the probe's number, written back."""
         code, out = self._gate(
             self._area(
-                f"C1 met · recorded: (run {self.RUN})",
+                f"criterion-1 met · recorded: (run {self.RUN})",
                 declared=self.RUN,
                 run_kind="probe",
             )
@@ -790,7 +802,7 @@ class IfReported(unittest.TestCase):
     def test_citing_another_run_than_the_one_that_answers_blocks(self):
         other = "2026-10-01T09-00-00_ffff"
         code, out = self._gate(
-            self._area(f"c1_pass = True (run {other})", declared=other)
+            self._area(f"criterion_1_pass = True (run {other})", declared=other)
         )
         self.assertEqual(code, 1, out)
         self.assertIn("finalize: ", out)
@@ -799,7 +811,9 @@ class IfReported(unittest.TestCase):
     def test_a_reported_run_without_its_analysis_audit_blocks(self):
         code, out = self._gate(
             self._area(
-                f"C1 met · recorded: (run {self.RUN})", declared=self.RUN, audited=False
+                f"criterion-1 met · recorded: (run {self.RUN})",
+                declared=self.RUN,
+                audited=False,
             )
         )
         self.assertEqual(code, 1, out)
@@ -832,7 +846,7 @@ class RegisteredReport(unittest.TestCase):
         git: bool = False,
     ) -> Path:
         return self._fixture(
-            f"C1 met · recorded: (run {self.RUN})",
+            f"criterion-1 met · recorded: (run {self.RUN})",
             declared=declared,
             git=git,
             report=report,

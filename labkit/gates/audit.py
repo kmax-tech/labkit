@@ -1581,7 +1581,7 @@ def decision_lines(
             f"owed for {owed}):"
         )
         promised = may_leave_unassessed(area, protocol)
-        # the id named with its field: an agent cannot pick `A2` unnamed
+        # the id named with its field: an agent cannot pick `quality-check-2` unnamed
         named = effect_ids_named(area, protocol) if promised else ""
         # what the route owes and what it does by itself: readers took the
         # review clause of `stands` for this route too, and named every
@@ -2268,8 +2268,8 @@ def may_leave_unassessed(area: Path, protocol: Path | None) -> bool:
 
 def effect_ids_named(area: Path, protocol: Path | None) -> str:
     """The ids an effect may leave not assessable, each with its field's
-    name (`protocol_check.named_ids`): "C1 (success / failure criterion),
-    A1 (admissibility condition)" — "" when the protocol registers none or
+    name (`protocol_check.named_ids`): "criterion-1 (success / failure criterion),
+    quality-check-1 (admissibility condition)" — "" when the protocol registers none or
     is not known here (`may_leave_unassessed` decides whether the route is
     named at all)."""
     try:

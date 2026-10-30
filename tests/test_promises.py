@@ -51,15 +51,15 @@ def block(*entries: str) -> str:
 
 
 C1 = """[[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "accuracy >= min_acc"
 scope = ["scripts/01_measure.py:compute_score"]
 constants = { min_acc = 0.7 }
 """
 A1 = """[[promise]]
-id = "A1"
-key = "a1_anchor_ok"
+id = "quality-check-1"
+key = "quality_check_1_anchor_ok"
 sentence = "the anchor items come out at 1.0, else no verdict"
 scope = ["scripts/01_measure.py"]
 """
@@ -73,7 +73,8 @@ def parsed(text: str) -> promises.PromiseTables:
 
 
 def protocol_text(
-    *entries: str, prose: str = "Criterion [C1]; admissibility [A1].\n"
+    *entries: str,
+    prose: str = "Criterion [criterion-1]; admissibility [quality-check-1].\n",
 ) -> str:
     """A protocol whose one ```toml block holds the head and `entries`."""
     return head(promises="\n".join(entries)) + "\n" + prose
@@ -95,15 +96,15 @@ class Parse(unittest.TestCase):
 
     def test_entries_kinds_constants(self):
         b = parsed(protocol_text(C1, A1))
-        self.assertEqual([p.id for p in b.promises], ["C1", "A1"])
-        self.assertEqual(b.by_id()["C1"].kind, "criterion")
-        self.assertEqual(b.by_id()["A1"].kind, "admissibility")
-        self.assertEqual(b.by_id()["C1"].constants, {"min_acc": 0.7})
-        self.assertEqual(b.by_id()["A1"].constants, {})
+        self.assertEqual([p.id for p in b.promises], ["criterion-1", "quality-check-1"])
+        self.assertEqual(b.by_id()["criterion-1"].kind, "criterion")
+        self.assertEqual(b.by_id()["quality-check-1"].kind, "quality-check")
+        self.assertEqual(b.by_id()["criterion-1"].constants, {"min_acc": 0.7})
+        self.assertEqual(b.by_id()["quality-check-1"].constants, {})
 
     def test_digest_follows_the_block_not_the_prose(self):
         a = parsed(protocol_text(C1))
-        b = parsed(protocol_text(C1, prose="other prose [C1]\n"))
+        b = parsed(protocol_text(C1, prose="other prose [criterion-1]\n"))
         c = parsed(protocol_text(C1.replace("0.7", "0.8")))
         self.assertEqual(a.sha, b.sha)
         self.assertNotEqual(a.sha, c.sha)
@@ -130,19 +131,38 @@ class Parse(unittest.TestCase):
         self.assertRejects(block(C1) + block(A1), "exactly one")
 
     def test_invalid_toml(self):
-        self.assertRejects(block('[[promise]]\nid = "C1\n'), "not valid TOML")
+        self.assertRejects(block('[[promise]]\nid = "criterion-1\n'), "not valid TOML")
 
     def test_earlier_letter_in_block(self):
         self.assertRejects(
-            block(C1.replace('"C1"', '"K1"')), "is not C<n>, A<n> or B<n>"
+            block(C1.replace('"criterion-1"', '"K1"')),
+            "is not criterion-<n>, quality-check-<n> or interpretation-<n>",
+        )
+
+    def test_the_letters_of_0_103_are_refused_naming_the_version(self):
+        """A protocol in the C/A/B letters is not read: refused with the
+        version that reads it, never checked as if it registered nothing.
+        The twin: the kind-word id parses (every test above)."""
+        self.assertRejects(
+            block(
+                C1.replace('"criterion-1"', '"C1"').replace(
+                    '"criterion_1_pass"', '"c1_pass"'
+                )
+            ),
+            "labkit 0.103.0 (C/A/B)",
+        )
+        self.assertEqual(
+            promises.earlier_ids("[C1] and [A2] and [criterion-1]"), ["A2", "C1"]
         )
 
     def test_key_outside_namespace(self):
         self.assertRejects(
-            block(C1.replace('"c1_pass"', '"c2_pass"')), "outside the id's namespace"
+            block(C1.replace('"criterion_1_pass"', '"criterion_2_pass"')),
+            "outside the id's namespace",
         )
         self.assertRejects(
-            block(C1.replace('"c1_pass"', '"c10_pass"')), "outside the id's namespace"
+            block(C1.replace('"criterion_1_pass"', '"criterion_10_pass"')),
+            "outside the id's namespace",
         )
 
     def test_duplicate_id(self):
@@ -170,9 +190,19 @@ class Alphabet(unittest.TestCase):
         metrics = {"f1_score": 1, "p1": 1, "q1": 1, "r1_recall": 1, "h1": 1}
         self.assertEqual(promises.reported_ids(metrics), set())
 
-    def test_only_c_a_b_keys_are_ids(self):
-        metrics = {"c1_pass": 1, "a2": 1, "b1_branch": "x", "k1_pass": 1, "n1": 1}
-        self.assertEqual(promises.reported_ids(metrics), {"c1", "a2", "b1"})
+    def test_only_kind_word_keys_are_ids(self):
+        metrics = {
+            "criterion_1_pass": 1,
+            "quality_check_2": 1,
+            "interpretation_1_branch": "x",
+            "c1_pass": 1,
+            "k1_pass": 1,
+            "n1": 1,
+        }
+        self.assertEqual(
+            promises.reported_ids(metrics),
+            {"criterion-1", "quality-check-2", "interpretation-1"},
+        )
 
     def test_one_alphabet_everywhere(self):
         self.assertIs(intent_check.ID_KEY, promises.ID_KEY)
@@ -182,9 +212,10 @@ class Alphabet(unittest.TestCase):
     def test_prose_mismatch_both_directions(self):
         b = parsed(block(C1))
         self.assertEqual(
-            promises.prose_mismatch("[C1] and [A2] and [K1]", b), (["A2"], [])
+            promises.prose_mismatch("[criterion-1] and [quality-check-2] and [K1]", b),
+            (["quality-check-2"], []),
         )
-        self.assertEqual(promises.prose_mismatch("only [K1]", b), ([], ["C1"]))
+        self.assertEqual(promises.prose_mismatch("only [K1]", b), ([], ["criterion-1"]))
 
 
 class ScopeHash(unittest.TestCase):
@@ -284,16 +315,16 @@ class Chain(unittest.TestCase):
             rc = intent_check.main([str(self.protocol)])
         return rc, buf.getvalue()
 
-    GOOD = {"c1_pass": True, "a1_anchor_ok": True}
+    GOOD = {"criterion_1_pass": True, "quality_check_1_anchor_ok": True}
 
     def test_run_records_block_and_scope_per_promise(self):
         run = self.start()
         rec = json.loads((run.dir / "config.json").read_text())["promises"]
         self.assertEqual(rec["block_sha"], promises.load(self.protocol).sha)
-        self.assertEqual(set(rec["ids"]), {"C1", "A1"})
-        self.assertEqual(rec["ids"]["C1"]["constants"], {"min_acc": 0.7})
+        self.assertEqual(set(rec["ids"]), {"criterion-1", "quality-check-1"})
+        self.assertEqual(rec["ids"]["criterion-1"]["constants"], {"min_acc": 0.7})
         self.assertEqual(
-            rec["ids"]["C1"]["declared_scope_sha"],
+            rec["ids"]["criterion-1"]["declared_scope_sha"],
             promises.declared_scope_sha(
                 self.area, ("scripts/01_measure.py:compute_score",)
             ),
@@ -316,9 +347,11 @@ class Chain(unittest.TestCase):
         self.assertFalse((self.area / "runs").exists())
 
     def test_constants_are_read_from_the_protocol(self):
-        self.assertEqual(promises.constants(self.protocol, "C1"), {"min_acc": 0.7})
+        self.assertEqual(
+            promises.constants(self.protocol, "criterion-1"), {"min_acc": 0.7}
+        )
         with self.assertRaises(promises.PromiseError):
-            promises.constants(self.protocol, "C9")
+            promises.constants(self.protocol, "criterion-9")
 
     def test_intent_check_green_on_the_bound_block(self):
         self.complete(self.start(), self.GOOD)
@@ -379,19 +412,24 @@ class Chain(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_declared_key_must_be_reported_exactly(self):
-        self.complete(self.start(), {"c1_debug": 1, "a1_anchor_ok": True})
-        rc, out = self.check()
-        self.assertEqual(rc, 1)
-        self.assertIn("declares key 'c1_pass'", out)
-
-    def test_prose_and_block_must_name_the_same_ids(self):
-        self.protocol.write_text(
-            protocol_text(C1, A1, prose="only [C1] and [B1]\n"), encoding="utf-8"
+        self.complete(
+            self.start(), {"criterion_1_debug": 1, "quality_check_1_anchor_ok": True}
         )
         rc, out = self.check()
         self.assertEqual(rc, 1)
-        self.assertIn("[B1] appears in the text but not in the promise block", out)
-        self.assertIn("[A1] is in the promise block but never named", out)
+        self.assertIn("declares key 'criterion_1_pass'", out)
+
+    def test_prose_and_block_must_name_the_same_ids(self):
+        self.protocol.write_text(
+            protocol_text(C1, A1, prose="only [criterion-1] and [interpretation-1]\n"),
+            encoding="utf-8",
+        )
+        rc, out = self.check()
+        self.assertEqual(rc, 1)
+        self.assertIn(
+            "[interpretation-1] appears in the text but not in the promise block", out
+        )
+        self.assertIn("[quality-check-1] is in the promise block but never named", out)
 
     def test_recheck_refuses_a_changed_block(self):
         """Durchstich 2026-10-06: the threshold lowered after the run left
@@ -436,7 +474,7 @@ class Chain(unittest.TestCase):
         )
         out = station()
         self.assertIn("BLOCKER: declared scope changed", out)
-        self.assertIn("[C1]", out)
+        self.assertIn("[criterion-1]", out)
 
     def test_recheck_refuses_a_changed_scope(self):
         run = self.complete(self.start(), self.GOOD)
@@ -447,8 +485,8 @@ class Chain(unittest.TestCase):
         )
         with self.assertRaises(SystemExit) as cm:
             recheck.scopes_unchanged(run, self.area)
-        self.assertIn("[C1]", str(cm.exception))
-        self.assertIn("[A1]", str(cm.exception))
+        self.assertIn("[criterion-1]", str(cm.exception))
+        self.assertIn("[quality-check-1]", str(cm.exception))
 
 
 if __name__ == "__main__":
@@ -517,7 +555,8 @@ class Constants(unittest.TestCase):
             'scope = ["scripts/01_measure.py"]\nconstants = { min_acc = 0.7 }',
         )
         self.assertRejects(
-            protocol_text(C1, a1), "constant min_acc already stands in [[promise]] C1"
+            protocol_text(C1, a1),
+            "constant min_acc already stands in [[promise]] criterion-1",
         )
 
     def test_a_name_twice_in_one_table_is_toml_s_refusal(self):
@@ -558,7 +597,7 @@ class Constants(unittest.TestCase):
                 'sentence = "<the criterion in one sentence>"',
             )
         )
-        self.assertEqual(promises.placeholder_sentences(stamped), ["C1"])
+        self.assertEqual(promises.placeholder_sentences(stamped), ["criterion-1"])
         for frozen, full_run in ((True, False), (False, True)):
             with self.subTest(frozen=frozen, full_run=full_run):
                 owed = (
@@ -568,7 +607,8 @@ class Constants(unittest.TestCase):
                     or ""
                 )
                 self.assertIn(
-                    "[[promise]] C1 still carries the stamp's `<…>` sentence", owed
+                    "[[promise]] criterion-1 still carries the stamp's `<…>` sentence",
+                    owed,
                 )
         self.assertIsNone(
             promises.promise_tables_owed(stamped, frozen=False, full_run=False)
@@ -611,9 +651,13 @@ class KeyKind(unittest.TestCase):
     """`promises.key_kind` is the one way to ask a key's letter."""
 
     def test_kinds_and_outsiders(self):
-        self.assertEqual(promises.key_kind("c1_pass"), "criterion")
-        self.assertEqual(promises.key_kind("a2"), "admissibility")
-        self.assertEqual(promises.key_kind("b10_branch"), "branch")
+        self.assertEqual(promises.key_kind("criterion_1_pass"), "criterion")
+        self.assertEqual(promises.key_kind("quality_check_2"), "quality-check")
+        self.assertEqual(
+            promises.key_kind("interpretation_10_branch"), "interpretation"
+        )
+        self.assertIsNone(promises.key_kind("c1_pass"))
+        self.assertIsNone(promises.key_kind("quality-check-2"))
         for key in ("f1", "p1_x", "criterion_pass", "ac1_pass", "k1_pass"):
             self.assertIsNone(promises.key_kind(key), key)
 
@@ -627,32 +671,50 @@ class SnapshotChanges(unittest.TestCase):
 
     def test_each_change_of_the_registration_is_named(self):
         a2 = {
-            "key": "a2_pass",
+            "key": "quality_check_2_pass",
             "constants": {"null_band": 0.1},
             "scope": ["s.py"],
             "declared_scope_sha": "x",
         }
         was = self.snap(
-            "aaa", A2=a2, A3={"key": "a3_pass", "constants": {}, "scope": ["s.py"]}
+            "aaa",
+            **{
+                "quality-check-2": a2,
+                "quality-check-3": {
+                    "key": "quality_check_3_pass",
+                    "constants": {},
+                    "scope": ["s.py"],
+                },
+            },
         )
         now = self.snap(
             "bbb",
-            A2={**a2, "constants": {"null_band": 0.15}, "scope": ["s.py", "t.py"]},
-            C2={"key": "c2_pass", "constants": {}, "scope": []},
+            **{
+                "quality-check-2": {
+                    **a2,
+                    "constants": {"null_band": 0.15},
+                    "scope": ["s.py", "t.py"],
+                },
+                "criterion-2": {
+                    "key": "criterion_2_pass",
+                    "constants": {},
+                    "scope": [],
+                },
+            },
         )
         self.assertEqual(
             promises.snapshot_changes(was, now),
             [
-                "[C2] added",
-                "[A3] dropped",
-                "[A2] null_band 0.1 → 0.15",
-                "[A2] scope ['s.py'] → ['s.py', 't.py']",
+                "[criterion-2] added",
+                "[quality-check-3] dropped",
+                "[quality-check-2] null_band 0.1 → 0.15",
+                "[quality-check-2] scope ['s.py'] → ['s.py', 't.py']",
             ],
         )
 
     def test_the_same_block_and_a_repaired_code_name_nothing(self):
         a2 = {
-            "key": "a2_pass",
+            "key": "quality_check_2_pass",
             "constants": {"null_band": 0.1},
             "scope": ["s.py"],
             "declared_scope_sha": "x",
@@ -673,7 +735,7 @@ class SnapshotChanges(unittest.TestCase):
         )
 
     def test_a_block_that_differs_in_nothing_kept_differs_in_a_sentence(self):
-        a2 = {"key": "a2_pass", "constants": {}, "scope": ["s.py"]}
+        a2 = {"key": "quality_check_2_pass", "constants": {}, "scope": ["s.py"]}
         self.assertEqual(
             promises.snapshot_changes(self.snap("aaa", A2=a2), self.snap("bbb", A2=a2)),
             ["a promise's sentence"],

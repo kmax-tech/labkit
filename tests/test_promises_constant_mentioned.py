@@ -1,4 +1,4 @@
-"""A registered constant that no sentence names and no scope file reads (2026-10-17, plan P step C3).
+"""A registered constant that no sentence names and no scope file reads (2026-10-17, plan P step criterion-3).
 
 Three Haiku protocols (labkit-paper area 09, 2026-10-16) kept the stamp's
 `margin`, `max_empty` and `null_band_items` under sentences that never used
@@ -25,22 +25,22 @@ from test_protocol_check import PILOT_FIELDS  # noqa: E402
 
 BLOCK = """\
 [[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "accuracy is at least the null lane's plus margin"
 scope = ["scripts/01_measure.py"]
 constants = { margin = 0.25 }
 
 [[promise]]
-id = "A1"
-key = "a1_pass"
+id = "quality-check-1"
+key = "quality_check_1_pass"
 sentence = "every item gets an answer"
 scope = ["scripts/01_measure.py"]
 constants = { max_empty = 0 }
 
 [[promise]]
-id = "A2"
-key = "a2_pass"
+id = "quality-check-2"
+key = "quality_check_2_pass"
 sentence = "the null lane sits at chance"
 scope = ["scripts/01_measure.py:evaluate_rows"]
 constants = { null_band_items = 1 }
@@ -48,7 +48,7 @@ constants = { null_band_items = 1 }
 SCRIPT = """\
 def evaluate_rows(rows, cfg):
     empty = sum(1 for r in rows if not r["answer"])
-    return {"a1_pass": empty <= cfg.max_empty, "c1_pass": True, "a2_pass": True}
+    return {"quality_check_1_pass": empty <= cfg.max_empty, "criterion_1_pass": True, "quality_check_2_pass": True}
 
 
 def elsewhere(cfg):
@@ -76,13 +76,14 @@ class UnmentionedConstants(unittest.TestCase):
         # margin: in the sentence; max_empty: read by the scope file;
         # null_band_items: read only OUTSIDE the declared function → named
         [line] = promises.unmentioned_constants(block(), area_with())
-        self.assertIn("A2: constant `null_band_items`", line)
+        self.assertIn("quality-check-2: constant `null_band_items`", line)
         self.assertIn("scripts/01_measure.py:evaluate_rows", line)
         self.assertIn("static evidence", line)
 
     def test_read_inside_the_declared_function_is_silent(self):
         inside = SCRIPT.replace(
-            '"a2_pass": True}', '"a2_pass": abs(len(rows) // 2) <= cfg.null_band_items}'
+            '"quality_check_2_pass": True}',
+            '"quality_check_2_pass": abs(len(rows) // 2) <= cfg.null_band_items}',
         )
         self.assertEqual(promises.unmentioned_constants(block(), area_with(inside)), [])
 
@@ -94,7 +95,7 @@ class UnmentionedConstants(unittest.TestCase):
         )
         assert parsed is not None
         lines = promises.unmentioned_constants(parsed, area_with())
-        self.assertTrue(any("C1: constant `margin`" in ln for ln in lines))
+        self.assertTrue(any("criterion-1: constant `margin`" in ln for ln in lines))
 
     def test_a_missing_scope_file_is_loud(self):
         with self.assertRaises(promises.PromiseError):
@@ -112,7 +113,7 @@ class UnmentionedConstants(unittest.TestCase):
             rc = protocol_report.main([str(p)])
         out = buf.getvalue()
         self.assertEqual(rc, 0, out)
-        self.assertIn("WARNING: A2: constant `null_band_items`", out)
+        self.assertIn("WARNING: quality-check-2: constant `null_band_items`", out)
         self.assertNotIn("constant `margin`", out)
         # the twin: the sentence names it — silent
         p.write_text(

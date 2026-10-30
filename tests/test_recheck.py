@@ -106,10 +106,10 @@ class Area(unittest.TestCase):
         self.assertEqual(v.grown, ["max_n"])
 
     def test_intent_key_on_one_side_fails(self):
-        self._record({**evaluate(ROWS), "c1_pass": True})
+        self._record({**evaluate(ROWS), "criterion_1_pass": True})
         with self.assertRaises(SystemExit) as cm:
             recheck.holds(self.area, self.out, evaluate, self.note)
-        self.assertIn("c1_pass", str(cm.exception))
+        self.assertIn("criterion_1_pass", str(cm.exception))
 
     def test_note_missing_number_or_run(self):
         self.note.write_text(
@@ -223,8 +223,10 @@ class Area(unittest.TestCase):
             ({"a": 0}, {"a": False}),
         ):
             with self.assertRaises(SystemExit, msg=f"{stored!r} vs {again!r}"):
-                recheck.agree({"c1_pass": stored}, {"c1_pass": again})
-        self.assertEqual(recheck.agree({"c1_pass": True}, {"c1_pass": True}), [])
+                recheck.agree({"criterion_1_pass": stored}, {"criterion_1_pass": again})
+        self.assertEqual(
+            recheck.agree({"criterion_1_pass": True}, {"criterion_1_pass": True}), []
+        )
 
     def test_a_tuple_is_the_list_the_run_recorded(self):
         """evaluate() returns a tuple, metrics.json holds a list: the same

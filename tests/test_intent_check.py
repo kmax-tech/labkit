@@ -21,11 +21,11 @@ from labkit.checks import intent_check  # noqa: E402
 PROTOCOL = (
     head()
     + """# 66 — x
-- **Success / failure criterion:** [C1] null holds (p > 0,20) AND
-  [C2] opened > bare (p < 0,05) AND [C3] both cells agree
-- **Admissibility condition:** [A1] at most 2 of 96 rounds unparsed AND
-  [A2] placebo in the same run shows its expected value
-- **Registered branch:** [B1] on "mixed", report closed - echo
+- **Success / failure criterion:** [criterion-1] null holds (p > 0,20) AND
+  [criterion-2] opened > bare (p < 0,05) AND [criterion-3] both cells agree
+- **Admissibility condition:** [quality-check-1] at most 2 of 96 rounds unparsed AND
+  [quality-check-2] placebo in the same run shows its expected value
+- **Registered branch:** [interpretation-1] on "mixed", report closed - echo
 """
 )
 
@@ -80,7 +80,15 @@ class TestIntentCheck(unittest.TestCase):
     # -- extraction -------------------------------------------------------
     def test_ids_found_anywhere_in_free_structure(self):
         self.assertEqual(
-            intent_check.ids_in_prose(PROTOCOL), {"c1", "c2", "c3", "a1", "a2", "b1"}
+            intent_check.ids_in_prose(PROTOCOL),
+            {
+                "criterion-1",
+                "criterion-2",
+                "criterion-3",
+                "quality-check-1",
+                "quality-check-2",
+                "interpretation-1",
+            },
         )
 
     def test_blank_template_registers_no_ids(self):
@@ -103,14 +111,14 @@ class TestIntentCheck(unittest.TestCase):
         self.assertEqual(
             intent_check.reported_intent_ids(
                 {
-                    "c1": True,
-                    "a1_pass": True,
-                    "b1_branch": "a",
+                    "criterion_1": True,
+                    "quality_check_1_pass": True,
+                    "interpretation_1_branch": "a",
                     "auc": 0.7,
                     "n_channels": 24,
                 }
             ),
-            {"c1", "a1", "b1"},
+            {"criterion-1", "quality-check-1", "interpretation-1"},
         )
 
     def test_f1_score_is_no_intent_id(self):
@@ -125,12 +133,12 @@ class TestIntentCheck(unittest.TestCase):
         self.proto.write_text(PROTOCOL, encoding="utf-8")
         self._metrics(
             {
-                "c1_pass": True,
-                "c2_pass": False,
-                "c3_pass": True,
-                "a1_pass": True,
-                "a2_pass": True,
-                "b1_branch": "none",
+                "criterion_1_pass": True,
+                "criterion_2_pass": False,
+                "criterion_3_pass": True,
+                "quality_check_1_pass": True,
+                "quality_check_2_pass": True,
+                "interpretation_1_branch": "none",
             }
         )
         rc, out = self._run([str(self.proto)])
@@ -140,33 +148,38 @@ class TestIntentCheck(unittest.TestCase):
         """The 62 case: criterion_met implemented as one conjunct of three."""
         self.proto.write_text(PROTOCOL, encoding="utf-8")
         self._metrics(
-            {"c2_pass": True, "a1_pass": True, "a2_pass": True, "b1_branch": "none"}
+            {
+                "criterion_2_pass": True,
+                "quality_check_1_pass": True,
+                "quality_check_2_pass": True,
+                "interpretation_1_branch": "none",
+            }
         )
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 1)
-        self.assertIn("[C1]", out)
-        self.assertIn("[C3]", out)
-        self.assertNotIn("[C2]", out)
+        self.assertIn("[criterion-1]", out)
+        self.assertIn("[criterion-3]", out)
+        self.assertNotIn("[criterion-2]", out)
 
     def test_unregistered_key_fails(self):
-        self.proto.write_text(head() + "# x\n[C1] only.\n", encoding="utf-8")
-        self._metrics({"c1": True, "b1_branch": "taken"})
+        self.proto.write_text(head() + "# x\n[criterion-1] only.\n", encoding="utf-8")
+        self._metrics({"criterion_1": True, "interpretation_1_branch": "taken"})
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 1)
-        self.assertIn("[B1]", out)
+        self.assertIn("[interpretation-1]", out)
         self.assertIn("without a registration", out)
 
     def test_newest_run_wins(self):
-        self.proto.write_text(head() + "# x\n[C1].\n", encoding="utf-8")
+        self.proto.write_text(head() + "# x\n[criterion-1].\n", encoding="utf-8")
         self._metrics({}, run="2026-09-09T09-00-00_old1")
-        self._metrics({"c1": 1}, run="2026-09-09T11-00-00_new2")
+        self._metrics({"criterion_1": 1}, run="2026-09-09T11-00-00_new2")
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 0, out)
 
     def test_explicit_metrics_flag(self):
-        self.proto.write_text(head() + "# x\n[C1].\n", encoding="utf-8")
+        self.proto.write_text(head() + "# x\n[criterion-1].\n", encoding="utf-8")
         old = self._metrics({}, run="2026-09-09T09-00-00_old1")
-        self._metrics({"c1": 1}, run="2026-09-09T11-00-00_new2")
+        self._metrics({"criterion_1": 1}, run="2026-09-09T11-00-00_new2")
         rc, out = self._run([str(self.proto), "--metrics", str(old)])
         self.assertEqual(rc, 1)
 
@@ -204,7 +217,7 @@ class TestIntentCheck(unittest.TestCase):
         self.assertEqual(rc, 2)
 
     def test_missing_explicit_metrics_exits_two(self):
-        self.proto.write_text(head() + "[C1]", encoding="utf-8")
+        self.proto.write_text(head() + "[criterion-1]", encoding="utf-8")
         rc, out = self._run(
             [str(self.proto), "--metrics", str(self.area / "gone.json")]
         )
@@ -213,7 +226,7 @@ class TestIntentCheck(unittest.TestCase):
 
     def test_a_refusal_goes_to_stderr_and_leaves_stdout_to_findings(self):
         """A caller reading stdout for findings must not read a refusal as one."""
-        self.proto.write_text(head() + "[C1]", encoding="utf-8")
+        self.proto.write_text(head() + "[criterion-1]", encoding="utf-8")
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             rc = intent_check.main(
@@ -249,7 +262,7 @@ class KeysInImportedCode(unittest.TestCase):
             (repo / "src" / "measure").mkdir(parents=True)
             (repo / "src" / "measure" / "__init__.py").write_text("")
             (repo / "src" / "measure" / "comparison.py").write_text(
-                'def evaluate(rows):\n    return {"c1_pass": True}\n'
+                'def evaluate(rows):\n    return {"criterion_1_pass": True}\n'
             )
             keys = intent_check.code_keys(area)
-        self.assertEqual(keys["c1_pass"], ["src/measure/comparison.py:2"])
+        self.assertEqual(keys["criterion_1_pass"], ["src/measure/comparison.py:2"])

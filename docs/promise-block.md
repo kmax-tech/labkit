@@ -34,46 +34,51 @@ among the warnings. Individual messages do not always print the kind.
 
 ## Three kinds of promise
 
-| Letter | Kind | One sentence |
-|---|---|---|
-| `C` | criterion | constrains the reported outcome: which value of which metric counts as support for the hypothesis |
-| `A` | admissibility | determines whether any C verdict may be issued, conditional on an outcome-neutral check (control, anchor, yield, coverage, resolution) passing in the same run |
-| `B` | branch | binds a pre-specified condition on the results to the conclusion or follow-up analysis it licenses |
+An id is the kind and a number — `[criterion-1]`, `[quality-check-2]`,
+`[interpretation-1]` — and its metrics key is the id with underscores and
+a suffix (`criterion_1_pass`), so a person reading a protocol, a report or
+a run's metrics.json needs no legend.
 
-**Separation rule: C judges, A releases the judgement, B says what follows
-from it.** Whether something is A: does it depend on the outcome of the
-hypothesis? No → A (an outcome-neutral condition in the sense of Registered
-Reports); yes → C. A comparator without a target value (a baseline the
-traces are read against) is no promise; it belongs in the text of the C it
-serves.
+| Kind | One sentence |
+|---|---|
+| `criterion` | constrains the reported outcome: which value of which metric counts as support for the hypothesis |
+| `quality-check` | determines whether any criterion's verdict may be issued, conditional on an outcome-neutral check (control, anchor, yield, coverage, resolution) passing in the same run |
+| `interpretation` | binds a pre-specified condition on the results to the reading or follow-up analysis it licenses |
 
-Two refinements (review 2026-10-08). An A names *why* its failure makes the
-measurement uninterpretable — the instrument's yield, an anchor, a control
-at its expected value — never a value the hypothesis needs: that threshold
-is a C, and filed as an A it would turn a clean negative result into "no
-verdict". A failed A withholds the verdict, not the data: descriptive
-readings may follow, labelled as such. A B is decided on its own
+**Separation rule: a criterion judges, a quality check releases the
+judgement, an interpretation says what follows from it.** Whether
+something is a quality check: does it depend on the outcome of the
+hypothesis? No → quality check (an outcome-neutral condition in the sense
+of Registered Reports); yes → criterion. A comparator without a target
+value (a baseline the traces are read against) is no promise; it belongs
+in the text of the criterion it serves.
+
+Two refinements (review 2026-10-08). A quality check names *why* its
+failure makes the measurement uninterpretable — the instrument's yield, an
+anchor, a control at its expected value — never a value the hypothesis
+needs: that threshold is a criterion, and filed as a quality check it
+would turn a clean negative result into "no verdict". A failed quality
+check withholds the verdict, not the data: descriptive readings may
+follow, labelled as such. An interpretation is decided on its own
 condition, not on the verdict: a stop rule fires during the run or on an
-inadmissible one too (`verdict()` sets the C keys to None, never the B).
-"n/a — only one outcome" is the honest B when the answer to "and if [C…]
-fails?" is not known before the run; a decision taken afterwards is
-reported as taken afterwards.
+inadmissible one too (`verdict()` sets the criterion keys to None, never
+the interpretation's). "n/a — only one outcome" is the honest
+interpretation when the answer to "and if [criterion-…] fails?" is not
+known before the run; a decision taken afterwards is reported as taken
+afterwards.
 
-**Earlier letters.** `K` (criterion), `S` (stop rule), `W` (fork) and `N`
-(null condition) are not read since labkit 0.48. They did not map
-one-to-one onto C/A/B: tested against 16 earlier protocols, the separation
-rule assigned six ids differently from their letter — anchor and
-completeness checks filed as criteria are A, a stop rule that selects the
-next study is B, and an S/N pair describing one check becomes one A. Frozen
-protocols are registrations and are not rewritten; they are read with
-labkit 0.47.
+**Earlier letters.** The letters `C`, `A`, `B` (labkit 0.48 to 0.103.0)
+and, before them, `K`, `S`, `W`, `N` (up to 0.47) are not read: a protocol
+carrying them is refused with a sentence naming the version that reads
+it. Nothing translates them — K/S/W/N did not even map one-to-one onto
+C/A/B (tested against 16 earlier protocols, the separation rule assigned
+six ids differently from their letter). Frozen protocols are registrations
+and are not rewritten; they are read with the labkit they were written
+for.
 
 **Not a kind:** a descriptive quantity reported in every branch, without a
 criterion. It is a report line, not a promise — until a second case shows
 it needs its own kind.
-
-Letters excluded against collision with metric names: F (`f1`), P (`p1`),
-R (`r1`), Q (`q1`), H (`h1`).
 
 ## The block
 
@@ -99,7 +104,7 @@ source = "the project's expectation (task text)"   # who states the value; optio
 ```
 
 `protocol_block.reference` reads it exactly or refuses it by name; on a
-fit or an apply it is refused naming `[C]` — those kinds compare in a
+fit or an apply it is refused naming the criterion — those kinds compare in a
 criterion (`protocol_check.reference_gap`). It is no promise and no bar:
 the compute skeleton writes the verdict (`ref_state`, `ref_met`,
 `ref_distance`, …; `formats/reference`) beside the number, `02_analyze.py
@@ -122,8 +127,8 @@ frozen = true
 preflight_audit = "2026-10-07T09-12-preflight.toml"
 
 [[promise]]
-id = "C1"
-key = "c1_pass"
+id = "criterion-1"
+key = "criterion_1_pass"
 sentence = "macro-F1 of the judge >= min_f1 on the test split"
 scope = ["scripts/01_measure.py:evaluate", "scripts/01_measure.py:filter_items"]
 constants = { min_f1 = 0.70 }
@@ -131,8 +136,8 @@ constants = { min_f1 = 0.70 }
 
 | Field | Rule |
 |---|---|
-| `id` | `C<n>`, `A<n>` or `B<n>`, unique; also named in the prose |
-| `key` | the metrics key reporting it: the id itself or `<id>_<suffix>` |
+| `id` | `criterion-<n>`, `quality-check-<n>` or `interpretation-<n>`, unique; also named in the prose |
+| `key` | the metrics key reporting it: the id with underscores (`quality_check_2`) or that stem and `_<suffix>` |
 | `sentence` | the promise in one sentence |
 | `scope` | non-empty list of `file` or `file:function` (top-level function or class), relative to the protocol's directory |
 | `constants` | scalars the code reads from here instead of a second copy in the script — `promises.all_constants(promises.load(PROTOCOL))` into the script's config object; a name is lowercase snake_case and stands in exactly one promise (0.71.0) |
@@ -160,7 +165,7 @@ every measurement, including at `repeat_cost = "low"`, owes the block
 (`promises.promise_tables_owed`, standard 0.19): without tables, `protocol-check`
 reports a MUST failure (frozen or low), `preflight` and `finalize`
 block, and no measurement starts under it. The one exception: a
-computation (`kind = "compute"`) whose prose names no `[C]`/`[A]`/`[B]` id
+computation (`kind = "compute"`) whose prose names no promise id
 registers nothing and owes no tables, including when frozen at `high`.
 Its freeze still requires the completed registration and covering preflight
 audit. A computation owes no success
@@ -185,7 +190,7 @@ parser can see.
 It does **not** state that the region is all the code the number depends
 on, nor that the code implements the promise correctly.
 
-The counterexample that fixes this: `compute_score()` writes `c1_accuracy`
+The counterexample that fixes this: `compute_score()` writes `criterion_1_accuracy`
 and calls `filter_items()`. An edit to `filter_items` (now dropping empty
 answers instead of counting them wrong) moves the number.
 

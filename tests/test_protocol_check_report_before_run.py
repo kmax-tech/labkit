@@ -1,4 +1,4 @@
-"""Report fields written before any run (2026-10-17, plan P step B1).
+"""Report fields written before any run (2026-10-17, plan P step interpretation-1).
 
 Sonnet t18 (labkit-paper area 09, v2 and v3) filled "Did" with the grid
 search and the 55 labelled test molecules while `runs/` held only the
@@ -55,7 +55,9 @@ def completed_run(area: Path) -> None:
         ),
         encoding="utf-8",
     )
-    (run / "metrics.json").write_text(json.dumps({"c1_pass": True}), encoding="utf-8")
+    (run / "metrics.json").write_text(
+        json.dumps({"criterion_1_pass": True}), encoding="utf-8"
+    )
     (run / "completion.json").write_text(
         json.dumps({"status": "completed"}), encoding="utf-8"
     )
