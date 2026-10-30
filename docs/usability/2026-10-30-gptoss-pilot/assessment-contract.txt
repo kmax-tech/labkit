@@ -8,8 +8,9 @@ this agent is worth running.
 Agent and model. Codex CLI (version in the manifest's agent_cli) as the agent, driving gpt-oss served by
 vLLM on a cluster node, reached through the sandbox's proxy (Responses API, one path, every request
 logged). Model identity, filled in before the first attempt from the server's own output and held in
-every manifest: model MODEL_NAME = gpt-oss-20b (openai/gpt-oss-20b), weights revision ______ (the
-Hugging Face commit the server loaded), vLLM image vllm/vllm-openai:v0.32.0 (vLLM version 0.32.0, /version),
+every manifest: model MODEL_NAME = gpt-oss-20b (openai/gpt-oss-20b), weights revision 6cee5e81ee83917806bbde320786a8fb61efebee (the
+Hugging Face commit of openai/gpt-oss-20b, last modified 2025-08-26, the only revision a fresh download could
+load; vLLM's log names no snapshot), vLLM image vllm/vllm-openai:v0.32.0 (vLLM version 0.32.0, /version),
 GPU NVIDIA A100-SXM4-40GB (driver 580.178.04), node gammaweb05, reached from the proxy container as
 http://gammaweb05.medien.uni-weimar.de:31726 over the VPN without a tunnel (the bare host name does not
 resolve in a container; probe of 2026-10-30, /v1/models 200) (Slurm job vllm-gptoss20b, started
@@ -63,3 +64,56 @@ tasks under this harness. B: how many of five lab attempts end with a bound numb
 round 1's three of fifteen (a description, no test), and whether the lab arm says "met" against its
 evidence (it should not), says "not met", or says nothing. A failed pass (infrastructure: proxy, VPN,
 server) is set aside with its cause in an addendum before the next launch, counted nowhere.
+
+Addendum 1, 2026-10-30 late morning, during the first launch of stage A. The server was restarted before
+stage A with --max-model-len 131072 and --max-num-seqs 8 (the 32768 of the first start is too small for
+an agent session: the hello-world attempt alone sent 15,000 tokens a request); the runner reads the window
+from /v1/models and hands it to Codex. The first launch of stage A (images labkit-sandbox:fe36fb46f728,
+agentsandbox 9d564d1, started 10:28) is set aside as a harness-configuration pass and counted nowhere:
+Codex has no catalog entry for a served model name and runs on fallback metadata (model_info_from_slug:
+unified exec shell only, no apply_patch tool, 272k window), and gpt-oss-20b — trained on Codex's
+apply_patch — calls the tool Codex does not offer ("unsupported call: apply_patch") and writes files
+through shell heredocs whose JSON it garbles ("failed to parse function arguments"); the first three
+attempts (21, 34, 60) ended after 90 to 377 s without REPORT.md or output file. Two harness changes
+follow, both in agentsandbox, before stage A is launched again: (1) a catalog entry for the served model
+written by the image's wrapper and handed to Codex through model_catalog_json (apply_patch as a free-form
+tool, the server's context window, no parallel tool calls, Codex 0.166.0's own base instructions —
+verified in a container: the metadata warning is gone and apply_patch is offered); (2) the proxy drops the
+grammar from custom tools on the Responses path, because vLLM 0.32.0 accepts free-form custom tools only
+("Custom tools with a grammar format are not supported", 400) — the first rewrite of agent traffic the
+proxy makes beyond the credential swap; every rewrite is named in the request record. The weights revision
+is still owed (the server log's snapshot id). Stage A's second launch names the new image and commit.
+
+Addendum 2, 2026-10-30 midday, before the second launch of stage A. The server moved: the Slurm job now
+runs on gammaweb09 (same A100 40 GB, same image vllm/vllm-openai:v0.32.0, same flags, --max-model-len 131072,
+--max-num-seqs 8); the runner reads the window from /v1/models (131072). The harness change announced in
+addendum 1 grew a third part, in vLLM itself: vLLM 0.32.0's harmony path — the only path gpt-oss takes — knew
+function tools only, so a custom (free-form) tool such as Codex's apply_patch was refused at serialisation
+("tool type 'custom' is not supported", parser/harmony_utils.py get_developer_message) although the
+Responses layer accepted the definition and already knew how to map a call back (responses/utils.py:
+custom_tool_names, decode_custom_tool_input). The patch (five files, applied inside the running container
+over the installed vLLM, source and diffs in the public repo beside this contract): (1) harmony_utils shows a
+custom tool to the model as vLLM's own single-string function shim (custom_tool_as_function_dict, the
+chat-template path's); (2) responses/utils counts custom names among the function tool names; (3)
+responses/harmony.py, streaming_events.py and serving.py return the model's call as a custom_tool_call with
+the unwrapped payload, in the non-streaming and the streaming path. Verified against the running server
+with a minimal request (both paths: `custom_tool_call apply_patch "*** Begin Patch … *** End Patch"`).
+Codex's own apply_patch behaviour is untouched: it receives the item type it registers for; what the model
+sees is the shim vLLM already uses for every non-harmony model. The proxy shim (grammar → text format)
+stays, because vLLM refuses grammar formats at acceptance. agentsandbox is at fb03d46 (images
+labkit-sandbox:5c9247c30b3d, agentsandbox-proxy:779d63471cca). Catalog entry, shim and vLLM patch are harness
+work, named as such; a comparison with Haiku's round 1 stays a description of two counts side by side.
+
+Addendum 3, 2026-10-30 early afternoon, before the third launch of stage A. The second launch (12:30, two
+attempts started) is set aside and counted nowhere: the first Codex attempt against the three-part vLLM patch
+applied its patch (the file appeared) but the next request failed with "Unknown input type: custom_tool_call",
+because Codex replays its history and vLLM's harmony input path (responses/harmony.py
+response_input_to_harmony, renderers/online_renderer.py) knew function_call items only. The gate that
+released the launch had read stderr, not the turn's events — corrected: a launch now requires a probe attempt
+with no turn.failed and no error event. The vLLM patch gains a fourth part (six files in all): an earlier
+custom_tool_call in the request input is replayed to the model as the shim's function call with the payload
+wrapped again, a custom_tool_call_output as the tool's result, and the renderer keeps custom calls among the
+earlier calls so an output finds its call by call_id. Verified against the running server with a second-turn
+request (custom_tool_call + custom_tool_call_output as input: 200, an assistant message) and the single-call
+request (custom_tool_call returned). Server restarts loaded the weights anew each time (about 15 to 19
+minutes); the same node gammaweb09, flags unchanged.

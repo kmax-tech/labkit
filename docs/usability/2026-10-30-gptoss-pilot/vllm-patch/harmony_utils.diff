@@ -1,0 +1,22 @@
+--- orig/harmony_utils.py	2026-10-30 10:52:58.026576552 +0100
++++ patched/harmony_utils.py	2026-10-30 10:52:58.149771350 +0100
+@@ -181,6 +181,19 @@
+ 
+             elif tool.type == "function":
+                 function_tools.append(tool)
++            elif tool.type == "custom":
++                # A custom (free-form text) tool is shown to the model as the
++                # same single-string function shim the chat-template path
++                # uses (tool_parsers.utils.get_function_tools); the Responses
++                # layer maps the call back to a custom_tool_call and unwraps
++                # the payload (responses.utils.decode_custom_tool_input).
++                from openai.types.responses import FunctionTool
++
++                from vllm.tool_parsers.utils import custom_tool_as_function_dict
++
++                function_tools.append(
++                    FunctionTool.model_validate(custom_tool_as_function_dict(tool))
++                )
+             else:
+                 raise VLLMValidationError(
+                     f"tool type {tool.type!r} is not supported.",

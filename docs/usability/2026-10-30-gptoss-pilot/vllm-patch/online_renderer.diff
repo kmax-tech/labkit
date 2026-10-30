@@ -1,0 +1,18 @@
+--- orig/online_renderer.py	2026-10-30 12:36:13.435977735 +0100
++++ patched/online_renderer.py	2026-10-30 12:36:13.558265750 +0100
+@@ -443,7 +443,14 @@
+                     )
+                     if new_message is not None:
+                         messages.append(new_message)
+-                    if isinstance(response_message, ResponseFunctionToolCall):
++                    # function calls and custom tool calls alike: a later
++                    # *_output item finds its call by call_id
++                    _kind = (
++                        response_message.get("type")
++                        if isinstance(response_message, dict)
++                        else getattr(response_message, "type", None)
++                    )
++                    if _kind in ("function_call", "custom_tool_call"):
+                         previous_outputs.append(response_message)
+         except (ValueError, VLLMValidationError) as exc:
+             return self.create_error_response(

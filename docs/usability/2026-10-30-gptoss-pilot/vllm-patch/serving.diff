@@ -1,0 +1,27 @@
+--- orig/serving.py	2026-10-30 12:16:03.007255652 +0100
++++ patched/serving.py	2026-10-30 12:16:03.142364773 +0100
+@@ -64,6 +64,7 @@
+ )
+ from vllm.entrypoints.openai.responses.utils import (
+     build_response_output_items,
++    custom_tool_names,
+     extract_function_tool_names,
+     extract_tool_types,
+     reuse_streamed_item_ids,
+@@ -793,6 +794,7 @@
+                     incomplete=(
+                         i == len(harmony_msgs) - 1 and context.last_append_flush_status
+                     ),
++                    custom_tool_names=custom_tool_names(request.tools),
+                 )
+                 if next_streamed is not None and next_streamed[0] is msg:
+                     reuse_streamed_item_ids(items, next_streamed[1])
+@@ -1281,7 +1283,7 @@
+             [StreamingResponsesResponse], StreamingResponsesResponse
+         ],
+     ) -> AsyncGenerator[StreamingResponsesResponse, None]:
+-        state = StreamingState()
++        state = StreamingState(custom_tool_names=custom_tool_names(request.tools))
+ 
+         async for ctx in result_generator:
+             assert isinstance(ctx, HarmonyContext)

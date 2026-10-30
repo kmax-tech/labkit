@@ -1,0 +1,12 @@
+--- orig/responses_utils.py	2026-10-30 10:52:58.028822294 +0100
++++ patched/responses_utils.py	2026-10-30 10:52:58.150007187 +0100
+@@ -447,6 +447,9 @@
+     for tool in tools:
+         if tool.type == "function":
+             names.append(tool.name)
++        elif tool.type == "custom":
++            # shown to the model as a function shim (parser.harmony_utils)
++            names.append(tool.name)
+         elif tool.type == "namespace":
+             names.extend(
+                 flat_namespace_tool_name(tool.name, namespaced_tool.name)

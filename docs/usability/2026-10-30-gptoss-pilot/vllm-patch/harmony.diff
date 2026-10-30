@@ -1,0 +1,142 @@
+--- orig/harmony.py	2026-10-30 12:16:03.010085283 +0100
++++ patched/harmony.py	2026-10-30 12:36:13.557973166 +0100
+@@ -10,6 +10,7 @@
+ import json
+ 
+ from openai.types.responses import (
++    ResponseCustomToolCall,
+     ResponseFunctionToolCall,
+     ResponseOutputItem,
+     ResponseOutputMessage,
+@@ -39,6 +40,10 @@
+     ResponseInputOutputItem,
+     ResponsesRequest,
+ )
++from vllm.entrypoints.openai.responses.utils import (
++    decode_custom_tool_input,
++    encode_custom_tool_input,
++)
+ from vllm.exceptions import VLLMValidationError
+ from vllm.logger import init_logger
+ from vllm.utils import random_uuid
+@@ -148,6 +153,21 @@
+ # ---------------------------------------------------------------------------
+ 
+ 
++def _previous_call_name(call_id: str, prev_responses: list) -> str | None:
++    """The tool name of the earlier function or custom tool call CALL_ID,
++    whether that call is a parsed item or a plain dict; None when absent."""
++    for prev in reversed(prev_responses):
++        if isinstance(prev, dict):
++            if prev.get("type") in ("function_call", "custom_tool_call") and prev.get("call_id") == call_id:
++                return prev.get("name")
++        elif getattr(prev, "call_id", None) == call_id and getattr(prev, "type", None) in (
++            "function_call",
++            "custom_tool_call",
++        ):
++            return getattr(prev, "name", None)
++    return None
++
++
+ def response_input_to_harmony(
+     response_msg: ResponseInputOutputItem,
+     prev_responses: list[ResponseOutputItem | ResponseReasoningItem],
+@@ -176,23 +196,16 @@
+             msg = Message.from_role_and_contents(role, contents)
+         if role == "assistant":
+             msg = msg.with_channel("final")
+-    elif response_msg["type"] == "function_call_output":
++    elif response_msg["type"] in ("function_call_output", "custom_tool_call_output"):
+         call_id = response_msg["call_id"]
+-        call_response: ResponseFunctionToolCall | None = None
+-        for prev_response in reversed(prev_responses):
+-            if (
+-                isinstance(prev_response, ResponseFunctionToolCall)
+-                and prev_response.call_id == call_id
+-            ):
+-                call_response = prev_response
+-                break
+-        if call_response is None:
++        call_name = _previous_call_name(call_id, prev_responses)
++        if call_name is None:
+             raise VLLMValidationError(
+                 f"No call message found for {call_id}",
+                 parameter="input",
+             )
+         msg = Message.from_author_and_content(
+-            Author.new(Role.TOOL, f"functions.{call_response.name}"),
++            Author.new(Role.TOOL, f"functions.{call_name}"),
+             response_msg["output"],
+         )
+         msg = msg.with_channel("commentary")
+@@ -210,6 +223,16 @@
+         msg = msg.with_channel("commentary")
+         msg = msg.with_recipient(f"functions.{response_msg['name']}")
+         msg = msg.with_content_type("json")
++    elif response_msg["type"] == "custom_tool_call":
++        # The model saw the custom tool as the single-string function shim
++        # (parser.harmony_utils), so its earlier call is replayed as that
++        # function call with the payload wrapped again.
++        msg = Message.from_role_and_content(
++            Role.ASSISTANT, encode_custom_tool_input(response_msg.get("input") or "")
++        )
++        msg = msg.with_channel("commentary")
++        msg = msg.with_recipient(f"functions.{response_msg['name']}")
++        msg = msg.with_content_type("json")
+     else:
+         raise VLLMValidationError(
+             f"Unknown input type: {response_msg['type']}",
+@@ -316,13 +339,29 @@
+ 
+ 
+ def _parse_function_call(
+-    message: Message, recipient: str, incomplete: bool = False
++    message: Message,
++    recipient: str,
++    incomplete: bool = False,
++    custom_tool_names: frozenset[str] = frozenset(),
+ ) -> list[ResponseOutputItem]:
+-    """Parse function calls into function tool call items."""
++    """Parse function calls into function tool call items; a call to a
++    custom tool (shown to the model as a single-string function shim,
++    parser.harmony_utils) is a custom_tool_call with the payload unwrapped."""
+     function_name = extract_function_from_recipient(recipient)
+     output_items = []
+     for content in message.content:
+         random_id = random_uuid()
++        if function_name in custom_tool_names:
++            output_items.append(
++                ResponseCustomToolCall(
++                    id=f"ctc_{random_id}",
++                    call_id=f"call_{random_id}",
++                    type="custom_tool_call",
++                    name=function_name,
++                    input=decode_custom_tool_input(content.text),
++                )
++            )
++            continue
+         response_item = ResponseFunctionToolCall(
+             arguments=content.text,
+             call_id=f"call_{random_id}",
+@@ -445,6 +484,7 @@
+     message: Message,
+     function_tool_names: frozenset[str],
+     incomplete: bool = False,
++    custom_tool_names: frozenset[str] = frozenset(),
+ ) -> list[ResponseOutputItem]:
+     """Parse a Harmony message into a list of output response items.
+ 
+@@ -468,7 +508,12 @@
+         # Function calls (with or without "functions." prefix)
+         elif is_function_recipient(recipient, function_tool_names):
+             output_items.extend(
+-                _parse_function_call(message, recipient, incomplete=incomplete)
++                _parse_function_call(
++                    message,
++                    recipient,
++                    incomplete=incomplete,
++                    custom_tool_names=custom_tool_names,
++                )
+             )
+ 
+         # Built-in MCP tools (python, browser, container)
