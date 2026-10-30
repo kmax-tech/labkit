@@ -131,9 +131,9 @@ class Undecided(unittest.TestCase):
         text = path.read_text(encoding="utf-8")
         first, rest = text.split("[[finding]]", 1)
         blocker_tbl, warning_tbl = rest.split("[[finding]]")
-        decided = blocker_tbl.replace('status = "open"', 'status = "limit"').replace(
-            'reason = ""', 'reason = "the leak is the measured quantity"'
-        )
+        decided = blocker_tbl.replace(
+            'status = "open"', 'status = "limitation"'
+        ).replace('reason = ""', 'reason = "the leak is the measured quantity"')
         path.write_text(first + "[[finding]]" + decided + "[[finding]]" + warning_tbl)
         rc, _, err = self._stop()
         self.assertEqual(rc, 0, err)

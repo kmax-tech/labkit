@@ -62,7 +62,7 @@ class Decide(unittest.TestCase):
     def test_an_accepted_blocker_owes_its_effect(self):
         before = self.path.read_bytes()
         with self.assertRaisesRegex(findings.FindingsError, "owes its effect"):
-            findings.write_decision(self.path, 1, "limit", "kept")
+            findings.write_decision(self.path, 1, "limitation", "kept")
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_a_refusal_of_the_effects_form_is_told_apart(self):
@@ -73,38 +73,38 @@ class Decide(unittest.TestCase):
                 self.subTest(effect=effect),
                 self.assertRaises(findings.EffectFormError),
             ):
-                findings.write_decision(self.path, 1, "limit", "kept", effect)
+                findings.write_decision(self.path, 1, "limitation", "kept", effect)
         with self.assertRaises(findings.FindingsError) as caught:
             findings.write_decision(self.path, 1, "false-positive", "no", "stands")
         self.assertNotIsInstance(caught.exception, findings.EffectFormError)
 
     def test_the_effect_is_stored_and_read_back(self):
         rec = findings.write_decision(
-            self.path, 1, "limit", "kept", "criterion-1 not assessable"
+            self.path, 1, "limitation", "kept", "criterion-1 not assessable"
         )
         self.assertEqual(rec.findings[0].effect, "criterion-1 not assessable")
         self.assertEqual(rec.limits(), [(1, rec.findings[0])])
-        again = findings.write_decision(self.path, 1, "limit", "kept", "stands")
+        again = findings.write_decision(self.path, 1, "limitation", "kept", "stands")
         self.assertEqual(again.findings[0].effect, "stands")
         self.assertEqual(self.path.read_text(encoding="utf-8").count("effect ="), 1)
 
     def test_an_accepted_warning_may_name_an_effect_and_is_then_a_limit(self):
-        rec = findings.write_decision(self.path, 2, "limit", "a cue", "stands")
+        rec = findings.write_decision(self.path, 2, "limitation", "a cue", "stands")
         self.assertEqual(rec.findings[1].effect, "stands")
         self.assertEqual([n for n, _ in rec.limits()], [2])  # the BLOCKER is still open
 
     def test_an_accepted_warning_without_an_effect_is_no_limit(self):
-        rec = findings.write_decision(self.path, 2, "limit", "noted")
+        rec = findings.write_decision(self.path, 2, "limitation", "noted")
         self.assertEqual(rec.findings[1].effect, "")
         self.assertEqual(rec.limits(), [])  # the BLOCKER is still open
 
     def test_no_effect_on_anything_but_an_accepted_blocker_or_warning(self):
         with self.assertRaisesRegex(
-            findings.FindingsError, "BLOCKER or WARNING decided limit"
+            findings.FindingsError, "BLOCKER or WARNING decided limitation"
         ):
             findings.write_decision(self.path, 1, "false-positive", "no", "stands")
         with self.assertRaisesRegex(
-            findings.FindingsError, "BLOCKER or WARNING decided limit"
+            findings.FindingsError, "BLOCKER or WARNING decided limitation"
         ):
             findings.write_decision(self.path, 2, "deferred", "later", "stands")
 
@@ -112,22 +112,22 @@ class Decide(unittest.TestCase):
         """One note however many limits; three "read within" tails grew the
         Answer (sandbox, 2026-10-21). Which promise a limit leaves unjudged
         stands in the line's verdicts (`result_render.verdicts`)."""
-        a, b = "Limit (audit x #1)", "Limit (audit x #2)"
+        a, b = "Limitation (audit x #1)", "Limitation (audit x #2)"
         self.assertEqual(findings.answer_note([]), "")
         self.assertEqual(
             findings.answer_note([(a, "stands")]),
-            "; subject to 1 recorded limitation (the Limit lines below)",
+            "; subject to 1 recorded limitation (the Limitation lines below)",
         )
         self.assertEqual(
             findings.answer_note(
                 [(a, "stands"), (b, "criterion-1, quality-check-2 not assessable")]
             ),
-            "; subject to 2 recorded limitations (the Limit lines below)",
+            "; subject to 2 recorded limitations (the Limitation lines below)",
         )
 
     def test_a_hand_written_effect_is_held_on_reading(self):
         text = self.path.read_text(encoding="utf-8").replace(
-            'status = "open"\nreason = ""', 'status = "limit"\nreason = "k"\neffect = "criterion-1 not met"', 1
+            'status = "open"\nreason = ""', 'status = "limitation"\nreason = "k"\neffect = "criterion-1 not met"', 1
         )  # fmt: skip
         self.path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "finding 1: effect"):
@@ -136,7 +136,7 @@ class Decide(unittest.TestCase):
     def test_an_accepted_blocker_decided_by_hand_without_effect_reads(self):
         """report-check asks for the effect; the record itself stays readable."""
         text = self.path.read_text(encoding="utf-8").replace(
-            'status = "open"\nreason = ""', 'status = "limit"\nreason = "k"', 1
+            'status = "open"\nreason = ""', 'status = "limitation"\nreason = "k"', 1
         )
         self.path.write_text(text, encoding="utf-8")
         self.assertEqual(findings.read(self.path).findings[0].effect, "")
@@ -156,7 +156,7 @@ class LimitLinesInRecordOrder(unittest.TestCase):
         text = (
             "## Result\n\n- **Recorded results:** a = 1 (run x)\n- **Raw output:** r\n"
         )
-        limits = tuple((f"Limit (audit r #{n})", f"v{n}") for n in (1, 2, 3))
+        limits = tuple((f"Limitation (audit r #{n})", f"v{n}") for n in (1, 2, 3))
         out, written = protocol_fill.limit_lines(text, limits)
         self.assertEqual(written, [label for label, _ in limits])
         rows = [ln for ln in out.splitlines() if ln.startswith("- **")]
@@ -164,9 +164,9 @@ class LimitLinesInRecordOrder(unittest.TestCase):
             rows,
             [
                 "- **Recorded results:** a = 1 (run x)",
-                "- **Limit (audit r #1):** v1",
-                "- **Limit (audit r #2):** v2",
-                "- **Limit (audit r #3):** v3",
+                "- **Limitation (audit r #1):** v1",
+                "- **Limitation (audit r #2):** v2",
+                "- **Limitation (audit r #3):** v3",
                 "- **Raw output:** r",
             ],
         )

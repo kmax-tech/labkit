@@ -778,7 +778,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
             f"the result in the SAME session: `protocol-fill --render` for the "
             f"Recorded results; Conclusion (the question's answer in two sentences, within the "
-            f"Limits) and Raw output are yours."
+            f"Limitations) and Raw output are yours."
         )
     for n, ln in r.series:
         print(

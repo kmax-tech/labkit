@@ -111,7 +111,7 @@ SUMMARY_FIRST = """# Experiment protocol: x
 ## Summary (after the run, for a person)
 
 - **Conclusion:** The model judged 11 of 12 sentences right, clearly above a placebo question.
-- **Limits:** Twelve sentences, one run.
+- **Limitations:** Twelve sentences, one run.
 - **Next step:** none
 
 ## Intent (before the run)
@@ -137,7 +137,7 @@ preflight_audit = ""
 ## Summary (after the run, for a person)
 
 - **Conclusion:** The model judged 11 of 12 sentences right.
-- **Limits:** One run.
+- **Limitations:** One run.
 - **Next step:** none
 """
 
@@ -145,7 +145,7 @@ preflight_audit = ""
 class Glance(unittest.TestCase):
     def test_a_summary_on_top_is_inside_the_first_lines(self):
         g = pr.glance(SUMMARY_FIRST)
-        self.assertEqual(g.summary_fields, ("conclusion", "limits", "next step"))
+        self.assertEqual(g.summary_fields, ("conclusion", "limitations", "next step"))
         self.assertEqual(g.lines, 10)
         self.assertEqual(g.chars, len(g.excerpt))
 

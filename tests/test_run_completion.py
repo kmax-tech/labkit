@@ -345,7 +345,7 @@ class TestDerivedRun(unittest.TestCase):
             with runlog.run(
                 "x", {}, base_dir=area, derived_from="2026-10-05T10-00-00_aaaa"
             ) as r:
-                r.metrics(c1_pass=True)
+                r.metrics(criterion_1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(cfg["derived_from"], "2026-10-05T10-00-00_aaaa")
 
@@ -377,7 +377,7 @@ class TestDerivedRun(unittest.TestCase):
                 with runlog.run(
                     "x", {"model": "m"}, base_dir=area, derived_from=parent.name
                 ) as r:
-                    r.metrics(c1_pass=True)
+                    r.metrics(criterion_1_pass=True)
             res.assert_not_called()
             child = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(child["models_resolved"], {})
@@ -387,6 +387,6 @@ class TestDerivedRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
             with runlog.run("x", {}, base_dir=area) as r:
-                r.metrics(c1_pass=True)
+                r.metrics(criterion_1_pass=True)
             cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertIsNone(cfg["derived_from"])

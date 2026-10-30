@@ -51,7 +51,7 @@ class WaysOut(unittest.TestCase):
         unjudged = next(
             ln for ln in bare.splitlines() if ways_out.UNJUDGED_PROMISE in ln
         )
-        for way in ("`limit`", "Conclusion", "`deferred`", "hand over"):
+        for way in ("`limitation`", "Conclusion", "`deferred`", "hand over"):
             self.assertIn(way, unjudged)
         # the other routes stay as they are
         self.assertEqual(

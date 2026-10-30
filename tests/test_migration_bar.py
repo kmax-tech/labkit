@@ -149,7 +149,7 @@ class LaneDuties(unittest.TestCase):
     SECONDS_MODEL = [
         "Terms of this protocol",
         "Question / hypothesis",
-        "Success / failure criterion",
+        "Inference criterion",
         "Quality check",
         "Data / scope",
         "Data profile",
@@ -162,7 +162,7 @@ class LaneDuties(unittest.TestCase):
     FULL_MUST = [
         "Terms of this protocol",
         "Question / hypothesis",
-        "Success / failure criterion",
+        "Inference criterion",
         "Quality check",
         "Data / scope",
         "Data profile",
@@ -194,7 +194,7 @@ class LaneDuties(unittest.TestCase):
     REPORT = [
         "Question",
         "Did",
-        "Outcome",
+        "Expected or surprising",
         "Rival check",
         "Caps/drops",
         "Analysis audit",
@@ -278,7 +278,7 @@ class LaneDuties(unittest.TestCase):
 
 class WriteBack(unittest.TestCase):
     """What `--from-run` writes from the run and what stays the author's.
-    Phase 3 renders Recorded results and the Limit lines from the run and the
+    Phase 3 renders Recorded results and the Limitation lines from the run and the
     record instead; the Result stays the author's two sentences throughout."""
 
     def test_from_run_writes_the_answer_and_the_author_writes_the_rest(self):

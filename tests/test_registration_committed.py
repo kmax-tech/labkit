@@ -39,7 +39,7 @@ from labkit.gates import finalize, report_check
 RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"
 BAR = (
-    "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
+    "- **Inference criterion:** [criterion-1] accuracy >= 0.8\n"
     "- **Quality check:** [quality-check-1] no empty answer\n"
     "- **Null condition / anchors:** [quality-check-2] shuffled labels near chance\n"
 )
@@ -211,7 +211,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertIn(
             f"the registration as committed at the first measurement {RUN} "
             f"({sha[:12]}) lacks [protocol] kind = 'fit' (it said 'compute' then), "
-            f"Success / failure criterion, Quality check, Null "
+            f"Inference criterion, Quality check, Null "
             f"condition / anchors",
             out,
         )

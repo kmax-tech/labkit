@@ -59,7 +59,7 @@ class Registration(unittest.TestCase):
         )
         bar = (
             "Question / hypothesis",
-            "Success / failure criterion",
+            "Inference criterion",
             "Quality check",
             "Null condition / anchors",
         )
@@ -176,11 +176,11 @@ class Described(unittest.TestCase):
                     text,
                 )
         self.assertIn(
-            "Success / failure criterion",
+            "Inference criterion",
             "\n".join(sc.describe("low", "apply", True)),
         )
         self.assertIn(
-            "Success / failure criterion",
+            "Inference criterion",
             "\n".join(sc.describe("low", "fit", False)),
         )
         self.assertNotIn(

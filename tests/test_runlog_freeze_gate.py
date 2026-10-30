@@ -49,7 +49,7 @@ NO_FIELD = FROZEN.replace(f'preflight_audit = "{AUDIT}"\n', "")
 REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
-- **Success / failure criterion:** [criterion-1] accuracy above the trivial decider
+- **Inference criterion:** [criterion-1] accuracy above the trivial decider
 - **Quality check:** [quality-check-1] every case parsed
 - **Null condition / anchors:** [quality-check-2] the shuffled-label lane stays at chance
 - **Data profile:** 6 and 6 cases, mean words alike; no marker only in one class
@@ -352,7 +352,7 @@ class FreezeGate(unittest.TestCase):
         area = self._area(LOW_NO_CRITERION)
         with self.assertRaises(SystemExit) as cm:
             runlog.Run("t", {}, area, run_kind="measurement")
-        self.assertIn("Success / failure criterion", str(cm.exception))
+        self.assertIn("Inference criterion", str(cm.exception))
         self.assertIn('repeat_cost = "low"', str(cm.exception))
         self.assertFalse((area / "runs").exists())
         # A low-lane probe is refused before checking its registration.

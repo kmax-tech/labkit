@@ -33,7 +33,7 @@ scope = ["scripts/01_measure.py"]
 constants = { min_acc = 0.7 }
 """
 BODY = (
-    "\n- **Question / hypothesis:** q\n- **Success / failure criterion:** [criterion-1] c\n"
+    "\n- **Question / hypothesis:** q\n- **Inference criterion:** [criterion-1] c\n"
     "- **Quality check:** none\n"
 )
 
@@ -157,7 +157,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
     ) -> None:
         registered = (
             head(repeat_cost="low", promises=None)
-            + "- **Success / failure criterion:** [criterion-1] x\n"
+            + "- **Inference criterion:** [criterion-1] x\n"
         )
         report = protocol_check.check_fields(registered)
         self.assertTrue(

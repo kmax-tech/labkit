@@ -25,7 +25,7 @@ from protocol_fixture import registration_of, head  # noqa: E402
 BODY = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [criterion-1] p < .05
+- **Inference criterion:** [criterion-1] p < .05
 - **Quality check:** [quality-check-1] parse yield above 80%
 - **Model I/O:** in: text · out: a label, parsed by parse()
 - **Prompt (verbatim, per variant):**
@@ -144,7 +144,7 @@ class TellTestRun(unittest.TestCase):
     """preflight and finalize render the area-test run alike (S7)."""
 
     def test_a_failed_run_carries_its_counts_into_the_blocker(self):
-        # the 10-23 interpretation-1 fix stood in finalize only; preflight's blocker lost
+        # the 10-23 branch-1 fix stood in finalize only; preflight's blocker lost
         # pytest's counts for a collecting caller
         tests = preflight.AreaTests(
             "tests/test_01_x.py",
@@ -527,7 +527,7 @@ class TestAuditFindings(unittest.TestCase):
             self.assertEqual(code, 0, out)
             self.assertIn("all decided (1 audit(s) recorded)", out)
             path.write_text(
-                text.replace('status = "fixed"', 'status = "limit"')
+                text.replace('status = "fixed"', 'status = "limitation"')
             )  # no reason
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)

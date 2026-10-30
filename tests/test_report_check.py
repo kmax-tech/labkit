@@ -169,7 +169,7 @@ class ReportCheck(unittest.TestCase):
                 "mean line count per", "mean line count\n  per"
             )
             + "- **Conclusion:** the cases hold eleven lines on average.\n"
-            + "- **Limits:** one corpus only.\n",
+            + "- **Limitations:** one corpus only.\n",
             encoding="utf-8",
         )
         code, out = self._run(area)

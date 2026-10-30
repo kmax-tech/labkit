@@ -1,4 +1,4 @@
-"""Report fields written before any run (2026-10-17, plan P step interpretation-1).
+"""Report fields written before any run (2026-10-17, plan P step branch-1).
 
 Sonnet t18 (labkit-paper area 09, v2 and v3) filled "Did" with the grid
 search and the 55 labelled test molecules while `runs/` held only the
@@ -82,7 +82,7 @@ class WrittenBeforeRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             text = protocol(
                 "- **Did †:** <what was done>\n",
-                "- **Outcome †:** —\n",
+                "- **Expected or surprising †:** —\n",
                 "- **Rival check †:** n/a — no rivals named\n",
             )
             self.assertEqual(before_run(text, Path(d)), [])

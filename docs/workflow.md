@@ -182,7 +182,7 @@ next audit follows earlier findings up, while the first adoption of the
 run audited moves nothing; and with the setup's prose the audit read
 (Terms, Data / scope, Model / tool, Model I/O, Exclusions / filters,
 Unit), so a description corrected in place is followed up too. The fields
-written after the audit (the Summary, Recorded results, the Limit lines,
+written after the audit (the Summary, Recorded results, the Limitation lines,
 the run list) are not bound. The person decides every finding; labkit stores the
 decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
@@ -194,7 +194,7 @@ audit (LAB-017 The number of audits follows the cost tier); at
 `high` the preflight audit came before the freeze and this one
 comes before the number leaves (LAB-050 Analysis audit before reporting).
 
-## 6. The decision review — when a BLOCKER was decided `limit` with `stands`
+## 6. The decision review — when a BLOCKER was decided `limitation` with `stands`
 
 ```
 protocol-fill PROTOCOL-<name>.md "Conclusion=…"      # the claim, first
@@ -236,8 +236,8 @@ Changes: **the protocol file only** — the head's `[result] run =
 **adopted run**), the `Recorded results` line (the reportable verdict of
 every registered promise — a quality check not assessable or
 not met leaves each criterion not assessable —, then the other metric keys
-and values as recorded, the run id, a note on the limits), one `Limit (audit <record>
-#N)` line per decided limit, and the run's entry in the protocol run
+and values as recorded, the run id, a note on the limits), one `Limitation (audit <record>
+#N)` line per decided limitation, and the run's entry in the protocol run
 list; the command names them as "Recorded results, [result] run, Runs".
 Before writing it runs `report-check` on the written text and restores
 the file on a blocker: a result adopted this way has passed every check.
@@ -267,11 +267,11 @@ block** between two markers: the Recorded results line and the Limit
 lines as the protocol renders them, owned by the protocol named in the
 opening marker; after a new run is adopted the same command replaces it.
 What the block guarantees: it equals what its protocol's bound sources
-render — the run's metrics, the records' decided limits — and the
+render — the run's metrics, the records' decided limitations — and the
 protocol's whole chain holds. What it does not: the prose beside it. A
 count or median the run never stored has no source; numbers outside the
 block are named as unsourced (a hint), and whether the prose reads the
-number rightly, and whether a decided limit is enough, stay the audit's
+number rightly, and whether a decided limitation is enough, stay the audit's
 and the reader's judgement. The report is a file at its own path: a
 report that is a symbolic link, wherever it points, is refused at the
 stop and the commit — the file a link points to can lie where no report

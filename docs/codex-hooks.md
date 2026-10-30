@@ -43,7 +43,7 @@ cache. `gates/claude_hooks.py` and `gates/codex_hooks.py` are the command
 adapters. There is one implementation of the preflight, evidence and report
 obligations, with the same repeat-cost rules and the same stop time budget.
 
-## Limits and verification
+## Limitations and verification
 
 These hooks add feedback and bounded continuation to the existing gates.
 They do not judge whether an announced task was completed. In particular,

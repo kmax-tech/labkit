@@ -35,21 +35,25 @@ among the warnings. Individual messages do not always print the kind.
 ## Three kinds of promise
 
 An id is the kind and a number — `[criterion-1]`, `[quality-check-2]`,
-`[interpretation-1]` — and its metrics key is the id with underscores and
+`[branch-1]` — and its metrics key is the id with underscores and
 a suffix (`criterion_1_pass`), so a person reading a protocol, a report or
 a run's metrics.json needs no legend.
 
 | Kind | One sentence |
 |---|---|
-| `criterion` | constrains the reported outcome: which value of which metric counts as support for the hypothesis |
-| `quality-check` | determines whether any criterion's verdict may be issued, conditional on an outcome-neutral check (control, anchor, yield, coverage, resolution) passing in the same run |
-| `interpretation` | binds a pre-specified condition on the results to the reading or follow-up analysis it licenses |
+| `criterion` | an **inference criterion**: the registered condition on the result that decides which conclusion the run supports; a missed criterion is a valid result (OSF preregistration: *inference criteria*) |
+| `quality-check` | assesses whether the measurement can support the intended inference, rather than whether the result supports the hypothesis; its condition is specified before the result is known (control, anchor, yield, coverage, resolution). If any quality check is not met or cannot be assessed, no inference criterion receives a verdict; measured values may still be reported descriptively (Registered Reports: *outcome-neutral conditions*, *quality checks*) |
+| `branch` | a **registered branch**: a pre-specified mapping from conditions on the results to named outcomes and their consequences (COS: a decision tree of IF-THEN rules; PCI RR: *contingent interpretation given different outcomes*) |
 
 **Separation rule: a criterion judges, a quality check releases the
-judgement, an interpretation says what follows from it.** Whether
-something is a quality check: does it depend on the outcome of the
-hypothesis? No → quality check (an outcome-neutral condition in the sense
-of Registered Reports); yes → criterion. A comparator without a target
+judgement, a branch says what follows from it.** Whether something is a
+quality check is decided by its function, not by when it was written: a
+criterion, too, is specified before the result. A quality check asks
+whether the measurement can support the inference at all; a criterion
+asks which inference the result supports. "Outcome-neutral" means the
+check is fixed before the result is known and not by the direction
+anyone wants — not that passing it is statistically independent of the
+hypothesis. A comparator without a target
 value (a baseline the traces are read against) is no promise; it belongs
 in the text of the criterion it serves.
 
@@ -59,37 +63,47 @@ anchor, a control at its expected value — never a value the hypothesis
 needs: that threshold is a criterion, and filed as a quality check it
 would turn a clean negative result into "no verdict". A failed quality
 check withholds the verdict, not the data: descriptive readings may
-follow, labelled as such. An interpretation is decided on its own
+follow, labelled as such. A branch is decided on its own
 condition, not on the verdict: a stop rule fires during the run or on an
 inadmissible one too (`verdict()` sets the criterion keys to None, never
-the interpretation's). "n/a — only one outcome" is the honest
-interpretation when the answer to "and if [criterion-…] fails?" is not
-known before the run — then no `[interpretation-…]` id is written; a
+the branch's). "n/a — only one outcome" is the honest
+branch when the answer to "and if [criterion-…] fails?" is not
+known before the run — then no `[branch-…]` id is written; a
 decision taken afterwards is reported as taken afterwards.
 
-**An interpretation's arms.** Its sentence is written arm by arm,
-`<condition> → <reading>`, arms separated by `;`:
+**A branch's outcomes.** Its sentence lists its outcomes in order, each
+`<condition> → <outcome>: <consequence>`, separated by `;`:
 
 ```toml
 [[promise]]
-id = "interpretation-1"
-key = "interpretation_1_branch"
-sentence = "criterion-1 met and quality-check-1 met → generalises; quality-check-1 not met → noisy; otherwise → no-verdict"
+id = "branch-1"
+key = "branch_1_outcome"
+sentence = "quality-check-1 not met → noisy: no verdict, the parser is repaired first; criterion-1 met → generalises: the screen is used on the next cohort; otherwise → misses: reported as a miss, no further analysis"
 scope = ["scripts/01_measure.py:evaluate"]
 ```
 
-`promises.parse_arms` reads it; `parse_block` refuses an interpretation
-whose sentence is not in this form, naming the promise and the arm. The
-rules: at least two arms (one outcome registers no interpretation); each
-arm holds exactly one `→` (U+2192 — `->` is refused, not read as a second
-spelling) with a non-empty condition before it; `otherwise` stands as the
-condition of the last arm only; a reading is lowercase letters, digits
-and hyphens (`[a-z0-9][a-z0-9-]*`) and unique in the sentence. The
-condition is the author's words; nothing evaluates it. The reading is
-data: the run records one of them under the promise's key, and
-`intent-check` (so `finalize`) blocks any other value, naming the
-registered readings — a reading chosen after the run has no arm the
-reader could find. The stamp's `<…>` placeholder parses without arms;
+- **condition** — a condition on the results that selects an outcome; a
+  final `otherwise` covers the cases no earlier condition matched. The
+  conditions are read in order and the first that holds selects the
+  outcome. They are the author's words: labkit does not evaluate them;
+  the run's code selects, and the agent audit judges whether it keeps the
+  order.
+- **outcome** — a named possible result of the branch: lowercase letters,
+  digits and hyphens (`[a-z0-9][a-z0-9-]*`), unique in the sentence. The
+  run records the name its condition selected under the promise's key.
+- **consequence** — what the selected outcome permits: an interpretation,
+  an action, or an explicitly justified non-action. It is owed, and holds
+  no `;` (write it with commas): an outcome without one registers a label,
+  not what the result permits.
+
+`promises.parse_outcomes` reads it; `parse_block` refuses a branch whose
+sentence is not in this form, naming the promise and the outcome: fewer
+than two outcomes (one registers no branch), not exactly one `→` (U+2192 —
+`->` is refused, not read as a second spelling), an empty condition,
+`otherwise` before the last outcome, a name outside the alphabet or used
+twice, a missing consequence. `intent-check` (so `finalize`) blocks a run
+whose key records a name that is none of the outcomes, naming them: a name
+chosen after the run has no registered condition the reader could find. The stamp's `<…>` placeholder parses without outcomes;
 `promise_tables_owed` refuses it once frozen or in a full run. Criteria
 and quality checks keep a free sentence.
 
@@ -162,9 +176,9 @@ constants = { min_f1 = 0.70 }
 
 | Field | Rule |
 |---|---|
-| `id` | `criterion-<n>`, `quality-check-<n>` or `interpretation-<n>`, unique; also named in the prose |
+| `id` | `criterion-<n>`, `quality-check-<n>` or `branch-<n>`, unique; also named in the prose |
 | `key` | the metrics key reporting it: the id with underscores (`quality_check_2`) or that stem and `_<suffix>` |
-| `sentence` | the promise in one sentence; an interpretation's as arms, `<condition> → <reading>; …` (above) |
+| `sentence` | the promise in one sentence; a branch's as its outcomes, `<condition> → <outcome>: <consequence>; …` (above) |
 | `scope` | non-empty list of `file` or `file:function` (top-level function or class), relative to the protocol's directory |
 | `constants` | scalars the code reads from here instead of a second copy in the script — `promises.all_constants(promises.load(PROTOCOL))` into the script's config object; a name is lowercase snake_case and stands in exactly one promise (0.71.0) |
 

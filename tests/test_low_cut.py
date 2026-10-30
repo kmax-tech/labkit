@@ -43,7 +43,7 @@ class Cut(unittest.TestCase):
             head(repeat_cost="low")
             + """
 - **Question / hypothesis:** how many?
-- **Success / failure criterion:** the mean is reported
+- **Inference criterion:** the mean is reported
 - **Quality check:** n/a — deterministic
 - **Terms of this protocol:** n/a
 - **Data / scope:** data/raw/cases.jsonl
@@ -68,7 +68,7 @@ class Cut(unittest.TestCase):
             + head(type="confirmatory", repeat_cost="low", model="haiku")
             + """
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [criterion-1] accuracy > 0.5
+- **Inference criterion:** [criterion-1] accuracy > 0.5
 - **Quality check:** [quality-check-1] at most two empty answers
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Data / scope:** data/raw/claims.jsonl, 12 rows
@@ -96,7 +96,7 @@ class Cut(unittest.TestCase):
             head(repeat_cost="low", frozen=True)
             + """
 - **Question / hypothesis:** q
-- **Success / failure criterion:** c
+- **Inference criterion:** c
 - **Quality check:** a
 - **Terms of this protocol:** n/a
 - **Data / scope:** d
@@ -115,7 +115,7 @@ class Cut(unittest.TestCase):
 class Registration(unittest.TestCase):
     QUESTION = (
         "- **Model / tool:** haiku\n"  # an apply: the gate owes the bar, its reference, admissibility
-        "- **Question / hypothesis:** q\n- **Success / failure criterion:** c\n"
+        "- **Question / hypothesis:** q\n- **Inference criterion:** c\n"
         "- **Null condition / anchors:** n\n"
         "- **Data profile:** 6 and 6 items; 'because' in both classes\n"
     )
@@ -129,7 +129,7 @@ class Registration(unittest.TestCase):
         self.assertEqual(
             protocol_check.low_registration_missing(text),
             [
-                "Success / failure criterion",
+                "Inference criterion",
                 "Quality check",
                 "Null condition / anchors",
             ],
@@ -147,9 +147,7 @@ class Registration(unittest.TestCase):
         )
         missing = protocol_check.low_registration_missing(placeholder)
         self.assertIn("[protocol] kind", missing)
-        self.assertIn(
-            "Success / failure criterion", missing
-        )  # undecided: the most is owed
+        self.assertIn("Inference criterion", missing)  # undecided: the most is owed
 
     def test_a_count_owes_only_its_question(self):
         """Without a model there is no bar to clear: the gate is the question (0.87.1)."""
@@ -247,7 +245,7 @@ class PromiseIds(unittest.TestCase):
                 promises='[[promise]]\nid = "criterion-1"\nkey = "criterion_1_pass"\nsentence = "s"\n'
                 'scope = ["scripts/01_measure.py"]\n'
             )
-            + "- **Success / failure criterion:** <c>\n"
+            + "- **Inference criterion:** <c>\n"
             + "- **Quality check:** <a>\n"
             + "- **Null condition / anchors (in the same run):** <n>\n"
         )
@@ -263,6 +261,6 @@ class PromiseIds(unittest.TestCase):
             ("<10% unparsed", False),
         ):
             with self.subTest(value):
-                text = f"- **Success / failure criterion:** {value}\n"
+                text = f"- **Inference criterion:** {value}\n"
                 (f,) = protocol_check.fields(text)
                 self.assertIs(f.placeholder, open_)

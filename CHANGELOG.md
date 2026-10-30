@@ -34,61 +34,71 @@ pins (`requirements.txt` / `requirements.lock`).
 ### Breaking
 
 - **Promise ids are their kind and a number.** `[criterion-1]`,
-  `[quality-check-2]`, `[interpretation-1]` replace `[C1]`, `[A2]`, `[B1]`;
+  `[quality-check-2]`, `[branch-1]` replace `[C1]`, `[A2]`, `[B1]`;
   a metrics key is the id with underscores and a suffix
   (`criterion_1_pass`, `quality_check_2_pass`) instead of `c1_pass`. A
   person reading a protocol, a report or a run's metrics.json needs no
   legend (plan: `docs/notes/2026-10-30-agent-surface.md`). The alphabet
   has one home (`promises.KINDS`, `key_stem`, `id_of_stem`); a promise's
-  `kind` is the kind word (`quality-check` was `admissibility`,
-  `interpretation` was `branch`). A protocol in the letters is not read:
+  `kind` is the kind word (`quality-check` was `admissibility`).
+  A protocol in the letters is not read:
   an id `C1`/`A1`/`B1` (or the earlier `K`/`S`/`W`/`N`) is refused with a
   sentence naming the version that reads it — **0.103.0 is the last
   labkit that reads the C/A/B letters**; reproduce such a run with its
   repo's commit and that pin. Stamped protocols, the script skeletons and
   their tests, the docs and the agents' prompts use the new ids.
 
-- **The kind words in the protocol's fields.** The field `Admissibility
-  condition` is now `Quality check`, `Registered branch` is
-  `Interpretation`; the prose of the docs, templates, prompts and messages
-  says quality check and interpretation throughout. A protocol with the old
-  labels no longer has these fields — read it with labkit 0.103.0. The
-  title of LAB-013 (Registered branch when the run can answer two
-  questions) is unchanged: a rule's name is cited across repositories, and
-  renaming it is a rollout of its own.
+- **Quality check in the protocol's fields.** The field `Admissibility
+  condition` is now `Quality check`, and the prose of the docs, templates,
+  prompts and messages says quality check throughout (Registered Reports:
+  outcome-neutral conditions, quality checks). `Registered branch` keeps
+  its name. A protocol with the old label no longer has the field — read
+  it with labkit 0.103.0.
 
 - **Decisions are named by their consequence.** `labkit-audit AREA
-  --decide N STATUS --why "REASON" [--not-assessable IDS]`: `fixed` (the
-  fault is repaired; a new measurement and a follow-up audit check it),
-  `limit` (the finding is true and the number carries it as a Limit line —
-  was `accepted`), `false-positive` (the auditor misread; a BLOCKER's needs
-  a second auditor — was `dismissed`), `deferred` (unchanged in this
-  step). The reason is a named option (`--why`), never positional;
-  `--effect` is gone: a `limit` on a BLOCKER or WARNING records `stands`
-  itself, and `--not-assessable criterion-1` names the promises the run
-  does not judge (no review owed). A WARNING decided `limit` now always
-  reaches the result as a Limit line, and its missing review warns. Audit
-  records with `status = "accepted"` or `"dismissed"` no longer read —
-  0.103.0 reads them.
+  --decide N STATUS --why "REASON" [--not-assessable IDS]`: `fixed` (a
+  repair is claimed; the follow-up audit confirms it — after a new
+  measurement when the repair changed what was measured), `limitation`
+  (the finding is true; the number carries it as a `Limitation (audit … #N)`
+  line — was `accepted`), `false-positive` (the finding does not apply to
+  the code and run as audited; `--why` records the counter-evidence, and a
+  BLOCKER's needs a second auditor — was `dismissed`), `deferred`
+  (unchanged in this step). The reason is a named option (`--why`), never
+  positional; `--effect` is gone: a `limitation` on a BLOCKER or WARNING
+  records `stands` itself, and `--not-assessable criterion-1` names the
+  promises the run does not judge (no review owed). A WARNING decided
+  `limitation` now always reaches the result, and its missing review
+  warns. The generated `Limit (audit … #N)` lines are `Limitation (audit …
+  #N)`. Audit records with `status = "accepted"` or `"dismissed"`, and
+  results with `Limit` lines, no longer read — 0.103.0 reads them.
 
-- **An interpretation is written arm by arm, and the run records one of
-  its readings.** An `[interpretation-…]` promise's sentence is
-  `<condition> → <reading>; …` — at least two arms, one `→` each (`->` is
-  refused), `otherwise` as the last condition only, a reading in
-  lowercase letters, digits and hyphens, unique in the sentence
-  ("criterion-1 met and quality-check-1 met → generalises; quality-check-1
-  not met → noisy; otherwise → no-verdict"). `promises.parse_arms` reads it
-  in one home; `parse_block` refuses a protocol whose interpretation is
-  free text, naming the promise, the arm and the form. `intent-check`, and
-  `finalize` through it, block a run whose interpretation key records a
-  value that is none of the registered readings, the way out naming them
-  (`intent_check.unregistered_readings`; until now nothing held the
-  recorded value to what was registered). Intent-check's findings are
-  gate findings with their own way out (`Held.findings`), printed with it.
-  The stamp's `<…>` placeholder still parses for an unfrozen pilot.
-  **0.103.0 is the last labkit that reads a free-text interpretation**;
-  re-register it in arms, or reproduce such a run with its repo's commit
-  and that pin.
+- **The protocol's fields in the field's words.** `Success / failure
+  criterion` is `Inference criterion` (what result supports which
+  conclusion — a missed criterion is a valid result); the result
+  section's `Interpretation / next step` is `Interpretation` (CONSORT 2010
+  item 22), the next step living in the Summary alone; `Outcome †` is
+  `Expected or surprising †` (outcome now names a branch's possible
+  result); `Limits` is `Limitations` (CONSORT 2010 item 20). A protocol
+  with the old labels lacks these fields — 0.103.0 reads it.
+
+- **A registered branch lists its outcomes, and the run records one of
+  them.** The B kind is a registered branch again (`[branch-1]`, key
+  `branch_1_outcome`): a pre-specified mapping from conditions on the
+  results to named outcomes and their consequences, its sentence
+  `<condition> → <outcome>: <consequence>; …` — at least two outcomes, one
+  `→` each (`->` is refused), the first condition that holds selects,
+  `otherwise` as the last condition only, an outcome named in lowercase
+  letters, digits and hyphens and unique, a consequence owed (an
+  interpretation, an action or a justified non-action, no `;`).
+  `promises.parse_outcomes` reads it in one home; `parse_block` refuses a
+  free-text branch, naming the promise, the outcome and the form.
+  `intent-check`, and `finalize` through it, block a run whose branch key
+  records a name that is none of the outcomes, the way out naming them
+  (`intent_check.unregistered_outcomes`); intent-check's findings are gate
+  findings with their own way out. The stamp's `<…>` placeholder still
+  parses for an unfrozen pilot. **0.103.0 is the last labkit that reads a
+  free-text branch**; re-register it, or reproduce such a run with its
+  repo's commit and that pin.
 
 - **A registered output is the file the run recorded, and the deliverable
   of an external task is a registered output of the answering run.**

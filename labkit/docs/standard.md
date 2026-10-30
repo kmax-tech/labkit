@@ -83,7 +83,7 @@ written with. The following applies:
 
 - **Intent** — the intention before the run: question, success criterion,
   quality checks (English field label: *quality check*) and
-  interpretations (LAB-004 Identifiers make the intent addressable).
+  branches (LAB-004 Identifiers make the intent addressable).
 - **Render check** — only look at finished prompts, zero model calls (`--show`).
 - **Instrument check** — ~10 real calls through the real pipeline (`--probe`).
 - **Area** — one experiment directory under `experiments/`: protocol, scripts,
@@ -179,14 +179,14 @@ evidence file under the same ID (top of this document).*
   |------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------|
   | `[criterion-1]`…    | Criterion     | which value of which metric supports the hypothesis                                                                               |
   | `[quality-check-1]`…    | Quality check | whether a criterion verdict may be issued at all: an outcome-neutral check in the same run (control, anchor, yield, coverage, resolution) |
-  | `[interpretation-1]`…    | Interpretation | what follows from a result: which conclusion or which follow-up analysis                                                          |
+  | `[branch-1]`…    | Branch        | what follows from a result: which conclusion or which follow-up analysis                                                          |
 
   The separation rule: **a criterion judges, a quality check permits the
-  verdict, an interpretation says what follows from it.** If a condition depends on the outcome of the hypothesis,
+  verdict, a branch says what follows from it.** If a condition depends on the outcome of the hypothesis,
   it is C, otherwise A. Prose without a promise gets no identifier — otherwise
   the protocol turns into bookkeeping. The contract: every identifier appears
   as a lowercase key in the `metrics.json` of the reportable run
-  (`criterion_1_pass`, `quality_check_1_pass`, `interpretation_1_branch`); `intent-check <PROTOCOL>` (labkit)
+  (`criterion_1_pass`, `quality_check_1_pass`, `branch_1_outcome`); `intent-check <PROTOCOL>` (labkit)
   checks set equality in both directions. The command only sees whether the
   key is there, never whether it is correct — the audit checks that per identifier.
   Identifiers are also the handover unit between agents: a build order
@@ -198,7 +198,7 @@ evidence file under the same ID (top of this document).*
   — so with `repeat_cost = "low"` always, with one exception: a computation
   (`kind = "compute"` in the head, standard 0.22: a number that judges no
   prediction and so cannot pass trivially) registers nothing unless its
-  prose names a promise id (`[criterion-…]`, `[quality-check-…]`, `[interpretation-…]`), and owes neither tables nor a
+  prose names a promise id (`[criterion-…]`, `[quality-check-…]`, `[branch-…]`), and owes neither tables nor a
   success criterion (labkit 0.87.1, `promises.promise_tables_owed`); its
   question, data, exclusions and unit are its registration. A fit (a model
   trained or adjusted in the experiment) and an apply (a model used
@@ -208,13 +208,16 @@ evidence file under the same ID (top of this document).*
   script reads it with `promises.all_constants()`, never as a copy, and
   `runlog` refuses, before creating the run directory, a run
   whose config omits a registered constant or records a different value. An
-  quality check says why its failure invalidates the measurement
-  (instrument, never the hypothesis); an interpretation is decided on its own
-  condition, "n/a" is the honest interpretation when none is known before the run.
-  An interpretation's sentence is written arm by arm, `<condition> →
-  <reading>`, arms separated by `;` ("criterion-1 met → generalises;
-  otherwise → no-verdict"); the run records one of its readings under the
-  key, and `intent-check` blocks any other value.
+  quality check assesses whether the measurement can support the intended
+  inference, not whether the result supports the hypothesis, and says why
+  its failure invalidates the measurement (instrument, never the
+  hypothesis); a branch is decided on its own condition, "n/a" is the
+  honest branch when none is known before the run. A branch's sentence
+  lists its outcomes in order, each `<condition> → <outcome>:
+  <consequence>` (the first condition that holds selects; a consequence is
+  an interpretation, an action or a justified non-action); the run
+  records the outcome's name under the key, and `intent-check` blocks any
+  other name.
   `labkit-params <area>` shows every value of a run
   with its home. Contract: `~/projects/labkit/docs/promise-block.md`. The old letters
   `[K]`/`[S]`/`[W]`/`[N]` are no longer read by labkit; they cannot be translated
@@ -334,7 +337,7 @@ evidence file under the same ID (top of this document).*
 
 - **LAB-013 · Registered branch when the run can answer two questions.** *(was §2.A10)*
   If a precondition decides which question the run actually answers
-  (e.g. "does the evidence vary enough to measure hardness?"), the interpretation
+  (e.g. "does the evidence vary enough to measure hardness?"), the branch
   belongs BEFORE the run: the condition, and which question each branch answers. Then
   both outcomes are findings and neither is a failure.
 
@@ -357,15 +360,15 @@ evidence file under the same ID (top of this document).*
   a second way — it drifted from the shipped text once and read this whole
   standard twice per audit.
 
-  Every finding is decided (fixed / limit / false-positive / deferred,
-  each but fixed with a reason); a BLOCKER or WARNING decided limit also
+  Every finding is decided (fixed / limitation / false-positive / deferred,
+  each but fixed with a reason); a BLOCKER or WARNING decided limitation also
   carries its effect on the verdicts — they stand, read within it, or the run
   leaves the named promises not assessable (a number may be reported
   within a fault; a verdict needs an instrument fit to judge it). How
   severe a finding is and what the result still allows are two
   questions: the effect follows from what the promise claims, not from
   the grade. The reported protocol carries each named effect as a
-  `Limit (audit <record> #N)` line and a note in the Conclusion, both held
+  `Limitation (audit <record> #N)` line and a note in the Conclusion, both held
   to the record by report-check;
   whether the limit is enough stays a reader's judgement. The raw report
   stays in the scratchpad (LAB-012 Protocol is content), and the head
@@ -440,7 +443,7 @@ evidence file under the same ID (top of this document).*
   | One output file = one run      | Instrument check or debug writes into the run's file                                                                                                                                                                      | preflight | LAB-057 One area per idea                                                                                                                   |
   | Parser without fixture test    | Model-output parser without a test with a real raw answer; drops uncounted; empty answer not a state of its own                                                                                                           | beide     | LAB-023 No silent loss, LAB-030 Reasoning models                                                                                             |
   | Spread unknown                 | n = 1 draw, unseeded, temperature implicit — a difference without a noise floor                                                                                                                                           | beide     | LAB-036 Validate                                                                                                                            |
-  | Criterion fails on noise       | a criterion on model output that one vote of a component the change does not touch can fail: every rejection counts, no majority over draws, no restriction to the component under test (uniagent 26, 2026-10-12: [criterion-3] fell to a single vote of an unchanged rule) | preflight | LAB-036 Validate, LAB-016 Resolution check before freezing                                                                                   |
+  | Criterion fails on noise       | a criterion on model output that one vote of a component the change does not touch can fail: every rejection counts, no majority over draws, no restriction to the component under test (uniagent 26, 2026-10-12: [C3] fell to a single vote of an unchanged rule) | preflight | LAB-036 Validate, LAB-016 Resolution check before freezing                                                                                   |
   | Shared constant                | Anchor or threshold lives in `lib/` and is shared by several areas; whoever changes it changes other areas' numbers                                                                                                       | beide     | —                                                                                                                                          |
   | Index/assignment               | Join by position instead of id — two stages build their order independently                                                                                                                                               | beide     | —                                                                                                                                          |
   | Provenance incomplete          | `prompt_sha`/config does not cover everything that determines the prompt or the number                                                                                                                                    | beide     | LAB-043 Runs go through `runlog`                                                                                                            |
@@ -503,7 +506,7 @@ evidence file under the same ID (top of this document).*
 
   | Tier               | before the run                                                                                                                                             | after the run                                                                                                                                                                                                                                                                                                   |
   |--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | `low`          | `code-check` (LAB-018 Routine check after every implementation); no agent audit, `preflight_audit` stays empty; the first run replaces the instrument check | **one** audit in `analysis` mode, which also covers the `preflight` rows of the scar table; it comes at the promotion of the number — before its adoption (`protocol-fill --from-run`), which report-check holds to it — or immediately if it steers a decision (an interpretation `[interpretation-…]`, a lab notebook item) — until then the number is *sketch*; blockers and warnings are reported, notes only as a count |
+  | `low`          | `code-check` (LAB-018 Routine check after every implementation); no agent audit, `preflight_audit` stays empty; the first run replaces the instrument check | **one** audit in `analysis` mode, which also covers the `preflight` rows of the scar table; it comes at the promotion of the number — before its adoption (`protocol-fill --from-run`), which report-check holds to it — or immediately if it steers a decision (a branch `[branch-…]`, a lab notebook item) — until then the number is *sketch*; blockers and warnings are reported, notes only as a count |
   | `high`         | `code-check`, then preflight audit (LAB-015 Preflight audit before freezing)                                                                                | Analysis audit (LAB-050 Analysis audit before reporting), before a number is reported                                                                                                                                                                                                                            |
 
   **At `low`, the criterion freezes once, the instrument never.** The
@@ -791,7 +794,7 @@ evidence file under the same ID (top of this document).*
   (the same logic as for shared prompts, LAB-067 A prompt has one home, which the run freezes). Two versions of the same
   rule in one script are the two-truths trap in miniature.
 
-- **LAB-039 · Anchors include the near cases.** *(was §2.C11)* A gate that was checked only on clear cases counts as unchecked, because the errors happen at the boundary. Anchor sets therefore carry boundary cases (ideally, verbatim, the cases on which the last version failed), and the report separates near from clear: A missed near anchor is a resolution limit (interpretation, LAB-013 Registered branch when the run can answer two questions), a missed clear anchor an instrument defect.
+- **LAB-039 · Anchors include the near cases.** *(was §2.C11)* A gate that was checked only on clear cases counts as unchecked, because the errors happen at the boundary. Anchor sets therefore carry boundary cases (ideally, verbatim, the cases on which the last version failed), and the report separates near from clear: A missed near anchor is a resolution limit (branch, LAB-013 Registered branch when the run can answer two questions), a missed clear anchor an instrument defect.
 
 ### 2D · Afterwards — analyzing and reporting
 
@@ -1143,7 +1146,7 @@ definition note.
   there is a term, it is used,
   even if one's own sounds catchier: shared vocabulary is worth more
   than a better individual name. (2) *Lab stock:*
-  `grep -ri <candidate + synonyms> notes/`; if a lab term exists, it is inherited, never coined twice. **Four homes, one per kind of term:** *Method* (criterion, quality check, interpretation, arm, draw) →
+  `grep -ri <candidate + synonyms> notes/`; if a lab term exists, it is inherited, never coined twice. **Four homes, one per kind of term:** *Method* (criterion, quality check, branch, arm, draw) →
   the vocabulary table of this standard; *Tool* (answering run, derived
   run, stamp) → labkit README "Terms"; *Lab* (rival, gap case,
   coverage per case) → `notes/theorie/terms.md` of the repo, per line
@@ -1189,7 +1192,7 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
 | Labkit term                          | Established term                                                     | Source / note                                                                                                                                            |
 |--------------------------------------|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Area                                 | no fixed term; closest: study folder                                 | one directory under `experiments/`: protocol, scripts, data references, runs — the unit every labkit check works on                                      |
-| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[criterion-…]`, a quality check `[quality-check-…]` or an interpretation `[interpretation-…]` — that the code must keep     |
+| Promise                              | preregistered hypothesis or analysis-plan item                       | one row of the protocol's promise block — a criterion `[criterion-…]`, a quality check `[quality-check-…]` or a branch `[branch-…]` — that the code must keep     |
 | Scar table                           | taxonomy of known failure modes; checklist                           | the error classes of LAB-015 Preflight audit before freezing that the audit checks, each an error that has happened before, with the rule that forbids it |
 | Intent · freeze (frozen)             | preregistration; study protocol                                      | Nosek et al. 2018 (PNAS)                                                                                                                                 |
 | Render check · instrument check      | instrument pretest (survey methodology)                              | Dev language as secondary term: dry run / smoke test                                                                                                     |
@@ -1202,7 +1205,7 @@ labkit's own and defined here: area, promise, scar table, free knobs.*
 | Polarity symmetry                    | framing/valence effect; prompt polarity sensitivity                  | NOT positional bias — that is the swap control                                                                                                           |
 | Anchor gate                          | validation gate; sanity checks                                       | Software QA / ML eval                                                                                                                                    |
 | Producer                             | build step / pipeline stage                                          | Data engineering                                                                                                                                         |
-| Interpretation (`[interpretation-…]`) | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — criteria and quality checks also decide                                                                                              |
+| Registered branch (`[branch-…]`) | pre-specified conditional analysis; decision tree (IF-THEN)          | Prereg templates; NOT "decision rule" — criteria and quality checks also decide                                                                                              |
 | Quality check (`[quality-check-…]`) | outcome-neutral condition; quality check                             | Registered Reports; NOT stopping rule (= when data collection ends) and NOT futility                                                                     |
 | Throwaway test                       | no fixed term; closest: exploratory scratch run                      | —                                                                                                                                                        |
 | Judge instance                       | judge configuration                                                  | LLM-as-judge literature                                                                                                                                  |

@@ -33,7 +33,7 @@ UNFROZEN = head(repeat_cost="high", frozen=False, promises=DEFAULT_BLOCK, model=
 REGISTRATION = """
 - **Model / tool:** haiku
 - **Question / hypothesis:** does the register beat the trivial decider?
-- **Success / failure criterion:** [criterion-1] accuracy above the trivial decider
+- **Inference criterion:** [criterion-1] accuracy above the trivial decider
 - **Quality check:** [quality-check-1] every case parsed
 """
 LOW_NO_CRITERION = (head(repeat_cost="low", model="haiku") + REGISTRATION).replace(

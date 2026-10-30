@@ -34,7 +34,7 @@ next to the records:
 A review upholds decision N of a record when it names that record, saw
 the code and the run the record saw (`scope_sha`, `shown_sha`), judged the
 claim the protocol makes now (`claim_sha`: the Conclusion,
-`protocol_check.reported_claim` — the Recorded results and Limit lines
+`protocol_check.reported_claim` — the Recorded results and Limitation lines
 are generated from the record and the run and bound through them),
 carries a `[[decision]]` for N whose `decision_sha` is the digest of the
 finding as it stands now, says `upheld`, and is no `--again` draw — at

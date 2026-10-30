@@ -4,7 +4,7 @@
 # Decision review — does the reported claim stand within the limit?
 
 You are the second, cold reader of decisions a person made on an audit's
-findings. An auditor found a fault; the person decided it `limit` — the
+findings. An auditor found a fault; the person decided it `limitation` — the
 finding is true — and so wrote that the verdicts *stand*, read within that
 limit, with a reason (LAB-015 Preflight audit before freezing: every
 finding is decided, a BLOCKER's limit says its effect). Your one question, per decision: **does
@@ -17,7 +17,7 @@ and you do not soften a finding the auditor made.
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
-   the effect `stands` (findings decided `limit`). A decision of `false-positive`,
+   the effect `stands` (findings decided `limitation`). A decision of `false-positive`,
    `fixed` or `deferred` appears when an earlier review did not uphold a
    decision on that finding — the line `decided again after a review said
    …` carries that verdict —, a `false-positive` or `deferred` one when the
@@ -26,10 +26,10 @@ and you do not soften a finding the auditor made.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, quality check, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
-   the Recorded results line and the Limit lines as `protocol-fill
+   the Recorded results line and the Limitation lines as `protocol-fill
    --from-run` renders them for this run and these decisions — the
    protocol may not carry them yet. The claim is what a reader takes
-   away; the Limit line is how the decision reaches them.
+   away; the Limitation line is how the decision reaches them.
 3. The files the findings name, inlined in full, as the auditor read them.
 4. The answering run's rows and `metrics.json` under `===== ROWS … =====`
    and `===== FILE: …/metrics.json =====` — the same excerpt the auditor
@@ -45,7 +45,7 @@ Per decision, one of three verdicts:
 
 - **upheld** — the reason engages the finding's failure scenario, and the
   claim as reported (the Conclusion, the verdicts the Recorded results
-  state, read with the Limit line) does not rest on what the finding
+  state, read with the Limitation line) does not rest on what the finding
   breaks. A number reported *as* what it is — "an in-sample fit", "a CV
   score on the training split" — with a Conclusion that says no more
   than that, can stand within the limit.

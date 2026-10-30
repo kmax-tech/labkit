@@ -61,7 +61,11 @@ class Repeats(unittest.TestCase):
             derived_from=derived_from,
         )
         with contextlib.redirect_stdout(io.StringIO()), r as run:
-            run.metrics(c1_pass=True, a1_pass=True, a2_pass=True)
+            run.metrics(
+                criterion_1_pass=True,
+                quality_check_1_pass=True,
+                quality_check_2_pass=True,
+            )
         return run.run_id
 
     def _cfg(self, run_id: str) -> dict:
@@ -439,7 +443,11 @@ class Reseed(unittest.TestCase):
         seen: dict = {}
         with contextlib.redirect_stdout(io.StringIO()), r as run:
             seen = run.config
-            run.metrics(c1_pass=True, a1_pass=True, a2_pass=True)
+            run.metrics(
+                criterion_1_pass=True,
+                quality_check_1_pass=True,
+                quality_check_2_pass=True,
+            )
         return run.run_id, seen
 
     def _recorded(self, run_id: str) -> dict:

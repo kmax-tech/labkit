@@ -453,11 +453,11 @@ class Exp(unittest.TestCase):
         self.assertIn('kind = "compute"', proto)
         # a computation has no bar to clear: no promise tables, no criterion, no admissibility
         self.assertNotIn("[[promise]]", proto)
-        self.assertNotIn("Success / failure criterion", proto)
+        self.assertNotIn("Inference criterion", proto)
         self.assertNotIn("Quality check", proto)
         # the Summary at low repeat cost is the Result line
         self.assertIn("- **Conclusion:**", proto)
-        self.assertNotIn("- **Limits:**", proto)
+        self.assertNotIn("- **Limitations:**", proto)
         self.assertNotIn("- **Next step:**", proto)
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
         # the one public recheck of every skeleton: the compute skeleton's 02_analyze.py
@@ -510,7 +510,7 @@ class Exp(unittest.TestCase):
             "constants = { margin = 0.25 }",
             "constants = { max_empty = 2 }",
             "constants = { null_band_items = 1 }",
-            "Success / failure criterion",
+            "Inference criterion",
             "Quality check",
             "Raw output",
         ):

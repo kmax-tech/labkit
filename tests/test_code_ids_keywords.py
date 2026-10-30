@@ -2,7 +2,7 @@
 
 `r.metrics(criterion_1_pass=...)` reaches metrics.json as "criterion_1_pass" without being a
 string literal. Reading literals only produced a BLOCKER against correct
-code ("no script mentions a 'criterion-1' key") — found in the first promise-block
+code ("no script mentions a 'c1' key") — found in the first promise-block
 run, and the same for `k1_pass=` since the check existed.
 
 The decisive fixture is a twin pair: the same report written as a dict

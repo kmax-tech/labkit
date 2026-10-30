@@ -144,9 +144,9 @@ promise's sentence; leave the after-run fields for after the run.
 
 A promise's id is its kind and a number: `criterion-1` (what counts as
 success), `quality-check-1` (what must hold before the criterion is read)
-and `interpretation-1` (what follows from an outcome, written arm by arm —
+and `branch-1` (what follows from an outcome, written as conditional outcomes —
 `criterion-1 met → generalises; otherwise → no-verdict` — the run
-recording one of those readings).
+recording one of those outcomes).
 
 Use `protocol-fill <PROTOCOL> "type=exploratory" "criterion-1 sentence=<value>"
 "<Label>=<value>"` with the values your design calls for; a computation
@@ -250,7 +250,7 @@ to decide. The statuses, named by what follows from them:
 | status | when | what follows |
 |---|---|---|
 | `fixed` | after you made the repair — the named fault is gone from the files (code, data, a description in the setup, or the adoption); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
-| `limit` | the finding is true and you report within it | the number carries it as a Limit line; the verdict holds within the limit — for a BLOCKER a second auditor must uphold it, for a WARNING its missing review stays a warning; `--not-assessable <ID>` instead when this run cannot judge that promise (no review owed) |
+| `limitation` | the finding is true and you report within it | the number carries it as a Limitation line; the verdict holds within the limit — for a BLOCKER a second auditor must uphold it, for a WARNING its missing review stays a warning; `--not-assessable <ID>` instead when this run cannot judge that promise (no review owed) |
 | `false-positive` | the finding does not apply to the code and run as audited — the auditor misread them | `--why` shows from the files why (file, line, value); a BLOCKER's needs a second auditor (`labkit-audit <area> --review --record <record>`) before the number leaves, a WARNING's does not |
 | `deferred` | the fault is real but not this result's to fix — someone else's task, or the area is handed over | the reason names who or why; a carried one needs a second auditor |
 
@@ -279,7 +279,7 @@ the registered question, criteria or constants. Step 3 then obtains a new
 covering preflight audit and freezes again before the new full run;
 preflight with the old frozen, stale audit would hold the repair.
 
-A `limit` keeps the registered verdict, read within the limit; add
+A `limitation` keeps the registered verdict, read within the limit; add
 `--not-assessable <ID>` when this run cannot judge that promise. An unassessable or unmet quality
 check leaves every criterion not assessable. Measured values remain
 description, not a success claim. See the recovery choices below.
@@ -296,7 +296,7 @@ valid (they are rendered from the run, not from the Conclusion), every
 decision review becomes stale and is redone where one is owed, and the
 report's own explanation must still match.
 
-A BLOCKER decided `limit` (verdicts standing) or `false-positive` requires
+A BLOCKER decided `limitation` (verdicts standing) or `false-positive` requires
 `labkit-audit <area> --review --record <record>`. A rejected review means
 correcting the decision, evidence or claim, not drawing until approved.
 If a review did not uphold a BLOCKER and it is now `fixed`,
@@ -387,11 +387,11 @@ prints these same recovery choices with each decision list:
 - **a missed criterion** — that is the result: report the miss first.
   Example: valid held-out performance is below the registered margin.
   Lowering the margin is not a repair.
-- **an unjudged promise** — a fault you cannot fix: decide it `limit`
+- **an unjudged promise** — a fault you cannot fix: decide it `limitation`
   with `--not-assessable <ID>`; report descriptive values and
   the promise as not assessable, not a pass. A protocol without promises
   (a `compute`) has none to leave unjudged, and `--decide` refuses every
-  id: there the fault limits the claim (`limit`, the limit in the
+  id: there the fault limits the claim (`limitation`, the limit in the
   Conclusion) or is decided `deferred` and handed over.
 - **an invalid registration** — the question cannot be answered as
   written, not merely missed. Example: incompatible definitions of what

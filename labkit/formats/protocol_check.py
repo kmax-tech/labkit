@@ -97,7 +97,7 @@ FIELDS = (
     Field("Terms of this protocol", "must", "l"),
     Field("Question / hypothesis", "must", "l"),
     Field(
-        "Success / failure criterion", "must", "lb"
+        "Inference criterion", "must", "lb"
     ),  # a computation has no bar to clear (2026-10-12); a fit or an apply has (0.104)
     Field("Quality check", "must", "lb"),
     Field("Data / scope", "must", "l"),
@@ -136,12 +136,12 @@ FIELDS = (
     # The Summary for a person, written after the run (2026-10-07)
     Field("Conclusion", "after", "l"),
     Field(
-        "Limits", "after"
+        "Limitations", "after"
     ),  # at low repeat cost the Summary requires Conclusion (2026-10-12)
     Field("Next step", "after"),
     Field("Question", "report"),
     Field("Did", "report"),
-    Field("Outcome", "report"),
+    Field("Expected or surprising", "report"),
     Field("Rival check", "report"),
     Field("Caps/drops", "report"),
     # "fällig mit dem Zurückschreiben der Zahl" (LAB-050 Analysis audit before reporting)
@@ -154,7 +154,7 @@ FIELDS = (
 #: `protocol-fill --prompts` writes from the code the record binds already,
 #: and the registration's own fields, which `registration_stamp` binds field
 #: by field (so a rewritten question is named as one). The fields written
-#: after the audit (the Summary, Recorded results, the Limit lines, the run
+#: after the audit (the Summary, Recorded results, the Limitation lines, the run
 #: list) and the reportable run's further fields are not in it, so writing
 #: them leaves the audit standing. Why: a corrected Data / scope could never
 #: be followed up (fifth SAB-like draw, 2026-10-28)
@@ -429,9 +429,9 @@ def promise_names(text: str) -> dict[str, str]:
 
 def named_ids(ids: Iterable[str], names: Mapping[str, str]) -> str:
     """IDS as a message names them, each with its field's name from NAMES
-    (`promise_names`): "criterion-1 (success / failure criterion), quality-check-2 (null
+    (`promise_names`): "criterion-1 (inference criterion), quality-check-2 (null
     condition / anchors)" — an id without a name stands alone. An agent
-    reading `quality-check-2` alone could not tell which condition it was."""
+    outcome `quality-check-2` alone could not tell which condition it was."""
     return ", ".join(f"{i} ({names[i]})" if i in names else i for i in ids)
 
 
@@ -860,10 +860,10 @@ BEFORE_RUN_CLAIMS = (
     "Recorded results",
     "Raw output",
     "Conclusion",
-    "Limits",
+    "Limitations",
     "Next step",
     "Did",
-    "Outcome",
+    "Expected or surprising",
     "Rival check",
     "Caps/drops",
 )
@@ -911,7 +911,7 @@ def reported_claim(text: str) -> list[tuple[str, str]]:
     """(label, value) of the claim the author makes of the result — the
     Conclusion, as written, a placeholder included — what a decision
     review judged (`reviews.claim_digest`); rewritten afterwards it is
-    another claim. The Recorded results line and the Limit lines are not
+    another claim. The Recorded results line and the Limitation lines are not
     part of it: they are generated from the run and the records and held
     exactly to them (`result_render.render_gaps`), so the record's
     decision and the run's `shown_sha` bind them already — and

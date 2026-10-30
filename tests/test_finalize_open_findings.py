@@ -29,11 +29,11 @@ from protocol_fixture import registration_of, completed_run, head, run_record  #
 
 BODY = """\
 - **Question / hypothesis:** does it hold?
-- **Success / failure criterion:** [criterion-1] p < .05
+- **Inference criterion:** [criterion-1] p < .05
 - **Quality check:** [quality-check-1] parse yield above 80%
 - **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels stay at chance
 - **Raw output:** one real example
-- **Outcome:** 0.03
+- **Expected or surprising:** 0.03
 
 ```text
 prompt
@@ -112,7 +112,7 @@ class OpenFindings(unittest.TestCase):
         path = self._record([BLOCKER])
         path.write_text(
             path.read_text(encoding="utf-8")
-            .replace('status = "open"', 'status = "limit"')
+            .replace('status = "open"', 'status = "limitation"')
             .replace('reason = ""', 'reason = "the leak is the measured quantity"'),
             encoding="utf-8",
         )

@@ -1,6 +1,6 @@
 """result_render — the result section as its bound sources render it.
 
-The Recorded results line and the Limit lines are generated. Recorded
+The Recorded results line and the Limitation lines are generated. Recorded
 results opens with the reportable verdict of every registered promise
 (`verdicts`, one derivation for every reader): a quality check
 not assessable — an accepted limit names it — or not met leaves every
@@ -12,7 +12,7 @@ values —, then, for a computation whose head registers a `[reference]`,
 the comparison as the run recorded it (`reference 0.62 ± 0.01 (within):
 not met, distance 0.145`, or `not comparable: <key> absent` — never a
 "met" the run did not record; `comparison_phrase`), then the run id and
-one note on the limits. Each Limit line comes
+one note on the limits. Each Limitation line comes
 from an accepted finding with an effect in the analysis records covering
 that run (`audit_binding.covering_analysis`). `protocol-fill --from-run`
 writes them, `--render` writes them again, and report-check holds the
@@ -123,7 +123,7 @@ def _verdict(
 ) -> str:
     """`verdicts` for one promise P, its recorded VALUE; BLOCKED the
     quality checks that leave a criterion unjudged."""
-    if p.kind == "interpretation":
+    if p.kind == "branch":
         return f"{p.id} {value}"
     if p.id in unjudged:
         return f"{p.id} not assessable ({unjudged[p.id]})"
@@ -273,8 +273,8 @@ RENDER = "`protocol-fill <PROTOCOL> --render`"
 def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
     """Why TEXT's result section is not EXPECTED, one blocker each with the
     `protocol-fill` step that writes it, or []:
-    the Recorded results line missing or differing, a Limit line missing or differing,
-    a Limit line no covering record decides, a generated label written more
+    the Recorded results line missing or differing, a Limitation line missing or differing,
+    a Limitation line no covering record decides, a generated label written more
     than once (every line of a label is held, not the last one). Exact:
     the comparison is equality of the rendered values, no reading of what
     they say."""

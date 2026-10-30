@@ -101,7 +101,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # runlog's repeat_of and start_check's derived_from each read their
     # parent run (audit 2026-10-27, third, S4); `start_check.completed_parent`
     ("a parent run read by hand", r"names no completed run", {"start_check"}),
-    # finalize and preflight each rendered the area-test run; the 10-23 interpretation-1
+    # finalize and preflight each rendered the area-test run; the 10-23 branch-1
     # fix landed in one (audit 2026-10-27, third, S7); `preflight.tell_test_run`
     (
         "an area-test run rendered by hand",
@@ -199,7 +199,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # 2026-10-27, C17): `findings.DECIDED_LIST`, `carried_and_closed`
     (
         "the decided statuses spelled by hand",
-        r"fixed / limit / false-positive / deferred|\(\"false-positive\", \"deferred\"\)",
+        r"fixed / limitation / false-positive / deferred|\(\"false-positive\", \"deferred\"\)",
         {"findings"},
     ),
     # a bare area name was read by two globs, `*` running over dashes, and

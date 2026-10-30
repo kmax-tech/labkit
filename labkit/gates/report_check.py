@@ -41,7 +41,7 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
                     and shown evidence; while the area's audit evidence is
                     gone the blocker names the loss and its restore, since
                     labkit-audit starts no audit then. Check the generated
-                    Recorded results and Limit lines against that run and
+                    Recorded results and Limitation lines against that run and
                     those records.
   6. recomputation  always run `scripts/02_analyze.py --check` under the
                     repo's interpreter: its outputs, metrics and cited
@@ -700,10 +700,10 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
 
 
 def limit_gaps(ctx: Checked) -> list[GateFinding]:
-    """The generated results and limits: every BLOCKER decided `limit` of the covering analysis
+    """The generated results and limits: every BLOCKER decided `limitation` of the covering analysis
     records has its effect decided, and the result section says exactly
     what those records and the run render (`result_render.render_gaps`):
-    the Recorded results line with its note, one Limit line per decided limit, none
+    the Recorded results line with its note, one Limitation line per decided limitation, none
     that no record decides. Exact in what it holds — equality with the
     rendering — and silent on whether a limit is enough: that is the
     audit's question. Empty when no covering record exists
@@ -722,13 +722,13 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                 # a record changed by hand: `--decide … limit` writes the effect
                 gaps.append(
                     blocker(
-                        f"{findings.limit_label(r, n)}: a BLOCKER decided limit "
+                        f"{findings.limit_label(r, n)}: a BLOCKER decided limitation "
                         "owes its effect on the verdicts",
                         fix="decide it again: `"
                         + decide_command(
                             ctx.area,
                             n,
-                            "limit",
+                            "limitation",
                             "<why>",
                             r.path.name,
                             protocol=ctx.protocol,
@@ -758,7 +758,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     (`reviews.upholding`: a review of that record, its code and its run as
     shown, under the claim the protocol makes now, of the decision as it
     stands now, every draw saying `upheld`). The grade follows the
-    finding's: a BLOCKER limit's `stands` no review upholds — never
+    finding's: a BLOCKER limitation's `stands` no review upholds — never
     reviewed, rejected, insufficient, contested, or reviewed as another
     decision or claim — is a BLOCKER (a severe finding is not settled by
     a reason alone; decided 2026-10-22 after the fifth round's replay and
@@ -798,7 +798,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
             out.append(
                 GateFinding(
                     BLOCKER if f.grade == "BLOCKER" else WARNING,
-                    f"{findings.limit_label(r, n)}: `stands` on a {f.grade} decided limit "
+                    f"{findings.limit_label(r, n)}: `stands` on a {f.grade} decided limitation "
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
                     f"upholds that the reported claim stands within this limit "
                     f"(LAB-015 Preflight audit before freezing)",

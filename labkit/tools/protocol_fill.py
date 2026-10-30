@@ -15,7 +15,7 @@ placeholders included) and leaves everything else byte-identical.
     protocol-fill PROTOCOL-x.md type=exploratory repeat_cost=low kind=fit "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
-                                               Recorded results, Limit lines (stray ones dropped), Prompt block
+                                               Recorded results, Limitation lines (stray ones dropped), Prompt block
     protocol-fill PROTOCOL-x.md --into REPORT.md  the declared result as a generated block in a
                                                report outside the protocol (replaced in place,
                                                or appended); report-check holds the block to
@@ -32,7 +32,7 @@ placeholders included) and leaves everything else byte-identical.
                                                block in the report (`handovers`)
     protocol-fill PROTOCOL-x.md --withdraw --why "…" [--into REPORT.md]
                                                the declaration withdrawn: `[result]`
-                                               gone, Recorded results and Limit lines
+                                               gone, Recorded results and Limitation lines
                                                reset, the run's Runs entry marked
                                                `withdrawn <date>: <why>`, its result
                                                blocks in REPORT withdrawn; audit
@@ -51,7 +51,7 @@ placeholders included) and leaves everything else byte-identical.
                                                holds it to), written only when report-check
                                                passes on them; the Summary's Conclusion — the
                                                question's answer in two sentences, within the
-                                               Limits — stays yours
+                                               Limitations — stays yours
 
 A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
@@ -435,7 +435,7 @@ def _insert_result_table(lines: list[str], span: tuple[int, int], run_id: str) -
 #: it apart, since filling it before the run makes --from-run refuse
 WRITTEN_BY_RUN = (RECORDED_RESULTS_LABEL,)
 #: the fields about the run that the author writes after it — Conclusion: the
-#: question's answer in two plain sentences, read within the Limit lines;
+#: question's answer in two plain sentences, read within the Limitation lines;
 #: Raw output from the run's rows (which pair shows a finding is a choice
 #: no record makes). `--list` sets them apart too, and `--from-run` names
 #: the open ones with the run's output files.
@@ -483,9 +483,9 @@ def from_run(
 ) -> tuple[str, list[str], str]:
     """Write the run back: `[result] run` in the TOML head (the one
     declaration that the number is reported, `fill_result_run`), the Recorded results
-    line, the Limit lines and the Runs entry as `runs/<run_id>/metrics.json`
+    line, the Limitation lines and the Runs entry as `runs/<run_id>/metrics.json`
     and the covering records render them (`result_render.rendering`; the
-    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limit line of a record that covers
+    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limitation line of a record that covers
     the run no longer dropped; the Summary's Conclusion stays the author's
     (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
     Recorded results is refused without `force`; a `[result]` naming another
@@ -512,7 +512,7 @@ def from_run(
         filled.append("Runs")
     text, written = limit_lines(text, r.limits, force)
     filled += written
-    # a Limit line of a record that no longer covers the run is labkit's own
+    # a Limitation line of a record that no longer covers the run is labkit's own
     # stale line, never the author's prose: it goes with the write-back
     text, dropped = drop_stray_limits(text, r.limits)
     filled += [f"dropped {label}" for label in dropped]
@@ -522,7 +522,7 @@ def from_run(
 def drop_stray_limits(
     text: str, keep: tuple[tuple[str, str], ...]
 ) -> tuple[str, list[str]]:
-    """TEXT without the Limit lines no covering record decides (labels not in
+    """TEXT without the Limitation lines no covering record decides (labels not in
     KEEP) — written by hand or from an older record. (text, labels dropped)."""
     keep_labels = {label for label, _ in keep}
     dropped: list[str] = []
@@ -555,7 +555,7 @@ def declared_run_dir(text: str, area: Path, why: str) -> Path:
 
 def render_result(text: str, area: Path) -> tuple[str, list[str]]:
     """`--render`: the result section written again from its sources for the
-    declared run — the Recorded results line, the Limit lines (stray ones dropped) and,
+    declared run — the Recorded results line, the Limitation lines (stray ones dropped) and,
     where the scripts' PROMPT constants read statically, the Prompt block.
     Idempotent: a text that says what its sources say comes back unchanged.
     (text, what was written). Raises ValueError without a declared run or
@@ -614,7 +614,7 @@ def limit_lines(
             )
             if answer is None:
                 raise ValueError(f"no Recorded results line to write {label!r} under")
-            # below Recorded results and the Limit lines already under it: in
+            # below Recorded results and the Limitation lines already under it: in
             # record order (inserted right below Recorded results, three limits
             # read #3, #2, #1 — the final audits, 2026-10-21)
             at = answer.last
@@ -753,7 +753,7 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
 def _name_yours(text: str, area: Path, run: Path) -> None:
     """After an adopted write-back: the after-run fields still open, which
     the author writes (Conclusion: the question's answer in two sentences within
-    the Limits; Raw output from the rows), and the run's output files — the
+    the Limitations; Raw output from the rows), and the run's output files — the
     post hook asked for Raw output only after the commit, and two of three
     cold agents filled it in a second round (sandbox, 2026-10-21). A field
     this protocol does not owe (`not_owed`: Raw output without a model) is
@@ -912,7 +912,7 @@ def _prompts_file(protocol: Path, text: str) -> int:
 
 def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str, str]:
     """`--into`: REPORT with the declared result as a generated block — the
-    protocol's Recorded results and Limit lines as rendered (`report_blocks.block_body`),
+    protocol's Recorded results and Limitation lines as rendered (`report_blocks.block_body`),
     replaced in place or appended (`report_blocks.with_block`).
     PROTOCOL is the protocol's path relative to the report, the block's
     owner: its blocks are replaced whichever run they showed. (report text,
@@ -1156,7 +1156,7 @@ WITHDRAWN_RESULTS = (
 def withdraw(text: str, why: str, day: str) -> tuple[str, str]:
     """`--withdraw`: TEXT without its result declaration (`without_result`),
     the lines `--from-run` generated reset — Recorded results to a
-    placeholder naming the withdrawal (WITHDRAWN_RESULTS), every Limit line
+    placeholder naming the withdrawal (WITHDRAWN_RESULTS), every Limitation line
     dropped — and the run's Runs entry marked with DAY and WHY
     (`withdrawn_runs_entry`). Audit records, findings and runs are not
     touched: a withdrawal releases nothing and settles nothing. Returns
@@ -1453,7 +1453,7 @@ def main(argv: list[str]) -> int:
         "--render",
         action="store_true",
         help="write the result section again from its sources for the adopted run: "
-        "the Recorded results line, the Limit lines (stray ones dropped), the Prompt block",
+        "the Recorded results line, the Limitation lines (stray ones dropped), the Prompt block",
     )
     ap.add_argument(
         "--into",
@@ -1462,7 +1462,7 @@ def main(argv: list[str]) -> int:
         metavar="REPORT",
         help="the report a block is written into (a report outside the protocol): "
         "alone, the adopted result as a generated block — Recorded results and "
-        "Limit lines as rendered; the protocol's block is replaced (also after a "
+        "Limitation lines as rendered; the protocol's block is replaced (also after a "
         "new run), else one is appended; with --discuss or --handover, that block",
     )
     ap.add_argument(
@@ -1504,7 +1504,7 @@ def main(argv: list[str]) -> int:
         "--withdraw",
         action="store_true",
         help="with --why (and --into REPORT): withdraw the result's adoption — "
-        "[result] removed, Recorded results and Limit lines reset, the run's Runs "
+        "[result] removed, Recorded results and Limitation lines reset, the run's Runs "
         "entry marked withdrawn with the date and why, its result blocks in REPORT "
         "withdrawn; audit records and findings untouched; no result is released, "
         "the next adoption owes a covering audit",
@@ -1516,7 +1516,7 @@ def main(argv: list[str]) -> int:
         default=None,
         metavar="RUN_ID",
         help="adopt the run as the result: write it as `[result] run` in the TOML head and write Recorded results and Runs lines from its metrics.json, kept only when report-check passes "
-        "(without RUN_ID the protocol's answering run — the one finalize and report-check hold it to: completed, bound to its id, never a repeat); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limits",
+        "(without RUN_ID the protocol's answering run — the one finalize and report-check hold it to: completed, bound to its id, never a repeat); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limitations",
     )
     ap.add_argument(
         "--line",

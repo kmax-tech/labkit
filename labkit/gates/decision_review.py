@@ -8,7 +8,7 @@ An accepted finding whose effect is `stands` claims that the verdicts hold,
 read within the limit (`findings.EFFECT_STANDS`). The reviewer gets, in one
 call: every such decision of the record (the finding, the person's
 reason), the protocol as it is now (the registration and the reported
-claim — Conclusion, Recorded results, Limit lines), the files the findings
+claim — Conclusion, Recorded results, Limitation lines), the files the findings
 name as the record's auditor read them (the area snapshot, held to the
 record's `scope_sha`), and what the auditor was shown of the run (the
 rows' excerpts and metrics.json, held to the record's `shown_sha`). The
@@ -19,7 +19,7 @@ Instructions: `decision-review.agent.md`.
 The verdicts are written beside the records (`formats/reviews`,
 `audits/<minute>-review.toml`), bound to the record, its code, its run as
 shown, the claim as judged (`reviews.claim_digest`: the Conclusion; the
-Recorded results and Limit lines are shown as they render and are bound
+Recorded results and Limitation lines are shown as they render and are bound
 through the record and the run) and each decision as it stood
 (`findings.decision_digest`). Only `upheld` releases a decision;
 `rejected` and `insufficient` do not, nor does a review of a decision or
@@ -92,7 +92,7 @@ DECISIONS_LABEL = (
     "did not uphold a decision on it"
 )
 RESULT_LABEL = (
-    "RESULT — the Recorded results line and the Limit lines as `protocol-fill "
+    "RESULT — the Recorded results line and the Limitation lines as `protocol-fill "
     "--from-run` renders them for this run and these decisions (the protocol "
     "above may not carry them yet)"
 )
@@ -223,7 +223,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     decided = reviewable(record, found)
     if not decided:
         raise AuditError(
-            f"{record.path.name}: no finding decided `limit` with effect `stands`, no "
+            f"{record.path.name}: no finding decided `limitation` with effect `stands`, no "
             f"finding closed after a review did not uphold it and no carried finding "
             f"closed dismissed or deferred — nothing to review",
             fix=f"`{audit_command(area, '--findings', protocol=protocol)}` "
@@ -454,7 +454,7 @@ def rejected_way(promised: bool) -> str:
     promise, PROMISED — else decide it `deferred` and hand over) or fix the
     fault; never another audit that settles nothing."""
     routes = (
-        "limit the claim (the Conclusion), change the effect (`--decide N limit "
+        "limit the claim (the Conclusion), change the effect (`--decide N limitation "
         '--why "REASON" --not-assessable <ID>`) or fix the fault'
         if promised
         else "limit the claim (the Conclusion) or fix the fault — or decide it "

@@ -1040,7 +1040,7 @@ def given_or_in(given: Path, directory: Path) -> Path:
     when GIVEN is a bare file name and DIRECTORY holds it, else GIVEN
     unchanged — the caller's refusal names what was typed. The gates print
     a protocol and an audit record by their file name (`preflight <AREA>
-    --protocol PROTOCOL-*.md`, `Limit (audit <record> #N)`), and the name
+    --protocol PROTOCOL-*.md`, `Limitation (audit <record> #N)`), and the name
     was refused from the repo root."""
     if given.exists() or given.is_symlink() or given.parent != Path("."):
         return given

@@ -2,7 +2,7 @@
 
 A promise is one checked registration of a protocol: a criterion that
 judges, a quality check that releases or withholds the verdict, an
-interpretation that says what follows from it. Its id is its kind and a
+branch that says what follows from it. Its id is its kind and a
 number, in the protocol text (`[criterion-1]`); its key in the run's
 metrics is the id with underscores and a suffix (`criterion_1_pass`).
 
@@ -12,12 +12,12 @@ metrics is the id with underscores and a suffix (`criterion_1_pass`).
                     issued, conditional on an outcome-neutral check
                     (control, anchor, yield, coverage, resolution) passing
                     in the same run
-    interpretation  binds a pre-specified condition on the results to the
-                    reading or follow-up analysis it licenses
+    branch  binds a pre-specified condition on the results to the
+                    outcome or follow-up analysis it licenses
 
-An interpretation's sentence is written arm by arm, `<condition> →
-<reading>`, arms separated by `;` (`parse_arms`); the run records one of
-its readings under the promise's key, and intent-check holds it there.
+A branch's sentence lists its outcomes, each `<condition> →
+<name>`, separated by `;` (`parse_outcomes`); the run records the name of one of
+its outcomes under the promise's key, and intent-check holds it there.
 
 The kind is spelled out so that a person reading a protocol, a report or a
 run's metrics.json needs no legend. The earlier letters (C/A/B, and before
@@ -62,7 +62,7 @@ from pathlib import Path
 from labkit.formats import files, protocol_block, runs, scope_sha
 
 #: the kinds of promise — each one an id's stem: `criterion-1`
-KINDS = ("criterion", "quality-check", "interpretation")
+KINDS = ("criterion", "quality-check", "branch")
 #: A constant is named like the config key it is recorded under — lowercase
 #: snake_case, so the name IS the mapping between protocol and run record
 #: (2026-10-08: `min_f1` in the block against `min_f1` in the record would
@@ -97,13 +97,15 @@ def kind_of(pid: str) -> str:
 def registers_ids(text: str) -> bool:
     """Does the protocol's prose name any promise id? A computation at low repeat cost
     names none and owes no [[promise]] table (0.87.1)."""
-    return ID_IN_PROTOCOL.search(text) is not None
+    return (
+        ID_IN_PROTOCOL.search(text) is not None or EARLIER_ID.search(text) is not None
+    )
 
 
 #: an id in the letters earlier labkits read (C/A/B up to 0.103.0, K/S/W/N
 #: up to 0.47) — detected, never read: a protocol carrying them would
 #: otherwise pass every id check with nothing checked
-EARLIER_ID = re.compile(r"\[([CABKSWN]\d+)\]")
+EARLIER_ID = re.compile(r"\[([CABKSWN]\d+)\]", re.IGNORECASE)
 #: a metrics key in the id namespace: the bare stem `criterion_1` or
 #: `criterion_1_<suffix>`; group 1 is the stem
 ID_KEY = re.compile(rf"^((?:{_KEY_KIND})_\d+)(?:_.*)?$")
@@ -118,21 +120,27 @@ CRITERION_N_KEY = re.compile(r"^criterion_\d+_n$")
 
 _BLOCK_ID = re.compile(rf"^(?:{_KIND})-\d+$")
 
-#: an interpretation's reading — the value its run records under the key
-READING = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-#: the arrow between an arm's condition and its reading (U+2192), the one
-#: spelling: `->` is refused, not read as a second form of the same arm
+#: an outcome's name — what the run records under the branch's key
+OUTCOME_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+#: the arrow between an outcome's condition and its name (U+2192), the one
+#: spelling: `->` is refused, not read as a second form of the same outcome
 ARROW = "→"
-#: what separates an interpretation's arms
-ARM_SEPARATOR = ";"
-#: the condition of a last arm, taken when no earlier arm's condition holds
+#: what separates an outcome's name from its consequence
+CONSEQUENCE_MARK = ":"
+#: what separates a branch's outcomes (a consequence holds none)
+OUTCOME_SEPARATOR = ";"
+#: the condition of the last outcome: the cases no earlier condition matched
 OTHERWISE = "otherwise"
-#: the form, as every refusal of an interpretation's sentence shows it
-ARMS_FORM = (
-    "an interpretation is written arm by arm, `<condition> → <reading>`, arms "
-    "separated by `;`, a reading in lowercase letters, digits and hyphens: "
-    '"criterion-1 met and quality-check-1 met → generalises; quality-check-1 '
-    'not met → noisy; otherwise → no-verdict"'
+#: the form, as every refusal of a branch's sentence shows it
+OUTCOMES_FORM = (
+    "a branch lists its outcomes in order, each `<condition> → <outcome>: "
+    "<consequence>`, separated by `;` — the first condition that holds selects "
+    "the outcome, a final `otherwise` covers the rest, an outcome is named in "
+    "lowercase letters, digits and hyphens, and a consequence (an "
+    "branch, an action, or a non-action with its reason) holds no `;`: "
+    '"quality-check-1 not met → noisy: no verdict, the parser is repaired '
+    "first; criterion-1 met → generalises: the screen is used on the next "
+    'cohort; otherwise → misses: reported as a miss, no further analysis"'
 )
 _ALLOWED_FIELDS = {"id", "key", "sentence", "scope", "constants"}
 
@@ -188,66 +196,92 @@ class PromiseError(ValueError):
 
 
 @dataclass(frozen=True)
-class InterpretationArm:
-    """One arm of an interpretation: a condition on the results and the
-    reading it licenses — the value the run records under the promise's key
-    when the condition holds."""
+class BranchOutcome:
+    """One outcome of a registered branch: the condition on the results that
+    selects it, its name — what the run records under the branch's key — and
+    its consequence: what the outcome permits (a branch, an action,
+    or a non-action with its reason)."""
 
-    condition: str  # "quality-check-1 not met", or OTHERWISE on the last arm
-    reading: str  # "noisy" — READING
+    condition: str  # "quality-check-1 not met", or OTHERWISE on the last one
+    name: str  # "noisy" — OUTCOME_NAME
+    consequence: str  # "no verdict, the parser is repaired first"
 
 
-def parse_arms(sentence: str) -> tuple[InterpretationArm, ...]:
-    """The arms of an interpretation's SENTENCE, in order.
+def parse_outcomes(sentence: str) -> tuple[BranchOutcome, ...]:
+    """The outcomes of a branch's SENTENCE, in order.
 
-    The form: arms separated by `;`, each `<condition> → <reading>`. The
-    arrow is `→` alone — `->` is refused with a sentence, not read as a
-    second spelling. The condition is non-empty; `otherwise` stands as the
-    condition of the last arm only. The reading matches READING and is
-    unique in the sentence: it is the value a run records. At least two
-    arms — one outcome licenses nothing to choose between. Pure; raises
-    PromiseError naming the arm and what is wrong, with ARMS_FORM.
-    """
-    parts = [part.strip() for part in sentence.split(ARM_SEPARATOR)]
-    arms: list[InterpretationArm] = []
+    The form (OUTCOMES_FORM): outcomes separated by `;`, each `<condition> →
+    <outcome>: <consequence>`. The conditions are read in order and the first
+    that holds selects the outcome — labkit does not evaluate them (they are
+    prose); the run's code selects, and the agent audit judges whether it
+    keeps the order. The arrow is `→` alone — `->` is refused with a
+    sentence, not read as a second spelling. The condition is non-empty;
+    `otherwise` stands as the last condition only. The name matches
+    OUTCOME_NAME and is unique in the sentence: it is the value a run
+    records. The consequence is owed: an outcome without one registers a
+    label, not what the result permits. At least two outcomes — one
+    licenses nothing to choose between. Pure; raises PromiseError naming the
+    outcome and what is wrong, with OUTCOMES_FORM."""
+    parts = [part.strip() for part in sentence.split(OUTCOME_SEPARATOR)]
+    outcomes: list[BranchOutcome] = []
     for n, part in enumerate(parts, 1):
-        if not part:
-            raise PromiseError(f"arm {n} is empty — {ARMS_FORM}")
-        if part.count(ARROW) != 1:
-            ascii_arrow = (
-                " (the arrow is `→`, not `->`)"
-                if not part.count(ARROW) and "->" in part
-                else ""
-            )
+        outcome = _outcome(n, part, last=n == len(parts), after_one=bool(outcomes))
+        if outcome.name in {o.name for o in outcomes}:
             raise PromiseError(
-                f"arm {n} {part!r} holds {part.count(ARROW)} `→`, not one"
-                f"{ascii_arrow} — {ARMS_FORM}"
+                f"outcome {n} {part!r}: name {outcome.name!r} stands in an "
+                f"earlier outcome too — a recorded name must select one outcome"
             )
-        condition, _, reading = (side.strip() for side in part.partition(ARROW))
-        if not condition:
-            raise PromiseError(f"arm {n} {part!r} has no condition — {ARMS_FORM}")
-        if condition == OTHERWISE and n != len(parts):
-            raise PromiseError(
-                f"arm {n} {part!r} is `otherwise` but not the last arm — the "
-                f"arms after it would never be taken; {ARMS_FORM}"
-            )
-        if not READING.match(reading):
-            raise PromiseError(
-                f"arm {n} {part!r}: reading {reading!r} is not lowercase "
-                f"letters, digits and hyphens — {ARMS_FORM}"
-            )
-        if reading in {a.reading for a in arms}:
-            raise PromiseError(
-                f"arm {n} {part!r}: reading {reading!r} stands in an earlier "
-                f"arm too — a recorded reading must name one arm"
-            )
-        arms.append(InterpretationArm(condition, reading))
-    if len(arms) < 2:
+        outcomes.append(outcome)
+    if len(outcomes) < 2:
         raise PromiseError(
-            f"one arm — an interpretation chooses between at least two "
-            f"readings; with one outcome, register none; {ARMS_FORM}"
+            f"one outcome — a branch chooses between at least two; with one "
+            f"outcome, register none; {OUTCOMES_FORM}"
         )
-    return tuple(arms)
+    return tuple(outcomes)
+
+
+def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome:
+    """Outcome N of a branch's sentence from its PART, or PromiseError naming
+    what is wrong (`parse_outcomes`): one `→`, a condition, `otherwise` only
+    when LAST, a name in OUTCOME_NAME, a consequence. AFTER_ONE: an earlier
+    outcome stands, so a PART without an arrow may be the tail of a
+    consequence that held a `;`."""
+    if not part:
+        raise PromiseError(f"outcome {n} is empty — {OUTCOMES_FORM}")
+    arrows = part.count(ARROW)
+    if arrows != 1:
+        if not arrows and "->" in part:
+            hint = " (the arrow is `→`, not `->`)"
+        elif not arrows and after_one:
+            hint = (
+                " (a `;` inside the consequence before it? a consequence holds "
+                "none — write it with commas)"
+            )
+        else:
+            hint = ""
+        raise PromiseError(
+            f"outcome {n} {part!r} holds {arrows} `→`, not one{hint} — {OUTCOMES_FORM}"
+        )
+    condition, _, rest = (side.strip() for side in part.partition(ARROW))
+    name, mark, consequence = (s.strip() for s in rest.partition(CONSEQUENCE_MARK))
+    if not condition:
+        raise PromiseError(f"outcome {n} {part!r} has no condition — {OUTCOMES_FORM}")
+    if condition == OTHERWISE and not last:
+        raise PromiseError(
+            f"outcome {n} {part!r} is `otherwise` but not the last outcome — "
+            f"the outcomes after it would never be selected; {OUTCOMES_FORM}"
+        )
+    if not OUTCOME_NAME.match(name):
+        raise PromiseError(
+            f"outcome {n} {part!r}: name {name!r} is not lowercase letters, "
+            f"digits and hyphens — {OUTCOMES_FORM}"
+        )
+    if not mark or not consequence:
+        raise PromiseError(
+            f"outcome {n} {part!r} names no consequence — what does {name!r} "
+            f"permit? `{name}: <consequence>`; {OUTCOMES_FORM}"
+        )
+    return BranchOutcome(condition, name, consequence)
 
 
 def is_placeholder(sentence: str) -> bool:
@@ -261,19 +295,19 @@ class Promise:
     """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
 
     id: str  # "criterion-1"
-    kind: str  # one of KINDS: "criterion" | "quality-check" | "interpretation"
+    kind: str  # one of KINDS: "criterion" | "quality-check" | "branch"
     key: str  # metrics key that reports it
     sentence: str  # the promise in one sentence
     scope: tuple[str, ...]  # declared implementation region
     constants: dict[str, int | float | str | bool]
-    # an interpretation's arms (`parse_arms`); () for a criterion, a
-    # quality check, and a sentence still the stamp's placeholder
-    arms: tuple[InterpretationArm, ...]
+    # a branch's outcomes (`parse_outcomes`); () for a criterion, a quality
+    # check, and a sentence still the stamp's placeholder
+    outcomes: tuple[BranchOutcome, ...]
 
-    def readings(self) -> tuple[str, ...]:
-        """The readings the promise registers, in arm order: the values its
+    def outcome_names(self) -> tuple[str, ...]:
+        """The names of the outcomes the promise registers, in order: what its
         run may record under `key` (none for a criterion or quality check)."""
-        return tuple(a.reading for a in self.arms)
+        return tuple(o.name for o in self.outcomes)
 
 
 @dataclass(frozen=True)
@@ -303,7 +337,7 @@ def earlier_ids(text: str) -> list[str]:
 
 EARLIER_IDS_HELP = (
     "promise ids are written as their kind and a number since labkit "
-    "0.104.0 — [criterion-1], [quality-check-1], [interpretation-1] "
+    "0.104.0 — [criterion-1], [quality-check-1], [branch-1] "
     "(docs/promise-block.md); re-register the promises so, or check this "
     "protocol with labkit 0.103.0 (C/A/B) or 0.47 (K/S/W/N)"
 )
@@ -340,8 +374,8 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
 
     Raises PromiseError on anything malformed: invalid TOML, an unknown
     field, an unknown kind, a key outside its id's namespace, a duplicate
-    id, an empty scope, a non-scalar constant, an interpretation whose
-    sentence is not arms (`parse_arms`; the stamp's `<…>` placeholder
+    id, an empty scope, a non-scalar constant, a branch whose
+    sentence is not outcomes (`parse_outcomes`; the stamp's `<…>` placeholder
     passes — `promise_tables_owed` holds it). The digest covers the
     promises only, not the head: freezing or stamping the audit line must
     not read as a changed promise.
@@ -384,7 +418,7 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
             )
             raise PromiseError(
                 f"{where}: id {pid!r} is not criterion-<n>, quality-check-<n> "
-                f"or interpretation-<n>{hint}"
+                f"or branch-<n>{hint}"
             )
         where = f"[[promise]] {pid}"
         if pid in seen:
@@ -401,10 +435,10 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         if not isinstance(sentence, str) or not sentence.strip():
             raise PromiseError(f"{where}: `sentence` is empty")
         sentence = sentence.strip()
-        arms: tuple[InterpretationArm, ...] = ()
-        if kind_of(pid) == "interpretation" and not is_placeholder(sentence):
+        outcomes: tuple[BranchOutcome, ...] = ()
+        if kind_of(pid) == "branch" and not is_placeholder(sentence):
             try:
-                arms = parse_arms(sentence)
+                outcomes = parse_outcomes(sentence)
             except PromiseError as exc:
                 raise PromiseError(f"{where}: `sentence`: {exc}") from exc
         scope = e["scope"]
@@ -452,7 +486,7 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
                 sentence=sentence,
                 scope=tuple(scope),
                 constants=dict(constants),
-                arms=arms,
+                outcomes=outcomes,
             )
         )
     # over the promises as read, not as spelled: a stripped sentence, a
@@ -496,7 +530,7 @@ def registered_ids(text: str) -> set[str]:
 def table_ids(text: str) -> set[str]:
     """The ids the protocol's [[promise]] tables declare (`criterion-1`):
     the ids an audit decision's effect may leave not assessable
-    (`labkit-audit --decide N limit --not-assessable <ID>`). Empty for a
+    (`labkit-audit --decide N limitationation --not-assessable <ID>`). Empty for a
     protocol without tables — a computation registers none. Unlike
     `registered_ids`, an id named only in the prose does not count. Raises
     PromiseError on a malformed block."""

@@ -497,7 +497,7 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
 #: before the placeholder, because the cut placeholder loses the template's
 #: `[criterion-…]` hint and a cold agent then writes `criterion-1:`, which no check reads
 PROMISE_FIELDS = {
-    "Success / failure criterion": "criterion-1",
+    "Inference criterion": "criterion-1",
     "Quality check": "quality-check-1",
     "Null condition / anchors (in the same run)": "quality-check-2",
 }
@@ -505,7 +505,7 @@ PROMISE_FIELDS = {
 
 def name_promise_ids(text: str, kind: str) -> str:
     """The stamped promise ids written before the placeholders of the fields
-    that state them (PROMISE_FIELDS): `- **Success / failure criterion:**
+    that state them (PROMISE_FIELDS): `- **Inference criterion:**
     [criterion-1] <…>` — for a KIND with a bar; a computation's text comes back unchanged
     (an id in its prose would register a promise). Raises ValueError when a
     field is not stamped or the stamped block does not declare its id: the

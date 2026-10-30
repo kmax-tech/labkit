@@ -533,7 +533,7 @@ def judge_area(lab: Lab, name: str) -> tuple[Path, Path]:
         "type=exploratory",
         "Terms of this protocol=n/a — no coinage",
         "Question / hypothesis=Does the model read a causal claim off one sentence?",
-        "Success / failure criterion=[criterion-1] registered accuracy at least the null lane's plus margin",
+        "Inference criterion=[criterion-1] registered accuracy at least the null lane's plus margin",
         "Quality check=[quality-check-1] at most max_empty empty answers; [quality-check-2] the null lane at chance within null_band_items",
         "Data / scope=data/prepared/sentences_v1.jsonl, 12 sentences, 00_prepare.py",
         "Data profile=6 and 6 sentences, the marker 'because' in both classes",
@@ -1276,19 +1276,19 @@ class Judge(unittest.TestCase):
         """Review 2026-10-21 (judge-2): an accepted BLOCKER may carry a
         number read within it, but an instrument unfit for criterion-1 leaves criterion-1
         unjudged — the decision says which, the protocol carries it as a
-        Limit line, report-check holds the two together."""
+        Limitation line, report-check holds the two together."""
         self._adopted()
         lab = type(self).lab
         record = self._blocker()
-        label = f"Limit (audit {record.stem} #1)"
+        label = f"Limitation (audit {record.stem} #1)"
         reason = "real: the prompt says states or implies, the gold codes juxtaposition not causal"
         rc, out = self._decide(
-            record, "limit", reason, "--not-assessable", "criterion-9"
+            record, "limitation", reason, "--not-assessable", "criterion-9"
         )
         self.assertEqual(rc, 2, out)  # an id the protocol does not register
         self.assertIn("criterion-9", out)
         rc, out = self._decide(
-            record, "limit", reason, "--not-assessable", "criterion-1"
+            record, "limitation", reason, "--not-assessable", "criterion-1"
         )
         self.assertEqual(rc, 0, out)
         self.assertEqual(
@@ -1322,11 +1322,11 @@ class Judge(unittest.TestCase):
         self.assertIn(label, out)
         # the twin: the verdicts stand, the limit named beside them — and a
         # BLOCKER's `stands` owes a decision review before the number leaves
-        rc, out = self._decide(record, "limit", reason)
+        rc, out = self._decide(record, "limitation", reason)
         self.assertEqual(rc, 0, out)
         rc, out = lab.adopt_forced(self.protocol, self.run_id)
         self.assertEqual(rc, 1, out)
-        self.assertIn("`stands` on a BLOCKER decided limit not reviewed", out)
+        self.assertIn("`stands` on a BLOCKER decided limitation not reviewed", out)
         # the review judges the claim: the Conclusion comes first (judge-2
         # on 86e38bc reviewed a placeholder and paid a second review)
         rc, out = self._review(record)
@@ -1346,7 +1346,7 @@ class Judge(unittest.TestCase):
         )
         self.assertNotIn("not assessable with this run", text)
         self.assertIn(
-            "; subject to 1 recorded limitation (the Limit lines below)", text
+            "; subject to 1 recorded limitation (the Limitation lines below)", text
         )
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
@@ -1390,9 +1390,9 @@ class Judge(unittest.TestCase):
             [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
             run_id=self.run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
-        label = f"Limit (audit {record.stem} #1)"
+        label = f"Limitation (audit {record.stem} #1)"
         reason = "criterion-1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
-        rc, out = self._decide(record, "limit", reason)
+        rc, out = self._decide(record, "limitation", reason)
         self.assertEqual(rc, 0, out)
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)  # named, the effect is owed in the result
@@ -1547,7 +1547,7 @@ class Estimator(unittest.TestCase):
             **{
                 "Terms of this protocol": "n/a — no coinage",
                 "Question / hypothesis": "Does a threshold on feature 0 predict the label out of fold?",
-                "Success / failure criterion": "[criterion-1] registered accuracy at least the null lane's plus margin",
+                "Inference criterion": "[criterion-1] registered accuracy at least the null lane's plus margin",
                 "Quality check": "[quality-check-1] at most max_empty items without a prediction; [quality-check-2] the null lane within null_band of chance",
                 "Split touched": "train",
                 "Timebox": "1h",

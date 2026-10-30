@@ -519,7 +519,7 @@ def check_intent_keys_in_metrics(
     findings: Findings, protocol: Path, text: str, answering_run: Path | None
 ) -> None:
     """Station 2: every registered intent id reports as a key of the answering
-    run's metrics.json, an interpretation as one of its registered readings
+    run's metrics.json, a branch as one of its registered outcomes
     (intent-check). Not code_check.check_intent_ids, which
     holds the promises to the code before any run."""
     if not _registers(text):

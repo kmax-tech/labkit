@@ -13,7 +13,7 @@ The opening line names the protocol the block belongs to — its path
 relative to the report, without spaces — and the run it shows. The body is
 what that protocol, declaring that run as its result, renders
 (`result_render.rendering`): its Recorded results line, limits note included, and one
-line per Limit (`block_body`) — the note's "Limit lines below" stand below
+line per Limit (`block_body`) — the note's "Limitation lines below" stand below
 in the report too. What each check
 here states, and no more:
 

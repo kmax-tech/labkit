@@ -166,7 +166,7 @@ def lane(repeat_cost: str | None) -> Lane:
 #: labels are the template's, held to `protocol_check.FIELDS` by a test.
 REGISTRATION_FIELDS = ("Question / hypothesis",)
 REGISTRATION_FIELDS_WITH_BAR = (
-    "Success / failure criterion",
+    "Inference criterion",
     "Quality check",
     "Null condition / anchors",
 )

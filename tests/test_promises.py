@@ -66,14 +66,15 @@ scope = ["scripts/01_measure.py"]
 """
 
 B1 = """[[promise]]
-id = "interpretation-1"
-key = "interpretation_1_branch"
-sentence = "criterion-1 met → generalises; quality-check-1 not met → noisy; otherwise → no-verdict"
+id = "branch-1"
+key = "branch_1_outcome"
+sentence = "criterion-1 met → generalises: used on the next cohort; quality-check-1 not met → noisy: no verdict, the parser is repaired first; otherwise → no-verdict: reported descriptively"
 scope = ["scripts/01_measure.py"]
 """
-ARMS = (
-    "criterion-1 met and quality-check-1 met → generalises; "
-    "quality-check-1 not met → noisy; otherwise → no-verdict"
+OUTCOMES = (
+    "criterion-1 met and quality-check-1 met → generalises: used on the next cohort; "
+    "quality-check-1 not met → noisy: no verdict, the parser is repaired first; "
+    "otherwise → no-verdict: reported descriptively, no further analysis"
 )
 
 
@@ -148,7 +149,7 @@ class Parse(unittest.TestCase):
     def test_earlier_letter_in_block(self):
         self.assertRejects(
             block(C1.replace('"criterion-1"', '"K1"')),
-            "is not criterion-<n>, quality-check-<n> or interpretation-<n>",
+            "is not criterion-<n>, quality-check-<n> or branch-<n>",
         )
 
     def test_the_letters_of_0_103_are_refused_naming_the_version(self):
@@ -206,14 +207,14 @@ class Alphabet(unittest.TestCase):
         metrics = {
             "criterion_1_pass": 1,
             "quality_check_2": 1,
-            "interpretation_1_branch": "x",
+            "branch_1_outcome": "x",
             "c1_pass": 1,
             "k1_pass": 1,
             "n1": 1,
         }
         self.assertEqual(
             promises.reported_ids(metrics),
-            {"criterion-1", "quality-check-2", "interpretation-1"},
+            {"criterion-1", "quality-check-2", "branch-1"},
         )
 
     def test_one_alphabet_everywhere(self):
@@ -423,66 +424,63 @@ class Chain(unittest.TestCase):
         rc, out = self.check()
         self.assertEqual(rc, 0, out)
 
-    def with_interpretation(self) -> None:
+    def with_branch(self) -> None:
         self.protocol.write_text(
             protocol_text(
                 C1,
                 A1,
                 B1,
                 prose="Criterion [criterion-1]; quality check [quality-check-1]; "
-                "interpretation [interpretation-1].\n",
+                "branch [branch-1].\n",
             ),
             encoding="utf-8",
         )
 
     def test_a_registered_reading_passes(self):
-        """The twin: the reading of an arm passes, whichever arm."""
-        self.with_interpretation()
-        for reading in ("generalises", "no-verdict"):
-            with self.subTest(reading=reading):
+        """The twin: a registered name passes, whichever outcome it names."""
+        self.with_branch()
+        for outcome in ("generalises", "no-verdict"):
+            with self.subTest(outcome=outcome):
                 if (self.area / "runs").exists():
                     shutil.rmtree(self.area / "runs")
-                self.complete(
-                    self.start(), {**self.GOOD, "interpretation_1_branch": reading}
-                )
+                self.complete(self.start(), {**self.GOOD, "branch_1_outcome": outcome})
                 rc, out = self.check()
                 self.assertEqual(rc, 0, out)
 
-    def test_an_unregistered_reading_is_a_blocker_naming_the_readings(self):
-        """Free text recorded as the interpretation's value: no arm holds it."""
-        self.with_interpretation()
+    def test_an_unregistered_outcome_is_a_blocker_naming_the_outcomes(self):
+        """Free text recorded as the branch's value: no outcome holds it."""
+        self.with_branch()
         self.complete(
             self.start(),
-            {**self.GOOD, "interpretation_1_branch": "generalises if criterion-1 met"},
+            {**self.GOOD, "branch_1_outcome": "generalises if criterion-1 met"},
         )
         rc, out = self.check()
         self.assertEqual(rc, 1, out)
         self.assertIn(
-            "[interpretation-1] records interpretation_1_branch = "
-            "'generalises if criterion-1 met', which is none of the readings "
-            "its arms register — way out: record one of generalises, noisy, "
-            "no-verdict",
+            "[branch-1] records branch_1_outcome = "
+            "'generalises if criterion-1 met', which is none of its outcomes' "
+            "names — way out: record one of generalises, noisy, no-verdict",
             out,
         )
 
-    def test_unregistered_readings_is_pure_and_type_strict(self):
+    def test_unregistered_outcomes_is_pure_and_type_strict(self):
         block = parsed(protocol_text(C1, B1))
         for value in (True, None, 1, ["noisy"], "Noisy"):
             with self.subTest(value=value):
-                (finding,) = intent_check.unregistered_readings(
-                    block, {"interpretation_1_branch": value}, "r1"
+                (finding,) = intent_check.unregistered_outcomes(
+                    block, {"branch_1_outcome": value}, "r1"
                 )
                 self.assertEqual(finding.grade, "BLOCKER")
                 self.assertEqual(finding.evidence_kind, "guaranteed")
                 self.assertIn("generalises, noisy, no-verdict", finding.fix or "")
         self.assertEqual(
-            intent_check.unregistered_readings(
-                block, {"interpretation_1_branch": "noisy"}, "r1"
+            intent_check.unregistered_outcomes(
+                block, {"branch_1_outcome": "noisy"}, "r1"
             ),
             [],
         )
         # an unreported key is check_block_against_run's finding, not this one
-        self.assertEqual(intent_check.unregistered_readings(block, {}, "r1"), [])
+        self.assertEqual(intent_check.unregistered_outcomes(block, {}, "r1"), [])
 
     def test_declared_key_must_be_reported_exactly(self):
         self.complete(
@@ -494,13 +492,13 @@ class Chain(unittest.TestCase):
 
     def test_prose_and_block_must_name_the_same_ids(self):
         self.protocol.write_text(
-            protocol_text(C1, A1, prose="only [criterion-1] and [interpretation-1]\n"),
+            protocol_text(C1, A1, prose="only [criterion-1] and [branch-1]\n"),
             encoding="utf-8",
         )
         rc, out = self.check()
         self.assertEqual(rc, 1)
         self.assertIn(
-            "[interpretation-1] appears in the text but not in the promise block", out
+            "[branch-1] appears in the text but not in the promise block", out
         )
         self.assertIn("[quality-check-1] is in the promise block but never named", out)
 
@@ -720,114 +718,138 @@ class Constants(unittest.TestCase):
                 )
 
 
-class Arms(unittest.TestCase):
-    """An interpretation's sentence is arms, `<condition> → <reading>`;
-    `parse_arms` reads them or refuses them by name."""
+class Outcomes(unittest.TestCase):
+    """A branch's sentence lists its outcomes, `<condition> → <outcome>:
+    <consequence>`; `parse_outcomes` reads them or refuses them by name."""
 
     def assertRefused(self, sentence: str, fragment: str, *, shows_form: bool = True):
         with self.assertRaises(promises.PromiseError) as cm:
-            promises.parse_arms(sentence)
+            promises.parse_outcomes(sentence)
         self.assertIn(fragment, str(cm.exception))
         if shows_form:
-            self.assertIn(promises.ARMS_FORM, str(cm.exception))
+            self.assertIn(promises.OUTCOMES_FORM, str(cm.exception))
 
-    def test_the_form_reads_arm_by_arm(self):
+    def test_the_form_reads_outcome_by_outcome(self):
         self.assertEqual(
-            promises.parse_arms(ARMS),
+            promises.parse_outcomes(OUTCOMES),
             (
-                promises.InterpretationArm(
-                    "criterion-1 met and quality-check-1 met", "generalises"
+                promises.BranchOutcome(
+                    "criterion-1 met and quality-check-1 met",
+                    "generalises",
+                    "used on the next cohort",
                 ),
-                promises.InterpretationArm("quality-check-1 not met", "noisy"),
-                promises.InterpretationArm("otherwise", "no-verdict"),
+                promises.BranchOutcome(
+                    "quality-check-1 not met",
+                    "noisy",
+                    "no verdict, the parser is repaired first",
+                ),
+                promises.BranchOutcome(
+                    "otherwise",
+                    "no-verdict",
+                    "reported descriptively, no further analysis",
+                ),
             ),
         )
-        # two arms without `otherwise`, digits in a reading, tight spacing
+        # two outcomes without `otherwise`, digits in a name, tight spacing
         self.assertEqual(
             [
-                a.reading
-                for a in promises.parse_arms("n >= 50→full;n < 50 → coverage-2")
+                o.name
+                for o in promises.parse_outcomes(
+                    "n >= 50→full:all reported;n < 50 → coverage-2: coverage only"
+                )
             ],
             ["full", "coverage-2"],
+        )
+
+    def test_an_outcome_without_its_consequence_is_refused(self):
+        """An outcome without a consequence registers a label, not what the
+        result permits; the twin above carries one each."""
+        self.assertRefused(
+            "a → yes; b → no: stop", "outcome 1 'a → yes' names no consequence"
+        )
+        self.assertRefused("a → yes:; b → no: stop", "names no consequence")
+
+    def test_a_semicolon_inside_a_consequence_is_named(self):
+        self.assertRefused(
+            "a → yes: report it; then stop; b → no: nothing",
+            "a consequence holds none — write it with commas",
         )
 
     def test_a_sentence_without_an_arrow_is_refused(self):
         """The free text of 0.103.0: nothing held the recorded value to it."""
         self.assertRefused(
             "generalises if criterion-1 met; noisy if quality-check-1 not met",
-            "arm 1 'generalises if criterion-1 met' holds 0 `→`, not one",
+            "outcome 1 'generalises if criterion-1 met' holds 0 `→`, not one",
         )
 
     def test_the_ascii_arrow_is_refused_by_name(self):
-        self.assertRefused("a -> yes; b → no", "(the arrow is `→`, not `->`)")
+        self.assertRefused("a -> yes: x; b → no: y", "(the arrow is `→`, not `->`)")
 
     def test_two_arrows_in_one_arm_are_refused(self):
-        self.assertRefused("a → b → c; d → e", "holds 2 `→`, not one")
+        self.assertRefused("a → b → c: x; d → e: y", "holds 2 `→`, not one")
 
     def test_an_empty_arm_is_refused(self):
-        self.assertRefused("a → yes; ; b → no", "arm 2 is empty")
-        self.assertRefused("a → yes; b → no;", "arm 3 is empty")
+        self.assertRefused("a → yes: x; ; b → no: y", "outcome 2 is empty")
+        self.assertRefused("a → yes: x; b → no: y;", "outcome 3 is empty")
 
     def test_an_empty_condition_is_refused(self):
-        self.assertRefused("→ yes; b → no", "arm 1 '→ yes' has no condition")
+        self.assertRefused(
+            "→ yes: x; b → no: y", "outcome 1 '→ yes: x' has no condition"
+        )
 
     def test_a_reading_that_is_not_a_slug_is_refused(self):
-        for reading in ("Yes", "no verdict", "-no", "", "réussi"):
-            with self.subTest(reading=reading):
+        for outcome in ("Yes", "no verdict", "-no", "", "réussi"):
+            with self.subTest(outcome=outcome):
                 self.assertRefused(
-                    f"a → {reading}; b → other",
+                    f"a → {outcome}: x; b → other: y",
                     "is not lowercase letters, digits and hyphens",
                 )
 
     def test_a_reading_twice_is_refused(self):
         self.assertRefused(
-            "a → yes; b → yes",
-            "reading 'yes' stands in an earlier arm too",
+            "a → yes: x; b → yes: y",
+            "name 'yes' stands in an earlier outcome too",
             shows_form=False,
         )
 
     def test_one_arm_is_refused(self):
-        self.assertRefused("a → yes", "one arm — an interpretation chooses")
+        self.assertRefused("a → yes: x", "one outcome — a branch chooses")
 
     def test_otherwise_before_the_last_arm_is_refused(self):
         self.assertRefused(
-            "otherwise → yes; b → no", "is `otherwise` but not the last arm"
+            "otherwise → yes: x; b → no: y", "is `otherwise` but not the last outcome"
         )
 
     def test_parse_block_refuses_a_free_text_interpretation_by_id(self):
         free = B1.replace(
-            "criterion-1 met → generalises; quality-check-1 not met → noisy; "
-            "otherwise → no-verdict",
+            "criterion-1 met → generalises: used on the next cohort; quality-check-1 not met → noisy: no verdict, the parser is repaired first; otherwise → no-verdict: reported descriptively",
             "generalises if criterion-1 met, noisy otherwise",
         )
         with self.assertRaises(promises.PromiseError) as cm:
             promises.parse_block(protocol_text(C1, free))
-        self.assertIn(
-            "[[promise]] interpretation-1: `sentence`: arm 1", str(cm.exception)
-        )
-        self.assertIn(promises.ARMS_FORM, str(cm.exception))
+        self.assertIn("[[promise]] branch-1: `sentence`: outcome 1", str(cm.exception))
+        self.assertIn(promises.OUTCOMES_FORM, str(cm.exception))
 
     def test_parse_block_reads_the_arms_and_leaves_other_kinds_free(self):
         b = parsed(protocol_text(C1, A1, B1))
         self.assertEqual(
-            b.by_id()["interpretation-1"].readings(),
+            b.by_id()["branch-1"].outcome_names(),
             ("generalises", "noisy", "no-verdict"),
         )
-        # a criterion's sentence is no arm form, and none is asked of it
-        self.assertEqual(b.by_id()["criterion-1"].arms, ())
-        self.assertEqual(b.by_id()["quality-check-1"].readings(), ())
+        # a criterion's sentence is no outcome form, and none is asked of it
+        self.assertEqual(b.by_id()["criterion-1"].outcomes, ())
+        self.assertEqual(b.by_id()["quality-check-1"].outcome_names(), ())
 
     def test_a_stamp_placeholder_interpretation_parses_without_arms(self):
         """An unfrozen pilot may carry the stamp's `<…>`; `promise_tables_owed`
         holds it once frozen or a full run."""
         stamped = B1.replace(
-            "criterion-1 met → generalises; quality-check-1 not met → noisy; "
-            "otherwise → no-verdict",
-            "<the arms of the reading>",
+            "criterion-1 met → generalises: used on the next cohort; quality-check-1 not met → noisy: no verdict, the parser is repaired first; otherwise → no-verdict: reported descriptively",
+            "<the outcomes of the outcome>",
         )
         b = parsed(protocol_text(C1, stamped))
-        self.assertEqual(b.by_id()["interpretation-1"].arms, ())
-        self.assertEqual(promises.placeholder_sentences(b), ["interpretation-1"])
+        self.assertEqual(b.by_id()["branch-1"].outcomes, ())
+        self.assertEqual(promises.placeholder_sentences(b), ["branch-1"])
 
 
 class KeyKind(unittest.TestCase):
@@ -836,9 +858,7 @@ class KeyKind(unittest.TestCase):
     def test_kinds_and_outsiders(self):
         self.assertEqual(promises.key_kind("criterion_1_pass"), "criterion")
         self.assertEqual(promises.key_kind("quality_check_2"), "quality-check")
-        self.assertEqual(
-            promises.key_kind("interpretation_10_branch"), "interpretation"
-        )
+        self.assertEqual(promises.key_kind("branch_10_outcome"), "branch")
         self.assertIsNone(promises.key_kind("c1_pass"))
         self.assertIsNone(promises.key_kind("quality-check-2"))
         for key in ("f1", "p1_x", "criterion_pass", "ac1_pass", "k1_pass"):

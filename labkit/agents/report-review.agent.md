@@ -43,7 +43,7 @@ A **claim** is a line that does one of these:
 - **contradiction** — states something the audits contradict: a verdict
   on a promise a decision calls `not assessable`, a check called passed
   that a failed or undecided audit was to make, a number the audit
-  findings say is wrong, a "no deviations" against a finding decided `limit`.
+  findings say is wrong, a "no deviations" against a finding decided `limitation`.
 
 Not a claim:
 

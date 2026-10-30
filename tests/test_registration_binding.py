@@ -21,7 +21,7 @@ from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
 BODY = """
 - **Question / hypothesis:** what is the mean line count per case?
-- **Success / failure criterion:** [criterion-1] above the trivial decider
+- **Inference criterion:** [criterion-1] above the trivial decider
 - **Quality check:** [quality-check-1] every case parsed
 - **Null condition / anchors (in the same run):** [quality-check-2] shuffled labels at chance
 """
@@ -41,7 +41,7 @@ class Stamp(unittest.TestCase):
             [
                 "kind",
                 "Question / hypothesis",
-                "Success / failure criterion",
+                "Inference criterion",
                 "Quality check",
                 "Null condition / anchors",
             ],
@@ -65,7 +65,9 @@ class Stamp(unittest.TestCase):
 
     def test_report_fields_are_not_part_of_it(self):
         text = _protocol()
-        written = text + "- **Conclusion:** eleven lines.\n- **Limits:** one corpus.\n"
+        written = (
+            text + "- **Conclusion:** eleven lines.\n- **Limitations:** one corpus.\n"
+        )
         self.assertEqual(
             protocol_check.registration_stamp(written),
             protocol_check.registration_stamp(text),

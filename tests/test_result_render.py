@@ -1,7 +1,7 @@
 """result_render: the result section is held to equality with its rendering
 (phase 5 of the 1.0 line, 2026-10-21). The sources — the declared run's
 metrics.json and the covering analysis records — render the Recorded results line and
-the Limit lines; `--from-run` writes them, `--render` writes them again, and
+the Limitation lines; `--from-run` writes them, `--render` writes them again, and
 a line that differs from the rendering is a blocker whatever it says.
 """
 
@@ -60,7 +60,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         registration=registration_of(area),
     )
     if limit_reason is not None:
-        findings.write_decision(path, 1, "limit", limit_reason, "stands")
+        findings.write_decision(path, 1, "limitation", limit_reason, "stands")
     return area, protocol
 
 
@@ -88,10 +88,12 @@ class Rendering(unittest.TestCase):
         self.assertEqual(
             r.recorded_results,
             f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: criterion_1_accuracy = 0.83 (run {RUN}); "
-            "subject to 1 recorded limitation (the Limit lines below)",
+            "subject to 1 recorded limitation (the Limitation lines below)",
         )
         ((label, value),) = r.limits
-        self.assertTrue(label.startswith("Limit (audit ") and label.endswith(" #1)"))
+        self.assertTrue(
+            label.startswith("Limitation (audit ") and label.endswith(" #1)")
+        )
         self.assertEqual(value, "the verdicts stand, read within this limit — one draw")
 
     def test_no_decided_limit_renders_a_bare_answer(self):
@@ -124,14 +126,14 @@ class ReportableVerdicts(unittest.TestCase):
                 "quality_check_1_pass": True,
                 "quality_check_2_pass": True,
             },
-            {"quality-check-2": "Limit (audit x #1)"},
+            {"quality-check-2": "Limitation (audit x #1)"},
         )
         self.assertEqual(
             said,
             [
-                "criterion-1 not assessable — quality-check-2 not assessable (Limit (audit x #1))",
+                "criterion-1 not assessable — quality-check-2 not assessable (Limitation (audit x #1))",
                 "quality-check-1 met",
-                "quality-check-2 not assessable (Limit (audit x #1))",
+                "quality-check-2 not assessable (Limitation (audit x #1))",
             ],
         )
 
@@ -185,7 +187,7 @@ class ReportableVerdicts(unittest.TestCase):
         area, protocol = area_with_record(limit_reason=None)
         rec = findings.area_records(area)[0]
         findings.write_decision(
-            rec.path, 1, "limit", "one draw", "quality-check-2 not assessable"
+            rec.path, 1, "limitation", "one draw", "quality-check-2 not assessable"
         )
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN)
@@ -245,27 +247,27 @@ class RenderGaps(unittest.TestCase):
 
     def test_a_generated_label_written_twice_is_a_gap(self):
         """Review 2026-10-22: the check kept the fields in a dict, so a wrong
-        Limit line above the record's correct one — or a retyped Recorded
+        Limitation line above the record's correct one — or a retyped Recorded
         results below the generated one — passed. Every line of a label is
         held."""
         exp = result_render.Rendering(
             "criterion_1_pass = True (run r1)",
             (
                 (
-                    "Limit (audit a #1)",
+                    "Limitation (audit a #1)",
                     "the verdicts stand, read within this limit — ok",
                 ),
             ),
         )
         good = (
             "- **Recorded results:** criterion_1_pass = True (run r1)\n"
-            "- **Limit (audit a #1):** the verdicts stand, read within this limit — ok\n"
+            "- **Limitation (audit a #1):** the verdicts stand, read within this limit — ok\n"
         )
         self.assertEqual(result_render.render_gaps(good, exp), [])
         (gap,) = result_render.render_gaps(
-            "- **Limit (audit a #1):** no restriction applies\n" + good, exp
+            "- **Limitation (audit a #1):** no restriction applies\n" + good, exp
         )
-        self.assertIn('"Limit (audit a #1)" is written 2 times', gap.text)
+        self.assertIn('"Limitation (audit a #1)" is written 2 times', gap.text)
         (gap,) = result_render.render_gaps(
             good + "- **Recorded results:** criterion_1_pass = False (run r1)\n", exp
         )
@@ -275,7 +277,7 @@ class RenderGaps(unittest.TestCase):
         text = self.written()
         stray = text.replace(
             "- **Raw output:** r",
-            "- **Limit (audit 2026-10-01T00-00-analysis #9):** the verdicts stand, "
+            "- **Limitation (audit 2026-10-01T00-00-analysis #9):** the verdicts stand, "
             "read within this limit — invented\n- **Raw output:** r",
         )
         (gap,) = result_render.render_gaps(stray, self.expected)
@@ -283,7 +285,7 @@ class RenderGaps(unittest.TestCase):
         rendered, written = protocol_fill.render_result(stray, self.area)
         self.assertEqual(rendered, text)
         self.assertEqual(
-            written, ["dropped Limit (audit 2026-10-01T00-00-analysis #9)"]
+            written, ["dropped Limitation (audit 2026-10-01T00-00-analysis #9)"]
         )
 
     def test_render_refuses_without_a_declaration(self):

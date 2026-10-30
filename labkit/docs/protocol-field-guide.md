@@ -99,12 +99,12 @@ lowercase key in the run's metrics:
 
 | id | means | example in the field | key in metrics |
 |---|---|---|---|
-| `[criterion-1]` | criterion 1 — which value of which metric supports the hypothesis | `[criterion-1] accuracy >= 0.80` | `r.metrics(criterion_1_pass=True)` |
-| `[quality-check-1]` | quality check 1 — an outcome-neutral check that must pass before any criterion verdict | `[quality-check-1] parse failures <= 10%` · `[quality-check-2] shuffled labels show no effect` | `quality_check_1_pass`, `quality_check_2_pass` |
-| `[interpretation-1]` | interpretation 1 — what a result licenses next, arm by arm (`<condition> → <reading>`) | `[interpretation-1] ≥ 50 usable cases → full-report; otherwise → coverage-only` | `interpretation_1_branch` = one of its readings (`coverage-only`) |
+| `[criterion-1]` | inference criterion 1 — what result supports which conclusion | `[criterion-1] accuracy >= 0.80` | `r.metrics(criterion_1_pass=True)` |
+| `[quality-check-1]` | quality check 1 — whether the measurement can support the inference at all; not met or not assessable, no criterion gets a verdict | `[quality-check-1] parse failures <= 10%` · `[quality-check-2] shuffled labels show no effect` | `quality_check_1_pass`, `quality_check_2_pass` |
+| `[branch-1]` | registered branch 1 — its outcomes in order, `<condition> → <outcome>: <consequence>` | `[branch-1] ≥ 50 usable cases → full-report: all measures reported; otherwise → coverage-only: coverage reported, no accuracy` | `branch_1_outcome` = the selected outcome's name (`coverage-only`) |
 
 The separation rule: **a criterion judges, a quality check releases the
-judgement, an interpretation says what follows from it.** Does the condition depend on whether the hypothesis
+judgement, a branch says what follows from it.** Does the condition depend on whether the hypothesis
 holds? Then it is C; otherwise A. A baseline without a target value is no
 promise — it belongs in the text of the C it serves.
 
@@ -210,7 +210,7 @@ The same block may hold the `[[promise]]` tables (labkit
   reasoning goes into the commit message.
 - **preflight_audit** — the file name of the decided preflight record
   under `audits/` (`<minute>-preflight.toml`, written by `labkit-audit
-  --mode preflight`; every finding in it fixed / limit / false-positive /
+  --mode preflight`; every finding in it fixed / limitation / false-positive /
   deferred, with reason): the code-vs-intent audit after the instrument
   check and before freezing. Empty until then, and at `low`.
 
@@ -273,7 +273,7 @@ derives from the detail below and carries no fact that isn't there.
   readers of the first ten lines got the number and the limit but not
   whether the criterion held). No intent ids, metric keys or run_ids (they are in Result below);
   a technical term gets a half-sentence gloss.
-- **Limits:** how far it holds, one sentence — the sample, a single run,
+- **Limitations:** how far it holds, one sentence — the sample, a single run,
   what was not tested.
 - **Next step:** what follows — a decision, the next experiment, or "none".
 - **Question †:** the first line of the Summary: the Intent's question in
@@ -307,7 +307,7 @@ derives from the detail below and carries no fact that isn't there.
 - **Question / hypothesis:** the one question — what do you expect? Even
   "just try it" has a question behind it; if you can't state it, ask BEFORE
   you build.
-- **Success / failure criterion:** a number, a behavior, a visual check —
+- **Inference criterion:** a number, a behavior, a visual check —
   decided beforehand. Four questions to ask the criterion itself:
   (1) Does it test the *mechanism* or just a number? (2) Is the target a
   *property of one item* or a *relation between items*? A relation has no
@@ -315,7 +315,7 @@ derives from the detail below and carries no fact that isn't there.
   expected effect bigger than the run-to-run noise? Differences below the
   noise are not interpretable. (4) Could the run answer two *different*
   questions depending on a precondition? Then register that branch beforehand.
-  Using intent ids: one [criterion-1], [criterion-2] … per conjunct, [interpretation-1] per branch point. Cases the criterion singles out are named by their
+  Using intent ids: one [criterion-1], [criterion-2] … per conjunct, [branch-1] per branch point. Cases the criterion singles out are named by their
   class ("every case over its ceiling"), and `data/prepared/case_classes.toml`
   says which cases that is and from which facts — not a list of ids with a
   prose reason in the script (uniagent 17: "33 in Wien, 140 € > ARV 117" as a
@@ -352,27 +352,28 @@ derives from the detail below and carries no fact that isn't there.
   must say `dev`. The moment a `test` run decides something — a threshold, a
   variant, a checkpoint — the result is tuned, not held out, and must be
   reported that way.
-- **Interpretation:** if a result decides the conclusion or the next
+- **Registered branch:** if a result decides the conclusion or the next
   analysis, register it BEFORE the run: condition + what each branch
-  licenses, [interpretation-1] per branch point. The test: "and if [criterion-…] fails — what
+  licenses, [branch-1] per branch point. The test: "and if [criterion-…] fails — what
   then?" An answer you have now is a branch; no answer yet is "n/a — only
-  one outcome" (no [interpretation-…] id), and a decision taken after the
+  one outcome" (no [branch-…] id), and a decision taken after the
   run goes to Next step, labelled as taken after the run (exploratory, not
-  registered). The sentence is written arm by arm, `<condition> →
-  <reading>`, arms separated by `;`, at least two, `otherwise` allowed as
-  the last condition: "criterion-1 met and quality-check-1 met →
-  generalises; quality-check-1 not met → noisy; otherwise → no-verdict". A
-  reading is lowercase letters, digits and hyphens, unique in the sentence;
-  a protocol whose interpretation is not in this form is refused. A branch
-  is decided on its own condition, not on the verdict: a stop rule fires
-  during the run or on an inadmissible one too. The value the run records
-  under `interpretation_1_branch` is one of the registered readings —
-  `intent-check` and `finalize` block any other value — so a reader of
-  metrics.json finds the arm in the protocol by searching it. It says
-  which branch was taken; what follows stands in the arm, and how to
-  interpret votes or reasons is the protocol's business (rival
-  explanations), not the reading's (round 15: "extrem technisch — da muss
-  ich erst nachschauen").
+  registered). The sentence lists the outcomes in order, each `<condition>
+  → <outcome>: <consequence>`, separated by `;`, at least two: "quality-check-1
+  not met → noisy: no verdict, the parser is repaired first; criterion-1 met
+  → generalises: used on the next cohort; otherwise → misses: reported as a
+  miss, no further analysis". The first condition that holds selects the
+  outcome, a final `otherwise` covers the rest. An outcome's name is
+  lowercase letters, digits and hyphens, unique in the sentence; its
+  consequence — an interpretation, an action or a non-action with its
+  reason — is owed and holds no `;`. A protocol whose branch is not in this
+  form is refused. A branch is decided on its own condition, not on the
+  verdict: a stop rule fires during the run or on an inadmissible one too.
+  The name the run records under `branch_1_outcome` is one of the
+  registered outcomes — `intent-check` and `finalize` block any other — so
+  a reader of metrics.json finds the outcome, and what it permits, in the
+  protocol by searching for it (round 15: "extrem technisch — da muss ich
+  erst nachschauen").
 - **Why this design †:** choice of model, dataset, method — one sentence.
 - **Rival explanations †:** per confound: what OTHER than the hypothesis
   produces the same number · error direction (does it push for or against
@@ -395,7 +396,7 @@ scattered in output files nobody can interpret.
   by `protocol-fill --from-run` and held exactly
   to that rendering by `report-check` (phase 5, 2026-10-21): never retyped,
   never reworded; after a changed decision `protocol-fill --render` writes
-  it again. The Limit lines below it are rendered the same way from the
+  it again. The Limitation lines below it are rendered the same way from the
   audit records. What the number means goes into the Summary's Conclusion, in
   your words; long form → [[note]]. Example (the rendered form is one
   line):
@@ -407,9 +408,9 @@ scattered in output files nobody can interpret.
   an estimator's registered and null row —, read from the run's kept
   output after the run — never `--probe`'s, which is thrown
   away. Owed only with a model; without one the stamp leaves it out.
-- **Interpretation / next step:** one sentence; keep instrument findings
+- **Interpretation:** one sentence; keep instrument findings
   apart from findings about the subject.
-- **Outcome †:** expected or surprising — failures belong here.
+- **Expected or surprising †:** expected or surprising — failures belong here.
 - **Rival check †:** which rivals are ruled out, which still stand?
 - **Caps/drops †:** what was omitted or limited.
 - **Analysis audit †:** date · scope sha · N findings — the audit of the
@@ -432,7 +433,7 @@ scattered in output files nobody can interpret.
 - **Deviations after freeze:** "none", or what was changed after
   `frozen = true`. The registered plan (Intent) is not rewritten; a
   deviation stands here, in the Result block, and — where it touches the
-  verdict — in Summary → Limits. Not to be confused with "Changed", which
+  verdict — in Summary → Limitations. Not to be confused with "Changed", which
   records instrument changes BEFORE the freeze.
 
 ### Context (APPARATUS)
@@ -641,7 +642,7 @@ Delete this section if everything was prompted.
 | Quality check      | LAB-004 Identifiers make the intent addressable |
 | Timebox            | — |
 | Split touched      | — |
-| Interpretation  | LAB-013 Registered branch when the run can answer two questions |
+| Branch        | LAB-013 Registered branch when the run can answer two questions |
 | Preflight audit    | LAB-015 Preflight audit before freezing |
 | Instrument check   | LAB-014 One fully rendered example pair per gold class |
 | Resolution check   | LAB-016 Resolution check before freezing |

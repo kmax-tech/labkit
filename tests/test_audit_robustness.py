@@ -32,7 +32,7 @@ def area_with_run(tmp: Path) -> tuple[Path, Path]:
     protocol.write_text(head(promises=C1) + "\nCriterion [criterion-1].\n")
     with contextlib.redirect_stdout(io.StringIO()):
         with runlog.run("t", {"min_acc": 0.7}, base_dir=tmp) as r:
-            r.metrics(c1_pass=True)
+            r.metrics(criterion_1_pass=True)
     return protocol, r.dir
 
 

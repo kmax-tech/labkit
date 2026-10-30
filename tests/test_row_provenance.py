@@ -64,7 +64,7 @@ class ResumedRunNamesWhatItContinues(unittest.TestCase):
                     with batch.Store(out, prov={"run": r.run_id}) as store:
                         for rec in store.pending([{"id": i} for i in ("1", "2", "3")]):
                             store.append({**rec, "answer": "y"})
-                    r.metrics(c1_pass=True)
+                    r.metrics(criterion_1_pass=True)
             entries = runs.read_outputs(r.dir) or []
             self.assertEqual(entries[0].continues, (A,))
             self.assertEqual(entries[0].rows_from, {A: 2, r.run_id: 1})
@@ -87,7 +87,7 @@ class ResumedRunNamesWhatItContinues(unittest.TestCase):
                 with runlog.run("t", {}, base_dir=area) as r:
                     r.output(out)
                     _rows(out, r.run_id, ["1"])
-                    r.metrics(c1_pass=True)
+                    r.metrics(criterion_1_pass=True)
             entries = runs.read_outputs(r.dir) or []
             self.assertEqual(entries[0].continues, ())
             self.assertEqual(run_record_check.row_provenance_findings(r.dir), ([], []))
@@ -112,7 +112,7 @@ class AFinishedRunIsContinuedOutLoud(unittest.TestCase):
                         store.append({**rec, "answer": "y"})
                 if crash:
                     raise RuntimeError("broke off")
-                r.metrics(c1_pass=True)
+                r.metrics(criterion_1_pass=True)
         return r, said.getvalue()
 
     def test_continuing_a_finished_run_is_said_with_the_way_to_its_own_output(self):
@@ -158,7 +158,7 @@ class ForeignRowsDuringTheRun(unittest.TestCase):
                 with runlog.run("t", {}, base_dir=area) as r:
                     r.output(out)
                     _rows(out, A, ["1", "2"])
-                    r.metrics(c1_pass=True)
+                    r.metrics(criterion_1_pass=True)
             entries = runs.read_outputs(r.dir) or []
             self.assertEqual(entries[0].continues, ())
             self.assertEqual(entries[0].rows_from, {A: 2})

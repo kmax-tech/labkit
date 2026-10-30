@@ -260,7 +260,7 @@ def score_reader_answer(
 # field parser, no judgement).
 
 GLANCE_LINES = 10
-SUMMARY_FIELDS = ("conclusion", "limits", "next step")
+SUMMARY_FIELDS = ("conclusion", "limitations", "next step")
 #: the glance questions a reader answers in words — "answered" counts these
 GLANCE_CONTENT_KEYS = ("question", "result", "how_sure", "what_follows")
 

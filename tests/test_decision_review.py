@@ -108,7 +108,7 @@ def area_with(
     for n, (status, reason, effect) in decide.items():
         findings.write_decision(record, n, status, reason, effect)
     # the result section as --from-run writes it: Recorded results with its
-    # note, one Limit line per decided limit
+    # note, one Limitation line per decided limitation
     rendered, _ = protocol_fill.render_result(proto.read_text(encoding="utf-8"), area)
     proto.write_text(rendered, encoding="utf-8")
     return area, record
@@ -116,7 +116,7 @@ def area_with(
 
 def decide(record: Path, n: int, status: str, reason: str, effect: str = "") -> None:
     """Decide finding N and write the result section again, as the person
-    does after `--decide` (`protocol-fill --render`): a Limit line of a
+    does after `--decide` (`protocol-fill --render`): a Limitation line of a
     closed finding would otherwise stand stale."""
     findings.write_decision(record, n, status, reason, effect)
     area = record.parent.parent
@@ -163,21 +163,21 @@ class Reviewable(unittest.TestCase):
         _, record = area_with(
             [BLOCKER, BLOCKER, WARNING, WARNING],
             {
-                1: ("limit", "an in-sample fit, said so", "stands"),
+                1: ("limitation", "an in-sample fit, said so", "stands"),
                 2: (
-                    "limit",
+                    "limitation",
                     "the run cannot judge it",
                     "criterion-1 not assessable",
                 ),
-                3: ("limit", "one seed", "stands"),
-                4: ("limit", "noted", ""),
+                3: ("limitation", "one seed", "stands"),
+                4: ("limitation", "noted", ""),
             },
         )
         rec = findings.read(record)
         self.assertEqual([n for n, _ in decision_review.reviewable(rec, [])], [1, 3])
 
     def test_named_files_resolve_against_the_repo_then_the_area(self):
-        area, record = area_with([BLOCKER], {1: ("limit", "r", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "r", "stands")})
         rec = findings.read(record)
         files = decision_review.named_files(
             decision_review.reviewable(rec, []), area.parent.parent, area
@@ -189,7 +189,13 @@ class TheCall(unittest.TestCase):
     def test_the_reviewer_reads_decisions_protocol_named_files_rows_and_rules(self):
         area, record = area_with(
             [BLOCKER],
-            {1: ("limit", "the fit is in-sample, the Conclusion says so", "stands")},
+            {
+                1: (
+                    "limitation",
+                    "the fit is in-sample, the Conclusion says so",
+                    "stands",
+                )
+            },
         )
         rc, out, err, sent = run_review(area, UPHELD)
         self.assertEqual(rc, 0, out + err)
@@ -220,13 +226,13 @@ class TheCall(unittest.TestCase):
 
     def test_an_upheld_review_releases_the_stands_and_the_gate_is_silent(self):
         area, record = area_with(
-            [BLOCKER], {1: ("limit", "in-sample, said so", "stands")}
+            [BLOCKER], {1: ("limitation", "in-sample, said so", "stands")}
         )
         code, out = gate(area)
         self.assertEqual(code, 1, out)  # a BLOCKER's stands blocks until upheld
-        self.assertIn("BLOCKER: Limit (audit", out)
+        self.assertIn("BLOCKER: Limitation (audit", out)
         self.assertIn(
-            "`stands` on a BLOCKER decided limit not reviewed — no decision review upholds",
+            "`stands` on a BLOCKER decided limitation not reviewed — no decision review upholds",
             out,
         )
         self.assertIn(f"--review --record {record.name}", out)
@@ -250,7 +256,7 @@ class TheCall(unittest.TestCase):
         self.assertEqual(len(findings.area_records(area)), 1)
 
     def test_a_rejected_review_does_not_release_and_the_gate_says_why(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "Finding noted", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "Finding noted", "stands")})
         rc, out, _, _ = run_review(area, REJECTED)
         self.assertEqual(rc, 1, out)
         self.assertIn("rejected: decide the finding again first", out)
@@ -258,7 +264,8 @@ class TheCall(unittest.TestCase):
         code, out = gate(area)
         self.assertEqual(code, 1, out)
         self.assertIn(
-            "`stands` on a BLOCKER decided limit rejected: the reason restates", out
+            "`stands` on a BLOCKER decided limitation rejected: the reason restates",
+            out,
         )
 
     def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
@@ -270,7 +277,7 @@ class TheCall(unittest.TestCase):
             with self.subTest(promises="none" if block is None else "default"):
                 area, _ = area_with(
                     [BLOCKER],
-                    {1: ("limit", "Finding noted", "stands")},
+                    {1: ("limitation", "Finding noted", "stands")},
                     promise_block=block,
                 )
                 rc, out, _, _ = run_review(area, REJECTED)
@@ -284,7 +291,7 @@ class TheCall(unittest.TestCase):
                 self.assertEqual("`deferred` and hand over" in err, not offered)
 
     def test_report_check_asks_a_limit_without_its_effect_to_decide_again(self):
-        """A BLOCKER decided limit without its effect (a record changed by
+        """A BLOCKER decided limitation without its effect (a record changed by
         hand: `--decide … limit` writes it): report-check names the decision
         to make again, with or without promises registered."""
         for block, offered in ((None, False), ("", True)):
@@ -294,7 +301,7 @@ class TheCall(unittest.TestCase):
                 record.write_text(
                     text.replace(
                         'status = "open"\nreason = ""',
-                        'status = "limit"\nreason = "kept"',
+                        'status = "limitation"\nreason = "kept"',
                         1,
                     )
                 )
@@ -305,25 +312,27 @@ class TheCall(unittest.TestCase):
                     if "BLOCKER:" in ln and "owes its effect" in ln
                 ]
                 self.assertIn("decide it again", line)
-                self.assertIn("--decide 1 limit --why", line)
+                self.assertIn("--decide 1 limitation --why", line)
 
     def test_the_twin_a_warnings_stands_without_a_review_only_warns(self):
         """The scope, narrow at first: the release does not hang on every
         lesser limit — an accepted WARNING's `stands` no review upholds is a
         warning, a BLOCKER's a blocker."""
-        area, _ = area_with([WARNING], {1: ("limit", "one seed, said so", "stands")})
+        area, _ = area_with(
+            [WARNING], {1: ("limitation", "one seed, said so", "stands")}
+        )
         code, out = gate(area)
         self.assertEqual(code, 0, out)
-        self.assertIn("WARNING: Limit (audit", out)
-        self.assertIn("`stands` on a WARNING decided limit not reviewed", out)
+        self.assertIn("WARNING: Limitation (audit", out)
+        self.assertIn("`stands` on a WARNING decided limitation not reviewed", out)
         self.assertNotIn("BLOCKER:", out)
 
     def test_the_reviewer_sees_the_result_as_it_renders(self):
-        area, record = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         _, _, _, sent = run_review(area, UPHELD)
         self.assertIn(f"===== {decision_review.RESULT_LABEL} =====", sent[0])
         self.assertIn(
-            f"- **Limit (audit {record.stem} #1):** the verdicts stand", sent[0]
+            f"- **Limitation (audit {record.stem} #1):** the verdicts stand", sent[0]
         )
         self.assertIn(
             f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {RUN})",
@@ -331,9 +340,11 @@ class TheCall(unittest.TestCase):
         )
 
     def test_a_changed_decision_makes_the_review_stale(self):
-        area, record = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         run_review(area, UPHELD)
-        findings.write_decision(record, 1, "limit", "in-sample, and more", "stands")
+        findings.write_decision(
+            record, 1, "limitation", "in-sample, and more", "stands"
+        )
         rec = findings.read(record)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         self.assertFalse(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
@@ -346,7 +357,7 @@ class TheCall(unittest.TestCase):
         """The wording of the claim separates upheld from rejected (replay
         2026-10-22): a Conclusion strengthened after the review is another
         claim, and the gate asks again."""
-        area, record = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         run_review(area, UPHELD)
         code, out = gate(area)
         self.assertNotIn("decision review", out)
@@ -367,7 +378,7 @@ class TheCall(unittest.TestCase):
         )
         code, out = gate(area)
         self.assertEqual(code, 1, out)
-        self.assertIn("`stands` on a BLOCKER decided limit not reviewed", out)
+        self.assertIn("`stands` on a BLOCKER decided limitation not reviewed", out)
         # the claim's digest reads the Conclusion and nothing generated: the
         # lines --from-run writes after the decision must not stale a review
         self.assertEqual([k for k, _ in reviews.reported_claim(text)], ["Conclusion"])
@@ -383,7 +394,7 @@ class TheCall(unittest.TestCase):
         Now the state says not reviewed as claimed now and what the earlier
         review said; the grade is unchanged (a WARNING stays a warning)."""
         for grade, code_now in ((WARNING, 0), (BLOCKER, 1)):
-            area, record = area_with([grade], {1: ("limit", "noted", "stands")})
+            area, record = area_with([grade], {1: ("limitation", "noted", "stands")})
             run_review(area, REJECTED)
             proto = area / "PROTOCOL-x.md"
             text = proto.read_text(encoding="utf-8").replace(
@@ -405,7 +416,7 @@ class TheCall(unittest.TestCase):
             self.assertIn("earlier rejected: the reason restates", out)
 
     def test_a_review_nobody_can_read_is_named_by_the_gate(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         run_review(area, UPHELD)
         (review,) = (area / "audits").glob("*-review.toml")
         review.write_text(
@@ -424,7 +435,9 @@ class TheCall(unittest.TestCase):
         The record says it was one, its verdicts count, and the exit says
         the state. The twin: a review without `--again` on the same state
         releases it."""
-        area, record = area_with([BLOCKER], {1: ("limit", "Finding noted", "stands")})
+        area, record = area_with(
+            [BLOCKER], {1: ("limitation", "Finding noted", "stands")}
+        )
         rc, out, _, sent = run_review(area, UPHELD, "--again")
         self.assertEqual((rc, len(sent)), (1, 1))
         self.assertIn("(--again, it releases nothing)", out)
@@ -446,7 +459,9 @@ class TheCall(unittest.TestCase):
         rejected could be re-reviewed until an upheld came. Now every draw
         on one state counts, the command refuses another draw, and deciding
         again is the way out."""
-        area, record = area_with([BLOCKER], {1: ("limit", "Finding noted", "stands")})
+        area, record = area_with(
+            [BLOCKER], {1: ("limitation", "Finding noted", "stands")}
+        )
         rc, _, _, _ = run_review(area, REJECTED)
         self.assertEqual(rc, 1)
         rc, _, err, sent = run_review(area, UPHELD)
@@ -474,7 +489,7 @@ class TheCall(unittest.TestCase):
         findings.write_decision(
             record,
             1,
-            "limit",
+            "limitation",
             "the Conclusion claims the in-sample fit only",
             "stands",
         )
@@ -492,7 +507,7 @@ class TheCall(unittest.TestCase):
         until a review upholds the new decision; a filled-in reason alone
         releases nothing."""
         area, record = area_with(
-            [BLOCKER], {1: ("limit", "rows are stale, see the diff", "stands")}
+            [BLOCKER], {1: ("limitation", "rows are stale, see the diff", "stands")}
         )
         rc, _, _, _ = run_review(area, INSUFFICIENT)
         self.assertEqual(rc, 1)
@@ -506,7 +521,7 @@ class TheCall(unittest.TestCase):
                 )
                 self.assertIn("closing a finding a reviewer did not uphold", out)
                 self.assertIn(f"--review --record {record.name}", out)
-                self.assertNotIn("Limit (audit", out)  # no limit: closed
+                self.assertNotIn("Limitation (audit", out)  # no limit: closed
         # the reviewer is asked about the new decision, and sees what it answers to
         rc, _, _, sent = run_review(area, UPHELD)
         self.assertEqual((rc, len(sent)), (0, 1))
@@ -560,7 +575,9 @@ class TheCall(unittest.TestCase):
     def test_a_closed_warning_after_a_rejection_only_warns(self):
         """The grade rule holds for a closed contested finding as for a
         `stands`: a WARNING's is a warning, a BLOCKER's a blocker."""
-        area, record = area_with([WARNING], {1: ("limit", "Finding noted", "stands")})
+        area, record = area_with(
+            [WARNING], {1: ("limitation", "Finding noted", "stands")}
+        )
         run_review(area, REJECTED)
         decide(record, 1, "false-positive", "one seed is enough here")
         code, out = gate(area)
@@ -569,7 +586,7 @@ class TheCall(unittest.TestCase):
         self.assertIn("`false-positive` on a WARNING a review said rejected on", out)
 
     def test_a_report_that_disagrees_with_itself_records_nothing(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         for bad in (
             "DECISION #1 · upheld · x\nverdict: 0 upheld, 1 rejected, 0 insufficient\n",
             "DECISION #2 · upheld · x\nverdict: 1 upheld, 0 rejected, 0 insufficient\n",
@@ -583,7 +600,7 @@ class TheCall(unittest.TestCase):
         ) if "DECISION #2" in bad else None
 
     def test_code_changed_after_the_record_is_refused(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         (area / "scripts" / "01_measure.py").write_text("x = 1\n", encoding="utf-8")
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual(rc, 2)
@@ -594,7 +611,7 @@ class TheCall(unittest.TestCase):
         """The refusal names what `--review` needs first: with the
         Conclusion a placeholder, the step is to write it, then the review
         (ninth haiku round, t3, never ran the review the gate named)."""
-        area, record = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
             proto.read_text(encoding="utf-8").replace(
@@ -618,7 +635,7 @@ class TheCall(unittest.TestCase):
         while the Conclusion was a placeholder went stale when it was
         written — a second opus call. The name resolves under audits/,
         and the review asks for the Conclusion first."""
-        area, record = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         rc, _, _, sent = run_review(area, UPHELD, "--record", record.name)
         self.assertEqual((rc, len(sent)), (0, 1))
         proto = area / "PROTOCOL-x.md"
@@ -641,7 +658,7 @@ class TheCall(unittest.TestCase):
                     str(area),
                     "--decide",
                     "1",
-                    "limit",
+                    "limitation",
                     "--why",
                     "in-sample, said so",
                     "--record",
@@ -654,7 +671,7 @@ class TheCall(unittest.TestCase):
         area, _ = area_with([BLOCKER], {1: ("fixed", "fixed it", "")})
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual((rc, sent), (2, []))
-        self.assertIn("no finding decided `limit` with effect `stands`", err)
+        self.assertIn("no finding decided `limitation` with effect `stands`", err)
 
 
 class TheFile(unittest.TestCase):
@@ -708,7 +725,9 @@ class Journal(unittest.TestCase):
     report review that named two claims)."""
 
     def test_a_review_is_journaled_with_its_answer_and_its_record(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "in-sample, said so", "stands")})
+        area, _ = area_with(
+            [BLOCKER], {1: ("limitation", "in-sample, said so", "stands")}
+        )
         rc, _, _, _ = run_review(area, UPHELD)
         self.assertEqual(rc, 0)
         (a,) = attempts.read_journal(area)
@@ -722,7 +741,7 @@ class Journal(unittest.TestCase):
         self.assertEqual(attempts.area_gaps(area).blockers, [])
 
     def test_a_deleted_review_is_named_and_refuses_the_next_call(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "Finding noted", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "Finding noted", "stands")})
         run_review(area, REJECTED)
         (review,) = reviews.area_reviews(area)
         review.path.unlink()
@@ -737,7 +756,7 @@ class Journal(unittest.TestCase):
         self.assertIn(review.path.name, err)
 
     def test_a_backend_that_does_not_answer_ends_the_attempt_with_its_cause(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
 
         def down(alias, prompt, **kw):
             raise llm_backends.BackendError("claude-cli: exit 1, empty stderr")
@@ -756,7 +775,7 @@ class Journal(unittest.TestCase):
         self.assertEqual(reviews.area_reviews(area), [])
 
     def test_an_answer_that_does_not_read_is_kept_and_named(self):
-        area, _ = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, _ = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         rc, _, _, _ = run_review(area, "looks fine to me")
         self.assertEqual(rc, 2)
         (a,) = attempts.read_journal(area)
@@ -771,7 +790,7 @@ class Journal(unittest.TestCase):
     def test_the_twin_a_review_older_than_the_journal_is_not_held(self):
         """No entry is written afterwards for a review made before the
         journal: one that no attempt names stands as it is."""
-        area, record = area_with([BLOCKER], {1: ("limit", "in-sample", "stands")})
+        area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         d = reviews.Decision(1, "a" * 12, "upheld", "fine")
         reviews.write_review(area, "opus", record.name, "s", "h", "c", [d], again=False)
         self.assertEqual(attempts.read_journal(area), [])

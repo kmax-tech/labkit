@@ -136,7 +136,7 @@ repo root.
    Decide each finding with the command `labkit-audit
    experiments/01-document-count --findings` prints for it (`--decide N
    STATUS "REASON"`): `fixed`, `accepted`, `deferred` or `dismissed`;
-   all but `fixed` owe a reason (`--why`); a `limit` that leaves a promise unjudged names it with `--not-assessable`.
+   all but `fixed` owe a reason (`--why`); a `limitation` that leaves a promise unjudged names it with `--not-assessable`.
    The record is never edited by hand. Fixes can invalidate the audit's
    binding; rerun the affected measurement or audit when the checks
    require it.
@@ -329,22 +329,25 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **metrics** | Measured values recorded in `metrics.json`. |
 | **protocol run list** | The protocol's `## Runs` section: references to runs; listing a run does not select or release its result. |
 | **run entry** | One reference in the protocol run list: a run id and a sentence describing the run. |
-| **intent id** | Identifier of a checked promise: `[criterion-1]`, `[quality-check-1]`, `[interpretation-1]`, etc. |
+| **intent id** | Identifier of a checked promise: `[criterion-1]`, `[quality-check-1]`, `[branch-1]`, etc. |
 | **bundle** | Protocol, code and extracted facts packed by `code-check --bundle` for an agent the lab runs on it; labkit ships none. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
 | **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
 | **number_describes** | `[model]` key of a `compute` with a model in the loop: `model_outputs` (the number describes what the model marked) or `target_property` (a property of the data, the model as annotator). |
 | **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with an adopted result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |
-| **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
-| **criterion** | Promise kind `criterion` (`[criterion-1]`): success or failure decided from the run. |
-| **quality check** | Promise kind `quality-check` (`[quality-check-1]`): prerequisite for reading a criterion; failure withholds every criterion's verdict. |
-| **interpretation** | Promise kind `interpretation` (`[interpretation-1]`): the registered readings of an outcome, written arm by arm as `<condition> → <reading>`; the run records the reading taken as `interpretation_1_branch`, etc. |
+| **promise** | An explicitly registered requirement that the implementation and the run are checked against: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
+| **inference criterion** | Promise kind `criterion` (`[criterion-1]`, protocol field `Inference criterion`): the registered condition on the result that decides which conclusion the run supports; a missed criterion is a valid result (OSF preregistration: *inference criteria*). |
+| **quality check** | Promise kind `quality-check` (`[quality-check-1]`): assesses whether the measurement can support the intended inference, rather than whether the result supports the hypothesis; its condition is specified before the result is known. If any quality check is not met or cannot be assessed, no inference criterion receives a verdict; measured values may still be reported descriptively (Registered Reports: *outcome-neutral conditions*). |
+| **registered branch** | Promise kind `branch` (`[branch-1]`): a pre-specified mapping from conditions on the results to named outcomes and their consequences, written `<condition> → <outcome>: <consequence>; …` (COS: decision tree of IF-THEN rules). |
+| **condition** | A condition on the results that selects an outcome; the first that holds selects, a final `otherwise` covers the cases no earlier condition matched. |
+| **outcome** | A named possible result of a registered branch; the run records the name its condition selected (`branch_1_outcome`) (PCI RR: *interpretation given different outcomes*; not CONSORT's outcome measure). |
+| **consequence** | What the selected outcome permits: an interpretation, an action, or an explicitly justified non-action. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
 | **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
 | **recorded results** | Generated verdicts of the registered promises (a quality check not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
-| **report result block** | Generated section in a separate report containing the recorded results and full Limit lines; written by `protocol-fill --into` and checked against the same sources. |
+| **report result block** | Generated section in a separate report containing the recorded results and full Limitation lines; written by `protocol-fill --into` and checked against the same sources. |
 | **discussion block** | Generated section in a separate report for a run it looks at without reporting it: protocol, run and why as TOML in the head, the line `Run <id> — discussed, not reported: <why>` written from them; written by `protocol-fill --discuss … --into`. |
 | **derived run** | Re-evaluation of a completed non-repeat run's rows through `derived_from`, with no new model calls. |
 | **scope hash** | Per-promise hash of its declared code scope, recorded with the run and checked by finalize. |
@@ -352,7 +355,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **estimator** | The instrument of the estimator skeleton: at `fit` trained on the data, at a local `apply` the unchanged predictor; both compare a registered lane with a null lane on permuted labels. |
 
 The protocol's recorded results and a report result block present the
-same bound sources. The report block includes the full Limit lines so its
+same bound sources. The report block includes the full Limitation lines so its
 reader can see the restrictions alongside the numbers. The conclusion is
 the author's interpretation of those results within their limits.
 

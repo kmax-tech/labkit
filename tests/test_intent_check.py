@@ -21,11 +21,11 @@ from labkit.checks import intent_check  # noqa: E402
 PROTOCOL = (
     head()
     + """# 66 — x
-- **Success / failure criterion:** [criterion-1] null holds (p > 0,20) AND
+- **Inference criterion:** [criterion-1] null holds (p > 0,20) AND
   [criterion-2] opened > bare (p < 0,05) AND [criterion-3] both cells agree
 - **Quality check:** [quality-check-1] at most 2 of 96 rounds unparsed AND
   [quality-check-2] placebo in the same run shows its expected value
-- **Interpretation:** [interpretation-1] on "mixed", report closed - echo
+- **Registered branch:** [branch-1] on "mixed", report closed - echo
 """
 )
 
@@ -87,7 +87,7 @@ class TestIntentCheck(unittest.TestCase):
                 "criterion-3",
                 "quality-check-1",
                 "quality-check-2",
-                "interpretation-1",
+                "branch-1",
             },
         )
 
@@ -113,12 +113,12 @@ class TestIntentCheck(unittest.TestCase):
                 {
                     "criterion_1": True,
                     "quality_check_1_pass": True,
-                    "interpretation_1_branch": "a",
+                    "branch_1_outcome": "a",
                     "auc": 0.7,
                     "n_channels": 24,
                 }
             ),
-            {"criterion-1", "quality-check-1", "interpretation-1"},
+            {"criterion-1", "quality-check-1", "branch-1"},
         )
 
     def test_f1_score_is_no_intent_id(self):
@@ -138,7 +138,7 @@ class TestIntentCheck(unittest.TestCase):
                 "criterion_3_pass": True,
                 "quality_check_1_pass": True,
                 "quality_check_2_pass": True,
-                "interpretation_1_branch": "none",
+                "branch_1_outcome": "none",
             }
         )
         rc, out = self._run([str(self.proto)])
@@ -152,7 +152,7 @@ class TestIntentCheck(unittest.TestCase):
                 "criterion_2_pass": True,
                 "quality_check_1_pass": True,
                 "quality_check_2_pass": True,
-                "interpretation_1_branch": "none",
+                "branch_1_outcome": "none",
             }
         )
         rc, out = self._run([str(self.proto)])
@@ -163,10 +163,10 @@ class TestIntentCheck(unittest.TestCase):
 
     def test_unregistered_key_fails(self):
         self.proto.write_text(head() + "# x\n[criterion-1] only.\n", encoding="utf-8")
-        self._metrics({"criterion_1": True, "interpretation_1_branch": "taken"})
+        self._metrics({"criterion_1": True, "branch_1_outcome": "taken"})
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 1)
-        self.assertIn("[interpretation-1]", out)
+        self.assertIn("[branch-1]", out)
         self.assertIn("without a registration", out)
 
     def test_newest_run_wins(self):

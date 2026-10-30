@@ -10,9 +10,9 @@ this late; a set comparison catches it mechanically.
 The contract (LAB-004 Identifiers make the intent addressable): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
 in the protocol text (`[criterion-1]` criterion, `[quality-check-1]` quality check,
-`[interpretation-1]` interpretation; the alphabet is `promises`), and every id
+`[branch-1]` branch; the alphabet is `promises`), and every id
 reappears as a lowercase key in the reportable run's metrics.json
-(`criterion_1_pass`, `quality_check_1_pass`, `interpretation_1_branch`, or the bare id). This command checks the two sets
+(`criterion_1_pass`, `quality_check_1_pass`, `branch_1_outcome`, or the bare id). This command checks the two sets
 against each other, in both directions:
 
 - an id with no metrics key: the promise has no implementation evidence;
@@ -28,10 +28,10 @@ that it computes the right thing — the semantic half stays with the
 preflight audit (LAB-015 Preflight audit before freezing), which works the same ids.
 
 The alphabet lives in `promises`: the kinds criterion, quality-check and
-interpretation, and the promise block that makes them data. With a block, four more checks run here — text and block
+branch, and the promise block that makes them data. With a block, four more checks run here — text and block
 name the same ids, every declared key is reported exactly, the run
-recorded this very block, and an interpretation's key records one of the
-readings its arms register (`unregistered_readings`).
+recorded this very block, and a branch's key records one of the
+registered outcome values (`unregistered_outcomes`).
 
 A protocol without ids exits 0 with a note: nothing is promised.
 
@@ -241,22 +241,22 @@ def hold(protocol: Path, metrics_arg: Path | None) -> Held:
     and no file named, no run that may answer, an unreadable metrics.json
     or run record."""
     text, pid, block = _read(protocol)
-    mismatch = _prose_block_mismatch(protocol, text, block)
-    if mismatch:
-        return Held([], [blocker(m, fix=INTENT_FIX) for m in mismatch], "")
-
     earlier = promises.earlier_ids(text)
     if earlier:
         raise console.Refused(
             "intent-check",
             f"{protocol}: intent ids {', '.join(earlier)} — {promises.EARLIER_IDS_HELP}",
         )
+    mismatch = _prose_block_mismatch(protocol, text, block)
+    if mismatch:
+        return Held([], [blocker(m, fix=INTENT_FIX) for m in mismatch], "")
+
     reg = ids_in_prose(text)
     if not reg:
         return Held(
             [],
             [],
-            "intent-check: no intent ids registered ([criterion-1]/[quality-check-1]/[interpretation-1] — "
+            "intent-check: no intent ids registered ([criterion-1]/[quality-check-1]/[branch-1] — "
             "LAB-004 Identifiers make the intent addressable); nothing to hold the metrics against.",
         )
 
@@ -270,7 +270,7 @@ def hold(protocol: Path, metrics_arg: Path | None) -> Held:
         for m in _key_mismatch(protocol, mpath, reg, metrics)
         + (check_block_against_run(block, mpath, metrics) if block is not None else [])
     ] + (
-        unregistered_readings(block, metrics, mpath.parent.name)
+        unregistered_outcomes(block, metrics, mpath.parent.name)
         if block is not None
         else []
     )
@@ -315,32 +315,32 @@ def check_block_against_run(
     return out
 
 
-def unregistered_readings(
+def unregistered_outcomes(
     block: promises.PromiseTables, metrics: dict, run_name: str
 ) -> list[GateFinding]:
-    """Guaranteed tier: every interpretation of BLOCK whose key METRICS
-    records with a value that is none of the readings its arms register
-    (`promises.parse_arms`) — a blocker naming those readings. A reading
+    """Guaranteed tier: every branch of BLOCK whose key METRICS
+    records with a value that is none of its outcomes' names
+    (`promises.parse_outcomes`) — a blocker naming them. An outcome
     the protocol never registered is a conclusion chosen after the run;
-    the reader of the run finds no arm for it. A key the run does not
+    the reader of the run finds no outcome for it. A key the run does not
     report is `check_block_against_run`'s finding, and a sentence still the
-    stamp's placeholder registers no readings (`promise_tables_owed` holds
+    stamp's placeholder registers no outcomes (`promise_tables_owed` holds
     it), so neither is one here. RUN_NAME names the run in the sentence.
     Pure."""
     out = []
     for p in block.promises:
-        readings = p.readings()
-        if not readings or p.key not in metrics:
+        outcomes = p.outcome_names()
+        if not outcomes or p.key not in metrics:
             continue
         value = metrics[p.key]
-        if isinstance(value, str) and value in readings:
+        if isinstance(value, str) and value in outcomes:
             continue
         out.append(
             blocker(
                 f"{run_name}: [{p.id}] records {p.key} = {value!r}, which is "
-                f"none of the readings its arms register",
-                fix=f"record one of {', '.join(readings)} — the reading of the "
-                f"arm whose condition holds, as [[promise]] {p.id} writes it: "
+                f"none of its outcomes' names",
+                fix=f"record one of {', '.join(outcomes)} — the name of the "
+                f"outcome whose condition holds, as [[promise]] {p.id} writes it: "
                 f"fix the code and measure again",
             )
         )

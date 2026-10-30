@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 from labkit.checks import intent_check  # noqa: E402
 from protocol_fixture import run_record, PID, head  # noqa: E402
 
-CRITERION = "- **Success / failure criterion:** [criterion-1] holds\n"
+CRITERION = "- **Inference criterion:** [criterion-1] holds\n"
 
 
 def _run(area: Path, rid: str, metrics: dict) -> Path:

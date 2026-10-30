@@ -13,10 +13,7 @@ from labkit.checks import intent_check
 from labkit.formats import promises, protocol_check
 from protocol_fixture import head
 
-TEXT = (
-    head()
-    + "- **Success / failure criterion:** [K1] accuracy >= 0.8; [S1] stop on errors\n"
-)
+TEXT = head() + "- **Inference criterion:** [K1] accuracy >= 0.8; [S1] stop on errors\n"
 
 
 class EarlierIds(unittest.TestCase):
@@ -40,11 +37,30 @@ class EarlierIds(unittest.TestCase):
         self.assertEqual(rc, 2, buf.getvalue())
         self.assertIn("K1, S1", buf.getvalue())
 
+    def test_current_and_previous_letters_are_refused_in_both_cases(self):
+        for pid in ("C1", "c1", "A2", "a2", "B1", "b1", "k1"):
+            with self.subTest(pid=pid), tempfile.TemporaryDirectory() as d:
+                text = (
+                    head(kind="compute", repeat_cost="low", promises=None)
+                    + f"Criterion [{pid}] accuracy >= 0.8\n"
+                )
+                self.assertEqual(promises.earlier_ids(text), [pid])
+                self.assertTrue(promises.registers_ids(text))
+                missing = protocol_check.check_fields(text).missing_must
+                self.assertTrue(any("intent ids" in m for m in missing), missing)
+                self.assertTrue(
+                    any("no [[promise]] table" in m for m in missing), missing
+                )
+                path = Path(d) / "PROTOCOL-x.md"
+                path.write_text(text, encoding="utf-8")
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                    rc = intent_check.main([str(path)])
+                self.assertEqual(rc, 2, buf.getvalue())
+                self.assertIn(pid, buf.getvalue())
+
     def test_new_letters_are_untouched(self):
-        text = (
-            head()
-            + "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
-        )
+        text = head() + "- **Inference criterion:** [criterion-1] accuracy >= 0.8\n"
         missing = protocol_check.check_fields(text).missing_must
         self.assertFalse(any("intent ids" in m for m in missing), missing)
 

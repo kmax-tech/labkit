@@ -465,23 +465,21 @@ class OneCallFill(unittest.TestCase):
 
 
 class StampedId(unittest.TestCase):
-    TEXT = "- **Success / failure criterion:** [criterion-1] <how do we recognise…>\n"
+    TEXT = "- **Inference criterion:** [criterion-1] <how do we recognise…>\n"
 
     def test_a_value_without_an_id_keeps_the_stamped_one(self):
-        out = protocol_fill.fill(self.TEXT, "Success / failure criterion", "acc >= 0.8")
-        self.assertEqual(
-            out, "- **Success / failure criterion:** [criterion-1] acc >= 0.8\n"
-        )
+        out = protocol_fill.fill(self.TEXT, "Inference criterion", "acc >= 0.8")
+        self.assertEqual(out, "- **Inference criterion:** [criterion-1] acc >= 0.8\n")
 
     def test_a_value_with_its_own_ids_replaces_it(self):
         out = protocol_fill.fill(
             self.TEXT,
-            "Success / failure criterion",
+            "Inference criterion",
             "[criterion-1] acc >= 0.8 and [criterion-2] f1 >= 0.5",
         )
         self.assertEqual(
             out,
-            "- **Success / failure criterion:** [criterion-1] acc >= 0.8 and [criterion-2] f1 >= 0.5\n",
+            "- **Inference criterion:** [criterion-1] acc >= 0.8 and [criterion-2] f1 >= 0.5\n",
         )
 
 
@@ -828,7 +826,7 @@ class WithdrawText(unittest.TestCase):
         return (
             "# Experiment protocol: x\n\n## Result\n\n"
             f"- **Recorded results:** lines_mean = 3.0 (run {self.RUN})\n"
-            "- **Limit (audit 2026-01-01T00-00-analysis #1):** the verdicts stand\n"
+            "- **Limitation (audit 2026-01-01T00-00-analysis #1):** the verdicts stand\n"
             "- **Deviations after freeze:** none\n\n"
             f"## Runs\n\n- {self.RUN} — the kept run\n\n## Head\n\n"
             + head(result=result)
@@ -970,9 +968,9 @@ class PromiseSentences(unittest.TestCase):
         self.assertIn('sentence = "y"', new)
         with self.assertRaisesRegex(
             ValueError,
-            r"no \[\[promise\]\] 'interpretation-9'.*criterion-1, quality-check-1",
+            r"no \[\[promise\]\] 'branch-9'.*criterion-1, quality-check-1",
         ):
-            protocol_fill.fill_many(self.text(), [("interpretation-9 sentence", "x")])
+            protocol_fill.fill_many(self.text(), [("branch-9 sentence", "x")])
 
     def test_one_call_fills_a_field_and_a_sentence_or_nothing(self):
         text = self.text() + "\n- **Unit:** <the unit>\n"
@@ -981,7 +979,7 @@ class PromiseSentences(unittest.TestCase):
             p.write_text(text, encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = protocol_fill.main(
-                    [str(p), "Unit=one case", "interpretation-9 sentence=x"]
+                    [str(p), "Unit=one case", "branch-9 sentence=x"]
                 )
             self.assertEqual(rc, 2)
             self.assertEqual(p.read_text(encoding="utf-8"), text)

@@ -249,7 +249,7 @@ def standard_excerpt(mode: str = "preflight") -> tuple[str, str]:
     return f"{STANDARD_LABEL} ({', '.join(ids)} — the rules this audit cites)", text
 
 
-class Reading(NamedTuple):
+class AuditInputs(NamedTuple):
     """What the auditor reads in full: the protocol, the code, the standard
     (its cited rules). Every other stamped file comes as an index, taken
     from the snapshot (`bound_prompt`)."""
@@ -259,7 +259,7 @@ class Reading(NamedTuple):
     standard: Path
 
 
-def gather(area: Path, protocol: Path | None) -> Reading:
+def gather(area: Path, protocol: Path | None) -> AuditInputs:
     """What the agent reads, by LAB-103 The audit reads by declared scope,
     not by import graph: the area's scripts and analysis files, the files
     the promises declare as scope, the repo-local modules those import
@@ -298,7 +298,7 @@ def gather(area: Path, protocol: Path | None) -> Reading:
             f"(scar table, severity legend)",
             fix="reinstall labkit from the repo's pinned `requirements.txt`",
         )
-    return Reading(chosen, code, standard)
+    return AuditInputs(chosen, code, standard)
 
 
 def module_index(files: list[Path], repo: Path, read: Callable[[Path], str]) -> str:
@@ -1188,7 +1188,7 @@ class BoundPrompt:
     earlier_repairs: Followup
 
 
-def bound_prompt(mode: str, area: Path, reading: Reading) -> BoundPrompt:
+def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     """The prompt and what its record binds (`BoundPrompt`) from ONE
     reading:
     the record binds what the prompt shows. The code is one snapshot: its
@@ -1299,7 +1299,7 @@ def main(argv: list[str]) -> int:
         "--not-assessable",
         default="",
         metavar="IDS",
-        help="with --decide N limit: the promises this run does not judge, "
+        help="with --decide N limitation: the promises this run does not judge, "
         "comma-separated (`quality-check-2`); without it a limit's verdicts "
         "stand, read within it",
     )
@@ -1321,7 +1321,7 @@ def main(argv: list[str]) -> int:
         "--review",
         action="store_true",
         help="a second auditor on the decisions of the newest analysis record (or "
-        "--record) that owe one — a finding decided `limit` with effect `stands`, a finding "
+        "--record) that owe one — a finding decided `limitation` with effect `stands`, a finding "
         "closed after a review did not uphold a decision on it, a carried finding "
         "closed dismissed or deferred: does the reported claim stand? writes "
         "audits/<minute>-review.toml",
@@ -1593,7 +1593,7 @@ def decision_lines(
         # review clause of `stands` for this route too, and named every
         # criterion an unjudged quality check already voids
         unassessed = (
-            "limit --not-assessable <ID>[,<ID>]"
+            "limitation --not-assessable <ID>[,<ID>]"
             + (f" (<ID>: {named})" if named else "")
             + " — no review owed; a quality check left unjudged "
             "leaves every criterion without a verdict by itself, so name the "
@@ -1625,7 +1625,7 @@ def decision_lines(
                 )
             if f.grade == "BLOCKER":
                 out.append(
-                    "      limit: the verdicts hold, read within it; a second "
+                    "      limitation: the verdicts hold, read within it; a second "
                     "auditor must uphold it before the number leaves, at every "
                     f"repeat cost: `"
                     f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
@@ -1640,7 +1640,7 @@ def decision_lines(
                 )
             elif f.grade == "WARNING":
                 out.append(
-                    "      limit: the verdicts hold, read within it (its missing "
+                    "      limitation: the verdicts hold, read within it (its missing "
                     "review warns)" + (f" | {unassessed}" if promised else "")
                 )
     hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
@@ -1750,7 +1750,7 @@ def _without_audit(args: argparse.Namespace) -> int:
 def record_path(area: Path, record: Path) -> Path:
     """RECORD as given when it exists, else the file of that name under
     AREA's audits/ (`repo.given_or_in`) — the gates name a record by its
-    file name (`Limit (audit <record> #N)`, report-check's `--record
+    file name (`Limitation (audit <record> #N)`, report-check's `--record
     <name>`), and judge-2 (round on 86e38bc, 2026-10-22) copied the name
     and was refused with "No such file"."""
     return given_or_in(record, area / findings.DIR)
@@ -2157,7 +2157,7 @@ def _decide(
 ) -> int:
     """`--decide`: store the person's decision on one finding of RECORD (the
     area's newest record without it) through `findings.write_decision`. A
-    `limit` on a BLOCKER or WARNING records its effect: `stands`, or the
+    `limitation` on a BLOCKER or WARNING records its effect: `stands`, or the
     ids NOT_ASSESSABLE names (`<ids> not assessable`), held to the promises
     the protocol registers; `--not-assessable` with another status is
     refused. Print what was written and how many findings stay open, what
@@ -2172,11 +2172,11 @@ def _decide(
         if not n_text.isdigit():
             raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
         record = _newest_record(area) if record is None else record_path(area, record)
-        if not_assessable and status != "limit":
+        if not_assessable and status != "limitation":
             raise findings.FindingsError(
                 f"--not-assessable goes with limit, not with {status}"
             )
-        if status == "limit":
+        if status == "limitation":
             rec_before = findings.read(record)
             n = int(n_text)
             grade = (
@@ -2289,7 +2289,7 @@ def may_leave_unassessed(area: Path, protocol: Path | None) -> bool:
 
 def effect_ids_named(area: Path, protocol: Path | None) -> str:
     """The ids an effect may leave not assessable, each with its field's
-    name (`protocol_check.named_ids`): "criterion-1 (success / failure criterion),
+    name (`protocol_check.named_ids`): "criterion-1 (inference criterion),
     quality-check-1 (quality check)" — "" when the protocol registers none or
     is not known here (`may_leave_unassessed` decides whether the route is
     named at all)."""

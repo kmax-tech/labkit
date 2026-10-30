@@ -127,7 +127,7 @@ class Fields(unittest.TestCase):
         multi-line placeholder stays a placeholder (review 2026-10-07)."""
         written = (
             head(repeat_cost="low") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
-            "- **Success / failure criterion:** [criterion-1] x\n- **Quality check:** [quality-check-1] y\n"
+            "- **Inference criterion:** [criterion-1] x\n- **Quality check:** [quality-check-1] y\n"
         )
         self.assertEqual(protocol_check.low_registration_missing(written), [])
         unwritten = written.replace(

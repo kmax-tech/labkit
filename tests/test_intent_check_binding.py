@@ -29,7 +29,7 @@ A_ID = "p-aaaaaaaaaaaaaaaa"
 B_ID = "p-bbbbbbbbbbbbbbbb"
 #: Both protocols promise exactly this — only the binding can separate them.
 SAME_IDS = (
-    "- **Success / failure criterion:** [criterion-1] holds and [criterion-2] holds\n"
+    "- **Inference criterion:** [criterion-1] holds and [criterion-2] holds\n"
     "- **Quality check:** [quality-check-1] yield above 90%\n"
 )
 #: Every promise of SAME_IDS reported.

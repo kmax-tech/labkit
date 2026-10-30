@@ -53,7 +53,7 @@ class AreaFixture:
 
 
 PROTOCOL_TWO = (
-    "- **Success / failure criterion:** [criterion-1] trifft und [criterion-2] haelt.\n"
+    "- **Inference criterion:** [criterion-1] trifft und [criterion-2] haelt.\n"
     "- **Quality check:** [quality-check-1] Ausbeute > 90%.\n"
 )
 CLEAN_CODE = 'm = {"criterion_1_pass": True, "criterion_2_pass": False, "quality_check_1_pass": True}\n'
@@ -96,12 +96,12 @@ class TestIntentIdsAgainstCode(unittest.TestCase):
 
         `"s65"` without a suffix is a name, not a metric key. Reading it as a
         promise produced three findings and no defect. The S letter is gone;
-        the same bare form in today's namespace is `"quality-check-65"`.
+        the same bare form in today's namespace is `"quality_check_65"`.
         """
         with AreaFixture(
             PROTOCOL_TWO,
             {
-                "00_prepare.py": 'SESSIONS = ["quality-check-65", "quality-check-68", "quality-check-69"]\n',
+                "00_prepare.py": 'SESSIONS = ["quality_check_65", "quality_check_68", "quality_check_69"]\n',
                 "03_evaluate.py": CLEAN_CODE,
             },
         ) as a:
@@ -320,7 +320,7 @@ class TestProtocolChoice(unittest.TestCase):
 
     def _second(self, area: Path, name="PROTOCOL-s2-later.md"):
         (area / name).write_text(
-            "- **Success / failure criterion:** [criterion-9] haelt.\n",
+            "- **Inference criterion:** [criterion-9] haelt.\n",
             encoding="utf-8",
         )
         return area / name

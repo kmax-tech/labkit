@@ -77,7 +77,7 @@ Instrument nichts.**
 PILOT_FIELDS = """\
 - **Terms of this protocol:** n/a — standard vocabulary
 - **Question / hypothesis:** does A beat B?
-- **Success / failure criterion:** [criterion-1] AUC > 0.6
+- **Inference criterion:** [criterion-1] AUC > 0.6
 - **Quality check:** [quality-check-1] yield >= 90%
 - **Model I/O:** in: claim · out: yes/no, parsed by parse()
 - **Prompt:** see block
@@ -330,7 +330,7 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
             or ln.startswith("  after")
         )
         for label in (
-            "Success / failure criterion",
+            "Inference criterion",
             "Quality check",
             "Data profile",
             "Model I/O",
@@ -531,7 +531,7 @@ class TestCheckFields(unittest.TestCase):
         other fields of a bar (`<!-- lb -->`), in the full form too; a fit
         owes them."""
         bar = [f.label for f in protocol_check.FIELDS if f.low_cut == "lb"]
-        self.assertIn("Success / failure criterion", bar)
+        self.assertIn("Inference criterion", bar)
         for cost in ("high",):
             with self.subTest(repeat_cost=cost):
                 count = protocol_check.check_fields(
@@ -724,7 +724,7 @@ class TestPlaceholders(unittest.TestCase):
             pilot().replace("[criterion-1] AUC > 0.6", "<how do we recognise it?>")
         )
         self.assertEqual(rc, 1)
-        self.assertIn("PLACEHOLDER ONLY (must): Success / failure criterion", out)
+        self.assertIn("PLACEHOLDER ONLY (must): Inference criterion", out)
 
     def test_a_german_label_is_not_the_field(self):
         """Exact template labels only: `Modell-I/O` filled leaves `Model I/O` missing."""
@@ -780,7 +780,7 @@ class TestStampPlaceholders(unittest.TestCase):
 
     def test_content_with_angle_brackets_and_own_placeholders_stays_content(self):
         filled = (
-            "- **Limits:** <10% unparsed; one draw\n"
+            "- **Limitations:** <10% unparsed; one draw\n"
             "- **Timebox:** 2h, then log and ask\n"
             "- **Did †:** ran `protocol-fill PROTOCOL-<name>.md --list` once\n"
             "- **Next step:** one draw; <what was not tested>\n"
@@ -1021,7 +1021,7 @@ class TestPromptAndExample(unittest.TestCase):
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
             )
             + "\n## Summary\n\n- **Conclusion:** The mean is 3.5 documents per case.\n"
-            "- **Limits:** One count over 12 cases.\n- **Next step:** none\n"
+            "- **Limitations:** One count over 12 cases.\n- **Next step:** none\n"
             + "\n## Result\n\n- **Recorded results:** 3.5 (2026-09-06T10-00-00_aa11)\n"
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — the full run\n"
         )
@@ -1039,9 +1039,7 @@ class TestPromptAndExample(unittest.TestCase):
         lines = [
             ln
             for ln in base.splitlines()
-            if not ln.startswith(
-                ("- **Success / failure criterion:**", "- **Quality check:**")
-            )
+            if not ln.startswith(("- **Inference criterion:**", "- **Quality check:**"))
         ]
         text = (
             "\n".join(lines)
@@ -1052,9 +1050,9 @@ class TestPromptAndExample(unittest.TestCase):
         rc, out = run_main(text)
         self.assertEqual(rc, 0, out)
         for label in (
-            "Success / failure criterion",
+            "Inference criterion",
             "Quality check",
-            "Limits",
+            "Limitations",
             "Next step",
             "Raw output",
         ):
@@ -1067,7 +1065,7 @@ class TestPromptAndExample(unittest.TestCase):
             )
         )
         self.assertEqual(rc, 1)
-        self.assertIn("Success / failure criterion", out)
+        self.assertIn("Inference criterion", out)
 
     def test_a_probe_run_owes_no_result(self):
         text = (
@@ -1082,7 +1080,7 @@ class TestPromptAndExample(unittest.TestCase):
         text = (
             pilot(result="2026-09-06T10-00-00_aa11")
             + "\n## Summary\n\n- **Conclusion:** The classifier separates the two classes"
-            " well on the held-out set.\n- **Limits:** One run on one split.\n"
+            " well on the held-out set.\n- **Limitations:** One run on one split.\n"
             "- **Next step:** none\n"
             + "\n## Result\n\n- **Recorded results:** AUC 0.91 "
             "(2026-09-06T10-00-00_aa11)\n- **Raw output:** see output/examples.md\n"
@@ -1092,7 +1090,7 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_a_summary_without_limits_after_a_declared_run_fails(self):
-        # The twin above passes; the same protocol without Limits must not.
+        # The twin above passes; the same protocol without Limitations must not.
         text = (
             pilot(result="2026-09-06T10-00-00_aa11")
             + "\n## Summary\n\n- **Conclusion:** The classifier separates the two classes"
@@ -1103,7 +1101,7 @@ class TestPromptAndExample(unittest.TestCase):
         )
         rc, out = run_main(text)
         self.assertEqual(rc, 1, out)
-        self.assertIn("Limits", out)
+        self.assertIn("Limitations", out)
 
 
 class TestPilotStampNotFrozen(unittest.TestCase):
@@ -1491,7 +1489,7 @@ class PromiseNames(unittest.TestCase):
         field's name, and `named_ids` writes them as a message names them;
         an id with no field stands alone (the twin: nothing is invented)."""
         text = (
-            "- **Success / failure criterion:** [criterion-1] accuracy >= 0.8\n"
+            "- **Inference criterion:** [criterion-1] accuracy >= 0.8\n"
             "- **Null condition / anchors (in the same run):** [quality-check-2] chance\n"
             "- **Question / hypothesis:** does [criterion-1] hold?\n"
         )
@@ -1499,11 +1497,11 @@ class PromiseNames(unittest.TestCase):
         self.assertEqual(
             names,
             {
-                "criterion-1": "success / failure criterion",
+                "criterion-1": "inference criterion",
                 "quality-check-2": "null condition / anchors",
             },
         )
         self.assertEqual(
-            protocol_check.named_ids(["quality-check-2", "interpretation-1"], names),
-            "quality-check-2 (null condition / anchors), interpretation-1",
+            protocol_check.named_ids(["quality-check-2", "branch-1"], names),
+            "quality-check-2 (null condition / anchors), branch-1",
         )
