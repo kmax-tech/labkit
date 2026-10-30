@@ -162,3 +162,14 @@ grows the context. The Qwen server is restarted with --max-model-len 65536, --ma
 /v1/models at launch as before. The attempt ids now carry the model family (qwen-A-…). Everything else as
 addendum 6. A Qwen session that still outgrows 65k ends as a timeout-like failure of that attempt, counted as
 such.
+
+Addendum 8, 2026-10-30 afternoon, before the third Qwen launch. The second Qwen launch (window 65,536, two
+sequences) is set aside too: task 21's session ran over the window after eleven requests ("your prompt contains
+at least 65537 input tokens"), because a `head -n 20` on a GeoJSON file returns lines of megabytes and Codex
+keeps up to 10,000 tokens of every tool output (the catalog's truncation policy, the same for gpt-oss); five such
+outputs plus the base context exceed 65k, while the gpt-oss sessions had 131k and reached 55k. The harness
+stays as it is — the same truncation for both models — and the server's window grows instead: --max-model-len
+122880, --max-num-seqs 1, --kv-cache-dtype fp8 (about 130k fp8 KV tokens on the card), so the Qwen attempts run
+one at a time. Observed in the same attempt and recorded: Qwen writes apply_patch input in git-diff form and
+tries "Update File" on a file that does not exist yet, then falls back to the shell for writing — the same
+tool-format friction as gpt-oss, milder. Everything else as addenda 6 and 7.
