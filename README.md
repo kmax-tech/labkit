@@ -160,14 +160,14 @@ to check or correct the instrument.
 An exploration may leave the answer open and end without a reported result.
 A probe (`run_kind="probe"`) or an acknowledged unfrozen run cannot supply a
 reportable number. A report (`REPORT.md`, a results note) that cites the
-area's answering run while its protocol declares no result is held at the
+area's answering run while its protocol has adopted no result is held at the
 stop and the commit: that is the number leaving the area without the
 adoption. A run the report looks at without reporting it stands in a
 discussion block, `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what
 refused the adoption, what you found>" --into REPORT.md`: its head holds
 the protocol, the run and the why as TOML, its line
 (`Run <run_id> — discussed, not reported: <why>`) is written from them.
-Which block a report gets: the number a protocol declares → `--into`; a
+Which block a report gets: the number a protocol has adopted → `--into`; a
 run looked at but not reported → `--discuss`; a protocol that ends
 without a result → `--handover` (below).
 
@@ -266,10 +266,10 @@ protocol-check PROTOCOL             # check required fields and promise tables
 protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: the fields it owes and its row) or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
-protocol-fill PROTOCOL --into REPORT.md # the declared result as a generated block in a report
+protocol-fill PROTOCOL --into REPORT.md # the adopted result as a generated block in a report
 protocol-fill PROTOCOL --handover --why "…" --tried "…" --into REPORT.md # end without a result: [result] withdrawn, a handover record, its block in the report
 protocol-fill PROTOCOL --discuss RUN_ID --why "…" --into REPORT.md # a run the report looks at without reporting it, as a discussion block
-protocol-fill PROTOCOL --withdraw --why "…" [--into REPORT.md] # the declaration withdrawn, the run's Runs entry marked; audit, then --from-run adopts the run that answers
+protocol-fill PROTOCOL --withdraw --why "…" [--into REPORT.md] # the adoption withdrawn, the run's Runs entry marked; audit, then --from-run adopts the run that answers
 code-check AREA [--protocol FILE] [--bundle FILE] # code checks; audit bundle
 intent-check PROTOCOL [--metrics FILE] # promises against recorded metrics
 scope-sha AREA                     # code stamp used by an audit
@@ -334,14 +334,14 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
 | **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
 | **number_describes** | `[model]` key of a `compute` with a model in the loop: `model_outputs` (the number describes what the model marked) or `target_property` (a property of the data, the model as annotator). |
-| **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with a declared result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |
+| **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with an adopted result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |
 | **promise** | Checkable commitment: id, metrics key, sentence, code scope and constants in a `[[promise]]` table. |
 | **criterion** | Kind C promise: success or failure decided from the run. |
 | **admissibility** | Kind A promise: prerequisite for reading a criterion; failure withholds all C verdicts. |
 | **branch** | Kind B promise: the registered interpretation for an outcome, recorded as `b1_branch`, etc. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
-| **declared run** | Run named by `[result].run` as the reported result; the gates require it to equal the answering run. |
+| **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
 | **recorded results** | Generated verdicts of the registered promises (an admissibility condition not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
 | **report result block** | Generated section in a separate report containing the recorded results and full Limit lines; written by `protocol-fill --into` and checked against the same sources. |

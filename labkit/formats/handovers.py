@@ -555,7 +555,7 @@ def _protocol_mismatch(
         return f"{record.protocol} changed since the handover"
     declaring = declared_results(area, root, staged=staged)
     if declaring:
-        return f"{declaring[0].relative_to(root).as_posix()} declares a result"
+        return f"{declaring[0].relative_to(root).as_posix()} has adopted a result"
     return None
 
 

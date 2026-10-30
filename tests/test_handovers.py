@@ -466,7 +466,7 @@ class HandoverRecovery(cases._Chain):
         rc, out = self.lab.pre_commit(self.report, self.protocol, other_report)
         self.assertEqual(rc, 1, out)
         self.assertIn("OTHER.md", out)
-        self.assertIn("it declares no result", out)
+        self.assertIn("it has adopted no result", out)
 
     def test_malformed_record_never_grants_permission(self):
         rc, out = self.handover()

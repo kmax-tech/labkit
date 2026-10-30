@@ -205,12 +205,11 @@ def declared_run_mismatch(
     # BLOCKER on that very run, three of three Haiku readers were told to
     # adopt the faulty run (stuck-state probe 2026-10-28)
     return blocker(
-        f"[result] declares {declared}, but the run that answers is "
-        f"{answering_run.name}",
-        fix=f"withdraw the declaration (`{withdraw_command(protocol)}`), audit the "
+        f"[result] names {declared}, but the run that answers is {answering_run.name}",
+        fix=f"withdraw the adoption (`{withdraw_command(protocol)}`), audit the "
         f"run that answers and decide its findings, then "
-        f"`{adopt_command(protocol, answering_run.name)}` declares it — an audit "
-        f"made while another run is declared does not cover it; if the fault is "
+        f"`{adopt_command(protocol, answering_run.name)}` adopts it — an audit "
+        f"made while another run is adopted does not cover it; if the fault is "
         f"in that run, fix the code and measure again first",
     )
 
@@ -226,10 +225,10 @@ def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | Non
     if protocol_block.declared_run(text) is not None:
         return None
     return (
-        f"no [result] declared yet — after the analysis audit "
+        f"no result adopted yet ([result]) — after the analysis audit "
         f"(`{audit_command(protocol.parent, '--mode', 'analysis', protocol=protocol)}`) "
         f"and its decisions, {report_fields_step(protocol)}; then "
-        f"`{adopt_command(protocol, answering_run.name)}` declares the run and "
+        f"`{adopt_command(protocol, answering_run.name)}` adopts the run and "
         f"writes the number"
     )
 
@@ -960,7 +959,7 @@ def declared_run_gaps(area: Path, text: str, protocol: Path) -> list[GateFinding
         return []
     return [
         blocker(
-            f"[result] declares {declared}, but there is no runs/{declared}/ in this "
+            f"[result] names {declared}, but there is no runs/{declared}/ in this "
             f"area — a run id is runlog's, never typed",
             fix=written,
         )

@@ -228,7 +228,7 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
         declared = protocol_block.declared_run(pred_text)
         earlier = predecessor_verdict(pred.parent, pred_text, {*seen, rep.protocol})
         if declared is None:
-            verdict = "no result declared — unresolved"
+            verdict = "no result adopted — unresolved"
         else:
             pred_run = runs.run_path(pred.parent, declared)
             unregistered = _unregistered(pred, rep.protocol, pred_run)

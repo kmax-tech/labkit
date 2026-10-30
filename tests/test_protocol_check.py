@@ -211,7 +211,7 @@ class TestResultAfterARun(unittest.TestCase):
         )
         rc, out = run_main(text)
         self.assertEqual(rc, 1)
-        self.assertIn(f"the head declares run {self.RUN_ID}", out)
+        self.assertIn(f"the head has adopted run {self.RUN_ID}", out)
 
     def test_a_run_in_the_list_alone_declares_nothing(self):
         text = (
@@ -219,7 +219,7 @@ class TestResultAfterARun(unittest.TestCase):
             "- **Raw output:** see output/examples.md\n" + self.RUN
         )
         rc, out = run_main(text)
-        self.assertNotIn("the head declares run", out)
+        self.assertNotIn("the head has adopted run", out)
 
 
 class TestStagedReadsTheIndex(unittest.TestCase):
@@ -1010,7 +1010,7 @@ class TestPromptAndExample(unittest.TestCase):
         )
         rc, out = run_main(text)
         self.assertEqual(rc, 1)
-        self.assertIn("the head declares run 2026-09-06T10-00-00_aa11", out)
+        self.assertIn("the head has adopted run 2026-09-06T10-00-00_aa11", out)
 
     def test_raw_output_is_not_owed_without_a_model_at_seconds(self):
         """A count has no prompt+answer pair to show: the field is `sm`, owed
@@ -1074,7 +1074,7 @@ class TestPromptAndExample(unittest.TestCase):
             "\n## Runs\n\n- 2026-09-06T10-00-00_aa11 — probe, 10 calls\n"
         )
         rc, out = run_main(text)
-        self.assertNotIn("the head declares run", out)
+        self.assertNotIn("the head has adopted run", out)
         self.assertEqual(rc, 0, out)
 
     def test_written_raw_output_after_a_declared_run_passes(self):

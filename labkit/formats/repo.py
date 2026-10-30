@@ -150,7 +150,7 @@ def report_fields_step(protocol: Path) -> str:
     it, which refuses a frozen protocol without them."""
     return (
         f"write the Conclusion and the report fields "
-        f"(`{contract_command(protocol)}`, once frozen and declared)"
+        f"(`{contract_command(protocol)}`, once frozen and adopted)"
     )
 
 

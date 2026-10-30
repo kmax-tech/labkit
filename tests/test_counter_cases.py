@@ -323,7 +323,7 @@ class ConflictRegisteredAnew(_Chain):
         text = self.released(run_id)
         self.assertIn(
             f"- **Recorded results:** replaces {pid} (01-judge/PROTOCOL-judge.md): "
-            "no result declared — unresolved · this question: C1 met; A1 met; A2 met",
+            "no result adopted — unresolved · this question: C1 met; A1 met; A2 met",
             text,
         )
 

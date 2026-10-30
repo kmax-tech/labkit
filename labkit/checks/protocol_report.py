@@ -267,8 +267,8 @@ def full_form_lines() -> list[str]:
     for level, title in (
         ("must", "MUST (every pilot of the full form)"),
         ("should", "SHOULD (MUST once frozen = true)"),
-        ("after", "after the run (owed once a result is declared)"),
-        ("report", "report (owed once frozen = true and a result is declared)"),
+        ("after", "after the run (owed once a result is adopted)"),
+        ("report", "report (owed once frozen = true and a result is adopted)"),
     ):
         out += ["", f"  {title}"] + [
             f"    {f.label}" for f in FIELDS if f.level == level
@@ -361,11 +361,11 @@ def owed_field_lines(
             + ([PROMISE_SENTENCES] if registers and not owed_here.low else []),
         ),
         (
-            "after the run, once the head declares a result (`[result] run`)",
+            "after the run, once the head has adopted a result (`[result] run`)",
             owed_here.after_run,
         ),
         (
-            "once frozen = true and a result is declared also",
+            "once frozen = true and a result is adopted also",
             owed_here.once_reported,
         ),
     )
@@ -569,7 +569,7 @@ class FileReport:
             + [f"{label} (line {n}, placeholder)" for n, label in self.must_holes]
             + (["a prompt code block"] if self.no_block else [])
             + (["a rendered example (frozen)"] if self.frozen_without_io else [])
-            + [f"{field_label(n)} (a result is declared)" for n in self.run_unreported]
+            + [f"{field_label(n)} (a result is adopted)" for n in self.run_unreported]
             + (
                 ["a shorter protocol (frozen)"]
                 if self.frozen and (self.too_long or self.big)
@@ -774,7 +774,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         )
     if r.run_unreported:
         print(
-            f"{f}: MISSING (must): the head declares run {r.declared} but "
+            f"{f}: MISSING (must): the head has adopted run {r.declared} but "
             f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
             f"the result in the SAME session: `protocol-fill --render` for the "
             f"Recorded results; Conclusion (the question's answer in two sentences, within the "
@@ -796,7 +796,7 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
     for n, label in r.before_run:
         print(
             f"{f}:{n}: WARNING: {label} written before any run — no completed "
-            f"run is bound to this protocol and the head declares no `[result] run`; "
+            f"run is bound to this protocol and the head has adopted no run (`[result] run`); "
             f"a report field describes a run that happened (write it with "
             f"`{adopt_command(f)}` after the run)"
         )

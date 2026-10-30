@@ -96,7 +96,7 @@ WAYS_OUT = (
     (
         "an implementation error",
         "the code does not do what the registration says: fix the code (where "
-        "the protocol declares a result, withdraw it first — `protocol-fill "
+        "the protocol has adopted a result, withdraw it first — `protocol-fill "
         '<PROTOCOL> --withdraw --why "<why>"`), decide `fixed` naming the change, '
         "measure again under the unchanged registration, audit the new run",
     ),
@@ -132,9 +132,9 @@ WAYS_OUT = (
         "itself",
     ),
     (
-        "a wrong declaration",
-        "the measurement stands and the protocol's head declares another run "
-        "than the one the finding judged: withdraw the declaration "
+        "a wrong adoption",
+        "the measurement stands and the protocol's head has adopted another run "
+        "than the one the finding judged: withdraw the adoption "
         '(`protocol-fill <PROTOCOL> --withdraw --why "<why>"`), decide `fixed` '
         "naming that, run the analysis audit again — the follow-up judges the "
         "finding —, then adopt the run that answers (`--from-run`); no new "
@@ -156,7 +156,7 @@ WAYS_OUT = (
 #: found the full list hard to filter
 WAYS_OUT_SHORT = {
     "an implementation error": (
-        "the code does not do what the registration says → fix it (a declared "
+        "the code does not do what the registration says → fix it (an adopted "
         "result: `--withdraw` first), decide `fixed`, measure again, audit"
     ),
     "a missed criterion": (
@@ -177,8 +177,8 @@ WAYS_OUT_SHORT = {
         "report-check names a field missing at the first measurement → "
         "register anew with `[replaces]`, or hand over"
     ),
-    "a wrong declaration": (
-        "the measurement stands, the head declares another run → `--withdraw`, "
+    "a wrong adoption": (
+        "the measurement stands, the head has adopted another run → `--withdraw`, "
         "decide `fixed`, audit again, then `--from-run`; no new measurement"
     ),
     "none of these": (
@@ -231,7 +231,7 @@ def blocker_routes(promised: bool, *, full: bool) -> tuple[str, ...]:
 
 
 #: what every hold names first while a declared run's code has changed
-WITHDRAW_FIRST = "withdraw the declaration first (`{command}`), then "
+WITHDRAW_FIRST = "withdraw the adoption first (`{command}`), then "
 
 
 def declared_first(finding: GateFinding, protocol: Path) -> GateFinding:

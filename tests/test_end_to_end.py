@@ -415,7 +415,7 @@ class Count(unittest.TestCase):
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 1, out)
         self.assertIn("the working tree differs from the index", out)
-        self.assertIn(f"its head declares {run_id}", out)
+        self.assertIn(f"its head has adopted {run_id}", out)
         lab.git("add", "-A")
         rc, out = lab.pre_commit(self.protocol)
         self.assertEqual(rc, 0, out)
@@ -668,11 +668,11 @@ class Withdraw(CountCommands):
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
         self.assertIn(
-            f"[result] declares {run_a}, but the run that answers is {run_b}", out
+            f"[result] names {run_a}, but the run that answers is {run_b}", out
         )
         self.assertIn("--withdraw", out)
         wrong = (
-            f"BLOCKER · PROTOCOL-lines.md:1 · the head declares run {run_a}, the rows "
+            f"BLOCKER · PROTOCOL-lines.md:1 · the head has adopted run {run_a}, the rows "
             f"shown are run {run_b} · the reported mean · LAB-050 Analysis audit "
             f"before reporting · declare the run the current code measured\n"
             f"verdict: 1 blockers, 0 warnings, 0 notes"
@@ -680,9 +680,9 @@ class Withdraw(CountCommands):
         rc, out, prompt = self.analysis(wrong)
         self.assertEqual(rc, 1, out)
         self.assertIn(
-            f"the protocol's [result] declares {run_a}, not the run shown", prompt
+            f"the protocol's [result] names {run_a}, not the run shown", prompt
         )
-        self.assertIn("a wrong declaration", out)  # the way out, where it is decided
+        self.assertIn("a wrong adoption", out)  # the way out, where it is decided
         self.assertIn("--withdraw", out)
         record = self.record
         assert record is not None
@@ -690,7 +690,7 @@ class Withdraw(CountCommands):
         # a declaration is never replaced, --force or not: it is withdrawn
         rc, out = self.lab.adopt_forced(self.protocol, run_b)
         self.assertEqual(rc, 2, out)
-        self.assertIn("a declaration is not replaced: withdraw it", out)
+        self.assertIn("an adoption is not replaced: withdraw it", out)
         self.assertEqual(self.declared(), run_a)
         rc, out = self.withdraw("the measuring code changed after the adoption")
         self.assertEqual(rc, 0, out)
@@ -719,10 +719,10 @@ class Withdraw(CountCommands):
         self.assertEqual(rc, 1, out)
         self.assertIn(f"{record.name}#1: decided `fixed`, never followed up", out)
         rc, out, prompt = self.analysis(
-            f"FIX · {record.name}#1 · resolved · the head declares no run now\n\n{self.clean}"
+            f"FIX · {record.name}#1 · resolved · the head has adopted no run now\n\n{self.clean}"
         )
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("the protocol's [result] declares", prompt)
+        self.assertNotIn("the protocol's [result] names", prompt)
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.declared(), run_b)
@@ -743,7 +743,7 @@ class Withdraw(CountCommands):
         self.assertEqual(rc, 0, out)
         rc, out, prompt = self.analysis(self.clean)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("the protocol's [result] declares", prompt)
+        self.assertNotIn("the protocol's [result] names", prompt)
         rc, out = self.lab.adopt(self.protocol, run_b)  # no --force
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.declared(), run_b)
@@ -758,7 +758,7 @@ class Withdraw(CountCommands):
         run_b = self.measure()
         rc, out, prompt = self.analysis(self.clean)
         self.assertEqual(rc, 0, out)
-        self.assertIn("the protocol's [result] declares", prompt)
+        self.assertIn("the protocol's [result] names", prompt)
         self.assertEqual(self.withdraw("code changed")[0], 0)
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 1, out)
@@ -796,13 +796,13 @@ class Withdraw(CountCommands):
         holds = [ln for ln in out.splitlines() if ln.startswith("  BLOCKER: ")]
         self.assertGreaterEqual(len(holds), 2, out)
         for hold in holds:
-            self.assertIn("— way out: withdraw the declaration first (`", hold)
+            self.assertIn("— way out: withdraw the adoption first (`", hold)
         self.assertIn(f"changed since {run_a}", out)
         self.assertEqual(self.withdraw("the measuring code changes")[0], 0)
         self.lab.git("add", str(self.protocol))
         rc, out = self.lab.pre_commit(measure, self.protocol)
         self.assertEqual(rc, 0, out)
-        self.assertNotIn("withdraw the declaration first", out)
+        self.assertNotIn("withdraw the adoption first", out)
 
     # -- a dismissed BLOCKER owes a second auditor; a dismissed WARNING does not
     def review(self, record: Path, verdict: str) -> tuple[int, str]:
@@ -868,7 +868,7 @@ class Withdraw(CountCommands):
         run_a = self.measure()
         rc, out = self.withdraw("nothing declared yet")
         self.assertEqual(rc, 2, out)  # nothing to withdraw
-        self.assertIn("declares no result", out)
+        self.assertIn("has adopted no result", out)
         rc, out, _ = self.analysis(self.clean)
         rc, out = self.lab.adopt(self.protocol, run_a)
         self.assertEqual(rc, 0, out)

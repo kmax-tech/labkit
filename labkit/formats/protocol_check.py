@@ -603,7 +603,7 @@ def kind_gap(text: str, head: protocol_block.Head) -> str | None:
             '[model] annotation_validity — number_describes = "target_property" '
             "claims a property of the data through the model's annotations; name "
             'the evidence the annotator suits: { protocol = "p-…" } (an apply '
-            'protocol of this repo with a declared result) or { doi = "10.…" }'
+            'protocol of this repo with an adopted result) or { doi = "10.…" }'
         )
     if (
         m.number_describes == protocol_block.MODEL_OUTPUTS
@@ -954,8 +954,8 @@ def recorded_results_without_run(text: str) -> str | None:
     except protocol_block.BlockError:
         return None
     return (
-        "WARNING: `Recorded results` is written but the head declares no "
-        "`[result] run` — a reported result is declared by `protocol-fill <PROTOCOL> "
+        "WARNING: `Recorded results` is written but the head has adopted no run "
+        "(`[result] run`) — a reported result is adopted by `protocol-fill <PROTOCOL> "
         "--from-run <run_id>`, which writes the table and Recorded results; report-check "
         "then holds it at the stop and the commit; an exploration that reports no "
         "result leaves the field open (LAB-041 Generate numbers, don't retype them)"

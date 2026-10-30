@@ -246,7 +246,7 @@ def release_holds(
                         "the repair",
                         "change what the finding names — the code, then a new run; "
                         "a description in the protocol's setup, corrected in place; "
-                        "a wrong declaration, `protocol-fill <PROTOCOL> --withdraw "
+                        "a wrong adoption, `protocol-fill <PROTOCOL> --withdraw "
                         f'--why "…"` — and {FOLLOWUP_AUDIT}',
                     )
                 )

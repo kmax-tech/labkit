@@ -264,7 +264,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     if seen.sha != record.shown_sha:
         raise AuditError(
             f"the run shows {seen.sha} now, the record's auditor was shown "
-            f"{record.shown_sha} — rows, metrics, the declared run or the audited "
+            f"{record.shown_sha} — rows, metrics, the adopted run or the audited "
             f"protocol text changed after the audit",
             fix="audit again and decide again",
         )

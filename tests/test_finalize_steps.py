@@ -18,7 +18,7 @@ class Steps(unittest.TestCase):
         protocol = Path("/x/PROTOCOL-x.md")
         mismatch = finalize.declared_run_mismatch(text, run, protocol)
         assert mismatch is not None
-        self.assertIn("[result] declares 2026-10-07T09-00-00_bb22", mismatch.text)
+        self.assertIn("[result] names 2026-10-07T09-00-00_bb22", mismatch.text)
         # the command names the protocol: without it argparse refused it
         # (audit 2026-10-27, H5)
         fix = mismatch.fix or ""
@@ -67,7 +67,7 @@ class DeclaredRunHint(unittest.TestCase):
             head(repeat_cost="low"), self.RUN, self.PROTOCOL
         )
         assert hint is not None
-        self.assertIn("no [result] declared yet", hint)
+        self.assertIn("no result adopted yet ([result])", hint)
         self.assertIn(
             "protocol-fill /x/PROTOCOL-a.md --from-run 2026-10-07T10-00-00_aa11", hint
         )

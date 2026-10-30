@@ -203,7 +203,7 @@ class Binding(unittest.TestCase):
             ids = self._bound(d, head(id=VALIDATION_ID, kind="apply", model="haiku"))
             found = self._findings(d, ids, f'{{ protocol = "{VALIDATION_ID}" }}')
         self.assertEqual([f.grade for f in found], [BLOCKER])
-        self.assertIn("declares no result", found[0].text)
+        self.assertIn("has adopted no result", found[0].text)
 
     def test_an_id_of_no_protocol_here_is_refused(self):
         with tempfile.TemporaryDirectory() as d:

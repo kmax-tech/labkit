@@ -324,7 +324,7 @@ class TierSentence(unittest.TestCase):
         self.assertIn("keep it", line)
 
     def test_no_tier_leaves_it_to_the_agent(self):
-        self.assertIn("declaring it is part of the task", usability.tier_sentence(None))
+        self.assertIn("setting it is part of the task", usability.tier_sentence(None))
 
     def test_both_sheets_carry_the_slot(self):
         here = PACKAGE_DIR / "templates"

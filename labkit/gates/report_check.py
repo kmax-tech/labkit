@@ -1093,7 +1093,7 @@ def report_check(
         console.refuse("report-check", f"{chosen.name}: {exc}")
         return 2
     print(
-        f"  {chosen.name}: read from the {ctx.state}; the head declares "
+        f"  {chosen.name}: read from the {ctx.state}; the head has adopted "
         f"{ctx.declared or 'no run'}; the answering run is "
         f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
     )
@@ -1341,7 +1341,7 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
         # delivered, is owed the handover or the result all the same
         return hold_registered(protocol, text, repo, staged=staged)
     print(
-        f"═══ report-check {protocol} (its head declares "
+        f"═══ report-check {protocol} (its head has adopted "
         f"{declared or 'a result that does not read'}) ═══"
     )
     area = protocol.parent.resolve()
@@ -1371,7 +1371,7 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
     if gap is None:
         return 0
     print(
-        f"═══ report-check {protocol} (its head declares no result; its "
+        f"═══ report-check {protocol} (its head has adopted no result; its "
         f"registered report is delivered) ═══"
     )
     out = Findings()
@@ -1394,7 +1394,7 @@ def main(argv: list[str]) -> int:
         # of this command's contract and stands in its --help (audit 2026-10-23, C2)
         epilog=(
             "report-check --if-reported [--staged] PATH ...\n"
-            "    every protocol of an area a path touches whose head declares a\n"
+            "    every protocol of an area a path touches whose head has adopted a\n"
             "    result, and every report among PATHS citing a run (the stop\n"
             "    hook; with --staged the pre-commit: the head and the report as\n"
             "    the index holds them, and the area's tree must equal the index)\n"

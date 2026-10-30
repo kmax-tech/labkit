@@ -439,7 +439,7 @@ def _bound_pieces(bound: BoundValidation, repo: Path) -> tuple[tuple[str, str], 
         pieces.append(
             (
                 "EVIDENCE: validation result",
-                f"run {bound.run} declared, but {shown(metrics, repo)} does not read",
+                f"run {bound.run} adopted, but {shown(metrics, repo)} does not read",
             )
         )
     pieces.append(

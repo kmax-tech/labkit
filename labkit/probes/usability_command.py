@@ -66,7 +66,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
         choices=(*REPEAT_COSTS, "unset"),
         metavar="TIER",
         help="the repeat cost stamped into the protocol (default: the task's, "
-        "low); unset = the agent declares it, the full form is stamped",
+        "low); unset = the agent sets it, the full form is stamped",
     )
     s.add_argument(
         "--model",

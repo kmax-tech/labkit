@@ -64,7 +64,7 @@ class WorkflowOrientation(unittest.TestCase):
         self.assertIn("write the Conclusion and the report fields", step)
         self.assertIn(f"`{repo.contract_command(protocol)}`", step)
         self.assertIn("--contract", repo.contract_command(protocol))
-        self.assertIn("once frozen and declared", step)
+        self.assertIn("once frozen and adopted", step)
         hint = finalize.undeclared_hint(
             head(repeat_cost="low"), protocol.parent / "runs" / run, protocol
         )

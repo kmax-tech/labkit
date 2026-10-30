@@ -450,9 +450,7 @@ def tier_sentence(repeat_cost: str | None) -> str:
     minute", set the head to `low` and took the short lane — the probe
     measured a lane it was not staged for (2026-10-14)."""
     if repeat_cost is None:
-        return (
-            "Its protocol head names no repeat cost: declaring it is part of the task."
-        )
+        return "Its protocol head names no repeat cost: setting it is part of the task."
     return (
         f'Its protocol head says `repeat_cost = "{repeat_cost}"`: the number is owed at that '
         f"tier — keep it, and follow the lane AGENTS.md gives for it."

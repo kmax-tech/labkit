@@ -17,7 +17,7 @@ from labkit.gates.report_check import adoption_order_note  # noqa: E402
 from labkit.formats import protocol_block  # noqa: E402
 from labkit.run import start_check  # noqa: E402
 
-ADOPT = "finalize: [result] declares A, but the run that answers is B — way out: once that run's checks hold, `protocol-fill P --from-run B --force` declares it"
+ADOPT = "finalize: [result] names A, but the run that answers is B — way out: once that run's checks hold, `protocol-fill P --from-run B --force` adopts it"
 RENDER = "result section: the Recorded results line differs from its rendering — `protocol-fill <PROTOCOL> --render` writes it again"
 OPEN = "finalize: 2026-10-27T22-45-analysis.toml: BLOCKER · scripts/01_measure.py:113 · the refinement is truncated"
 
@@ -46,7 +46,7 @@ class AdoptionOrder(unittest.TestCase):
         self.assertIsNotNone(msg)
         assert msg is not None
         # the replacement goes through the withdrawal and an audit, never --force
-        self.assertIn("withdraw the declaration", msg.fix or "")
+        self.assertIn("withdraw the adoption", msg.fix or "")
         self.assertIn(
             "audit the run that answers and decide its findings", msg.fix or ""
         )

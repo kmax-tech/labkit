@@ -258,7 +258,7 @@ def bound_validation(
         )
     if bound_run is None:
         return (
-            f"{bound} declares no result yet ([result] run); a validation "
+            f"{bound} has adopted no result yet ([result] run); a validation "
             "without its number is no evidence"
         )
     return BoundValidation(bound, bound_text, bound_run)
@@ -285,7 +285,7 @@ def check_annotation_validity(
             BLOCKER,
             f"{where} — {bound}",
             form=AS_WRITTEN,
-            fix="bind it to one apply protocol of this repo whose head declares "
+            fix="bind it to one apply protocol of this repo whose head has adopted "
             "its result (`[result] run`, adopted there first), or name a DOI",
             evidence_kind=GUARANTEED,
         )

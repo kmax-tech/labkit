@@ -265,7 +265,9 @@ class RenderGaps(unittest.TestCase):
 
     def test_render_refuses_without_a_declaration(self):
         undeclared = head(repeat_cost="low") + BODY
-        with self.assertRaisesRegex(ValueError, "no \\[result\\] run declared"):
+        with self.assertRaisesRegex(
+            ValueError, "no run adopted \\(\\[result\\] run\\)"
+        ):
             protocol_fill.render_result(undeclared, self.area)
 
 

@@ -56,7 +56,7 @@ rejected, while the report handed the question over). A report the
 protocol's head registers (`report = "REPORT.md"`, stamped by
 `labkit-init exp --report-file`) is owed that protocol's result: once the
 file exists, the stop and the commit hold it until it carries the
-generated result block of the declared run (`protocol-fill <PROTOCOL>
+generated result block of the adopted run (`protocol-fill <PROTOCOL>
 --into REPORT.md`) or the handover block; a number with the run id
 removed, or a run id typed in, releases nothing, and a discussion block
 does not either. General notes and input descriptions elsewhere owe
@@ -246,7 +246,7 @@ to decide. The four statuses:
 
 | status | when | what follows |
 |---|---|---|
-| `fixed` | after you made the repair — the named fault is gone from the files (code, data, a description in the setup, or the declaration); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
+| `fixed` | after you made the repair — the named fault is gone from the files (code, data, a description in the setup, or the adoption); never for a repair still to come | the next analysis audit judges the repair; until it finds it resolved, the number is held |
 | `accepted` | the fault stays and you report within it | `--effect stands` (the verdict holds within the limit; for a BLOCKER a second auditor must uphold it, for a WARNING its missing review stays a warning) or `--effect "<ID> not assessable"` |
 | `dismissed` | the finding does not apply to the code and run as audited — the auditor misread them | the reason shows from the files why; a dismissed BLOCKER needs a second auditor (`labkit-audit <area> --review --record <record>`) before the number leaves, a dismissed WARNING does not |
 | `deferred` | the fault is real but not this result's to fix — someone else's task, or the area is handed over | the reason names who or why; a carried one needs a second auditor |
@@ -319,9 +319,9 @@ An analysis audit with no findings covers the run when it saw the current
 code, promises and run: there is nothing to decide. It re-checks each
 earlier decided BLOCKER itself; adoption needs it to find that fix in
 place — you add nothing to the record.
-After a fix, withdraw the old declaration first (`protocol-fill <PROTOCOL>
---withdraw --why "<why>"`): the commit hook holds the code to the declared
-run, and an audit made while another run is declared does not cover the
+After a fix, withdraw the old adoption first (`protocol-fill <PROTOCOL>
+--withdraw --why "<why>"`): the commit hook holds the code to the adopted
+run, and an audit made while another run is adopted does not cover the
 next adoption. Then the new run is adopted the same way, in this order:
 its analysis audit and decisions, the Conclusion for it (`--force` if one
 is filled), `protocol-fill <PROTOCOL> --from-run <new run_id>`,
@@ -378,9 +378,9 @@ prints these same recovery choices with each decision list:
 
 - **an implementation error** — fix the code, decide `fixed` naming the
   change, measure again under the unchanged registration, audit the new
-  run. Where the protocol already declares a result, withdraw it first
+  run. Where the protocol has already adopted a result, withdraw it first
   (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`): the commit hook
-  holds the code to the declared run.
+  holds the code to the adopted run.
   Example: an excluded feature is still used. Remove it from the code,
   not from the exclusion rule.
 - **a missed criterion** — that is the result: report the miss first.
@@ -422,9 +422,9 @@ prints these same recovery choices with each decision list:
   the run used is no such correction: measure anew. A promise's sentence,
   key or constant, and the registration's question, criterion,
   admissibility and null condition, stay as registered.
-- **a wrong declaration** — the measurement stands, but the protocol's
-  head declares another run than the one the finding judged. Withdraw the
-  declaration (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`),
+- **a wrong adoption** — the measurement stands, but the protocol's
+  head has adopted another run than the one the finding judged. Withdraw the
+  adoption (`protocol-fill <PROTOCOL> --withdraw --why "<why>"`),
   decide the BLOCKER `fixed` naming that, and run the analysis audit
   again: the follow-up judges the finding. Then adopt the run that
   answers (`--from-run`). No new measurement, and never past a hook with
@@ -461,7 +461,7 @@ BLOCKERs — `fixed`, naming the change, where the change repaired the
 fault — and stage the record with that change. Where the change touched
 what a run measured — the measuring code or its inputs — measure again
 and audit the new run, which adds a record of its own; a withdrawn
-declaration needs no new measurement, only the analysis audit of the
+adoption needs no new measurement, only the analysis audit of the
 run that answers. A record deleted
 before it was staged holds the commit; the hold names how it comes back.
 

@@ -324,9 +324,9 @@ def report_owed(
     run, _ = audited_run(protocol.parent.resolve(), protocol, text)
     newest = declared or (run.name if run is not None else "<run_id>")
     what = (
-        f"the result block of run {declared}, its declared result"
+        f"the result block of run {declared}, its adopted result"
         if declared is not None
-        else "a result block (the head declares no result)"
+        else "a result block (the head has adopted no result)"
     )
     adopt = (
         ""
@@ -501,7 +501,7 @@ def block_sources(
             )
         elif (run_id := sources.declared[p]) is None:
             out[b.protocol] = report_blocks.BlockSource(
-                None, None, "it declares no result"
+                None, None, "it has adopted no result"
             )
         else:
             try:
@@ -533,9 +533,9 @@ def owed_blocks(
             declaring.setdefault(run_id, []).append(name)
     return [
         blocker(
-            f"line {n}: cites run {run_id}, the declared result of {protocol}, "
+            f"line {n}: cites run {run_id}, the adopted result of {protocol}, "
             f"without its generated block — the number a report shows of a "
-            f"declared result is the generated one",
+            f"adopted result is the generated one",
             fix=f"`{into_command(named[protocol], report)}` writes it",
         )
         for n, run_id, protocol in report_blocks.blocks_owed(
@@ -959,7 +959,7 @@ def undeclared_findings(
             out.append(
                 blocker(
                     f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
-                    f"reported, but {named} declares it as its result",
+                    f"reported, but {named} has adopted it as its result",
                     fix="remove the discussion block; the generated result block "
                     "shows the number",
                 )
@@ -989,10 +989,10 @@ def undeclared_findings(
             out.append(
                 blocker(
                     f"{rel}: cites {run_id}, the answering run of {named}, which "
-                    f"declares it in the working tree but not in the index — the "
+                    f"adopts it in the working tree but not in the index — the "
                     f"adoption `protocol-fill --from-run` wrote is not staged",
                     fix=f"`git add {named}` stages the protocol with its "
-                    f"declaration; commit the report and the protocol together",
+                    f"adoption; commit the report and the protocol together",
                 )
             )
             continue
@@ -1004,7 +1004,7 @@ def undeclared_findings(
             out.append(
                 blocker(
                     f"{rel}: cites {run_id}, the answering run of {named}, which "
-                    f"declares no result — and neither its adoption nor a "
+                    f"has adopted no result — and neither its adoption nor a "
                     f"discussion can pass: {lost.cause}",
                     fix=lost.fix,
                 )
@@ -1012,7 +1012,7 @@ def undeclared_findings(
             continue
         out.append(
             blocker(
-                f"{rel}: cites {run_id}, the answering run of {named}, which declares "
+                f"{rel}: cites {run_id}, the answering run of {named}, which has adopted "
                 f"no result",
                 fix=f"a full run's number leaves the area through "
                 f"`{adopt_command(protocol, run_id)}` (it names what the "
@@ -1026,8 +1026,8 @@ def undeclared_findings(
         out.append(
             GateFinding(
                 WARNING,
-                f"{rel}: cites {', '.join(looked_at)}, which no protocol declares as "
-                f"its result — a reported number is declared by `protocol-fill "
+                f"{rel}: cites {', '.join(looked_at)}, which no protocol has adopted as "
+                f"its result — a reported number is adopted by `protocol-fill "
                 f"<PROTOCOL> --from-run`, and its block written by `--into {rel}`; "
                 f"an exploration's run is cited, not reported",
                 evidence_kind=GUARANTEED,
@@ -1120,7 +1120,7 @@ def reached_reports(
             (
                 path,
                 text,
-                f"a committed report citing a run {', '.join(by)} newly declares "
+                f"a committed report citing a run {', '.join(by)} newly adopts "
                 f"as its result",
             )
         )

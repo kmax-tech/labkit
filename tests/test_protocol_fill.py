@@ -610,7 +610,7 @@ class TestFromRun(unittest.TestCase):
         area = self._area({"mean_docs_per_case": 3.5})
         with self.assertRaises(ValueError) as cm:
             protocol_fill.from_run(protocol, area)
-        self.assertIn(f"[result] declares {other}, not {self.RUN}", str(cm.exception))
+        self.assertIn(f"[result] names {other}, not {self.RUN}", str(cm.exception))
         # --force does not replace it either: the declaration is withdrawn first
         with self.assertRaises(ValueError) as cm:
             protocol_fill.from_run(protocol, area, force=True)

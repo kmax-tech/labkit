@@ -197,7 +197,7 @@ class ReportCheck(unittest.TestCase):
         code, out = self._run(area)
         self.assertEqual(code, 0, out)
         self.assertIn(
-            f"read from the working tree; the head declares no run; the answering "
+            f"read from the working tree; the head has adopted no run; the answering "
             f"run is {run.name}",
             out,
         )
@@ -613,7 +613,7 @@ class IfReported(unittest.TestCase):
         )
         code, out = self._staged_gate(area.parent.parent, area / "PROTOCOL-x.md")
         self.assertEqual(code, 0, out)
-        self.assertIn("read from the index; the head declares " + self.RUN, out)
+        self.assertIn("read from the index; the head has adopted " + self.RUN, out)
 
     def test_staged_refuses_an_area_whose_tree_is_not_the_index(self):
         """A script modified and one untracked under a reported number: the
@@ -672,13 +672,13 @@ class IfReported(unittest.TestCase):
         self._git(root, "add", "REPORT.md")
         code, out = self._staged_gate(root, report)
         self.assertEqual(code, 1, out)
-        self.assertIn("declares it in the working tree but not in the index", out)
+        self.assertIn("adopts it in the working tree but not in the index", out)
         self.assertIn("`git add experiments/01-x/PROTOCOL-x.md`", out)
-        self.assertNotIn("which declares no result", out)
+        self.assertNotIn("which has adopted no result", out)
         self._git(root, "add", "experiments/01-x/PROTOCOL-x.md")
         code, out = self._staged_gate(root, report)
         self.assertNotIn("not in the index", out)
-        self.assertNotIn("which declares no result", out)
+        self.assertNotIn("which has adopted no result", out)
 
     def test_a_shared_helper_reopens_the_areas_that_import_it(self):
         """lib/scoring.py lies in no area; an area whose script imports it is
@@ -772,7 +772,7 @@ class IfReported(unittest.TestCase):
             self._area(f"C1 met · recorded: (run {self.RUN})", declared=self.RUN)
         )
         self.assertEqual(code, 0, out)
-        self.assertIn(f"its head declares {self.RUN}", out)
+        self.assertIn(f"its head has adopted {self.RUN}", out)
         self.assertIn("finalized, audited, checked", out)
 
     def test_a_reported_probe_is_refused(self):
@@ -863,7 +863,7 @@ class RegisteredReport(unittest.TestCase):
                 self.assertEqual(code, 1, out)
                 self.assertIn(
                     "/REPORT.md carries "
-                    "neither a result block (the head declares no result) nor "
+                    "neither a result block (the head has adopted no result) nor "
                     "the protocol's handover block — a registered report owes "
                     "the result or an explicit end without one; a number with "
                     "its run id removed, or a run id typed in, releases nothing",
@@ -882,7 +882,7 @@ class RegisteredReport(unittest.TestCase):
                 self.assertIn("--handover --why", out)
                 self.assertIn("ends the protocol without a result", out)
                 self.assertIn(
-                    "its head declares no result; its registered report is delivered",
+                    "its head has adopted no result; its registered report is delivered",
                     out,
                 )
         ctx = report_check.checked(area, area / "PROTOCOL-x.md")
@@ -940,7 +940,7 @@ class RegisteredReport(unittest.TestCase):
         code, out = self._gate(root, proto)
         self.assertEqual(code, 1, out)
         self.assertIn(
-            f"neither the result block of run {self.RUN}, its declared result", out
+            f"neither the result block of run {self.RUN}, its adopted result", out
         )
         line = next(ln for ln in out.splitlines() if "registers " in ln)
         self.assertIn("way out: `protocol-fill ", line)

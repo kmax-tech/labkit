@@ -665,16 +665,16 @@ class Exp(unittest.TestCase):
         # high-lane steps were taken for the route)
         for kind in ("compute", "fit"):
             undeclared = scaffold.next_steps(rel, "foo", "01", None, kind, False)
-            self.assertIn("the repeat cost is not declared yet", undeclared)
+            self.assertIn("the repeat cost is not set yet", undeclared)
             self.assertIn('"repeat_cost=low"', undeclared)
             self.assertIn('"repeat_cost=high"', undeclared)
             self.assertIn("read an unfilled repeat cost as high", undeclared)
-            decide = undeclared.index("Declare the repeat cost")
+            decide = undeclared.index("Set the repeat cost")
             self.assertLess(decide, undeclared.index("preflight experiments/01-foo"))
             if kind == "compute":
                 self.assertLess(undeclared.index("Check the kind"), decide)
-        self.assertNotIn("Declare the repeat cost", low)
-        self.assertNotIn("Declare the repeat cost", text)
+        self.assertNotIn("Set the repeat cost", low)
+        self.assertNotIn("Set the repeat cost", text)
         for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
             self.assertIn(owed, low, low)
 
@@ -1965,7 +1965,7 @@ class NextStepFields(unittest.TestCase):
                             "the Conclusion and the report fields (`protocol-check", out
                         )
                         self.assertIn(
-                            "once frozen and declared), then `protocol-fill", out
+                            "once frozen and adopted), then `protocol-fill", out
                         )
                         self.assertIn(
                             "output file is written from that run only after", out

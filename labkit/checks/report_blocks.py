@@ -229,7 +229,7 @@ def block_gaps(
         if s.run_id is None:
             gaps.append(
                 blocker(
-                    f"{at}: {s.why} — a block shows a declared result only",
+                    f"{at}: {s.why} — a block shows an adopted result only",
                     fix="remove it, or adopt a run in the protocol (`--from-run`) "
                     "and write it again",
                 )
@@ -237,7 +237,7 @@ def block_gaps(
         elif s.run_id != b.run_id:
             gaps.append(
                 blocker(
-                    f"{at}: the protocol declares run {s.run_id} now",
+                    f"{at}: the protocol has adopted run {s.run_id} now",
                     fix=f"{into} replaces the block",
                 )
             )

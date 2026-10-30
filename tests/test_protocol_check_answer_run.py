@@ -36,7 +36,7 @@ class AnswerWithoutRun(unittest.TestCase):
         self.assertIsNotNone(warning)
         assert warning is not None
         self.assertTrue(warning.startswith("WARNING:"))
-        self.assertIn("the head declares no `[result] run`", warning)
+        self.assertIn("the head has adopted no run (`[result] run`)", warning)
 
     def test_an_answer_with_its_run_is_silent(self):
         self.assertIsNone(
@@ -64,7 +64,7 @@ class AnswerWithoutRun(unittest.TestCase):
                 p, p.read_text(encoding="utf-8"), set(), {}
             )
         self.assertIn(
-            "WARNING: `Recorded results` is written but the head declares no",
+            "WARNING: `Recorded results` is written but the head has adopted no",
             buf.getvalue(),
         )
         self.assertIsNotNone(report.answer_unbound)

@@ -15,7 +15,7 @@ Five words the page leans on: a **full run** is one started with
 one named check of a gate, told in the gate's output in its order; the
 **release** is the moment a number leaves the area as a reported result
 (the adoption, the stop, the commit); a **hint** is static evidence —
-named, never blocking; the **declared run** (`[result] run` in the head)
+named, never blocking; the **adopted run** (`[result] run` in the head)
 and the **answering run** (the choice below) must be the same run, or
 `report-check` blocks.
 
@@ -140,8 +140,8 @@ Changes: nothing. Its first station chooses the **answering run**
 this protocol id that reports an intent key — a computation registers no ids,
 so for a computation it is simply the newest completed bound run. Every later
 station holds that run, and so does every other gate: nobody chooses
-twice. Then the stations: the head's declared run is the answering run
-(or no run is declared yet); the output rows were written by it; its
+twice. Then the stations: the head's adopted run is the answering run
+(or no run is adopted yet); the output rows were written by it; its
 promise block is the one the first measurement registered — a change
 after it is held here, every changed sentence, key, constant and scope
 named with the way back, and not first at the adoption; the
@@ -176,8 +176,8 @@ in `text` —, each `open`, bound to the code (`scope_sha`), the
 promise block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`; the report
 fields written later do not move it) — the run and what the auditor was
-shown of it (`shown_sha`) — with the run the protocol declares when that
-is another one, so withdrawing that declaration moves the state and the
+shown of it (`shown_sha`) — with the run the protocol has adopted when that
+is another one, so withdrawing that adoption moves the state and the
 next audit follows earlier findings up, while the first adoption of the
 run audited moves nothing; and with the setup's prose the audit read
 (Terms, Data / scope, Model / tool, Model I/O, Exclusions / filters,
@@ -232,8 +232,8 @@ protocol-fill PROTOCOL-<name>.md --from-run <run_id>
 Reads: the run's `metrics.json` and the covering audit records (the
 analysis records whose code, promise and run stamps are the area's now).
 Changes: **the protocol file only** — the head's `[result] run =
-"<run_id>"` (the one declaration that this protocol reports a number: the
-**declared run**), the `Recorded results` line (the reportable verdict of
+"<run_id>"` (the one adoption that this protocol reports a number: the
+**adopted run**), the `Recorded results` line (the reportable verdict of
 every registered promise — an admissibility condition not assessable or
 not met leaves each criterion not assessable —, then the other metric keys
 and values as recorded, the run id, a note on the limits), one `Limit (audit <record>
@@ -245,15 +245,15 @@ The `Conclusion` is the author's sentence, written before this step (the
 walkthrough does so); `--render` writes the generated lines again after
 a change.
 
-A declared result is replaced, never overwritten: `protocol-fill
+An adopted result is replaced, never overwritten: `protocol-fill
 PROTOCOL-<name>.md --withdraw --why "<why>"` removes `[result]`, resets
 the generated lines and marks the run's entry in the run list `withdrawn
 <date>: <why>` (with `--into REPORT.md` it also withdraws the result
 blocks there). It touches no audit record and releases nothing: the
 analysis audit of the run that answers comes next — it follows earlier
 decided BLOCKERs up —, then this step for that run. An audit made while
-another run was declared does not cover the new declaration. The commit
-hook holds the code to a declared run, so a change of the measuring code
+another run was adopted does not cover the new adoption. The commit
+hook holds the code to an adopted run, so a change of the measuring code
 after an adoption starts with the withdrawal.
 
 ## 8. The report block — the number outside the protocol
@@ -290,7 +290,7 @@ holds a stored key that vanished from the recomputation; it does not
 notice a number left out of the dict and written in prose.
 
 A report that cites a protocol's **answering run** while that protocol
-declares no result is blocked: at `low` the report is the promotion,
+has adopted no result is blocked: at `low` the report is the promotion,
 and this is its shape without the adoption (`report_check.promotions`;
 sixth haiku round, t3 and t18: `--from-run` refused, REPORT.md written
 from `metrics.json` by hand). The sentence names the adoption
@@ -301,7 +301,7 @@ adoption, what you found>" --into REPORT.md` — its head holds the
 protocol, the run and the why as TOML, its line is written from them. A
 block without its why, one whose line differs from its head, a second
 block of the same protocol and run, and a discussion of a run some
-protocol does declare block (the result block shows that number); numbers
+protocol has adopted block (the result block shows that number); numbers
 in and beside a discussion are named as a hint. A report with a
 discussion block owes a report review of its state: `labkit-audit <AREA>
 --report-review REPORT.md` writes `audits/report-reviews/<minute>-review.toml`
@@ -327,7 +327,7 @@ repository root, stamped by `labkit-init exp --report-file REPORT.md`;
 `usability stage` registers it for the SAB tasks, whose sheet asks for
 the file) is owed that result by that file, run id or not: once the
 file exists — in the tree at the stop, in the index at the commit — it
-carries the protocol's result block of the declared run or the
+carries the protocol's result block of the adopted run or the
 protocol's handover block, else the stop, the commit and the plain
 `report-check` hold it with the three ways out: adopt the newest kept
 run and `--into`; `--discuss`, which releases nothing (the report then
@@ -361,7 +361,7 @@ audit of its mode, of any protocol of the area, since the old start
 names none. Explicitly decide readable
 unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
-REPORT.md` command. It withdraws the result declaration, keeps an
+REPORT.md` command. It withdraws the result's adoption, keeps an
 immutable handover record in `audits/handovers/` and writes its handover
 block into the report (one per protocol, replaced in place). The selected
 protocol's result blocks in that report are withdrawn; other text and
@@ -385,11 +385,11 @@ first measurement (`low`); finalize clean and the answering run a
 full run; a decided analysis record covering code, promises, run and what
 was shown; every generated line equal to its rendering, written once;
 every BLOCKER's `stands` upheld by a review; `02_analyze.py --check`
-passing. A report that cites a declared run owes that protocol's block —
+passing. A report that cites an adopted run owes that protocol's block —
 also a committed, untouched report, when the protocol among the paths
-declares that run newly against HEAD (a report committed before the
-declaration, then the declaration committed alone, left the delivered
-state with a blocker no commit saw). A protocol that declares no result
+adopts that run newly against HEAD (a report committed before the
+adoption, then the adoption committed alone, left the delivered
+state with a blocker no commit saw). A protocol that has adopted no result
 owes nothing but its registered report: an exploration ends without a
 reported number, and a REPORT.md its head registers, once delivered,
 carries its handover block or its result block (section 8; the

@@ -16,6 +16,21 @@ pins (`requirements.txt` / `requirements.lock`).
   adapter and commands. Codex project and hook trust are reviewed in
   `/hooks`; installation does not grant trust. See `docs/codex-hooks.md`.
 
+### Changed
+
+- **The agent-facing wording leads to the next action** (plan:
+  `docs/notes/2026-10-30-agent-surface.md`). The run a protocol reports is
+  the *adopted* run in every message, `AGENTS.md`, the README and
+  `docs/workflow.md`: `protocol-fill --from-run` adopts it, `--withdraw`
+  withdraws the adoption ("declared run" and "declaration" are gone from
+  that text; the `[result] run` field is unchanged). Where an agent names
+  a promise id, labkit names its field: `--effect "<ID> not assessable"
+  (<ID>: C1 (success / failure criterion))`, and a refused id lists the
+  registered ones the same way. The line under an accepted `stands` says
+  the review per grade and at every repeat cost: a BLOCKER's number does
+  not leave without it, a WARNING's absent review warns. Message text
+  only; no format changes.
+
 ### Breaking
 
 - **A registered output is the file the run recorded, and the deliverable

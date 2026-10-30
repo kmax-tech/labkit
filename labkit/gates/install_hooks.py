@@ -104,7 +104,7 @@ if [ -n "$staged_areas" ]; then
 fi
 
 # 2. A number written back: every protocol of an area a staged file touches
-#    whose head declares a result ([result] run) goes through report-check —
+#    whose head has adopted a result ([result] run) goes through report-check —
 #    the whole release check at every repeat cost (finalize clean, a full run,
 #    a decided analysis audit, the numbers recomputed); a protocol declaring
 #    none owes nothing here. Every staged path, not only a protocol: a script changed

@@ -376,13 +376,13 @@ def fill_result_run(text: str, run_id: str) -> str:
         return text
     if current is not None:
         raise ValueError(
-            f"[result] declares {current}, not {run_id} — a declaration is not "
+            f"[result] names {current}, not {run_id} — an adoption is not "
             f'replaced: withdraw it (`--withdraw --why "<why>"`), audit the run that '
             f"answers, then adopt it"
         )
     span = protocol_block.toml_block_span(text)
     if span is None:
-        raise ValueError("no ```toml block — the head is where the result is declared")
+        raise ValueError("no ```toml block — the head is where the result is adopted")
     lines = text.split("\n")
     if current is not None:
         _replace_result_run(lines, span, run_id)
@@ -542,13 +542,13 @@ def declared_run_dir(text: str, area: Path, why: str) -> Path:
     declared = protocol_block.declared_run(text)
     if declared is None:
         raise ValueError(
-            f"no [result] run declared — `--from-run <run_id>` declares the run "
+            f"no run adopted ([result] run) — `--from-run <run_id>` adopts the run "
             f"and writes the result; {why}"
         )
     run = runs.run_path(area, declared)
     if not runs.metrics_path(run).is_file():
         raise ValueError(
-            f"[result] declares {declared}, but runs/{declared}/metrics.json is not there"
+            f"[result] names {declared}, but runs/{declared}/metrics.json is not there"
         )
     return run
 
@@ -918,7 +918,7 @@ def into_report(text: str, area: Path, report: str, protocol: str) -> tuple[str,
     owner: its blocks are replaced whichever run they showed. (report text,
     run id). Raises ValueError without a declared run or its metrics.json,
     and on a block in REPORT that does not read."""
-    run = declared_run_dir(text, area, "a report shows a declared result only")
+    run = declared_run_dir(text, area, "a report shows an adopted result only")
     body = report_blocks.block_body(rendering(area, text, run))
     return report_blocks.with_block(report, protocol, run.name, body), run.name
 
@@ -960,7 +960,7 @@ def discuss_into(
     a block in REPORT that does not read or is there twice."""
     if protocol_block.declared_run(text) == run_id:
         raise ValueError(
-            f"run {run_id} is the protocol's declared result — a declared result "
+            f"run {run_id} is the protocol's adopted result — an adopted result "
             f"is reported, not discussed: `--into` without `--discuss` writes its "
             f"result block"
         )
@@ -1073,7 +1073,7 @@ def without_result(text: str) -> str:
     del lines[start:end]
     result = "\n".join(lines)
     if protocol_block.declared_run(result) is not None:
-        raise ValueError("[result] declaration could not be withdrawn")
+        raise ValueError("[result] adoption could not be withdrawn")
     return result
 
 
@@ -1134,7 +1134,7 @@ def withdrawn_runs_entry(text: str, run_id: str, day: str, why: str) -> str:
         # a declaration that did not read names no run: its own entry
         text, _ = runs_line(text, f"[result] {run_id}", f"withdrawn {day}: {why}")
         return text
-    text, _ = runs_line(text, run_id, "the run declared as the result")
+    text, _ = runs_line(text, run_id, "the run adopted as the result")
     lines = text.split("\n")
     heading = next(
         i for i in protocol_block.section_starts(lines) if RUNS_HEADING.match(lines[i])
@@ -1165,7 +1165,7 @@ def withdraw(text: str, why: str, day: str) -> tuple[str, str]:
     run_id = protocol_block.declared_run_shown(text)
     if run_id is None:
         raise ValueError(
-            "the protocol declares no result ([result] run) — nothing to withdraw"
+            "the protocol has adopted no result ([result] run) — nothing to withdraw"
         )
     if not why.strip():
         raise ValueError(
@@ -1221,7 +1221,7 @@ def _withdraw_file(args: argparse.Namespace, text: str) -> int:
     # step a line, so the decision is not skipped
     print("next, in this order:")
     print(
-        f"  1. a BLOCKER that named this declaration: decide it `fixed`, naming the "
+        f"  1. a BLOCKER that named this adoption: decide it `fixed`, naming the "
         f"withdrawal — `{audit_command(area, '--findings', protocol=protocol)}` "
         f"prints its --decide command"
     )
@@ -1275,7 +1275,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         others = [p for p in handovers.declared_results(area, root) if p != protocol]
         if others:
             raise ValueError(
-                f"{others[0]}: declares a result; an area handed over unresolved "
+                f"{others[0]}: has adopted a result; an area handed over unresolved "
                 "cannot also release another protocol's result"
             )
         expected, errors = attempts.expected_evidence(area)
@@ -1452,7 +1452,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--render",
         action="store_true",
-        help="write the result section again from its sources for the declared run: "
+        help="write the result section again from its sources for the adopted run: "
         "the Recorded results line, the Limit lines (stray ones dropped), the Prompt block",
     )
     ap.add_argument(
@@ -1461,7 +1461,7 @@ def main(argv: list[str]) -> int:
         default=None,
         metavar="REPORT",
         help="the report a block is written into (a report outside the protocol): "
-        "alone, the declared result as a generated block — Recorded results and "
+        "alone, the adopted result as a generated block — Recorded results and "
         "Limit lines as rendered; the protocol's block is replaced (also after a "
         "new run), else one is appended; with --discuss or --handover, that block",
     )
@@ -1503,7 +1503,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--withdraw",
         action="store_true",
-        help="with --why (and --into REPORT): withdraw the result declaration — "
+        help="with --why (and --into REPORT): withdraw the result's adoption — "
         "[result] removed, Recorded results and Limit lines reset, the run's Runs "
         "entry marked withdrawn with the date and why, its result blocks in REPORT "
         "withdrawn; audit records and findings untouched; no result is released, "
@@ -1515,7 +1515,7 @@ def main(argv: list[str]) -> int:
         const="newest",
         default=None,
         metavar="RUN_ID",
-        help="adopt the run as the result: declare it as `[result] run` in the TOML head and write Recorded results and Runs lines from its metrics.json, kept only when report-check passes "
+        help="adopt the run as the result: write it as `[result] run` in the TOML head and write Recorded results and Runs lines from its metrics.json, kept only when report-check passes "
         "(without RUN_ID the protocol's answering run — the one finalize and report-check hold it to: completed, bound to its id, never a repeat); the Summary's Conclusion stays yours — the question's answer in two sentences, within the Limits",
     )
     ap.add_argument(
@@ -1528,7 +1528,7 @@ def main(argv: list[str]) -> int:
         "--force",
         action="store_true",
         help="overwrite a field that is already filled (with --from-run: the "
-        "generated lines of the run declared); a [result] that declares another "
+        "generated lines of the run adopted); a [result] that names another "
         "run is withdrawn first (--withdraw), never replaced",
     )
     args = ap.parse_args(argv)

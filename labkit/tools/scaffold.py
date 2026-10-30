@@ -1587,7 +1587,7 @@ def next_steps(
         # them for the route instead of a tier to decide
         steps.insert(
             1 if kind == standard_contract.COMPUTE_KIND else 0,
-            f"Declare the repeat cost before the first measurement: "
+            f"Set the repeat cost before the first measurement: "
             f'`protocol-fill {rel / protocol} "repeat_cost=low"` for a run you can '
             f"repeat at will — then the route is the registration fields, the full "
             f"run, `finalize`, the analysis audit and the adoption, with no probe, "
@@ -1595,7 +1595,7 @@ def next_steps(
             f"that costs real time or money. The steps below are the high lane's: "
             f"the gates read an unfilled repeat cost as high.",
         )
-        title = f"{title}; the repeat cost is not declared yet"
+        title = f"{title}; the repeat cost is not set yet"
     return f"\nNext ({title}):\n" + "\n".join(
         f"  {i}. {step}" for i, step in enumerate(steps, 1)
     )

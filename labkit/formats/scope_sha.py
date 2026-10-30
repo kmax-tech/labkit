@@ -520,7 +520,7 @@ def validation_basis(
         entries += _bound_entries(name, bound, root)
         told.append(
             f"{_key(p, root)} names {_key(bound, root)} (the protocol, its "
-            f"declared result, the run record of its model and its scripts)"
+            f"adopted result, the run record of its model and its scripts)"
         )
     return entries, tuple(told)
 

@@ -344,7 +344,7 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
     return [
         f"repeat_cost = {ln.repeat_cost!r}"
         + (
-            ' (unfilled — declare it: `protocol-fill <PROTOCOL> "repeat_cost=low"` '
+            ' (unfilled — set it: `protocol-fill <PROTOCOL> "repeat_cost=low"` '
             'for a run you can repeat at will, `"repeat_cost=high"` for one that '
             "costs real time or money; until then the gates read it as high and "
             "the lines below are the high lane's)"

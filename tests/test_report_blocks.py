@@ -97,7 +97,7 @@ class Blocks(unittest.TestCase):
             found, {P: BlockSource("2026-10-08T10-00-00_cd34", "a = 2")}, report
         )
         self.assertIn(
-            "the protocol declares run 2026-10-08T10-00-00_cd34 now", gap.line
+            "the protocol has adopted run 2026-10-08T10-00-00_cd34 now", gap.line
         )
         # protocol and report as the working directory reaches them, runnable
         # from there (audit 2026-10-27, third, S2)
@@ -105,10 +105,10 @@ class Blocks(unittest.TestCase):
             f"`protocol-fill {P} --into REPORT.md` replaces the block", gap.line
         )
         (gap,) = report_blocks.block_gaps(
-            found, {P: BlockSource(None, None, "it declares no result")}, report
+            found, {P: BlockSource(None, None, "it has adopted no result")}, report
         )
         self.assertIn(
-            "it declares no result — a block shows a declared result only", gap.line
+            "it has adopted no result — a block shows an adopted result only", gap.line
         )
 
     def test_cited_ids_must_name_runs_of_the_repo(self):
@@ -331,7 +331,7 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn(
-            "it declares no result — a block shows a declared result only", out
+            "it has adopted no result — a block shows an adopted result only", out
         )
 
     def test_the_declaring_protocol_is_held_though_no_path_touches_its_area(self):
@@ -381,7 +381,7 @@ class ReportFiles(unittest.TestCase):
             code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn(
-            f"notes/REPORT.md: line 1: cites run {self.RUN}, the declared result of "
+            f"notes/REPORT.md: line 1: cites run {self.RUN}, the adopted result of "
             f"../experiments/01-x/PROTOCOL-x.md, without its generated block",
             out,
         )
@@ -416,7 +416,7 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
         self.assertIn(
-            f"REPORT.md: cites {self.RUN}, which no protocol declares as its result",
+            f"REPORT.md: cites {self.RUN}, which no protocol has adopted as its result",
             out,
         )
         self.assertNotIn("without its generated block", out)
@@ -435,7 +435,7 @@ class ReportFiles(unittest.TestCase):
         )
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
-        self.assertIn(f"REPORT.md: cites {older}, which no protocol declares", out)
+        self.assertIn(f"REPORT.md: cites {older}, which no protocol has adopted", out)
 
     def _discussed(self, report: Path, area: Path, why: str, before: str = "") -> None:
         """REPORT with BEFORE and the discussion block of RUN, as `--discuss`
@@ -502,7 +502,7 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(
             f"notes/REPORT.md: cites {self.RUN}, the answering run of "
-            f"../experiments/01-x/PROTOCOL-x.md, which declares no result",
+            f"../experiments/01-x/PROTOCOL-x.md, which has adopted no result",
             out,
         )
         self.assertIn(f"PROTOCOL-x.md --from-run {self.RUN}` (it names what the", out)
@@ -511,7 +511,7 @@ class ReportFiles(unittest.TestCase):
             f'what you found>" --into notes/REPORT.md`',
             out,
         )
-        self.assertNotIn("which no protocol declares as its result", out)
+        self.assertNotIn("which no protocol has adopted as its result", out)
 
     def test_the_prose_marker_is_not_read_eighth_round_t3(self):
         """Eighth haiku round (2026-10-26, t3): the agent wrote the prose
@@ -563,7 +563,7 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)
         self.assertNotIn("BLOCKER", out)
-        self.assertNotIn("which no protocol declares", out)
+        self.assertNotIn("which no protocol has adopted", out)
         self.assertNotIn("in or beside a discussed run", out)
 
     def test_a_claim_holds_and_a_later_clean_draw_does_not_release(self):
@@ -740,14 +740,14 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(
             f"run {self.RUN} is discussed as not reported, but "
-            f"experiments/01-x/PROTOCOL-x.md declares it as its result",
+            f"experiments/01-x/PROTOCOL-x.md has adopted it as its result",
             out,
         )
 
     def test_discuss_refuses_a_declared_run_and_a_run_the_area_lacks(self):
         area = self._area(f"C1 met · recorded: (run {self.RUN})", declared=self.RUN)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "is the protocol's declared result"):
+        with self.assertRaisesRegex(ValueError, "is the protocol's adopted result"):
             protocol_fill.discuss_into(text, area, "", P, self.RUN, "a look")
         other = "2026-10-06T10-00-00_aa11"
         with self.assertRaisesRegex(ValueError, f"no runs/{other}/"):
@@ -862,7 +862,7 @@ class ReportFiles(unittest.TestCase):
         )
         proto.write_text(text, encoding="utf-8")
         _, out = self._gate(root, report)
-        self.assertIn(f"the protocol declares run {new} now", out)
+        self.assertIn(f"the protocol has adopted run {new} now", out)
         self.assertNotIn(f"--from-run {self.RUN}", out)
         written, _ = protocol_fill.into_report(
             text, area, report.read_text(encoding="utf-8"), P
@@ -894,7 +894,9 @@ class ReportFiles(unittest.TestCase):
     def test_into_refuses_without_a_declared_run(self):
         area = self._area(f"C1 met · recorded: (run {self.RUN})", declared=None)
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "no \\[result\\] run declared"):
+        with self.assertRaisesRegex(
+            ValueError, "no run adopted \\(\\[result\\] run\\)"
+        ):
             protocol_fill.into_report(text, area, "", P)
 
     def test_the_two_step_commit_reaches_the_committed_report(self):
@@ -938,17 +940,17 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(
             "═══ report-check REPORT.md (a committed report citing a run "
-            "PROTOCOL-x.md newly declares as its result) ═══",
+            "PROTOCOL-x.md newly adopts as its result) ═══",
             out,
         )
         self.assertIn(
-            f"REPORT.md: line 4: cites run {self.RUN}, the declared result of "
+            f"REPORT.md: line 4: cites run {self.RUN}, the adopted result of "
             f"experiments/01-x/PROTOCOL-x.md, without its generated block",
             out,
         )
         self.assertIn(
             "is discussed as not reported, but experiments/01-x/PROTOCOL-x.md "
-            "declares it as its result",
+            "has adopted it as its result",
             out,
         )
         # the twin: the result block written into the report, the discussion

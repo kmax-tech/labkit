@@ -268,7 +268,7 @@ def declared_piece(run_dir: Path | None, declared: str | None) -> list[tuple[str
     return [
         (
             DECLARED_LABEL,
-            f"the protocol's [result] declares {declared}, not the run shown "
+            f"the protocol's [result] names {declared}, not the run shown "
             f"here ({shown or 'none'})",
         )
     ]
