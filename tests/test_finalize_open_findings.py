@@ -112,7 +112,7 @@ class OpenFindings(unittest.TestCase):
         path = self._record([BLOCKER])
         path.write_text(
             path.read_text(encoding="utf-8")
-            .replace('status = "open"', 'status = "accepted"')
+            .replace('status = "open"', 'status = "limit"')
             .replace('reason = ""', 'reason = "the leak is the measured quantity"'),
             encoding="utf-8",
         )

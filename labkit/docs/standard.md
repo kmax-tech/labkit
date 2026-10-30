@@ -353,9 +353,9 @@ evidence file under the same ID (top of this document).*
   a second way — it drifted from the shipped text once and read this whole
   standard twice per audit.
 
-  Every finding is decided (fixed / accepted with reason /
-  dismissed); an accepted BLOCKER also says its effect on the verdicts,
-  and an accepted WARNING may — they stand, read within it, or the run
+  Every finding is decided (fixed / limit / false-positive / deferred,
+  each but fixed with a reason); a BLOCKER or WARNING decided limit also
+  carries its effect on the verdicts — they stand, read within it, or the run
   leaves the named promises not assessable (a number may be reported
   within a fault; a verdict needs an instrument fit to judge it). How
   severe a finding is and what the result still allows are two

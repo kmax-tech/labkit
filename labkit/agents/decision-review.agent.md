@@ -1,13 +1,13 @@
 <!-- the decision-review agent's instructions, run by `labkit-audit --review` through labkit.run.llm.
      `labkit-audit` inlines everything the list below names; the LAB ids this file cites are
      the rules it inlines from the standard (`audit.cited_rules`). -->
-# Decision review — does the reported claim stand within the accepted limit?
+# Decision review — does the reported claim stand within the limit?
 
 You are the second, cold reader of decisions a person made on an audit's
-findings. An auditor found a fault; the person accepted the finding and
-wrote that the verdicts *stand*, read within that limit, with a reason
-(LAB-015 Preflight audit before freezing: every finding is decided, an
-accepted BLOCKER says its effect). Your one question, per decision: **does
+findings. An auditor found a fault; the person decided it `limit` — the
+finding is true — and so wrote that the verdicts *stand*, read within that
+limit, with a reason (LAB-015 Preflight audit before freezing: every
+finding is decided, a BLOCKER's limit says its effect). Your one question, per decision: **does
 the reason show that the reported claim still stands when the finding is
 true?** You do not audit the experiment again, you do not propose repairs,
 and you do not soften a finding the auditor made.
@@ -17,12 +17,12 @@ and you do not soften a finding the auditor made.
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
-   the effect `stands` (accepted findings). A decision of `dismissed`,
+   the effect `stands` (findings decided `limit`). A decision of `false-positive`,
    `fixed` or `deferred` appears when an earlier review did not uphold a
    decision on that finding — the line `decided again after a review said
-   …` carries that verdict —, a `dismissed` or `deferred` one when the
+   …` carries that verdict —, a `false-positive` or `deferred` one when the
    finding is carried (a follow-up audit did not find its fault gone), and
-   every BLOCKER decided `dismissed`, its first dismissal too.
+   every BLOCKER decided `false-positive`.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, quality check, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
@@ -61,12 +61,12 @@ Per decision, one of three verdicts:
   reason points to evidence that is not inlined, or the claim is not
   written. Name what is missing. This is not a pass.
 
-For a BLOCKER decided `dismissed`, and for a finding closed after a
+For a BLOCKER decided `false-positive`, and for a finding closed after a
 review did not uphold it, the question changes with the status, and the
 files inlined are the ones the auditor read — the code and the run have
 not changed since:
 
-- `dismissed` — **upheld** when the reason shows, in what is inlined, that
+- `false-positive` — **upheld** when the reason shows, in what is inlined, that
   the finding does not apply to this code and run; **rejected** when it
   merely withdraws the finding or the earlier reviewer's request
   ("insufficient evidence withdrawn", "not relevant") without showing why;

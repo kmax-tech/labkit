@@ -29,6 +29,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.formats import findings, protocol_block  # noqa: E402
+from protocol_fixture import decide_words  # noqa: E402
 from labkit.gates import audit, report_check  # noqa: E402
 from labkit.run import llm  # noqa: E402
 import test_end_to_end as e2e  # noqa: E402 — the module, so its tests are not collected here
@@ -100,7 +101,14 @@ class _Chain(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = audit.main(
-                [str(self.area), "--decide", "1", *argv, "--record", str(record)]
+                [
+                    str(self.area),
+                    "--decide",
+                    "1",
+                    *decide_words(*argv),
+                    "--record",
+                    str(record),
+                ]
             )
         self.assertEqual(rc, 0, out.getvalue())
 

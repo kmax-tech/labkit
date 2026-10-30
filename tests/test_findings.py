@@ -280,7 +280,7 @@ class Decisions(unittest.TestCase):
     def test_a_decided_status_without_reason_is_loud(self):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
-        set_status(path, 1, "accepted")
+        set_status(path, 1, "limit")
         with self.assertRaises(findings.FindingsError) as cm:
             findings.read(path)
         self.assertIn("owes a reason", str(cm.exception))
@@ -348,11 +348,11 @@ class HandDecisions(unittest.TestCase):
         # both string forms a hand may have written read back
         decided = text.replace(
             'status = "open"\nreason = ""',
-            'status = "accepted"\nreason = \'the "inputs" root is fixed\'',
+            'status = "limit"\nreason = \'the "inputs" root is fixed\'',
             1,
         ).replace(
             'status = "open"\nreason = ""',
-            'status = "dismissed"\nreason = "a \\"quoted\\" word"',
+            'status = "false-positive"\nreason = "a \\"quoted\\" word"',
             1,
         )
         path.write_text(decided, encoding="utf-8")
@@ -367,7 +367,7 @@ class HandDecisions(unittest.TestCase):
         path = next((area / "audits").glob("*.toml"))
         text = path.read_text(encoding="utf-8").replace(
             'status = "open"\nreason = ""',
-            'status = "accepted"\nreason = "the "inputs" root is fixed"',
+            'status = "limit"\nreason = "the "inputs" root is fixed"',
             1,
         )
         path.write_text(text, encoding="utf-8")
@@ -406,8 +406,8 @@ class WriteDecision(unittest.TestCase):
         before = findings.read(path)
         text_before = path.read_text(encoding="utf-8")
         reason = 'the "inputs" root is fixed \\ checked\nall 12 rows'
-        after = findings.write_decision(path, 2, "accepted", reason)
-        self.assertEqual(after.findings[1].status, "accepted")
+        after = findings.write_decision(path, 2, "limit", reason)
+        self.assertEqual(after.findings[1].status, "limit")
         self.assertEqual(after.findings[1].reason, reason.strip())
         self.assertEqual(after.findings[0], before.findings[0])
         self.assertEqual(
@@ -448,7 +448,7 @@ class WriteDecision(unittest.TestCase):
                     "checked by hand\nover two lines",
                 )
                 after = findings.write_decision(
-                    path, 1, "accepted", "the leak is named", "stands"
+                    path, 1, "limit", "the leak is named", "stands"
                 )
                 self.assertEqual(
                     (
@@ -456,7 +456,7 @@ class WriteDecision(unittest.TestCase):
                         after.findings[0].reason,
                         after.findings[0].effect,
                     ),
-                    ("accepted", "the leak is named", "stands"),
+                    ("limit", "the leak is named", "stands"),
                 )
                 written = path.read_text(encoding="utf-8")
                 self.assertIn('reason = "the leak is named"  # kept', written)
@@ -479,13 +479,13 @@ class WriteDecision(unittest.TestCase):
                 at = text.index('reason = ""\n')
                 path.write_text(text[:at] + hand + text[at + len('reason = ""\n') :])
                 self.assertEqual(findings.read(path).findings[0].reason, value)
-                findings.write_decision(path, 1, "dismissed", "not a fault")
+                findings.write_decision(path, 1, "false-positive", "not a fault")
                 after = path.read_text(encoding="utf-8")
                 self.assertEqual(
                     after,
                     text.replace(
                         'status = "open"\nreason = ""\n',
-                        'status = "dismissed"\nreason = "not a fault"\n',
+                        'status = "false-positive"\nreason = "not a fault"\n',
                         1,
                     ),
                 )
@@ -494,7 +494,7 @@ class WriteDecision(unittest.TestCase):
         path = self.record()
         crlf = path.read_text(encoding="utf-8").replace("\n", "\r\n")
         path.write_bytes(crlf.encode("utf-8"))
-        findings.write_decision(path, 2, "accepted", "known", "stands")
+        findings.write_decision(path, 2, "limit", "known", "stands")
         after = path.read_bytes().decode("utf-8")
         self.assertNotIn("\n", after.replace("\r\n", ""))
         self.assertEqual(after.count("\r\n"), crlf.count("\r\n") + 1)  # the effect line
@@ -515,16 +515,16 @@ class WriteDecision(unittest.TestCase):
 
     def test_the_decided_statuses_and_the_carried_rule_have_one_home(self):
         self.assertEqual(
-            findings.DECIDED_LIST, "fixed / accepted / deferred / dismissed"
+            findings.DECIDED_LIST, "fixed / limit / false-positive / deferred"
         )
         carried = findings.Finding(
-            "BLOCKER", "x", status="dismissed", reason="r", carries="r.toml#1"
+            "BLOCKER", "x", status="false-positive", reason="r", carries="r.toml#1"
         )
         self.assertTrue(findings.carried_and_closed(carried))
         for twin in (
-            findings.Finding("BLOCKER", "x", status="dismissed", reason="r"),
+            findings.Finding("BLOCKER", "x", status="false-positive", reason="r"),
             findings.Finding(
-                "BLOCKER", "x", status="accepted", reason="r", carries="r.toml#1"
+                "BLOCKER", "x", status="limit", reason="r", carries="r.toml#1"
             ),
         ):
             self.assertFalse(findings.carried_and_closed(twin))
@@ -535,7 +535,7 @@ class WriteDecision(unittest.TestCase):
     def test_a_reason_is_owed_and_a_status_is_one_of_the_list(self):
         path = self.record()
         before = path.read_text(encoding="utf-8")
-        for status, reason in (("accepted", " "), ("dismissed", ""), ("done", "x")):
+        for status, reason in (("limit", " "), ("false-positive", ""), ("done", "x")):
             with self.subTest(status=status):
                 with self.assertRaises(findings.FindingsError):
                     findings.write_decision(path, 1, status, reason)
@@ -610,11 +610,20 @@ class DecideCommand(unittest.TestCase):
         area = area_with([("preflight", TWO), ("analysis", TWO)])
         records = sorted((area / "audits").glob("*.toml"), key=findings.written_order)
         rc, out, err = self.run_main(
-            [str(area), "--decide", "1", "dismissed", 'not a "bug": the data say so']
+            [
+                str(area),
+                "--decide",
+                "1",
+                "false-positive",
+                "--why",
+                'not a "bug": the data say so',
+            ]
         )
         self.assertEqual(rc, 0, err)
         self.assertIn(records[-1].name, out)
-        self.assertEqual(findings.read(records[-1]).findings[0].status, "dismissed")
+        self.assertEqual(
+            findings.read(records[-1]).findings[0].status, "false-positive"
+        )
         self.assertEqual(findings.read(records[0]).findings[0].status, "open")
         self.assertIn("1 open", out)
 
@@ -622,11 +631,11 @@ class DecideCommand(unittest.TestCase):
         area = area_with([("preflight", TWO), ("analysis", TWO)])
         first = sorted((area / "audits").glob("*.toml"), key=findings.written_order)[0]
         rc, _, err = self.run_main(
-            [str(area), "--decide", "2", "fixed", "", "--record", str(first)]
+            [str(area), "--decide", "2", "fixed", "--why", "", "--record", str(first)]
         )
         self.assertEqual(rc, 0, err)
         self.assertEqual(findings.read(first).findings[1].status, "fixed")
-        rc, out, err = self.run_main([str(area), "--decide", "2", "accepted", ""])
+        rc, out, err = self.run_main([str(area), "--decide", "2", "limit", "--why", ""])
         self.assertEqual(rc, 2)
         self.assertIn("owes a reason", err)
         self.assertEqual(out, "")
@@ -634,7 +643,7 @@ class DecideCommand(unittest.TestCase):
     def test_decide_and_mode_do_not_go_together_and_one_is_needed(self):
         area = area_with([("preflight", TWO)])
         rc, _, err = self.run_main(
-            [str(area), "--mode", "analysis", "--decide", "1", "fixed", ""]
+            [str(area), "--mode", "analysis", "--decide", "1", "fixed", "--why", ""]
         )
         self.assertEqual(rc, 2)
         rc, _, err = self.run_main([str(area)])
@@ -701,7 +710,7 @@ class DecisionList(unittest.TestCase):
         self.assertIn("a new approach never turns an earlier miss into a pass", text)
         commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
         self.assertEqual(len(commands), 2, text)
-        for cmd, status in zip(commands, ("fixed", "dismissed")):
+        for cmd, status in zip(commands, ("fixed", "false-positive")):
             argv = shlex.split(cmd)[1:]  # without the program name
             argv = [
                 status if w == "STATUS" else "checked by hand" if w == "REASON" else w
@@ -713,7 +722,7 @@ class DecisionList(unittest.TestCase):
             ):
                 self.assertEqual(audit.main(argv), 0)
         rec = findings.read(path)
-        self.assertEqual([f.status for f in rec.findings], ["fixed", "dismissed"])
+        self.assertEqual([f.status for f in rec.findings], ["fixed", "false-positive"])
         self.assertEqual(rec.open, [])
 
     def test_a_record_without_findings_says_so(self):
@@ -766,7 +775,7 @@ class AuditCoverage(unittest.TestCase):
         area = area_with([("preflight", TWO)])
         (path,) = sorted((area / findings.DIR).glob("*.toml"))
         set_status(path, 1, "fixed")
-        set_status(path, 2, "accepted", "spread is a limit")
+        set_status(path, 2, "limit", "spread is a limit")
         self.assertIsNone(
             findings.audit_coverage(
                 area,

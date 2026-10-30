@@ -39,7 +39,7 @@ from labkit.formats import (
     scope_sha,
     standard_contract as sc,
 )
-from protocol_fixture import registration_of, shown_sha  # noqa: E402
+from protocol_fixture import decide_words, registration_of, shown_sha  # noqa: E402
 
 
 def _replace(path: Path, pairs: list[tuple[str, str]]) -> None:
@@ -601,8 +601,7 @@ class CountCommands(unittest.TestCase):
                     str(self.area),
                     "--decide",
                     str(n),
-                    status,
-                    reason,
+                    *decide_words(status, reason),
                     "--record",
                     str(record),
                 ]
@@ -823,7 +822,7 @@ class Withdraw(CountCommands):
             rc = audit.main([str(self.area), "--review", "--record", str(record)])
         return rc, out.getvalue()
 
-    def test_a_dismissed_blocker_is_held_until_a_second_auditor_upholds_it(self):
+    def test_a_false_positive_blocker_is_held_until_a_second_auditor_upholds_it(self):
         """The deciding agent's own `dismissed` does not release a blocking
         finding, its first dismissal too (decided 2026-10-28; until then it
         released the number on its reason alone). The twin: a review that
@@ -837,13 +836,13 @@ class Withdraw(CountCommands):
         self.assertEqual(rc, 1, out)
         record = self.record
         assert record is not None
-        self.decide(record, 1, "dismissed", "visible() skips hidden files at :12")
+        self.decide(record, 1, "false-positive", "visible() skips hidden files at :12")
         self.lab.fill(
             self.protocol, "Conclusion=Three documents hold 3.0 lines on average."
         )
         rc, out = self.lab.adopt(self.protocol, run_a)
         self.assertEqual(rc, 1, out)
-        self.assertIn(f"{record.stem} #1: `dismissed` on a BLOCKER", out)
+        self.assertIn(f"{record.stem} #1: `false-positive` on a BLOCKER", out)
         self.assertIn("--review", out)
         rc, out = self.review(record, "upheld")
         self.assertEqual(rc, 0, out)
@@ -859,7 +858,7 @@ class Withdraw(CountCommands):
         )
         record = self.record
         assert record is not None
-        self.decide(record, 1, "dismissed", "visible() skips hidden files at :12")
+        self.decide(record, 1, "false-positive", "visible() skips hidden files at :12")
         rc, out = self.lab.adopt(self.protocol, run_a)
         self.assertEqual(rc, 0, out)
 
@@ -1238,7 +1237,14 @@ class Judge(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = audit.main(
-                [str(self.area), "--decide", "1", *argv, "--record", str(record)]
+                [
+                    str(self.area),
+                    "--decide",
+                    "1",
+                    *decide_words(*argv),
+                    "--record",
+                    str(record),
+                ]
             )
         return rc, out.getvalue()
 
@@ -1276,16 +1282,13 @@ class Judge(unittest.TestCase):
         record = self._blocker()
         label = f"Limit (audit {record.stem} #1)"
         reason = "real: the prompt says states or implies, the gold codes juxtaposition not causal"
-        rc, out = self._decide(record, "accepted", reason)
-        self.assertEqual(rc, 2, out)  # the effect is owed
-        self.assertIn("owes its effect", out)
         rc, out = self._decide(
-            record, "accepted", reason, "--effect", "criterion-9 not assessable"
+            record, "limit", reason, "--not-assessable", "criterion-9"
         )
         self.assertEqual(rc, 2, out)  # an id the protocol does not register
         self.assertIn("criterion-9", out)
         rc, out = self._decide(
-            record, "accepted", reason, "--effect", "criterion-1 not assessable"
+            record, "limit", reason, "--not-assessable", "criterion-1"
         )
         self.assertEqual(rc, 0, out)
         self.assertEqual(
@@ -1319,11 +1322,11 @@ class Judge(unittest.TestCase):
         self.assertIn(label, out)
         # the twin: the verdicts stand, the limit named beside them — and a
         # BLOCKER's `stands` owes a decision review before the number leaves
-        rc, out = self._decide(record, "accepted", reason, "--effect", "stands")
+        rc, out = self._decide(record, "limit", reason)
         self.assertEqual(rc, 0, out)
         rc, out = lab.adopt_forced(self.protocol, self.run_id)
         self.assertEqual(rc, 1, out)
-        self.assertIn("`stands` on an accepted BLOCKER not reviewed", out)
+        self.assertIn("`stands` on a BLOCKER decided limit not reviewed", out)
         # the review judges the claim: the Conclusion comes first (judge-2
         # on 86e38bc reviewed a placeholder and paid a second review)
         rc, out = self._review(record)
@@ -1360,12 +1363,14 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn("decided `fixed` in the state audited", out)
         rc, out = self._decide(
-            record, "dismissed", "the gold codes the prompt's three cases after all"
+            record,
+            "false-positive",
+            "the gold codes the prompt's three cases after all",
         )
         self.assertEqual(rc, 0, out)
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)
-        self.assertIn("`dismissed` on a BLOCKER not reviewed", out)
+        self.assertIn("`false-positive` on a BLOCKER not reviewed", out)
         rc, out = self._review(record)
         self.assertEqual(rc, 0, out)
 
@@ -1387,7 +1392,7 @@ class Judge(unittest.TestCase):
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
         label = f"Limit (audit {record.stem} #1)"
         reason = "criterion-1 reached on these items; a keyword rule scores 12/12, so no causal understanding is shown"
-        rc, out = self._decide(record, "accepted", reason, "--effect", "stands")
+        rc, out = self._decide(record, "limit", reason)
         self.assertEqual(rc, 0, out)
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)  # named, the effect is owed in the result
@@ -1405,10 +1410,13 @@ class Judge(unittest.TestCase):
         )
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
-        # accepted without an effect it is no limit — and the result section
-        # must say so again: the rendering is exact (phase 5), a Limit line
-        # and a note the records no longer decide are blockers until written back
-        rc, out = self._decide(record, "accepted", reason)
+        # decided again as a false positive it is no limit — and the result
+        # section must say so again: the rendering is exact (phase 5), a Limit
+        # line and a note the records no longer decide are blockers until
+        # written back
+        rc, out = self._decide(
+            record, "false-positive", "data/raw:1 holds no connective at all"
+        )
         self.assertEqual(rc, 0, out)
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)

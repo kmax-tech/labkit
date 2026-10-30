@@ -199,7 +199,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     # 2026-10-27, C17): `findings.DECIDED_LIST`, `carried_and_closed`
     (
         "the decided statuses spelled by hand",
-        r"fixed / accepted / deferred / dismissed|\(\"dismissed\", \"deferred\"\)",
+        r"fixed / limit / false-positive / deferred|\(\"false-positive\", \"deferred\"\)",
         {"findings"},
     ),
     # a bare area name was read by two globs, `*` running over dashes, and
@@ -346,7 +346,7 @@ class OneHome(unittest.TestCase):
             "open BLOCKERs filtered by hand": 'held = [u for u in open_findings(rs) if u.grade == "BLOCKER"]',
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
-            "the decided statuses spelled by hand": 'if f.carries and f.status in ("dismissed", "deferred"):',
+            "the decided statuses spelled by hand": 'if f.carries and f.status in ("false-positive", "deferred"):',
             "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',

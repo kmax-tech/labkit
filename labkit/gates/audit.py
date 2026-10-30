@@ -2,7 +2,7 @@
 
     labkit-audit <AREA> --mode preflight|analysis|clarity [--protocol FILE]
                  [--model ALIAS] [--timeout S] [--out FILE]
-    labkit-audit <AREA> --decide N STATUS REASON [--effect E] [--record FILE]
+    labkit-audit <AREA> --decide N STATUS --why REASON [--not-assessable IDS] [--record FILE]
     labkit-audit <AREA> --findings [--record FILE]
     labkit-audit <AREA> --review [--record FILE] [--again]   (`gates/decision_review`)
     labkit-audit <AREA> --report-review REPORT [--again] [--protocol FILE]
@@ -1282,20 +1282,26 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--mode", choices=MODES)
     ap.add_argument(
         "--decide",
-        nargs=3,
-        metavar=("N", "STATUS", "REASON"),
+        nargs=2,
+        metavar=("N", "STATUS"),
         help="store your decision on finding N of the newest record: STATUS "
-        f"({' | '.join(findings.STATUSES)}) and REASON (owed for "
-        f"{', '.join(findings.REASON_OWED)}); no audit runs",
+        f"({' | '.join(s for s in findings.STATUSES if s != 'open')}), its reason "
+        f"with --why (owed for {', '.join(findings.REASON_OWED)}); no audit runs",
     )
     ap.add_argument(
-        "--effect",
+        "--why",
         default="",
-        metavar="EFFECT",
-        help="with --decide, owed for an accepted BLOCKER, open to an accepted WARNING: "
-        "`stands` (the verdicts hold, "
-        'the limit named beside them) or "<ID>[, <ID>] not assessable" (this run '
-        "does not judge those promises)",
+        metavar="REASON",
+        help="with --decide: why — the change for fixed, the limit for limit, the "
+        "counter-evidence (file, line, value) for false-positive",
+    )
+    ap.add_argument(
+        "--not-assessable",
+        default="",
+        metavar="IDS",
+        help="with --decide N limit: the promises this run does not judge, "
+        "comma-separated (`quality-check-2`); without it a limit's verdicts "
+        "stand, read within it",
     )
     ap.add_argument(
         "--findings",
@@ -1315,7 +1321,7 @@ def main(argv: list[str]) -> int:
         "--review",
         action="store_true",
         help="a second auditor on the decisions of the newest analysis record (or "
-        "--record) that owe one — an accepted finding with effect `stands`, a finding "
+        "--record) that owe one — a finding decided `limit` with effect `stands`, a finding "
         "closed after a review did not uphold a decision on it, a carried finding "
         "closed dismissed or deferred: does the reported claim stand? writes "
         "audits/<minute>-review.toml",
@@ -1587,7 +1593,7 @@ def decision_lines(
         # review clause of `stands` for this route too, and named every
         # criterion an unjudged quality check already voids
         unassessed = (
-            '--effect "<ID>[, <ID>] not assessable"'
+            "limit --not-assessable <ID>[,<ID>]"
             + (f" (<ID>: {named})" if named else "")
             + " — no review owed; a quality check left unjudged "
             "leaves every criterion without a verdict by itself, so name the "
@@ -1605,7 +1611,7 @@ def decision_lines(
             out.append(
                 "      "
                 + decide_command(
-                    area, n, "STATUS", "REASON", where, protocol=protocol, base=here
+                    area, n, "STATUS", "<why>", where, protocol=protocol, base=here
                 )
             )
             if f.check:
@@ -1619,11 +1625,11 @@ def decision_lines(
                 )
             if f.grade == "BLOCKER":
                 out.append(
-                    "      accepted owes its effect: --effect stands (the verdicts "
-                    "hold, read within it; a second auditor must uphold it before the "
-                    f"number leaves, at every repeat cost: `"
+                    "      limit: the verdicts hold, read within it; a second "
+                    "auditor must uphold it before the number leaves, at every "
+                    f"repeat cost: `"
                     f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
-                    f"`)"
+                    f"`"
                     + (
                         f" or {unassessed}"
                         if promised
@@ -1634,9 +1640,8 @@ def decision_lines(
                 )
             elif f.grade == "WARNING":
                 out.append(
-                    "      accepted may name its effect when it limits what the "
-                    "result allows: --effect stands"
-                    + (f" | {unassessed}" if promised else "")
+                    "      limit: the verdicts hold, read within it (its missing "
+                    "review warns)" + (f" | {unassessed}" if promised else "")
                 )
     hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
     if hints:
@@ -1646,18 +1651,15 @@ def decision_lines(
 
 
 #: how `--decide` takes its values, as its refusals name the form
-DECIDE_FORM = '--decide takes <n> <status> "<reason>"'
+DECIDE_FORM = '--decide takes <n> <status> --why "<reason>"'
 
 
 def decide_shape(argv: list[str]) -> str | None:
-    """Why ARGV's `--decide` does not carry its three values, or None: the
-    words after `--decide` up to the next option are its values; fewer
-    than three, or a third that reads as an effect (`findings.effect_ids`:
-    `stands`, `<ID> not assessable`) given in the reason's place, is
-    refused naming the form and where the effect goes. Six calls of
-    `--decide N accepted --effect stands` in four cells were refused with
-    "unrecognized arguments: stands" — argparse took `--effect` for the
-    reason — and the agents dropped the effect (SAB round 1, 2026-10-29).
+    """Why ARGV's `--decide` is not `<n> <status>` followed by its options,
+    or None: the words after `--decide` up to the next option are its
+    values; not two, or a third word where `--why` belongs, is refused
+    naming the form. A positional reason once surfaced as "unrecognized
+    arguments" and agents dropped what followed (SAB round 1, 2026-10-29).
     Checked before argparse parses, so a usage error names the reason."""
     if "--decide" not in argv:
         return None
@@ -1665,21 +1667,14 @@ def decide_shape(argv: list[str]) -> str | None:
     values = after[
         : next((i for i, w in enumerate(after) if w.startswith("-")), len(after))
     ]
-    if len(values) == 2:
-        return (
-            f"{DECIDE_FORM} — the reason is missing; an effect goes after it: "
-            "--effect stands"
-        )
     if len(values) < 2:
-        return f"{DECIDE_FORM} — {len(values)} of 3 given"
-    try:
-        findings.effect_ids(values[2])
-    except ValueError:
-        return None  # a reason in its place
-    return (
-        f"{DECIDE_FORM} — the reason is missing: {values[2]!r} is an effect, and "
-        f"an effect goes after the reason: --effect {shlex.quote(values[2])}"
-    )
+        return f"{DECIDE_FORM} — {len(values)} of 2 given"
+    if len(values) > 2:
+        return (
+            f"{DECIDE_FORM} — the reason goes after --why: "
+            f"--why {shlex.quote(' '.join(values[2:]))}"
+        )
+    return None
 
 
 def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
@@ -1697,7 +1692,7 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     ]
     if sum(chosen) != 1:
         ap.error(
-            "give --mode to audit, --decide N STATUS REASON to decide, --findings "
+            "give --mode to audit, --decide N STATUS --why REASON to decide, --findings "
             "to show what there is to decide, --review to review the decisions, or "
             "--report-review REPORT to read a finished report — one of them"
         )
@@ -1705,8 +1700,8 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
         args.mode is not None or args.report_review is not None
     ):
         ap.error("--record goes with --decide, --findings or --review")
-    if args.effect and args.decide is None:
-        ap.error("--effect goes with --decide")
+    if (args.why or args.not_assessable) and args.decide is None:
+        ap.error("--why and --not-assessable go with --decide")
     if args.again and not (args.review or args.report_review is not None):
         ap.error("--again goes with --review or --report-review")
 
@@ -1741,7 +1736,14 @@ def _without_audit(args: argparse.Namespace) -> int:
             again=args.again,
         )
     if args.decide is not None:
-        return _decide(args.area, args.decide, args.record, args.effect, args.protocol)
+        return _decide(
+            args.area,
+            args.decide,
+            args.why,
+            args.record,
+            args.not_assessable,
+            args.protocol,
+        )
     return _findings(args.area, args.record, args.protocol)
 
 
@@ -2148,27 +2150,46 @@ def _print_handover_steps(
 def _decide(
     area: Path,
     decide: list[str],
+    reason: str,
     record: Path | None,
-    effect: str = "",
+    not_assessable: str = "",
     protocol: Path | None = None,
 ) -> int:
     """`--decide`: store the person's decision on one finding of RECORD (the
-    area's newest record without it) through `findings.write_decision`,
-    with EFFECT for an accepted BLOCKER — its ids held to the promises the
-    protocol registers; print what was written and how many findings stay
-    open, what the status entails (`findings.decision_entails`) and, under
-    `fixed`, the hint that nothing changed since the audit (`repair_hint`).
-    Exit 2 on a decision that cannot be stored, the file untouched; a
-    refusal that names the effect's form (`findings.EFFECT_FORM`, its
-    example an id) adds, for a protocol without promises, the routes that
-    work there (`ways_out.NO_PROMISE_ROUTE`)."""
-    n_text, status, reason = decide
+    area's newest record without it) through `findings.write_decision`. A
+    `limit` on a BLOCKER or WARNING records its effect: `stands`, or the
+    ids NOT_ASSESSABLE names (`<ids> not assessable`), held to the promises
+    the protocol registers; `--not-assessable` with another status is
+    refused. Print what was written and how many findings stay open, what
+    the status entails (`findings.decision_entails`) and, under `fixed`,
+    the hint that nothing changed since the audit (`repair_hint`). Exit 2
+    on a decision that cannot be stored, the file untouched; a refusal of
+    the ids adds, for a protocol without promises, the routes that work
+    there (`ways_out.NO_PROMISE_ROUTE`)."""
+    n_text, status = decide
+    effect = ""
     try:
         if not n_text.isdigit():
             raise findings.FindingsError(f"N must be a finding number, not {n_text!r}")
-        if effect:
-            _registered(area, protocol, effect)
         record = _newest_record(area) if record is None else record_path(area, record)
+        if not_assessable and status != "limit":
+            raise findings.FindingsError(
+                f"--not-assessable goes with limit, not with {status}"
+            )
+        if status == "limit":
+            rec_before = findings.read(record)
+            n = int(n_text)
+            grade = (
+                rec_before.findings[n - 1].grade
+                if 1 <= n <= len(rec_before.findings)
+                else ""
+            )
+            if not_assessable:
+                ids = [i.strip() for i in not_assessable.split(",") if i.strip()]
+                effect = ", ".join(ids) + " not assessable"
+                _registered(area, protocol, effect)
+            elif grade in findings.EFFECT_GRADES:
+                effect = findings.EFFECT_STANDS
         rec = findings.write_decision(record, int(n_text), status, reason, effect)
     except findings.FindingsError as exc:
         why = str(exc)

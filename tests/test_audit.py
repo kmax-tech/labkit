@@ -870,8 +870,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
         # and the refusal it spares: --decide holds the effect to the tables
         decided = io.StringIO()
         with contextlib.redirect_stderr(decided):
-            effect = ["--effect", "criterion-1 not assessable"]
-            rc = audit.main([str(bare), "--decide", "1", "accepted", "r", *effect])
+            effect = ["--not-assessable", "criterion-1"]
+            rc = audit.main(
+                [str(bare), "--decide", "1", "limit", "--why", "r", *effect]
+            )
         self.assertEqual(rc, 2)
         self.assertIn(
             f"effect names criterion-1 — PROTOCOL-x0.md: {ways_out.NO_PROMISE_ROUTE}",
@@ -879,12 +881,12 @@ class DecisionListReachesThePerson(unittest.TestCase):
         )
         # a refusal of the effect's form, whose example is an id, names the
         # routes that work for a protocol without promises
-        for effect in ([], ["--effect", "1 not assessable"]):
+        for effect in (["--not-assessable", "1"],):
             with self.subTest(effect=effect):
                 decided = io.StringIO()
                 with contextlib.redirect_stderr(decided):
                     rc = audit.main(
-                        [str(bare), "--decide", "1", "accepted", "r", *effect]
+                        [str(bare), "--decide", "1", "limit", "--why", "r", *effect]
                     )
                 self.assertEqual(rc, 2)
                 self.assertIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
@@ -895,13 +897,15 @@ class DecisionListReachesThePerson(unittest.TestCase):
         )
         rc, out, err, _ = run(promised, BLOCK)
         self.assertEqual(rc, 1, err)
-        self.assertIn('or --effect "<ID>[, <ID>] not assessable"', out)
+        self.assertIn("or limit --not-assessable <ID>[,<ID>]", out)
         self.assertNotIn("this protocol registers no promise", out)
         decided = io.StringIO()
         with contextlib.redirect_stderr(decided):
-            rc = audit.main([str(promised), "--decide", "1", "accepted", "r"])
-        self.assertEqual(rc, 2)
-        self.assertIn("owes its effect", decided.getvalue())
+            rc = audit.main([str(promised), "--decide", "1", "limit", "--why", "r"])
+        self.assertEqual(rc, 0, decided.getvalue())  # a limit's verdicts stand
+        self.assertEqual(
+            findings.area_records(promised)[-1].findings[0].effect, "stands"
+        )
         self.assertNotIn(ways_out.NO_PROMISE_ROUTE, decided.getvalue())
 
     def test_the_ids_an_effect_may_name_come_with_their_fields(self):
@@ -918,7 +922,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         rc, out, err, _ = run(area, BLOCK)
         self.assertEqual(rc, 1, err)
         self.assertIn(
-            '--effect "<ID>[, <ID>] not assessable" (<ID>: criterion-1 (success / failure '
+            "limit --not-assessable <ID>[,<ID>] (<ID>: criterion-1 (success / failure "
             "criterion)) — no review owed; a quality check left "
             "unjudged leaves every criterion without a verdict by itself, so name "
             "the condition, not the criteria",
@@ -926,8 +930,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
         )
         refused = io.StringIO()
         with contextlib.redirect_stderr(refused):
-            effect = ["--effect", "quality-check-9 not assessable"]
-            rc = audit.main([str(area), "--decide", "1", "accepted", "r", *effect])
+            effect = ["--not-assessable", "quality-check-9"]
+            rc = audit.main(
+                [str(area), "--decide", "1", "limit", "--why", "r", *effect]
+            )
         self.assertEqual(rc, 2)
         self.assertIn(
             "effect names quality-check-9 — PROTOCOL-x0.md registers criterion-1 (success / failure "
@@ -935,8 +941,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
             refused.getvalue(),
         )
         with contextlib.redirect_stderr(io.StringIO()):
-            effect = ["--effect", "criterion-1 not assessable"]
-            rc = audit.main([str(area), "--decide", "1", "accepted", "r", *effect])
+            effect = ["--not-assessable", "criterion-1"]
+            rc = audit.main(
+                [str(area), "--decide", "1", "limit", "--why", "r", *effect]
+            )
         self.assertEqual(rc, 0)
 
     def test_a_decide_without_its_reason_is_refused_naming_the_reason(self):
@@ -948,24 +956,17 @@ class DecisionListReachesThePerson(unittest.TestCase):
         form decides."""
         area = repo_with()
         run(area, BLOCK)
-        form = '--decide takes <n> <status> "<reason>"'
+        form = '--decide takes <n> <status> --why "<reason>"'
         for given, said in (
             (
-                ["1", "accepted", "--effect", "stands"],
-                f"{form} — the reason is missing; an effect goes after it: "
-                "--effect stands",
+                ["1", "limit", "the limit"],
+                f"{form} — the reason goes after --why: --why 'the limit'",
             ),
             (
-                ["1", "accepted", "stands"],
-                f"{form} — the reason is missing: 'stands' is an effect, and an "
-                "effect goes after the reason: --effect stands",
+                ["1", "limit", "stands"],
+                f"{form} — the reason goes after --why: --why stands",
             ),
-            (
-                ["1", "accepted"],
-                f"{form} — the reason is missing; an effect goes after it: "
-                "--effect stands",
-            ),
-            (["1"], f"{form} — 1 of 3 given"),
+            (["1"], f"{form} — 1 of 2 given"),
         ):
             with self.subTest(given=given):
                 err = io.StringIO()
@@ -986,16 +987,15 @@ class DecisionListReachesThePerson(unittest.TestCase):
                     str(area),
                     "--decide",
                     "1",
-                    "accepted",
+                    "limit",
+                    "--why",
                     "the limit",
-                    "--effect",
-                    "stands",
                 ]
             )
         self.assertEqual(rc, 0, out.getvalue())
-        self.assertIn("finding 1: accepted (stands) — the limit", out.getvalue())
+        self.assertIn("finding 1: limit (stands) — the limit", out.getvalue())
         decided = findings.area_records(area)[-1].findings[0]
-        self.assertEqual((decided.status, decided.effect), ("accepted", "stands"))
+        self.assertEqual((decided.status, decided.effect), ("limit", "stands"))
 
     def test_an_accepted_warning_is_told_its_review_warns_and_does_not_hold(self):
         """Agents read a low repeat cost as "no review needed" after the
@@ -1006,7 +1006,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         f = findings.Finding(
             grade="WARNING",
             text="WARNING · a.py:1 · x",
-            status="accepted",
+            status="limit",
             reason="the limit",
             effect=findings.EFFECT_STANDS,
         )
@@ -1040,7 +1040,14 @@ class DecisionListReachesThePerson(unittest.TestCase):
                     contextlib.redirect_stdout(out),
                     contextlib.redirect_stderr(io.StringIO()),
                 ):
-                    rc = audit.main(["experiments/01-x", "--decide", "1", *words])
+                    rc = audit.main(
+                        [
+                            "experiments/01-x",
+                            "--decide",
+                            "1",
+                            *fixture.decide_words(*words),
+                        ]
+                    )
                 self.assertEqual(rc, 0, out.getvalue())
                 return out.getvalue()
 
@@ -1072,17 +1079,17 @@ class DecisionListReachesThePerson(unittest.TestCase):
             (area / "scripts" / "01_measure.py").write_text(SCRIPT + "# repaired\n")
             self.assertNotIn("hint:", decide("fixed", "dropped the feature"))
 
-            said = decide("accepted", "the limit", "--effect", "stands")
+            said = decide("limit", "the limit")
             self.assertIn(
-                "accepted --effect stands: the finding holds; this says the claim "
-                "stands within it — give the effect on the claim in the reason; the "
-                "number does not leave until a second auditor upholds it, at every "
-                f"repeat cost: {review}",
+                "limit: the finding holds and the number carries it as a Limit line "
+                "— give its effect on the claim in the reason; the number does not "
+                "leave until a second auditor upholds it, at every repeat cost: "
+                f"{review}",
                 said,
             )
             f = findings.read(record).findings[0]
             self.assertEqual(
-                (f.status, f.reason, f.effect), ("accepted", "the limit", "stands")
+                (f.status, f.reason, f.effect), ("limit", "the limit", "stands")
             )
             self.assertIn(
                 "deferred: unresolved and carried — deferring releases nothing; the "
@@ -1091,19 +1098,19 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 decide("deferred", "no time"),
             )
             self.assertIn(
-                "dismissed: the finding is factually wrong for this state — the "
-                "reason must name the counter-evidence (file, line, value); a "
-                f"dismissal without it is held by the review: {review}",
-                decide("dismissed", "a.py:1 reads b"),
+                "false-positive: the auditor misread this state — the reason must "
+                "name the counter-evidence (file, line, value); a second auditor "
+                f"must uphold it before the number leaves: {review}",
+                decide("false-positive", "a.py:1 reads b"),
             )
             f = findings.read(record).findings[0]
-            self.assertEqual((f.status, f.reason), ("dismissed", "a.py:1 reads b"))
+            self.assertEqual((f.status, f.reason), ("false-positive", "a.py:1 reads b"))
             self.assertEqual(
                 len(findings.area_records(area)), 1
             )  # nothing written beside
         finally:
             os.chdir(old)
-        # a promise left not assessable, and a WARNING's dismissal, which no review holds
+        # a WARNING decided limit — not assessable or standing — and a false positive
         promised = repo_with()
         (promised / "PROTOCOL-x0.md").write_text(
             fixture.head(promises=fixture.C1_BLOCK) + PROTOCOL, encoding="utf-8"
@@ -1111,16 +1118,16 @@ class DecisionListReachesThePerson(unittest.TestCase):
         run(promised, WARN)
         for words, line in (
             (
-                ["accepted", "r", "--effect", "criterion-1 not assessable"],
-                "accepted: the finding holds and limits the claim — `criterion-1 not "
-                "assessable` stands in the report's Limit line",
+                ["limit", "--why", "r", "--not-assessable", "criterion-1"],
+                "limit: the finding holds and this run does not judge what it names "
+                "— `criterion-1 not assessable` stands in the report's Limit line; "
+                "no review is owed",
             ),
             (
-                ["accepted", "r"],
-                "accepted: the finding holds and is recorded; without an effect it "
-                "limits nothing in the report",
+                ["limit", "--why", "r"],
+                "limit: the finding holds and the number carries it as a Limit line",
             ),
-            (["dismissed", "r"], "(file, line, value)\n"),
+            (["false-positive", "--why", "r"], "(file, line, value)\n"),
         ):
             with self.subTest(words=words):
                 out = io.StringIO()
@@ -1131,7 +1138,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
                     rc = audit.main([str(promised), "--decide", "1", *words])
                 self.assertEqual(rc, 0, out.getvalue())
                 self.assertIn(line, out.getvalue())
-                self.assertNotIn("--review", out.getvalue())
+                # a WARNING's limit with its verdicts standing owes a review
+                # whose absence warns; nothing else here names one
+                owes_review = words == ["limit", "--why", "r"]
+                self.assertEqual("--review" in out.getvalue(), owes_review)
 
     def test_a_missing_area_is_refused_with_one_sentence_on_every_step(self):
         """`labkit-audit experiments/01-x --findings` from a subdirectory
@@ -1146,7 +1156,11 @@ class DecisionListReachesThePerson(unittest.TestCase):
         os.chdir(area / "scripts")
         here = Path.cwd()  # as the sentence names it (macOS: /private/var)
         try:
-            for step in (["--findings"], ["--review"], ["--decide", "1", "fixed", ""]):
+            for step in (
+                ["--findings"],
+                ["--review"],
+                ["--decide", "1", "fixed", "--why", ""],
+            ):
                 with self.subTest(step=step):
                     out, err = io.StringIO(), io.StringIO()
                     with (
@@ -1435,13 +1449,13 @@ class FixVerdicts(unittest.TestCase):
         self.assertEqual(self.new_records(area, earlier), [])
 
     def test_every_decided_blocker_is_shown_and_nothing_else(self):
-        """accepted, dismissed, deferred are shown like fixed, with the
+        """limit, false-positive, deferred are shown like fixed, with the
         decision; an open BLOCKER and a decided WARNING are not."""
         area, earlier = self.area()
-        findings.write_decision(earlier, 1, "accepted", "kept", "stands")
+        findings.write_decision(earlier, 1, "limit", "kept", "stands")
         _, _, _, sent = self.audit(area, CLEAN)
         self.assertIn(
-            f"{earlier.name}#1\n  finding: {self.LEAK}\n  decided: accepted "
+            f"{earlier.name}#1\n  finding: {self.LEAK}\n  decided: limit "
             f"(effect: stands) — kept\n",
             sent[0],
         )
@@ -2679,7 +2693,7 @@ class Carried(unittest.TestCase):
             (f"{r1.name}#1", "feature_sources", "every column"),
         )
         findings.write_decision(
-            r2.path, n2, "accepted", "kept as a limit", "criterion-1 not assessable"
+            r2.path, n2, "limit", "kept as a limit", "criterion-1 not assessable"
         )
         self.new_state(area, 2)
         rc, _, err, sent = self.fv.audit(
@@ -2731,7 +2745,7 @@ class Carried(unittest.TestCase):
             shown_sha=shown_sha(area, run),
             now=60,
         )
-        findings.write_decision(same, 1, "dismissed", "does not apply")
+        findings.write_decision(same, 1, "false-positive", "does not apply")
         _, _, _, sent = self.fv.audit(area, CLEAN)
         piece = (
             sent[0]
@@ -2789,9 +2803,9 @@ class Carried(unittest.TestCase):
         self.assertEqual(findings.read(r2.path).verdict[0], 1)
 
     def test_carries_is_part_of_the_digest(self):
-        base = findings.Finding("BLOCKER", "x", "accepted", "r", "stands")
+        base = findings.Finding("BLOCKER", "x", "limit", "r", "stands")
         carried = findings.Finding(
-            "BLOCKER", "x", "accepted", "r", "stands", "", "", "a.toml#1"
+            "BLOCKER", "x", "limit", "r", "stands", "", "", "a.toml#1"
         )
         self.assertNotEqual(
             findings.decision_digest(base), findings.decision_digest(carried)
@@ -2845,9 +2859,9 @@ class Carried(unittest.TestCase):
             ]
             self.assertIn("--protocol", line)
             words = shlex.split(line)
-            filled = [w if w != "STATUS" else "accepted" for w in words[1:]]
+            filled = [w if w != "STATUS" else "limit" for w in words[1:]]
             filled = [w if w != "REASON" else "known limit" for w in filled]
-            effect = ["--effect", "criterion-1 not assessable"]
+            effect = ["--not-assessable", "criterion-1"]
             without = [
                 w
                 for i, w in enumerate(filled)
@@ -3068,18 +3082,18 @@ class FollowupGate(unittest.TestCase):
         findings.write_decision(rec.path, 1, "fixed", "repaired")
         (line,) = self.gate(area)
         self.assertIn("decided `fixed` in the state audited", line)
-        findings.write_decision(rec.path, 1, "accepted", "kept", "stands")
+        findings.write_decision(rec.path, 1, "limit", "kept", "stands")
         self.assertEqual(self.gate(area), [])  # the twin: the review gate's now
 
     def test_an_old_accepted_limit_is_carried_and_renders_in_the_current_result(self):
         area, r1 = self.fv.area()
-        findings.write_decision(r1, 1, "accepted", "kept", "criterion-1 not assessable")
+        findings.write_decision(r1, 1, "limit", "kept", "criterion-1 not assessable")
         self.assertEqual(len(self.gate(area)), 1)  # never followed up
         self.cr.new_state(area, 1)
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
         findings.write_decision(
-            r2.path, n, "accepted", "kept as a limit", "criterion-1 not assessable"
+            r2.path, n, "limit", "kept as a limit", "criterion-1 not assessable"
         )
         self.assertEqual(self.gate(area), [])
         text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
@@ -3087,7 +3101,7 @@ class FollowupGate(unittest.TestCase):
         labels = [label for label, _, _ in result_render.limits_of(area, text, run)]
         self.assertEqual(labels, [findings.limit_label(findings.read(r2.path), n)])
         # stands instead: the decision review is owed for it
-        findings.write_decision(r2.path, n, "accepted", "kept as a limit", "stands")
+        findings.write_decision(r2.path, n, "limit", "kept as a limit", "stands")
         reviewed = decision_review.reviewable(findings.read(r2.path), [])
         self.assertIn(n, [k for k, _ in reviewed])
 
@@ -3097,7 +3111,7 @@ class FollowupGate(unittest.TestCase):
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
         findings.write_decision(
-            r2.path, n, "dismissed", "the column is no leak: never read"
+            r2.path, n, "false-positive", "the column is no leak: never read"
         )
         (line,) = self.gate(area)
         self.assertIn("a carried finding", line)
@@ -3112,7 +3126,7 @@ class FollowupGate(unittest.TestCase):
         """The finding never applied: the follow-up says so with `resolved`
         and releases; a bare status change does not."""
         area, r1 = self.fv.area()
-        findings.write_decision(r1, 1, "dismissed", "the column is not read")
+        findings.write_decision(r1, 1, "false-positive", "the column is not read")
         self.fv.audit(area, CLEAN)
         self.assertEqual(len(self.gate(area)), 1)
         self.follow_up(
@@ -3129,7 +3143,7 @@ class FollowupGate(unittest.TestCase):
         r2 = self.follow_up(area, f"FIX · {r1.name}#1 · unresolved · still read")
         ((n2, _),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
         findings.write_decision(
-            r2.path, n2, "accepted", "kept", "criterion-1 not assessable"
+            r2.path, n2, "limit", "kept", "criterion-1 not assessable"
         )
         for verdict, limits in (("unresolved", 1), ("resolved", 0)):
             with self.subTest(verdict):
@@ -3142,7 +3156,7 @@ class FollowupGate(unittest.TestCase):
                 carried = [(n, f) for n, f in enumerate(r3.findings, 1) if f.carries]
                 for n, _ in carried:
                     findings.write_decision(
-                        r3.path, n, "accepted", "kept", "criterion-1 not assessable"
+                        r3.path, n, "limit", "kept", "criterion-1 not assessable"
                     )
                 text = (area / "PROTOCOL-x0.md").read_text(encoding="utf-8")
                 run = area / "runs" / "2026-01-01T00-00-00_0001"
@@ -3155,6 +3169,14 @@ class FollowupGate(unittest.TestCase):
 GATE = PILOT2 / "gate"
 
 
+def as_today(record: bytes) -> bytes:
+    """A pilot's record with the decision statuses of labkit 0.103.0
+    (`accepted`, `dismissed`) in today's words (`limit`, `false-positive`)."""
+    return record.replace(b'status = "accepted"', b'status = "limit"').replace(
+        b'status = "dismissed"', b'status = "false-positive"'
+    )
+
+
 class PilotRecords(unittest.TestCase):
     """The release rule on the records the second pilot kept: the partial
     fix (A-1, unresolved) and the unshown check (D2-1) hold, the full fix
@@ -3164,10 +3186,12 @@ class PilotRecords(unittest.TestCase):
     def holds(self, case: str, record: Path) -> list[followup.Hold]:
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "audits").mkdir(parents=True)
+        # the pilot's records keep the status words of their day (`accepted`,
+        # labkit 0.103.0); the copies speak today's
         earlier = area / "audits" / "2026-10-26T08-17-analysis.toml"
-        earlier.write_bytes((GATE / f"earlier-{case}.toml").read_bytes())
+        earlier.write_bytes(as_today((GATE / f"earlier-{case}.toml").read_bytes()))
         later = area / "audits" / "2026-10-26T18-00-analysis.toml"
-        later.write_bytes(record.read_bytes())
+        later.write_bytes(as_today(record.read_bytes()))
         records = findings.area_records(area)
         return followup.release_holds(records, [findings.read(later)], None)
 

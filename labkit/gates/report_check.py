@@ -147,7 +147,6 @@ from labkit.formats import (
     console,
     findings,
     followup,
-    promises,
     protocol_block,
     reviews,
     runs,
@@ -701,7 +700,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
 
 
 def limit_gaps(ctx: Checked) -> list[GateFinding]:
-    """The generated results and limits: every accepted BLOCKER of the covering analysis
+    """The generated results and limits: every BLOCKER decided `limit` of the covering analysis
     records has its effect decided, and the result section says exactly
     what those records and the run render (`result_render.render_gaps`):
     the Recorded results line with its note, one Limit line per decided limit, none
@@ -717,27 +716,21 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
     except (AuditError, FileNotFoundError, ValueError):
         return []
     gaps: list[GateFinding] = []
-    # `<ID> not assessable` only where the protocol registers a promise: a
-    # computation has none, and `--decide` refuses every id there. The block
-    # reads here: `covering_analysis` above stamped it (PromiseError → [])
-    effects = (
-        'stands|"<ID> not assessable"' if promises.table_ids(ctx.text) else "stands"
-    )
     for r in records:
         for n, f in r.limits():
             if not f.effect:
+                # a record changed by hand: `--decide … limit` writes the effect
                 gaps.append(
                     blocker(
-                        f"{findings.limit_label(r, n)}: an accepted BLOCKER owes its "
-                        "effect on the verdicts",
-                        fix="`"
+                        f"{findings.limit_label(r, n)}: a BLOCKER decided limit "
+                        "owes its effect on the verdicts",
+                        fix="decide it again: `"
                         + decide_command(
                             ctx.area,
                             n,
-                            "accepted",
-                            "REASON",
+                            "limit",
+                            "<why>",
                             r.path.name,
-                            effect=effects,
                             protocol=ctx.protocol,
                         )
                         + "`",
@@ -765,14 +758,14 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     (`reviews.upholding`: a review of that record, its code and its run as
     shown, under the claim the protocol makes now, of the decision as it
     stands now, every draw saying `upheld`). The grade follows the
-    finding's: an accepted BLOCKER's `stands` no review upholds — never
+    finding's: a BLOCKER limit's `stands` no review upholds — never
     reviewed, rejected, insufficient, contested, or reviewed as another
     decision or claim — is a BLOCKER (a severe finding is not settled by
     a reason alone; decided 2026-10-22 after the fifth round's replay and
     the assessment of its fifteen decisions from their sources), an
     accepted WARNING's a WARNING for now (the release does not yet hang
     on every lesser limit). A finding a review of the record once did not
-    uphold (`reviews.once_not_upheld`) and that is now `dismissed`, `fixed`
+    uphold (`reviews.once_not_upheld`) and that is now `false-positive`, `fixed`
     or `deferred` (`findings.CLOSING`) is held the same way until a review
     upholds the new decision: closing it is not settling it (sixth haiku
     round, 2026-10-23, t5). Empty when no record covers the run
@@ -805,7 +798,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
             out.append(
                 GateFinding(
                     BLOCKER if f.grade == "BLOCKER" else WARNING,
-                    f"{findings.limit_label(r, n)}: `stands` on an accepted {f.grade} "
+                    f"{findings.limit_label(r, n)}: `stands` on a {f.grade} decided limit "
                     f"{reviews.state(r, n, found, ctx.text)} — no decision review "
                     f"upholds that the reported claim stands within this limit "
                     f"(LAB-015 Preflight audit before freezing)",
@@ -840,7 +833,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
 def first_dismissals(
     ctx: Checked, r: findings.Record, found: list[reviews.Review]
 ) -> list[GateFinding]:
-    """A BLOCKER of record R decided `dismissed` (`findings.dismissed_blocker`)
+    """A BLOCKER of record R decided `false-positive` (`findings.false_positive_blocker`)
     that no review among FOUND upholds — held as a BLOCKER: the deciding
     agent's own decision would release a blocking finding. A carried one is
     the follow-up's (`followup_findings`), one a review once did not uphold
@@ -848,7 +841,7 @@ def first_dismissals(
     out: list[GateFinding] = []
     for n, f in enumerate(r.findings, 1):
         if (
-            not findings.dismissed_blocker(f)
+            not findings.false_positive_blocker(f)
             or f.carries
             or reviews.once_not_upheld(r, n, found) is not None
             or reviews.upholding(r, n, found, ctx.text)
@@ -857,12 +850,12 @@ def first_dismissals(
         out.append(
             GateFinding(
                 BLOCKER,
-                f"audit {r.path.stem} #{n}: `dismissed` on a BLOCKER "
+                f"audit {r.path.stem} #{n}: `false-positive` on a BLOCKER "
                 f"{reviews.state(r, n, found, ctx.text)} — a blocking finding is not "
                 f"released by the deciding agent's own decision (LAB-015 Preflight "
                 f"audit before freezing)",
                 fix=f"{_review_step(ctx, r)} asks a second auditor whether the reason "
-                f"shows it {_closing_question('dismissed')}",
+                f"shows it {_closing_question('false-positive')}",
                 evidence_kind=GUARANTEED,
             )
         )
@@ -957,7 +950,7 @@ def _review_step(ctx: Checked, record: findings.Record) -> str:
 def _closing_question(status: str) -> str:
     """What the reviewer is asked of a closed contested finding, by status."""
     return {
-        "dismissed": "does not apply to the code and run as audited",
+        "false-positive": "does not apply to the code and run as audited",
         "fixed": "gone in the files as audited",
         "deferred": "somebody else's task, not this result's limit",
     }[status]

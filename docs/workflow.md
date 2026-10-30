@@ -162,7 +162,7 @@ the run can carry a number; it does not release one.
 
 ```
 labkit-audit experiments/NN-<name> --mode analysis
-labkit-audit experiments/NN-<name> --decide N STATUS "REASON" [--effect stands | "criterion-1 not assessable"] --record <file>
+labkit-audit experiments/NN-<name> --decide N STATUS --why "REASON" [--not-assessable criterion-1] --record <file>
 ```
 
 Reads: the protocol, the scripts and the repo-local modules they import,
@@ -194,7 +194,7 @@ audit (LAB-017 The number of audits follows the cost tier); at
 `high` the preflight audit came before the freeze and this one
 comes before the number leaves (LAB-050 Analysis audit before reporting).
 
-## 6. The decision review — when a BLOCKER was accepted with `stands`
+## 6. The decision review — when a BLOCKER was decided `limit` with `stands`
 
 ```
 protocol-fill PROTOCOL-<name>.md "Conclusion=…"      # the claim, first
@@ -219,7 +219,7 @@ reviewer is asked whether the reason shows the finding inapplicable, the
 fault gone in the files as audited, or the task somebody else's — and
 `report-check` holds it by the finding's grade until a review upholds
 the new decision. The same holds for a carried finding — one a follow-up
-audit did not find gone — closed `dismissed` or `deferred`. A reason alone
+audit did not find gone — closed `false-positive` or `deferred`. A reason alone
 releases nothing. An accepted WARNING with `stands` owes no review yet;
 `report-check` names it as a warning.
 
@@ -405,7 +405,7 @@ at the repository root lying in no area).
   `stands`; `report-check` blocks until one upholds it. And when a
   finding a review did not uphold is closed instead (`dismissed`,
   `fixed`, `deferred`): the new decision owes its own review. And when a
-  carried finding is closed `dismissed` or `deferred`. Not for
+  carried finding is closed `false-positive` or `deferred`. Not for
   `not assessable`, not (yet) for a WARNING.
 - *Which file does `--from-run` change?* The protocol, and only it.
 - *What does the report block guarantee, and what remains judgement?* The

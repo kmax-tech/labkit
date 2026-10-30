@@ -223,19 +223,19 @@ def decide_command(
     reason: str,
     record: str,
     *,
-    effect: str | None = None,
+    not_assessable: str | None = None,
     protocol: Path | None = None,
     base: Path | None = None,
 ) -> str:
-    """The `labkit-audit … --decide N STATUS "REASON" [--effect EFFECT]
-    --record RECORD` line (`audit_command`): REASON in double quotes as
-    given — a placeholder the reader replaces (`<why>`), never a ready-made
-    reason —, EFFECT as given, RECORD as the caller shows it. The one
-    builder of a printed decision."""
-    effect_words = f" --effect {effect}" if effect is not None else ""
+    """The `labkit-audit … --decide N STATUS --why "REASON"
+    [--not-assessable IDS] --record RECORD` line (`audit_command`): REASON
+    in double quotes as given — a placeholder the reader replaces
+    (`<why>`), never a ready-made reason —, IDS as given, RECORD as the
+    caller shows it. The one builder of a printed decision."""
+    ids = f" --not-assessable {not_assessable}" if not_assessable is not None else ""
     return (
         f"{audit_command(area, protocol=protocol, base=base)} --decide {n} "
-        f'{status} "{reason}"{effect_words} --record {shlex.quote(record)}'
+        f'{status} --why "{reason}"{ids} --record {shlex.quote(record)}'
     )
 
 

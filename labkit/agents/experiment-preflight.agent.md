@@ -155,7 +155,7 @@ shown: the head reports another run than the one you judge.
 
 **In MODE analysis, judge every earlier decided BLOCKER.** Under
 `===== EARLIER DECIDED BLOCKERS =====` stand the area's BLOCKERs that a
-person decided in an earlier state — `fixed`, `accepted`, `dismissed` or
+person decided in an earlier state — `fixed`, `limit`, `false-positive` or
 `deferred` — each as `<record>#<n>` with the finding and the decision
 (status, effect, reason). A finding that begins `carried from …` continues
 an earlier one; judge the fault it names. The decision is a claim, not
@@ -208,7 +208,7 @@ example value included. Where code and registration disagree, the repair
 is the code, made to do what the registration says, then measured again.
 Where the registration itself cannot be answered as written, or lacked a
 choice at the first measurement, the repair is a new registration that
-names this one in `[replaces]`. `accepted` with an effect, and the
+names this one in `[replaces]`. `limit` with an effect, and the
 handover, stay open; neither changes the registration. So the last field
 of a finding about the registration never proposes a new sentence, value,
 key or scope for this protocol — report-check refuses that change. It

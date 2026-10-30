@@ -303,3 +303,28 @@ def started_at(run: Path, root: Path) -> None:
     data = json.loads(cfg.read_text(encoding="utf-8"))
     data.update(head_commit(root))
     cfg.write_text(json.dumps(data), encoding="utf-8")
+
+
+def decide_words(*words: str) -> list[str]:
+    """WORDS after `--decide N` as the command takes them: `STATUS --why
+    REASON`, a given `--effect stands` dropped (a limit writes it) and
+    `--effect "<ids> not assessable"` as `--not-assessable <ids>`. Words
+    already in that form, or a STATUS alone, pass unchanged — the one place
+    the tests' older call shapes meet the command."""
+    if not words:
+        return []
+    status, rest = words[0], list(words[1:])
+    if rest and not rest[0].startswith("--"):
+        rest = ["--why", rest[0], *rest[1:]]
+    out: list[str] = [status]
+    i = 0
+    while i < len(rest):
+        if rest[i] == "--effect" and i + 1 < len(rest):
+            value = rest[i + 1]
+            if value.endswith(" not assessable"):
+                out += ["--not-assessable", value.removesuffix(" not assessable")]
+            i += 2
+            continue
+        out.append(rest[i])
+        i += 1
+    return out

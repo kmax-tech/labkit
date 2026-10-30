@@ -320,8 +320,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
         if got is None:
             gaps.append(
                 blocker(
-                    f'no "{label}" line — the accepted finding\'s limit belongs in '
-                    f"the protocol",
+                    f'no "{label}" line — the limit\'s line belongs in the protocol',
                     fix=f"{RENDER} writes it from the record",
                 )
             )

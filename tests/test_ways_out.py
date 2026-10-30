@@ -45,13 +45,13 @@ class WaysOut(unittest.TestCase):
         id an effect names (t34, t21 of the pilot, 2026-10-28): its routes
         name what works — limit the claim, fix, defer and hand over."""
         promised = "\n".join(ways_out.blocker_routes(True, full=True))
-        self.assertIn('--effect "<ID> not assessable"', promised)
+        self.assertIn("--not-assessable <ID>", promised)
         bare = "\n".join(ways_out.blocker_routes(False, full=True))
-        self.assertNotIn("<ID> not assessable", bare)
+        self.assertNotIn("--not-assessable", bare)
         unjudged = next(
             ln for ln in bare.splitlines() if ways_out.UNJUDGED_PROMISE in ln
         )
-        for way in ("`--effect stands`", "Conclusion", "`deferred`", "hand over"):
+        for way in ("`limit`", "Conclusion", "`deferred`", "hand over"):
             self.assertIn(way, unjudged)
         # the other routes stay as they are
         self.assertEqual(
@@ -129,7 +129,8 @@ class WaysOut(unittest.TestCase):
         report = flags_of(protocol_fill.main, ["--help"])
         # the reading works: flags known to exist are found
         self.assertTrue(
-            {"--kind", "--change-kind"} <= init and {"--decide", "--effect"} <= decide
+            {"--kind", "--change-kind"} <= init
+            and {"--decide", "--not-assessable"} <= decide
         )
         # every flag of every code span, held to the command the span starts
         # with; it read only a flag right after a backtick, so --handover,

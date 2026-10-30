@@ -23,12 +23,12 @@ area, one file per audit:
     text = "BLOCKER · scripts/01_measure.py:42 · … · LAB-038 What the prompt demands · …"
                          # the finding whole: its grade line and the lines the
                          # auditor wrote below it, joined by line breaks (\n)
-    status = "open"      # open | fixed | accepted | deferred | dismissed
-    reason = ""          # owed for accepted, deferred and dismissed
-    # effect = "criterion-1 not assessable"  — an accepted BLOCKER or WARNING: see EFFECT
+    status = "open"      # open | fixed | limit | false-positive | deferred
+    reason = ""          # owed for limit, false-positive and deferred
+    # effect = "stands"  — a BLOCKER or WARNING decided limit: see EFFECT
 
 The person decides each finding with `labkit-audit AREA --decide N STATUS
-REASON`, which validates the decision the person typed and stores it
+--why REASON`, which validates the decision the person typed and stores it
 (`write_decision`) — the one supported way to write a decision; a record
 changed by hand is not one labkit wrote, whatever its fields say, and a
 check of the file cannot tell who wrote them. labkit never decides.
@@ -79,24 +79,22 @@ hand): a finding deferred in area 16 as "its own task" bit in area 17; the
 same finding was accepted three times in three areas; 13 of 44 audit lines
 end in "accepted/dismissed" and what they decided is lost in a 400-character
 protocol line. With the findings as data the deferred ones stay visible and
-an audit's yield (fixed / accepted / dismissed per class) can be counted
+an audit's yield (fixed / limit / false-positive per class) can be counted
 instead of read.
 
-An accepted finding is a fault the person keeps: the number may still be
-reported, read within the fault, but a fault in the instrument can leave
-a promise unjudged by the run. The decision says which (`effect`):
-`stands` — the verdicts hold, read within the limit — or `criterion-1 not
-assessable` (ids comma-separated) — this run does not judge them. How
-severe a finding is and what the result still allows are two questions:
-an accepted BLOCKER owes its effect, an accepted WARNING may name one
-(a cue that limits how the number reads), and either way a named effect
-reaches the result. Which effect follows from what the promise's sentence
-claims — a threshold on these items, or a capability — not from the
-grade. The protocol carries each as a `Limit (audit <record> #N)` line
+The statuses are named by their consequence: `fixed` — the fault is
+repaired, a new measurement and a follow-up audit check it; `limit` — the
+finding is true and the number carries it as a Limit line; `false-positive`
+— the auditor misread, the reason names the counter-evidence. A `limit` on
+a BLOCKER or WARNING records its effect (`effect`): `stands` — the
+verdicts hold, read within the limit — unless `--not-assessable IDS` names
+the promises this run does not judge (`criterion-1 not assessable`). Which
+follows from what the promise's sentence claims — a threshold on these
+items, or a capability — not from the grade. The protocol carries each as a `Limit (audit <record> #N)` line
 and a note in Recorded results (`protocol-fill --from-run` writes both from the
 record), and report-check holds them to it (`limit_line`, `answer_note`). Whether the
 named limit is enough stays the audit's question, not this check's
-(judge probe, 2026-10-21: a prompt broader than the gold, accepted, and
+(judge probe, 2026-10-21: a prompt broader than the gold, kept as a limit, and
 "criterion-1 not met" reported with the limit in the record only).
 
 Reading is loud: an unknown status, a decided status without a reason, a
@@ -149,22 +147,22 @@ ATTEMPT_TIMEOUT_S = 900
 #: (`stopped_attempt`): each further try costs the same and was stopped
 #: again in the fit probes
 FAILED_CAUSES = ("unavailable", "unproven")
-STATUSES = ("open", "fixed", "accepted", "deferred", "dismissed")
-REASON_OWED = ("accepted", "deferred", "dismissed")
+STATUSES = ("open", "fixed", "limit", "false-positive", "deferred")
+REASON_OWED = ("limit", "false-positive", "deferred")
 #: the statuses under which a finding leaves the result's limits without
 #: a Limit line — the fault removed, put off, or not a fault. After a
 #: review did not uphold a decision on the finding, none of them settles
 #: it alone (`reviews.once_not_upheld`, `report_check.review_findings`)
-CLOSING = ("fixed", "deferred", "dismissed")
+CLOSING = ("fixed", "deferred", "false-positive")
 #: every status but `open`: what deciding a finding sets
 DECIDED = tuple(s for s in STATUSES if s != "open")
-#: the decided statuses as a step names them: "fixed / accepted / deferred / dismissed"
+#: the decided statuses as a step names them: "fixed / limit / false-positive / deferred"
 DECIDED_LIST = " / ".join(DECIDED)
 #: a carried finding (`carries`: a follow-up did not find its fault gone)
 #: closed with one of these owes a decision review before the number leaves
-CARRIED_CLOSING = ("dismissed", "deferred")
-#: an accepted BLOCKER's effect on the verdicts: they stand with the limit,
-#: or the run judges the named promises not at all
+CARRIED_CLOSING = ("false-positive", "deferred")
+#: a limit's effect on the verdicts: they stand with the limit, or the run
+#: judges the named promises not at all (`--not-assessable`)
 EFFECT_STANDS = "stands"
 EFFECT_GRADES = ("BLOCKER", "WARNING")
 _EFFECT_NOT = re.compile(r"^(\S+(?:\s*,\s*\S+)*)\s+not assessable$")
@@ -199,7 +197,7 @@ class Finding:
     text: str
     status: str
     reason: str
-    effect: str = ""  # accepted: EFFECT_STANDS or "<ids> not assessable"
+    effect: str = ""  # limit: EFFECT_STANDS or "<ids> not assessable"
     # the diagnostic the auditor requires to show a repair: a metrics.json
     # key, set from the finding line when the record is written, never by
     # a decision ("" when none is required)
@@ -222,17 +220,17 @@ class Finding:
 
     @property
     def effect_owed(self) -> bool:
-        """An accepted BLOCKER owes the effect it has on the verdicts."""
-        return self.grade == "BLOCKER" and self.status == "accepted"
+        """A BLOCKER decided `limit` owes the effect it has on the verdicts."""
+        return self.grade == "BLOCKER" and self.status == "limit"
 
     @property
     def effect_allowed(self) -> bool:
-        """An accepted BLOCKER or WARNING may name an effect; nothing else."""
-        return self.grade in EFFECT_GRADES and self.status == "accepted"
+        """A BLOCKER or WARNING decided `limit` carries an effect; nothing else."""
+        return self.grade in EFFECT_GRADES and self.status == "limit"
 
 
 #: an analysis audit's verdict on an earlier decided BLOCKER (fixed,
-#: accepted, deferred or dismissed):
+#: limit, false-positive or deferred):
 #: the fault is gone in the files and rows it was shown, still there, or
 #: not to be judged from them (no diagnostic shown that could tell)
 FIX_VERDICTS = ("resolved", "unresolved", "not_assessable")
@@ -363,19 +361,20 @@ def decision_entails(
     claimed, confirmation pending; the follow-up audit judges it after a
     new measurement, the check owed named when F carries one
     (`check_order`), then the measure and analysis-audit commands.
-    `accepted` with effect `stands`: the claim stands within the finding;
+    `limit` with effect `stands`: the claim stands within the finding;
     a second auditor's review is owed at every repeat cost (`--review
     --record`) — a BLOCKER's number does not leave without it, a WARNING's
-    absent review warns. `accepted` with
-    another effect: it stands in the report's Limit line; without one (a
-    WARNING or NOTE) the finding limits nothing there (`Record.limits`).
+    absent review warns. `limit` with `<ids> not assessable`: the run does
+    not judge those promises, and no review is owed; a NOTE's limit is
+    recorded and limits nothing in the report (`Record.limits`).
     `deferred`: unresolved and carried; nothing but a new decision
     releases it, and the handover ends the protocol without the number.
-    `dismissed`: factually wrong for this state; the reason names the
-    counter-evidence, and a BLOCKER's or a carried finding's dismissal is
-    held by the review (`dismissed_blocker`, `carried_and_closed`). Agents
-    used `dismissed` for "I will fix it", `deferred` for "no longer
-    relevant" and `accepted` for "repaired" (SAB round 1, 2026-10-29).
+    `false-positive`: the auditor misread this state; the reason names the
+    counter-evidence, and a BLOCKER's or a carried finding's is held by
+    the review (`false_positive_blocker`, `carried_and_closed`). The old
+    words were misread — `dismissed` for "I will fix it", `deferred` for
+    "no longer relevant", `accepted` for "repaired" (SAB round 1,
+    2026-10-29) —, so each status is named by its consequence.
     Raises ValueError on a status that is not decided (DECIDED)."""
     here = Path.cwd()
     review = audit_command(
@@ -393,7 +392,7 @@ def decision_entails(
             "judges it after a new measurement; until then it releases nothing"
             f"{owed}; then `{measure_command(area)}` and `{analysis}`"
         )
-    if f.status == "accepted" and f.effect == EFFECT_STANDS:
+    if f.status == "limit" and f.effect == EFFECT_STANDS:
         # the review is owed at every repeat cost; agents read a low one as
         # "no review needed", and a WARNING's line that said "before the
         # number leaves" was untrue once the adoption let it through
@@ -405,20 +404,20 @@ def decision_entails(
             "until a review upholds it"
         )
         return (
-            "accepted --effect stands: the finding holds; this says the claim "
-            "stands within it — give the effect on the claim in the reason; "
+            "limit: the finding holds and the number carries it as a Limit line "
+            "— give its effect on the claim in the reason; "
             f"{held}, at every repeat cost: `{review}`"
         )
-    if f.status == "accepted" and f.effect:
+    if f.status == "limit" and f.effect:
         return (
-            f"accepted: the finding holds and limits the claim — `{f.effect}` "
-            "stands in the report's Limit line"
+            f"limit: the finding holds and this run does not judge what it "
+            f"names — `{f.effect}` stands in the report's Limit line; no review "
+            "is owed"
         )
-    if f.status == "accepted":
+    if f.status == "limit":
         return (
-            "accepted: the finding holds and is recorded; without an effect it "
-            "limits nothing in the report — `--effect stands` or `--effect "
-            '"<ID> not assessable"` would'
+            "limit: the finding holds and is recorded; a NOTE limits nothing in "
+            "the report"
         )
     if f.status == "deferred":
         return (
@@ -426,15 +425,15 @@ def decision_entails(
             "protocol ends without this number through the handover unless the "
             "finding is decided again"
         )
-    if f.status == "dismissed":
+    if f.status == "false-positive":
         held = (
-            f"; a dismissal without it is held by the review: `{review}`"
-            if dismissed_blocker(f) or carried_and_closed(f)
+            f"; a second auditor must uphold it before the number leaves: `{review}`"
+            if false_positive_blocker(f) or carried_and_closed(f)
             else ""
         )
         return (
-            "dismissed: the finding is factually wrong for this state — the reason "
-            f"must name the counter-evidence (file, line, value){held}"
+            "false-positive: the auditor misread this state — the reason must "
+            f"name the counter-evidence (file, line, value){held}"
         )
     raise ValueError(f"status {f.status!r} is not decided — one of {DECIDED_LIST}")
 
@@ -586,8 +585,8 @@ class Record:
 
     def limits(self) -> list[tuple[int, Finding]]:
         """(number, finding) of every finding that is a limit of the result:
-        an accepted BLOCKER (its effect owed) and an accepted WARNING that
-        names an effect — numbered as `--decide` takes them."""
+        a BLOCKER decided `limit` (its effect owed) and a WARNING decided
+        `limit` with its effect — numbered as `--decide` takes them."""
         return [
             (n, f)
             for n, f in enumerate(self.findings, 1)
@@ -760,21 +759,20 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
     return None
 
 
-def dismissed_blocker(f: Finding) -> bool:
-    """Is F a BLOCKER decided `dismissed`? Its first dismissal owes a
-    decision review before the number leaves: the deciding agent's own
-    decision would otherwise release a blocking finding, and a second
-    auditor judges whether it does not apply to the code and run as
-    audited. A WARNING's dismissal owes none. The one rule the gate
+def false_positive_blocker(f: Finding) -> bool:
+    """Is F a BLOCKER decided `false-positive`? It owes a decision review
+    before the number leaves: the deciding agent's own decision would
+    otherwise release a blocking finding, and a second auditor judges
+    whether it does not apply to the code and run as audited. A WARNING's
+    owes none (its missing review warns). The one rule the gate
     (`report_check.review_findings`) and the review
-    (`decision_review.reviewable`) both read; decided by the author,
-    2026-10-28, as a design requirement — no log showed misuse."""
-    return f.grade == "BLOCKER" and f.status == "dismissed"
+    (`decision_review.reviewable`) both read."""
+    return f.grade == "BLOCKER" and f.status == "false-positive"
 
 
 def carried_and_closed(f: Finding) -> bool:
     """Is F a carried finding (`carries`: a follow-up did not find its fault
-    gone) closed `dismissed` or `deferred` (CARRIED_CLOSING)? Such a
+    gone) closed `false-positive` or `deferred` (CARRIED_CLOSING)? Such a
     decision owes a decision review before the number leaves — the one rule
     the gate (`report_check.followup_findings`) and the review
     (`decision_review.reviewable`) both read."""
@@ -1339,7 +1337,7 @@ def write_decision(
     path: Path, n: int, status: str, reason: str, effect: str = ""
 ) -> Record:
     """Set finding N (1-based) of the record at PATH to STATUS with REASON —
-    and, for an accepted BLOCKER, EFFECT (`effect_ids`) — the decision the
+    and, for a limit, EFFECT (`effect_ids`) — the decision the
     person gives, stored, never made: the side effect is the file. The
     lines are found by the record's structure (the N-th `[[finding]]`
     table), their values written by `toml_string`, every other byte kept;
@@ -1348,7 +1346,7 @@ def write_decision(
     (`files.write_atomic`) only when exactly that finding changed. Raises
     FindingsError — the file untouched — on a record that does not read, a
     number outside it, a status outside STATUSES, a reason owed and empty,
-    an accepted BLOCKER without its effect or an effect anywhere else, or a
+    a BLOCKER limit without its effect or an effect anywhere else, or a
     finding without the status and reason lines labkit-audit writes (a
     one-line or a multi-line TOML string each)."""
     from labkit.formats.files import write_atomic
@@ -1386,16 +1384,16 @@ def write_decision(
 
 
 def _effect_problem(f: Finding) -> str | None:
-    """Why F's effect cannot stand, or None: an effect on anything but an
-    accepted BLOCKER or WARNING, or not in EFFECT_FORM. An accepted BLOCKER
-    without one reads (a record decided before effects were owed);
-    report-check asks for it."""
+    """Why F's effect cannot stand, or None: an effect on anything but a
+    BLOCKER or WARNING decided `limit`, or not in EFFECT_FORM. A limit
+    without one reads (a record written by hand); report-check asks for
+    it."""
     if not f.effect:
         return None
     if not f.effect_allowed:
         return (
-            f"an effect belongs to an accepted BLOCKER or WARNING, not to a "
-            f"{f.status} {f.grade}"
+            f"--not-assessable belongs to a BLOCKER or WARNING decided limit, "
+            f"not to a {f.status} {f.grade}"
         )
     try:
         effect_ids(f.effect)
@@ -1405,13 +1403,13 @@ def _effect_problem(f: Finding) -> str | None:
 
 
 def _hold_effect(decided: Finding) -> None:
-    """An accepted BLOCKER names its effect, an accepted WARNING may, nothing
+    """A BLOCKER decided `limit` carries its effect, a WARNING may, nothing
     else does — or FindingsError: EffectFormError for an effect owed and
     missing or not in EFFECT_FORM."""
     if decided.effect_owed and not decided.effect:
         raise EffectFormError(
-            "an accepted BLOCKER owes its effect on the verdicts — "
-            f"--effect {EFFECT_FORM}: does this run still judge the promise?"
+            "a BLOCKER decided limit owes its effect on the verdicts — "
+            f"{EFFECT_FORM}: does this run still judge the promise?"
         )
     problem = _effect_problem(decided)
     if problem:

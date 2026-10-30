@@ -247,7 +247,7 @@ class Gate(_Areas):
         self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         (gap,) = self.gaps()
         self.assertIn("its predecessor's BLOCKER is still open", gap)
-        self.assertIn(f'--decide 1 deferred "replaced by {B_ID}: <why>"', gap)
+        self.assertIn(f'--decide 1 deferred --why "replaced by {B_ID}: <why>"', gap)
         findings.write_decision(
             record, 1, "deferred", f"replaced by {B_ID}: the leak is its question"
         )

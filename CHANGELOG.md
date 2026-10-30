@@ -57,6 +57,20 @@ pins (`requirements.txt` / `requirements.lock`).
   questions) is unchanged: a rule's name is cited across repositories, and
   renaming it is a rollout of its own.
 
+- **Decisions are named by their consequence.** `labkit-audit AREA
+  --decide N STATUS --why "REASON" [--not-assessable IDS]`: `fixed` (the
+  fault is repaired; a new measurement and a follow-up audit check it),
+  `limit` (the finding is true and the number carries it as a Limit line —
+  was `accepted`), `false-positive` (the auditor misread; a BLOCKER's needs
+  a second auditor — was `dismissed`), `deferred` (unchanged in this
+  step). The reason is a named option (`--why`), never positional;
+  `--effect` is gone: a `limit` on a BLOCKER or WARNING records `stands`
+  itself, and `--not-assessable criterion-1` names the promises the run
+  does not judge (no review owed). A WARNING decided `limit` now always
+  reaches the result as a Limit line, and its missing review warns. Audit
+  records with `status = "accepted"` or `"dismissed"` no longer read —
+  0.103.0 reads them.
+
 - **A registered output is the file the run recorded, and the deliverable
   of an external task is a registered output of the answering run.**
   `finalize` (and `report-check` through it) holds every file in the

@@ -73,7 +73,7 @@ class Area:
             shown_sha="0" * 12,
         )
         findings.write_decision(
-            rec, 1, "accepted", "the leak stays", "criterion-1 not assessable"
+            rec, 1, "limit", "the leak stays", "criterion-1 not assessable"
         )
         findings.write_failed(
             self.area,

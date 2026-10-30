@@ -62,7 +62,7 @@ class Decide(unittest.TestCase):
     def test_an_accepted_blocker_owes_its_effect(self):
         before = self.path.read_bytes()
         with self.assertRaisesRegex(findings.FindingsError, "owes its effect"):
-            findings.write_decision(self.path, 1, "accepted", "kept")
+            findings.write_decision(self.path, 1, "limit", "kept")
         self.assertEqual(self.path.read_bytes(), before)
 
     def test_a_refusal_of_the_effects_form_is_told_apart(self):
@@ -73,38 +73,38 @@ class Decide(unittest.TestCase):
                 self.subTest(effect=effect),
                 self.assertRaises(findings.EffectFormError),
             ):
-                findings.write_decision(self.path, 1, "accepted", "kept", effect)
+                findings.write_decision(self.path, 1, "limit", "kept", effect)
         with self.assertRaises(findings.FindingsError) as caught:
-            findings.write_decision(self.path, 1, "dismissed", "no", "stands")
+            findings.write_decision(self.path, 1, "false-positive", "no", "stands")
         self.assertNotIsInstance(caught.exception, findings.EffectFormError)
 
     def test_the_effect_is_stored_and_read_back(self):
         rec = findings.write_decision(
-            self.path, 1, "accepted", "kept", "criterion-1 not assessable"
+            self.path, 1, "limit", "kept", "criterion-1 not assessable"
         )
         self.assertEqual(rec.findings[0].effect, "criterion-1 not assessable")
         self.assertEqual(rec.limits(), [(1, rec.findings[0])])
-        again = findings.write_decision(self.path, 1, "accepted", "kept", "stands")
+        again = findings.write_decision(self.path, 1, "limit", "kept", "stands")
         self.assertEqual(again.findings[0].effect, "stands")
         self.assertEqual(self.path.read_text(encoding="utf-8").count("effect ="), 1)
 
     def test_an_accepted_warning_may_name_an_effect_and_is_then_a_limit(self):
-        rec = findings.write_decision(self.path, 2, "accepted", "a cue", "stands")
+        rec = findings.write_decision(self.path, 2, "limit", "a cue", "stands")
         self.assertEqual(rec.findings[1].effect, "stands")
         self.assertEqual([n for n, _ in rec.limits()], [2])  # the BLOCKER is still open
 
     def test_an_accepted_warning_without_an_effect_is_no_limit(self):
-        rec = findings.write_decision(self.path, 2, "accepted", "noted")
+        rec = findings.write_decision(self.path, 2, "limit", "noted")
         self.assertEqual(rec.findings[1].effect, "")
         self.assertEqual(rec.limits(), [])  # the BLOCKER is still open
 
     def test_no_effect_on_anything_but_an_accepted_blocker_or_warning(self):
         with self.assertRaisesRegex(
-            findings.FindingsError, "accepted BLOCKER or WARNING"
+            findings.FindingsError, "BLOCKER or WARNING decided limit"
         ):
-            findings.write_decision(self.path, 1, "dismissed", "no", "stands")
+            findings.write_decision(self.path, 1, "false-positive", "no", "stands")
         with self.assertRaisesRegex(
-            findings.FindingsError, "accepted BLOCKER or WARNING"
+            findings.FindingsError, "BLOCKER or WARNING decided limit"
         ):
             findings.write_decision(self.path, 2, "deferred", "later", "stands")
 
@@ -127,7 +127,7 @@ class Decide(unittest.TestCase):
 
     def test_a_hand_written_effect_is_held_on_reading(self):
         text = self.path.read_text(encoding="utf-8").replace(
-            'status = "open"\nreason = ""', 'status = "accepted"\nreason = "k"\neffect = "criterion-1 not met"', 1
+            'status = "open"\nreason = ""', 'status = "limit"\nreason = "k"\neffect = "criterion-1 not met"', 1
         )  # fmt: skip
         self.path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "finding 1: effect"):
@@ -136,7 +136,7 @@ class Decide(unittest.TestCase):
     def test_an_accepted_blocker_decided_by_hand_without_effect_reads(self):
         """report-check asks for the effect; the record itself stays readable."""
         text = self.path.read_text(encoding="utf-8").replace(
-            'status = "open"\nreason = ""', 'status = "accepted"\nreason = "k"', 1
+            'status = "open"\nreason = ""', 'status = "limit"\nreason = "k"', 1
         )
         self.path.write_text(text, encoding="utf-8")
         self.assertEqual(findings.read(self.path).findings[0].effect, "")

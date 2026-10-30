@@ -130,7 +130,7 @@ def reviewable(
     follow-up did not find it resolved) now `dismissed` or `deferred` —
     report-check holds it until a review upholds that
     (`report_check.followup_findings`) —, and a BLOCKER `dismissed`, its
-    first dismissal too (`findings.dismissed_blocker`). `not assessable`
+    first dismissal too (`findings.false_positive_blocker`). `not assessable`
     leaves the promise unjudged and claims nothing to review."""
     stands = {n for n, f in record.limits() if f.effect == EFFECT_STANDS}
     return [
@@ -138,7 +138,7 @@ def reviewable(
         for n, f in enumerate(record.findings, 1)
         if n in stands
         or findings.carried_and_closed(f)
-        or findings.dismissed_blocker(f)
+        or findings.false_positive_blocker(f)
         or (
             f.status in findings.CLOSING
             and reviews.once_not_upheld(record, n, found) is not None
@@ -223,7 +223,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     decided = reviewable(record, found)
     if not decided:
         raise AuditError(
-            f"{record.path.name}: no accepted finding with effect `stands`, no "
+            f"{record.path.name}: no finding decided `limit` with effect `stands`, no "
             f"finding closed after a review did not uphold it and no carried finding "
             f"closed dismissed or deferred — nothing to review",
             fix=f"`{audit_command(area, '--findings', protocol=protocol)}` "
@@ -454,8 +454,8 @@ def rejected_way(promised: bool) -> str:
     promise, PROMISED — else decide it `deferred` and hand over) or fix the
     fault; never another audit that settles nothing."""
     routes = (
-        'limit the claim (the Conclusion), change the effect (`--decide N accepted "REASON" '
-        '--effect "<ID> not assessable"`) or fix the fault'
+        "limit the claim (the Conclusion), change the effect (`--decide N limit "
+        '--why "REASON" --not-assessable <ID>`) or fix the fault'
         if promised
         else "limit the claim (the Conclusion) or fix the fault — or decide it "
         "`deferred` and hand over (no promise is registered to leave not "

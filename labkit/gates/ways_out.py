@@ -109,8 +109,8 @@ WAYS_OUT = (
     ),
     (
         UNJUDGED_PROMISE,
-        "a fault you cannot fix leaves a promise unjudged: decide it accepted "
-        'with `--effect "<ID> not assessable"`; the criterion then reads not '
+        "a fault you cannot fix leaves a promise unjudged: decide it `limit` "
+        "with `--not-assessable <ID>`; the criterion then reads not "
         "assessable — report the measured numbers as description, no verdict",
     ),
     (
@@ -165,8 +165,8 @@ WAYS_OUT_SHORT = {
         "move the bar"
     ),
     UNJUDGED_PROMISE: (
-        'a fault you cannot fix → `accepted` with `--effect "<ID> not '
-        'assessable"`; the numbers stay description'
+        "a fault you cannot fix → `limit` with `--not-assessable <ID>`; the "
+        "numbers stay description"
     ),
     "an invalid registration": (
         "the question cannot be answered as written: it is not repaired in place "
@@ -188,8 +188,8 @@ WAYS_OUT_SHORT = {
 }
 #: the one-line form of NO_PROMISE_ROUTE
 NO_PROMISE_SHORT = (
-    "a fault you cannot fix, no promise registered → `accepted --effect stands` "
-    "with the limit named, or `deferred` and hand over"
+    "a fault you cannot fix, no promise registered → `limit` with the limit "
+    "named, or `deferred` and hand over"
 )
 #: where every way out stands in full
 WAYS_OUT_IN_FULL = 'each in full: AGENTS.md, "When you are stuck"'
@@ -202,9 +202,8 @@ WAYS_OUT_IN_FULL = 'each in full: AGENTS.md, "When you are stuck"'
 NO_PROMISE_ROUTE = (
     "this protocol registers no promise, so no effect leaves one not "
     "assessable (`--decide` refuses every id): a fault you cannot fix limits "
-    "the claim — accept it with `--effect stands`, the limit named in the "
-    "Conclusion (a second auditor must uphold it) — or decide it `deferred` "
-    "and hand over"
+    "the claim — decide it `limit`, the limit named in the Conclusion (a "
+    "second auditor must uphold it) — or decide it `deferred` and hand over"
 )
 
 

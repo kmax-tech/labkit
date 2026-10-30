@@ -495,7 +495,9 @@ class TestAuditFindings(unittest.TestCase):
                 ln for ln in out.splitlines() if "BLOCKER: preflight_audit:" in ln
             ]
             self.assertIn(f"1 finding(s) of {stale.name} still `open`", line)
-            self.assertIn(f'--decide 1 STATUS "<why>" --record {stale.name}', line)
+            self.assertIn(
+                f'--decide 1 STATUS --why "<why>" --record {stale.name}', line
+            )
             self.assertNotIn("audit this code and promise block", line)
             other = findings.write(
                 area,
@@ -525,7 +527,7 @@ class TestAuditFindings(unittest.TestCase):
             self.assertEqual(code, 0, out)
             self.assertIn("all decided (1 audit(s) recorded)", out)
             path.write_text(
-                text.replace('status = "fixed"', 'status = "accepted"')
+                text.replace('status = "fixed"', 'status = "limit"')
             )  # no reason
             code, out = _run_preflight(area)
             self.assertEqual(code, 1, out)

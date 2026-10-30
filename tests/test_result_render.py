@@ -60,7 +60,7 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
         registration=registration_of(area),
     )
     if limit_reason is not None:
-        findings.write_decision(path, 1, "accepted", limit_reason, "stands")
+        findings.write_decision(path, 1, "limit", limit_reason, "stands")
     return area, protocol
 
 
@@ -185,7 +185,7 @@ class ReportableVerdicts(unittest.TestCase):
         area, protocol = area_with_record(limit_reason=None)
         rec = findings.area_records(area)[0]
         findings.write_decision(
-            rec.path, 1, "accepted", "one draw", "quality-check-2 not assessable"
+            rec.path, 1, "limit", "one draw", "quality-check-2 not assessable"
         )
         text = protocol.read_text(encoding="utf-8")
         r = result_render.rendering(area, text, area / "runs" / RUN)

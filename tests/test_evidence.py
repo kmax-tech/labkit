@@ -67,7 +67,7 @@ class Rules(unittest.TestCase):
     def test_a_decision_leaves_the_record_as_written_besides_its_lines(self):
         path = _record(self.area)
         before = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "accepted", "noted", "stands")
+        findings.write_decision(path, 1, "limit", "noted", "stands")
         after = path.read_text(encoding="utf-8")
         self.assertNotEqual(before, after)
         self.assertFalse(evidence.record_changed(before, after))
@@ -130,7 +130,7 @@ class Committed(unittest.TestCase):
         _git(self.root, "commit", "-qm", "evidence")
 
     def test_a_decision_through_decide_is_no_change_in_tree_or_index(self):
-        findings.write_decision(self.record, 1, "accepted", "noted", "stands")
+        findings.write_decision(self.record, 1, "limit", "noted", "stands")
         self.assertEqual(evidence.changes(self.area), [])
         _git(self.root, "add", "-A")
         self.assertEqual(evidence.changes(self.area, staged=True), [])
@@ -275,7 +275,7 @@ class Session(unittest.TestCase):
         self.assertEqual(rc, 0, err)
 
     def test_a_decision_committed_in_the_session_passes(self):
-        findings.write_decision(self.record, 1, "accepted", "noted", "stands")
+        findings.write_decision(self.record, 1, "limit", "noted", "stands")
         self._commit("decide")
         rc, err = self._stop()
         self.assertEqual(rc, 0, err)
@@ -349,7 +349,7 @@ class Told(unittest.TestCase):
         self.assertIn(f"runs/{CLOSED}: the closed run's metrics.json (changed)", ctx)
 
     def test_a_decision_and_a_new_run_are_silent(self):
-        findings.write_decision(self.record, 1, "accepted", "noted", "stands")
+        findings.write_decision(self.record, 1, "limit", "noted", "stands")
         _run_dir(self.area, OPEN, closed=False)
         self.assertEqual(self._told(), "")
 
