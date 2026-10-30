@@ -1752,6 +1752,19 @@ Notiert, nicht geplant:
    vLLM-Version, Sampling) in attempts.jsonl. Auf 80 GB passt auch
    gpt-oss-120b — Achse „Agentenstärke" mit 20b, 120b, Haiku. Mac-Seite
    baut die Sitzung auf Ansage; gebraucht werden Port und Modellname.
+   **Vorbereitet (2026-10-30 vormittags):** Server auf gammaweb05 (A100
+   40 GB, also nur 20b; vLLM 0.32.0, Port 31726, Schlüssel), vom Proxy
+   als `gammaweb05.medien.uni-weimar.de` erreichbar, kein Tunnel.
+   agentsandbox-Branch `codex-agent` (Worktree `agentsandbox-codex`, sieben
+   Commits bis 2e742e1): Upstream und Allow-Liste je Agent, Proxy mit
+   http-Upstream und Responses-Verbrauch, `Codex`-Adapter mit Wrapper,
+   Codex 0.166.0 im Basis-Image, nur Funktionswerkzeuge (vLLM weist
+   `multi_agent`-Namespace und `web_search` ab). Pilot-venv
+   `labkit-paper-main/.venv-pilot` (nicht das geteilte). Images
+   labkit-sandbox:4ef8b52f2332, agentsandbox-proxy:ea9344c872a8. Läufer
+   und Vertrag: `docs/usability/2026-10-30-gptoss-pilot/`. Mini-Versuch
+   durch die ganze Kette in 8 s. Offen: Gewichte-Revision (Cluster-Log),
+   Selbsttest, dann Stufe A.
 
 
 Die Messlatte trennt zwei Fragen: Rechnet und bindet labkit dieselben
