@@ -2540,34 +2540,35 @@ Danach, gleicher Abend, gleicher Branch (je ein Commit, Hook grün,
 
 Als Nächstes, in dieser Reihenfolge:
 1. `main` auf `id-words` vorspulen (Kommando im Chat), Release 0.104.0
-   (`just release 0.104.0`), Worktrees `id-words` und `interp-arms`
-   entfernen.
-2. Schritt 5 („ehrlicher Stopp schuldet die Zahl“) wartet auf eine
-   Entscheidung: er widerspricht dem bisherigen Entwurf — die Übergabe
-   nennt bewusst keine Lauf-IDs (`handovers._message`), und Zahlen in oder
-   neben einem Diskussionsblock meldet `numbers_beside_discussed` als
-   Hinweis, weil sie als Ergebnis gelesen werden. Erster Vorschlag war
-   eine erzeugte Zeile „Measured: …“ aus `metrics.json`. Einwand im Review
-   (2026-10-30): sie verbreitet gerade die Zahl, deren Berechnung noch
-   beanstandet sein kann. Gegenvorschlag: ein ehrlicher Stopp schuldet den
-   nachvollziehbaren Stand, nicht die Zahl — kein Lauf → warum nicht
-   gemessen; Lauf ohne brauchbare Metriken → Laufbezug und Fehler; Metriken
-   da, Freigabe offen → Evidenzverweis, offene Befunde, ausdrücklich keine
-   Freigabe; gültiges Ergebnis mit verfehltem Kriterium → regulär
-   übernehmen. Zuerst den Evidenzverweis verpflichtend machen; Zahlen nur
-   mit eigenem, gekennzeichnetem und geprüftem Formatvertrag.
-3. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
+   (`just release 0.104.0`), Push mit Tag, Worktrees `id-words` und
+   `interp-arms` entfernen (vorher `git status` in `interp-arms`).
+2. Injektion auf den neuen Gates wiederholen (sieben saubere Zustände) —
+   die Reihenfolge oben (Vorher-Nachher-Runde, Punkt 2) stellt sie vor die
+   Runde.
+3. Kalte Runde 21/60 alt gegen neu: gleicher Praxisfall, gleicher Vertrag
+   und gleiche Bewertung wie Runde 1; Haiku, drei Versuche je Zelle. Maß:
+   Aufgabe korrekt abgeschlossen, Ablehnungen sinnvoll bearbeitet,
+   Übergabe nur bei tatsächlichem Hindernis (der Übergabe-Eintrag sagt
+   jetzt `adoptable`, wenn nichts die Übernahme hielt), dazu gebundene
+   Zahlen, Eintritt, geschlossene Befunde, Zeit bis zur Adoption,
+   Überanspruch unverändert null. Braucht den gepushten Tag (das Image
+   installiert ihn) und API-Schlüssel; ein halber Tag. Die Wortzahl der
+   `AGENTS.md` belegt nichts, erst diese Runde.
+4. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
    in den Gate-Meldungen noch nicht (dort weiter: answering run, intent
    key, repeat cost …).
-4. Kalte Runde 21/60 alt gegen neu — ein Experiment, startet auf Ansage.
-   Die Wortzahl belegt nichts; erst derselbe Praxisfall wie zuvor zeigt,
-   ob Agenten mit der kurzen `AGENTS.md` zuverlässiger arbeiten.
-5. Die Gate-Meldungen nennen für die Übernahme weiter `protocol-fill …
-   --from-run` (`repo.adopt_command`, auch in der Schrittliste von
-   `labkit-init exp` und im Bereichs-README), `AGENTS.md` und
-   `labkit-next` nennen `labkit-adopt`. Beides funktioniert; vereinheitlichen
-   heißt `adopt_command` umstellen, und `tell_adoption_order` erkennt die
-   Übernahme heute am `--from-run`.
+
+Danach, nach dem zweiten Review (je ein Commit, 2.553 Tests):
+- Schritt 5 neu gefasst und gebaut: ein ehrlicher Stopp schuldet den
+  nachvollziehbaren Stand, nicht die Zahl. Der Übergabe-Eintrag (Schema 2,
+  Breaking) hält den Lauf und seinen Stand fest — `not-measured`,
+  `unusable`, `held` mit den Blockern, `adoptable` mit Warnung —, der
+  Berichtsblock nur den Stand ohne Lauf-ID; eine Messung nach der Übergabe
+  beendet ihre Anerkennung. Keine Zahlen in der Übergabe.
+- `labkit-adopt` ist der Übernahmebefehl in allen Meldungen
+  (`repo.adopt_command`, `repo.ADOPT_TOOL` in der Reihenfolge-Notiz);
+  `--from-run` und `--into` bleiben für gezielte Reparaturen.
+- Eigener Test für einen abgelehnten Schritt 3 von `labkit-adopt`.
 
 Nach dem Review (gleicher Abend, je ein Commit, 2.544 Tests): Übergabe an
 das Protokoll gebunden (`handovers.protocol_handed_over`);
