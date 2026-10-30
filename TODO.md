@@ -1811,6 +1811,15 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+- **Standard-Check stürzt an einem nicht parsebaren Messskript ab (2026-10-30,
+  gpt-oss/Qwen-Pilot, Qwen Labor-21):** `finalize.check_open_fields` →
+  `readme_check.readme_route` liest das Skript mit `ast.parse`; ein
+  `IndentationError` (der Agent hatte mit `sed` editiert) wird zum Traceback
+  statt zum BLOCKER mit Datei und Zeile. Garantierte Schicht, Fail loud heißt
+  Satz, nicht Stack. Zwilling: ein parsebares Skript bleibt unberührt.
+  Evidenz: `labkit-evidence/usability/2026-10-30-gptoss-pilot/qwen/store-B/
+  qwen-B-t21-labkit/`.
+
 - **Runde 2 des labkit-Piloten (labkit-paper Bereich 15, labkit `72507d0`,
   `repeat_cost = high`, 2026-10-28): neun Mängel und die Steuerung der
   Reparatur.** Belege in labkit-paper
