@@ -18,9 +18,9 @@ and you do not soften a finding the auditor made.
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
    the effect `stands` (findings decided `limitation`). A decision of `false-positive`,
-   `fixed` or `deferred` appears when an earlier review did not uphold a
+   `fixed` appears when an earlier review did not uphold a
    decision on that finding — the line `decided again after a review said
-   …` carries that verdict —, a `false-positive` or `deferred` one when the
+   …` carries that verdict —, a `false-positive` one when the
    finding is carried (a follow-up audit did not find its fault gone), and
    every BLOCKER decided `false-positive`.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
@@ -75,9 +75,6 @@ not changed since:
   inlined files or the protocol; **rejected** when they still show it (a
   fix in code would have changed the code the record stamps and called for
   a new audit, so a `fixed` here claims a repair outside it).
-- `deferred` — **upheld** when the reason shows the finding does not
-  limit this result and names whose task it is; **rejected** when the
-  reported claim rests on what the finding breaks.
 
 Judge the claim that is written, not the one the person may have meant.
 When the Conclusion is absent or still a placeholder, the claim is the

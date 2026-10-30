@@ -587,14 +587,14 @@ class TestAuditFindings(unittest.TestCase):
             self.assertEqual(code, 1, out)
             self.assertIn("saw the promise block", out)
 
-    def test_deferred_in_another_area_is_a_reminder_not_a_count(self):
+    def test_an_open_finding_handed_over_elsewhere_is_a_reminder_not_a_count(self):
         with _area_dir() as d:
             root = Path(d) / "experiments"
             (root / "17-here").mkdir(parents=True)
             area, _ = _area(root / "17-here")
             other = root / "16-there"
             other.mkdir()
-            path = findings.write(
+            findings.write(
                 other,
                 "preflight",
                 "opus",
@@ -604,20 +604,12 @@ class TestAuditFindings(unittest.TestCase):
                 self.ROW,
                 registration=registration_of(other),
             )
-            path.write_text(
-                path.read_text()
-                .replace('status = "open"', 'status = "deferred"')
-                .replace('reason = ""', 'reason = "own task"')
-            )
+            # an open finding elsewhere is that area's work in progress: not told
             code, out = _run_preflight(area)
             self.assertEqual(code, 0, out)
-            self.assertIn("deferred in 16-there", out)
-            self.assertIn("set aside for later work", out)
-            self.assertIn("own task", out)
-            self.assertIn("1 deferred finding(s) elsewhere", out)
-            # a handover of that area that lists the finding tells it apart:
-            # the decision stays deferred, the area ended without a result
-            # (audit 2026-10-27, second, left open, settled the same day)
+            self.assertNotIn("16-there", out)
+            # a handover of that area that records it sets it aside: told,
+            # the area ended without a result (audit 2026-10-27, second)
             (record,) = findings.area_records(other)
             handovers.write_record(
                 handovers.new_path(other),
@@ -636,15 +628,14 @@ class TestAuditFindings(unittest.TestCase):
             )
             code, over = _run_preflight(area)
             self.assertEqual(code, 0, over)
+            self.assertIn("open in 16-there", over)
             self.assertIn("handed over unresolved — no result released", over)
-            self.assertNotIn("set aside for later work:", over)
-            self.assertIn("(0 set aside for later, 1 handed over unresolved)", over)
-            # a handover record that does not read cannot tell either way: it
-            # was told "set aside" (audit 2026-10-27, third, K5)
+            self.assertIn("1 open finding(s) handed over elsewhere", over)
+            # a handover record that does not read warns and tells nothing
             (other / "audits" / "handovers" / "handover-broken.json").write_text("{}")
             _, unread = _run_preflight(area)
-            self.assertIn("handed over or set aside cannot be told", unread)
-            self.assertNotIn("set aside for later work:", unread)
+            self.assertIn("WARNING", unread)
+            self.assertNotIn("open in 16-there", unread)
             # a reminder, not a count: the summary line is the same without it
             shutil.rmtree(other / "audits")
             _, alone = _run_preflight(area)

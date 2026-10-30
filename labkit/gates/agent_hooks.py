@@ -108,9 +108,10 @@ stop
     under it, git status) to its audit records: a BLOCKER nobody decided,
     or audit evidence gone or unreadable → exit 2, naming file and finding
     (`undecided_blockers`); a current handover of the area acknowledges
-    the loss, never the BLOCKER, and one that no longer matches says why.
+    the loss and the open BLOCKERs it records, and one that no longer
+    matches says why.
     The pre-commit runs `claude-hook undecided` on the staged paths for the
-    same rule. Deciding is cheap and visible: `accepted` with a reason is
+    same rule. Deciding is cheap and visible: `limitation` with a reason is
     a documented deviation, which is what the gate is for; a hand-written
     `fixed` is a lie the next audit sees (LAB-015 Preflight audit before freezing).
 
@@ -1108,16 +1109,17 @@ def session_evidence(
 
 #: the way out the stop and the pre-commit print for `undecided_blockers`
 UNDECIDED_WAY = (
-    f"decide each BLOCKER ({findings.DECIDED_LIST}; accepted, deferred and "
-    "dismissed owe a reason) with the `--decide` command `labkit-audit <AREA> "
+    f"decide each BLOCKER ({findings.DECIDED_LIST}; limitation and "
+    "false-positive owe a reason) with the `--decide` command `labkit-audit <AREA> "
     "--findings` prints for it (AREA: the path each line starts with), never by "
     "rewriting or deleting the record — one a later change made outdated "
     "stays and is decided too, `fixed` naming the change where it repaired "
     "the fault; restore evidence that is gone or changed (a line "
     "that names its `git checkout` restores from git); when the area cannot "
     "be finished, hand it over with the `protocol-fill <PROTOCOL> --handover` "
-    "command `--findings` prints (it acknowledges the loss at the stop and the "
-    "commit only, never an open BLOCKER nor a change git can undo)"
+    "command `--findings` prints: the BLOCKERs stay open and the handover "
+    "records them, and while it matches the area the stop and the commit read "
+    "it instead of holding them (never a change git can undo)"
 )
 
 
@@ -1163,9 +1165,10 @@ def undecided_state(
     STAGED (the pre-commit): the audit records with their decisions and
     the attempt journal as the index holds them (`attempts.area_integrity`)
     — what the commit carries, not the tree.
-    A current handover may acknowledge integrity gaps for this stop/commit
-    alone (`handovers.acknowledgement`); it never dismisses readable open
-    BLOCKERs. At commit, its audit evidence must also match the working
+    A current handover acknowledges integrity gaps and the open BLOCKERs it
+    records for this stop/commit alone (`handovers.acknowledgement`): it
+    binds the audit files by blob, so a finding changed or added after it
+    is held again. It decides nothing — the findings stay `open`. At commit, its audit evidence must also match the working
     tree, so new unstaged evidence cannot borrow an earlier
     acknowledgement. Where the gaps stand and a handover record of the area
     does not count, a line per record says why (`handovers.mismatch`).
@@ -1201,7 +1204,16 @@ def undecided_state(
                 f"{shown}: the handover {name} no longer acknowledges this: {why}"
                 for name, why in handed_over.refused.items()
             ]
-        out += [f"{shown}: {u.line}" for u in findings.open_blockers(state.records)]
+        open_lines = [
+            f"{shown}: {u.line}" for u in findings.open_blockers(state.records)
+        ]
+        if handed_over.valid and open_lines:
+            acknowledged.append(
+                f"{shown}: a handover records these open BLOCKERs — the protocol "
+                f"ends without a result: " + "; ".join(open_lines)
+            )
+        else:
+            out += open_lines
         # undone from git, so never a handover's to acknowledge
         changed = evidence.changes(area, staged=staged) + evidence.ignored(area)
         out += [f"{shown}: {line}" for line in changed]

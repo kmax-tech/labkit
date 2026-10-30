@@ -23,8 +23,8 @@ area, one file per audit:
     text = "BLOCKER · scripts/01_measure.py:42 · … · LAB-038 What the prompt demands · …"
                          # the finding whole: its grade line and the lines the
                          # auditor wrote below it, joined by line breaks (\n)
-    status = "open"      # open | fixed | limit | false-positive | deferred
-    reason = ""          # owed for limit, false-positive and deferred
+    status = "open"      # open | fixed | limitation | false-positive
+    reason = ""          # owed for limitation and false-positive
     # effect = "stands"  — a BLOCKER or WARNING decided limitation: see EFFECT
 
 The person decides each finding with `labkit-audit AREA --decide N STATUS
@@ -71,14 +71,17 @@ promise rewritten after the audit, or a later run under the same code,
 kept the old audit valid (review 2026-10-18). `preflight` reads every
 findings file of the area: a finding still `open`
 is a warning before the freeze and a blocker once `frozen = true`
-(LAB-015 Preflight audit before freezing: every finding is decided), a `deferred`
-finding anywhere in the repo is printed as a reminder and never counted.
+(LAB-015 Preflight audit before freezing: every finding is decided). A
+finding nobody can settle stays `open`: a handover of its protocol records
+it and ends the protocol without a result, and the gates read the handover
+(`handovers.acknowledgement`); open findings a handover elsewhere in the
+repo lists are printed as a reminder and never counted.
 
 Why (uniagent, 2026-10-12, 23 preflight and 21 analysis audits read by
 hand): a finding deferred in area 16 as "its own task" bit in area 17; the
 same finding was accepted three times in three areas; 13 of 44 audit lines
 end in "accepted/dismissed" and what they decided is lost in a 400-character
-protocol line. With the findings as data the deferred ones stay visible and
+protocol line. With the findings as data the unsettled ones stay visible and
 an audit's yield (fixed / limitation / false-positive per class) can be counted
 instead of read.
 
@@ -147,20 +150,20 @@ ATTEMPT_TIMEOUT_S = 900
 #: (`stopped_attempt`): each further try costs the same and was stopped
 #: again in the fit probes
 FAILED_CAUSES = ("unavailable", "unproven")
-STATUSES = ("open", "fixed", "limitation", "false-positive", "deferred")
-REASON_OWED = ("limitation", "false-positive", "deferred")
+STATUSES = ("open", "fixed", "limitation", "false-positive")
+REASON_OWED = ("limitation", "false-positive")
 #: the statuses under which a finding leaves the result's limits without
 #: a Limitation line — the fault removed, put off, or not a fault. After a
 #: review did not uphold a decision on the finding, none of them settles
 #: it alone (`reviews.once_not_upheld`, `report_check.review_findings`)
-CLOSING = ("fixed", "deferred", "false-positive")
+CLOSING = ("fixed", "false-positive")
 #: every status but `open`: what deciding a finding sets
 DECIDED = tuple(s for s in STATUSES if s != "open")
-#: the decided statuses as a step names them: "fixed / limitation / false-positive / deferred"
+#: the decided statuses as a step names them: "fixed / limitation / false-positive"
 DECIDED_LIST = " / ".join(DECIDED)
 #: a carried finding (`carries`: a follow-up did not find its fault gone)
 #: closed with one of these owes a decision review before the number leaves
-CARRIED_CLOSING = ("false-positive", "deferred")
+CARRIED_CLOSING = ("false-positive",)
 #: a limit's effect on the verdicts: they stand with the limit, or the run
 #: judges the named promises not at all (`--not-assessable`)
 EFFECT_STANDS = "stands"
@@ -181,7 +184,7 @@ class FindingsError(ValueError):
 
 
 class EffectFormError(FindingsError):
-    """A decision's effect missing where it is owed (an accepted BLOCKER) or
+    """A decision's effect missing where it is owed (a BLOCKER decided limitation) or
     not in EFFECT_FORM — the refusals whose example is a promise id, which
     `labkit-audit --decide` completes for a protocol without promises."""
 
@@ -230,7 +233,7 @@ class Finding:
 
 
 #: an analysis audit's verdict on an earlier decided BLOCKER (fixed,
-#: limit, false-positive or deferred):
+#: limitation or false-positive):
 #: the fault is gone in the files and rows it was shown, still there, or
 #: not to be judged from them (no diagnostic shown that could tell)
 FIX_VERDICTS = ("resolved", "unresolved", "not_assessable")
@@ -367,10 +370,9 @@ def decision_entails(
     absent review warns. `limitation` with `<ids> not assessable`: the run does
     not judge those promises, and no review is owed; a NOTE's limitation is
     recorded and limits nothing in the report (`Record.limits`).
-    `deferred`: unresolved and carried; nothing but a new decision
-    releases it, and the handover ends the protocol without the number.
-    `false-positive`: the auditor misread this state; the reason names the
-    counter-evidence, and a BLOCKER's or a carried finding's is held by
+    `false-positive`: the finding does not apply to the code and run as
+    audited; the reason names the counter-evidence, and a BLOCKER's or a
+    carried finding's is held by
     the review (`false_positive_blocker`, `carried_and_closed`). The old
     words were misread — `dismissed` for "I will fix it", `deferred` for
     "no longer relevant", `accepted` for "repaired" (SAB round 1,
@@ -418,12 +420,6 @@ def decision_entails(
         return (
             "limitation: the finding holds and is recorded; a NOTE limits nothing in "
             "the report"
-        )
-    if f.status == "deferred":
-        return (
-            "deferred: unresolved and carried — deferring releases nothing; the "
-            "protocol ends without this number through the handover unless the "
-            "finding is decided again"
         )
     if f.status == "false-positive":
         held = (
@@ -581,11 +577,6 @@ class Record:
         """The findings nobody has decided yet."""
         return [f for f in self.findings if f.status == "open"]
 
-    @property
-    def deferred(self) -> list[Finding]:
-        """The findings put off as somebody's later task."""
-        return [f for f in self.findings if f.status == "deferred"]
-
     def limits(self) -> list[tuple[int, Finding]]:
         """(number, finding) of every finding that is a limit of the result:
         a BLOCKER decided `limitation` (its effect owed) and a WARNING decided
@@ -663,12 +654,13 @@ def open_findings(
         claude-hook stop / undecided every mode, the    a BLOCKER only — the hook says what the commit would be
                                      areas the session  refused for and nags for nothing less (`open_blockers`)
                                      touched
-        protocol-fill --handover     every mode         a BLOCKER refuses the handover: decided first, `deferred`
-                                                        when it stays unresolved (`open_blockers`)
+        protocol-fill --handover     every mode         an open BLOCKER stays open: the handover records it
+                                                        (`handovers.remaining`) and the stop/commit read the
+                                                        handover instead of holding it
         labkit-audit --findings      every mode         a BLOCKER selects its record for the listing and prints
-                                                        its `deferred` command (`open_blockers`)
+                                                        the handover command beside its `--decide` (`open_blockers`)
         report-check, replacement    the predecessor's  a BLOCKER holds the replacement until it is decided
-                                     area               (`open_blockers`)
+                                     area               or a handover of the predecessor lists it (`open_blockers`)
         audit_coverage (report-check) the covering record  any grade: the record is not decided
 
     The differences are intended. A change to one row is a change to that
@@ -775,7 +767,7 @@ def false_positive_blocker(f: Finding) -> bool:
 
 def carried_and_closed(f: Finding) -> bool:
     """Is F a carried finding (`carries`: a follow-up did not find its fault
-    gone) closed `false-positive` or `deferred` (CARRIED_CLOSING)? Such a
+    gone) closed `false-positive` (CARRIED_CLOSING)? Such a
     decision owes a decision review before the number leaves — the one rule
     the gate (`report_check.followup_findings`) and the review
     (`decision_review.reviewable`) both read."""
@@ -2024,16 +2016,14 @@ def repo_records(experiments: Path) -> list[tuple[Path, Record]]:
     return out
 
 
-def deferred_elsewhere(
-    area: Path, experiments: Path
-) -> list[tuple[Path, Record, Finding]]:
-    """Deferred findings in other areas of the repo — "its own task" that
-    nobody picked up (uniagent 16 → 17, 2026-10-08)."""
+def open_elsewhere(area: Path, experiments: Path) -> list[tuple[Path, Record, Finding]]:
+    """Open findings in other areas of the repo — a finding left there as
+    "its own task" may be this area's (uniagent 16 → 17, 2026-10-08)."""
     return [
         (other, rec, f)
         for other, rec in repo_records(experiments)
         if other.resolve() != area.resolve()
-        for f in rec.deferred
+        for f in rec.open
     ]
 
 

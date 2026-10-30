@@ -284,11 +284,11 @@ class TheCall(unittest.TestCase):
                 self.assertEqual(rc, 1, out)
                 (line,) = [ln for ln in out.splitlines() if "  rejected: " in ln]
                 self.assertEqual("--not-assessable <ID>" in line, offered, line)
-                self.assertEqual("`deferred` and hand over" in line, not offered)
+                self.assertEqual("hand the protocol over" in line, not offered)
                 rc, _, err, sent = run_review(area, UPHELD)  # contested: refused
                 self.assertEqual((rc, sent), (2, []))
                 self.assertEqual("effect `not assessable`" in err, offered, err)
-                self.assertEqual("`deferred` and hand over" in err, not offered)
+                self.assertEqual("hand the protocol over" in err, not offered)
 
     def test_report_check_asks_a_limit_without_its_effect_to_decide_again(self):
         """A BLOCKER decided limitation without its effect (a record changed by
@@ -503,7 +503,7 @@ class TheCall(unittest.TestCase):
         found the evidence for a `stands` insufficient; the agent dismissed
         the finding with "insufficient evidence withdrawn" and the state
         was released — a dismissal needed no review. Now a finding a review
-        did not uphold is held under `dismissed`, `fixed` or `deferred`
+        did not uphold is held under `false-positive` or `fixed`
         until a review upholds the new decision; a filled-in reason alone
         releases nothing."""
         area, record = area_with(
@@ -511,7 +511,7 @@ class TheCall(unittest.TestCase):
         )
         rc, _, _, _ = run_review(area, INSUFFICIENT)
         self.assertEqual(rc, 1)
-        for status in ("false-positive", "fixed", "deferred"):
+        for status in ("fixed", "false-positive"):
             with self.subTest(status=status):
                 decide(record, 1, status, "insufficient evidence withdrawn")
                 code, out = gate(area)
@@ -525,7 +525,7 @@ class TheCall(unittest.TestCase):
         # the reviewer is asked about the new decision, and sees what it answers to
         rc, _, _, sent = run_review(area, UPHELD)
         self.assertEqual((rc, len(sent)), (0, 1))
-        self.assertIn("   status: deferred", sent[0])
+        self.assertIn("   status: false-positive", sent[0])
         self.assertIn("   reason: insufficient evidence withdrawn", sent[0])
         self.assertIn(
             "   decided again after a review said insufficient: the reason names "

@@ -210,8 +210,8 @@ The same block may hold the `[[promise]]` tables (labkit
   reasoning goes into the commit message.
 - **preflight_audit** — the file name of the decided preflight record
   under `audits/` (`<minute>-preflight.toml`, written by `labkit-audit
-  --mode preflight`; every finding in it fixed / limitation / false-positive /
-  deferred, with reason): the code-vs-intent audit after the instrument
+  --mode preflight`; every finding in it fixed / limitation / false-positive, with
+  reason): the code-vs-intent audit after the instrument
   check and before freezing. Empty until then, and at `low`.
 
 **Choosing the kind** — the kind follows the reported number, not the

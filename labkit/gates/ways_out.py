@@ -116,8 +116,8 @@ WAYS_OUT = (
     (
         "an invalid registration",
         "the registration cannot be answered as written: it is not repaired in "
-        f"place — {register_anew()}; decide the "
-        "earlier protocol's open BLOCKERs `deferred`, naming the new one. The "
+        f"place — {register_anew()}; hand the earlier protocol over "
+        "(`--handover`), its open BLOCKERs stay open in that record. The "
         "earlier verdict is rendered first; a new approach never turns an "
         "earlier miss into a pass",
     ),
@@ -144,8 +144,8 @@ WAYS_OUT = (
         "none of these",
         "a way out above cannot be taken because a prerequisite it names is "
         "missing — name which; a refusal alone is no reason, it names its next "
-        f"step: stop and {HANDOVER} — decide each readable open BLOCKER first "
-        "(deferred, with why it stays unresolved). Never hand-edit audit or "
+        f"step: stop and {HANDOVER} — the open BLOCKERs stay open and the "
+        "handover records them, with why it stops. Never hand-edit audit or "
         "run evidence; decisions use --decide, generated report blocks use "
         "protocol-fill; never --no-verify",
     ),
@@ -183,13 +183,13 @@ WAYS_OUT_SHORT = {
     ),
     "none of these": (
         "a way out cannot be taken for a missing prerequisite you can name → "
-        "open BLOCKERs `deferred`, then `--handover`; never `--no-verify`"
+        "`--handover`, which records the open BLOCKERs; never `--no-verify`"
     ),
 }
 #: the one-line form of NO_PROMISE_ROUTE
 NO_PROMISE_SHORT = (
     "a fault you cannot fix, no promise registered → `limitation` with the limit "
-    "named, or `deferred` and hand over"
+    "named, or hand over"
 )
 #: where every way out stands in full
 WAYS_OUT_IN_FULL = 'each in full: AGENTS.md, "When you are stuck"'
@@ -203,7 +203,7 @@ NO_PROMISE_ROUTE = (
     "this protocol registers no promise, so no effect leaves one not "
     "assessable (`--decide` refuses every id): a fault you cannot fix limits "
     "the claim — decide it `limitation`, the limit named in the Conclusion (a "
-    "second auditor must uphold it) — or decide it `deferred` and hand over"
+    "second auditor must uphold it) — or hand over"
 )
 
 

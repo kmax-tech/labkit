@@ -106,7 +106,7 @@ class Decide(unittest.TestCase):
         with self.assertRaisesRegex(
             findings.FindingsError, "BLOCKER or WARNING decided limitation"
         ):
-            findings.write_decision(self.path, 2, "deferred", "later", "stands")
+            findings.write_decision(self.path, 1, "fixed", "", "stands")
 
     def test_the_answer_note_counts_the_limits(self):
         """One note however many limits; three "read within" tails grew the

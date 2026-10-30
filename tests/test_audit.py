@@ -862,7 +862,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertNotIn("<ID> not assessable", out)
         self.assertIn(
             "no promise is registered to leave not assessable; a fault the claim "
-            "cannot be read within: decide it `deferred` and hand over",
+            "cannot be read within: hand the protocol over",
             out,
         )
         # the decision list prints the one-line form (WAYS_OUT_SHORT)
@@ -1100,12 +1100,6 @@ class DecisionListReachesThePerson(unittest.TestCase):
             f = findings.read(record).findings[0]
             self.assertEqual(
                 (f.status, f.reason, f.effect), ("limitation", "the limit", "stands")
-            )
-            self.assertIn(
-                "deferred: unresolved and carried — deferring releases nothing; the "
-                "protocol ends without this number through the handover unless the "
-                "finding is decided again",
-                decide("deferred", "no time"),
             )
             self.assertIn(
                 "false-positive: the auditor misread this state — the reason must "
@@ -1459,7 +1453,7 @@ class FixVerdicts(unittest.TestCase):
         self.assertEqual(self.new_records(area, earlier), [])
 
     def test_every_decided_blocker_is_shown_and_nothing_else(self):
-        """limit, false-positive, deferred are shown like fixed, with the
+        """limitation and false-positive are shown like fixed, with the
         decision; an open BLOCKER and a decided WARNING are not."""
         area, earlier = self.area()
         findings.write_decision(earlier, 1, "limitation", "kept", "stands")

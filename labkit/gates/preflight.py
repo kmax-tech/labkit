@@ -34,8 +34,8 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      the head names a preflight record, that record must be
                      one of the code and the promise block as they are now,
                      decided (`findings.audit_record_gap`, the same answer
-                     runlog's freeze gate gives). A `deferred` finding in another
-                     area of the repo is told as a reminder, never counted
+                     runlog's freeze gate gives). An open finding a handover
+                     of another area records is told as a reminder, never counted
   4. code-check      its automated checks (`code_check.code_findings`):
                      intent ids against the code, parser fixtures, prompt
                      drift, and the code the stamp cannot follow (sys.path
@@ -209,8 +209,8 @@ def preflight_area(
        counted.
     3. audit findings — every record of the area, always; the audit
        line's coverage only where the lane owes the freeze and the head
-       carries the line; the deferred findings elsewhere in the repo
-       always, as a reminder.
+       carries the line; the open findings handovers elsewhere in the
+       repo record, always, as a reminder.
     4. code-check — always.
     5. scope-sha — always; told.
     6. working tree — always.
@@ -257,12 +257,12 @@ def preflight_area(
         findings.note(line)
 
     # 3. audit findings — the records always; the line's coverage where the
-    #    lane owes the freeze and a line is stamped; deferred elsewhere always
+    #    lane owes the freeze and a line is stamped; handed over elsewhere always
     findings.header("audit findings")
     records = check_audit_records(findings, area, frozen=frozen)
     if lane.freeze and head.preflight_audit:
         check_audit_coverage(findings, area, head.preflight_audit, text, frozen=frozen)
-    check_deferred_elsewhere(findings, area, records)
+    check_handed_over_elsewhere(findings, area, records)
 
     # 4. code-check — always
     findings.header("code-check: intent ids, stamp coverage")
@@ -459,54 +459,48 @@ def check_audit_coverage(
         )
 
 
-def check_deferred_elsewhere(
+def check_handed_over_elsewhere(
     findings: Findings, area: Path, records: list[audit_findings.Record]
 ) -> None:
-    """Station 3, the reminder: every `deferred` finding in another area of
-    the repo, told and never counted — a finding deferred there as "its own
-    task" may be this area's; one a handover of that area lists
-    (`handovers.handed_over`) is told as handed over unresolved, no result
-    released, the rest as set aside for later; a record elsewhere nobody
-    can read warns.
+    """Station 3, the reminder: every open finding of another area of the
+    repo that a handover of that area records (`handovers.handed_over`) —
+    set aside there unresolved, it may be this area's ("its own task",
+    uniagent 16 → 17, 2026-10-08). Told and never counted; an open finding
+    no handover records is that area's work in progress and not told; a
+    record or a handover elsewhere nobody can read warns.
     Closes the station with what RECORDS (this area's) say when nothing is
     open."""
     experiments = area.resolve().parent
     try:
-        elsewhere = audit_findings.deferred_elsewhere(area, experiments)
+        elsewhere = audit_findings.open_elsewhere(area, experiments)
     except audit_findings.FindingsError as exc:
         findings.warn(str(exc), evidence_kind=GUARANTEED)
         elsewhere = []
-    handed: dict[Path, set[str] | None] = {}
-    over = 0
+    handed: dict[Path, set[str]] = {}
+    told = 0
     for other, r, f in elsewhere:
         if other not in handed:
             try:
                 handed[other] = handovers.handed_over(other)
             except handovers.HandoverError as exc:
                 findings.warn(str(exc), evidence_kind=GUARANTEED)
-                handed[other] = None  # cannot tell; "set aside" would claim it
-        n = audit_findings.number_of(r, f)
-        names = handed[other]
-        if names is None:
-            how = "handed over or set aside cannot be told — its handover record does not read"
-        elif handovers.entry(r, n) in names:
-            over += 1
-            how = "handed over unresolved — no result released"
-        else:
-            how = "set aside for later work"
+                handed[other] = set()
+        if handovers.entry(r, audit_findings.number_of(r, f)) not in handed[other]:
+            continue
+        told += 1
         findings.note(
-            f"  deferred in {other.name} ({r.date}), {how}: {f.one_line} — {f.reason}"
+            f"  open in {other.name} ({r.date}), handed over unresolved — no result "
+            f"released: {f.one_line}"
         )
-    if elsewhere:
+    if told:
         findings.note(
-            f"  {len(elsewhere)} deferred finding(s) elsewhere in the repo "
-            f"({len(elsewhere) - over} set aside for later, {over} handed over "
-            "unresolved) — a reminder, not counted"
+            f"  {told} open finding(s) handed over elsewhere in the repo — a "
+            "reminder, not counted"
         )
     undecided = bool(audit_findings.open_findings(records))
-    if not records and not elsewhere:
+    if not records and not told:
         findings.note("  none recorded")
-    elif not undecided and not elsewhere:
+    elif not undecided and not told:
         findings.note(f"  all decided ({len(records)} audit(s) recorded)")
 
 

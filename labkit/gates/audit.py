@@ -48,7 +48,7 @@ in prose below its line left an open blocker in the record behind exit 0
 The report is printed (and written to --out), and its findings are written
 as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
 line, every one `open` (`labkit.formats.findings`); deciding each (fixed / accepted
-/ deferred / dismissed, with reason) and stamping the protocol field stays
+/ false-positive, with reason) and stamping the protocol field stays
 with the human (LAB-015 Preflight audit before freezing), and `preflight`
 holds the file to that. The command prints the stamp's facts — date, scope
 sha, counts — to copy from, and what the call cost (`llm.last_usage()`:
@@ -1323,7 +1323,7 @@ def main(argv: list[str]) -> int:
         help="a second auditor on the decisions of the newest analysis record (or "
         "--record) that owe one — a finding decided `limitation` with effect `stands`, a finding "
         "closed after a review did not uphold a decision on it, a carried finding "
-        "closed dismissed or deferred: does the reported claim stand? writes "
+        "closed false-positive: does the reported claim stand? writes "
         "audits/<minute>-review.toml",
     )
     ap.add_argument(
@@ -1634,8 +1634,8 @@ def decision_lines(
                         f" or {unassessed}"
                         if promised
                         else " — no promise is registered to leave not assessable; "
-                        "a fault the claim cannot be read within: decide it "
-                        "`deferred` and hand over"
+                        "a fault the claim cannot be read within: hand the "
+                        "protocol over"
                     )
                 )
             elif f.grade == "WARNING":
@@ -1995,9 +1995,8 @@ def _findings(area: Path, record: Path | None, protocol: Path | None = None) -> 
     record with an open finding of any grade (a NOTE still open holds a
     frozen preflight too) and the newest, the others counted. Where
     an open BLOCKER, an evidence error or such a failed call stands, the
-    way to end the area unresolved follows: decide each open BLOCKER
-    `deferred` with why (step 1), then the handover command per protocol
-    (step 2). A partial failure hides no readable finding; READ hints are
+    way to end the area unresolved follows: the handover command per
+    protocol, which records the open BLOCKERs as they stand. A partial failure hides no readable finding; READ hints are
     not stored.
 
         exit 0   nothing failed: the decisions shown are all there is
@@ -2125,26 +2124,17 @@ def _historical_line(
 def _print_handover_steps(
     area: Path, blockers: list[findings.OpenFinding], protocol: Path | None
 ) -> None:
-    """`--findings`' way to end AREA unresolved: decide each open BLOCKER
-    `deferred` (step 1), then the handover command per protocol (step 2)."""
+    """`--findings`' way to end AREA unresolved: the handover command per
+    protocol; BLOCKERS stay open, and the handover records them."""
     print(
         "if the area cannot be finished, hand it over unresolved (no model call; "
-        "it records the loss and approves no result):"
+        "it records the loss and approves no result"
+        + (f"; its {len(blockers)} open BLOCKER(s) stay open in it" if blockers else "")
+        + "):"
     )
-    for u in blockers:
-        cmd = decide_command(
-            area,
-            u.number,
-            "deferred",
-            "<why it stays unresolved>",
-            u.record.path.name,
-            protocol=protocol,
-        )
-        print(f"  1. decide it: {cmd}")
     selected = [protocol.resolve()] if protocol is not None else area_protocols(area)
-    step = "2. " if blockers else ""
     for chosen in selected:
-        print(f"  {step}hand over: {handover_command(chosen)}")
+        print(f"  hand over: {handover_command(chosen)}")
 
 
 def _decide(

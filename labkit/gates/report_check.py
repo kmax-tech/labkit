@@ -147,6 +147,7 @@ from labkit.formats import (
     console,
     findings,
     followup,
+    handovers,
     protocol_block,
     reviews,
     runs,
@@ -185,6 +186,7 @@ from labkit.formats.repo import (
     commit_known,
     decide_command,
     git_root,
+    handover_command,
     indexed_protocols,
     layout_root,
     measure_command,
@@ -487,11 +489,14 @@ def _undeclared_changes(
 
 
 def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
-    """PRED's BLOCKERs still `open`, each with the `--decide` that defers it
-    to this protocol — they are decided before the replacement reports."""
+    """PRED's BLOCKERs still `open` that no handover of PRED's area records
+    (`handovers.handed_over`) — each holds the replacement until it is
+    decided, or the predecessor is handed over (its open BLOCKERs stay open
+    in that record)."""
     try:
         held = findings.open_blockers(findings.area_records(pred.parent))
-    except findings.FindingsError as exc:
+        recorded = handovers.handed_over(pred.parent) if held else set()
+    except (findings.FindingsError, handovers.HandoverError) as exc:
         return [
             blocker(
                 f"the predecessor's audit records do not read: {exc}",
@@ -501,18 +506,21 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
     return [
         blocker(
             f"its predecessor's BLOCKER is still open — {u.line}",
-            fix="decide it first: `"
+            fix="decide it (`"
             + decide_command(
                 pred.parent,
                 u.number,
-                "deferred",
-                f"replaced by {ctx.head.id}: <why>",
+                "STATUS",
+                "<why>",
                 u.record.path.name,
                 protocol=pred,
             )
+            + f"`), or hand the predecessor over, replaced by {ctx.head.id}: `"
+            + handover_command(pred)
             + "`",
         )
         for u in held
+        if handovers.entry(u.record, u.number) not in recorded
     ]
 
 
@@ -766,7 +774,7 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     accepted WARNING's a WARNING for now (the release does not yet hang
     on every lesser limit). A finding a review of the record once did not
     uphold (`reviews.once_not_upheld`) and that is now `false-positive`, `fixed`
-    or `deferred` (`findings.CLOSING`) is held the same way until a review
+    (`findings.CLOSING`) is held the same way until a review
     upholds the new decision: closing it is not settling it (sixth haiku
     round, 2026-10-23, t5). Empty when no record covers the run
     (`analysis_audit_gap` names that), and silent on whether the verdict is
@@ -867,7 +875,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
     one not released by a valid `resolved` of the state reported now, and a
     BLOCKER `fixed` in that state itself, is a BLOCKER naming the missing
     step. A carried finding (`carries`) closed in a covering record as
-    `dismissed` or `deferred` is held until a decision review of that
+    `false-positive` is held until a decision review of that
     record upholds the new decision — the follow-up did not find the fault
     gone, so closing it is not settling it (the rule of
     `reviews.once_not_upheld`, for a verdict of the follow-up). A chain
@@ -952,7 +960,6 @@ def _closing_question(status: str) -> str:
     return {
         "false-positive": "does not apply to the code and run as audited",
         "fixed": "gone in the files as audited",
-        "deferred": "somebody else's task, not this result's limit",
     }[status]
 
 

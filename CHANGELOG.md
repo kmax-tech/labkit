@@ -62,14 +62,19 @@ pins (`requirements.txt` / `requirements.lock`).
   (the finding is true; the number carries it as a `Limitation (audit … #N)`
   line — was `accepted`), `false-positive` (the finding does not apply to
   the code and run as audited; `--why` records the counter-evidence, and a
-  BLOCKER's needs a second auditor — was `dismissed`), `deferred`
-  (unchanged in this step). The reason is a named option (`--why`), never
+  BLOCKER's needs a second auditor — was `dismissed`). `deferred` is gone:
+  a finding nobody can settle stays `open`, and the handover
+  (`protocol-fill --handover`) records it and ends the protocol without a
+  result — it sets no status; the stop, the commit and a replacement's
+  report-check read a current handover instead of holding the findings it
+  records, and preflight reminds of open findings handovers elsewhere
+  record. The reason is a named option (`--why`), never
   positional; `--effect` is gone: a `limitation` on a BLOCKER or WARNING
   records `stands` itself, and `--not-assessable criterion-1` names the
   promises the run does not judge (no review owed). A WARNING decided
   `limitation` now always reaches the result, and its missing review
   warns. The generated `Limit (audit … #N)` lines are `Limitation (audit …
-  #N)`. Audit records with `status = "accepted"` or `"dismissed"`, and
+  #N)`. Audit records with `status = "accepted"`, `"dismissed"` or `"deferred"`, and
   results with `Limit` lines, no longer read — 0.103.0 reads them.
 
 - **The protocol's fields in the field's words.** `Success / failure

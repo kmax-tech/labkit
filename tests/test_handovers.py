@@ -267,9 +267,8 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(rc, 1, out)
         rc, out = self.findings_listing()
         self.assertEqual(rc, 0, out)
-        self.assertIn("1. decide it:", out)
-        self.assertIn("<why it stays unresolved>", out)
-        self.assertIn("2. hand over: protocol-fill", out)
+        self.assertIn("its 1 open BLOCKER(s) stay open in it", out)
+        self.assertIn("  hand over: protocol-fill", out)
         self.assertIn("1 earlier record(s) without an open finding not shown", out)
 
     def test_a_stop_the_handover_lets_pass_names_the_loss(self):
@@ -345,26 +344,23 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(attempts.area_gaps(self.area).blockers, [])
 
     def test_broken_journal_does_not_hide_an_older_open_blocker(self):
+        """The open BLOCKER stays open and the handover records it by record
+        and number; the listing names both before."""
         rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
         (record,) = findings.area_records(self.area)
         self.lab.record(self.area, self.protocol, "analysis", self.run_id)
         attempts.journal_path(self.area).write_text("not JSON\n")
-        rc, out = self.handover()
-        self.assertEqual(rc, 2, out)
-        self.assertIn("open BLOCKERs", out)
-        self.assertEqual(handovers.record_paths(self.area), [])
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
             rc = audit.main([str(self.area), "--findings"])
         self.assertEqual(rc, 2)
         self.assertIn("audit evidence incomplete", buf.getvalue())
         self.assertIn(record.path.name, buf.getvalue())
-        self.assertIn("deferred", buf.getvalue())
         self.assertIn("--handover", buf.getvalue())
-        self.decide(record.path, "deferred", "unresolved; handed over without a result")
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
+        self.assertIn(f"{record.path.name} #1 (BLOCKER, open)", self.report.read_text())
         self.assertEqual(self.lab.stop_hook()[0], 0)
         self.staged_release()
         # Its block is part of the exact acknowledgement, including at the
@@ -505,10 +501,12 @@ class HandoverRecovery(cases._Chain):
         status = findings.record_status(self.area)
         self.assertTrue(status.errors)
         self.assertEqual(len(findings.open_findings(status.records)), 1)
+        # the readable BLOCKER is not hidden: the handover records it open
         rc, out = self.handover()
-        self.assertEqual(rc, 2, out)
-        self.assertIn("open BLOCKERs", out)
-        self.assertEqual(handovers.record_paths(self.area), [])
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            "renamed-analysis.toml #1 (BLOCKER, open)", self.report.read_text()
+        )
 
     def test_a_staged_handover_cannot_leave_new_audit_evidence_unstaged(self):
         rc, out = self.audit(cases.CLEAN)
@@ -642,10 +640,9 @@ class HandoverRecovery(cases._Chain):
         rc, out = self.audit(BLOCKED)
         self.assertEqual(rc, 1, out)
         (record,) = findings.area_records(self.area)
-        self.decide(record.path, "deferred", "the source cannot be read here")
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
-        named = f"{record.path.name} #1 (BLOCKER, deferred)"
+        named = f"{record.path.name} #1 (BLOCKER, open)"
         self.assertIn(named, self.report.read_text())
         (path,) = handovers.record_paths(self.area)
         self.assertEqual(handovers.read_handover(path).remaining, [named])

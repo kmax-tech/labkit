@@ -271,11 +271,20 @@ class Decisions(unittest.TestCase):
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         set_status(path, 1, "fixed")
-        set_status(path, 2, "deferred", "own task: the reference line")
+        set_status(path, 2, "limitation", "the reference line stays a limit")
         rec = findings.read(path)
         self.assertEqual(len(rec.open), 0)
-        self.assertEqual([f.text for f in rec.deferred], [TWO[1][1]])
-        self.assertEqual(rec.deferred[0].reason, "own task: the reference line")
+        self.assertEqual(rec.findings[1].reason, "the reference line stays a limit")
+
+    def test_a_deferred_finding_of_0_103_does_not_read(self):
+        """`deferred` is gone: an unsettled finding stays open, and a handover
+        records it; a record of labkit 0.103.0 that says deferred is refused
+        by name. The twin: the statuses of today read (above)."""
+        area = area_with([("preflight", TWO)])
+        path = next((area / "audits").glob("*.toml"))
+        set_status(path, 2, "deferred", "own task")
+        with self.assertRaisesRegex(findings.FindingsError, "deferred"):
+            findings.read(path)
 
     def test_a_decided_status_without_reason_is_loud(self):
         area = area_with([("preflight", TWO)])
@@ -514,9 +523,7 @@ class WriteDecision(unittest.TestCase):
             findings.write_decision(path, 1, "fixed", "")
 
     def test_the_decided_statuses_and_the_carried_rule_have_one_home(self):
-        self.assertEqual(
-            findings.DECIDED_LIST, "fixed / limitation / false-positive / deferred"
-        )
+        self.assertEqual(findings.DECIDED_LIST, "fixed / limitation / false-positive")
         carried = findings.Finding(
             "BLOCKER", "x", status="false-positive", reason="r", carries="r.toml#1"
         )
@@ -755,19 +762,17 @@ class DecisionList(unittest.TestCase):
 
 
 class Repo(unittest.TestCase):
-    def test_deferred_elsewhere_names_the_other_area_only(self):
+    def test_open_elsewhere_names_the_other_area_only(self):
         root = Path(tempfile.mkdtemp()) / "experiments"
         here = area_with([("preflight", TWO)], at=root / "17-here")
         there = area_with([("preflight", TWO)], at=root / "16-there")
         for area in (here, there):
-            set_status(
-                next((area / "audits").glob("*.toml")), 2, "deferred", "own task"
-            )
-        found = findings.deferred_elsewhere(here, root)
+            set_status(next((area / "audits").glob("*.toml")), 1, "fixed")
+        found = findings.open_elsewhere(here, root)
         self.assertEqual(
             [(a.name, f.text) for a, _, f in found], [("16-there", TWO[1][1])]
         )
-        self.assertEqual(findings.deferred_elsewhere(there, root)[0][0].name, "17-here")
+        self.assertEqual(findings.open_elsewhere(there, root)[0][0].name, "17-here")
         self.assertEqual(findings.area_records(root / "99-none"), [])
 
 

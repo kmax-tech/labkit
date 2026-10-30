@@ -1,7 +1,7 @@
 """followup — what an analysis audit is shown of the area's earlier decided
 BLOCKERs, and the chain a carried finding forms with its origin.
 
-A BLOCKER that was decided — `fixed`, `accepted`, `dismissed`, `deferred` —
+A BLOCKER that was decided — `fixed`, `limitation`, `false-positive` —
 in a record that is not of the state now audited is an *earlier* BLOCKER.
 The next analysis audit is shown each one and says per finding whether the
 fault it names is in the state it sees (`resolved`: not there, repaired
@@ -10,7 +10,7 @@ A finding not found resolved is not dropped: labkit writes it into the new
 record as a *carried* finding (`carried_finding`), open, with the
 original's text, check and note, and `carries = "<record>#<n>"` naming
 the finding it continues. There it is decided like any finding of the
-current state, and an accepted one renders as a limit of the current
+current state, and one decided limitation renders as a limitation of the current
 result. Why (fixed-followup pilots, 2026-10-26): an earlier decision
 otherwise left the result without trace — a `fixed` with no check, an
 `accepted` limit that the renderer, reading only covering records, no

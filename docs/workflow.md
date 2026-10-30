@@ -188,7 +188,7 @@ decision and never makes one. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
 named promise (`not assessable`) — where the protocol registers one: a
 computation has no [[promise]] table, `--decide` refuses every id there,
-and the printed ways out name `stands`, a fix, or `deferred` and the
+and the printed ways out name `stands`, a fix, or the
 handover instead. At `low` this is the lane's one
 audit (LAB-017 The number of audits follows the cost tier); at
 `high` the preflight audit came before the freeze and this one
@@ -214,12 +214,12 @@ anyway: its verdicts count, and it releases nothing — an `upheld` from
 `--again` draws alone releases no decision. The exit says the state, not
 the draw: 0 every decision reviewed released, 1 one held. Deciding again is
 not closing: once a review did not uphold a decision on a finding, a
-`dismissed`, `fixed` or `deferred` on it is under review as well — the
+`false-positive` or `fixed` on it is under review as well — the
 reviewer is asked whether the reason shows the finding inapplicable, the
 fault gone in the files as audited, or the task somebody else's — and
 `report-check` holds it by the finding's grade until a review upholds
 the new decision. The same holds for a carried finding — one a follow-up
-audit did not find gone — closed `false-positive` or `deferred`. A reason alone
+audit did not find gone — closed `false-positive`. A reason alone
 releases nothing. An accepted WARNING with `stands` owes no review yet;
 `report-check` names it as a warning.
 
@@ -358,8 +358,8 @@ labkit 0.103.0 or earlier, which names no promise block and protocol, or
 a `-failed.toml` no journal attempt names) is named as such with the
 audit, run again now in the current format, that supersedes it — an
 audit of its mode, of any protocol of the area, since the old start
-names none. Explicitly decide readable
-unresolved BLOCKERs as deferred, then use its `protocol-fill <PROTOCOL>
+names none. A readable BLOCKER that stays unresolved stays `open`;
+use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
 REPORT.md` command. It withdraws the result's adoption, keeps an
 immutable handover record in `audits/handovers/` and writes its handover
@@ -403,9 +403,9 @@ at the repository root lying in no area).
   every other gate reads that choice (`audit_binding.audited_run`).
 - *When is a decision review needed?* When an accepted BLOCKER carries
   `stands`; `report-check` blocks until one upholds it. And when a
-  finding a review did not uphold is closed instead (`dismissed`,
-  `fixed`, `deferred`): the new decision owes its own review. And when a
-  carried finding is closed `false-positive` or `deferred`. Not for
+  finding a review did not uphold is closed instead (`false-positive`,
+  `fixed`): the new decision owes its own review. And when a
+  carried finding is closed `false-positive`. Not for
   `not assessable`, not (yet) for a WARNING.
 - *Which file does `--from-run` change?* The protocol, and only it.
 - *What does the report block guarantee, and what remains judgement?* The

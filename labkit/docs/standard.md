@@ -360,8 +360,9 @@ evidence file under the same ID (top of this document).*
   a second way — it drifted from the shipped text once and read this whole
   standard twice per audit.
 
-  Every finding is decided (fixed / limitation / false-positive / deferred,
-  each but fixed with a reason); a BLOCKER or WARNING decided limitation also
+  Every finding is decided (fixed / limitation / false-positive, each but
+  fixed with a reason) or stays open in a handover that ends the protocol
+  without a result; a BLOCKER or WARNING decided limitation also
   carries its effect on the verdicts — they stand, read within it, or the run
   leaves the named promises not assessable (a number may be reported
   within a fault; a verdict needs an instrument fit to judge it). How

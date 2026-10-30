@@ -193,7 +193,7 @@ class Undecided(unittest.TestCase):
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "audit")
         open_text = path.read_text(encoding="utf-8")
-        findings.write_decision(path, 1, "deferred", "measured in area 02")
+        findings.write_decision(path, 1, "limitation", "measured in area 02", "stands")
         script = self._touch(self.area)
         _git(self.root, "add", str(script))
 
@@ -238,7 +238,7 @@ class Undecided(unittest.TestCase):
         self.assertIn("in the tree, not in the index", out)
         self.assertIn(f"git add experiments/01-x/audits/{path.name}", out)
         self.assertIn("a record a later change made outdated is staged too", out)
-        findings.write_decision(path, 1, "deferred", "measured in area 02")
+        findings.write_decision(path, 1, "limitation", "measured in area 02", "stands")
         _git(self.root, "add", str(path))
         self.assertEqual(commit_gate(), (0, ""))
 

@@ -135,7 +135,8 @@ repo root.
 
    Decide each finding with the command `labkit-audit
    experiments/01-document-count --findings` prints for it (`--decide N
-   STATUS "REASON"`): `fixed`, `accepted`, `deferred` or `dismissed`;
+   STATUS --why "REASON"`): `fixed`, `limitation` or `false-positive` — a
+   BLOCKER nobody can settle stays `open`, and the handover records it;
    all but `fixed` owe a reason (`--why`); a `limitation` that leaves a promise unjudged names it with `--not-assessable`.
    The record is never edited by hand. Fixes can invalidate the audit's
    binding; rerun the affected measurement or audit when the checks
@@ -193,7 +194,7 @@ area, since the old start names none. Decide unresolved readable BLOCKERs explic
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
 immutable handover record of the remaining evidence, losses and the
-findings left open or deferred, and writes the record's handover block
+findings left open, and writes the record's handover block
 into the report — one block per protocol, replaced in place. It withdraws
 that protocol's result blocks in the chosen report and keeps other text
 and other protocols' blocks. Citations in prose and other reports still
@@ -276,7 +277,7 @@ scope-sha AREA                     # code stamp used by an audit
 preflight AREA                     # readiness before freezing
 finalize AREA                      # checks after the run
 labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
-labkit-audit AREA --decide N STATUS --why REASON [--not-assessable IDS] [--record FILE] # store your decision on a finding (fixed, limit, false-positive, deferred)
+labkit-audit AREA --decide N STATUS --why REASON [--not-assessable IDS] [--record FILE] # store your decision on a finding (fixed, limitation, false-positive)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw on a judged state — its verdicts count, it lifts no hold; the exit is the state's, as without --again)
 labkit-audit AREA --report-review REPORT                   # a cold reader on a report that discusses a run (a discussion block): does it state that run's numbers as results, or what the audits contradict? recorded in audits/report-reviews/; report-check holds the report until a review of its state names no claim; exit 0 only when the state is released, 2 on a claimed state without --again [--again: one more draw on a judged state — its claims hold, it releases nothing]
@@ -323,7 +324,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **repeat cost** | `repeat_cost` in the protocol head, `low` or `high`: the price of repeating the run. It selects the lane — what the area owes before and after the run (the table above, `standard_contract.lane`). |
 | **probe** | Instrument check before a measurement at high repeat cost; its number is not reported. |
 | **measurement** | Run of the registered question, eligible for result release after the required checks. |
-| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open or deferred) and writes its handover block into the report. The stop and the commit then accept the loss it records, never an open BLOCKER; audits and adoption stay refused until the evidence is restored. |
+| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open) and writes its handover block into the report. The stop and the commit then accept the loss it records, never an open BLOCKER; audits and adoption stay refused until the evidence is restored. |
 | **run metadata** | Start and completion records: `config.json` and `completion.json`. |
 | **run index** | Searchable overview in `runs.tsv`. |
 | **metrics** | Measured values recorded in `metrics.json`. |

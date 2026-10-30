@@ -4,7 +4,7 @@ cold auditor on the `stands` decisions of one analysis record.
     labkit-audit <AREA> --review [--record FILE] [--protocol FILE]
                  [--model ALIAS] [--timeout S] [--out FILE]
 
-An accepted finding whose effect is `stands` claims that the verdicts hold,
+A finding decided `limitation` whose effect is `stands` claims that the verdicts hold,
 read within the limit (`findings.EFFECT_STANDS`). The reviewer gets, in one
 call: every such decision of the record (the finding, the person's
 reason), the protocol as it is now (the registration and the reported
@@ -28,11 +28,11 @@ a claim since changed. The call is an attempt in the area's journal
 the end naming the review file or why there is none — so a review
 deleted before the commit is named. After `rejected` the person decides again first —
 limits the claim, changes the effect to `not assessable` (where the
-protocol registers a promise; else decides it `deferred` and hands
-over), or fixes the fault (`rejected_way`); a new audit is due when its basis changes or the finding is
+protocol registers a promise; else hands the protocol over), or fixes
+the fault (`rejected_way`); a new audit is due when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
 `insufficient` the missing evidence is supplied and the review run again.
-Closing the finding instead — `dismissed`, `fixed`, `deferred`
+Closing the finding instead — `false-positive`, `fixed`
 (`findings.CLOSING`) — is a decision like any other once a review did
 not uphold one on that finding: it is under review too
 (`reviews.once_not_upheld`), and the reviewer is asked whether the
@@ -88,7 +88,7 @@ VERDICT = re.compile(
 )
 DECISIONS_LABEL = (
     "DECISIONS — the decisions under review, each with the reason given: an "
-    "accepted finding with effect `stands`, or a finding closed after a review "
+    "finding decided `limitation` with effect `stands`, or a finding closed after a review "
     "did not uphold a decision on it"
 )
 RESULT_LABEL = (
@@ -122,12 +122,12 @@ def reviewable(
     record: findings.Record, found: list[reviews.Review]
 ) -> list[tuple[int, findings.Finding]]:
     """(number, finding) of every decision of RECORD a review asks about,
-    in the record's order: a limit of the result (`Record.limits`: an
-    accepted BLOCKER, an accepted WARNING naming an effect) whose effect is
-    `stands`, and a finding closed (`findings.CLOSING`: dismissed, fixed,
-    deferred) after a review among FOUND did not uphold a decision on it
-    (`reviews.once_not_upheld`), a carried finding (`carries`: a
-    follow-up did not find it resolved) now `dismissed` or `deferred` —
+    in the record's order: a limitation of the result (`Record.limits`: a
+    BLOCKER or WARNING decided `limitation`) whose effect is `stands`, and a
+    finding closed (`findings.CLOSING`: false-positive, fixed) after a review
+    among FOUND did not uphold a decision on it (`reviews.once_not_upheld`),
+    a carried finding (`carries`: a follow-up did not find it resolved) now
+    `false-positive` —
     report-check holds it until a review upholds that
     (`report_check.followup_findings`) —, and a BLOCKER `dismissed`, its
     first dismissal too (`findings.false_positive_blocker`). `not assessable`
@@ -225,7 +225,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         raise AuditError(
             f"{record.path.name}: no finding decided `limitation` with effect `stands`, no "
             f"finding closed after a review did not uphold it and no carried finding "
-            f"closed dismissed or deferred — nothing to review",
+            f"closed false-positive — nothing to review",
             fix=f"`{audit_command(area, '--findings', protocol=protocol)}` "
             f"shows what the area's records still owe",
         )
@@ -352,7 +352,7 @@ def contested_gap(
         "effect `not assessable`) or limit the claim, then review"
         if audit.may_leave_unassessed(area, protocol)
         else "decide again (`--decide N …`, the reason naming the evidence) or "
-        "limit the claim, then review — or decide it `deferred` and hand over "
+        "limit the claim, then review — or hand the protocol over "
         "(no promise is registered to leave not assessable)"
     )
     return AuditError(
@@ -451,15 +451,14 @@ def review(
 def rejected_way(promised: bool) -> str:
     """What a decision a review rejected owes first: limit the claim, change
     the effect (`<ID> not assessable` only where the protocol registers a
-    promise, PROMISED — else decide it `deferred` and hand over) or fix the
+    promise, PROMISED — else hand the protocol over) or fix the
     fault; never another audit that settles nothing."""
     routes = (
         "limit the claim (the Conclusion), change the effect (`--decide N limitation "
         '--why "REASON" --not-assessable <ID>`) or fix the fault'
         if promised
-        else "limit the claim (the Conclusion) or fix the fault — or decide it "
-        "`deferred` and hand over (no promise is registered to leave not "
-        "assessable)"
+        else "limit the claim (the Conclusion) or fix the fault — or hand the "
+        "protocol over (no promise is registered to leave not assessable)"
     )
     return (
         f"decide the finding again first — {routes}; a new audit only when its "

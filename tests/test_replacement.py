@@ -21,7 +21,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import result_render  # noqa: E402
-from labkit.formats import findings, protocol_block, protocol_history  # noqa: E402
+from labkit.formats import (  # noqa: E402
+    findings,
+    handovers,
+    protocol_block,
+    protocol_history,
+)
 from labkit.gates import finalize, report_check, report_hold  # noqa: E402
 from protocol_fixture import completed_run, head, registration_of, started_at  # noqa: E402
 
@@ -247,11 +252,29 @@ class Gate(_Areas):
         self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         (gap,) = self.gaps()
         self.assertIn("its predecessor's BLOCKER is still open", gap)
-        self.assertIn(f'--decide 1 deferred --why "replaced by {B_ID}: <why>"', gap)
-        findings.write_decision(
-            record, 1, "deferred", f"replaced by {B_ID}: the leak is its question"
+        self.assertIn('--decide 1 STATUS --why "<why>"', gap)
+        self.assertIn(f"or hand the predecessor over, replaced by {B_ID}", gap)
+        self.assertIn("--handover", gap)
+        # the twin: a handover of the predecessor that records the BLOCKER
+        # releases the replacement; the finding stays open
+        (rec,) = findings.area_records(record.parent.parent)
+        handovers.write_record(
+            handovers.new_path(record.parent.parent),
+            handovers.Handover(
+                handovers.SCHEMA,
+                "experiments/01-a/PROTOCOL-a.md",
+                "sha",
+                "REPORT.md",
+                f"replaced by {B_ID}",
+                "the leak is its question",
+                {},
+                [],
+                [handovers.entry(rec, 1)],
+                [],
+            ),
         )
         self.assertEqual(self.gaps(), [])
+        self.assertEqual(findings.read(record).findings[0].status, "open")
 
     def test_the_predecessors_verdict_is_rendered_first(self):
         proto = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))

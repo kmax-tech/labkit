@@ -155,8 +155,8 @@ shown: the head reports another run than the one you judge.
 
 **In MODE analysis, judge every earlier decided BLOCKER.** Under
 `===== EARLIER DECIDED BLOCKERS =====` stand the area's BLOCKERs that a
-person decided in an earlier state — `fixed`, `limitation`, `false-positive` or
-`deferred` — each as `<record>#<n>` with the finding and the decision
+person decided in an earlier state — `fixed`, `limitation` or
+`false-positive` — each as `<record>#<n>` with the finding and the decision
 (status, effect, reason). A finding that begins `carried from …` continues
 an earlier one; judge the fault it names. The decision is a claim, not
 evidence. For each one, write exactly one line:

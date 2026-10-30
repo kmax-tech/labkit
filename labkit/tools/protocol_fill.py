@@ -1242,7 +1242,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
 
     Refuse open readable BLOCKERs and another protocol of the area that
     declares a result before writing. Bind the available audit bytes, the
-    findings left open or deferred, known losses and the protocol
+    findings left open, known losses and the protocol
     (`handovers.build`); the report gets the record's handover block, the
     one of this protocol replaced in place, its result blocks in that
     report withdrawn, everything else kept (`handovers.with_handover_block`,
@@ -1261,15 +1261,6 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
             raise ValueError("handover requires a git repository")
         report = handovers.report_destination(root, args.into)
         state = attempts.area_integrity(area)
-        opened = findings.open_blockers(state.records)
-        if opened:
-            raise ValueError(
-                "open BLOCKERs must be decided explicitly first: "
-                + "; ".join(u.line for u in opened)
-                + f" — `{audit_command(area, '--findings', protocol=protocol)}` "
-                "prints each --decide command; decide it deferred, with why it "
-                "stays unresolved, when it does"
-            )
         withdrawn = protocol_block.declared_run(text)
         new = without_result(text)
         others = [p for p in handovers.declared_results(area, root) if p != protocol]

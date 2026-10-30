@@ -3,7 +3,7 @@
 The Recorded results line and the Limitation lines are generated. Recorded
 results opens with the reportable verdict of every registered promise
 (`verdicts`, one derivation for every reader): a quality check
-not assessable — an accepted limit names it — or not met leaves every
+not assessable — a limitation names it — or not met leaves every
 criterion not assessable, so a criterion's own `True` never reads as a
 pass beside it (the repair case, 2026-10-27, K2). The declared run's other
 reported keys follow as recorded values — descriptive; the registered
@@ -13,7 +13,7 @@ the comparison as the run recorded it (`reference 0.62 ± 0.01 (within):
 not met, distance 0.145`, or `not comparable: <key> absent` — never a
 "met" the run did not record; `comparison_phrase`), then the run id and
 one note on the limits. Each Limitation line comes
-from an accepted finding with an effect in the analysis records covering
+from a finding decided limitation in the analysis records covering
 that run (`audit_binding.covering_analysis`). `protocol-fill --from-run`
 writes them, `--render` writes them again, and report-check holds the
 protocol to exactly this rendering (`render_gaps`): a generated line that
@@ -99,7 +99,7 @@ def verdicts(
 ) -> list[str]:
     """The reportable verdict of every promise of BLOCK, in its order, one
     phrase each, from the run's METRICS read through each promise's key and
-    UNJUDGED (an id an accepted limit leaves not assessable → that limit's
+    UNJUDGED (an id a limitation leaves not assessable → that limit's
     label). Every quality check conditions every criterion (each
     `[quality-check-…]` says why its failure voids the verdict): one not assessable or
     not met makes each criterion `not assessable`, with why; a criterion
@@ -138,7 +138,7 @@ def _verdict(
 
 def limits_of(area: Path, text: str, run: Path) -> list[tuple[str, str, str]]:
     """(label, value, effect) of every limit with its effect decided — an
-    accepted BLOCKER, an accepted WARNING that names one — in the analysis
+    BLOCKER or WARNING decided limitation — in the analysis
     records covering RUN. An area the gate cannot hold to that run gives
     none here: report-check names why (`analysis_audit_gap`)."""
     try:

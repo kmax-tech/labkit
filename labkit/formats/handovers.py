@@ -2,7 +2,7 @@
 never an approval of evidence.
 
 Each immutable JSON record in audits/handovers binds one unresolved end:
-its protocol without a result, the findings left open or deferred, and
+its protocol without a result, the findings left open, and
 every available audit file by blob id. The report carries the record's
 projection as a handover block, one per protocol, beside any other prose
 or block:
@@ -15,7 +15,7 @@ or block:
 
     - Why: …
     - Tried: …
-    - Findings left open or deferred (in `experiments/01-x/audits`): …
+    - Findings left open (in `experiments/01-x/audits`): …
     - Evidence and recorded losses: [handover record](<…>)
     <!-- /labkit handover -->
 
@@ -68,7 +68,7 @@ OPEN = opener(KIND)
 CLOSE = closer(KIND)
 HEAD_KEYS = ("protocol", "record")
 #: the decisions a handover lists as left over: nothing settled them
-UNSETTLED = ("open", "deferred")
+UNSETTLED = ("open",)
 
 
 class HandoverError(ValueError):
@@ -78,7 +78,7 @@ class HandoverError(ValueError):
 @dataclass(frozen=True)
 class Handover:
     """One unresolved end and its exact evidence state; no finding is resolved.
-    REMAINING names each finding left open or deferred as `<record file>
+    REMAINING names each finding left open as `<record file>
     #<n> (<grade>, <status>)`."""
 
     schema: int
@@ -361,7 +361,7 @@ def handover_lines(record: Handover, root: Path, path: Path) -> list[str]:
         "",
         f"- Why: {record.why}",
         f"- Tried: {record.tried}",
-        f"- Findings left open or deferred (in `{audits}`): {left}",
+        f"- Findings left open (in `{audits}`): {left}",
         f"- Evidence and recorded losses: [handover record](<{link}>)",
         CLOSE,
     ]

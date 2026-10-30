@@ -1,6 +1,6 @@
-"""reviews — a second auditor's verdicts on accepted findings, as data.
+"""reviews — a second auditor's verdicts on decided findings, as data.
 
-An accepted finding with the effect `stands` says: the verdicts hold, read
+A finding decided `limitation` with the effect `stands` says: the verdicts hold, read
 within this limit (`findings.EFFECT_STANDS`). Whether the reason given
 bears that out was nobody's question (labkit-paper area 09, fifth haiku
 round, 2026-10-22: 28 findings, 15 accepted with no action; t5 accepted
@@ -53,7 +53,7 @@ refuses another draw on such a state unless asked for one (`--again`):
 its verdicts count like any draw's, and it releases nothing — an `upheld`
 from `--again` alone never releases a decision, contested or not. Deciding again does not mean closing: once a
 review of this record did not uphold a decision on a finding
-(`once_not_upheld`), a `dismissed`, `fixed` or `deferred` on it owes an
+(`once_not_upheld`), a `false-positive` or `fixed` on it owes an
 upholding review of the new decision as well — the reviewer is asked
 whether the reason shows the finding inapplicable, the fault gone in the
 files as audited, or the task truly somebody else's (sixth haiku round,
@@ -61,8 +61,8 @@ files as audited, or the task truly somebody else's (sixth haiku round,
 `insufficient` released the state; a filled-in reason is not evidence).
 What is guaranteed is the release condition; whether the verdict is
 right stays the reviewer's judgement, as with every agent audit.
-report-check blocks on an accepted BLOCKER's `stands` nobody upheld and
-warns on an accepted WARNING's, and grades a closed contested finding the
+report-check blocks on a BLOCKER limitation's `stands` nobody upheld and
+warns on a WARNING limitation's, and grades a closed contested finding the
 same way (`report_check.review_findings`; decided 2026-10-22 after the
 fifth round's replay, two passes, and the assessment of its fifteen
 decisions from their sources, `docs/usability/2026-10-22-decision-review-*.md`).
@@ -171,7 +171,7 @@ def write_review(
     u, r, i = counts_of(decisions)
     lines = [
         "# written by labkit-audit --review — a second auditor's verdicts on the "
-        "accepted findings of the record named below; not edited by hand",
+        "decided findings of the record named below; not edited by hand",
         "[review]",
         f"date = {_s(date_minute(when))}",
         f"model = {_s(model)}",
@@ -306,7 +306,7 @@ def once_not_upheld(
     whatever decision and under whatever claim it was drawn — or None.
     Such a finding is contested: a decision made on it since owes an
     upholding review of its own (`upholding`), whatever its status —
-    `dismissed`, `fixed` or `deferred` close nothing by themselves
+    `false-positive` or `fixed` close nothing by themselves
     (sixth haiku round, 2026-10-23, t5: after `insufficient` the finding
     was dismissed with "insufficient evidence withdrawn" and the state
     released; `report_check.review_findings` holds it now)."""

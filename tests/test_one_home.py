@@ -195,11 +195,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"protocol_block"},
     ),
     # seven sites listed the decided statuses, two copied the rule that a
-    # carried finding closed dismissed or deferred owes a review (audit
-    # 2026-10-27, C17): `findings.DECIDED_LIST`, `carried_and_closed`
+    # carried finding closed as a false positive owes a review (audit
+    # 2026-10-27, C17): `findings.DECIDED_LIST`, `findings.CLOSING`
     (
         "the decided statuses spelled by hand",
-        r"fixed / limitation / false-positive / deferred|\(\"false-positive\", \"deferred\"\)",
+        r"fixed / limitation / false-positive|\(\"fixed\", \"false-positive\"\)",
         {"findings"},
     ),
     # a bare area name was read by two globs, `*` running over dashes, and
@@ -342,11 +342,11 @@ class OneHome(unittest.TestCase):
             "a requirements pin spelled by hand": 'if ln.startswith("labkit"):',
             "a tier rule read off the head": 'if head.repeat_cost == "low":',
             "an open-finding walk": "for f in rec.open:",
-            "a decide command spelled by hand": 'f"{cmd} --decide {n} deferred \\"<why>\\""',
+            "a decide command spelled by hand": 'f"{cmd} --decide {n} fixed \\"<why>\\""',
             "open BLOCKERs filtered by hand": 'held = [u for u in open_findings(rs) if u.grade == "BLOCKER"]',
             "a run directory spelled by hand": 'run_dir = area / "runs" / run_id',
             "the metrics file spelled by hand": 'metrics = run_dir / "metrics.json"',
-            "the decided statuses spelled by hand": 'if f.carries and f.status in ("false-positive", "deferred"):',
+            "the decided statuses spelled by hand": 'if f.status in ("fixed", "false-positive"):',
             "an area name globbed by hand": 'hits = sorted(experiments.glob(f"[0-9]*-{name}"))',
             "a JSONL line parsed by hand": "row = json.loads(line)",
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
