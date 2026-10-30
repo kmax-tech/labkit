@@ -61,7 +61,7 @@ packages = [
 [tool.setuptools.package-data]
 # the protocol template IS the checker's contract — shipping the checker
 # without it leaves `protocol-check` with nothing to check against.
-labkit = ["templates/*.template", "agents/*.agent.md", "docs/standard.md", "docs/rules.tsv", "docs/protocol-field-guide.md"]
+labkit = ["templates/*.template", "agents/*.agent.md", "docs/standard.md", "docs/rules.tsv", "docs/protocol-field-guide.md", "docs/agent-guide.md"]
 
 [tool.ruff]
 # a one-off extraction script kept as the evidence of a usability record —

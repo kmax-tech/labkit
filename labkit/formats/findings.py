@@ -324,7 +324,7 @@ def check_of(text: str) -> tuple[str, str]:
 
 def check_order(check: str, note: str = "") -> str:
     """What a finding's required CHECK asks of the measuring code — the one
-    wording of the decision list, the follow-up's holds and AGENTS.md: the
+    wording of the decision list, the follow-up's holds and the agent guide: the
     kept rows carry what the value needs, `evaluate_rows()` computes it from
     them and writes it to metrics.json under CHECK, where the recheck
     recomputes it; NOTE, what it must show. A `file:<path>`

@@ -1,6 +1,11 @@
 """labkit-next — the one next step of an area, and what is held until it is taken.
 
     labkit-next <AREA> [--protocol FILE]
+    labkit-next --guide
+
+`--guide` prints the agent guide (`labkit/docs/agent-guide.md`): the
+workflow the stamped `AGENTS.md` keeps short, in full, with the reason
+for each rule.
 
 Reads what the gates already compute and adds no check of its own; the
 first that applies is the step:
@@ -28,6 +33,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit import PACKAGE_DIR
 from labkit.formats import console, handovers, protocol_block, protocol_check
 from labkit.formats.gate import BLOCKER
 from labkit.formats.repo import (
@@ -37,6 +43,10 @@ from labkit.formats.repo import (
     no_such_area,
     shown,
 )
+
+
+#: the workflow in full, which `AGENTS.md` keeps short
+GUIDE = PACKAGE_DIR / "docs" / "agent-guide.md"
 
 
 @dataclass(frozen=True)
@@ -122,9 +132,17 @@ def main(argv: list[str]) -> int:
         prog="labkit-next",
         description=(__doc__ or "").splitlines()[0],
     )
-    ap.add_argument("area", type=area_path)
+    ap.add_argument("area", type=area_path, nargs="?", default=None)
     ap.add_argument("--protocol", type=Path, default=None)
+    ap.add_argument(
+        "--guide", action="store_true", help="print the workflow in full and exit"
+    )
     args = ap.parse_args(argv)
+    if args.guide:
+        print(GUIDE.read_text(encoding="utf-8"), end="")
+        return 0
+    if args.area is None:
+        ap.error("an AREA, or --guide")
     area: Path = args.area
     if not area.is_dir():
         console.refuse("labkit-next", no_such_area(area))

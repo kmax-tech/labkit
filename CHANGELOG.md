@@ -34,6 +34,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The stamped `AGENTS.md` is 1,158 words (was 4,823).** It keeps the
+  loop around `labkit-next`, six words (protocol, run, criterion, audit,
+  decision, adoption), the kinds table, the decisions, the stop rule and
+  the instructions no gate can check, in one instruction per sentence.
+  Everything else moved, unchanged but for one dated sentence, to the
+  agent guide `labkit/docs/agent-guide.md`, which `labkit-next --guide`
+  prints. `tests/test_agent_surface.py` holds the limit of 1,200 words,
+  no date in either text, and every labkit command `AGENTS.md` names
+  being installed. An existing lab repo keeps its `AGENTS.md`
+  (`labkit-init lab` writes it only where none is): move it aside, run
+  `labkit-init lab .` again and carry the repo's own additions over
+  (`docs/student-repos.md`, "Moving to a newer version").
+
 - **Every gate line in one pattern: `<what is refused>. Next: <fix>`.**
   `gate.with_way_out` joins a sentence and its way out with `. Next: `
   (was ` — way out: `), the sentence's own full stop dropped; a dotted

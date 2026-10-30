@@ -260,6 +260,7 @@ The **console commands** are installed with the package. Use
 ```bash
 labkit-init lab [DIR]               # create a lab repo
 labkit-next AREA [--protocol FILE]    # where the area stands, the one next step, and what is held until it is taken
+labkit-next --guide                   # the workflow in full (labkit/docs/agent-guide.md), which the stamped AGENTS.md keeps short
 labkit-adopt AREA [RUN] [--protocol FILE]  # adopt the run: --from-run, the registered report's --into, report-check — stops at the first that does not pass
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--report-file PATH] [--explore]
 labkit-init exp NAME --kind compute --reference KEY=VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT] # a computation compared with a stated value: the head's [reference]

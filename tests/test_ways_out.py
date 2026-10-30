@@ -1,6 +1,7 @@
 """The ways out of a BLOCKER are one set of decisions in two places: the
 list `labkit-audit` prints with every decision list (`ways_out.WAYS_OUT`) and
-the stamped AGENTS.md ("When you are stuck"). Held by meaning and command,
+the agent guide ("When you are stuck", `labkit-next --guide`; the stamped
+AGENTS.md keeps the stop rule short). Held by meaning and command,
 not by copied strings: the same causes in both, every command they name a
 real one, every flag a flag of it, and the `[replaces]` table they describe
 one the head parser reads (K1, docs/notes/2026-10-27-new-registration-contracts.md)."""
@@ -21,7 +22,7 @@ from labkit.tools import protocol_fill, scaffold  # noqa: E402
 from protocol_fixture import head  # noqa: E402
 
 TEMPLATE = (
-    Path(__file__).resolve().parents[1] / "labkit/templates/AGENTS.md.template"
+    Path(__file__).resolve().parents[1] / "labkit/docs/agent-guide.md"
 ).read_text(encoding="utf-8")
 
 
