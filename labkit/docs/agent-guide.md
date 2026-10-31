@@ -45,10 +45,11 @@ or a discussion block releases nothing. Other notes owe nothing.
 `AGENTS.md` gives the table of `kind`, `repeat_cost` and `type`. These
 points add to it:
 
-- Decide `kind` first, with the two questions of `AGENTS.md`, in their
-  order: did this experiment train, tune or select a model, and if not,
-  does the kept number judge predictions? A tuning rule registered in
-  advance still tunes.
+- Decide `kind` first, by what the reported result claims (`AGENTS.md`):
+  a computed quantity is `compute`. A claim about predictions is `fit` if
+  this experiment trained, tuned or selected the model, else `apply`. A
+  tuning rule registered in advance still tunes. Document and audit a
+  training under `compute` like any other code.
 - Evaluate a `fit` on held-out labelled rows. Judge a tuned detector on
   rows kept apart from the tuning.
 - A RandomForest fitted in seconds is `fit`, usually at `low`. A threshold

@@ -39,8 +39,12 @@ pins (`requirements.txt` / `requirements.lock`).
   guide, the field guide and the protocol template goes through the real
   parser in a test (`tests/test_agent_surface.py`): the guide showed a
   decide call without `--why` and a branch without consequences. The kind
-  is chosen by one path everywhere, training first (`KIND_QUESTIONS`):
-  the field guide asked about the number first. The field guide states
+  is chosen by one path everywhere (`KIND_QUESTIONS`, `AGENTS.md`, both
+  guides): by what the reported result claims. A computed quantity — a
+  model's feature importances included — is `compute`, its training
+  documented and audited; a claim about predictions is `fit` when this
+  experiment trained, tuned or selected the model, else `apply`; a file of
+  predictions claims how well the model predicts. The field guide states
   the quality check and the inference criterion by their function; the
   template's help names no rule, the field guide's last table does.
 

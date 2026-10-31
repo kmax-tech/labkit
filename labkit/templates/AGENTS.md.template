@@ -43,16 +43,15 @@ area and its protocol. In an existing area, keep its registered settings.
 | `repeat_cost` | What one more measurement costs | `low`: you can repeat it at will. `high`: a repeat is expensive, so a preflight audit and a freeze come first. |
 | `type` | The claim | `confirmatory`: question, inputs and analysis stood before you saw any result. Otherwise `exploratory`. |
 
-Choose `kind` with two questions, in this order:
+Choose `kind` by what the reported result claims:
 
-1. Does this experiment train, tune or select a model? If yes, the kind
-   is `fit`. Example: a random forest trained here, or a threshold tuned on
-   labelled rows. This holds also if you deliver only predictions. The
-   kept number is then the score on held-out labelled rows.
-2. If not, does the kept number judge predictions against gold labels? If
-   yes, the kind is `apply`. Example: an unchanged LLM scored against
-   labels. If not, the kind is `compute`. Example: the mean number of
-   documents per case.
+1. If it describes a computed quantity, the kind is `compute`. Example:
+   the mean number of documents per case, or a model's feature importances.
+2. If it claims how well a model predicts, ask whether this experiment
+   trained, tuned or selected the model. If yes, the kind is `fit`.
+   Example: a threshold tuned on labelled rows. If not, the kind is
+   `apply`. Example: an unchanged LLM scored against labels. A file of
+   predictions claims how well the model predicts.
 
 `protocol-check <PROTOCOL> --contract` names what this area owes.
 

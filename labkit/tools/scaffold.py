@@ -1373,17 +1373,21 @@ def blank_before_headings(text: str) -> str:
 #: an agent told to "train a random forest" called it a cheap computation
 #: (docs/notes/2026-10-26-kind-choice.md)
 KIND_QUESTIONS = (
-    "(1) Does this area train, adjust or select a model or prediction procedure "
-    "so that data set its free parameters (a threshold, window or prompt tuned "
-    "on reference annotations counts, even by a rule registered in advance, and "
-    "so does one set by hand after seeing results; a fixed formula that "
-    "computes each input's threshold from that input alone — k times each "
-    "signal's own noise level, k fixed — does not)? yes: fit — also "
-    "when the deliverable is predictions on unlabelled rows; the kept number is "
-    "then the model's score on held-out labelled rows. (2) Otherwise: does the "
-    "number judge how well a model used unchanged predicts, against gold labels "
-    "or targets? yes: apply, no: compute. Repeat cost does not decide the kind: "
-    "a fit that takes seconds is a fit"
+    "(1) What does the reported result claim? If it claims how well a model "
+    "or a prediction procedure predicts, against gold labels or targets, go "
+    "to (2). This holds also when the deliverable is predictions on "
+    "unlabelled rows: a predictions file claims that the predictions are "
+    "good. If the result describes a computed quantity (a count, a mean, the "
+    "feature importances of a model), the kind is compute; the model, its "
+    "training and its selection are then documented and audited like any "
+    "other code. (2) Did this experiment train, tune or select the model or "
+    "procedure, so that data set its free parameters? A threshold, window or "
+    "prompt tuned on labelled data counts, also by a rule registered in "
+    "advance or by hand after seeing results. A fixed formula that sets each "
+    "input's threshold from that input alone (k times the signal's own noise, "
+    "k fixed) does not count. If yes, the kind is fit. If not, the kind is "
+    "apply. Repeat cost does not decide the kind: a fit that takes seconds "
+    "is a fit"
 )
 
 
@@ -1578,10 +1582,10 @@ def next_steps(
         # owes a criterion its protocol has no place for
         steps.insert(
             0,
-            f"Check the kind before anything else. {KIND_QUESTIONS}. If (1) "
-            f"is yes: `labkit-init exp {slug} --kind fit --change-kind` — before "
-            f"the first measurement; it keeps what you wrote and refuses to "
-            f"replace a file you changed.",
+            f"Check the kind before anything else. {KIND_QUESTIONS}. If the "
+            f"answer is fit: `labkit-init exp {slug} --kind fit --change-kind` "
+            f"(apply likewise), before the first measurement. It keeps what you "
+            f"wrote and refuses to replace a file you changed.",
         )
     steps += _closing_steps(ln, rel, protocol)
     if repeat_cost is None:

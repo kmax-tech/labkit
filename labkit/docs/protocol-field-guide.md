@@ -154,19 +154,18 @@ parser. A typo is an error that names the field. The same block holds the
 
 #### Choosing the kind
 
-Ask the two questions of `AGENTS.md`, in this order:
+The kind follows what the reported result claims, not the tool:
 
-1. Does this experiment train, adjust or select a model? A threshold or a
-   prompt chosen on performance data is model selection (ML:II-189). If
-   yes, the kind is `fit`, also when the deliverable is only predictions.
-   The kept number is then the score on held-out labelled rows.
-2. If not, does the kept number judge how well a model predicts, against
-   gold labels? If yes, the kind is `apply`. If not, it is `compute` (ML
-   lecture, ML:VII-1).
+1. Does the result claim how well a model predicts, against gold labels or
+   targets? If not, the kind is `compute` (ML lecture, ML:VII-1). A file of
+   predictions on unlabelled rows claims how well the model predicts.
+2. If it does: did this experiment train, adjust or select the model? A
+   threshold or a prompt chosen on performance data is model selection
+   (ML:II-189). If yes, the kind is `fit`. If not, it is `apply`.
 
-Training comes first because a predictions file on unlabelled rows is no
-score: asked about the number first, an agent that trains a model can
-answer "no" and lose the criterion.
+Under `compute`, document the training and the model selection like any
+other code: the audit reads them. An inference criterion is not a score.
+It states which result allows which conclusion.
 
 If you select on the data that the number is reported from, the kind
 stays `fit`. The number is then a training error, not a holdout error (ML:II-175). Report it on a separate
@@ -182,8 +181,7 @@ test set or by nested cross-validation.
 | BERT checkpoint used unchanged | test F1 | `apply` |
 | checkpoint fixed, decision threshold chosen on dev | test F1 | `fit` |
 | random forest trained, hyperparameters by cross-validation | CV / holdout error | `fit` (nested CV or a separate test set) |
-| model trained here | feature importance as a finding | `fit` (the held-out score shows the importances come from a model that generalises) |
-| model trained elsewhere, used unchanged | feature importance as a finding | `compute` |
+| fitted model, trained here or elsewhere | feature importances as computed | `compute` (training documented and audited) |
 | regex / parser | number of matches | `compute` |
 | regex / parser, rules fixed | precision vs gold | `apply` |
 | regex / parser, rules repaired on the same data | precision | `fit` |
