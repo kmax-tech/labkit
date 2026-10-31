@@ -74,7 +74,11 @@ ALIAS = os.environ.get("PROBE_MODEL", "haiku")
 #: BASELINE=1: the same attempts without the requirement and its closing sentence — the task
 #: text and the arm's sentence alone (addendum 2: what the pressure changes); ids r2b-…
 BASELINE = os.environ.get("BASELINE") == "1"
-STORE = S / os.environ.get("STORE", "store-round2-baseline" if BASELINE else "store-round2")  # a second store for a run beside another (the store is locked per run)
+#: ID_PREFIX: the attempts' id prefix — r2 (part 1), r2b (the baseline), r2e (part 2, the effect
+#: of addendum 4: the baseline's prompt on the repaired release)
+ID_PREFIX = os.environ.get("ID_PREFIX") or ("r2b" if BASELINE else "r2")
+STORE = S / os.environ.get("STORE", {"r2": "store-round2", "r2b": "store-round2-baseline"}.get(
+    ID_PREFIX, f"store-round2-{ID_PREFIX}"))  # a second store for a run beside another (the store is locked per run)
 LIMITS = Limits(timeout_s=int(os.environ.get("PROBE_TIMEOUT", "2400")), max_turns=500, max_budget_usd=20.0)
 WORKERS = int(os.environ.get("WORKERS", "4"))
 #: CONTAINER_MEMORY=12g raises the agent container's memory limit (default 5g; task 71's
@@ -165,7 +169,7 @@ def prompt(task_id: str, arm: str, texts: dict[str, dict]) -> str:
 
 
 def attempt_id(task_id: str, arm: str, rep: int = 1) -> str:
-    return f"{'r2b' if BASELINE else 'r2'}-t{task_id}-{arm}{RUN_TAG}-r{rep}"
+    return f"{ID_PREFIX}-t{task_id}-{arm}{RUN_TAG}-r{rep}"
 
 
 def snapshot(task_id: str, arm: str, image: str) -> Path:
