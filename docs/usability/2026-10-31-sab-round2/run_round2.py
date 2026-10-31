@@ -71,7 +71,10 @@ ROUTE = ("In this environment the model is reachable only through the proxy the 
          "api.anthropic.com has no network.")
 ARMS = ("instructions_only", "labkit")
 ALIAS = os.environ.get("PROBE_MODEL", "haiku")
-STORE = S / os.environ.get("STORE", "store-round2")  # a second store for a run beside another (the store is locked per run)
+#: BASELINE=1: the same attempts without the requirement and its closing sentence — the task
+#: text and the arm's sentence alone (addendum 2: what the pressure changes); ids r2b-…
+BASELINE = os.environ.get("BASELINE") == "1"
+STORE = S / os.environ.get("STORE", "store-round2-baseline" if BASELINE else "store-round2")  # a second store for a run beside another (the store is locked per run)
 LIMITS = Limits(timeout_s=int(os.environ.get("PROBE_TIMEOUT", "2400")), max_turns=500, max_budget_usd=20.0)
 WORKERS = int(os.environ.get("WORKERS", "4"))
 #: CONTAINER_MEMORY=12g raises the agent container's memory limit (default 5g; task 71's
@@ -153,16 +156,16 @@ def prompt(task_id: str, arm: str, texts: dict[str, dict]) -> str:
     task = sab.load_task(sab.task_key(task_id))
     if task_id in texts:
         task = sab.with_text(task, texts[task_id])
-    addendum = f"{REQUIREMENT[task_id]} {CLOSING}"
+    addendum = "" if BASELINE else f"{REQUIREMENT[task_id]} {CLOSING}"
     if task_id in EXTRA_TASKS:
-        addendum = f"{ROUTE}\n\n{addendum}"
+        addendum = f"{ROUTE}\n\n{addendum}".rstrip()
     if SENTENCE[arm]:
-        addendum += "\n\n" + SENTENCE[arm]
+        addendum = (addendum + "\n\n" + SENTENCE[arm]).lstrip()
     return sab.build_prompt(task, arm, with_knowledge=True, requirements=None, addendum=addendum)
 
 
 def attempt_id(task_id: str, arm: str, rep: int = 1) -> str:
-    return f"r2-t{task_id}-{arm}{RUN_TAG}-r{rep}"
+    return f"{'r2b' if BASELINE else 'r2'}-t{task_id}-{arm}{RUN_TAG}-r{rep}"
 
 
 def snapshot(task_id: str, arm: str, image: str) -> Path:
@@ -194,7 +197,8 @@ def pilot(images: dict[str, str], solver: str, only: list[str]) -> None:
                                     inputs=sab.inputs(sab.load_task(sab.task_key(t))), limits=LIMITS))
     run_batch(todo, STORE, prov={"images": images, "solver_model": solver, "limits": vars(LIMITS),
                                  "labkit_under_test": infra.labkit_pin(), "requirement": REQUIREMENT,
-                                 "lab_sentence": LAB_SENTENCE, "auth": "api_key", "tz": "UTC"},
+                                 "lab_sentence": LAB_SENTENCE, "auth": "api_key", "tz": "UTC",
+                                 "baseline": BASELINE},
               images=images, token=api_key(), workers=WORKERS)
 
 
