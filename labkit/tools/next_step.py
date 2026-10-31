@@ -139,9 +139,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
 def _fill_line(protocol: str, missing: str) -> str | None:
     """The `protocol-fill` line that fills MISSING, a MUST gap as
     `protocol_check.check_fields` names it — a field label, or a head key as
-    `[protocol] <key>` with its allowed values (`protocol_fill.HEAD_KEYS`) —
+    `[protocol] <key>` with its allowed values (`protocol_edit.HEAD_KEYS`) —
     or None for a gap no single fill closes (a contradiction, a freeze key)."""
-    from labkit.tools.protocol_fill import HEAD_KEYS
+    from labkit.tools.protocol_edit import HEAD_KEYS
 
     if missing.startswith("[protocol] "):
         key = missing.removeprefix("[protocol] ")

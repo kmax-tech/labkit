@@ -21,6 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.tools import protocol_fill  # noqa: E402
+from labkit.tools import protocol_edit
+from labkit.tools import protocol_result
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
@@ -44,13 +46,13 @@ SAMPLE = """# Experiment protocol: x
 
 class TestFill(unittest.TestCase):
     def test_single_line_placeholder_is_replaced_by_label(self):
-        out = protocol_fill.fill(SAMPLE, "Conclusion", "K2 PASS, run 2026-x")
+        out = protocol_edit.fill(SAMPLE, "Conclusion", "K2 PASS, run 2026-x")
         self.assertIn("- **Conclusion †:** K2 PASS, run 2026-x", out)
         self.assertNotIn("<number(s)", out)
         self.assertIn("does Y move X?", out)  # untouched neighbours
 
     def test_multi_line_placeholder_collapses_to_the_filled_line(self):
-        out = protocol_fill.fill(
+        out = protocol_edit.fill(
             SAMPLE, "Meaning of the gold label", "positive = the judge prefers world A"
         )
         self.assertIn(
@@ -60,19 +62,19 @@ class TestFill(unittest.TestCase):
         self.assertNotIn("annotator's words", out)
 
     def test_label_match_ignores_dagger_and_case(self):
-        out = protocol_fill.fill(SAMPLE, "conclusion †", "filled")
+        out = protocol_edit.fill(SAMPLE, "conclusion †", "filled")
         self.assertIn("- **Conclusion †:** filled", out)
 
     def test_filled_field_is_refused_without_force(self):
         with self.assertRaises(ValueError) as ctx:
-            protocol_fill.fill(SAMPLE, "Model / tool", "gpt-oss")
+            protocol_edit.fill(SAMPLE, "Model / tool", "gpt-oss")
         self.assertIn("already filled", str(ctx.exception))
-        out = protocol_fill.fill(SAMPLE, "Model / tool", "gpt-oss", force=True)
+        out = protocol_edit.fill(SAMPLE, "Model / tool", "gpt-oss", force=True)
         self.assertIn("- **Model / tool:** gpt-oss", out)
 
     def test_unknown_label_lists_the_open_fields(self):
         with self.assertRaises(ValueError) as ctx:
-            protocol_fill.fill(SAMPLE, "No such field", "x")
+            protocol_edit.fill(SAMPLE, "No such field", "x")
         msg = str(ctx.exception)
         self.assertIn("Question", msg)
         self.assertIn("Meaning of the gold label", msg)
@@ -80,9 +82,9 @@ class TestFill(unittest.TestCase):
     def test_ambiguous_label_requires_line(self):
         two = SAMPLE + "\n- **Conclusion †:** <second stamp>\n"
         with self.assertRaises(ValueError) as ctx:
-            protocol_fill.fill(two, "Conclusion", "x")
+            protocol_edit.fill(two, "Conclusion", "x")
         self.assertIn("--line", str(ctx.exception))
-        out = protocol_fill.fill(two, "Conclusion", "x", line_no=6)
+        out = protocol_edit.fill(two, "Conclusion", "x", line_no=6)
         self.assertIn("- **Conclusion †:** x", out)
         self.assertIn("<second stamp>", out)
 
@@ -90,7 +92,7 @@ class TestFill(unittest.TestCase):
         """The stamped `Resolution check` label wraps; the old parser listed
         it as `extremes)` (usability probe 2026-10-07)."""
         text = "- **Resolution check (ZERO calls,\n  extremes):** <both numbers>\n"
-        out = protocol_fill.fill(text, "Resolution check", "fires 1.0, silent 0.0")
+        out = protocol_edit.fill(text, "Resolution check", "fires 1.0, silent 0.0")
         self.assertEqual(
             out,
             "- **Resolution check (ZERO calls, extremes):** fires 1.0, silent 0.0\n",
@@ -137,7 +139,7 @@ class HeadType(unittest.TestCase):
     )
 
     def test_list_names_the_head_type_first_and_fill_sets_it(self):
-        self.assertEqual(protocol_fill.head_open(self.HEAD, "type"), 7)
+        self.assertEqual(protocol_edit.head_open(self.HEAD, "type"), 7)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
@@ -148,7 +150,7 @@ class HeadType(unittest.TestCase):
             text = p.read_text(encoding="utf-8")
         self.assertEqual(out.getvalue().splitlines()[0].split()[:2], ["7", "type"])
         self.assertIn('type = "exploratory"', text)
-        self.assertIsNone(protocol_fill.head_open(text, "type"))
+        self.assertIsNone(protocol_edit.head_open(text, "type"))
         # the head reads: the hook's "MISSING (must): [protocol] type" is gone
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
@@ -170,7 +172,7 @@ class HeadType(unittest.TestCase):
         cut = next(i for i, ln in enumerate(lines) if ln.startswith("after the run"))
         before = " ".join(lines[:cut])
         after = " ".join(lines[cut + 1 :])
-        for label in protocol_fill.WRITTEN_BY_RUN:
+        for label in protocol_result.WRITTEN_BY_RUN:
             self.assertNotIn(label, before)
             self.assertIn(label, after)
         self.assertIn("Question / hypothesis", before)
@@ -185,14 +187,14 @@ class HeadType(unittest.TestCase):
         text = example + self.HEAD.replace(
             '"<exploratory | confirmatory>"', '"exploratory"'
         )
-        self.assertIsNone(protocol_fill.head_open(text, "type"))
+        self.assertIsNone(protocol_edit.head_open(text, "type"))
         text = example + self.HEAD
-        line = protocol_fill.head_open(text, "type")
+        line = protocol_edit.head_open(text, "type")
         assert line is not None
         self.assertEqual(
             text.splitlines()[line - 1].strip(), 'type = "<exploratory | confirmatory>"'
         )
-        filled = protocol_fill.fill_head(text, "type", "confirmatory")
+        filled = protocol_edit.fill_head(text, "type", "confirmatory")
         self.assertIn('type = "<yes | no>"', filled)  # the example is untouched
         self.assertIn('type = "confirmatory"', filled)
 
@@ -200,7 +202,7 @@ class HeadType(unittest.TestCase):
         """`labkit-init exp` without --repeat-cost leaves `cost = "<…>"`; --list named
         only type, and the agent edited the head by hand (2026-10-21)."""
         text = self.HEAD.replace('repeat_cost = "low"', 'repeat_cost = "<low | high>"')
-        self.assertEqual(protocol_fill.head_open(text, "repeat_cost"), 8)
+        self.assertEqual(protocol_edit.head_open(text, "repeat_cost"), 8)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
@@ -216,11 +218,11 @@ class HeadType(unittest.TestCase):
         self.assertEqual(listed, [["7", "type"], ["8", "repeat_cost"]])
         self.assertIn("low | high", out.getvalue())
         self.assertEqual(protocol_block.head(filled).repeat_cost, "high")
-        self.assertIsNone(protocol_fill.head_open(filled, "repeat_cost"))
+        self.assertIsNone(protocol_edit.head_open(filled, "repeat_cost"))
         with self.assertRaisesRegex(ValueError, "repeat_cost must be one of low"):
-            protocol_fill.fill_head(text, "repeat_cost", "days")
+            protocol_edit.fill_head(text, "repeat_cost", "days")
         with self.assertRaisesRegex(ValueError, "not a choice protocol-fill sets"):
-            protocol_fill.head_open(text, "frozen")
+            protocol_edit.head_open(text, "frozen")
 
     def test_the_model_alias_left_by_a_bare_model_flag_is_listed_and_set(self):
         """`labkit-init exp --model` without an alias stamps `[model] alias =
@@ -230,7 +232,7 @@ class HeadType(unittest.TestCase):
             'preflight_audit = "none"\n',
             'preflight_audit = "none"\n\n[model]\nalias = "<alias from models.toml>"\n',
         )
-        self.assertEqual(protocol_fill.head_open(text, "alias"), 14)
+        self.assertEqual(protocol_edit.head_open(text, "alias"), 14)
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp) / "PROTOCOL-x.md"
@@ -248,9 +250,9 @@ class HeadType(unittest.TestCase):
         m = protocol_block.model(filled)
         assert m is not None
         self.assertEqual(m.alias, "haiku")
-        self.assertIsNone(protocol_fill.head_open(filled, "alias"))
+        self.assertIsNone(protocol_edit.head_open(filled, "alias"))
         with self.assertRaisesRegex(ValueError, "alias: an empty value"):
-            protocol_fill.fill_head(text, "alias", " ")
+            protocol_edit.fill_head(text, "alias", " ")
 
     def test_number_describes_is_listed_and_set_and_the_freeze_says_how(self):
         # a MUST of a computation with a model that no tool set, and the
@@ -273,11 +275,11 @@ class HeadType(unittest.TestCase):
         self.assertIn("number_describes", out.getvalue())
         self.assertIn('number_describes = "model_outputs"', filled)
         with self.assertRaisesRegex(ValueError, "must be one of"):
-            protocol_fill.fill_many(text, [("number_describes", "outputs")])
+            protocol_edit.fill_many(text, [("number_describes", "outputs")])
         for key in ("frozen", "preflight_audit"):
             with self.subTest(key=key):
                 with self.assertRaisesRegex(ValueError, "set by hand in the TOML head"):
-                    protocol_fill.fill_many(text, [(key, "true")])
+                    protocol_edit.fill_many(text, [(key, "true")])
 
     def test_list_sets_apart_the_fields_this_protocol_does_not_owe(self):
         # a high computation without a model was told to fill its data
@@ -301,9 +303,9 @@ class HeadType(unittest.TestCase):
 
     def test_a_wrong_type_and_a_set_type_are_refused(self):
         with self.assertRaises(ValueError):
-            protocol_fill.fill_head(self.HEAD, "type", "descriptive")
+            protocol_edit.fill_head(self.HEAD, "type", "descriptive")
         with self.assertRaises(ValueError):
-            protocol_fill.fill_head(
+            protocol_edit.fill_head(
                 self.HEAD.replace('"<exploratory | confirmatory>"', '"exploratory"'),
                 "type",
                 "confirmatory",
@@ -327,7 +329,7 @@ class Prompts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             protocol = self.area(d)
             consts = prompt_check.prompt_constants(protocol.parent)
-            protocol.write_text(protocol_fill.fill_prompts(TEMPLATE, consts))
+            protocol.write_text(protocol_result.fill_prompts(TEMPLATE, consts))
             self.assertEqual(
                 prompt_check.check_prompt_drift(protocol.parent, protocol), []
             )
@@ -341,7 +343,7 @@ class Prompts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             protocol = self.area(d)
             consts = prompt_check.prompt_constants(protocol.parent)
-            protocol.write_text(protocol_fill.fill_prompts(TEMPLATE, consts))
+            protocol.write_text(protocol_result.fill_prompts(TEMPLATE, consts))
             (protocol.parent / "scripts" / "01_measure.py").write_text(
                 SCRIPT.replace("causal claim", "claim of cause")
             )
@@ -353,12 +355,12 @@ class Prompts(unittest.TestCase):
 
     def test_filling_twice_replaces_not_appends(self):
         consts = {"PROMPT": "Q?"}
-        once = protocol_fill.fill_prompts(TEMPLATE, consts)
-        self.assertEqual(protocol_fill.fill_prompts(once, consts), once)
+        once = protocol_result.fill_prompts(TEMPLATE, consts)
+        self.assertEqual(protocol_result.fill_prompts(once, consts), once)
 
     def test_no_constant_is_a_sentence(self):
         with self.assertRaises(ValueError) as cm:
-            protocol_fill.fill_prompts(TEMPLATE, {})
+            protocol_result.fill_prompts(TEMPLATE, {})
         self.assertIn("no PROMPT constant", str(cm.exception))
 
     def prompts_cli(self, protocol: Path) -> tuple[int, str, str]:
@@ -408,26 +410,26 @@ class OneCallFill(unittest.TestCase):
 
     def test_every_word_with_an_equals_sign_is_one_assignment(self):
         self.assertEqual(
-            protocol_fill.assignments_of("Unit=a = b", ["Data / scope=x"]),
+            protocol_edit.assignments_of("Unit=a = b", ["Data / scope=x"]),
             [("Unit", "a = b"), ("Data / scope", "x")],
         )
 
     def test_the_one_field_form_joins_the_value_words(self):
         self.assertEqual(
-            protocol_fill.assignments_of("Unit", ["one", "thing"]),
+            protocol_edit.assignments_of("Unit", ["one", "thing"]),
             [("Unit", "one thing")],
         )
         self.assertEqual(
-            protocol_fill.assignments_of("Unit", ["x = 1"]), [("Unit", "x = 1")]
+            protocol_edit.assignments_of("Unit", ["x = 1"]), [("Unit", "x = 1")]
         )
 
     def test_no_value_is_no_assignment(self):
-        self.assertEqual(protocol_fill.assignments_of("Unit", []), [])
-        self.assertEqual(protocol_fill.assignments_of(None, []), [])
+        self.assertEqual(protocol_edit.assignments_of("Unit", []), [])
+        self.assertEqual(protocol_edit.assignments_of(None, []), [])
 
     def test_fill_many_fills_in_order_and_sets_the_head_type(self):
         text = head(type="<exploratory | confirmatory>") + self.BODY
-        new = protocol_fill.fill_many(
+        new = protocol_edit.fill_many(
             text,
             [
                 ("type", "confirmatory"),
@@ -443,9 +445,9 @@ class OneCallFill(unittest.TestCase):
     def test_one_bad_label_fills_nothing(self):
         text = head() + self.BODY
         with self.assertRaises(ValueError):
-            protocol_fill.fill_many(text, [("Unit", "one case"), ("Nope", "x")])
+            protocol_edit.fill_many(text, [("Unit", "one case"), ("Nope", "x")])
         with self.assertRaises(ValueError):
-            protocol_fill.fill_many(text, [("Unit", "")])
+            protocol_edit.fill_many(text, [("Unit", "")])
 
     def test_the_command_writes_once_or_not_at_all(self):
         with tempfile.TemporaryDirectory() as d:
@@ -468,11 +470,11 @@ class StampedId(unittest.TestCase):
     TEXT = "- **Inference criterion:** [criterion-1] <how do we recognise…>\n"
 
     def test_a_value_without_an_id_keeps_the_stamped_one(self):
-        out = protocol_fill.fill(self.TEXT, "Inference criterion", "acc >= 0.8")
+        out = protocol_edit.fill(self.TEXT, "Inference criterion", "acc >= 0.8")
         self.assertEqual(out, "- **Inference criterion:** [criterion-1] acc >= 0.8\n")
 
     def test_a_value_with_its_own_ids_replaces_it(self):
-        out = protocol_fill.fill(
+        out = protocol_edit.fill(
             self.TEXT,
             "Inference criterion",
             "[criterion-1] acc >= 0.8 and [criterion-2] f1 >= 0.5",
@@ -549,10 +551,10 @@ class TestFromRun(unittest.TestCase):
                 "duration_s": 0.02,
             }
         )
-        text, filled, run_id = protocol_fill.from_run(self.PROTOCOL, area)
+        text, filled, run_id = protocol_result.from_run(self.PROTOCOL, area)
         self.assertEqual(run_id, self.RUN)
         self.assertEqual(
-            filled, ["Recorded results", protocol_fill.RESULT_LABEL, "Runs"]
+            filled, ["Recorded results", protocol_result.RESULT_LABEL, "Runs"]
         )
         line = (
             "mean_docs_per_case = 3.5, n_cases = 12, quality_check_1_pass = True (run "
@@ -563,7 +565,7 @@ class TestFromRun(unittest.TestCase):
         # the Result is the author's two sentences, not the key dump again
         # (three of three judge protocols carried it there, 2026-10-21)
         self.assertIn("- **Conclusion:** <the answer to the question above", text)
-        self.assertIn("Conclusion", protocol_fill.WRITTEN_AFTER_RUN)
+        self.assertIn("Conclusion", protocol_result.WRITTEN_AFTER_RUN)
         self.assertIn("- " + self.RUN + " — the kept run", text)
         self.assertNotIn("duration_s", text)  # labkit's own key is not the number
         self.assertNotIn("<run_id>", text)
@@ -578,11 +580,11 @@ class TestFromRun(unittest.TestCase):
 
     def test_a_written_answer_is_refused_without_force_and_the_run_is_named_once(self):
         area = self._area({"mean_docs_per_case": 3.5})
-        text, _, _ = protocol_fill.from_run(self.PROTOCOL, area)
+        text, _, _ = protocol_result.from_run(self.PROTOCOL, area)
         with self.assertRaises(ValueError) as cm:
-            protocol_fill.from_run(text, area)
+            protocol_result.from_run(text, area)
         self.assertIn("already filled", str(cm.exception))
-        again, filled, _ = protocol_fill.from_run(text, area, force=True)
+        again, filled, _ = protocol_result.from_run(text, area, force=True)
         self.assertNotIn("Runs", filled)  # the run line is there once, not twice
         self.assertEqual(
             again.count(self.RUN), 3
@@ -593,12 +595,12 @@ class TestFromRun(unittest.TestCase):
         once, right after the [protocol] table, read back exactly; the
         template's comment above [protocol] and every other byte stay."""
         area = self._area({"mean_docs_per_case": 3.5})
-        text, filled, _ = protocol_fill.from_run(self.PROTOCOL, area)
-        self.assertIn(protocol_fill.RESULT_LABEL, filled)
+        text, filled, _ = protocol_result.from_run(self.PROTOCOL, area)
+        self.assertIn(protocol_result.RESULT_LABEL, filled)
         self.assertEqual(protocol_block.declared_run(text), self.RUN)
         self.assertIn(f'preflight_audit = ""\n\n[result]\nrun = "{self.RUN}"\n', text)
-        again, filled, _ = protocol_fill.from_run(text, area, force=True)
-        self.assertNotIn(protocol_fill.RESULT_LABEL, filled)  # declared already
+        again, filled, _ = protocol_result.from_run(text, area, force=True)
+        self.assertNotIn(protocol_result.RESULT_LABEL, filled)  # declared already
         self.assertEqual(again.count("[result]"), 1)
 
     def test_a_head_declaring_another_run_is_refused_not_skipped(self):
@@ -609,17 +611,17 @@ class TestFromRun(unittest.TestCase):
         )
         area = self._area({"mean_docs_per_case": 3.5})
         with self.assertRaises(ValueError) as cm:
-            protocol_fill.from_run(protocol, area)
+            protocol_result.from_run(protocol, area)
         self.assertIn(f"[result] names {other}, not {self.RUN}", str(cm.exception))
         # --force does not replace it either: the declaration is withdrawn first
         with self.assertRaises(ValueError) as cm:
-            protocol_fill.from_run(protocol, area, force=True)
+            protocol_result.from_run(protocol, area, force=True)
         self.assertIn("withdraw it", str(cm.exception))
 
     def test_a_named_run_that_is_not_completed_refuses(self):
         area = self._area({"x": 1})
         with self.assertRaises(SystemExit):
-            protocol_fill.from_run(
+            protocol_result.from_run(
                 self.PROTOCOL, area, run_id="2026-01-01T00-00-00_0000"
             )
 
@@ -813,7 +815,7 @@ class Adopt(unittest.TestCase):
 
 
 class WithdrawText(unittest.TestCase):
-    """`protocol_fill.withdraw` on a protocol's text: the declaration gone,
+    """`protocol_result.withdraw` on a protocol's text: the declaration gone,
     the generated lines reset, the trace on the run's Runs entry — also for a
     `[result]` that does not read, which no audit may crash on
     (`protocol_block.declared_run_shown`). The chain through the commands
@@ -833,7 +835,7 @@ class WithdrawText(unittest.TestCase):
         )
 
     def test_the_declaration_goes_and_the_trace_stays_on_the_runs_entry(self):
-        new, run = protocol_fill.withdraw(
+        new, run = protocol_result.withdraw(
             self.protocol(self.RUN), "code changed", self.DAY
         )
         self.assertEqual(run, self.RUN)
@@ -858,15 +860,15 @@ class WithdrawText(unittest.TestCase):
         self.assertIn("does not read", shown)
         piece = audit_binding.declared_piece(None, shown)
         self.assertEqual(len(piece), 1)  # the audit shows it, never crashes on it
-        new, _ = protocol_fill.withdraw(text, "a typed run id", self.DAY)
+        new, _ = protocol_result.withdraw(text, "a typed run id", self.DAY)
         self.assertIsNone(protocol_block.declared_run(new))
         self.assertIn(f"withdrawn {self.DAY}: a typed run id", new)
 
     def test_nothing_declared_or_no_reason_is_refused(self):
         with self.assertRaises(ValueError):
-            protocol_fill.withdraw(self.protocol(None), "why", self.DAY)
+            protocol_result.withdraw(self.protocol(None), "why", self.DAY)
         with self.assertRaises(ValueError):
-            protocol_fill.withdraw(self.protocol(self.RUN), "  ", self.DAY)
+            protocol_result.withdraw(self.protocol(self.RUN), "  ", self.DAY)
 
     def test_the_declared_piece_stands_only_beside_another_run(self):
         run = Path("/x/runs") / self.RUN
@@ -880,9 +882,9 @@ class WithdrawText(unittest.TestCase):
 
     def test_a_declaration_is_never_replaced_by_another_run(self):
         text = self.protocol(self.RUN)
-        self.assertEqual(protocol_fill.fill_result_run(text, self.RUN), text)
+        self.assertEqual(protocol_result.fill_result_run(text, self.RUN), text)
         with self.assertRaises(ValueError) as cm:
-            protocol_fill.fill_result_run(text, "2026-01-01T00-00-00_0002")
+            protocol_result.fill_result_run(text, "2026-01-01T00-00-00_0002")
         self.assertIn("withdraw it", str(cm.exception))
 
     def test_withdraw_takes_why_and_no_other_operation(self):
@@ -945,7 +947,7 @@ class PromiseSentences(unittest.TestCase):
 
     def test_a_fill_writes_a_toml_string_that_reads_back(self):
         value = 'registered accuracy >= null + margin; "empty" counts as wrong \\ ok'
-        new = protocol_fill.fill_many(self.text(), [("criterion-1 sentence", value)])
+        new = protocol_edit.fill_many(self.text(), [("criterion-1 sentence", value)])
         from labkit.formats import promises
 
         block = promises.parse_block(new)
@@ -961,8 +963,8 @@ class PromiseSentences(unittest.TestCase):
 
     def test_a_written_sentence_needs_force_and_an_unknown_id_is_named(self):
         with self.assertRaisesRegex(ValueError, "already written"):
-            protocol_fill.fill_many(self.text(), [("quality-check-1 sentence", "x")])
-        new = protocol_fill.fill_many(
+            protocol_edit.fill_many(self.text(), [("quality-check-1 sentence", "x")])
+        new = protocol_edit.fill_many(
             self.text(), [("quality-check-1 sentence", "y")], force=True
         )
         self.assertIn('sentence = "y"', new)
@@ -970,7 +972,7 @@ class PromiseSentences(unittest.TestCase):
             ValueError,
             r"no \[\[promise\]\] 'branch-9'.*criterion-1, quality-check-1",
         ):
-            protocol_fill.fill_many(self.text(), [("branch-9 sentence", "x")])
+            protocol_edit.fill_many(self.text(), [("branch-9 sentence", "x")])
 
     def test_one_call_fills_a_field_and_a_sentence_or_nothing(self):
         text = self.text() + "\n- **Unit:** <the unit>\n"
@@ -1032,7 +1034,7 @@ class PromiseSentencesReview(unittest.TestCase):
                     f"{self.sentence_line(text):4d}  criterion-1 sentence",
                     self.listed(text),
                 )
-                new = protocol_fill.fill_many(text, [("criterion-1 sentence", "s")])
+                new = protocol_edit.fill_many(text, [("criterion-1 sentence", "s")])
                 self.assertIn('sentence = "s"', new)
 
     def test_a_line_break_character_in_the_prose_keeps_the_line(self):
@@ -1043,7 +1045,7 @@ class PromiseSentencesReview(unittest.TestCase):
                     f"{self.sentence_line(text):4d}  criterion-1 sentence",
                     self.listed(text),
                 )
-                new = protocol_fill.fill_many(text, [("criterion-1 sentence", "s")])
+                new = protocol_edit.fill_many(text, [("criterion-1 sentence", "s")])
                 self.assertIn(f"a{mark}b", new)
                 self.assertIn('sentence = "s"', new)
 
@@ -1051,22 +1053,22 @@ class PromiseSentencesReview(unittest.TestCase):
         from labkit.formats import promises
 
         value = "a b c\x85d\x7fe\nf\tg\\h\"i'"
-        new = protocol_fill.fill_many(self.text(), [("criterion-1 sentence", value)])
+        new = protocol_edit.fill_many(self.text(), [("criterion-1 sentence", value)])
         block = promises.parse_block(new)
         assert block is not None
         self.assertEqual(block.promises[0].sentence, value)
 
     def test_a_lone_surrogate_is_refused_by_name(self):
         with self.assertRaisesRegex(ValueError, "surrogate"):
-            protocol_fill.fill_many(self.text(), [("criterion-1 sentence", "a\udcffb")])
+            protocol_edit.fill_many(self.text(), [("criterion-1 sentence", "a\udcffb")])
 
     def test_a_prose_label_ending_in_sentence_stays_a_prose_field(self):
         text = self.text() + "\n- **Key sentence:** <the one sentence>\n"
-        new = protocol_fill.fill_many(text, [("Key sentence", "k")])
+        new = protocol_edit.fill_many(text, [("Key sentence", "k")])
         self.assertIn("- **Key sentence:** k", new)
 
     def test_line_is_refused_for_a_promise_sentence(self):
         with self.assertRaisesRegex(ValueError, "--line"):
-            protocol_fill.fill_many(
+            protocol_edit.fill_many(
                 self.text(), [("criterion-1 sentence", "s")], line_no=3
             )

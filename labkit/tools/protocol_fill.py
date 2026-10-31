@@ -5,7 +5,10 @@ placeholder block never matches exactly (2026-09-09, twice in one day on the
 same protocol — three attempts each until a regex sat). The template stamps
 every field as `- **Label †:** <placeholder>`, so the LABEL is the stable
 handle; this tool matches it, replaces the `<...>` value (multi-line
-placeholders included) and leaves everything else byte-identical.
+placeholders included) and leaves everything else byte-identical. The text
+edits stand in `protocol_edit`, the writers of the result section in
+`protocol_result`; this module reads and writes the files and holds the
+command line.
 
     protocol-fill PROTOCOL-x.md --list
     protocol-fill PROTOCOL-x.md "Meaning of the gold label=positive = ..."   the form AGENTS.md shows; several fields in one call
@@ -80,8 +83,6 @@ later-changed answer to the same. A provisional number stays a sketch in
 from __future__ import annotations
 
 import argparse
-import difflib
-import re
 from datetime import date
 from pathlib import Path
 
@@ -89,13 +90,12 @@ from labkit.formats import (
     attempts,
     console,
     files,
-    findings,
     handovers,
     promises,
     protocol_block,
     runs,
 )
-from labkit.checks.result_render import Rendering, rendering
+from labkit.checks.result_render import rendering
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     GitError,
@@ -110,600 +110,30 @@ from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
-    RECORDED_RESULTS_LABEL,
-    BEFORE_RUN_CLAIMS,
-    RUNS_PLACEHOLDER,
     field_name,
     fields,
     not_owed,
     placeholder_fields,
 )
-
-# Bullet and indentation of a label line, kept when the line is rewritten.
-_LEAD = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)?")
-
-
-def field_for(text: str, field: str, line_no: int | None = None) -> str:
-    """The field name (`field_name`) FIELD means in TEXT: its own when a field
-    has it, else the one field whose name it begins (`Terms` → `terms of
-    this protocol`) — a label typed short names its field when no other
-    begins the same. Raises ValueError naming the fields a prefix begins
-    when several do, else the nearest names (`difflib`) and the open
-    placeholder fields. LINE_NO restricts the fields to that line."""
-    want = field_name(field)
-    names = sorted(
-        {f.name for f in fields(text) if line_no is None or f.line == line_no}
-    )
-    if want in names:
-        return want
-    begun = [n for n in names if want and n.startswith(want)]
-    if len(begun) == 1:
-        return begun[0]
-    where = f" at line {line_no}" if line_no else ""
-    if begun:
-        raise ValueError(
-            f"{field!r}{where} begins {len(begun)} fields: "
-            + " · ".join(begun)
-            + " — name one in full"
-        )
-    near = difflib.get_close_matches(want, names, n=3, cutoff=0.6)
-    labels = sorted({lbl for _, lbl in placeholder_fields(text)})
-    raise ValueError(
-        f"no field labelled {field!r}{where}"
-        + (f" — did you mean {' · '.join(near)}?" if near else "")
-        + (
-            " Open placeholder fields: " + " · ".join(labels)
-            if labels
-            else " No placeholder fields left."
-        )
-    )
-
-
-def fill(
-    text: str, field: str, value: str, line_no: int | None = None, force: bool = False
-) -> str:
-    """Return the protocol text with `field`'s placeholder replaced by `value`.
-
-    Fields are read by `protocol_check.fields` — the one parser of labels
-    and placeholders; a second one here mis-read a wrapped label as
-    `extremes)` (usability probe 2026-10-07). The label line and its
-    continuation lines become one line; everything else stays byte-identical.
-    An id the stamp wrote before the placeholder (`[criterion-1] <…>`) stays when
-    VALUE names no id; a VALUE with its own ids replaces it.
-
-    Raises ValueError with a human-readable reason (unknown label, ambiguous
-    label, already filled without force) — the CLI prints it verbatim.
-    """
-    want = field_for(text, field, line_no)
-    hits = [
-        f
-        for f in fields(text)
-        if f.name == want and (line_no is None or f.line == line_no)
-    ]
-    if len(hits) > 1:
-        where = ", ".join(str(f.line) for f in hits)
-        raise ValueError(
-            f"label {field!r} matches lines {where} — disambiguate with --line <n>."
-        )
-    (f,) = hits
-    if not f.placeholder and not force:
-        raise ValueError(
-            f"line {f.line} ({f.label!r}) is already filled: "
-            f"{f.value[:80]!r}. Overwrite with --force."
-        )
-    # the id the stamp wrote before the placeholder stays when VALUE names
-    # none: a criterion filled without it is a promise the prose drops
-    stamped_id = promises.ID_PREFIX.match(f.value)
-    if stamped_id and not promises.ids_in_prose(value):
-        value = stamped_id.group(0).rstrip() + " " + value
-    lines = text.splitlines()
-    lead = _LEAD.match(lines[f.line - 1])
-    assert lead is not None, "the pattern matches the empty prefix"
-    lines[f.line - 1 : f.last] = [f"{lead.group(0)}**{f.label}:** {value}"]
-    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
-
-
-#: the head's stamped placeholders `protocol-fill` sets, by the label a fill
-#: names: (the TOML key, its allowed values — None for a free string)
-HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
-    "type": ("type", protocol_block.TYPES),
-    "repeat_cost": ("repeat_cost", protocol_block.REPEAT_COSTS),
-    "kind": ("kind", protocol_block.KINDS),
-    "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
-    # [model] number_describes, a MUST of a computation with a model that no
-    # tool could set and `--list` never named (audit 2026-10-27, third, I5)
-    "number_describes": ("number_describes", protocol_block.NUMBER_DESCRIBES),
-}
-#: the head's freeze keys: a deliberate edit by the author once preflight is
-#: clean and the preflight audit decided, not a fill — named so a fill of
-#: them says so instead of "no field labelled" (audit 2026-10-27, third, I6)
-FREEZE_KEYS = ("frozen", "preflight_audit")
-#: TOML key → its allowed values (None: free), for `head_open` and `fill_head`
-HEAD_CHOICES: dict[str, tuple[str, ...] | None] = {
-    key: choices for key, choices in HEAD_KEYS.values()
-}
-
-
-def _head_line(key: str) -> re.Pattern[str]:
-    """The head's `KEY = "<…>"` placeholder line, its key and `=` kept."""
-    return re.compile(rf'^({re.escape(key)}\s*=\s*)"<[^"\n]*>"\s*$')
-
-
-def head_open(text: str, key: str) -> int | None:
-    """Line number of the TOML head's `KEY = "<…>"` placeholder, KEY one of
-    `HEAD_CHOICES`, or None once set; ValueError on another key.
-
-    The stamp leaves `type` — and `repeat_cost`, when `labkit-init exp` got no
-    `--repeat-cost` — as a placeholder in the head; `--list` named only the prose
-    fields, so an agent filled those, hit the hook's "MISSING (must):
-    [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
-    2026-10-13). Read inside the TOML block only (`protocol_block.toml_block_span`):
-    a `type = "<…>"` line in a fenced example was taken for the head
-    (audit 2026-10-15)."""
-    if key not in HEAD_CHOICES:
-        raise ValueError(
-            f"the head's {key!r} is not a choice protocol-fill sets "
-            f"({', '.join(HEAD_CHOICES)})"
-        )
-    lines = text.splitlines()
-    span = protocol_block.toml_block_span(text)
-    if span is None:
-        return None
-    start, end = span
-    pattern = _head_line(key)
-    for i in range(start, end):
-        if pattern.match(lines[i]):
-            return i + 1
-    return None
-
-
-def fill_head(text: str, key: str, value: str) -> str:
-    """Set the head's KEY from its placeholder; VALUE one of `HEAD_CHOICES[key]`,
-    or any non-empty string where the key is free (written by `toml_string`)."""
-    n = head_open(text, key)
-    choices = HEAD_CHOICES[key]
-    if choices is not None and value not in choices:
-        raise ValueError(f"{key} must be one of {' | '.join(choices)}, not {value!r}")
-    if not value.strip():
-        raise ValueError(f"{key}: an empty value")
-    if n is None:
-        raise ValueError(
-            f"the head's {key} is already set (edit the TOML head to change it)"
-        )
-    lines = text.split("\n")
-    written = protocol_block.toml_string(value)
-    lines[n - 1] = _head_line(key).sub(lambda m: f"{m.group(1)}{written}", lines[n - 1])
-    return "\n".join(lines)
-
-
-#: a promise's sentence as `--list` names it and a fill addresses it:
-#: `criterion-1 sentence` — the word before "sentence" is a promise id
-#: (`promises.is_block_id`), else the label is a prose field's
-SENTENCE_LABEL = re.compile(r"^\s*(\S+)\s+sentence\s*$", re.I)
-#: a one-line `sentence = <string>` with an optional comment, the key bare
-#: or quoted, the value a basic or a literal string — the form a fill rewrites
-_ONE_LINE_SENTENCE = re.compile(
-    r"""^(\s*(?:sentence|"sentence"|'sentence')\s*=\s*)"""
-    r"""(?:"(?:[^"\\]|\\.)*"|'[^']*')(\s*(?:#.*)?)$"""
+from labkit.tools.protocol_edit import (
+    HEAD_KEYS,
+    as_filled,
+    assignments_of,
+    fill,
+    fill_many,
+    head_open,
+    open_sentences,
 )
-_SENTENCE_KEY = re.compile(r"""^\s*(?:sentence|"sentence"|'sentence')\s*=""")
-
-
-def sentence_lines(text: str) -> dict[str, int]:
-    """{promise id: line number of its `sentence =`} in the TOML head. The
-    ids come from `promises.parse_block`, in table order; this function
-    only counts `[[promise]]` headers and finds each table's sentence key,
-    so every valid spelling of the id reads (a comment after it, single
-    quotes, a quoted key dropped the table, review 2026-10-20). Lines are
-    cut as the fence walker cuts them (`str.splitlines`). An id is missing
-    when its table has no one-line sentence key, or when the headers do not
-    count the tables (an inline array of tables). Raises
-    promises.PromiseError on a malformed block."""
-    block = promises.parse_block(text)
-    span = protocol_block.toml_block_span(text)
-    if block is None or span is None:
-        return {}
-    lines = text.splitlines()
-    tables: list[int | None] = []
-    inside = False
-    for i in range(span[0], span[1]):
-        if protocol_block.PROMISE_HEADER.match(lines[i]):
-            tables.append(None)
-            inside = True
-        elif protocol_block.TABLE_HEADER.match(lines[i]):
-            inside = False
-        elif inside and tables[-1] is None and _SENTENCE_KEY.match(lines[i]):
-            tables[-1] = i + 1
-    if len(tables) != len(block.promises):
-        return {}
-    return {p.id: n for p, n in zip(block.promises, tables) if n is not None}
-
-
-def open_sentences(text: str) -> list[tuple[int | None, str]]:
-    """(line, `<id> sentence`) of every [[promise]] sentence still holding the
-    stamp's `<…>`, the line None where `sentence_lines` cannot place it —
-    named all the same: the pre-commit refuses each one where the tables
-    are owed (judge probes, 2026-10-20). Raises promises.PromiseError on a
-    malformed block."""
-    block = promises.parse_block(text)
-    if block is None:
-        return []
-    where = sentence_lines(text)
-    return [
-        (where.get(pid), f"{pid} sentence")
-        for pid in promises.placeholder_sentences(block)
-    ]
-
-
-def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
-    """Set [[promise]] PID's sentence to VALUE, written by
-    `protocol_block.toml_string` — the escaping an agent got wrong by hand
-    (an unescaped quote, count probe 2026-10-20). The line keeps its key,
-    comment and line ending; every other byte stays. Refuses a written
-    sentence without force, and a sentence not on one line (edit that by
-    hand); reads the block back and raises unless it holds exactly VALUE."""
-    block = promises.parse_block(text)
-    ids = [p.id for p in block.promises] if block is not None else []
-    match = [i for i in ids if i == pid]
-    if not match:
-        raise ValueError(
-            f"no [[promise]] {pid!r} in the TOML head"
-            + (f" (ids: {', '.join(ids)})" if ids else "")
-        )
-    (pid,) = match
-    assert block is not None
-    if pid not in promises.placeholder_sentences(block) and not force:
-        raise ValueError(
-            f"[[promise]] {pid}'s sentence is already written. Overwrite with --force."
-        )
-    n = sentence_lines(text).get(pid)
-    lines = text.splitlines(keepends=True)
-    body = lines[n - 1].splitlines()[0] if n is not None else ""
-    m = _ONE_LINE_SENTENCE.match(body) if n is not None else None
-    if n is None or m is None:
-        raise ValueError(
-            f'[[promise]] {pid}\'s sentence is not one `sentence = "..."` line '
-            f"— edit it in the TOML head by hand"
-        )
-    ending = lines[n - 1][len(body) :]
-    lines[n - 1] = m.group(1) + protocol_block.toml_string(value) + m.group(2) + ending
-    new = "".join(lines)
-    after = promises.parse_block(new)
-    written = {p.id: p.sentence for p in after.promises} if after else {}
-    if written.get(pid) != value:
-        raise ValueError(
-            f"[[promise]] {pid}: the sentence did not read back as written"
-        )
-    return new
-
-
-RUNS_HEADING = re.compile(r"^## Runs\b")
-
-#: how `--from-run` names the declaration among what it filled
-RESULT_LABEL = "[result] run"
-_PROTOCOL_HEADER = re.compile(r"^\s*\[\s*protocol\s*\]\s*(?:#.*)?$")
-_RESULT_HEADER = re.compile(r"^\s*\[\s*result\s*\]\s*(?:#.*)?$")
-#: the `[result]` table's one line, its key and `=` and a trailing comment kept
-_RESULT_RUN_LINE = re.compile(r'^(\s*run\s*=\s*)"[^"\n]*"(\s*(?:#.*)?)$')
-
-
-def fill_result_run(text: str, run_id: str) -> str:
-    """Declare RUN_ID as the protocol's reported result: `[result] run =
-    "<id>"` in the TOML block, the one declaration report-check holds the
-    protocol to (`protocol_block.declared_run`). Without a `[result]` the
-    table is written right after the `[protocol]` table's last key; one
-    naming RUN_ID already leaves the text as it is; one naming another run
-    is refused, --force or not: a declaration is withdrawn (`--withdraw`),
-    then the run that answers is audited and adopted — an audit made while
-    another run is declared does not cover the new one (file-check case,
-    2026-10-28). Every other byte stays, and the block is read back and
-    must declare exactly RUN_ID. Raises BlockError on a head that does not
-    read, ValueError on the refusal or a block without `[protocol]`."""
-    current = protocol_block.declared_run(text)
-    if current == run_id:
-        return text
-    if current is not None:
-        raise ValueError(
-            f"[result] names {current}, not {run_id} — an adoption is not "
-            f'replaced: withdraw it (`--withdraw --why "<why>"`), audit the run that '
-            f"answers, then adopt it"
-        )
-    span = protocol_block.toml_block_span(text)
-    if span is None:
-        raise ValueError("no ```toml block — the head is where the result is adopted")
-    lines = text.split("\n")
-    if current is not None:
-        _replace_result_run(lines, span, run_id)
-    else:
-        _insert_result_table(lines, span, run_id)
-    new = "\n".join(lines)
-    if protocol_block.declared_run(new) != run_id:
-        raise ValueError("[result] run did not read back as written")
-    return new
-
-
-def _replace_result_run(lines: list[str], span: tuple[int, int], run_id: str) -> None:
-    """Set the `run = "…"` line of the `[result]` table in LINES[SPAN] to RUN_ID."""
-    inside = False
-    for i in range(*span):
-        if _RESULT_HEADER.match(lines[i]):
-            inside = True
-            continue
-        if protocol_block.TABLE_HEADER.match(lines[i]):
-            inside = False
-            continue
-        m = _RESULT_RUN_LINE.match(lines[i]) if inside else None
-        if m:
-            lines[i] = f'{m.group(1)}"{run_id}"{m.group(2)}'
-            return
-    raise ValueError(
-        '[result] has no one-line `run = "…"` — edit the TOML head by hand'
-    )
-
-
-def _insert_result_table(lines: list[str], span: tuple[int, int], run_id: str) -> None:
-    """Write `[result]` with RUN_ID after the last key of the `[protocol]`
-    table in LINES[SPAN] — before the comments and tables that follow it."""
-    start, end = span
-    for i in range(start, end):
-        if not _PROTOCOL_HEADER.match(lines[i]):
-            continue
-        last_key = i
-        for j in range(i + 1, end):
-            if protocol_block.TABLE_HEADER.match(lines[j]):
-                break
-            if lines[j].strip() and not lines[j].lstrip().startswith("#"):
-                last_key = j
-        lines[last_key + 1 : last_key + 1] = ["", "[result]", f'run = "{run_id}"']
-        return
-    raise ValueError("no [protocol] table in the ```toml block")
-
-
-#: the label `--from-run` writes from the run's metrics.json — `--list` sets
-#: it apart, since filling it before the run makes --from-run refuse
-WRITTEN_BY_RUN = (RECORDED_RESULTS_LABEL,)
-#: the fields about the run that the author writes after it — Conclusion: the
-#: question's answer in two plain sentences, read within the Limitation lines;
-#: Raw output from the run's rows (which pair shows a finding is a choice
-#: no record makes). `--list` sets them apart too, and `--from-run` names
-#: the open ones with the run's output files.
-WRITTEN_AFTER_RUN = tuple(
-    label for label in BEFORE_RUN_CLAIMS if label not in WRITTEN_BY_RUN
+from labkit.tools.protocol_result import (
+    WRITTEN_AFTER_RUN,
+    WRITTEN_BY_RUN,
+    declared_run_dir,
+    fill_prompts,
+    from_run,
+    render_result,
+    withdraw,
+    without_result,
 )
-
-
-def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
-    """Add a run entry to the protocol run list (`## Runs`).
-
-    The stamped `<run_id>` placeholder becomes the entry, else one is
-    appended. A list already naming `run_id` is left alone.
-    Returns (text, changed).
-    """
-    lines = text.split("\n")
-    heading = next(
-        (
-            i
-            for i in protocol_block.section_starts(lines)
-            if RUNS_HEADING.match(lines[i])
-        ),
-        None,
-    )
-    if heading is None:
-        raise ValueError("no `## Runs` section to name the run in")
-    end = protocol_block.section_end(lines, heading)
-    section = range(heading + 1, end)
-    if any(run_id in lines[i] for i in section):
-        return text, False
-    entry = f"- {run_id} — {sentence}"
-    for i in section:
-        if RUNS_PLACEHOLDER.match(lines[i]):
-            lines[i] = entry
-            return "\n".join(lines), True
-    k = end
-    while k > heading + 1 and not lines[k - 1].strip():
-        k -= 1
-    lines.insert(k, entry)
-    return "\n".join(lines), True
-
-
-def from_run(
-    text: str, area: Path, run_id: str | None = None, force: bool = False
-) -> tuple[str, list[str], str]:
-    """Write the run back: `[result] run` in the TOML head (the one
-    declaration that the number is reported, `fill_result_run`), the Recorded results
-    line, the Limitation lines and the Runs entry as `runs/<run_id>/metrics.json`
-    and the covering records render them (`result_render.rendering`; the
-    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limitation line of a record that covers
-    the run no longer dropped; the Summary's Conclusion stays the author's
-    (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
-    Recorded results is refused without `force`; a `[result]` naming another
-    run is refused always (`fill_result_run`: withdraw it first)."""
-    run = recheck.chosen_run(area, text, run_id)
-    r = rendering(area, text, run)
-    filled: list[str] = []
-    for label in WRITTEN_BY_RUN:
-        try:
-            text = fill(text, label, r.recorded_results, force=force)
-            filled.append(label)
-        except ValueError as exc:
-            if "no field labelled" in str(exc):
-                continue  # a cut without this line (the Summary of a report-grade full form carries it)
-            raise
-    declared = fill_result_run(text, run.name)
-    if declared != text:
-        text = declared
-        filled.append(RESULT_LABEL)
-    text, changed = runs_line(
-        text, run.name, "the kept run; its metrics.json is the number"
-    )
-    if changed:
-        filled.append("Runs")
-    text, written = limit_lines(text, r.limits, force)
-    filled += written
-    # a Limitation line of a record that no longer covers the run is labkit's own
-    # stale line, never the author's prose: it goes with the write-back
-    text, dropped = drop_stray_limits(text, r.limits)
-    filled += [f"dropped {label}" for label in dropped]
-    return text, filled, run.name
-
-
-def drop_stray_limits(
-    text: str, keep: tuple[tuple[str, str], ...]
-) -> tuple[str, list[str]]:
-    """TEXT without the Limitation lines no covering record decides (labels not in
-    KEEP) — written by hand or from an older record. (text, labels dropped)."""
-    keep_labels = {label for label, _ in keep}
-    dropped: list[str] = []
-    lines = text.split("\n")
-    for f in sorted(fields(text), key=lambda f: -f.line):
-        label = f.label.replace("†", "").strip()
-        if label.startswith(findings.LIMIT_PREFIX) and label not in keep_labels:
-            del lines[f.line - 1 : f.last]
-            dropped.append(label)
-    return "\n".join(lines), dropped
-
-
-def declared_run_dir(text: str, area: Path, why: str) -> Path:
-    """The run directory TEXT's head declares as its result, in AREA.
-    Raises ValueError without a declaration (WHY says what the caller
-    needs it for) or without the run's metrics.json."""
-    declared = protocol_block.declared_run(text)
-    if declared is None:
-        raise ValueError(
-            f"no run adopted ([result] run) — `--from-run <run_id>` adopts the run "
-            f"and writes the result; {why}"
-        )
-    run = runs.run_path(area, declared)
-    if not runs.metrics_path(run).is_file():
-        raise ValueError(
-            f"[result] names {declared}, but runs/{declared}/metrics.json is not there"
-        )
-    return run
-
-
-def render_result(text: str, area: Path) -> tuple[str, list[str]]:
-    """`--render`: the result section written again from its sources for the
-    declared run — the Recorded results line, the Limitation lines (stray ones dropped) and,
-    where the scripts' PROMPT constants read statically, the Prompt block.
-    Idempotent: a text that says what its sources say comes back unchanged.
-    (text, what was written). Raises ValueError without a declared run or
-    without `runs/<id>/` for it — `--from-run` declares first."""
-    run = declared_run_dir(text, area, "--render only writes the result again")
-    r: Rendering = rendering(area, text, run)
-    written: list[str] = []
-    before = text
-    text = fill(text, RECORDED_RESULTS_LABEL, r.recorded_results, force=True)
-    if text != before:
-        written.append(RECORDED_RESULTS_LABEL)
-    text, limits_written = limit_lines(text, r.limits, force=True)
-    written += limits_written
-    text, dropped = drop_stray_limits(text, r.limits)
-    written += [f"dropped {label}" for label in dropped]
-    constants = prompt_constants(area)
-    if constants:
-        before = text
-        text = fill_prompts(text, constants)
-        if text != before:
-            written.append("Prompt")
-    return text, written
-
-
-def limit_lines(
-    text: str, limits: tuple[tuple[str, str], ...], force: bool = False
-) -> tuple[str, list[str]]:
-    """Each LIMITS entry (label, value — `result_render.Rendering.limits`) as
-    its `- **<label>:** <value>` line, below Recorded results: added when missing,
-    left when it says that already, replaced only with FORCE. (text, labels
-    written). Raises ValueError on a differing line without FORCE, or with
-    no Recorded results line to stand under."""
-    written: list[str] = []
-    for label, value in limits:
-        lines = text.split("\n")
-        by_label = {f.label.replace("†", "").strip(): f for f in fields(text)}
-        line = f"- **{label}:** {value}"
-        have = by_label.get(label)
-        if have is not None:
-            if have.value == value:
-                continue
-            if not force:
-                raise ValueError(
-                    f"line {have.line} ({label!r}) says {have.value[:80]!r}, the "
-                    f"record says otherwise — --force to write the record's"
-                )
-            lines[have.line - 1 : have.last] = [line]
-        else:
-            answer = next(
-                (
-                    f
-                    for f in fields(text)
-                    if f.name == field_name(RECORDED_RESULTS_LABEL)
-                ),
-                None,
-            )
-            if answer is None:
-                raise ValueError(f"no Recorded results line to write {label!r} under")
-            # below Recorded results and the Limitation lines already under it: in
-            # record order (inserted right below Recorded results, three limits
-            # read #3, #2, #1 — the final audits, 2026-10-21)
-            at = answer.last
-            for f in fields(text):
-                if f.line == at + 1 and f.label.startswith(findings.LIMIT_PREFIX):
-                    at = f.last
-            lines.insert(at, line)
-        text = "\n".join(lines)
-        written.append(label)
-    return text, written
-
-
-def fill_prompts(text: str, constants: dict[str, str]) -> str:
-    """Return the protocol text with the Prompt field's code block written
-    from the scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT`
-    first, each under a `── NAME ──` line when there are several.
-
-    The block is what `code-check` holds the script to (prompt drift); three
-    of three cold agents wrote it by a Python snippet because the label fill
-    could not reach a code block (re-measure 2026-10-07). Replaces the block
-    that follows the label (within three lines), or inserts one."""
-    if not constants:
-        raise ValueError(
-            "no PROMPT constant readable in the area's scripts (an f-string "
-            "renders at run time and cannot be copied) — write the block by hand"
-        )
-    hits = [f for f in fields(text) if f.name == "prompt"]
-    if len(hits) != 1:
-        where = ", ".join(str(f.line) for f in hits) or "none"
-        raise ValueError(f"expected one Prompt field, found {where}")
-    (f,) = hits
-    lines = text.splitlines()
-    names = sorted(constants, key=lambda n: (n != "PROMPT", n))
-    body: list[str] = []
-    for name in names:
-        if len(names) > 1:
-            body.append(f"── {name} ──")
-        body += constants[name].splitlines()
-    start = end = f.last  # 0-based index just after the field's value
-    for j in range(f.last, min(f.last + 3, len(lines))):
-        m = protocol_block.FENCE.match(lines[j])
-        if m:
-            # the one fence rule (protocol_block.closes): until 0.96.0 a line
-            # merely starting with the marker closed it (audit 2026-10-15)
-            k = next(
-                (
-                    k
-                    for k in range(j + 1, len(lines))
-                    if protocol_block.closes(lines[k], m.group(2))
-                ),
-                None,
-            )
-            if k is None:
-                raise ValueError(f"line {j + 1}: the Prompt block never closes")
-            start, end = j, k + 1
-            break
-    block = ["  ```text", *[f"  {ln}" if ln else "" for ln in body], "  ```"]
-    if start == end:  # no block yet: a blank line, then the block
-        block = ["", *block]
-    lines[start:end] = block
-    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
 def adopt(protocol: Path, before: str, after: str) -> int:
@@ -853,63 +283,6 @@ def _list_open(text: str) -> int:
             # a sentence the table walk cannot place is named all the same
             print(f"{n:4d}  {label}" if n is not None else f"   ?  {label}")
     return 0
-
-
-def assignments_of(field: str | None, value: list[str]) -> list[tuple[str, str]]:
-    """The (label, value) pairs a command line asks for: `FIELD VALUE...` is
-    one pair, `LABEL=VALUE [LABEL=VALUE ...]` (every word carries `=`; a
-    value with spaces is one quoted word) one pair per word. Empty when the
-    line names no value. Why the one-call form: seven cold agents filled six
-    fields in six calls and named it their largest sink (cloud probes,
-    2026-10-13)."""
-    if not field:
-        return []
-    words = [field, *value]
-    if all("=" in w for w in words):
-        return [(lb, v) for lb, v in (w.split("=", 1) for w in words)]
-    if not value:
-        return []
-    return [(field, " ".join(value))]
-
-
-def fill_many(
-    text: str,
-    assignments: list[tuple[str, str]],
-    line_no: int | None = None,
-    force: bool = False,
-) -> str:
-    """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`,
-    `model alias` and `number_describes` (`HEAD_KEYS`), `fill_sentence` for
-    `<id> sentence`; the freeze keys (`FREEZE_KEYS`) are refused with how to
-    set them by hand;
-    the first ValueError leaves the caller's file untouched — all or
-    nothing."""
-    for label, value in assignments:
-        if not label.strip() or not value.strip():
-            raise ValueError(f"empty label or value in {label}={value!r}")
-        sentence = SENTENCE_LABEL.match(label)
-        if sentence and not promises.is_block_id(sentence.group(1)):
-            sentence = None  # a prose label such as "Key sentence"
-        if label.strip().lower() in FREEZE_KEYS:
-            raise ValueError(
-                f"{label.strip()} is the freeze, set by hand in the TOML head once "
-                "`preflight` is clean and the preflight audit decided: "
-                '`preflight_audit = "<the record file labkit-audit wrote>"`, '
-                "`frozen = true` — the protocol is the author's to edit; audit and "
-                "run records are not"
-            )
-        if label.strip().lower() in HEAD_KEYS:
-            text = fill_head(text, HEAD_KEYS[label.strip().lower()][0], value)
-        elif sentence:
-            if line_no is not None:
-                raise ValueError(
-                    f"--line names a prose field; {label.strip()!r} is a "
-                    f"promise's sentence, addressed by its id"
-                )
-            text = fill_sentence(text, sentence.group(1), value, force=force)
-        else:
-            text = fill(text, label, value, line_no=line_no, force=force)
-    return text
 
 
 def _prompts_file(protocol: Path, text: str) -> int:
@@ -1080,31 +453,6 @@ def _run_mode(args: argparse.Namespace, text: str) -> int | None:
     return None
 
 
-def without_result(text: str) -> str:
-    """Withdraw only the result declaration — the `[result]` table, also one
-    that does not read; preserve registration and run evidence."""
-    span = protocol_block.toml_block_span(text)
-    if span is None:
-        return text
-    lines = text.split("\n")
-    start = next((i for i in range(*span) if _RESULT_HEADER.match(lines[i])), None)
-    if start is None:
-        return text
-    end = next(
-        (
-            i
-            for i in range(start + 1, span[1])
-            if protocol_block.TABLE_HEADER.match(lines[i])
-        ),
-        span[1],
-    )
-    del lines[start:end]
-    result = "\n".join(lines)
-    if protocol_block.declared_run(result) is not None:
-        raise ValueError("[result] adoption could not be withdrawn")
-    return result
-
-
 def newest_preparation(area: Path) -> Path:
     """AREA's newest completed preparation run. Raises ValueError when it
     has none."""
@@ -1151,67 +499,8 @@ def _data_counts_file(args: argparse.Namespace, text: str) -> int:
     return 0
 
 
-def withdrawn_runs_entry(text: str, run_id: str, day: str, why: str) -> str:
-    """TEXT with the `## Runs` entry of RUN_ID marked `· withdrawn DAY: WHY`
-    — the trace a withdrawal leaves where the run list stands and every
-    later adoption keeps (`runs_line` only appends); an entry is added when
-    the list does not name the run. Raises ValueError without a `## Runs`
-    section."""
-    mark = f" · withdrawn {day}: {why}"
-    if not runs.RUN_ID.match(run_id):
-        # a declaration that did not read names no run: its own entry
-        text, _ = runs_line(text, f"[result] {run_id}", f"withdrawn {day}: {why}")
-        return text
-    text, _ = runs_line(text, run_id, "the run adopted as the result")
-    lines = text.split("\n")
-    heading = next(
-        i for i in protocol_block.section_starts(lines) if RUNS_HEADING.match(lines[i])
-    )
-    end = protocol_block.section_end(lines, heading)
-    at = next(i for i in range(heading + 1, end) if run_id in lines[i])
-    lines[at] += mark
-    return "\n".join(lines)
-
-
-#: what Recorded results says after a withdrawal: a placeholder again (the
-#: next `--from-run` fills it without --force), naming what was withdrawn
-WITHDRAWN_RESULTS = (
-    "<withdrawn {day}: run {run} is no longer the result — {why}; "
-    "protocol-fill --from-run writes this field for the run adopted next>"
-)
-
-
-def withdraw(text: str, why: str, day: str) -> tuple[str, str]:
-    """`--withdraw`: TEXT without its result declaration (`without_result`),
-    the lines `--from-run` generated reset — Recorded results to a
-    placeholder naming the withdrawal (WITHDRAWN_RESULTS), every Limitation line
-    dropped — and the run's Runs entry marked with DAY and WHY
-    (`withdrawn_runs_entry`). Audit records, findings and runs are not
-    touched: a withdrawal releases nothing and settles nothing. Returns
-    (text, the run withdrawn). Raises ValueError when TEXT declares no
-    result or WHY is empty."""
-    run_id = protocol_block.declared_run_shown(text)
-    if run_id is None:
-        raise ValueError(
-            "the protocol has adopted no result ([result] run) — nothing to withdraw"
-        )
-    if not why.strip():
-        raise ValueError(
-            "--withdraw needs --why: one line, why the run is no longer the result"
-        )
-    new = without_result(text)
-    new = fill(
-        new,
-        RECORDED_RESULTS_LABEL,
-        WITHDRAWN_RESULTS.format(day=day, run=run_id, why=why.strip()),
-        force=True,
-    )
-    new, _ = drop_stray_limits(new, ())
-    return withdrawn_runs_entry(new, run_id, day, why.strip()), run_id
-
-
 def _withdraw_file(args: argparse.Namespace, text: str) -> int:
-    """`--withdraw`: the protocol's declaration withdrawn (`withdraw`) and,
+    """`--withdraw`: the protocol's declaration withdrawn (`protocol_result.withdraw`) and,
     with --into, the protocol's result blocks in that report
     (`report_blocks.withdraw_result_blocks`); the protocol is written last,
     so a report that does not read leaves both as they were. Names the
@@ -1589,18 +878,8 @@ def main(argv: list[str]) -> int:
         console.refuse("protocol-fill", str(exc))
         return 2
     files.write_atomic(args.protocol, new)
-    print("filled: " + ", ".join(_as_filled(text, label) for label, _ in assignments))
+    print("filled: " + ", ".join(as_filled(text, label) for label, _ in assignments))
     return 0
-
-
-def _as_filled(text: str, label: str) -> str:
-    """LABEL as the fill line tells it: with the field a prefix named
-    (`Terms → terms of this protocol`), else as typed."""
-    try:
-        meant = field_for(text, label)
-    except ValueError:
-        return label  # a head key or a promise's sentence: not a prose field
-    return label if meant == field_name(label) else f"{label} → {meant}"
 
 
 def cli() -> None:

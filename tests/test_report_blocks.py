@@ -23,6 +23,7 @@ from labkit.checks import report_blocks
 from labkit.formats import report_reviews
 from labkit.gates import report_check, report_hold, report_review
 from labkit.tools import protocol_fill
+from labkit.tools import protocol_result
 
 RUN = "2026-10-07T10-00-00_ab12"
 P = "experiments/01-x/PROTOCOL-x.md"
@@ -978,7 +979,7 @@ class ReportFiles(unittest.TestCase):
         self._git(root, "commit", "-qm", "report")
         # step two: the protocol declares the run; the report is untouched
         proto = area / "PROTOCOL-x.md"
-        declaring = protocol_fill.fill_result_run(
+        declaring = protocol_result.fill_result_run(
             proto.read_text(encoding="utf-8"), self.RUN
         )
         proto.write_text(declaring, encoding="utf-8")
@@ -1028,7 +1029,7 @@ class ReportFiles(unittest.TestCase):
         )
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
-        declaring = protocol_fill.fill_result_run(
+        declaring = protocol_result.fill_result_run(
             proto.read_text(encoding="utf-8"), self.RUN
         )
         written, _ = protocol_fill.into_report(declaring, area, "# Report\n\n", P)

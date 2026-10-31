@@ -17,7 +17,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record, head
 
-from labkit.tools import protocol_fill
+from labkit.tools import protocol_result
 from labkit.checks import recheck
 from labkit.formats import answering_run
 from labkit.formats.scope_sha import file_digest
@@ -86,7 +86,7 @@ class TwoProtocols(unittest.TestCase):
         )
 
     def test_from_run_writes_the_bound_runs_number(self):
-        text, _, run_id = protocol_fill.from_run(
+        text, _, run_id = protocol_result.from_run(
             self.a.read_text(encoding="utf-8"), self.area
         )
         self.assertEqual(run_id, RUN_A)
@@ -94,7 +94,7 @@ class TwoProtocols(unittest.TestCase):
         self.assertNotIn("99", text)
 
     def test_holds_passes_for_the_bound_run(self):
-        text, _, _ = protocol_fill.from_run(
+        text, _, _ = protocol_result.from_run(
             self.a.read_text(encoding="utf-8"), self.area
         )
         self.a.write_text(text, encoding="utf-8")

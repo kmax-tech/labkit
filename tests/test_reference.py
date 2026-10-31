@@ -14,6 +14,7 @@ import sys
 import unittest
 from pathlib import Path
 
+from labkit.tools import protocol_result
 from labkit.gates import audit_prompt
 from labkit.formats import protocol_block, protocol_check, reference
 from protocol_fixture import head  # noqa: E402
@@ -528,14 +529,13 @@ class Rendered(unittest.TestCase):
 
     def test_the_written_line_is_held_and_a_typed_met_is_refused(self):
         from labkit.checks import recheck, result_render
-        from labkit.tools import protocol_fill
 
         ref = ref_of(WITHIN)
         metrics = reference.with_verdict({"lines_mean": 0.475}, ref)
         area, protocol = area_with_run(WITHIN, metrics)
         text = protocol.read_text(encoding="utf-8")
         expected = result_render.rendering(area, text, area / "runs" / RUN)
-        written, _, _ = protocol_fill.from_run(text, area)
+        written, _, _ = protocol_result.from_run(text, area)
         self.assertEqual(result_render.render_gaps(written, expected), [])
         protocol.write_text(written, encoding="utf-8")
         # the check finds every number of the verdict in the note (twin 2)

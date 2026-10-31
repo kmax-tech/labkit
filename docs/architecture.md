@@ -24,7 +24,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 | 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `data_counts`, `report_blocks`, `report_review_inputs`, `protocol_report` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out` |
-| tools · `labkit/tools/` | `protocol_fill`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree`, `next_step`, `adopt` | `protocol_fill`, `scaffold`, `protocol_cuts`, `calltree`, `next_step`, `adopt` |
+| tools · `labkit/tools/` | `protocol_fill`, `protocol_edit`, `protocol_result`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree`, `next_step`, `adopt` | `protocol_fill`, `protocol_edit`, `protocol_result`, `scaffold`, `protocol_cuts`, `calltree`, `next_step`, `adopt` |
 | tools · probes · `labkit/probes/` | `usability`, `usability_score`, `usability_command`, `sab_cases`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` | `usability`, `usability_score`, `usability_command`, `sab_cases`, `agent_transcript`, `cold_reader`, `protocol_reading`, `code_navigation` |
 
 The third column names the doctrine modules of each row; every other
@@ -221,7 +221,9 @@ checks that they are installed.
 ### Tools
 
 `labkit/tools/` provides commands that may use any layer. `protocol_fill`
-fills protocol fields. `scaffold` stamps a lab repo and its areas from the
+fills protocol fields and adopts a run: its text edits stand in
+`protocol_edit`, the writers of the result section in `protocol_result`.
+`scaffold` stamps a lab repo and its areas from the
 shipped templates; `protocol_cuts` selects the protocol template for a cost
 tier. The estimator script fits models only for `kind = "fit"`; a local
 `apply` uses the unchanged predictor, its null lane on labels permuted with

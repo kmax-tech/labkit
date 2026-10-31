@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
-from labkit.tools import protocol_fill  # noqa: E402
+from labkit.tools import protocol_result
 from protocol_fixture import registration_of, completed_run, head, scope_file, shown_sha  # noqa: E402
 
 RUN = "2026-10-21T10-00-00_abcd"
@@ -213,13 +213,13 @@ class RenderGaps(unittest.TestCase):
         )
 
     def written(self) -> str:
-        text, _, _ = protocol_fill.from_run(self.text, self.area)
+        text, _, _ = protocol_result.from_run(self.text, self.area)
         return text
 
     def test_what_from_run_writes_has_no_gap_and_render_changes_nothing(self):
         text = self.written()
         self.assertEqual(result_render.render_gaps(text, self.expected), [])
-        again, written = protocol_fill.render_result(text, self.area)
+        again, written = protocol_result.render_result(text, self.area)
         self.assertEqual((again, written), (text, []))
 
     def test_an_unwritten_answer_is_named(self):
@@ -241,7 +241,7 @@ class RenderGaps(unittest.TestCase):
         self.assertIn("Recorded results line differs from its rendering", gaps[0].text)
         self.assertIn("differs from the record", gaps[1].text)
         self.assertIn("--render", gaps[1].fix or "")
-        rendered, written = protocol_fill.render_result(edited, self.area)
+        rendered, written = protocol_result.render_result(edited, self.area)
         self.assertEqual(rendered, text)
         self.assertEqual(len(written), 2)
 
@@ -282,7 +282,7 @@ class RenderGaps(unittest.TestCase):
         )
         (gap,) = result_render.render_gaps(stray, self.expected)
         self.assertIn("no covering record decides", gap.text)
-        rendered, written = protocol_fill.render_result(stray, self.area)
+        rendered, written = protocol_result.render_result(stray, self.area)
         self.assertEqual(rendered, text)
         self.assertEqual(
             written, ["dropped Limitation (audit 2026-10-01T00-00-analysis #9)"]
@@ -293,7 +293,7 @@ class RenderGaps(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "no run adopted \\(\\[result\\] run\\)"
         ):
-            protocol_fill.render_result(undeclared, self.area)
+            protocol_result.render_result(undeclared, self.area)
 
 
 if __name__ == "__main__":

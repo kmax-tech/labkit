@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from labkit.formats.runs import RunKind
 from labkit.tools import protocol_fill
+from labkit.tools import protocol_result
 
 import contextlib
 import dataclasses
@@ -190,7 +191,7 @@ class ReportCheck(unittest.TestCase):
         )
         self.assertEqual(ctx.text, proto.read_text(encoding="utf-8"))
         # the index's text, not the tree's: the declaration comes from there
-        staged = protocol_fill.fill_result_run(ctx.text, run.name)
+        staged = protocol_result.fill_result_run(ctx.text, run.name)
         ctx = report_context.checked(
             area, proto, state=report_context.INDEX, text=staged
         )

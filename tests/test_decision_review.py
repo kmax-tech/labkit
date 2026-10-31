@@ -24,7 +24,7 @@ from protocol_fixture import registration_of, completed_run, head, scope_file, s
 from labkit.formats import attempts, findings, promises, reviews, scope_sha
 from labkit.gates import audit, decision_review, report_check
 from labkit.run import llm_backends
-from labkit.tools import protocol_fill
+from labkit.tools import protocol_result
 
 RUN = "2026-10-07T10-00-00_ab12"
 BLOCKER = (
@@ -109,7 +109,7 @@ def area_with(
         findings.write_decision(record, n, status, reason, effect)
     # the result section as --from-run writes it: Recorded results with its
     # note, one Limitation line per decided limitation
-    rendered, _ = protocol_fill.render_result(proto.read_text(encoding="utf-8"), area)
+    rendered, _ = protocol_result.render_result(proto.read_text(encoding="utf-8"), area)
     proto.write_text(rendered, encoding="utf-8")
     return area, record
 
@@ -121,7 +121,7 @@ def decide(record: Path, n: int, status: str, reason: str, effect: str = "") -> 
     findings.write_decision(record, n, status, reason, effect)
     area = record.parent.parent
     proto = area / "PROTOCOL-x.md"
-    rendered, _ = protocol_fill.render_result(proto.read_text(encoding="utf-8"), area)
+    rendered, _ = protocol_result.render_result(proto.read_text(encoding="utf-8"), area)
     proto.write_text(rendered, encoding="utf-8")
 
 
