@@ -203,6 +203,7 @@ PY_TOKEN = re.compile(r"[\w./~-]+\.py")
 # a heredoc): uniagent 2026-10-10, 85 of 272 hook lines in one session said
 # "opens a run" about a lib module someone was reading.
 INTERPRETER = re.compile(r"(?:^|/)python[\d.]*$")
+SHELL_ASSIGNMENT = re.compile(r"[a-zA-Z_]\w*=.*", re.DOTALL)
 COMMAND_PREFIX = {"--", "nohup", "time", "exec"}
 STRIP = "\"'`();"  # around a token: quotes, parentheses, a trailing ;
 # A script opens a run when its text calls runlog, or builds the `lanes.Lanes`
@@ -254,6 +255,10 @@ def _capture(fn: Callable[..., int], *args: object) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------- pre-run
+
+
+class UnresolvedScriptError(ValueError):
+    """A relative Python script cannot be located for the pre-run check."""
 
 
 def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
@@ -347,10 +352,13 @@ def _low_registration_line(head: str, texts: list[str]) -> str:
 def executed_py(words: list[str]) -> list[str]:
     """The .py paths one simple command (WORDS, a `shell.segments` entry)
     RUNS, in order: preceded by an interpreter (flags in between allowed),
-    first in the command or after a prefix (`nohup`, `--`), or `./x.py`. A
+    first in the command or after a prefix (`nohup`, `--`). A
     .py path that is only named — read, edited, inside a quoted `-c` string
-    — is not among them."""
+    — is not among them. Leading shell variable assignments precede the
+    command, so `NAME=value ./x.py` runs the script too."""
     tokens = words
+    while tokens and SHELL_ASSIGNMENT.fullmatch(tokens[0]):
+        tokens = tokens[1:]
     out: list[str] = []
     for i, raw in enumerate(tokens):
         tok = raw.strip(STRIP)
@@ -361,8 +369,7 @@ def executed_py(words: list[str]) -> list[str]:
             j -= 1  # interpreter flags: python -u x.py
         before = tokens[j].strip(STRIP) if j >= 0 else None
         runs = (
-            tok.startswith("./")
-            or before is None
+            before is None
             or before in COMMAND_PREFIX
             or INTERPRETER.search(before) is not None
         )
@@ -371,14 +378,22 @@ def executed_py(words: list[str]) -> list[str]:
     return out
 
 
-def run_scripts(command: str, cwd: Path) -> list[Path]:
+def run_scripts(
+    command: str, cwd: Path, *, require_resolved_scripts: bool = False
+) -> list[Path]:
     """The .py files the command runs that open a run — resolved against the
     directory the command stands in at that point (a `cd` is followed) and
     existing; a segment with a throwaway flag (`THROWAWAY_FLAGS`) opens no
     run. Each simple command of the line
     (`shell.segments`) is judged on its own: read as one, `cd AREA && python
     scripts/01_measure.py` found no script, and one `--probe` freed every
-    command of the line (audit 2026-10-15)."""
+    command of the line (audit 2026-10-15).
+
+    With require_resolved_scripts, an unresolved relative script raises
+    UnresolvedScriptError: Codex omits the tool's workdir, so absence at its session
+    cwd cannot establish that no measurement runs. Absolute missing paths
+    cannot be redirected by workdir. See docs/codex-hooks.md.
+    """
     out = []
     here = cwd
     for seg in segments(command):
@@ -392,6 +407,13 @@ def run_scripts(command: str, cwd: Path) -> list[Path]:
             p = Path(os.path.expanduser(tok))
             if not p.is_absolute():
                 p = here / p
+                if require_resolved_scripts and not p.is_file():
+                    raise UnresolvedScriptError(
+                        f"cannot check Python script {tok!r} from {here}: "
+                        "Codex does not supply exec_command.workdir to hooks. "
+                        "Next: rerun with an explicit cd to the absolute scripts "
+                        "directory in the command, or an absolute script path"
+                    )
             if not p.is_file():
                 continue
             try:
@@ -414,8 +436,15 @@ def protocol_named_in(script: Path, area: Path) -> Path | None:
     return p if p.is_file() else None
 
 
-def pre_run(event: dict) -> int:
-    """PreToolUse hook on Bash: the session's stop base is kept before its first command (`keep_stop_base`); a full measure run gets its area's preflight first; blockers refuse the command (exit 2)."""
+def pre_run(event: dict, *, require_resolved_scripts: bool = False) -> int:
+    """Keep the stop base, resolve scripts, then check full runs before Bash.
+
+    Preflight blockers refuse the command (exit 2). When
+    require_resolved_scripts is true, unresolved relative Python scripts
+    raise UnresolvedScriptError for the adapter to refuse with the
+    explicit-directory retry; throwaway commands remain exempt. Other
+    commands pass (exit 0).
+    """
     if event.get("tool_name", "Bash") != "Bash":
         return 0
     repo = session_repo(event)
@@ -425,7 +454,9 @@ def pre_run(event: dict) -> int:
     if not command:
         return 0
     cwd = Path(event.get("cwd") or os.getcwd())
-    scripts = run_scripts(command, cwd)
+    scripts = run_scripts(
+        command, cwd, require_resolved_scripts=require_resolved_scripts
+    )
     if not scripts:
         return 0
     if SKIP_TOKEN in command:

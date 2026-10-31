@@ -81,7 +81,11 @@ def main(argv: list[str]) -> int:
         console.refuse("codex-hook", str(exc))
         return 2
     if action == "pre-run":
-        return agent_hooks.pre_run(event)
+        try:
+            return agent_hooks.pre_run(event, require_resolved_scripts=True)
+        except agent_hooks.UnresolvedScriptError as exc:
+            console.refuse("codex-hook", str(exc))
+            return 2
     if action == "post-change":
         return agent_hooks.post_change(event)
     return agent_hooks.stop(event)

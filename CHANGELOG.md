@@ -7,6 +7,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Fixed
+
+- **Codex pre-run directory gap.** Refuse an invoked relative Python
+  script that cannot be resolved from the hook's session directory and
+  explicit `cd` commands, with feedback to use an absolute directory or
+  script path. Codex omits `exec_command.workdir`; unresolved scripts no
+  longer silently pass as non-measurements. Throwaway stages remain
+  exempt. Same-name scripts in different directories remain ambiguous;
+  see `docs/codex-hooks.md`.
+
 ### Added
 
 - **Codex lifecycle hooks.** `labkit-hooks install` also writes

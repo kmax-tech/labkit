@@ -2477,7 +2477,10 @@ Stufe A auf 21, 34, 60, ein Versuch je Task, `gpt-5-codex`; dafür ein
 Sandbox-Image mit labkit ≥ 0.104 (Codex-Hooks), die Vertrauensfreigabe für
 Projekt-Hooks im Wrapper `codex-sandbox`, und ein Nachweis im Container,
 dass ein Hook feuert; bekannte Lücke: `exec_command` mit `workdir` meldet
-dem Pre-Run-Hook nur das Sitzungsverzeichnis (Note 2026-10-30-codex-hooks).
+dem Pre-Run-Hook nur das Sitzungsverzeichnis. Nicht auflösbare relative
+Skriptaufrufe werden jetzt verweigert, mit erneutem Aufruf über absolutes
+`cd` oder absoluten Skriptpfad; gleichnamige Skripte im Sitzungsverzeichnis
+bleiben ohne Tool-Verzeichnis ununterscheidbar (Note 2026-10-30-codex-hooks).
 pubmedqa50 ist beidseitig auf 50 gekürzt (labkit-paper `5a1ba8b`), damit die
 Apply-Sorte zwei Tasks hat; der Deckel-Satz (ein Aufruf je Frage) ist offen.
 Druckrunde: vier Tasks 21, 34, 60, 15 (plus pubmedqa50, wenn der Probelauf
@@ -2549,10 +2552,12 @@ Als Nächstes, in dieser Reihenfolge:
   Vertrauen; Projekt und Hooks werden in Codex über `/hooks` geprüft.
   Echtprobe mit Codex 0.165.0: Laufstart-Verweigerung, Patch-Kontext,
   Stop-Fortsetzung und korrekter Gegenfall geprüft. Offene Harness-Grenze:
-  Codex lässt `exec_command.workdir` im Hook-Ereignis weg; relative
-  Skriptpfade brauchen deshalb explizites `cd` oder einen Pfad vom
-  Sitzungs-Root. Übernahme in Pilot-Images und andere Repos bleibt
-  externer Rollout.
+  Codex lässt `exec_command.workdir` im Hook-Ereignis weg. Der Adapter
+  verweigert jetzt nicht auflösbare relative Python-Skriptaufrufe; die
+  Meldung verlangt absolutes `cd` oder absoluten Skriptpfad. Gleichnamige
+  Skripte im Sitzungsverzeichnis bleiben ununterscheidbar; vollständige
+  Abdeckung braucht das effektive Tool-Verzeichnis von Codex. Übernahme
+  in Pilot-Images und andere Repos bleibt externer Rollout.
 
 labkit-paper (Pin 0.85.0): die Nummernvergabe über alle Branches und der
 `pre-merge-commit` kommen erst mit gehobenem Pin und `labkit-hooks

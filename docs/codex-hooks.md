@@ -59,14 +59,31 @@ pre-tool check. Hook trust, disabled hooks or a harness terminating a hook
 can also prevent enforcement. Git gates and the explicit labkit commands
 remain available independently.
 
-**Codex CLI 0.165.0 omits `exec_command.workdir` from its canonical hook
-input and reports the session directory as `cwd`.** A relative script in
-another tool working directory can therefore escape run recognition. Use
-repo-relative or absolute script paths, or spell the directory change in
-the command (`cd experiments/01-x/scripts && python 01_measure.py`). A
-separate `workdir` argument alone does not provide that information to the
-hook. The stop's repository-wide checks still run. This port does not claim
-complete pre-run coverage for that CLI version.
+**Codex CLI omits `exec_command.workdir` from its canonical hook input
+and reports the session directory as `cwd`** (observed in 0.165.0 and 0.166.0).
+The Codex adapter therefore refuses an invoked relative Python script
+that cannot be found from that directory and any explicit `cd` in the
+command. The feedback asks for an absolute script path or an explicit
+`cd` to the absolute scripts directory. This refusal states missing
+execution context; it does not assert a preflight violation in an
+unidentified area. It also applies to ordinary helper scripts whose
+paths cannot be resolved. Reads such as `sed … file.py` and the existing
+throwaway stages (`--probe`, `--show`, etc.) remain exempt; flags free
+only their own simple command. `LABKIT_PREFLIGHT=skip` does not bypass
+this directory check.
+
+For example, replace `python 01_measure.py` plus a separate `workdir`
+with `cd /absolute/repo/experiments/01-x/scripts && python 01_measure.py`,
+or `python /absolute/repo/experiments/01-x/scripts/01_measure.py`.
+The normal preflight checks then apply to the resolved measurement.
+
+This closes the observed missing-script path, not every working-directory
+ambiguity: if another script exists at the session-relative path, the
+hook cannot distinguish it from the one in an omitted workdir. A relative
+`cd` also depends on the omitted initial directory; an absolute `cd`
+avoids that ambiguity. No repository search guesses the intended area.
+Full transparent coverage requires Codex to supply the effective tool
+working directory. The stop's repository-wide checks still run.
 
 The shared transcript fallback reads only the first record's timestamp.
 Codex does not promise a stable transcript format: a missing usable start

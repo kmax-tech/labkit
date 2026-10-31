@@ -38,8 +38,7 @@ class CodexAdapter(unittest.TestCase):
     def test_explicit_cd_locates_the_script_missing_from_the_session_directory(self):
         """Codex 0.165 drops exec_command.workdir from canonical hook input.
 
-        This received event cannot locate the script; spelling cd in the
-        command is the supported twin. The runtime limit is documented.
+        Missing script context must refuse with a retry, rather than pass.
         """
         root = _repo(True)
         event = wire_event(
@@ -48,12 +47,62 @@ class CodexAdapter(unittest.TestCase):
             tool_name="Bash",
             tool_input={"command": "python 01_measure.py"},
         )
-        self.assertEqual(invoke("pre-run", event)[0], 0)
+        rc, _, err = invoke("pre-run", event)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("exec_command.workdir", err)
+        self.assertIn("Next:", err)
+        for command in (
+            "./01_measure.py",
+            "SETTING=value ./01_measure.py",
+            "LABKIT_PREFLIGHT=skip python 01_measure.py",
+        ):
+            with self.subTest(command=command):
+                event["tool_input"]["command"] = command
+                self.assertEqual(invoke("pre-run", event)[0], 2)
         event["tool_input"]["command"] = (
             "cd experiments/01-x/scripts && python 01_measure.py"
         )
         rc, _, err = invoke("pre-run", event)
         self.assertEqual(rc, 2, err)
+        self.assertIn("preflight", err)
+
+    def test_resolved_non_measurement_and_explicit_probe_pass(self) -> None:
+        root = _repo(True)
+        helper = root / "helper.py"
+        helper.write_text("print('ok')\n")
+        for command in (
+            "python helper.py",
+            "./helper.py",
+            "SETTING=value ./helper.py",
+            f"python {helper}",
+            f"cd {root} && python helper.py",
+            "python 01_measure.py --probe 3",
+            "sed -n 1,5p missing.py",
+            "sed -n 1,5p ./missing.py",
+            "cat ./missing.py",
+            "rg runlog ./missing.py",
+            "python -c 'print(1)'",
+        ):
+            with self.subTest(command=command):
+                event = wire_event(
+                    root,
+                    "PreToolUse",
+                    tool_name="Bash",
+                    tool_input={"command": command},
+                )
+                self.assertEqual(invoke("pre-run", event)[0], 0)
+
+    def test_probe_in_another_segment_does_not_free_unresolved_script(self) -> None:
+        root = _repo(True)
+        event = wire_event(
+            root,
+            "PreToolUse",
+            tool_name="Bash",
+            tool_input={"command": "python missing.py --probe 3; python 01_measure.py"},
+        )
+        rc, _, err = invoke("pre-run", event)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("01_measure.py", err)
 
     def test_frozen_run_blocks_and_probe_passes_even_with_a_claude_directory(self):
         root = _repo(True)
