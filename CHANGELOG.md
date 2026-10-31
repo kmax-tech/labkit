@@ -9,6 +9,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The audit leaves alone what the task fixes for its deliverable.** The
+  files `DELIVERABLES` names and the columns of `DELIVERABLE_COLUMNS`, with
+  their names and order, are out of the auditor's scope; the protocol's Unit
+  says what a value is. Round 2: an analysis audit graded the task's own
+  column name `percentage_deforestation` for carrying the fraction the task
+  asks for. The area's own text writing one number two ways stays in scope.
 - **A computation's stamped test holds a case checked by hand, not a mean.**
   The compute skeleton's test fixed the kept number as the mean of a
   `COUNT_FIELD`; an area whose number is a share, a sum or an improvement

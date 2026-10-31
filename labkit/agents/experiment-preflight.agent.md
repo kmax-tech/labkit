@@ -273,6 +273,11 @@ estimate as measured.
 
 ## Out of scope
 
+- What the task fixes for its deliverable: the files `DELIVERABLES` names and
+  the columns, their names and their order in `DELIVERABLE_COLUMNS`. A column
+  the task calls `percentage_…` and defines as a fraction is the task's choice;
+  the protocol's Unit says what the value is. The area's own text writing the
+  same number two ways (0.47 and 47 %) stays in scope.
 - Code style, naming, type annotations, refactoring, test coverage in the
   abstract. (The protocol's readability is in scope in MODE analysis, as
   `READ` lines only.)
