@@ -140,8 +140,11 @@ how far the null lane can stray from its target:
   A fit times its first fold and stops before the budget when the
   projection exceeds it, with the numbers and the way out.
 
-After the first measurement, these values stay fixed. Decide a finding
-about them by the ways under "When you are stuck".
+After the first measurement, these values stay fixed, and so do the
+question, its terms, the data, the exclusions, the unit and the head's
+`[reference]`: finalize holds a run whose protocol changed them. If the
+number misses, report the miss. A changed question is a new protocol.
+Decide a finding about them by the ways under "When you are stuck".
 
 ### 2. Implement and test the instrument
 

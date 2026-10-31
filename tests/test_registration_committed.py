@@ -476,6 +476,127 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn("the report names the protocol, not its runs", finding.line)
 
 
+#: a computation's scope as Labor-21 r3 registered it (round 2, 2026-10-31)
+ALL_ROADS = (
+    "- **Question / hypothesis:** the deforested share within 5.5 km of the roads\n"
+    "- **Data / scope:** roads.geojson and deforestedArea.geojson\n"
+    "- **Exclusions / filters:** areas outside the buffer\n"
+    "- **Unit:** a fraction of the buffer's area\n"
+)
+REFERENCE = 'key = "percentage_deforestation"\nvalue = 0.62\ntolerance = 0.01\nrelation = "within"\n'
+
+
+class ScopeAsFirstMeasured(_Repository):
+    """What a number is about holds from its first measurement on, at every
+    kind (docs/notes/2026-10-31-scope-frozen.md). The case (round 2 of the
+    pressure design, Labor-21 r3): all roads gave 0.4749 against a stated
+    0.62; the roads were then filtered to BR highways in the script and in
+    Data / scope and Exclusions / filters, the next run gave 0.6259 and was
+    adopted, and every gate was green — a computation has no promise block,
+    and only the block was held."""
+
+    FIRST = "2026-10-07T09-25-31_98dd"
+
+    def _register(
+        self, fields: str, reference: str = REFERENCE, result: str = RUN
+    ) -> str:
+        self.proto.write_text(
+            head(
+                repeat_cost="low",
+                kind="compute",
+                promises=None,
+                reference=reference,
+                result=result,
+            )
+            + fields,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        return _git(self.root, "rev-parse", "HEAD")
+
+    def _changes(self) -> list[str]:
+        return [f.line for f in _registration_changes(self.area, self.proto)]
+
+    def test_the_scope_rewritten_after_a_missed_measurement_is_held_with_its_way_back(
+        self,
+    ):
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        narrowed = ALL_ROADS.replace(
+            "roads.geojson and", "roads.geojson (BR highways only) and"
+        ).replace(
+            "areas outside the buffer",
+            "roads other than BR highways; areas outside the buffer",
+        )
+        later = self._register(narrowed)
+        self._run(later, RUN)
+        (line,) = self._changes()
+        self.assertIn(
+            f"what the number is about changed after the first measurement {self.FIRST}",
+            line,
+        )
+        self.assertIn(
+            'Data / scope "roads.geojson and deforestedArea.geojson" → "roads.geojson (BR highways only)',
+            line,
+        )
+        self.assertIn("Exclusions / filters", line)
+        self.assertIn(
+            f"Next: restore Data / scope, Exclusions / filters as {self.FIRST} registered them",
+            line,
+        )
+        self.assertIn("register anew", line)
+
+    def test_a_reference_moved_after_the_first_measurement_is_held(self):
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        self._run(
+            self._register(ALL_ROADS, reference=REFERENCE.replace("0.62", "0.48")), RUN
+        )
+        (line,) = self._changes()
+        self.assertIn("[reference]", line)
+        self.assertIn("value = 0.62", line)
+        self.assertIn("value = 0.48", line)
+
+    def test_the_twin_a_script_repaired_under_the_same_scope_passes(self):
+        """The code changed and measured again under unchanged fields: what
+        the run computes is the analysis audit's question, not this hold's."""
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        script = self.area / "scripts" / "01_measure.py"
+        script.write_text(script.read_text(encoding="utf-8") + "# repaired\n")
+        _git(self.root, "commit", "-qam", "repair")
+        self._run(_git(self.root, "rev-parse", "HEAD"), RUN)
+        self.assertEqual(self._changes(), [])
+
+    def test_the_twin_generated_counts_and_reflowed_lines_are_no_change(self):
+        """`protocol-fill --data-counts` writes its part into Data / scope after
+        the prepare run, and an editor may reflow a value: neither changes
+        what the number is about."""
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        counted = ALL_ROADS.replace(
+            "roads.geojson and deforestedArea.geojson\n",
+            "roads.geojson and\n  deforestedArea.geojson · counts (prepare run "
+            "2026-10-07T09-00-00_aaaa): read roads.geojson 27662 lines; 27662 items prepared\n",
+        )
+        self._run(self._register(counted), RUN)
+        self.assertEqual(self._changes(), [])
+
+    def test_the_twin_one_measurement_has_nothing_to_compare(self):
+        self._run(self._register(ALL_ROADS), RUN)
+        self.assertEqual(self._changes(), [])
+
+    def test_finalize_holds_it(self):
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        self._run(self._register(ALL_ROADS.replace("5.5 km", "2.75 km")), RUN)
+        collected = Findings(tell=None)
+        self.assertEqual(finalize.finalize_area(self.area, self.proto, collected), 1)
+        self.assertTrue(
+            any(
+                "what the number is about changed after the first measurement" in line
+                for line in collected.blocked
+            ),
+            collected.blocked,
+        )
+
+
 class FirstMeasurementInGitOrder(_Repository):
     """Git's history orders the measurements, a run id only those at one
     commit (A11, audit 2026-10-27)."""

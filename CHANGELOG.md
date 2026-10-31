@@ -5,6 +5,23 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Fixed
+
+- **What a number is about holds from its first measurement on, at every
+  kind.** finalize (and report-check through it) holds the answering run to
+  the question, its terms, the data, the exclusions and the unit, and the
+  head's kind and `[reference]`, as the protocol stood for its first
+  measurement (`finalize.scope_changes`, `protocol_history.SCOPE_FIELDS`); a
+  change is a guaranteed BLOCKER naming each field's old and new value, the
+  way back restoring them and measuring again, or registering anew. Before,
+  only the promise block was held, and a computation has none: in round 2 of
+  the pressure design a lab agent rewrote Data / scope and Exclusions /
+  filters after a missed 0.4749, measured 0.6259 against a stated 0.62, and
+  every gate was green. The generated data counts and reflowed lines are no
+  change; their pattern moved to `protocol_block.COUNTS`. A script changed
+  under the same fields still passes (docs/notes/2026-10-31-scope-frozen.md).
 ## 0.104.0 — 2026-10-31
 
 ### Fixed
@@ -5080,7 +5097,19 @@ path: 0.88.8.
   text", it made every registration read as unfinished and two agents
   stopped to see whether it blocks. The check now says so in one line; a
   frozen protocol with the stamped entry is still a leftover (the scar of
-  uniagent area 08). The pattern has one home, `protocol_check.RUNS_PLACEHOLDER`.
+  uniagent area 08). The pattern has one home, `protocol_check.RUNS_- **What a number is about holds from its first measurement on, at every
+  kind.** finalize (and report-check through it) holds the answering run to
+  the question, its terms, the data, the exclusions and the unit, and the
+  head's kind and `[reference]`, as the protocol stood for its first
+  measurement (`finalize.scope_changes`, `protocol_history.SCOPE_FIELDS`); a
+  change is a guaranteed BLOCKER naming each field's old and new value, the
+  way back restoring them and measuring again, or registering anew. Before,
+  only the promise block was held, and a computation has none: in round 2 of
+  the pressure design a lab agent rewrote Data / scope and Exclusions /
+  filters after a missed 0.4749, measured 0.6259 against a stated 0.62, and
+  every gate was green. The generated data counts and reflowed lines are no
+  change; their pattern moved to `protocol_block.COUNTS`. A script changed
+  under the same fields still passes (docs/notes/2026-10-31-scope-frozen.md).`.
 
 ### Decided, not built
 
