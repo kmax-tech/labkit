@@ -130,6 +130,12 @@ _TOML_RAW_UNSAFE = str.maketrans(
 )
 
 
+#: the generated part of Data / scope (`data_counts.counts_text`): its prepare
+#: run, then its text to the end of the value — written by `protocol-fill
+#: --data-counts`, not by the author
+COUNTS = re.compile(r"counts \(prepare run (?P<run>[^\s)]+)\): .*$")
+
+
 def toml_string(value: str) -> str:
     """VALUE as a one-line TOML basic string, the one writer of a TOML
     string labkit writes (findings and review files, a promise sentence,

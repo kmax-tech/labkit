@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
+from labkit.formats.protocol_block import COUNTS
 from labkit.formats.protocol_check import fields, low_registration_missing
 
 if TYPE_CHECKING:
@@ -290,6 +291,75 @@ def check_annotation_validity(
             evidence_kind=GUARANTEED,
         )
     ]
+
+
+#: the fields that say what a number is about — the question and its words,
+#: the data and what is dropped from it, the unit — held with the head's kind
+#: and `[reference]` from the first measurement on (`scope_differences`):
+#: every kind writes them before the commit, and a computation has no promise
+#: block to hold instead (round 2 of the pressure design, 2026-10-31,
+#: docs/notes/2026-10-31-scope-frozen.md)
+SCOPE_FIELDS = (
+    "Question / hypothesis",
+    "Terms of this protocol",
+    "Data / scope",
+    "Exclusions / filters",
+    "Unit",
+)
+
+
+def scope_value(value: str) -> str:
+    """A scope field's VALUE as it is compared: whitespace folded, the
+    generated data counts of Data / scope left out (`COUNTS`; the prepare run
+    writes them, not the author), the separator before them dropped."""
+    flat = " ".join(value.split())
+    m = COUNTS.search(flat)
+    if m:
+        flat = flat[: m.start()].rstrip(" ·;")
+    return flat
+
+
+def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
+    """(what, from, to) for every difference between the protocol texts OLD
+    and NEW in what the number is about: each of SCOPE_FIELDS
+    (`scope_value`), the head's kind and its `[reference]` as the head writes
+    it. ABSENT where one text has nothing; a head or a `[reference]` that
+    does not read is compared as the sentence its error says, so the fields
+    are compared whatever the head held then (round 2, Labor-21 r3: the first
+    measurements ran on a commit whose `[reference]` did not read yet). Pure."""
+    out: list[tuple[str, str, str]] = []
+    ka, kb = _head_part(old, "kind"), _head_part(new, "kind")
+    if ka != kb:
+        out.append(("kind", ka, kb))
+    ta, tb = _head_part(old, "reference"), _head_part(new, "reference")
+    if ta != tb:
+        out.append(("[reference]", ta, tb))
+    fa = {f.label: f.value for f in fields(old)}
+    fb = {f.label: f.value for f in fields(new)}
+    for label in SCOPE_FIELDS:
+        x = scope_value(fa[label]) if fa.get(label) else ABSENT
+        y = scope_value(fb[label]) if fb.get(label) else ABSENT
+        if x != y:
+            out.append((label, x, y))
+    return out
+
+
+def _head_part(text: str, part: str) -> str:
+    """The head's PART of TEXT as `scope_differences` compares it: "kind"
+    its kind, "reference" its `[reference]` as TOML on one line (ABSENT
+    without one); `(does not read: …)` with the error where the head or the
+    table does not parse."""
+    try:
+        if part == "kind":
+            return str(protocol_block.head(text).kind)
+        ref = protocol_block.reference(text)
+    except protocol_block.BlockError as exc:
+        return f"(does not read: {exc})"
+    return (
+        " ".join(protocol_block.reference_toml(ref).split())
+        if ref is not None
+        else ABSENT
+    )
 
 
 #: the registration fields outside the promise block a replacement compares

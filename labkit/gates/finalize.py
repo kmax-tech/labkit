@@ -112,6 +112,7 @@ from labkit.formats.runs import (
 from labkit.formats.answering_run import (
     adopted_run,
     bound_answering_run,
+    first_measurement_groups,
     first_registrations,
 )
 from labkit.formats import protocol_history
@@ -316,17 +317,18 @@ def registration_changes(
     the records. Raises RuntimeError when git fails."""
     if pid is None or run is None:
         return []
+    root = git_root(protocol)
+    scope = scope_changes(area, protocol, pid, run, root)
     cfg = read_run_config(run)
     now = cfg.promises if cfg is not None else None
     if now is None:
-        return []
-    root = git_root(protocol)
+        return scope
     registered = first_registrations(area, pid, root)
     if len(registered) > 1:
         named = ", ".join(
             f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
         )
-        return [
+        return scope + [
             blocker(
                 f"the first measurements recorded different registrations: {named} — "
                 f"which one stood before the number cannot be told, so no run of "
@@ -341,26 +343,15 @@ def registration_changes(
             )
         ]
     if not registered:
-        return []
+        return scope
     ((sha, (first, snap)),) = registered.items()
     if now["block_sha"] == sha:
-        return []
+        return scope
     changes, restores = named_changes(
         protocol, first, read_run_dir(run), snap, now, root
     )
-    commit = recorded_commit(first.config) if first.config is not None else None
-    shown_then = ""
-    if commit and root is not None:
-        rel = protocol.resolve().relative_to(root.resolve()).as_posix()
-        shown_then = (
-            f" — `git show {commit[:12]}:{rel}` shows them as committed then"
-            + (
-                f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
-                if patch_path(first.dir).is_file()
-                else ""
-            )
-        )
-    return [
+    shown_then = _shown_then(protocol, first, root)
+    return scope + [
         blocker(
             f"the registration changed after the first measurement {first.dir.name}: "
             f"{'; '.join(changes)} (recorded by the answering run {run.name}) — a "
@@ -374,6 +365,87 @@ def registration_changes(
             + " — the earlier protocol, its runs and their verdict stay",
         )
     ]
+
+
+def _shown_then(protocol: Path, first: RunDir, root: Path | None) -> str:
+    """The clause that shows PROTOCOL as the first measurement FIRST saw it:
+    the `git show` of its recorded commit, and its uncommitted.patch where
+    the run kept one; "" without a recorded commit or a repository."""
+    commit = recorded_commit(first.config) if first.config is not None else None
+    if not commit or root is None:
+        return ""
+    rel = protocol.resolve().relative_to(root.resolve()).as_posix()
+    return f" — `git show {commit[:12]}:{rel}` shows them as committed then" + (
+        f", runs/{first.dir.name}/uncommitted.patch what its tree changed"
+        if patch_path(first.dir).is_file()
+        else ""
+    )
+
+
+#: how much of a field's old and new value a scope hold quotes
+SCOPE_QUOTE = 120
+
+
+def scope_changes(
+    area: Path, protocol: Path, pid: str, run: Path, root: Path | None
+) -> list[GateFinding]:
+    """The answering RUN holds what its protocol's first measurement said the
+    number is about (`protocol_history.scope_differences`: the question and
+    its terms, the data, the exclusions, the unit, the head's kind and
+    `[reference]`), read from the protocol each run saw (`as_measured`) —
+    at every kind, so a computation, which has no promise block, is held too.
+    A change is a BLOCKER naming each field with its old and new value and
+    the way out: restore them and measure again, or register anew. A code
+    change measured again under the same fields passes: what the run computes
+    is the analysis audit's question, not this one. The first measurements are
+    every run at each first position (`first_measurement_groups`); the
+    answering run, when it is one of them, has nothing to compare. Empty when
+    the protocol a run saw cannot be read back: the registration station and
+    the promise-block hold name that state.
+    Raises RuntimeError when git fails."""
+    answering = read_run_dir(run)
+    firsts = [
+        rd
+        for group in first_measurement_groups(area, pid, root)
+        for rd in group
+        if rd.dir.resolve() != run.resolve()
+    ]
+    if not firsts:
+        return []
+    current, _ = protocol_history.as_measured(protocol, answering, root)
+    if current is None:
+        return []
+    for first in firsts:
+        then, _ = protocol_history.as_measured(protocol, first, root)
+        if then is None:
+            continue
+        diffs = protocol_history.scope_differences(then, current)
+        if not diffs:
+            continue
+        changes = "; ".join(
+            f'{what} "{_quoted(old)}" → "{_quoted(new)}"' for what, old, new in diffs
+        )
+        labels = ", ".join(what for what, _, _ in diffs)
+        return [
+            blocker(
+                f"what the number is about changed after the first measurement "
+                f"{first.dir.name}: {changes} (as the answering run {run.name} saw the "
+                f"protocol) — a scope set after a result was seen does not answer the "
+                f"registered question",
+                fix=f"restore {labels} as {first.dir.name} registered them"
+                f"{_shown_then(protocol, first, root)}, and measure again, then audit "
+                f"that run (the earlier runs stay); or, when the registration cannot "
+                f"be answered as written, "
+                + register_anew(pid)
+                + " — the earlier protocol, its runs and their verdict stay",
+            )
+        ]
+    return []
+
+
+def _quoted(value: str) -> str:
+    """VALUE cut to SCOPE_QUOTE characters for a hold's sentence."""
+    return value if len(value) <= SCOPE_QUOTE else value[: SCOPE_QUOTE - 1] + "…"
 
 
 def named_changes(
@@ -451,11 +523,15 @@ def check_registration(
     findings: Findings, area: Path, protocol: Path, pid: str | None, run: Path
 ) -> None:
     """Hold the answering RUN to the registration of the first measurement
-    (`registration_changes`); a note when it holds."""
+    (`registration_changes`: what the number is about, and the promise
+    block); a note when it holds."""
     held = registration_changes(area, protocol, pid, run)
     findings.take_all(held)
     if not held:
-        findings.note("  the promise block is the one the first measurement registered")
+        findings.note(
+            "  what the number is about and the promise block are the ones the first "
+            "measurement registered"
+        )
 
 
 def check_open_audit_findings(findings: Findings, area: Path) -> None:

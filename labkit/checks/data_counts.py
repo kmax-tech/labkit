@@ -18,11 +18,11 @@ prepare script that printed the total alone (fifth SAB-like draw,
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from pathlib import Path
 
 from labkit.formats import runs
+from labkit.formats.protocol_block import COUNTS  # the pattern's one home
 
 #: the label of the field the counts stand in
 FIELD = "Data / scope"
@@ -31,8 +31,6 @@ COUNT_KEYS = ("n_items", "n_labelled", "n_unlabelled", "gold_counts")
 #: a gold that takes at most this many values is a class label and is
 #: counted per value; more values are a measured quantity, not counted so
 CLASS_LIMIT = 20
-#: the generated part of Data / scope: its run, then its text to the end
-COUNTS = re.compile(r"counts \(prepare run (?P<run>[^\s)]+)\): .*$")
 
 
 def item_counts(items: list[dict], gold: str = "gold") -> dict:
