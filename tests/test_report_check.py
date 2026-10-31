@@ -799,14 +799,14 @@ class IfReported(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("a probe (run_kind='probe'), not a measurement", out)
 
-    def test_citing_another_run_than_the_one_that_answers_blocks(self):
+    def test_citing_a_run_that_does_not_exist_blocks(self):
         other = "2026-10-01T09-00-00_ffff"
         code, out = self._gate(
             self._area(f"criterion_1_pass = True (run {other})", declared=other)
         )
         self.assertEqual(code, 1, out)
         self.assertIn("finalize: ", out)
-        self.assertIn("but the run that answers is", out)
+        self.assertIn("which cannot answer for", out)
 
     def test_a_reported_run_without_its_analysis_audit_blocks(self):
         code, out = self._gate(

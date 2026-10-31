@@ -898,7 +898,10 @@ def written_before_run(
         return filled
     return (
         filled
-        if answering_run.bound_answering_run(area, head.id).run_dir is None
+        if answering_run.bound_answering_run(
+            area, head.id, answering_run.adopted_run(text)
+        ).run_dir
+        is None
         else []
     )
 

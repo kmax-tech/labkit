@@ -52,6 +52,7 @@ from labkit.formats.repo import (
 from labkit.formats.runs import read_run_config
 from labkit.formats.scope_sha import parse_source
 from labkit.formats.answering_run import (
+    adopted_run,
     bound_answering_run,
     lineage,
     model_provenance_run,
@@ -349,7 +350,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 "labkit-params", f"{protocol.name} is unstamped — name a run with --run"
             )
             return 2
-        choice = bound_answering_run(area, pid)
+        choice = bound_answering_run(area, pid, adopted_run(text))
         blocker, lines = choice.explain(promises.registers_ids(text))
         if blocker or choice.run_dir is None:
             console.refuse(

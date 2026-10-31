@@ -655,10 +655,10 @@ class CountCommands(unittest.TestCase):
 class Withdraw(CountCommands):
     """Replacing a declared result goes through the real commands: withdraw
     the declaration (`protocol-fill --withdraw`), audit the run that
-    answers, adopt it (`--from-run`). An analysis record binds the run the
-    head declared when it was another one (`audit_binding.declared_piece`),
-    so a withdrawal moves the state and the next audit follows earlier
-    findings up. File-check case, 2026-10-28: a BLOCKER on the declared run,
+    answers, adopt it (`--from-run`). While a run stands adopted, every
+    check and the analysis audit hold that run, not the newest by name
+    (`answering_run.bound_answering_run`), so a withdrawal moves the state
+    and the next audit follows earlier findings up. File-check case, 2026-10-28: a BLOCKER on the declared run,
     fixed by re-adopting, stayed held, and the agent committed past the
     hook; a first fix bound the declaration but left `--from-run --force`
     as the way, which then could never pass. No test here writes a
@@ -669,24 +669,27 @@ class Withdraw(CountCommands):
         run_a = self.adopted_a()
         self.change_code()
         run_b = self.measure()
-        # finalize names the mismatch, and the withdrawal as its way out
+        # finalize holds the adopted run, not the newest by name: its code
+        # changed, and the withdrawal comes first
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
+        self.assertIn(f"changed since {run_a} ran it", out)
+        self.assertIn("withdraw the adoption first", out)
+        self.assertIn(f"{run_a}: completed (adopted in [result]", out)
         self.assertIn(
-            f"[result] names {run_a}, but the run that answers is {run_b}", out
+            f"WARNING: {run_b}: bound to this protocol and newer by name", out
         )
-        self.assertIn("--withdraw", out)
         wrong = (
-            f"BLOCKER · PROTOCOL-lines.md:1 · the head has adopted run {run_a}, the rows "
-            f"shown are run {run_b} · the reported mean · LAB-050 Analysis audit "
-            f"before reporting · declare the run the current code measured\n"
+            f"BLOCKER · PROTOCOL-lines.md:1 · the head has adopted run {run_a}, "
+            f"which the current code no longer measures; run {run_b} answers · "
+            f"the reported mean · LAB-050 Analysis audit before reporting · "
+            f"declare the run the current code measured\n"
             f"verdict: 1 blockers, 0 warnings, 0 notes"
         )
         rc, out, prompt = self.analysis(wrong)
         self.assertEqual(rc, 1, out)
-        self.assertIn(
-            f"the protocol's [result] names {run_a}, not the run shown", prompt
-        )
+        # the audit reads the adopted run, so no other run is declared
+        self.assertNotIn("the protocol's [result] names", prompt)
         self.assertIn("a wrong adoption", out)  # the way out, where it is decided
         self.assertIn("--withdraw", out)
         record = self.record
@@ -754,15 +757,17 @@ class Withdraw(CountCommands):
         self.assertNotEqual(run_a, run_b)
 
     def test_an_audit_made_while_another_run_was_declared_is_owed_again(self):
-        """The twin of the usual path in the other order: B audited while A
-        is still declared; after the withdrawal that audit does not cover,
-        and one audit more does."""
-        self.adopted_a()
+        """The twin of the usual path in the other order: audited while A is
+        still adopted, the audit reads A; after the withdrawal it does not
+        cover B, and one audit more does."""
+        run_a = self.adopted_a()
         self.change_code()
         run_b = self.measure()
         rc, out, prompt = self.analysis(self.clean)
         self.assertEqual(rc, 0, out)
-        self.assertIn("the protocol's [result] names", prompt)
+        # while A stands adopted, the audit reads A, not B
+        self.assertIn(f"runs/{run_a}", prompt)
+        self.assertNotIn(f"runs/{run_b}", prompt)
         self.assertEqual(self.withdraw("code changed")[0], 0)
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 1, out)
@@ -1669,7 +1674,7 @@ class Estimator(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         pid = protocol_block.head(self.protocol.read_text(encoding="utf-8")).id
         assert pid is not None
-        chosen = answering_run.bound_answering_run(self.area, pid).run_dir
+        chosen = answering_run.bound_answering_run(self.area, pid, None).run_dir
         self.assertEqual(chosen.name if chosen else None, run_id)  # still the answer
 
     def _the_class_counts_reach_the_report_block_and_are_held(self) -> None:

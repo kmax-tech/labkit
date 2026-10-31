@@ -155,7 +155,7 @@ class Repeats(unittest.TestCase):
     def test_the_primary_keeps_answering_and_rechecking(self):
         first = self._run()
         self._run(repeat_of=first)
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertEqual(choice.run_dir.name if choice.run_dir else None, first)
         self.assertIn("a repeat of", " ".join(e.why for e in choice.exclusions))
         self.assertEqual(

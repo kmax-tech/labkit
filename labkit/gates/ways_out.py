@@ -133,8 +133,9 @@ WAYS_OUT = (
     ),
     (
         "a wrong adoption",
-        "the measurement stands and the protocol's head has adopted another run "
-        "than the one the finding judged: withdraw the adoption "
+        "the measurement stands and the protocol's head has adopted a run that "
+        "does not answer — the finding names the one that does: withdraw the "
+        "adoption "
         '(`protocol-fill <PROTOCOL> --withdraw --why "<why>"`), decide `fixed` '
         "naming that, run the analysis audit again — the follow-up judges the "
         "finding —, then adopt the run that answers (`labkit-adopt`); no new "
@@ -178,8 +179,9 @@ WAYS_OUT_SHORT = {
         "register anew with `[replaces]`, or hand over"
     ),
     "a wrong adoption": (
-        "the measurement stands, the head has adopted another run → `--withdraw`, "
-        "decide `fixed`, audit again, then `labkit-adopt`; no new measurement"
+        "the measurement stands, the head adopted a run that does not answer → "
+        "`--withdraw`, decide `fixed`, audit again, then `labkit-adopt`; no new "
+        "measurement"
     ),
     "none of these": (
         "a way out cannot be taken for a missing prerequisite you can name → "

@@ -86,7 +86,7 @@ from pathlib import Path
 
 from labkit.formats.repo import gate_command, measure_anew
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
-from labkit.formats.runs import metrics_path, read_metrics, run_path
+from labkit.formats.runs import metrics_path, read_metrics
 from labkit.formats import (
     console,
     findings as audit_findings,
@@ -109,6 +109,7 @@ from labkit.formats.runs import (
     read_run_config,
 )
 from labkit.formats.answering_run import (
+    adopted_run,
     bound_answering_run,
     first_registrations,
 )
@@ -160,16 +161,22 @@ from labkit.formats.scope_sha import SourceError
 
 
 def choose_answering_run(
-    findings: Findings, area: Path, pid: str | None, ids_registered: bool
+    findings: Findings, protocol: Path, pid: str | None, text: str
 ) -> Path | None:
-    """The run every station holds the protocol to — `answering_run.bound_answering_run`,
-    ONE choice for every station: intent-check skips newer runs without
-    intent keys (a probe), so checking scopes or provenance on the newest
-    run judged the probe while the numbers came from the measurement
-    (review 2026-10-07). A blocker here is the finding, and it carries the
-    runs that were looked at and why none answers: a note beside it
-    reaches no caller that collects the findings as data (audit
-    2026-10-23, B1)."""
+    """The run every station holds PROTOCOL (its TEXT) to —
+    `answering_run.bound_answering_run`, ONE choice for every station: the
+    adopted run once `[result]` names one, else the newest bound run that
+    reports an intent key (intent-check skips a probe, so checking scopes
+    or provenance on the newest run judged the probe while the numbers
+    came from the measurement, review 2026-10-07). A blocker here is the
+    finding, and it carries the runs that were looked at and why none
+    answers: a note beside it reaches no caller that collects the findings
+    as data (audit 2026-10-23, B1). Bound runs newer by name than the
+    adopted one are a static-evidence warning, never a blocker: a run id is
+    local time without a zone, so the name orders the runs of one machine
+    only — yet on one machine a newer run left out is what choosing among
+    seeds looks like (audit 2026-10-27, A13)."""
+    area = protocol.parent
     if pid is None:
         findings.block(
             "no stamped protocol id ([protocol] id) — no run is bound to it",
@@ -177,44 +184,34 @@ def choose_answering_run(
             "writes a fresh id, and carry the protocol's text over",
         )
         return None
-    choice = bound_answering_run(area, pid)
-    blocker, lines = choice.explain(ids_registered)
+    choice = bound_answering_run(area, pid, adopted_run(text))
+    blocker, lines = choice.explain(_registers(text))
     if choice.run_dir is None:
         assert blocker is not None, "explain() names a blocker whenever no run stands"
         looked_at = "".join(f"; {line}" for line in lines)
-        findings.take(replace(blocker, text=blocker.text + looked_at))
+        fix = (
+            f"withdraw the adoption (`{withdraw_command(protocol)}`), audit the "
+            f"run that answers, then `{adopt_command(protocol, '<run_id>')}` adopts it"
+            if choice.adopted
+            else blocker.fix
+        )
+        findings.take(replace(blocker, text=blocker.text + looked_at, fix=fix))
         return None
+
     if blocker:
         findings.take(blocker)
     findings.note(
         f"  {choice.run_dir.name}: completed" + "".join(f" ({ln})" for ln in lines)
     )
+    if choice.newer_by_name:
+        findings.warn(
+            f"{', '.join(choice.newer_by_name)}: bound to this protocol and newer "
+            f"by name than the adopted run {choice.run_dir.name} — if one of them "
+            f"answers, withdraw the adoption (`{withdraw_command(protocol)}`), "
+            f"audit it and adopt it; a run left out of the report is named in it",
+            evidence_kind=STATIC_EVIDENCE,
+        )
     return choice.run_dir
-
-
-def declared_run_mismatch(
-    text: str, answering_run: Path, protocol: Path
-) -> GateFinding | None:
-    """A blocker when the head's `[result] run` of PROTOCOL (its TEXT) names
-    another run than the one the checks hold, with the command that
-    declares that one; None when it names that run or the protocol
-    declares none (an exploration). The declaration is a projection of
-    `answering_run.bound_answering_run`, never a second binding — held to the
-    choice, not consulted for it."""
-    declared = protocol_block.declared_run(text)
-    if declared is None or declared == answering_run.name:
-        return None
-    # the command is the last step, not the fix: printed bare beside an open
-    # BLOCKER on that very run, three of three Haiku readers were told to
-    # adopt the faulty run (stuck-state probe 2026-10-28)
-    return blocker(
-        f"[result] names {declared}, but the run that answers is {answering_run.name}",
-        fix=f"withdraw the adoption (`{withdraw_command(protocol)}`), audit the "
-        f"run that answers and decide its findings, then "
-        f"`{adopt_command(protocol, answering_run.name)}` adopts it — an audit "
-        f"made while another run is adopted does not cover it; if the fault is "
-        f"in that run, fix the code and measure again first",
-    )
 
 
 def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | None:
@@ -237,23 +234,16 @@ def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | Non
 
 
 def _hold_declaration(
-    findings: Findings, area: Path, protocol: Path, text: str, run: Path | None
+    findings: Findings, protocol: Path, text: str, run: Path | None
 ) -> None:
-    """The head's `[result]` against RUN, the run the checks hold: a table
-    that does not read or names no run of AREA blocks (`declared_run_gaps`),
-    one naming another run blocks (`declared_run_mismatch`), none yet is a
-    note with the command (`undeclared_hint`)."""
-    gaps = declared_run_gaps(area, text, protocol)
+    """The head's `[result]`: a table that does not read blocks
+    (`declared_run_gaps`); none yet is a note with the command
+    (`undeclared_hint`). An adopted run is the run the checks hold
+    (`answering_run.bound_answering_run`), so it cannot name another."""
+    gaps = declared_run_gaps(text, protocol)
     findings.take_all(gaps)
-    if run is None:
+    if run is None or gaps:
         return
-    try:
-        protocol_block.declared_run(text)
-    except protocol_block.BlockError:
-        return  # named in GAPS; nothing to hold to the run
-    mismatch = declared_run_mismatch(text, run, protocol)
-    if mismatch:
-        findings.take(mismatch)
     hint = undeclared_hint(text, run, protocol)
     if hint:
         findings.note(
@@ -267,8 +257,8 @@ def check_answering_run(
     """Station 1: the run every later station holds the protocol to — chosen,
     shown, and held to the run the head declares (`[result] run`). Returns
     it, or None."""
-    answering_run = choose_answering_run(findings, area, pid, _registers(text))
-    _hold_declaration(findings, area, protocol, text, answering_run)
+    answering_run = choose_answering_run(findings, protocol, pid, text)
+    _hold_declaration(findings, protocol, text, answering_run)
     if answering_run is not None:
         for warning in (
             model_provenance_gap(answering_run),
@@ -946,30 +936,21 @@ def finalize_area(
     return report(findings)  # 1 if any step found a blocker, else 0
 
 
-def declared_run_gaps(area: Path, text: str, protocol: Path) -> list[GateFinding]:
-    """A blocker when the head's `[result] run` names no run of AREA (no
-    `runs/<id>/` there), or when the table does not read (a typed id, a
-    stray key: `protocol_block.declared_run`'s sentence). A run id is
-    written by runlog and copied by `protocol-fill --from-run`, never
-    typed — a typed one claims a run that may not exist. Empty without a
-    declaration."""
+def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
+    """A blocker when the head's `[result]` table does not read (a typed
+    id, a stray key: `protocol_block.declared_run`'s sentence). An adopted
+    run that is no completed run of the protocol — no `runs/<id>/` among
+    them — is the run choice's blocker (`choose_answering_run`). Empty
+    without a declaration or with one that reads."""
     written = (
         f"`{withdraw_command(protocol)}` removes it; audit the run that answers, "
         f"then `{adopt_command(protocol, '<run_id>')}` writes the table for it"
     )
     try:
-        declared = protocol_block.declared_run(text)
+        protocol_block.declared_run(text)
     except protocol_block.BlockError as exc:
         return [blocker(str(exc), fix=written)]
-    if declared is None or run_path(area, declared).is_dir():
-        return []
-    return [
-        blocker(
-            f"[result] names {declared}, but there is no runs/{declared}/ in this "
-            f"area — a run id is runlog's, never typed",
-            fix=written,
-        )
-    ]
+    return []
 
 
 def main(argv: list[str]) -> int:

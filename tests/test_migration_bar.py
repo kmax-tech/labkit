@@ -98,13 +98,9 @@ class Declaration(unittest.TestCase):
         text = self.protocol(f"criterion-1 met · recorded: (run {RUN})", declared=RUN)
         self.assertEqual(protocol_block.declared_run(text), RUN)
         self.assertIsNone(protocol_check.recorded_results_without_run(text))
-        self.assertIsNone(
-            finalize.declared_run_mismatch(
-                text, Path("runs") / RUN, Path("PROTOCOL-x.md")
-            )
-        )
+        self.assertEqual(finalize.declared_run_gaps(text, Path("PROTOCOL-x.md")), [])
 
-    def test_a_typed_id_does_not_read_and_a_shaped_one_must_be_a_run(self):
+    def test_a_typed_id_does_not_read(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             typed = self.protocol("criterion_1_pass = True").replace(
@@ -116,13 +112,8 @@ class Declaration(unittest.TestCase):
             ):
                 protocol_block.declared_run(typed)
             protocol = area / "PROTOCOL-x.md"
-            (gap,) = finalize.declared_run_gaps(area, typed, protocol)
+            (gap,) = finalize.declared_run_gaps(typed, protocol)
             self.assertIn("no run id runlog writes", gap.text)
-            shaped = self.protocol(
-                f"criterion-1 met · recorded: (run {RUN})", declared=RUN
-            )
-            (gap,) = finalize.declared_run_gaps(area, shaped, protocol)
-            self.assertIn(f"no runs/{RUN}/", gap.text)
 
     def test_an_answer_without_a_declaration_is_a_warning_not_a_declaration(self):
         text = self.protocol("criterion_1_pass = True, see the run")

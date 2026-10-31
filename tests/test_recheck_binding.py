@@ -81,7 +81,7 @@ class TwoProtocols(unittest.TestCase):
     def test_the_run_bound_to_the_protocol_answers_not_the_newest(self):
         self.assertEqual(recheck.run_dir(self.area, self.a).name, RUN_A)
         self.assertEqual(
-            answering_run.bound_answering_run(self.area, PID_A).run_dir,
+            answering_run.bound_answering_run(self.area, PID_A, None).run_dir,
             self.area / "runs" / RUN_A,
         )
 

@@ -12,12 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.gates import finalize  # noqa: E402
 from labkit.gates.report_check import adoption_order_note  # noqa: E402
 from labkit.formats import protocol_block  # noqa: E402
 from labkit.run import start_check  # noqa: E402
 
-ADOPT = "finalize: [result] names A, but the run that answers is B. Next: once that run's checks hold, `labkit-adopt E B` adopts it"
+ADOPT = "finalize: [result] names A, which cannot answer for p-1: unfinalized. Next: withdraw the adoption, audit the run that answers, then `labkit-adopt E <run_id>` adopts it"
 RENDER = "result section: the Recorded results line differs from its rendering — `protocol-fill <PROTOCOL> --render` writes it again"
 OPEN = "finalize: 2026-10-27T22-45-analysis.toml: BLOCKER · scripts/01_measure.py:113 · the refinement is truncated"
 
@@ -36,22 +35,6 @@ class AdoptionOrder(unittest.TestCase):
     def test_no_adoption_line_no_note(self):
         self.assertIsNone(adoption_order_note([OPEN, RENDER]))
         self.assertIsNone(adoption_order_note([]))
-
-    def test_the_declared_run_hint_names_its_precondition(self):
-        text = '```toml\n[result]\nrun = "2026-01-01T00-00-00_aaaa"\n```\n'
-        protocol = Path("experiments/01-x/PROTOCOL-x.md")
-        msg = finalize.declared_run_mismatch(
-            text, Path("runs/2026-01-02T00-00-00_bbbb"), protocol
-        )
-        self.assertIsNotNone(msg)
-        assert msg is not None
-        # the replacement goes through the withdrawal and an audit, never --force
-        self.assertIn("withdraw the adoption", msg.fix or "")
-        self.assertIn(
-            "audit the run that answers and decide its findings", msg.fix or ""
-        )
-        self.assertIn("fix the code and measure again first", msg.fix or "")
-        self.assertNotIn("--force", msg.fix or "")
 
 
 HEAD = '```toml\n[protocol]\nstandard = "0.23"\nid = "p-0123456789abcdef"\ntype = "exploratory"\nrepeat_cost = "{cost}"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'

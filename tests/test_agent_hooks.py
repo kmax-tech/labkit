@@ -806,7 +806,7 @@ class Stop(unittest.TestCase):
         rc, _, err = self._stop()
         self.assertEqual(rc, 2)
         self.assertIn("report-check reports blockers", err)
-        self.assertIn("but the run that answers is", err)
+        self.assertIn("which cannot answer for", err)
 
     def test_a_correct_answer_lets_it_stop(self):
         """Twin of the case above: the head declares the run that answers, a
@@ -877,10 +877,10 @@ class Stop(unittest.TestCase):
         rc, _, err = self._stop()
         self.assertEqual(rc, 2, err)
         self.assertIn("committed in this session", err)
-        self.assertIn("but the run that answers is", err)
+        self.assertIn("which cannot answer for", err)
         rc, _, err = self._stop(active=True)
         self.assertEqual(rc, 0)
-        self.assertIn("but the run that answers is", err)  # said, not dropped
+        self.assertIn("which cannot answer for", err)  # said, not dropped
         self.assertIn("sent back once in this turn", err)
         self.assertEqual(self._base(), base)
         rc, _, _ = self._stop()  # the next turn
@@ -907,7 +907,7 @@ class Stop(unittest.TestCase):
         _git(self.root, "checkout", "--", protocol)  # the fix dropped
         rc, _, err = self._stop()
         self.assertEqual(rc, 2, err)
-        self.assertIn("but the run that answers is", err)
+        self.assertIn("which cannot answer for", err)
         self.assertEqual(self._base(), base)
         _git(self.root, "checkout", "HEAD~1", "--", protocol)
         _git(self.root, "reset", "-q", "--", protocol)
@@ -967,7 +967,7 @@ class Stop(unittest.TestCase):
         self.assertEqual(rc, 2, err)
         self.assertIn("the session has no stop base", err)
         self.assertIn("dated since the transcript began", err)
-        self.assertIn("but the run that answers is", err)
+        self.assertIn("which cannot answer for", err)
         self._command()  # the next command keeps no base past the commit
         self.assertFalse(path.exists())
         self.assertEqual(self._stop()[0], 2)
