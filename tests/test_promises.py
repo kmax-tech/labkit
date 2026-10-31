@@ -459,7 +459,7 @@ class Chain(unittest.TestCase):
         self.assertIn(
             "[branch-1] records branch_1_outcome = "
             "'generalises if criterion-1 met', which is none of its outcomes' "
-            "names — way out: record one of generalises, noisy, no-verdict",
+            "names. Next: record one of generalises, noisy, no-verdict",
             out,
         )
 

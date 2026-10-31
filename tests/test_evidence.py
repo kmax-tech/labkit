@@ -142,7 +142,7 @@ class Committed(unittest.TestCase):
         rel = f"experiments/01-x/audits/{self.record.name}"
         self.assertIn("changed beyond its findings' decision lines", line)
         self.assertIn(f"`git checkout HEAD -- {rel}`", line)
-        self.assertIn("— way out: ", line)
+        self.assertIn(". Next: ", line)
         _git(self.root, "checkout", "HEAD", "--", rel)
         self.assertEqual(evidence.changes(self.area), [])
 

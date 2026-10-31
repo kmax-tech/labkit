@@ -52,6 +52,8 @@ from labkit.formats.answering_run import (
     repeats_of,
 )
 from labkit.formats.repo import (
+    gate_command,
+    measure_anew,
     GitError,
     blobs_now,
     blobs_then,
@@ -74,8 +76,6 @@ CRITERION_N = promises.CRITERION_N_KEY
 
 #: what a script search in an area passes over: run records, outputs, data
 _NOT_CODE = frozenset({"runs", "output", "data", "__pycache__", ".git"})
-#: the way out where the run cannot be held to its code or rows
-MEASURE_ANEW = "measure anew and audit that run"
 #: the way out of a code change since the run, the fix first: restoring the
 #: old code removes the difference, not a fault the change corrected
 FIX_FIRST = (
@@ -110,7 +110,7 @@ def code_since_run(
         return [
             blocker(
                 f"{answering_run.name}: its runs cannot be followed ({exc})",
-                fix=MEASURE_ANEW,
+                fix=measure_anew(answering_run.parent.parent),
             )
         ], []
     blockers: list[GateFinding] = []
@@ -132,7 +132,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
         return [
             blocker(
                 f"{rid} recorded no script — the code behind its number cannot be compared",
-                fix=MEASURE_ANEW,
+                fix=measure_anew(area),
             )
         ], []
     script = _script_of(area, cfg)
@@ -141,9 +141,9 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
         return [
             blocker(
                 f"{rid}: {script}",
-                fix="measure anew with the script where it is now and audit that "
-                f"run; only when it was moved or deleted by mistake, restore it "
-                f"from {shown(kept, here)}",
+                fix=f"{measure_anew(area)}, with the script where it is now; only "
+                f"when it was moved or deleted by mistake, restore it from "
+                f"{shown(kept, here)}",
             )
         ], []
     out: list[GateFinding] = []
@@ -164,7 +164,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
             *out,
             blocker(
                 f"the code {rid} ran cannot be read now: {exc}",
-                fix="repair what the error names, then finalize again",
+                fix=f"repair what the error names, then `{gate_command('finalize', area)}`",
             ),
         ], []
     b, w = _helpers_since_run(helpers, script, repo, run, cfg)
@@ -243,7 +243,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             blocker(
                 f"{rid} recorded no commit, so the helpers its script imports "
                 f"({names}) cannot be compared",
-                fix="measure anew in the repository and audit that run",
+                fix=f"in the repository, {measure_anew(run_dir.parent.parent)}",
             ),
         ], warnings
     if not commit_known(repo, cfg.git_full):
@@ -253,7 +253,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 f"{rid} started at commit {cfg.git_full[:12]}, which this clone "
                 f"does not hold",
                 fix=f"fetch it (`git fetch --unshallow` in a shallow clone) or "
-                f"{MEASURE_ANEW}",
+                f"{measure_anew(run_dir.parent.parent)}",
             ),
         ], warnings
     patch = patch_path(run_dir)
@@ -270,7 +270,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             *out,
             blocker(
                 f"the tree {rid} started from cannot be read for {names}: {exc}",
-                fix=MEASURE_ANEW,
+                fix=measure_anew(run_dir.parent.parent),
             ),
         ], warnings
     for f in in_git:
@@ -279,7 +279,7 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
                 blocker(
                     f"{shown(f, here)} was not committed when {rid} started — what "
                     f"it held then is not recorded",
-                    fix=f"commit it, {MEASURE_ANEW}",
+                    fix=f"commit it, then {measure_anew(run_dir.parent.parent)}",
                 )
             )
         elif then[f] != now[f]:
@@ -366,7 +366,8 @@ def null_lane_findings(answering_run: Path) -> NullLanes:
                     f"instrument that ignores its labels predicts the same in both "
                     f"lanes; LAB-034 Null condition in the same run)",
                     fix="give the instrument a null of its own, e.g. its predictions "
-                    "against permuted gold, then measure again and audit that run",
+                    f"against permuted gold, then "
+                    f"{measure_anew(answering_run.parent.parent)}",
                 )
             )
     return NullLanes(out, examined)
@@ -430,7 +431,7 @@ def provenance_findings(
             blocker(
                 "source not frozen — the run carries no `data=`",
                 fix="pass data={name: path} to runlog.run so sha and rows are "
-                "recorded, then measure again",
+                f"recorded, then {measure_anew(area)}",
             )
         )
     sources = [
@@ -452,7 +453,7 @@ def provenance_findings(
         return blockers, warnings
     for f, sha in sources:
         if not f.exists():
-            blockers.append(_gone(f))
+            blockers.append(_gone(f, area))
             continue
         untracked = _untracked_files(repo, f)  # a directory: file by file
         if untracked:
@@ -613,19 +614,19 @@ def output_record_findings(answering_run: Path) -> list[GateFinding]:
     return [
         blocker(
             f"{entry.path}: not the file run {answering_run.name} recorded — {why}",
-            fix=MEASURE_ANEW,
+            fix=measure_anew(answering_run.parent.parent),
         )
         for entry in read_outputs(answering_run) or []
         if (why := output_drift(entry)) is not None
     ]
 
 
-def _gone(f: Path) -> GateFinding:
-    """A source file the run recorded is gone: its rows cannot be re-derived."""
+def _gone(f: Path, area: Path) -> GateFinding:
+    """A source file of AREA's run is gone: its rows cannot be re-derived."""
     return blocker(
         f"{f} is gone — the run's rows cannot be re-derived",
         fix=f"restore it (`git checkout HEAD -- {shlex.quote(str(f))}` where git "
-        f"holds it), or {MEASURE_ANEW}",
+        f"holds it), or {measure_anew(area)}",
     )
 
 
@@ -707,7 +708,7 @@ def row_provenance_findings(
         return [
             blocker(
                 f"row provenance: the lineage of {answering_run.name} is broken — {exc}",
-                fix=MEASURE_ANEW,
+                fix=measure_anew(answering_run.parent.parent),
             )
         ], []
     for entry in read_outputs(answering_run) or []:
@@ -716,7 +717,12 @@ def row_provenance_findings(
         try:
             rr = batch.row_runs(entry.path)
         except ValueError as exc:
-            blockers.append(blocker(f"{entry.path.name}: {exc}", fix=MEASURE_ANEW))
+            blockers.append(
+                blocker(
+                    f"{entry.path.name}: {exc}",
+                    fix=measure_anew(answering_run.parent.parent),
+                )
+            )
             continue
         ok = allowed | set(entry.continues)
         foreign = sorted(r for r in rr.runs if r not in ok)
@@ -726,7 +732,8 @@ def row_provenance_findings(
                     f"{entry.path.name}: {sum(rr.runs[r] for r in foreign)} row(s) "
                     f"from {', '.join(foreign)} — a run this run neither is, "
                     f"continues nor derives from; a file of two measurements",
-                    fix="measure anew into an output file of its own and audit that run",
+                    fix=f"{measure_anew(answering_run.parent.parent)}, into an output "
+                    "file of its own",
                 )
             )
         if entry.continues:

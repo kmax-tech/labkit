@@ -1939,7 +1939,7 @@ class KeptAnswer(unittest.TestCase):
                 self.assertEqual(attempt.outcome, "none")
                 findings_command = audit.audit_command(area, "--findings")
                 self.assertIn(
-                    f"— way out: {fix}; the answer is kept in "
+                    f". Next: {fix}; the answer is kept in "
                     f"{path.resolve().as_posix()}; `{findings_command}` names this "
                     "call and offers the handover",
                     err,
@@ -1959,7 +1959,7 @@ class KeptAnswer(unittest.TestCase):
         attempt, path = self.kept(area)
         self.assertEqual(attempt.outcome, "none")
         self.assertIn(
-            f"— way out: {findings.record_way(area)}; the answer is kept in "
+            f". Next: {findings.record_way(area)}; the answer is kept in "
             f"{path.resolve().as_posix()}",
             err,
         )
@@ -2500,7 +2500,7 @@ class WholeFinding(unittest.TestCase):
         rc, _, err, _ = run(area, answer)
         self.assertEqual(rc, 2, err)
         self.assertIn("after the last finding, below a blank line", err)
-        self.assertIn(f"— way out: {ways_out.ANSWER_AGAIN}; the answer is kept", err)
+        self.assertIn(f". Next: {ways_out.ANSWER_AGAIN}; the answer is kept", err)
         self.assertEqual(findings.area_records(area), [])
         # the twins: directly below the last finding, or below a blank line
         # before another finding, the text is the finding's

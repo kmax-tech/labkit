@@ -2525,19 +2525,90 @@ für 0.104.0:
   kein Unterschied in der nächsten Handlung; der Umbau stützt sich auf
   die Lesbarkeit für Menschen.
 
+Danach, gleicher Abend, gleicher Branch (je ein Commit, Hook grün,
+2.541 Tests):
+- Schritt 2: `labkit-next AREA` — Stand, ein nächster Befehl, was gehalten
+  ist; liest report-checks Kette (`report_check.report_gaps`, jetzt eine
+  Funktion), keine eigene Prüfung.
+- Schritt 4: `labkit-adopt AREA [RUN]` — `--from-run`, `--into` des
+  registrierten Berichts, report-check; hält beim ersten Schritt an, der
+  nicht besteht.
+- Schritt 6: jede Gate-Zeile `<was abgelehnt ist>. Next: <Befehl>`
+  (`gate.with_way_out`); alle 50 literalen BLOCKER-Auswege ohne Befehl
+  nennen jetzt einen (`repo.gate_command`, `repo.measure_anew`), ein Test
+  hält das.
+- Schritt 7: `AGENTS.md` 1.158 Wörter (war 4.823); der Rest unverändert
+  als `labkit/docs/agent-guide.md`, `labkit-next --guide`;
+  `tests/test_agent_surface.py` hält Grenze, keine Daten, echte Befehle.
+
 Als Nächstes, in dieser Reihenfolge:
 1. `main` auf `id-words` vorspulen (Kommando im Chat), Release 0.104.0
-   (`just release 0.104.0`), Worktrees `id-words` und `interp-arms`
-   entfernen.
-2. Plan-Schritte 1, 2, 4, 5, 6, 7 der Note: `labkit next`, `labkit
-   adopt`, ehrlicher Stopp schuldet die Zahl, Gate-Meldungen im Muster,
-   `AGENTS.md` unter 1.200 Wörter.
-3. Kalte Runde 21/60 alt gegen neu.
+   (`just release 0.104.0`), Push mit Tag, Worktrees `id-words` und
+   `interp-arms` entfernen (vorher `git status` in `interp-arms`).
+2. Injektion auf den neuen Gates wiederholen (sieben saubere Zustände) —
+   die Reihenfolge oben (Vorher-Nachher-Runde, Punkt 2) stellt sie vor die
+   Runde.
+3. Kalte Runde 21/60 alt gegen neu: gleicher Praxisfall, gleicher Vertrag
+   und gleiche Bewertung wie Runde 1; Haiku, drei Versuche je Zelle. Maß:
+   Aufgabe korrekt abgeschlossen, Ablehnungen sinnvoll bearbeitet,
+   Übergabe nur bei tatsächlichem Hindernis (der Übergabe-Eintrag sagt
+   jetzt `adoptable`, wenn nichts die Übernahme hielt), dazu gebundene
+   Zahlen, Eintritt, geschlossene Befunde, Zeit bis zur Adoption,
+   Überanspruch unverändert null. Braucht den gepushten Tag (das Image
+   installiert ihn) und API-Schlüssel; ein halber Tag. Die Wortzahl der
+   `AGENTS.md` belegt nichts, erst diese Runde.
+4. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
+   in den Gate-Meldungen noch nicht (dort weiter: answering run, intent
+   key, repeat cost …).
+5. Gekürzt (2026-10-31): Protokollvorlage 1.665 Wörter (war 2.225), jede
+   Hilfe eine kurze Anweisung; `protocol-check --contract` beginnt mit dem
+   `labkit-next`-Befehl. Vorlage, `AGENTS.md` und (auf `audit-prompts`) die
+   Audit-Prompts liefen durch den Self-Check des SimpleEnglish-Skills
+   (`~/projects/SimpleEnglish`, prozedurales Register). Danach auch die
+   Referenz: Feldleitfaden 3.790 Wörter (war 6.555), Agenten-Anleitung
+   2.861 (war 4.727), je von einem Subagenten nach dem Skill gekürzt und
+   von mir gegengelesen; die Herkunft der gestrichenen Stellen in
+   `docs/notes/2026-10-31-field-guide-cut.md`.
+6. Codex-Hooks im Container nachweisen (Vertrauensfreigabe im Wrapper, ein
+   Hook feuert), dann der Codex-Screen.
+7. Branch `audit-prompts` (`92a47d5`, Prompts der Audit-Agenten gekürzt,
+   Note `docs/notes/2026-10-31-audit-prompts-cut.md`): erst nach der kalten
+   Runde einmischen, am Injection-Benchmark messen; die Hauskopie
+   `~/.claude/agents/code-clarity.md` zieht der Rollout nach. Beim
+   Einmischen kollidiert die Lesbarkeitsregel im Preflight-Prompt
+   (Feldnamen, auf beiden Zweigen korrigiert: `d04de5d`, `4820377`): die
+   Fassung von `audit-prompts` nehmen.
+
+Nach dem dritten Hinweis (2026-10-31): `protocol-fill` nimmt ein
+eindeutiges Präfix eines Feldnamens an und nennt bei Mehrdeutigkeit die
+Felder, sonst das nächstliegende; `labkit-init` erklärt `--type` und nennt
+für unbekannte Flags das nächstliegende (`7b93c86`, Zwillingstests).
+
+Danach, nach dem zweiten Review (je ein Commit, 2.553 Tests):
+- Schritt 5 neu gefasst und gebaut: ein ehrlicher Stopp schuldet den
+  nachvollziehbaren Stand, nicht die Zahl. Der Übergabe-Eintrag (Schema 2,
+  Breaking) hält den Lauf und seinen Stand fest — `not-measured`,
+  `unusable`, `held` mit den Blockern, `adoptable` mit Warnung —, der
+  Berichtsblock nur den Stand ohne Lauf-ID; eine Messung nach der Übergabe
+  beendet ihre Anerkennung. Keine Zahlen in der Übergabe.
+- `labkit-adopt` ist der Übernahmebefehl in allen Meldungen
+  (`repo.adopt_command`, `repo.ADOPT_TOOL` in der Reihenfolge-Notiz);
+  `--from-run` und `--into` bleiben für gezielte Reparaturen.
+- Eigener Test für einen abgelehnten Schritt 3 von `labkit-adopt`.
+
+Nach dem Review (gleicher Abend, je ein Commit, 2.544 Tests): Übergabe an
+das Protokoll gebunden (`handovers.protocol_handed_over`);
+`labkit-adopt` setzt nach abgelehntem Schritt 2 oder 3 wieder auf und sagt,
+dass die Übernahme steht; ein Gang nach der kurzen `AGENTS.md` (Zählaufgabe,
+an jeder Station `labkit-next`, Audit als Stand-in ohne Modell) lief bis
+„next: nothing“ durch und fand zwei Fehler in `labkit-next` (falscher
+Füllbefehl für Kopffelder, ungefüllter `<area>`-Platzhalter), beide
+behoben; `main` (67f44ab) eingemischt.
 - Offen, notiert: LAB-013 trägt noch „Registered branch“ im Titel — passt
   jetzt wieder; die Lese-Probe lief mit Lesern, die die globale
   CLAUDE.md sahen (künftig Leser ohne Hauskontext).
 
-- **Prompts der Audit-Agenten kürzen (notiert, nicht geplant):**
+- **Prompts der Audit-Agenten kürzen — gebaut auf Branch `audit-prompts`, Einmischen siehe oben:**
   `labkit/agents/*.agent.md`, 5.657 Wörter, der Preflight allein 3.155
   mit sechs Daten. Erst nach der kalten Runde 21/60, damit deren Effekt
   zuzuordnen bleibt; derselbe Satz-Filter, gemessen am

@@ -294,8 +294,8 @@ class CountDelivers(unittest.TestCase):
             )
             self.assertIn(held, out)
             self.assertIn(
-                f"is not the recorded {entry.sha256} — way out: "
-                "measure anew and audit that run",
+                f"is not the recorded {entry.sha256}. Next: "
+                "measure anew (`.venv/bin/python ",
                 out,
             )
             checked = io.StringIO()

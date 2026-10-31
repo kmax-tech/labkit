@@ -955,8 +955,8 @@ def recorded_results_without_run(text: str) -> str | None:
         return None
     return (
         "WARNING: `Recorded results` is written but the head has adopted no run "
-        "(`[result] run`) — a reported result is adopted by `protocol-fill <PROTOCOL> "
-        "--from-run <run_id>`, which writes the table and Recorded results; report-check "
+        "(`[result] run`) — a reported result is adopted by `labkit-adopt <area> "
+        "<run_id>`, which writes the table and Recorded results; report-check "
         "then holds it at the stop and the commit; an exploration that reports no "
         "result leaves the field open (LAB-041 Generate numbers, don't retype them)"
     )

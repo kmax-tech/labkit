@@ -515,7 +515,7 @@ class TestAuditFindings(unittest.TestCase):
             (line,) = [
                 ln for ln in out.splitlines() if "BLOCKER: preflight_audit:" in ln
             ]
-            self.assertIn("way out: audit this code and promise block", line)
+            self.assertIn("Next: audit this code and promise block", line)
             self.assertNotIn("--decide", line)
 
     def test_decided_findings_pass_and_an_unreadable_file_blocks(self):
@@ -623,6 +623,9 @@ class TestAuditFindings(unittest.TestCase):
                     {},
                     [],
                     [handovers.entry(record, 1)],
+                    [],
+                    None,
+                    handovers.NOT_MEASURED,
                     [],
                 ),
             )

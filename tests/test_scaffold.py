@@ -652,7 +652,7 @@ class Exp(unittest.TestCase):
                 "runlog start experiments/01-foo",
                 "finalize experiments/01-foo",
                 "labkit-audit experiments/01-foo --mode analysis",
-                "protocol-fill experiments/01-foo/PROTOCOL-foo.md --from-run",
+                "labkit-adopt experiments/01-foo",
             ]
             positions = [text.index(step) for step in order]
             self.assertEqual(positions, sorted(positions), text)
@@ -676,7 +676,7 @@ class Exp(unittest.TestCase):
                 self.assertLess(undeclared.index("Check the kind"), decide)
         self.assertNotIn("Set the repeat cost", low)
         self.assertNotIn("Set the repeat cost", text)
-        for owed in ("code-check", "finalize", "--mode analysis", "--from-run"):
+        for owed in ("code-check", "finalize", "--mode analysis", "labkit-adopt"):
             self.assertIn(owed, low, low)
 
     def test_the_next_steps_name_only_what_the_skeleton_has(self) -> None:
@@ -1976,7 +1976,7 @@ class NextStepFields(unittest.TestCase):
                             "the Conclusion and the report fields (`protocol-check", out
                         )
                         self.assertIn(
-                            "once frozen and adopted), then `protocol-fill", out
+                            "once frozen and adopted), then `labkit-adopt", out
                         )
                         self.assertIn(
                             "output file is written from that run only after", out

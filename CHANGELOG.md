@@ -19,6 +19,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
+- **`labkit-adopt AREA [RUN]`: the adoption in one step.** Runs
+  `protocol-fill --from-run` (written and kept only when report-check
+  passes on it), the result block into the report the head registers
+  (`--into`) and report-check on the tree, stopping at the first step that
+  does not pass. A run already adopted skips the first step. The three
+  commands stay; `labkit-next` and `AGENTS.md` name this one.
+- **`labkit-next AREA`: the one next step.** Prints where the area stands,
+  the next command and what is held until it is taken. It adds no check:
+  no protocol → `labkit-init exp`; a MUST field unfilled → `protocol-fill`;
+  a current handover → nothing; otherwise the first blocker of
+  report-check's chain (`report_check.report_gaps`, the stages now one
+  function report-check prints) with its way out; nothing held and no run
+  adopted → the adoption; adopted and clean → nothing owed. Before an
+  adoption it leaves out what the adoption writes and checks on its
+  proposal (the result section, `--check`, the report).
+
 - **Codex lifecycle hooks.** `labkit-hooks install` also writes
   `.codex/hooks.json`, preserving foreign handlers; `check` detects missing
   or stale entries. `codex-hook pre-run|post-change|stop` adapts Codex events
@@ -27,6 +43,82 @@ pins (`requirements.txt` / `requirements.lock`).
   `/hooks`; installation does not grant trust. See `docs/codex-hooks.md`.
 
 ### Changed
+
+- **What an agent copies is what labkit takes.** Every `--decide` call
+  and every registered-branch example shown in `AGENTS.md`, the agent
+  guide, the field guide and the protocol template goes through the real
+  parser in a test (`tests/test_agent_surface.py`): the guide showed a
+  decide call without `--why` and a branch without consequences. The kind
+  is chosen by one path everywhere (`KIND_QUESTIONS`, `AGENTS.md`, both
+  guides): by what the reported result claims. A computed quantity — a
+  model's feature importances included — is `compute`, its training
+  documented and audited; a claim about predictions is `fit` when this
+  experiment trained, tuned or selected the model, else `apply`; a file of
+  predictions claims how well the model predicts. The field guide states
+  the quality check and the inference criterion by their function; the
+  template's help names no rule, the field guide's last table does.
+
+- **The reference an agent is sent to is shorter.** The field guide
+  (`protocol-check --guide`) is 3,790 words (was 6,555), the agent guide
+  (`labkit-next --guide`) 2,861 (was 4,727), both in the SimpleEnglish
+  document register; a field the field guide does not list has only its
+  template help. Their history moved to
+  `docs/notes/2026-10-31-field-guide-cut.md`.
+
+- **The protocol template is 1,665 words (was 2,225).** Each field's
+  help text is one short instruction in the procedural register of the
+  SimpleEnglish skill (condition first, no semicolon, must not may); the
+  labels, sections and cut marks are unchanged, and how to fill a field
+  stays in the field guide (`protocol-check --guide`). The stamp's
+  phrases are what `protocol_check.stamp_placeholders` recognises: in a
+  protocol stamped before, a field whose whole value is still `<…>` stays
+  a placeholder, but text written beside an old phrase no longer marks the
+  field unfilled — fill such a field anew.
+- **`protocol-check PROTOCOL --contract` opens with the next step.** Its
+  first line names `labkit-next <area>`; the fill commands follow as three
+  short lines naming the protocol.
+
+- **A label typed short names its field; an unknown flag names the one
+  meant.** `protocol-fill PROTOCOL "Terms=…"` fills `Terms of this
+  protocol` when no other field begins the same, and says so
+  (`filled: Terms → terms of this protocol`); a prefix of several fields
+  names them, a near miss names the nearest (`protocol_fill.field_for`).
+  `labkit-init exp --type` is told that `type` is a protocol field set
+  with `protocol-fill <PROTOCOL> type=…` and that the kind is `--kind`;
+  another unknown flag names the nearest one.
+
+- **Every message names `labkit-adopt` for the adoption.**
+  `repo.adopt_command` builds `labkit-adopt <area> <run_id>` (with
+  `--protocol` where the area holds several protocols), so finalize,
+  report-check, the report holds, recheck, protocol-check, the ways out,
+  `labkit-init exp`'s steps and the area README name one command; where
+  the report is registered, its way out no longer adds `--into` after it
+  (the adoption writes the block). The order note before an adoption
+  recognises the line by `repo.ADOPT_TOOL`. `protocol-fill --from-run`
+  and `--into` stay for a targeted repair.
+
+- **The stamped `AGENTS.md` is 1,158 words (was 4,823).** It keeps the
+  loop around `labkit-next`, six words (protocol, run, criterion, audit,
+  decision, adoption), the kinds table, the decisions, the stop rule and
+  the instructions no gate can check, in one instruction per sentence.
+  Everything else moved, unchanged but for one dated sentence, to the
+  agent guide `labkit/docs/agent-guide.md`, which `labkit-next --guide`
+  prints. `tests/test_agent_surface.py` holds the limit of 1,200 words,
+  no date in either text, and every labkit command `AGENTS.md` names
+  being installed. An existing lab repo keeps its `AGENTS.md`
+  (`labkit-init lab` writes it only where none is): move it aside, run
+  `labkit-init lab .` again and carry the repo's own additions over
+  (`docs/student-repos.md`, "Moving to a newer version").
+
+- **Every gate line in one pattern: `<what is refused>. Next: <fix>`.**
+  `gate.with_way_out` joins a sentence and its way out with `. Next: `
+  (was ` — way out: `), the sentence's own full stop dropped; a dotted
+  line's last part reads `Next: <fix>`. Every literal BLOCKER way out
+  names its command (`tests/test_ways_out_data.py`): the 50 that said
+  "fix the block", "remove one" or "measure again" now end in the command
+  — after a repair by hand the check run again (`repo.gate_command`), a
+  new run as `repo.measure_anew(area)` names it. A reader that matched
+  ` — way out: ` in a gate's output matches `. Next: ` now.
 
 - **The agent-facing wording leads to the next action** (plan:
   `docs/notes/2026-10-30-agent-surface.md`). The run a protocol reports is
@@ -42,6 +134,18 @@ pins (`requirements.txt` / `requirements.lock`).
   only; no format changes.
 
 ### Breaking
+
+- **A handover records the run it stands at (handover schema 2).** The
+  record gains `run`, `run_state` and `run_why`, computed when the
+  handover is written (`report_check.adoption_state`): `not-measured` (no
+  measurement bound to the protocol), `unusable` (a measurement, and no
+  number from it), `held` (the blockers that hold its adoption) or
+  `adoptable` (nothing held it — the handover is written, with a warning
+  naming `labkit-adopt`: a missed criterion is a result). The report's
+  block says which state holds, without a run id. A measurement bound to
+  the protocol after the handover ends its acknowledgement. A schema-1
+  record no longer reads; labkit 0.103.0 is the last that reads it — hand
+  the protocol over again.
 
 - **Promise ids are their kind and a number.** `[criterion-1]`,
   `[quality-check-2]`, `[branch-1]` replace `[C1]`, `[A2]`, `[B1]`;

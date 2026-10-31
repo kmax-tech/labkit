@@ -40,6 +40,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 
 import re
 
+from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED, GateFinding, blocker
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings
@@ -135,7 +136,8 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
         must.append(
             blocker(
                 f"{f}:1: MISSING (must): no italic meta line after the title",
-                fix="write one under the title: *<Zweck> · <Sorte> · … · <Datum>*",
+                fix="write one under the title: *<Zweck> · <Sorte> · … · <Datum>*, "
+                f"then `{gate_command('notes-check', f)}`",
             )
         )
         return must, warn
@@ -146,7 +148,8 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
             blocker(
                 f"{f}:{n}: MISSING (must): no kind in the meta line",
                 fix="name one in it: Instrument — Entwurf|implementiert · "
-                "Related-Lesart · Referenzkarte · Audit",
+                "Related-Lesart · Referenzkarte · Audit, then "
+                f"`{gate_command('notes-check', f)}`",
             )
         )
     if not DATE.search(para):
@@ -159,7 +162,8 @@ def check_file(f: Path) -> tuple[list[GateFinding], list[str]]:
                     f"implementiert' but names no script, function, or "
                     f"experiments/ path",
                     fix="name the script, function or experiments/ path that "
-                    "implements it, or declare it 'Instrument — Entwurf'",
+                    "implements it, or declare it 'Instrument — Entwurf', then "
+                    f"`{gate_command('notes-check', f)}`",
                 )
             )
         else:
@@ -207,8 +211,8 @@ def main(argv: list[str]) -> int:
         except OSError as exc:
             findings.block(
                 f"{f}: not readable ({exc})",
-                fix="make the file readable (its path and permissions), then run "
-                "notes-check again",
+                fix="make the file readable (its path and permissions), then "
+                f"`{gate_command('notes-check', f)}`",
             )
             continue
         findings.take_all(must)

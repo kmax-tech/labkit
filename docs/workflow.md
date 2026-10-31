@@ -362,7 +362,9 @@ names none. A readable BLOCKER that stays unresolved stays `open`;
 use its `protocol-fill <PROTOCOL>
 --handover --why "<what blocks>" --tried "<what you tried>" --into
 REPORT.md` command. It withdraws the result's adoption, keeps an
-immutable handover record in `audits/handovers/` and writes its handover
+immutable handover record in `audits/handovers/` — with the run the
+protocol stands at and what held its adoption, computed, and a warning
+when nothing held it (a missed criterion is a result) — and writes its handover
 block into the report (one per protocol, replaced in place). The selected
 protocol's result blocks in that report are withdrawn; other text and
 other protocols' blocks stay. Citations in prose or other reports must

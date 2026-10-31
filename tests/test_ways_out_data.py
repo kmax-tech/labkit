@@ -91,6 +91,109 @@ class EverySite(unittest.TestCase):
         self.assertEqual(blocker_sites_without_fix(tree), [1, 2, 3, 4])
 
 
+#: a field of an f-string way out that builds a command: its expression
+#: names one (`audit_command(…)`, `findings.decide_way(…)`, `measure`,
+#: `preflight.contract_hint(…)`, `ways_out.register_anew(…)`)
+COMMAND_FIELD = (
+    "command",
+    "way",
+    "WAY",
+    "measure",
+    "again",
+    "HANDOVER",
+    "audit",
+    "contract_hint",
+    "fields",
+    "register_anew",
+    "_review_step",
+    "into",
+    "RENDER",
+    "AGAIN",
+)
+
+
+def _part_names_command(part: ast.expr) -> bool:
+    """Does one part of an f-string name a command: a backticked literal or
+    a field naming a command builder?"""
+    if isinstance(part, ast.Constant):
+        return "`" in str(part.value)
+    if isinstance(part, ast.FormattedValue):
+        return any(word in ast.unparse(part.value) for word in COMMAND_FIELD)
+    return False
+
+
+def _names_command(node: ast.expr) -> bool | None:
+    """Does the literal way out NODE name a command — a backticked span, or a
+    field whose expression names a command builder (`COMMAND_FIELD`)? None
+    for a way out computed elsewhere (a name, a call): out of a static
+    reader's reach."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return "`" in node.value
+    if isinstance(node, ast.JoinedStr):
+        return any(_part_names_command(v) for v in node.values)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left, right = _names_command(node.left), _names_command(node.right)
+        if left or right:
+            return True
+        return None if left is None or right is None else False
+    if isinstance(node, ast.IfExp):
+        body, orelse = _names_command(node.body), _names_command(node.orelse)
+        if body is None or orelse is None:
+            return None
+        return body and orelse
+    return None
+
+
+def commandless_blocker_ways(tree: ast.AST) -> list[tuple[int, str]]:
+    """(line, function) of every BLOCKER site of TREE whose literal way out
+    names no command (`_names_command` False) — the pattern every gate line
+    follows is `<what is refused>. Next: <command>`."""
+    where = _functions(tree)
+    out: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = _name(node.func)
+        if name not in BUILDERS:
+            continue
+        if name == "block" and not (isinstance(node.func, ast.Attribute) and node.args):
+            continue
+        grade_at = BUILDERS[name]
+        if grade_at is not None:
+            grade = node.args[grade_at] if len(node.args) > grade_at else None
+            if grade is None or _is_warning(grade):
+                continue
+        fix = next((k.value for k in node.keywords if k.arg == "fix"), None)
+        if fix is not None and _names_command(fix) is False:
+            out.append((node.lineno, where.get(node, "<module>")))
+    return out
+
+
+class EveryWayOut(unittest.TestCase):
+    def test_every_literal_way_out_names_its_command(self):
+        """`<what is refused>. Next: <command>` (agent-surface plan, step 6):
+        the step after a repair by hand is the check run again
+        (`repo.gate_command`)."""
+        missing = []
+        for path in sorted((ROOT / "labkit").rglob("*.py")):
+            rel = path.relative_to(ROOT).as_posix()
+            tree = ast.parse(path.read_text(encoding="utf-8"), rel)
+            missing += [f"{rel}:{n} ({fn})" for n, fn in commandless_blocker_ways(tree)]
+        self.assertEqual(missing, [], "a BLOCKER way out that names no command")
+
+    def test_the_reader_tells_a_command_from_a_sentence(self):
+        tree = ast.parse(
+            "def f():\n"
+            "    blocker('x', fix='fix the block')\n"
+            "    blocker('x', fix='run `y`')\n"
+            "    blocker('x', fix=f'{audit_command(a)} again')\n"
+            "    blocker('x', fix=f'remove {path}')\n"
+            "    blocker('x', fix=way)\n"
+            "    GateFinding(WARNING, 'x', fix='look', evidence_kind=K)\n"
+        )
+        self.assertEqual(commandless_blocker_ways(tree), [(2, "f"), (5, "f")])
+
+
 #: the refusals that carry their way out as `fix=` (`AuditError`,
 #: `AttemptError`: a required keyword, None only where exempt)
 REFUSALS = ("AuditError", "AttemptError")
@@ -183,7 +286,7 @@ class EveryRefusal(unittest.TestCase):
 
         for cls in (AuditError, AttemptError):
             exc = cls("x is gone", fix="restore x")
-            self.assertEqual(str(exc), "x is gone — way out: restore x")
+            self.assertEqual(str(exc), "x is gone. Next: restore x")
             self.assertEqual((exc.why, exc.fix), ("x is gone", "restore x"))
         self.assertEqual(gate.with_way_out("x", None), "x")
 
@@ -227,9 +330,9 @@ class TheFinding(unittest.TestCase):
     def test_every_form_tells_the_fix(self):
         fix = "run `y`"
         for form, line in (
-            (gate.PREFIXED, "BLOCKER: x — way out: run `y`"),
-            (gate.AS_WRITTEN, "x — way out: run `y`"),
-            (gate.DOTTED, "BLOCKER · a.py:1 · x · run `y`"),
+            (gate.PREFIXED, "BLOCKER: x. Next: run `y`"),
+            (gate.AS_WRITTEN, "x. Next: run `y`"),
+            (gate.DOTTED, "BLOCKER · a.py:1 · x · Next: run `y`"),
         ):
             f = gate.GateFinding(
                 gate.BLOCKER,
@@ -247,7 +350,7 @@ class TheFinding(unittest.TestCase):
         out = gate.Findings(told.append, area="experiments/01-x")
         out.block("x", fix=f"run `labkit-audit {gate.AREA_SLOT} --findings`")
         out.report("tool", "reporting")
-        want = "x — way out: run `labkit-audit experiments/01-x --findings`"
+        want = "x. Next: run `labkit-audit experiments/01-x --findings`"
         self.assertIn(f"  BLOCKER: {want}", told)
         self.assertIn(f"  - {want}", told)
 

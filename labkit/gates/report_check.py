@@ -126,6 +126,7 @@ import subprocess
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
@@ -136,7 +137,12 @@ from labkit.formats.gate import (
     GateFinding,
     blocker,
 )
-from labkit.formats.answering_run import first_measurements
+from labkit.formats.answering_run import (
+    bound_answering_run,
+    bound_runs,
+    first_measurements,
+    is_measurement,
+)
 from labkit.formats.protocol_history import (
     registration_differences,
     registrations_as_first_measured,
@@ -178,6 +184,7 @@ from labkit.gates.report_hold import (
 )
 from labkit.formats.protocol_check import check_fields, conclusion_written
 from labkit.formats.repo import (
+    ADOPT_TOOL,
     adopt_command,
     area_path,
     area_protocols,
@@ -412,20 +419,23 @@ def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
     if pid == ctx.head.id:
         return blocker(
             "[replaces] protocol is its own id",
-            fix="name the protocol it replaces",
+            fix=f"name the protocol it replaces in [replaces] protocol, then "
+            f"`{gate_command('report-check', ctx.area)}`",
         )
     hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
     if len(hits) != 1:
         return blocker(
             f"[replaces] protocol = {pid} names "
             + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
-            fix="name the one protocol of this repo it replaces, kept as it is",
+            fix="name the one protocol of this repo it replaces, kept as it "
+            f"is, then `{gate_command('report-check', ctx.area)}`",
         )
     circle = _replacement_circle(str(ctx.head.id), hits[0])
     if circle:
         return blocker(
             f"the replacements run in a circle ({circle})",
-            fix="let each name the one before it",
+            fix=f"let each name the one before it, then "
+            f"`{gate_command('report-check', ctx.area)}`",
         )
     return hits[0]
 
@@ -471,7 +481,8 @@ def _undeclared_changes(
             f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
             f"{y}",
             fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
-            f'{s(x)}, to = {s(y)}, why = "…"',
+            f'{s(x)}, to = {s(y)}, why = "…"; then '
+            f"`{gate_command('report-check', ctx.area)}`",
         )
         for (what, x, y), old_where in computed.items()
         if (what, x, y) not in listed
@@ -481,7 +492,8 @@ def _undeclared_changes(
         blocker(
             f"declares a change the registrations do not show: {what} {x} → {y} "
             f"(the predecessor {against}, this protocol {new_where})",
-            fix="remove that [[replaces.change]]",
+            fix=f"remove that [[replaces.change]], then "
+            f"`{gate_command('report-check', ctx.area)}`",
         )
         for what, x, y in sorted(listed - set(computed))
     ]
@@ -1019,11 +1031,15 @@ def finalize_gaps(area: Path, protocol: Path) -> list[GateFinding]:
     ]
 
 
-def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
+def analysis_findings(
+    ctx: Checked, rule: str, *, result_section: bool = True
+) -> list[GateFinding]:
     """Coverage and rendered-result blockers for an analysis stage already due.
 
     RULE is the lane's analysis-audit rule; the entry point decides whether
-    this stage runs. Missing coverage and result differences are all kept.
+    this stage runs. Missing coverage and result differences are all kept;
+    RESULT_SECTION False leaves the rendered result out (before an adoption,
+    which writes it).
     """
     out: list[GateFinding] = []
     gap = analysis_audit_gap(ctx)
@@ -1032,9 +1048,10 @@ def analysis_findings(ctx: Checked, rule: str) -> list[GateFinding]:
     # the rendered result section is held here too, named as what it is:
     # a cold reader took "analysis audit:" on a retyped Recorded results
     # line for a record problem (reading probe 2026-10-22)
-    out.extend(
-        replace(gap, text=f"result section: {gap.text}") for gap in limit_gaps(ctx)
-    )
+    if result_section:
+        out.extend(
+            replace(gap, text=f"result section: {gap.text}") for gap in limit_gaps(ctx)
+        )
     return out
 
 
@@ -1102,69 +1119,143 @@ def report_check(
         area=shown(ctx.area, Path.cwd()),
         audit=audit_command(ctx.area, protocol=ctx.protocol),
     )
-
-    # 1. declaration — a blocker does not stop the remaining stages
-    if ctx.declaration_gap:
-        findings.block(
-            f"{chosen.name}: {ctx.declaration_gap}",
-            fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
-            f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
-            f"`[result]` table for it",
-        )
-
-    # 2. registration — freeze or committed registration, as the lane owes
-    if ln.freeze:
-        findings.take_all(freeze_gaps(ctx))
-    else:
+    if not ln.freeze:
         print(
             f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
             f"audit owed (LAB-017 The number of audits follows the cost tier); the "
             f"registration as committed at the first measurement, the full run, "
             f"the analysis audit and the check are owed instead"
         )
-        if ln.registration:
-            findings.take_all(registration_gaps(ctx))
-    # a declared replacement binds its changes (K1)
-    findings.take_all(replacement_gaps(ctx))
-
-    # 3. finalize — always, with its blockers named
-    finalized = finalize_gaps(ctx.area, ctx.protocol)
-    findings.take_all(finalized)
-    # a declared run whose code changed: every later hold withdraws first
-    held_by = held_declaration(ctx, finalized)
-
-    # 4. full run — only with an answering run; finalize names its absence
-    if ctx.run is not None:
-        findings.take_all(withdrawn_first(unreportable_gaps(ctx, ln.freeze), held_by))
-
-    # 5. analysis — coverage and rendering where the lane owes the audit
-    if ANALYSIS_AUDIT in ln.audits:
-        findings.take_all(
-            withdrawn_first(analysis_findings(ctx, ln.analysis_rule), held_by)
-        )
-
-    # 6. recomputation — always, including after a failed earlier stage
-    findings.take_all(
-        withdrawn_first(recomputation_findings(ctx.area, ctx.repo), held_by)
-    )
-
-    # 7. decisions — reviews and follow-ups where the lane owes the analysis audit
-    if ANALYSIS_AUDIT in ln.audits:
-        findings.take_all(withdrawn_first(review_findings(ctx), held_by))
-        findings.take_all(withdrawn_first(followup_findings(ctx), held_by))
-
-    # 7b. adoption last — a `--from-run` line beside other blockers is the last
+    findings.take_all(report_gaps(ctx))
+    # adoption last — an adoption line beside other blockers is the last
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
-
-    # 8. report — the file the head registers, once delivered in this state
-    findings.take_all(report_findings(ctx))
 
     # 9. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
+
+
+def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFinding]:
+    """Every gap report-check holds CTX to, in the order of the chain — the
+    one list `report_check` prints and `next_step` reads:
+
+    1. Declaration: an unreadable `[result]` blocks; later stages continue.
+    2. Registration: the freeze where the lane owes it, else the first
+       measurement's committed registration where owed; a declared
+       replacement's changes.
+    3. Finalize: its blockers, always.
+    4. Full run: reportability, only when an answering run exists.
+    5. Analysis: coverage and rendered results where the lane owes it.
+    6. Recomputation: the analysis script's `--check`, always.
+    7. Decisions: reviews and follow-ups where the lane owes the analysis.
+    8. Report: the registered report, once delivered in CTX's state.
+
+    Every applicable stage runs despite earlier blockers; a declared run
+    whose code changed puts the withdrawal before every later hold
+    (`withdrawn_first`). ADOPTION_PENDING (no run adopted yet, the one a
+    next step asks about): the stages the adoption writes and holds on its
+    proposal — the result section (`limit_gaps`), the recomputation, the
+    report — are left out, since the tree cannot pass them before the
+    adoption writes them; `protocol_fill.adopt` checks the whole proposal.
+    Prints nothing."""
+    ln = lane(ctx.head.repeat_cost)
+    out: list[GateFinding] = []
+    # 1. declaration
+    if ctx.declaration_gap:
+        out.append(
+            blocker(
+                f"{ctx.protocol.name}: {ctx.declaration_gap}",
+                fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
+                f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
+                f"`[result]` table for it",
+            )
+        )
+    # 2. registration
+    if ln.freeze:
+        out += freeze_gaps(ctx)
+    elif ln.registration:
+        out += registration_gaps(ctx)
+    out += replacement_gaps(ctx)
+    # 3. finalize
+    finalized = finalize_gaps(ctx.area, ctx.protocol)
+    out += finalized
+    held_by = held_declaration(ctx, finalized)
+    # 4. full run
+    if ctx.run is not None:
+        out += withdrawn_first(unreportable_gaps(ctx, ln.freeze), held_by)
+    # 5. analysis
+    if ANALYSIS_AUDIT in ln.audits:
+        analysis = analysis_findings(
+            ctx, ln.analysis_rule, result_section=not adoption_pending
+        )
+        out += withdrawn_first(analysis, held_by)
+    # 6. recomputation
+    if not adoption_pending:
+        out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), held_by)
+    # 7. decisions
+    if ANALYSIS_AUDIT in ln.audits:
+        out += withdrawn_first(review_findings(ctx), held_by)
+        out += withdrawn_first(followup_findings(ctx), held_by)
+    # 8. report
+    if not adoption_pending:
+        out += report_findings(ctx)
+    return out
+
+
+def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccount:
+    """Where PROTOCOL of AREA, as TEXT holds it, stands for an adoption —
+    the account a handover records (`handovers.RunAccount`):
+
+    - NOT_MEASURED: no measurement bound to it (completed or not) and none
+      unreadable — a preparation or probe run measures nothing;
+    - UNUSABLE: a measurement of it, and no number from it — the run choice
+      holds (no completed run, an unreadable or same-second rival:
+      `answering_run.bound_answering_run`), it chose a run that is no
+      measurement, or the metrics.json does not read; the run is the newest
+      measurement, WHY the sentences that put it there;
+    - HELD: the answering run, and the blockers report-check holds its
+      adoption with (`report_gaps`, the adoption pending; an audit that
+      cannot be held to the run among them);
+    - ADOPTABLE: the answering run, and nothing holds it.
+
+    Prints nothing. Raises `protocol_block.BlockError` on a head that does
+    not read, `runs.RunConfigError` from a run's config.json."""
+    pid = protocol_block.head(text).id
+    if not pid:
+        return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
+    taken, rest = bound_runs(area, pid)
+    ours = [f for f in rest if f.binding.id == pid or f.state == runs.UNREADABLE]
+    measured = [f for f in [*taken, *ours] if is_measurement(f)]
+    if not measured:
+        return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
+    choice = bound_answering_run(area, pid)
+    if choice.run_dir is None or not any(f.dir == choice.run_dir for f in measured):
+        why = [f"{f.dir.name}: {f.why or f.state}" for f in measured if f in ours]
+        why += [choice.blocker] if choice.blocker else []
+        if choice.run_dir is not None:
+            why.append(f"{choice.run_dir.name}, the run chosen, is no measurement")
+        newest = max(f.dir.name for f in measured)
+        return handovers.RunAccount(newest, handovers.UNUSABLE, tuple(why))
+    run = choice.run_dir.name
+    try:
+        runs.read_metrics(runs.metrics_path(choice.run_dir))
+    except runs.MetricsError as exc:
+        return handovers.RunAccount(run, handovers.UNUSABLE, (str(exc),))
+    try:
+        ctx = checked(area, protocol, text=text)
+    except AuditError as exc:
+        # the audit cannot be held to the run: that holds the adoption too
+        return handovers.RunAccount(run, handovers.HELD, (str(exc),))
+    held = tuple(
+        g.text
+        for g in report_gaps(ctx, adoption_pending=ctx.declared is None)
+        if g.grade == BLOCKER
+    )
+    state = handovers.HELD if held else handovers.ADOPTABLE
+    return handovers.RunAccount(run, state, held)
 
 
 def report_findings(ctx: Checked) -> list[GateFinding]:
@@ -1190,20 +1281,22 @@ def report_findings(ctx: Checked) -> list[GateFinding]:
 
 def adoption_order_note(blocked: list[str]) -> str | None:
     """The order to tell when BLOCKED (the blocker messages) names an adoption
-    (`--from-run`) beside blockers that are not themselves projections of
-    one (`--from-run`, `--render`): adoption runs this check and is refused
-    while any of them stands, so they come first. None otherwise — then the
-    adoption line is the way out as printed. Why: printed bare, `--from-run
-    <run> --force` beside an open BLOCKER on that run read as the fix to
-    three of three Haiku readers (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
-    adoption = [m for m in blocked if "--from-run" in m]
-    other = [m for m in blocked if "--from-run" not in m and "--render" not in m]
+    (a `labkit-adopt` line, `repo.ADOPT_TOOL`) beside blockers that are not
+    themselves projections of one (an adoption, a `--from-run` or `--render`
+    rewrite): adoption runs this check and is refused while any of them
+    stands, so they come first. None otherwise — then the adoption line is
+    the way out as printed. Why: printed bare, the adoption line beside an
+    open BLOCKER on that run read as the fix to three of three Haiku readers
+    (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
+    projections = (ADOPT_TOOL, "--from-run", "--render")
+    adoption = [m for m in blocked if ADOPT_TOOL in m]
+    other = [m for m in blocked if not any(p in m for p in projections)]
     if not adoption or not other:
         return None
     return (
-        f"  adoption comes last: `--from-run` runs report-check itself and is "
+        f"  adoption comes last: `{ADOPT_TOOL}` runs report-check itself and is "
         f"refused while any of the {len(other)} other blocker(s) above stands — "
-        f"clear them first, or hand the area over; the `--from-run` line names "
+        f"clear them first, or hand the area over; the `{ADOPT_TOOL}` line names "
         f"the last step, not the fix"
     )
 

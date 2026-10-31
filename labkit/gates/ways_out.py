@@ -137,7 +137,7 @@ WAYS_OUT = (
         "than the one the finding judged: withdraw the adoption "
         '(`protocol-fill <PROTOCOL> --withdraw --why "<why>"`), decide `fixed` '
         "naming that, run the analysis audit again — the follow-up judges the "
-        "finding —, then adopt the run that answers (`--from-run`); no new "
+        "finding —, then adopt the run that answers (`labkit-adopt`); no new "
         "measurement",
     ),
     (
@@ -179,7 +179,7 @@ WAYS_OUT_SHORT = {
     ),
     "a wrong adoption": (
         "the measurement stands, the head has adopted another run → `--withdraw`, "
-        "decide `fixed`, audit again, then `--from-run`; no new measurement"
+        "decide `fixed`, audit again, then `labkit-adopt`; no new measurement"
     ),
     "none of these": (
         "a way out cannot be taken for a missing prerequisite you can name → "

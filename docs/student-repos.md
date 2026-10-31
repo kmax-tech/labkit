@@ -44,8 +44,13 @@ a newer tag; it reports and changes nothing.
 2. `.venv/bin/pip install -r requirements.txt`.
 3. `.venv/bin/labkit-hooks install` — the hooks the repo carries come from
    the installed version; `labkit-hooks check` names them stale until then.
-4. Run the tests, commit `requirements.txt` and the reinstalled hooks. The
-   commit history then says which labkit produced which run.
+4. Where the release changed the stamped `AGENTS.md` (its `CHANGELOG.md`
+   entry says so): `mv AGENTS.md AGENTS.md.old && .venv/bin/labkit-init lab .`
+   writes the new one (it writes only files that are absent); carry the
+   repo's own additions over from `AGENTS.md.old`, then delete it.
+5. Run the tests, commit `requirements.txt`, the reinstalled hooks and
+   `AGENTS.md`. The commit history then says which labkit produced which
+   run.
 
 The student or the supervisor (a commit in the student's repo) can do it.
 A breaking release names in `CHANGELOG.md` the last version that reads the

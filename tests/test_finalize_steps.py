@@ -23,9 +23,7 @@ class Steps(unittest.TestCase):
         # (audit 2026-10-27, H5)
         fix = mismatch.fix or ""
         self.assertIn('protocol-fill /x/PROTOCOL-x.md --withdraw --why "<why>"', fix)
-        self.assertIn(
-            "`protocol-fill /x/PROTOCOL-x.md --from-run 2026-10-07T10-00-00_aa11`", fix
-        )
+        self.assertIn("`labkit-adopt /x 2026-10-07T10-00-00_aa11`", fix)
         self.assertNotIn("--force", fix)
 
     def test_declaring_the_answering_run_or_none_passes(self):
@@ -68,9 +66,7 @@ class DeclaredRunHint(unittest.TestCase):
         )
         assert hint is not None
         self.assertIn("no result adopted yet ([result])", hint)
-        self.assertIn(
-            "protocol-fill /x/PROTOCOL-a.md --from-run 2026-10-07T10-00-00_aa11", hint
-        )
+        self.assertIn("labkit-adopt /x 2026-10-07T10-00-00_aa11", hint)
 
     def test_a_declared_run_is_quiet(self):
         text = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
@@ -87,7 +83,8 @@ class DeclaredRunHint(unittest.TestCase):
             )
             self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap.text)
             self.assertIn("--withdraw", gap.fix or "")
-            self.assertIn("--from-run <run_id>`", gap.fix or "")
+            self.assertIn("labkit-adopt ", gap.fix or "")
+            self.assertIn(" <run_id>`", gap.fix or "")
             self.assertNotIn("--force", gap.fix or "")
             typed = head(repeat_cost="low").replace(
                 'preflight_audit = ""\n',

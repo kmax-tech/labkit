@@ -145,7 +145,7 @@ repo root.
 5. **Adopt the result.** Replace `<run-id>` with the recorded run ID:
 
    ```bash
-   .venv/bin/protocol-fill experiments/01-document-count/PROTOCOL-document-count.md --from-run <run-id>
+   .venv/bin/labkit-adopt experiments/01-document-count <run-id>
    ```
 
    This writes the answer and run reference from `metrics.json`, runs
@@ -193,8 +193,10 @@ again now (`labkit-audit <area> --mode <mode>`), of any protocol of the
 area, since the old start names none. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
-immutable handover record of the remaining evidence, losses and the
-findings left open, and writes the record's handover block
+immutable handover record of the remaining evidence, losses, the
+findings left open and the run the protocol stands at — none measured,
+measured without a number, held by checks, or adoptable, with the
+reasons — and writes the record's handover block (the state, no run id)
 into the report — one block per protocol, replaced in place. It withdraws
 that protocol's result blocks in the chosen report and keeps other text
 and other protocols' blocks. Citations in prose and other reports still
@@ -259,6 +261,9 @@ The **console commands** are installed with the package. Use
 
 ```bash
 labkit-init lab [DIR]               # create a lab repo
+labkit-next AREA [--protocol FILE]    # where the area stands, the one next step, and what is held until it is taken
+labkit-next --guide                   # the workflow in full (labkit/docs/agent-guide.md), which the stamped AGENTS.md keeps short
+labkit-adopt AREA [RUN] [--protocol FILE]  # adopt the run: --from-run, the registered report's --into, report-check — stops at the first that does not pass
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--report-file PATH] [--explore]
 labkit-init exp NAME --kind compute --reference KEY=VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT] # a computation compared with a stated value: the head's [reference]
 labkit-init exp NAME --kind KIND --change-kind # another kind before the first measurement, written fields kept
@@ -324,7 +329,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **repeat cost** | `repeat_cost` in the protocol head, `low` or `high`: the price of repeating the run. It selects the lane — what the area owes before and after the run (the table above, `standard_contract.lane`). |
 | **probe** | Instrument check before a measurement at high repeat cost; its number is not reported. |
 | **measurement** | Run of the registered question, eligible for result release after the required checks. |
-| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open) and writes its handover block into the report. The stop and the commit then accept the loss it records, never an open BLOCKER; audits and adoption stay refused until the evidence is restored. |
+| **handover** | A protocol's end without a result: `protocol-fill <PROTOCOL> --handover` withdraws `[result]`, keeps a handover record under `audits/handovers/` (the remaining evidence, its losses, the findings left open, the run it stands at and what held its adoption) and writes its handover block into the report. The stop and the commit then accept the loss and the open findings it records; audits and adoption stay refused until the evidence is restored, and a measurement after the handover ends it. |
 | **run metadata** | Start and completion records: `config.json` and `completion.json`. |
 | **run index** | Searchable overview in `runs.tsv`. |
 | **metrics** | Measured values recorded in `metrics.json`. |
@@ -345,7 +350,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **consequence** | What the selected outcome permits: an interpretation, an action, or an explicitly justified non-action. |
 | **binding** | Run's record of the protocol id it ran under. |
 | **answering run** | Completed run selected to answer a particular protocol; repeat draws are excluded. Selection rules: [protocol/run binding](docs/protocol-run-binding.md). |
-| **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
+| **adopted run** | Run named by `[result].run` as the reported result, written by the adoption (`labkit-adopt`, through `protocol-fill --from-run`) and removed by `--withdraw`; the gates require it to equal the answering run. |
 | **conclusion** | Author's interpretation answering the question, in at most two plain sentences in the Summary's `Conclusion` field. |
 | **recorded results** | Generated verdicts of the registered promises (a quality check not assessable or not met leaves each criterion not assessable), the other metrics, run id and limits note in the protocol's `Recorded results` field; checked against the declared run and covering audit records. |
 | **report result block** | Generated section in a separate report containing the recorded results and full Limitation lines; written by `protocol-fill --into` and checked against the same sources. |

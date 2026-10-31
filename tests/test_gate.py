@@ -133,7 +133,7 @@ class Findings(unittest.TestCase):
         self.assertEqual(
             f.blocked,
             [
-                "experiments/01-x: x — way out: `labkit-audit experiments/01-x "
+                "experiments/01-x: x. Next: `labkit-audit experiments/01-x "
                 "--mode analysis` follows it up"
             ],
         )
@@ -152,12 +152,12 @@ class Findings(unittest.TestCase):
             )[-1]
         )
         self.assertEqual(code, 1)
-        self.assertIn("  BLOCKER: x failed — way out: mend x", out)
+        self.assertIn("  BLOCKER: x failed. Next: mend x", out)
         self.assertIn("  WARNING: y", out)
         self.assertIn(
             "t: 1 blocker(s), 1 warning(s) — fix the blockers before freezing:", out
         )
-        self.assertIn("  - x failed — way out: mend x", out)
+        self.assertIn("  - x failed. Next: mend x", out)
 
     def test_warnings_alone_are_exit_0_and_clear_is_said(self):
         f = gate.Findings(tell=None)
@@ -204,13 +204,13 @@ class Findings(unittest.TestCase):
             evidence_kind=gate.GUARANTEED,
         )
         self.assertEqual(
-            full.line, "WARNING · a.py:2 · y · why · LAB-004 Name · do this"
+            full.line, "WARNING · a.py:2 · y · why · LAB-004 Name · Next: do this"
         )
         self.assertEqual(
             gate.coded(
                 "BLOCKER", None, "x", evidence_kind=gate.GUARANTEED, fix="y"
             ).line,
-            "BLOCKER · x · y",
+            "BLOCKER · x · Next: y",
         )
         self.assertEqual(
             (full.where, full.rule, full.fix), ("a.py:2", "LAB-004 Name", "do this")
@@ -248,7 +248,7 @@ class Silent(unittest.TestCase):
             )[-1]
         )
         self.assertEqual((code, out), (1, ""))
-        self.assertEqual(f.blocked, ["x failed — way out: mend x"])
+        self.assertEqual(f.blocked, ["x failed. Next: mend x"])
         self.assertEqual(f.warned, ["y", "WARNING · a.py:2 · z"])
         self.assertEqual([x.grade for x in f.found], ["BLOCKER", "WARNING", "WARNING"])
         self.assertEqual(f.exit_code, 1)
@@ -265,7 +265,7 @@ class Silent(unittest.TestCase):
             gate.GateFinding(
                 "BLOCKER", "x", fix="y", evidence_kind=gate.GUARANTEED
             ).line,
-            "BLOCKER: x — way out: y",
+            "BLOCKER: x. Next: y",
         )
         self.assertEqual(
             gate.GateFinding(
@@ -283,7 +283,7 @@ class Silent(unittest.TestCase):
         f.note("── x ──")
         f.block("b", fix="c")
         f.report("t", "x")
-        self.assertEqual(lines[:2], ["── x ──", "  BLOCKER: b — way out: c"])
+        self.assertEqual(lines[:2], ["── x ──", "  BLOCKER: b. Next: c"])
         self.assertIn(
             "t: 1 blocker(s), 0 warning(s) — fix the blockers before x:", lines
         )

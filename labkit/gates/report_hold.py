@@ -328,12 +328,13 @@ def report_owed(
         if declared is not None
         else "a result block (the head has adopted no result)"
     )
-    adopt = (
-        ""
+    # the adoption writes the registered report's block itself (tools.adopt)
+    write = (
+        f"`{into_command(protocol, report)}` writes the result block"
         if declared is not None
         else f"`{adopt_command(protocol, newest)}` adopts the run"
         + (" (the newest kept one)" if run is not None else "")
-        + ", then "
+        + " and writes its result block"
     )
     return blocker(
         f"{name_p} registers {name_r} as its report, and {name_r} carries "
@@ -342,7 +343,7 @@ def report_owed(
         + " — a registered report owes the result or an explicit end without "
         "one; a number with its run id removed, or a run id typed in, releases "
         "nothing",
-        fix=f"{adopt}`{into_command(protocol, report)}` writes the result block; "
+        fix=f"{write}; "
         f"`{report_blocks.discuss_command(name_p, newest, name_r)}` discusses a "
         f"run only looked at and releases nothing — the report then still owes "
         f"the result or the handover; `{handover_command(protocol, name_r)}` "
@@ -825,7 +826,8 @@ def report_review_owed(
                         f"{shown(area, sources.repo)}, whose working tree differs "
                         f"from the index ({', '.join(differs)}) — the commit would "
                         f"not hold what the review saw",
-                        fix="stage these too, or stash them",
+                        fix=f"stage these too: `git add -- "
+                        f"{shlex.quote(shown(area, sources.repo))}`",
                     )
                 )
                 continue
@@ -960,8 +962,8 @@ def undeclared_findings(
                 blocker(
                     f"{rel}: line {d.first}: run {d.run_id} is discussed as not "
                     f"reported, but {named} has adopted it as its result",
-                    fix="remove the discussion block; the generated result block "
-                    "shows the number",
+                    fix="remove the discussion block — the generated result block "
+                    f"shows the number —, then `report-check --if-reported {rel}`",
                 )
             )
     said_so = {d.run_id for d in discussed}
@@ -990,7 +992,7 @@ def undeclared_findings(
                 blocker(
                     f"{rel}: cites {run_id}, the answering run of {named}, which "
                     f"adopts it in the working tree but not in the index — the "
-                    f"adoption `protocol-fill --from-run` wrote is not staged",
+                    f"adoption (`labkit-adopt`) wrote is not staged",
                     fix=f"`git add {named}` stages the protocol with its "
                     f"adoption; commit the report and the protocol together",
                 )
@@ -1027,9 +1029,10 @@ def undeclared_findings(
             GateFinding(
                 WARNING,
                 f"{rel}: cites {', '.join(looked_at)}, which no protocol has adopted as "
-                f"its result — a reported number is adopted by `protocol-fill "
-                f"<PROTOCOL> --from-run`, and its block written by `--into {rel}`; "
-                f"an exploration's run is cited, not reported",
+                f"its result — a reported number is adopted by `labkit-adopt "
+                f"<area> <run_id>`, and its block written by `protocol-fill "
+                f"<PROTOCOL> --into {rel}`; an exploration's run is cited, not "
+                f"reported",
                 evidence_kind=GUARANTEED,
             )
         )

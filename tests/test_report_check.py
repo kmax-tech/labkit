@@ -343,7 +343,7 @@ class ReportCheck(unittest.TestCase):
         self.assertEqual(seen, {"stdout_untouched": True, "silent": True})
         # the nested gate's way out reaches the line (TODO 3.2: nested gates)
         self.assertIn(
-            "BLOCKER: finalize: no completed run bound to p-x — way out: measure: `x`",
+            "BLOCKER: finalize: no completed run bound to p-x. Next: measure: `x`",
             out.getvalue(),
         )
         self.assertNotIn("── completion ──", out.getvalue())
@@ -885,7 +885,8 @@ class RegisteredReport(unittest.TestCase):
                 )
                 self.assertIn("PROTOCOL-x.md registers ", out)
                 self.assertIn(
-                    f"--from-run {self.RUN}` adopts the run (the newest kept one), then `",
+                    f" {self.RUN}` adopts the run (the newest kept one) and writes "
+                    "its result block",
                     out,
                 )
                 self.assertIn(f"--discuss {self.RUN} --why", out)
@@ -957,7 +958,7 @@ class RegisteredReport(unittest.TestCase):
             f"neither the result block of run {self.RUN}, its adopted result", out
         )
         line = next(ln for ln in out.splitlines() if "registers " in ln)
-        self.assertIn("way out: `protocol-fill ", line)
+        self.assertIn("Next: `protocol-fill ", line)
         self.assertIn("--into ", line)
         self.assertNotIn("--from-run", line.split("--discuss")[0])
 

@@ -1,5 +1,18 @@
 # Choosing the kind: training comes first
 
+> **Superseded 2026-10-31: the claim comes first.** The kind follows what
+> the reported result claims. A computed quantity is `compute` — a
+> model's feature importances included —, and its training and selection
+> are documented and audited like any other code. A claim about how well a
+> model predicts is `fit` when this experiment trained, tuned or selected
+> the model, else `apply`. The gap this note closed stays closed by one
+> sentence in the first question: a file of predictions on unlabelled rows
+> claims how well the model predicts. Why (review 2026-10-31): training
+> first made every evaluation of a trained model a performance claim and
+> owed it a held-out score, which does not answer a question about
+> importances; and an inference criterion is no score — it states which
+> result allows which conclusion. Below, the record of 2026-10-26.
+
 *2026-10-26, ninth haiku round of labkit-paper area 09 (labkit `85c54fd`),
 t3-labkit. Code: `labkit/tools/scaffold.py` (`KIND_QUESTIONS`, `next_steps`),
 `labkit/templates/AGENTS.md.template` (lane `low`, step 1).*

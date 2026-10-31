@@ -36,6 +36,8 @@ claude-hook = "labkit.gates.claude_hooks:cli"
 codex-hook = "labkit.gates.codex_hooks:cli"
 usability = "labkit.probes.usability_command:cli"
 labkit-audit = "labkit.gates.audit:cli"
+labkit-next = "labkit.tools.next_step:cli"
+labkit-adopt = "labkit.tools.adopt:cli"
 labkit-hooks = "labkit.gates.install_hooks:cli"
 labkit-params = "labkit.tools.params:cli"
 labkit-calltree = "labkit.tools.calltree:cli"
@@ -59,7 +61,7 @@ packages = [
 [tool.setuptools.package-data]
 # the protocol template IS the checker's contract — shipping the checker
 # without it leaves `protocol-check` with nothing to check against.
-labkit = ["templates/*.template", "agents/*.agent.md", "docs/standard.md", "docs/rules.tsv", "docs/protocol-field-guide.md"]
+labkit = ["templates/*.template", "agents/*.agent.md", "docs/standard.md", "docs/rules.tsv", "docs/protocol-field-guide.md", "docs/agent-guide.md"]
 
 [tool.ruff]
 # a one-off extraction script kept as the evidence of a usability record —

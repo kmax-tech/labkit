@@ -28,7 +28,7 @@ class WorkflowOrientation(unittest.TestCase):
                     "--mode analysis",
                     "decide",
                     "Conclusion",
-                    "--from-run",
+                    "labkit-adopt",
                 )
                 positions = [route.index(stage) for stage in stages]
                 self.assertEqual(positions, sorted(positions), route)
@@ -38,7 +38,7 @@ class WorkflowOrientation(unittest.TestCase):
         # the missing audit (audit 2026-10-27, third, I3)
         protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
         line = repo.next_after_run(protocol, "2026-10-27T10-00-00_ab12")
-        stages = ("finalize", "--mode analysis", "decide", "Conclusion", "--from-run")
+        stages = ("finalize", "--mode analysis", "decide", "Conclusion", "labkit-adopt")
         positions = [line.index(stage) for stage in stages]
         self.assertEqual(positions, sorted(positions), line)
         for template in (
@@ -79,7 +79,7 @@ class WorkflowOrientation(unittest.TestCase):
         ):
             with self.subTest(line=name):
                 self.assertIn(step, line)
-                self.assertLess(line.index(step), line.index("--from-run"))
+                self.assertLess(line.index(step), line.index("labkit-adopt"))
 
     def test_the_area_route_names_the_area_from_the_root(self):
         # `runlog .` from the root, as AGENTS.md asks, read the repo as an

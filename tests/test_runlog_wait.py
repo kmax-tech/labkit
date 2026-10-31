@@ -373,7 +373,7 @@ class TestWaitSeesADetachedStart(unittest.TestCase):
                 with self.assertRaises(console.Refused) as cm:
                     detached.starts(area)
                 self.assertIn("command is None", cm.exception.why)
-                self.assertIn(f"way out: remove it (`rm {running}`)", cm.exception.why)
+                self.assertIn(f"Next: remove it: `rm {running}`", cm.exception.why)
 
     def test_a_command_that_cannot_start_is_refused_and_leaves_no_record(self):
         from labkit.run import detached

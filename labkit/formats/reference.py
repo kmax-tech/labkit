@@ -23,6 +23,7 @@ be rendered. Pure: nothing here reads or writes a file.
 
 from __future__ import annotations
 
+from labkit.formats.gate import AREA_SLOT
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.protocol_block import (
     AT_LEAST,
@@ -161,8 +162,9 @@ def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
                 f"— a comparison is registered before the run, never written beside "
                 f"the number",
                 fix="register the stated value in the head's [reference] table "
-                "(key, value, tolerance, relation, source) and measure anew; or "
-                "drop the keys from evaluate_rows()",
+                "(key, value, tolerance, relation, source), or drop the keys from "
+                f"evaluate_rows(); then `.venv/bin/python "
+                f"{AREA_SLOT}/scripts/01_measure.py`",
             )
         ]
     if STATE_KEY not in metrics:
@@ -216,7 +218,7 @@ def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
                 f"the reference changed after the run, and a value set after a "
                 f"result was seen does not answer the registered question",
                 fix="restore the [reference] the run compared with, or register anew "
-                "and measure again",
+                "(`labkit-init exp <new-name> --kind …`) and measure there",
             )
         ]
     return []

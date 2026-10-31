@@ -93,6 +93,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract
@@ -187,7 +188,8 @@ def _intent_id_findings(area: Path, protocol: Path) -> list[GateFinding]:
                 f"'{promises.key_stem(i)}'/'{promises.key_stem(i)}_*' key · the run reports nothing for this promise "
                 f"and the metrics check fails after the tokens are spent",
                 rule=ID_RULE,
-                fix="implement the key or drop the id",
+                fix=f"report the key in the measure script or drop [{i}] from the "
+                f"block, then `{gate_command('code-check', area)}`",
                 evidence_kind=GUARANTEED,
             )
         )
@@ -225,7 +227,8 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                 protocol.name,
                 f"promise block: {exc}",
                 rule=ID_RULE,
-                fix="fix the block",
+                fix=f"repair the [[promise]] tables as the sentence says, then "
+                f"`{gate_command('code-check', area)}`",
                 evidence_kind=GUARANTEED,
             )
         ]
@@ -243,7 +246,8 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     BLOCKER,
                     protocol.name,
                     f"[{p.id}] declared scope: {exc} · runlog refuses the run",
-                    fix="fix the scope",
+                    fix=f"name files that exist in [{p.id}]'s scope, then "
+                    f"`{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
                 )
             )
@@ -257,7 +261,8 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
                     protocol.name,
                     f"[{p.id}] declares key '{p.key}', which no script "
                     f"mentions{hint} · intent-check fails after the run",
-                    fix="report the declared key or fix the block",
+                    fix=f"report '{p.key}' in the measure script or correct the key "
+                    f"in [{p.id}], then `{gate_command('code-check', area)}`",
                     evidence_kind=GUARANTEED,
                 )
             )

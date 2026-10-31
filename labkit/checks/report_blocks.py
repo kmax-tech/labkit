@@ -230,7 +230,8 @@ def block_gaps(
             gaps.append(
                 blocker(
                     f"{at}: {s.why} — a block shows an adopted result only",
-                    fix="remove it, or adopt a run in the protocol (`--from-run`) "
+                    fix="remove it, or adopt a run in the protocol "
+                    "(`labkit-adopt <area> <run_id>`) "
                     "and write it again",
                 )
             )
@@ -309,7 +310,8 @@ def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[GateFindin
             gaps.append(
                 blocker(
                     f"line {n}: cites run {token} — no runs/{token}/ in the repo",
-                    fix="cite a run the repo holds: a run that is gone reports no number",
+                    fix="cite a run the repo holds — a run that is gone reports no "
+                    f"number —, then {REPORT_CHECK_AGAIN}",
                 )
             )
     return gaps
@@ -339,6 +341,11 @@ DISCUSS_OPEN = opener(DISCUSSED)
 DISCUSS_HEAD_END = HEAD_END
 DISCUSS_CLOSE = closer(DISCUSSED)
 DISCUSS_KEYS = ("protocol", "run", "why")
+
+
+#: the way out's last step after a report is repaired by hand: the check
+#: the stop and the commit run on it
+REPORT_CHECK_AGAIN = "`report-check --if-reported <REPORT>`"
 
 
 def discuss_command(protocol: str, run_id: str, report: str) -> str:
@@ -495,7 +502,7 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
                 blocker(
                     f"{at} repeats the block at line {seen[key]} — one block per "
                     f"protocol and run",
-                    fix="remove one",
+                    fix=f"remove one, then {REPORT_CHECK_AGAIN}",
                 )
             )
         else:

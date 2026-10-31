@@ -271,6 +271,9 @@ class Gate(_Areas):
                 [],
                 [handovers.entry(rec, 1)],
                 [],
+                None,
+                handovers.NOT_MEASURED,
+                [],
             ),
         )
         self.assertEqual(self.gaps(), [])

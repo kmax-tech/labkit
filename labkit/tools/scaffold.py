@@ -57,6 +57,8 @@ install), `lab` stamps only templates that ref holds unchanged
 from __future__ import annotations
 
 import argparse
+import difflib
+from typing import NoReturn
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 import importlib.metadata
@@ -533,8 +535,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
 through `runlog` · `finalize` · `labkit-audit <area> --mode analysis` ·
 decide its findings (`labkit-audit <area> --findings` prints the commands) ·
 write the Conclusion and obtain any required decision review ·
-`protocol-fill --from-run` writes the number back and runs {recheck} through
-`report-check`. `AGENTS.md` explains each step and the recovery choices.
+`labkit-adopt <area> <run_id>` writes the number back and runs {recheck}
+through `report-check`. `AGENTS.md` explains each step and the recovery choices.
 
 ## State
 
@@ -542,7 +544,7 @@ write the Conclusion and obtain any required decision review ·
 - [ ] {state}
 - [ ] Run and `finalize` green
 - [ ] Analysis audit decided; Conclusion written; required reviews upheld
-- [ ] `protocol-fill --from-run` and `report-check` green
+- [ ] `labkit-adopt` green
 """
 
 
@@ -1371,17 +1373,21 @@ def blank_before_headings(text: str) -> str:
 #: an agent told to "train a random forest" called it a cheap computation
 #: (docs/notes/2026-10-26-kind-choice.md)
 KIND_QUESTIONS = (
-    "(1) Does this area train, adjust or select a model or prediction procedure "
-    "so that data set its free parameters (a threshold, window or prompt tuned "
-    "on reference annotations counts, even by a rule registered in advance, and "
-    "so does one set by hand after seeing results; a fixed formula that "
-    "computes each input's threshold from that input alone — k times each "
-    "signal's own noise level, k fixed — does not)? yes: fit — also "
-    "when the deliverable is predictions on unlabelled rows; the kept number is "
-    "then the model's score on held-out labelled rows. (2) Otherwise: does the "
-    "number judge how well a model used unchanged predicts, against gold labels "
-    "or targets? yes: apply, no: compute. Repeat cost does not decide the kind: "
-    "a fit that takes seconds is a fit"
+    "(1) What does the reported result claim? If it claims how well a model "
+    "or a prediction procedure predicts, against gold labels or targets, go "
+    "to (2). This holds also when the deliverable is predictions on "
+    "unlabelled rows: a predictions file claims that the predictions are "
+    "good. If the result describes a computed quantity (a count, a mean, the "
+    "feature importances of a model), the kind is compute; the model, its "
+    "training and its selection are then documented and audited like any "
+    "other code. (2) Did this experiment train, tune or select the model or "
+    "procedure, so that data set its free parameters? A threshold, window or "
+    "prompt tuned on labelled data counts, also by a rule registered in "
+    "advance or by hand after seeing results. A fixed formula that sets each "
+    "input's threshold from that input alone (k times the signal's own noise, "
+    "k fixed) does not count. If yes, the kind is fit. If not, the kind is "
+    "apply. Repeat cost does not decide the kind: a fit that takes seconds "
+    "is a fit"
 )
 
 
@@ -1576,10 +1582,10 @@ def next_steps(
         # owes a criterion its protocol has no place for
         steps.insert(
             0,
-            f"Check the kind before anything else. {KIND_QUESTIONS}. If (1) "
-            f"is yes: `labkit-init exp {slug} --kind fit --change-kind` — before "
-            f"the first measurement; it keeps what you wrote and refuses to "
-            f"replace a file you changed.",
+            f"Check the kind before anything else. {KIND_QUESTIONS}. If the "
+            f"answer is fit: `labkit-init exp {slug} --kind fit --change-kind` "
+            f"(apply likewise), before the first measurement. It keeps what you "
+            f"wrote and refuses to replace a file you changed.",
         )
     steps += _closing_steps(ln, rel, protocol)
     if repeat_cost is None:
@@ -1780,9 +1786,53 @@ def _closing_steps(ln: standard_contract.Lane, rel: Path, protocol: str) -> list
 # --- command line -------------------------------------------------------------
 
 
+#: flags agents pass that labkit-init does not take, with what they meant
+MEANT_FLAGS = {
+    "--type": (
+        "`type` (confirmatory | exploratory) is a field of the protocol, set "
+        "after the stamp: `protocol-fill <PROTOCOL> type=exploratory`; what "
+        "the number asserts is `--kind compute|fit|apply`"
+    ),
+}
+
+
+class _HintingParser(argparse.ArgumentParser):
+    """An ArgumentParser whose refusal of an unknown flag names the flag
+    meant: a known mistake from MEANT_FLAGS, else the nearest flag this
+    command takes (`difflib`). The subcommands' parsers are of this class
+    too (argparse makes them so)."""
+
+    def error(self, message: str) -> NoReturn:
+        if "unrecognized arguments" in message:
+            known = self._flags()
+            hints = []
+            for word in message.split(":", 1)[1].split():
+                flag = word.split("=", 1)[0]
+                if not flag.startswith("--"):
+                    continue
+                if flag in MEANT_FLAGS:
+                    hints.append(f"{flag}: {MEANT_FLAGS[flag]}")
+                    continue
+                near = difflib.get_close_matches(flag, sorted(known), n=1)
+                if near:
+                    hints.append(f"{flag}: did you mean {near[0]}?")
+            if hints:
+                message += " — " + "; ".join(hints)
+        super().error(message)
+
+    def _flags(self) -> set[str]:
+        """Every flag of this parser and of its subcommands."""
+        flags = set(self._option_string_actions)
+        for action in self._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for parser in action.choices.values():
+                    flags |= set(parser._option_string_actions)
+        return {f for f in flags if f.startswith("--")}
+
+
 def main(argv: list[str]) -> int:
     """`labkit-init lab|exp` — see the module docstring."""
-    ap = argparse.ArgumentParser(
+    ap = _HintingParser(
         prog="labkit-init", description=(__doc__ or "").split("\n\n")[0]
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
