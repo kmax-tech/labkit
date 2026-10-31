@@ -17,738 +17,6 @@ pins (`requirements.txt` / `requirements.lock`).
   exempt. Same-name scripts in different directories remain ambiguous;
   see `docs/codex-hooks.md`.
 
-### Added
-
-- **`labkit-adopt AREA [RUN]`: the adoption in one step.** Runs
-  `protocol-fill --from-run` (written and kept only when report-check
-  passes on it), the result block into the report the head registers
-  (`--into`) and report-check on the tree, stopping at the first step that
-  does not pass. A run already adopted skips the first step. The three
-  commands stay; `labkit-next` and `AGENTS.md` name this one.
-- **`labkit-next AREA`: the one next step.** Prints where the area stands,
-  the next command and what is held until it is taken. It adds no check:
-  no protocol → `labkit-init exp`; a MUST field unfilled → `protocol-fill`;
-  a current handover → nothing; otherwise the first blocker of
-  report-check's chain (`report_check.report_gaps`, the stages now one
-  function report-check prints) with its way out; nothing held and no run
-  adopted → the adoption; adopted and clean → nothing owed. Before an
-  adoption it leaves out what the adoption writes and checks on its
-  proposal (the result section, `--check`, the report).
-
-- **Codex lifecycle hooks.** `labkit-hooks install` also writes
-  `.codex/hooks.json`, preserving foreign handlers; `check` detects missing
-  or stale entries. `codex-hook pre-run|post-change|stop` adapts Codex events
-  to the shared checks in `gates/agent_hooks.py`. Claude Code retains its
-  adapter and commands. Codex project and hook trust are reviewed in
-  `/hooks`; installation does not grant trust. See `docs/codex-hooks.md`.
-
-### Changed
-
-- **The fit skeleton's plan follows the repeat cost, and the Timebox is a
-  budget the run holds.** At `low` a fit trains 3 folds × (1 + 2 refits)
-  = 9 fits, at `high` 5 × (1 + 5) = 30 as before (`FIT_PLAN`); folds and
-  refits are recorded in the run's config (`n_folds`, `null_refits`),
-  fewer than two refits are refused. A Timebox that starts with a duration
-  (`45 min — then record and ask`) is read (`labkit/formats/timebox.py`):
-  the fit times its first fold, projects the run and stops before the
-  second fold when the projection exceeds the budget, with the numbers and
-  the way out; a Timebox without a leading duration stays prose and the
-  run says that no projection is made. Note: `docs/notes/2026-10-31-fit-budget.md`.
-
-- **After the adoption, the adopted run answers, not the newest by name.**
-  `answering_run.bound_answering_run(area, pid, adopted)` takes the
-  protocol's `[result] run` (`adopted_run(text)`): once adopted, every
-  gate, the analysis audit and the views hold that run; one that cannot
-  answer (no such directory, unfinalized, bound elsewhere, a repeat) blocks
-  with the withdrawal. Bound runs whose ids sort after it are a
-  static-evidence WARNING in finalize, never a blocker. Why: a run id is
-  local time without a zone (`runlog`), so a cluster run in UTC sorts two
-  hours "before" a Mac run in CEST, and the newest-by-name rule picked the
-  wrong answer across machines without anyone seeing it. Before the
-  adoption the choice is unchanged, and `labkit-next` proposes its run.
-  finalize's "[result] names A, but the run that answers is B" is gone
-  (`finalize.declared_run_mismatch` removed; `declared_run_gaps` keeps the
-  unreadable table only). Until the run id carries its zone, every machine
-  measuring for one area runs in one zone — containers with `TZ=UTC`
-  (`docs/protocol-run-binding.md`).
-
-- **Breaking (Python imports): four long modules split by concern.** The
-  console commands and every file format are unchanged; code importing
-  these names from labkit moves to the new module:
-  - `gates/audit.py` → `audit_prompt` (what the auditor is shown:
-    `instructions`, `cited_rules`, `gather`, `render`, `bound_prompt`,
-    `validity_evidence`, `earlier_of`, `Stamp`), `audit_reply` (reading its
-    answer: `parse`, `parse_clarity`, `parse_fixes`, `LEAD`, `SEP`),
-    `audit_decisions` (`--findings` and `--decide`: `decision_lines`,
-    `decide_shape`, `record_path`, `show_findings`, `decide`).
-  - `formats/findings.py` → `failed_attempts` (the `*-failed.toml` file:
-    `write_failed`, `read_failed`, `failed_attempts`, `audit_unavailable`,
-    `stopped_attempt`, `ATTEMPT_TIMEOUT_S`) and `audit_gaps`
-    (`audit_coverage`, `audit_record_gap`, `RecordGap`,
-    `records_of_gone_runs`, `covering_records`).
-  - `gates/report_check.py` → `report_context` (`Checked`, `checked`,
-    `TREE`, `INDEX`, `PROPOSED`), `report_replacement`
-    (`replacement_gaps`), `report_decisions` (`limit_gaps`,
-    `review_findings`, `followup_findings`).
-  - `tools/protocol_fill.py` → `protocol_edit` (`fill`, `fill_head`,
-    `fill_many`, `fill_sentence`, `HEAD_KEYS`) and `protocol_result`
-    (`from_run`, `render_result`, `fill_prompts`, `withdraw`,
-    `limit_lines`, `fill_result_run`).
-
-- **What an agent copies is what labkit takes.** Every `--decide` call
-  and every registered-branch example shown in `AGENTS.md`, the agent
-  guide, the field guide and the protocol template goes through the real
-  parser in a test (`tests/test_agent_surface.py`): the guide showed a
-  decide call without `--why` and a branch without consequences. The kind
-  is chosen by one path everywhere (`KIND_QUESTIONS`, `AGENTS.md`, both
-  guides): by what the reported result claims. A computed quantity — a
-  model's feature importances included — is `compute`, its training
-  documented and audited; a claim about predictions is `fit` when this
-  experiment trained, tuned or selected the model, else `apply`; a file of
-  predictions claims how well the model predicts. The field guide states
-  the quality check and the inference criterion by their function; the
-  template's help names no rule, the field guide's last table does.
-
-- **The reference an agent is sent to is shorter.** The field guide
-  (`protocol-check --guide`) is 3,790 words (was 6,555), the agent guide
-  (`labkit-next --guide`) 2,861 (was 4,727), both in the SimpleEnglish
-  document register; a field the field guide does not list has only its
-  template help. Their history moved to
-  `docs/notes/2026-10-31-field-guide-cut.md`.
-
-- **The protocol template is 1,665 words (was 2,225).** Each field's
-  help text is one short instruction in the procedural register of the
-  SimpleEnglish skill (condition first, no semicolon, must not may); the
-  labels, sections and cut marks are unchanged, and how to fill a field
-  stays in the field guide (`protocol-check --guide`). The stamp's
-  phrases are what `protocol_check.stamp_placeholders` recognises: in a
-  protocol stamped before, a field whose whole value is still `<…>` stays
-  a placeholder, but text written beside an old phrase no longer marks the
-  field unfilled — fill such a field anew.
-- **`protocol-check PROTOCOL --contract` opens with the next step.** Its
-  first line names `labkit-next <area>`; the fill commands follow as three
-  short lines naming the protocol.
-
-- **A label typed short names its field; an unknown flag names the one
-  meant.** `protocol-fill PROTOCOL "Terms=…"` fills `Terms of this
-  protocol` when no other field begins the same, and says so
-  (`filled: Terms → terms of this protocol`); a prefix of several fields
-  names them, a near miss names the nearest (`protocol_fill.field_for`).
-  `labkit-init exp --type` is told that `type` is a protocol field set
-  with `protocol-fill <PROTOCOL> type=…` and that the kind is `--kind`;
-  another unknown flag names the nearest one.
-
-- **Every message names `labkit-adopt` for the adoption.**
-  `repo.adopt_command` builds `labkit-adopt <area> <run_id>` (with
-  `--protocol` where the area holds several protocols), so finalize,
-  report-check, the report holds, recheck, protocol-check, the ways out,
-  `labkit-init exp`'s steps and the area README name one command; where
-  the report is registered, its way out no longer adds `--into` after it
-  (the adoption writes the block). The order note before an adoption
-  recognises the line by `repo.ADOPT_TOOL`. `protocol-fill --from-run`
-  and `--into` stay for a targeted repair.
-
-- **The stamped `AGENTS.md` is 1,158 words (was 4,823).** It keeps the
-  loop around `labkit-next`, six words (protocol, run, criterion, audit,
-  decision, adoption), the kinds table, the decisions, the stop rule and
-  the instructions no gate can check, in one instruction per sentence.
-  Everything else moved, unchanged but for one dated sentence, to the
-  agent guide `labkit/docs/agent-guide.md`, which `labkit-next --guide`
-  prints. `tests/test_agent_surface.py` holds the limit of 1,200 words,
-  no date in either text, and every labkit command `AGENTS.md` names
-  being installed. An existing lab repo keeps its `AGENTS.md`
-  (`labkit-init lab` writes it only where none is): move it aside, run
-  `labkit-init lab .` again and carry the repo's own additions over
-  (`docs/student-repos.md`, "Moving to a newer version").
-
-- **Every gate line in one pattern: `<what is refused>. Next: <fix>`.**
-  `gate.with_way_out` joins a sentence and its way out with `. Next: `
-  (was ` — way out: `), the sentence's own full stop dropped; a dotted
-  line's last part reads `Next: <fix>`. Every literal BLOCKER way out
-  names its command (`tests/test_ways_out_data.py`): the 50 that said
-  "fix the block", "remove one" or "measure again" now end in the command
-  — after a repair by hand the check run again (`repo.gate_command`), a
-  new run as `repo.measure_anew(area)` names it. A reader that matched
-  ` — way out: ` in a gate's output matches `. Next: ` now.
-
-- **The agent-facing wording leads to the next action** (plan:
-  `docs/notes/2026-10-30-agent-surface.md`). The run a protocol reports is
-  the *adopted* run in every message, `AGENTS.md`, the README and
-  `docs/workflow.md`: `protocol-fill --from-run` adopts it, `--withdraw`
-  withdraws the adoption ("declared run" and "declaration" are gone from
-  that text; the `[result] run` field is unchanged). Where an agent names
-  a promise id, labkit names its field: `--effect "<ID> not assessable"
-  (<ID>: C1 (success / failure criterion))`, and a refused id lists the
-  registered ones the same way. The line under an accepted `stands` says
-  the review per grade and at every repeat cost: a BLOCKER's number does
-  not leave without it, a WARNING's absent review warns. Message text
-  only; no format changes.
-
-### Breaking
-
-- **A handover records the run it stands at (handover schema 2).** The
-  record gains `run`, `run_state` and `run_why`, computed when the
-  handover is written (`report_check.adoption_state`): `not-measured` (no
-  measurement bound to the protocol), `unusable` (a measurement, and no
-  number from it), `held` (the blockers that hold its adoption) or
-  `adoptable` (nothing held it — the handover is written, with a warning
-  naming `labkit-adopt`: a missed criterion is a result). The report's
-  block says which state holds, without a run id. A measurement bound to
-  the protocol after the handover ends its acknowledgement. A schema-1
-  record no longer reads; labkit 0.103.0 is the last that reads it — hand
-  the protocol over again.
-
-- **Promise ids are their kind and a number.** `[criterion-1]`,
-  `[quality-check-2]`, `[branch-1]` replace `[C1]`, `[A2]`, `[B1]`;
-  a metrics key is the id with underscores and a suffix
-  (`criterion_1_pass`, `quality_check_2_pass`) instead of `c1_pass`. A
-  person reading a protocol, a report or a run's metrics.json needs no
-  legend (plan: `docs/notes/2026-10-30-agent-surface.md`). The alphabet
-  has one home (`promises.KINDS`, `key_stem`, `id_of_stem`); a promise's
-  `kind` is the kind word (`quality-check` was `admissibility`).
-  A protocol in the letters is not read:
-  an id `C1`/`A1`/`B1` (or the earlier `K`/`S`/`W`/`N`) is refused with a
-  sentence naming the version that reads it — **0.103.0 is the last
-  labkit that reads the C/A/B letters**; reproduce such a run with its
-  repo's commit and that pin. Stamped protocols, the script skeletons and
-  their tests, the docs and the agents' prompts use the new ids.
-
-- **Quality check in the protocol's fields.** The field `Admissibility
-  condition` is now `Quality check`, and the prose of the docs, templates,
-  prompts and messages says quality check throughout (Registered Reports:
-  outcome-neutral conditions, quality checks). `Registered branch` keeps
-  its name. A protocol with the old label no longer has the field — read
-  it with labkit 0.103.0.
-
-- **Decisions are named by their consequence.** `labkit-audit AREA
-  --decide N STATUS --why "REASON" [--not-assessable IDS]`: `fixed` (a
-  repair is claimed; the follow-up audit confirms it — after a new
-  measurement when the repair changed what was measured), `limitation`
-  (the finding is true; the number carries it as a `Limitation (audit … #N)`
-  line — was `accepted`), `false-positive` (the finding does not apply to
-  the code and run as audited; `--why` records the counter-evidence, and a
-  BLOCKER's needs a second auditor — was `dismissed`). `deferred` is gone:
-  a finding nobody can settle stays `open`, and the handover
-  (`protocol-fill --handover`) records it and ends the protocol without a
-  result — it sets no status; the stop, the commit and a replacement's
-  report-check read a current handover instead of holding the findings it
-  records, and preflight reminds of open findings handovers elsewhere
-  record. The reason is a named option (`--why`), never
-  positional; `--effect` is gone: a `limitation` on a BLOCKER or WARNING
-  records `stands` itself, and `--not-assessable criterion-1` names the
-  promises the run does not judge (no review owed). A WARNING decided
-  `limitation` now always reaches the result, and its missing review
-  warns. The generated `Limit (audit … #N)` lines are `Limitation (audit …
-  #N)`. Audit records with `status = "accepted"`, `"dismissed"` or `"deferred"`, and
-  results with `Limit` lines, no longer read — 0.103.0 reads them.
-
-- **The protocol's fields in the field's words.** `Success / failure
-  criterion` is `Inference criterion` (what result supports which
-  conclusion — a missed criterion is a valid result); the result
-  section's `Interpretation / next step` is `Interpretation` (CONSORT 2010
-  item 22), the next step living in the Summary alone; `Outcome †` is
-  `Expected or surprising †` (outcome now names a branch's possible
-  result); `Limits` is `Limitations` (CONSORT 2010 item 20). A protocol
-  with the old labels lacks these fields — 0.103.0 reads it.
-
-- **A registered branch lists its outcomes, and the run records one of
-  them.** The B kind is a registered branch again (`[branch-1]`, key
-  `branch_1_outcome`): a pre-specified mapping from conditions on the
-  results to named outcomes and their consequences, its sentence
-  `<condition> → <outcome>: <consequence>; …` — at least two outcomes, one
-  `→` each (`->` is refused), the first condition that holds selects,
-  `otherwise` as the last condition only, an outcome named in lowercase
-  letters, digits and hyphens and unique, a consequence owed (an
-  interpretation, an action or a justified non-action, no `;`).
-  `promises.parse_outcomes` reads it in one home; `parse_block` refuses a
-  free-text branch, naming the promise, the outcome and the form.
-  `intent-check`, and `finalize` through it, block a run whose branch key
-  records a name that is none of the outcomes, the way out naming them
-  (`intent_check.unregistered_outcomes`); intent-check's findings are gate
-  findings with their own way out. The stamp's `<…>` placeholder still
-  parses for an unfrozen pilot. **0.103.0 is the last labkit that reads a
-  free-text branch**; re-register it, or reproduce such a run with its
-  repo's commit and that pin.
-
-- **A registered output is the file the run recorded, and the deliverable
-  of an external task is a registered output of the answering run.**
-  `finalize` (and `report-check` through it) holds every file in the
-  run's outputs.json to the path and the sha256 the run recorded when it
-  ended, on every lane (station 7, "registered outputs",
-  `run_record_check.output_record_findings`): a file gone, or with
-  another sha256, is a guaranteed BLOCKER with the way out "measure anew
-  and audit that run" — the tree at check time is only compared, never
-  trusted. Nothing compared the two before, and the output file an
-  external task names (`pred_results/<name>.csv`) was written outside the
-  run's record: an injection benchmark swapped it in seven delivered
-  states without a gate noticing
-  (docs/usability/2026-10-29-injection-ab4ce6d.md, M7). The stamped
-  measure skeletons (compute and estimator) carry `DELIVERABLES`, the
-  files the task names relative to the repo, and `deliverable_rows()`,
-  their rows from the kept rows and the metrics; the full run writes each
-  (`formats/deliverable.write_csv`) and registers it before it closes, a
-  repeat's draw writes none. `labkit-init exp --deliverable PATH` stamps
-  the constant (repeatable); `usability stage` stamps the SAB-like case's
-  `pred_results/<output>` and records the flag in probe.json; AGENTS.md
-  names the constant. A delivered state whose deliverable differs from
-  the answering run's record is held from now on; a run of a stamped
-  skeleton with an empty `DELIVERABLES` registers its rows as before.
-  `recheck.pin` compares through the same `output_drift`. 0.103.0 is the
-  last version without the hold.
-
-- **An analysis record binds the setup's prose; a corrected description
-  is followed up.** In the fifth SAB-like draw (2026-10-28) two agents
-  registered data counts in Data / scope that the data did not hold. The
-  audits found them; one agent corrected the count in place, as AGENTS.md
-  says, decided `fixed` and audited again. Since the record bound only the
-  registration's judged fields, the new audit covered the same state, and
-  report-check held the BLOCKER for good as fixed in the state audited.
-  `shown_sha` now also covers the setup's prose the audit read
-  (`protocol_check.audited_texts`: Terms, Data / scope, Model / tool,
-  Model I/O, Exclusions / filters, Unit — not the Prompt block, which is
-  written from the code, not the registration's own fields, which
-  `registration` binds field by field, not what is written after the
-  audit). A corrected description therefore moves the state, and the next
-  audit follows the finding up. AGENTS.md and the auditor name the rule:
-  a description of unchanged data or code is corrected in place; a change
-  of the data or code used is measured anew. The hold of a BLOCKER fixed
-  in the state audited names the correction. Every analysis record written
-  before covers no state any more: audit again. 0.103.0 is the last
-  version without the binding.
-
-- **A BLOCKER decided `dismissed` owes a decision review, its first
-  dismissal too.** Until now a BLOCKER dismissed in the record of the
-  state reported released the number on its reason alone; a review was
-  owed only after a review had not upheld a decision on it, or for a
-  carried finding. Decided by the author as a design requirement (no log
-  showed misuse): the deciding agent's own decision does not release a
-  blocking finding. report-check holds such a BLOCKER until `labkit-audit
-  <area> --review --record <record>` upholds that the reason shows it does
-  not apply to the code and run as audited (`findings.dismissed_blocker`,
-  read by `decision_review.reviewable` and `report_check.review_findings`).
-  A dismissed WARNING owes none. Areas with a BLOCKER dismissed in the
-  state reported are held until reviewed; 0.103.0 is the last version that
-  releases them without one.
-
-- **`protocol-fill --from-run --force` no longer replaces a declared
-  result.** A `[result]` naming another run is refused, `--force` or not.
-  The declaration is withdrawn (`protocol-fill PROTOCOL --withdraw --why
-  "…"`), the run that answers is audited, then adopted. An audit made
-  while another run is declared does not cover the new declaration, so
-  the replacement could never pass once an audit had seen the old one
-  (file-check case, 2026-10-28). The declared-run acceptance case passed
-  the new way before the old one was removed. `--force` still overwrites
-  the generated lines of the run declared. 0.103.0 is the last version
-  that replaces.
-
-- **A failed audit call is superseded by a later audit of its mode,
-  protocol and promise block, also after a code change; the journal's
-  start names block and protocol.** An earlier completed audit hid a later
-  failed call from `labkit-audit --findings`, exit 0 (review of the D3
-  repair, 2026-10-28): a `-failed.toml` was covered by any record of its
-  mode, code and promises, an attempt that ended without a record by any
-  record of its mode and code, whenever made. A rule of mode, code and
-  block in the journal's order closed that and left a dead end: a call
-  that failed on code corrected since stayed named, exit 2, until an
-  audit of exactly the old code existed — in practice only the handover
-  cleared it. The rule now (`attempts.superseding_record`): a later
-  completed audit of the same mode and the same protocol with the same
-  promise block supersedes the failed call, also after a code change —
-  a record written by an attempt the journal started after the call, on
-  the same protocol. `--findings` shows a superseded call as superseded
-  by that record, informational, exit unaffected, never as open: the
-  reader sees which audit took its place and what that means. The old
-  call and its kept answer stay as they are; superseding confirms neither
-  the call's content nor the repair of any finding, and a recorded
-  BLOCKER stays under the follow-up rule — whether the current result may
-  be adopted is decided by the checks of the current code and run
-  (`followup`, report-check), as before. An earlier audit, another
-  protocol or another promise block supersede nothing, nor a record no
-  attempt names. The protocol is named by its file name in the area, not by the head's `id` (a protocol without an `id` must still be nameable; Max, 2026-10-28): a protocol file renamed since counts as another protocol, so its earlier failed calls stay named until the file is renamed back and audited, or the area is handed over. An audit's start event records the promise block it
-  read and the protocol it audited, by file name in the area
-  (`block_sha`, `protocol`; `attempts.begin` takes both as keywords, None
-  for a review, whose start names neither; `Attempt.block_sha`,
-  `Attempt.protocol`). A `-failed.toml` carries its block in its file and
-  takes its protocol from the start of the attempt that wrote it. A
-  historical call — an attempt whose start names no block and protocol
-  (written by 0.103.0 or earlier; it reads as it stands, and neither is
-  supplied after the fact) or a `-failed.toml` no attempt of the journal
-  names — has a binding or order the journal cannot give
-  (`historical_call`): `--findings` names it as historical, exit 2, with
-  the step that supersedes it. Migration, that step: run the audit of its
-  mode again now, in the current format — `labkit-audit <area> --mode
-  <preflight|analysis>`, the command `--findings` prints; a later audit of
-  its mode whose start names block and protocol supersedes the historical
-  call, of any protocol of the area, since the old start names none. Journal, answers and records stay as written. 0.103.0 is the last
-  version whose starts name neither.
-- **The analysis audit and the decision review see the run's declared
-  dependencies.** In the second repair case the follow-up could not
-  confirm a correct repair against `model.json` — "that result is in no
-  file shown here" — three decision reviews said `insufficient`, and the
-  adopted result read C1, A1 and A2 not assessable though the number was
-  the true one. The run's `data=` inputs recorded without rows
-  (`provenance.BinaryInput`: a predictor, its weights) are now shown
-  under `===== DEPENDENCY <path> … =====` (`audit_binding.dependency_pieces`):
-  a UTF-8 file of at most 64 kB whole while its digest is the one the run
-  recorded; a changed, binary or larger one named with its digest and why
-  it is not shown. The pieces are part of what the record binds
-  (`shown_sha`): an analysis record made before this change, of a run
-  with such inputs, no longer covers it — run the analysis audit again.
-  Runs without such inputs keep their coverage.
-- **Committed evidence stays as written: the stop and the commit hold a
-  change git can undo.** labkit noticed evidence that went missing; a
-  record rewritten in place was seen only where the rewrite broke its
-  format (ninth Haiku round, t5), and a committed run's files could change
-  under its run id. Now a record may change in its findings' decision
-  lines alone (`status`, `reason`, `effect`, as `--decide` writes them;
-  `findings.without_decisions`), another file under `audits/` never, and a
-  run committed closed (`completion.json` or `failure.json`) never; a
-  version back as labkit first committed it is no change
-  (`evidence.original`). The stop holds the tree and the commit the index
-  against HEAD (`evidence.changes`), both a file of labkit's that git
-  ignores (`evidence.ignored`), and the stop also each session commit
-  against its parent — a commit past the pre-commit — and a closed run a
-  reset or an amend left in HEAD's reflog (`evidence.commit_changes`,
-  `evidence.orphaned_runs`, `claude_hooks.session_evidence`). Every line
-  names the `git checkout` that undoes it, and no handover acknowledges
-  it. `labkit-audit <area> --findings` shows the changes first and exits 2.
-  `findings.is_record_name` is public. Note:
-  docs/notes/2026-10-28-evidence-changes.md. Migration: restore what a line
-  names; 0.103.0 is the last version that let a rewritten record or run
-  pass.
-- **Every BLOCKER names its way out, as data.** The ways past the gates
-  came where an agent saw no admissible next step, and a held step that
-  named its command was followed (docs/notes/2026-10-27-standard-way-out.md);
-  many blockers carried their step inside the sentence, some none.
-  `gate.GateFinding` now refuses a BLOCKER without a `fix`, every line
-  tells it (`BLOCKER: <what> — way out: <fix>`; a dotted line keeps it as
-  its last part) and the summary repeats it; `Findings.block(msg, *, fix)`
-  takes it as a required keyword, `Findings.warn` may. Every site that
-  builds a blocker passes one (`tests/test_ways_out_data.py` reads them
-  all), worded where the cause is known and built from the shared command
-  builders — new: `repo.measure_command`, `findings.decide_way`,
-  `findings.record_way`, `gate.blocker`. The pure checks that fed blockers
-  as sentences return findings now, the step split from the cause:
-  `run_record_check.code_since_run`, `provenance_findings`,
-  `row_provenance_findings`, `null_lane_findings` (`NullLanes.unmoved`),
-  `report_blocks.block_gaps`, `cited_gaps`, `discussion_gaps`,
-  `result_render.render_gaps`, `notes_check.check_file`'s must list, the
-  report-check and report-hold producers, `finalize.declared_run_gaps`
-  (now with the protocol) and `declared_run_mismatch`;
-  `AnsweringRun.explain` returns its blocker as a finding with `way_out`.
-  report-check's finalize station keeps finalize's fixes. Migration: a
-  caller of `Findings.block` passes `fix=`, a reader of these functions
-  reads `.text` / `.fix` (or `.line`, the told form); 0.103.0 is the last
-  version whose blockers carry no way out.
-- **The refusals an agent meets outside the gates name their way out
-  too.** `AuditError` (labkit-audit, the decision and report reviews) and
-  `AttemptError` (the attempt journal) take the way out as a required
-  keyword, `AuditError(why, *, fix)` — None only where
-  `tests/test_ways_out_data.py` exempts a site, with its reason — and tell
-  it as a gate line does (`gate.with_way_out`); `.why` and `.fix` keep the
-  parts. runlog's start refusals (`runlog`, `start_check`) end with theirs,
-  and the pre-run hook's notes name their step. Shared: `ways_out.ANSWER_AGAIN`,
-  `AUDIT_AGAIN`, `PROTOCOL_NAMED`, `attempts.JOURNAL_WAY`,
-  `start_check.PROMISE_BLOCK_WAY`; `findings.decide_way` and `record_way`
-  serve every layer. Migration: a caller building either error passes
-  `fix=`; 0.103.0 is the last version without.
-- **A protocol is a regular file; a symbolic link is refused.** The stop
-  read a protocol link's target in the tree (`report_check.repo_sources`,
-  `hold_declared` followed it) and the commit read the name the link
-  stores in the index, so the two judged different text. A protocol that
-  is a symbolic link, valid or broken, is now refused with one sentence
-  naming it (`repo.protocol_link`), each state by itself
-  (`repo.protocol_links`): by the protocol choice of every command
-  (`repo.the_protocol`), by report-check at the stop and the commit, by
-  `protocol-check` and by the handover. `repo_sources` reads through
-  `repo.state_text`. Migration: put the file in place of the link; 0.103.0
-  is the last version that followed one. Audit 2026-10-27 (second), left
-  open, settled the same day.
-- **Not assessable limits the verdict: Recorded results opens with the
-  reportable verdicts.** The generated line listed every metric as
-  recorded and appended "A3 not assessable with this run": in the repair
-  case (2026-10-27) it read `c1_pass = True … ; A3 not assessable` and the
-  report claimed "C1 PASS". The line now opens with one verdict per
-  registered promise, derived in one place (`result_render.verdicts`) for
-  protocol-fill, report-check, the report blocks and the decision review:
-  an admissibility condition not assessable — an accepted limit names it —
-  or not met leaves every criterion `not assessable`, with why; otherwise a
-  criterion is `met` or `missed`; a key not recorded as true or false gives
-  no verdict and says so (intent-check holds the run). The other metrics
-  follow as recorded values; the promises' own keys stay in `metrics.json`,
-  unchanged, and are no longer repeated in the line.
-  `findings.answer_note` now only counts the limits. Every protocol and
-  report block rendered before is held as differing until `protocol-fill
-  --render` (and `--into`) writes it again; 0.103.0 is the last version
-  that renders the old line. Contract: K2 in
-  `docs/notes/2026-10-27-new-registration-contracts.md`.
-- **report-check holds a run whose registration changed after the first
-  measurement.** Nothing compared the promise block a protocol's first
-  measurement recorded with the answering run's: in the repair case
-  (labkit-paper area 12, 2026-10-27) run 98dd failed [A2] at `null_band`
-  0.1, the band was raised to 0.15 "to accommodate observed null score",
-  the next run passed and the report was released. Every lane now holds
-  an answering run whose recorded block differs from its first
-  measurements' (`report_check.registration_changes`): each change is
-  named per id and constant (`promises.snapshot_changes`, `[A2] null_band
-  0.1 → 0.15`; a sentence through the block digest, whose old text the run
-  record does not keep — `git show <commit>:<protocol>` shows it), with the
-  way back: restore the `[[promise]]` tables as the first measurement
-  registered them — each change undone by name (a value back, an added
-  promise out, a dropped one back in, the sentences as then) — and measure
-  again, or register anew (`audit.register_anew`, the one wording). The code the scopes name is not compared: a repair measured again
-  under unchanged promises passes. The first measurements are every run at
-  each first position (`answering_run.first_registrations`), not one
-  chosen by name; when they recorded different blocks, which one stood
-  cannot be told and no run answers a registered question: held too, with
-  both ways out named — a new registration that declares its changes
-  against each (K1), or a handover (`audit.HANDOVER`: no `[result]`, the
-  report names the protocol, not its runs, and no number); the adoption of
-  such a run is refused. Both ways, and the twins that are held, run
-  through the whole chain in `tests/test_counter_cases.py`. Contract:
-  `docs/notes/2026-10-27-new-registration-contracts.md` (K3). 0.103.0 is
-  the last version that lets such a run through.
-- **An `--again` decision review releases nothing, and `--review` exits
-  with the state.** `labkit-audit --review --again` skipped the contested
-  check, so on a decision never reviewed its `upheld` released the
-  decision, though the rule decided for both reviews is that an `--again`
-  draw releases nothing; and the exit was the draw's. A review record now
-  says whether it was an `--again` draw (`[review] again`); its verdicts
-  count, and a decision is released only when a review that is no
-  `--again` draw upheld it and none said otherwise (`reviews.upholding`).
-  Every draw prints its verdicts and the state apart, and the exit says
-  the state: 0 every decision reviewed released, 1 one held, 2 no review.
-  A review record without `again` is no longer read; 0.103.0 is the last
-  version that reads one — review again.
-- **The first measurement is the one git's history puts first, not the
-  clock.** report-check holds the low registration to the commit of the
-  first measurement, and that was the oldest run by name. A run id is
-  local time, so a run started under `TZ=Etc/GMT+12` sorted twelve hours
-  early and became first: a measurement at a commit without the
-  registration was passed over for a later one whose commit held it, and
-  no gap was named (audit 2026-10-27, A11).
-  `answering_run.first_measurements(area, pid, repo)` replaces
-  `first_measurement` and orders the measurements by the commit each record
-  names and git's ancestry (`repo.earliest_commits`, `is_ancestor`,
-  `commit_known`); the run id orders only runs at one commit, which share
-  their verdict. `runs.recorded_commit` returns the full sha (`git_full`)
-  instead of the short `git`; blockers show its first twelve characters.
-  Where git cannot order, each candidate is held: on diverged history (a
-  rebase, an amend, a side branch) the first of each branch, and every run
-  whose commit is not recorded or not in the clone — the latter a new
-  blocker naming the commit to fetch; until now such a run was held only
-  when its name sorted first. No new field, no schema change. 0.103.0 is
-  the last version that orders by run id. Limit: this protects the
-  registration, not every choice of a run — the answering run is still the
-  newest bound run by run id, local time, so which run answers can still
-  depend on the time zone it was started under. Rule, rejected
-  alternatives and limits: `docs/notes/2026-10-27-first-measurement-order.md`.
-- **finalize and report-check hold a number whose code changed since its
-  run.** No gate compared the code that produced the answering run's
-  number with the code now: a script fixed after the run, with no new
-  run, left the old code's number standing (audit 2026-10-27, A1;
-  red-team scenario g1). Station 3 now compares, for every kind and for
-  the answering run and each run it derives from, the measurement script
-  (the path its command names) with the hash its run recorded
-  (`script_sha`) and every module it imports — beside it, under `lib/` or
-  `src/` (`scope_sha.measured_code`) — with the tree the run started from
-  (its commit with the part of its `uncommitted.patch` for that module,
-  `repo.blobs_then`); an untracked sibling against the run's copy. Each
-  difference is a blocker naming the way out, the fix first: measure anew
-  with the code as it is and audit that run — restoring the old code
-  removes the difference, not a fault the change corrected; only for a
-  change not meant, the command that restores the code as it ran (`cp` of
-  the run's copy, `git cat-file blob <id> > <path>`). A module in another repository (a submodule, a link out
-  of the repository) is a warning, not compared. A run now keeps its
-  patch in a form that applies again whatever the user's diff settings
-  (`repo.tree_patch`: binary in full, no colour, no textconv, a/ b/
-  prefixes, unstripped); a patch an earlier labkit wrote is read as far
-  as it can be. Analysis code and the pin are not compared, so an analysis fix or
-  a pin raise needs no new measurement. A run that recorded no script, a
-  helper not committed when the run started, and a run with no commit are
-  held: what they ran is not recorded. Not seen: a change made and undone
-  in between, and code loaded another way. No field was added to the run
-  record. Areas whose measurement code changed since their answering run
-  are held from this release on; 0.103.0 is the last version that lets
-  them through.
-- **report-check holds an earlier decided BLOCKER until a follow-up
-  releases it.** Every BLOCKER decided `fixed`, `accepted`, `dismissed` or
-  `deferred` in a record not of the state reported is held
-  (`report_check.followup_findings`, `followup.release_holds`) until a
-  covering analysis record finds it `resolved` — on its decision as it
-  stands (`decision_digest`), with a required check shown
-  (`check_present`) — and no covering record holds another verdict on its
-  origin (a later draw on the same state does not outvote it); or until a
-  covering record carries it, where it is decided like any finding (an
-  accepted one renders as a Limit line). A carried finding `dismissed` or
-  `deferred` is held until a decision review of its record upholds that
-  (`--review` now asks about it). A BLOCKER `fixed` in the state reported
-  is held: no follow-up has seen the repair. Each sentence names the
-  missing step: a run that writes the required check, or the analysis
-  audit. Areas with decided BLOCKERs in older records owe one analysis
-  audit of the current state before reporting again; 0.103.0 is the last
-  version that releases without it. Why: the fixed-followup pilots
-  (`docs/usability/2026-10-26-fixed-followup-pilot*.md`) — a partial fix
-  closed `fixed` released t3's leak, and an older `accepted` limit fell out
-  of the result.
-
-- **Protocol standard 0.23: `repeat_cost = "low" | "high"` replaces
-  `cost = "seconds" | "minutes" | "hours"`.** The gates read two lanes
-  (`standard_contract.lane`: `seconds` against the rest) under three
-  names: `minutes` and `hours` never owed different checks (888 commits,
-  no hours-only scar in any lab), and the time words misled — two cold
-  agents declared `minutes` for sixteen calls and waited fifteen minutes
-  of audit for a 64-second run (2026-10-05). The field now names the
-  dimension the field guide had to add in prose, the price of a repeat;
-  `seconds` is `low`, `minutes` and `hours` are `high`, an unfilled value
-  still reads as `high`. Renamed with it: `protocol_block.REPEAT_COSTS`,
-  `Head.repeat_cost`, `standard_contract.LOW | HIGH`, `LOW_LANE`,
-  `LOW_CUT`, `effective_repeat_cost` (was `cost_tier`), `Lane.repeat_cost`,
-  `protocol_cuts.low_cut` and its template marks `<!-- l -->`, `<!-- lb -->`,
-  `<!-- lm -->` (were `s`, `sb`, `sm`), `protocol_check.Field.low_cut`,
-  `low_registration_missing`, `protocol_history.repeat_cost_lowered`
-  (`high -> low` warns as before), `labkit-init exp --repeat-cost low|high`,
-  `usability stage --repeat-cost`, `protocol-fill PROTOCOL repeat_cost=…`,
-  and the run record's `repeat_cost` (was `cost_tier` in `config.json`).
-  Migration, said in the refusal of a 0.22 head (`protocol_block.MIGRATION`):
-  set `standard = "0.23"` and rename the key with its value. 0.103.0 is
-  the last version reading standard 0.22 and the three time words; the
-  refusal of the intermediate `kind = "count"` (`COUNT_RENAMED`) goes with
-  it, a 0.22 head is refused before its kind is read. The lab rule LAB-017
-  keeps its name, "The number of audits follows the cost tier": the two
-  values are its tiers. The run record is schema 4 (`runs.RUN_SCHEMA`): a
-  schema-3 record is refused naming 0.103.0, not its keys. The lowered-tier
-  warning compares from the first commit this standard reads and counts
-  the earlier ones it cannot (`protocol_history.first_repeat_cost`); a
-  usability probe staged with `--cost` is refused at restamp with the
-  mapping (`usability.stamped_repeat_cost`), never read as unset. Rollout
-  to the labs' protocols, `AGENTS.md` and pins is a separate task.
-
-- **A resume refuses another model behind the same alias.** The judge's
-  instrument (`lanes.Lanes.instrument`) held the prompts' digest and the
-  alias only: models.toml edited between two processes put another model
-  behind the alias, the resume kept the old model's answers and added the
-  new one's, and the balance passed (review 2026-10-23). The instrument
-  now also carries `model_identity` — backend and model, `name@digest`
-  for ollama (`llm.identity`, the spelling `llm.provenance` stamps) — and
-  `batch.Store` refuses rows of another (`InstrumentError`, naming both).
-  Endpoints are not part of it: a cluster host changes with every
-  allocation. An ollama digest that read `unavailable` in one process and
-  a digest in the next is refused too — the weights cannot be shown to
-  match. `lanes.balance` also refuses a file whose rows carry more than
-  one instrument, whichever they are (rows merged by hand, or resumed
-  before this). Migration: an output file written before holds rows without
-  `model_identity` and is refused on resume; finish it with labkit
-  0.103.0, or measure again into a new output file. Kept results are not
-  touched: `--eval-only` and the analysis read the rows as they stand.
-- **An audit record binds the registration it judged.** `[audit]` carries
-  `registration = { kind = "…", "Question / hypothesis" = "<digest>", … }`:
-  the head's kind and, per field the kind owes
-  (`standard_contract.registration_fields`), the digest of its value,
-  whitespace collapsed (`protocol_check.registration_stamp`). A record
-  covers the protocol only while they are what the audit judged; the
-  refusal names what changed — `the registration changed after the audit
-  (Question / hypothesis)` — in the freeze gate, preflight, protocol-check
-  and report-check. The report fields written after the run (Conclusion,
-  Recorded results, Limits, the run list) are not in it. Why (review
-  2026-10-23): the question was rewritten from the mean line count to the
-  mean number of causal claims after the number was adopted, and the old
-  analysis audit still covered it — report-check exited 0. A record
-  without `registration` is no longer read; labkit 0.103.0 is the last
-  that reads one. Migration: run the audits again (`labkit-audit <area>
-  --mode preflight|analysis`) — a digest of what an old audit saw cannot
-  be written by hand.
-- **A failed audit attempt names its cause, and an unproven one stops
-  the auditing of that state.** `audits/*-failed.toml` carries `cause =
-  "unavailable" | "unproven"`: the backend gave no answer, or the
-  requested model did not write it whole (`llm_backends.UnprovenAnswer`).
-  After an `unproven` attempt `labkit-audit` refuses another try on the
-  same code, promises and model before any call
-  (`findings.stopped_attempt`) — in the fit probes a safety classifier
-  stopped the auditor again on almost every try, and each try cost
-  minutes and about a dollar. Another alias (`--model`) may try. A failed
-  record without `cause` is not read; labkit 0.103.0 is the last that
-  reads one. Migration: add `cause = "unavailable"` to each
-  `audits/*-failed.toml` written before. Where no audit covers the state
-  and an unproven attempt exists, the refusal of `report-check` and the
-  freeze says so — the model, the count, the record — instead of only "no
-  audit" (`findings.audit_coverage`); `usability score` shows `audit
-  attempts failed · N (K unproven)`.
-- **Protocol standard 0.22: the head says what the kept number asserts
-  (`kind`).** `kind = "compute" | "fit" | "apply"` below `cost`: a
-  computation judges no prediction (a measurement that cannot pass trivially), a fit
-  judges a model trained or adjusted in the experiment, an apply a model
-  used unchanged. The registration and the skeleton follow the kind, not
-  the model technology (`standard_contract.registration_fields(kind,
-  model)`, `skeleton(cost, kind, model)`, `has_bar`): a computation owes its
-  question; a fit or an apply also the success criterion, the
-  admissibility condition and the null condition / anchors, and carries
-  promise tables at every tier; a `[model]` table adds the data profile
-  and the prompt. `labkit-init exp` takes `--kind` and stamps nothing
-  without it; `--kind compute --model` stamps the claim keys below; a fit at `seconds` gets
-  the estimator skeleton (until now the compute's, now the fit skeleton). The template marks the
-  fields a bar owes with `<!-- sb -->` (`protocol_cuts.SECONDS_BAR_TAG`),
-  and the seconds cut carries them for a fit without a model. Loud, never
-  a fallback: an unknown kind does not read (`protocol_block.head`), a
-  placeholder stands among the head's placeholders and refuses a full run,
-  a `compute` with a `[model]` table says what its number describes,
-  `[model] number_describes = "model_outputs" | "target_property"`: the
-  model's outputs, or a property of the data with the model as annotator;
-  the latter owes `[model] annotation_validity = { protocol = "p-…" }` (an
-  apply of this repo with a declared result, bound by protocol-check and
-  preflight, `protocol_history.check_annotation_validity`) or `{ doi =
-  "10.…" }` (its form only); evidence with `model_outputs`, and either key
-  with a fit or an apply, is a must finding (`protocol_check.kind_gap`).
-  Neither form proves the annotator suits — that stays the audit's, which
-  is shown the bound protocol, its result, the model its run recorded
-  (`answering_run.recorded_models`) and its prompt, today's models.toml
-  entry and prompt sources marked as today's; the area stamp
-  (`scope_sha.validation_basis`) covers the protocol, the result, the run
-  records and the scripts — not today's models.toml — so
-  an audit record goes stale when the bound validation changes (a DOI by
-  its string only — the cited content is bound by nothing). Areas without
-  `annotation_validity` keep their stamp. An
-  intermediate commit refused `compute` with a `[model]` table outright
-  (and the usability staging rewrote it to `apply` in silence): a share
-  of model labels judges no prediction, but its claim about the data needs
-  the annotator's evidence. Migration, said in the refusal of a 0.21
-  head (`protocol_block.MIGRATION`): set `standard = "0.22"` and add the
-  `kind` line (`protocol-fill PROTOCOL kind=…`); 0.103.0 is the last
-  version reading standard 0.21, and no code reads it here. Why: a
-  RandomForest at `seconds` had no `[model]` alias, got the count's
-  skeleton and owed no criterion — t5 and t18 of the fifth haiku round;
-  the writing probe (`docs/notes/2026-10-22-kind-writing-probe.md`)
-  registered a count, two fits and an apply under the schema without a
-  special rule. The kind was first stamped `count` and renamed `compute`
-  before this release: it names what the number asserts — a descriptive
-  or inferential statistic of fixed data, no prediction judged (ML
-  lecture, ML:VII-1) — and not the one operation of counting. Migration
-  for repos pinned to an intermediate commit: `kind = "count"` →
-  `kind = "compute"` in the head (the refusal says so,
-  `protocol_block.COUNT_RENAMED`), `labkit-init exp --kind count` →
-  `--kind compute`; the skeleton `standard_contract.COUNT` is
-  `COMPUTE`.
-
-- **`preflight_audit` names the decided record, not a line.** The head
-  field is the file name of the decided preflight record under the area's
-  `audits/` (`preflight_audit = "2026-09-08T14-12-preflight.toml"`, as
-  `labkit-audit --mode preflight` prints it when it writes one); `""`
-  until then and at `seconds`. The gates read the record it names
-  (`findings.audit_record_gap`: no such record, another mode, other code
-  or another promise block than the area carries now, a finding still
-  open — each a refusal at the run and a blocker in `preflight` once
-  frozen; `n/a` or any other text names no record and is refused as
-  before). A line of the old form (`<date> · scope sha <12 hex> · N
-  findings`) is read as naming no record: 0.103.0 is the last version
-  that reads it; a frozen protocol moves by writing its record's name
-  into the field. `scope_sha.AUDIT_SHA`, `scope_sha.audit_stamp_drift`,
-  `findings.waived_audit_gap` and `findings.audit_line_gap` are gone. Why:
-  the last machine-read text inside a TOML value (review 2026-10-22) —
-  the record carries its stamp, its date and its decisions, so the head
-  copied a sha a regex had to find again.
-
-### Fixed
-
 - **A measure script that does not parse is a blocker in finalize, not a
   traceback.** The open-fields station asked the README route whether
   `scripts/01_measure.py` defines `evaluate_rows` through a bare
@@ -2125,7 +1393,575 @@ pins (`requirements.txt` / `requirements.lock`).
   and the extra line is removed by hand (`--render` rewrites one and
   leaves the others).
 
+### Added
+
+- **`labkit-adopt AREA [RUN]`: the adoption in one step.** Runs
+  `protocol-fill --from-run` (written and kept only when report-check
+  passes on it), the result block into the report the head registers
+  (`--into`) and report-check on the tree, stopping at the first step that
+  does not pass. A run already adopted skips the first step. The three
+  commands stay; `labkit-next` and `AGENTS.md` name this one.
+- **`labkit-next AREA`: the one next step.** Prints where the area stands,
+  the next command and what is held until it is taken. It adds no check:
+  no protocol → `labkit-init exp`; a MUST field unfilled → `protocol-fill`;
+  a current handover → nothing; otherwise the first blocker of
+  report-check's chain (`report_check.report_gaps`, the stages now one
+  function report-check prints) with its way out; nothing held and no run
+  adopted → the adoption; adopted and clean → nothing owed. Before an
+  adoption it leaves out what the adoption writes and checks on its
+  proposal (the result section, `--check`, the report).
+
+- **Codex lifecycle hooks.** `labkit-hooks install` also writes
+  `.codex/hooks.json`, preserving foreign handlers; `check` detects missing
+  or stale entries. `codex-hook pre-run|post-change|stop` adapts Codex events
+  to the shared checks in `gates/agent_hooks.py`. Claude Code retains its
+  adapter and commands. Codex project and hook trust are reviewed in
+  `/hooks`; installation does not grant trust. See `docs/codex-hooks.md`.
+
+- **A computation compared with a stated value: the head's `[reference]`
+  table, read by the compute skeleton, held by the check.** A task that
+  asks a computation to match a value ("0.62 within 0.01", "at least
+  0.20") had no place in the `compute` kind: the pressure pilot's agents
+  typed the comparison into prose, and the analysis auditor held a
+  compute protocol for a criterion it cannot carry
+  (docs/notes/2026-10-29-reference-comparison.md). The protocol head
+  takes one optional table, `compute` only: `[reference]` with `key` (the
+  metrics key compared, the skeleton's `METRIC_KEY`), `value`,
+  `tolerance` (absolute, or a fraction of `value` with `relative =
+  true`; `within` only), `relation` (`within` | `at_least` | `at_most`)
+  and `source` (who states the value; optional). `protocol_block.reference`
+  reads it exactly or refuses it by name; on a fit or an apply it is
+  refused naming `[C]` (`protocol_check.reference_gap`, by
+  `protocol-check` and the start of a low run); the registration stamp
+  digests it, so a value changed after the audit is drift. The verdict
+  has one home, `formats/reference.reference_verdict`: the compute
+  skeleton's `metrics_of()` writes `ref_state` (`compared` | `not
+  comparable`), `ref_met`, `ref_distance` (`|measured − value|`, exact
+  float arithmetic, never rounded), `ref_value`, `ref_tolerance` (the
+  absolute one used) and `ref_relation` into metrics.json after
+  `evaluate_rows()`, and `02_analyze.py --check` recomputes them with the
+  number. A protocol without the table is a pure computation: no `ref_*`
+  key, nothing owed. A missed reference is a valid outcome (`ref_met =
+  false`, the delivery stands); a key absent from the metrics or no
+  finite number is `not comparable`. `labkit-init exp --kind compute
+  --reference KEY=VALUE[±TOL] [--relation …] [--reference-source TEXT]`
+  stamps the table; `usability stage` does not — registering a stated
+  value is the agent's. Recorded results and the result block carry the
+  comparison generated (`reference 0.62 ± 0.01 (within): not met,
+  distance 0.145`; `… not comparable: <key> absent`), and finalize blocks
+  a registered reference the run cannot compare (guaranteed), naming the
+  key and the way out. Not a breaking change: old heads carry no table.
+
+- **The registered report owes its result.** In the pressure pilot of
+  2026-10-29 three of six lab agents (tasks 34, 15, 60) deleted the run
+  id from REPORT.md after the hook had refused the report for citing a
+  run that declares no result, and the commit passed: report-check held
+  only reports that cite a run, so a number without one was outside the
+  gate. Decided by the author the same day: a report fixed as an area's
+  deliverable owes its result adoption, run id or not, and an inserted
+  run id is not enough. The protocol head takes an optional `report =
+  "REPORT.md"` (a path relative to the repository root, inside it, not a
+  protocol, Markdown — `protocol_block.report_field`; absent, nothing is
+  owed), stamped by `labkit-init exp --report-file PATH` (kept by
+  `--change-kind`); `usability stage` registers REPORT.md for the SAB
+  tasks, whose sheet asks for that file (count, judge and fit report in
+  the final answer and register none). Once the registered file exists
+  — in the tree at the stop, in the index at the commit — it carries
+  the protocol's result block of the declared run (`protocol-fill
+  --into`) or the protocol's handover block as its record renders it
+  (`handovers.block_mismatch`), else report-check's new station 8, the
+  stop and the commit hold it with one BLOCKER naming the protocol, the
+  file and the three ways out: adopt the newest kept run then `--into`;
+  `--discuss`, said to release nothing (the report then still owes the
+  result or the handover); `--handover`. A protocol declaring no result
+  is held to this too (`report_check.hold_registered`), and the
+  protocols registering a file among the paths are selected though the
+  file lies in no area (`report_hold.registering_protocols`). A report
+  not yet written owes nothing (the obligation is on what is
+  delivered), and general notes beside it stay outside it. One check,
+  `report_hold.report_owed`; AGENTS.md's deliverable paragraph says the
+  rule. Not breaking: a head without `report` behaves as before; only a
+  probe staged from this version for a SAB task holds its REPORT.md.
+
+- **The counts of Data / scope are generated: `protocol-fill --data-counts`.**
+  In the fifth SAB-like draw two agents registered counts the data did not
+  hold (108 labelled persons for 92; 118/60/60 compounds for 240/80/80)
+  after a prepare script that printed the total alone. The estimator
+  skeleton's `00_prepare.py` now records its items' counts in the
+  preparation run's metrics (`data_counts.item_counts`: `n_items`,
+  `n_labelled`, `n_unlabelled`, `gold_counts` per gold value for a class
+  label). `protocol-fill <PROTOCOL> --data-counts [RUN_ID]` writes them,
+  with the files the run read and their lines, as the generated end of
+  Data / scope (`counts (prepare run <id>): …`), keeping the author's words
+  before it. finalize holds that part to the run (`data_counts.counts_gap`):
+  a count typed over it, or a part left stale, blocks with the command
+  that writes it again. AGENTS.md, the field guide and the estimator stamp
+  say the counts are never typed. A Data / scope without the generated
+  part is not checked.
+
+- **The post-change hook tells evidence gone or changed right after the
+  tool.** An agent learnt that a record it deleted or rewrote was evidence
+  only at the stop or the commit, after its next steps rested on it. Now,
+  for an area whose `audits/` or `runs/` git status names, the hook tells
+  at once what those two will hold — `attempts.area_integrity`'s problems
+  and `evidence.changes`/`evidence.ignored` — each line with its restore,
+  once per state (an area git status no longer names forgets its state).
+  It holds nothing itself (`claude_hooks.evidence_areas`,
+  `_untold_evidence`).
+- **The attempt journal keeps a copy outside the working tree, one per
+  branch.** Agents deleted `audits/` whole, journal included, before a
+  first commit (ninth haiku round t5; first SAB-like draw, 2026-10-27),
+  and nothing in the tree was left to notice. Every journal line is now
+  also written to `<git common dir>/labkit-attempts/<branch>/<area>.jsonl`
+  (`attempts.journal_copy`), and the tree check — the stop, the next
+  audit, `--findings`, the handover — names every attempt whose line the
+  copy keeps and the journal lacks, with each file its end names that is
+  gone, and the command that restores the lines (`attempts.copy_gaps`).
+  The guarantee is that and no more: an attempt made in this repository
+  on a branch, deleted in the working tree. Not covered: a detached HEAD
+  (no copy), a fresh clone, a deleted git directory, attempts made before
+  the copy existed. Held per branch and as a set of lines, so a switch to
+  a branch with a shorter journal, a merge that interleaves two branches'
+  lines and a journal older than its copy pass; a branch deleted and made
+  again under its old name keeps the old copy, which is then removed by
+  hand.
+- **`01_measure.py --calibrate-null` derives an apply null's band before
+  the registration.** The estimator skeleton asked to derive `null_band`
+  from the null lane's spread over seeds on the probe, but `--probe` draws
+  one seed and is not offered at `repeat_cost = "low"`; in the third
+  SAB-like draw apply-screen (low, 92 items) kept the stamped 0.1 and [A2]
+  failed by chance. At apply the predictions are fixed and only the gold
+  is permuted, so the spread is cheap: `calibrate_null` scores the
+  unchanged predictor's predictions against 200 permutations of the gold
+  and derives the band by a rule fixed in the skeleton (the 0.99 quantile
+  of |null − chance|, `NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). It
+  measures the permutation's spread, not a refit or new model answers; it
+  makes no run, writes nothing and never scores a prediction against its
+  true gold. At fit the null refits, so there is no free path and the
+  command refuses; so does a registered fixed null predictor. A band
+  changed after the first measurement stays refused
+  (`report_check.registration_changes`). The printed next steps and the
+  apply stamp name the step; `--probe` no longer offers its rows for the
+  Raw output field.
+- **finalize holds a null lane that did not move, from the kept rows.**
+  An instrument that ignores its labels predicts the same in both lanes,
+  and a null that answers the registered lane on every item measures no
+  noise floor. In the SAB-like apply case (2026-10-27, branch
+  `sab-like-cases`) the guard stood in the editable script and a cold
+  agent deleted it before it first ran. finalize now reads the rows the
+  answering run registered as its output (`outputs.json`) and blocks such
+  a null (`run_record_check.null_lane_unmoved`, `null_lane_findings`): a
+  fitted null that predicts otherwise, or a local apply's null on permuted
+  gold, moved. LAB-034 Null condition in the same run.
+- **`labkit-init numbers` and a pre-merge-commit hook: a merge meets the
+  commit's checks.** `labkit-init numbers [--staged]` names every number
+  two areas carry — in the working tree, or in the index with `--staged` —
+  a living and an archived area alike, with the next free number; exit 1
+  when one is shared. The pre-commit runs it where a staged path lies
+  under `experiments/`. `labkit-hooks install` now also writes
+  `.githooks/pre-merge-commit`, which runs the pre-commit on the merge's
+  index: git runs that hook, never pre-commit, for a merge it completes
+  without conflicts, and such a merge went unchecked. Probed on the count
+  walkthrough: a branch that changed `02_analyze.py` merged cleanly into
+  the branch that reported its number, and report-check on the merged
+  state exits 1; the merge now stays uncommitted with report-check's
+  blocker and the way out (fix, then `git commit`; or `git merge
+  --abort`). `labkit-hooks check` reports the hook missing until
+  `install` runs again.
+- **Ask for recovery steps instead of memorizing them.**
+  `labkit-audit AREA --findings` makes no model call and lists readable open
+  BLOCKERs even behind a damaged journal or an invalid record name, explicit
+  evidence errors, decision commands and each protocol's handover command.
+  Readable unresolved BLOCKERs require an explicit `deferred` decision.
+  `protocol-fill PROTOCOL --handover --why TEXT --tried TEXT --into REPORT`
+  then withdraws `[result]`, preserves a schema-1 JSON handover record under
+  `audits/handovers/` and writes its handover block into the report (one
+  per protocol, replaced in place, the rest kept; the findings left open
+  or deferred by record and number); protocols and evidence are never a
+  destination. Only an unchanged block and state let stop/commit
+  acknowledge damaged evidence, with all
+  audit evidence staged together. Normal audit and result release still
+  refuse the loss, including after the handover is committed. Guide:
+  `docs/notes/2026-10-27-handover-recovery.md`.
+- **A new registration names what it replaces, and the declaration binds
+  it (K1).** In the repair case (2026-10-27) the agent took the "register
+  anew" route into a second area and lowered the criterion's margin 0.25 →
+  0.15 without a word. A protocol may now declare `[replaces] protocol =
+  "p-<id>"` with one `[[replaces.change]]` (`what`, `from`, `to`, `why`) per
+  difference of its registration against the predecessor's — as each of
+  its first measurements saw it: the recorded commit's text with the run's
+  `uncommitted.patch` for the protocol applied, held to the block the run
+  recorded (`protocol_history.registrations_as_first_measured`,
+  `as_measured`); when they saw several, the changes are owed against each
+  (`registration_differences`: promise sentences, keys, constants, scopes,
+  the kind, the data profile); a registration that cannot be read back
+  leaves the handover. report-check then holds, exactly
+  (`report_check.replacement_gaps`): a predecessor that is itself, none or
+  several protocols of the repo, or a circle; a type other than
+  `exploratory`; a difference not declared — named with the TOML lines
+  that declare it — or a declared change that is none; the predecessor's
+  open BLOCKERs, each with the `--decide … deferred` that hands it over.
+  The generated Recorded results of a replacing protocol open with the
+  predecessor's verdict, derived from its own sources, then `this
+  question:` (`result_render.predecessor_verdict`); `no verdict — …` when
+  its declared run answers no registered question (its first measurements
+  saw different registrations, or its registration changed after the
+  first — a bar moved in the predecessor does not reach the successor as
+  its earlier verdict). A report that cited one
+  protocol's runs at HEAD and now cites another's, which declares no
+  `[replaces]` of it, is a WARNING of static evidence
+  (`report_check.replacement_hints`): a citation shows no succession, and
+  independent questions stay free. Limit: a successor that never declares
+  `[replaces]` is the audit's question. Contract:
+  `docs/notes/2026-10-27-new-registration-contracts.md`.
+- **`labkit-init exp NAME --kind KIND --change-kind`** restamps an area
+  under another kind before its first measurement: the old kind's stamped
+  scripts, README and area test are replaced where unchanged, the protocol
+  keeps its id, every written field, `type`, model alias and report fields;
+  explore files and data stay. It refuses, changing nothing, after a run
+  (the kind is part of the registration — a new protocol then), or when a
+  stamp was edited, a promise block changed, or a written field has no
+  place under the new kind (`scaffold.change_kind`, `plan_kind_change`).
+  A computation's next steps name it; until now they said to `rm -r` the
+  area, which deleted the moved explore file and left the computation's
+  test behind for the fit (review 2026-10-26).
+
+- **The follow-up judges every earlier decided BLOCKER, and carries what it
+  does not find resolved.** The analysis prompt's piece is now `EARLIER
+  DECIDED BLOCKERS`: every BLOCKER decided `fixed`, `accepted`, `dismissed`
+  or `deferred` in a record that is not of the state now audited, with its
+  decision (status, effect, reason). `resolved` means the fault named is
+  not in the state shown — repaired, or the finding did not apply; the why
+  says which. On `unresolved` or `not_assessable` labkit writes the finding
+  into the new record as a *carried* finding: open, the origin's text under
+  `carried from <record>#<n> (<verdict>): `, the check and note kept,
+  `carries = "<record>#<n>"` (bound in the decision digest). The record's
+  `blockers` counts it, `carried_blockers` says how many; a reader refuses
+  a record whose carried findings and counts disagree. `followup.chain`
+  follows `carries` to the origin and refuses a reference to no finding,
+  to the same or a later record, to no BLOCKER, a loop, and two carried
+  findings of one origin in one record; only the head of each origin is
+  shown again, so a limit does not multiply. Operating limits of the
+  piece: 40 entries, 60 kB — past either the audit refuses, the record
+  keeps the measured size as `followup`. An area with more than one
+  protocol refuses a follow-up while earlier decided BLOCKERs exist (the
+  records name no protocol). Why: an `accepted` limit in an older record
+  left the result without trace — the renderer reads covering records
+  only (decided 2026-10-26 after the fixed-followup pilots).
+  `findings.FixedBlocker` and `fixed_blockers` moved to
+  `followup.Member` and `followup.earlier_blockers`.
+
+- **The analysis audit judges every earlier `fixed` BLOCKER.** The prompt
+  shows each BLOCKER of the area decided `fixed`, as `<record>#<n>` with
+  the reason it was closed with; the auditor writes one `FIX · <record>#<n>
+  · resolved|unresolved|not_assessable · <why>` line per finding, from the
+  files and rows shown only; the why may go on in the lines right below,
+  up to a blank line or the next entry, and is kept whole (an entry that
+  also names another shown finding is refused). The record stores them as `[[fix_verdict]]`
+  tables, each bound to the decision as shown (`findings.decision_digest`):
+  a changed status or reason is another decision. A FIX line that does not
+  read, one on a finding the prompt did not show, a second one on the
+  same finding, a word outside the three, and a shown decision changed
+  during the call record nothing (exit 2); a shown finding without a line
+  has no verdict and stays unchecked. No gate reads the verdicts yet: they
+  are the pilot's data (eighth haiku round, t3: a leak closed `fixed` by
+  dropping one of two leaking features, the check the finding asked for
+  never run). A record without fix verdicts reads as before.
+  A finding may require the diagnostic its repair must show: the auditor
+  closes its line with `· check: <metrics key>`, stored as `check` in the
+  `[[finding]]` table when the record is written; `--decide` never sets or
+  drops it, and it is part of `findings.decision_digest` (a finding
+  without one keeps its earlier digest, so standing reviews stay valid).
+  The follow-up prompt shows that key's whole value from the metrics.json
+  it renders, or that it is missing; each fix verdict records `check` and
+  `check_present`, computed from that same snapshot, never by the model
+  and never by reading the file again. No check required (no field) and a
+  required key missing (`check_present = false`) are two states; a
+  `resolved` on a missing key is kept as written. After the key the
+  auditor may say what its value must show, as ` (<note>)` or
+  ` — <note>` to the end of the line: only the key is machine-read, the
+  note is stored whole as `check_note` and bound in the digest with the
+  check; any other text after the key, and two check fields in one
+  finding, refuse the record (second fixed-followup pilot: six of twelve
+  records lost to `check: <key> (<note>)` while only the bare key read).
+- **Every audit answer is kept before it is read.** `labkit-audit`
+  (preflight, analysis) writes the model's answer unchanged to
+  `audits/answers/<attempt id>.txt` right after the call, and the
+  attempt's end in `attempts.jsonl` names it (`"answer"`), also when the
+  answer does not read and no record is written. A kept answer that is
+  gone is a gap like a missing record (`attempts.gaps`). It releases
+  nothing. Why: the six refused answers of the second pilot survived only
+  because the pilot's runner passed `--out`.
+
+- **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
+  that discusses a run (a discussion block).** In the seventh haiku round
+  both agents that took the mark (t3, t18) left the run's numbers in the
+  report as results — at t18 "C1 … PASS" under an accepted decision that
+  makes C1 not assessable. One model call gets the report with line
+  numbers, the protocol, each discussed run's `metrics.json` and every audit
+  record with its decisions and failed attempts, and names lines as
+  `result` or `contradiction` (`report-review.agent.md`,
+  `gates/report_review`). It writes its claims to
+  `audits/report-reviews/<minute>-review.toml` with the fingerprint of
+  exactly the inputs it read (`formats/report_reviews`; its own folder and
+  the attempt journal are not among them, so writing the record leaves the
+  state as it was), and report-check holds a report with a discussion
+  block until a review of its state names no claim
+  (`report_check.report_review_owed`, at the stop and the commit; at the
+  commit the report and protocol as the index holds them, and only records
+  the index holds). A claim holds the state: a later clean draw does not
+  release it, and the command refuses another draw on it (`--again` draws
+  as a measurement and releases nothing); a changed input — the report,
+  the protocol, a run's metrics, an audit decision — owes a review of the
+  new state. Decided after the eighth haiku round (2026-10-26, t18): as a
+  hint at the commit the review was passed over, and the discussed run's
+  numbers stayed in the report as results. Pilot: both delivered reports
+  caught in 4 of 4 draws, clean counterexamples clean in 10 of 10,
+  0.08–0.16 USD a call (`docs/usability/2026-10-25-report-review-pilot.md`).
+  A report that cites no run is out of its reach. `claude-hook
+  post-change` names the command for a changed report that discusses a
+  run (once per text); nothing starts it but the agent.
+
+- **A crashed run keeps why it broke off.** When the block of
+  `runlog.run` raises, the run directory gets `failure.json` — the
+  exception's type, message and time (`runs.write_failure`,
+  `runs.read_failure`) — and `runlog --wait` names it beside CRASHED.
+  Until now the reason stood on stderr alone; a claude-cli answer another
+  model wrote ends a run this way. A failure to write the file is said on
+  stderr and never masks the exception.
+- **A fit probe for the usability harness.** `usability stage <dir> --task
+  fit --data <train.csv>` stamps a `kind = "fit"` area at seconds with the
+  estimator skeleton and plants the DILI molecules the operator hands in
+  (columns `standardised_smiles`, `vDILIConcern`; the package ships no
+  benchmark data) with a task sheet asking for the registered lane's
+  out-of-fold accuracy under `c1_score`; the score reads it as a model's
+  number (present, within [0, 1], the null lane reported). The first cold
+  probe of the fit lane after standard 0.22.
+- **`docs/workflow.md` and an executable count walkthrough.** The steps
+  from a registered question to a kept number, one section each: the
+  command, what it reads and changes, what must hold before it, what a
+  clean exit means; the `minutes`/`hours` extras at their place; the
+  decision review's conditional step. `docs/examples/count-walkthrough.sh
+  <dir> [VENV]` walks them on the stamped count task (registration, run,
+  finalize, the analysis record as a marked stand-in for the model call,
+  adoption, report block, gate), then retypes a generated number in the
+  report and in the protocol and shows the refusal each time;
+  `tests/test_workflow_example.py` runs it. A cold reading probe answered
+  the page's four acceptance questions rightly
+  (`docs/usability/2026-10-22-workflow-reading-probe.md`); its stumbles are
+  worked in, and the skeletons' hint after a run names what `--from-run`
+  writes as the command does ("Recorded results, [result] run and the run
+  entry", not "Answer, Result and Runs").
+- **A decision review: `labkit-audit AREA --review [--record FILE]`.** A
+  second, cold auditor gets every accepted finding of one analysis record
+  whose effect is `stands`, with the person's reason, the protocol (the
+  registration and the reported claim — Conclusion, Recorded results,
+  Limit lines), the files the findings name as the record's auditor read
+  them (the area snapshot, held to the record's `scope_sha`) and what the
+  auditor was shown of the run (held to `shown_sha`), and answers per
+  decision `upheld`, `rejected` or `insufficient` with one sentence
+  (`decision-review.agent.md`, `gates/decision_review`). The verdicts are
+  written beside the records as `audits/<minute>-review.toml`
+  (`formats/reviews`), bound to the record, its code, its run as shown,
+  the claim as judged (`claim_sha`: the Conclusion,
+  `protocol_check.reported_claim`; the Recorded results and Limit lines
+  are shown to the reviewer as they render and are bound through the
+  record and the run) and each
+  decision as it stood (`findings.decision_digest`): only `upheld`
+  releases a `stands`; `rejected`, `insufficient`, a review of a decision
+  since changed and one of a claim since rewritten do not. Every draw on
+  one state counts (`reviews.contested`): once a review of the decision
+  as decided and claimed now said `rejected` or `insufficient`, no later
+  draw releases it, and `--review` refuses another draw on that state
+  unless `--again` asks for one as a measurement (it never releases).
+  After `rejected` the person decides again first (limits the claim,
+  changes the effect, fixes the fault); a new audit does not by itself
+  settle it. `--review` refuses while the Conclusion is a placeholder
+  (the claim it judges; a review made before it goes stale when it is
+  written), and `--record` takes a record's bare file name for
+  `--review`, `--decide` and `--findings`, resolved under the area's
+  `audits/` — both from the fresh round on 86e38bc (judge-2 paid a
+  second review and was refused once on the name;
+  `docs/usability/2026-10-22-sandbox-86e38bc.md`). Replayed on the fifth round (two passes, 1.77 USD) and every
+  decision assessed from its sources (`docs/usability/2026-10-22-decision-review-*.md`). `report-check` names every `stands` of
+  the covering records that no review upholds, with the review's state:
+  a **blocker** for an accepted BLOCKER (a severe finding is not settled
+  by a reason alone; `protocol-fill --from-run` refuses the adoption the
+  same way), a warning for an accepted WARNING for now. A `--from-run`
+  that passed before is refused when an accepted BLOCKER with `stands` has
+  no upholding review. A report whose decision lines
+  and closing counts disagree, or that decides on a finding not asked
+  about, records nothing (exit 2); the review is refused when the code or
+  the run is no longer what the record's auditor saw. Why: labkit-paper
+  area 09, fifth haiku round — 28 findings, 15 accepted with no action,
+  six with the reason "Finding noted"; of four findings at decision
+  points, one was fixed.
+- **The seconds release holds the registration to the commit of the first
+  measurement.** `report-check` (stage 2, the registration, where the lane owes it
+  instead of the freeze) reads the oldest full run bound to
+  the protocol (`answering_run.first_measurement`), the commit its record
+  names (`runs.recorded_commit`) and the protocol as that commit holds it
+  (`protocol_history.registration_in_commit`): the protocol not committed
+  there, or the fields the lane owes not written there, blocks; outside a
+  repository a warning, as the provenance station's. runlog's start gate
+  reads the tree, which a line written a minute before the run passes;
+  what stood before the number is what the commit holds. The fields are
+  the lane's (`standard_contract.registration_fields`): the question, with
+  a `[model]` table also criterion, admissibility condition and data
+  profile. Why: labkit-paper area 09, fifth haiku round — none of the
+  three labkit agents had committed criterion and admissibility condition
+  before the first measurement.
+- **finalize blocks on an audit record of a deleted run.** Station 8 now
+  also holds every analysis record to the area's runs: a record naming a
+  run that has no `runs/<id>/` any more is a blocker where the record
+  stands (`findings.records_of_gone_runs`). A run an audit read is a kept
+  run; the record is the evidence that it existed. Why: labkit-paper area
+  09, fifth haiku round (labkit 0.102.0), t18 removed two measured runs
+  with `rm -rf runs/…` after their analysis audits, `runs.tsv` still
+  listed them, and finalize read the three records left behind as "every
+  finding decided".
+
 ### Changed
+
+- **The fit skeleton's plan follows the repeat cost, and the Timebox is a
+  budget the run holds.** At `low` a fit trains 3 folds × (1 + 2 refits)
+  = 9 fits, at `high` 5 × (1 + 5) = 30 as before (`FIT_PLAN`); folds and
+  refits are recorded in the run's config (`n_folds`, `null_refits`),
+  fewer than two refits are refused. A Timebox that starts with a duration
+  (`45 min — then record and ask`) is read (`labkit/formats/timebox.py`):
+  the fit times its first fold, projects the run and stops before the
+  second fold when the projection exceeds the budget, with the numbers and
+  the way out; a Timebox without a leading duration stays prose and the
+  run says that no projection is made. Note: `docs/notes/2026-10-31-fit-budget.md`.
+
+- **After the adoption, the adopted run answers, not the newest by name.**
+  `answering_run.bound_answering_run(area, pid, adopted)` takes the
+  protocol's `[result] run` (`adopted_run(text)`): once adopted, every
+  gate, the analysis audit and the views hold that run; one that cannot
+  answer (no such directory, unfinalized, bound elsewhere, a repeat) blocks
+  with the withdrawal. Bound runs whose ids sort after it are a
+  static-evidence WARNING in finalize, never a blocker. Why: a run id is
+  local time without a zone (`runlog`), so a cluster run in UTC sorts two
+  hours "before" a Mac run in CEST, and the newest-by-name rule picked the
+  wrong answer across machines without anyone seeing it. Before the
+  adoption the choice is unchanged, and `labkit-next` proposes its run.
+  finalize's "[result] names A, but the run that answers is B" is gone
+  (`finalize.declared_run_mismatch` removed; `declared_run_gaps` keeps the
+  unreadable table only). Until the run id carries its zone, every machine
+  measuring for one area runs in one zone — containers with `TZ=UTC`
+  (`docs/protocol-run-binding.md`).
+
+- **Breaking (Python imports): four long modules split by concern.** The
+  console commands and every file format are unchanged; code importing
+  these names from labkit moves to the new module:
+  - `gates/audit.py` → `audit_prompt` (what the auditor is shown:
+    `instructions`, `cited_rules`, `gather`, `render`, `bound_prompt`,
+    `validity_evidence`, `earlier_of`, `Stamp`), `audit_reply` (reading its
+    answer: `parse`, `parse_clarity`, `parse_fixes`, `LEAD`, `SEP`),
+    `audit_decisions` (`--findings` and `--decide`: `decision_lines`,
+    `decide_shape`, `record_path`, `show_findings`, `decide`).
+  - `formats/findings.py` → `failed_attempts` (the `*-failed.toml` file:
+    `write_failed`, `read_failed`, `failed_attempts`, `audit_unavailable`,
+    `stopped_attempt`, `ATTEMPT_TIMEOUT_S`) and `audit_gaps`
+    (`audit_coverage`, `audit_record_gap`, `RecordGap`,
+    `records_of_gone_runs`, `covering_records`).
+  - `gates/report_check.py` → `report_context` (`Checked`, `checked`,
+    `TREE`, `INDEX`, `PROPOSED`), `report_replacement`
+    (`replacement_gaps`), `report_decisions` (`limit_gaps`,
+    `review_findings`, `followup_findings`).
+  - `tools/protocol_fill.py` → `protocol_edit` (`fill`, `fill_head`,
+    `fill_many`, `fill_sentence`, `HEAD_KEYS`) and `protocol_result`
+    (`from_run`, `render_result`, `fill_prompts`, `withdraw`,
+    `limit_lines`, `fill_result_run`).
+
+- **What an agent copies is what labkit takes.** Every `--decide` call
+  and every registered-branch example shown in `AGENTS.md`, the agent
+  guide, the field guide and the protocol template goes through the real
+  parser in a test (`tests/test_agent_surface.py`): the guide showed a
+  decide call without `--why` and a branch without consequences. The kind
+  is chosen by one path everywhere (`KIND_QUESTIONS`, `AGENTS.md`, both
+  guides): by what the reported result claims. A computed quantity — a
+  model's feature importances included — is `compute`, its training
+  documented and audited; a claim about predictions is `fit` when this
+  experiment trained, tuned or selected the model, else `apply`; a file of
+  predictions claims how well the model predicts. The field guide states
+  the quality check and the inference criterion by their function; the
+  template's help names no rule, the field guide's last table does.
+
+- **The reference an agent is sent to is shorter.** The field guide
+  (`protocol-check --guide`) is 3,790 words (was 6,555), the agent guide
+  (`labkit-next --guide`) 2,861 (was 4,727), both in the SimpleEnglish
+  document register; a field the field guide does not list has only its
+  template help. Their history moved to
+  `docs/notes/2026-10-31-field-guide-cut.md`.
+
+- **The protocol template is 1,665 words (was 2,225).** Each field's
+  help text is one short instruction in the procedural register of the
+  SimpleEnglish skill (condition first, no semicolon, must not may); the
+  labels, sections and cut marks are unchanged, and how to fill a field
+  stays in the field guide (`protocol-check --guide`). The stamp's
+  phrases are what `protocol_check.stamp_placeholders` recognises: in a
+  protocol stamped before, a field whose whole value is still `<…>` stays
+  a placeholder, but text written beside an old phrase no longer marks the
+  field unfilled — fill such a field anew.
+- **`protocol-check PROTOCOL --contract` opens with the next step.** Its
+  first line names `labkit-next <area>`; the fill commands follow as three
+  short lines naming the protocol.
+
+- **A label typed short names its field; an unknown flag names the one
+  meant.** `protocol-fill PROTOCOL "Terms=…"` fills `Terms of this
+  protocol` when no other field begins the same, and says so
+  (`filled: Terms → terms of this protocol`); a prefix of several fields
+  names them, a near miss names the nearest (`protocol_fill.field_for`).
+  `labkit-init exp --type` is told that `type` is a protocol field set
+  with `protocol-fill <PROTOCOL> type=…` and that the kind is `--kind`;
+  another unknown flag names the nearest one.
+
+- **Every message names `labkit-adopt` for the adoption.**
+  `repo.adopt_command` builds `labkit-adopt <area> <run_id>` (with
+  `--protocol` where the area holds several protocols), so finalize,
+  report-check, the report holds, recheck, protocol-check, the ways out,
+  `labkit-init exp`'s steps and the area README name one command; where
+  the report is registered, its way out no longer adds `--into` after it
+  (the adoption writes the block). The order note before an adoption
+  recognises the line by `repo.ADOPT_TOOL`. `protocol-fill --from-run`
+  and `--into` stay for a targeted repair.
+
+- **The stamped `AGENTS.md` is 1,158 words (was 4,823).** It keeps the
+  loop around `labkit-next`, six words (protocol, run, criterion, audit,
+  decision, adoption), the kinds table, the decisions, the stop rule and
+  the instructions no gate can check, in one instruction per sentence.
+  Everything else moved, unchanged but for one dated sentence, to the
+  agent guide `labkit/docs/agent-guide.md`, which `labkit-next --guide`
+  prints. `tests/test_agent_surface.py` holds the limit of 1,200 words,
+  no date in either text, and every labkit command `AGENTS.md` names
+  being installed. An existing lab repo keeps its `AGENTS.md`
+  (`labkit-init lab` writes it only where none is): move it aside, run
+  `labkit-init lab .` again and carry the repo's own additions over
+  (`docs/student-repos.md`, "Moving to a newer version").
+
+- **Every gate line in one pattern: `<what is refused>. Next: <fix>`.**
+  `gate.with_way_out` joins a sentence and its way out with `. Next: `
+  (was ` — way out: `), the sentence's own full stop dropped; a dotted
+  line's last part reads `Next: <fix>`. Every literal BLOCKER way out
+  names its command (`tests/test_ways_out_data.py`): the 50 that said
+  "fix the block", "remove one" or "measure again" now end in the command
+  — after a repair by hand the check run again (`repo.gate_command`), a
+  new run as `repo.measure_anew(area)` names it. A reader that matched
+  ` — way out: ` in a gate's output matches `. Next: ` now.
+
+- **The agent-facing wording leads to the next action** (plan:
+  `docs/notes/2026-10-30-agent-surface.md`). The run a protocol reports is
+  the *adopted* run in every message, `AGENTS.md`, the README and
+  `docs/workflow.md`: `protocol-fill --from-run` adopts it, `--withdraw`
+  withdraws the adoption ("declared run" and "declaration" are gone from
+  that text; the `[result] run` field is unchanged). Where an agent names
+  a promise id, labkit names its field: `--effect "<ID> not assessable"
+  (<ID>: C1 (success / failure criterion))`, and a refused id lists the
+  registered ones the same way. The line under an accepted `stands` says
+  the review per grade and at every repeat cost: a BLOCKER's number does
+  not leave without it, a WARNING's absent review warns. Message text
+  only; no format changes.
 
 - **At apply [A2]'s band follows a registered rule, and the first
   measurement holds it.** In the fifth SAB-like draw the agent registered
@@ -2986,410 +2822,568 @@ pins (`requirements.txt` / `requirements.lock`).
   prose beside invented ones; the block is the one number a report shows
   that its sources hold.
 
-### Added
+### Breaking
 
-- **A computation compared with a stated value: the head's `[reference]`
-  table, read by the compute skeleton, held by the check.** A task that
-  asks a computation to match a value ("0.62 within 0.01", "at least
-  0.20") had no place in the `compute` kind: the pressure pilot's agents
-  typed the comparison into prose, and the analysis auditor held a
-  compute protocol for a criterion it cannot carry
-  (docs/notes/2026-10-29-reference-comparison.md). The protocol head
-  takes one optional table, `compute` only: `[reference]` with `key` (the
-  metrics key compared, the skeleton's `METRIC_KEY`), `value`,
-  `tolerance` (absolute, or a fraction of `value` with `relative =
-  true`; `within` only), `relation` (`within` | `at_least` | `at_most`)
-  and `source` (who states the value; optional). `protocol_block.reference`
-  reads it exactly or refuses it by name; on a fit or an apply it is
-  refused naming `[C]` (`protocol_check.reference_gap`, by
-  `protocol-check` and the start of a low run); the registration stamp
-  digests it, so a value changed after the audit is drift. The verdict
-  has one home, `formats/reference.reference_verdict`: the compute
-  skeleton's `metrics_of()` writes `ref_state` (`compared` | `not
-  comparable`), `ref_met`, `ref_distance` (`|measured − value|`, exact
-  float arithmetic, never rounded), `ref_value`, `ref_tolerance` (the
-  absolute one used) and `ref_relation` into metrics.json after
-  `evaluate_rows()`, and `02_analyze.py --check` recomputes them with the
-  number. A protocol without the table is a pure computation: no `ref_*`
-  key, nothing owed. A missed reference is a valid outcome (`ref_met =
-  false`, the delivery stands); a key absent from the metrics or no
-  finite number is `not comparable`. `labkit-init exp --kind compute
-  --reference KEY=VALUE[±TOL] [--relation …] [--reference-source TEXT]`
-  stamps the table; `usability stage` does not — registering a stated
-  value is the agent's. Recorded results and the result block carry the
-  comparison generated (`reference 0.62 ± 0.01 (within): not met,
-  distance 0.145`; `… not comparable: <key> absent`), and finalize blocks
-  a registered reference the run cannot compare (guaranteed), naming the
-  key and the way out. Not a breaking change: old heads carry no table.
+- **A handover records the run it stands at (handover schema 2).** The
+  record gains `run`, `run_state` and `run_why`, computed when the
+  handover is written (`report_check.adoption_state`): `not-measured` (no
+  measurement bound to the protocol), `unusable` (a measurement, and no
+  number from it), `held` (the blockers that hold its adoption) or
+  `adoptable` (nothing held it — the handover is written, with a warning
+  naming `labkit-adopt`: a missed criterion is a result). The report's
+  block says which state holds, without a run id. A measurement bound to
+  the protocol after the handover ends its acknowledgement. A schema-1
+  record no longer reads; labkit 0.103.0 is the last that reads it — hand
+  the protocol over again.
 
-- **The registered report owes its result.** In the pressure pilot of
-  2026-10-29 three of six lab agents (tasks 34, 15, 60) deleted the run
-  id from REPORT.md after the hook had refused the report for citing a
-  run that declares no result, and the commit passed: report-check held
-  only reports that cite a run, so a number without one was outside the
-  gate. Decided by the author the same day: a report fixed as an area's
-  deliverable owes its result adoption, run id or not, and an inserted
-  run id is not enough. The protocol head takes an optional `report =
-  "REPORT.md"` (a path relative to the repository root, inside it, not a
-  protocol, Markdown — `protocol_block.report_field`; absent, nothing is
-  owed), stamped by `labkit-init exp --report-file PATH` (kept by
-  `--change-kind`); `usability stage` registers REPORT.md for the SAB
-  tasks, whose sheet asks for that file (count, judge and fit report in
-  the final answer and register none). Once the registered file exists
-  — in the tree at the stop, in the index at the commit — it carries
-  the protocol's result block of the declared run (`protocol-fill
-  --into`) or the protocol's handover block as its record renders it
-  (`handovers.block_mismatch`), else report-check's new station 8, the
-  stop and the commit hold it with one BLOCKER naming the protocol, the
-  file and the three ways out: adopt the newest kept run then `--into`;
-  `--discuss`, said to release nothing (the report then still owes the
-  result or the handover); `--handover`. A protocol declaring no result
-  is held to this too (`report_check.hold_registered`), and the
-  protocols registering a file among the paths are selected though the
-  file lies in no area (`report_hold.registering_protocols`). A report
-  not yet written owes nothing (the obligation is on what is
-  delivered), and general notes beside it stay outside it. One check,
-  `report_hold.report_owed`; AGENTS.md's deliverable paragraph says the
-  rule. Not breaking: a head without `report` behaves as before; only a
-  probe staged from this version for a SAB task holds its REPORT.md.
+- **Promise ids are their kind and a number.** `[criterion-1]`,
+  `[quality-check-2]`, `[branch-1]` replace `[C1]`, `[A2]`, `[B1]`;
+  a metrics key is the id with underscores and a suffix
+  (`criterion_1_pass`, `quality_check_2_pass`) instead of `c1_pass`. A
+  person reading a protocol, a report or a run's metrics.json needs no
+  legend (plan: `docs/notes/2026-10-30-agent-surface.md`). The alphabet
+  has one home (`promises.KINDS`, `key_stem`, `id_of_stem`); a promise's
+  `kind` is the kind word (`quality-check` was `admissibility`).
+  A protocol in the letters is not read:
+  an id `C1`/`A1`/`B1` (or the earlier `K`/`S`/`W`/`N`) is refused with a
+  sentence naming the version that reads it — **0.103.0 is the last
+  labkit that reads the C/A/B letters**; reproduce such a run with its
+  repo's commit and that pin. Stamped protocols, the script skeletons and
+  their tests, the docs and the agents' prompts use the new ids.
 
-- **The counts of Data / scope are generated: `protocol-fill --data-counts`.**
-  In the fifth SAB-like draw two agents registered counts the data did not
-  hold (108 labelled persons for 92; 118/60/60 compounds for 240/80/80)
-  after a prepare script that printed the total alone. The estimator
-  skeleton's `00_prepare.py` now records its items' counts in the
-  preparation run's metrics (`data_counts.item_counts`: `n_items`,
-  `n_labelled`, `n_unlabelled`, `gold_counts` per gold value for a class
-  label). `protocol-fill <PROTOCOL> --data-counts [RUN_ID]` writes them,
-  with the files the run read and their lines, as the generated end of
-  Data / scope (`counts (prepare run <id>): …`), keeping the author's words
-  before it. finalize holds that part to the run (`data_counts.counts_gap`):
-  a count typed over it, or a part left stale, blocks with the command
-  that writes it again. AGENTS.md, the field guide and the estimator stamp
-  say the counts are never typed. A Data / scope without the generated
-  part is not checked.
+- **Quality check in the protocol's fields.** The field `Admissibility
+  condition` is now `Quality check`, and the prose of the docs, templates,
+  prompts and messages says quality check throughout (Registered Reports:
+  outcome-neutral conditions, quality checks). `Registered branch` keeps
+  its name. A protocol with the old label no longer has the field — read
+  it with labkit 0.103.0.
 
-- **The post-change hook tells evidence gone or changed right after the
-  tool.** An agent learnt that a record it deleted or rewrote was evidence
-  only at the stop or the commit, after its next steps rested on it. Now,
-  for an area whose `audits/` or `runs/` git status names, the hook tells
-  at once what those two will hold — `attempts.area_integrity`'s problems
-  and `evidence.changes`/`evidence.ignored` — each line with its restore,
-  once per state (an area git status no longer names forgets its state).
-  It holds nothing itself (`claude_hooks.evidence_areas`,
-  `_untold_evidence`).
-- **The attempt journal keeps a copy outside the working tree, one per
-  branch.** Agents deleted `audits/` whole, journal included, before a
-  first commit (ninth haiku round t5; first SAB-like draw, 2026-10-27),
-  and nothing in the tree was left to notice. Every journal line is now
-  also written to `<git common dir>/labkit-attempts/<branch>/<area>.jsonl`
-  (`attempts.journal_copy`), and the tree check — the stop, the next
-  audit, `--findings`, the handover — names every attempt whose line the
-  copy keeps and the journal lacks, with each file its end names that is
-  gone, and the command that restores the lines (`attempts.copy_gaps`).
-  The guarantee is that and no more: an attempt made in this repository
-  on a branch, deleted in the working tree. Not covered: a detached HEAD
-  (no copy), a fresh clone, a deleted git directory, attempts made before
-  the copy existed. Held per branch and as a set of lines, so a switch to
-  a branch with a shorter journal, a merge that interleaves two branches'
-  lines and a journal older than its copy pass; a branch deleted and made
-  again under its old name keeps the old copy, which is then removed by
-  hand.
-- **`01_measure.py --calibrate-null` derives an apply null's band before
-  the registration.** The estimator skeleton asked to derive `null_band`
-  from the null lane's spread over seeds on the probe, but `--probe` draws
-  one seed and is not offered at `repeat_cost = "low"`; in the third
-  SAB-like draw apply-screen (low, 92 items) kept the stamped 0.1 and [A2]
-  failed by chance. At apply the predictions are fixed and only the gold
-  is permuted, so the spread is cheap: `calibrate_null` scores the
-  unchanged predictor's predictions against 200 permutations of the gold
-  and derives the band by a rule fixed in the skeleton (the 0.99 quantile
-  of |null − chance|, `NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). It
-  measures the permutation's spread, not a refit or new model answers; it
-  makes no run, writes nothing and never scores a prediction against its
-  true gold. At fit the null refits, so there is no free path and the
-  command refuses; so does a registered fixed null predictor. A band
-  changed after the first measurement stays refused
-  (`report_check.registration_changes`). The printed next steps and the
-  apply stamp name the step; `--probe` no longer offers its rows for the
-  Raw output field.
-- **finalize holds a null lane that did not move, from the kept rows.**
-  An instrument that ignores its labels predicts the same in both lanes,
-  and a null that answers the registered lane on every item measures no
-  noise floor. In the SAB-like apply case (2026-10-27, branch
-  `sab-like-cases`) the guard stood in the editable script and a cold
-  agent deleted it before it first ran. finalize now reads the rows the
-  answering run registered as its output (`outputs.json`) and blocks such
-  a null (`run_record_check.null_lane_unmoved`, `null_lane_findings`): a
-  fitted null that predicts otherwise, or a local apply's null on permuted
-  gold, moved. LAB-034 Null condition in the same run.
-- **`labkit-init numbers` and a pre-merge-commit hook: a merge meets the
-  commit's checks.** `labkit-init numbers [--staged]` names every number
-  two areas carry — in the working tree, or in the index with `--staged` —
-  a living and an archived area alike, with the next free number; exit 1
-  when one is shared. The pre-commit runs it where a staged path lies
-  under `experiments/`. `labkit-hooks install` now also writes
-  `.githooks/pre-merge-commit`, which runs the pre-commit on the merge's
-  index: git runs that hook, never pre-commit, for a merge it completes
-  without conflicts, and such a merge went unchecked. Probed on the count
-  walkthrough: a branch that changed `02_analyze.py` merged cleanly into
-  the branch that reported its number, and report-check on the merged
-  state exits 1; the merge now stays uncommitted with report-check's
-  blocker and the way out (fix, then `git commit`; or `git merge
-  --abort`). `labkit-hooks check` reports the hook missing until
-  `install` runs again.
-- **Ask for recovery steps instead of memorizing them.**
-  `labkit-audit AREA --findings` makes no model call and lists readable open
-  BLOCKERs even behind a damaged journal or an invalid record name, explicit
-  evidence errors, decision commands and each protocol's handover command.
-  Readable unresolved BLOCKERs require an explicit `deferred` decision.
-  `protocol-fill PROTOCOL --handover --why TEXT --tried TEXT --into REPORT`
-  then withdraws `[result]`, preserves a schema-1 JSON handover record under
-  `audits/handovers/` and writes its handover block into the report (one
-  per protocol, replaced in place, the rest kept; the findings left open
-  or deferred by record and number); protocols and evidence are never a
-  destination. Only an unchanged block and state let stop/commit
-  acknowledge damaged evidence, with all
-  audit evidence staged together. Normal audit and result release still
-  refuse the loss, including after the handover is committed. Guide:
-  `docs/notes/2026-10-27-handover-recovery.md`.
-- **A new registration names what it replaces, and the declaration binds
-  it (K1).** In the repair case (2026-10-27) the agent took the "register
-  anew" route into a second area and lowered the criterion's margin 0.25 →
-  0.15 without a word. A protocol may now declare `[replaces] protocol =
-  "p-<id>"` with one `[[replaces.change]]` (`what`, `from`, `to`, `why`) per
-  difference of its registration against the predecessor's — as each of
-  its first measurements saw it: the recorded commit's text with the run's
-  `uncommitted.patch` for the protocol applied, held to the block the run
-  recorded (`protocol_history.registrations_as_first_measured`,
-  `as_measured`); when they saw several, the changes are owed against each
-  (`registration_differences`: promise sentences, keys, constants, scopes,
-  the kind, the data profile); a registration that cannot be read back
-  leaves the handover. report-check then holds, exactly
-  (`report_check.replacement_gaps`): a predecessor that is itself, none or
-  several protocols of the repo, or a circle; a type other than
-  `exploratory`; a difference not declared — named with the TOML lines
-  that declare it — or a declared change that is none; the predecessor's
-  open BLOCKERs, each with the `--decide … deferred` that hands it over.
-  The generated Recorded results of a replacing protocol open with the
-  predecessor's verdict, derived from its own sources, then `this
-  question:` (`result_render.predecessor_verdict`); `no verdict — …` when
-  its declared run answers no registered question (its first measurements
-  saw different registrations, or its registration changed after the
-  first — a bar moved in the predecessor does not reach the successor as
-  its earlier verdict). A report that cited one
-  protocol's runs at HEAD and now cites another's, which declares no
-  `[replaces]` of it, is a WARNING of static evidence
-  (`report_check.replacement_hints`): a citation shows no succession, and
-  independent questions stay free. Limit: a successor that never declares
-  `[replaces]` is the audit's question. Contract:
+- **Decisions are named by their consequence.** `labkit-audit AREA
+  --decide N STATUS --why "REASON" [--not-assessable IDS]`: `fixed` (a
+  repair is claimed; the follow-up audit confirms it — after a new
+  measurement when the repair changed what was measured), `limitation`
+  (the finding is true; the number carries it as a `Limitation (audit … #N)`
+  line — was `accepted`), `false-positive` (the finding does not apply to
+  the code and run as audited; `--why` records the counter-evidence, and a
+  BLOCKER's needs a second auditor — was `dismissed`). `deferred` is gone:
+  a finding nobody can settle stays `open`, and the handover
+  (`protocol-fill --handover`) records it and ends the protocol without a
+  result — it sets no status; the stop, the commit and a replacement's
+  report-check read a current handover instead of holding the findings it
+  records, and preflight reminds of open findings handovers elsewhere
+  record. The reason is a named option (`--why`), never
+  positional; `--effect` is gone: a `limitation` on a BLOCKER or WARNING
+  records `stands` itself, and `--not-assessable criterion-1` names the
+  promises the run does not judge (no review owed). A WARNING decided
+  `limitation` now always reaches the result, and its missing review
+  warns. The generated `Limit (audit … #N)` lines are `Limitation (audit …
+  #N)`. Audit records with `status = "accepted"`, `"dismissed"` or `"deferred"`, and
+  results with `Limit` lines, no longer read — 0.103.0 reads them.
+
+- **The protocol's fields in the field's words.** `Success / failure
+  criterion` is `Inference criterion` (what result supports which
+  conclusion — a missed criterion is a valid result); the result
+  section's `Interpretation / next step` is `Interpretation` (CONSORT 2010
+  item 22), the next step living in the Summary alone; `Outcome †` is
+  `Expected or surprising †` (outcome now names a branch's possible
+  result); `Limits` is `Limitations` (CONSORT 2010 item 20). A protocol
+  with the old labels lacks these fields — 0.103.0 reads it.
+
+- **A registered branch lists its outcomes, and the run records one of
+  them.** The B kind is a registered branch again (`[branch-1]`, key
+  `branch_1_outcome`): a pre-specified mapping from conditions on the
+  results to named outcomes and their consequences, its sentence
+  `<condition> → <outcome>: <consequence>; …` — at least two outcomes, one
+  `→` each (`->` is refused), the first condition that holds selects,
+  `otherwise` as the last condition only, an outcome named in lowercase
+  letters, digits and hyphens and unique, a consequence owed (an
+  interpretation, an action or a justified non-action, no `;`).
+  `promises.parse_outcomes` reads it in one home; `parse_block` refuses a
+  free-text branch, naming the promise, the outcome and the form.
+  `intent-check`, and `finalize` through it, block a run whose branch key
+  records a name that is none of the outcomes, the way out naming them
+  (`intent_check.unregistered_outcomes`); intent-check's findings are gate
+  findings with their own way out. The stamp's `<…>` placeholder still
+  parses for an unfrozen pilot. **0.103.0 is the last labkit that reads a
+  free-text branch**; re-register it, or reproduce such a run with its
+  repo's commit and that pin.
+
+- **A registered output is the file the run recorded, and the deliverable
+  of an external task is a registered output of the answering run.**
+  `finalize` (and `report-check` through it) holds every file in the
+  run's outputs.json to the path and the sha256 the run recorded when it
+  ended, on every lane (station 7, "registered outputs",
+  `run_record_check.output_record_findings`): a file gone, or with
+  another sha256, is a guaranteed BLOCKER with the way out "measure anew
+  and audit that run" — the tree at check time is only compared, never
+  trusted. Nothing compared the two before, and the output file an
+  external task names (`pred_results/<name>.csv`) was written outside the
+  run's record: an injection benchmark swapped it in seven delivered
+  states without a gate noticing
+  (docs/usability/2026-10-29-injection-ab4ce6d.md, M7). The stamped
+  measure skeletons (compute and estimator) carry `DELIVERABLES`, the
+  files the task names relative to the repo, and `deliverable_rows()`,
+  their rows from the kept rows and the metrics; the full run writes each
+  (`formats/deliverable.write_csv`) and registers it before it closes, a
+  repeat's draw writes none. `labkit-init exp --deliverable PATH` stamps
+  the constant (repeatable); `usability stage` stamps the SAB-like case's
+  `pred_results/<output>` and records the flag in probe.json; AGENTS.md
+  names the constant. A delivered state whose deliverable differs from
+  the answering run's record is held from now on; a run of a stamped
+  skeleton with an empty `DELIVERABLES` registers its rows as before.
+  `recheck.pin` compares through the same `output_drift`. 0.103.0 is the
+  last version without the hold.
+
+- **An analysis record binds the setup's prose; a corrected description
+  is followed up.** In the fifth SAB-like draw (2026-10-28) two agents
+  registered data counts in Data / scope that the data did not hold. The
+  audits found them; one agent corrected the count in place, as AGENTS.md
+  says, decided `fixed` and audited again. Since the record bound only the
+  registration's judged fields, the new audit covered the same state, and
+  report-check held the BLOCKER for good as fixed in the state audited.
+  `shown_sha` now also covers the setup's prose the audit read
+  (`protocol_check.audited_texts`: Terms, Data / scope, Model / tool,
+  Model I/O, Exclusions / filters, Unit — not the Prompt block, which is
+  written from the code, not the registration's own fields, which
+  `registration` binds field by field, not what is written after the
+  audit). A corrected description therefore moves the state, and the next
+  audit follows the finding up. AGENTS.md and the auditor name the rule:
+  a description of unchanged data or code is corrected in place; a change
+  of the data or code used is measured anew. The hold of a BLOCKER fixed
+  in the state audited names the correction. Every analysis record written
+  before covers no state any more: audit again. 0.103.0 is the last
+  version without the binding.
+
+- **A BLOCKER decided `dismissed` owes a decision review, its first
+  dismissal too.** Until now a BLOCKER dismissed in the record of the
+  state reported released the number on its reason alone; a review was
+  owed only after a review had not upheld a decision on it, or for a
+  carried finding. Decided by the author as a design requirement (no log
+  showed misuse): the deciding agent's own decision does not release a
+  blocking finding. report-check holds such a BLOCKER until `labkit-audit
+  <area> --review --record <record>` upholds that the reason shows it does
+  not apply to the code and run as audited (`findings.dismissed_blocker`,
+  read by `decision_review.reviewable` and `report_check.review_findings`).
+  A dismissed WARNING owes none. Areas with a BLOCKER dismissed in the
+  state reported are held until reviewed; 0.103.0 is the last version that
+  releases them without one.
+
+- **`protocol-fill --from-run --force` no longer replaces a declared
+  result.** A `[result]` naming another run is refused, `--force` or not.
+  The declaration is withdrawn (`protocol-fill PROTOCOL --withdraw --why
+  "…"`), the run that answers is audited, then adopted. An audit made
+  while another run is declared does not cover the new declaration, so
+  the replacement could never pass once an audit had seen the old one
+  (file-check case, 2026-10-28). The declared-run acceptance case passed
+  the new way before the old one was removed. `--force` still overwrites
+  the generated lines of the run declared. 0.103.0 is the last version
+  that replaces.
+
+- **A failed audit call is superseded by a later audit of its mode,
+  protocol and promise block, also after a code change; the journal's
+  start names block and protocol.** An earlier completed audit hid a later
+  failed call from `labkit-audit --findings`, exit 0 (review of the D3
+  repair, 2026-10-28): a `-failed.toml` was covered by any record of its
+  mode, code and promises, an attempt that ended without a record by any
+  record of its mode and code, whenever made. A rule of mode, code and
+  block in the journal's order closed that and left a dead end: a call
+  that failed on code corrected since stayed named, exit 2, until an
+  audit of exactly the old code existed — in practice only the handover
+  cleared it. The rule now (`attempts.superseding_record`): a later
+  completed audit of the same mode and the same protocol with the same
+  promise block supersedes the failed call, also after a code change —
+  a record written by an attempt the journal started after the call, on
+  the same protocol. `--findings` shows a superseded call as superseded
+  by that record, informational, exit unaffected, never as open: the
+  reader sees which audit took its place and what that means. The old
+  call and its kept answer stay as they are; superseding confirms neither
+  the call's content nor the repair of any finding, and a recorded
+  BLOCKER stays under the follow-up rule — whether the current result may
+  be adopted is decided by the checks of the current code and run
+  (`followup`, report-check), as before. An earlier audit, another
+  protocol or another promise block supersede nothing, nor a record no
+  attempt names. The protocol is named by its file name in the area, not by the head's `id` (a protocol without an `id` must still be nameable; Max, 2026-10-28): a protocol file renamed since counts as another protocol, so its earlier failed calls stay named until the file is renamed back and audited, or the area is handed over. An audit's start event records the promise block it
+  read and the protocol it audited, by file name in the area
+  (`block_sha`, `protocol`; `attempts.begin` takes both as keywords, None
+  for a review, whose start names neither; `Attempt.block_sha`,
+  `Attempt.protocol`). A `-failed.toml` carries its block in its file and
+  takes its protocol from the start of the attempt that wrote it. A
+  historical call — an attempt whose start names no block and protocol
+  (written by 0.103.0 or earlier; it reads as it stands, and neither is
+  supplied after the fact) or a `-failed.toml` no attempt of the journal
+  names — has a binding or order the journal cannot give
+  (`historical_call`): `--findings` names it as historical, exit 2, with
+  the step that supersedes it. Migration, that step: run the audit of its
+  mode again now, in the current format — `labkit-audit <area> --mode
+  <preflight|analysis>`, the command `--findings` prints; a later audit of
+  its mode whose start names block and protocol supersedes the historical
+  call, of any protocol of the area, since the old start names none. Journal, answers and records stay as written. 0.103.0 is the last
+  version whose starts name neither.
+- **The analysis audit and the decision review see the run's declared
+  dependencies.** In the second repair case the follow-up could not
+  confirm a correct repair against `model.json` — "that result is in no
+  file shown here" — three decision reviews said `insufficient`, and the
+  adopted result read C1, A1 and A2 not assessable though the number was
+  the true one. The run's `data=` inputs recorded without rows
+  (`provenance.BinaryInput`: a predictor, its weights) are now shown
+  under `===== DEPENDENCY <path> … =====` (`audit_binding.dependency_pieces`):
+  a UTF-8 file of at most 64 kB whole while its digest is the one the run
+  recorded; a changed, binary or larger one named with its digest and why
+  it is not shown. The pieces are part of what the record binds
+  (`shown_sha`): an analysis record made before this change, of a run
+  with such inputs, no longer covers it — run the analysis audit again.
+  Runs without such inputs keep their coverage.
+- **Committed evidence stays as written: the stop and the commit hold a
+  change git can undo.** labkit noticed evidence that went missing; a
+  record rewritten in place was seen only where the rewrite broke its
+  format (ninth Haiku round, t5), and a committed run's files could change
+  under its run id. Now a record may change in its findings' decision
+  lines alone (`status`, `reason`, `effect`, as `--decide` writes them;
+  `findings.without_decisions`), another file under `audits/` never, and a
+  run committed closed (`completion.json` or `failure.json`) never; a
+  version back as labkit first committed it is no change
+  (`evidence.original`). The stop holds the tree and the commit the index
+  against HEAD (`evidence.changes`), both a file of labkit's that git
+  ignores (`evidence.ignored`), and the stop also each session commit
+  against its parent — a commit past the pre-commit — and a closed run a
+  reset or an amend left in HEAD's reflog (`evidence.commit_changes`,
+  `evidence.orphaned_runs`, `claude_hooks.session_evidence`). Every line
+  names the `git checkout` that undoes it, and no handover acknowledges
+  it. `labkit-audit <area> --findings` shows the changes first and exits 2.
+  `findings.is_record_name` is public. Note:
+  docs/notes/2026-10-28-evidence-changes.md. Migration: restore what a line
+  names; 0.103.0 is the last version that let a rewritten record or run
+  pass.
+- **Every BLOCKER names its way out, as data.** The ways past the gates
+  came where an agent saw no admissible next step, and a held step that
+  named its command was followed (docs/notes/2026-10-27-standard-way-out.md);
+  many blockers carried their step inside the sentence, some none.
+  `gate.GateFinding` now refuses a BLOCKER without a `fix`, every line
+  tells it (`BLOCKER: <what> — way out: <fix>`; a dotted line keeps it as
+  its last part) and the summary repeats it; `Findings.block(msg, *, fix)`
+  takes it as a required keyword, `Findings.warn` may. Every site that
+  builds a blocker passes one (`tests/test_ways_out_data.py` reads them
+  all), worded where the cause is known and built from the shared command
+  builders — new: `repo.measure_command`, `findings.decide_way`,
+  `findings.record_way`, `gate.blocker`. The pure checks that fed blockers
+  as sentences return findings now, the step split from the cause:
+  `run_record_check.code_since_run`, `provenance_findings`,
+  `row_provenance_findings`, `null_lane_findings` (`NullLanes.unmoved`),
+  `report_blocks.block_gaps`, `cited_gaps`, `discussion_gaps`,
+  `result_render.render_gaps`, `notes_check.check_file`'s must list, the
+  report-check and report-hold producers, `finalize.declared_run_gaps`
+  (now with the protocol) and `declared_run_mismatch`;
+  `AnsweringRun.explain` returns its blocker as a finding with `way_out`.
+  report-check's finalize station keeps finalize's fixes. Migration: a
+  caller of `Findings.block` passes `fix=`, a reader of these functions
+  reads `.text` / `.fix` (or `.line`, the told form); 0.103.0 is the last
+  version whose blockers carry no way out.
+- **The refusals an agent meets outside the gates name their way out
+  too.** `AuditError` (labkit-audit, the decision and report reviews) and
+  `AttemptError` (the attempt journal) take the way out as a required
+  keyword, `AuditError(why, *, fix)` — None only where
+  `tests/test_ways_out_data.py` exempts a site, with its reason — and tell
+  it as a gate line does (`gate.with_way_out`); `.why` and `.fix` keep the
+  parts. runlog's start refusals (`runlog`, `start_check`) end with theirs,
+  and the pre-run hook's notes name their step. Shared: `ways_out.ANSWER_AGAIN`,
+  `AUDIT_AGAIN`, `PROTOCOL_NAMED`, `attempts.JOURNAL_WAY`,
+  `start_check.PROMISE_BLOCK_WAY`; `findings.decide_way` and `record_way`
+  serve every layer. Migration: a caller building either error passes
+  `fix=`; 0.103.0 is the last version without.
+- **A protocol is a regular file; a symbolic link is refused.** The stop
+  read a protocol link's target in the tree (`report_check.repo_sources`,
+  `hold_declared` followed it) and the commit read the name the link
+  stores in the index, so the two judged different text. A protocol that
+  is a symbolic link, valid or broken, is now refused with one sentence
+  naming it (`repo.protocol_link`), each state by itself
+  (`repo.protocol_links`): by the protocol choice of every command
+  (`repo.the_protocol`), by report-check at the stop and the commit, by
+  `protocol-check` and by the handover. `repo_sources` reads through
+  `repo.state_text`. Migration: put the file in place of the link; 0.103.0
+  is the last version that followed one. Audit 2026-10-27 (second), left
+  open, settled the same day.
+- **Not assessable limits the verdict: Recorded results opens with the
+  reportable verdicts.** The generated line listed every metric as
+  recorded and appended "A3 not assessable with this run": in the repair
+  case (2026-10-27) it read `c1_pass = True … ; A3 not assessable` and the
+  report claimed "C1 PASS". The line now opens with one verdict per
+  registered promise, derived in one place (`result_render.verdicts`) for
+  protocol-fill, report-check, the report blocks and the decision review:
+  an admissibility condition not assessable — an accepted limit names it —
+  or not met leaves every criterion `not assessable`, with why; otherwise a
+  criterion is `met` or `missed`; a key not recorded as true or false gives
+  no verdict and says so (intent-check holds the run). The other metrics
+  follow as recorded values; the promises' own keys stay in `metrics.json`,
+  unchanged, and are no longer repeated in the line.
+  `findings.answer_note` now only counts the limits. Every protocol and
+  report block rendered before is held as differing until `protocol-fill
+  --render` (and `--into`) writes it again; 0.103.0 is the last version
+  that renders the old line. Contract: K2 in
   `docs/notes/2026-10-27-new-registration-contracts.md`.
-- **`labkit-init exp NAME --kind KIND --change-kind`** restamps an area
-  under another kind before its first measurement: the old kind's stamped
-  scripts, README and area test are replaced where unchanged, the protocol
-  keeps its id, every written field, `type`, model alias and report fields;
-  explore files and data stay. It refuses, changing nothing, after a run
-  (the kind is part of the registration — a new protocol then), or when a
-  stamp was edited, a promise block changed, or a written field has no
-  place under the new kind (`scaffold.change_kind`, `plan_kind_change`).
-  A computation's next steps name it; until now they said to `rm -r` the
-  area, which deleted the moved explore file and left the computation's
-  test behind for the fit (review 2026-10-26).
+- **report-check holds a run whose registration changed after the first
+  measurement.** Nothing compared the promise block a protocol's first
+  measurement recorded with the answering run's: in the repair case
+  (labkit-paper area 12, 2026-10-27) run 98dd failed [A2] at `null_band`
+  0.1, the band was raised to 0.15 "to accommodate observed null score",
+  the next run passed and the report was released. Every lane now holds
+  an answering run whose recorded block differs from its first
+  measurements' (`report_check.registration_changes`): each change is
+  named per id and constant (`promises.snapshot_changes`, `[A2] null_band
+  0.1 → 0.15`; a sentence through the block digest, whose old text the run
+  record does not keep — `git show <commit>:<protocol>` shows it), with the
+  way back: restore the `[[promise]]` tables as the first measurement
+  registered them — each change undone by name (a value back, an added
+  promise out, a dropped one back in, the sentences as then) — and measure
+  again, or register anew (`audit.register_anew`, the one wording). The code the scopes name is not compared: a repair measured again
+  under unchanged promises passes. The first measurements are every run at
+  each first position (`answering_run.first_registrations`), not one
+  chosen by name; when they recorded different blocks, which one stood
+  cannot be told and no run answers a registered question: held too, with
+  both ways out named — a new registration that declares its changes
+  against each (K1), or a handover (`audit.HANDOVER`: no `[result]`, the
+  report names the protocol, not its runs, and no number); the adoption of
+  such a run is refused. Both ways, and the twins that are held, run
+  through the whole chain in `tests/test_counter_cases.py`. Contract:
+  `docs/notes/2026-10-27-new-registration-contracts.md` (K3). 0.103.0 is
+  the last version that lets such a run through.
+- **An `--again` decision review releases nothing, and `--review` exits
+  with the state.** `labkit-audit --review --again` skipped the contested
+  check, so on a decision never reviewed its `upheld` released the
+  decision, though the rule decided for both reviews is that an `--again`
+  draw releases nothing; and the exit was the draw's. A review record now
+  says whether it was an `--again` draw (`[review] again`); its verdicts
+  count, and a decision is released only when a review that is no
+  `--again` draw upheld it and none said otherwise (`reviews.upholding`).
+  Every draw prints its verdicts and the state apart, and the exit says
+  the state: 0 every decision reviewed released, 1 one held, 2 no review.
+  A review record without `again` is no longer read; 0.103.0 is the last
+  version that reads one — review again.
+- **The first measurement is the one git's history puts first, not the
+  clock.** report-check holds the low registration to the commit of the
+  first measurement, and that was the oldest run by name. A run id is
+  local time, so a run started under `TZ=Etc/GMT+12` sorted twelve hours
+  early and became first: a measurement at a commit without the
+  registration was passed over for a later one whose commit held it, and
+  no gap was named (audit 2026-10-27, A11).
+  `answering_run.first_measurements(area, pid, repo)` replaces
+  `first_measurement` and orders the measurements by the commit each record
+  names and git's ancestry (`repo.earliest_commits`, `is_ancestor`,
+  `commit_known`); the run id orders only runs at one commit, which share
+  their verdict. `runs.recorded_commit` returns the full sha (`git_full`)
+  instead of the short `git`; blockers show its first twelve characters.
+  Where git cannot order, each candidate is held: on diverged history (a
+  rebase, an amend, a side branch) the first of each branch, and every run
+  whose commit is not recorded or not in the clone — the latter a new
+  blocker naming the commit to fetch; until now such a run was held only
+  when its name sorted first. No new field, no schema change. 0.103.0 is
+  the last version that orders by run id. Limit: this protects the
+  registration, not every choice of a run — the answering run is still the
+  newest bound run by run id, local time, so which run answers can still
+  depend on the time zone it was started under. Rule, rejected
+  alternatives and limits: `docs/notes/2026-10-27-first-measurement-order.md`.
+- **finalize and report-check hold a number whose code changed since its
+  run.** No gate compared the code that produced the answering run's
+  number with the code now: a script fixed after the run, with no new
+  run, left the old code's number standing (audit 2026-10-27, A1;
+  red-team scenario g1). Station 3 now compares, for every kind and for
+  the answering run and each run it derives from, the measurement script
+  (the path its command names) with the hash its run recorded
+  (`script_sha`) and every module it imports — beside it, under `lib/` or
+  `src/` (`scope_sha.measured_code`) — with the tree the run started from
+  (its commit with the part of its `uncommitted.patch` for that module,
+  `repo.blobs_then`); an untracked sibling against the run's copy. Each
+  difference is a blocker naming the way out, the fix first: measure anew
+  with the code as it is and audit that run — restoring the old code
+  removes the difference, not a fault the change corrected; only for a
+  change not meant, the command that restores the code as it ran (`cp` of
+  the run's copy, `git cat-file blob <id> > <path>`). A module in another repository (a submodule, a link out
+  of the repository) is a warning, not compared. A run now keeps its
+  patch in a form that applies again whatever the user's diff settings
+  (`repo.tree_patch`: binary in full, no colour, no textconv, a/ b/
+  prefixes, unstripped); a patch an earlier labkit wrote is read as far
+  as it can be. Analysis code and the pin are not compared, so an analysis fix or
+  a pin raise needs no new measurement. A run that recorded no script, a
+  helper not committed when the run started, and a run with no commit are
+  held: what they ran is not recorded. Not seen: a change made and undone
+  in between, and code loaded another way. No field was added to the run
+  record. Areas whose measurement code changed since their answering run
+  are held from this release on; 0.103.0 is the last version that lets
+  them through.
+- **report-check holds an earlier decided BLOCKER until a follow-up
+  releases it.** Every BLOCKER decided `fixed`, `accepted`, `dismissed` or
+  `deferred` in a record not of the state reported is held
+  (`report_check.followup_findings`, `followup.release_holds`) until a
+  covering analysis record finds it `resolved` — on its decision as it
+  stands (`decision_digest`), with a required check shown
+  (`check_present`) — and no covering record holds another verdict on its
+  origin (a later draw on the same state does not outvote it); or until a
+  covering record carries it, where it is decided like any finding (an
+  accepted one renders as a Limit line). A carried finding `dismissed` or
+  `deferred` is held until a decision review of its record upholds that
+  (`--review` now asks about it). A BLOCKER `fixed` in the state reported
+  is held: no follow-up has seen the repair. Each sentence names the
+  missing step: a run that writes the required check, or the analysis
+  audit. Areas with decided BLOCKERs in older records owe one analysis
+  audit of the current state before reporting again; 0.103.0 is the last
+  version that releases without it. Why: the fixed-followup pilots
+  (`docs/usability/2026-10-26-fixed-followup-pilot*.md`) — a partial fix
+  closed `fixed` released t3's leak, and an older `accepted` limit fell out
+  of the result.
 
-- **The follow-up judges every earlier decided BLOCKER, and carries what it
-  does not find resolved.** The analysis prompt's piece is now `EARLIER
-  DECIDED BLOCKERS`: every BLOCKER decided `fixed`, `accepted`, `dismissed`
-  or `deferred` in a record that is not of the state now audited, with its
-  decision (status, effect, reason). `resolved` means the fault named is
-  not in the state shown — repaired, or the finding did not apply; the why
-  says which. On `unresolved` or `not_assessable` labkit writes the finding
-  into the new record as a *carried* finding: open, the origin's text under
-  `carried from <record>#<n> (<verdict>): `, the check and note kept,
-  `carries = "<record>#<n>"` (bound in the decision digest). The record's
-  `blockers` counts it, `carried_blockers` says how many; a reader refuses
-  a record whose carried findings and counts disagree. `followup.chain`
-  follows `carries` to the origin and refuses a reference to no finding,
-  to the same or a later record, to no BLOCKER, a loop, and two carried
-  findings of one origin in one record; only the head of each origin is
-  shown again, so a limit does not multiply. Operating limits of the
-  piece: 40 entries, 60 kB — past either the audit refuses, the record
-  keeps the measured size as `followup`. An area with more than one
-  protocol refuses a follow-up while earlier decided BLOCKERs exist (the
-  records name no protocol). Why: an `accepted` limit in an older record
-  left the result without trace — the renderer reads covering records
-  only (decided 2026-10-26 after the fixed-followup pilots).
-  `findings.FixedBlocker` and `fixed_blockers` moved to
-  `followup.Member` and `followup.earlier_blockers`.
+- **Protocol standard 0.23: `repeat_cost = "low" | "high"` replaces
+  `cost = "seconds" | "minutes" | "hours"`.** The gates read two lanes
+  (`standard_contract.lane`: `seconds` against the rest) under three
+  names: `minutes` and `hours` never owed different checks (888 commits,
+  no hours-only scar in any lab), and the time words misled — two cold
+  agents declared `minutes` for sixteen calls and waited fifteen minutes
+  of audit for a 64-second run (2026-10-05). The field now names the
+  dimension the field guide had to add in prose, the price of a repeat;
+  `seconds` is `low`, `minutes` and `hours` are `high`, an unfilled value
+  still reads as `high`. Renamed with it: `protocol_block.REPEAT_COSTS`,
+  `Head.repeat_cost`, `standard_contract.LOW | HIGH`, `LOW_LANE`,
+  `LOW_CUT`, `effective_repeat_cost` (was `cost_tier`), `Lane.repeat_cost`,
+  `protocol_cuts.low_cut` and its template marks `<!-- l -->`, `<!-- lb -->`,
+  `<!-- lm -->` (were `s`, `sb`, `sm`), `protocol_check.Field.low_cut`,
+  `low_registration_missing`, `protocol_history.repeat_cost_lowered`
+  (`high -> low` warns as before), `labkit-init exp --repeat-cost low|high`,
+  `usability stage --repeat-cost`, `protocol-fill PROTOCOL repeat_cost=…`,
+  and the run record's `repeat_cost` (was `cost_tier` in `config.json`).
+  Migration, said in the refusal of a 0.22 head (`protocol_block.MIGRATION`):
+  set `standard = "0.23"` and rename the key with its value. 0.103.0 is
+  the last version reading standard 0.22 and the three time words; the
+  refusal of the intermediate `kind = "count"` (`COUNT_RENAMED`) goes with
+  it, a 0.22 head is refused before its kind is read. The lab rule LAB-017
+  keeps its name, "The number of audits follows the cost tier": the two
+  values are its tiers. The run record is schema 4 (`runs.RUN_SCHEMA`): a
+  schema-3 record is refused naming 0.103.0, not its keys. The lowered-tier
+  warning compares from the first commit this standard reads and counts
+  the earlier ones it cannot (`protocol_history.first_repeat_cost`); a
+  usability probe staged with `--cost` is refused at restamp with the
+  mapping (`usability.stamped_repeat_cost`), never read as unset. Rollout
+  to the labs' protocols, `AGENTS.md` and pins is a separate task.
 
-- **The analysis audit judges every earlier `fixed` BLOCKER.** The prompt
-  shows each BLOCKER of the area decided `fixed`, as `<record>#<n>` with
-  the reason it was closed with; the auditor writes one `FIX · <record>#<n>
-  · resolved|unresolved|not_assessable · <why>` line per finding, from the
-  files and rows shown only; the why may go on in the lines right below,
-  up to a blank line or the next entry, and is kept whole (an entry that
-  also names another shown finding is refused). The record stores them as `[[fix_verdict]]`
-  tables, each bound to the decision as shown (`findings.decision_digest`):
-  a changed status or reason is another decision. A FIX line that does not
-  read, one on a finding the prompt did not show, a second one on the
-  same finding, a word outside the three, and a shown decision changed
-  during the call record nothing (exit 2); a shown finding without a line
-  has no verdict and stays unchecked. No gate reads the verdicts yet: they
-  are the pilot's data (eighth haiku round, t3: a leak closed `fixed` by
-  dropping one of two leaking features, the check the finding asked for
-  never run). A record without fix verdicts reads as before.
-  A finding may require the diagnostic its repair must show: the auditor
-  closes its line with `· check: <metrics key>`, stored as `check` in the
-  `[[finding]]` table when the record is written; `--decide` never sets or
-  drops it, and it is part of `findings.decision_digest` (a finding
-  without one keeps its earlier digest, so standing reviews stay valid).
-  The follow-up prompt shows that key's whole value from the metrics.json
-  it renders, or that it is missing; each fix verdict records `check` and
-  `check_present`, computed from that same snapshot, never by the model
-  and never by reading the file again. No check required (no field) and a
-  required key missing (`check_present = false`) are two states; a
-  `resolved` on a missing key is kept as written. After the key the
-  auditor may say what its value must show, as ` (<note>)` or
-  ` — <note>` to the end of the line: only the key is machine-read, the
-  note is stored whole as `check_note` and bound in the digest with the
-  check; any other text after the key, and two check fields in one
-  finding, refuse the record (second fixed-followup pilot: six of twelve
-  records lost to `check: <key> (<note>)` while only the bare key read).
-- **Every audit answer is kept before it is read.** `labkit-audit`
-  (preflight, analysis) writes the model's answer unchanged to
-  `audits/answers/<attempt id>.txt` right after the call, and the
-  attempt's end in `attempts.jsonl` names it (`"answer"`), also when the
-  answer does not read and no record is written. A kept answer that is
-  gone is a gap like a missing record (`attempts.gaps`). It releases
-  nothing. Why: the six refused answers of the second pilot survived only
-  because the pilot's runner passed `--out`.
+- **A resume refuses another model behind the same alias.** The judge's
+  instrument (`lanes.Lanes.instrument`) held the prompts' digest and the
+  alias only: models.toml edited between two processes put another model
+  behind the alias, the resume kept the old model's answers and added the
+  new one's, and the balance passed (review 2026-10-23). The instrument
+  now also carries `model_identity` — backend and model, `name@digest`
+  for ollama (`llm.identity`, the spelling `llm.provenance` stamps) — and
+  `batch.Store` refuses rows of another (`InstrumentError`, naming both).
+  Endpoints are not part of it: a cluster host changes with every
+  allocation. An ollama digest that read `unavailable` in one process and
+  a digest in the next is refused too — the weights cannot be shown to
+  match. `lanes.balance` also refuses a file whose rows carry more than
+  one instrument, whichever they are (rows merged by hand, or resumed
+  before this). Migration: an output file written before holds rows without
+  `model_identity` and is refused on resume; finish it with labkit
+  0.103.0, or measure again into a new output file. Kept results are not
+  touched: `--eval-only` and the analysis read the rows as they stand.
+- **An audit record binds the registration it judged.** `[audit]` carries
+  `registration = { kind = "…", "Question / hypothesis" = "<digest>", … }`:
+  the head's kind and, per field the kind owes
+  (`standard_contract.registration_fields`), the digest of its value,
+  whitespace collapsed (`protocol_check.registration_stamp`). A record
+  covers the protocol only while they are what the audit judged; the
+  refusal names what changed — `the registration changed after the audit
+  (Question / hypothesis)` — in the freeze gate, preflight, protocol-check
+  and report-check. The report fields written after the run (Conclusion,
+  Recorded results, Limits, the run list) are not in it. Why (review
+  2026-10-23): the question was rewritten from the mean line count to the
+  mean number of causal claims after the number was adopted, and the old
+  analysis audit still covered it — report-check exited 0. A record
+  without `registration` is no longer read; labkit 0.103.0 is the last
+  that reads one. Migration: run the audits again (`labkit-audit <area>
+  --mode preflight|analysis`) — a digest of what an old audit saw cannot
+  be written by hand.
+- **A failed audit attempt names its cause, and an unproven one stops
+  the auditing of that state.** `audits/*-failed.toml` carries `cause =
+  "unavailable" | "unproven"`: the backend gave no answer, or the
+  requested model did not write it whole (`llm_backends.UnprovenAnswer`).
+  After an `unproven` attempt `labkit-audit` refuses another try on the
+  same code, promises and model before any call
+  (`findings.stopped_attempt`) — in the fit probes a safety classifier
+  stopped the auditor again on almost every try, and each try cost
+  minutes and about a dollar. Another alias (`--model`) may try. A failed
+  record without `cause` is not read; labkit 0.103.0 is the last that
+  reads one. Migration: add `cause = "unavailable"` to each
+  `audits/*-failed.toml` written before. Where no audit covers the state
+  and an unproven attempt exists, the refusal of `report-check` and the
+  freeze says so — the model, the count, the record — instead of only "no
+  audit" (`findings.audit_coverage`); `usability score` shows `audit
+  attempts failed · N (K unproven)`.
+- **Protocol standard 0.22: the head says what the kept number asserts
+  (`kind`).** `kind = "compute" | "fit" | "apply"` below `cost`: a
+  computation judges no prediction (a measurement that cannot pass trivially), a fit
+  judges a model trained or adjusted in the experiment, an apply a model
+  used unchanged. The registration and the skeleton follow the kind, not
+  the model technology (`standard_contract.registration_fields(kind,
+  model)`, `skeleton(cost, kind, model)`, `has_bar`): a computation owes its
+  question; a fit or an apply also the success criterion, the
+  admissibility condition and the null condition / anchors, and carries
+  promise tables at every tier; a `[model]` table adds the data profile
+  and the prompt. `labkit-init exp` takes `--kind` and stamps nothing
+  without it; `--kind compute --model` stamps the claim keys below; a fit at `seconds` gets
+  the estimator skeleton (until now the compute's, now the fit skeleton). The template marks the
+  fields a bar owes with `<!-- sb -->` (`protocol_cuts.SECONDS_BAR_TAG`),
+  and the seconds cut carries them for a fit without a model. Loud, never
+  a fallback: an unknown kind does not read (`protocol_block.head`), a
+  placeholder stands among the head's placeholders and refuses a full run,
+  a `compute` with a `[model]` table says what its number describes,
+  `[model] number_describes = "model_outputs" | "target_property"`: the
+  model's outputs, or a property of the data with the model as annotator;
+  the latter owes `[model] annotation_validity = { protocol = "p-…" }` (an
+  apply of this repo with a declared result, bound by protocol-check and
+  preflight, `protocol_history.check_annotation_validity`) or `{ doi =
+  "10.…" }` (its form only); evidence with `model_outputs`, and either key
+  with a fit or an apply, is a must finding (`protocol_check.kind_gap`).
+  Neither form proves the annotator suits — that stays the audit's, which
+  is shown the bound protocol, its result, the model its run recorded
+  (`answering_run.recorded_models`) and its prompt, today's models.toml
+  entry and prompt sources marked as today's; the area stamp
+  (`scope_sha.validation_basis`) covers the protocol, the result, the run
+  records and the scripts — not today's models.toml — so
+  an audit record goes stale when the bound validation changes (a DOI by
+  its string only — the cited content is bound by nothing). Areas without
+  `annotation_validity` keep their stamp. An
+  intermediate commit refused `compute` with a `[model]` table outright
+  (and the usability staging rewrote it to `apply` in silence): a share
+  of model labels judges no prediction, but its claim about the data needs
+  the annotator's evidence. Migration, said in the refusal of a 0.21
+  head (`protocol_block.MIGRATION`): set `standard = "0.22"` and add the
+  `kind` line (`protocol-fill PROTOCOL kind=…`); 0.103.0 is the last
+  version reading standard 0.21, and no code reads it here. Why: a
+  RandomForest at `seconds` had no `[model]` alias, got the count's
+  skeleton and owed no criterion — t5 and t18 of the fifth haiku round;
+  the writing probe (`docs/notes/2026-10-22-kind-writing-probe.md`)
+  registered a count, two fits and an apply under the schema without a
+  special rule. The kind was first stamped `count` and renamed `compute`
+  before this release: it names what the number asserts — a descriptive
+  or inferential statistic of fixed data, no prediction judged (ML
+  lecture, ML:VII-1) — and not the one operation of counting. Migration
+  for repos pinned to an intermediate commit: `kind = "count"` →
+  `kind = "compute"` in the head (the refusal says so,
+  `protocol_block.COUNT_RENAMED`), `labkit-init exp --kind count` →
+  `--kind compute`; the skeleton `standard_contract.COUNT` is
+  `COMPUTE`.
 
-- **`labkit-audit AREA --report-review REPORT`: a cold reader on a report
-  that discusses a run (a discussion block).** In the seventh haiku round
-  both agents that took the mark (t3, t18) left the run's numbers in the
-  report as results — at t18 "C1 … PASS" under an accepted decision that
-  makes C1 not assessable. One model call gets the report with line
-  numbers, the protocol, each discussed run's `metrics.json` and every audit
-  record with its decisions and failed attempts, and names lines as
-  `result` or `contradiction` (`report-review.agent.md`,
-  `gates/report_review`). It writes its claims to
-  `audits/report-reviews/<minute>-review.toml` with the fingerprint of
-  exactly the inputs it read (`formats/report_reviews`; its own folder and
-  the attempt journal are not among them, so writing the record leaves the
-  state as it was), and report-check holds a report with a discussion
-  block until a review of its state names no claim
-  (`report_check.report_review_owed`, at the stop and the commit; at the
-  commit the report and protocol as the index holds them, and only records
-  the index holds). A claim holds the state: a later clean draw does not
-  release it, and the command refuses another draw on it (`--again` draws
-  as a measurement and releases nothing); a changed input — the report,
-  the protocol, a run's metrics, an audit decision — owes a review of the
-  new state. Decided after the eighth haiku round (2026-10-26, t18): as a
-  hint at the commit the review was passed over, and the discussed run's
-  numbers stayed in the report as results. Pilot: both delivered reports
-  caught in 4 of 4 draws, clean counterexamples clean in 10 of 10,
-  0.08–0.16 USD a call (`docs/usability/2026-10-25-report-review-pilot.md`).
-  A report that cites no run is out of its reach. `claude-hook
-  post-change` names the command for a changed report that discusses a
-  run (once per text); nothing starts it but the agent.
-
-- **A crashed run keeps why it broke off.** When the block of
-  `runlog.run` raises, the run directory gets `failure.json` — the
-  exception's type, message and time (`runs.write_failure`,
-  `runs.read_failure`) — and `runlog --wait` names it beside CRASHED.
-  Until now the reason stood on stderr alone; a claude-cli answer another
-  model wrote ends a run this way. A failure to write the file is said on
-  stderr and never masks the exception.
-- **A fit probe for the usability harness.** `usability stage <dir> --task
-  fit --data <train.csv>` stamps a `kind = "fit"` area at seconds with the
-  estimator skeleton and plants the DILI molecules the operator hands in
-  (columns `standardised_smiles`, `vDILIConcern`; the package ships no
-  benchmark data) with a task sheet asking for the registered lane's
-  out-of-fold accuracy under `c1_score`; the score reads it as a model's
-  number (present, within [0, 1], the null lane reported). The first cold
-  probe of the fit lane after standard 0.22.
-- **`docs/workflow.md` and an executable count walkthrough.** The steps
-  from a registered question to a kept number, one section each: the
-  command, what it reads and changes, what must hold before it, what a
-  clean exit means; the `minutes`/`hours` extras at their place; the
-  decision review's conditional step. `docs/examples/count-walkthrough.sh
-  <dir> [VENV]` walks them on the stamped count task (registration, run,
-  finalize, the analysis record as a marked stand-in for the model call,
-  adoption, report block, gate), then retypes a generated number in the
-  report and in the protocol and shows the refusal each time;
-  `tests/test_workflow_example.py` runs it. A cold reading probe answered
-  the page's four acceptance questions rightly
-  (`docs/usability/2026-10-22-workflow-reading-probe.md`); its stumbles are
-  worked in, and the skeletons' hint after a run names what `--from-run`
-  writes as the command does ("Recorded results, [result] run and the run
-  entry", not "Answer, Result and Runs").
-- **A decision review: `labkit-audit AREA --review [--record FILE]`.** A
-  second, cold auditor gets every accepted finding of one analysis record
-  whose effect is `stands`, with the person's reason, the protocol (the
-  registration and the reported claim — Conclusion, Recorded results,
-  Limit lines), the files the findings name as the record's auditor read
-  them (the area snapshot, held to the record's `scope_sha`) and what the
-  auditor was shown of the run (held to `shown_sha`), and answers per
-  decision `upheld`, `rejected` or `insufficient` with one sentence
-  (`decision-review.agent.md`, `gates/decision_review`). The verdicts are
-  written beside the records as `audits/<minute>-review.toml`
-  (`formats/reviews`), bound to the record, its code, its run as shown,
-  the claim as judged (`claim_sha`: the Conclusion,
-  `protocol_check.reported_claim`; the Recorded results and Limit lines
-  are shown to the reviewer as they render and are bound through the
-  record and the run) and each
-  decision as it stood (`findings.decision_digest`): only `upheld`
-  releases a `stands`; `rejected`, `insufficient`, a review of a decision
-  since changed and one of a claim since rewritten do not. Every draw on
-  one state counts (`reviews.contested`): once a review of the decision
-  as decided and claimed now said `rejected` or `insufficient`, no later
-  draw releases it, and `--review` refuses another draw on that state
-  unless `--again` asks for one as a measurement (it never releases).
-  After `rejected` the person decides again first (limits the claim,
-  changes the effect, fixes the fault); a new audit does not by itself
-  settle it. `--review` refuses while the Conclusion is a placeholder
-  (the claim it judges; a review made before it goes stale when it is
-  written), and `--record` takes a record's bare file name for
-  `--review`, `--decide` and `--findings`, resolved under the area's
-  `audits/` — both from the fresh round on 86e38bc (judge-2 paid a
-  second review and was refused once on the name;
-  `docs/usability/2026-10-22-sandbox-86e38bc.md`). Replayed on the fifth round (two passes, 1.77 USD) and every
-  decision assessed from its sources (`docs/usability/2026-10-22-decision-review-*.md`). `report-check` names every `stands` of
-  the covering records that no review upholds, with the review's state:
-  a **blocker** for an accepted BLOCKER (a severe finding is not settled
-  by a reason alone; `protocol-fill --from-run` refuses the adoption the
-  same way), a warning for an accepted WARNING for now. A `--from-run`
-  that passed before is refused when an accepted BLOCKER with `stands` has
-  no upholding review. A report whose decision lines
-  and closing counts disagree, or that decides on a finding not asked
-  about, records nothing (exit 2); the review is refused when the code or
-  the run is no longer what the record's auditor saw. Why: labkit-paper
-  area 09, fifth haiku round — 28 findings, 15 accepted with no action,
-  six with the reason "Finding noted"; of four findings at decision
-  points, one was fixed.
-- **The seconds release holds the registration to the commit of the first
-  measurement.** `report-check` (stage 2, the registration, where the lane owes it
-  instead of the freeze) reads the oldest full run bound to
-  the protocol (`answering_run.first_measurement`), the commit its record
-  names (`runs.recorded_commit`) and the protocol as that commit holds it
-  (`protocol_history.registration_in_commit`): the protocol not committed
-  there, or the fields the lane owes not written there, blocks; outside a
-  repository a warning, as the provenance station's. runlog's start gate
-  reads the tree, which a line written a minute before the run passes;
-  what stood before the number is what the commit holds. The fields are
-  the lane's (`standard_contract.registration_fields`): the question, with
-  a `[model]` table also criterion, admissibility condition and data
-  profile. Why: labkit-paper area 09, fifth haiku round — none of the
-  three labkit agents had committed criterion and admissibility condition
-  before the first measurement.
-- **finalize blocks on an audit record of a deleted run.** Station 8 now
-  also holds every analysis record to the area's runs: a record naming a
-  run that has no `runs/<id>/` any more is a blocker where the record
-  stands (`findings.records_of_gone_runs`). A run an audit read is a kept
-  run; the record is the evidence that it existed. Why: labkit-paper area
-  09, fifth haiku round (labkit 0.102.0), t18 removed two measured runs
-  with `rm -rf runs/…` after their analysis audits, `runs.tsv` still
-  listed them, and finalize read the three records left behind as "every
-  finding decided".
+- **`preflight_audit` names the decided record, not a line.** The head
+  field is the file name of the decided preflight record under the area's
+  `audits/` (`preflight_audit = "2026-09-08T14-12-preflight.toml"`, as
+  `labkit-audit --mode preflight` prints it when it writes one); `""`
+  until then and at `seconds`. The gates read the record it names
+  (`findings.audit_record_gap`: no such record, another mode, other code
+  or another promise block than the area carries now, a finding still
+  open — each a refusal at the run and a blocker in `preflight` once
+  frozen; `n/a` or any other text names no record and is refused as
+  before). A line of the old form (`<date> · scope sha <12 hex> · N
+  findings`) is read as naming no record: 0.103.0 is the last version
+  that reads it; a frozen protocol moves by writing its record's name
+  into the field. `scope_sha.AUDIT_SHA`, `scope_sha.audit_stamp_drift`,
+  `findings.waived_audit_gap` and `findings.audit_line_gap` are gone. Why:
+  the last machine-read text inside a TOML value (review 2026-10-22) —
+  the record carries its stamp, its date and its decisions, so the head
+  copied a sha a regex had to find again.
 
 ## 0.103.0 — 2026-10-22
 
