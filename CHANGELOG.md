@@ -34,6 +34,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The reference an agent is sent to is shorter.** The field guide
+  (`protocol-check --guide`) is 3,790 words (was 6,555), the agent guide
+  (`labkit-next --guide`) 2,861 (was 4,727), both in the SimpleEnglish
+  document register; a field the field guide does not list has only its
+  template help. Their history moved to
+  `docs/notes/2026-10-31-field-guide-cut.md`.
+
 - **The protocol template is 1,665 words (was 2,225).** Each field's
   help text is one short instruction in the procedural register of the
   SimpleEnglish skill (condition first, no semicolon, must not may); the

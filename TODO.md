@@ -2561,10 +2561,11 @@ Als Nächstes, in dieser Reihenfolge:
    Hilfe eine kurze Anweisung; `protocol-check --contract` beginnt mit dem
    `labkit-next`-Befehl. Vorlage, `AGENTS.md` und (auf `audit-prompts`) die
    Audit-Prompts liefen durch den Self-Check des SimpleEnglish-Skills
-   (`~/projects/SimpleEnglish`, prozedurales Register). Offen: der
-   Feldleitfaden `labkit/docs/protocol-field-guide.md` und die
-   Agenten-Anleitung `labkit/docs/agent-guide.md` sind Referenz und nicht
-   gekürzt.
+   (`~/projects/SimpleEnglish`, prozedurales Register). Danach auch die
+   Referenz: Feldleitfaden 3.790 Wörter (war 6.555), Agenten-Anleitung
+   2.861 (war 4.727), je von einem Subagenten nach dem Skill gekürzt und
+   von mir gegengelesen; die Herkunft der gestrichenen Stellen in
+   `docs/notes/2026-10-31-field-guide-cut.md`.
 6. Codex-Hooks im Container nachweisen (Vertrauensfreigabe im Wrapper, ein
    Hook feuert), dann der Codex-Screen.
 7. Branch `audit-prompts` (`92a47d5`, Prompts der Audit-Agenten gekürzt,
