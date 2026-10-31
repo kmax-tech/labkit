@@ -2490,8 +2490,12 @@ Refits abgelehnt (ein Zug entschied einst ein Urteil); die Timebox wird
 Budget: beginnt das Feld mit einer Dauer (`45 min — …`), misst der Fit die
 erste Falte, rechnet hoch und stoppt vor dem Budget mit Zahlen und Ausweg.
 Verworfen: das Nullband bei low aus Permutationen der Vorhersagen (andere
-Streuung, Methodenwechsel). Offen: Minuten je Falte auf 15 und 71 messen,
-bevor der Vertrag der Druckrunde Budgets nennt.
+Streuung, Methodenwechsel). Gemessen (Sandbox-Image, 4 CPUs, 8 GB, ein Fit
+der registrierten Schätzer): 71 `LinearRegression` 204 s je Fit (float64),
+96 s (float32) — alter Plan 107 bzw. 51 min, `low` 35 bzw. 17 min; 15
+`RandomForest` 2,5 bis 9,1 s je Fit — alter Plan 1,3 bis 4,8 min je Messung,
+die Stunde ging in zwei bis sieben Messungen. Für die Druckrunde: 71 mit
+float32 in der Vorbereitung und Timebox 25 min, 15 Timebox 5 min.
 
 Reported preliminary study = 3 und 4; was heute vorliegt, ist die
 Pilotphase, die sagt, wo es klemmt.
