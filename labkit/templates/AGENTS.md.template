@@ -26,9 +26,9 @@ must pass `--protocol <PROTOCOL>` to every command that accepts it.
    step, then return to 1.
 4. Stop when `labkit-next` prints `next: nothing`, or when you hand over.
 
-Every refusal names its next step. You must not get past a refusal with
-`--no-verify`, by editing or deleting audit or run records, or with ignore
-rules. The protocol is yours to edit; audit records and runs are not.
+Every refusal names its next step. Never get past a refusal with
+`--no-verify`. Never edit or delete audit or run records, and never add
+ignore rules for them. You can edit the protocol.
 `labkit-next --guide` prints the full workflow with the reason for each
 rule. Read the part for your current step only.
 
@@ -39,7 +39,7 @@ area and its protocol. In an existing area, keep its registered settings.
 
 | Setting | Decides | Choose |
 |---|---|---|
-| `kind` | What the number asserts | `fit`: data train, tune or select a model or procedure here. `apply`: a model used unchanged is judged against labels. `compute`: a quantity is calculated; no prediction is judged. |
+| `kind` | What the number asserts | `fit`: data train, tune or select a model or procedure here. `apply`: a model used unchanged is judged against labels. `compute`: a quantity is calculated, and no prediction is judged. |
 | `repeat_cost` | What one more measurement costs | `low`: you can repeat it at will. `high`: a repeat is expensive, so a preflight audit and a freeze come first. |
 | `type` | The claim | `confirmatory`: question, inputs and analysis stood before you saw any result. Otherwise `exploratory`. |
 
@@ -124,9 +124,8 @@ yourself: a green gate proves only what it checks.
 
 Name the cause before you change anything. With each decision list,
 `labkit-audit` prints the recovery routes. A refusal alone is no reason to
-stop: it names its next step. If a route cannot be taken because a
-prerequisite it names is missing, hand over without a result, and say
-which prerequisite is missing:
+stop: it names its next step. If a route needs a prerequisite that is
+missing, hand over without a result. Name the missing prerequisite:
 
 `protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried "<what you tried>" --into REPORT.md`
 
@@ -146,10 +145,10 @@ The handover adopts no result. A finding nobody could settle stays
 - One interpreter: `.venv/bin/python`. Install the pinned
   `requirements.txt`, freeze `requirements.lock`, and run
   `labkit-hooks install`. Tests: `.venv/bin/python -m pytest -q`.
-- If your harness limits how long a shell command may run, set
+- If your harness limits the duration of a shell command, set
   `LABKIT_FOREGROUND_TIMEOUT_S`. If runlog asks you to detach a
   measurement, detach it.
 - `experiments/NN-<name>/` holds one area per question. `lib/` holds this
-  repository's helpers; labkit's helpers come from the pinned package.
+  repository's helpers. labkit's helpers come from the pinned package.
   `models.toml` is the only place for model backends. `notes/` holds
   notes.
