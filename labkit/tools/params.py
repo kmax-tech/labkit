@@ -50,6 +50,7 @@ from labkit.formats.repo import (
     no_such_area,
 )
 from labkit.formats.runs import read_run_config
+from labkit.formats.scope_sha import parse_source
 from labkit.formats.answering_run import (
     bound_answering_run,
     lineage,
@@ -223,12 +224,13 @@ def script_literals(area: Path) -> dict[str, tuple[object, int]]:
     """Names assigned a literal at module level of scripts/01_measure.py:
     name -> (value, line). Empty without the script. A registered constant's
     copy is looked up here under its own name; the evidence rows take the
-    UPPER_CASE ones."""
+    UPPER_CASE ones. Raises SourceError (a ValueError) naming the script
+    when it does not parse."""
     script = area / MEASURE_SCRIPT
     if not script.is_file():
         return {}
     out: dict[str, tuple[object, int]] = {}
-    for node in ast.parse(script.read_text(encoding="utf-8")).body:
+    for node in parse_source(script).body:
         if not (isinstance(node, ast.Assign) and len(node.targets) == 1):
             continue
         target, value = node.targets[0], node.value

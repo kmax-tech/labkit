@@ -155,6 +155,8 @@ from labkit.checks.run_record_check import (
     single_draw,
 )
 from labkit.checks.readme_check import readme_placeholders, readme_route
+from labkit.checks.code_scan import unreadable_source
+from labkit.formats.scope_sha import SourceError
 
 
 def choose_answering_run(
@@ -624,9 +626,14 @@ def check_open_fields(
             f"{line} — a stamped placeholder, fill or delete the line",
             evidence_kind=GUARANTEED,
         )
-    route = readme_route(protocol.parent, protocol.name)
-    for line in route:
-        findings.warn(line, evidence_kind=GUARANTEED)
+    try:
+        route = readme_route(protocol.parent, protocol.name)
+    except SourceError as exc:
+        findings.take(unreadable_source(exc))
+        route = [str(exc)]
+    else:
+        for line in route:
+            findings.warn(line, evidence_kind=GUARANTEED)
     counted = check_data_counts(findings, protocol, text)
     if not holes and not stale and not route and counted:
         findings.note("  all fields filled")

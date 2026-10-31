@@ -13,6 +13,8 @@ import ast
 import re
 from pathlib import Path
 
+from labkit.formats.scope_sha import parse_source
+
 
 # the stamp's blanks may wrap lines; an HTML comment (`<!-- labkit:route -->`)
 # is a marker, not a blank
@@ -67,7 +69,12 @@ def readme_route(area: Path, protocol_name: str) -> list[str]:
     the markers, the protocol or a station not named, or
     `scripts/01_measure.py` without an `evaluate_rows`. No README: nothing.
     The block is checked, never written — finalize reads only; the stamp
-    writes it."""
+    writes it.
+
+    Raises:
+        SourceError: `scripts/01_measure.py` does not parse — the gate
+            reports it as a blocker (`code_scan.unreadable_source`).
+    """
     readme = area / "README.md"
     if not readme.is_file():
         return []
@@ -91,7 +98,7 @@ def readme_route(area: Path, protocol_name: str) -> list[str]:
         out.append("README.md route: scripts/01_measure.py does not exist")
     elif not any(
         isinstance(n, ast.FunctionDef) and n.name == "evaluate_rows"
-        for n in ast.parse(script.read_text(encoding="utf-8")).body
+        for n in parse_source(script).body
     ):
         out.append("README.md route: scripts/01_measure.py defines no evaluate_rows")
     return out

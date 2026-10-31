@@ -305,6 +305,16 @@ class CommandLine(unittest.TestCase):
             self.assertIn("no completed run bound to", err.getvalue())
             self.assertIn("bound to p-other", err.getvalue())
 
+    def test_a_script_that_does_not_parse_is_a_refusal(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            area = _area(d, script='min_acc = 0.7\nMODEL = f"{x\n')
+            _run(area, "2026-10-01T10-00-00_aaaa", {"min_acc": 0.7})
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = params.main([str(area)])
+            self.assertEqual(code, 2)
+            self.assertIn("01_measure.py: cannot be read as Python", err.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

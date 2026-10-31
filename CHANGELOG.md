@@ -688,6 +688,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A measure script that does not parse is a blocker in finalize, not a
+  traceback.** The open-fields station asked the README route whether
+  `scripts/01_measure.py` defines `evaluate_rows` through a bare
+  `ast.parse`; a sed edit that left an unterminated f-string (Qwen pilot)
+  ended finalize with a `SyntaxError` and no finding at all. The route
+  check and `labkit-params` now parse through `scope_sha.parse_source`,
+  the one parse behind the code gates: finalize reports one guaranteed
+  BLOCKER naming the file and line (`cannot be read as Python`), and
+  `labkit-params` refuses with the same sentence.
+
 - **The auditor's instruction no longer asks a computation for a
   criterion.** `experiment-preflight.agent.md` asked every registration
   for "question, success criterion, admissibility condition" and refused

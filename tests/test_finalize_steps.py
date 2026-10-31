@@ -8,7 +8,9 @@ from pathlib import Path
 from protocol_fixture import head, run_record  # noqa: E402
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
-from labkit.formats import repo
+from labkit.formats import protocol_block, repo
+from labkit.formats.gate import Findings
+from labkit.formats.scope_sha import SourceError
 
 
 class Steps(unittest.TestCase):
@@ -237,6 +239,38 @@ class ReadmeRoute(unittest.TestCase):
                 readme_check.readme_route(area, "PROTOCOL-a.md"),
                 ["README.md route: scripts/01_measure.py defines no evaluate_rows"],
             )
+
+    def test_a_script_that_does_not_parse_raises_naming_it(self):
+        # a sed edit left an unterminated f-string (Qwen pilot): a traceback
+        # out of finalize, not a finding
+        broken = 'def evaluate_rows(rows):\n    return f"{rows\n'
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, ROUTE, script=broken)
+            with self.assertRaises(SourceError) as caught:
+                readme_check.readme_route(area, "PROTOCOL-a.md")
+            self.assertIn("01_measure.py", str(caught.exception))
+            self.assertIn("line 2", str(caught.exception))
+
+    def test_finalize_takes_a_script_that_does_not_parse_as_one_blocker(self):
+        broken = 'def evaluate_rows(rows):\n    return f"{rows\n'
+        for script, blockers in (
+            ("def evaluate_rows(rows):\n    return {}\n", []),
+            (broken, ["01_measure.py"]),
+        ):
+            with self.subTest(blockers=blockers), tempfile.TemporaryDirectory() as d:
+                area = self._area(d, ROUTE, script=script)
+                text = head(repeat_cost="low")
+                protocol = area / "PROTOCOL-a.md"
+                protocol.write_text(text, encoding="utf-8")
+                found = Findings(tell=None)
+                finalize.check_open_fields(
+                    found, protocol, text, protocol_block.head(text)
+                )
+                self.assertEqual(len(found.blocked), len(blockers))
+                for message, name in zip(found.blocked, blockers):
+                    self.assertIn(name, message)
+                    self.assertIn("cannot be read as Python", message)
+                self.assertFalse([w for w in found.warned if "route" in w])
 
     def test_no_readme_is_nothing(self):
         with tempfile.TemporaryDirectory() as d:
