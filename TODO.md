@@ -2481,9 +2481,17 @@ dem Pre-Run-Hook nur das Sitzungsverzeichnis (Note 2026-10-30-codex-hooks).
 pubmedqa50 ist beidseitig auf 50 gekürzt (labkit-paper `5a1ba8b`), damit die
 Apply-Sorte zwei Tasks hat; der Deckel-Satz (ein Aufruf je Frage) ist offen.
 Druckrunde: vier Tasks 21, 34, 60, 15 (plus pubmedqa50, wenn der Probelauf
-die Aufrufzahl bestätigt), zehn je Zelle, 8 GB je Container; Fit-Skelett
-vorher auf drei Falten und einmalige Null-Refits bei low, mit gemessenem
-Budget auf 15; 71 bleibt draußen (EEG-Arrays, andere Messgröße).
+die Aufrufzahl bestätigt), zehn je Zelle, 8 GB je Container; 71 bleibt
+draußen (EEG-Arrays, andere Messgröße). Fit-Skelett gebaut (Zweig
+`fit-budget`, 2026-10-31, Note `docs/notes/2026-10-31-fit-budget.md`): Plan
+je `repeat_cost` (`low` 3 Falten × (1 + 2) = 9 Fits, `high` 5 × (1 + 5) = 30
+wie bisher), `n_folds` und `null_refits` in der Lauf-Config, unter zwei
+Refits abgelehnt (ein Zug entschied einst ein Urteil); die Timebox wird
+Budget: beginnt das Feld mit einer Dauer (`45 min — …`), misst der Fit die
+erste Falte, rechnet hoch und stoppt vor dem Budget mit Zahlen und Ausweg.
+Verworfen: das Nullband bei low aus Permutationen der Vorhersagen (andere
+Streuung, Methodenwechsel). Offen: Minuten je Falte auf 15 und 71 messen,
+bevor der Vertrag der Druckrunde Budgets nennt.
 
 Reported preliminary study = 3 und 4; was heute vorliegt, ist die
 Pilotphase, die sagt, wo es klemmt.

@@ -54,8 +54,8 @@ reasoned value, and `--calibrate-null` shows the fixed rule here
 (`NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). A protocol that registers a fixed null predictor
 returns it from `make_null_predictor()` instead; its score plus `margin`
 is the bar, and [quality-check-2] holds it within `null_band` of `chance_of()`. At fit
-the null lane refits on permuted labels `NULL_REFITS` times, each draw
-seeded from the run's seed, its fold and its number: [criterion-1]'s bar is the
+the null lane refits on permuted labels `null_refits` times per fold (the
+fit plan by repeat cost, `FIT_PLAN`), each draw seeded from the run's seed, its fold and its number: [criterion-1]'s bar is the
 mean of their scores plus `margin`, [quality-check-2] holds that mean within
 `null_band` of `chance_of()`, and the draws' scores (`quality_check_2_draw_scores`)
 show how far one strays — one refit's draw decided a fit's verdict
@@ -72,7 +72,7 @@ Measurement contract:
     or as the mean (r2) and is counted on its own as `quality_check_1_empty`.
   - [criterion-1] passes when the registered lane's score is at least the bar plus
     `margin`: at apply with the permuted null its exact expectation
-    (`permutation_expectation`), at fit the mean of the `NULL_REFITS`
+    (`permutation_expectation`), at fit the mean of the `null_refits`
     permuted-label refits, with a fixed null predictor its score.
   - [quality-check-1] checks the yield (at most `max_empty` labelled items without a
     prediction); [quality-check-2] that the null lane scores within `null_band` of its
@@ -116,6 +116,7 @@ import json
 import math
 import random
 import sys
+import time
 from collections import Counter
 from dataclasses import asdict, dataclass, field, replace
 from fractions import Fraction
@@ -128,11 +129,12 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
-from labkit.formats import deliverable, promises, protocol_block, scope_sha, standard_contract
+from labkit.formats import deliverable, promises, protocol_block, scope_sha, standard_contract, timebox
 from labkit.formats.repo import next_after_run
 from labkit.formats.answering_run import first_measurements
 
-KIND = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).kind
+HEAD = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
+KIND = HEAD.kind
 
 # written by 00_prepare.py: id · features (a list of numbers) · gold (null for
 # the unlabelled split) · split ("train" | "test")
@@ -154,7 +156,15 @@ FEATURES_FIELD = "features"                     # TODO: the item field holding t
 GOLD_FIELD = "gold"
 SPLIT_FIELD = "split"
 SCORE = "accuracy"                              # TODO: accuracy | r2 | auc — the one the criterion names
-N_FOLDS = 5
+#: the fit plan by repeat cost — (folds, permuted-label refits per fold) —
+#: read from the protocol's head, so the cost of a run follows what the
+#: protocol registered: at `low` 3 × (1 + 2) = 9 fits, at `high` 5 × (1 + 5)
+#: = 30. Both go into the run's config (`n_folds`, `null_refits`): a changed
+#: plan is a changed config. Fewer than two refits are refused — one draw
+#: decided a verdict once (docs/notes/2026-10-31-fit-budget.md).
+FIT_PLAN = {"low": (3, 2), "high": (5, 5)}
+N_FOLDS, NULL_REFITS = FIT_PLAN[HEAD.repeat_cost]
+MIN_NULL_REFITS = 2
 SEED = 0
 # TODO: the estimator and its FIXED parameters, as text — it is the
 # instrument's version (estimator_sha): a changed line is a changed config.
@@ -168,10 +178,6 @@ LANES = (*SCORED_LANES, "test")
 #: null_band; a protocol registers its own (`null_permutations`,
 #: `null_band_quantile`) beside null_band, which the first measurement holds
 NULL_PERMUTATIONS = 200
-#: fit: how many permuted-label refits the null lane takes in the run —
-#: fixed before any run; [criterion-1]'s bar and [quality-check-2] read their mean (null-lane
-#: decision, 2026-10-28: one refit's draw decided a verdict)
-NULL_REFITS = 5
 NULL_BAND_QUANTILE = 0.99  # null_band = this quantile of |null − permutation expectation|
 
 
@@ -248,7 +254,9 @@ class MeasureConfig:
     null_band_quantile: float | None = None
     null_permutations: int | None = None
     seed: int = SEED            # folds, permutation, estimator
-    n_folds: int = N_FOLDS
+    n_folds: int = N_FOLDS      # fit: the plan by repeat cost (FIT_PLAN), recorded with the run
+    null_refits: int = NULL_REFITS  # fit: permuted-label refits per fold; [criterion-1]'s bar and
+                                # [quality-check-2] read their mean, each draw is kept
     score: str = SCORE
     # the instrument's version: the estimator line, so a changed parameter is
     # a different config even when every threshold stays
@@ -320,25 +328,27 @@ def instrument(cfg: MeasureConfig, items: list[dict]) -> dict:
             "seed": cfg.seed, "n_folds": cfg.n_folds, "items_sha": batch.content_sha(items)}
 
 
-def null_draws() -> list[int | None]:
+def null_draws(cfg: MeasureConfig) -> list[int | None]:
     """The draws of the null lane, as its rows number them: at fit the
-    `NULL_REFITS` refits (0, 1, …), at apply one unnumbered draw."""
-    return list(range(NULL_REFITS)) if KIND == "fit" else [None]
+    `cfg.null_refits` refits (0, 1, …), at apply one unnumbered draw."""
+    return list(range(cfg.null_refits)) if KIND == "fit" else [None]
 
 
-def expected(items: list[dict]) -> list[dict]:
-    """The rows a complete run holds, by id: the registered lane and each
-    null draw over the labelled items, the test lane over the unlabelled
-    ones."""
+def expected(items: list[dict], cfg: MeasureConfig) -> list[dict]:
+    """The rows a complete run holds under CFG's plan, by id: the registered
+    lane and each null draw over the labelled items, the test lane over the
+    unlabelled ones."""
     return ([{"id": f"registered:{it['id']}"} for it in labelled(items)]
-            + [{"id": row_id("null", it, d)} for d in null_draws() for it in labelled(items)]
+            + [{"id": row_id("null", it, d)} for d in null_draws(cfg) for it in labelled(items)]
             + [{"id": f"test:{it['id']}"} for it in unlabelled(items)])
 
 
 def measure(cfg: MeasureConfig, items: list[dict], out: Path,
             prov: dict | None = None, probe: bool = False,
-            registered: list | None = None) -> list[dict]:
+            registered: list | None = None, budget_s: int | None = None) -> list[dict]:
     """Predict every item in its lanes and write OUT, with PROV on every row.
+    BUDGET_S, the protocol's Timebox in seconds, lets a fit project itself
+    after its first fold and stop before the budget (`fit_rows`).
 
     Apply predicts with the unchanged primary (its null lane on permuted
     gold, or a registered fixed null) without training; fit uses
@@ -355,7 +365,7 @@ def measure(cfg: MeasureConfig, items: list[dict], out: Path,
                              "a caller passes replace(CONFIG, predictor_sha=predictor_digests())")
         raise ValueError("measure(): predictor dependencies changed since the config snapshot")
     rows = (apply_rows(cfg, items, probe, registered) if KIND == "apply"
-            else fit_rows(cfg, items, probe))
+            else fit_rows(cfg, items, probe, budget_s=budget_s))
     if predictor_digests() != cfg.predictor_sha:
         raise ValueError("measure(): predictor dependencies changed during prediction")
     with batch.Store(out, prov=prov, instrument=identity) as store:
@@ -426,19 +436,29 @@ def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool,
     return rows
 
 
-def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
-    """Out-of-fold registered rows, `NULL_REFITS` draws of out-of-fold
+def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool,
+             budget_s: int | None = None, clock=time.monotonic) -> list[dict]:
+    """Out-of-fold registered rows, `cfg.null_refits` draws of out-of-fold
     permuted-label rows, and unlabelled test rows; every lane and draw fits
-    a fresh estimator. Returns rows without writing them.
+    a fresh estimator. Returns rows without writing them. With BUDGET_S
+    (the protocol's Timebox in seconds) the first fold is timed by CLOCK and
+    the whole run projected (`timebox.projected_seconds`); a projection
+    over the budget raises SystemExit with the numbers and the way out
+    before the second fold starts. Fewer than MIN_NULL_REFITS refits are
+    refused: one draw's score would set the bar.
     """
+    if cfg.null_refits < MIN_NULL_REFITS:
+        raise ValueError(f"fit_rows(): null_refits = {cfg.null_refits} — at least {MIN_NULL_REFITS}, "
+                         "so that no single draw sets the bar (FIT_PLAN)")
     train, test = labelled(items), unlabelled(items)
     rows: list[dict] = []
+    started = clock()
     for k, held in enumerate(folds(len(train), cfg.n_folds, cfg.seed)):
         held_set = set(held)
         fit = [train[i] for i in range(len(train)) if i not in held_set]
         out_items = [train[i] for i in held]
         draws = [("registered", None, None)] + [
-            ("null", d, random.Random(f"fit-null:{cfg.seed}:{k}:{d}")) for d in range(NULL_REFITS)
+            ("null", d, random.Random(f"fit-null:{cfg.seed}:{k}:{d}")) for d in range(cfg.null_refits)
         ]
         for lane, d, permute in draws:
             preds = fit_predict(cfg, fit, out_items, permute, probe)
@@ -446,6 +466,12 @@ def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool) -> list[dict]:
             # never cut to the shorter list (the missing items would vanish)
             rows += [lane_row(lane, it, p, it[GOLD_FIELD], fold=k, draw=d)
                      for it, p in zip(out_items, preds, strict=True)]
+        if k == 0 and budget_s is not None and not probe:
+            first_fold_s = clock() - started
+            projected = timebox.projected_seconds(first_fold_s, cfg.n_folds, len(draws), bool(test))
+            refusal = timebox.over_budget(projected, budget_s, first_fold_s, cfg.n_folds, len(draws))
+            if refusal:
+                raise SystemExit(f"measurement stopped: {refusal}")
     if test:
         preds = fit_predict(cfg, train, test, None, probe)
         rows += [lane_row("test", it, p, None) for it, p in zip(test, preds, strict=True)]
@@ -553,7 +579,7 @@ def calibrate_null(cfg: MeasureConfig, items: list[dict], k: int | None = None) 
     if KIND != "apply":
         raise ValueError(
             "calibrate_null(): kind apply only — at fit the null lane refits on permuted "
-            f"labels {NULL_REFITS} times in the run, and its draws' scores (quality_check_2_draw_scores) "
+            f"labels {cfg.null_refits} times per fold in the run, and its draws' scores (quality_check_2_draw_scores) "
             "show the spread; the band is a reasoned value, or at high repeat cost the "
             "draws of --probe over a few --seed values")
     if make_null_predictor(cfg.seed) is not None:
@@ -735,7 +761,7 @@ def balance(out: Path, cfg: MeasureConfig, items: list[dict]) -> None:
     each gap, before any number (→ LAB-023 No silent loss). The rows then are
     the source's items, and every count `evaluate_rows` makes is a count of
     the source."""
-    batch.Store(out).ledger(expected(items),
+    batch.Store(out).ledger(expected(items, cfg),
                             expect={"_instrument": instrument(cfg, items)}).require_complete()
 
 
@@ -890,13 +916,16 @@ def main() -> None:
     # [quality-check-2]'s band against its registered rule, before the run opens (a
     # started measurement binds the registration); its predictions are reused
     registered = band_check(cfg, items) if args.repeat_of is None else None
+    budget_s, budget_note = timebox.seconds_of(PROTOCOL.read_text(encoding="utf-8"))
+    print(f"fit plan: {cfg.n_folds} folds × (1 + {cfg.null_refits}) fits at repeat_cost {HEAD.repeat_cost!r}; {budget_note}"
+          if KIND == "fit" else budget_note)
     with runlog.run("<name>", config=asdict(cfg), base_dir=AREA, data=data_files(),
                     run_kind="measurement", protocol=PROTOCOL.name,
                     repeat_of=args.repeat_of, reseed=args.repeat_of is not None) as run:
         cfg = MeasureConfig(**run.config)   # measure with what is recorded
         out = run.draw_output(OUT)
         run.output(out)
-        rows = measure(cfg, items, out, prov={"run": run.run_id}, registered=registered)
+        rows = measure(cfg, items, out, prov={"run": run.run_id}, registered=registered, budget_s=budget_s)
         metrics = evaluate(out, cfg, items, run)
         write_deliverables(run, rows, metrics)
         if run.draw is None:

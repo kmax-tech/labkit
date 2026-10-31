@@ -763,13 +763,16 @@ class TestStampPlaceholders(unittest.TestCase):
         phrases = protocol_check.stamp_placeholders()
         self.assertGreaterEqual(len(phrases), 40)
         self.assertEqual([p for p in phrases if " " not in p], [])
-        self.assertIn("<a hard budget, such as 4h. Then record and ask.>", phrases)
+        self.assertIn(
+            "<the duration first, such as `45 min` or `4h`, then what follows: record and ask. A fit stops before this budget when its first fold projects over it.>",
+            phrases,
+        )
         # the TOML head's sentences and the Prompt block's are other readers'
         self.assertNotIn("<the criterion in one sentence>", " ".join(phrases))
 
     def test_text_before_or_after_a_left_phrase_is_still_a_placeholder(self):
-        before = "- **Timebox:** 2h <a hard budget, such as 4h. Then record and ask.>\n"
-        after = "- **Timebox:** <a hard budget, such as 4h. Then record and ask.> 2h\n"
+        before = "- **Timebox:** 2h <the duration first, such as `45 min` or `4h`, then what follows: record and ask. A fit stops before this budget when its first fold projects over it.>\n"
+        after = "- **Timebox:** <the duration first, such as `45 min` or `4h`, then what follows: record and ask. A fit stops before this budget when its first fold projects over it.> 2h\n"
         for text in (before, after):
             self.assertEqual(
                 [lb for _, lb in protocol_check.placeholder_fields(text)], ["Timebox"]
