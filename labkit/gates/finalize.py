@@ -728,15 +728,26 @@ def check_data_counts(findings: Findings, protocol: Path, text: str) -> bool:
     return False
 
 
-def check_provenance(findings: Findings, area: Path, answering_run: Path) -> None:
+def check_provenance(
+    findings: Findings, area: Path, answering_run: Path, text: str
+) -> None:
     """Station 5: the run's source frozen in the run, source and output
-    tracked in git."""
-    b, w = provenance_findings(area, answering_run)
+    tracked in git — or a source outside git pinned by the checksum the run
+    recorded, which the protocol TEXT's Data / scope names."""
+    scope = next(
+        (f.value for f in fields(text) if f.name == field_name(data_counts.FIELD)), ""
+    )
+    b, w, pinned = provenance_findings(area, answering_run, scope)
     findings.take_all(b)
     for line in w:
         findings.warn(line, evidence_kind=GUARANTEED)
+    for line in pinned:
+        findings.note(f"  {line}")
     if not b and not w:
-        findings.note("  source frozen in the run; source and output tracked in git")
+        findings.note(
+            "  source frozen in the run; source and output tracked in git"
+            + (" or pinned by checksum" if pinned else "")
+        )
 
 
 def check_area_tests(findings: Findings, area: Path) -> None:
@@ -986,7 +997,7 @@ def finalize_area(
     elif answering_run is None:
         findings.note(NO_RUN)
     else:
-        check_provenance(findings, area, answering_run)
+        check_provenance(findings, area, answering_run, text)
 
     # 6. area tests — always
     findings.header("area tests")

@@ -156,14 +156,6 @@ class Guide(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(out.getvalue(), GUIDE.read_text(encoding="utf-8"))
 
-    def test_no_area_and_no_guide_is_a_usage_error(self):
-        with (
-            contextlib.redirect_stderr(io.StringIO()),
-            self.assertRaises(SystemExit) as cm,
-        ):
-            next_step.main([])
-        self.assertEqual(cm.exception.code, 2)
-
 
 if __name__ == "__main__":
     unittest.main()

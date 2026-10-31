@@ -1106,7 +1106,18 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 (f.status, f.reason, f.effect), ("fixed", "dropped the feature", "")
             )
             (area / "scripts" / "01_measure.py").write_text(SCRIPT + "# repaired\n")
-            self.assertNotIn("hint:", decide("fixed", "dropped the feature"))
+            repaired = decide("fixed", "dropped the feature")
+            self.assertNotIn("hint:", repaired)
+            # round 2: seven of eight reviews came after a repair and were refused —
+            # the next step is said at the decision, not first at the review
+            self.assertIn(
+                "next: the repair is in the area — measure again "
+                "(`.venv/bin/python experiments/01-x/scripts/01_measure.py`), then "
+                "`labkit-audit experiments/01-x --mode analysis` on that run, and decide "
+                f"its findings; {record.name} judged the code before the repair, so a "
+                "decision review of it no longer applies",
+                repaired,
+            )
 
             said = decide("limitation", "the limit")
             self.assertIn(

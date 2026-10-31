@@ -33,7 +33,7 @@ from labkit.formats.scope_sha import (
     measured_code,
 )
 from labkit.run import batch
-from labkit.run.provenance import visible_files
+from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.runs import (
@@ -414,16 +414,23 @@ def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
 
 
 def provenance_findings(
-    area: Path, answering_run: Path
-) -> tuple[list[GateFinding], list[str]]:
-    """(blockers, warnings) for a run at low repeat cost: source frozen, files
-    tracked (a directory source file by file, `_untracked_files`). Raises
-    GitError when git cannot list a directory source's tracked files or say
-    whether an untracked source is ignored (`_ignore_rules`): finalize then
-    ends in that error, not in a blocker with a way out that may not lead
-    out."""
+    area: Path, answering_run: Path, data_scope: str = ""
+) -> tuple[list[GateFinding], list[str], list[str]]:
+    """(blockers, warnings, pinned) for a run at low repeat cost: source
+    frozen, files tracked (a directory source file by file,
+    `_untracked_files`) — or, for a source outside git, pinned: the
+    protocol's Data / scope DATA_SCOPE names the checksum the run recorded
+    for it, and the bytes there now give that checksum (`pinned_source`,
+    the standard's Fixed inputs: large or protected data stay out of the
+    repository, which holds their source or access route, version and
+    checksum). PINNED says so per source; the bytes changed since the run
+    are a blocker. Raises GitError when git cannot list a directory
+    source's tracked files or say whether an untracked source is ignored
+    (`_ignore_rules`): finalize then ends in that error, not in a blocker
+    with a way out that may not lead out."""
     blockers: list[GateFinding] = []
     warnings: list[str] = []
+    pinned: list[str] = []
     cfg = read_run_config(answering_run)
     data = cfg.data if cfg else {}
     if not data:
@@ -450,14 +457,13 @@ def provenance_findings(
         warnings.append(
             "not a git repository — cannot tell whether source and output are committed"
         )
-        return blockers, warnings
+        return blockers, warnings, pinned
     for f, sha in sources:
-        if not f.exists():
-            blockers.append(_gone(f, area))
-            continue
-        untracked = _untracked_files(repo, f)  # a directory: file by file
-        if untracked:
-            blockers.append(_untracked_source(repo, f, untracked, sha))
+        found, note = _source_finding(repo, area, f, sha, data_scope)
+        if found is not None:
+            blockers.append(found)
+        if note is not None:
+            pinned.append(note)
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
     # blocker that sends the agent round the loop (2026-10-05, five probes).
@@ -468,7 +474,56 @@ def provenance_findings(
                 f"output {f.name} is not yet tracked — `git add {f}` before "
                 f"the commit that cites the number"
             )
-    return blockers, warnings
+    return blockers, warnings, pinned
+
+
+def _source_finding(
+    repo: Path, area: Path, source: Path, sha: object, data_scope: str
+) -> tuple[GateFinding | None, str | None]:
+    """(blocker, pinned note) for one SOURCE the run recorded with checksum
+    SHA: gone, untracked and not pinned (`_untracked_source`), pinned but
+    changed since the run — or tracked, or pinned and unchanged (the note).
+    Raises GitError as `_untracked_files` does."""
+    if not source.exists():
+        return _gone(source, area), None
+    untracked = _untracked_files(repo, source)  # a directory: file by file
+    if not untracked:
+        return None, None
+    held = pinned_source(source, sha, data_scope)
+    if held is None:
+        return _untracked_source(repo, source, untracked, sha), None
+    if held == PINNED:
+        return None, (
+            f"source {source} lies outside git, pinned by the checksum the run "
+            f"recorded (sha256 {sha}), which Data / scope names"
+        )
+    return (
+        blocker(
+            f"source {source} is not the bytes the run read: {held} — Data / scope "
+            f"pins it by the checksum the run recorded (sha256 {sha})",
+            fix=f"restore the source the run read from the route Data / scope names, "
+            f"or {measure_anew(area)}",
+        ),
+        None,
+    )
+
+
+#: `pinned_source`'s answer when the bytes are the ones the run read
+PINNED = "pinned"
+
+
+def pinned_source(source: Path, sha: object, data_scope: str) -> str | None:
+    """Whether a source outside git is pinned by the protocol: None when the
+    run recorded no checksum SHA or DATA_SCOPE (the Data / scope value) does
+    not name it; PINNED when it does and SOURCE's bytes now give it
+    (`provenance.source_digest`, the digest the run recorded, cut to its
+    length); otherwise the sentence why not. Reads SOURCE, writes nothing."""
+    if not isinstance(sha, str) or sha not in " ".join(data_scope.split()):
+        return None
+    now = source_digest(source)[: len(sha)]
+    if now == sha:
+        return PINNED
+    return f"its sha256 is now {now}"
 
 
 #: the command that ends an area without a number while finalize stays
@@ -519,10 +574,8 @@ def _untracked_source(
     out the two routes the standard's Fixed inputs names: a small input that
     may legally be shared is committed; for large or protected data the
     protocol's Data / scope names its source or access route and version
-    (the field guide), beside the checksum SHA the run recorded. No labkit
-    text says how a gate holds that declaration, so finalize reads none:
-    the blocker stays, and the second route ends in a handover without a
-    number. A directory names its untracked files (`NAMED_UNTRACKED` of
+    (the field guide), beside the checksum SHA the run recorded, which
+    `pinned_source` then holds the bytes to. A directory names its untracked files (`NAMED_UNTRACKED` of
     them), and its commit lists each of them, so no file the run did not
     read goes in. When git ignores any of them the sentence names the rule
     (`_ignore_rules`) and the commit adds them past it (`git add -f`): a
@@ -542,19 +595,19 @@ def _untracked_source(
     else:
         add = f"git add{force} {shlex.quote(str(source))}"
     past = " past the rule" if rules else ""
-    checksum = (
-        f"the checksum this run recorded (sha256 {sha})"
+    pin = (
+        f"large or protected data stay out of git: name the source or access "
+        f"route and version in the protocol's Data / scope beside the checksum "
+        f"this run recorded, `sha256 {sha}` — finalize then holds the file to it"
         if isinstance(sha, str)
-        else "the checksum (this run recorded none)"
+        else "large or protected data stay out of git, pinned by the checksum a run "
+        "records: this run recorded none, so pass the source in `data=` and measure "
+        "again"
     )
     return blocker(
         f"{what}{ignored} — the number cannot be re-derived from the repository",
         fix=f"if it is small and may legally be shared, commit it{past} "
-        f"(`{add}`); large or protected data stay out, but "
-        f"finalize still blocks them: it does not read the declaration — name "
-        f"the source or access route and version in the protocol's Data / "
-        f"scope beside {checksum}, then hand over without a number "
-        f"(`{HANDOVER_COMMAND}`, the <…> parts filled)",
+        f"(`{add}`); {pin}",
     )
 
 

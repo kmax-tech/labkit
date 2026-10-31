@@ -95,6 +95,46 @@ class TheChain(unittest.TestCase):
 
 
 class BeforeTheChain(unittest.TestCase):
+    def _bare(self, cwd: Path) -> tuple[int, str, str]:
+        """`labkit-next` without an area, from CWD."""
+        out, err = io.StringIO(), io.StringIO()
+        old = Path.cwd()
+        os.chdir(cwd)
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = next_step.main([])
+        finally:
+            os.chdir(old)
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_without_an_area_and_none_stamped_the_step_creates_one(self):
+        """Round 2: fourteen bare `labkit-next` calls, before any area
+        existed, met the usage line."""
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "tests").mkdir()
+            rc, out, err = self._bare(Path(d))
+        self.assertEqual(rc, 0, err)
+        self.assertIn("no experiment area yet", out)
+        self.assertIn("labkit-init exp <name> --kind", out)
+
+    def test_without_an_area_the_one_area_is_taken(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "tests").mkdir()
+            (Path(d) / "experiments" / "01-x").mkdir(parents=True)
+            rc, out, err = self._bare(Path(d))
+        self.assertEqual(rc, 0, err)
+        self.assertIn("labkit-next: experiments/01-x", out)
+
+    def test_without_an_area_and_several_each_is_named(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "tests").mkdir()
+            for name in ("01-x", "02-y"):
+                (Path(d) / "experiments" / name).mkdir(parents=True)
+            rc, out, err = self._bare(Path(d))
+        self.assertEqual(rc, 2)
+        self.assertIn("experiments/01-x", err)
+        self.assertIn("experiments/02-y", err)
+
     def test_an_area_without_a_protocol_is_told_to_register(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d) / "experiments" / "01-x"

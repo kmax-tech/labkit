@@ -321,6 +321,17 @@ def file_url_path(url: str) -> Path | None:
     return Path(plain.removeprefix("file://")) if plain.startswith("file://") else None
 
 
+def stamped_areas(root: Path) -> list[Path]:
+    """The areas under `experiments/` of ROOT: the directories named
+    `NN-<name>` (`AREA_NAME`), sorted; [] without the folder."""
+    experiments = root / EXPERIMENTS
+    if not experiments.is_dir():
+        return []
+    return sorted(
+        p for p in experiments.iterdir() if p.is_dir() and AREA_NAME.match(p.name)
+    )
+
+
 def areas_named(experiments: Path, name: str) -> list[Path]:
     """Every area directory under EXPERIMENTS that the bare NAME names,
     sorted: the one called NAME and every `NN-<NAME>` (`AREA_NAME`) — the

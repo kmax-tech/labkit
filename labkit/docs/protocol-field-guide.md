@@ -312,7 +312,9 @@ result is only a plan.
   under `data/prepared/`. Never type the counts. After the preparation run,
   `protocol-fill <PROTOCOL> --data-counts` writes them at the end of the
   field. `finalize` holds that part to the run. Commit small inputs that can legally be shared. For large or
-  protected data, name the source, the access route and the version. Look
+  protected data, name the source, the access route and the version beside
+  the `sha256` the run recorded for it (finalize names it): `finalize` then
+  holds the file outside git to that checksum. Look
   at the prepared file before the run. Otherwise a format bug and a model
   failure look the same.
 - **Data profile:** owed whenever a model is named. The prompt skeleton's

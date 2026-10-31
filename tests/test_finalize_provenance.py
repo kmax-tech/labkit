@@ -20,6 +20,7 @@ from labkit.checks import run_record_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from labkit.formats import promises, scope_sha  # noqa: E402
 from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
+from labkit.run import provenance  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
 
 BODY = """
@@ -151,12 +152,10 @@ class Provenance(unittest.TestCase):
         line = next(x for x in out.splitlines() if "not tracked in git" in x)
         self.assertIn("Next: if it is small and may legally be shared", line)
         self.assertIn(f"`git add {self.src}`", line)
-        self.assertIn(
-            "large or protected data stay out, but finalize still blocks", line
-        )
+        self.assertIn("large or protected data stay out of git", line)
         self.assertIn("source or access route and version in the protocol's Data", line)
-        self.assertIn("the checksum this run recorded (sha256 ab)", line)
-        self.assertIn("protocol-fill <PROTOCOL> --handover --why", line)
+        self.assertIn("the checksum this run recorded, `sha256 ab`", line)
+        self.assertIn("finalize then holds the file to it", line)
 
     def test_an_ignored_source_names_the_rule_and_its_git_add_leads_out(self):
         # pilot t60: the sandbox's .git/info/exclude held `benchmark/`, and the
@@ -243,6 +242,51 @@ class Provenance(unittest.TestCase):
         (geo / ".DS_Store").write_text("x")  # outside the run's digest
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
+
+    def _pinned(self, scope_line: str) -> tuple[int, str]:
+        """An untracked source the run recorded with its real checksum, and a
+        protocol whose Data / scope says SCOPE_LINE."""
+        sha = provenance.source_digest(self.src)[:RECORD_SHA_CHARS]
+        protocol = SHORT + f"- **Data / scope:** {scope_line.format(sha=sha)}\n"
+        self._run(
+            protocol,
+            {"cases": {"path": str(self.src), "rows": 1, "sha256": sha}},
+            commit=False,
+        )
+        _git(self.repo, "add", "experiments")
+        _git(self.repo, "commit", "-qm", "x")
+        return self._finalize()
+
+    def test_a_source_outside_git_pinned_by_data_scope_passes(self):
+        """The standard's Fixed inputs: large or protected data stay out of the
+        repository, which holds their source, version and checksum (round 2:
+        every lab agent force-added the benchmark's data past .git/info/exclude,
+        the only way out finalize gave)."""
+        rc, out = self._pinned(
+            "cases.jsonl from the court archive, release 3, sha256 {sha}"
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertIn("lies outside git, pinned by the checksum the run recorded", out)
+
+    def test_the_twin_a_source_outside_git_without_its_checksum_named_blocks(self):
+        rc, out = self._pinned("cases.jsonl from the court archive, release 3")
+        self.assertEqual(rc, 1)
+        self.assertIn("not tracked in git", out)
+
+    def test_a_pinned_source_whose_bytes_changed_since_the_run_blocks(self):
+        sha = provenance.source_digest(self.src)[:RECORD_SHA_CHARS]
+        protocol = SHORT + f"- **Data / scope:** cases.jsonl, sha256 {sha}\n"
+        self._run(
+            protocol,
+            {"cases": {"path": str(self.src), "rows": 1, "sha256": sha}},
+            commit=False,
+        )
+        _git(self.repo, "add", "experiments")
+        _git(self.repo, "commit", "-qm", "x")
+        self.src.write_text('{"id": 2}\n', encoding="utf-8")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1)
+        self.assertIn("is not the bytes the run read", out)
 
     def test_the_printed_handover_is_the_one_agents_md_gives(self):
         agents = (PACKAGE_DIR / "templates" / "AGENTS.md.template").read_text(

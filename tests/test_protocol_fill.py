@@ -154,6 +154,28 @@ class HeadType(unittest.TestCase):
         # the head reads: the hook's "MISSING (must): [protocol] type" is gone
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
+    def test_a_head_key_named_with_its_table_is_filled(self):
+        """Round 2: agents wrote `"[protocol] type=…"` and met "no field
+        labelled"; the key named with its table is the key."""
+        text = protocol_edit.fill_many(self.HEAD, [("[protocol] type", "exploratory")])
+        self.assertEqual(protocol_block.head(text).type, "exploratory")
+
+    def test_a_head_part_protocol_fill_does_not_write_names_where_it_is_written(self):
+        for label, way in (
+            ("[reference]", "--reference KEY=VALUE"),
+            ("reference value", "--reference KEY=VALUE"),
+            ("[result] run", "labkit-adopt"),
+            ("standard", "stamped and never edited"),
+        ):
+            with self.subTest(label=label), self.assertRaises(ValueError) as cm:
+                protocol_edit.fill_many(self.HEAD, [(label, "x")])
+            self.assertIn("is not a field", str(cm.exception))
+            self.assertIn(way, str(cm.exception))
+
+    def test_the_twin_a_prose_field_is_still_filled_by_its_label(self):
+        text = protocol_edit.fill_many(self.HEAD, [("Unit", "one row per case")])
+        self.assertIn("- **Unit:** one row per case", text)
+
     def test_list_sets_the_fields_from_run_writes_apart(self):
         """Listed among the rest, Result and Answer read as owed before the
         run: a cold agent filled them with "pending run" and --from-run then

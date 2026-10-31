@@ -178,7 +178,9 @@ Commit the code and the registration. Keep raw data under `data/raw/`.
 Prepare inputs with a script, `scripts/00_prepare.py`, into
 `data/prepared/`. Put small inputs into git if you can legally
 share them. For large or protected data, commit the source or access route
-and the version. To resume a run, use the same measurement command.
+and the version, with the `sha256` the run recorded, into Data / scope:
+finalize holds the file outside git to that checksum. To resume a run, use
+the same measurement command.
 
 ### 4. Finalize, audit and decide
 

@@ -125,6 +125,19 @@ HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
 #: clean and the preflight audit decided, not a fill — named so a fill of
 #: them says so instead of "no field labelled" (audit 2026-10-27, third, I6)
 FREEZE_KEYS = ("frozen", "preflight_audit")
+#: a label that names a head key with its table, as agents write it
+#: (`[protocol] type`, `[model] alias`): the table prefix `head_label` drops
+TABLE_PREFIX = re.compile(r"^\[(protocol|model)\]\s*")
+#: head parts `protocol-fill` does not write, by the label an agent gave, and
+#: where they are written instead (round 2: `[reference]` filled as a field)
+NOT_FILLED: dict[str, str] = {
+    "reference": "the head's [reference] table is written by `labkit-init exp <name> "
+    "--kind compute --reference KEY=VALUE[±TOL]` before the first measurement, or by "
+    "hand in the TOML head (key, value, tolerance, relation)",
+    "result": "`[result] run` is written by `labkit-adopt <area> <run_id>`, never by hand",
+    "standard": "`standard` is stamped and never edited: labkit refuses a protocol of "
+    "another version",
+}
 #: TOML key → its allowed values (None: free), for `head_open` and `fill_head`
 HEAD_CHOICES: dict[str, tuple[str, ...] | None] = {
     key: choices for key, choices in HEAD_KEYS.values()
@@ -301,6 +314,28 @@ def assignments_of(field: str | None, value: list[str]) -> list[tuple[str, str]]
     return [(field, " ".join(value))]
 
 
+def head_label(label: str) -> str:
+    """LABEL as `fill_many` reads it: a head key named with its table
+    (`[protocol] type`, `[model] alias`) is the key (`TABLE_PREFIX`); a head
+    part `protocol-fill` does not write (`NOT_FILLED`: `[reference]`,
+    `[result]`, `standard`, with or without brackets or a subkey) raises
+    ValueError naming where it is written; any other label is returned as
+    given."""
+    bare = TABLE_PREFIX.sub("", label.strip())
+    table = re.match(r"^\[?(\w+)\]?", bare)
+    if (
+        table
+        and table.group(1).lower() in NOT_FILLED
+        and (bare.startswith("[") or bare.lower().split()[0] in NOT_FILLED)
+    ):
+        raise ValueError(
+            f"{label.strip()!r} is not a field: {NOT_FILLED[table.group(1).lower()]}"
+        )
+    if bare != label.strip() and bare.lower() in HEAD_KEYS:
+        return bare
+    return label
+
+
 def fill_many(
     text: str,
     assignments: list[tuple[str, str]],
@@ -316,6 +351,7 @@ def fill_many(
     for label, value in assignments:
         if not label.strip() or not value.strip():
             raise ValueError(f"empty label or value in {label}={value!r}")
+        label = head_label(label)
         sentence = SENTENCE_LABEL.match(label)
         if sentence and not promises.is_block_id(sentence.group(1)):
             sentence = None  # a prose label such as "Key sentence"

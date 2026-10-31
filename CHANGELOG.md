@@ -5,6 +5,30 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Fixed
+
+- **A source outside git is held by its checksum.** finalize's provenance
+  station passes an untracked source when the protocol's Data / scope names
+  the `sha256` the run recorded for it and the bytes there now give it
+  (`run_record_check.pinned_source`) — the standard's Fixed inputs: large
+  or protected data stay out of the repository, which holds their source,
+  version and checksum. The bytes changed since the run are a blocker.
+  Before, finalize blocked every untracked source ("it does not read the
+  declaration"), and in round 2 every lab agent force-added the benchmark's
+  data past `.git/info/exclude`.
+- **`labkit-next` without an area** takes the repository's one area, says
+  how to create one when there is none, and names each when there are
+  several — fourteen bare calls in round 2 met the usage line.
+- **`protocol-fill` reads a head key named with its table** (`"[protocol]
+  type=exploratory"`) and, for `[reference]`, `[result]` and `standard`,
+  says where they are written instead of "no field labelled".
+- **A `fixed` decision on repaired code says the next step**: measure again,
+  audit that run, decide its findings — the record judged the code before
+  the repair, so a decision review of it no longer applies (seven of eight
+  reviews in round 2 came after a repair and were refused).
+
 ## 0.104.1 — 2026-10-31
 
 ### Fixed

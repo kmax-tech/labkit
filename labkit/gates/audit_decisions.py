@@ -27,6 +27,7 @@ from labkit.formats.repo import (
     decide_command,
     given_or_in,
     handover_command,
+    measure_command,
     shown,
     the_protocol,
 )
@@ -604,21 +605,22 @@ def decide(
         findings.decision_entails(rec.findings[int(n_text) - 1], area, record, protocol)
     )
     if status == "fixed":
-        hint = repair_hint(area, record, protocol)
-        if hint is not None:
-            print(hint)
+        print(repair_hint(area, record, protocol))
     return 0
 
 
-def repair_hint(area: Path, record: Path, protocol: Path | None) -> str | None:
-    """The `hint:` line under a `fixed` decision on RECORD: nothing the
+def repair_hint(area: Path, record: Path, protocol: Path | None) -> str:
+    """The line under a `fixed` decision on RECORD. `hint:` when nothing the
     record binds — code, promise block, registration
     (`findings.state_unchanged`) — has changed since the audit, so the
-    claimed repair is not in the area yet; or the state could not be
-    compared, naming why (no one protocol to read, nothing to stamp). None
-    when something changed. A hint, never a refusal: the decision stands as
-    given. Agents decided `fixed` on the audited state itself (SAB round 1,
-    2026-10-29)."""
+    claimed repair is not in the area yet, or when the state could not be
+    compared, naming why (no one protocol to read, nothing to stamp).
+    `next:` when the state changed: measure again, then audit that run — a
+    review of RECORD's decisions holds them to the code RECORD read, so the
+    repaired code is judged by the next audit, not by a review of this one
+    (round 2: seven of eight `--review` calls came after a repair and were
+    refused). A line, never a refusal: the decision stands as given. Agents
+    decided `fixed` on the audited state itself (SAB round 1, 2026-10-29)."""
     repair = (
         "a repair changes code, inputs or configuration — repair first, then "
         "measure and audit again"
@@ -629,7 +631,12 @@ def repair_hint(area: Path, record: Path, protocol: Path | None) -> str | None:
     except (ValueError, FileNotFoundError) as exc:
         return f"hint: the audited state could not be compared ({exc}); {repair}"
     if not unchanged:
-        return None
+        return (
+            f"next: the repair is in the area — measure again (`{measure_command(area)}`), "
+            f"then `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` on that "
+            f"run, and decide its findings; {record.name} judged the code before the repair, "
+            f"so a decision review of it no longer applies"
+        )
     return (
         f"hint: nothing relevant changed since the audit {record.name} (code, "
         f"promise block and registration stamp as it saw them): {repair}"
