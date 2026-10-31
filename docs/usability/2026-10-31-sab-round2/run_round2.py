@@ -200,17 +200,18 @@ def pilot(images: dict[str, str], solver: str, only: list[str]) -> None:
 
 def api_key() -> str:
     """The API key for the proxy: SANDBOX_UPSTREAM_TOKEN, else the macOS keychain item
-    API_KEY_ITEM; never from a file. Refuses an OAuth token (sk-ant-oat…): this round
-    runs on an API key, not on the subscription."""
+    API_KEY_ITEM; never from a file. Refuses the subscription's OAuth token
+    (sk-ant-oat…): this round runs on an API key (sk-ant-api… or sk-ant-usr…, sent as
+    x-api-key), not on the subscription."""
     import subprocess
     key = os.environ.get(sandbox_config.TOKEN_ENV) or subprocess.run(
         ["security", "find-generic-password", "-a", os.environ.get("USER", ""), "-s", API_KEY_ITEM, "-w"],
         capture_output=True, text=True).stdout.strip()
     if not key:
         raise SystemExit(f"no API key — store it once: security add-generic-password -a \"$USER\" -s {API_KEY_ITEM} -w")
-    if not key.startswith("sk-ant-api"):
-        raise SystemExit(f"the key in {sandbox_config.TOKEN_ENV} or {API_KEY_ITEM} is no API key (sk-ant-api…); "
-                         "this round does not run on the subscription")
+    if key.startswith("sk-ant-oat") or not key.startswith("sk-ant-"):
+        raise SystemExit(f"the key in {sandbox_config.TOKEN_ENV} or {API_KEY_ITEM} is no API key "
+                         "(sk-ant-oat… is the subscription's token); this round does not run on the subscription")
     return key
 
 
