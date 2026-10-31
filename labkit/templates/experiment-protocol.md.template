@@ -24,28 +24,22 @@
   Write one id per conjunct (`[criterion-…]`). The run reports each as its
   lowercase key (`criterion_1_pass`). Where a number stands, name its
   constant from the [[promise]] table ("in at least `min_draws` = 2 of 3
-  draws")
-  (→ LAB-003 No run without an intent paragraph, LAB-004 Identifiers make the intent addressable)>
+  draws")>
 - **Quality check:** <!-- lb --> <what must hold in the same run before any
   verdict: yield, coverage, a control at its expected value. Write one
   `[quality-check-…]` id per condition, with why its failure makes the
   measurement uninterpretable. A threshold the hypothesis needs is a
   criterion, never a quality check. If one fails, there is no criterion
-  verdict (→ LAB-004 Identifiers make the intent addressable)>
-- **Registered branch:** <if a result decides the conclusion or the next
-  analysis, register it before the run. List its outcomes in order, each
-  `<condition> → <outcome>: <consequence>`, separated by `;`. The first
-  condition that holds selects the outcome, and `otherwise` can close the
-  list ("criterion-… met → generalises: used on the next cohort; otherwise
-  → misses: reported as a miss"). The run records the outcome's name under
-  its key. Write "n/a — only one outcome" if no result decides anything
-  (→ LAB-013 Registered branch when the run can answer two questions, LAB-004 Identifiers make the intent addressable)>
+  verdict>
+- **Registered branch:** <if a result decides what follows, register it
+  before the run, like this: "criterion-… met → supported: reported as
+  meeting the criterion; otherwise → missed: reported as a miss". Write
+  "n/a — only one outcome" if no result decides anything.>
 - **Timebox:** <a hard budget, such as 4h. Then record and ask.>
 - **Split touched:** <which split the run can touch: train | dev | test>
 - **Why this design †:** <the choice of model, dataset and method, in one sentence>
 - **Rival explanations †:** <per confound: what else produces the same
-  number, which way it pushes, and the check as code in evaluate()
-  (→ LAB-044 The check on a confound is code)>
+  number, which way it pushes, and the check as code in evaluate()>
 - **Out of scope †:** <the neighbouring questions this run leaves open>
 
 ## Result (after the run — write back, don't go quiet)
@@ -62,8 +56,7 @@
 - **Rival check †:** <which rivals are ruled out, and which still stand>
 - **Caps/drops †:** <what was left out or limited>
 - **Analysis audit †:** <date · scope sha · N findings: the audit of the
-  evaluation before the number leaves
-  (→ LAB-050 Analysis audit before reporting, LAB-017 The number of audits follows the cost tier)>
+  evaluation before the number leaves>
 
 <!-- APPARATUS — this part gets LOOKED UP, not read. -->
 
@@ -91,7 +84,7 @@
 - **Null condition / anchors (in the same run):** <!-- lb --> <one id per
   anchor that runs in THIS run and must show null: an anchor of known
   rate, a placebo, a swap. Give each its expected outcome and the reason
-  in half a sentence (→ LAB-037 Every anchor carries its target and rationale)>
+  in half a sentence>
 - **Exclusions / filters:** <!-- l --> <what is dropped from the data or
   the output, and why. Write "none" if nothing is dropped.>
 - **Unit:** <!-- l --> <what one counted or judged thing is, and what is
@@ -116,20 +109,19 @@
 - **Resolution check (ZERO calls, real `evaluate()` on synthetic
   extremes):** <a perfect effect and a null effect through the real
   evaluation: does the criterion fire, and does it stay silent? Kept as
-  `tests/test_<NN>_<name>.py`, run by `preflight` (→ LAB-016 Resolution check before freezing)>
+  `tests/test_<NN>_<name>.py`, run by `preflight`>
 - **Render check (ZERO calls, `--show N`):** <one rendered prompt per gold
   class, read verbatim: negations, empty fields, questions the answer form
   cannot decide>
 - **Instrument check (real pipeline, ~10 calls, `--probe N`):** <one
-  rendered prompt+answer pair per gold class, from real data
-  (→ LAB-014 One fully rendered example pair per gold class)>
-- **Yield per stage:** <expected vs. obtained per parse step (→ LAB-023 No silent loss)>
+  rendered prompt+answer pair per gold class, from real data>
+- **Yield per stage:** <expected vs. obtained per parse step>
 - **Parser cases harvested:** <the probe's answer forms, added to the
   parser test as real cases>
 - **Clarified terms:** <what was ambiguous, and what it is called now>
 - **Changed — and in which class:** <before the freeze, the instrument can
   change (wording, answer form, parser, field names). The hypothesis,
-  criterion and quality check must not change (→ LAB-008 Instrument check before freezing).
+  criterion and quality check must not change.
   A change after the freeze goes to "Deviations after freeze".>
 - **Pilot:** <N items checked against a hand analysis or anchors, before scaling>
 
@@ -141,7 +133,7 @@
 
 - **Notes updated:** <[[…]], reconciled where they contradict>
 - **Prediction for the follow-up run †:** <the expected number, written
-  HERE before the follow-up starts (→ LAB-045 The forecast comes before the follow-up run)>
+  HERE before the follow-up starts>
 
 ## Notes (by-catch: ideas, follow-up experiments — cheap now, expensive later)
 

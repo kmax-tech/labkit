@@ -75,9 +75,10 @@ metrics of the run:
 | `[quality-check-2]` | the null condition, stamped as a quality check: the control shows no effect | `[quality-check-2] shuffled labels show no effect` | `quality_check_2_pass` |
 | `[branch-1]` | registered branch 1: its outcomes in order | `[branch-1] ≥ 50 usable cases → full-report: all measures reported; otherwise → coverage-only: coverage reported, no accuracy` | `branch_1_outcome` = the selected outcome's name (`coverage-only`) |
 
-A criterion judges. A quality check releases the judgement. A branch says
-what follows from it. If a condition depends on whether the hypothesis
-holds, it is a criterion. Otherwise it is a quality check. A baseline
+A quality check tests whether the measurement can carry the intended
+conclusion. An inference criterion decides which conclusion the result
+supports. A branch says what follows from it. Specify each condition
+before the result is known. A baseline
 without a target value is no promise. Write it in the text of its
 criterion.
 
@@ -153,13 +154,19 @@ parser. A typo is an error that names the field. The same block holds the
 
 #### Choosing the kind
 
-The kind follows the reported number, not the tool. Ask two questions:
+Ask the two questions of `AGENTS.md`, in this order:
 
-1. Does the number judge how well a model predicts, against gold labels?
-   If not, the kind is `compute` (ML lecture, ML:VII-1).
-2. Did this experiment train, adjust or select that model? A threshold or a
+1. Does this experiment train, adjust or select a model? A threshold or a
    prompt chosen on performance data is model selection (ML:II-189). If
-   yes, the kind is `fit`. If not, it is `apply`.
+   yes, the kind is `fit`, also when the deliverable is only predictions.
+   The kept number is then the score on held-out labelled rows.
+2. If not, does the kept number judge how well a model predicts, against
+   gold labels? If yes, the kind is `apply`. If not, it is `compute` (ML
+   lecture, ML:VII-1).
+
+Training comes first because a predictions file on unlabelled rows is no
+score: asked about the number first, an agent that trains a model can
+answer "no" and lose the criterion.
 
 If you select on the data that the number is reported from, the kind
 stays `fit`. The number is then a training error, not a holdout error (ML:II-175). Report it on a separate
@@ -175,7 +182,8 @@ test set or by nested cross-validation.
 | BERT checkpoint used unchanged | test F1 | `apply` |
 | checkpoint fixed, decision threshold chosen on dev | test F1 | `fit` |
 | random forest trained, hyperparameters by cross-validation | CV / holdout error | `fit` (nested CV or a separate test set) |
-| fitted model | feature importance as a finding | `compute` |
+| model trained here | feature importance as a finding | `fit` (the held-out score shows the importances come from a model that generalises) |
+| model trained elsewhere, used unchanged | feature importance as a finding | `compute` |
 | regex / parser | number of matches | `compute` |
 | regex / parser, rules fixed | precision vs gold | `apply` |
 | regex / parser, rules repaired on the same data | precision | `fit` |
@@ -426,3 +434,22 @@ If you trained or fine-tuned a model, add these fields under Setup:
 - **Gold vs. predicted inputs:** in a multi-stage pipeline, say which stage
   got gold inputs and which got predictions. If you can, report both. The
   gap is the error propagation.
+
+## Rules behind the fields
+
+The template's help names no rule. Each field below answers to a rule of
+the lab standard (`python -m labkit.formats.rules show LAB-nnn` prints it):
+
+| Field | Rule |
+|---|---|
+| Inference criterion | LAB-003 No run without an intent paragraph, LAB-004 Identifiers make the intent addressable |
+| Quality check | LAB-004 Identifiers make the intent addressable |
+| Registered branch | LAB-013 Registered branch when the run can answer two questions, LAB-004 Identifiers make the intent addressable |
+| Rival explanations | LAB-044 The check on a confound is code |
+| Analysis audit | LAB-050 Analysis audit before reporting, LAB-017 The number of audits follows the cost tier |
+| Null condition / anchors | LAB-037 Every anchor carries its target and rationale |
+| Resolution check | LAB-016 Resolution check before freezing |
+| Instrument check | LAB-014 One fully rendered example pair per gold class |
+| Yield per stage | LAB-023 No silent loss |
+| Changed — and in which class | LAB-008 Instrument check before freezing |
+| Prediction for the follow-up run | LAB-045 The forecast comes before the follow-up run |

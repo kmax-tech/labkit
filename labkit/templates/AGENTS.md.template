@@ -43,9 +43,18 @@ area and its protocol. In an existing area, keep its registered settings.
 | `repeat_cost` | What one more measurement costs | `low`: you can repeat it at will. `high`: a repeat is expensive, so a preflight audit and a freeze come first. |
 | `type` | The claim | `confirmatory`: question, inputs and analysis stood before you saw any result. Otherwise `exploratory`. |
 
-If data adjust the procedure, the kind is `fit`. This holds for a
-threshold or a k tuned on labelled data, and when the deliverable has no
-labels. `protocol-check <PROTOCOL> --contract` names what this area owes.
+Choose `kind` with two questions, in this order:
+
+1. Does this experiment train, tune or select a model? If yes, the kind
+   is `fit`. Example: a random forest trained here, or a threshold tuned on
+   labelled rows. This holds also if you deliver only predictions. The
+   kept number is then the score on held-out labelled rows.
+2. If not, does the kept number judge predictions against gold labels? If
+   yes, the kind is `apply`. Example: an unchanged LLM scored against
+   labels. If not, the kind is `compute`. Example: the mean number of
+   documents per case.
+
+`protocol-check <PROTOCOL> --contract` names what this area owes.
 
 ## Before the first run
 
@@ -61,8 +70,7 @@ labels. `protocol-check <PROTOCOL> --contract` names what this area owes.
   number or the value to meet it.
 - After `scripts/00_prepare.py`, `protocol-fill <PROTOCOL> --data-counts`
   writes the data counts. Never type a count.
-- Keep raw data under `data/raw/` and prepared data under
-  `data/prepared/`. Declare a binary input (.npz, model weights) as
+- Declare a binary input (.npz, model weights) as
   `provenance.BinaryInput(path)`.
 - Commit the registration before the first full measurement.
 
@@ -150,5 +158,4 @@ The handover adopts no result. A finding nobody could settle stays
   measurement, detach it.
 - `experiments/NN-<name>/` holds one area per question. `lib/` holds this
   repository's helpers. labkit's helpers come from the pinned package.
-  `models.toml` is the only place for model backends. `notes/` holds
-  notes.
+  `models.toml` is the only place for model backends.

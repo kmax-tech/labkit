@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import io
 import re
+import shlex
 import sys
 import tomllib
 import unittest
@@ -84,6 +85,66 @@ class Agents(unittest.TestCase):
     def test_it_points_at_the_next_step_and_the_guide(self):
         self.assertIn("`labkit-next <area>`", self.text)
         self.assertIn("`labkit-next --guide`", self.text)
+
+
+#: every text an agent reads that may show an example command or branch
+AGENT_TEXTS = (
+    AGENTS,
+    GUIDE,
+    ROOT / "labkit" / "docs" / "protocol-field-guide.md",
+    ROOT / "labkit" / "templates" / "experiment-protocol.md.template",
+)
+
+
+def spans(text: str) -> list[str]:
+    """The code spans and double-quoted spans of TEXT, whitespace collapsed."""
+    flat = " ".join(text.split())
+    return re.findall(r"`([^`]+)`", flat) + re.findall(r'"([^"]+)"', flat)
+
+
+class Examples(unittest.TestCase):
+    """An example an agent copies must be one labkit takes: a review ran a
+    shown `--decide` call (refused, no `--why`) and a shown branch (refused,
+    no consequences)."""
+
+    def test_every_decide_call_shown_is_one_the_parser_takes(self):
+        from labkit.gates import audit
+
+        seen = 0
+        for path in AGENT_TEXTS:
+            for span in spans(path.read_text(encoding="utf-8")):
+                if not span.startswith("labkit-audit") or "--decide" not in span:
+                    continue
+                seen += 1
+                with self.subTest(path=path.name, span=span):
+                    self.assertIsNone(audit.decide_shape(shlex.split(span)))
+        self.assertGreater(seen, 0, "the reader finds the decide calls")
+
+    def test_every_branch_example_shown_parses(self):
+        from labkit.formats import promises
+
+        seen = 0
+        for path in AGENT_TEXTS:
+            for span in spans(path.read_text(encoding="utf-8")):
+                if "→" not in span or ";" not in span or "<outcome>" in span:
+                    continue
+                seen += 1
+                example = promises.ID_PREFIX.sub("", span)
+                with self.subTest(path=path.name, span=span):
+                    self.assertGreaterEqual(len(promises.parse_outcomes(example)), 2)
+        self.assertGreater(seen, 0, "the reader finds the branch examples")
+
+    def test_the_reader_refuses_the_reviewed_faults(self):
+        from labkit.formats import promises
+        from labkit.gates import audit
+
+        self.assertIsNotNone(
+            audit.decide_shape(shlex.split('labkit-audit a --decide 1 fixed "x"'))
+        )
+        with self.assertRaises(promises.PromiseError):
+            promises.parse_outcomes(
+                "criterion-1 met → generalises; otherwise → no-verdict"
+            )
 
 
 class Guide(unittest.TestCase):

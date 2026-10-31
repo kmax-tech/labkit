@@ -45,14 +45,17 @@ or a discussion block releases nothing. Other notes owe nothing.
 `AGENTS.md` gives the table of `kind`, `repeat_cost` and `type`. These
 points add to it:
 
-- Decide `kind` first. If data adjust the procedure, choose `fit`. This
-  holds also for a tuning rule registered in advance. Else, if the number judges predictions,
-  choose `apply`. Else, choose `compute`.
+- Decide `kind` first, with the two questions of `AGENTS.md`, in their
+  order: did this experiment train, tune or select a model, and if not,
+  does the kept number judge predictions? A tuning rule registered in
+  advance still tunes.
 - Evaluate a `fit` on held-out labelled rows. Judge a tuned detector on
   rows kept apart from the tuning.
 - A RandomForest fitted in seconds is `fit`, usually at `low`. A threshold
-  of k times each signal's own noise, with k fixed in advance, is
-  `compute`. An unchanged LLM judged against labels is `apply`.
+  of k times each signal's own noise, with k fixed in advance, tunes
+  nothing. Scored against annotations, it is `apply`. A count of its
+  detections is `compute`. An unchanged LLM judged against labels is
+  `apply`.
 - `repeat_cost` is the cost of the measurement, not of the audit or the
   whole task.
 - Neither `low` nor `exploratory` removes the criterion or the audits of a
@@ -87,26 +90,31 @@ After it, use the replacement route under "When you are stuck".
 
 Fill the before-run fields, including `type` and each promise's sentence:
 
-- Every kind: question, data/scope, exclusions and unit. In data/scope,
-  name the source and the producer script. `protocol-fill <PROTOCOL>
+- For every kind, fill the question, Data / scope, the exclusions and the
+  unit. In Data / scope, name the source and the producer script. `protocol-fill <PROTOCOL>
   --data-counts` writes the counts after `scripts/00_prepare.py`.
-- Fit and apply: also the criterion, the quality check and a null
-  condition in the same run. A criterion judges the outcome. A quality
-  check says whether that judgement means anything.
-- Compute with a value the task states ("0.62 within 0.01"): before the
-  first measurement, run `labkit-init exp --kind compute --reference
+- For a fit or an apply, also fill the inference criterion, the quality
+  check and a null condition in the same run. The criterion decides which
+  conclusion the result supports. The quality check tests whether the
+  measurement can carry that conclusion.
+- If a computation is compared with a value the task states ("0.62 within
+  0.01"), run this before the first measurement: `labkit-init exp --kind compute --reference
   KEY=VALUE[±TOL]`, or write the head's `[reference]` table yourself. KEY
   is the skeleton's `METRIC_KEY`.
   Register no criterion. A miss is a result, and the run writes the
   verdict.
-- A `[model]` table: also the data profile. Copy the skeleton's `PROMPT`
-  constants with `protocol-fill <PROTOCOL> --prompts`.
+- If the head contains a `[model]` table, also fill Data profile. Copy the
+  skeleton's `PROMPT` constants with `protocol-fill <PROTOCOL> --prompts`.
 
 A promise id is its kind and a number:
 
-- `criterion-1`: what counts as success.
-- `quality-check-1`: what must hold before you read the criterion.
-- `branch-1`: conditional outcomes, such as `criterion-1 met → generalises; otherwise → no-verdict`.
+- `criterion-1`: the condition that decides which conclusion the result
+  supports.
+- `quality-check-1`: what must hold for the measurement to carry that
+  conclusion.
+- `branch-1`: what follows from each outcome, such as `criterion-1 met →
+  supported: reported as meeting the criterion; otherwise → missed:
+  reported as a miss`.
 
 Fill values with `protocol-fill <PROTOCOL> "type=exploratory"
 "criterion-1 sentence=<value>" "<Label>=<value>"`. A computation without
@@ -157,8 +165,9 @@ The full measurement checks the instrument.
 
 If you fix code, audit the fixed code before the freeze.
 
-Commit the code and the registration. Prepare inputs with a script,
-`scripts/00_prepare.py`. Put small inputs into git if you can legally
+Commit the code and the registration. Keep raw data under `data/raw/`.
+Prepare inputs with a script, `scripts/00_prepare.py`, into
+`data/prepared/`. Put small inputs into git if you can legally
 share them. For large or protected data, commit the source or access route
 and the version. To resume a run, use the same measurement command.
 
@@ -168,7 +177,7 @@ Before you report any result, run `finalize <area>`, then `labkit-audit
 <area> --mode analysis`. Decide each finding with the command that
 `labkit-audit <area> --findings` prints:
 
-`labkit-audit <area> --decide <N> <STATUS> "<REASON>" --record <record>`
+`labkit-audit <area> --decide <N> <STATUS> --why "<REASON>" --record <record>`
 
 READ lines are hints, not findings to decide.
 

@@ -34,6 +34,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **What an agent copies is what labkit takes.** Every `--decide` call
+  and every registered-branch example shown in `AGENTS.md`, the agent
+  guide, the field guide and the protocol template goes through the real
+  parser in a test (`tests/test_agent_surface.py`): the guide showed a
+  decide call without `--why` and a branch without consequences. The kind
+  is chosen by one path everywhere, training first (`KIND_QUESTIONS`):
+  the field guide asked about the number first. The field guide states
+  the quality check and the inference criterion by their function; the
+  template's help names no rule, the field guide's last table does.
+
 - **The reference an agent is sent to is shorter.** The field guide
   (`protocol-check --guide`) is 3,790 words (was 6,555), the agent guide
   (`labkit-next --guide`) 2,861 (was 4,727), both in the SimpleEnglish
