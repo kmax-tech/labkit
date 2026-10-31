@@ -30,6 +30,7 @@ PLAIN = [
     ("one call per item and lane (50 labelled questions × registered and null lane)",
      "one call per labelled question and prompt (50 × the question prompt and the placebo prompt)"),
     (" (the model template's parser)", ""),
+    (" (the model template's parser, labkit 0.104.4)", ""),
     (
         "; the files stay outside git, pinned by the sha256 the run records for them",
         "; the files are used as supplied, not copied or changed",

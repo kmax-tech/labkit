@@ -47,7 +47,7 @@ result.
    ("Is this passage written in English?") whose chance the template
    computes from its own answers (since the template repair of 2026-10-31;
    before, it sat at half the items, right for two balanced labels only),
-   band 3 items, margin 0.25, the template's first-word parser in any case.
+   band 3 items, margin 0.25, the template's first-word parser in any case, markdown or quote marks around the word dropped (0.104.4).
 
 ## Preparation evidence (not part of the registration)
 
