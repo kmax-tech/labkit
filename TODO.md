@@ -2503,6 +2503,29 @@ Reihenfolge:
    die Zweige der Piloten-Fixes (`pilot-*`, `r2-*`) sind alle in `main`
    und können weg.
 
+## Lücke aus Runde 2, Teil 1 — garantierte Schicht, vor Teil 2 (2026-10-31)
+
+**Die Registrierung einer Berechnung lässt sich nach einer verfehlten Messung
+still umschreiben.** Labor-21 r3: erste Messung 0,4749 unter der committeten
+Registrierung (alle Straßen), dann Commit 965b51c mit BR-Filter, neuer
+Projektion und umgeschriebenen Feldern Data / scope und Exclusions / filters,
+zweite Messung 0,6259, adoptiert, Referenzprüfung „met“, report-check 0
+Blocker, Standard erfüllt. Bei `low` prüft labkit die Prosafelder nur auf
+„vor der ersten Messung geschrieben“ (`low_registration_missing`); „registration
+since the first measurement“ in finalize vergleicht nur den Promise-Block,
+und eine Berechnung hat keinen. Das Analyse-Audit sieht den Endstand und
+fand die Änderung nicht.
+
+Reparatur (vor Teil 2, als Release): die Registrierungsfelder des Kinds
+(`standard_contract.registration_fields`) im Commit der ersten Messung gegen
+den Stand bei der Adoption halten, Kopf-Referenz eingeschlossen; eine
+Änderung ist ein BLOCKER mit dem Ausweg „als neues Protokoll registrieren
+(`[replaces]` nur bei unbeantwortbarer Registrierung) oder die Abweichung
+unter Deviations after freeze benennen und den Anspruch begrenzen“. Zwilling:
+eine unveränderte Registrierung bleibt grün; eine Änderung nur an Feldern
+außerhalb der Registrierung bleibt grün. Danach Teil 2 auf dem Release, mit
+den Nachbesserungen aus dem Review.
+
 ## Runde 2 — mögliche Nachbesserungen vor Teil 2 (Review 2026-10-31, nicht entschieden)
 
 Ein externes Review des Versuchsdesigns (Druckrunde, Vertrag
