@@ -2513,12 +2513,13 @@ ihrer eigenen Antworten, Parser ohne Groß-/Kleinschreibung, c72498c). Vor der R
 
 1. ~~Modellweg für pubmedqa50 getrennt prüfen~~ — erledigt 2026-10-31: `haiku` über `claude-cli` im
    Container hinter dem Proxy, ein Aufruf, Antwort `yes`, 0,008 $ (README, Vorbereitungsevidenz).
-2. Kleiner technischer Probelauf Ende zu Ende (Modellaufruf, Parser, Zeilen, Audit, Adoption) auf dem
-   Release mit der Vorlagenreparatur.
-3. Harness: Stempeln mit vorgegebenem Protokoll in `sandboxlab.arms` reparieren (ruft noch
-   `--cost seconds`), `PLAN.md` in den Kontrollarm legen.
-4. Vertrag vor der Runde; Nachweis, dass globale Befehle, Repo-Umgebung und Hooks dasselbe labkit
-   benutzen.
+2. Kleiner technischer Probelauf Ende zu Ende — Teil 0 des Vertrags
+   (`assessment-contract.txt`), wartet auf das Release mit der Vorlagenreparatur und den Pin
+   (`sandbox/labkit.pin` auf den Commit-Hash des Tags; der Pin-Test in labkit-paper verlangt einen
+   Hash und ist mit `v0.104.2` rot).
+3. ~~Harness~~ — erledigt 2026-10-31: `arms.head_stamp`, `PLAN.md` im Kontrollarm, Ein-labkit-Prüfung
+   im Setup (labkit-paper 81e66d6); Läufer `run_pilot.py`.
+4. ~~Vertrag~~ — geschrieben 2026-10-31 (`assessment-contract.txt`).
 5. Messung 3 (Reparaturen von heute auf dem neuen Release) vorher, eigener Vertrag.
 
 ## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)

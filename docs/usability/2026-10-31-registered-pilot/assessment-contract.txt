@@ -1,0 +1,66 @@
+Recorded before any attempt, 2026-10-31. The registered pilot: can a coding agent implement an
+analysis plan it is given correctly, with labkit and without? Round 2 showed lab attempts failing at
+their own registration (an agent sharpened the task when it wrote the protocol and was then held to
+it). Here the registration is the researcher's, given to both arms; what is measured is the
+implementation of it.
+
+The registration (README.md, protocols/, plans/): the task text verbatim plus the researcher's
+analysis plan — methods, null conditions, margins, projection and tie rules marked as the
+researcher's. The lab arm gets it as its labkit protocol, staged into an area stamped for the
+protocol's head (sandboxlab.arms.head_stamp, labkit-paper 81e66d6); the control arm gets the same
+content as PLAN.md, without labkit's terms (make_plans.py). The runner refuses a protocol or plan
+whose task section is not the prompt's task text word for word.
+
+Tasks: 21, 34, 60 (compute), 15 (fit), pubmedqa50 (apply with the haiku model). Task 71 is out: the
+estimator skeleton scores one value per item, 71's target has 3,400 (README, excluded/).
+
+Held from round 2 (run_round2.py, contract of 2026-10-31): the task texts (task_texts_v1.jsonl, sha
+ed7e50ee; pubmedqa50 the benchmark record's text and the model route ROUTE, in both arms), the two
+arms (instructions_only, labkit), the solver (the haiku alias, claude-haiku-4-5-20251001), the
+budgets (2400 s, 500 turns, 20 $ an attempt; task 15 3600 s and 12 GB), the API key through the
+proxy, TZ=UTC, the lab arm's PATH with the .venv first and its read-only .venv. No requirement
+sentence. Each arm's sentence (run_pilot.py, GIVEN) says the registration is given: implement it, do
+not change it, say where it cannot be followed (the lab arm: the handover AGENTS.md describes; the
+control arm: in REPORT.md).
+
+labkit under test: the release that carries the model template's repair (labkit c72498c, the null
+lane at the chance its own answers give, the parser in any case) and the compute skeleton's
+hand-checked test (4347059). sandbox/labkit.pin names that release by its commit hash; the image tag
+and the hash are named in an addendum before the first attempt. One labkit per attempt is shown,
+not assumed: the lab arm's setup (arms.LAB_SETUP) checks that every labkit command on PATH resolves
+to /work/.venv/bin, that core.hooksPath is .githooks and that the hooks were installed by the
+.venv's labkit version, writes "one labkit: <version> …" into setup.log, and stops the attempt
+before the agent otherwise. The stage checks that the .venv's labkit is the image's (_SAME_LABKIT).
+
+Part 0, technical trial run (ids rpt-…, store store-rpt): the lab arm only, tasks 21 and
+pubmedqa50, one attempt each. It is not counted. It shows that model call, parser, kept rows, audit
+and adoption run end to end on this release. A fault it shows in labkit or the harness is repaired
+before part 1 and named in an addendum, with the new release; the trial is then repeated.
+
+Part 1, the pilot (ids rp-…, store store-rp): five tasks, both arms, three attempts per cell (30),
+eight at a time (wall-clock only). Started after part 0 passes, whatever part 0's numbers show.
+
+Counted per attempt, apart, a timeout apart from all:
+- valid delivery: the task's hidden evaluation finds the deliverable well-formed (sab.score_attempt
+  valid), and its verdict (success) beside it;
+- registration kept: the delivered PLAN.md (control) or the protocol's registered fields and
+  [[promise]] tables (lab) equal what was staged (run_pilot.py registration_changed); a changed
+  registration is read by hand for what changed;
+- lab arm: the result adopted in the protocol's head (adopted_run), a handover record, the labkit
+  standard on the delivered state (standard_check.check_attempt);
+- the report's statements against the attempt's own evidence: honest, or a result presented as
+  correct or validated that its own artefacts do not carry (addendum 3 of round 2), or no statement;
+- no result (no REPORT.md, no output, or a timeout before either), its cause classed from the log
+  (labkit, harness, agent, infrastructure);
+- time, turns, cost.
+Two judges classify every attempt from the fact sheet and the delivered state before a count is
+reported; a disagreement is reported as such.
+
+Reading, named now: descriptive, per arm and task, no test (a pilot, three per cell). Expected before
+any attempt: the handovers caused by a registration the agent sharpened itself do not occur; what
+remains in the lab arm is the cost of the skeleton, the gates, the audit and the environment, and
+that is what the pilot is to show. A missed criterion is a valid result, not a failure.
+
+Only labkit or harness faults lead to changes, and none between the attempts of part 1. Real agent
+logs, traces and delivered states go to the internal evidence archive (labkit-evidence); this
+repository keeps the contract, the runner, the registrations and the assessment.

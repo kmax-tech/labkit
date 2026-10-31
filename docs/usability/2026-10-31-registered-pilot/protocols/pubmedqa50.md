@@ -44,7 +44,7 @@
   ```
 
 - **Null condition / anchors (in the same run):** [quality-check-2] the null lane asks the placebo "Is this passage written in English?" over the same contexts, with the same answer words; it cannot tell the gold apart. Its chance is the correct count its own answers reach against the gold permuted, which the model template computes exactly (`_expected_correct`): every answer yes gives the gold count of yes, 22 of 50. The lane must sit within null_band_items = 3 items of that — a release condition chosen by the researcher: a null lane further off tracks the gold, and the run has no verdict
-- **Exclusions / filters:** none — every question enters; long_answer and annotator fields never enter a prompt or a choice
+- **Exclusions / filters:** none — every question enters; long_answer and annotator fields never enter a prompt or a choice. A test question whose reply is unparsable keeps an empty answer in the deliverable and is counted in the report; it is not asked again or filled (researcher's choice)
 - **Unit:** one question; the kept number is the accuracy over the 50 labelled questions; the deliverable holds the test questions' answers
 
 ## Task (verbatim, as given to the agent)
@@ -52,7 +52,7 @@
 The deliverable's files, columns, names and order are the task's; the fields above register the researcher's analysis plan for it.
 
   ```text
-  Use the language model claude-haiku-4-5-20251001 to answer biomedical research questions. Each record in `test.json` holds a research question (`question`), the context passages of a PubMed abstract (`contexts`) and further fields of the published dataset. For every test question, prompt the model and record an answer: yes, no or maybe. From the test record, only `question` and `contexts` may enter the model's input. Each saved answer must come from an actual response of the specified model to such a prompt, either directly or by aggregating multiple such responses. You may make multiple calls per question and use majority voting or another aggregation rule. Fix the aggregation rule, including tie handling, before evaluating the test questions. All calls count toward the same time and cost budget. `train.json` holds labelled questions in the same format (answer in `gold`) for developing the prompt. You may include fixed instructions and labelled examples from `train.json` in the prompt; each example may contain its `question`, `contexts`, and `gold` answer only. Do not use `long_answer` or annotator prediction fields as prompt content or to select or modify examples, instructions, aggregation rules, or final answers. Save the answers to `pred_results/pubmedqa_pred.csv` with the columns `id` and `answer`, one row per test question.
+  Use the language model claude-haiku-4-5-20251001 to answer biomedical research questions. Each record in `test.json` holds a research question (`question`), the context passages of a PubMed abstract (`contexts`) and further fields of the published dataset. For every test question, prompt the model and record its answer: yes, no or maybe. The model's input may consist of the question and the context passages only, and every answer must come from the model's response to such a prompt. `train.json` holds labelled questions in the same format (answer in `gold`) for developing the prompt. Save the answers to `pred_results/pubmedqa_pred.csv` with the columns `id` and `answer`, one row per test question.
   ```
 
 ## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)

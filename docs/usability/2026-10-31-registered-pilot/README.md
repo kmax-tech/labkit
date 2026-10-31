@@ -67,11 +67,10 @@ result.
   about 6,200 input tokens per call are the CLI's own system prompt. Script
   and output in the evidence archive (`labkit-evidence`, same folder name).
 
-## Before the round
+## The round
 
-1. A small technical trial run end to end — model call, parser, kept rows,
-   audit, adoption — on the release that carries the template repair.
-2. The harness: stamping with a given protocol in `sandboxlab.arms` (it still
-   calls `--cost seconds`), `PLAN.md` into the control arm.
-3. A contract, written before the round, and the evidence that the global
-   commands, the repo's environment and the hooks run the same labkit.
+`assessment-contract.txt` registers it: part 0, a technical trial run (lab arm, 21 and pubmedqa50,
+one attempt each, not counted), then part 1, five tasks × two arms × three attempts.
+`run_pilot.py` runs both (copy it with protocols/, plans/ and a models.toml into a run directory).
+Open before part 0: the release with the template repair, and `sandbox/labkit.pin` set to its
+commit hash.
