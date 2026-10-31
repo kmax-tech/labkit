@@ -64,3 +64,12 @@ that is what the pilot is to show. A missed criterion is a valid result, not a f
 Only labkit or harness faults lead to changes, and none between the attempts of part 1. Real agent
 logs, traces and delivered states go to the internal evidence archive (labkit-evidence); this
 repository keeps the contract, the runner, the registrations and the assessment.
+
+Addendum 1, 2026-10-31 evening, before the first attempt of part 0. labkit under test: v0.104.3,
+commit 89182a39a6631fabf4c797a8c9459b8a62ba17b5 (sandbox/labkit.pin, labkit-paper 89d0893); agent
+image labkit-sandbox:00067900778e, proxy agentsandbox-proxy:aa300c7b22af. Checked before any
+agent, in the image on the staged repositories of part 0 (t21-labkit-cc2dfbbbe4,
+tpubmedqa50-labkit-47a7b2a689): the setup line prints "one labkit: 0.104.3 — .venv, commands on
+PATH (/work/.venv/bin), hooks (.githooks, labkit-hooks 0.104.3)", protocol-check passes both
+protocols, and pubmedqa50's stamped measurement script carries the repaired null check
+(_expected_correct). Part 0 runs two at a time.
