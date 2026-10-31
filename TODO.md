@@ -2484,6 +2484,16 @@ Druckrunde: vier Tasks 21, 34, 60, 15 (plus pubmedqa50, wenn der Probelauf
 die Aufrufzahl bestätigt), zehn je Zelle, 8 GB je Container; Fit-Skelett
 vorher auf drei Falten und einmalige Null-Refits bei low, mit gemessenem
 Budget auf 15; 71 bleibt draußen (EEG-Arrays, andere Messgröße).
+Vertragssatz der Runde: alle Container laufen mit `TZ=UTC` — Lauf-Ids sind
+Ortszeit ohne Zone (`runlog`), und vor der Adoption wählt die Antwortwahl
+nach Namen; nach der Adoption hält jedes Gate den adoptierten Lauf
+(`f0d9946`, review-fixes), neuere Läufe sind nur eine Warnung.
+
+Nach der Druckrunde, als angekündigter Bruch: die Lauf-Id in UTC mit `Z`,
+die Reihenfolge aus dem im Record geschriebenen Endzeitpunkt mit Zone
+statt aus dem Namen; derselbe Vergleich steckt im Stop-Hook
+(`agent_hooks.record_session` vergleicht über `runs.run_started` die Ortszeit der Id mit dem
+Sitzungsbeginn) und in `same_second`. Danach kann der Vertragssatz fallen.
 
 Reported preliminary study = 3 und 4; was heute vorliegt, ist die
 Pilotphase, die sagt, wo es klemmt.
