@@ -20,6 +20,8 @@ KEEP = (
 PLAIN = [
     ("at least the null lane's accuracy plus margin", "at least the placebo prompt's accuracy plus margin"),
     ("the null lane asks the placebo", "the placebo prompt asks"),
+    (" (the model template's TEXT_FIELD), built by 00_prepare.py as", ", built as"),
+    ("the one text field both lanes render", "the one text both prompts show"),
     (", which the model template computes exactly (`_expected_correct`)", ", computed exactly"),
     ("The lane must sit within", "The placebo prompt's correct count must sit within"),
     ("a null lane further off tracks the gold, and the run has no verdict",
@@ -112,6 +114,9 @@ def plan(protocol: str) -> str:
         )
     lines += ["", "## Task (verbatim)", "", task.group(1)]
     text = "\n".join(lines) + "\n"
+    # labkit's pins of data outside git (Data / scope) are the lab arm's; the plan says the same in words
+    text = re.sub(r"; they stay outside git, pinned by labkit's source digest[^\n]*",
+                  "; the files are used as supplied, not copied or changed", text)
     for a, b in PLAIN:
         text = text.replace(a, b)
     left = LABKIT_WORDS.findall(text)
