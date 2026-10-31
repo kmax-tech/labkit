@@ -236,3 +236,43 @@ def test_failed_check_does_not_write_success_report(runner, monkeypatch, tmp_pat
         runner.main()
     assert not list(tmp_path.iterdir())
     runner.run_batch.assert_not_called()
+
+
+# Tonight's log, copied: the lid shut on battery during part 0's repetition.
+PMSET = (
+    "2026-10-31 21:23:24 +0100 Assertions          \tPID 40712(caffeinate) ClientDied PreventUserIdleSystemSleep\n"
+    "2026-10-31 21:25:50 +0100 Sleep               \tEntering Sleep state due to 'Clamshell Sleep':TCPKeepAlive=active\n"
+    "2026-10-31 21:25:52 +0100 Wake Requests       \t[*process=dasd request=SleepService deltaSecs=983]\n"
+    "2026-10-31 21:27:07 +0100 DarkWake            \tDarkWake from Deep Idle [CDNP]\n"
+    "2026-10-31 21:27:52 +0100 Sleep               \tEntering Sleep state due to 'Maintenance Sleep'\n"
+    "2026-10-31 21:46:58 +0100 DarkWake            \tDarkWake from Deep Idle [CDNP]\n"
+    "2026-10-31 21:47:43 +0100 Sleep               \tEntering Sleep state due to 'Maintenance Sleep'\n"
+    "2026-10-31 21:49:17 +0100 Wake                \tWake from Deep Idle [CDNVA] : due to lid\n"
+)
+
+
+def _epoch(hms):
+    from datetime import datetime
+
+    return datetime.strptime(
+        f"2026-10-31 {hms} +0100", "%Y-%m-%d %H:%M:%S %z"
+    ).timestamp()
+
+
+def test_the_host_sleeps_are_read_from_the_power_log(checks):
+    """Three sleeps, the 'Wake Requests' line is no wake; the attempt that
+    started 21:22:41 lost 77 + 1146 + 94 seconds."""
+    intervals = checks.sleep_intervals(PMSET)
+    assert [(b - a) for a, b in intervals] == [77, 1146, 94]
+    assert (
+        checks.slept_seconds(intervals, _epoch("21:22:41"), _epoch("22:02:41")) == 1317
+    )
+    # the twin: an attempt that ran before the lid shut lost nothing
+    assert checks.slept_seconds(intervals, _epoch("21:00:00"), _epoch("21:25:50")) == 0
+    # a sleep the log does not end stays open, it is not dropped
+    open_end = checks.sleep_intervals(
+        PMSET + "2026-10-31 22:10:00 +0100 Sleep               \tClamshell\n"
+    )
+    assert open_end[-1][1] == float("inf")
+    with pytest.raises(ValueError):
+        checks.slept_seconds(intervals, 2.0, 1.0)

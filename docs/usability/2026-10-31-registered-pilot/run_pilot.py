@@ -46,7 +46,13 @@ from pathlib import Path
 S = Path(__file__).resolve().parent
 LAB = Path.home() / "projects" / "labkit-paper-main"
 sys.path.insert(0, str(LAB / "lib"))
-from pilot_checks import check_setup, read_environment  # noqa: E402
+from pilot_checks import (  # noqa: E402
+    check_setup,
+    read_environment,
+    read_pmset_log,
+    sleep_intervals,
+    slept_seconds,
+)
 from agentsandbox import images as image_info, trees  # noqa: E402
 from agentsandbox import config as sandbox_config  # noqa: E402
 from agentsandbox.agents import ClaudeCode, Limits  # noqa: E402
@@ -296,7 +302,14 @@ def pilot(
     todo: list[Attempt],
     environment: dict[str, str],
 ) -> None:
-    """Run prepared attempts and retain the checked sandbox commit in the store."""
+    """Run prepared attempts and retain the checked sandbox commit in the store.
+    Holds off idle sleep for as long as this process lives (`caffeinate -i -w`);
+    a laptop shut on battery sleeps anyway, which `--score` counts per attempt
+    (`host_slept_s`)."""
+    import subprocess
+
+    subprocess.Popen(["caffeinate", "-i", "-w", str(os.getpid())])
+    print("keep the machine open and on power until the batch ends", flush=True)
     given = {
         t: {
             k: hashlib.sha256(v.encode("utf-8")).hexdigest()
@@ -496,7 +509,10 @@ def venv_changed(rec: dict, work: Path) -> bool | None:
 
 
 def score(images: dict[str, str]) -> None:
-    """Evaluate kept attempts and write scores beside the runner."""
+    """Evaluate kept attempts and write scores beside the runner; each row
+    carries how long the host slept during the attempt (`host_slept_s`, from
+    `pmset -g log`), an attempt with any sleep is an infrastructure failure."""
+    asleep = sleep_intervals(read_pmset_log())
     rows = []
     for rec in kept(STORE):
         work = work_dir(STORE, rec)
@@ -513,6 +529,9 @@ def score(images: dict[str, str]) -> None:
             "success": s["verdict"],
             "line": s["line"],
             "registration_changed": registration_changed(rec, work),
+            "host_slept_s": slept_seconds(
+                asleep, rec["started"], rec["started"] + rec["seconds"]
+            ),
             **effort(rec),
         }
         if rec["arm"] == "labkit":

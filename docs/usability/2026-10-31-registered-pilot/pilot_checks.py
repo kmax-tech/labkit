@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 
@@ -132,3 +133,55 @@ def check_setup(image: str, archive: bytes, env: dict[str, str], script: str) ->
         return output
     finally:
         docker_output(["rm", "-f", name])
+
+
+#: a power-management event in `pmset -g log`: its timestamp and kind, the kind
+#: padded with spaces up to a tab ("Wake Requests" is no Wake)
+_PM_EVENT = re.compile(
+    r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d [+-]\d{4}) (Sleep|Wake|DarkWake) *\t", re.M
+)
+
+
+def sleep_intervals(pmset_log: str) -> list[tuple[float, float]]:
+    """The host's sleeps in PMSET_LOG (`pmset -g log` text) as (start, end)
+    epoch seconds: from a Sleep event to the next Wake or DarkWake; a sleep
+    the log does not end stays open (end = inf). Pure; reads nothing else.
+    A laptop shut on battery sleeps whatever caffeinate asserts (part 0's
+    repetition lost twenty of its forty minutes to 'Clamshell Sleep')."""
+    out: list[tuple[float, float]] = []
+    start: float | None = None
+    for stamp, kind in _PM_EVENT.findall(pmset_log):
+        t = datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S %z").timestamp()
+        if kind == "Sleep":
+            if start is None:
+                start = t
+        elif start is not None:
+            out.append((start, t))
+            start = None
+    if start is not None:
+        out.append((start, float("inf")))
+    return out
+
+
+def slept_seconds(
+    intervals: list[tuple[float, float]], start: float, end: float
+) -> float:
+    """Seconds of INTERVALS inside [START, END]: how long the host slept
+    during one attempt. Raises ValueError when END precedes START."""
+    if end < start:
+        raise ValueError(f"attempt window ends before it starts: {start} > {end}")
+    return sum(max(0.0, min(b, end) - max(a, start)) for a, b in intervals)
+
+
+def read_pmset_log() -> str:
+    """The host's power-management log (`pmset -g log`, macOS). Raises
+    RuntimeError when pmset fails — a sleep that cannot be read is not
+    assumed absent."""
+    result = subprocess.run(
+        ["pmset", "-g", "log"], capture_output=True, text=True, timeout=120
+    )
+    if result.returncode:
+        raise RuntimeError(
+            f"pmset -g log failed ({result.returncode}): {result.stderr.strip()}"
+        )
+    return result.stdout
