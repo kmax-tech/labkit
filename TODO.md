@@ -2571,7 +2571,10 @@ Als Nächstes, in dieser Reihenfolge:
 7. Branch `audit-prompts` (`92a47d5`, Prompts der Audit-Agenten gekürzt,
    Note `docs/notes/2026-10-31-audit-prompts-cut.md`): erst nach der kalten
    Runde einmischen, am Injection-Benchmark messen; die Hauskopie
-   `~/.claude/agents/code-clarity.md` zieht der Rollout nach.
+   `~/.claude/agents/code-clarity.md` zieht der Rollout nach. Beim
+   Einmischen kollidiert die Lesbarkeitsregel im Preflight-Prompt
+   (Feldnamen, auf beiden Zweigen korrigiert: `d04de5d`, `4820377`): die
+   Fassung von `audit-prompts` nehmen.
 
 Nach dem dritten Hinweis (2026-10-31): `protocol-fill` nimmt ein
 eindeutiges Präfix eines Feldnamens an und nennt bei Mehrdeutigkeit die
