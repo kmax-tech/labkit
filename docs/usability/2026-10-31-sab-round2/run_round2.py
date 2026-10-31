@@ -244,7 +244,8 @@ def score(images: dict[str, str]) -> None:
             with tempfile.TemporaryDirectory(dir=S) as tmp:
                 std = standard_check.check_attempt(rec["images"]["agent"], work, Path(tmp),
                                                    inputs=sab.inputs(task), inputs_sha256=rec["inputs_sha256"])
-            row.update(standard_met=std["met"], repeat_cost=std.get("repeat_cost"), gaps=std["gaps"])
+            row.update(standard_met=std["met"], repeat_cost=std.get("repeat_cost"), gaps=std["gaps"],
+                       adopted_run=std.get("adopted_run"), handovers=std.get("handovers", 0))
         rows.append(row)
         print(json.dumps({k: row[k] for k in ("attempt_id", "success", "valid", "line", "seconds", "turns", "cost_usd")
                           if k in row} | ({"standard_met": row["standard_met"]} if "standard_met" in row else {})),
