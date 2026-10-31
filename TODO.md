@@ -2557,12 +2557,14 @@ Als Nächstes, in dieser Reihenfolge:
 4. Schritt 1 (sechs Begriffe, Rest verborgen) ist in `AGENTS.md` umgesetzt,
    in den Gate-Meldungen noch nicht (dort weiter: answering run, intent
    key, repeat cost …).
-5. Weiter kürzen, was der Agent liest (Hinweis 2026-10-31): die
-   Protokollvorlage `experiment-protocol.md.template` (2.225 Wörter, rund
-   35 Felder) und `protocol-check --contract` (ein Bildschirm Prosa, der
-   nächste Schritt steht nicht oben — `labkit-next` nennt ihn, aber
-   `--contract` sollte mit ihm beginnen). Vor der kalten Runde, wenn
-   „nachher“ die gekürzte Oberfläche messen soll.
+5. Gekürzt (2026-10-31): Protokollvorlage 1.665 Wörter (war 2.225), jede
+   Hilfe eine kurze Anweisung; `protocol-check --contract` beginnt mit dem
+   `labkit-next`-Befehl. Vorlage, `AGENTS.md` und (auf `audit-prompts`) die
+   Audit-Prompts liefen durch den Self-Check des SimpleEnglish-Skills
+   (`~/projects/SimpleEnglish`, prozedurales Register). Offen: der
+   Feldleitfaden `labkit/docs/protocol-field-guide.md` und die
+   Agenten-Anleitung `labkit/docs/agent-guide.md` sind Referenz und nicht
+   gekürzt.
 6. Codex-Hooks im Container nachweisen (Vertrauensfreigabe im Wrapper, ein
    Hook feuert), dann der Codex-Screen.
 7. Branch `audit-prompts` (`92a47d5`, Prompts der Audit-Agenten gekürzt,
