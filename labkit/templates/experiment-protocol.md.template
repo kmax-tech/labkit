@@ -35,7 +35,7 @@
   before the run, like this: "criterion-… met → supported: reported as
   meeting the criterion; otherwise → missed: reported as a miss". Write
   "n/a — only one outcome" if no result decides anything.>
-- **Timebox:** <a hard budget, such as 4h. Then record and ask.>
+- **Timebox:** <the duration first, such as `45 min` or `4h`, then what follows: record and ask. A fit stops before this budget when its first fold projects over it.>
 - **Split touched:** <which split the run can touch: train | dev | test>
 - **Why this design †:** <the choice of model, dataset and method, in one sentence>
 - **Rival explanations †:** <per confound: what else produces the same

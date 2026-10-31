@@ -44,6 +44,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The fit skeleton's plan follows the repeat cost, and the Timebox is a
+  budget the run holds.** At `low` a fit trains 3 folds × (1 + 2 refits)
+  = 9 fits, at `high` 5 × (1 + 5) = 30 as before (`FIT_PLAN`); folds and
+  refits are recorded in the run's config (`n_folds`, `null_refits`),
+  fewer than two refits are refused. A Timebox that starts with a duration
+  (`45 min — then record and ask`) is read (`labkit/formats/timebox.py`):
+  the fit times its first fold, projects the run and stops before the
+  second fold when the projection exceeds the budget, with the numbers and
+  the way out; a Timebox without a leading duration stays prose and the
+  run says that no projection is made. Note: `docs/notes/2026-10-31-fit-budget.md`.
+
 - **What an agent copies is what labkit takes.** Every `--decide` call
   and every registered-branch example shown in `AGENTS.md`, the agent
   guide, the field guide and the protocol template goes through the real

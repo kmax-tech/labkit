@@ -258,7 +258,10 @@ the detail below does not hold.
   own condition, not on the verdict. A stop rule can fire during the run or
   on a failed quality check. `intent-check` and `finalize` block an
   outcome name under `branch_1_outcome` that is not registered.
-- **Timebox:** a budget in time, not a condition on a result. "If the
+- **Timebox:** a budget in time, not a condition on a result. Write the
+  duration first (`45 min — then record and ask`): a fit skeleton reads it,
+  times its first fold and stops before the budget when the projection
+  exceeds it. "If the
   pipeline does not run by tomorrow" is a result condition. A quality check
   fires on a bad result. A timebox fires when you are stuck without one.
 - **Split touched:** write the split that you plan to use, before the run.
@@ -376,8 +379,10 @@ result is only a plan.
     predictions fixed. [quality-check-2] registers the rule beside the band
     (`null_band_quantile` over `null_permutations`). `--write` registers
     the band before the first measurement.
-  - At fit, the null lane refits `NULL_REFITS` times in the run. Their
-    scores (`quality_check_2_draw_scores`) show the spread.
+  - At fit, the null lane refits on permuted labels in every fold, as
+    the script's fit plan says (`null_refits` in the run's config: 2 per
+    fold at low repeat cost, 5 at high). Their scores
+    (`quality_check_2_draw_scores`) show the spread.
   - At high repeat cost, run `--probe` over a few seeds.
 
   A registered number seen before `frozen = true` makes the freeze empty.

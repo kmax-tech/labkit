@@ -2439,6 +2439,51 @@ kein Gesamtumbau dafür. Änderungen am Haus-Skill bleiben externer Rollout.
 - **Allgemeine Regelbeispiele / `lib scar`:** Erst wenn fremdes Labor eigene
   Belege sammelt. Datierte Belege von geltenden Regeln getrennt halten.
 
+## Zusammenführen zur finalen Version (Stand 2026-10-31 mittags)
+
+Was noch offen liegt, bevor 0.104.0 die gekürzte Oberfläche, die
+Codex-Hooks, das Fit-Budget und die Modulteilung zusammen trägt. Nichts
+davon ist gepusht; `main` steht 56 Commits vor `origin/main`.
+
+| Repo | Zweig / Ort | Stand | Inhalt | Weg nach `main` |
+|---|---|---|---|---|
+| labkit | Hauptcheckout, ungesichert | 7 Dateien (`gates/agent_hooks.py`, `gates/codex_hooks.py`, Tests, `docs/codex-hooks.md`, Note, CHANGELOG, TODO) | Codex-Hooks (Arbeitsverzeichnis-Lücke?) — ein anderer Agent | der Agent committet; bis dahin kein Merge in den Hauptcheckout |
+| labkit | `id-words` | 29 vor `main`, `main` 1 vor ihm (`67f44ab`, TODO) | Oberfläche gekürzt, id-Wörter, Entscheidungen, Vorlage, `labkit-next`, `--contract` | `git merge id-words` (kein Fast-Forward; TODO-Hunks in verschiedenen Abschnitten) |
+| labkit | `fit-budget` | 2 vor `id-words` | Fit-Plan je `repeat_cost`, Timebox als Budget, Messung | Fast-Forward auf `id-words` |
+| labkit | `review-fixes` | 3 vor `id-words` | `TZ=UTC` als Vertragssatz, Lauf-Id in UTC (Issue 3) | Fast-Forward auf `id-words` |
+| labkit | `split-modules` | 5 vor `id-words` | Modulteilung der langen Dateien (`audit.py`, `findings.py`, `scaffold.py` …), Bruch für Importeure | zuletzt, weil es Dateien verschiebt: nach den anderen Geschwistern mergen, Konflikte dort lösen |
+| labkit | `audit-prompts` | 19 vor `main`, Basis `7b93c86` (vor `id-words`) | Audit-Prompts gekürzt, SimpleEnglish-Check | echter Merge nach `main` (oder Rebase auf `id-words`), Suite danach |
+| labkit | `interp-arms` | 0 vor `main` | erledigt | Worktree entfernen |
+| agentsandbox | `codex-agent` | 13 vor `main` | Codex-Adapter, Proxy-Upstream, API-Schlüssel-Route, `ferry.toml` | `git -C ~/projects/agentsandbox merge --ff-only codex-agent` |
+| labkit-paper | `main-round` | 14 vor `main` | Runde 1, Piloten, pubmedqa50-Zuschnitt, `ferry.toml` | `git -C ~/projects/labkit-paper-main merge --ff-only main-round` (oder `main-round` bleibt der Arbeitszweig) |
+| labkit-evidence | `main`, kein Remote | aktuell | Stores, Urteile, Fit-Zeiten | nichts |
+
+Reihenfolge:
+
+1. Der Agent im Hauptcheckout committet seine Codex-Hook-Änderung (oder
+   setzt sie auf einen Zweig); erst dann ist `main` frei für Merges.
+2. `id-words` nach `main` mergen; Suite im Hauptcheckout (`.venv`) grün.
+3. Die drei Geschwister in dieser Folge auf `main`: `fit-budget`,
+   `review-fixes`, `split-modules` (je `merge --ff-only` auf `id-words`
+   vor Schritt 2, sonst echter Merge; `split-modules` zuletzt, Konflikte an
+   den verschobenen Dateien dort lösen); nach jedem Merge die Suite.
+4. `audit-prompts` mergen; Suite.
+5. CHANGELOG: ein Kopf `## 0.104.0 — <Datum>` über dem gesamten
+   Unreleased-Block (die Teilzweige haben je eigene Einträge dort), dann
+   `just release 0.104.0 && git push origin main && git push --tags`
+   (Release und Push bleiben beim Autor; der Klassifizierer lehnt sie für
+   den Agenten ab).
+6. agentsandbox `codex-agent` nach `main`; labkit-paper `main-round` nach
+   `main` oder als Arbeitszweig belassen.
+7. Danach das Sandbox-Image mit dem Pin 0.104.0 bauen (labkit-paper
+   `requirements.txt`, `sandboxlab.infra.build_images`), der Selbsttest
+   der Sandbox, und `labkit-init lab` in einem frischen Probe-Repo: die
+   Vorlagen müssen dem Tag entsprechen (der Stempel lehnt den
+   Entwicklungsstand ab, `--labkit-ref` nur zum Probieren).
+8. Worktrees aufräumen (`git worktree remove …` für erledigte Zweige),
+   die Zweige der Piloten-Fixes (`pilot-*`, `r2-*`) sind alle in `main`
+   und können weg.
+
 ## Evaluation für das Paper — Reihenfolge (2026-10-30 abends)
 
 Belegt und berichtbar: der Druckvergleich (Haiku, fünf Tasks, 30
@@ -2484,9 +2529,21 @@ bleiben ohne Tool-Verzeichnis ununterscheidbar (Note 2026-10-30-codex-hooks).
 pubmedqa50 ist beidseitig auf 50 gekürzt (labkit-paper `5a1ba8b`), damit die
 Apply-Sorte zwei Tasks hat; der Deckel-Satz (ein Aufruf je Frage) ist offen.
 Druckrunde: vier Tasks 21, 34, 60, 15 (plus pubmedqa50, wenn der Probelauf
-die Aufrufzahl bestätigt), zehn je Zelle, 8 GB je Container; Fit-Skelett
-vorher auf drei Falten und einmalige Null-Refits bei low, mit gemessenem
-Budget auf 15; 71 bleibt draußen (EEG-Arrays, andere Messgröße).
+die Aufrufzahl bestätigt), zehn je Zelle, 8 GB je Container; 71 bleibt
+draußen (EEG-Arrays, andere Messgröße). Fit-Skelett gebaut (Zweig
+`fit-budget`, 2026-10-31, Note `docs/notes/2026-10-31-fit-budget.md`): Plan
+je `repeat_cost` (`low` 3 Falten × (1 + 2) = 9 Fits, `high` 5 × (1 + 5) = 30
+wie bisher), `n_folds` und `null_refits` in der Lauf-Config, unter zwei
+Refits abgelehnt (ein Zug entschied einst ein Urteil); die Timebox wird
+Budget: beginnt das Feld mit einer Dauer (`45 min — …`), misst der Fit die
+erste Falte, rechnet hoch und stoppt vor dem Budget mit Zahlen und Ausweg.
+Verworfen: das Nullband bei low aus Permutationen der Vorhersagen (andere
+Streuung, Methodenwechsel). Gemessen (Sandbox-Image, 4 CPUs, 8 GB, ein Fit
+der registrierten Schätzer): 71 `LinearRegression` 204 s je Fit (float64),
+96 s (float32) — alter Plan 107 bzw. 51 min, `low` 35 bzw. 17 min; 15
+`RandomForest` 2,5 bis 9,1 s je Fit — alter Plan 1,3 bis 4,8 min je Messung,
+die Stunde ging in zwei bis sieben Messungen. Für die Druckrunde: 71 mit
+float32 in der Vorbereitung und Timebox 25 min, 15 Timebox 5 min.
 
 Reported preliminary study = 3 und 4; was heute vorliegt, ist die
 Pilotphase, die sagt, wo es klemmt.

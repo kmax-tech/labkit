@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import replace
 import math
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import importlib.util
 import io
 import pickle
@@ -645,6 +644,66 @@ class ApplySkeleton(unittest.TestCase):
             instrument.fit.call_count,
             (1 + measure.NULL_REFITS) * measure.CONFIG.n_folds + 1,
         )
+
+    # the fit plan follows the protocol's repeat cost and the Timebox is a
+    # budget the run holds (docs/notes/2026-10-31-fit-budget.md)
+
+    def test_the_plan_at_low_is_three_folds_and_two_refits_recorded_in_the_config(self):
+        _, measure = self.measure_module("fit")
+        self.assertEqual(measure.FIT_PLAN["low"], (3, 2))
+        self.assertEqual(measure.FIT_PLAN["high"], (5, 5))
+        self.assertEqual((measure.CONFIG.n_folds, measure.CONFIG.null_refits), (3, 2))
+        self.assertIn("null_refits", asdict(measure.CONFIG))
+        instrument = mock.Mock()
+        instrument.predict.side_effect = lambda xs: [x[0] for x in xs]
+        with mock.patch.object(measure, "make_estimator", return_value=instrument):
+            measure.fit_rows(measure.CONFIG, self.items(), probe=False)
+        self.assertEqual(
+            instrument.fit.call_count, 3 * (1 + 2) + 1
+        )  # nine fits and the test fit
+
+    def test_fewer_than_two_refits_are_refused(self):
+        _, measure = self.measure_module("fit")
+        with self.assertRaises(ValueError) as cm:
+            measure.fit_rows(
+                replace(measure.CONFIG, null_refits=1), self.items(), probe=False
+            )
+        self.assertIn("null_refits = 1", str(cm.exception))
+
+    def _timed_fit(self, measure, seconds_per_fold: float, budget_s: int | None):
+        instrument = mock.Mock()
+        instrument.predict.side_effect = lambda xs: [x[0] for x in xs]
+        ticks = iter([0.0] + [seconds_per_fold * k for k in range(1, 10)])
+        with mock.patch.object(measure, "make_estimator", return_value=instrument):
+            return measure.fit_rows(
+                measure.CONFIG,
+                self.items(),
+                probe=False,
+                budget_s=budget_s,
+                clock=lambda: next(ticks),
+            )
+
+    def test_a_first_fold_that_projects_over_the_timebox_stops_the_measurement_with_the_numbers(
+        self,
+    ):
+        _, measure = self.measure_module("fit")
+        # 3 folds of 240 s and a test fit project to 800 s against 600 s
+        with self.assertRaises(SystemExit) as cm:
+            self._timed_fit(measure, 240.0, budget_s=600)
+        msg = str(cm.exception)
+        self.assertIn("240 s", msg)
+        self.assertIn("13.3 min", msg)
+        self.assertIn("10.0 min", msg)
+        self.assertIn("Next:", msg)
+
+    def test_a_projection_within_the_timebox_and_no_timebox_both_run_through(self):
+        _, measure = self.measure_module("fit")
+        rows = self._timed_fit(measure, 100.0, budget_s=600)  # 333 s projected
+        self.assertEqual(len([r for r in rows if r["lane"] == "test"]), 1)
+        rows = self._timed_fit(
+            measure, 240.0, budget_s=None
+        )  # no budget, no projection
+        self.assertEqual(len({r["id"] for r in rows}), len(rows))
 
 
 if __name__ == "__main__":

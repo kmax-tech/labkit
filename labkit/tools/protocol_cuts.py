@@ -417,7 +417,7 @@ ESTIMATOR_FIELDS = {
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
     "Prompt (verbatim, per variant)": "n/a — no prompt; the instrument is an estimator",
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
-    "Null condition / anchors (in the same run)": "<the same estimator refitted NULL_REFITS (5) times on labels permuted inside each fitting fold · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>",
+    "Null condition / anchors (in the same run)": "<the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>",
     # filled after the run from its kept rows, owed only with a model
     # (`protocol_check.not_owed`); --probe's rows are thrown away — the
     # stamp asked for them here (audit 2026-10-27, third, I11)

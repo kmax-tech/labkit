@@ -93,7 +93,7 @@ class Pairing(unittest.TestCase):
         with self._predicting(short_by=0):
             rows = m.measure(m.CONFIG, self.ITEMS, self.out)
         # registered, NULL_REFITS null draws, then test (the estimator here is a fit)
-        per_item = 1 + len(m.null_draws())
+        per_item = 1 + len(m.null_draws(m.CONFIG))
         self.assertEqual(len(rows), per_item * 10 + 2)
         self.assertEqual(_lines(self.out), per_item * 10 + 2)
 

@@ -131,9 +131,14 @@ how far the null lane can stray from its target:
   `.venv/bin/python <area>/scripts/01_measure.py --calibrate-null --write`.
   It registers the band by the registered rule, before the first
   measurement only.
-- At `fit`, the null lane refits five times on permuted labels
-  (`NULL_REFITS`). Give the band a reasoned value. At `high`, you can use
-  the spread of those refits over a few `--seed` values of `--probe`.
+- At `fit`, the null lane refits on permuted labels in every fold: twice
+  per fold at `low` (3 folds), five times at `high` (5 folds). The plan is
+  in the measurement script's head (`FIT_PLAN`) and in the run's config.
+  Give the band a reasoned value. At `high`, you can use the spread of
+  those refits over a few `--seed` values of `--probe`.
+- Write the Timebox as a duration first (`45 min — then record and ask`).
+  A fit times its first fold and stops before the budget when the
+  projection exceeds it, with the numbers and the way out.
 
 After the first measurement, these values stay fixed. Decide a finding
 about them by the ways under "When you are stuck".
