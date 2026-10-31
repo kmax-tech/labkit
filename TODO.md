@@ -2503,23 +2503,24 @@ Reihenfolge:
    die Zweige der Piloten-Fixes (`pilot-*`, `r2-*`) sind alle in `main`
    und können weg.
 
-## Pilot mit vorgegebener Registrierung (2026-10-31, Entwurf nach Review)
+## Pilot mit vorgegebener Registrierung (2026-10-31, Entwurf nach zwei Reviews)
 
-Frage: Setzt der Agent einen vorgegebenen Analyseplan mit labkit besser um als ohne? Entwürfe in
-`docs/usability/2026-10-31-registered-pilot/` (Protokolle, gleichwertige `PLAN.md`, README mit den
-Forscherentscheidungen). Vor dem Lauf offen:
+Frage: Setzt der Agent einen vorgegebenen Analyseplan mit labkit besser um als ohne? Fünf Tasks
+(21, 34, 60, 15, pubmedqa50); 71 ausgenommen, weil das Schätzer-Gerüst nur einen Wert pro Item
+bewertet. Entwürfe, Forscherentscheidungen und Vorbereitungsevidenz in
+`docs/usability/2026-10-31-registered-pilot/`. Die Modellvorlage ist repariert (Null-Spur am Zufallswert
+ihrer eigenen Antworten, Parser ohne Groß-/Kleinschreibung, c72498c). Vor der Runde:
 
-1. Die sechs Forscherentscheidungen im README bestätigen; 71 aus dem Pilot nehmen (Empfehlung).
-2. Modellweg für pubmedqa50 einmal getrennt prüfen (Proxy, API-Schlüssel, ein Aufruf).
+1. Modellweg für pubmedqa50 einmal getrennt prüfen (Proxy, API-Schlüssel, ein Aufruf). Die Sandbox
+   kennt bisher nur `claude-cli` als Backend für `haiku` (models.toml) — klären, wie ein
+   Experimentskript im Container das Modell erreicht.
+2. Kleiner technischer Probelauf Ende zu Ende (Modellaufruf, Parser, Zeilen, Audit, Adoption) auf dem
+   Release mit der Vorlagenreparatur.
 3. Harness: Stempeln mit vorgegebenem Protokoll in `sandboxlab.arms` reparieren (ruft noch
    `--cost seconds`), `PLAN.md` in den Kontrollarm legen.
-4. Messung 3 (Reparaturen von heute auf dem neuen Release) vorher, eigener Vertrag.
-
-**Fehler in der Modellvorlage, gefunden im Review:** `_within_chance()` in
-`labkit/templates/measure-script.py.template` prüft die Null-Spur gegen die Hälfte der Items — richtig
-nur für zwei gleich häufige Klassen. Bei drei Antworten (PubMedQA: yes/no/maybe) ist der Zufallswert
-die Permutationserwartung, wie sie das Schätzer-Gerüst schon rechnet (`permutation_expectation`).
-Eine Heimat: die Rechnung aus dem Schätzer-Gerüst übernehmen, nicht kopieren.
+4. Vertrag vor der Runde; Nachweis, dass globale Befehle, Repo-Umgebung und Hooks dasselbe labkit
+   benutzen.
+5. Messung 3 (Reparaturen von heute auf dem neuen Release) vorher, eigener Vertrag.
 
 ## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)
 

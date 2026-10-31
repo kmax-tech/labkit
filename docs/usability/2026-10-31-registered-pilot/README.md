@@ -10,24 +10,28 @@ implement a given analysis plan correctly, with labkit and without?** The
 registration is the task text plus the researcher's analysis plan. Methods,
 null conditions, margins, the projection and tie rules are the researcher's
 decisions, not the task's; each is marked "researcher's choice" or
-"researcher's precision" where it stands.
+"researcher's precision" where it stands. A missed criterion is a valid
+result.
 
 - `protocols/<task>.md` — the lab arm's protocol (the stage replaces
-  `{protocol_id}` with the stamped id), one per task of round 1: 21, 34, 60
-  (compute), 15, 71 (fit), pubmedqa50 (apply with a model). Each carries the
-  task verbatim in its own section, so the audit, which reads the protocol
-  first, sees the full deliverable spec. Each passes `protocol-check` — that
-  shows the form, not that the plan is sound.
+  `{protocol_id}` with the stamped id) for five tasks of round 1: 21, 34, 60
+  (compute), 15 (fit), pubmedqa50 (apply with a model). Each carries the task
+  verbatim in its own section, so the audit, which reads the protocol first,
+  sees the full deliverable spec. Each passes `protocol-check` — that shows
+  the form, not that the plan is sound.
 - `plans/<task>.md` — the same content for the control arm as `PLAN.md`,
   without labkit's terms, written by `make_plans.py`; the two arms differ in
   labkit, not in what they are told about the task.
+- `excluded/71.md` — not in this pilot: the estimator skeleton scores one
+  value per item, and 71's target is 3,400 values per image. Supporting it
+  is an extension of the skeleton; the pilot would measure implementation,
+  usability and new framework function at once.
 
-## The researcher's choices to confirm before a run
+## The researcher's choices
 
 1. 21: all supplied roads, the buffer not clipped at a state boundary; that
-   every feature lies inside Rondônia is not checked. Areas in EPSG:32720 (UTM
-   20S). Checked in the runtime image: EPSG:32720 gives 0.4749, 32723 0.4793,
-   5880 0.4755 — under 1 % apart, the benchmark's tolerance is 5 % relative.
+   every feature lies inside Rondônia is not checked. Areas in EPSG:32720
+   (UTM 20S), chosen for its fit to the layers' extent.
 2. 34: neurokit2 0.2.12 (the image's), `ecg_peaks` default method without
    artifact correction, `hrv()` at 100 Hz. An empty column only for an index
    `hrv()` returns no value for, with its reason in the report; a missing
@@ -35,21 +39,35 @@ decisions, not the task's; each is marked "researcher's choice" or
 3. 60: registered as `compute` (fixed predictions, nothing of ours is judged).
    The MFA tie goes to the first response in CCOBRA's order and the rule
    application is spelled out — both precisions of the task's wording.
-4. 15: Morgan fingerprints (radius 2, 2,048 bits; fitted on nothing, so no
-   fold leakage) and `RandomForestClassifier(n_estimators=500,
-   random_state=seed)`, 3 folds and 2 permuted-label refits per fold from
-   the skeleton's plan, seed 0. Margin 0.25 is a choice without a source; the
-   null band 0.1 is wide against a null standard deviation near 0.008.
-5. 71: the bar is the mean training response, scored in the same folds; no
-   band on it, since images share structure and a mean can correlate with
-   each; normalisation (one mean, one deviation per subject) from the
-   fitting fold. **Recommended: not in this pilot.** The estimator skeleton
-   scores one scalar per item; a 3,400-value target needs an extension of
-   the skeleton, and the pilot should not measure that at the same time.
-6. pubmedqa50: a strict parser (the whole reply must be yes, no or maybe);
-   the null is the permutation expectation of the registered answers,
-   computed exactly, its band the 0.99 quantile over 200 permutations. The
-   model template's null check sits at half the items, which holds for two
-   classes only: the agent has to replace it, as the protocol says. The
-   model route through the proxy with an API key is to be tried once before
-   the run, apart from any attempt.
+4. 15: Morgan fingerprints (radius 2, 2,048 bits) and
+   `RandomForestClassifier(n_estimators=500, random_state=0)`, 3 folds and 2
+   permuted-label refits per fold from the skeleton's plan, nothing tuned.
+   Margin 0.25 without a source; null band 0.1 a generous plausibility limit.
+5. pubmedqa50: the model template's lanes as stamped — a placebo null lane
+   ("Is this passage written in English?") whose chance the template
+   computes from its own answers (since the template repair of 2026-10-31;
+   before, it sat at half the items, right for two balanced labels only),
+   band 3 items, margin 0.25, the template's first-word parser in any case.
+
+## Preparation evidence (not part of the registration)
+
+- 21, the projection's effect, computed in the runtime image
+  (`labkit-sandbox:286f86bb93f8`, geopandas 1.1.4) with the reference
+  computation of buffer, dissolve and overlay: EPSG:32720 0.47491,
+  EPSG:32723 0.47930, EPSG:5880 0.47546 — under 1 % apart; the benchmark's
+  tolerance is 5 % relative. The extent of the roads: 60.1–66.8° W,
+  8.0–13.7° S.
+- 15, counted in the supplied files: train 5,093 rows (2,654 positive), val
+  728 (450 positive).
+- pubmedqa50, counted in train.json: yes 22, no 21, maybe 7.
+
+## Before the round
+
+1. The model route for pubmedqa50, tried once apart from any attempt (proxy,
+   API key, one call).
+2. A small technical trial run end to end — model call, parser, kept rows,
+   audit, adoption — on the release that carries the template repair.
+3. The harness: stamping with a given protocol in `sandboxlab.arms` (it still
+   calls `--cost seconds`), `PLAN.md` into the control arm.
+4. A contract, written before the round, and the evidence that the global
+   commands, the repo's environment and the hooks run the same labkit.

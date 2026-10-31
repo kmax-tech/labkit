@@ -18,6 +18,15 @@ KEEP = (
     "Unit",
 )
 PLAIN = [
+    ("at least the null lane's accuracy plus margin", "at least the placebo prompt's accuracy plus margin"),
+    ("the null lane asks the placebo", "the placebo prompt asks"),
+    (", which the model template computes exactly (`_expected_correct`)", ", computed exactly"),
+    ("The lane must sit within", "The placebo prompt's correct count must sit within"),
+    ("a null lane further off tracks the gold, and the run has no verdict",
+     "a placebo further off tracks the gold, and the run gives no verdict"),
+    ("one call per item and lane (50 labelled questions × registered and null lane)",
+     "one call per labelled question and prompt (50 × the question prompt and the placebo prompt)"),
+    (" (the model template's parser)", ""),
     (
         "; the files stay outside git, pinned by the sha256 the run records for them",
         "; the files are used as supplied, not copied or changed",
