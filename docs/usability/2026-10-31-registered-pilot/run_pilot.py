@@ -5,10 +5,10 @@
 labkit protocol, the control arm as PLAN.md — can the agent implement a given
 plan, with labkit and without? (README.md beside this file, assessment-contract.txt.)
 
-    ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --show 21 labkit
-    ID_PREFIX=rpt ARMS_ONLY=labkit ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --pilot --only 21 pubmedqa50
-    REPS=3 ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --pilot
-    ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --score
+    ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --show 21 labkit
+    ID_PREFIX=rpt ARMS_ONLY=labkit ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --pilot --only 21 pubmedqa50
+    REPS=3 ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --pilot
+    ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --score
 
 Copy this file, protocols/ and plans/ into a run directory first: the store,
 the staged repositories (arms-pilot-<pin>/) and scores.json land beside it.

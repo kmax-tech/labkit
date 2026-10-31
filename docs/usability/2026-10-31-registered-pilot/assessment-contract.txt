@@ -73,3 +73,13 @@ tpubmedqa50-labkit-47a7b2a689): the setup line prints "one labkit: 0.104.3 — .
 PATH (/work/.venv/bin), hooks (.githooks, labkit-hooks 0.104.3)", protocol-check passes both
 protocols, and pubmedqa50's stamped measurement script carries the repaired null check
 (_expected_correct). Part 0 runs two at a time.
+
+Addendum 2, 2026-10-31 evening, before any attempt (part 0's first start ended at the runner's
+construction of the agent, no container ran, store-rpt stays empty). Correction of addendum 1: its
+images were built from labkit-paper's .venv, which holds an older agentsandbox (no API-key
+credential) from another checkout. The images of part 0 and part 1 are built and run from
+.venv-pilot, as round 2: agent image labkit-sandbox:f998024abb6c, proxy
+agentsandbox-proxy:779d63471cca (round 2's and the model probe's proxy), labkit v0.104.3 at
+89182a39a6631fabf4c797a8c9459b8a62ba17b5 unchanged. Part 0's repositories restaged in that image;
+the checks of addendum 1 repeated there with the same result ("one labkit: 0.104.3 …",
+protocol-check passes both, _expected_correct in pubmedqa50's script; Claude Code 2.1.285).
