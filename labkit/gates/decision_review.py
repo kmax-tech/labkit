@@ -40,7 +40,7 @@ reason shows the finding inapplicable, the fault gone in the files as
 audited, or the task somebody else's; a reason alone releases nothing
 (sixth haiku round, 2026-10-23, t5). The gate: report-check blocks on an
 accepted BLOCKER's `stands` no review upholds, and on a closed contested
-BLOCKER, and warns on a WARNING's (`report_check.review_findings`).
+BLOCKER, and warns on a WARNING's (`report_decisions.review_findings`).
 
 Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
 review — no record, nothing to review in it (no `stands`, no closed
@@ -129,7 +129,7 @@ def reviewable(
     a carried finding (`carries`: a follow-up did not find it resolved) now
     `false-positive` —
     report-check holds it until a review upholds that
-    (`report_check.followup_findings`) —, and a BLOCKER `dismissed`, its
+    (`report_decisions.followup_findings`) —, and a BLOCKER `dismissed`, its
     first dismissal too (`findings.false_positive_blocker`). `not assessable`
     leaves the promise unjudged and claims nothing to review."""
     stands = {n for n, f in record.limits() if f.effect == EFFECT_STANDS}

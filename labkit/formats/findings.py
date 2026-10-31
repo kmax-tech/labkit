@@ -124,7 +124,7 @@ REASON_OWED = ("limitation", "false-positive")
 #: the statuses under which a finding leaves the result's limits without
 #: a Limitation line — the fault removed, put off, or not a fault. After a
 #: review did not uphold a decision on the finding, none of them settles
-#: it alone (`reviews.once_not_upheld`, `report_check.review_findings`)
+#: it alone (`reviews.once_not_upheld`, `report_decisions.review_findings`)
 CLOSING = ("fixed", "false-positive")
 #: every status but `open`: what deciding a finding sets
 DECIDED = tuple(s for s in STATUSES if s != "open")
@@ -729,7 +729,7 @@ def false_positive_blocker(f: Finding) -> bool:
     otherwise release a blocking finding, and a second auditor judges
     whether it does not apply to the code and run as audited. A WARNING's
     owes none (its missing review warns). The one rule the gate
-    (`report_check.review_findings`) and the review
+    (`report_decisions.review_findings`) and the review
     (`decision_review.reviewable`) both read."""
     return f.grade == "BLOCKER" and f.status == "false-positive"
 
@@ -738,7 +738,7 @@ def carried_and_closed(f: Finding) -> bool:
     """Is F a carried finding (`carries`: a follow-up did not find its fault
     gone) closed `false-positive` (CARRIED_CLOSING)? Such a
     decision owes a decision review before the number leaves — the one rule
-    the gate (`report_check.followup_findings`) and the review
+    the gate (`report_decisions.followup_findings`) and the review
     (`decision_review.reviewable`) both read."""
     return bool(f.carries) and f.status in CARRIED_CLOSING
 

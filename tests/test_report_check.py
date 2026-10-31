@@ -44,6 +44,7 @@ from protocol_fixture import (
 
 from labkit.formats import findings, handovers, promises, scope_sha, standard_contract
 from labkit.gates import report_check
+from labkit.gates import report_context
 
 
 class ReportCheck(unittest.TestCase):
@@ -183,15 +184,17 @@ class ReportCheck(unittest.TestCase):
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         proto = area / "PROTOCOL-x.md"
-        ctx = report_check.checked(area, proto)
+        ctx = report_context.checked(area, proto)
         self.assertEqual(
-            (ctx.state, ctx.declared, ctx.run), (report_check.TREE, None, run)
+            (ctx.state, ctx.declared, ctx.run), (report_context.TREE, None, run)
         )
         self.assertEqual(ctx.text, proto.read_text(encoding="utf-8"))
         # the index's text, not the tree's: the declaration comes from there
         staged = protocol_fill.fill_result_run(ctx.text, run.name)
-        ctx = report_check.checked(area, proto, state=report_check.INDEX, text=staged)
-        self.assertEqual((ctx.state, ctx.declared), (report_check.INDEX, run.name))
+        ctx = report_context.checked(
+            area, proto, state=report_context.INDEX, text=staged
+        )
+        self.assertEqual((ctx.state, ctx.declared), (report_context.INDEX, run.name))
         self.assertEqual(ctx.head.repeat_cost, "low")
         self._audited(area, run)
         code, out = self._run(area)
@@ -204,7 +207,7 @@ class ReportCheck(unittest.TestCase):
 
     def test_without_an_answering_run_the_context_says_why(self):
         area = self._area()
-        ctx = report_check.checked(area, area / "PROTOCOL-x.md")
+        ctx = report_context.checked(area, area / "PROTOCOL-x.md")
         self.assertIsNone(ctx.run)
         self.assertIn("no completed run bound to", ctx.why)
         code, out = self._run(area)
@@ -900,7 +903,7 @@ class RegisteredReport(unittest.TestCase):
                     "its head has adopted no result; its registered report is delivered",
                     out,
                 )
-        ctx = report_check.checked(area, area / "PROTOCOL-x.md")
+        ctx = report_context.checked(area, area / "PROTOCOL-x.md")
         (gap,) = report_check.report_findings(ctx)
         self.assertEqual(gap.grade, "BLOCKER")
         self.assertIn(self.OWED, gap.text)
@@ -922,11 +925,11 @@ class RegisteredReport(unittest.TestCase):
             head(repeat_cost="low", result=self.RUN, promises=C1_BLOCK)
             + text[text.index("- **Question") :]
         )
-        ctx = report_check.checked(
-            area, proto, state=report_check.PROPOSED, text=declared
+        ctx = report_context.checked(
+            area, proto, state=report_context.PROPOSED, text=declared
         )
         self.assertEqual(report_check.report_findings(ctx), [])
-        ctx = report_check.checked(area, proto)
+        ctx = report_context.checked(area, proto)
         (gap,) = report_check.report_findings(ctx)
         self.assertIn(self.OWED, gap.text)
 
@@ -945,7 +948,7 @@ class RegisteredReport(unittest.TestCase):
                 self.assertEqual(code, 0, out)
                 self.assertNotIn(self.OWED, out)
         self.assertEqual(
-            report_check.report_findings(report_check.checked(area, proto)), []
+            report_check.report_findings(report_context.checked(area, proto)), []
         )
         # a block showing another run than the head declares is no release;
         # with a result declared the way out is `--into` alone

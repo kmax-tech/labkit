@@ -16,7 +16,10 @@ Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
 This module holds the protocol's release stations and the entry points
 (`if_reported`, `hold_declared`, `main`): the order and the conditions of
-what runs stand here. Finding the reports a change reaches and what holds
+what runs stand here. The context every station reads is
+`report_context.checked`; the replacement station lives in
+`report_replacement`, the stations on the audit decisions (limits, reviews,
+follow-up) in `report_decisions`. Finding the reports a change reaches and what holds
 each lives in `report_hold`, which `if_reported` calls after the protocols.
 
 `finalize` holds the run before the number is written back and comes
@@ -123,10 +126,9 @@ from __future__ import annotations
 import argparse
 import shlex
 import subprocess
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from pathlib import Path
 
-from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
@@ -144,30 +146,21 @@ from labkit.formats.answering_run import (
     is_measurement,
 )
 from labkit.formats.protocol_history import (
-    registration_differences,
-    registrations_as_first_measured,
     registration_in_commit,
 )
 from labkit.formats import (
     attempts,
     audit_gaps,
     console,
-    findings,
-    followup,
     handovers,
     protocol_block,
-    reviews,
     runs,
 )
 from labkit.checks.audit_binding import (
     AuditError,
     analysis_now,
-    audited_run,
-    check_evidence,
     covering_analysis,
-    dependency_pieces,
 )
-from labkit.checks.result_render import render_gaps, rendering
 from labkit.gates.finalize import finalize_area
 from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
@@ -183,7 +176,7 @@ from labkit.gates.report_hold import (
     report_owed,
     tree_differs,
 )
-from labkit.formats.protocol_check import check_fields, conclusion_written
+from labkit.formats.protocol_check import check_fields
 from labkit.formats.repo import (
     ADOPT_TOOL,
     adopt_command,
@@ -192,11 +185,8 @@ from labkit.formats.repo import (
     audit_command,
     choose_protocol,
     commit_known,
-    decide_command,
     git_root,
-    handover_command,
     indexed_protocols,
-    layout_root,
     measure_command,
     no_such_area,
     protocol_links,
@@ -213,79 +203,16 @@ from labkit.formats.standard_contract import (
     check_command,
     lane,
 )
-
-#: which file state the declaration (the answer line) is read from — named
-#: in the output, so a reader knows what was held. The stations read the
-#: working tree in every case; the caller makes the tree that state: the
-#: pre-commit holds the area's tree equal to the index (`tree_differs`), the
-#: adoption writes the proposal into the tree and puts it back on refusal
-#: (`protocol_fill.adopt`)
-TREE = "working tree"
-INDEX = "index"
-PROPOSED = "proposed protocol"
-
-
-@dataclass(frozen=True)
-class Checked:
-    """The context of one check, built once (`checked`) and read by every
-    station: one protocol text, one head, one answering run, one named file
-    state. This gate's checks use the same declaration and run choice.
-    The nested finalize gate and analysis script read their own inputs.
-
-    Attributes:
-        area: The area, resolved.
-        repo: Where the area's layout starts (`repo.layout_root`).
-        protocol: The protocol file.
-        text: The protocol as STATE holds it — the declaration is read here.
-        head: Its TOML head.
-        state: TREE, INDEX or PROPOSED.
-        declared: The run the head declares as the reported result
-            (`protocol_block.declared_run`, `[result] run`), None for an
-            exploration — or for a `[result]` that does not read, which
-            `declaration_gap` then names (a blocker: the commit must not
-            carry it).
-        declaration_gap: Why the declaration does not read, or None.
-        run: The answering run (`audit_binding.audited_run`, through
-            `answering_run.bound_answering_run`: the one choice every gate holds the
-            protocol to), or None.
-        why: Why there is no answering run, when RUN is None.
-    """
-
-    area: Path
-    repo: Path
-    protocol: Path
-    text: str
-    head: protocol_block.Head
-    state: str
-    declared: str | None
-    declaration_gap: str | None
-    run: Path | None
-    why: str
-
-
-def checked(
-    area: Path, protocol: Path, *, state: str = TREE, text: str | None = None
-) -> Checked:
-    """The context of one check: TEXT is the protocol as STATE holds it
-    (the working tree when None). Raises `protocol_block.BlockError` on an
-    unreadable head, `AuditError` out of the run choice."""
-    if text is None:
-        text = protocol.read_text(encoding="utf-8")
-    head = protocol_block.head(text)
-    declared, declaration_gap = _declaration(text)
-    run, why = audited_run(area, protocol, text)
-    return Checked(
-        area=area.resolve(),
-        repo=layout_root(area),
-        protocol=protocol,
-        text=text,
-        head=head,
-        state=state,
-        declared=declared,
-        declaration_gap=declaration_gap,
-        run=run,
-        why=why,
-    )
+from labkit.gates.report_context import (
+    Checked,
+    INDEX,
+    PROPOSED,
+    TREE,
+    checked,
+    declaration,
+)
+from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
+from labkit.gates.report_replacement import replacement_gaps
 
 
 #: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
@@ -322,14 +249,6 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
 
 
-def _declaration(text: str) -> tuple[str | None, str | None]:
-    """(the declared run, None) or (None, why the `[result]` table does not read)."""
-    try:
-        return protocol_block.declared_run(text), None
-    except protocol_block.BlockError as exc:
-        return None, str(exc)
-
-
 def freeze_gaps(ctx: Checked) -> list[GateFinding]:
     """Why the freeze does not hold — the flag unset, or a must
     gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
@@ -363,201 +282,6 @@ def freeze_gaps(ctx: Checked) -> list[GateFinding]:
         for n, label in report.must_holes
     ]
     return gaps
-
-
-def replacement_gaps(ctx: Checked) -> list[GateFinding]:
-    """A protocol that declares `[replaces]` (K1,
-    docs/notes/2026-10-27-new-registration-contracts.md) answers a new,
-    post-hoc question, and the declaration binds it, exactly: the
-    predecessor is one protocol of the repo, not itself, and the chain of
-    replacements has no circle; the protocol is `type = "exploratory"`;
-    every difference of its registration against the predecessor's — each
-    as its first measurements saw it (`protocol_history.
-    registrations_as_first_measured`; against each when they saw several,
-    the way out of K3's registration that cannot be told) — is a
-    `[[replaces.change]]`, and every
-    declared change is one (`registration_differences`); the predecessor's
-    open BLOCKERs are decided first. Blockers, each with the line or command
-    that clears it. Nothing without `[replaces]`: an undeclared successor is
-    indicated at the report (`replacement_hints`), never held here."""
-    name = ctx.protocol.name
-    try:
-        rep = protocol_block.replaces(ctx.text)
-    except protocol_block.BlockError as exc:
-        return [
-            blocker(
-                f"{name}: {exc}",
-                fix='write `[replaces]` as the head reads it: `protocol = "<id>"` '
-                "and one `[[replaces.change]]` (what, from, to, why) per change",
-            )
-        ]
-    if rep is None or ctx.head.id is None:
-        return []
-    pred = _predecessor(ctx, rep.protocol)
-    if isinstance(pred, GateFinding):
-        return [replace(pred, text=f"{name}: {pred.text}")]
-    out = []
-    if ctx.head.type != "exploratory":
-        out.append(
-            blocker(
-                f'{name}: [protocol] type = "{ctx.head.type}" — a protocol that replaces '
-                f"another answers a new, post-hoc question",
-                fix='set `type = "exploratory"` in its head',
-            )
-        )
-    out += [
-        replace(f, text=f"{name}: {f.text}")
-        for f in _undeclared_changes(ctx, rep, pred)
-    ]
-    out += [replace(f, text=f"{name}: {f.text}") for f in _predecessor_open(ctx, pred)]
-    return out
-
-
-def _predecessor(ctx: Checked, pid: str) -> Path | GateFinding:
-    """The predecessor's protocol for `[replaces] protocol = PID`, or why it
-    is none, as a blocker with its way out: its own id, no or several
-    protocols of the repo carrying PID, or a circle of replacements."""
-    if pid == ctx.head.id:
-        return blocker(
-            "[replaces] protocol is its own id",
-            fix=f"name the protocol it replaces in [replaces] protocol, then "
-            f"`{gate_command('report-check', ctx.area)}`",
-        )
-    hits = protocol_block.repo_protocol_ids(ctx.protocol).get(pid, [])
-    if len(hits) != 1:
-        return blocker(
-            f"[replaces] protocol = {pid} names "
-            + ("no protocol of this repo" if not hits else f"{len(hits)} protocols"),
-            fix="name the one protocol of this repo it replaces, kept as it "
-            f"is, then `{gate_command('report-check', ctx.area)}`",
-        )
-    circle = _replacement_circle(str(ctx.head.id), hits[0])
-    if circle:
-        return blocker(
-            f"the replacements run in a circle ({circle})",
-            fix=f"let each name the one before it, then "
-            f"`{gate_command('report-check', ctx.area)}`",
-        )
-    return hits[0]
-
-
-def _undeclared_changes(
-    ctx: Checked, rep: protocol_block.Replaces, pred: Path
-) -> list[GateFinding]:
-    """Every difference of the registration against PRED's that REP does not
-    declare, and every declared change that is none — PRED's registration
-    as each of its first measurements saw it (several: the changes are owed
-    against each), this protocol's as its first measurement saw it, or as
-    it stands before one; or why they cannot be compared."""
-    olds, missing = registrations_as_first_measured(pred, rep.protocol, git_root(pred))
-    news, own_missing = registrations_as_first_measured(
-        ctx.protocol, str(ctx.head.id), git_root(ctx.protocol)
-    )
-    gaps = [
-        f"{p.name}: {why}"
-        for p, why in ((pred, missing), (ctx.protocol, own_missing))
-        if why
-    ]
-    if len(news) > 1:
-        gaps.append(
-            f"{ctx.protocol.name}: its own first measurements saw different "
-            f"registrations (the registration station names them)"
-        )
-    if gaps:
-        return [
-            blocker(
-                f"the registrations cannot be compared — {'; '.join(gaps)}",
-                fix=f"until they can, {ways_out.HANDOVER}",
-            )
-        ]
-    ((new, new_where),) = news
-    computed: dict[tuple[str, str, str], str] = {}
-    for old, old_where in olds:
-        for change in registration_differences(old, new):
-            computed.setdefault(change, old_where)
-    listed = {(c.what, c.from_, c.to) for c in rep.changes}
-    s = protocol_block.toml_string
-    out = [
-        blocker(
-            f"changed against {pred.name} ({old_where}) and not declared: {what} {x} → "
-            f"{y}",
-            fix=f"add under [replaces]: [[replaces.change]] what = {s(what)}, from = "
-            f'{s(x)}, to = {s(y)}, why = "…"; then '
-            f"`{gate_command('report-check', ctx.area)}`",
-        )
-        for (what, x, y), old_where in computed.items()
-        if (what, x, y) not in listed
-    ]
-    against = "; ".join(where for _, where in olds)
-    out += [
-        blocker(
-            f"declares a change the registrations do not show: {what} {x} → {y} "
-            f"(the predecessor {against}, this protocol {new_where})",
-            fix=f"remove that [[replaces.change]], then "
-            f"`{gate_command('report-check', ctx.area)}`",
-        )
-        for what, x, y in sorted(listed - set(computed))
-    ]
-    return out
-
-
-def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
-    """PRED's BLOCKERs still `open` that no handover of PRED's area records
-    (`handovers.handed_over`) — each holds the replacement until it is
-    decided, or the predecessor is handed over (its open BLOCKERs stay open
-    in that record)."""
-    try:
-        held = findings.open_blockers(findings.area_records(pred.parent))
-        recorded = handovers.handed_over(pred.parent) if held else set()
-    except (findings.FindingsError, handovers.HandoverError) as exc:
-        return [
-            blocker(
-                f"the predecessor's audit records do not read: {exc}",
-                fix=findings.record_way(pred.parent, pred),
-            )
-        ]
-    return [
-        blocker(
-            f"its predecessor's BLOCKER is still open — {u.line}",
-            fix="decide it (`"
-            + decide_command(
-                pred.parent,
-                u.number,
-                "STATUS",
-                "<why>",
-                u.record.path.name,
-                protocol=pred,
-            )
-            + f"`), or hand the predecessor over, replaced by {ctx.head.id}: `"
-            + handover_command(pred)
-            + "`",
-        )
-        for u in held
-        if handovers.entry(u.record, u.number) not in recorded
-    ]
-
-
-def _replacement_circle(start: str, pred: Path) -> str:
-    """The chain of `[replaces]` from PRED back, as ids joined by ` → `,
-    when it returns to START or to an id it already passed; "" when it
-    ends."""
-    seen = [start]
-    current: Path | None = pred
-    while current is not None:
-        try:
-            text = current.read_text(encoding="utf-8")
-            pid = protocol_block.head(text).id
-            nxt = protocol_block.replaces(text)
-        except (OSError, protocol_block.BlockError):
-            return ""
-        if pid in seen:
-            return " → ".join([*seen, str(pid)])
-        seen.append(str(pid))
-        if nxt is None:
-            return ""
-        hits = protocol_block.repo_protocol_ids(current).get(nxt.protocol, [])
-        current = hits[0] if len(hits) == 1 else None
-    return ""
 
 
 def registration_gaps(ctx: Checked) -> list[GateFinding]:
@@ -718,262 +442,6 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             f"area and no number leaves it: {ways_out.HANDOVER}",
         )
     return blocker(gap, fix=audit)
-
-
-def limit_gaps(ctx: Checked) -> list[GateFinding]:
-    """The generated results and limits: every BLOCKER decided `limitation` of the covering analysis
-    records has its effect decided, and the result section says exactly
-    what those records and the run render (`result_render.render_gaps`):
-    the Recorded results line with its note, one Limitation line per decided limitation, none
-    that no record decides. Exact in what it holds — equality with the
-    rendering — and silent on whether a limit is enough: that is the
-    audit's question. Empty when no covering record exists
-    (`analysis_audit_gap` names that), and the rendering is not owed while
-    the head declares no result."""
-    if ctx.run is None:
-        return []
-    try:
-        records = covering_analysis(ctx.area, ctx.text, ctx.run)
-    except (AuditError, FileNotFoundError, ValueError):
-        return []
-    gaps: list[GateFinding] = []
-    for r in records:
-        for n, f in r.limits():
-            if not f.effect:
-                # a record changed by hand: `--decide … limit` writes the effect
-                gaps.append(
-                    blocker(
-                        f"{findings.limit_label(r, n)}: a BLOCKER decided limitation "
-                        "owes its effect on the verdicts",
-                        fix="decide it again: `"
-                        + decide_command(
-                            ctx.area,
-                            n,
-                            "limitation",
-                            "<why>",
-                            r.path.name,
-                            protocol=ctx.protocol,
-                        )
-                        + "`",
-                    )
-                )
-    if ctx.declared is None:
-        return gaps  # nothing reported: the result section is not owed yet
-    try:
-        expected = rendering(ctx.area, ctx.text, ctx.run)
-    except (OSError, ValueError) as exc:
-        return gaps + [
-            blocker(
-                f"the result cannot be rendered from {ctx.run.name}: {exc}",
-                fix=f"repair what the sentence names, then "
-                f"`protocol-fill {shlex.quote(shown(ctx.protocol, Path.cwd()))} "
-                f"--render` writes the result section",
-            )
-        ]
-    return gaps + render_gaps(ctx.text, expected)
-
-
-def review_findings(ctx: Checked) -> list[GateFinding]:
-    """The decision reviews: every `stands` among the limits of the
-    covering analysis records is upheld by a decision review
-    (`reviews.upholding`: a review of that record, its code and its run as
-    shown, under the claim the protocol makes now, of the decision as it
-    stands now, every draw saying `upheld`). The grade follows the
-    finding's: a BLOCKER limitation's `stands` no review upholds — never
-    reviewed, rejected, insufficient, contested, or reviewed as another
-    decision or claim — is a BLOCKER (a severe finding is not settled by
-    a reason alone; decided 2026-10-22 after the fifth round's replay and
-    the assessment of its fifteen decisions from their sources), an
-    accepted WARNING's a WARNING for now (the release does not yet hang
-    on every lesser limit). A finding a review of the record once did not
-    uphold (`reviews.once_not_upheld`) and that is now `false-positive`, `fixed`
-    (`findings.CLOSING`) is held the same way until a review
-    upholds the new decision: closing it is not settling it (sixth haiku
-    round, 2026-10-23, t5). Empty when no record covers the run
-    (`analysis_audit_gap` names that), and silent on whether the verdict is
-    right: that is the reviewer's judgement."""
-    if ctx.run is None:
-        return []
-    try:
-        records = covering_analysis(ctx.area, ctx.text, ctx.run)
-    except (AuditError, FileNotFoundError, ValueError):
-        return []  # ValueError: FindingsError — analysis_audit_gap names them
-    out: list[GateFinding] = []
-    try:
-        found = reviews.area_reviews(ctx.area)
-    except reviews.ReviewError as exc:
-        # named, and the decisions are judged as unreviewed: a file nobody
-        # can read must not hide a BLOCKER's unupheld `stands`
-        out.append(
-            GateFinding(
-                WARNING, f"a review nobody can read: {exc}", evidence_kind=GUARANTEED
-            )
-        )
-        found = []
-    for r in records:
-        for n, f in r.limits():
-            if f.effect != findings.EFFECT_STANDS or reviews.upholding(
-                r, n, found, ctx.text
-            ):
-                continue
-            out.append(
-                GateFinding(
-                    BLOCKER if f.grade == "BLOCKER" else WARNING,
-                    f"{findings.limit_label(r, n)}: `stands` on a {f.grade} decided limitation "
-                    f"{reviews.state(r, n, found, ctx.text)} — no decision review "
-                    f"upholds that the reported claim stands within this limit "
-                    f"(LAB-015 Preflight audit before freezing)",
-                    fix=f"{_review_step(ctx, r)} asks a second auditor (owed at "
-                    f"every repeat cost); after a rejection, decide again",
-                    evidence_kind=GUARANTEED,
-                )
-            )
-        for n, f in enumerate(r.findings, 1):
-            if f.status not in findings.CLOSING:
-                continue
-            was = reviews.once_not_upheld(r, n, found)
-            if was is None or reviews.upholding(r, n, found, ctx.text):
-                continue
-            out.append(
-                GateFinding(
-                    BLOCKER if f.grade == "BLOCKER" else WARNING,
-                    f"audit {r.path.stem} #{n}: `{f.status}` on a {f.grade} a "
-                    f"review said {was.verdict} on ({was.why}) — closing a finding "
-                    f"a reviewer did not uphold settles nothing by itself; the new "
-                    f"decision is {reviews.state(r, n, found, ctx.text)} "
-                    f"(LAB-015 Preflight audit before freezing)",
-                    fix=f"{_review_step(ctx, r)} asks a second auditor whether the "
-                    f"reason shows it {_closing_question(f.status)}",
-                    evidence_kind=GUARANTEED,
-                )
-            )
-        out += first_dismissals(ctx, r, found)
-    return out
-
-
-def first_dismissals(
-    ctx: Checked, r: findings.Record, found: list[reviews.Review]
-) -> list[GateFinding]:
-    """A BLOCKER of record R decided `false-positive` (`findings.false_positive_blocker`)
-    that no review among FOUND upholds — held as a BLOCKER: the deciding
-    agent's own decision would release a blocking finding. A carried one is
-    the follow-up's (`followup_findings`), one a review once did not uphold
-    the closing rule's (`review_findings`); each is held once."""
-    out: list[GateFinding] = []
-    for n, f in enumerate(r.findings, 1):
-        if (
-            not findings.false_positive_blocker(f)
-            or f.carries
-            or reviews.once_not_upheld(r, n, found) is not None
-            or reviews.upholding(r, n, found, ctx.text)
-        ):
-            continue
-        out.append(
-            GateFinding(
-                BLOCKER,
-                f"audit {r.path.stem} #{n}: `false-positive` on a BLOCKER "
-                f"{reviews.state(r, n, found, ctx.text)} — a blocking finding is not "
-                f"released by the deciding agent's own decision (LAB-015 Preflight "
-                f"audit before freezing)",
-                fix=f"{_review_step(ctx, r)} asks a second auditor whether the reason "
-                f"shows it {_closing_question('false-positive')}",
-                evidence_kind=GUARANTEED,
-            )
-        )
-    return out
-
-
-def followup_findings(ctx: Checked) -> list[GateFinding]:
-    """The follow-up of earlier decided BLOCKERs (`followup.release_holds`): each
-    one not released by a valid `resolved` of the state reported now, and a
-    BLOCKER `fixed` in that state itself, is a BLOCKER naming the missing
-    step. A carried finding (`carries`) closed in a covering record as
-    `false-positive` is held until a decision review of that
-    record upholds the new decision — the follow-up did not find the fault
-    gone, so closing it is not settling it (the rule of
-    `reviews.once_not_upheld`, for a verdict of the follow-up). A chain
-    that does not read is a BLOCKER. Without a covering record every
-    earlier decided BLOCKER is held — no follow-up saw it. Empty without an
-    answering run, or when the covering records or the area's records do
-    not read (`analysis_audit_gap` names those); silent on whether a verdict
-    is right: that is the auditor's judgement. Why: the fixed-followup
-    pilots, 2026-10-26."""
-    if ctx.run is None:
-        return []
-    try:
-        covering = covering_analysis(ctx.area, ctx.text, ctx.run)
-        records = findings.area_records(ctx.area)
-    except (AuditError, FileNotFoundError, ValueError):
-        return []  # analysis_audit_gap names them
-    try:
-        metrics: dict | None = runs.read_metrics(runs.metrics_path(ctx.run))
-    except (OSError, ValueError):
-        metrics = None
-    evidence = check_evidence(metrics, dependency_pieces(ctx.run))
-    try:
-        held = followup.release_holds(records, covering, evidence)
-    except findings.FindingsError as exc:
-        return [
-            blocker(
-                f"the carried findings of {ctx.area.name} do not form a chain: {exc}",
-                fix=findings.record_way(ctx.area, ctx.protocol),
-            )
-        ]
-    # the follow-up refuses an area with several protocols (`audit_prompt.earlier_of`):
-    # no step there may name it
-    several = len(area_protocols(ctx.area)) > 1
-    out = [
-        blocker(
-            f"audit {h.ref}: {h.why} (LAB-015 Preflight audit before freezing)",
-            fix=followup.STEP_NONE_SEVERAL
-            if several and h.needs_followup_audit
-            else h.step,
-        )
-        for h in held
-    ]
-    try:
-        found = reviews.area_reviews(ctx.area)
-    except reviews.ReviewError:
-        found = []  # review_findings names the file; unreviewed holds here
-    for r in covering:
-        for n, f in enumerate(r.findings, 1):
-            if findings.carried_and_closed(f) and not reviews.upholding(
-                r, n, found, ctx.text
-            ):
-                out.append(
-                    blocker(
-                        f"audit {r.path.stem} #{n}: a carried finding (from {f.carries}) "
-                        f"`{f.status}` — the follow-up did not find the fault gone, so "
-                        f"closing it settles nothing by itself "
-                        f"(LAB-015 Preflight audit before freezing)",
-                        fix=f"{_review_step(ctx, r)} asks a second auditor whether "
-                        f"the reason shows it {_closing_question(f.status)}",
-                    )
-                )
-    return out
-
-
-def _review_step(ctx: Checked, record: findings.Record) -> str:
-    """The decision review of RECORD as the next step: the whole command
-    with the area as seen from here, and — while the protocol's Conclusion
-    is unwritten — the step `--review` refuses without (it judges the
-    claim). A refusal naming `<area>` and no precondition was not followed
-    (ninth haiku round, t3)."""
-    command = f"`{audit_command(ctx.area, '--review', '--record', record.path.name, protocol=ctx.protocol)}`"
-    if conclusion_written(ctx.text):
-        return command
-    return (
-        f"write the Conclusion in {ctx.protocol.name} first (the review judges "
-        f"that claim, and refuses without it), then {command}"
-    )
-
-
-def _closing_question(status: str) -> str:
-    """What the reviewer is asked of a closed contested finding, by status."""
-    return {
-        "false-positive": "does not apply to the code and run as audited",
-        "fixed": "gone in the files as audited",
-    }[status]
 
 
 def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
@@ -1158,7 +626,7 @@ def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFin
     whose code changed puts the withdrawal before every later hold
     (`withdrawn_first`). ADOPTION_PENDING (no run adopted yet, the one a
     next step asks about): the stages the adoption writes and holds on its
-    proposal — the result section (`limit_gaps`), the recomputation, the
+    proposal — the result section (`report_decisions.limit_gaps`), the recomputation, the
     report — are left out, since the tree cannot pass them before the
     adoption writes them; `protocol_fill.adopt` checks the whole proposal.
     Prints nothing."""
@@ -1429,7 +897,7 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
             return 0  # not in the commit: nothing declared there
         console.refuse("report-check", f"{protocol}: no such file")
         return 2
-    declared, gap = _declaration(text)
+    declared, gap = declaration(text)
     if declared is None and gap is None:
         # an exploration: nothing declared; its registered report, once
         # delivered, is owed the handover or the result all the same

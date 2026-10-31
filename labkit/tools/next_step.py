@@ -66,8 +66,8 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     PROTOCOL None and no protocol in AREA is the first step; PROTOCOL must
     otherwise be the one the caller chose (`repo.choose_protocol`). Raises
     `protocol_block.BlockError` on a head that does not read and whatever
-    `report_check.checked` raises on a run choice that cannot be made."""
-    from labkit.gates import report_check
+    `report_context.checked` raises on a run choice that cannot be made."""
+    from labkit.gates import report_check, report_context
 
     if protocol is None:
         return Step(
@@ -99,7 +99,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "nothing — a new attempt at the question is a new registration",
             "",
         )
-    ctx = report_check.checked(area, protocol)
+    ctx = report_context.checked(area, protocol)
     pending = ctx.declared is None and ctx.run is not None
     gaps = report_check.report_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it

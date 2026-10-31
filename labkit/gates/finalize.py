@@ -319,7 +319,7 @@ def registration_changes(
     when they recorded different blocks, which one stood cannot be told and
     no run answers a registered question: held too, the ways out a new
     registration that declares its changes against each (K1,
-    `report_check.replacement_gaps`) or a handover without a declared
+    `report_replacement.replacement_gaps`) or a handover without a declared
     result. Empty without an answering run, a stamped id PID, or a block in
     the records. Raises RuntimeError when git fails."""
     if pid is None or run is None:

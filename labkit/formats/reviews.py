@@ -63,7 +63,7 @@ What is guaranteed is the release condition; whether the verdict is
 right stays the reviewer's judgement, as with every agent audit.
 report-check blocks on a BLOCKER limitation's `stands` nobody upheld and
 warns on a WARNING limitation's, and grades a closed contested finding the
-same way (`report_check.review_findings`; decided 2026-10-22 after the
+same way (`report_decisions.review_findings`; decided 2026-10-22 after the
 fifth round's replay, two passes, and the assessment of its fifteen
 decisions from their sources, `docs/usability/2026-10-22-decision-review-*.md`).
 
@@ -309,7 +309,7 @@ def once_not_upheld(
     `false-positive` or `fixed` close nothing by themselves
     (sixth haiku round, 2026-10-23, t5: after `insufficient` the finding
     was dismissed with "insufficient evidence withdrawn" and the state
-    released; `report_check.review_findings` holds it now)."""
+    released; `report_decisions.review_findings` holds it now)."""
     for r in drawn_on(record, reviews):
         d = r.of(n)
         if d is not None and d.verdict != UPHELD:

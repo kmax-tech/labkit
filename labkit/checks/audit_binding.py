@@ -68,7 +68,7 @@ def audited_run(
     protocol as the caller's file state holds it), or `(None, why)`: no
     protocol id, no completed bound run, a blocker of the choice. Raises
     AuditError on a head it cannot read. report-check holds the record to
-    the same choice (`report_check.checked`)."""
+    the same choice (`report_context.checked`)."""
     if text is None:
         text = protocol.read_text(encoding="utf-8")
     try:

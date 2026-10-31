@@ -27,7 +27,7 @@ record and a limit does not multiply over audits.
 
 Pure: records in, data out. The audit shows and writes
 (`audit_prompt.bound_prompt`, `audit._record`); report-check holds the release
-(`report_check.followup_findings`).
+(`report_decisions.followup_findings`).
 """
 
 from __future__ import annotations

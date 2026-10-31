@@ -107,6 +107,7 @@ from labkit.formats.repo import (
 )
 from labkit.checks import data_counts, recheck, report_blocks
 from labkit.gates import report_check, report_hold
+from labkit.gates import report_context
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
@@ -719,11 +720,11 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     2026-10-19, a check script printing a byte no codec reads). Both writes
     go whole or not at all (`files.write_atomic`): a reader, or the next
     check, sees the protocol as it was or as proposed, never half of
-    either; the check is told it holds the proposal (`report_check.PROPOSED`)."""
+    either; the check is told it holds the proposal (`report_context.PROPOSED`)."""
     files.write_atomic(protocol, after)
     try:
         rc = report_check.report_check(
-            protocol.parent, protocol, state=report_check.PROPOSED, text=after
+            protocol.parent, protocol, state=report_context.PROPOSED, text=after
         )
     except BaseException:
         files.write_atomic(protocol, before)

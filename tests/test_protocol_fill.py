@@ -783,7 +783,7 @@ class Adopt(unittest.TestCase):
 
     def test_the_check_is_told_it_holds_the_proposal_written_whole(self):
         """The written-back protocol goes to report-check as the proposed
-        state with its text (`report_check.PROPOSED`), written through
+        state with its text (`report_context.PROPOSED`), written through
         `files.write_atomic`: no half-written protocol, no temp file left."""
         area = self._area()
         proto = area / "PROTOCOL-x.md"

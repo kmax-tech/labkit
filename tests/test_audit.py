@@ -29,7 +29,8 @@ from labkit.gates import (
     audit_prompt,
     audit_reply,
     decision_review,
-    report_check,
+    report_context,
+    report_decisions,
     ways_out,
 )  # noqa: E402
 from labkit.checks import audit_binding, result_render  # noqa: E402
@@ -40,6 +41,7 @@ from labkit.formats import (
     findings,
     followup,
     promises,
+    reviews,
     rules,
     runs,
     scope_sha,
@@ -2931,8 +2933,8 @@ class FollowupGate(unittest.TestCase):
         self.cr.fv = self.fv
 
     def gate(self, area: Path) -> list[str]:
-        ctx = report_check.checked(area, area / "PROTOCOL-x0.md")
-        return [g.line for g in report_check.followup_findings(ctx)]
+        ctx = report_context.checked(area, area / "PROTOCOL-x0.md")
+        return [g.line for g in report_decisions.followup_findings(ctx)]
 
     def follow_up(self, area: Path, lines: str) -> findings.Record:
         return self.cr.audit_with(area, lines)
@@ -3146,7 +3148,7 @@ class FollowupGate(unittest.TestCase):
         self.assertIn(
             n, [k for k, _ in decision_review.reviewable(findings.read(r2.path), [])]
         )
-        with mock.patch.object(report_check.reviews, "upholding", lambda *a: True):
+        with mock.patch.object(reviews, "upholding", lambda *a: True):
             self.assertEqual(self.gate(area), [])
 
     def test_a_wrong_finding_is_closed_by_a_resolved_follow_up(self):

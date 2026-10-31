@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.gates import report_context  # noqa: E402
 from labkit.formats import protocol_block  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.tools import adopt  # noqa: E402
@@ -112,7 +113,7 @@ class Adopt(unittest.TestCase):
         calls: list[str] = []
 
         def refusing_on_the_tree(*args, **kw):
-            if kw.get("state", report_check.TREE) == report_check.TREE:
+            if kw.get("state", report_context.TREE) == report_context.TREE:
                 calls.append("tree")
                 return 1
             return real(*args, **kw)
