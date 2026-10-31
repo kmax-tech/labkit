@@ -1751,6 +1751,20 @@ class Exp(unittest.TestCase):
                 for i, (a, g) in enumerate(zip(answers, golds, strict=True))
             ]
 
+        for reply, label in (
+            ("YES.", "yes"),
+            ("**yes**", "yes"),
+            ("*no*", "no"),
+            ("`maybe`", "maybe"),
+            ('"No."', "no"),
+            ("**No.**\nThe study shows otherwise.", "no"),
+            ("yes or no", "yes"),  # the first word decides, as the docstring says
+            ("Answer: yes", None),  # no search through the reply
+            ("yes/no", None),
+            ("", None),
+        ):
+            with self.subTest(reply=reply):
+                self.assertEqual(measure.parse_answer(reply), label)
         placebo = lane("null", ["Yes"] * 50)  # any case reads as yes
         tracking = lane("null", golds)  # a null lane that knows the gold
         registered = lane("registered", golds)

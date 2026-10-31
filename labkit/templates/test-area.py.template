@@ -138,6 +138,8 @@ CANONICAL_CASES: list[tuple[str, str | None]] = [
     (YES, POS),
     (YES + ".", POS),
     (YES.upper(), POS),
+    ("**" + YES + "**", POS),
+    ("*" + NO + "*.", NEG),
     (NO, NEG),
     (NO + "\nBecause the text says otherwise.", NEG),
     ("", None),

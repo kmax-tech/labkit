@@ -27,6 +27,7 @@ config.json records it whole.
 from __future__ import annotations
 
 import argparse
+import string
 import tomllib
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
@@ -85,6 +86,11 @@ def read_jsonl(path: Path) -> list[dict]:
     return batch.Store(path).records()
 
 
+#: item and job keys no prompt shows: the label the model is to predict, and
+#: the keys plan() sets (the lane-qualified id, the lane, the item's digest)
+_NOT_SHOWN = frozenset({"gold", "id", "lane", "item_sha"})
+
+
 @dataclass(frozen=True)
 class Lanes:
     """One two-lane measurement as its area defines it (see the module docstring)."""
@@ -93,7 +99,7 @@ class Lanes:
     protocol: Path
     items: Path  # the prepared items: id · the text field · gold
     out: Path  # the run's output file; a repeat writes <stem>_draw<N>.jsonl
-    prompts: dict[str, str]  # lane -> template with `{text}`; "registered" and "null"
+    prompts: dict[str, str]  # lane -> template ("registered" and "null"), see render()
     text_field: str
     parse_answer: Callable[[str], str | None]
     evaluate_rows: Callable[..., dict]  # (rows, config) -> metrics
@@ -123,8 +129,34 @@ class Lanes:
         return jobs
 
     def render(self, job: dict) -> str:
-        """The one prompt renderer: `--show` prints it, `measure` sends it."""
-        return self.prompts[job["lane"]].format(text=job[self.text_field])
+        """The one prompt renderer: `--show` prints it, `measure` sends it.
+        `{text}` shows the item's TEXT_FIELD; any other `{name}` shows the
+        item's field of that name, so a lane can show part of an item — a
+        null lane the context without the question under test (PubMedQA:
+        a placebo shown the research question answered it, registered
+        pilot, 2026-10-31). Raises ValueError for a field the item lacks,
+        for `gold`, for the job's own keys (id, lane, item_sha) and for a
+        placeholder that is no plain name."""
+        template = self.prompts[job["lane"]]
+        names = {
+            f for _, f, _, _ in string.Formatter().parse(template) if f is not None
+        }
+        for name in sorted(names - {"text"}):
+            if not name.isidentifier():
+                raise ValueError(
+                    f"prompt of lane {job['lane']}: placeholder {{{name}}} is no field name"
+                )
+            if name in _NOT_SHOWN:
+                raise ValueError(
+                    f"prompt of lane {job['lane']}: {{{name}}} is never shown — "
+                    "the gold label or the run's bookkeeping"
+                )
+            if name not in job:
+                raise ValueError(
+                    f"prompt of lane {job['lane']}: the item has no field {name!r}"
+                )
+        fields = {n: job[n] for n in names - {"text"}}
+        return template.format(text=job[self.text_field], **fields)
 
     def instrument(self, cfg: Any) -> dict:
         """What makes two answers comparable — both prompts' digest, the

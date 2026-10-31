@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+from dataclasses import replace
 import tempfile
 import threading
 import time
@@ -76,6 +77,52 @@ def lanes_in(d: Path, n: int = 6) -> tuple[lanes.Lanes, list[dict]]:
         probe_cases_in="tests/test_01_x.py",
     )  # fmt: skip
     return run, items
+
+
+class PromptsShowNamedFields(Case):
+    """A lane may show part of an item: PubMedQA's placebo shown the research
+    question with the context answered it (registered pilot, 2026-10-31), so
+    a prompt names fields beside `{text}`; the gold label and the run's own
+    keys are never shown, and a field the item lacks is refused."""
+
+    def test_a_prompt_shows_the_fields_it_names_and_nothing_else(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            plain, _ = lanes_in(Path(tmp))
+            run = replace(
+                plain,
+                prompts={
+                    "registered": "Q: {question}\n{text}",
+                    "null": "N: {contexts}",
+                },
+            )
+            job = {"id": "null:x1", "lane": "null", "item_sha": "s", "gold": "Yes",
+                   "text": "full", "question": "Is it?", "contexts": "Passage."}  # fmt: skip
+            self.assertEqual(run.render(job), "N: Passage.")
+            self.assertEqual(
+                run.render({**job, "lane": "registered"}), "Q: Is it?\nfull"
+            )
+            self.assertEqual(plain.render(job), "N: full")  # `{text}` alone, as before
+
+    def test_gold_bookkeeping_missing_fields_and_odd_placeholders_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run, _ = lanes_in(Path(tmp))
+            job = {
+                "id": "null:x1",
+                "lane": "null",
+                "item_sha": "s",
+                "gold": "Yes",
+                "text": "t",
+            }
+            for prompt, why in (("{gold}", "never shown"), ("{id}", "never shown"),
+                                ("{item_sha}", "never shown"), ("{contexts}", "no field 'contexts'"),
+                                ("{0}", "no field name"), ("{text.upper}", "no field name")):  # fmt: skip
+                with (
+                    self.subTest(prompt=prompt),
+                    self.assertRaisesRegex(ValueError, why),
+                ):
+                    replace(run, prompts={"registered": "R", "null": prompt}).render(
+                        job
+                    )
 
 
 class AnswersStayWithTheirJobs(Case):

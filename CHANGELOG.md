@@ -5,6 +5,23 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **A model prompt shows any field of the item by name.** `lanes.render`
+  filled `{text}` alone, so a null lane could only ask another question
+  about the same text; on PubMedQA that text carries the research question,
+  and the placebo answered it (registered pilot, part 0: null 27 of 50
+  against 21.2 expected). Beside `{text}` a prompt now names item fields
+  (`{contexts}`); `{gold}`, the job's own keys and a field the item lacks
+  are refused.
+- **The model template's parser reads an answer word inside markdown or
+  quote marks** (`**No**`, `*yes*`, `` `maybe` ``). The first token still
+  decides and must be an answer word whole; there is no search through the
+  reply. Part 0's three `**No**` replies were unreadable and failed the
+  yield check; read again, all three were right.
+
 ## 0.104.3 — 2026-10-31
 
 ### Changed

@@ -57,6 +57,7 @@ Stamped by `labkit-init exp <name>`.
 from __future__ import annotations
 
 import hashlib
+import re
 from collections import Counter
 import sys
 from dataclasses import dataclass
@@ -98,7 +99,9 @@ PROMPT = ("TODO: the question about this text.\n\n"
 # answer maps to (0.5 on balanced gold); the check computes it from the
 # lane's own answers, for two answer words or more. A placebo whose answer varies per
 # item (numbers, length, negation) can track the gold label (usability
-# probe 2026-10-07).
+# probe 2026-10-07). A prompt shows `{text}` (TEXT_FIELD) and, by name, any
+# other field of the item: a placebo that must not see the question under
+# test shows only the fields it needs (`{contexts}`, not `{question}`).
 PROMPT_NULL = ("TODO: a question about this text that has nothing to do with the gold label.\n\n"
                "Text: {text}\n\n" + ANSWER_LINE + "\n\nAnswer:")
 
@@ -152,6 +155,10 @@ CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
 CRITERION_VALUE_KEY = "criterion_1_accuracy"
 
 
+# The first token with its markdown or quote marks and trailing punctuation
+# taken off: the answer word, or no match.
+_FIRST_WORD = re.compile(r"""[*_`'"]*([^*_`'".,:;!]+)[*_`'"]*[.,:;!]*[*_`'"]*""")
+
 # The parser reads answer words in any case, so two words that differ only
 # in case would be one answer: the import refuses them.
 if len({word.casefold() for word in ANSWERS}) != len(ANSWERS):
@@ -160,12 +167,17 @@ if len({word.casefold() for word in ANSWERS}) != len(ANSWERS):
 
 def parse_answer(text: str) -> str | None:
     """Model text -> gold label via ANSWERS, or None for empty/unreadable.
-    Empty is its own state, never folded into a label (→ LAB-030 Reasoning models); the first
-    token decides, in any case, a second line of explanation is ignored (→ LAB-023 No silent loss)."""
+    Empty is its own state, never folded into a label (→ LAB-030 Reasoning models). The rule:
+    the FIRST whitespace-separated token decides — markdown or quote marks around it
+    (`**Yes**`, `*no*`, `` `maybe` ``, `"yes"`) and trailing .,:;! dropped, any case — and it
+    must then be one answer word whole; the rest of the reply is ignored, so "yes or no"
+    reads as yes and "Answer: yes" is unreadable. No search through the text: an
+    explanation or a second answer never counts (→ LAB-023 No silent loss)."""
     text = text.strip()
     if not text:
         return None
-    word = text.split()[0].rstrip(".,:;!").casefold()
+    m = _FIRST_WORD.fullmatch(text.split()[0])
+    word = m.group(1).casefold() if m else None
     return next((label for w, label in ANSWERS.items() if w.casefold() == word), None)
 
 
