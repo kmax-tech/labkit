@@ -400,8 +400,8 @@ def scope_changes(
     is the analysis audit's question, not this one. The first measurements are
     every run at each first position (`first_measurement_groups`); the
     answering run, when it is one of them, has nothing to compare. Empty when
-    the protocol a run saw cannot be read back or its head does not read:
-    the registration station and the promise-block hold name those states.
+    the protocol a run saw cannot be read back: the registration station and
+    the promise-block hold name that state.
     Raises RuntimeError when git fails."""
     answering = read_run_dir(run)
     firsts = [
@@ -419,10 +419,7 @@ def scope_changes(
         then, _ = protocol_history.as_measured(protocol, first, root)
         if then is None:
             continue
-        try:
-            diffs = protocol_history.scope_differences(then, current)
-        except protocol_block.BlockError:
-            continue
+        diffs = protocol_history.scope_differences(then, current)
         if not diffs:
             continue
         changes = "; ".join(

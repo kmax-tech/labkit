@@ -323,17 +323,17 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     """(what, from, to) for every difference between the protocol texts OLD
     and NEW in what the number is about: each of SCOPE_FIELDS
     (`scope_value`), the head's kind and its `[reference]` as the head writes
-    it. ABSENT where one text has nothing. Pure; raises BlockError on a head
-    that does not read."""
+    it. ABSENT where one text has nothing; a head or a `[reference]` that
+    does not read is compared as the sentence its error says, so the fields
+    are compared whatever the head held then (round 2, Labor-21 r3: the first
+    measurements ran on a commit whose `[reference]` did not read yet). Pure."""
     out: list[tuple[str, str, str]] = []
-    ha, hb = protocol_block.head(old), protocol_block.head(new)
-    if ha.kind != hb.kind:
-        out.append(("kind", str(ha.kind), str(hb.kind)))
-    ra, rb = protocol_block.reference(old), protocol_block.reference(new)
-    ta = protocol_block.reference_toml(ra).strip() if ra is not None else ABSENT
-    tb = protocol_block.reference_toml(rb).strip() if rb is not None else ABSENT
+    ka, kb = _head_part(old, "kind"), _head_part(new, "kind")
+    if ka != kb:
+        out.append(("kind", ka, kb))
+    ta, tb = _head_part(old, "reference"), _head_part(new, "reference")
     if ta != tb:
-        out.append(("[reference]", " ".join(ta.split()), " ".join(tb.split())))
+        out.append(("[reference]", ta, tb))
     fa = {f.label: f.value for f in fields(old)}
     fb = {f.label: f.value for f in fields(new)}
     for label in SCOPE_FIELDS:
@@ -342,6 +342,24 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
         if x != y:
             out.append((label, x, y))
     return out
+
+
+def _head_part(text: str, part: str) -> str:
+    """The head's PART of TEXT as `scope_differences` compares it: "kind"
+    its kind, "reference" its `[reference]` as TOML on one line (ABSENT
+    without one); `(does not read: …)` with the error where the head or the
+    table does not parse."""
+    try:
+        if part == "kind":
+            return str(protocol_block.head(text).kind)
+        ref = protocol_block.reference(text)
+    except protocol_block.BlockError as exc:
+        return f"(does not read: {exc})"
+    return (
+        " ".join(protocol_block.reference_toml(ref).split())
+        if ref is not None
+        else ABSENT
+    )
 
 
 #: the registration fields outside the promise block a replacement compares

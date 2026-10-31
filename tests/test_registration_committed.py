@@ -556,6 +556,23 @@ class ScopeAsFirstMeasured(_Repository):
         self.assertIn("value = 0.62", line)
         self.assertIn("value = 0.48", line)
 
+    def test_a_first_measurement_whose_reference_did_not_read_yet_still_holds_the_fields(
+        self,
+    ):
+        """Labor-21 r3: the first runs started on a commit whose [reference]
+        did not parse, the table was repaired, the fields rewritten later —
+        the fields are compared whatever the head held then."""
+        broken = 'key = "percentage_deforestation"\nvalue = 0.62\ntolerance = 0.01\nrelation = "within"\nunit = "fraction"\n'
+        self._run(self._register(ALL_ROADS, reference=broken), self.FIRST)
+        narrowed = ALL_ROADS.replace(
+            "roads.geojson and", "roads.geojson (BR highways only) and"
+        )
+        self._run(self._register(narrowed), RUN)
+        (line,) = self._changes()
+        self.assertIn("Data / scope", line)
+        self.assertIn("[reference]", line)
+        self.assertIn("does not read", line)
+
     def test_the_twin_a_script_repaired_under_the_same_scope_passes(self):
         """The code changed and measured again under unchanged fields: what
         the run computes is the analysis audit's question, not this hold's."""
