@@ -2153,6 +2153,26 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+### Lange Dateien (2026-10-31)
+
+Geteilt auf Zweig `split-modules` (vier Commits, Verhalten unverändert,
+CHANGELOG „Breaking (Python imports)“): `audit.py` 2.351 → 763,
+`findings.py` 2.065 → 1.633, `report_check.py` 1.514 → 979,
+`protocol_fill.py` 1.611 → 888. `findings.py` bleibt groß, weil Lesen,
+Schreiben und Entscheiden eines Formats in ein Modul gehören.
+
+Offen:
+
+1. `gates/agent_hooks.py` (1.253) — erst nachdem die Codex-Hook-Arbeit auf
+   `main` committet ist; sie ändert genau diese Datei.
+2. `tools/scaffold.py` (2.041) — größte Datei, stand nicht im Befund.
+3. Funktionen über 100 Zeilen (16). Die meisten `main` sind flache
+   argparse-Definitionen; echte Kandidaten: `promises.parse_block` (139),
+   `finalize.finalize_area` (136), `findings.write` (111),
+   `protocol_report.print_report` (112), `preflight.preflight_area` (107).
+   Eine Funktion aufteilen ist eine Entwurfsentscheidung, kein Verschieben —
+   einzeln und mit Begründung.
+
 ### Phase-2-Reste (2026-10-27)
 
 Entschieden 2026-10-27 (Autor), umgesetzt:

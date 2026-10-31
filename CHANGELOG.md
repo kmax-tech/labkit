@@ -34,6 +34,29 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Breaking (Python imports): four long modules split by concern.** The
+  console commands and every file format are unchanged; code importing
+  these names from labkit moves to the new module:
+  - `gates/audit.py` → `audit_prompt` (what the auditor is shown:
+    `instructions`, `cited_rules`, `gather`, `render`, `bound_prompt`,
+    `validity_evidence`, `earlier_of`, `Stamp`), `audit_reply` (reading its
+    answer: `parse`, `parse_clarity`, `parse_fixes`, `LEAD`, `SEP`),
+    `audit_decisions` (`--findings` and `--decide`: `decision_lines`,
+    `decide_shape`, `record_path`, `show_findings`, `decide`).
+  - `formats/findings.py` → `failed_attempts` (the `*-failed.toml` file:
+    `write_failed`, `read_failed`, `failed_attempts`, `audit_unavailable`,
+    `stopped_attempt`, `ATTEMPT_TIMEOUT_S`) and `audit_gaps`
+    (`audit_coverage`, `audit_record_gap`, `RecordGap`,
+    `records_of_gone_runs`, `covering_records`).
+  - `gates/report_check.py` → `report_context` (`Checked`, `checked`,
+    `TREE`, `INDEX`, `PROPOSED`), `report_replacement`
+    (`replacement_gaps`), `report_decisions` (`limit_gaps`,
+    `review_findings`, `followup_findings`).
+  - `tools/protocol_fill.py` → `protocol_edit` (`fill`, `fill_head`,
+    `fill_many`, `fill_sentence`, `HEAD_KEYS`) and `protocol_result`
+    (`from_run`, `render_result`, `fill_prompts`, `withdraw`,
+    `limit_lines`, `fill_result_run`).
+
 - **What an agent copies is what labkit takes.** Every `--decide` call
   and every registered-branch example shown in `AGENTS.md`, the agent
   guide, the field guide and the protocol template goes through the real
