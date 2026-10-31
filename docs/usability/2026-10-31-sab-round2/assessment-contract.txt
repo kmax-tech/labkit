@@ -130,3 +130,13 @@ either, 60 three of ten in the lab arm and none in the control arm. Mean time a 
 min, lab 13.3 to 18.9 min. Against the baseline (addendum 3, three per cell), the control arm's rate is
 lower here (4 or 7 of 30 against 7 or 8 of 9): the baseline's difference was larger than ten attempts per
 cell bear out.
+
+Addendum 6, 2026-10-31 night, a correction of addenda 4 and 5. Part 2's lab arm did not run on labkit
+v0.104.2. The runner stages each arm's repository once and reuses it (`snapshot`); part 2 reused the
+repositories staged for part 1 and the baseline, whose requirements and .venv pin v0.104.0 (every lab
+attempt's requirements.txt names v0.104.0). The image held v0.104.2, but an agent runs the labkit of its
+repository's .venv. So part 2 is the baseline's setup again (the same labkit 0.104.0, the same prompt) at
+ten attempts per cell, and its test (addendum 5) is read as such; addendum 1's repair and the four of
+addendum 4 were not under test (one lab attempt named the run's checksum in Data / scope and was still
+blocked: the check is in v0.104.2, its .venv ran v0.104.0). The runner now stages per labkit pin
+(`arms-<pin>/`) and refuses a staged repository whose pin is not the image's.

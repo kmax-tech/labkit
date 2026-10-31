@@ -173,9 +173,14 @@ def attempt_id(task_id: str, arm: str, rep: int = 1) -> str:
 
 
 def snapshot(task_id: str, arm: str, image: str) -> Path:
-    # round 2's own staged repositories: arms/ holds round 1's, staged with labkit bf76bbc
-    dest = S / "arms-r2" / f"t{task_id}-{arm}"
+    # staged repositories per labkit pin: a repository staged for another pin carries that
+    # labkit in its .venv, and the agent runs it, whatever the image holds (part 2 ran on
+    # arms-r2/, staged for v0.104.0, under an image of v0.104.2 — addendum 6)
+    dest = S / f"arms-{infra.labkit_pin()}" / f"t{task_id}-{arm}"
     if dest.exists():
+        wrong = arms.pin_findings(dest, infra.labkit_requirement()) if arm == "labkit" else []
+        if wrong:
+            raise SystemExit(f"{dest}: staged for another labkit than the image's: {wrong}")
         return dest
     return arms.stage_arm(arm, dest, image, name=f"task-{task_id}", protocol=None, exclude=sab.EXCLUDE)
 
