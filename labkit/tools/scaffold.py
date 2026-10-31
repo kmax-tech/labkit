@@ -1635,8 +1635,8 @@ def _first_steps(
             f"{protocol}: fill the pilot part (head: type, repeat_cost; "
             f"{fields}); `protocol-check --contract` names the labels.",
             f"scripts/01_measure.py: expected_ids(), rows(), evaluate_rows(); {code_check}.",
-            f"{test}: the counting function at two edges — no criterion, so no "
-            "resolution check.",
+            f"{test}: KNOWN_IDS, KNOWN_ROWS, KNOWN_METRICS — a case checked by hand "
+            "that evaluate_rows() must give; no criterion, so no resolution check.",
         ]
     if sk is standard_contract.ESTIMATOR:
         title += " — the instrument is an estimator" + (

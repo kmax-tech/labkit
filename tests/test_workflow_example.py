@@ -52,7 +52,7 @@ class CountWalkthrough(unittest.TestCase):
         self.assertEqual(p.returncode, 0, out[-4000:])
         for said in (
             "== 1. a lab repo",
-            "filled: SOURCE, INPUTS, COUNT_FIELD, METRIC_KEY",
+            "filled: SOURCE, INPUTS, METRIC_KEY",
             "== 5. finalize",
             "all clear",
             "- **Recorded results:** mean_docs_per_case = 3.5 (run ",

@@ -5,6 +5,28 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **The audit leaves alone what the task fixes for its deliverable.** The
+  files `DELIVERABLES` names and the columns of `DELIVERABLE_COLUMNS`, with
+  their names and order, are out of the auditor's scope; the protocol's Unit
+  says what a value is. Round 2: an analysis audit graded the task's own
+  column name `percentage_deforestation` for carrying the fraction the task
+  asks for. The area's own text writing one number two ways stays in scope.
+- **A computation's stamped test holds a case checked by hand, not a mean.**
+  The compute skeleton's test fixed the kept number as the mean of a
+  `COUNT_FIELD`; an area whose number is a share, a sum or an improvement
+  failed it unless the agent bent its metric into that mean (round 2: a
+  `mean_accuracy` of 1.0 over constant counts, "standard template
+  requirement"). The test now reads `KNOWN_IDS`, `KNOWN_ROWS` and
+  `KNOWN_METRICS` — the agent's hand-checked rows and the number(s)
+  `evaluate_rows()` must give for them, `METRIC_KEY` among them — and fails
+  until they are filled. `COUNT_FIELD` is gone from `01_measure.py`, and
+  `METRIC_KEY` is stamped `"TODO_number"`. Areas stamped before keep their
+  files.
+
 ## 0.104.2 — 2026-10-31
 
 ### Fixed

@@ -39,7 +39,6 @@ s = p.read_text(encoding="utf-8")
 consts = {
     "SOURCE": 'REPO / "data" / "raw" / "cases.jsonl"',
     "INPUTS": 'REPO / "data" / "raw" / "inputs"',
-    "COUNT_FIELD": '"n_docs"',
     "METRIC_KEY": '"mean_docs_per_case"',
 }
 for name, value in consts.items():
@@ -58,18 +57,29 @@ bodies = {
         "        files = visible(input_dir(records[item_id], item_id))\n"
         "        if not files:\n"
         "            raise ValueError(f'rows(): {item_id} has no documents')\n"
-        "        out.append({'case_id': item_id, COUNT_FIELD: len(files)})\n"
+        "        out.append({'case_id': item_id, 'n_docs': len(files)})\n"
         "    return out"
     ),
     'raise NotImplementedError("evaluate_rows(): compute the number(s) from items")': (
-        "return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(items)}"
+        "return {METRIC_KEY: sum(r['n_docs'] for r in items) / len(items)}"
     ),
 }
 for old, new in bodies.items():
     assert old in s, old
     s = s.replace(old, new, 1)
 p.write_text(s, encoding="utf-8")
-print("filled: SOURCE, INPUTS, COUNT_FIELD, METRIC_KEY, expected_ids(), rows(), evaluate_rows()")
+# the stamped test's case, checked by hand: two cases of 1 and 3 documents, a mean of 2.0
+t = Path("tests/test_01_docs_per_case.py")
+u = t.read_text(encoding="utf-8")
+for stamped, filled in (
+    ("KNOWN_IDS: list[str] = []", 'KNOWN_IDS: list[str] = ["c1", "c2"]'),
+    ("KNOWN_ROWS: list[dict] = []", 'KNOWN_ROWS: list[dict] = [{"case_id": "c1", "n_docs": 1}, {"case_id": "c2", "n_docs": 3}]'),
+    ("KNOWN_METRICS: dict = {}", 'KNOWN_METRICS: dict = {"mean_docs_per_case": 2.0}'),
+):
+    assert stamped in u, stamped
+    u = u.replace(stamped, filled, 1)
+t.write_text(u, encoding="utf-8")
+print("filled: SOURCE, INPUTS, METRIC_KEY, expected_ids(), rows(), evaluate_rows(), the test's hand-checked case")
 EOF
 run "$V/code-check" "$AREA"
 

@@ -328,3 +328,21 @@ def decide_words(*words: str) -> list[str]:
         out.append(rest[i])
         i += 1
     return out
+
+
+def fill_known_case(area: Path, ids: str, rows: str, metrics: str) -> None:
+    """The hand-checked case of AREA's stamped compute test filled: KNOWN_IDS,
+    KNOWN_ROWS and KNOWN_METRICS as the Python literals IDS, ROWS and METRICS
+    (`test-quick.py.template`). The test lies under the repository's tests/,
+    named after the area."""
+    test = area.parents[1] / "tests" / f"test_{area.name.replace('-', '_')}.py"
+    text = test.read_text(encoding="utf-8")
+    for name, value in (
+        ("KNOWN_IDS: list[str]", ids),
+        ("KNOWN_ROWS: list[dict]", rows),
+        ("KNOWN_METRICS: dict", metrics),
+    ):
+        stamped = f"{name} = {'{}' if name.endswith('dict') else '[]'}\n"
+        assert text.count(stamped) == 1, f"{test}: no stamped {name}"
+        text = text.replace(stamped, f"{name} = {value}\n")
+    test.write_text(text, encoding="utf-8")

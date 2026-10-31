@@ -16,6 +16,7 @@ import unittest
 from unittest import mock
 
 import test_end_to_end as e2e
+from protocol_fixture import fill_known_case
 from labkit.checks import protocol_report
 from labkit.formats import protocol_block, standard_contract
 from labkit.gates import preflight, report_check
@@ -41,8 +42,10 @@ class HighComputeWorkflow(unittest.TestCase):
                     'SOURCE = REPO / "data" / "TODO"',
                     'SOURCE = REPO / "data" / "raw" / "counts.json"',
                 ),
-                ('COUNT_FIELD = "TODO_count"', 'COUNT_FIELD = "count"'),
-                ('METRIC_KEY = "TODO_mean"', 'METRIC_KEY = "mean_count"'),
+                (
+                    'METRIC_KEY = "TODO_number"',
+                    'METRIC_KEY = "mean_count"\nCOUNT_FIELD = "count"',
+                ),
                 (
                     'raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
                     'return sorted(json.loads(SOURCE.read_text(encoding="utf-8")))',
@@ -57,6 +60,12 @@ class HighComputeWorkflow(unittest.TestCase):
                     "return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
                 ),
             ],
+        )
+        fill_known_case(
+            area,
+            '["a", "b"]',
+            '[{"id": "a", "count": 1}, {"id": "b", "count": 3}]',
+            '{"mean_count": 2.0}',
         )
         lab.fill(protocol, "type=exploratory")
         lab.fill_open(
