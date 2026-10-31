@@ -16,7 +16,8 @@ import unittest
 from pathlib import Path
 
 from labkit.formats import protocol_block, reference
-from test_end_to_end import Lab, _replace
+from protocol_fixture import fill_known_case
+from test_end_to_end import KNOWN_IDS, KNOWN_METRICS, KNOWN_ROWS, Lab, _replace
 
 LINES = (("a.txt", 1), ("b.txt", 2), ("c.txt", 6))  # mean 3.0
 
@@ -41,8 +42,10 @@ def stamp_lines(
                 'SOURCE = REPO / "data" / "TODO"',
                 'SOURCE = REPO / "data" / "raw" / "docs"',
             ),
-            ('COUNT_FIELD = "TODO_count"', 'COUNT_FIELD = "lines"'),
-            ('METRIC_KEY = "TODO_mean"', 'METRIC_KEY = "lines_mean"'),
+            (
+                'METRIC_KEY = "TODO_number"',
+                'METRIC_KEY = "lines_mean"\nCOUNT_FIELD = "lines"',
+            ),
             (
                 '    raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
                 "    return [p.name for p in visible(SOURCE)]",
@@ -66,6 +69,7 @@ def stamp_lines(
         "Exclusions / filters=hidden entries and nested directories (visible())",
         "Unit=one document of data/raw/docs",
     )
+    fill_known_case(area, KNOWN_IDS, KNOWN_ROWS, KNOWN_METRICS)
     return area, protocol
 
 

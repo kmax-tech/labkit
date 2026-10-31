@@ -39,7 +39,7 @@ from labkit.formats import (
     scope_sha,
     standard_contract as sc,
 )
-from protocol_fixture import decide_words, registration_of, shown_sha  # noqa: E402
+from protocol_fixture import decide_words, fill_known_case, registration_of, shown_sha  # noqa: E402
 
 
 def _replace(path: Path, pairs: list[tuple[str, str]]) -> None:
@@ -263,8 +263,10 @@ def stamp_count(
                 'SOURCE = REPO / "data" / "TODO"',
                 'SOURCE = REPO / "data" / "raw" / "docs"',
             ),
-            ('COUNT_FIELD = "TODO_count"', 'COUNT_FIELD = "lines"'),
-            ('METRIC_KEY = "TODO_mean"', 'METRIC_KEY = "lines_mean"'),
+            (
+                'METRIC_KEY = "TODO_number"',
+                'METRIC_KEY = "lines_mean"\nCOUNT_FIELD = "lines"',
+            ),
             (
                 '    raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
                 "    return [p.name for p in visible(SOURCE)]",
@@ -279,6 +281,7 @@ def stamp_count(
             ),
         ],
     )
+    fill_known_case(area, KNOWN_IDS, KNOWN_ROWS, KNOWN_METRICS)
     lab.fill(
         protocol,
         "type=exploratory",
@@ -290,6 +293,13 @@ def stamp_count(
     )
     lab.commit("the count, registered")
     return area, protocol
+
+
+#: the counting areas' hand-checked case for their stamped test: two documents of 1 and 3
+#: lines give a mean of 2.0
+KNOWN_IDS = '["a", "b"]'
+KNOWN_ROWS = '[{"id": "a", "lines": 1}, {"id": "b", "lines": 3}]'
+KNOWN_METRICS = '{"lines_mean": 2.0}'
 
 
 class Count(unittest.TestCase):

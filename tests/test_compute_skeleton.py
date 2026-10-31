@@ -95,7 +95,6 @@ class FillList(unittest.TestCase):
         self.assertEqual(
             sorted(blanks),
             [
-                "COUNT_FIELD",
                 "INPUTS",
                 "METRIC_KEY",
                 "SOURCE",

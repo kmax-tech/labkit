@@ -1,10 +1,11 @@
-"""`<area>`: the counting function at two edges, before any run.
+"""`<area>`: the number's function on a hand-checked case, before any run.
 
     .venv/bin/python -m pytest tests/test_<NN>_<name>.py
 
 Imports the area's script by path under a unique name (two areas in one
 pytest run must not share `01_measure`), never copies its formula. Until
-the TODOs are filled the first test FAILS on purpose.
+KNOWN_IDS, KNOWN_ROWS and KNOWN_METRICS hold a case checked by hand, the
+first two tests FAIL on purpose.
 """
 from __future__ import annotations
 
@@ -22,15 +23,28 @@ sys.modules[_spec.name] = measure
 _spec.loader.exec_module(measure)
 
 
+#: TODO: a case you checked by hand — two or more rows in the shape rows()
+#: returns, the ids they answer, and the number(s) evaluate_rows() must give
+#: for them under their metrics keys, METRIC_KEY among them — worked out by
+#: hand, never by calling the code
+KNOWN_IDS: list[str] = []
+KNOWN_ROWS: list[dict] = []
+KNOWN_METRICS: dict = {}
+
+
 def test_known_rows_give_the_known_number():
-    rows = [{"id": "a", measure.COUNT_FIELD: 1}, {"id": "b", measure.COUNT_FIELD: 3}]
-    metrics = measure.evaluate_rows(rows, ["a", "b"])
-    assert metrics[measure.METRIC_KEY] == pytest.approx(2.0)   # the mean those two rows give
+    assert len(KNOWN_ROWS) >= 2 and measure.METRIC_KEY in KNOWN_METRICS, (
+        "fill KNOWN_IDS, KNOWN_ROWS and KNOWN_METRICS with a case checked by hand"
+    )
+    metrics = measure.evaluate_rows(KNOWN_ROWS, KNOWN_IDS)
+    for key, value in KNOWN_METRICS.items():
+        assert metrics[key] == pytest.approx(value), key
 
 
 def test_a_lost_row_is_a_refusal_not_a_smaller_denominator():
+    assert len(KNOWN_ROWS) >= 2, "the hand-checked case owes two rows at least"
     with pytest.raises(ValueError):
-        measure.evaluate_rows([{"id": "a", measure.COUNT_FIELD: 1}], ["a", "b"])
+        measure.evaluate_rows(KNOWN_ROWS[:-1], KNOWN_IDS)
 
 
 def test_hidden_entries_do_not_count(tmp_path):

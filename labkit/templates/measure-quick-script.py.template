@@ -15,9 +15,12 @@ this skeleton has no --show and no --probe. The number is produced here, never
 retyped (LAB-041 Generate numbers, don't retype them): the protocol's Result line cites it with the run_id, and
 `scripts/02_analyze.py --check` (stamped beside this script) holds that line to the run.
 
-Fill four constants — SOURCE, INPUTS, COUNT_FIELD, METRIC_KEY — and the
-bodies of three functions — expected_ids(), rows(), evaluate_rows(); each
-place carries a TODO, and none may be left. Everything else stays — `visible()` is the one reader of a directory, the
+Fill three constants — SOURCE, INPUTS, METRIC_KEY — and the bodies of
+three functions — expected_ids(), rows(), evaluate_rows(); each place
+carries a TODO, and none may be left. The number is whatever the question
+asks — a mean, a share, a sum, a ratio, a value read off the data —, and
+the rows carry whatever it needs; the area's test holds evaluate_rows() to
+a case you checked by hand, not to a formula of its own. Everything else stays — `visible()` is the one reader of a directory, the
 denominator is the source's id list, a missing item is a refusal. INPUTS names
 what the rows read beyond SOURCE: a count of documents per case reads the case
 directories, and only a frozen directory makes the number citable against
@@ -56,8 +59,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 SOURCE = REPO / "data" / "TODO"                 # what is counted — a file or a directory
 INPUTS = None                                   # TODO: a directory the rows read beyond SOURCE (REPO / "data" / "raw" / "inputs"), frozen with it; None when SOURCE is all the number reads
 OUT = AREA / "output" / "<name>.jsonl"          # one row per item, written by this script
-COUNT_FIELD = "TODO_count"                      # the per-item number in each row
-METRIC_KEY = "TODO_mean"                        # the kept number's key in metrics.json; the test reads both names from here
+METRIC_KEY = "TODO_number"                      # the kept number's key in metrics.json; the test reads it from here
 DELIVERABLES: tuple[str, ...] = ()              # files an external task names, relative to REPO ("pred_results/<name>.csv"); written by the run from the kept rows (`deliverable_rows`), registered as its outputs
 DELIVERABLE_COLUMNS: tuple[str, ...] = ()       # the columns the task names for them, in its order; the write refuses other columns; () holds nothing
 
