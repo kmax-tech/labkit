@@ -2522,6 +2522,19 @@ ihrer eigenen Antworten, Parser ohne Groß-/Kleinschreibung, c72498c). Vor der R
 4. ~~Vertrag~~ — geschrieben 2026-10-31 (`assessment-contract.txt`).
 5. Messung 3 (Reparaturen von heute auf dem neuen Release) vorher, eigener Vertrag.
 
+Absicherung des Läufers (Auftrag 2026-10-31, Punkte 2 und 3): Commit aus
+`direct_url.json` gegen den Pin, mit Commit in der Store-Provenienz;
+`--check` baut/stagt/konstruiert und prüft die echte Setup-Zeile offline.
+Code und Tests im Läufer unter
+`docs/usability/2026-10-31-registered-pilot/`; die vorhandene
+Verzeichnisinstallation wird tatsächlich abgelehnt. **Noch offen:** Punkt 1,
+eine eigene Umgebung aus dem beabsichtigten Git-Pin, danach ein erfolgreicher
+vollständiger `--check`. Der neue Setup-Pfad ist getrennt an frisch gestagten
+Laborarmen 21 und pubmedqa50 im echten Image geprüft: zweimal „one labkit:
+0.104.3“, zweimal `protocol-check` OK, null Modellaufrufe. Kein
+kostenpflichtiger Start durch diesen Umbau.
+
+
 ## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)
 
 Alle auf labkit 0.104.0 (Teil 2 auch, Nachtrag 6). Belege: labkit-evidence

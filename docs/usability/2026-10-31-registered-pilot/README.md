@@ -71,6 +71,53 @@ result.
 
 `assessment-contract.txt` registers it: part 0, a technical trial run (lab arm, 21 and pubmedqa50,
 one attempt each, not counted), then part 1, five tasks × two arms × three attempts.
-`run_pilot.py` runs both (copy it with protocols/, plans/ and a models.toml into a run directory).
+`run_pilot.py` runs both (copy it with pilot_checks.py, protocols/, plans/ and a models.toml into a run directory).
 Open before part 0: the release with the template repair, and `sandbox/labkit.pin` set to its
 commit hash.
+
+## Runner checks (points 2 and 3 of the environment repair)
+
+Every mode verifies the interpreter's installed `agentsandbox` commit from
+`direct_url.json` against the full Git commit in
+`labkit-paper-main/requirements.txt`, before building images. Missing metadata,
+a directory or editable installation, and a mismatching commit stop the runner.
+The package version alone is insufficient: the incompatible installations both
+reported 0.1.0. A real pilot stores the checked commit, version and interpreter
+in its batch provenance as `runner_environment`.
+
+From the copied run directory, use the **same interpreter and settings** for
+check and pilot; `--check` honors `--only`, `ARMS_ONLY` and `REPS` just as `--pilot` does:
+
+```sh
+ID_PREFIX=rpt ARMS_ONLY=labkit ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --check --only 21 pubmedqa50
+```
+
+`--check` builds the images, stages the selected task/arm repositories and
+constructs every attempt, including its adapter command and environment. For
+each distinct snapshot it copies the repository and inputs into a disposable
+container and runs the actual setup line, then `protocol-check` for the lab
+arm. These containers have no network. Setup Docker calls have a separate
+120-second timeout; the attempt budgets are constructed and recorded, while
+the setup containers use no attempt CPU or memory limits. The check starts no agent or proxy,
+reads no API key and writes no attempt store. A setup or protocol failure
+stops the check. The proxy image is inspected; proxy forwarding and model
+responses still require the registered technical trial run.
+
+After all checks pass, `check-<prefix>.json` and `check-<prefix>.txt` record the
+installed commit, image tags and immutable IDs, CLI version, model, budgets,
+constructed attempt IDs, tree digests and observed setup output (including
+`one labkit`). The text is the evidence for the next addendum; the historical
+contract is not rewritten automatically. Failed checks do not produce a new
+success report; existing reports describe earlier checks only.
+
+**Current environment prerequisite:** the existing `.venv-pilot` is a directory
+installation and is intentionally refused. Replacing it with an installation
+of the intended pinned Git commit is point 1, a separate environment change.
+No environment, pin, historical store or running attempt is changed by this
+runner patch. The actual directory-install rejection has been exercised;
+the successful full `--check` awaits a matching Git installation. Separately,
+the new preparation/setup path was exercised on freshly staged task 21 and
+pubmedqa50 lab arms in `labkit-sandbox:f998024abb6c`: both printed
+`one labkit: 0.104.3` and passed `protocol-check`, with Claude Code 2.1.285
+and zero model calls. This diagnostic exercised setup directly; it does not
+claim that the current directory installation passed the commit check.
