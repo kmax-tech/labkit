@@ -8,14 +8,19 @@ and a reason that only explains go; the answer format the parser reads
 (`labkit-audit`'s finding, `FIX`, `READ`, `check:`, `verdict`/`scope`, the
 refusal line, the decision and claim lines) stays word for word. The rules
 each prompt cites are the part of the standard the caller inlines
-(`audit.cited_rules`), so their set and order stay as they were.
+(`audit.cited_rules`), so their set and order stay as they were. The kept
+text then went through the self-check of the SimpleEnglish skill
+(`~/projects/SimpleEnglish`, procedural register for agent prompts): a
+sentence joined by a semicolon became two, `may` became `can` or went, a
+list item lost its trailing semicolon. Kept as written: the quoted
+warning a test binds, the scope format and quoted examples.
 
 | Prompt | Words before (body, head comment dropped) | After | What went |
 |---|---|---|---|
-| `experiment-preflight` | 3,091 | 2,427 | dates and incidents, the reasons behind the low-cost note line and the cut by reversibility, repeated clauses |
-| `decision-review` | 884 | 865 | one tangled sentence rewritten, `--from-run` named as the adoption |
-| `code-clarity` | 809 | 737 | where each rule was observed |
-| `report-review` | 661 | unchanged | nothing: no date, no repetition |
+| `experiment-preflight` | 3,091 | 2,429 | dates and incidents, the reasons behind the low-cost note line and the cut by reversibility, repeated clauses |
+| `decision-review` | 884 | 868 | one tangled sentence rewritten, `--from-run` named as the adoption |
+| `code-clarity` | 809 | 738 | where each rule was observed |
+| `report-review` | 661 | 662 | semicolon chains split |
 
 Built on its own branch (`audit-prompts`), kept out of the release the
 cold round 21/60 measures: cut in the same round, a change in the round
