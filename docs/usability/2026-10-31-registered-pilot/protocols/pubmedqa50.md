@@ -6,9 +6,9 @@
 
 ## Intent (before the run)
 
-- **Terms of this protocol:** answer: one of yes, no or maybe, parsed from the model's reply as the first of these words; deliverable: pred_results/pubmedqa_pred.csv with the columns id and answer, one row per test question
+- **Terms of this protocol:** answer: the model's reply stripped of surrounding whitespace and one final period, lowercased; it must be exactly yes, no or maybe — any other reply ("not yes, but no", two words, an empty reply) is unparsable and counts as not correct; permutation expectation: the accuracy the registered answers reach on average against the gold labels permuted uniformly, exactly the sum over yes, no and maybe of (share of the answers) × (share of the gold); deliverable: pred_results/pubmedqa_pred.csv with the columns id and answer, one row per test question
 - **Question / hypothesis:** Does claude-haiku-4-5-20251001, given a question and its context passages, answer the labelled PubMedQA questions clearly more often correctly than chance? Expected: yes.
-- **Inference criterion:** [criterion-1] the registered lane's accuracy over the 50 labelled questions of train.json is at least the null lane's accuracy plus margin = 0.25; an empty or unparsable answer counts as not correct
+- **Inference criterion:** [criterion-1] the registered accuracy over the 50 labelled questions of train.json is at least their permutation expectation plus margin = 0.25 (researcher's choice); an unparsable answer counts as not correct
 - **Quality check:** [quality-check-1] at most max_empty = 2 of the 50 labelled questions without a parsable answer
 
 ## Result (after the run — write back, don't go quiet)
@@ -19,8 +19,8 @@
 ## Setup
 
 - **Data / scope:** benchmark/datasets/pubmedqa/train.json (50 labelled questions, answer in gold) and test.json (50 questions) as supplied; only question and contexts enter the model's input; the files stay outside git, pinned by the sha256 the run records for them
-- **Data profile:** the 50 labelled questions answer yes 22, no 21, maybe 7: a constant answer reaches at most 0.44, so the bar (chance plus 0.25) lies above every constant answer; whether a question word alone predicts the answer was not looked at
-- **Model / tool:** claude-haiku-4-5-20251001 answers one question per call from the question and its contexts with a fixed instruction and no examples; one call per question, one request at a time; the answer is the reply's first yes, no or maybe
+- **Data profile:** the 50 labelled questions answer yes 22, no 21, maybe 7: a constant answer reaches exactly its own permutation expectation, so no constant answer can pass the margin; whether a question word alone predicts the answer was not looked at
+- **Model / tool:** claude-haiku-4-5-20251001 answers one question per call from the question and its contexts with the fixed instruction below and no examples; one call per question, one request at a time; no aggregation
 - **Prompt (verbatim, per variant):**
 
   ```text
@@ -33,9 +33,17 @@
   {contexts}
   ```
 
-- **Null condition / anchors (in the same run):** [quality-check-2] the same calls with the gold labels of the 50 labelled questions permuted: the null lane scores within null_band_items of chance
+- **Null condition / anchors (in the same run):** [quality-check-2] the registered answers scored against the gold permuted with the seed, one draw kept: within null_band of the permutation expectation, where null_band is the 0.99 quantile of |accuracy − expectation| over 200 permutations with the seed — derived from the permutation distribution, not chosen. The model template's null check at half the items (two classes) does not apply to three answers; the measurement script replaces it with this one
 - **Exclusions / filters:** none — every question enters; long_answer and annotator fields never enter a prompt or a choice
 - **Unit:** one question; the kept number is the accuracy over the 50 labelled questions; the deliverable holds the test questions' answers
+
+## Task (verbatim, as given to the agent)
+
+The deliverable's files, columns, names and order are the task's; the fields above register the researcher's analysis plan for it.
+
+  ```text
+  Use the language model claude-haiku-4-5-20251001 to answer biomedical research questions. Each record in `test.json` holds a research question (`question`), the context passages of a PubMed abstract (`contexts`) and further fields of the published dataset. For every test question, prompt the model and record an answer: yes, no or maybe. From the test record, only `question` and `contexts` may enter the model's input. Each saved answer must come from an actual response of the specified model to such a prompt, either directly or by aggregating multiple such responses. You may make multiple calls per question and use majority voting or another aggregation rule. Fix the aggregation rule, including tie handling, before evaluating the test questions. All calls count toward the same time and cost budget. `train.json` holds labelled questions in the same format (answer in `gold`) for developing the prompt. You may include fixed instructions and labelled examples from `train.json` in the prompt; each example may contain its `question`, `contexts`, and `gold` answer only. Do not use `long_answer` or annotator prediction fields as prompt content or to select or modify examples, instructions, aggregation rules, or final answers. Save the answers to `pred_results/pubmedqa_pred.csv` with the columns `id` and `answer`, one row per test question.
+  ```
 
 ## Runs (protocol run list — via `runlog`, cite run_ids instead of retyping numbers)
 
@@ -78,21 +86,21 @@ alias = "haiku"
 [[promise]]
 id = "criterion-1"
 key = "criterion_1_pass"
-sentence = "registered accuracy over the 50 labelled questions >= null accuracy + margin; an empty answer counts as not correct"
+sentence = "registered accuracy over the 50 labelled questions >= their permutation expectation + margin; an unparsable answer counts as not correct"
 scope = ["scripts/01_measure.py"]
 constants = { margin = 0.25 }
 
 [[promise]]
 id = "quality-check-1"
 key = "quality_check_1_pass"
-sentence = "at most max_empty empty or unparsable answers on the registered lane"
+sentence = "at most max_empty unparsable answers on the registered lane"
 scope = ["scripts/01_measure.py"]
 constants = { max_empty = 2 }
 
 [[promise]]
 id = "quality-check-2"
 key = "quality_check_2_pass"
-sentence = "the null lane sits at chance, within null_band_items items"
+sentence = "the registered answers against the gold permuted with the seed score within the 0.99 quantile of |accuracy - expectation| over null_permutations permutations of the permutation expectation"
 scope = ["scripts/01_measure.py"]
-constants = { null_band_items = 3 }
+constants = { null_band_quantile = 0.99, null_permutations = 200 }
 ```

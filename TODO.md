@@ -2503,6 +2503,24 @@ Reihenfolge:
    die Zweige der Piloten-Fixes (`pilot-*`, `r2-*`) sind alle in `main`
    und können weg.
 
+## Pilot mit vorgegebener Registrierung (2026-10-31, Entwurf nach Review)
+
+Frage: Setzt der Agent einen vorgegebenen Analyseplan mit labkit besser um als ohne? Entwürfe in
+`docs/usability/2026-10-31-registered-pilot/` (Protokolle, gleichwertige `PLAN.md`, README mit den
+Forscherentscheidungen). Vor dem Lauf offen:
+
+1. Die sechs Forscherentscheidungen im README bestätigen; 71 aus dem Pilot nehmen (Empfehlung).
+2. Modellweg für pubmedqa50 einmal getrennt prüfen (Proxy, API-Schlüssel, ein Aufruf).
+3. Harness: Stempeln mit vorgegebenem Protokoll in `sandboxlab.arms` reparieren (ruft noch
+   `--cost seconds`), `PLAN.md` in den Kontrollarm legen.
+4. Messung 3 (Reparaturen von heute auf dem neuen Release) vorher, eigener Vertrag.
+
+**Fehler in der Modellvorlage, gefunden im Review:** `_within_chance()` in
+`labkit/templates/measure-script.py.template` prüft die Null-Spur gegen die Hälfte der Items — richtig
+nur für zwei gleich häufige Klassen. Bei drei Antworten (PubMedQA: yes/no/maybe) ist der Zufallswert
+die Permutationserwartung, wie sie das Schätzer-Gerüst schon rechnet (`permutation_expectation`).
+Eine Heimat: die Rechnung aus dem Schätzer-Gerüst übernehmen, nicht kopieren.
+
 ## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)
 
 Alle auf labkit 0.104.0 (Teil 2 auch, Nachtrag 6). Belege: labkit-evidence
