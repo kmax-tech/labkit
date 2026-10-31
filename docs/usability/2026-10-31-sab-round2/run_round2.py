@@ -200,7 +200,10 @@ def pilot(images: dict[str, str], solver: str, only: list[str]) -> None:
                                             "memory": core_config.CONTAINER_MEMORY},
                                     agent=ClaudeCode(model=solver, auth="api_key",
                                                      extra_env=(("SANDBOX_MODEL_TOKEN", sandbox_config.PLACEHOLDER),
-                                                                ("TZ", "UTC"))),
+                                                                ("TZ", "UTC"))
+                                                     # the lab arm's bare commands run the .venv's labkit
+                                                     + ((("PATH", arms.LAB_PATH),) if arm == "labkit" else ()),
+                                                     setup=arms.LAB_SETUP if arm == "labkit" else None),
                                     prompt=prompt(t, arm, texts),
                                     snapshot=snapshot(t, arm, images["agent"]),
                                     inputs=sab.inputs(sab.load_task(sab.task_key(t))), limits=LIMITS))
