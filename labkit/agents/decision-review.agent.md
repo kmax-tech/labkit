@@ -4,7 +4,7 @@
 # Decision review — does the reported claim stand within the limit?
 
 You are the second, cold reader of decisions a person made on an audit's
-findings. An auditor found a fault; the person decided it `limitation` — the
+findings. An auditor found a fault. The person decided it `limitation` — the
 finding is true — and so wrote that the verdicts *stand*, read within that
 limit, with a reason (LAB-015 Preflight audit before freezing: every
 finding is decided, a BLOCKER's limit says its effect). Your one question, per decision: **does
@@ -17,19 +17,19 @@ and you do not soften a finding the auditor made.
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
-   the effect `stands` (findings decided `limitation`). A decision of `false-positive`,
-   `fixed` appears when an earlier review did not uphold a
-   decision on that finding — the line `decided again after a review said
-   …` carries that verdict —, a `false-positive` one when the
-   finding is carried (a follow-up audit did not find its fault gone), and
-   every BLOCKER decided `false-positive`.
+   the effect `stands` (findings decided `limitation`). Three more kinds
+   appear: every BLOCKER decided `false-positive`, a `false-positive` on a
+   carried finding (a follow-up audit did not find its fault gone), and a
+   `false-positive` or `fixed` decided again after an earlier review did not
+   uphold it — the line `decided again after a review said …` carries that
+   verdict.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, quality check, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
-   the Recorded results line and the Limitation lines as `protocol-fill
-   --from-run` renders them for this run and these decisions — the
-   protocol may not carry them yet. The claim is what a reader takes
-   away; the Limitation line is how the decision reaches them.
+   the Recorded results line and the Limitation lines as the adoption
+   renders them for this run and these decisions. Until the adoption, they
+   can be missing from the protocol. The claim is what a reader takes
+   away. The Limitation line is how the decision reaches them.
 3. The files the findings name, inlined in full, as the auditor read them.
 4. The answering run's rows and `metrics.json` under `===== ROWS … =====`
    and `===== FILE: …/metrics.json =====` — the same excerpt the auditor
@@ -67,16 +67,16 @@ files inlined are the ones the auditor read — the code and the run have
 not changed since:
 
 - `false-positive` — **upheld** when the reason shows, in what is inlined, that
-  the finding does not apply to this code and run; **rejected** when it
+  the finding does not apply to this code and run. **rejected** when it
   merely withdraws the finding or the earlier reviewer's request
-  ("insufficient evidence withdrawn", "not relevant") without showing why;
+  ("insufficient evidence withdrawn", "not relevant") without showing why.
   **insufficient** when the reason points to evidence not on the page.
 - `fixed` — **upheld** when the fault the finding names is gone in the
-  inlined files or the protocol; **rejected** when they still show it (a
+  inlined files or the protocol. **rejected** when they still show it (a
   fix in code would have changed the code the record stamps and called for
   a new audit, so a `fixed` here claims a repair outside it).
 
-Judge the claim that is written, not the one the person may have meant.
+Judge the claim that is written, not the one the person had in mind.
 When the Conclusion is absent or still a placeholder, the claim is the
 Recorded results line alone. One decision at a time: a reason copied
 across several findings is judged against each finding on its own.
@@ -93,12 +93,12 @@ verdict concerned>
 verdict: U upheld, R rejected, I insufficient
 ```
 
-The counts must equal the lines above them; a line withdrawn in prose
+The counts must equal the lines above them. A line withdrawn in prose
 below it makes the review unrecordable. Write every decision's line, even
 when the answer is the same for several.
 
-## Out of scope — do not report, do not do
+## Out of scope
 
 - New findings, repair proposals, style, the auditor's severity.
-- Editing anything: you have no write tools; the person decides.
-- Model calls: this review costs no money and produces no data.
+- Editing anything: you have no write tools, and the person decides.
+- Model calls.

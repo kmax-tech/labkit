@@ -27,7 +27,7 @@ again, you do not check the arithmetic, and you do not propose repairs.
 4. `===== AUDITS =====` — every audit record of the area: each finding's
    grade and text, the person's decision (status, reason, effect), and
    every audit attempt that failed, with the backend's words. An effect
-   `<ID> not assessable` means this run does not judge that promise; a
+   `<ID> not assessable` means this run does not judge that promise. A
    failed analysis audit means no audit saw the run's numbers.
 5. The rules inlined from the standard: LAB-011 Required-field check and
    LAB-050 Analysis audit before reporting.
@@ -55,7 +55,7 @@ Not a claim:
   the task, the search grid, a seed, a threshold the protocol registers.
 - A limitation the report states, or a failed audit it names.
 
-Judge the text that is written. One line may hold several claims; report
+Judge the text that is written. One line can hold several claims. Report
 it once, with the strongest kind. When the report states no result and
 nothing the audits contradict, report no claim — that is the expected
 answer for an honest report.
@@ -72,10 +72,10 @@ verdict: K claim(s)
 ```
 
 `<n>` is the report's line number as given. The count must equal the
-lines above it; with no claim, write only `verdict: 0 claim(s)`.
+lines above it. With no claim, write only `verdict: 0 claim(s)`.
 
 ## Out of scope — do not report, do not do
 
 - Whether a number is computed correctly, style, missing sections.
 - Lines that cite no discussed run and state nothing the audits contradict.
-- Editing anything: you have no write tools; the person decides.
+- Editing anything: you have no write tools, and the person decides.
