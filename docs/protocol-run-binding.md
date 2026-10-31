@@ -170,6 +170,13 @@ protocol to a run: it reads the newest completed run, bound or not
 (`usability_score.latest_run`), since an unbound run is a finding of the
 probe.
 
+Once the protocol has adopted a run (`[result] run`, below), that run
+answers — not the newest. It must be eligible (point 1); else no run
+answers, and the blocker names why it cannot and the withdrawal. Eligible
+runs whose ids sort after it are a static-evidence warning in `finalize`,
+never a blocker. Before the adoption the choice is points 1 to 3, and
+`labkit-next` proposes its run for the adoption.
+
 1. **Eligible** are the COMPLETED runs that record this id. Left out, each
    with its reason for the operator: unbound runs, runs bound to another
    id, `unfinalized`, `corrupt` and `unreadable` runs, and **repeats**
@@ -185,6 +192,11 @@ probe.
    - a **rival in the same second** — another eligible run of the same
      standing whose run id carries the same start second: the order of the
      two is chance.
+   The order is the run ids', and a run id is local time without a zone
+   (`runlog`): a run measured on a machine in another zone sorts by its
+   own clock, a cluster run in UTC two hours "before" a Mac run in CEST
+   measured earlier. Until the id carries its zone, every machine that
+   measures for one area runs in the same zone — containers with `TZ=UTC`.
 4. **No answer** (nothing eligible, or a refusal) is exit 2 in
    `intent-check`, a blocker in `finalize`, with every other run of the
    area and the reason it was left out. "Nothing to check yet" is not a pass
@@ -210,11 +222,11 @@ run = "2026-10-21T13-40-06_ad5f"
 Written by `protocol-fill --from-run` after a clean `finalize`, never typed
 (`protocol_block.declared_run`; until 0.100.0 the declaration was a run id
 in the former prose Answer line, and the `Answering run` field a second projection
-of it). It is a projection of the answering run, never a second binding:
-`finalize` and `report-check` hold it to `bound_answering_run`'s choice — a
-table naming another run blocks, one naming no run of the area blocks, one
-that does not read (a typed `…_final`, a stray key) blocks where it stands,
-and a protocol without the table is an exploration that reports nothing.
+of it). Once written, it is the answering run (`bound_answering_run`
+takes it): a table naming a run that cannot answer — none of the area, an
+unfinalized one, one bound elsewhere — blocks with the withdrawal, one that
+does not read (a typed `…_final`, a stray key) blocks where it stands, and
+a protocol without the table is an exploration that reports nothing.
 The Recorded results line is generated from the declared run's `metrics.json`.
 
 ## Protocol run list

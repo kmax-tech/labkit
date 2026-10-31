@@ -55,6 +55,23 @@ pins (`requirements.txt` / `requirements.lock`).
   the way out; a Timebox without a leading duration stays prose and the
   run says that no projection is made. Note: `docs/notes/2026-10-31-fit-budget.md`.
 
+- **After the adoption, the adopted run answers, not the newest by name.**
+  `answering_run.bound_answering_run(area, pid, adopted)` takes the
+  protocol's `[result] run` (`adopted_run(text)`): once adopted, every
+  gate, the analysis audit and the views hold that run; one that cannot
+  answer (no such directory, unfinalized, bound elsewhere, a repeat) blocks
+  with the withdrawal. Bound runs whose ids sort after it are a
+  static-evidence WARNING in finalize, never a blocker. Why: a run id is
+  local time without a zone (`runlog`), so a cluster run in UTC sorts two
+  hours "before" a Mac run in CEST, and the newest-by-name rule picked the
+  wrong answer across machines without anyone seeing it. Before the
+  adoption the choice is unchanged, and `labkit-next` proposes its run.
+  finalize's "[result] names A, but the run that answers is B" is gone
+  (`finalize.declared_run_mismatch` removed; `declared_run_gaps` keeps the
+  unreadable table only). Until the run id carries its zone, every machine
+  measuring for one area runs in one zone — containers with `TZ=UTC`
+  (`docs/protocol-run-binding.md`).
+
 - **What an agent copies is what labkit takes.** Every `--decide` call
   and every registered-branch example shown in `AGENTS.md`, the agent
   guide, the field guide and the protocol template goes through the real
@@ -708,6 +725,16 @@ pins (`requirements.txt` / `requirements.lock`).
   copied a sha a regex had to find again.
 
 ### Fixed
+
+- **A measure script that does not parse is a blocker in finalize, not a
+  traceback.** The open-fields station asked the README route whether
+  `scripts/01_measure.py` defines `evaluate_rows` through a bare
+  `ast.parse`; a sed edit that left an unterminated f-string (Qwen pilot)
+  ended finalize with a `SyntaxError` and no finding at all. The route
+  check and `labkit-params` now parse through `scope_sha.parse_source`,
+  the one parse behind the code gates: finalize reports one guaranteed
+  BLOCKER naming the file and line (`cannot be read as Python`), and
+  `labkit-params` refuses with the same sentence.
 
 - **The auditor's instruction no longer asks a computation for a
   criterion.** `experiment-preflight.agent.md` asked every registration

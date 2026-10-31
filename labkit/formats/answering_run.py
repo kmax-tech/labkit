@@ -4,8 +4,8 @@ The run facts a choice rests on (state, binding), the repeats of a run
 and whether they are comparable (`repeats_of`, `repeat_mismatch`,
 `next_draw`), the bound runs of a protocol and the newest one, a tie
 within one second refused rather than guessed (`same_second_rival`),
-the answering run with the reasons the others were excluded
-(`bound_answering_run`), the first measurements in git's order
+the answering run — the adopted one, else the newest — with the reasons
+the others were excluded (`bound_answering_run`), the first measurements in git's order
 (`first_measurements`), and the run that recorded the model behind a
 derived run's rows (`model_provenance_run`) along the validated
 `derived_from` chain (`lineage`). intent-check, finalize,
@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import cast
 
 from labkit.formats.runs import metrics_path, run_path, runs_path
-from labkit.formats import promises
+from labkit.formats import promises, protocol_block
 from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
 from labkit.formats.repo import commit_known, earliest_commits, measure_command
 from labkit.formats.scope_sha import digest
@@ -581,9 +581,15 @@ class AnsweringRun:
             and the newest was taken anyway — a probe or producer run, not
             an answer; the caller names it.
         exclusions: Every run left out, with its reason.
-        blocker: Why no choice stands — no completed bound run, or a newer
-            run whose binding cannot be read — or None.
+        blocker: Why no choice stands — no completed bound run, a newer
+            run whose binding cannot be read, or an adopted run that cannot
+            answer — or None.
         way_out: What closes `blocker` (`GateFinding.fix`); set with it.
+        adopted: The run is the protocol's `[result] run`, not the newest
+            by name.
+        newer_by_name: Bound runs of the adopted run's standing whose ids
+            sort after it — a suggestion to look, never a verdict: a run id
+            is local time without a zone.
     """
 
     run_dir: Path | None
@@ -592,6 +598,8 @@ class AnsweringRun:
     blocker: str | None
     reports_intent_keys: bool = True
     way_out: str | None = None
+    adopted: bool = False
+    newer_by_name: tuple[str, ...] = ()
 
     def explain(self, ids_registered: bool) -> tuple[GateFinding | None, list[str]]:
         """(why no run may answer as a BLOCKER with its way out, or None; the
@@ -610,11 +618,16 @@ class AnsweringRun:
             ), [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
         if ids_registered and not self.reports_intent_keys:
             area = self.run_dir.parent.parent
+            standing = (
+                "is the adopted run ([result] run), and it reports no intent key"
+                if self.adopted
+                else "is the newest bound run, and no bound run reports an intent key"
+            )
             return (
                 GateFinding(
                     BLOCKER,
-                    f"{self.run_dir.name} is the newest bound run, and no bound run "
-                    f"reports an intent key — a probe or producer run, not an answer",
+                    f"{self.run_dir.name} {standing} — a probe or producer run, "
+                    f"not an answer",
                     fix=f"measure in full: `{measure_command(area)}` (no `--probe`, "
                     f"`--show` or `--eval-only`) writes the intent keys to metrics.json",
                     evidence_kind=GUARANTEED,
@@ -622,6 +635,8 @@ class AnsweringRun:
                 [],
             )
         lines: list[str] = []
+        if self.adopted:
+            lines.append("adopted in [result]")
         if self.skipped_newer:
             lines.append(
                 f"skipped {self.skipped_newer} newer bound run(s) without intent keys"
@@ -629,15 +644,40 @@ class AnsweringRun:
         return None, lines
 
 
-def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
-    """The run every check holds the protocol to: the newest COMPLETED run
-    bound to `pid` that reports an intent key. The binding is the run's own
-    record, so the choice is a filter, not a guess; an unfinalized or corrupt
-    run has numbers and no finish, a run bound elsewhere answers another
-    question. A newer run whose config.json cannot be read (`unreadable`)
-    blocks the choice: it may be the one that answers — then run_dir is
-    None and `blocker` says why. So does a rival started in the same
-    second, whose order the run ids cannot tell."""
+def adopted_run(text: str) -> str | None:
+    """The run the protocol TEXT has adopted (`[result] run`), as the choice
+    takes it (`bound_answering_run`); None without a `[result]` table — and
+    for one that does not read: finalize and report-check block on that
+    table where they read the declaration (`finalize.declared_run_gaps`,
+    report-check's declaration stage), so the choice does not fail a
+    second time and the views show the newest bound run meanwhile."""
+    try:
+        return protocol_block.declared_run(text)
+    except protocol_block.BlockError:
+        return None
+
+
+def bound_answering_run(area: Path, pid: str, adopted: str | None) -> AnsweringRun:
+    """The run every check holds the protocol to.
+
+    Once the protocol has adopted a run (ADOPTED, its `[result] run`), that
+    run: it answers if it is a COMPLETED run bound to `pid` and no repeat,
+    else no choice stands and `blocker` says why (`_adopted_choice`).
+
+    Before the adoption, the newest COMPLETED run bound to `pid` that
+    reports an intent key — what labkit-next proposes to adopt. The
+    binding is the run's own record, so the choice is a filter, not a
+    guess; an unfinalized or corrupt run has numbers and no finish, a run
+    bound elsewhere answers another question. A newer run whose
+    config.json cannot be read (`unreadable`) blocks the choice: it may be
+    the one that answers — then run_dir is None and `blocker` says why. So
+    does a rival started in the same second, whose order the run ids
+    cannot tell.
+
+    "Newest" is the order of the run ids, local time without a zone: a run
+    measured on a machine in another zone sorts by its own clock. That is
+    why the adoption, not the name, decides once it is made.
+    """
     measure = f"measure: `{measure_command(area)}` opens a run bound to {pid}"
     if not runs_path(area).is_dir():
         return AnsweringRun(
@@ -649,6 +689,8 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
         )
     taken, rest = bound_runs(area, pid)
     exclusions = tuple(RunExclusion(f.dir, f.why or f.state) for f in rest)
+    if adopted is not None:
+        return _adopted_choice(area, pid, adopted, taken, exclusions)
     if not taken:
         return AnsweringRun(
             None, 0, exclusions, f"no completed run bound to {pid}", way_out=measure
@@ -676,6 +718,46 @@ def bound_answering_run(area: Path, pid: str) -> AnsweringRun:
             way_out="move the one that does not answer out of runs/",
         )
     return AnsweringRun(mpath.parent, skipped, exclusions, None, has_keys)
+
+
+def _adopted_choice(
+    area: Path,
+    pid: str,
+    adopted: str,
+    taken: list[RunFacts],
+    exclusions: tuple[RunExclusion, ...],
+) -> AnsweringRun:
+    """The adopted run ADOPTED as the choice, when it is among TAKEN (the
+    completed runs bound to PID); else a blocker naming why it cannot
+    answer — its exclusion, or no such run directory. The bound runs of the
+    same standing (reporting an intent key, if the adopted one does) whose
+    ids sort after it are `newer_by_name`."""
+    hit = next((f for f in taken if f.dir.name == adopted), None)
+    if hit is None:
+        why = next(
+            (x.why for x in exclusions if x.run_dir.name == adopted),
+            f"there is no runs/{adopted}/ in this area — a run id is runlog's, "
+            f"never typed",
+        )
+        return AnsweringRun(
+            None,
+            0,
+            exclusions,
+            f"[result] names {adopted}, which cannot answer for {pid}: {why}",
+            way_out=f"withdraw the adoption (`protocol-fill <PROTOCOL> --withdraw "
+            f'--why "<why>"`), audit a completed run bound to {pid}, then adopt it',
+            adopted=True,
+        )
+    has_keys = bool(promises.reported_ids(read_metrics(hit.metrics)))
+    newer = tuple(
+        f.dir.name
+        for f in taken
+        if f.dir.name > adopted
+        and (not has_keys or promises.reported_ids(read_metrics(f.metrics)))
+    )
+    return AnsweringRun(
+        hit.dir, 0, exclusions, None, has_keys, adopted=True, newer_by_name=newer
+    )
 
 
 def lineage(run_dir: Path) -> list[Path]:

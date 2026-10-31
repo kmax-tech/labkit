@@ -608,12 +608,18 @@ class TestFromRun(unittest.TestCase):
             f'preflight_audit = ""\n\n[result]\nrun = "{other}"\n',
         )
         area = self._area({"mean_docs_per_case": 3.5})
-        with self.assertRaises(ValueError) as cm:
+        # the adopted run is the one the choice holds: one that cannot answer
+        # is refused with the withdrawal
+        with self.assertRaises(SystemExit) as cm:
             protocol_fill.from_run(protocol, area)
+        self.assertIn(f"[result] names {other}, which cannot answer", str(cm.exception))
+        self.assertIn("--withdraw", str(cm.exception))
+        with self.assertRaises(ValueError) as cm:
+            protocol_fill.from_run(protocol, area, run_id=self.RUN)
         self.assertIn(f"[result] names {other}, not {self.RUN}", str(cm.exception))
         # --force does not replace it either: the declaration is withdrawn first
         with self.assertRaises(ValueError) as cm:
-            protocol_fill.from_run(protocol, area, force=True)
+            protocol_fill.from_run(protocol, area, run_id=self.RUN, force=True)
         self.assertIn("withdraw it", str(cm.exception))
 
     def test_a_named_run_that_is_not_completed_refuses(self):

@@ -191,7 +191,7 @@ class EveryArrangement(unittest.TestCase):
                 (_write(area, _name(i, one_second), k), k) for i, k in enumerate(combo)
             ]
             want = oracle(placed)
-            got = answering_run.bound_answering_run(area, PID)
+            got = answering_run.bound_answering_run(area, PID, None)
             self.assertEqual(got.run_dir, want.run_dir)
             self.assertEqual(got.skipped_newer, want.skipped_newer)
             self.assertEqual(got.reports_intent_keys, want.reports_intent_keys)
@@ -223,7 +223,9 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     quiet = contextlib.redirect_stdout(io.StringIO())
 
-    choice = answering_run.bound_answering_run(area, PID)
+    choice = answering_run.bound_answering_run(
+        area, PID, answering_run.adopted_run(text)
+    )
     blocker, _ = choice.explain(promises_registered := True)
     assert promises_registered
     out["bound_answering_run"] = (
@@ -232,12 +234,12 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
 
     found = Findings()
     with quiet:
-        got = finalize.choose_answering_run(found, area, PID, True)
+        got = finalize.choose_answering_run(found, protocol, PID, text)
     out["finalize"] = BLOCKED if found.blocked or got is None else got.name
 
     try:
         with contextlib.redirect_stdout(io.StringIO()):
-            out["intent-check"] = intent_check.choose_bound(protocol, PID, True)[
+            out["intent-check"] = intent_check.choose_bound(protocol, PID, text)[
                 0
             ].parent.name
     except console.Refused:

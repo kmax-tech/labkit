@@ -8,35 +8,70 @@ from pathlib import Path
 from protocol_fixture import head, run_record  # noqa: E402
 from labkit.gates import finalize
 from labkit.checks import run_record_check, readme_check
-from labkit.formats import repo
+from labkit.formats import protocol_block, repo
+from labkit.formats.gate import STATIC_EVIDENCE, Findings
+from labkit.formats.scope_sha import SourceError
 
 
 class Steps(unittest.TestCase):
-    def test_a_declared_run_that_is_not_the_answering_one_blocks(self):
-        run = Path("/x/runs/2026-10-07T10-00-00_aa11")
-        text = head(repeat_cost="low", result="2026-10-07T09-00-00_bb22")
-        protocol = Path("/x/PROTOCOL-x.md")
-        mismatch = finalize.declared_run_mismatch(text, run, protocol)
-        assert mismatch is not None
-        self.assertIn("[result] names 2026-10-07T09-00-00_bb22", mismatch.text)
-        # the command names the protocol: without it argparse refused it
-        # (audit 2026-10-27, H5)
-        fix = mismatch.fix or ""
-        self.assertIn('protocol-fill /x/PROTOCOL-x.md --withdraw --why "<why>"', fix)
-        self.assertIn("`labkit-adopt /x 2026-10-07T10-00-00_aa11`", fix)
-        self.assertNotIn("--force", fix)
-
-    def test_declaring_the_answering_run_or_none_passes(self):
-        run = Path("/x/runs/2026-10-07T10-00-00_aa11")
-        declares_it = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
-        self.assertIsNone(
-            finalize.declared_run_mismatch(declares_it, run, Path("/x/PROTOCOL-x.md"))
-        )
-        self.assertIsNone(
-            finalize.declared_run_mismatch(
-                head(repeat_cost="low"), run, Path("/x/PROTOCOL-x.md")
+    def _area(self, d: str, result: str | None) -> Path:
+        area = Path(d)
+        protocol = area / "PROTOCOL-x.md"
+        protocol.write_text(head(repeat_cost="low", result=result), encoding="utf-8")
+        pid = protocol_block.head(protocol.read_text(encoding="utf-8")).id
+        for name in ("2026-10-07T09-00-00_bb22", "2026-10-07T10-00-00_aa11"):
+            run = area / "runs" / name
+            run.mkdir(parents=True)
+            (run / "config.json").write_text(
+                json.dumps(run_record(protocol={"id": pid, "path": "PROTOCOL-x.md"})),
+                encoding="utf-8",
             )
-        )
+            (run / "metrics.json").write_text('{"criterion_1_pass": true}')
+            (run / "completion.json").write_text(
+                json.dumps({"schema_version": 4, "run_kind": "measurement"})
+            )
+        return protocol
+
+    def _choose(self, protocol: Path) -> tuple[Path | None, Findings]:
+        text = protocol.read_text(encoding="utf-8")
+        found = Findings(tell=None)
+        pid = protocol_block.head(text).id
+        return finalize.choose_answering_run(found, protocol, pid, text), found
+
+    def test_the_adopted_run_is_held_though_another_is_newer_by_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self._area(d, "2026-10-07T09-00-00_bb22")
+            run, found = self._choose(protocol)
+            assert run is not None
+            self.assertEqual(run.name, "2026-10-07T09-00-00_bb22")
+            self.assertEqual(found.blocked, [])
+            (warning,) = found.found
+            self.assertEqual(warning.evidence_kind, STATIC_EVIDENCE)
+            self.assertIn(
+                "2026-10-07T10-00-00_aa11: bound to this protocol", warning.text
+            )
+            self.assertIn("--withdraw", warning.text)
+
+    def test_the_twin_before_adoption_holds_the_newest(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, found = self._choose(self._area(d, None))
+            assert run is not None
+            self.assertEqual(run.name, "2026-10-07T10-00-00_aa11")
+            self.assertEqual((found.blocked, found.warned), ([], []))
+
+    def test_an_adopted_run_with_no_directory_is_one_blocker(self):
+        with tempfile.TemporaryDirectory() as d:
+            protocol = self._area(d, "2026-10-07T11-00-00_cc33")
+            run, found = self._choose(protocol)
+            self.assertIsNone(run)
+            (finding,) = found.found
+            self.assertIn("no runs/2026-10-07T11-00-00_cc33/", finding.text)
+            # the command names the protocol: without it argparse refused it
+            # (audit 2026-10-27, H5)
+            fix = finding.fix or ""
+            self.assertIn('PROTOCOL-x.md --withdraw --why "<why>"', fix)
+            self.assertIn(" <run_id>`", fix)
+            self.assertNotIn("--force", fix)
 
     def test_two_protocols_and_none_named_refuses(self):
         with tempfile.TemporaryDirectory() as d:
@@ -72,35 +107,22 @@ class DeclaredRunHint(unittest.TestCase):
         text = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
         self.assertIsNone(finalize.undeclared_hint(text, self.RUN, self.PROTOCOL))
 
-    def test_a_declared_run_with_no_directory_or_a_typed_id_is_a_blocker(self):
-        with tempfile.TemporaryDirectory() as d:
-            area = Path(d)
-            protocol = area / "PROTOCOL-x.md"
-            (gap,) = finalize.declared_run_gaps(
-                area,
-                head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"),
-                protocol,
-            )
-            self.assertIn("no runs/2026-10-07T10-00-00_aa11/", gap.text)
-            self.assertIn("--withdraw", gap.fix or "")
-            self.assertIn("labkit-adopt ", gap.fix or "")
-            self.assertIn(" <run_id>`", gap.fix or "")
-            self.assertNotIn("--force", gap.fix or "")
-            typed = head(repeat_cost="low").replace(
-                'preflight_audit = ""\n',
-                'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',
-            )
-            (gap,) = finalize.declared_run_gaps(area, typed, protocol)
-            self.assertIn("no run id runlog writes", gap.text)
-            (area / "runs" / "2026-10-07T10-00-00_aa11").mkdir(parents=True)
-            self.assertEqual(
-                finalize.declared_run_gaps(
-                    area,
-                    head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"),
-                    protocol,
-                ),
-                [],
-            )
+    def test_a_typed_id_is_a_blocker(self):
+        protocol = Path("/x/PROTOCOL-x.md")
+        typed = head(repeat_cost="low").replace(
+            'preflight_audit = ""\n',
+            'preflight_audit = ""\n\n[result]\nrun = "2026-10-07T10-00-00_final"\n',
+        )
+        (gap,) = finalize.declared_run_gaps(typed, protocol)
+        self.assertIn("no run id runlog writes", gap.text)
+        self.assertIn("--withdraw", gap.fix or "")
+        self.assertIn("labkit-adopt ", gap.fix or "")
+        self.assertEqual(
+            finalize.declared_run_gaps(
+                head(repeat_cost="low", result="2026-10-07T10-00-00_aa11"), protocol
+            ),
+            [],
+        )
 
 
 class ModelProvenanceGap(unittest.TestCase):
@@ -237,6 +259,38 @@ class ReadmeRoute(unittest.TestCase):
                 readme_check.readme_route(area, "PROTOCOL-a.md"),
                 ["README.md route: scripts/01_measure.py defines no evaluate_rows"],
             )
+
+    def test_a_script_that_does_not_parse_raises_naming_it(self):
+        # a sed edit left an unterminated f-string (Qwen pilot): a traceback
+        # out of finalize, not a finding
+        broken = 'def evaluate_rows(rows):\n    return f"{rows\n'
+        with tempfile.TemporaryDirectory() as d:
+            area = self._area(d, ROUTE, script=broken)
+            with self.assertRaises(SourceError) as caught:
+                readme_check.readme_route(area, "PROTOCOL-a.md")
+            self.assertIn("01_measure.py", str(caught.exception))
+            self.assertIn("line 2", str(caught.exception))
+
+    def test_finalize_takes_a_script_that_does_not_parse_as_one_blocker(self):
+        broken = 'def evaluate_rows(rows):\n    return f"{rows\n'
+        for script, blockers in (
+            ("def evaluate_rows(rows):\n    return {}\n", []),
+            (broken, ["01_measure.py"]),
+        ):
+            with self.subTest(blockers=blockers), tempfile.TemporaryDirectory() as d:
+                area = self._area(d, ROUTE, script=script)
+                text = head(repeat_cost="low")
+                protocol = area / "PROTOCOL-a.md"
+                protocol.write_text(text, encoding="utf-8")
+                found = Findings(tell=None)
+                finalize.check_open_fields(
+                    found, protocol, text, protocol_block.head(text)
+                )
+                self.assertEqual(len(found.blocked), len(blockers))
+                for message, name in zip(found.blocked, blockers):
+                    self.assertIn(name, message)
+                    self.assertIn("cannot be read as Python", message)
+                self.assertFalse([w for w in found.warned if "route" in w])
 
     def test_no_readme_is_nothing(self):
         with tempfile.TemporaryDirectory() as d:

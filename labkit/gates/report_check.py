@@ -138,6 +138,7 @@ from labkit.formats.gate import (
     blocker,
 )
 from labkit.formats.answering_run import (
+    adopted_run,
     bound_answering_run,
     bound_runs,
     first_measurements,
@@ -1231,7 +1232,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     measured = [f for f in [*taken, *ours] if is_measurement(f)]
     if not measured:
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
-    choice = bound_answering_run(area, pid)
+    choice = bound_answering_run(area, pid, adopted_run(text))
     if choice.run_dir is None or not any(f.dir == choice.run_dir for f in measured):
         why = [f"{f.dir.name}: {f.why or f.state}" for f in measured if f in ours]
         why += [choice.blocker] if choice.blocker else []

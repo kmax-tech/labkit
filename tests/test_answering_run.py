@@ -72,7 +72,7 @@ class AnsweringRun(unittest.TestCase):
         """Twin: a clean area — no blocker, nothing excluded."""
         _run(self.area, "2026-10-01T10-00-00_aaaa")
         chosen = _run(self.area, "2026-10-02T10-00-00_bbbb")
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertEqual(choice.run_dir, chosen)
         self.assertEqual(
             (choice.skipped_newer, choice.exclusions, choice.blocker), (0, (), None)
@@ -81,7 +81,7 @@ class AnsweringRun(unittest.TestCase):
     def test_a_newer_probe_without_intent_keys_is_skipped_and_counted(self) -> None:
         chosen = _run(self.area, "2026-10-01T10-00-00_aaaa")
         _run(self.area, "2026-10-02T10-00-00_bbbb", metrics={"n_rows": 3})
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertEqual((choice.run_dir, choice.skipped_newer), (chosen, 1))
 
     def test_runs_bound_elsewhere_or_unfinished_are_excluded_with_a_reason(
@@ -90,7 +90,7 @@ class AnsweringRun(unittest.TestCase):
         chosen = _run(self.area, "2026-10-01T10-00-00_aaaa")
         _run(self.area, "2026-10-02T10-00-00_bbbb", pid="p-0002")
         _run(self.area, "2026-10-03T10-00-00_cccc", completion=False)
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertEqual(choice.run_dir, chosen)
         self.assertEqual(
             {x.run_dir.name: x.why for x in choice.exclusions},
@@ -103,7 +103,7 @@ class AnsweringRun(unittest.TestCase):
 
     def test_no_bound_run_is_a_blocker_not_a_guess(self) -> None:
         _run(self.area, "2026-10-01T10-00-00_aaaa", pid="p-0002")
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertIsNone(choice.run_dir)
         self.assertIn("no completed run bound to p-0001", choice.blocker or "")
         self.assertIn(
@@ -116,7 +116,7 @@ class AnsweringRun(unittest.TestCase):
         that answers, so the older one must not answer past it."""
         _run(self.area, "2026-10-01T10-00-00_aaaa")
         _run(self.area, "2026-10-02T10-00-00_bbbb", config_text="{not json")
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertIsNone(choice.run_dir)  # blocked: no run_dir to take by mistake
         self.assertIn("cannot say which protocol", choice.blocker or "")
         self.assertIn("repair or move them aside", choice.way_out or "")
@@ -128,7 +128,7 @@ class AnsweringRun(unittest.TestCase):
         the choice says it reports no intent key (2026-10-09)."""
         _run(self.area, "2026-10-01T10-00-00_aaaa", metrics={"n_rows": 3})
         newest = _run(self.area, "2026-10-02T10-00-00_bbbb", metrics={"n_rows": 4})
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertEqual(choice.run_dir, newest)
         self.assertFalse(choice.reports_intent_keys)
         self.assertEqual(choice.skipped_newer, 0)
@@ -139,7 +139,7 @@ class AnsweringRun(unittest.TestCase):
         started after `_ffff`. Neither may answer by being "newest"."""
         _run(self.area, "2026-10-01T10-00-00_ffff")
         _run(self.area, "2026-10-01T10-00-00_0000")
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertIsNone(choice.run_dir)
         self.assertIn("started in the same second", choice.blocker or "")
         self.assertIn("move the one that does not answer", choice.way_out or "")
@@ -149,7 +149,7 @@ class AnsweringRun(unittest.TestCase):
         whichever started first."""
         chosen = _run(self.area, "2026-10-01T10-00-00_0000")
         _run(self.area, "2026-10-01T10-00-00_ffff", metrics={"n_rows": 3})
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertEqual(choice.run_dir, chosen)
         self.assertIsNone(choice.blocker)
 
@@ -158,14 +158,79 @@ class AnsweringRun(unittest.TestCase):
         but may have started after it."""
         _run(self.area, "2026-10-01T10-00-00_0000", config_text="{not json")
         _run(self.area, "2026-10-01T10-00-00_ffff")
-        choice = answering_run.bound_answering_run(self.area, PID)
+        choice = answering_run.bound_answering_run(self.area, PID, None)
         self.assertIsNone(choice.run_dir)
         self.assertIn("cannot say which protocol", choice.blocker or "")
 
     def test_no_runs_directory(self) -> None:
-        choice = answering_run.bound_answering_run(self.area / "nowhere", PID)
+        choice = answering_run.bound_answering_run(self.area / "nowhere", PID, None)
         self.assertIsNone(choice.run_dir)
         self.assertIn("no runs/ directory", choice.blocker or "")
+
+
+class AdoptedRun(unittest.TestCase):
+    """Once `[result]` names a run, that run answers, not the newest by
+    name: a run id is local time without a zone, so a cluster run in UTC
+    measured after a Mac run in CEST sorts before it."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.area = Path(self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_the_adopted_run_answers_past_a_newer_name(self) -> None:
+        cluster = _run(self.area, "2026-10-01T08-30-00_aaaa")  # 08:30 UTC
+        _run(self.area, "2026-10-01T09-00-00_bbbb")  # 09:00 CEST = 07:00 UTC
+        choice = answering_run.bound_answering_run(self.area, PID, cluster.name)
+        self.assertEqual(choice.run_dir, cluster)
+        self.assertIsNone(choice.blocker)
+        self.assertEqual(choice.newer_by_name, ("2026-10-01T09-00-00_bbbb",))
+        blocker, lines = choice.explain(True)
+        self.assertIsNone(blocker)
+        self.assertEqual(lines, ["adopted in [result]"])
+
+    def test_the_twin_without_adoption_takes_the_newest_name(self) -> None:
+        _run(self.area, "2026-10-01T08-30-00_aaaa")
+        newest = _run(self.area, "2026-10-01T09-00-00_bbbb")
+        choice = answering_run.bound_answering_run(self.area, PID, None)
+        self.assertEqual(choice.run_dir, newest)
+        self.assertFalse(choice.adopted)
+
+    def test_a_newer_probe_is_not_named_newer(self) -> None:
+        adopted = _run(self.area, "2026-10-01T08-30-00_aaaa")
+        _run(self.area, "2026-10-01T09-00-00_bbbb", metrics={"n_rows": 3})
+        choice = answering_run.bound_answering_run(self.area, PID, adopted.name)
+        self.assertEqual(choice.newer_by_name, ())
+
+    def test_an_adopted_run_that_cannot_answer_blocks_with_its_reason(self) -> None:
+        _run(self.area, "2026-10-01T08-30-00_aaaa")
+        _run(self.area, "2026-10-01T09-00-00_bbbb", pid="p-0002")
+        _run(self.area, "2026-10-01T10-00-00_cccc", completion=False)
+        for adopted, why in (
+            ("2026-10-01T09-00-00_bbbb", "bound to p-0002"),
+            ("2026-10-01T10-00-00_cccc", "unfinalized"),
+            ("2026-10-01T11-00-00_dddd", "no runs/2026-10-01T11-00-00_dddd/"),
+        ):
+            with self.subTest(adopted=adopted):
+                choice = answering_run.bound_answering_run(self.area, PID, adopted)
+                self.assertIsNone(choice.run_dir)
+                self.assertIn(f"[result] names {adopted}", choice.blocker or "")
+                self.assertIn(why, choice.blocker or "")
+                self.assertIn("--withdraw", choice.way_out or "")
+
+    def test_an_adopted_probe_is_no_answer(self) -> None:
+        probe = _run(self.area, "2026-10-01T08-30-00_aaaa", metrics={"n_rows": 3})
+        _run(self.area, "2026-10-01T09-00-00_bbbb")
+        choice = answering_run.bound_answering_run(self.area, PID, probe.name)
+        blocker, _ = choice.explain(True)
+        assert blocker is not None
+        self.assertIn("is the adopted run ([result] run)", blocker.text)
+
+    def test_a_result_table_that_does_not_read_adopts_nothing(self) -> None:
+        self.assertIsNone(answering_run.adopted_run('[result]\nrun = "typed"\n'))
+        self.assertIsNone(answering_run.adopted_run("no block"))
 
 
 class ModelProvenance(unittest.TestCase):

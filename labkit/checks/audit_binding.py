@@ -28,7 +28,7 @@ from labkit.formats import (
     runs,
     scope_sha,
 )
-from labkit.formats.answering_run import bound_answering_run
+from labkit.formats.answering_run import adopted_run, bound_answering_run
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import contract_command, layout_root, shown
 from labkit.formats.runs import read_outputs
@@ -80,7 +80,7 @@ def audited_run(
         ) from exc
     if pid is None:
         return None, "the protocol id is still a placeholder"
-    choice = bound_answering_run(area, pid)
+    choice = bound_answering_run(area, pid, adopted_run(text))
     blocker, _ = choice.explain(promises.registers_ids(text))
     if blocker or choice.run_dir is None:
         return None, blocker.text if blocker else "no completed bound run"

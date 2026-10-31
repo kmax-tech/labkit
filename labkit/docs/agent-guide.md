@@ -324,11 +324,12 @@ prints these ways out with each decision list:
   the analysis audit again. If the data or code changes, measure anew.
   In place, never change a promise, the question, the criterion, the
   quality checks or the null condition.
-- **a wrong adoption** — The measurement stands, but the head adopted
-  another run than the one the finding judged. Withdraw the adoption with
-  `protocol-fill <PROTOCOL> --withdraw --why "<why>"`. Decide the BLOCKER
-  `fixed`, naming that, and run the analysis audit again. Then adopt the
-  answering run with `labkit-adopt <area> <run_id>`. Do not measure again.
+- **a wrong adoption** — The measurement stands, but the head adopted a
+  run that does not answer; the finding names the one that does. Withdraw
+  the adoption with `protocol-fill <PROTOCOL> --withdraw --why "<why>"`.
+  Decide the BLOCKER `fixed`, naming that, and run the analysis audit
+  again. Then adopt the answering run with `labkit-adopt <area> <run_id>`.
+  Do not measure again.
 - **none of these** — A way out above needs a prerequisite that is
   missing. Name it. First run `labkit-audit <area> --findings`. Decide each
   BLOCKER you can decide. An unresolved one stays `open`, and the handover

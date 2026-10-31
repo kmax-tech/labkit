@@ -50,7 +50,9 @@ from labkit.formats.repo import (
     no_such_area,
 )
 from labkit.formats.runs import read_run_config
+from labkit.formats.scope_sha import parse_source
 from labkit.formats.answering_run import (
+    adopted_run,
     bound_answering_run,
     lineage,
     model_provenance_run,
@@ -223,12 +225,13 @@ def script_literals(area: Path) -> dict[str, tuple[object, int]]:
     """Names assigned a literal at module level of scripts/01_measure.py:
     name -> (value, line). Empty without the script. A registered constant's
     copy is looked up here under its own name; the evidence rows take the
-    UPPER_CASE ones."""
+    UPPER_CASE ones. Raises SourceError (a ValueError) naming the script
+    when it does not parse."""
     script = area / MEASURE_SCRIPT
     if not script.is_file():
         return {}
     out: dict[str, tuple[object, int]] = {}
-    for node in ast.parse(script.read_text(encoding="utf-8")).body:
+    for node in parse_source(script).body:
         if not (isinstance(node, ast.Assign) and len(node.targets) == 1):
             continue
         target, value = node.targets[0], node.value
@@ -347,7 +350,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
                 "labkit-params", f"{protocol.name} is unstamped — name a run with --run"
             )
             return 2
-        choice = bound_answering_run(area, pid)
+        choice = bound_answering_run(area, pid, adopted_run(text))
         blocker, lines = choice.explain(promises.registers_ids(text))
         if blocker or choice.run_dir is None:
             console.refuse(

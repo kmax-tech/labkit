@@ -54,7 +54,7 @@ from labkit.formats.runs import metrics_path
 from labkit.formats import console, promises, protocol_block
 from labkit.formats.gate import EXIT_CONTRACT, GateFinding, blocker, with_way_out
 from labkit.formats.runs import COMPLETED, read_metrics, read_run_config
-from labkit.formats.answering_run import bound_answering_run, run_facts
+from labkit.formats.answering_run import adopted_run, bound_answering_run, run_facts
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.scope_sha import area_files, imported_repo_helpers
 
@@ -151,7 +151,7 @@ def _metrics_file(
     if metrics_arg is not None:
         return choose_explicit(protocol, metrics_arg, pid)
     if pid is not None:
-        return choose_bound(protocol, pid, promises.registers_ids(text))
+        return choose_bound(protocol, pid, text)
     raise NoRunChosen(
         "intent-check",
         f"{protocol.name} has no stamped id ([protocol] id) — no run is bound to it.",
@@ -439,16 +439,15 @@ def choose_explicit(
     return metrics_arg, notes
 
 
-def choose_bound(
-    protocol: Path, pid: str, ids_registered: bool
-) -> tuple[Path, list[str]]:
-    """The newest completed run bound to `pid` — `answering_run.bound_answering_run` —
+def choose_bound(protocol: Path, pid: str, text: str) -> tuple[Path, list[str]]:
+    """The run that answers for `pid` under the protocol TEXT —
+    `answering_run.bound_answering_run`: the adopted one, else the newest —
     and the lines of its choice to tell the operator (`AnsweringRun.explain`). Raises
     console.Refused when no choice stands, a probe or producer run among
     them when the protocol registers ids (until 0.96.0 a warning, and every
     promise then read as unimplemented)."""
-    choice = bound_answering_run(protocol.parent, pid)
-    blocker, lines = choice.explain(ids_registered)
+    choice = bound_answering_run(protocol.parent, pid, adopted_run(text))
+    blocker, lines = choice.explain(promises.registers_ids(text))
     if blocker:
         why = [
             with_way_out(

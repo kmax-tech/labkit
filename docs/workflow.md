@@ -136,12 +136,14 @@ finalize experiments/NN-<name>
 
 Reads: the protocol, every run record of the area, the audit records, git.
 Changes: nothing. Its first station chooses the **answering run**
-(`answering_run.bound_answering_run`): the newest completed run bound to
-this protocol id that reports an intent key — a computation registers no ids,
+(`answering_run.bound_answering_run`): the run the head adopted, once
+it adopted one; before that the newest completed run bound to this
+protocol id that reports an intent key — a computation registers no ids,
 so for a computation it is simply the newest completed bound run. Every later
 station holds that run, and so does every other gate: nobody chooses
-twice. Then the stations: the head's adopted run is the answering run
-(or no run is adopted yet); the output rows were written by it; its
+twice. Then the stations: an adopted run that cannot answer blocks with
+the withdrawal, and bound runs newer by name than it are a warning; the
+output rows were written by it; its
 promise block is the one the first measurement registered — a change
 after it is held here, every changed sentence, key, constant and scope
 named with the way back, and not first at the adoption; the

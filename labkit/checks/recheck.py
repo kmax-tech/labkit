@@ -79,7 +79,9 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
         )
     if run_id is not None:
         return _named_run(runs.run_path(area, run_id), pid)
-    choice = answering_run.bound_answering_run(area, pid)
+    choice = answering_run.bound_answering_run(
+        area, pid, answering_run.adopted_run(protocol_text)
+    )
     blocker, lines = choice.explain(promises.registers_ids(protocol_text))
     if blocker or choice.run_dir is None:
         why = blocker.message if blocker else "no run answers"

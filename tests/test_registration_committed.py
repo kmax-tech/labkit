@@ -307,9 +307,11 @@ class RegistrationAsFirstMeasured(_Repository):
     # named before RUN: the answering run is still the newest by name
     FIRST = "2026-10-07T09-25-31_98dd"
 
-    def _register(self, block: str) -> str:
+    def _register(self, block: str, result: str = RUN) -> str:
+        """Commit the protocol with BLOCK as its promises, adopting RESULT —
+        the run the checks then hold (`answering_run.bound_answering_run`)."""
         self.proto.write_text(
-            head(repeat_cost="low", result=RUN, promises=block) + REGISTRATION,
+            head(repeat_cost="low", result=result, promises=block) + REGISTRATION,
             encoding="utf-8",
         )
         _git(self.root, "add", "-A")
@@ -356,7 +358,8 @@ class RegistrationAsFirstMeasured(_Repository):
             "([quality-check-2] null_band 0.1 back; [quality-check-3] out)", line
         )
         self.assertIn('[replaces] protocol = "', line)
-        self._run(self._register(_block(0.1)), "2026-10-07T11-00-00_cd34")
+        repaired = "2026-10-07T11-00-00_cd34"
+        self._run(self._register(_block(0.1), result=repaired), repaired)
         self.assertEqual(self._changes(), [])
 
     def test_the_twin_a_repair_under_the_same_registration_passes(self):
@@ -408,7 +411,8 @@ class RegistrationAsFirstMeasured(_Repository):
             line,
         )
         # restored as told, nothing is left to hold
-        self._run(self._register(_block(0.1)), "2026-10-07T11-00-00_cd34")
+        repaired = "2026-10-07T11-00-00_cd34"
+        self._run(self._register(_block(0.1), result=repaired), repaired)
         self.assertEqual(self._changes(), [])
 
     def test_unread_sentences_are_said_with_what_the_records_hold(self):

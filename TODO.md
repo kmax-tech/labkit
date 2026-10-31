@@ -2544,6 +2544,16 @@ der registrierten Schätzer): 71 `LinearRegression` 204 s je Fit (float64),
 `RandomForest` 2,5 bis 9,1 s je Fit — alter Plan 1,3 bis 4,8 min je Messung,
 die Stunde ging in zwei bis sieben Messungen. Für die Druckrunde: 71 mit
 float32 in der Vorbereitung und Timebox 25 min, 15 Timebox 5 min.
+Vertragssatz der Runde: alle Container laufen mit `TZ=UTC` — Lauf-Ids sind
+Ortszeit ohne Zone (`runlog`), und vor der Adoption wählt die Antwortwahl
+nach Namen; nach der Adoption hält jedes Gate den adoptierten Lauf
+(`f0d9946`, review-fixes), neuere Läufe sind nur eine Warnung.
+
+Nach der Druckrunde, als angekündigter Bruch: die Lauf-Id in UTC mit `Z`,
+die Reihenfolge aus dem im Record geschriebenen Endzeitpunkt mit Zone
+statt aus dem Namen; derselbe Vergleich steckt im Stop-Hook
+(`agent_hooks.record_session` vergleicht über `runs.run_started` die Ortszeit der Id mit dem
+Sitzungsbeginn) und in `same_second`. Danach kann der Vertragssatz fallen.
 
 Reported preliminary study = 3 und 4; was heute vorliegt, ist die
 Pilotphase, die sagt, wo es klemmt.
