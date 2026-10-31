@@ -147,3 +147,23 @@ agentsandbox-proxy:779d63471cca, Claude Code 2.1.285; both repositories print "o
 …" and pass protocol-check. Part 0 goes on with the two tasks not yet run end to end on this
 release: pubmedqa50 (ids rpt4-…, 2,400 s, 5 GB) and 15, the fit, untried so far (ids rpt4f-…, 3,600
 s, 12 GB, as registered for 15), run side by side, lab arm only, not counted. 21 is not repeated.
+
+Addendum 6, 2026-11-01 night, after rpt4 and rpt4f, before part 1. Both ran awake on v0.104.4.
+- 15 (rpt4f, 3,600 s, 12 GB): result adopted (2026-10-31T22-30-15_8ea7), deliverable valid and
+  passing the hidden evaluation, registration and .venv kept; no REPORT.md, so the labkit standard
+  is not met — the agent's omission, which the standard check names; 81 turns, 0.70 $, 26 min.
+- pubmedqa50 (rpt4): the repairs hold — the measurement (100 calls, 682 s) met both quality checks,
+  no unreadable reply and the placebo at exactly its expectation (0.44 against 0.44); the criterion
+  missed by one item (0.68 against 0.69), an honest result. Then the analysis audit held the
+  template's parser (markdown marks dropped, v0.104.4) against the protocol's Terms, which still
+  described the old rule (only trailing .,:;!) — a sentence of the registration not carried along
+  with the repair, the researcher's fault. The agent bent the parser to the registration as the
+  audit asked, five replies became unreadable, the verdict went, and the attempt timed out while
+  aligning its test predictions; deliverable valid, test accuracy 0.64.
+The protocol's answer rule now states the template's (labkit, this commit's parent); every reader of
+the old sentence searched (protocol, plan, README). Each step of the chain has now run end to end on
+v0.104.4 in at least one attempt — model route, kept rows, both null lanes, audit, adoption (21,
+15) — and part 1 starts without repeating pubmedqa50, on the registration as corrected here.
+Capacity: Docker's VM has 23.4 GiB, so part 1 runs the 5 GB tasks (21, 34, 60, pubmedqa50; 24
+attempts) four at a time, then task 15 (6 attempts, 12 GB, 3,600 s) one at a time — wall-clock
+only, each attempt keeps its own containers and limits.
