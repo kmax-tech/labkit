@@ -2530,9 +2530,40 @@ Kopien der 22 nicht fertigen Versuche aus Teil 2.
   neu entscheiden; die Spuren zeigen bis zu sechs solche Runden je Versuch,
   bis Zeit oder Geduld enden.
 
+Zweite Lesung (Review 2026-10-31 nachts, an den Spuren geprüft): die
+„eine Schleife“ ist zu grob. Mindestens fünf getrennte Ursachen:
+- **Gemischte labkit-Stände in Teil 2** (Nachtrag 7): Kommandos ohne Pfad
+  liefen aus dem Image (0.104.2), Hook, runlog und Skelett aus dem `.venv`
+  (0.104.0); 13 von 30 Versuchen. r6: der neue Ausweg über den Hash vom einen,
+  die alte Ablehnung vom anderen. Vor jeder Runde: PATH-labkit = `.venv`-labkit
+  prüfen und sonst nicht starten (Harness).
+- **Umgebung selbst beschädigt** (r2e-t34-labkit-r3): `.venv/bin/pip` fehlt
+  absichtlich, der Agent baut `.venv` neu ohne `--system-site-packages`, dann
+  fehlen NumPy und NeuroKit2, ohne Netz; danach Platzhalter-Rechnungen.
+- **compute-Gerüst zählt** (r2e-t60-labkit-r7): „Compute mean of COUNT_FIELD
+  (standard template requirement)“ ergibt `mean_accuracy = 1.0` aus
+  konstanten Einsen; das Audit merkt es zu Recht. Das Skelett passt zu
+  Zählaufgaben, nicht zu allgemeinen Berechnungen — labkit-Fehler.
+- **Audit gegen die Ausgabevorgabe der Aufgabe** (r2e-t21-labkit-r6): ein
+  Befund beanstandet einen Bruch zwischen 0 und 1, den die Aufgabe genau so
+  verlangt. Das Audit kennt die Ausgabevorgabe nicht verbindlich.
+- **Gültige Lieferung, offene Nachweispflicht** (r2e-t60-labkit-r2): Rechnung
+  richtig, Folgeaudit und Prüfkennzahlen fehlen, danach weitere
+  Gerüst-Arbeit.
+- **Standard erfüllt ≠ adoptiert**: 7 adoptiert und erfüllt, 5 adoptiert und
+  nicht erfüllt, 1 erfüllt ohne Adoption (r2e-t21-labkit-r6), 35 weder noch;
+  was der Standard-Check bei einer Übergabe oder ohne Ergebnis als „met“
+  zählt, klären.
+
+Reihenfolge danach: Laufzeitstände und Umgebung absichern, dann compute-
+Gerüst und die Eingaben des Audits (Ausgabevorgabe); erst dann messen, was ein
+gezielteres Folgeaudit noch einsparen würde. Keine allgemeine Lockerung der
+Audit-Bindung aus diesen Spuren.
+
 Offen, zu entscheiden (nichts davon gebaut):
 1. Die Schleife billiger machen, ohne die Garantie aufzugeben — etwa ein
-   Folgeaudit, das nur die geänderten Befunde prüft, statt das ganze Audit.
+   Folgeaudit, das nur die geänderten Befunde prüft, statt das ganze Audit
+   (nach den Punkten oben).
 2. Bei einer registrierten, nicht umsetzbaren Einschränkung den Weg
    `limitation` nennen statt nur Übergabe (die Meldung, die zur Übergabe
    führte, lesen).

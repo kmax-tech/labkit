@@ -140,3 +140,13 @@ ten attempts per cell, and its test (addendum 5) is read as such; addendum 1's r
 addendum 4 were not under test (one lab attempt named the run's checksum in Data / scope and was still
 blocked: the check is in v0.104.2, its .venv ran v0.104.0). The runner now stages per labkit pin
 (`arms-<pin>/`) and refuses a staged repository whose pin is not the image's.
+
+Addendum 7, 2026-10-31 night, a correction of addendum 6. Part 2's lab arm ran mixed labkit versions, not
+0.104.0 alone: the image puts v0.104.2's commands on PATH (/usr/local/bin), the reused repository's .venv
+holds v0.104.0, and the commit hook, runlog and the stamped scripts use the .venv. Of the 30 lab attempts,
+17 called labkit's commands only through .venv/bin (0.104.0 throughout), 6 only bare (the image's 0.104.2
+for the commands, 0.104.0 for hooks, runlog and the skeleton), 7 both — 260 of 1,160 command calls went
+to the image's labkit. In r2e-t21-labkit-r6 the bare commands offered the checksum route out of an
+untracked source, and the .venv's commit hook refused it ("it does not read the declaration"). Pinning
+the staged repository (addendum 6) is not enough: an attempt must also start with the PATH labkit and the
+.venv labkit the same, and stop when they differ.
