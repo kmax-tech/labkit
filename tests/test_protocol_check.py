@@ -281,6 +281,24 @@ class TestFlagsAnywhere(unittest.TestCase):
                 self.assertNotIn("not readable", out.getvalue())
                 self.assertIn("Question / hypothesis", out.getvalue())
 
+    def test_contract_with_a_protocol_opens_with_the_next_step_command(self):
+        """The next step leads; the fill lines name this protocol. The twin:
+        without a protocol there is no area to name, and no next line."""
+        with tempfile.TemporaryDirectory() as d:
+            protocol = Path(d) / "PROTOCOL-x.md"
+            protocol.write_text(head(repeat_cost="low"))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(protocol_report.main([str(protocol), "--contract"]), 0)
+            first, *rest = out.getvalue().splitlines()
+            self.assertRegex(first, r"^next: `labkit-next \S+` names the one next step")
+            self.assertIn(f"protocol-fill {protocol.resolve()} --list", "\n".join(rest))
+            bare = io.StringIO()
+            with contextlib.redirect_stdout(bare):
+                self.assertEqual(protocol_report.main(["--contract"]), 0)
+            self.assertNotIn("labkit-next", bare.getvalue())
+            self.assertIn("protocol-fill PROTOCOL-x.md --list", bare.getvalue())
+
     def test_contract_with_a_protocol_prints_its_own_row(self):
         # It printed five fixed rows whatever the protocol, none for a
         # high-cost computation (audit 2026-10-27, H8).
@@ -745,13 +763,13 @@ class TestStampPlaceholders(unittest.TestCase):
         phrases = protocol_check.stamp_placeholders()
         self.assertGreaterEqual(len(phrases), 40)
         self.assertEqual([p for p in phrases if " " not in p], [])
-        self.assertIn("<hard budget, e.g. 4h — then log and ask>", phrases)
+        self.assertIn("<a hard budget, such as 4h. Then record and ask.>", phrases)
         # the TOML head's sentences and the Prompt block's are other readers'
         self.assertNotIn("<the criterion in one sentence>", " ".join(phrases))
 
     def test_text_before_or_after_a_left_phrase_is_still_a_placeholder(self):
-        before = "- **Timebox:** 2h <hard budget, e.g. 4h — then log and ask>\n"
-        after = "- **Timebox:** <hard budget, e.g. 4h — then log and ask> 2h\n"
+        before = "- **Timebox:** 2h <a hard budget, such as 4h. Then record and ask.>\n"
+        after = "- **Timebox:** <a hard budget, such as 4h. Then record and ask.> 2h\n"
         for text in (before, after):
             self.assertEqual(
                 [lb for _, lb in protocol_check.placeholder_fields(text)], ["Timebox"]
@@ -760,11 +778,10 @@ class TestStampPlaceholders(unittest.TestCase):
     def test_the_stamps_phrase_left_under_an_alias_is_a_placeholder(self):
         text = (
             "- **Model / tool:** qwen\n"
-            "  <the instrument in one sentence: what the model\n"
-            "  does here and what it sees — its alias stands in the head's `[model]`, never\n"
-            "  hardcode endpoint or ID; two arms (profiles) compared? say what `before` and\n"
-            "  `after` are — the profiles themselves stand in `[model.arms.<arm>]`, and the\n"
-            "  diff between them verbatim under Prompt>\n"
+            "  <what the model does here and what it\n"
+            "  sees. Its alias stands in the head's `[model]`. If two arms (profiles)\n"
+            "  are compared, say what `before` and `after` are. Their diff stands\n"
+            "  verbatim under Prompt.>\n"
         )
         self.assertEqual(
             [lb for _, lb in protocol_check.placeholder_fields(text)], ["Model / tool"]
@@ -1446,7 +1463,7 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
     def test_body_instruction_lines_still_count(self):
         lines = protocol_report.template_lines(protocol_report.find_template(None))
         # An instruction line from inside a section stays in the set.
-        self.assertTrue([s for s in lines if "error direction" in s], lines)
+        self.assertTrue([s for s in lines if "which way it pushes" in s], lines)
 
 
 class TestRepeatCost(unittest.TestCase):

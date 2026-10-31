@@ -34,6 +34,19 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The protocol template is 1,665 words (was 2,225).** Each field's
+  help text is one short instruction in the procedural register of the
+  SimpleEnglish skill (condition first, no semicolon, must not may); the
+  labels, sections and cut marks are unchanged, and how to fill a field
+  stays in the field guide (`protocol-check --guide`). The stamp's
+  phrases are what `protocol_check.stamp_placeholders` recognises: in a
+  protocol stamped before, a field whose whole value is still `<…>` stays
+  a placeholder, but text written beside an old phrase no longer marks the
+  field unfilled — fill such a field anew.
+- **`protocol-check PROTOCOL --contract` opens with the next step.** Its
+  first line names `labkit-next <area>`; the fill commands follow as three
+  short lines naming the protocol.
+
 - **A label typed short names its field; an unknown flag names the one
   meant.** `protocol-fill PROTOCOL "Terms=…"` fills `Terms of this
   protocol` when no other field begins the same, and says so
