@@ -792,11 +792,15 @@ def stamp_area(
         root, area, nn, slug, skeleton, model, deliverables, deliverable_columns
     )
     _point_hooks_at(root)
+    # one line, not the route: `labkit-next` computes the next step from the
+    # area's state, and AGENTS.md's loop starts there (the printed six steps
+    # were a second copy of the route, read once and then stale)
+    rel = area.relative_to(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
         + "\n".join(log)
-        + "\n"
-        + next_steps(area.relative_to(root), slug, nn, repeat_cost, kind, bool(model))
+        + f"\nnext: `labkit-next {rel}` names the one next step, with its command; "
+        f"`labkit-next --guide` the whole route"
     )
 
 

@@ -9,6 +9,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **`labkit-init exp` ends with one line, not the route.** The six printed
+  steps were a second copy of the workflow, read once and then stale beside
+  the state; the stamp now ends with `next: labkit-next <area>`, which
+  computes the step from the area, and `labkit-next --guide` for the whole
+  route. `--change-kind` still prints its steps (`next_steps`).
+
 - **Codex pre-run directory gap.** Refuse an invoked relative Python
   script that cannot be resolved from the hook's session directory and
   explicit `cd` commands, with feedback to use an absolute directory or
