@@ -74,7 +74,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             f"{shown(area, Path.cwd())} holds no protocol: nothing is registered",
             "`labkit-init exp <name> --kind compute|fit|apply` stamps the area "
             "and its protocol; `labkit-init exp --help` names the options",
-            "every run and every check: there is no question to hold a number to",
+            "every run: a run needs a registered question",
         )
     text = protocol.read_text(encoding="utf-8")
     report = protocol_check.check_fields(text)
@@ -89,8 +89,8 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             (f"`{fill}` fills the first; " if fill else "")
             + f"`protocol-fill {named} --list` names every open field with its "
             f"values, `protocol-check {named} --contract` what each one owes",
-            "the first measurement: what the registration lacks then cannot be "
-            "added in place",
+            "the first measurement: fill and commit the registration first, "
+            "because it cannot change after that run",
         )
     if handovers.protocol_handed_over(area, protocol):
         return Step(
@@ -115,7 +115,8 @@ def next_step(area: Path, protocol: Path | None) -> Step:
         return Step(
             first.text,
             first.fix or "the line above names what holds",
-            f"reporting and the adoption — {len(held)} blocker(s) in report-check",
+            f"the adoption and any report of the number: {len(held)} "
+            "blocker(s) stand, and this is the first",
         )
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
@@ -124,7 +125,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             f"`labkit-adopt {shown(area, Path.cwd())} {run}` adopts it: it writes "
             "the result and the report's block and checks them — a refusal "
             "names its step",
-            "the number in any report: a number no protocol adopted is not reported",
+            "the number in any report: report only an adopted number",
         )
     return Step(
         f"{protocol.name} has adopted {ctx.declared}; nothing holds it",

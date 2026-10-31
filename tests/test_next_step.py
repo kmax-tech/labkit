@@ -65,7 +65,7 @@ class TheChain(unittest.TestCase):
         # registered, not measured: measure
         step = self.step()
         self.assertIn("01_measure.py", step.next, step)
-        self.assertIn("blocker(s) in report-check", step.held)
+        self.assertIn("blocker(s) stand, and this is the first", step.held)
         run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
         # measured, no analysis audit: audit the run that answers
         step = self.step()
