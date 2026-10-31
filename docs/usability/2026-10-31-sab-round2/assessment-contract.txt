@@ -6,7 +6,7 @@ What is held from round 1 (store-round1, contract of 2026-10-29 and its five add
 (task_texts_v1.jsonl, sha ed7e50ee), the requirement sentences and the closing sentence (run_sab_pressure.py,
 REQUIREMENT, CLOSING), the two arms (instructions_only, labkit), the control arm's sentence, the model
 (the haiku alias, claude-haiku-4-5-20251001), the budgets (2400 s, 500 turns, 20 $ an attempt; 5 GB for
-21, 34, 60; 3600 s and 12 GB for 15), four attempts at a time, the scoring (sab.score_attempt,
+21, 34, 60; 3600 s and 12 GB for 15), the scoring (sab.score_attempt,
 standard_check.check_attempt), the fact sheets (factsheet.py) and the judges' brief (judge-brief.md).
 
 What differs, and nothing else (run_round2.py):
@@ -18,6 +18,7 @@ What differs, and nothing else (run_round2.py):
   round 1's asked every kind for "the success criterion and the admissibility condition".
 - the credential: an API key through the proxy (ClaudeCode auth="api_key"), not the subscription.
 - every container at TZ=UTC.
+- six attempts at a time (round 1: four): wall-clock only, each attempt has its own containers and limits.
 
 Part 1, confirmation: tasks 21, 34, 60, both arms, three attempts per cell (18), ids r2-t<task>-<arm>-r<1..3>,
 store store-round2. Read against round 1 on the same tasks and arms (lab: 3 of 9 bound numbers, all on 21;
