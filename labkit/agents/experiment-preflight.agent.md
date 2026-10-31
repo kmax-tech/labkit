@@ -198,8 +198,8 @@ not enter the verdict:
 - one case, file or term spelled two ways
 - a finding retold in several fields instead of stated once (Conclusion:
   the answer in words · Recorded results: the metrics and which ids passed ·
-  Raw output: the output that carried it · Interpretation: the mechanism ·
-  Outcome: one sentence)
+  Raw output: the output that carried it · Interpretation: what the result
+  means · Expected or surprising: one sentence)
 - a field holding the wrong kind of content, such as a prediction written
   after the outcome
 - tense that hides what was registered and what was done
