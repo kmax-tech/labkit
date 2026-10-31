@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats.protocol_check import fields  # noqa: E402
 from labkit.tools import protocol_fill, scaffold  # noqa: E402
+from labkit.tools import protocol_edit
 
 
 def stamped(kind: str = "compute", model: bool | str = False) -> str:
@@ -44,8 +45,8 @@ class ShortLabels(unittest.TestCase):
     text = stamped()
 
     def test_an_unambiguous_prefix_fills_its_field(self):
-        short = protocol_fill.fill(self.text, "Terms", "n/a — no coinage")
-        full = protocol_fill.fill(
+        short = protocol_edit.fill(self.text, "Terms", "n/a — no coinage")
+        full = protocol_edit.fill(
             self.text, "Terms of this protocol", "n/a — no coinage"
         )
         self.assertEqual(short, full)  # the twin: the full label
@@ -53,21 +54,21 @@ class ShortLabels(unittest.TestCase):
 
     def test_the_fill_line_says_which_field_a_prefix_named(self):
         self.assertEqual(
-            protocol_fill._as_filled(self.text, "Terms"),
+            protocol_edit.as_filled(self.text, "Terms"),
             "Terms → terms of this protocol",
         )
-        self.assertEqual(protocol_fill._as_filled(self.text, "Unit"), "Unit")
+        self.assertEqual(protocol_edit.as_filled(self.text, "Unit"), "Unit")
 
     def test_a_prefix_of_several_fields_names_them_and_fills_nothing(self):
         text = stamped("apply", "haiku")
         begun = {f.name for f in fields(text) if f.name.startswith("data")}
         self.assertGreater(len(begun), 1, begun)
         with self.assertRaisesRegex(ValueError, r"begins \d+ fields: .*data / scope"):
-            protocol_fill.fill(text, "Data", "x")
+            protocol_edit.fill(text, "Data", "x")
 
     def test_a_near_miss_is_named(self):
         with self.assertRaisesRegex(ValueError, "did you mean terms of this protocol"):
-            protocol_fill.fill(self.text, "Terms of this protocl", "x")
+            protocol_edit.fill(self.text, "Terms of this protocl", "x")
 
     def test_the_command_line_fills_by_prefix(self):
         with tempfile.TemporaryDirectory() as d:

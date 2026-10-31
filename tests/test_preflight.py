@@ -472,7 +472,7 @@ class TestAuditFindings(unittest.TestCase):
     def test_the_named_records_open_finding_carries_the_decide_way(self):
         """The gap of the record the head names told "audit again" where
         the way is to decide each finding; the twin, a record of other
-        code, keeps the audit way (`findings.audit_record_gap`)."""
+        code, keeps the audit way (`audit_gaps.audit_record_gap`)."""
         from labkit.formats import scope_sha
 
         with _area_dir() as d:

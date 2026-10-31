@@ -21,6 +21,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record, DEFAULT_BLOCK, PID, head, scope_file
 
+from labkit.tools import protocol_result
 from labkit.checks import recheck
 from labkit.run import runlog, provenance
 from labkit.formats import runs, answering_run
@@ -123,7 +124,6 @@ class Repeats(unittest.TestCase):
         Answer, Result and Runs (review 2026-10-15). recheck.run_dir, the one
         choice behind --from-run and --check, refuses it; the primary is
         written."""
-        from labkit.tools import protocol_fill
 
         first = self._run()
         second = self._run(repeat_of=first)
@@ -131,9 +131,9 @@ class Repeats(unittest.TestCase):
         text += "\n## Result\n\n- **Recorded results:** <the answer>\n\n## Runs\n\n- <run_id> — <one sentence>\n"
         for force in (False, True):
             with self.subTest(force=force), self.assertRaises(SystemExit) as cm:
-                protocol_fill.from_run(text, self.area, second, force=force)
+                protocol_result.from_run(text, self.area, second, force=force)
             self.assertIn("never the answer", str(cm.exception))
-        written, _, run_id = protocol_fill.from_run(text, self.area, first)
+        written, _, run_id = protocol_result.from_run(text, self.area, first)
         self.assertEqual(run_id, first)
         self.assertIn(f"(run {first})", written)
 

@@ -23,9 +23,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import protocol_text_of, registration_of, run_record, shown_sha  # noqa: E402
-from labkit.gates import audit, decision_review, report_check, ways_out  # noqa: E402
+from labkit.gates import (
+    audit,
+    audit_decisions,
+    audit_prompt,
+    audit_reply,
+    decision_review,
+    report_context,
+    report_decisions,
+    ways_out,
+)  # noqa: E402
 from labkit.checks import audit_binding, result_render  # noqa: E402
-from labkit.formats import attempts, findings, followup, promises, runs, scope_sha  # noqa: E402
+from labkit.formats import (
+    attempts,
+    audit_gaps,
+    failed_attempts,
+    findings,
+    followup,
+    promises,
+    reviews,
+    rules,
+    runs,
+    scope_sha,
+)  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [criterion-1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
@@ -141,7 +161,7 @@ class Audit(unittest.TestCase):
         self.assertNotIn("### 2B · The Data Path", prompt)  # a chapter nobody cited
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
-            audit.cited_rules("preflight"),
+            audit_prompt.cited_rules("preflight"),
             ["LAB-103", "LAB-015", "LAB-017", "LAB-004", "LAB-050", "LAB-003"],
         )
         # what binds after the first measurement comes with its rule
@@ -340,7 +360,7 @@ class Audit(unittest.TestCase):
         self.assertEqual(len(files), 1, err.getvalue())
         self.assertIn(f"recorded as {files[0]}", err.getvalue())
         self.assertIn("LABKIT_UNFROZEN=1", err.getvalue())
-        tried = findings.read_failed(files[0])
+        tried = failed_attempts.read_failed(files[0])
         self.assertEqual(tried.error, "claude-cli exit 1: quota")
         self.assertEqual(tried.timeout_s, 1200)
         self.assertEqual(tried.scope_sha, scope_sha.area_stamp(area)[0])
@@ -400,7 +420,7 @@ class Audit(unittest.TestCase):
         rc, err = audit_once()
         self.assertEqual(rc, 2)
         self.assertIn("Do not run it again on this state", err)
-        (tried,) = findings.failed_attempts(area)
+        (tried,) = failed_attempts.failed_attempts(area)
         self.assertEqual(tried.cause, "unproven")
         self.assertEqual(calls, ["opus"])
 
@@ -408,7 +428,7 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertIn("no further try on the same code, promises and model", err)
         self.assertEqual(calls, ["opus"])  # refused before any call
-        self.assertEqual(len(findings.failed_attempts(area)), 1)
+        self.assertEqual(len(failed_attempts.failed_attempts(area)), 1)
 
         rc, _ = audit_once("--model", "haiku")
         self.assertEqual(calls, ["opus", "haiku"])  # another model may try
@@ -431,7 +451,7 @@ class Audit(unittest.TestCase):
                 audit.main([str(area), "--mode", "preflight"])
         self.assertEqual(calls, ["opus", "opus"])
         self.assertEqual(
-            [f.cause for f in findings.failed_attempts(area)],
+            [f.cause for f in failed_attempts.failed_attempts(area)],
             ["unavailable", "unavailable"],
         )
 
@@ -479,9 +499,7 @@ class Audit(unittest.TestCase):
         self.assertIn("verdict", err)
 
     def test_missing_standard_and_ambiguous_protocol_refuse(self):
-        with mock.patch.object(
-            audit.rules, "STANDARD", Path("/nonexistent/standard.md")
-        ):
+        with mock.patch.object(rules, "STANDARD", Path("/nonexistent/standard.md")):
             rc, _, err, sent = run(repo_with(), CLEAN)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("installed without its standard", err)
@@ -522,7 +540,7 @@ class Audit(unittest.TestCase):
         self.assertNotIn("run_id", record)  # a preflight audit reads no run
         self.assertIn(
             "still `open`",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(before, block, registration_of(area)),
@@ -531,7 +549,7 @@ class Audit(unittest.TestCase):
         )
         self.assertIn(
             "no preflight audit saw",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(after, block, registration_of(area)),
@@ -547,7 +565,7 @@ class Audit(unittest.TestCase):
             "BLOCKER — a.py:1 — wrong denominator\n**BLOCKER:** b.py:2 · x\n"
             "verdict: 2 blockers, 0 warnings"
         )
-        self.assertEqual(len(audit.parse(report)["findings"]), 2)
+        self.assertEqual(len(audit_reply.parse(report)["findings"]), 2)
         area = repo_with()
         rc, _, err, _ = run(area, report)
         self.assertEqual(rc, 1)
@@ -620,17 +638,18 @@ class OneSnapshot(unittest.TestCase):
 
     def audit(self, area: Path, answer=None, **hooks) -> tuple[int, str, list[str]]:
         """labkit-audit in mode analysis; HOOKS wrap a function of the
-        reading (`audited_run`, `area_snapshot`) to edit the area first;
+        reading (`audit_prompt.audited_run`, `audit_prompt.area_snapshot`) to
+        edit the area first;
         ANSWER fakes the model (it may edit the area too)."""
         patches = []
         for name, edit in hooks.items():
-            real = getattr(audit, name)
+            real = getattr(audit_prompt, name)
 
             def edited_then(*args, _real=real, _edit=edit, **kw):
                 _edit()
                 return _real(*args, **kw)
 
-            patches.append(mock.patch.object(audit, name, edited_then))
+            patches.append(mock.patch.object(audit_prompt, name, edited_then))
         sent: list[str] = []
 
         def fake(alias, prompt, **kw):
@@ -1560,7 +1579,7 @@ class RequiredCheck(unittest.TestCase):
         assessable. The twin: a finding without a check names none."""
         area, earlier = self.fv.area(self.CHECKED)
         record = findings.read(earlier)
-        lines = "\n".join(audit.decision_lines(record, area, ""))
+        lines = "\n".join(audit_decisions.decision_lines(record, area, ""))
         self.assertIn(
             "check owed before `fixed` holds: extend the measuring script so that its "
             "kept rows carry what `feature_sources` needs and `evaluate_rows()` "
@@ -1572,7 +1591,9 @@ class RequiredCheck(unittest.TestCase):
         plain, plain_record = self.fv.area(FixVerdicts.LEAK)
         self.assertNotIn(
             "check owed",
-            "\n".join(audit.decision_lines(findings.read(plain_record), plain, "")),
+            "\n".join(
+                audit_decisions.decision_lines(findings.read(plain_record), plain, "")
+            ),
         )
 
     def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
@@ -1696,7 +1717,7 @@ class CheckNote(unittest.TestCase):
         for name in ("C-1", "C-2", "C-3", "D-1", "D-2", "D-3"):
             with self.subTest(name):
                 answer = (PILOT2 / f"{name}.report.txt").read_text(encoding="utf-8")
-                result = audit.parse(answer)
+                result = audit_reply.parse(answer)
                 area = repo_with()
                 path = findings.write(
                     area,
@@ -2070,7 +2091,7 @@ class UnrecordedCall(unittest.TestCase):
         ):
             rc = audit.main([str(area), "--mode", "preflight"])
         self.assertEqual(rc, 2, err.getvalue())
-        (tried,) = findings.failed_attempts(area)
+        (tried,) = failed_attempts.failed_attempts(area)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
         self.assertIn(f"audit did not complete: {tried.path.name}", out)
@@ -2148,7 +2169,7 @@ class UnrecordedCall(unittest.TestCase):
         self.assertIn(
             f"audit call superseded: attempt {attempt.id} (preflight) by the later "
             f"audit {record.path.name} of its mode, protocol and promise block (its "
-            f"code may differ) — {audit.SUPERSEDED_MEANS}",
+            f"code may differ) — {audit_decisions.SUPERSEDED_MEANS}",
             out,
         )
         self.assertNotIn("audit did not complete", out)
@@ -2254,7 +2275,7 @@ class UnrecordedCall(unittest.TestCase):
         """A `-failed.toml` from before the journal: its order is not known,
         and an audit of its mode run again now settles it."""
         area = repo_with()
-        failed = findings.write_failed(
+        failed = failed_attempts.write_failed(
             area, "preflight", "opus", "s" * 12, "b" * 12, 60, "down", "c",
             cause="unavailable",
         )  # fmt: skip
@@ -2272,7 +2293,7 @@ class UnrecordedCall(unittest.TestCase):
 
     def test_without_a_readable_journal_no_failed_file_is_called_historical(self):
         area = repo_with()
-        failed = findings.write_failed(
+        failed = failed_attempts.write_failed(
             area, "preflight", "opus", "s" * 12, "b" * 12, 60, "down", "c",
             cause="unavailable",
         )  # fmt: skip
@@ -2321,11 +2342,11 @@ def read_as_before(answer: str) -> list[tuple[str, str]]:
     their lines below the grade line: each finding line alone, stripped —
     the old reading frozen here on purpose, so the twin compares against
     it and not against the code under test."""
-    body = answer[: list(audit.VERDICT.finditer(answer))[-1].start()]
+    body = answer[: list(audit_reply.VERDICT.finditer(answer))[-1].start()]
     return [
         (f.group(1), line.strip())
         for line in body.splitlines()
-        if (f := audit.FINDING.match(line))
+        if (f := audit_reply.FINDING.match(line))
     ]
 
 
@@ -2489,7 +2510,7 @@ class WholeFinding(unittest.TestCase):
             with self.subTest(path.name):
                 answer = path.read_text(encoding="utf-8")
                 self.assertEqual(
-                    audit.parse(answer)["findings"], read_as_before(answer)
+                    audit_reply.parse(answer)["findings"], read_as_before(answer)
                 )
 
     def test_text_after_the_last_finding_below_a_blank_line_is_refused(self):
@@ -2534,7 +2555,7 @@ class WholeFinding(unittest.TestCase):
                 f"{closing}\n\nverdict: 0 blockers, 1 warnings, 0 notes"
             )
             with self.subTest(closing=closing):
-                parsed = audit.parse(answer)
+                parsed = audit_reply.parse(answer)
                 self.assertEqual(parsed["verdict"], (0, 1, 0))
                 self.assertEqual(
                     parsed["findings"],
@@ -2858,7 +2879,9 @@ class Carried(unittest.TestCase):
             os.chdir(area.parents[1])
             (line,) = [
                 ln.strip()
-                for ln in audit.decision_lines(findings.read(r1), area, "", x0)
+                for ln in audit_decisions.decision_lines(
+                    findings.read(r1), area, "", x0
+                )
                 if "--decide 1 " in ln
             ]
             self.assertIn("--protocol", line)
@@ -2886,7 +2909,7 @@ class Carried(unittest.TestCase):
 
     def test_past_the_operating_limit_the_audit_refuses(self):
         area, _ = self.fv.area()
-        with mock.patch.object(audit, "EARLIER_MAX_ENTRIES", 0):
+        with mock.patch.object(audit_prompt, "EARLIER_MAX_ENTRIES", 0):
             rc, _, err, sent = self.fv.audit(area, CLEAN)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("operating limit", err)
@@ -2910,8 +2933,8 @@ class FollowupGate(unittest.TestCase):
         self.cr.fv = self.fv
 
     def gate(self, area: Path) -> list[str]:
-        ctx = report_check.checked(area, area / "PROTOCOL-x0.md")
-        return [g.line for g in report_check.followup_findings(ctx)]
+        ctx = report_context.checked(area, area / "PROTOCOL-x0.md")
+        return [g.line for g in report_decisions.followup_findings(ctx)]
 
     def follow_up(self, area: Path, lines: str) -> findings.Record:
         return self.cr.audit_with(area, lines)
@@ -2955,7 +2978,7 @@ class FollowupGate(unittest.TestCase):
 
     def test_in_an_area_of_several_protocols_no_step_names_the_refused_audit(self):
         """The follow-up audit refuses an area holding several protocols
-        (`audit.earlier_of`); the hold says so instead of naming the command
+        (`audit_prompt.earlier_of`); the hold says so instead of naming the command
         it would refuse (audit 2026-10-27, B1). The twin: one protocol names it."""
         area, _ = self.fv.area()
         self.fv.audit(area, CLEAN)
@@ -3125,7 +3148,7 @@ class FollowupGate(unittest.TestCase):
         self.assertIn(
             n, [k for k, _ in decision_review.reviewable(findings.read(r2.path), [])]
         )
-        with mock.patch.object(report_check.reviews, "upholding", lambda *a: True):
+        with mock.patch.object(reviews, "upholding", lambda *a: True):
             self.assertEqual(self.gate(area), [])
 
     def test_a_wrong_finding_is_closed_by_a_resolved_follow_up(self):

@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -59,10 +60,10 @@ class FailedAudit(unittest.TestCase):
         mode: str = "preflight",
         sha: str | None = None,
         block: str | None = None,
-        timeout: int = findings.ATTEMPT_TIMEOUT_S,
+        timeout: int = failed_attempts.ATTEMPT_TIMEOUT_S,
         now: float | None = None,
     ) -> Path:
-        return findings.write_failed(
+        return failed_attempts.write_failed(
             self.tmp,
             mode,
             "opus",
@@ -140,13 +141,13 @@ class FailedAudit(unittest.TestCase):
 
     def test_an_attempt_given_too_little_time_is_not_one(self):
         """`--timeout 1` is the cheap forgery: the call cannot have been tried."""
-        self._failed(timeout=findings.ATTEMPT_TIMEOUT_S - 1)
+        self._failed(timeout=failed_attempts.ATTEMPT_TIMEOUT_S - 1)
         msg = self._refused()
-        self.assertIn(f"at least {findings.ATTEMPT_TIMEOUT_S} s", msg)
-        self.assertIn(f"{findings.ATTEMPT_TIMEOUT_S - 1} s)", msg)
+        self.assertIn(f"at least {failed_attempts.ATTEMPT_TIMEOUT_S} s", msg)
+        self.assertIn(f"{failed_attempts.ATTEMPT_TIMEOUT_S - 1} s)", msg)
 
     def test_a_longer_timeout_counts_and_the_newest_fitting_is_named(self):
-        self._failed(timeout=findings.ATTEMPT_TIMEOUT_S + 600, now=1_700_000_000)
+        self._failed(timeout=failed_attempts.ATTEMPT_TIMEOUT_S + 600, now=1_700_000_000)
         newer = self._failed(now=1_700_000_060)
         r, _ = self._start()
         cfg = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
@@ -165,7 +166,7 @@ class FailedAudit(unittest.TestCase):
         """`area_records` sees the records only: the attempt is not an audit."""
         self._failed()
         self.assertEqual(findings.area_records(self.tmp), [])
-        self.assertEqual(len(findings.failed_attempts(self.tmp)), 1)
+        self.assertEqual(len(failed_attempts.failed_attempts(self.tmp)), 1)
 
     def test_at_low_the_hatch_owes_no_attempt(self):
         (self.tmp / "PROTOCOL-x.md").write_text(LOW_NO_CRITERION, encoding="utf-8")

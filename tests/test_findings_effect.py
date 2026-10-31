@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.tools import protocol_result
 from labkit.formats import findings
 from protocol_fixture import registration_of  # noqa: E402
 
@@ -151,13 +152,12 @@ class LimitLinesInRecordOrder(unittest.TestCase):
     #3, #2, #1 — all three final audits named it (2026-10-21)."""
 
     def test_the_limit_lines_follow_the_record_order(self):
-        from labkit.tools import protocol_fill
 
         text = (
             "## Result\n\n- **Recorded results:** a = 1 (run x)\n- **Raw output:** r\n"
         )
         limits = tuple((f"Limitation (audit r #{n})", f"v{n}") for n in (1, 2, 3))
-        out, written = protocol_fill.limit_lines(text, limits)
+        out, written = protocol_result.limit_lines(text, limits)
         self.assertEqual(written, [label for label, _ in limits])
         rows = [ln for ln in out.splitlines() if ln.startswith("- **")]
         self.assertEqual(

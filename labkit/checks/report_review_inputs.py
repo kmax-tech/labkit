@@ -13,6 +13,7 @@ from pathlib import Path
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion
 from labkit.formats import findings
+from labkit.formats import failed_attempts
 from labkit.formats.repo import layout_root, shown
 from labkit.formats.runs import metrics_path, run_path
 
@@ -48,7 +49,7 @@ def audits_text(area: Path) -> str:
         if not r.findings:
             lines.append("  no findings")
         blocks.append("\n".join(lines))
-    for f in findings.failed_attempts(area):
+    for f in failed_attempts.failed_attempts(area):
         blocks.append(
             f"{f.path.name} · {f.mode} · FAILED ({f.cause}) · {f.model}\n"
             f"  error: {f.error}"

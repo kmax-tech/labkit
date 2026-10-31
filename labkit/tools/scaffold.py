@@ -73,7 +73,7 @@ from labkit.formats import promises, protocol_block, protocol_check, standard_co
 from labkit.gates import install_hooks
 from labkit.formats.runs import runs_path
 from labkit.formats.files import write_all, write_atomic
-from labkit.tools.protocol_fill import fill, fill_head
+from labkit.tools.protocol_edit import fill, fill_head
 from labkit.formats.repo import (
     EXPERIMENTS,
     commit_of,

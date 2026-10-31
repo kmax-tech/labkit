@@ -10,6 +10,7 @@ from unittest import mock
 from protocol_fixture import head  # noqa: E402
 
 from labkit.formats import attempts, findings, protocol_check, repo, standard_contract
+from labkit.formats import failed_attempts
 from labkit.checks import protocol_report
 from labkit.gates import audit, finalize
 from labkit.tools import scaffold
@@ -106,7 +107,7 @@ class WorkflowOrientation(unittest.TestCase):
             area, _ = scaffold.stamp_area(
                 root, "example", repeat_cost="low", kind="compute"
             )
-            failed = findings.write_failed(
+            failed = failed_attempts.write_failed(
                 area,
                 "analysis",
                 "auditor",
@@ -162,7 +163,7 @@ class WorkflowOrientation(unittest.TestCase):
                 block_sha="none",
                 protocol="PROTOCOL-example.md",
             )
-            failed = findings.write_failed(
+            failed = failed_attempts.write_failed(
                 area,
                 "analysis",
                 "auditor",

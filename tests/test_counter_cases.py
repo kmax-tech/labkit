@@ -31,6 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.formats import findings, protocol_block  # noqa: E402
 from protocol_fixture import decide_words  # noqa: E402
 from labkit.gates import audit, report_check  # noqa: E402
+from labkit.gates import report_context
+from labkit.gates import report_replacement
 from labkit.run import llm  # noqa: E402
 import test_end_to_end as e2e  # noqa: E402 — the module, so its tests are not collected here
 
@@ -319,8 +321,8 @@ class ConflictRegisteredAnew(_Chain):
         e2e._replace(self.protocol, [(MARGIN, MARGIN.replace("0.25", "0.2"))])
         self._declare(f'[replaces]\nprotocol = "{pid}"\n' + _change("0.25"))
         self.lab.commit("registered anew, against the first registration only")
-        (gap,) = report_check.replacement_gaps(
-            report_check.checked(self.area, self.protocol)
+        (gap,) = report_replacement.replacement_gaps(
+            report_context.checked(self.area, self.protocol)
         )
         self.assertIn(f"as its first measurement {second} saw it", gap.line)
         self.assertIn("with its uncommitted.patch", gap.line)

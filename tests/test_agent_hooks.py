@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import report_blocks  # noqa: E402
 from labkit.gates import agent_hooks  # noqa: E402
-from labkit.tools import protocol_fill  # noqa: E402
+from labkit.tools import protocol_result
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
     registration_of,
@@ -780,7 +780,7 @@ class Stop(unittest.TestCase):
         # true, no limit); written as text, since some tests declare a run
         # that does not exist
         p.write_text(
-            protocol_fill.fill_result_run(p.read_text(), run_id)
+            protocol_result.fill_result_run(p.read_text(), run_id)
             + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {run_id})\n"
         )
 

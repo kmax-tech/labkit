@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.checks import prompt_check, result_render  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
-from labkit.tools import protocol_fill  # noqa: E402
+from labkit.tools import protocol_result
 from protocol_fixture import head  # noqa: E402
 
 RUN = "2026-10-21T10-00-00_abcd"
@@ -273,10 +273,10 @@ class WriteBack(unittest.TestCase):
     record instead; the Result stays the author's two sentences throughout."""
 
     def test_from_run_writes_the_answer_and_the_author_writes_the_rest(self):
-        self.assertEqual(protocol_fill.WRITTEN_BY_RUN, ("Recorded results",))
-        self.assertIn("Conclusion", protocol_fill.WRITTEN_AFTER_RUN)
-        self.assertIn("Raw output", protocol_fill.WRITTEN_AFTER_RUN)
-        self.assertNotIn("Conclusion", protocol_fill.WRITTEN_BY_RUN)
+        self.assertEqual(protocol_result.WRITTEN_BY_RUN, ("Recorded results",))
+        self.assertIn("Conclusion", protocol_result.WRITTEN_AFTER_RUN)
+        self.assertIn("Raw output", protocol_result.WRITTEN_AFTER_RUN)
+        self.assertNotIn("Conclusion", protocol_result.WRITTEN_BY_RUN)
 
 
 if __name__ == "__main__":

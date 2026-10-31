@@ -35,6 +35,7 @@ from labkit.formats import answering_run, protocol_history, runs
 from labkit.formats.gate import Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check
+from labkit.gates import report_context
 
 RUN = "2026-10-07T10-00-00_ab12"
 REGISTRATION = "- **Question / hypothesis:** does it hold?\n"
@@ -150,7 +151,7 @@ class _Repository(unittest.TestCase):
 
     def _gaps(self) -> list[str]:
         """The registration station's findings, as report-check prints them."""
-        ctx = report_check.checked(self.area, self.proto)
+        ctx = report_context.checked(self.area, self.proto)
         return [f.line for f in report_check.registration_gaps(ctx)]
 
 
@@ -293,7 +294,7 @@ def _block(null_band: float, sentence: str = "the null lane stays near chance") 
 def _registration_changes(area: Path, proto: Path) -> list:
     """finalize's registration station on the answering run report-check
     chooses."""
-    ctx = report_check.checked(area, proto)
+    ctx = report_context.checked(area, proto)
     return finalize.registration_changes(ctx.area, ctx.protocol, ctx.head.id, ctx.run)
 
 

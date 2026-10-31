@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from labkit.formats import findings
+from labkit.formats import audit_gaps
+from labkit.formats import failed_attempts
 from protocol_fixture import registration_of  # noqa: E402
 
 SHA, BLOCK = "abc123def456", "b10c0000000a"
@@ -18,13 +20,13 @@ def attempt(area: Path, **kw: Any) -> Path:
         model="opus",
         scope_sha=SHA,
         block_sha=BLOCK,
-        timeout_s=findings.ATTEMPT_TIMEOUT_S,
+        timeout_s=failed_attempts.ATTEMPT_TIMEOUT_S,
         error='claude-cli exit 1: "quota"',
         command="labkit-audit experiments/01-x --mode preflight",
         cause="unavailable",
     )
     args.update(kw)
-    return findings.write_failed(area, **args)
+    return failed_attempts.write_failed(area, **args)
 
 
 class WriteRead(unittest.TestCase):
@@ -35,10 +37,10 @@ class WriteRead(unittest.TestCase):
     def test_roundtrip(self):
         path = attempt(self.area, now=1_700_000_000)
         self.assertTrue(path.name.endswith(f"-preflight{findings.FAILED_SUFFIX}"))
-        got = findings.read_failed(path)
+        got = failed_attempts.read_failed(path)
         self.assertEqual(
             (got.mode, got.model, got.scope_sha, got.block_sha, got.timeout_s),
-            ("preflight", "opus", SHA, BLOCK, findings.ATTEMPT_TIMEOUT_S),
+            ("preflight", "opus", SHA, BLOCK, failed_attempts.ATTEMPT_TIMEOUT_S),
         )
         self.assertEqual(got.error, 'claude-cli exit 1: "quota"')
         self.assertIn("--mode preflight", got.command)
@@ -47,7 +49,7 @@ class WriteRead(unittest.TestCase):
         a = attempt(self.area, now=1_700_000_000)
         b = attempt(self.area, now=1_700_000_030)
         self.assertNotEqual(a, b)
-        self.assertEqual(len(findings.failed_attempts(self.area)), 2)
+        self.assertEqual(len(failed_attempts.failed_attempts(self.area)), 2)
 
     def test_records_and_attempts_are_read_apart(self):
         attempt(self.area)
@@ -62,7 +64,7 @@ class WriteRead(unittest.TestCase):
             registration=registration_of(self.area),
         )
         self.assertEqual(len(findings.area_records(self.area)), 1)
-        self.assertEqual(len(findings.failed_attempts(self.area)), 1)
+        self.assertEqual(len(failed_attempts.failed_attempts(self.area)), 1)
 
     def test_wrong_mode_refuses_to_write(self):
         with self.assertRaises(ValueError):
@@ -90,7 +92,7 @@ class WriteRead(unittest.TestCase):
         ):
             path.write_text(broken, encoding="utf-8")
             with self.assertRaises(findings.FindingsError) as cm:
-                findings.failed_attempts(self.area)
+                failed_attempts.failed_attempts(self.area)
             self.assertIn(said, str(cm.exception))
 
 
@@ -101,17 +103,21 @@ class Unavailable(unittest.TestCase):
 
     def test_the_fitting_attempt_is_found_and_other_ones_are_not(self):
         self.assertIsNone(
-            findings.audit_unavailable(self.area, SHA, "preflight", BLOCK)
+            failed_attempts.audit_unavailable(self.area, SHA, "preflight", BLOCK)
         )
         attempt(self.area, scope_sha="000000000000", now=1_700_000_000)
         attempt(self.area, block_sha="000000000000", now=1_700_000_060)
         attempt(self.area, mode="analysis", now=1_700_000_120)
-        attempt(self.area, timeout_s=findings.ATTEMPT_TIMEOUT_S - 1, now=1_700_000_180)
+        attempt(
+            self.area,
+            timeout_s=failed_attempts.ATTEMPT_TIMEOUT_S - 1,
+            now=1_700_000_180,
+        )
         self.assertIsNone(
-            findings.audit_unavailable(self.area, SHA, "preflight", BLOCK)
+            failed_attempts.audit_unavailable(self.area, SHA, "preflight", BLOCK)
         )
         fitting = attempt(self.area, now=1_700_000_240)
-        got = findings.audit_unavailable(self.area, SHA, "preflight", BLOCK)
+        got = failed_attempts.audit_unavailable(self.area, SHA, "preflight", BLOCK)
         self.assertIsNotNone(got)
         assert got is not None
         self.assertEqual(got.path, fitting)
@@ -119,12 +125,12 @@ class Unavailable(unittest.TestCase):
     def test_without_a_block_the_code_alone_is_held(self):
         attempt(self.area)
         self.assertIsNotNone(
-            findings.audit_unavailable(self.area, SHA, "preflight", None)
+            failed_attempts.audit_unavailable(self.area, SHA, "preflight", None)
         )
 
     def test_an_unknown_mode_is_refused(self):
         with self.assertRaises(ValueError):
-            findings.audit_unavailable(self.area, SHA, "clarity", BLOCK)
+            failed_attempts.audit_unavailable(self.area, SHA, "clarity", BLOCK)
 
 
 class CoverageNamesTheStop(unittest.TestCase):
@@ -138,7 +144,7 @@ class CoverageNamesTheStop(unittest.TestCase):
 
     def test_an_unproven_attempt_at_this_state_is_named(self):
         attempt(self.area, cause="unproven", model="opus")
-        why = findings.audit_coverage(
+        why = audit_gaps.audit_coverage(
             self.area,
             "preflight",
             findings.AuditedState(SHA, BLOCK, registration_of(self.area)),
@@ -152,7 +158,7 @@ class CoverageNamesTheStop(unittest.TestCase):
     def test_an_unavailable_or_other_state_keeps_the_plain_refusal(self):
         attempt(self.area, cause="unavailable")
         attempt(self.area, cause="unproven", scope_sha="other" * 3)
-        why = findings.audit_coverage(
+        why = audit_gaps.audit_coverage(
             self.area,
             "preflight",
             findings.AuditedState(SHA, BLOCK, registration_of(self.area)),

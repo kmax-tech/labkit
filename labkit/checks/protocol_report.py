@@ -35,7 +35,7 @@ from labkit.formats.repo import (
     repo_protocols,
     state_text,
 )
-from labkit.formats.findings import RecordGap, audit_record_gap
+from labkit.formats.audit_gaps import RecordGap, audit_record_gap
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding, with_way_out
 from labkit.formats.protocol_history import (
     check_annotation_validity,

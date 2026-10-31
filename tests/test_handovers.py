@@ -18,6 +18,7 @@ from labkit.formats import attempts, findings, handovers, protocol_block
 from labkit.checks import report_blocks
 from labkit.gates import audit, agent_hooks, report_check
 from labkit.tools import protocol_fill
+from labkit.tools import protocol_result
 
 #: a simulated analysis answer holding one BLOCKER
 BLOCKED = (
@@ -396,7 +397,7 @@ class HandoverRecovery(cases._Chain):
 
     def test_an_existing_report_keeps_its_text_and_the_result_is_withdrawn(self):
         text = self.protocol.read_text()
-        text = protocol_fill.fill_result_run(text, self.run_id)
+        text = protocol_result.fill_result_run(text, self.run_id)
         self.protocol.write_text(text)
         self.report.write_text("# Earlier report\n\nWhat we looked at.\n")
         with self.assertRaises(SystemExit):  # the block is written in place

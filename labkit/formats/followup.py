@@ -26,8 +26,8 @@ only heads are shown again, so an origin is carried at most once per
 record and a limit does not multiply over audits.
 
 Pure: records in, data out. The audit shows and writes
-(`audit.bound_prompt`, `audit._record`); report-check holds the release
-(`report_check.followup_findings`).
+(`audit_prompt.bound_prompt`, `audit._record`); report-check holds the release
+(`report_decisions.followup_findings`).
 """
 
 from __future__ import annotations
@@ -188,7 +188,7 @@ class Hold:
     @property
     def needs_followup_audit(self) -> bool:
         """Does STEP end in the follow-up audit (FOLLOWUP_AUDIT)? It refuses an
-        area holding several protocols (`audit.earlier_of`)."""
+        area holding several protocols (`audit_prompt.earlier_of`)."""
         return FOLLOWUP_AUDIT in self.step
 
 
@@ -197,7 +197,7 @@ FOLLOWUP_AUDIT = "`labkit-audit <area> --mode analysis`"
 #: the step when a follow-up audit is all that is missing
 STEP_AUDIT = f"{FOLLOWUP_AUDIT} follows it up"
 #: what stands instead of a step ending in the follow-up audit where it
-#: cannot run: an area holding several protocols (`audit.earlier_of`)
+#: cannot run: an area holding several protocols (`audit_prompt.earlier_of`)
 STEP_NONE_SEVERAL = (
     "no step labkit offers clears this here yet: the follow-up audit refuses an "
     "area holding several protocols (its records name no protocol, so it would "

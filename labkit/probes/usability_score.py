@@ -20,7 +20,7 @@ from labkit.probes import agent_transcript, code_navigation, protocol_reading
 from labkit.formats import (
     answering_run,
     console,
-    findings,
+    failed_attempts,
     promises,
     runs,
     standard_contract,
@@ -573,7 +573,7 @@ def probe_score(
         )
     except (agent_transcript.TranscriptError, OSError) as exc:
         raise console.Refused("usability", f"transcript: {exc}") from exc
-    failed = findings.failed_attempts(pr.area)
+    failed = failed_attempts.failed_attempts(pr.area)
     # a matching key is not a matching quantity: the run's SCORE and items
     # are held to what the task's number means, and a mismatch is named
     # SCORE is the script's own setting (`RunConfig.config`, free JSON),

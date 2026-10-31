@@ -69,7 +69,9 @@ KNOWN_CROSSINGS = {
     # registration and which lane owes the freeze, the audit or the foreground
     # — doctrine that refuses a run, sitting in the run writer's start check
     # (moved with it out of runlog; the same crossings, not new ones)
-    ("start_check", "findings"),  # findings.audit_coverage
+    ("start_check", "findings"),  # findings.open_findings, findings.area_records
+    ("start_check", "audit_gaps"),  # audit_gaps.audit_record_gap
+    ("start_check", "failed_attempts"),  # failed_attempts.audit_unavailable
     ("start_check", "protocol_check"),  # protocol_check.low_registration_missing
     # the same registration, as HEAD holds it, for a first measurement:
     # report-check holds that commit, and a start on an uncommitted one could

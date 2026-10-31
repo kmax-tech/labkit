@@ -88,6 +88,7 @@ from labkit.formats.repo import gate_command, measure_anew
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
 from labkit.formats.runs import metrics_path, read_metrics
 from labkit.formats import (
+    audit_gaps,
     console,
     findings as audit_findings,
     promises,
@@ -310,7 +311,7 @@ def registration_changes(
     when they recorded different blocks, which one stood cannot be told and
     no run answers a registered question: held too, the ways out a new
     registration that declares its changes against each (K1,
-    `report_check.replacement_gaps`) or a handover without a declared
+    `report_replacement.replacement_gaps`) or a handover without a declared
     result. Empty without an answering run, a stamped id PID, or a block in
     the records. Raises RuntimeError when git fails."""
     if pid is None or run is None:
@@ -462,7 +463,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
     mode (`findings.open_findings`, with the table of the gates' rules) — a
     BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
     its file; and every analysis record names a run the area still holds
-    (`findings.records_of_gone_runs`): a run an audit read is a kept run,
+    (`audit_gaps.records_of_gone_runs`): a run an audit read is a kept run,
     and its deleted directory is a blocker where the record stands. A
     record nobody can read is a blocker, not "no findings"."""
     try:
@@ -471,7 +472,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
         findings.block(str(exc), fix=audit_findings.record_way(area))
         return
     known = {rd.dir.name for rd in run_dirs(area)}
-    gone = audit_findings.records_of_gone_runs(records, known)
+    gone = audit_gaps.records_of_gone_runs(records, known)
     for rec in gone:
         findings.block(
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "

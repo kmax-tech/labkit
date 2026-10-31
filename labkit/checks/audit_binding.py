@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit.formats import (
+    audit_gaps,
     findings,
     promises,
     protocol_block,
@@ -67,7 +68,7 @@ def audited_run(
     protocol as the caller's file state holds it), or `(None, why)`: no
     protocol id, no completed bound run, a blocker of the choice. Raises
     AuditError on a head it cannot read. report-check holds the record to
-    the same choice (`report_check.checked`)."""
+    the same choice (`report_context.checked`)."""
     if text is None:
         text = protocol.read_text(encoding="utf-8")
     try:
@@ -338,4 +339,4 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     Raises what `analysis_now` raises, and FindingsError (a ValueError) on a
     findings file it cannot read."""
     records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
-    return findings.covering_records(records, analysis_now(area, text, run))
+    return audit_gaps.covering_records(records, analysis_now(area, text, run))

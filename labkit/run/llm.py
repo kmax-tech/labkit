@@ -193,7 +193,7 @@ def _answering_model(used: BackendSpec) -> str:
 def model_entry(alias: str | None, start: Path) -> str:
     """`[models.<alias>]` of the lab's `models.toml` (`lab_root` of START) as
     TOML lines, or a sentence why not — what the audit is shown of a bound
-    validation's alias as today's setting (`audit.validity_evidence`; what
+    validation's alias as today's setting (`audit_prompt.validity_evidence`; what
     the validation ran with is its run record, `answering_run.recorded_models`).
     Reads the file using the same alias lookup as `_load_spec`
     (`alias_tables`); changes no files. Missing aliases, unreadable files

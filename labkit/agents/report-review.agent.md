@@ -1,6 +1,6 @@
 <!-- the report-review agent's instructions, run by `labkit-audit --report-review` through labkit.run.llm.
      `labkit-audit` inlines everything the list below names; the LAB ids this file cites are
-     the rules it inlines from the standard (`audit.cited_rules`). -->
+     the rules it inlines from the standard (`audit_prompt.cited_rules`). -->
 # Report review — does the report state as a result what it discusses as not reported?
 
 You are a cold reader of a finished report. The report cites at least one

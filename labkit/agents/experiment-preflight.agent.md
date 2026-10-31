@@ -2,7 +2,7 @@
      the one runner since 0.79.0 (the Claude subagent copy under ~/.claude/agents is gone:
      it drifted from this file once, 2026-10-07, and read the whole standard twice per audit).
      `labkit-audit` inlines everything the list below names; the LAB ids this file cites are
-     the rules it inlines from the standard (`audit.cited_rules`). -->
+     the rules it inlines from the standard (`audit_prompt.cited_rules`). -->
 # Experiment preflight audit
 
 You are the fresh pair of eyes between an experiment's registration and its

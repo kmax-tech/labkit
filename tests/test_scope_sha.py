@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.gates import audit_prompt, audit_reply
 from labkit.formats import scope_sha
 
 
@@ -206,7 +207,7 @@ class TestOneStampEverywhere(unittest.TestCase):
         sha, files, _ = packaged.area_stamp(self.area)
         self.assertIn(
             f"scope sha {sha}",
-            audit.stamp_facts(audit.Stamp(sha, files), [], 0),
+            audit.stamp_facts(audit_prompt.Stamp(sha, files), [], 0),
         )
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -248,10 +249,9 @@ class TestDeclaredScopeIsStamped(unittest.TestCase):
         (self.area / "PROTOCOL-x.md").write_text("# x\n" + head(promises=block))
 
     def test_the_audit_reads_nothing_the_stamp_does_not_bind(self):
-        from labkit.gates import audit
         from labkit.formats import scope_sha as packaged
 
-        read = {f.resolve() for f in audit.gather(self.area, None).code}
+        read = {f.resolve() for f in audit_prompt.gather(self.area, None).code}
         stamped = {f.resolve() for f in packaged.area_stamp(self.area)[1]}
         self.assertIn((self.area / "helper.py").resolve(), read)
         self.assertLessEqual(read, stamped)
@@ -403,11 +403,13 @@ class TestImportForms(unittest.TestCase):
             "verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n"
             "experiments/01/scripts/m.py\nlib/scoring.py\nlib/other.py\n"
         )
-        listed = audit.parse(report)["scope"]
+        listed = audit_reply.parse(report)["scope"]
         self.assertEqual(
             listed, ["experiments/01/scripts/m.py", "lib/scoring.py", "lib/other.py"]
         )
-        gaps = audit.scope_mismatch(self.area, listed, audit.area_stamp(self.area)[1])
+        gaps = audit_reply.scope_mismatch(
+            self.area, listed, audit.area_stamp(self.area)[1]
+        )
         self.assertIn(
             "the auditor read lib/other.py as part of the number, the stamp "
             "does not cover it",

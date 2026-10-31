@@ -33,7 +33,7 @@ What it runs, in order (`preflight_area` shows each station's condition):
                      record is a blocker. Where the lane owes the freeze and
                      the head names a preflight record, that record must be
                      one of the code and the promise block as they are now,
-                     decided (`findings.audit_record_gap`, the same answer
+                     decided (`audit_gaps.audit_record_gap`, the same answer
                      runlog's freeze gate gives). An open finding a handover
                      of another area records is told as a reminder, never counted
   4. code-check      its automated checks (`code_check.code_findings`):
@@ -70,6 +70,7 @@ from pathlib import Path
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
+    audit_gaps,
     console,
     handovers,
     promises,
@@ -446,12 +447,12 @@ def check_audit_coverage(
 ) -> None:
     """Station 3, the record: why the record the head's AUDIT_LINE names
     does not cover a full run of this code and the promise block TEXT
-    carries now (`findings.audit_record_gap`, the same answer runlog's
+    carries now (`audit_gaps.audit_record_gap`, the same answer runlog's
     freeze gate gives — preflight must not pass a state the run refuses),
     with the gap's own way out (`RecordGap.fix`: a new audit, or the
     decisions where the record's findings are still open). A gap warns,
     and blocks once FROZEN."""
-    gap = audit_findings.audit_record_gap(area, audit_line, text)
+    gap = audit_gaps.audit_record_gap(area, audit_line, text)
     if gap:
         _owed(findings, frozen)(
             f"preflight_audit: {gap.why} (LAB-015 Preflight audit before freezing)",

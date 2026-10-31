@@ -66,8 +66,8 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     PROTOCOL None and no protocol in AREA is the first step; PROTOCOL must
     otherwise be the one the caller chose (`repo.choose_protocol`). Raises
     `protocol_block.BlockError` on a head that does not read and whatever
-    `report_check.checked` raises on a run choice that cannot be made."""
-    from labkit.gates import report_check
+    `report_context.checked` raises on a run choice that cannot be made."""
+    from labkit.gates import report_check, report_context
 
     if protocol is None:
         return Step(
@@ -99,7 +99,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "nothing — a new attempt at the question is a new registration",
             "",
         )
-    ctx = report_check.checked(area, protocol)
+    ctx = report_context.checked(area, protocol)
     pending = ctx.declared is None and ctx.run is not None
     gaps = report_check.report_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
@@ -139,9 +139,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
 def _fill_line(protocol: str, missing: str) -> str | None:
     """The `protocol-fill` line that fills MISSING, a MUST gap as
     `protocol_check.check_fields` names it — a field label, or a head key as
-    `[protocol] <key>` with its allowed values (`protocol_fill.HEAD_KEYS`) —
+    `[protocol] <key>` with its allowed values (`protocol_edit.HEAD_KEYS`) —
     or None for a gap no single fill closes (a contradiction, a freeze key)."""
-    from labkit.tools.protocol_fill import HEAD_KEYS
+    from labkit.tools.protocol_edit import HEAD_KEYS
 
     if missing.startswith("[protocol] "):
         key = missing.removeprefix("[protocol] ")

@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.checks import readme_check
-from labkit.tools import scaffold, protocol_cuts
+from labkit.tools import protocol_cuts, protocol_edit, scaffold
 from labkit.formats import (
     console,
     promises,
@@ -739,7 +739,6 @@ class Exp(unittest.TestCase):
     def _compute_area_with_work(self) -> tuple[Path, Path, str]:
         """(area, protocol, its id): `foo-bar` stamped as a computation at
         low cost after an explore file, its Question written."""
-        from labkit.tools import protocol_fill
 
         quiet(scaffold.main, ["exp", "foo-bar", "--explore", "--repo", str(self.root)])
         quiet(scaffold.stamp_area, self.root, "foo-bar", "low", kind="compute")
@@ -752,7 +751,7 @@ class Exp(unittest.TestCase):
             if f.name.startswith("question")
         )
         proto.write_text(
-            protocol_fill.fill(text, label, "how well does a forest predict K?"),
+            protocol_edit.fill(text, label, "how well does a forest predict K?"),
             encoding="utf-8",
         )
         pid = protocol_block.head(text).id

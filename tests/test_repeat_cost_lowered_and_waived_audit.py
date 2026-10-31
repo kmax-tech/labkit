@@ -21,11 +21,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import (
-    scope_sha,
+    audit_gaps,
     findings,
     promises,
     protocol_block,
     protocol_history,
+    scope_sha,
 )
 from labkit.checks import protocol_report  # noqa: E402
 from labkit.gates import preflight  # noqa: E402
@@ -213,7 +214,7 @@ class WaivedAudit(unittest.TestCase):
 
     def test_the_gap_names_the_honest_ways_and_offers_no_word(self):
         text = self._protocol("high", "n/a — x").read_text(encoding="utf-8")
-        gap = findings.audit_record_gap(
+        gap = audit_gaps.audit_record_gap(
             self.area, "n/a — RF model training does not require external audit", text
         )
         assert gap is not None
@@ -229,11 +230,11 @@ class WaivedAudit(unittest.TestCase):
         another promise block, one with an open finding, and the twin."""
         text = self._protocol("high", "x").read_text(encoding="utf-8")
         block = promises.block_stamp(text)
-        gap = findings.audit_record_gap(
+        gap = audit_gaps.audit_record_gap(
             self.area, "2026 · scope sha 000000000000 · 0", text
         )
         self.assertIn("names no record", gap.why if gap else "")
-        gap = findings.audit_record_gap(
+        gap = audit_gaps.audit_record_gap(
             self.area, "2026-10-07T10-00-preflight.toml", text
         )
         self.assertIn("there is no such record", gap.why if gap else "")
@@ -247,7 +248,7 @@ class WaivedAudit(unittest.TestCase):
             [],
             registration=registration_of(self.area),
         )
-        gap = findings.audit_record_gap(self.area, other.name, text)
+        gap = audit_gaps.audit_record_gap(self.area, other.name, text)
         self.assertIn("the code now stamps", gap.why if gap else "")
         sha = scope_sha.area_stamp(self.area)[0]
         stale = findings.write(
@@ -260,7 +261,7 @@ class WaivedAudit(unittest.TestCase):
             [],
             registration=registration_of(self.area),
         )
-        gap = findings.audit_record_gap(self.area, stale.name, text)
+        gap = audit_gaps.audit_record_gap(self.area, stale.name, text)
         self.assertIn("saw the promise block otherblock00", gap.why if gap else "")
         open_ = findings.write(
             self.area,
@@ -277,7 +278,7 @@ class WaivedAudit(unittest.TestCase):
             ],
             registration=registration_of(self.area),
         )
-        gap = findings.audit_record_gap(self.area, open_.name, text)
+        gap = audit_gaps.audit_record_gap(self.area, open_.name, text)
         self.assertIn("still `open`", gap.why if gap else "")
         good = findings.write(
             self.area,
@@ -289,7 +290,7 @@ class WaivedAudit(unittest.TestCase):
             [],
             registration=registration_of(self.area),
         )
-        self.assertIsNone(findings.audit_record_gap(self.area, good.name, text))
+        self.assertIsNone(audit_gaps.audit_record_gap(self.area, good.name, text))
         analysis = findings.write(
             self.area,
             "analysis",
@@ -302,7 +303,7 @@ class WaivedAudit(unittest.TestCase):
             shown_sha="0" * 12,
             registration=registration_of(self.area),
         )
-        gap = findings.audit_record_gap(self.area, analysis.name, text)
+        gap = audit_gaps.audit_record_gap(self.area, analysis.name, text)
         self.assertIn(
             "names no record", gap.why if gap else ""
         )  # an analysis record's name is not a preflight one

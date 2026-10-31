@@ -70,8 +70,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.runs import run_path
 from labkit.formats.prompts import prompt_body
-from labkit.gates import audit
-from labkit.gates import report_hold
+from labkit.gates import audit, audit_prompt, audit_reply, report_hold
 from labkit.gates.ways_out import ANSWER_AGAIN
 
 REPORT_REVIEW = "report"
@@ -79,13 +78,13 @@ REPORT_REVIEW = "report"
 ATTEMPT_MODE = "report-review"
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
-    audit.LEAD
+    audit_reply.LEAD
     + r"\**CLAIM\s*#(\d+)\**\s*"
-    + audit.SEP
+    + audit_reply.SEP
     + r"\s*line\s*(\d+)\s*"
-    + audit.SEP
+    + audit_reply.SEP
     + r"\s*\**(result|contradiction)\**\s*"
-    + audit.SEP
+    + audit_reply.SEP
     + r"\s*(.*?)\s*$",
     re.M,
 )
@@ -171,11 +170,11 @@ def gather_report(
         area, report, text, protocol, protocol.read_text(encoding="utf-8"), discussed
     )
     repo = layout_root(area)
-    label, rules_text = audit.standard_excerpt(REPORT_REVIEW)
+    label, rules_text = audit_prompt.standard_excerpt(REPORT_REVIEW)
     shown_pieces = [*pieces, (f"FILE: {label}", rules_text)]
     body = prompt_body(shown_pieces)
     prompt = (
-        f"{audit.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
+        f"{audit_prompt.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
         f"{shown(area, repo)} · REPORT: {shown(report, repo)}\n\n{INLINE_NOTE}\n\n{body}"
     )
     return prompt, discussed, pieces
@@ -186,7 +185,7 @@ def parse_claims(report: str, n_lines: int) -> list[ReportClaim]:
     report of N_LINES, numbered 1, 2, … in order, and as many as the
     closing count says. Raises AuditError otherwise — a reply that
     disagrees with itself names nothing."""
-    last = audit.last_verdict(VERDICT, report, "the reply", "a review")
+    last = audit_reply.last_verdict(VERDICT, report, "the reply", "a review")
     found = list(CLAIM.finditer((report or "")[: last.start()]))
     numbers = [int(m.group(1)) for m in found]
     if numbers != list(range(1, len(found) + 1)):

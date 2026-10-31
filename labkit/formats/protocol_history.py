@@ -220,7 +220,7 @@ def bound_validation(
     why it is not bound (a sentence), or None when the protocol names no
     such evidence (not a computation, no `[model]`, a DOI, an unreadable
     head — the head check names that). The gate (`check_annotation_validity`)
-    and the audit's evidence pieces (`audit.validity_evidence`) read this."""
+    and the audit's evidence pieces (`audit_prompt.validity_evidence`) read this."""
     try:
         m = protocol_block.model(text)
         kind = protocol_block.head(text).kind

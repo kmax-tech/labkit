@@ -24,6 +24,8 @@ from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, protocol_check, repo
+from labkit.formats import audit_gaps
+from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
 from labkit.formats.gate import with_way_out
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT, lane
@@ -246,13 +248,15 @@ def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
     return blockers, lesser
 
 
-def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None":
+def _audit_unavailable(
+    base_dir: Path, bound: _Bound
+) -> "failed_attempts.Failed | None":
     """The failed audit attempt an acknowledged full run rests on, or
     None at `repeat_cost = "low"`, where no audit is owed before the run. Raises
     SystemExit when none fits: the hatch is for an audit the backend refused,
     not for one nobody started. The attempt must name the code as it stamps
     now and, under a protocol, the promise block as it reads now, and its
-    call must have had the default timeout at least (`findings.ATTEMPT_TIMEOUT_S`)."""
+    call must have had the default timeout at least (`failed_attempts.ATTEMPT_TIMEOUT_S`)."""
     if (
         bound.head is not None
         and PREFLIGHT_AUDIT not in lane(bound.head.repeat_cost).audits
@@ -277,13 +281,15 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
                 with_way_out(f"runlog: promise block: {exc}", PROMISE_BLOCK_WAY)
             ) from exc
     try:
-        failed = findings.audit_unavailable(base_dir, sha, "preflight", block_sha)
+        failed = failed_attempts.audit_unavailable(
+            base_dir, sha, "preflight", block_sha
+        )
     except findings.FindingsError as exc:
         raise SystemExit(
             with_way_out(f"runlog: {exc}", findings.record_way(base_dir))
         ) from exc
     if failed is None:
-        tried = findings.failed_attempts(base_dir)
+        tried = failed_attempts.failed_attempts(base_dir)
         seen = (
             "; ".join(
                 f"{f.path.name} (code {f.scope_sha}, promises {f.block_sha}, "
@@ -299,7 +305,7 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
                 "audit that could not run — not one nobody ran. No failed preflight "
                 f"attempt of the code as it is now (code {sha}, promises "
                 f"{block_sha or 'no protocol'}, at least "
-                f"{findings.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}",
+                f"{failed_attempts.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}",
                 f"run the audit: `{repo.audit_command(base_dir, '--mode', 'preflight', protocol=base_dir / bound.name if bound.head is not None else None)}`; "
                 "when the backend does not answer, it writes "
                 f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
@@ -312,7 +318,7 @@ def _audit_unavailable(base_dir: Path, bound: _Bound) -> "findings.Failed | None
 
 def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
     """Why the head's `preflight_audit` does not cover a full run: empty, or
-    what `findings.audit_record_gap` says of the record it names — none
+    what `audit_gaps.audit_record_gap` says of the record it names — none
     named (`n/a`, refused since 0.99.0), no such record, one of other code
     or another promise block than the area carries now, a finding open —
     each with its way out (`RecordGap.fix`)."""
@@ -322,7 +328,7 @@ def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> li
             f"preflight audit (`labkit-audit <area> --mode preflight`), decide its "
             f"findings and name its record here (LAB-015 Preflight audit before freezing)"
         ]
-    gap = findings.audit_record_gap(base_dir, line, text)
+    gap = audit_gaps.audit_record_gap(base_dir, line, text)
     if gap is None:
         return []
     return [with_way_out(f"{path.name}: preflight_audit: {gap.why}", gap.fix)]

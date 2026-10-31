@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.gates import audit_reply
 from labkit.checks import code_check
 from labkit.probes import usability_score
 from labkit.formats import console, promises, protocol_block, protocol_check
@@ -125,7 +126,6 @@ class ReadLines(unittest.TestCase):
     with the report but are no findings and enter no verdict."""
 
     def test_read_lines_are_not_findings(self):
-        from labkit.gates import audit
 
         report = (
             "WARNING · scripts/m.py:3 · x · y · new class · z\n"
@@ -133,7 +133,7 @@ class ReadLines(unittest.TestCase):
             "verdict: 0 blockers, 1 warnings, 0 notes\n"
             "scope:\nscripts/m.py\n"
         )
-        parsed = audit.parse(report)
+        parsed = audit_reply.parse(report)
         self.assertEqual([g for g, _ in parsed["findings"]], ["WARNING"])
         self.assertEqual(parsed["verdict"], (0, 1, 0))
 
