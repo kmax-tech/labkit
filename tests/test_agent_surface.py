@@ -22,6 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from labkit.gates import audit_decisions  # noqa: E402
 from labkit.tools import next_step  # noqa: E402
 
 AGENTS = ROOT / "labkit" / "templates" / "AGENTS.md.template"
@@ -108,7 +109,6 @@ class Examples(unittest.TestCase):
     no consequences)."""
 
     def test_every_decide_call_shown_is_one_the_parser_takes(self):
-        from labkit.gates import audit
 
         seen = 0
         for path in AGENT_TEXTS:
@@ -117,7 +117,7 @@ class Examples(unittest.TestCase):
                     continue
                 seen += 1
                 with self.subTest(path=path.name, span=span):
-                    self.assertIsNone(audit.decide_shape(shlex.split(span)))
+                    self.assertIsNone(audit_decisions.decide_shape(shlex.split(span)))
         self.assertGreater(seen, 0, "the reader finds the decide calls")
 
     def test_every_branch_example_shown_parses(self):
@@ -136,10 +136,11 @@ class Examples(unittest.TestCase):
 
     def test_the_reader_refuses_the_reviewed_faults(self):
         from labkit.formats import promises
-        from labkit.gates import audit
 
         self.assertIsNotNone(
-            audit.decide_shape(shlex.split('labkit-audit a --decide 1 fixed "x"'))
+            audit_decisions.decide_shape(
+                shlex.split('labkit-audit a --decide 1 fixed "x"')
+            )
         )
         with self.assertRaises(promises.PromiseError):
             promises.parse_outcomes(

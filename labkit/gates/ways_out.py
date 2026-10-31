@@ -197,7 +197,7 @@ WAYS_OUT_IN_FULL = 'each in full: AGENTS.md, "When you are stuck"'
 
 #: the unjudged-promise cause's way out where the protocol registers no
 #: promise — a computation has no [[promise]] table, and `--decide` refuses
-#: every id an effect names there (`audit._registered`); the routes left
+#: every id an effect names there (`audit_decisions._registered`); the routes left
 #: are the ones that work: limit the claim, fix the fault, defer and hand over
 NO_PROMISE_ROUTE = (
     "this protocol registers no promise, so no effect leaves one not "

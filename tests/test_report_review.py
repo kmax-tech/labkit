@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.checks.audit_binding import AuditError  # noqa: E402
 from labkit.checks.report_blocks import discussion_lines  # noqa: E402
 from labkit.formats import attempts, findings, report_reviews  # noqa: E402
-from labkit.gates import audit, report_review  # noqa: E402
+from labkit.gates import audit, audit_prompt, report_review  # noqa: E402
 from labkit.run import llm_backends  # noqa: E402
 
 RUN = "2026-10-25T20-57-42_9ae7"
@@ -491,8 +491,8 @@ class Cli(unittest.TestCase):
             audit.main(["x", "--report-review", "REPORT.md", "--review"])
 
     def test_the_instructions_ship(self):
-        self.assertIn("Report review", audit.instructions("report"))
-        self.assertEqual(audit.cited_rules("report"), ["LAB-011", "LAB-050"])
+        self.assertIn("Report review", audit_prompt.instructions("report"))
+        self.assertEqual(audit_prompt.cited_rules("report"), ["LAB-011", "LAB-050"])
 
 
 if __name__ == "__main__":

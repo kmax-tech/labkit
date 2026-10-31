@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.gates import audit_decisions, audit_reply
 from labkit.formats import findings
 from protocol_fixture import registration_of  # noqa: E402
 
@@ -680,9 +681,8 @@ class DecisionList(unittest.TestCase):
     )
 
     def recorded(self) -> tuple[Path, Path]:
-        from labkit.gates import audit
 
-        result = audit.parse(self.REPORT)
+        result = audit_reply.parse(self.REPORT)
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         area.mkdir(parents=True)
         path = findings.write(
@@ -703,7 +703,7 @@ class DecisionList(unittest.TestCase):
         from labkit.gates import audit
 
         area, path = self.recorded()
-        lines = audit.decision_lines(findings.read(path), area, self.REPORT)
+        lines = audit_decisions.decision_lines(findings.read(path), area, self.REPORT)
         text = "\n".join(lines)
         self.assertIn(str(path.name), text)
         self.assertRegex(text, r"\n  1 · BLOCKER · scripts/01_measure.py:12")
@@ -739,7 +739,6 @@ class DecisionList(unittest.TestCase):
         self.assertEqual(rec.open, [])
 
     def test_a_record_without_findings_says_so(self):
-        from labkit.gates import audit
 
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         area.mkdir(parents=True)
@@ -754,7 +753,9 @@ class DecisionList(unittest.TestCase):
             registration=registration_of(area),
         )
         report = "READ · README.md:3 · a stamped placeholder\nverdict: 0 blockers, 0 warnings\n"
-        text = "\n".join(audit.decision_lines(findings.read(path), area, report))
+        text = "\n".join(
+            audit_decisions.decision_lines(findings.read(path), area, report)
+        )
         self.assertIn("no findings to decide", text)
         self.assertNotIn("--decide", text)
         self.assertNotIn("before deciding a BLOCKER", text)  # no BLOCKER, no routes

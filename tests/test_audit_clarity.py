@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.gates import audit
+from labkit.gates import audit, audit_reply
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\n## Summary\nQuestion †: q\n"
 SCRIPT = '"""Does x?"""\nimport scoring\n\ndef evaluate_rows(rows):\n    return {}\n'
@@ -125,10 +125,10 @@ class Clarity(unittest.TestCase):
             "- **RULE 14** · b.md:2 · x · y\n"
             "verdict: 2 findings (1 would be answered wrong)\n"
         )
-        r = audit.parse_clarity(text)
+        r = audit_reply.parse_clarity(text)
         self.assertEqual((r["findings"], r["wrong"]), (2, 1))
         self.assertEqual([n for n, _ in r["lines"]], [12, 14])
-        self.assertEqual(audit.parse_clarity("verdict: 0 findings")["wrong"], 0)
+        self.assertEqual(audit_reply.parse_clarity("verdict: 0 findings")["wrong"], 0)
 
 
 if __name__ == "__main__":

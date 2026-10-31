@@ -71,7 +71,7 @@ from labkit.formats.repo import audit_command, layout_root, shown, the_protocol
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.formats.prompts import prompt_body
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
-from labkit.gates import audit
+from labkit.gates import audit, audit_decisions, audit_prompt, audit_reply
 from labkit.gates.ways_out import ANSWER_AGAIN
 
 #: the review's mode: its instructions, the prompt's MODE line and its
@@ -79,8 +79,8 @@ from labkit.gates.ways_out import ANSWER_AGAIN
 REVIEW = "review"
 #: a decision line of the reviewer's report
 DECISION = re.compile(
-    audit.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + audit.SEP + r"\s*\**"
-    r"(upheld|rejected|insufficient)\**\s*" + audit.SEP + r"\s*(.*?)\s*$",
+    audit_reply.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + audit_reply.SEP + r"\s*\**"
+    r"(upheld|rejected|insufficient)\**\s*" + audit_reply.SEP + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(
@@ -268,7 +268,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
             f"protocol text changed after the audit",
             fix="audit again and decide again",
         )
-    label, rules_text = audit.standard_excerpt(REVIEW)
+    label, rules_text = audit_prompt.standard_excerpt(REVIEW)
     pieces: list[tuple[str, str]] = [
         (DECISIONS_LABEL, decisions_text(record, decided, found)),
         (f"FILE: {shown(protocol, repo)}", text),
@@ -281,8 +281,8 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     pieces.append((f"FILE: {label}", rules_text))
     body = prompt_body(pieces)
     prompt = (
-        f"{audit.instructions(REVIEW)}\n\nMODE: {REVIEW} · AREA: {shown(area, repo)} · "
-        f"RECORD: {record.path.name}\n\n{audit.INLINE_NOTE}\n\n{body}"
+        f"{audit_prompt.instructions(REVIEW)}\n\nMODE: {REVIEW} · AREA: {shown(area, repo)} · "
+        f"RECORD: {record.path.name}\n\n{audit_prompt.INLINE_NOTE}\n\n{body}"
     )
     return Evidence(
         prompt, snap.sha, seen.sha, reviews.claim_digest(text), [n for n, _ in decided]
@@ -294,7 +294,7 @@ def parse_review(report: str, numbers: list[int]) -> list[tuple[int, str, str]]:
     line, held to NUMBERS: every number once, no other, and the closing
     counts equal to the lines. Raises AuditError otherwise — nothing is
     recorded from a report that disagrees with itself."""
-    m = audit.last_verdict(VERDICT, report, "the report", "a review")
+    m = audit_reply.last_verdict(VERDICT, report, "the report", "a review")
     body = (report or "")[: m.start()]
     lines = [
         (int(d.group(1)), d.group(2), d.group(3).strip())
@@ -324,7 +324,7 @@ def _record(area: Path, record: Path | None) -> findings.Record:
     """RECORD read, or the area's newest analysis record; FindingsError when
     there is none."""
     if record is not None:
-        return findings.read(audit.record_path(area, record))
+        return findings.read(audit_decisions.record_path(area, record))
     analysis = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
     if not analysis:
         raise findings.FindingsError(f"{area}: no analysis record — nothing to review")
@@ -350,7 +350,7 @@ def contested_gap(
     decide_again = (
         "decide again (`--decide N …`, the reason naming the evidence, or the "
         "effect `not assessable`) or limit the claim, then review"
-        if audit.may_leave_unassessed(area, protocol)
+        if audit_decisions.may_leave_unassessed(area, protocol)
         else "decide again (`--decide N …`, the reason naming the evidence) or "
         "limit the claim, then review — or hand the protocol over "
         "(no promise is registered to leave not assessable)"
@@ -439,7 +439,9 @@ def review(
         )
     )
     if r:
-        print(f"  rejected: {rejected_way(audit.may_leave_unassessed(area, chosen))}")
+        print(
+            f"  rejected: {rejected_way(audit_decisions.may_leave_unassessed(area, chosen))}"
+        )
     if i:
         print(
             "  insufficient: supply the evidence the reviewer names (in the "

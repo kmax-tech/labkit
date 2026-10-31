@@ -196,7 +196,7 @@ class Finding:
     grade: str
     # the finding whole, as the auditor wrote it: its grade line and the
     # lines below it up to the next finding or section, stripped, joined by
-    # "\n" (`audit.finding_entries`); its closing field is the check
+    # "\n" (`audit_reply.finding_entries`); its closing field is the check
     text: str
     status: str
     reason: str
@@ -438,7 +438,7 @@ def state_unchanged(record: Record, area: Path, text: str) -> bool:
     """Whether AREA's code, the promise block and the registration of TEXT
     stamp now as RECORD saw them — the run aside (`AuditedState`). Under a
     `fixed` decision this says the claimed repair changed nothing the audit
-    binds (`audit.repair_hint`). Raises FileNotFoundError or ValueError
+    binds (`audit_decisions.repair_hint`). Raises FileNotFoundError or ValueError
     (nothing to stamp) and `promises.PromiseError` (the block does not
     read)."""
     now = AuditedState(
@@ -498,7 +498,7 @@ class AuditedState:
     (`protocol_check.registration_stamp`, compared as a mapping) and, mode
     analysis, the RUN_ID it read (NO_RUN: none) and the SHOWN_SHA of what
     it was shown of that run; both None for preflight. One type for the
-    prompt that binds it (`audit.bound_prompt`), the record (`Record.state`)
+    prompt that binds it (`audit_prompt.bound_prompt`), the record (`Record.state`)
     and every match of the two (`covering_records`) — the audit matched a
     record field by field beside `covering_records` (audit 2026-10-27,
     third, plan 2)."""

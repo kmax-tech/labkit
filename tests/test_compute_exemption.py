@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 from labkit.formats import promises
-from labkit.gates import audit
+from labkit.gates import audit_prompt
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,7 +33,7 @@ class CountExemption(unittest.TestCase):
     def test_the_auditor_reads_the_exemption(self):
         for mode in ("preflight", "analysis"):
             with self.subTest(mode=mode):
-                _, text = audit.standard_excerpt(mode)
+                _, text = audit_prompt.standard_excerpt(mode)
                 self.assertIn('a computation\n  (`kind = "compute"`', text)
                 self.assertIn("owes neither tables nor a\n  success criterion", text)
 

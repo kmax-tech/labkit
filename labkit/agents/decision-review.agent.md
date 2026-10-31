@@ -1,6 +1,6 @@
 <!-- the decision-review agent's instructions, run by `labkit-audit --review` through labkit.run.llm.
      `labkit-audit` inlines everything the list below names; the LAB ids this file cites are
-     the rules it inlines from the standard (`audit.cited_rules`). -->
+     the rules it inlines from the standard (`audit_prompt.cited_rules`). -->
 # Decision review — does the reported claim stand within the limit?
 
 You are the second, cold reader of decisions a person made on an audit's

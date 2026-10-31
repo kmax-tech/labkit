@@ -74,9 +74,9 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"install_hooks"},
     ),
     # the audit and both reviewers each spelled the answer-line separator and
-    # joined the prompt themselves (audit 2026-10-27, third); `audit.SEP`,
-    # `audit.LEAD`, `audit.prompt_body`
-    ("an answer-line separator spelled by hand", r"\(\?:·\|—\|–\|:\)", {"audit"}),
+    # joined the prompt themselves (audit 2026-10-27, third); `audit_reply.SEP`,
+    # `audit_reply.LEAD`, `prompts.prompt_body`
+    ("an answer-line separator spelled by hand", r"\(\?:·\|—\|–\|:\)", {"audit_reply"}),
     (
         "a prompt joined by hand",
         r"\.join\(f\"===== \{|f\"\\n?===== FILE: \{",

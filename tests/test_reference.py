@@ -14,6 +14,7 @@ import sys
 import unittest
 from pathlib import Path
 
+from labkit.gates import audit_prompt
 from labkit.formats import protocol_block, protocol_check, reference
 from protocol_fixture import head  # noqa: E402
 
@@ -557,9 +558,8 @@ class AuditorInstruction(unittest.TestCase):
         return " ".join(text.split())
 
     def instruction(self) -> str:
-        from labkit.gates import audit
 
-        return self.one_line(audit.instructions("analysis"))
+        return self.one_line(audit_prompt.instructions("analysis"))
 
     def test_a_compute_protocol_owes_no_criterion(self):
         text = self.instruction()

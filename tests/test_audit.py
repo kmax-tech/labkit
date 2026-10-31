@@ -23,9 +23,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import protocol_text_of, registration_of, run_record, shown_sha  # noqa: E402
-from labkit.gates import audit, decision_review, report_check, ways_out  # noqa: E402
+from labkit.gates import (
+    audit,
+    audit_decisions,
+    audit_prompt,
+    audit_reply,
+    decision_review,
+    report_check,
+    ways_out,
+)  # noqa: E402
 from labkit.checks import audit_binding, result_render  # noqa: E402
-from labkit.formats import attempts, findings, followup, promises, runs, scope_sha  # noqa: E402
+from labkit.formats import (
+    attempts,
+    findings,
+    followup,
+    promises,
+    rules,
+    runs,
+    scope_sha,
+)  # noqa: E402
 
 PROTOCOL = "- **Protocol id:** p-0123456789abcdef\nCriterion [criterion-1].\n"
 SCRIPT = "import scoring\nfrom labkit.run import runlog\nprint(scoring.X)\n"
@@ -141,7 +157,7 @@ class Audit(unittest.TestCase):
         self.assertNotIn("### 2B · The Data Path", prompt)  # a chapter nobody cited
         self.assertNotIn("## 1. Evidence", prompt)
         self.assertEqual(
-            audit.cited_rules("preflight"),
+            audit_prompt.cited_rules("preflight"),
             ["LAB-103", "LAB-015", "LAB-017", "LAB-004", "LAB-050", "LAB-003"],
         )
         # what binds after the first measurement comes with its rule
@@ -479,9 +495,7 @@ class Audit(unittest.TestCase):
         self.assertIn("verdict", err)
 
     def test_missing_standard_and_ambiguous_protocol_refuse(self):
-        with mock.patch.object(
-            audit.rules, "STANDARD", Path("/nonexistent/standard.md")
-        ):
+        with mock.patch.object(rules, "STANDARD", Path("/nonexistent/standard.md")):
             rc, _, err, sent = run(repo_with(), CLEAN)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("installed without its standard", err)
@@ -547,7 +561,7 @@ class Audit(unittest.TestCase):
             "BLOCKER — a.py:1 — wrong denominator\n**BLOCKER:** b.py:2 · x\n"
             "verdict: 2 blockers, 0 warnings"
         )
-        self.assertEqual(len(audit.parse(report)["findings"]), 2)
+        self.assertEqual(len(audit_reply.parse(report)["findings"]), 2)
         area = repo_with()
         rc, _, err, _ = run(area, report)
         self.assertEqual(rc, 1)
@@ -620,17 +634,18 @@ class OneSnapshot(unittest.TestCase):
 
     def audit(self, area: Path, answer=None, **hooks) -> tuple[int, str, list[str]]:
         """labkit-audit in mode analysis; HOOKS wrap a function of the
-        reading (`audited_run`, `area_snapshot`) to edit the area first;
+        reading (`audit_prompt.audited_run`, `audit_prompt.area_snapshot`) to
+        edit the area first;
         ANSWER fakes the model (it may edit the area too)."""
         patches = []
         for name, edit in hooks.items():
-            real = getattr(audit, name)
+            real = getattr(audit_prompt, name)
 
             def edited_then(*args, _real=real, _edit=edit, **kw):
                 _edit()
                 return _real(*args, **kw)
 
-            patches.append(mock.patch.object(audit, name, edited_then))
+            patches.append(mock.patch.object(audit_prompt, name, edited_then))
         sent: list[str] = []
 
         def fake(alias, prompt, **kw):
@@ -1560,7 +1575,7 @@ class RequiredCheck(unittest.TestCase):
         assessable. The twin: a finding without a check names none."""
         area, earlier = self.fv.area(self.CHECKED)
         record = findings.read(earlier)
-        lines = "\n".join(audit.decision_lines(record, area, ""))
+        lines = "\n".join(audit_decisions.decision_lines(record, area, ""))
         self.assertIn(
             "check owed before `fixed` holds: extend the measuring script so that its "
             "kept rows carry what `feature_sources` needs and `evaluate_rows()` "
@@ -1572,7 +1587,9 @@ class RequiredCheck(unittest.TestCase):
         plain, plain_record = self.fv.area(FixVerdicts.LEAK)
         self.assertNotIn(
             "check owed",
-            "\n".join(audit.decision_lines(findings.read(plain_record), plain, "")),
+            "\n".join(
+                audit_decisions.decision_lines(findings.read(plain_record), plain, "")
+            ),
         )
 
     def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
@@ -1696,7 +1713,7 @@ class CheckNote(unittest.TestCase):
         for name in ("C-1", "C-2", "C-3", "D-1", "D-2", "D-3"):
             with self.subTest(name):
                 answer = (PILOT2 / f"{name}.report.txt").read_text(encoding="utf-8")
-                result = audit.parse(answer)
+                result = audit_reply.parse(answer)
                 area = repo_with()
                 path = findings.write(
                     area,
@@ -2148,7 +2165,7 @@ class UnrecordedCall(unittest.TestCase):
         self.assertIn(
             f"audit call superseded: attempt {attempt.id} (preflight) by the later "
             f"audit {record.path.name} of its mode, protocol and promise block (its "
-            f"code may differ) — {audit.SUPERSEDED_MEANS}",
+            f"code may differ) — {audit_decisions.SUPERSEDED_MEANS}",
             out,
         )
         self.assertNotIn("audit did not complete", out)
@@ -2321,11 +2338,11 @@ def read_as_before(answer: str) -> list[tuple[str, str]]:
     their lines below the grade line: each finding line alone, stripped —
     the old reading frozen here on purpose, so the twin compares against
     it and not against the code under test."""
-    body = answer[: list(audit.VERDICT.finditer(answer))[-1].start()]
+    body = answer[: list(audit_reply.VERDICT.finditer(answer))[-1].start()]
     return [
         (f.group(1), line.strip())
         for line in body.splitlines()
-        if (f := audit.FINDING.match(line))
+        if (f := audit_reply.FINDING.match(line))
     ]
 
 
@@ -2489,7 +2506,7 @@ class WholeFinding(unittest.TestCase):
             with self.subTest(path.name):
                 answer = path.read_text(encoding="utf-8")
                 self.assertEqual(
-                    audit.parse(answer)["findings"], read_as_before(answer)
+                    audit_reply.parse(answer)["findings"], read_as_before(answer)
                 )
 
     def test_text_after_the_last_finding_below_a_blank_line_is_refused(self):
@@ -2534,7 +2551,7 @@ class WholeFinding(unittest.TestCase):
                 f"{closing}\n\nverdict: 0 blockers, 1 warnings, 0 notes"
             )
             with self.subTest(closing=closing):
-                parsed = audit.parse(answer)
+                parsed = audit_reply.parse(answer)
                 self.assertEqual(parsed["verdict"], (0, 1, 0))
                 self.assertEqual(
                     parsed["findings"],
@@ -2858,7 +2875,9 @@ class Carried(unittest.TestCase):
             os.chdir(area.parents[1])
             (line,) = [
                 ln.strip()
-                for ln in audit.decision_lines(findings.read(r1), area, "", x0)
+                for ln in audit_decisions.decision_lines(
+                    findings.read(r1), area, "", x0
+                )
                 if "--decide 1 " in ln
             ]
             self.assertIn("--protocol", line)
@@ -2886,7 +2905,7 @@ class Carried(unittest.TestCase):
 
     def test_past_the_operating_limit_the_audit_refuses(self):
         area, _ = self.fv.area()
-        with mock.patch.object(audit, "EARLIER_MAX_ENTRIES", 0):
+        with mock.patch.object(audit_prompt, "EARLIER_MAX_ENTRIES", 0):
             rc, _, err, sent = self.fv.audit(area, CLEAN)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("operating limit", err)
@@ -2955,7 +2974,7 @@ class FollowupGate(unittest.TestCase):
 
     def test_in_an_area_of_several_protocols_no_step_names_the_refused_audit(self):
         """The follow-up audit refuses an area holding several protocols
-        (`audit.earlier_of`); the hold says so instead of naming the command
+        (`audit_prompt.earlier_of`); the hold says so instead of naming the command
         it would refuse (audit 2026-10-27, B1). The twin: one protocol names it."""
         area, _ = self.fv.area()
         self.fv.audit(area, CLEAN)

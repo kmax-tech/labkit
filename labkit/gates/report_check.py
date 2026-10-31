@@ -918,7 +918,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
                 fix=findings.record_way(ctx.area, ctx.protocol),
             )
         ]
-    # the follow-up refuses an area with several protocols (`audit.earlier_of`):
+    # the follow-up refuses an area with several protocols (`audit_prompt.earlier_of`):
     # no step there may name it
     several = len(area_protocols(ctx.area)) > 1
     out = [

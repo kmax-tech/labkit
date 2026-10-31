@@ -22,6 +22,7 @@ from pathlib import Path
 from unittest import mock
 
 import models_fixture
+from labkit.gates import audit_prompt
 from labkit.run import batch, lanes, llm
 from protocol_fixture import head
 
@@ -317,7 +318,6 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
     def test_the_audit_prompt_carries_what_decides_the_number(self):
         import subprocess
 
-        from labkit.gates import audit
         from labkit.tools import scaffold
 
         with tempfile.TemporaryDirectory() as d:
@@ -342,8 +342,8 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
                 self.assertEqual(scaffold.main(argv), 0)
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             area = root / "experiments" / "01-judge"
-            reading = audit.gather(area, None)
-            prompt = audit.bound_prompt("preflight", area, reading).prompt
+            reading = audit_prompt.gather(area, None)
+            prompt = audit_prompt.bound_prompt("preflight", area, reading).prompt
         for needle in (
             "ANSWERS = {",
             "PROMPT = (",

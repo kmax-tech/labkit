@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.gates import audit_prompt
 from labkit.formats import (  # noqa: E402
     protocol_block,
     protocol_check,
@@ -271,7 +272,7 @@ if __name__ == "__main__":
 class Evidence(unittest.TestCase):
     """The preflight audit is shown the bound validation itself — the apply
     protocol, its result, its model entry and its prompt — since a reference
-    alone gives it nothing to judge (`audit.validity_evidence`)."""
+    alone gives it nothing to judge (`audit_prompt.validity_evidence`)."""
 
     def _lab(self, d: str, validation: str | None) -> tuple[Path, str]:
         root = Path(d)
@@ -304,13 +305,12 @@ class Evidence(unittest.TestCase):
         )
 
     def _evidence(self, share: Path, claim: str) -> str:
-        from labkit.gates import audit
 
         text = _compute(claim)
         (share / "PROTOCOL-share.md").write_text(text, encoding="utf-8")
         return "\n".join(
             f"===== {label} =====\n{body}"
-            for label, body in audit.validity_evidence(share, text)
+            for label, body in audit_prompt.validity_evidence(share, text)
         )
 
     def test_a_bound_apply_is_shown_with_result_model_and_prompt(self):
@@ -387,7 +387,6 @@ class Evidence(unittest.TestCase):
         self.assertIn("form only", shown)
 
     def test_other_protocols_get_no_evidence_piece(self):
-        from labkit.gates import audit
 
         with tempfile.TemporaryDirectory() as d:
             share, _ = self._lab(d, None)
@@ -397,7 +396,7 @@ class Evidence(unittest.TestCase):
                 head(repeat_cost="high", kind="apply", model="haiku"),
             ):
                 with self.subTest(text=text[-120:]):
-                    self.assertEqual(audit.validity_evidence(share, text), ())
+                    self.assertEqual(audit_prompt.validity_evidence(share, text), ())
 
 
 class StaleEvidence(Evidence):

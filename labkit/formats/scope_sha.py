@@ -491,7 +491,7 @@ def validation_basis(
 ) -> tuple[list[tuple[str, bytes]], tuple[str, ...]]:
     """(entries, sentences): what the area stamp covers of the evidence its
     protocols name in `[model] annotation_validity`, so an audit that was
-    shown that evidence (`audit.validity_evidence`) goes stale when it
+    shown that evidence (`audit_prompt.validity_evidence`) goes stale when it
     changes. Per declaring protocol: the reference as written; for a
     protocol id that resolves to exactly one protocol of the repo
     (`protocol_block.repo_protocol_ids`), that protocol's bytes, its
