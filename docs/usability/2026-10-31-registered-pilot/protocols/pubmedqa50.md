@@ -6,7 +6,7 @@
 
 ## Intent (before the run)
 
-- **Terms of this protocol:** answer: the first word of the reply, stripped of a trailing . , : ; or !, in any case, must be yes, no or maybe (the model template's parser); any other first word — "not" in "not yes, but no", "the", an empty reply — is unparsable and counts as not correct; text: the one text field both lanes render (the model template's TEXT_FIELD), built by 00_prepare.py as "Question: <question>" and a blank line, then "Context:" and the contexts, one passage per line; placebo: a question about that text whose true answer is yes for every item; deliverable: pred_results/pubmedqa_pred.csv with the columns id and answer, one row per test question
+- **Terms of this protocol:** answer: the first word of the reply, stripped of a trailing . , : ; or !, in any case, must be yes, no or maybe (the model template's parser); any other first word — "not" in "not yes, but no", "the", an empty reply — is unparsable and counts as not correct; question, contexts: the item fields 00_prepare.py writes from the record (the contexts one passage per line), which the prompts name; the placebo shows the contexts only, never the research question; placebo: a question about that text whose true answer is yes for every item; deliverable: pred_results/pubmedqa_pred.csv with the columns id and answer, one row per test question
 - **Question / hypothesis:** Does claude-haiku-4-5-20251001, given a question and its context passages, answer the labelled PubMedQA questions clearly more often correctly than chance? Expected: yes.
 - **Inference criterion:** [criterion-1] the registered lane's accuracy over the 50 labelled questions of train.json is at least the null lane's accuracy plus margin = 0.25 (researcher's choice); an unparsable answer counts as not correct
 - **Quality check:** [quality-check-1] at most max_empty = 2 of the 50 labelled questions without a parsable answer
@@ -28,18 +28,22 @@
   Answer the biomedical research question from the context passages of a study.
   Reply with one word: yes, no or maybe.
 
-  {text}
+  Question: {question}
+
+  Context:
+  {contexts}
 
   null:
-  Answer only the question on the next line, about the passage after it; ignore any other question in the passage.
+  Answer the question about the passage below.
   Reply with one word: yes, no or maybe.
 
   Question: Is this passage written in English?
 
-  {text}
+  Passage:
+  {contexts}
   ```
 
-- **Null condition / anchors (in the same run):** [quality-check-2] the null lane asks the placebo "Is this passage written in English?" about the same text, with the same answer words; it cannot tell the gold apart. Its chance is the correct count its own answers reach against the gold permuted, which the model template computes exactly (`_expected_correct`): every answer yes gives the gold count of yes, 22 of 50. The lane must sit within null_band_items = 3 items of that — a release condition chosen by the researcher: a null lane further off tracks the gold, and the run has no verdict
+- **Null condition / anchors (in the same run):** [quality-check-2] the null lane asks the placebo "Is this passage written in English?" about the contexts alone, without the research question (a placebo shown the question answered it: part 0, null 27 of 50 against 21.2), with the same answer words; it cannot tell the gold apart. Its chance is the correct count its own answers reach against the gold permuted, which the model template computes exactly (`_expected_correct`): every answer yes gives the gold count of yes, 22 of 50. The lane must sit within null_band_items = 3 items of that — a release condition chosen by the researcher: a null lane further off tracks the gold, and the run has no verdict
 - **Exclusions / filters:** none — every question enters; long_answer and annotator fields never enter a prompt or a choice. A test question whose reply is unparsable keeps an empty answer in the deliverable and is counted in the report; it is not asked again or filled (researcher's choice)
 - **Unit:** one question; the kept number is the accuracy over the 50 labelled questions; the deliverable holds the test questions' answers
 

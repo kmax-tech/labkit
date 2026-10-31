@@ -20,8 +20,9 @@ KEEP = (
 PLAIN = [
     ("at least the null lane's accuracy plus margin", "at least the placebo prompt's accuracy plus margin"),
     ("the null lane asks the placebo", "the placebo prompt asks"),
-    (" (the model template's TEXT_FIELD), built by 00_prepare.py as", ", built as"),
-    ("the one text field both lanes render", "the one text both prompts show"),
+    ("the item fields 00_prepare.py writes from the record", "the record's fields"),
+    ("which the prompts name; ", ""),
+    (" (a placebo shown the question answered it: part 0, null 27 of 50 against 21.2)", ""),
     (", which the model template computes exactly (`_expected_correct`)", ", computed exactly"),
     ("The lane must sit within", "The placebo prompt's correct count must sit within"),
     ("a null lane further off tracks the gold, and the run has no verdict",
