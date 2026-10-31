@@ -1811,12 +1811,11 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
-- **Standard-Check stürzt an einem nicht parsebaren Messskript ab (2026-10-30,
-  gpt-oss/Qwen-Pilot, Qwen Labor-21):** `finalize.check_open_fields` →
-  `readme_check.readme_route` liest das Skript mit `ast.parse`; ein
-  `IndentationError` (der Agent hatte mit `sed` editiert) wird zum Traceback
-  statt zum BLOCKER mit Datei und Zeile. Garantierte Schicht, Fail loud heißt
-  Satz, nicht Stack. Zwilling: ein parsebares Skript bleibt unberührt.
+- **Erledigt (review-fixes, 2026-10-31): Standard-Check an einem nicht
+  parsebaren Messskript** — `readme_route` liest über `scope_sha.parse_source`,
+  `finalize` fängt den `SourceError` als BLOCKER „cannot be read as Python
+  (invalid syntax, line N) · Next: repair or remove"; am echten System
+  geprüft (Qwen Labor-21 war der Fall: `sed`-Edit mit `IndentationError`).
   Evidenz: `labkit-evidence/usability/2026-10-30-gptoss-pilot/qwen/store-B/
   qwen-B-t21-labkit/`.
 
