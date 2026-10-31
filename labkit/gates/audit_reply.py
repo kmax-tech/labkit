@@ -312,7 +312,7 @@ def scope_list(tail: str) -> list[str]:
 
 def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str]:
     """Where the auditor's scope and the stamp disagree — FILES are the
-    stamp's, taken before the call (`Stamp`). The stamp is what a later
+    stamp's, taken before the call (`audit_prompt.Stamp`). The stamp is what a later
     check recomputes, so a file the auditor read as part of the number but
     the stamp misses can change unnoticed (review 2026-10-07: the list was
     asked for and then dropped)."""

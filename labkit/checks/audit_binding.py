@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from labkit.formats import (
+    audit_gaps,
     findings,
     promises,
     protocol_block,
@@ -338,4 +339,4 @@ def covering_analysis(area: Path, text: str, run: Path) -> list[findings.Record]
     Raises what `analysis_now` raises, and FindingsError (a ValueError) on a
     findings file it cannot read."""
     records = [r for r in findings.area_records(area) if r.mode == ANALYSIS_AUDIT]
-    return findings.covering_records(records, analysis_now(area, text, run))
+    return audit_gaps.covering_records(records, analysis_now(area, text, run))

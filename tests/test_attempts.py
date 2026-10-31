@@ -23,7 +23,8 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.formats import attempts, findings  # noqa: E402
+from labkit.formats import attempts  # noqa: E402
+from labkit.formats import failed_attempts
 from labkit.formats.attempts import Attempt  # noqa: E402
 
 A = Attempt("a1", "analysis", "opus", "s", "2026-10-26T09:16:02", "here")
@@ -201,7 +202,7 @@ class Begin(unittest.TestCase):
 
     def test_a_committed_record_removed_refuses_the_next_attempt(self):
         area = area_in_repo()
-        findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e", "c",
+        failed_attempts.write_failed(area, "analysis", "opus", "s", "b", 60, "e", "c",
                               cause="unavailable")  # fmt: skip
         git(area.parent.parent, "add", "-A")
         git(area.parent.parent, "commit", "-qm", "failed attempt")
@@ -377,7 +378,7 @@ class EvidenceCopy(unittest.TestCase):
             area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"
         )
         running.keep_answer("the answer as the model gave it")
-        record = findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
+        record = failed_attempts.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
                                        "c", cause="unavailable")  # fmt: skip
         running.end("failed", file=record.name)
         return running.id, record
@@ -508,7 +509,7 @@ class Hook(unittest.TestCase):
         running = attempts.begin(
             area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"
         )
-        failed = findings.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
+        failed = failed_attempts.write_failed(area, "analysis", "opus", "s", "b", 60, "e",
                                        "c", cause="unavailable")  # fmt: skip
         running.end("failed", file=failed.name)  # as labkit-audit journals it
         git(root, "add", "-A")

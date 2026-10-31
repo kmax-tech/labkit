@@ -15,6 +15,7 @@ from labkit.formats import (
     attempts,
     console,
     evidence,
+    failed_attempts,
     findings,
     promises,
     protocol_check,
@@ -190,7 +191,7 @@ class _Calls:
     open, why each historical one among them is (HISTORICAL_WHY, by file
     name or attempt id), and those a later audit SUPERSEDED."""
 
-    failed: tuple[findings.Failed, ...] = ()
+    failed: tuple[failed_attempts.Failed, ...] = ()
     unrecorded: tuple[attempts.Attempt, ...] = ()
     historical_why: Mapping[str, str] = field(default_factory=dict)
     superseded: tuple[_Superseded, ...] = ()
@@ -209,7 +210,7 @@ class _Listing:
     records: list[findings.Record]
     errors: list[str]
     hidden: int
-    failed: tuple[findings.Failed, ...] = ()
+    failed: tuple[failed_attempts.Failed, ...] = ()
     unrecorded: tuple[attempts.Attempt, ...] = ()
     # of those, the historical calls (`attempts.historical_call`): failed file
     # name or attempt id → why its binding or order is not known; superseded
@@ -358,10 +359,10 @@ def _open_failed(
     that wrote it. Raises FindingsError on a failed file that does not
     read."""
     failed_at = {a.file: i for i, a in enumerate(journal) if a.outcome == "failed"}
-    failed: tuple[findings.Failed, ...] = ()
+    failed: tuple[failed_attempts.Failed, ...] = ()
     why: dict[str, str] = {}
     superseded: list[_Superseded] = []
-    for f in findings.failed_attempts(area):
+    for f in failed_attempts.failed_attempts(area):
         at = failed_at.get(f.path.name)  # None: no attempt names the file
         protocol = journal[at].protocol if at is not None else ""
         by, is_historical = _classify(

@@ -88,6 +88,7 @@ from labkit.formats.repo import gate_command, measure_anew
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
 from labkit.formats.runs import metrics_path, read_metrics, run_path
 from labkit.formats import (
+    audit_gaps,
     console,
     findings as audit_findings,
     promises,
@@ -470,7 +471,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
     mode (`findings.open_findings`, with the table of the gates' rules) — a
     BLOCKER blocks, a WARNING warns, a NOTE is printed — each with
     its file; and every analysis record names a run the area still holds
-    (`findings.records_of_gone_runs`): a run an audit read is a kept run,
+    (`audit_gaps.records_of_gone_runs`): a run an audit read is a kept run,
     and its deleted directory is a blocker where the record stands. A
     record nobody can read is a blocker, not "no findings"."""
     try:
@@ -479,7 +480,7 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
         findings.block(str(exc), fix=audit_findings.record_way(area))
         return
     known = {rd.dir.name for rd in run_dirs(area)}
-    gone = audit_findings.records_of_gone_runs(records, known)
+    gone = audit_gaps.records_of_gone_runs(records, known)
     for rec in gone:
         findings.block(
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "

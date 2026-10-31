@@ -8,7 +8,7 @@ check and the note, and finalize was green; finalize cannot ask for what
 follows the analysis audit, so the end has its own gate. Until 0.99.0 the
 gate exited 0 at `repeat_cost = "low"`, so a probe's number passed there as a
 reported one (TODO 1, 2026-10-19). Each station is tested where it lives
-(findings.audit_coverage, recheck.holds, finalize); here: what is owed when,
+(audit_gaps.audit_coverage, recheck.holds, finalize); here: what is owed when,
 that every station blocks on its own, and `--if-reported` — the gate the
 stop hook and the pre-commit run — holds exactly the protocols whose answer
 cites a run.

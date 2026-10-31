@@ -8,6 +8,7 @@ from pathlib import Path
 
 from labkit.gates import audit_decisions, audit_reply
 from labkit.formats import findings
+from labkit.formats import audit_gaps
 from protocol_fixture import registration_of  # noqa: E402
 
 BLOCK = "b10c0000000a"  # the promise block every fixture record names
@@ -310,7 +311,7 @@ class Decisions(unittest.TestCase):
         self.assertIn("carries 1 BLOCKER and 1 WARNING", str(cm.exception))
         self.assertIn(path.name, str(cm.exception))
         with self.assertRaises(findings.FindingsError):
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState("abc123def456", BLOCK, registration_of(area)),
@@ -789,7 +790,7 @@ class AuditCoverage(unittest.TestCase):
         set_status(path, 1, "fixed")
         set_status(path, 2, "limitation", "spread is a limit")
         self.assertIsNone(
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
@@ -801,7 +802,7 @@ class AuditCoverage(unittest.TestCase):
         empty.mkdir(parents=True)
         self.assertIn(
             "audited: none",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 empty,
                 "preflight",
                 findings.AuditedState(self.SHA, BLOCK, registration_of(empty)),
@@ -810,7 +811,7 @@ class AuditCoverage(unittest.TestCase):
         )
         area = area_with([("preflight", []), ("analysis", [])])
         gap = (
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState("0123456789ab", BLOCK, registration_of(area)),
@@ -822,7 +823,7 @@ class AuditCoverage(unittest.TestCase):
         analysis_only = area_with([("analysis", [])])
         self.assertIn(
             "audited: none",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 analysis_only,
                 "preflight",
                 findings.AuditedState(self.SHA, BLOCK, registration_of(analysis_only)),
@@ -834,7 +835,7 @@ class AuditCoverage(unittest.TestCase):
         area = area_with([("preflight", TWO)])
         self.assertIn(
             "2 finding(s)",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
@@ -854,14 +855,14 @@ class Binding(unittest.TestCase):
     def test_a_changed_promise_block_is_not_covered(self):
         area = area_with([("preflight", [])])
         self.assertIsNone(
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
             )
         )
         gap = (
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(self.SHA, "0ther0000000", registration_of(area)),
@@ -874,7 +875,7 @@ class Binding(unittest.TestCase):
     def test_an_analysis_audit_of_another_run_is_not_covered(self):
         area = area_with([("analysis", [])])
         self.assertIsNone(
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "analysis",
                 findings.AuditedState(
@@ -883,7 +884,7 @@ class Binding(unittest.TestCase):
             )
         )
         gap = (
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "analysis",
                 findings.AuditedState(
@@ -904,7 +905,7 @@ class Binding(unittest.TestCase):
         changed after the audit (review 2026-10-20)."""
         area = area_with([("analysis", [])])
         gap = (
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "analysis",
                 findings.AuditedState(
@@ -966,13 +967,13 @@ class Binding(unittest.TestCase):
                 registration=registration_of(area),
             )
         with self.assertRaisesRegex(ValueError, "held to the answering run"):
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "analysis",
                 findings.AuditedState(self.SHA, BLOCK, registration_of(area)),
             )
         with self.assertRaisesRegex(ValueError, "held to the answering run"):
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "analysis",
                 findings.AuditedState(
@@ -980,7 +981,7 @@ class Binding(unittest.TestCase):
                 ),
             )
         with self.assertRaisesRegex(ValueError, "a preflight audit to neither"):
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(
@@ -1003,7 +1004,7 @@ class Binding(unittest.TestCase):
         self.assertEqual(findings.read(path).run_id, "none")
         self.assertIn(
             "run none",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "analysis",
                 findings.AuditedState("s", "b", registration_of(area), RUN, SHOWN),
@@ -1091,6 +1092,6 @@ class AuditedStateMatch(unittest.TestCase):
         record = findings.read(path)
         now = findings.AuditedState("c", "b", reg, RUN, SHOWN)
         self.assertEqual(record.state, now)
-        self.assertEqual(findings.covering_records([record], now), [record])
+        self.assertEqual(audit_gaps.covering_records([record], now), [record])
         other = findings.AuditedState("c", "b", reg, RUN, "0" * 12)
-        self.assertEqual(findings.covering_records([record], other), [])
+        self.assertEqual(audit_gaps.covering_records([record], other), [])

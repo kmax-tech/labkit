@@ -588,7 +588,7 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     whose digest goes in the record (NO_RUN when none answers), and the
     area's earlier decided BLOCKERs (`followup.earlier_blockers`) are read
     once: the prompt shows them, and each
-    verdict on one is bound to the decision shown (`parse_fixes`).
+    verdict on one is bound to the decision shown (`audit_reply.parse_fixes`).
 
     The reading's file list was taken before the snapshot. After rendering,
     the list, the snapshot and the protocol are taken again; any change

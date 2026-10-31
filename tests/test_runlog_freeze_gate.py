@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, protocol_check, scope_sha  # noqa: E402
+from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -437,13 +438,13 @@ class FreezeGate(unittest.TestCase):
         """The failed preflight attempt at this code and these promises that a
         acknowledgement rests on (0.99.0)."""
         scope_file(self.tmp)
-        return findings.write_failed(
+        return failed_attempts.write_failed(
             self.tmp,
             "preflight",
             "opus",
             scope_sha.area_stamp(self.tmp)[0],
             promises.block_stamp(text),
-            findings.ATTEMPT_TIMEOUT_S,
+            failed_attempts.ATTEMPT_TIMEOUT_S,
             "claude-cli exit 1: ",
             "labkit-audit x --mode preflight",
             cause="unavailable",

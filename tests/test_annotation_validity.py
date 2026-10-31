@@ -19,7 +19,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import audit_prompt
-from labkit.formats import (  # noqa: E402
+from labkit.formats import (
+    audit_gaps,
     protocol_block,
     protocol_check,
     protocol_history,
@@ -436,9 +437,8 @@ class StaleEvidence(Evidence):
         ).name
 
     def _gap(self, share: Path, name: str, text: str) -> str | None:
-        from labkit.formats import findings
 
-        gap = findings.audit_record_gap(share, name, text)
+        gap = audit_gaps.audit_record_gap(share, name, text)
         return gap.why if gap else None
 
     def test_the_record_covers_the_area_while_nothing_changed(self):

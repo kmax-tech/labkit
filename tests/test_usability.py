@@ -18,7 +18,8 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit import PACKAGE_DIR  # noqa: E402
-from labkit.formats import findings, console  # noqa: E402
+from labkit.formats import console  # noqa: E402
+from labkit.formats import failed_attempts
 from labkit.probes import sab_cases, usability, usability_score  # noqa: E402
 from protocol_fixture import run_record, head  # noqa: E402
 
@@ -233,7 +234,7 @@ class ScoreVerdict(unittest.TestCase):
             _probe(root, {"mean_docs_per_case": 3.5})
             area = root / "experiments" / "01-docs-per-case"
             for cause in ("unavailable", "unproven"):
-                findings.write_failed(
+                failed_attempts.write_failed(
                     area, "analysis", "opus", "s" * 12, "b" * 12, 900,
                     "claude-cli: …", "labkit-audit x", cause=cause,
                 )  # fmt: skip

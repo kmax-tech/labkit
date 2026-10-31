@@ -33,29 +33,9 @@ The person decides each finding with `labkit-audit AREA --decide N STATUS
 changed by hand is not one labkit wrote, whatever its fields say, and a
 check of the file cannot tell who wrote them. labkit never decides.
 
-When the backend does not answer (`llm_backends.BackendError`: the CLI died, the
-server was down, every retry ran out), `labkit-audit` writes no findings
-but the evidence that it tried, next to them:
-
-    audits/2026-10-12T15-33-preflight-failed.toml
-
-    [failed]
-    date = "2026-10-12T15:33"
-    mode = "preflight"
-    model = "opus"
-    scope_sha = "fa45c7618423"   # the code it would have read
-    block_sha = "0c1d2e3f4a5b"   # the promises it would have read
-    timeout_s = 900              # the time the call was given
-    error = "claude-cli exit 1: …"
-    command = "labkit-audit experiments/09-x --mode preflight"
-
-That file is what `LABKIT_UNFROZEN=1` acknowledges at `high`:
-an audit that could not run, not one nobody ran (`audit_unavailable`, held
-by runlog's freeze gate since 0.99.0). labkit writes it, with the error the
-backend gave; a usage error (an unknown alias, an area that cannot be
-stamped) is not an unavailable audit and leaves none. A record of findings
-and a failed attempt never share a name; `area_records` reads the records
-only.
+When the backend does not answer, `labkit-audit` writes no findings but
+a failed attempt beside them (`failed_attempts`); `area_records` reads the
+records only.
 A record binds what the auditor read: the code (`scope_sha`), the promise
 block (`block_sha`), the registration it judged — the kind and the
 question with the other fields the kind owes (`registration`), not the
@@ -63,8 +43,8 @@ report fields written after the run — and, in mode analysis, the
 answering run (`run_id`).
 A full run at `high` needs the preflight record the head names
 (`preflight_audit = "<minute>-preflight.toml"`) to be one of the code and
-the promises as they are now, every finding decided (`audit_record_gap`,
-held by runlog's freeze gate and by `preflight`); a reported number needs
+the promises as they are now, every finding decided (`audit_gaps.audit_record_gap`,
+held by runlog's freeze gate and by `preflight`; `audit_gaps`); a reported number needs
 an analysis record of code, promises and the answering run as they are
 now (`report-check`). Until 0.97.1 a record named the code only, so a
 promise rewritten after the audit, or a later run under the same code,
@@ -117,7 +97,7 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
-from labkit.formats.protocol_check import registration_drift, registration_stamp
+from labkit.formats.protocol_check import registration_stamp
 from labkit.formats.repo import (
     INDEX_REV,
     audit_command,
@@ -129,7 +109,7 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.runs import as_stored, date_minute, name_minute
-from labkit.formats.scope_sha import area_stamp, digest, validation_note
+from labkit.formats.scope_sha import area_stamp, digest
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
 DIR = "audits"
@@ -139,17 +119,6 @@ FAILED_SUFFIX = "-failed.toml"
 #: and never read as one: `<minute>-review[-<n>].toml` (`create_file`
 #: numbers a second file of the minute before the suffix)
 REVIEW_NAME = re.compile(r"-review(?:-\d+)?\.toml$")
-#: the low lane's `labkit-audit` gives its one call by default, and the least a
-#: failed attempt must have been given to count as one (`audit_unavailable`):
-#: an attempt given less time than the audit takes is not an attempt
-ATTEMPT_TIMEOUT_S = 900
-#: why an audit attempt failed: the backend gave no answer (`unavailable`),
-#: or an answer the requested model did not write whole (`unproven`,
-#: `llm_backends.UnprovenAnswer` — a safety stop, another model). An
-#: unproven attempt ends the auditing of that state with that model
-#: (`stopped_attempt`): each further try costs the same and was stopped
-#: again in the fit probes
-FAILED_CAUSES = ("unavailable", "unproven")
 STATUSES = ("open", "fixed", "limitation", "false-positive")
 REASON_OWED = ("limitation", "false-positive")
 #: the statuses under which a finding leaves the result's limits without
@@ -499,8 +468,8 @@ class AuditedState:
     analysis, the RUN_ID it read (NO_RUN: none) and the SHOWN_SHA of what
     it was shown of that run; both None for preflight. One type for the
     prompt that binds it (`audit_prompt.bound_prompt`), the record (`Record.state`)
-    and every match of the two (`covering_records`) — the audit matched a
-    record field by field beside `covering_records` (audit 2026-10-27,
+    and every match of the two (`audit_gaps.covering_records`) — the audit matched a
+    record field by field beside `audit_gaps.covering_records` (audit 2026-10-27,
     third, plan 2)."""
 
     scope_sha: str
@@ -646,7 +615,7 @@ def open_findings(
                                                         a clean start says nothing of it — the run rests on
                                                         the preflight audit; an analysis record judges a
                                                         run, and finalize holds it
-        the record the head names    that record only   any grade is a gap (`audit_record_gap`): the freeze
+        the record the head names    that record only   any grade is a gap (`audit_gaps.audit_record_gap`): the freeze
         (runlog, preflight,                             refuses, preflight warns unfrozen and blocks frozen,
         protocol-check)                                 protocol-check reports — the named record stands
                                                         for the frozen state, decided whole
@@ -664,7 +633,7 @@ def open_findings(
         audit_coverage (report-check) the covering record  any grade: the record is not decided
 
     The differences are intended. A change to one row is a change to that
-    gate's rule: say so in its docstring and in this table. `audit_record_gap`
+    gate's rule: say so in its docstring and in this table. `audit_gaps.audit_record_gap`
     reads `Record.open` of the one named record itself; every walk over
     records goes through here.
     """
@@ -1589,297 +1558,6 @@ def area_records(area: Path) -> list[Record]:
     return status.records
 
 
-def covering_records(records: list[Record], now: AuditedState) -> list[Record]:
-    """The RECORDS that saw the area as it is NOW: that code, that promise
-    block, that registration and — mode analysis — that run and what was
-    shown of it (`AuditedState`)."""
-    return [r for r in records if r.state == now]
-
-
-def registration_note(records: list[Record], registration: Mapping[str, str]) -> str:
-    """For a refusal: "" unless the newest of RECORDS judged another
-    registration than REGISTRATION, else a clause naming what changed
-    (`protocol_check.registration_drift`) — the question or another field
-    the kind owes, rewritten after the audit, owes a new one."""
-    if not records:
-        return ""
-    changed = registration_drift(dict(records[-1].registration), registration)
-    if not changed:
-        return ""
-    return (
-        f" — the registration changed after the audit ({', '.join(changed)}): "
-        f"the audit judged another question than the protocol asks now"
-    )
-
-
-def records_of_gone_runs(records: list[Record], known: set[str]) -> list[Record]:
-    """The analysis RECORDS whose run is not among KNOWN (the run ids the
-    area holds now). A record is evidence that the run existed and was
-    read; the directory it names is gone. A record of NO_RUN names none.
-    Why (labkit-paper area 09, fifth haiku round, 2026-10-22): t18 deleted
-    two measured runs with `rm -rf runs/…` after their audits, and finalize
-    read the three records left behind as "every finding decided"."""
-    return [
-        r
-        for r in records
-        if r.run_id is not None and r.run_id != NO_RUN and r.run_id not in known
-    ]
-
-
-def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
-    """Why no audit of MODE covers the area as it is NOW, or None: a record
-    with that `mode` that binds NOW (`AuditedState`: the code, the
-    promises, the registration and — mode analysis — the answering run and
-    what the prompt showed of it, recomputed now: a metrics.json or output
-    rows changed after the audit owe a new one), every finding of it
-    decided. The head names a record by hand; this is what makes
-    "the frozen code was audited" a fact instead of a line (2026-10-14: after
-    fixing the audit's findings a cold agent stamped the new sha, and no
-    audit had seen that code). Its caller is report-check, mode `analysis`;
-    the freeze holds the record its head names instead
-    (`audit_record_gap`: runlog, preflight). Until 0.97.1 only the code was
-    held: a promise rewritten after the audit, or a later run under the same
-    code, kept the old record valid (review 2026-10-18).
-
-    Raises:
-        FindingsError: A findings file of AREA cannot be read.
-        ValueError: MODE is not one of MODES, or NOW's run and shown sha
-            are given for `preflight` or missing for `analysis`.
-    """
-    if mode not in MODES:
-        raise ValueError(f"audit mode {mode!r} is not one of {', '.join(MODES)}")
-    analysis = mode == ANALYSIS_AUDIT
-    if analysis != (now.run_id is not None) or analysis != (now.shown_sha is not None):
-        raise ValueError(
-            f"audit mode {mode!r} with run_id {now.run_id!r}, shown_sha "
-            f"{now.shown_sha!r}: "
-            f"an analysis audit is held to the answering run and what it was "
-            f"shown of it, a preflight audit to neither"
-        )
-    records = [r for r in area_records(area) if r.mode == mode]
-    covering = covering_records(records, now)
-    if not covering:
-        # the code, promises and run as audited, the registration rewritten
-        same_state = [r for r in records if r.state.bound == now.bound]
-        if same_state:
-            return (
-                f"no {mode} audit saw the area as it is now"
-                f"{registration_note(same_state, now.registration)} — "
-                f"`labkit-audit <area> --mode {mode}`"
-            )
-        seen = "; ".join(sorted({r.state.words() for r in records})) or "none"
-        stopped = unproven_attempts(area, mode, now.scope_sha, now.block_sha)
-        if stopped:
-            models = ", ".join(sorted({f.model for f in stopped}))
-            return (
-                f"no {mode} audit saw the area as it is now ({now.words()}): "
-                f"{len(stopped)} attempt(s) unproven — {models} did not write the "
-                f"answer whole (a safety stop or another model; "
-                f"{stopped[-1].path.name}); the same model is not tried again on "
-                f"this state: `labkit-audit <area> --mode {mode} --model <alias>`"
-            )
-        # before any audit "a change after the audit" spoke of one that
-        # never ran (audit 2026-10-27, third, I12)
-        why = (
-            "a change after the audit owes a new one" if records else "none has run yet"
-        )
-        return (
-            f"no {mode} audit saw the area as it is now "
-            f"({now.words()}; audited: {seen}) — {why}: "
-            f"`labkit-audit <area> --mode {mode}`"
-            f"{validation_note(area)}"
-        )
-    still_open = open_findings(covering)
-    if still_open:
-        return (
-            f"{len(still_open)} finding(s) of the {mode} audit of {now.scope_sha} still "
-            f"`open` — decide each ({DECIDED_LIST})"
-        )
-    return None
-
-
-@dataclass(frozen=True)
-class Failed:
-    """One attempt at an audit whose backend did not answer — written by
-    `labkit-audit`, never by hand (the evidence an acknowledged full run
-    rests on)."""
-
-    path: Path
-    date: str
-    mode: str
-    model: str
-    scope_sha: str  # the code it would have read
-    block_sha: str  # the promise block it would have read
-    timeout_s: int  # the seconds the one call was given
-    error: str  # what the backend said
-    command: str  # the command line that tried
-    cause: str  # one of FAILED_CAUSES
-
-
-def write_failed(
-    area: Path,
-    mode: str,
-    model: str,
-    scope_sha: str,
-    block_sha: str,
-    timeout_s: int,
-    error: str,
-    command: str,
-    *,
-    cause: str,
-    now: float | None = None,
-) -> Path:
-    """Write the evidence of an audit that could not run into AREA/audits/
-    and return its path: `<stamp>-<mode>-failed.toml`, never overwriting.
-    SCOPE_SHA and BLOCK_SHA name what the auditor would have read, so the
-    freeze gate can hold the acknowledgement to the code and promises as
-    they are now; TIMEOUT_S what the call was given; ERROR the backend's
-    words; COMMAND the line that tried; CAUSE one of FAILED_CAUSES."""
-    if mode not in MODES:
-        raise ValueError(f"mode {mode!r} — one of {', '.join(MODES)}")
-    if cause not in FAILED_CAUSES:
-        raise ValueError(f"cause {cause!r} — one of {', '.join(FAILED_CAUSES)}")
-    when = time.localtime(now)
-    stamp = name_minute(when)
-    lines = [
-        "# written by labkit-audit — the audit did not run; this is the evidence, "
-        "not a record of findings",
-        "[failed]",
-        f"date = {_s(date_minute(when))}",
-        f"mode = {_s(mode)}",
-        f"model = {_s(model)}",
-        f"scope_sha = {_s(scope_sha)}",
-        f"block_sha = {_s(block_sha)}",
-        f"timeout_s = {int(timeout_s)}",
-        f"error = {_s(error)}",
-        f"command = {_s(command)}",
-        f"cause = {_s(cause)}",
-    ]
-    return create_file(
-        area / DIR, f"{stamp}-{mode}", FAILED_SUFFIX, "\n".join(lines) + "\n"
-    )
-
-
-def read_failed(path: Path) -> Failed:
-    """The failed attempt at PATH; raises FindingsError on anything it
-    cannot hold to — a file nobody can read is not evidence."""
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
-        raise FindingsError(f"{path}: not TOML ({exc})") from exc
-    table = data.get("failed")
-    if not isinstance(table, dict):
-        raise FindingsError(f"{path}: no [failed] table")
-    for key in (
-        "date",
-        "mode",
-        "model",
-        "scope_sha",
-        "block_sha",
-        "error",
-        "command",
-        "cause",
-    ):
-        if not isinstance(table.get(key), str):
-            raise FindingsError(f"{path}: [failed] {key} is missing or not a string")
-    timeout = table.get("timeout_s")
-    if not isinstance(timeout, int) or isinstance(timeout, bool):
-        raise FindingsError(f"{path}: [failed] timeout_s is missing or not an integer")
-    if table["mode"] not in MODES:
-        raise FindingsError(
-            f"{path}: [failed] mode {table['mode']!r} — one of {', '.join(MODES)}"
-        )
-    if table["cause"] not in FAILED_CAUSES:
-        raise FindingsError(
-            f"{path}: [failed] cause {table['cause']!r} — one of "
-            f"{', '.join(FAILED_CAUSES)}"
-        )
-    return Failed(
-        path,
-        table["date"],
-        table["mode"],
-        table["model"],
-        table["scope_sha"],
-        table["block_sha"],
-        timeout,
-        table["error"],
-        table["command"],
-        table["cause"],
-    )
-
-
-def failed_attempts(area: Path) -> list[Failed]:
-    """Every failed attempt of AREA, oldest first (`written_order`); a file
-    that cannot be read raises."""
-    folder = area / DIR
-    if not folder.is_dir():
-        return []
-    return [
-        read_failed(p)
-        for p in sorted(folder.glob(f"*{FAILED_SUFFIX}"), key=written_order)
-    ]
-
-
-def unproven_attempts(area: Path, mode: str, sha: str, block_sha: str) -> list[Failed]:
-    """The `unproven` failed attempts of MODE at the area as it is now —
-    code SHA and promises BLOCK_SHA — with any model, oldest first.
-
-    Raises:
-        FindingsError: A failed-attempt file of AREA cannot be read.
-    """
-    return [
-        f
-        for f in failed_attempts(area)
-        if f.cause == "unproven"
-        and f.mode == mode
-        and f.scope_sha == sha
-        and f.block_sha == block_sha
-    ]
-
-
-def stopped_attempt(
-    area: Path, mode: str, model: str, sha: str, block_sha: str
-) -> Failed | None:
-    """The newest `unproven` attempt of MODE with MODEL at the area as it is
-    now (`unproven_attempts`); None when there is none. `labkit-audit`
-    refuses another try on that state with that model.
-
-    Raises:
-        FindingsError: A failed-attempt file of AREA cannot be read.
-    """
-    fitting = [
-        f for f in unproven_attempts(area, mode, sha, block_sha) if f.model == model
-    ]
-    return fitting[-1] if fitting else None
-
-
-def audit_unavailable(
-    area: Path, sha: str, mode: str, block_sha: str | None
-) -> Failed | None:
-    """The newest failed attempt of MODE at the area as it is now — code SHA
-    and, when given, promises BLOCK_SHA — whose call was given at least
-    ATTEMPT_TIMEOUT_S seconds; None when none is. This is what a full run's
-    acknowledgement rests on: an audit that could not run. An attempt at
-    other code or other promises says nothing about these; an attempt given
-    less time than the audit takes (`--timeout 1`) is not an attempt. Both
-    are mechanical, and both are said in the refusal.
-
-    Raises:
-        FindingsError: A failed-attempt file of AREA cannot be read.
-    """
-    if mode not in MODES:
-        raise ValueError(f"audit mode {mode!r} is not one of {', '.join(MODES)}")
-    fitting = [
-        f
-        for f in failed_attempts(area)
-        if f.mode == mode
-        and f.scope_sha == sha
-        and (block_sha is None or f.block_sha == block_sha)
-        and f.timeout_s >= ATTEMPT_TIMEOUT_S
-    ]
-    return fitting[-1] if fitting else None
-
-
 def names_preflight_record(name: str) -> bool:
     """Does NAME read as a preflight record's file name — the name
     `create_file` gave it under audits/ (`<minute>-preflight[-n].toml`),
@@ -1887,123 +1565,6 @@ def names_preflight_record(name: str) -> bool:
     m = _WRITTEN_NAME.match(name)
     return (
         m is not None and m.group("mode") == PREFLIGHT_AUDIT and not m.group("failed")
-    )
-
-
-@dataclass(frozen=True)
-class RecordGap:
-    """Why the record a head names covers no full run (`audit_record_gap`),
-    and the step that closes it — the way out a gate tells beside the
-    sentence (`gate.with_way_out`)."""
-
-    why: str
-    fix: str
-
-
-def audit_way(area: Path) -> str:
-    """The way out of a record that saw other code, another promise block
-    or another registration than AREA carries now: the preflight audit on
-    the state as it stands, then its decisions."""
-    return (
-        f"audit this code and promise block: "
-        f"`{audit_command(area, '--mode', 'preflight')}`, then decide its findings"
-    )
-
-
-def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
-    """Why the head's non-empty `preflight_audit` NAME does not cover a full
-    run of AREA under the protocol TEXT, or None: it names no record (an
-    `n/a`, a sentence, a path — the field is the file name of the decided
-    preflight record under audits/, and nobody waives their own audit),
-    there is no such record in the area, the record is of another mode,
-    it saw other code than the area stamps now (`scope_sha`) or another
-    promise block than TEXT carries (`block_sha`), or a finding of it is
-    still open — each with its own way out (`RecordGap.fix`): a new
-    audit where the record covers other code, another block or another
-    registration (`audit_way`), the decisions where its findings are
-    still open (`decide_way`), the record restored where it does not
-    read (`record_way`). One answer for runlog's freeze gate, `preflight`
-    and `protocol-check`; the caller decides what an empty field and
-    `low` mean. Until 0.103.0 the field was a hand-written line (`<date> · scope
-    sha <12 hex> · N findings`) whose sha a regex read and whose record the
-    sha then had to find — the record names its sha itself, so the head
-    names the record (review 2026-10-22). `n/a` passed every gate until
-    0.99.0 (third haiku round, t18: "RF model training does not require
-    external audit"); the refusal names the honest ways and offers no
-    word to write instead."""
-    name = name.strip()
-    audit = audit_way(area)
-    if not names_preflight_record(name):
-        return RecordGap(
-            "`preflight_audit` names no record — the field is the file name of the "
-            "decided preflight record under audits/ (`<minute>-preflight.toml`, "
-            "printed by `labkit-audit <area> --mode preflight` when it writes one); "
-            "at high repeat cost a full run owes that audit, and nobody waives their "
-            "own: run it and name its record; when the backend does not answer, "
-            "labkit-audit records the failed attempt and a full run acknowledges "
-            "it with LABKIT_UNFROZEN=1 (its number stays unreportable). If no "
-            "audit is owed at all, the repeat cost is wrong, not the field — and a "
-            "tier lowered after the protocol's first commit is reported "
-            "(LAB-015 Preflight audit before freezing, LAB-017 The number of audits follows the cost tier)",
-            audit,
-        )
-    path = area / DIR / name
-    if not path.is_file():
-        return RecordGap(
-            f"`preflight_audit` names {DIR}/{name}, and there is no such record in "
-            f"this area — name the one `labkit-audit <area> --mode preflight` wrote",
-            audit,
-        )
-    try:
-        record = read(path)
-    except FindingsError as exc:
-        return RecordGap(str(exc), record_way(area))
-    if record.mode != PREFLIGHT_AUDIT:
-        return RecordGap(
-            f"{name} is a {record.mode} record — `preflight_audit` names the "
-            "preflight audit",
-            audit,
-        )
-    try:
-        now = area_stamp(area)[0]
-    except (FileNotFoundError, ValueError) as exc:
-        return RecordGap(f"the area cannot be stamped now ({exc})", audit)
-    if record.scope_sha != now:
-        return RecordGap(
-            f"the record {name} saw scope sha {record.scope_sha}, the code now stamps "
-            f"{now} — it changed after the audit, so the change owes a new audit "
-            f"(`labkit-audit <area> --mode preflight`); naming another record "
-            f"without one is refused too{validation_note(area)}",
-            audit,
-        )
-    judged = _protocol_gap(record, name, text)
-    if judged:
-        return RecordGap(judged, audit)
-    if record.open:
-        return RecordGap(
-            f"{len(record.open)} finding(s) of {name} still `open` — decide each "
-            f"({DECIDED_LIST})",
-            "; ".join(decide_way(area, OpenFinding(record, f)) for f in record.open),
-        )
-    return None
-
-
-def _protocol_gap(record: Record, name: str, text: str) -> str | None:
-    """Why RECORD (named NAME) judged another protocol than TEXT, or None:
-    another promise block (`block_sha`) or another registration — the kind,
-    the question or another field the kind owes (`registration`)."""
-    try:
-        block = promises.block_stamp(text)
-    except promises.PromiseError as exc:
-        return str(exc)
-    if record.block_sha != block:
-        return (
-            f"the record {name} saw the promise block {record.block_sha}, the protocol "
-            f"carries {block} now — a promise rewritten after the audit owes a new one"
-        )
-    changed = registration_note([record], registration_stamp(text))
-    return (
-        f"the record {name} no longer covers the protocol{changed}" if changed else None
     )
 
 
@@ -2050,6 +1611,13 @@ def decide_way(
         f"{way} — `{audit_command(area, '--findings', protocol=protocol)}` "
         f"prints the ways out of a BLOCKER by its cause"
     )
+
+
+def decide_ways(area: Path, record: Record) -> str:
+    """The ways out of RECORD's open findings in AREA, one `decide_way` per
+    finding, joined by "; " — the fix of a record whose findings are still
+    open."""
+    return "; ".join(decide_way(area, OpenFinding(record, f)) for f in record.open)
 
 
 def record_way(area: Path, protocol: Path | None = None) -> str:

@@ -43,7 +43,7 @@ in prose below its line left an open blocker in the record behind exit 0
        as a WARNING; an audit that passed on warnings would have let it by)
     2  no audit: a missing file, an unreadable report, a backend failure —
        a backend that did not answer leaves `audits/<date>-<mode>-failed.toml`
-       (`findings.write_failed`): the evidence an acknowledged full run's
+       (`failed_attempts.write_failed`): the evidence an acknowledged full run's
        LABKIT_UNFROZEN=1 rests on, since 0.99.0
 
 The report is printed (and written to --out), and its findings are written
@@ -78,6 +78,7 @@ from labkit.checks.audit_binding import AuditError
 from labkit.formats import (
     attempts,
     console,
+    failed_attempts,
     findings,
     followup,
     protocol_block,
@@ -128,7 +129,7 @@ from labkit.run import llm, llm_backends
 DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
 REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
-    findings.ATTEMPT_TIMEOUT_S
+    failed_attempts.ATTEMPT_TIMEOUT_S
 )  # one call reads the area, the rules, the rows
 MODES = (*findings.MODES, "clarity")  # the recorded modes and the readability read
 #: the audit's exit contract — not `gate.EXIT_CONTRACT`: a warning is a
@@ -219,7 +220,7 @@ def _answer_or_record(
     without an end is marked interrupted and named). When the backend does not answer (the CLI died,
     the server was down, the retries ran out) there is no audit, and the
     evidence that one was tried — on this code, these promises, with this
-    much time — goes next to the records (`findings.write_failed`) before
+    much time — goes next to the records (`failed_attempts.write_failed`) before
     the AuditError that ends the command with exit 2. That file is what a
     LABKIT_UNFROZEN=1 rests on (second haiku round on 0.98.0:
     no agent started an audit, and the hatch asked for nothing). A usage
@@ -228,9 +229,9 @@ def _answer_or_record(
 
     An answer the model did not write whole (`llm_backends.UnprovenAnswer`)
     is recorded with cause `unproven`, and from then on this state is not
-    sent to this model again (`findings.stopped_attempt`): the next try is
+    sent to this model again (`failed_attempts.stopped_attempt`): the next try is
     refused before any call."""
-    stopped = findings.stopped_attempt(
+    stopped = failed_attempts.stopped_attempt(
         args.area, args.mode, args.model, stamp.sha, block_sha
     )
     if stopped is not None:
@@ -262,7 +263,7 @@ def _answer_or_record(
         running.keep_answer(answer)
         return answer, running
     except llm_backends.UnprovenAnswer as exc:
-        tried = findings.write_failed(
+        tried = failed_attempts.write_failed(
             args.area,
             args.mode,
             args.model,
@@ -281,7 +282,7 @@ def _answer_or_record(
             fix="audit with another alias (--model), or leave the number unreported",
         ) from exc
     except llm_backends.BackendError as exc:
-        tried = findings.write_failed(
+        tried = failed_attempts.write_failed(
             args.area,
             args.mode,
             args.model,
@@ -495,8 +496,8 @@ def _record(
     """Read REPORT, written to BOUND's prompt, write its record (bound to
     what BOUND shows) and end RUNNING with it; print what the
     person decides. Exit 1 on a blocker or a warning, 0 on none, 2 when the
-    report does not read, its FIX lines do not (`parse_fixes`), or a shown
-    decision changed while the auditor read it (`decisions_moved`) — the
+    report does not read, its FIX lines do not (`audit_reply.parse_fixes`), or a shown
+    decision changed while the auditor read it (`audit_prompt.decisions_moved`) — the
     attempt ends without a record, said why and with the way on
     (`_refusal_without_record`)."""
     console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
@@ -569,7 +570,7 @@ def _refusal_without_record(
     answer RUNNING kept, then `labkit-audit <area> --findings`, which names
     the call and offers the handover. The first way by the cause: an
     AuditError's own fix (each raised in `_record` carries one); for an
-    area record that does not read (FindingsError, from `decisions_moved`)
+    area record that does not read (FindingsError, from `audit_prompt.decisions_moved`)
     `findings.record_way`, which names `--findings` itself; for any other
     ValueError — the answer's lines, refused by `findings.write`: the
     verdict count, a finding's field — ANSWER_AGAIN. ARGS gives the area

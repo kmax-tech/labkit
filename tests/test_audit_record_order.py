@@ -14,6 +14,7 @@ import unittest
 from pathlib import Path
 
 from labkit.formats import findings
+from labkit.formats import failed_attempts
 from protocol_fixture import registration_of  # noqa: E402
 
 NOW = time.mktime((2026, 10, 20, 14, 3, 0, 0, 0, -1))
@@ -27,23 +28,25 @@ class WrittenOrder(unittest.TestCase):
         self,
     ) -> None:
         for n in (1, 2, 3):
-            findings.write_failed(
+            failed_attempts.write_failed(
                 self.area,
                 "preflight",
                 "opus",
                 "s" * 12,
                 "b" * 12,
-                findings.ATTEMPT_TIMEOUT_S,
+                failed_attempts.ATTEMPT_TIMEOUT_S,
                 f"attempt {n}",
                 "labkit-audit x",
                 cause="unavailable",
                 now=NOW,
             )
         self.assertEqual(
-            [f.error for f in findings.failed_attempts(self.area)],
+            [f.error for f in failed_attempts.failed_attempts(self.area)],
             ["attempt 1", "attempt 2", "attempt 3"],
         )
-        newest = findings.audit_unavailable(self.area, "s" * 12, "preflight", "b" * 12)
+        newest = failed_attempts.audit_unavailable(
+            self.area, "s" * 12, "preflight", "b" * 12
+        )
         assert newest is not None
         self.assertEqual(newest.error, "attempt 3")
 

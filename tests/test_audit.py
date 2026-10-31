@@ -35,6 +35,8 @@ from labkit.gates import (
 from labkit.checks import audit_binding, result_render  # noqa: E402
 from labkit.formats import (
     attempts,
+    audit_gaps,
+    failed_attempts,
     findings,
     followup,
     promises,
@@ -356,7 +358,7 @@ class Audit(unittest.TestCase):
         self.assertEqual(len(files), 1, err.getvalue())
         self.assertIn(f"recorded as {files[0]}", err.getvalue())
         self.assertIn("LABKIT_UNFROZEN=1", err.getvalue())
-        tried = findings.read_failed(files[0])
+        tried = failed_attempts.read_failed(files[0])
         self.assertEqual(tried.error, "claude-cli exit 1: quota")
         self.assertEqual(tried.timeout_s, 1200)
         self.assertEqual(tried.scope_sha, scope_sha.area_stamp(area)[0])
@@ -416,7 +418,7 @@ class Audit(unittest.TestCase):
         rc, err = audit_once()
         self.assertEqual(rc, 2)
         self.assertIn("Do not run it again on this state", err)
-        (tried,) = findings.failed_attempts(area)
+        (tried,) = failed_attempts.failed_attempts(area)
         self.assertEqual(tried.cause, "unproven")
         self.assertEqual(calls, ["opus"])
 
@@ -424,7 +426,7 @@ class Audit(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertIn("no further try on the same code, promises and model", err)
         self.assertEqual(calls, ["opus"])  # refused before any call
-        self.assertEqual(len(findings.failed_attempts(area)), 1)
+        self.assertEqual(len(failed_attempts.failed_attempts(area)), 1)
 
         rc, _ = audit_once("--model", "haiku")
         self.assertEqual(calls, ["opus", "haiku"])  # another model may try
@@ -447,7 +449,7 @@ class Audit(unittest.TestCase):
                 audit.main([str(area), "--mode", "preflight"])
         self.assertEqual(calls, ["opus", "opus"])
         self.assertEqual(
-            [f.cause for f in findings.failed_attempts(area)],
+            [f.cause for f in failed_attempts.failed_attempts(area)],
             ["unavailable", "unavailable"],
         )
 
@@ -536,7 +538,7 @@ class Audit(unittest.TestCase):
         self.assertNotIn("run_id", record)  # a preflight audit reads no run
         self.assertIn(
             "still `open`",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(before, block, registration_of(area)),
@@ -545,7 +547,7 @@ class Audit(unittest.TestCase):
         )
         self.assertIn(
             "no preflight audit saw",
-            findings.audit_coverage(
+            audit_gaps.audit_coverage(
                 area,
                 "preflight",
                 findings.AuditedState(after, block, registration_of(area)),
@@ -2087,7 +2089,7 @@ class UnrecordedCall(unittest.TestCase):
         ):
             rc = audit.main([str(area), "--mode", "preflight"])
         self.assertEqual(rc, 2, err.getvalue())
-        (tried,) = findings.failed_attempts(area)
+        (tried,) = failed_attempts.failed_attempts(area)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
         self.assertIn(f"audit did not complete: {tried.path.name}", out)
@@ -2271,7 +2273,7 @@ class UnrecordedCall(unittest.TestCase):
         """A `-failed.toml` from before the journal: its order is not known,
         and an audit of its mode run again now settles it."""
         area = repo_with()
-        failed = findings.write_failed(
+        failed = failed_attempts.write_failed(
             area, "preflight", "opus", "s" * 12, "b" * 12, 60, "down", "c",
             cause="unavailable",
         )  # fmt: skip
@@ -2289,7 +2291,7 @@ class UnrecordedCall(unittest.TestCase):
 
     def test_without_a_readable_journal_no_failed_file_is_called_historical(self):
         area = repo_with()
-        failed = findings.write_failed(
+        failed = failed_attempts.write_failed(
             area, "preflight", "opus", "s" * 12, "b" * 12, 60, "down", "c",
             cause="unavailable",
         )  # fmt: skip

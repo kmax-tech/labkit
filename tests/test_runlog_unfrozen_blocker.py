@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import findings, promises, scope_sha  # noqa: E402
+from labkit.formats import failed_attempts
 from labkit.run import runlog, start_check  # noqa: E402
 from protocol_fixture import registration_of, DEFAULT_BLOCK, head, scope_file  # noqa: E402
 
@@ -73,13 +74,13 @@ class UnfrozenBlocker(unittest.TestCase):
 
     def _audit_failed(self) -> Path:
         """The failed attempt the acknowledgement rests on (0.99.0)."""
-        return findings.write_failed(
+        return failed_attempts.write_failed(
             self.tmp,
             "preflight",
             "haiku",
             scope_sha.area_stamp(self.tmp)[0],
             promises.block_stamp(UNFROZEN),
-            findings.ATTEMPT_TIMEOUT_S,
+            failed_attempts.ATTEMPT_TIMEOUT_S,
             "claude-cli exit 1: ",
             "labkit-audit x --mode preflight",
             cause="unavailable",

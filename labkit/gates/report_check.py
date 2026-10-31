@@ -150,6 +150,7 @@ from labkit.formats.protocol_history import (
 )
 from labkit.formats import (
     attempts,
+    audit_gaps,
     console,
     findings,
     followup,
@@ -684,7 +685,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
             fix=f"measure: `{measure_command(ctx.area)}`, then audit that run",
         )
     try:
-        gap = findings.audit_coverage(
+        gap = audit_gaps.audit_coverage(
             ctx.area, ANALYSIS_AUDIT, analysis_now(ctx.area, ctx.text, ctx.run)
         )
         covering = covering_analysis(ctx.area, ctx.text, ctx.run)

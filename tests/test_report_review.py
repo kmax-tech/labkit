@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from labkit.checks.audit_binding import AuditError  # noqa: E402
 from labkit.checks.report_blocks import discussion_lines  # noqa: E402
 from labkit.formats import attempts, findings, report_reviews  # noqa: E402
+from labkit.formats import failed_attempts
 from labkit.gates import audit, audit_prompt, report_review  # noqa: E402
 from labkit.run import llm_backends  # noqa: E402
 
@@ -75,7 +76,7 @@ class Area:
         findings.write_decision(
             rec, 1, "limitation", "the leak stays", "criterion-1 not assessable"
         )
-        findings.write_failed(
+        failed_attempts.write_failed(
             self.area,
             "analysis",
             "opus",
