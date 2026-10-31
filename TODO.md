@@ -2511,9 +2511,8 @@ bewertet. Entwürfe, Forscherentscheidungen und Vorbereitungsevidenz in
 `docs/usability/2026-10-31-registered-pilot/`. Die Modellvorlage ist repariert (Null-Spur am Zufallswert
 ihrer eigenen Antworten, Parser ohne Groß-/Kleinschreibung, c72498c). Vor der Runde:
 
-1. Modellweg für pubmedqa50 einmal getrennt prüfen (Proxy, API-Schlüssel, ein Aufruf). Die Sandbox
-   kennt bisher nur `claude-cli` als Backend für `haiku` (models.toml) — klären, wie ein
-   Experimentskript im Container das Modell erreicht.
+1. ~~Modellweg für pubmedqa50 getrennt prüfen~~ — erledigt 2026-10-31: `haiku` über `claude-cli` im
+   Container hinter dem Proxy, ein Aufruf, Antwort `yes`, 0,008 $ (README, Vorbereitungsevidenz).
 2. Kleiner technischer Probelauf Ende zu Ende (Modellaufruf, Parser, Zeilen, Audit, Adoption) auf dem
    Release mit der Vorlagenreparatur.
 3. Harness: Stempeln mit vorgegebenem Protokoll in `sandboxlab.arms` reparieren (ruft noch

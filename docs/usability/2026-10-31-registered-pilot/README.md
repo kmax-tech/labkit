@@ -60,14 +60,18 @@ result.
 - 15, counted in the supplied files: train 5,093 rows (2,654 positive), val
   728 (450 positive).
 - pubmedqa50, counted in train.json: yes 22, no 21, maybe 7.
+- pubmedqa50, the model route, tried once apart from any attempt: labkit's
+  `haiku` alias (backend `claude-cli`) called from inside the agent image
+  through the proxy on the API key — one request
+  (`req_011CgarZ4rjdELjRRdaiXhuv`), reply `yes` to the placebo, 0.008 USD;
+  about 6,200 input tokens per call are the CLI's own system prompt. Script
+  and output in the evidence archive (`labkit-evidence`, same folder name).
 
 ## Before the round
 
-1. The model route for pubmedqa50, tried once apart from any attempt (proxy,
-   API key, one call).
-2. A small technical trial run end to end — model call, parser, kept rows,
+1. A small technical trial run end to end — model call, parser, kept rows,
    audit, adoption — on the release that carries the template repair.
-3. The harness: stamping with a given protocol in `sandboxlab.arms` (it still
+2. The harness: stamping with a given protocol in `sandboxlab.arms` (it still
    calls `--cost seconds`), `PLAN.md` into the control arm.
-4. A contract, written before the round, and the evidence that the global
+3. A contract, written before the round, and the evidence that the global
    commands, the repo's environment and the hooks run the same labkit.
