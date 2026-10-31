@@ -83,3 +83,33 @@ agentsandbox-proxy:779d63471cca (round 2's and the model probe's proxy), labkit 
 89182a39a6631fabf4c797a8c9459b8a62ba17b5 unchanged. Part 0's repositories restaged in that image;
 the checks of addendum 1 repeated there with the same result ("one labkit: 0.104.3 …",
 protocol-check passes both, _expected_correct in pubmedqa50's script; Claude Code 2.1.285).
+
+Addendum 3, 2026-10-31 night, after part 0 and before its repetition. Part 0 ran both lab attempts
+(rpt-t21-labkit-r1: 77 turns, 0.66 $, 15 min; rpt-tpubmedqa50-labkit-r1: 116 turns, 1.09 $, 26 min),
+both ended by the agent, none timed out. Neither work tree came back: the setup had made .venv
+read-only, and `docker cp` copied it back as a directory it could not fill ("copy /work back:
+mkdir …/.venv/bin: permission denied"); the store has .git and what sorts before .venv, the
+attempts are recorded as infrastructure failures. Read from the commits and traces: the model route,
+measurement, audits and report review ran end to end in both; neither adopted a result.
+- 21: the run measured 0.4749. Adoption was refused by finalize's untracked source (the benchmark
+  data, excluded from git; the registration named no checksum for it); the agent then committed the
+  data with `git add -f`, the first fix finalize names, and a second refusal followed (an analysis
+  audit named a run no longer kept). The agent also added a geometry repair (make_valid) to the
+  registered Exclusions field.
+- pubmedqa50: registered accuracy 0.66 against the bar 0.67 (null lane 0.42 + 0.25); the analysis
+  audit's blocker stood: the registered null prompt rendered its own fields, which the model
+  template cannot (both lanes render one text field) — a fault of the registration, not the agent's.
+Repairs, all before the repetition: (1) harness — the setup no longer makes .venv read-only
+(labkit-paper ec6e1a2); a .venv the agent changed is counted at scoring (run_pilot.py venv_changed);
+(2) registrations — every protocol pins its data outside git by labkit's source digest in Data /
+scope, directory and files (checked with labkit's own pinned_source, an edited file is caught);
+pubmedqa50's two prompts render the one text field (labkit 611de18e); (3) environment —
+agentsandbox pinned to db9b20c (labkit-paper 6f8e27e), the commit part 0 ran (its .venv-pilot held a
+directory install of that code), labkit-paper-main's .venv its own and built from the lock; the
+runner refuses an agentsandbox whose installed commit is not the pin and records it, and --check
+stages, constructs and runs the setup offline before any paid start (labkit 9b5d61ae, from the
+parallel session). The --check of the repetition, from that .venv, no model call: agentsandbox
+db9b20cc, images labkit-sandbox:f998024abb6c (sha256:1682bdfc…) and agentsandbox-proxy:779d63471cca
+(sha256:f4b89dbd…), Claude Code 2.1.285, labkit 89182a39; both restaged repositories print "one
+labkit: 0.104.3 …" and pass protocol-check. Part 0 is repeated as registered, ids rpt2-…, store
+store-rpt2; part 0's first store stays as it is, its traces and .git go to the evidence archive.
