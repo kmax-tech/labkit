@@ -128,3 +128,22 @@ and passing the hidden evaluation (21: relative error 0.009; pubmedqa50: test ac
 neither adopted a result nor handed over — 21 held by an analysis audit's open follow-up (a check
 the run does not carry), pubmedqa50 with no full run bound (the newest bound run a probe).
 Part 0 is repeated once more as registered, ids rpt3-…, store store-rpt3.
+
+Addendum 5, 2026-10-31 night, after rpt3 and before rpt4. rpt3 ran awake (host_slept_s 0 in both).
+21 ran end to end: result adopted (2026-10-31T21-35-23_da29), labkit standard met with no gap,
+deliverable valid (relative error 0.009), registration and .venv kept; 48 turns, 0.28 $, 22 min.
+pubmedqa50 timed out at 2,400 s without a deliverable: its measurement (100 calls, 637 s) met
+neither quality check — three replies `**No**` were unreadable to the template's parser, and the
+placebo, rendered from the one text field that carried the research question, scored 27 of 50
+against 21.2 expected; the agent recorded "no verdict", then regenerated the test predictions after
+an audit finding and ran out of time. Read again with the repaired parser, no new call: registered
+33 of 50 (0.66), no unreadable reply, the placebo still 27 of 50 (out of band) — so both repairs are
+needed. Both are labkit faults, repaired in v0.104.4 (labkit f06124c4, released as e79c220e): a
+prompt names item fields beside {text}, gold and the run's keys refused; the parser reads an answer
+word inside markdown or quote marks, the first token still deciding. pubmedqa50's placebo now shows
+the contexts alone (c048a6e5). sandbox/labkit.pin e79c220e (labkit-paper b515a83); --check, no
+model call: agentsandbox db9b20cc, images labkit-sandbox:67254c6edb2c (sha256:7b95c3a8…) and
+agentsandbox-proxy:779d63471cca, Claude Code 2.1.285; both repositories print "one labkit: 0.104.4
+…" and pass protocol-check. Part 0 goes on with the two tasks not yet run end to end on this
+release: pubmedqa50 (ids rpt4-…, 2,400 s, 5 GB) and 15, the fit, untried so far (ids rpt4f-…, 3,600
+s, 12 GB, as registered for 15), run side by side, lab arm only, not counted. 21 is not repeated.
