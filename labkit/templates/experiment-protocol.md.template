@@ -186,7 +186,7 @@ constants = { max_empty = 2 }
 [[promise]]
 id = "quality-check-2"
 key = "quality_check_2_pass"
-sentence = "<the null condition: the null lane sits at chance, within null_band_items items>"
+sentence = "<the null condition: the null lane sits within null_band_items items of chance — the correct count its own answers reach against the gold permuted (a constant placebo answer: the gold count of its class)>"
 scope = ["scripts/01_measure.py"]
 constants = { null_band_items = 1 }
 ```

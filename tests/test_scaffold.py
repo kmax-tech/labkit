@@ -1643,7 +1643,7 @@ class Exp(unittest.TestCase):
         stamped_proto = proto.read_text(encoding="utf-8")
         stamped_script = script.read_text(encoding="utf-8")
         example = "constants = { null_band_items = 1 }"
-        formula = "abs(2 * correct - n) <= 2 * items"
+        formula = "abs(correct - _expected_correct(rows)) <= items"
         self.assertEqual(stamped_proto.count(example), 1)
         self.assertEqual(stamped_script.count(formula), 1)
 
@@ -1677,14 +1677,91 @@ class Exp(unittest.TestCase):
             self.assertEqual(r.returncode, 0, f"band {band}: {r.stdout}{r.stderr}")
             self.assertIn("3 passed", r.stdout)
         for wrong in (
-            "abs(2 * correct - n) < 2 * items",  # one item too narrow
-            "2 * correct - n <= 2 * items",  # open below chance
+            "abs(correct - _expected_correct(rows)) < items",  # one item too narrow
+            "correct - _expected_correct(rows) <= items",  # open below chance
         ):
             script.write_text(stamped_script.replace(formula, wrong), encoding="utf-8")
             for band in (1, 5):
                 r = band_tests(band)
                 self.assertEqual(r.returncode, 1, f"{wrong}, band {band}: {r.stdout}")
                 self.assertIn("test_null_band_is_symmetric", r.stdout)
+
+    def test_the_model_stamp_holds_three_answer_words_and_unbalanced_gold(
+        self,
+    ) -> None:
+        """The null lane sat at half the items, right only for two balanced
+        labels — PubMedQA answers yes, no or maybe on 22/21/7 gold. With
+        three answer words the stamped test runs, chance is what the lane's
+        own answers reach against the gold permuted, and the parser reads an
+        answer word in any case; the twin, a lane that tracks the gold, is
+        still out of band."""
+        import importlib.util
+
+        quiet(
+            scaffold.stamp_area,
+            self.root,
+            "three-words",
+            repeat_cost="low",
+            model="haiku",
+            kind="apply",
+        )
+        (area,) = (self.root / "experiments").glob("[0-9]*-three-words")
+        script = area / "scripts" / "01_measure.py"
+        stamped = script.read_text(encoding="utf-8")
+        two = 'ANSWERS = {"Yes": "TODO-positive-gold", "No": "TODO-negative-gold"}'
+        self.assertEqual(stamped.count(two), 1)
+        script.write_text(
+            stamped.replace(
+                two, 'ANSWERS = {"yes": "yes", "no": "no", "maybe": "maybe"}'
+            ),
+            encoding="utf-8",
+        )
+        r = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                "-k",
+                "null_band or out_of_band or perfect_effect or placebo or parser",
+                str(self.root / "tests" / "test_01_three_words.py"),
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("skipped", r.stdout)
+        spec = importlib.util.spec_from_file_location("measure_three_words", script)
+        assert spec is not None and spec.loader is not None
+        measure = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = measure
+        try:
+            spec.loader.exec_module(measure)
+        finally:
+            del sys.modules[spec.name]
+        golds = ["yes"] * 22 + ["no"] * 21 + ["maybe"] * 7
+
+        def lane(name: str, answers: list[str]) -> list[dict]:
+            return [
+                {"id": f"{name}:{i}", "lane": name, "answer": a, "gold": g}
+                for i, (a, g) in enumerate(zip(answers, golds, strict=True))
+            ]
+
+        placebo = lane("null", ["Yes"] * 50)  # any case reads as yes
+        tracking = lane("null", golds)  # a null lane that knows the gold
+        registered = lane("registered", golds)
+        sits = measure.evaluate_rows(registered + placebo)
+        self.assertEqual(sits["quality_check_2_accuracy"], 22 / 50)
+        self.assertEqual(sits["quality_check_2_expected"], 22 / 50)
+        self.assertIs(sits["quality_check_2_pass"], True)
+        self.assertIs(sits["criterion_1_pass"], True)
+        out = measure.evaluate_rows(registered + tracking)
+        self.assertIs(out["quality_check_2_pass"], False)
+        self.assertIsNone(out["criterion_1_pass"])
 
     def test_the_stamp_declares_the_model_in_the_head(self) -> None:
         """Phase 4 (2026-10-21): `--model <alias>` writes `[model] alias`, a bare

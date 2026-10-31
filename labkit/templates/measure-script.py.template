@@ -26,7 +26,9 @@ Measurement contract:
   - [criterion-1] passes when the registered lane's accuracy is at least the null
     lane's plus `margin`.
   - [quality-check-1] checks the registered lane's readable yield, [quality-check-2] that the null
-    lane sits near chance. If either fails, [criterion-1] has no verdict (None).
+    lane sits near chance: the correct count its own answers reach on
+    average against the gold permuted, exact (`_expected_correct`). If
+    either fails, [criterion-1] has no verdict (None).
   - Every registered id produces its metric key in every evaluation.
   - `evaluate_rows()` is the only implementation of these formulas;
     `02_analyze.py` and the test import it, never copy it.
@@ -55,6 +57,7 @@ Stamped by `labkit-init exp <name>`.
 from __future__ import annotations
 
 import hashlib
+from collections import Counter
 import sys
 from dataclasses import dataclass
 from fractions import Fraction
@@ -92,7 +95,8 @@ PROMPT = ("TODO: the question about this text.\n\n"
 # (LAB-037 Every anchor carries its target and rationale). Safest placebo:
 # one whose true answer is the SAME for every item ("Is this text written in
 # English?") — its expected accuracy is the gold share of the class that
-# answer maps to (0.5 on balanced gold). A placebo whose answer varies per
+# answer maps to (0.5 on balanced gold); the check computes it from the
+# lane's own answers, for two answer words or more. A placebo whose answer varies per
 # item (numbers, length, negation) can track the gold label (usability
 # probe 2026-10-07).
 PROMPT_NULL = ("TODO: a question about this text that has nothing to do with the gold label.\n\n"
@@ -134,7 +138,7 @@ class MeasureConfig:
                                 # the stamped value is a placeholder: derive it for THIS item count, from how
                                 # many empty answers still leave the number readable (LAB-028 An endpoint is a
                                 # model slot) — and again when ITEMS changes
-    null_band_items: int        # [quality-check-2]: the null lane sits at chance ± this many ITEMS (counted, not a share)
+    null_band_items: int        # [quality-check-2]: the null lane sits within this many ITEMS of chance (counted, not a share)
     model: str = MODEL          # alias from models.toml; runlog resolves it into models_resolved
     # the instrument's version: both prompts, so a reworded prompt is a
     # different config even when every threshold stays
@@ -148,14 +152,21 @@ CONFIG = MeasureConfig(**promises.all_constants(promises.load(PROTOCOL)))
 CRITERION_VALUE_KEY = "criterion_1_accuracy"
 
 
+# The parser reads answer words in any case, so two words that differ only
+# in case would be one answer: the import refuses them.
+if len({word.casefold() for word in ANSWERS}) != len(ANSWERS):
+    raise ValueError(f"ANSWERS: two answer words differ only in case — {sorted(ANSWERS)}")
+
+
 def parse_answer(text: str) -> str | None:
     """Model text -> gold label via ANSWERS, or None for empty/unreadable.
     Empty is its own state, never folded into a label (→ LAB-030 Reasoning models); the first
-    token decides, a second line of explanation is ignored (→ LAB-023 No silent loss)."""
+    token decides, in any case, a second line of explanation is ignored (→ LAB-023 No silent loss)."""
     text = text.strip()
     if not text:
         return None
-    return ANSWERS.get(text.split()[0].rstrip(".,:;!"))
+    word = text.split()[0].rstrip(".,:;!").casefold()
+    return next((label for w, label in ANSWERS.items() if w.casefold() == word), None)
 
 
 def answer_of(r: dict) -> str | None:
@@ -178,12 +189,23 @@ def _accuracy(rows: list[dict]) -> tuple[float, int]:
     return correct / items, empty
 
 
+def _expected_correct(rows: list[dict]) -> Fraction:
+    """Chance as a count: the correct answers the lane's own answers reach on
+    average against its gold permuted uniformly — exact, the sum over gold
+    labels of (answers parsed as that label) · (items with that gold) / n.
+    A constant placebo answer gives the gold count of its class, any answers
+    on balanced two-label gold n/2; an empty answer matches no gold."""
+    parsed = Counter(parse_answer(r["answer"]) for r in rows)
+    golds = Counter(r["gold"] for r in rows)
+    return Fraction(sum(parsed[g] * c for g, c in golds.items()), len(rows))
+
+
 def _within_chance(rows: list[dict], items: int) -> bool:
-    """Is the lane at chance ± `items` items? Compared in item counts:
-    |correct - n/2| <= items, written as |2·correct - n| <= 2·items — in
-    shares the band was asymmetric in floating point (7/12 out, 5/12 in)."""
+    """Is the lane within `items` items of chance (`_expected_correct`)?
+    Compared in item counts as fractions — in shares the band was
+    asymmetric in floating point (7/12 out, 5/12 in)."""
     correct, n, _ = _counts(rows)
-    return n > 0 and abs(2 * correct - n) <= 2 * items
+    return n > 0 and abs(correct - _expected_correct(rows)) <= items
 
 
 def _at_least(reg: list[dict], null: list[dict], margin: float) -> bool:
@@ -200,7 +222,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
 
     Returns every registered id's keys on every lane:
       quality_check_1_empty · quality_check_1_pass           quality check: yield of the registered lane
-      quality_check_2_accuracy · quality_check_2_pass        quality check: the null lane inside its band
+      quality_check_2_accuracy · quality_check_2_expected · quality_check_2_pass   quality check: the null lane inside its band around chance
       criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against null + cfg.margin
       n_items · n_rows             yield (→ LAB-023 No silent loss)
     A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None)."""
@@ -215,8 +237,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows),
                      "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
                      "quality_check_2_accuracy": null_acc, "quality_check_2_empty": null_empty,
-                     # TODO: the band the protocol derived for the null — cfg.null_band_items
-                     # items around chance; a different expected rate needs its own count rule
+                     "quality_check_2_expected": float(_expected_correct(null) / len(null)),
                      "quality_check_2_pass": _within_chance(null, cfg.null_band_items)}
     admissible = metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]
     if not admissible:

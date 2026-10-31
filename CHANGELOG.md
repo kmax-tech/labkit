@@ -9,6 +9,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The model template's null lane sits at the chance its own answers give.**
+  `_within_chance()` held the null lane to half the items — right only for two
+  balanced gold labels; a constant placebo on PubMedQA's yes/no/maybe gold
+  (22/21/7) was refused at 22 of 50. Chance is now the correct count the
+  lane's own answers reach against the gold permuted, exact
+  (`_expected_correct`), recorded as `quality_check_2_expected`; on balanced
+  two-label gold it is half the items as before. The parser reads an answer
+  word in any case, and the stamped area test runs with two answer words or
+  more. Areas stamped before keep their script; a new stamp carries the rule.
 - **The audit leaves alone what the task fixes for its deliverable.** The
   files `DELIVERABLES` names and the columns of `DELIVERABLE_COLUMNS`, with
   their names and order, are out of the auditor's scope; the protocol's Unit

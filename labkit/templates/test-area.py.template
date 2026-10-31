@@ -26,8 +26,8 @@ measure = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = measure
 _spec.loader.exec_module(measure)
 
-POS, NEG = list(measure.ANSWERS.values())      # the two gold labels, from the one constant
-YES, NO = list(measure.ANSWERS)                 # the two answer words
+POS, NEG, *_ = list(measure.ANSWERS.values())  # two gold labels, from the one constant
+YES, NO, *_ = list(measure.ANSWERS)             # their answer words
 
 
 def rows(registered: list[tuple[str, str]], null: list[tuple[str, str]]) -> list[dict]:
@@ -114,6 +114,17 @@ def test_an_empty_answer_counts_as_not_correct():
     assert m["quality_check_1_empty"] == 2 and m["criterion_1_accuracy"] == 10 / 12
 
 
+def test_a_constant_placebo_sits_at_its_gold_share():
+    """Chance is what the null lane's own answers reach against its gold
+    permuted: a placebo answered the same on every item sits exactly at the
+    gold count of that answer's class, also on unbalanced gold — two thirds
+    of the items one label, far outside any band around half."""
+    n = 3 * _band_lane()
+    golds = [POS] * (2 * n // 3) + [NEG] * (n // 3)
+    m = measure.evaluate_rows(rows(_lane(12, 12), [(YES, g) for g in golds]))
+    assert m["quality_check_2_pass"] is True and m["quality_check_2_expected"] == 2 / 3
+
+
 def test_null_out_of_band_withholds_the_verdict():
     n = _band_lane()  # every item right lies outside the registered band
     m = measure.evaluate_rows(rows(_lane(n, n), _lane(n, n)))
@@ -126,6 +137,7 @@ def test_null_out_of_band_withholds_the_verdict():
 CANONICAL_CASES: list[tuple[str, str | None]] = [
     (YES, POS),
     (YES + ".", POS),
+    (YES.upper(), POS),
     (NO, NEG),
     (NO + "\nBecause the text says otherwise.", NEG),
     ("", None),
