@@ -20,6 +20,7 @@ Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 """
 
 import re
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import (
     adopt_command,
+    shown,
     git_root,
     protocol_link,
     protocol_links,
@@ -384,8 +386,10 @@ def print_contract(protocol: Path | None = None) -> None:
     only after reading the whole list, and none found protocol-fill
     (2026-10-07). With PROTOCOL, the fields that protocol owes by occasion
     (`owed_field_lines`) and the tier table's one row of its repeat_cost,
-    kind (the most a kind owes while undecided) and model (`model_named`);
-    else the low cut, the common rows and the full form's field lists.
+    kind (the most a kind owes while undecided) and model (`model_named`),
+    after a first line naming `labkit-next` for its area — the one next
+    step is a gate's reading, which this layer does not import; else the
+    low cut, the common rows and the full form's field lists.
     Raises OSError, UnicodeError or protocol_block.BlockError when PROTOCOL
     does not read."""
     if protocol is not None:
@@ -405,6 +409,8 @@ def print_contract(protocol: Path | None = None) -> None:
             f" The fields {protocol.name} owes stand in the first lines of this output."
         )
         tail: list[str] = []
+        area = shlex.quote(shown(protocol.resolve().parent, Path.cwd()))
+        print(f"next: `labkit-next {area}` names the one next step, with its command")
     else:
         top = [low_cut_line()]
         rows_title = (
@@ -420,12 +426,14 @@ def print_contract(protocol: Path | None = None) -> None:
         tail = full_form_lines()
     for line in top:
         print(line)
-    print(
-        "fill a field by its label, multi-line placeholders included: "
-        'protocol-fill PROTOCOL-x.md "<Label>=<value>" ["<Label>=<value>" …]; what is still open: '
-        "protocol-fill PROTOCOL-x.md --list; the Prompt block from the scripts' "
-        "PROMPT constants: protocol-fill PROTOCOL-x.md --prompts\n"
+    named = (
+        shlex.quote(shown(protocol, Path.cwd()))
+        if protocol is not None
+        else "PROTOCOL-x.md"
     )
+    print(f'fill a field:     protocol-fill {named} "<Label>=<value>" …')
+    print(f"list open fields: protocol-fill {named} --list")
+    print(f"write the Prompt: protocol-fill {named} --prompts\n")
     print(rows_title)
     for repeat_cost, kind, with_model in rows:
         first, *rest = standard_contract.describe(repeat_cost, kind, with_model)
