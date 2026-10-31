@@ -2503,6 +2503,42 @@ Reihenfolge:
    die Zweige der Piloten-Fixes (`pilot-*`, `r2-*`) sind alle in `main`
    und können weg.
 
+## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)
+
+Alle auf labkit 0.104.0 (Teil 2 auch, Nachtrag 6). Belege: labkit-evidence
+`usability/2026-10-31-sab-round2/` (Stores, Urteile), report-check im Image auf
+Kopien der 22 nicht fertigen Versuche aus Teil 2.
+
+- **Echte Adoption 12 von 48**, nicht 38: 32 Versuche riefen `labkit-adopt …
+  | tail -50` auf; der Exit-Code der Pipe ist 0, die letzte Zeile sagt
+  „not adopted — report-check refuses the written result“. (Meine erste
+  Zählung nach Exit-Code war falsch.) Standard erfüllt: 8 von 48.
+- **Übergaben 17 von 48**, fünf mit gültiger Lieferung. Gründe: selbst
+  registrierte, mit den Daten nicht umsetzbare Einschränkung (5, davon 4
+  gültig: „auf Rondônia zuschneiden“, keine Landesgrenze in den Daten —
+  richtig wäre `limitation` und Bericht innerhalb der Grenze); Daten außerhalb
+  von Git (3; ab 0.104.1 gelöst, im Feld ungetestet); Ablehnung durch den
+  zweiten Auditor (3); echte methodische Blocker (5); Sonstiges (1).
+- **Woran die Adoption scheitert** (22 Versuche aus Teil 2, Blocker je
+  Versuch, mehrere möglich): Audit veraltet, weil der Code nach dem Audit
+  geändert wurde (6); `fixed` ohne Folgemessung und Folgeaudit (4) oder ohne
+  die verlangte Prüfung im Lauf (4); `limitation` auf einem BLOCKER ohne
+  Review durch einen zweiten Auditor (4); offene Befunde (4); Daten außerhalb
+  von Git (3); Audit nennt einen gelöschten Lauf (2); Bereichstests rot (2).
+  Gemeinsamer Kern: **die Schleife Messen → Audit → Entscheiden**. Jede
+  Reparatur macht das Audit ungültig, verlangt neu messen, neu auditieren,
+  neu entscheiden; die Spuren zeigen bis zu sechs solche Runden je Versuch,
+  bis Zeit oder Geduld enden.
+
+Offen, zu entscheiden (nichts davon gebaut):
+1. Die Schleife billiger machen, ohne die Garantie aufzugeben — etwa ein
+   Folgeaudit, das nur die geänderten Befunde prüft, statt das ganze Audit.
+2. Bei einer registrierten, nicht umsetzbaren Einschränkung den Weg
+   `limitation` nennen statt nur Übergabe (die Meldung, die zur Übergabe
+   führte, lesen).
+3. Teil 2 neu auf 0.104.2 (gestempelte Repos je Pin), um die Reparaturen im
+   Feld zu prüfen — erst nach 1 und 2, sonst misst er dieselbe Schleife.
+
 ## Lücke aus Runde 2, Teil 1 — garantierte Schicht, vor Teil 2 (2026-10-31)
 
 **Die Registrierung einer Berechnung lässt sich nach einer verfehlten Messung
