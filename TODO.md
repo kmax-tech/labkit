@@ -2527,9 +2527,9 @@ Absicherung des Läufers (Auftrag 2026-10-31, Punkte 2 und 3): Commit aus
 `--check` baut/stagt/konstruiert und prüft die echte Setup-Zeile offline.
 Code und Tests im Läufer unter
 `docs/usability/2026-10-31-registered-pilot/`; die vorhandene
-Verzeichnisinstallation wird tatsächlich abgelehnt. **Noch offen:** Punkt 1,
-eine eigene Umgebung aus dem beabsichtigten Git-Pin, danach ein erfolgreicher
-vollständiger `--check`. Der neue Setup-Pfad ist getrennt an frisch gestagten
+Verzeichnisinstallation wird tatsächlich abgelehnt. Punkt 1 erledigt 2026-10-31: agentsandbox auf `db9b20c` gepinnt (labkit-paper 6f8e27e), eigene `.venv`
+aus `requirements.lock` in labkit-paper-main, besteht die Commitprüfung. **Noch offen:** ein
+erfolgreicher vollständiger `--check`. Der neue Setup-Pfad ist getrennt an frisch gestagten
 Laborarmen 21 und pubmedqa50 im echten Image geprüft: zweimal „one labkit:
 0.104.3“, zweimal `protocol-check` OK, null Modellaufrufe. Kein
 kostenpflichtiger Start durch diesen Umbau.

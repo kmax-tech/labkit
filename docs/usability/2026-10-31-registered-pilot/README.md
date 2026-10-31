@@ -110,14 +110,9 @@ constructed attempt IDs, tree digests and observed setup output (including
 contract is not rewritten automatically. Failed checks do not produce a new
 success report; existing reports describe earlier checks only.
 
-**Current environment prerequisite:** the existing `.venv-pilot` is a directory
-installation and is intentionally refused. Replacing it with an installation
-of the intended pinned Git commit is point 1, a separate environment change.
-No environment, pin, historical store or running attempt is changed by this
-runner patch. The actual directory-install rejection has been exercised;
-the successful full `--check` awaits a matching Git installation. Separately,
-the new preparation/setup path was exercised on freshly staged task 21 and
-pubmedqa50 lab arms in `labkit-sandbox:f998024abb6c`: both printed
-`one labkit: 0.104.3` and passed `protocol-check`, with Claude Code 2.1.285
-and zero model calls. This diagnostic exercised setup directly; it does not
-claim that the current directory installation passed the commit check.
+**Environment:** labkit-paper-main's `.venv` is its own (no longer a link to
+labkit-paper's), built from `requirements.lock`, with agentsandbox pinned to
+`db9b20c` (labkit-paper 6f8e27e); it passes the commit check. `.venv-pilot`, a
+directory installation, is refused as intended. Part 0's first two attempts
+ran from `.venv-pilot` on the same code (`db9b20c`, the directory's contents
+then), recorded in the contract's addendum 3.

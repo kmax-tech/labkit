@@ -5,11 +5,11 @@
 labkit protocol, the control arm as PLAN.md — can the agent implement a given
 plan, with labkit and without? (README.md beside this file, assessment-contract.txt.)
 
-    ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --show 21 labkit
-    ID_PREFIX=rpt ARMS_ONLY=labkit ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --pilot --only 21 pubmedqa50
-    REPS=3 ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --check
-    REPS=3 ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --pilot
-    ~/projects/labkit-paper-main/.venv-pilot/bin/python run_pilot.py --score
+    ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --show 21 labkit
+    ID_PREFIX=rpt ARMS_ONLY=labkit ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --pilot --only 21 pubmedqa50
+    REPS=3 ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --check
+    REPS=3 ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --pilot
+    ~/projects/labkit-paper-main/.venv/bin/python run_pilot.py --score
 
 Copy this file, pilot_checks.py, protocols/ and plans/ into a run directory first: the store,
 the staged repositories (arms-pilot-<pin>/) and scores.json land beside it.
@@ -206,13 +206,19 @@ def attempt_id(task_id: str, arm: str, rep: int) -> str:
     return f"{ID_PREFIX}-t{task_id}-{arm}-r{rep}"
 
 
-def snapshot(task_id: str, arm: str, image: str) -> Path:
-    """The staged repository, per labkit pin and per registration text: a changed
-    protocol or plan is a new snapshot, never a stale one."""
+def staged_dir(task_id: str, arm: str) -> Path:
+    """Where a task's arm is staged, per labkit pin and per registration text: a
+    changed protocol or plan is a new snapshot, never a stale one."""
     protocol, plan = registration(task_id)
     given = protocol if arm == "labkit" else plan
     digest = hashlib.sha256(given.encode("utf-8")).hexdigest()[:10]
-    dest = S / f"arms-pilot-{infra.labkit_pin()}" / f"t{task_id}-{arm}-{digest}"
+    return S / f"arms-pilot-{infra.labkit_pin()}" / f"t{task_id}-{arm}-{digest}"
+
+
+def snapshot(task_id: str, arm: str, image: str) -> Path:
+    """The staged repository (`staged_dir`), staged on first use."""
+    protocol, plan = registration(task_id)
+    dest = staged_dir(task_id, arm)
     if not dest.exists():
         arms.stage_arm(
             arm,
@@ -464,6 +470,31 @@ def registration_changed(rec: dict, work: Path) -> bool | None:
     )
 
 
+def venv_files(root: Path) -> dict[str, str]:
+    """The .venv under ROOT as {relative path: sha256}, links as their target."""
+    venv = root / ".venv"
+    out = {}
+    for f in sorted(venv.rglob("*")):
+        if "__pycache__" in f.parts:
+            continue
+        rel = f.relative_to(venv).as_posix()
+        if f.is_symlink():
+            out[rel] = "-> " + os.readlink(f)
+        elif f.is_file():
+            out[rel] = hashlib.sha256(f.read_bytes()).hexdigest()
+    return out
+
+
+def venv_changed(rec: dict, work: Path) -> bool | None:
+    """Whether the lab arm's delivered .venv differs from the staged one (files
+    added, removed or changed; bytecode caches aside); None for the control arm.
+    The setup no longer makes it read-only (arms.LAB_SETUP), so a change is
+    counted here instead."""
+    if rec["arm"] != "labkit":
+        return None
+    return venv_files(work) != venv_files(staged_dir(rec["task_id"], rec["arm"]))
+
+
 def score(images: dict[str, str]) -> None:
     """Evaluate kept attempts and write scores beside the runner."""
     rows = []
@@ -499,6 +530,7 @@ def score(images: dict[str, str]) -> None:
                 gaps=std["gaps"],
                 adopted_run=std.get("adopted_run"),
                 handovers=std.get("handovers", 0),
+                venv_changed=venv_changed(rec, work),
             )
         rows.append(row)
         print(
