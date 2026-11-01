@@ -99,7 +99,15 @@ def decision_lines(
                     area, n, "STATUS", "<why>", where, protocol=protocol, base=here
                 )
             )
-            if f.check:
+            if f.check and f.grade != "BLOCKER":
+                # a follow-up is shown decided BLOCKERs only: "the follow-up
+                # judges" promised a check that never came, and the WARNING
+                # lapsed undecided (reference pilot 2026-11-01, task 21)
+                out.append(
+                    f"      check asked: {findings.check_order(f.check, f.check_note)} "
+                    f"— no follow-up audit judges a {f.grade}; decide it now"
+                )
+            elif f.check:
                 # where the decision is made: in the repair case the check went
                 # unwritten and every follow-up judged the repair not assessable
                 out.append(
@@ -142,7 +150,9 @@ def decision_lines(
 
 
 #: a reading hint's place: `READ · <file>:<line> · …`
-_READ_PLACE = re.compile(r"READ\**\s*\S+\s*`?(?P<file>[^\s:`]+):(?P<line>\d+)")
+_READ_PLACE = re.compile(
+    r"READ\**\s*\S+\s*`?(?P<file>[^\s:`]+):(?P<place>[^`·]+?)\s*`?\s*(?:·|$)"
+)
 
 
 def read_hints(
@@ -163,7 +173,7 @@ def read_hints(
             continue
         m = _READ_PLACE.search(ln)
         if m is not None and _in_held_field(
-            area, protocol, m["file"], int(m["line"]), texts
+            area, protocol, m["file"], m["place"].strip(), texts
         ):
             held += 1
             continue
@@ -172,9 +182,13 @@ def read_hints(
 
 
 def _in_held_field(
-    area: Path, protocol: Path | None, file: str, line: int, texts: dict[str, str]
+    area: Path, protocol: Path | None, file: str, place: str, texts: dict[str, str]
 ) -> bool:
-    """Does LINE of FILE, a protocol of AREA, fall in one of HELD_FIELDS?"""
+    """Does PLACE of FILE, a protocol of AREA, fall in one of HELD_FIELDS?
+    PLACE is a line number, or a field named by its label or the label's
+    start (`:Terms` for "Terms of this protocol") — an auditor naming the
+    field slipped past a filter that read numbers only (reference pilot
+    2026-11-01, task 60)."""
     name = Path(file).name
     if not (name.startswith("PROTOCOL-") and name.endswith(".md")):
         return False
@@ -184,7 +198,10 @@ def _in_held_field(
             return False
         texts[name] = path.read_text(encoding="utf-8")
     held = {field_name(label) for label in HELD_FIELDS}
-    at = [f for f in fields(texts[name]) if f.line <= line]
+    if not place.isdigit():
+        named = field_name(place)
+        return bool(named) and any(h.startswith(named) for h in held)
+    at = [f for f in fields(texts[name]) if f.line <= int(place)]
     return bool(at) and at[-1].name in held
 
 

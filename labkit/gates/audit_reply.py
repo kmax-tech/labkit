@@ -18,6 +18,7 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats.repo import (
+    area_protocols,
     layout_root,
 )
 from labkit.gates.audit_prompt import Followup
@@ -302,8 +303,11 @@ def scope_list(tail: str) -> list[str]:
     for i, line in enumerate(lines):
         if line.strip().startswith("scope:"):
             first = line.strip().removeprefix("scope:").strip()
+            # every entry may repeat the prefix: kept, `scope: x.py` read as a
+            # file named so, and the same file was reported both read and
+            # unlisted (reference pilot 2026-11-01, task 21)
             rest = [
-                ln.strip().lstrip("-*• ").strip("`")
+                ln.strip().lstrip("-*• ").removeprefix("scope:").strip().strip("`")
                 for ln in lines[i + 1 :]
                 if not protocol_block.FENCE.match(ln)  # a marker is no entry
             ]
@@ -335,9 +339,17 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
             if q.resolve().is_relative_to(root.resolve())
             else s
         )
+    # the protocol is held by the registration and promise digests, not the
+    # stamp: listed as read it is no gap (noise in every audit of 2026-11-01)
+    protocols = {
+        p.resolve().relative_to(root.resolve()).as_posix()
+        for p in area_protocols(area)
+        # home: compared with `named`, as the stamp's files are
+        if p.resolve().is_relative_to(root.resolve())
+    }
     out = [
         f"the auditor read {n} as part of the number, the stamp does not cover it"
-        for n in sorted(named - stamped)
+        for n in sorted(named - stamped - protocols)
     ]
     out += [
         f"the stamp covers {s}, the auditor did not list it as read"

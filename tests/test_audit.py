@@ -8,6 +8,7 @@ because the benchmark's hardest fault came only as a WARNING."""
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import io
 import json
 import os
@@ -1697,6 +1698,15 @@ class RequiredCheck(unittest.TestCase):
                 audit_decisions.decision_lines(findings.read(plain_record), plain, "")
             ),
         )
+        # a WARNING with a check promises no follow-up: none judges it, and an
+        # undecided one lapsed (reference pilot 2026-11-01, task 21)
+        warned = dataclasses.replace(
+            record,
+            findings=[dataclasses.replace(record.findings[0], grade="WARNING")],
+        )
+        lines = "\n".join(audit_decisions.decision_lines(warned, area, ""))
+        self.assertNotIn("the follow-up judges", lines)
+        self.assertIn("no follow-up audit judges a WARNING; decide it now", lines)
 
     def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
         area, earlier = self.fv.area(self.CHECKED)
@@ -3388,11 +3398,56 @@ class ReadHintsOnRegisteredFields(unittest.TestCase):
                 f"READ · `PROTOCOL-x.md:{at['Data / scope']}` · count unclear · say 3 files\n"
                 "READ · scripts/01_measure.py:4 · a name · rename\n"
             )
+            report += (
+                "READ · `PROTOCOL-x.md:Terms` · NVC unglossed · add it\n"
+                "READ · PROTOCOL-x.md:Conclusion · a list · one sentence\n"
+            )
             shown_hints, held = audit_decisions.read_hints(report, area)
-            self.assertEqual(held, 2)
+            # a field named instead of a line is held too (reference pilot
+            # 2026-11-01, task 60); a result field named stays shown
+            self.assertEqual(held, 3)
             self.assertEqual(
                 [h.split(" · ")[1] for h in shown_hints],
-                [f"PROTOCOL-x.md:{at['Conclusion']}", "scripts/01_measure.py:4"],
+                [
+                    f"PROTOCOL-x.md:{at['Conclusion']}",
+                    "scripts/01_measure.py:4",
+                    "PROTOCOL-x.md:Conclusion",
+                ],
+            )
+
+    def test_the_scope_list_reads_a_prefix_on_every_line_and_skips_the_protocol(self):
+        """The auditor wrote `scope:` before every entry, and the protocol
+        among them: each file was reported read and unlisted at once, and the
+        protocol in every audit (reference pilot 2026-11-01, 21, 60, 15, sts512).
+        The twin: a file the stamp lacks still warns."""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / ".git").mkdir()
+            area = root / "experiments" / "01-x"
+            (area / "scripts").mkdir(parents=True)
+            measure = area / "scripts" / "01_measure.py"
+            measure.write_text("x = 1\n", encoding="utf-8")
+            (area / "PROTOCOL-x.md").write_text(self.PROTOCOL, encoding="utf-8")
+            listed = audit_reply.scope_list(
+                "scope: experiments/01-x/scripts/01_measure.py\n"
+                "scope: experiments/01-x/PROTOCOL-x.md\n"
+                "scope: experiments/01-x/scripts/extra.py\n"
+            )
+            self.assertEqual(
+                listed,
+                [
+                    "experiments/01-x/scripts/01_measure.py",
+                    "experiments/01-x/PROTOCOL-x.md",
+                    "experiments/01-x/scripts/extra.py",
+                ],
+            )
+            gaps = audit_reply.scope_mismatch(area, listed, [measure])
+            self.assertEqual(
+                gaps,
+                [
+                    "the auditor read experiments/01-x/scripts/extra.py as part of "
+                    "the number, the stamp does not cover it"
+                ],
             )
 
 

@@ -9,6 +9,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The audit's output says only what holds** (reference pilot, trial 2):
+  - a READ line that names a registered field instead of a line
+    (`PROTOCOL-x.md:Terms`) is left out too (60);
+  - the closing scope list reads `scope:` before every entry, and the
+    protocol listed as read is no gap: the same file was reported read and
+    unlisted, and the protocol warned in every audit (21, 60, 15, sts512);
+  - a WARNING that names a check no longer promises that "the follow-up
+    judges `fixed`" — no follow-up audit judges a WARNING; it says to decide
+    it now (21: an undecided one lapsed).
+
 - **The templates after the second trial** (reference pilot, 2026-11-01):
   - the stamped estimator test serves a registered null order: its
     synthetic null rows name their donors, and the band tests hold only
