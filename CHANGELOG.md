@@ -58,6 +58,15 @@ pins (`requirements.txt` / `requirements.lock`).
     "another alias" and named none, and `--findings` offered only the
     handover (15-r2 handed over a run that passed every other check, 15-r3
     guessed an alias models.toml lacks).
+- **A model measurement sends only the registered prompt, checked before
+  any paid call.** `lanes.Lanes` holds each fixed line of each lane's
+  prompt, as sent, to the protocol's Prompt block (`--probe` and the full
+  run; `prompt_drift`, `require_registered_prompts`) and refuses a line the
+  block does not hold. A protocol without a Prompt block is said aloud and
+  passes. pubmedqa50-r1 had sent an answer line and a closing `Answer:` the
+  registration lacked; the analysis audit saw it after 16 minutes of
+  measurement. `prompt_blocks` and `PLACEHOLDER_IN_PROMPT` moved to
+  `formats.protocol_check`, their one home for both readers.
 - **An audit under way is named where the records are read.** `--findings`
   prints `a <mode> audit is running — attempt <id> …` first and exits 3
   when no record exists yet; adopt's audit gap says the same instead of

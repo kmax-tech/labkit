@@ -19,18 +19,14 @@ from pathlib import Path
 from labkit.formats.repo import gate_command, shown
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
-from labkit.formats import protocol_block
 from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
-from labkit.formats.protocol_check import fields
+from labkit.formats.protocol_check import PLACEHOLDER_IN_PROMPT, prompt_blocks
 
 
 PARSE_DEF = re.compile(r"^\s*def (parse_\w+)\s*\(", re.M)
 
 
 PROMPT_NAME = re.compile(r"^PROMPT(_[A-Z0-9_]+)?$")
-
-
-PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
 
 
 def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
@@ -195,40 +191,6 @@ def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
         out.update(found)
         unreadable += [f"{sp.name}:{n}" for n in bad]
     return out, unreadable
-
-
-def prompt_blocks(protocol: Path) -> list[str]:
-    """Every fenced block under a `Prompt` field, up to the next field at the
-    same depth or the next heading — one block per variant is a written
-    form, and reading only the first made a null prompt in a second block
-    look missing (re-measure 2026-10-07: five false blockers in twelve
-    protocols once the check ran). The field is the one label parser's
-    (`protocol_check.fields`), the blocks the one fence walker's
-    (`protocol_block.fence_spans`): until 0.96.0 a second label grammar
-    and a backtick-only fence stood here (audit 2026-10-15)."""
-    text = protocol.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    found = fields(text)
-    blocks: list[str] = []
-    for n, f in enumerate(found):
-        if f.name != "prompt":
-            continue
-        indent = len(lines[f.line - 1]) - len(lines[f.line - 1].lstrip())
-        end = len(lines)
-        for g in found[n + 1 :]:
-            deeper = len(lines[g.line - 1]) - len(lines[g.line - 1].lstrip()) > indent
-            if not deeper:
-                end = g.line - 1
-                break
-        for j in range(f.line, end):
-            if lines[j].startswith("#"):
-                end = j
-                break
-        region = lines[f.line : end]
-        blocks += [
-            "\n".join(region[s:e]) for _, s, e in protocol_block.fence_spans(region)
-        ]
-    return blocks
 
 
 def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:

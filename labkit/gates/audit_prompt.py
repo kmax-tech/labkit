@@ -23,7 +23,8 @@ from typing import NamedTuple
 
 from labkit import PACKAGE_DIR
 from labkit.checks.audit_binding import AuditError, RunShown, audited_run, run_shown
-from labkit.checks.prompt_check import prompt_blocks, prompt_constants
+from labkit.checks.prompt_check import prompt_constants
+from labkit.formats.protocol_check import prompt_blocks
 from labkit.formats import (
     findings,
     followup,

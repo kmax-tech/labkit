@@ -1000,3 +1000,42 @@ def conclusion_written(text: str) -> bool:
         f.name == field_name(CONCLUSION_LABEL) and f.value.strip() and not f.placeholder
         for f in fields(text)
     )
+
+
+#: a prompt line that shows an item's field: filled per item, so held to no
+#: registered line (`prompt_check.check_prompt_drift`, `lanes.Lanes.prompt_drift`)
+PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
+
+
+def prompt_blocks(protocol: Path) -> list[str]:
+    """Every fenced block under a `Prompt` field, up to the next field at the
+    same depth or the next heading — one block per variant is a written
+    form, and reading only the first made a null prompt in a second block
+    look missing (re-measure 2026-10-07: five false blockers in twelve
+    protocols once the check ran). The field is the one label parser's
+    (`fields`), the blocks the one fence walker's
+    (`protocol_block.fence_spans`): until 0.96.0 a second label grammar
+    and a backtick-only fence stood here (audit 2026-10-15)."""
+    text = protocol.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    found = fields(text)
+    blocks: list[str] = []
+    for n, f in enumerate(found):
+        if f.name != "prompt":
+            continue
+        indent = len(lines[f.line - 1]) - len(lines[f.line - 1].lstrip())
+        end = len(lines)
+        for g in found[n + 1 :]:
+            deeper = len(lines[g.line - 1]) - len(lines[g.line - 1].lstrip()) > indent
+            if not deeper:
+                end = g.line - 1
+                break
+        for j in range(f.line, end):
+            if lines[j].startswith("#"):
+                end = j
+                break
+        region = lines[f.line : end]
+        blocks += [
+            "\n".join(region[s:e]) for _, s, e in protocol_block.fence_spans(region)
+        ]
+    return blocks

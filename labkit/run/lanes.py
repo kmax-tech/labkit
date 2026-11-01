@@ -34,7 +34,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from labkit.formats import protocol_block, runs, standard_contract
+from labkit.formats import protocol_block, protocol_check, runs, standard_contract
 from labkit.formats.repo import next_after_run
 from labkit.run import batch, llm, runlog
 
@@ -326,12 +326,73 @@ class Lanes:
         if args.show is not None:  # `is not None`: `--show 0` must not start a paid run
             self._show(cfg, items, args.show)
         elif args.probe is not None:
+            self.require_registered_prompts()
             # throwaway: own output file, no runlog — the moment a number is kept, it is a run
             self._print_probe(self.probe(cfg, items, args.probe))
         elif args.eval_only:
             self.evaluate(self.out, cfg, self.plan(items))
         else:
+            self.require_registered_prompts()
             self._run(cfg, items, args.repeat_of)
+
+    def prompt_drift(self) -> list[str]:
+        """Each fixed line (one without a `{placeholder}`) of a lane's
+        prompt that no line of the protocol's Prompt blocks holds, as
+        `<lane>: <line>` — the prompts as this object sends them, not as the
+        source reads, so a prompt built by a call is held too. Empty when
+        every line is registered, and when the protocol registers no prompt
+        block (`unregistered_prompt` says so)."""
+        blocks = self._prompt_blocks()
+        have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
+        return [
+            f"{lane}: {ln.strip()}"
+            for lane, template in self.prompts.items()
+            for ln in template.splitlines()
+            if ln.strip()
+            and not protocol_check.PLACEHOLDER_IN_PROMPT.search(ln)
+            and blocks
+            and ln.strip() not in have
+        ]
+
+    def unregistered_prompt(self) -> bool:
+        """Does the protocol hold no Prompt block (or only the template's
+        `<placeholder>`)? Then no prompt line can be held to it."""
+        return not self._prompt_blocks()
+
+    def _prompt_blocks(self) -> list[str]:
+        return [
+            b
+            for b in protocol_check.prompt_blocks(self.protocol)
+            if not b.strip().startswith("<")
+        ]
+
+    def require_registered_prompts(self) -> None:
+        """Refuse, before any paid call, a prompt whose fixed lines the
+        protocol's Prompt block does not hold (`prompt_drift`) — the
+        registration is the protocol, so the way is the code. A protocol
+        without a Prompt block is said aloud and passes: there is nothing to
+        hold the prompt to. pubmedqa50 (registered pilot part 1, r1) sent an
+        answer line and a closing `Answer:` the registration did not have,
+        and only the analysis audit, 16 minutes of measurement later, saw it.
+        Raises SystemExit naming each line."""
+        if self.unregistered_prompt():
+            print(
+                f"{self.protocol.name}: no registered Prompt block — the prompts "
+                f"are not held to the protocol",
+                flush=True,
+            )
+            return
+        drift = self.prompt_drift()
+        if drift:
+            raise SystemExit(
+                f"{self.protocol.name}: the prompt this script sends is not the "
+                f"registered one — {len(drift)} line(s) the Prompt block does not "
+                f"hold:\n  "
+                + "\n  ".join(drift)
+                + "\nNext: make PROMPT/PROMPT_NULL the registered text "
+                "(`--show 1` prints what is sent); the Prompt block is the "
+                "registration and stays as it is"
+            )
 
     def _run(self, cfg: Any, items: list[dict], repeat: str | None) -> None:
         """The full run: the whole config recorded, the items frozen (`data=`),

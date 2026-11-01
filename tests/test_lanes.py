@@ -359,6 +359,54 @@ class WorkersAreTheAreas(Case):
             asked.assert_not_called()
 
 
+class PromptIsTheRegisteredOne(Case):
+    """The prompts as sent are held to the protocol's Prompt block before any
+    paid call: pubmedqa50-r1 (registered pilot part 1) sent an answer line
+    and a closing `Answer:` the registration did not have, and only the
+    analysis audit, after 16 minutes of measurement, saw it."""
+
+    BLOCK = (
+        "\n- **Prompt (verbatim, per variant):**\n\n  ```text\n  registered:\n"
+        "  Answer yes or no.\n  {text}\n\n  null:\n  Is this English?\n  {text}\n  ```\n"
+    )
+
+    def lanes_with(self, d: Path, registered: str) -> lanes.Lanes:
+        run, _ = lanes_in(d)
+        protocol = d / "PROTOCOL-x.md"
+        protocol.write_text(
+            protocol.read_text(encoding="utf-8") + self.BLOCK, encoding="utf-8"
+        )
+        return dataclasses.replace(
+            run, prompts={"registered": registered, "null": "Is this English?\n{text}"}
+        )
+
+    def test_a_prompt_with_an_unregistered_line_is_refused_before_any_call(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self.lanes_with(Path(d), "Answer yes or no.\n{text}\n\nAnswer:")
+            self.assertEqual(run.prompt_drift(), ["registered: Answer:"])
+            with mock.patch.object(llm, "complete_many") as asked:
+                with self.assertRaises(SystemExit) as cm:
+                    run.main(Cfg(), [])
+            asked.assert_not_called()
+            self.assertIn("not the registered one", str(cm.exception))
+            self.assertIn("registered: Answer:", str(cm.exception))
+
+    def test_the_registered_prompt_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self.lanes_with(Path(d), "Answer yes or no.\n{text}")
+            self.assertEqual(run.prompt_drift(), [])
+            self.assertFalse(run.unregistered_prompt())
+
+    def test_no_prompt_block_is_said_aloud(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, _ = lanes_in(Path(d))
+            self.assertTrue(run.unregistered_prompt())
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                run.require_registered_prompts()
+            self.assertIn("no registered Prompt block", out.getvalue())
+
+
 class EvaluateKeptRows(Case):
     def test_eval_only_gives_the_numbers_of_the_rows_as_they_stand(self):
         with tempfile.TemporaryDirectory() as d:
