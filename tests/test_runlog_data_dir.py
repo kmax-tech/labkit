@@ -46,6 +46,20 @@ class DirectorySource(unittest.TestCase):
         (self.src / "a" / ".DS_Store").write_text("x")
         self.assertEqual(base, self.describe()["sha256"])
 
+    def test_bytecode_does_not_move_the_digest_nor_count(self):
+        """A run importing modules shipped in its source writes `.pyc` there;
+        counted, its digest never matched the registered one (reference pilot
+        2026-11-01, task 60). The twin: a real `.py` file still counts."""
+        base = self.describe()
+        cache = self.src / "a" / "__pycache__"
+        cache.mkdir()
+        (cache / "rule.cpython-312.pyc").write_bytes(b"\x00bytecode")
+        self.assertEqual(self.describe(), base)
+        (self.src / "a" / "rule.py").write_text("X = 1\n")
+        moved = self.describe()
+        self.assertNotEqual(moved["sha256"], base["sha256"])
+        self.assertEqual(moved["rows"], base["rows"] + 1)
+
 
 if __name__ == "__main__":
     unittest.main()

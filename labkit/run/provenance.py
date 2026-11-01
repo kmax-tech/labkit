@@ -312,16 +312,27 @@ def resolve_models(config: dict) -> dict:
     return out
 
 
+#: a directory part that holds what the interpreter writes, never data
+BYTECODE_DIR = "__pycache__"
+
+
 def visible_files(directory: Path) -> list[Path]:
     """Every regular file below `directory` that no hidden path component
-    hides — the files a directory source's digest and row count cover
+    hides and that is not the interpreter's bytecode (a `__pycache__` part) —
+    the files a directory source's digest and row count cover
     (`source_digest`, `_data_rows`), and so the ones finalize holds to git.
-    `.DS_Store` once moved a mean by a whole document (2026-10-05)."""
+    `.DS_Store` once moved a mean by a whole document (2026-10-05); a run
+    that imported the rule modules shipped in its source wrote `.pyc` there,
+    and its digest never matched the registered one (reference pilot
+    2026-11-01, task 60)."""
     return sorted(
         p
         for p in directory.rglob("*")
         if p.is_file()
-        and not any(part.startswith(".") for part in p.relative_to(directory).parts)
+        and not any(
+            part.startswith(".") or part == BYTECODE_DIR
+            for part in p.relative_to(directory).parts
+        )
     )
 
 

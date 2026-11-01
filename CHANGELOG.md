@@ -7,6 +7,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Breaking
+
+- **A directory source's digest and row count leave out `__pycache__`.**
+  A run that imported modules shipped in its source wrote `.pyc` files
+  there, so its digest never matched the one registered before it ran, and
+  finalize's way out listed the bytecode for `git add -f` (reference pilot,
+  2026-11-01, task 60). `provenance.visible_files` now skips every
+  `__pycache__` part, as the rest of labkit already did. A digest registered
+  over a directory that holds bytecode changes: re-pin it (task 60's
+  ScienceAgentBench directory `nvc`: `a22b8d82…` under 0.105.0, `1845de61…`
+  now). 0.105.0 is the last version that computes the old digest.
+
 ### Changed
 
 - **A field written as a list holds that list as its value.** The field
