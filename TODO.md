@@ -2606,6 +2606,28 @@ was diesen Versuch oder seine Bewertung betrifft (P1, P2, P3, P4); der Rest folg
   belegt.
 - Danach getrennt: Fehler 3, 7, 8, 9; Unklar 14, 15, 18.
 
+**Stand 2026-11-01 nachmittags — Evaluationsdesign und STS-Aufgabe.** Vorschlag (noch nicht
+beschlossen): zwei Behauptungen, zwei Methoden — (A) Erkennung: eingepflanzte Fehler auf
+Referenzumsetzungen, Trefferquote und Fehlalarme je Stufe und Ebene; (B) Nutzen im Gebrauch:
+Zwei-Arm-Studie, Hauptgröße stilles Integritätsversagen bei Zahl und Planbefolgung (Prosa-
+Übertreibung Nebengröße), 10–15 Aufgaben mit echter Fehlergelegenheit, Aufgabe als Block.
+
+- **sts512 gebaut** (labkit-paper-main 3bcc33c Image-Schicht sentence-transformers,
+  4c8c736 Aufgabe; Registrierung und Staging-Check labkit-evidence fdfdde0b): STS-B 512+512 Paare
+  und all-MiniLM-L6-v2 auf festen Revisionen, Referenz (ρ 0,9225, Null 0,0649, 13 s offline),
+  Auswerter (Lieferung, Übereinstimmung 1e-5, Metriken aus eigener Datei nachgerechnet 1e-6),
+  Gegenproben (eigenes Pooling 2,9e-7, scipy 1e-16, Wiederholung bitgleich), 7 eingepflanzte
+  Fehler erkannt, ehrliche Verfehlung nicht abgelehnt, Gold-Gate 1, beide Arme gestaged und
+  protocol-check OK (labkit 0.104.4).
+- Offen: (1) Staging-Skript statt `00_prepare.py` eines Bereichs (Abweichung von
+  `benchmarks/README.md`); (2) Bericht-Zahlen gegen Lieferung prüfen (Faktenblatt der Runde);
+  (3) das Kriterium ist ohne Druck (ρ 0,92 gegen Schwelle 0,36) — Fehlergelegenheit liegt in
+  der Umsetzung (Pooling, All-Pairs-Matrix, Clipping, Permutation, Rangbindungen), nicht in
+  der Latte; (4) Laborskelett: Spearman und Null aus Datei statt Seed sind bereichslokal zu
+  bauen; (5) Entwurf `docs/usability/2026-11-01-sts-apply/` ist nicht eingecheckt und nicht von
+  dieser Sitzung; (6) pubmedqa50-Technikprüfung auf neuem labkit wartet auf Release 0.105.0;
+  (7) keine Agentenversuche vor der Design-Diskussion.
+
 Fehler (labkit verhält sich gegen die eigene Doku):
 
 1. **Audit-Ablehnung als Überschrift nicht erkannt** (geprüft): `REFUSED` nutzt `LEAD`
