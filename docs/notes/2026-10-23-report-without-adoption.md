@@ -1,5 +1,20 @@
 # Note 2026-10-23 — a report from the run, not from the protocol: the proposal
 
+> **Status 2026-11-01: the boundary stands, a known limit.** In the second
+> reference trial (task 15) REPORT.md cited an older full run of a
+> protocol that had adopted nothing as "PASS"; the hook gave this note's
+> warning and report-check exited 0. A block on every such citation was
+> weighed and rejected: it equates mentioning a run with releasing its
+> result. "The probe gave 0.89, the analysis is unchecked", "the earlier
+> run was faulty and dropped" and "processing stopped before the audit"
+> stay writable without a discussion block and its review. A rule keyed
+> on whether the protocol has adopted another run does not decide it
+> either: the same false claim about an older run beside an adopted one
+> would pass. The guaranteed tier holds which run is adopted and that its
+> generated block matches it; whether a report presents another run as a
+> valid result is the report review's question. Task 15's report is its
+> test case (TODO, plan C1).
+
 > **Status 2026-10-26:** the prose marker `run <id> (not reported: …)` this
 > note proposes is replaced by a discussion block
 > ([2026-10-26-report-run-citations.md](2026-10-26-report-run-citations.md)).
