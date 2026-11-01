@@ -2742,7 +2742,8 @@ beide Arme korrekt und ehrlich: ein Deckeneffekt, keine gezählte Runde dort. St
   unveränderte Gegenstücke; technisch regulär registriert (kein Prüfsummen-Treffer als Erkennung);
   „Erkennung in den durchgeführten Prüfungen“, keine Garantie, keine Reparatur; Beanstandungen an
   Gegenstücken fachlich beurteilen.
-- **Bereich 16** bleibt Kontext (Aufwand bei vollständig vorgegebenem Plan).
+- **Bereich 16** bleibt Kontext (Aufwand bei vollständig vorgegebenem Plan); seine gezählte Runde
+  (36) läuft nur, wenn nach 17 und 18 Zeit bleibt.
 
 **Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
 Die Stopps im Referenzpilot gingen auf Integritätsfehler zurück, nicht auf die Strenge (34 voll
