@@ -786,7 +786,10 @@ def row_provenance_findings(
                     f"from {', '.join(foreign)} — a run this run neither is, "
                     f"continues nor derives from; a file of two measurements",
                     fix=f"{measure_anew(answering_run.parent.parent)}, into an output "
-                    "file of its own",
+                    f"file of its own — a new name for the output in the measuring "
+                    f"script, e.g. `{next_output_name(entry.path)}`; keep "
+                    f"{entry.path.name} and its runs, never delete it: those rows are "
+                    f"the other runs' evidence",
                 )
             )
         if entry.continues:

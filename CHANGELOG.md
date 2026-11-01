@@ -22,6 +22,18 @@ pins (`requirements.txt` / `requirements.lock`).
   leaves nothing for git status (task 60 deleted runs/ five times without a
   word). It now tells every run the area's runs.tsv lists whose directory is
   gone (`agent_hooks.gone_run_areas`).
+- **A run still open is seen before a second one starts.** A low-cost run
+  outlasted the agent's tool limit and went to the background; `labkit-next`
+  read it as nothing and advised measuring, and the next start resumed into
+  its rows — three runs overlapped, two wrote rows another had made (reference
+  pilot, task 15). `labkit-next` now names an open run first and the wait; a
+  measurement of the same script refuses to start while one is open
+  (`runlog.open_runs`, `open_twins`). A run that broke off (failure.json) is
+  not open, even while its process lives on.
+- **"Into an output file of its own" says how.** The fix of a file holding
+  two measurements now names the new output name in the measuring script
+  and to keep the old file; read as `rm`, it cost task 15 its only clean
+  run's rows.
 
 ## 0.106.1 — 2026-11-01
 

@@ -220,6 +220,13 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             self.assertIn(f"2 row(s) from {A}", blockers[0].text)
             self.assertIn("file of two measurements", blockers[0].text)
             self.assertIn("measure anew", blockers[0].fix or "")
+            # how, not just where: read as `rm`, the vague text cost the
+            # only clean run's rows (reference pilot 2026-11-01, task 15)
+            self.assertIn(
+                "a new name for the output in the measuring script",
+                blockers[0].fix or "",
+            )
+            self.assertIn("never delete it", blockers[0].fix or "")
 
     def test_continued_rows_of_other_code_are_a_blocker(self) -> None:
         """The repair case: the run continues the faulty run's file, and

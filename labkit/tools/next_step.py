@@ -101,6 +101,20 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "nothing — a new attempt at the question is a new registration",
             "",
         )
+    # a run still open comes first: read as nothing, it sent agents to
+    # measure again beside it (reference pilot 2026-11-01, task 15)
+    from labkit.run.runlog import open_runs
+
+    still = open_runs(area)
+    if still:
+        names = ", ".join(r.run_id for r in still)
+        return Step(
+            f"{names} {'is' if len(still) == 1 else 'are'} still running in "
+            f"{shown(area, Path.cwd())}",
+            f"`runlog {shown(area, Path.cwd())} --wait` waits for it; then "
+            f"`labkit-next` again",
+            "every step on its rows: a second measurement beside it is refused",
+        )
     ctx = report_context.checked(area, protocol)
     pending = ctx.declared is None and ctx.run is not None
     gaps = report_check.report_gaps(ctx, adoption_pending=pending)

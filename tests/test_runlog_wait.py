@@ -598,18 +598,30 @@ class TestARefusedSecondWriterBesideALiveRun(unittest.TestCase):
                     [sys.executable, str(script), d, "0"], env=env, cwd=d,
                     capture_output=True, text=True, timeout=60,
                 )  # fmt: skip
+                # refused at the start since the run of the same script is open
+                # (reference pilot 2026-11-01, task 15): no second run record,
+                # so nothing crashed beside the live run
                 self.assertNotEqual(second.returncode, 0)
-                self.assertIn(f"pid {live.pid} is alive", second.stderr)
-                self.assertIn("never delete its lock", second.stderr)
+                self.assertIn("01_measure.py is still measuring", second.stderr)
+                self.assertIn("--wait", second.stderr)
+                self.assertEqual(len(list((area / "runs").iterdir())), 1)
                 code, out = _wait_for(d, "30")
                 self.assertEqual(code, 0, out)
-                self.assertIn("not what it waits for", out)
-                self.assertIn("CRASHED", out)
+                self.assertNotIn("CRASHED", out)
                 self.assertIn("no open runs", out)
+                again = subprocess.run(
+                    [sys.executable, str(script), d, "0"], env=env, cwd=d,
+                    capture_output=True, text=True, timeout=60,
+                )  # fmt: skip
+                self.assertEqual(
+                    again.returncode, 0, again.stderr
+                )  # the twin: free again
                 _, live_err = live.communicate(timeout=30)
                 self.assertEqual(live.returncode, 0, live_err)
                 rows = (area / "out.jsonl").read_text(encoding="utf-8").splitlines()
-                self.assertEqual(len(rows), 1)  # one writer, one row
+                self.assertEqual(
+                    len(rows), 2
+                )  # two runs one after the other, a row each
             finally:
                 if live.poll() is None:
                     live.kill()

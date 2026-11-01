@@ -113,6 +113,7 @@ from labkit.formats.runs import (
     now_stamp,
     read_completion,
     write_failure,
+    read_failure,
     read_metrics,
     recorded_path,
     run_dirs,
@@ -495,6 +496,8 @@ class Run:
             if limit is not None and os.environ.get("LABKIT_DETACHED") != "1":
                 require_detached(base_dir, limit)
         _check_run_index(base_dir)
+        if prepared.run_kind == "measurement":
+            _require_no_open_twin(base_dir)
         described = describe_data(data, base_dir) if data else {}
         unfrozen_ack, audit_failed = False, None
         if prepared.run_kind == "measurement":
@@ -861,6 +864,57 @@ class run:
                 file=sys.stderr,
             )
         return False
+
+
+#: the states of a run still open: alive, or a pid that exists where its
+#: command line cannot be read (`runs.run_state`)
+OPEN_STATES = ("running", "unknown")
+
+
+def open_runs(base_dir: str | Path) -> list[ActiveRun]:
+    """The runs of BASE_DIR still open: in OPEN_STATES and without a
+    failure.json — a run that broke off recorded why, even while the
+    process that ran it lives on (a test, a notebook)."""
+    return [
+        r
+        for r in active(base_dir)
+        if r.state in OPEN_STATES and read_failure(r.dir) is None
+    ]
+
+
+def open_twins(base_dir: str | Path, script: str) -> list[ActiveRun]:
+    """The runs of BASE_DIR still open (`open_runs`) that run SCRIPT in
+    another process — a second writer comes from another process; one
+    process opening its runs one after another (a sweep) is no twin."""
+    return [
+        r
+        for r in open_runs(base_dir)
+        if r.config is not None
+        and r.config.script == script
+        and r.config.pid != os.getpid()
+    ]
+
+
+def _require_no_open_twin(base_dir: str | Path) -> None:
+    """Refuse a measurement while a run of the same script is still open in
+    the area: a low-cost run outlasted the agent's tool limit, went to the
+    background, and the next start resumed into its rows — three runs
+    overlapped and two wrote rows another run had made (reference pilot
+    2026-11-01, task 15). A crashed or completed run holds nothing.
+    Raises SystemExit naming the open run and the wait."""
+    script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
+    twins = open_twins(base_dir, script)
+    if twins:
+        named = ", ".join(
+            f"{r.run_id} (pid {r.config.pid if r.config else '?'})" for r in twins
+        )
+        raise SystemExit(
+            with_way_out(
+                f"runlog: {script} is still measuring in {base_dir}: {named} — a "
+                f"second measurement beside it would read and write the same files",
+                f"wait for it (`runlog {base_dir} --wait`), then read its result",
+            )
+        )
 
 
 def indexed_runs(base_dir: str | Path, protocol_id: str | None = None) -> list[str]:

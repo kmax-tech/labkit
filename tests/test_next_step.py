@@ -86,6 +86,40 @@ class TheChain(unittest.TestCase):
         self.assertTrue(step.next.startswith("nothing"), step)
         self.assertEqual(step.held, "")
 
+    def test_an_open_run_is_the_step_before_any_other(self):
+        """A run still open read as nothing, and labkit-next sent the agent to
+        measure again beside it (reference pilot 2026-11-01, task 15). The
+        twin: a run that broke off (failure.json) is not open."""
+        import json
+
+        from labkit.formats import runs
+        from protocol_fixture import run_record
+
+        me = runs._command_of(os.getpid()) or "python"
+        run_dir = self.area / "runs" / "2026-11-01T15-19-06_368b"
+        run_dir.mkdir(parents=True)
+        self.addCleanup(lambda: __import__("shutil").rmtree(run_dir))
+        (run_dir / "config.json").write_text(
+            json.dumps(
+                run_record(
+                    {
+                        "schema_version": 4,
+                        "run_kind": "measurement",
+                        "pid": os.getpid(),
+                        "script": me.split()[0],
+                    }
+                )
+            ),
+            encoding="utf-8",
+        )
+        step = self.step()
+        self.assertIn("2026-11-01T15-19-06_368b is still running", step.where)
+        self.assertIn("--wait", step.next)
+        (run_dir / runs.FAILURE_FILE).write_text(
+            json.dumps({"error": "RuntimeError", "message": "x"}), encoding="utf-8"
+        )
+        self.assertNotIn("still running", self.step().where)
+
     def test_the_command_prints_where_next_and_held(self):
         rc, out, err = run_next(self.area, self.lab.root)
         self.assertEqual(rc, 0, err)
