@@ -80,7 +80,8 @@ class CliIsolation(unittest.TestCase):
 
 
 class CliInput(unittest.TestCase):
-    """`input = "prompt"` sends the prompt alone: on CLI 2.1.309 the default
+    """`input = "prompt"` sends the prompt as the only message, beside the
+    CLI's fixed identity line in the system prompt: on CLI 2.1.309 the default
     call carried a 27 k-character agent system prompt, environment
     reminders and thinking beside a registered prompt (registered pilot,
     pubmedqa50, 2026-11-01; checked behind a logging proxy)."""
@@ -153,6 +154,7 @@ class CliInput(unittest.TestCase):
         self.assertEqual(prov["cli_input"], "prompt")
         self.assertIn("--bare", prov["cli_flags"])
         self.assertIn("MAX_THINKING_TOKENS=0", prov["cli_flags"])
+        self.assertIn("fixed identity line", prov["cli_sent"])
 
 
 if __name__ == "__main__":

@@ -21,7 +21,8 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Added
 
-- **A claude-cli alias can send the prompt alone: `input = "prompt"`.**
+- **A claude-cli alias can send the prompt as the only message: `input =
+  "prompt"`.**
   Behind a logging proxy (CLI 2.1.309), a `claude -p` call carried a
   27,000-character agent system prompt, environment reminders (cwd, model,
   date) and extended thinking beside the registered prompt; a protocol's
@@ -32,7 +33,8 @@ pins (`requirements.txt` / `requirements.lock`).
   ANTHROPIC_API_KEY, since `--bare` reads no login, and is refused without it.
   The default `harness` keeps today's call. A row's `_prov` names
   `cli_input` and the flags; a run records `input` when it is not the
-  default.
+  default; `_prov.cli_sent` says what was sent — not the prompt alone: the
+  CLI's identity line stays.
 
 ### Changed
 

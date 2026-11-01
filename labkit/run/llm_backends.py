@@ -214,6 +214,13 @@ CLI_ISOLATION = ["--setting-sources", "", "--tools", ""]
 #: ANTHROPIC_API_KEY.
 CLI_PROMPT_ONLY = ["--bare"]
 CLI_PROMPT_ONLY_ENV = {"MAX_THINKING_TOKENS": "0"}
+#: what such a call sends, as a row's provenance states it (`llm.provenance`):
+#: not the prompt alone — the CLI's identity line stays in the system prompt
+CLI_PROMPT_ONLY_SENT = (
+    "the prompt as the only message; system prompt: the CLI's fixed identity "
+    "line (billing header and agent sentence), then the caller's system prompt "
+    "if any; no environment reminders; thinking off"
+)
 
 
 #: `claude -p` runs from a neutral directory, never from the repo: the CLI

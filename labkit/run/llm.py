@@ -32,7 +32,8 @@ alias is first resolved):
     [models.haiku]
     backend = "claude-cli"            # subprocess `claude -p` (CLI auth, headless-safe)
     model = "claude-haiku-4-5-20251001"
-    input = "prompt"                  # the prompt alone (needs ANTHROPIC_API_KEY);
+    input = "prompt"                  # the prompt as the only message, beside the
+                                      # CLI's fixed identity line (needs ANTHROPIC_API_KEY);
                                       # unset, "harness": the CLI adds its agent
                                       # system prompt, reminders and thinking
 
@@ -113,6 +114,7 @@ from labkit.run.llm_backends import (
     CLI_ISOLATION,
     CLI_PROMPT_ONLY,
     CLI_PROMPT_ONLY_ENV,
+    CLI_PROMPT_ONLY_SENT,
     CALL_STATE,
     auth_headers,
     cli_version,
@@ -379,6 +381,8 @@ def provenance(alias: str) -> dict:
             CLI_ISOLATION + (CLI_PROMPT_ONLY if prompt_only else [])
         ) + "".join(f" {k}={v}" for k, v in CLI_PROMPT_ONLY_ENV.items() if prompt_only)
         prov["cli_input"] = used.input
+        if prompt_only:
+            prov["cli_sent"] = CLI_PROMPT_ONLY_SENT
     return prov
 
 
