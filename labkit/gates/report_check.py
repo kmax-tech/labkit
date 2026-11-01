@@ -551,6 +551,7 @@ def report_check(
     *,
     state: str = TREE,
     text: str | None = None,
+    review: bool = True,
 ) -> int:
     """Check AREA before reporting; 0 clean or warnings, 1 blocked, 2 no context.
 
@@ -564,13 +565,17 @@ def report_check(
     6. Recomputation: always run the analysis script's `--check`.
     7. Decisions: review accepted `stands` only where analysis is owed.
     8. Report: the registered report, only when the head names one and the
-       file is delivered in STATE, carries the result block or the handover.
+       file is delivered in STATE, carries the result block or the handover,
+       and then (REVIEW) a clean report review of that state.
     9. Summary: return 1 with any blocker, otherwise 0.
 
     Every applicable stage runs despite earlier blockers. STATE and TEXT
     name the declaration's file state: the tree by default, the index for
-    the pre-commit, the written proposal for adoption. The nested finalize
-    gate and analysis script read their own inputs.
+    the pre-commit, the written proposal for adoption. REVIEW false leaves
+    the registered report's review out — `labkit-adopt`'s own check right
+    after it wrote the block: the review reads the final text, which comes
+    after. The nested finalize gate and analysis script read their own
+    inputs.
     """
     # 0. protocol and context — the only early end
     chosen = choose_protocol(area, protocol, "report-check")
@@ -598,7 +603,7 @@ def report_check(
             f"registration as committed at the first measurement, the full run, "
             f"the analysis audit and the check are owed instead"
         )
-    findings.take_all(report_gaps(ctx))
+    findings.take_all(report_gaps(ctx, review=review))
     # adoption last — an adoption line beside other blockers is the last
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
@@ -610,7 +615,9 @@ def report_check(
     return findings.report("report-check", "reporting")
 
 
-def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFinding]:
+def report_gaps(
+    ctx: Checked, *, adoption_pending: bool = False, review: bool = True
+) -> list[GateFinding]:
     """Every gap report-check holds CTX to, in the order of the chain — the
     one list `report_check` prints and `next_step` reads:
 
@@ -685,7 +692,7 @@ def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFin
         out += withdrawn_first(followup_findings(ctx), held_by)
     # 8. report
     if not adoption_pending:
-        out += report_findings(ctx)
+        out += report_findings(ctx, review=review)
     return out
 
 
@@ -749,14 +756,14 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
         return handovers.RunAccount(run, handovers.HELD, (str(exc),))
     held = tuple(
         g.text
-        for g in report_gaps(ctx, adoption_pending=ctx.declared is None)
+        for g in report_gaps(ctx, adoption_pending=ctx.declared is None, review=False)
         if g.grade == BLOCKER
     )
     state = handovers.HELD if held else handovers.ADOPTABLE
     return handovers.RunAccount(run, state, held)
 
 
-def report_findings(ctx: Checked) -> list[GateFinding]:
+def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     """The registered report's obligation (`report_hold.report_owed`): the
     file the head's `report` names, as the state holds it, carries the
     result block of the declared run or the protocol's handover block —
@@ -768,11 +775,17 @@ def report_findings(ctx: Checked) -> list[GateFinding]:
     after the declaration (`--into`), so holding the report there held the
     adoption against itself (route probe, 2026-10-29: `--from-run` refused
     for the missing block, `--into` for the missing declaration); the stop
-    and the commit hold the delivered report."""
+    and the commit hold the delivered report. REVIEW: the released report
+    owes a clean report review of its state too (`report_owed`)."""
     if ctx.state == PROPOSED:
         return []
     gap = report_owed(
-        ctx.protocol, ctx.text, ctx.declared, ctx.repo, staged=ctx.state == INDEX
+        ctx.protocol,
+        ctx.text,
+        ctx.declared,
+        ctx.repo,
+        staged=ctx.state == INDEX,
+        review=review,
     )
     return [] if gap is None else [gap]
 

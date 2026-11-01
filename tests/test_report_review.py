@@ -110,13 +110,24 @@ class Gather(unittest.TestCase):
         self.assertIn("FAILED (unproven) · opus", prompt)
         self.assertIn("LAB-011", prompt)  # the cited rules are inlined
 
-    def test_a_report_marking_no_run_is_not_reviewed(self):
+    def test_a_report_with_no_discussion_block_is_reviewed_too(self):
+        """Reference pilot 2026-11-01, task 15: the review refused a report
+        citing a run without a discussion block ("nothing to review"), so
+        an older run's "PASS" met no reader. It reads such a report: the
+        adopted run (none here), no discussion, and each cited run's metrics
+        labelled as cited, not adopted."""
         with tempfile.TemporaryDirectory() as d:
             a = Area(d)
-            with self.assertRaisesRegex(AuditError, "nothing to review"):
-                report_review.gather_report(
-                    a.area, a.report(f"cites run {RUN}\n"), a.area / "PROTOCOL-x.md"
-                )
+            prompt, marked, _ = report_review.gather_report(
+                a.area,
+                a.report(f"criterion-1 PASS (run {RUN})\n"),
+                a.area / "PROTOCOL-x.md",
+            )
+        self.assertEqual(marked, [])
+        self.assertIn("none — the protocol has adopted no result", prompt)
+        self.assertIn("none — the report discusses no run", prompt)
+        self.assertIn("metrics.json (cited, not adopted) =====", prompt)
+        self.assertIn('"criterion_1_pass": true', prompt)
 
     def test_a_marked_run_the_area_lacks_is_refused(self):
         other = "2026-10-25T20-00-00_abcd"

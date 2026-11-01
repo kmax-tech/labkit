@@ -26,6 +26,9 @@ import shlex
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from labkit.formats.answering_run import bound_runs, is_measurement
+from labkit.formats.runs import UNREADABLE
+from labkit.run.runlog import indexed_runs
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.runs import run_dirs, run_path
 from labkit.formats.gate import WARNING, Findings, GateFinding, blocker
@@ -287,7 +290,13 @@ def registering_protocols(paths: list[Path], repo: Path, *, staged: bool) -> lis
 
 
 def report_owed(
-    protocol: Path, text: str, declared: str | None, repo: Path, *, staged: bool
+    protocol: Path,
+    text: str,
+    declared: str | None,
+    repo: Path,
+    *,
+    staged: bool,
+    review: bool = True,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
     the three ways out — or None.
@@ -297,7 +306,8 @@ def report_owed(
     state holds it (`repo.state_text`: the index when STAGED, else the
     tree); not there: None — the obligation is on what is delivered, a
     report not yet written owes nothing, and one the commit does not carry
-    is not delivered. Released by EITHER the protocol's result block
+    is not delivered (the stop names a missing one, `agent_hooks.missing_reports`).
+    Released by EITHER the protocol's result block
     showing DECLARED, the run the head declares (written by `protocol-fill
     --into`; where the report is among the paths its body is held to the
     rendering as well, `report_blocks.block_gaps`) OR the protocol's
@@ -311,7 +321,12 @@ def report_owed(
     DECLARED when declared) for the adoption and the discussion, and the
     handover. Why (pressure pilot 2026-10-29, tasks 34, 15, 60): the hook
     refused a report citing a run that declares no result, the agents
-    deleted the run id, and the commit passed."""
+    deleted the run id, and the commit passed. Once released, and REVIEW,
+    the report owes a clean report review of this state (`review_gap`):
+    its prose may still present another run as the result — the block
+    shows the adopted number, it cannot tell what the text around it
+    claims (reference pilot 2026-11-01, task 15: an older run's "PASS",
+    no review owed or possible)."""
     head = protocol_block.head(text)
     if head.report is None:
         return None
@@ -334,16 +349,25 @@ def report_owed(
     except (report_blocks.ReportBlockError, handovers.HandoverError) as exc:
         blocks, handed = [], []
         why.append(f"its blocks do not read: {exc}")
+
     if declared is not None and any(
         b.protocol == block_owner and b.run_id == declared for b in blocks
     ):
-        return None
+        return (
+            registered_review(report, written, protocol, text, repo, staged=staged)
+            if review
+            else None
+        )
     for h in handed:
         if h.protocol != block_owner:
             continue
         gap = handovers.block_mismatch(h, report, root, staged=staged)
         if gap is None:
-            return None
+            return (
+                registered_review(report, written, protocol, text, repo, staged=staged)
+                if review
+                else None
+            )
         why.append(f"its handover block at line {h.first} {gap}")
     run, _ = audited_run(protocol.parent.resolve(), protocol, text)
     newest = declared or (run.name if run is not None else "<run_id>")
@@ -372,6 +396,81 @@ def report_owed(
         f"run only looked at and releases nothing — the report then still owes "
         f"the result or the handover; `{handover_command(protocol, name_r)}` "
         f"ends the protocol without a result",
+    )
+
+
+def missing_report(protocol: Path, text: str, repo: Path) -> GateFinding | None:
+    """Why PROTOCOL (its TEXT) is delivered incomplete: its head registers
+    a report (`[protocol] report`, relative to REPO) that the working tree
+    lacks, while its area holds a measurement of it — bound and present
+    (`answering_run.bound_runs`, `is_measurement`) or listed in runs.tsv
+    and deleted since (`runlog.indexed_runs`). One blocker naming the two
+    ways to write it: the adoption (its result block) and the handover
+    (an end without a result). None when nothing is registered, the
+    report is there, or nothing was measured — before a measurement a
+    report owes nothing. Why: the registered report owes its review
+    (`report_owed`); left unwritten, it owed none, and an agent could end
+    without one (reference pilot 2026-11-01). Raises
+    `protocol_block.BlockError` on a head that does not read."""
+    head = protocol_block.head(text)
+    if head.report is None or not head.id:
+        return None
+    report = own_path(repo.resolve() / head.report)
+    if report.exists():
+        return None
+    area = protocol.parent
+    taken, rest = bound_runs(area, head.id)
+    # as `report_check.adoption_state` counts them: an unreadable config may be one
+    ours = [f for f in rest if f.binding.id == head.id or f.state == UNREADABLE]
+    measured = [f for f in [*taken, *ours] if is_measurement(f)]
+    gone = [r for r in indexed_runs(area, head.id) if not run_path(area, r).is_dir()]
+    if not measured and not gone:
+        return None
+    here = Path.cwd()
+    name_p, name_r = shown(protocol, here), shown(report, here)
+    return blocker(
+        f"{name_p} registers {name_r} as its report, which is not written, and "
+        f"its area holds a measurement of it — without its registered report "
+        f"the delivery is incomplete",
+        fix=f"`{adopt_command(protocol)}` adopts a run and writes its result "
+        f"block into {name_r}; `{handover_command(protocol, name_r)}` ends the "
+        f"protocol without a result and writes that into it; then the report "
+        f"review it owes",
+    )
+
+
+def registered_review(
+    report: Path, written: str, protocol: Path, text: str, repo: Path, *, staged: bool
+) -> GateFinding | None:
+    """The report review the registered REPORT (its WRITTEN text in the
+    state) of PROTOCOL (its TEXT) owes once its result or handover block
+    stands (`review_gap`, with the report's discussion blocks of PROTOCOL);
+    None when a review of this state names no claim. A discussion block
+    that does not read is a blocker of its own."""
+    here = Path.cwd()
+    name_p, name_r = shown(protocol, here), shown(report, here)
+    try:
+        mine = [
+            d
+            for d in report_blocks.discussions(written)
+            if (report.parent / d.protocol).resolve() == protocol.resolve()
+        ]
+    except report_blocks.ReportBlockError as exc:
+        return blocker(
+            f"{name_r}: its discussion blocks do not read — {exc}",
+            fix="restore the block's comment lines as `protocol-fill` wrote "
+            "them (`--discuss … --into` writes the block again)",
+        )
+    return review_gap(
+        report,
+        name_r,
+        written,
+        protocol,
+        text,
+        mine,
+        repo,
+        f"is the report {name_p} registers",
+        staged=staged,
     )
 
 
@@ -820,78 +919,105 @@ def report_review_owed(
     staged: bool = False,
 ) -> list[GateFinding]:
     """The report review the report at PATH (REL to the repo, TEXT as the
-    gate's state holds it) owes: per protocol its discussion blocks name,
-    a review of exactly this state — the inputs the reviewer reads
-    (`report_review_inputs.review_pieces`), the report and the protocol as the
-    state holds them — that names no claim (`report_reviews.standing`).
-    A BLOCKER per protocol without one, naming the command, the claims of
-    this state, or what changed since the last review. Guaranteed: the
-    records, their binding and their claim count are read exactly; whether
-    a claim is right stays the reviewer's judgement. A discussion whose
-    protocol or run is missing owes none here (`discussion_sources` names
-    it). STAGED (the pre-commit): every input comes from the state the
-    commit carries — the report and protocol from the index, and the
-    area's tree must equal the index (its runs' metrics, audit records and
-    review records are read from the tree), else a blocker; a review
-    counts only when the index holds its record."""
+    gate's state holds it) owes for its discussion blocks (DISCUSSED): per
+    protocol they name, a BLOCKER when no review of exactly this state
+    names no claim (`review_gap`). A protocol whose head registers this
+    report is left out here — its own hold owes the review of the whole
+    report once the result or handover block stands (`report_owed`), and
+    one blocker per protocol is enough. A discussion whose protocol or run
+    is missing owes none here (`discussion_sources` names it)."""
     out: list[GateFinding] = []
     by_protocol: dict[Path, list[report_blocks.Discussion]] = {}
     for d in discussed:
         by_protocol.setdefault((path.parent / d.protocol).resolve(), []).append(d)
+    registering = set(registering_protocols([path], sources.repo, staged=staged))
     for protocol, mine in by_protocol.items():
-        area = protocol.parent
         protocol_text = sources.texts.get(protocol)
-        if protocol_text is None or not all(
-            run_path(area, d.run_id).is_dir() for d in mine
-        ):
+        if protocol in registering or protocol_text is None:
             continue
-        command = f"`{report_review_command(area, path, protocol)}`"
-        if staged:
-            # the review reads the area's files (runs' metrics, audit records,
-            # its own records) from the tree; the commit carries the index —
-            # a release on bytes the commit does not hold is none
-            differs = tree_differs(sources.repo, area)
-            if differs:
-                out.append(
-                    blocker(
-                        f"{rel}: its report review reads "
-                        f"{shown(area, sources.repo)}, whose working tree differs "
-                        f"from the index ({', '.join(differs)}) — the commit would "
-                        f"not hold what the review saw",
-                        fix=f"stage these too: `git add -- "
-                        f"{shlex.quote(shown(area, sources.repo))}`",
-                    )
-                )
-                continue
-        try:
-            pieces = review_pieces(area, path, text, protocol, protocol_text, mine)
-            whole, parts = report_reviews.fingerprint(pieces)
-            report_key, protocol_key = review_keys(area, path, protocol)
-            found = report_reviews.area_report_reviews(area)
-            if staged:
-                carried = set(indexed_files(sources.repo))
-                found = [r for r in found if r.path.resolve() in carried]
-            stands = report_reviews.standing(found, report_key, protocol_key, whole)
-        except (
-            AuditError,
-            findings.FindingsError,
-            report_reviews.ReportReviewError,
-            RuntimeError,
-        ) as exc:
-            out.append(
-                blocker(
-                    f"{rel}: its report review cannot be told — {exc}",
-                    fix=f"repair what the sentence names, then review this state: "
-                    f"{command}",
-                )
-            )
-            continue
-        if stands.released:
+        if not all(run_path(protocol.parent, d.run_id).is_dir() for d in mine):
             continue
         runs_named = ", ".join(dict.fromkeys(d.run_id for d in mine))
-        # lost audit evidence, then claims, then no clean review (`review_hold`)
-        out.append(review_hold(rel, protocol, runs_named, stands, parts, command))
+        gap = review_gap(
+            path,
+            rel,
+            text,
+            protocol,
+            protocol_text,
+            mine,
+            sources.repo,
+            f"discusses {runs_named} as not reported",
+            staged=staged,
+        )
+        if gap is not None:
+            out.append(gap)
     return out
+
+
+def review_gap(
+    path: Path,
+    rel: str,
+    text: str,
+    protocol: Path,
+    protocol_text: str,
+    discussed: list[report_blocks.Discussion],
+    repo: Path,
+    held_for: str,
+    *,
+    staged: bool,
+) -> GateFinding | None:
+    """The BLOCKER of the report at PATH (REL to REPO, TEXT as the gate's
+    state holds it) under PROTOCOL (its PROTOCOL_TEXT, its DISCUSSED
+    blocks) when no report review of exactly this state names no claim —
+    the inputs the reviewer reads (`report_review_inputs.review_pieces`),
+    the report and the protocol as the state holds them
+    (`report_reviews.standing`); None when one does. HELD_FOR says why the
+    report owes it, for the sentence. Guaranteed: the records, their
+    binding and their claim count are read exactly; whether a claim is
+    right stays the reviewer's judgement. STAGED (the pre-commit): every
+    input comes from the state the commit carries — the report and
+    protocol from the index, and the area's tree must equal the index (its
+    runs' metrics, audit records and review records are read from the
+    tree), else a blocker; a review counts only when the index holds its
+    record."""
+    area = protocol.parent
+    command = f"`{report_review_command(area, path, protocol)}`"
+    if staged:
+        # the review reads the area's files (runs' metrics, audit records,
+        # its own records) from the tree; the commit carries the index —
+        # a release on bytes the commit does not hold is none
+        differs = tree_differs(repo, area)
+        if differs:
+            return blocker(
+                f"{rel}: its report review reads {shown(area, repo)}, whose "
+                f"working tree differs from the index ({', '.join(differs)}) — "
+                f"the commit would not hold what the review saw",
+                fix=f"stage these too: `git add -- {shlex.quote(shown(area, repo))}`",
+            )
+    try:
+        pieces = review_pieces(area, path, text, protocol, protocol_text, discussed)
+        whole, parts = report_reviews.fingerprint(pieces)
+        report_key, protocol_key = review_keys(area, path, protocol)
+        found = report_reviews.area_report_reviews(area)
+        if staged:
+            carried = set(indexed_files(repo))
+            found = [r for r in found if r.path.resolve() in carried]
+        stands = report_reviews.standing(found, report_key, protocol_key, whole)
+    except (
+        AuditError,
+        findings.FindingsError,
+        report_reviews.ReportReviewError,
+        protocol_block.BlockError,
+        RuntimeError,
+    ) as exc:
+        return blocker(
+            f"{rel}: its report review cannot be told — {exc}",
+            fix=f"repair what the sentence names, then review this state: {command}",
+        )
+    if stands.released:
+        return None
+    # lost audit evidence, then claims, then no clean review (`review_hold`)
+    return review_hold(rel, protocol, held_for, stands, parts, command)
 
 
 @dataclass(frozen=True)
@@ -925,31 +1051,32 @@ def lost_evidence(protocol: Path) -> LostEvidence | None:
 def review_hold(
     rel: str,
     protocol: Path,
-    runs_named: str,
+    held_for: str,
     stands: report_reviews.Standing,
     parts: dict[str, str],
     command: str,
 ) -> GateFinding:
-    """The BLOCKER of a report whose discussion no review releases: first,
-    while the area's audit evidence is gone, that no review can run and the
-    way out that works (`lost_evidence` — before any claims of this state,
-    since no review can answer them then); else the claims that hold this
-    state; else that it has no clean review. REL is the report, RUNS_NAMED
-    the discussed runs of PROTOCOL's area, STANDS where the report stands,
-    PARTS the state's fingerprint parts, COMMAND the review to run."""
+    """The BLOCKER of a report no review releases: first, while the area's
+    audit evidence is gone, that no review can run and the way out that
+    works (`lost_evidence` — before any claims of this state, since no
+    review can answer them then); else the claims that hold this state;
+    else that it has no clean review. REL is the report, HELD_FOR why it
+    owes a review of PROTOCOL's area (its discussion, or the head
+    registering it), STANDS where the report stands, PARTS the state's
+    fingerprint parts, COMMAND the review to run."""
     # `--discuss` under a handover for a lost record had no exit: the
     # review it owes was refused (pilot of labkit-paper area 15, t60)
     lost = lost_evidence(protocol)
     if lost is not None:
         return blocker(
-            f"{rel}: discusses {runs_named} and has no clean report review of "
-            f"this state — and none can run: {lost.cause}",
+            f"{rel}: {held_for} and has no clean report review of this "
+            f"state — and none can run: {lost.cause}",
             fix=lost.fix,
         )
     if stands.claims:
         return blocker(
-            f"{rel}: the report review holds this state on the discussion "
-            f"of {runs_named} — {held_by(stands)}",
+            f"{rel}: the report review holds this state ({held_for}) — "
+            f"{held_by(stands)}",
             fix=f"change the report, or a source the reviewer read, so that "
             f"no claim holds, then review that state: {command} (another "
             f"draw on this state, `--again` included, releases nothing)",
@@ -961,12 +1088,11 @@ def review_hold(
         else ""
     )
     return blocker(
-        f"{rel}: discusses {runs_named} as not reported and has no clean "
-        f"report review of this state (one naming no claim){since} — a cold "
-        f"reader checks that the report states none of their numbers as "
-        f"results",
+        f"{rel}: {held_for} and has no clean report review of this state "
+        f"(one naming no claim){since} — a cold reader checks that it "
+        f"presents nothing as a result the protocol has not adopted",
         fix=f"{command} (one model call) — last, after the report's text and "
-        f"its discussion block are final: a change after it owes another",
+        f"its blocks are final: a change after it owes another",
     )
 
 

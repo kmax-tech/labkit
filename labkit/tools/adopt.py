@@ -12,7 +12,10 @@ does not pass:
                the report the head registers (`[protocol] report`); no
                report registered, no step
     3. check   `report-check AREA`: the tree as it now stands, report
-               included
+               included — but not the registered report's review
+    4. review  named, not run: the registered report owes a report review
+               of its final text (`labkit-audit AREA --report-review
+               REPORT`), which the stop and the commit hold
 
 RUN_ID omitted: the run the gates hold the protocol to (`--from-run`
 without a value, `recheck.chosen_run`). A run the protocol has already
@@ -41,7 +44,7 @@ from labkit.formats.repo import (
 
 
 def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
-    """Run the module's three steps for RUN_ID (None: the answering run) on
+    """Run the module's steps for RUN_ID (None: the answering run) on
     PROTOCOL of AREA; each step prints its own lines. Returns 0 when all
     passed, else the exit code of the first that did not."""
     from labkit.gates import report_check
@@ -85,10 +88,24 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
             _resumes(adopted, 2, again)
             return rc
     print("labkit-adopt: 3. check")
-    rc = report_check.report_check(area, protocol)
+    # the registered report's review reads the final text, which the agent
+    # writes after this: the stop and the commit owe it, not this check
+    rc = report_check.report_check(area, protocol, review=False)
     if rc != 0:
         _resumes(adopted, 3, again)
-    return rc
+        return rc
+    if report is not None:
+        from labkit.formats.repo import report_review_command
+
+        path = own_path(layout_root(area).resolve() / report)
+        print(
+            f"labkit-adopt: 4. report review — owed last, once the text of "
+            f"{shown(path, Path.cwd())} is final: "
+            f"`{report_review_command(area, path, protocol)}` (one model call; "
+            f"the stop and the commit hold the report until a review of its "
+            f"final state names no claim)"
+        )
+    return 0
 
 
 def _resumes(adopted: str | None, step: int, again: str) -> None:

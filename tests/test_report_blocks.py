@@ -627,7 +627,10 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area, (claim,))
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
-        self.assertIn("the report review holds this state on the discussion of", out)
+        self.assertIn(
+            f"the report review holds this state (discusses {self.RUN} as not reported)",
+            out,
+        )
         self.assertIn("line 3 (result): criterion-1 PASS of the discussed run", out)
         self._reviewed(report, area)  # a clean draw on the same state
         self._reviewed(report, area, again=True)

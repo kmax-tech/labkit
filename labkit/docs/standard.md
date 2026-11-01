@@ -309,9 +309,12 @@ evidence file under the same ID (top of this document).*
   the adoption — and a run only looked at stands in a discussion block
   (`protocol-fill … --discuss <id> --why "<what refused the adoption, what
   was found>" --into <report>`: protocol, run and why in its head, its
-  line written from them), and a report with a discussion block carries
-  a report review of its state that names no claim (`labkit-audit
-  --report-review`, recorded under `audits/report-reviews/`); a number
+  line written from them), and a report with a discussion block — and
+  the report a protocol's head registers, once its result or handover
+  block stands — carries a report review of its state that names no
+  claim (`labkit-audit --report-review`, recorded under
+  `audits/report-reviews/`); a registered report never written after a
+  measurement is an incomplete delivery, held at the stop; a number
   outside every block is named as having no
   assigned source — a hint, since equal values elsewhere do not show
   where a number came from.

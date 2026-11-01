@@ -56,6 +56,9 @@ class Adopt(unittest.TestCase):
         self.assertIn(run_id, report)
         self.assertIn("labkit-adopt: 3. check", out)
         self.assertIn("finalized, audited, checked", out)
+        # the review of the registered report is named, not run, not held here
+        self.assertIn("labkit-adopt: 4. report review — owed last", out)
+        self.assertIn("--report-review", out)
         # again: the adoption is skipped, the block stands, the check passes
         rc, out = self.labkit_adopt(area, run_id)
         self.assertEqual(rc, 0, out)

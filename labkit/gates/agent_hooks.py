@@ -1038,7 +1038,7 @@ def _budget(seconds: float) -> Iterator[None]:
 
 
 def stop(event: dict) -> int:
-    """Stop hook: a number written back or committed in this session gets report-check; blockers, or checks that outrun the stop's budget, send the agent back (exit 2), once per turn."""
+    """Stop hook: a number written back or committed in this session gets report-check, and an area it worked in that measured owes its registered report (`missing_reports`); blockers, or checks that outrun the stop's budget, send the agent back (exit 2), once per turn."""
     repo = session_repo(event)
     if repo is None:
         # nothing tells the stop what the session changed or committed: a
@@ -1120,6 +1120,14 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
+    missing = missing_reports(repo, changed)
+    if missing:
+        print(
+            "a protocol of an area this session worked in registers a report "
+            "that is not written — an end without it is an incomplete "
+            "delivery, not a withheld result:\n  " + "\n  ".join(missing),
+            file=sys.stderr,
+        )
     rc = 0
     if changed:
         # every changed path, not only a protocol: a script edited after the
@@ -1138,10 +1146,30 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     # commits it could not read keep the base where it is: past them, no
     # later stop would check them
     return (
-        rc != 0 or bool(undecided) or session.hold,
+        rc != 0 or bool(undecided) or bool(missing) or session.hold,
         not in_tree and not session.unchecked,
         checked_head,
     )
+
+
+def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
+    """Per protocol of every area PATHS touch (`areas_touched`) whose
+    registered report is not written though the area measured
+    (`report_hold.missing_report`): the sentence with its way out. A head
+    that does not read is left to the checks that hold it where it is
+    touched."""
+    out: list[str] = []
+    for area in areas_touched(paths, repo):
+        for protocol in area_protocols(area):
+            try:
+                gap = report_hold.missing_report(
+                    protocol, protocol.read_text(encoding="utf-8"), repo
+                )
+            except (OSError, UnicodeError, protocol_block.BlockError):
+                continue  # held as a protocol where it is touched
+            if gap is not None:
+                out.append(f"{gap.text}. Next: {gap.fix}")
+    return out
 
 
 def session_evidence(

@@ -1,18 +1,22 @@
 """report_review — `labkit-audit AREA --report-review REPORT`: a cold reader
-on a finished report that discusses a run of AREA (not reported).
+on a finished report: does it present as a valid result anything the
+protocol has not adopted, or state something the audits or the adopted
+result contradict?
 
     labkit-audit <AREA> --report-review REPORT [--protocol FILE] [--again]
                  [--model ALIAS] [--timeout S] [--out FILE]
 
-A discussion block (`report_blocks.discussions`, written by `protocol-fill
-… --discuss RUN --why … --into REPORT`) says the run's numbers did not
-leave the area. Whether the report keeps them out is semantics: a number
-beside the block may be the why or a result, and a verdict may contradict
-an audit decision. The reviewer gets, in one call: the report with its
-line numbers, the discussion blocks of the protocol, the protocol as it
-is now, each discussed run's `metrics.json`, and every audit record of
-the area with its decisions and every failed attempt (`review_pieces`).
-Instructions: `report-review.agent.md`.
+The adoption (`labkit-adopt`) is the one way a number leaves the area as
+a result, and its generated block shows it. Whether the report's prose
+keeps to that is semantics: an older run's "PASS", a verdict the adopted
+run does not hold, a discussed run's number in a summary. The reviewer
+gets, in one call: the report with its line numbers, the run the
+protocol has adopted (or none), the discussion blocks of the protocol
+(`protocol-fill … --discuss RUN --why … --into REPORT`; or none), the
+protocol as it is now, the `metrics.json` of the adopted, each discussed
+and each cited run of the area, and every audit record of the area with
+its decisions and every failed attempt (`review_pieces`). Instructions:
+`report-review.agent.md`.
 
 Agent audit; its record is a gate's input. The review writes
 `audits/report-reviews/<minute>-review.toml` with the claims and the
@@ -21,10 +25,14 @@ attempt in the area's journal (`attempts.attempt`, mode `report-review`,
 started on that fingerprint): the answer kept before it is read, the end
 naming the record or why there is none — a review with a claim deleted
 before the commit is named, where before nothing held the state once it
-was gone (ninth haiku round, t5). report-check holds
-a report with a discussion block until a review of exactly that state
-names no claim (`report_hold.report_review_owed`); a claim holds the
-state, and a later clean draw does not release it. On a state a review
+was gone (ninth haiku round, t5). report-check holds a report with a
+discussion block, and the report a protocol's head registers once it
+carries its result or handover block, until a review of exactly that
+state names no claim (`report_hold.report_review_owed`,
+`report_hold.report_owed`); a claim holds the state, and a later clean
+draw does not release it. A research note citing a run is not held: it
+owes a review only when it discusses one, and may be reviewed by hand.
+On a state a review
 already judged the command makes no new call: after a claim, change the
 report or a source the reviewer read; after a clean review there is
 nothing to do. `--again` draws once more on such a state, to see how the
@@ -35,8 +43,6 @@ a review. After every draw the command prints two lines, the draw's
 claims and the state as every record of it now stands (`state_after`),
 and the exit code is the state's: a clean draw on a held state is no
 "done". Nothing starts the review but this command: the hooks name it.
-A report that discusses no run is not reviewed — one that cites no run
-at all is left out of reach of this review.
 
 Exit codes (the state's, by the release rule report-check holds the
 report to, `report_reviews.standing`; at the commit only the records the
@@ -45,10 +51,10 @@ released — a review that is no `--again` draw saw it and no review of it
 named a claim (this call's, or one before it: nothing to do; the commit
 counts the record once it is staged); 1 after a draw, the commit holds
 the state — a claim on it, this draw's or an earlier one's, or only
-`--again` draws saw it; 2 no review — no discussed run of the protocol
-in the report, a discussed run with no `runs/<id>/`, a state with a
-claim and no `--again` (refused, no call), the backend did not answer, or a reply
-whose lines and closing count disagree.
+`--again` draws saw it; 2 no review — a discussed run with no
+`runs/<id>/`, a state with a claim and no `--again` (refused, no call),
+the backend did not answer, or a reply whose lines and closing count
+disagree.
 """
 
 from __future__ import annotations
@@ -145,11 +151,11 @@ def discussed_under(report: Path, text: str, protocol: Path) -> list[Discussion]
 def gather_report(
     area: Path, report: Path, protocol: Path
 ) -> tuple[str, list[Discussion], list[tuple[str, str]]]:
-    """(prompt, the discussion blocks under PROTOCOL, the pieces the
-    prompt shows — `review_pieces`) for REPORT. Raises AuditError when the
-    report discusses no run of PROTOCOL (nothing to review), a discussed
-    run has no `runs/<id>/` in AREA, or a block does not read;
-    FindingsError on an unreadable audit file."""
+    """(prompt, the discussion blocks under PROTOCOL — none is a report
+    to review too —, the pieces the prompt shows — `review_pieces`) for
+    REPORT. Raises AuditError when a discussed run has no `runs/<id>/` in
+    AREA, or a block does not read; FindingsError on an unreadable audit
+    file."""
     text = report.read_text(encoding="utf-8")
     try:
         discussed = discussed_under(report, text, protocol)
@@ -159,13 +165,6 @@ def gather_report(
             fix="restore the block's comment lines as `protocol-fill` wrote them "
             "(`--discuss … --into` writes the block again)",
         ) from exc
-    if not discussed:
-        raise AuditError(
-            f"{report.name}: no discussion block of a run of {protocol.name} — "
-            f"the report review reads reports that discuss a run; nothing to review",
-            fix=f"`protocol-fill … --discuss RUN --why … --into {report.name}` "
-            f"writes one, when the report looks at a run without reporting it",
-        )
     pieces = review_pieces(
         area, report, text, protocol, protocol.read_text(encoding="utf-8"), discussed
     )

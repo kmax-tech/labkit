@@ -12,14 +12,18 @@
 > either: the same false claim about an older run beside an adopted one
 > would pass. The guaranteed tier holds which run is adopted and that its
 > generated block matches it. Whether a report presents another run as a
-> valid result is **covered by no tier today**: the report review is owed
-> only for a report with a discussion block (`report_review_owed`), and
-> `labkit-audit --report-review` refuses a report without one ("nothing
-> to review", exit 2) — checked on task 15's report and on the same
-> report worded as provisional, 2026-11-01. In the second trial no
-> report held a discussion block and no report review ran. The citation
-> gets this note's warning only; what should read such a report is open
-> (TODO, plan C1).
+> valid result was **covered by no tier**: the report review was owed
+> only for a report with a discussion block, and `labkit-audit
+> --report-review` refused a report without one ("nothing to review",
+> exit 2) — checked on task 15's report and on the same report worded as
+> provisional, 2026-11-01; in the second trial no report review ran.
+> Decided the same day (0.107.0): the review reads any report, and the
+> report a protocol's head registers owes a clean review of its final
+> state once its result or handover block stands; a registered report
+> never written after a measurement holds the stop. A research note
+> citing a run keeps this note's warning and owes no review. Whether the
+> review tells task 15's "PASS" from a provisional mention is the
+> reviewer's judgement, to be measured (TODO, plan C1).
 
 > **Status 2026-10-26:** the prose marker `run <id> (not reported: …)` this
 > note proposes is replaced by a discussion block

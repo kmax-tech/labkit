@@ -313,6 +313,15 @@ discussion block owes a report review of its state: `labkit-audit <AREA>
 with the fingerprint of the inputs it read, and the gate holds the report
 until a review of the state it reads names no claim; a claim holds that
 state, and only a changed report or source and a review of it release it.
+The report the head registers (`report = "REPORT.md"`) owes the same
+review of its own state once its result or handover block stands —
+whether or not it discusses a run: its prose may still present an older
+run's verdict as the result. `labkit-adopt` names that review as its
+fourth step and does not hold it (the text comes after); the stop and the
+commit do. A registered report never written after the area measured
+holds the stop as an incomplete delivery; a research note citing a run
+owes no review unless it discusses one, and `--report-review` reads any
+report on request.
 While the area's audit evidence is gone (`attempts.evidence_gaps`) no
 review can start, so the hold, the review's refusal, the adoption's and
 the handover name the route that works: restore the evidence, or the

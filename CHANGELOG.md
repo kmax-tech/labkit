@@ -7,7 +7,34 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## 0.107.0 — 2026-11-01
 
+### Breaking
+
+- **A report review reads the adopted run and every cited run.** Its
+  inputs (`report_review_inputs.review_pieces`) gained the adopted run,
+  the discussion blocks or "none", and the metrics of each cited run of
+  the area, labelled; a review record written by 0.106.1 or earlier
+  fingerprints other inputs and releases no state here — review again.
+
 ### Changed
+
+- **The registered report owes a report review; a missing one holds the
+  stop.** Task 15 (reference pilot, trial 2) wrote "PASS" for an older
+  run in REPORT.md; no review was owed, and `labkit-audit --report-review`
+  refused a report without a discussion block. Now:
+  - `--report-review` reads any report: does it present as a result what
+    the protocol has not adopted, or what the audits or the adopted result
+    contradict? (`report-review.agent.md`);
+  - the report a head registers (`report = "REPORT.md"`) owes a clean
+    review of its final state once its result or handover block stands —
+    report-check, the stop and the commit hold it; an edit after the
+    review owes another. `labkit-adopt` names it as step 4 and does not
+    hold it (`report_check(..., review=False)`);
+  - a registered report never written after the area measured holds the
+    stop as an incomplete delivery (`report_hold.missing_report`) —
+    deleting the runs does not lift it;
+  - a research note citing a run owes no review unless it discusses one.
+  The review is an agent audit: whether a claim is right stays the
+  reviewer's judgement; the gate holds that one ran on the final state.
 
 - **A report that cites the adopted run without its block is named before
   the commit.** `labkit-next` said "nothing holds it" and `labkit-adopt`

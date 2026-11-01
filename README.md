@@ -285,7 +285,7 @@ labkit-audit AREA --mode preflight|analysis|clarity [--model ALIAS]
 labkit-audit AREA --decide N STATUS --why REASON [--not-assessable IDS] [--record FILE] # store your decision on a finding (fixed, limitation, false-positive)
 labkit-audit AREA --findings [--record FILE]               # show what there is to decide, no audit
 labkit-audit AREA --review [--record FILE] [--again]       # a second auditor on the `stands` decisions, and on a finding closed after a review did not uphold it: does the reported claim stand within each limit? (--again: one more draw on a judged state — its verdicts count, it lifts no hold; the exit is the state's, as without --again)
-labkit-audit AREA --report-review REPORT                   # a cold reader on a report that discusses a run (a discussion block): does it state that run's numbers as results, or what the audits contradict? recorded in audits/report-reviews/; report-check holds the report until a review of its state names no claim; exit 0 only when the state is released, 2 on a claimed state without --again [--again: one more draw on a judged state — its claims hold, it releases nothing]
+labkit-audit AREA --report-review REPORT                   # a cold reader on a report: does it present as a result what the protocol has not adopted, or what the audits or the adopted result contradict? Owed by a report with a discussion block and by the report the head registers
 report-check AREA                  # release check before reporting
 report-check --if-reported [--staged] PATH... # check affected reported areas, citing reports, and the report a protocol head registers (owed its result block or handover block once delivered)
 runlog [AREA] [--wait | --follow]    # inspect or monitor runs

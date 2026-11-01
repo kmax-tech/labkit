@@ -864,6 +864,36 @@ class RegisteredReport(unittest.TestCase):
 
     OWED = "carries neither"
     WAYS = ("--into", "--discuss", "--handover")
+    UNREVIEWED = "PROTOCOL-x.md registers and has no clean report review"
+
+    def _reviewed(self, area: Path, report: Path, claims: tuple = ()) -> None:
+        """A report review of REPORT under the area's protocol in its state
+        now, naming CLAIMS — what `--report-review` writes."""
+        from labkit.formats import report_reviews
+        from labkit.gates import report_review
+
+        proto = area / "PROTOCOL-x.md"
+        text = report.read_text(encoding="utf-8")
+        pieces = report_review.review_pieces(
+            area,
+            report,
+            text,
+            proto,
+            proto.read_text(encoding="utf-8"),
+            report_review.discussed_under(report, text, proto),
+        )
+        whole, parts = report_reviews.fingerprint(pieces)
+        rkey, pkey = report_review.review_keys(area, report, proto)
+        report_reviews.write_report_review(
+            area,
+            model="m",
+            report=rkey,
+            protocol=pkey,
+            whole=whole,
+            parts=parts,
+            claims=list(claims),
+            again=False,
+        )
 
     def test_a_registered_report_without_its_block_is_held_with_the_three_ways_out(
         self,
@@ -943,6 +973,15 @@ class RegisteredReport(unittest.TestCase):
             proto.read_text(encoding="utf-8"), area, "# Report\n\n", self.P
         )
         report.write_text(new, encoding="utf-8")
+        # the block releases the result; the report's text still owes its
+        # review — the prose may present another run (reference pilot
+        # 2026-11-01, task 15)
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn(self.OWED, out)
+        self.assertIn(self.UNREVIEWED, out)
+        self.assertIn("--report-review", out)
+        self._reviewed(area, report)
         for path in (report, proto):
             with self.subTest(path=path.name):
                 code, out = self._gate(root, path)
@@ -965,6 +1004,98 @@ class RegisteredReport(unittest.TestCase):
         self.assertIn("Next: `protocol-fill ", line)
         self.assertIn("--into ", line)
         self.assertNotIn("--from-run", line.split("--discuss")[0])
+
+    def test_the_registered_report_is_held_by_a_claim_and_reviewed_again_after_a_change(
+        self,
+    ):
+        """Reference pilot 2026-11-01, task 15: REPORT.md called an older
+        run's criterion "PASS"; no review was owed, and `--report-review`
+        refused a report without a discussion block. The registered report
+        owes a review of its final state: a claim holds it; a clean review
+        releases that state only — a later edit owes another."""
+        from labkit.formats.report_reviews import ReportClaim
+
+        area = self._area(declared=self.RUN, git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        report = root / "REPORT.md"
+        new, _ = protocol_fill.into_report(
+            proto.read_text(encoding="utf-8"), area, "# Report\n\n", self.P
+        )
+        report.write_text(
+            new + "\nAn older run passed criterion-1.\n", encoding="utf-8"
+        )
+        claim = ReportClaim(
+            line=len(new.split("\n")) + 1, kind="result", why="an older run's verdict"
+        )
+        self._reviewed(area, report, (claim,))
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("the report review holds this state (is the report", out)
+        # the twin: the claim answered by the text, a clean review of that state
+        report.write_text(new, encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertIn(self.UNREVIEWED, out)
+        self._reviewed(area, report)
+        self.assertEqual(self._gate(root, report)[0], 0)
+        report.write_text(new + "\nAdded later.\n", encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn(self.UNREVIEWED, out)
+        self.assertIn("changed since", out)
+
+    def test_a_registered_report_never_written_is_an_incomplete_delivery(self):
+        """The registered report owes its review; left unwritten it owed
+        none, and an agent could end without one (reference pilot
+        2026-11-01). Once the area measured, the stop holds a protocol whose
+        registered report is missing — deleting the run does not lift it;
+        the twins: before a measurement, and with the report written,
+        nothing."""
+        import shutil
+
+        from labkit.gates import agent_hooks, report_hold
+
+        area = self._area(git=True)
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        text = proto.read_text(encoding="utf-8")
+        gap = report_hold.missing_report(proto, text, root)
+        assert gap is not None
+        self.assertIn("REPORT.md as its report, which is not written", gap.text)
+        self.assertIn("labkit-adopt", gap.fix or "")
+        self.assertIn("--handover", gap.fix or "")
+        (line,) = agent_hooks.missing_reports(root, [proto])
+        self.assertIn("the delivery is incomplete", line)
+        # the twin: the report written, nothing missing
+        (root / "REPORT.md").write_text("# Report\n", encoding="utf-8")
+        self.assertIsNone(report_hold.missing_report(proto, text, root))
+        (root / "REPORT.md").unlink()
+        # deleting the measured run does not lift it: runs.tsv still lists it
+        from labkit.run import runlog
+
+        runlog.reindex(area)
+        shutil.rmtree(area / "runs")
+        self.assertIsNotNone(report_hold.missing_report(proto, text, root))
+        # the twin: no measurement of it, nothing owed yet
+        (area / runlog.RUN_INDEX).unlink()
+        self.assertIsNone(report_hold.missing_report(proto, text, root))
+
+    def test_the_twin_a_note_citing_a_run_owes_no_review(self):
+        """A research note may describe an unreviewed run: only the report
+        the head registers owes a review, not every file citing a run."""
+        area = self._area(declared=self.RUN, git=True)
+        root = area.parent.parent
+        older = "2026-10-06T10-00-00_aa11"
+        completed_run(area, older, metrics={"criterion_1_pass": True})
+        note = root / "notes" / "pilot.md"
+        note.parent.mkdir()
+        note.write_text(
+            f"The first run, {older}, gave 0.89 and was dropped.\n",
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, note)
+        self.assertNotIn("report review", out)
+        self.assertEqual(code, 0, out)
 
     def test_the_twin_the_handover_block_passes_and_a_typed_one_does_not(self):
         area = self._area(git=True)
@@ -989,6 +1120,9 @@ class RegisteredReport(unittest.TestCase):
                 ]
             )
         self.assertEqual(rc, 0, buf.getvalue())
+        code, out = self._gate(root, report)
+        self.assertIn(self.UNREVIEWED, out)  # a handover owes its review too
+        self._reviewed(area, report)
         for path in (report, proto):
             with self.subTest(path=path.name):
                 code, out = self._gate(root, path)
