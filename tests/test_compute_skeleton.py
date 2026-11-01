@@ -10,46 +10,55 @@ what is read; a record that names another path is refused.
 import contextlib
 import importlib.util
 import io
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import ModuleType
 
 from labkit.tools import scaffold
 
 
+def stamp_compute_area(case: unittest.TestCase) -> tuple[Path, ModuleType]:
+    """A fresh lab with the compute area `01-docs` at low repeat cost:
+    (lab root, its `01_measure.py` imported). Cleans up with CASE."""
+    tmp = tempfile.TemporaryDirectory()
+    case.addCleanup(tmp.cleanup)
+    root = Path(tmp.name) / "lab"
+    with (
+        contextlib.redirect_stdout(io.StringIO()),
+        contextlib.redirect_stderr(io.StringIO()),
+    ):
+        scaffold.stamp_lab(root, root.name)
+        case.assertEqual(
+            scaffold.main(
+                [
+                    "exp",
+                    "docs",
+                    "--repo",
+                    str(root),
+                    "--repeat-cost",
+                    "low",
+                    "--kind",
+                    "compute",
+                ]
+            ),
+            0,
+        )
+    path = root / "experiments" / "01-docs" / "scripts" / "01_measure.py"
+    spec = importlib.util.spec_from_file_location("stamped_count_measure", path)
+    assert spec is not None and spec.loader is not None
+    measure = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = measure
+    case.addCleanup(sys.modules.pop, spec.name, None)
+    spec.loader.exec_module(measure)
+    return root, measure
+
+
 class InputDir(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        root = Path(self.tmp.name) / "lab"
-        with (
-            contextlib.redirect_stdout(io.StringIO()),
-            contextlib.redirect_stderr(io.StringIO()),
-        ):
-            scaffold.stamp_lab(root, root.name)
-            self.assertEqual(
-                scaffold.main(
-                    [
-                        "exp",
-                        "docs",
-                        "--repo",
-                        str(root),
-                        "--repeat-cost",
-                        "low",
-                        "--kind",
-                        "compute",
-                    ]
-                ),
-                0,
-            )
-        path = root / "experiments" / "01-docs" / "scripts" / "01_measure.py"
-        spec = importlib.util.spec_from_file_location("stamped_count_measure", path)
-        assert spec is not None and spec.loader is not None
-        self.measure = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = self.measure
-        self.addCleanup(sys.modules.pop, spec.name, None)
-        spec.loader.exec_module(self.measure)
+        _, self.measure = stamp_compute_area(self)
         setattr(self.measure, "INPUTS", self.measure.REPO / "data" / "raw" / "inputs")
 
     def test_a_record_naming_the_frozen_inputs_is_read_there(self):
@@ -70,10 +79,6 @@ class InputDir(unittest.TestCase):
         setattr(self.measure, "INPUTS", None)
         with self.assertRaisesRegex(ValueError, "INPUTS"):
             self.measure.input_dir({"inputs": "data/raw/inputs"}, "c1")
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class FillList(unittest.TestCase):
@@ -107,3 +112,107 @@ class FillList(unittest.TestCase):
         for name in blanks:
             self.assertIn(name, doc, name)
         self.assertNotRegex(doc, r"\b(three|four|five) TODOs\b")
+
+
+class KeptNumber(unittest.TestCase):
+    """The kept number (METRIC_KEY) is a number. Reference pilot trial 2,
+    task 34 (2026-11-01): METRIC_KEY named a flag, `hrv_computed = True`
+    became the adopted result while the protocol's Unit named HRV_MeanNN.
+    The run and `--check` (`metrics_of`) and the area's test refuse a bool,
+    a text or a missing key, naming the key; the twin, a numeric kept
+    number, passes all three."""
+
+    ROWS = [{"id": "s1", "mean_nn": 812.5, "computed": True}]
+
+    def setUp(self) -> None:
+        self.root, self.measure = stamp_compute_area(self)
+
+    def evaluating(self, key: str) -> None:
+        def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
+            return {
+                "hrv_mean_nn": items[0]["mean_nn"],
+                "hrv_computed": items[0]["computed"],
+                "unit": "ms",
+            }
+
+        setattr(self.measure, "METRIC_KEY", key)
+        setattr(self.measure, "evaluate_rows", evaluate_rows)
+
+    def test_a_flag_text_or_missing_key_is_refused_naming_the_key(self) -> None:
+        for key, says in (
+            ("hrv_computed", "'hrv_computed' holds True, which is no number"),
+            ("unit", "'unit' holds 'ms', which is no number"),
+            ("hrv_rmssd", "'hrv_rmssd': evaluate_rows\\(\\) returns no such key"),
+        ):
+            with self.subTest(key=key):
+                self.evaluating(key)
+                with self.assertRaisesRegex(ValueError, says):
+                    self.measure.metrics_of(self.ROWS, ["s1"])
+
+    def test_a_numeric_kept_number_passes(self) -> None:
+        self.evaluating("hrv_mean_nn")
+        metrics = self.measure.metrics_of(self.ROWS, ["s1"])
+        self.assertEqual(metrics["hrv_mean_nn"], 812.5)
+        self.assertEqual(self.measure.kept_number({"hrv_mean_nn": 812}), 812)
+
+    def test_the_area_test_refuses_a_flag_and_passes_a_number(self) -> None:
+        script = self.root / "experiments" / "01-docs" / "scripts" / "01_measure.py"
+        test = self.root / "tests" / "test_01_docs.py"
+        stamped_script = script.read_text(encoding="utf-8")
+        stamped_test = test.read_text(encoding="utf-8")
+        evaluate = '    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")\n'
+        metric_key = 'METRIC_KEY = "TODO_number"'
+        self.assertEqual(stamped_script.count(evaluate), 1)
+        self.assertEqual(stamped_script.count(metric_key), 1)
+        filled = stamped_script.replace(
+            evaluate,
+            '    return {"hrv_mean_nn": items[0]["mean_nn"], "hrv_computed": True}\n',
+        )
+        blanks = (
+            "KNOWN_IDS: list[str] = []\n"
+            "KNOWN_ROWS: list[dict] = []\n"
+            "KNOWN_METRICS: dict = {}\n"
+        )
+        self.assertEqual(stamped_test.count(blanks), 1)
+        for key, known, code in (
+            ("hrv_computed", "{'hrv_computed': True}", 1),
+            ("hrv_mean_nn", "{'hrv_mean_nn': 812.5}", 0),
+        ):
+            with self.subTest(key=key):
+                script.write_text(
+                    filled.replace(metric_key, f'METRIC_KEY = "{key}"'),
+                    encoding="utf-8",
+                )
+                test.write_text(
+                    stamped_test.replace(
+                        blanks,
+                        'KNOWN_IDS: list[str] = ["s1"]\n'
+                        f"KNOWN_ROWS: list[dict] = {self.ROWS!r}\n"
+                        f"KNOWN_METRICS: dict = {known}\n",
+                    ),
+                    encoding="utf-8",
+                )
+                r = subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                        "-q",
+                        "-p",
+                        "no:cacheprovider",
+                        "-k",
+                        "known_rows",
+                        str(test),
+                    ],
+                    cwd=self.root,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+                self.assertEqual(r.returncode, code, r.stdout + r.stderr)
+                if code:
+                    self.assertIn("'hrv_computed' holds True", r.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()
