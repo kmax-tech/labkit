@@ -59,7 +59,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 SOURCE = REPO / "data" / "TODO"                 # what is counted — a file or a directory
 INPUTS = None                                   # TODO: a directory the rows read beyond SOURCE (REPO / "data" / "raw" / "inputs"), frozen with it; None when SOURCE is all the number reads
 OUT = AREA / "output" / "<name>.jsonl"          # one row per item, written by this script
-METRIC_KEY = "TODO_number"                      # the kept number's key in metrics.json; the test reads it from here
+METRIC_KEY = "TODO_number"                      # the kept number's key in metrics.json — the value the protocol's Unit names, never a flag; the test reads it from here
 DELIVERABLES: tuple[str, ...] = ()              # files an external task names, relative to REPO ("pred_results/<name>.csv"); written by the run from the kept rows (`deliverable_rows`), registered as its outputs
 DELIVERABLE_COLUMNS: tuple[str, ...] = ()       # the columns the task names for them, in its order; the write refuses other columns; () holds nothing
 
@@ -119,15 +119,34 @@ def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
     raise NotImplementedError("evaluate_rows(): compute the number(s) from items")
 
 
+def kept_number(metrics: dict) -> int | float:
+    """The kept number: METRIC_KEY's value in METRICS. Raises ValueError,
+    naming the key, when METRICS lacks it or its value is no number — a
+    bool, a text, None: a flag says that a step ran, not what it measured,
+    and the adopted result would read "key = True"."""
+    if METRIC_KEY not in metrics:
+        raise ValueError(f"METRIC_KEY = {METRIC_KEY!r}: evaluate_rows() returns no such key "
+                         f"(it returns {', '.join(sorted(metrics)) or 'nothing'})")
+    value = metrics[METRIC_KEY]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"METRIC_KEY = {METRIC_KEY!r} holds {value!r}, which is no number — the kept "
+                         f"number is the value the protocol's Unit names; point METRIC_KEY at it")
+    return value
+
+
 def metrics_of(items: list[dict], ids: list[str]) -> dict:
-    """The run's metrics: evaluate_rows() over ITEMS and IDS, and — when the
-    protocol head registers a `[reference]` — the verdict of the kept number
-    under its key against the stated value (`reference.with_verdict`: the one
-    home of the comparison; `02_analyze.py --check` calls this too, so the
-    verdict is held to the rows like every number). Reads PROTOCOL's head.
-    Without a `[reference]` the metrics are evaluate_rows()'s alone."""
+    """The run's metrics: evaluate_rows() over ITEMS and IDS, its kept number
+    held to be a number (`kept_number`), and — when the protocol head
+    registers a `[reference]` — the verdict of the kept number under its key
+    against the stated value (`reference.with_verdict`: the one home of the
+    comparison; `02_analyze.py --check` calls this too, so the verdict is
+    held to the rows like every number). Reads PROTOCOL's head. Without a
+    `[reference]` the metrics are evaluate_rows()'s alone. Raises ValueError
+    when the kept number is missing or no number."""
+    metrics = evaluate_rows(items, ids)
+    kept_number(metrics)
     ref = protocol_block.reference(PROTOCOL.read_text(encoding="utf-8"))
-    return reference.with_verdict(evaluate_rows(items, ids), ref)
+    return reference.with_verdict(metrics, ref)
 
 
 def deliverable_rows(path: str, items: list[dict], metrics: dict) -> list[dict]:

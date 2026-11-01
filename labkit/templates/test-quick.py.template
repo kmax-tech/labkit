@@ -37,13 +37,14 @@ def test_known_rows_give_the_known_number():
         "fill KNOWN_IDS, KNOWN_ROWS and KNOWN_METRICS with a case checked by hand"
     )
     metrics = measure.evaluate_rows(KNOWN_ROWS, KNOWN_IDS)
+    measure.kept_number(metrics)  # a number, never a flag
     for key, value in KNOWN_METRICS.items():
         assert metrics[key] == pytest.approx(value), key
 
 
 def test_a_lost_row_is_a_refusal_not_a_smaller_denominator():
-    # one row is enough: a task with one unit has one (the registered and the
-    # reference pilot's 21 and 34 invented a second, copied from the run)
+    # one row is enough: a task with one unit has one, and a second row is
+    # never made up to fill the case (docs/notes/2026-11-01-hand-checked-case-one-row.md)
     assert len(KNOWN_ROWS) >= 1, "the hand-checked case owes one row at least"
     with pytest.raises(ValueError):
         measure.evaluate_rows(KNOWN_ROWS[:-1], KNOWN_IDS)
