@@ -2697,19 +2697,17 @@ B — Läufe (Zustandslogik, ein Verantwortlicher)
   neuen OUT-Namen im Skript und „die alte Datei behalten“.
 
 C — Berichte und Audit-Ausgabe (nach B)
-- C1 **nicht gebaut, bekannte Grenze (entschieden 2026-11-01).** Bericht zitiert einen nicht
-  übernommenen Lauf als gültiges Ergebnis (15 t2: älterer Lauf mit „PASS“, report-check Exit 0 mit
-  Warnung; sts512 t2: „[criterion-1] is MET“ ganz ohne Lauf-Kennung). Eine Sperre jedes Zitats
-  setzte Erwähnung mit Freigabe gleich („Probelauf ergab 0,89, ungeprüft“, „früherer Lauf
-  verworfen“, „Abbruch vor dem Audit“ müssen ohne Diskussionsblock und Review gehen); „Protokoll
-  hat schon ein Ergebnis“ entscheidet die Gültigkeit der Aussage auch nicht. Mechanisch bleibt:
-  welcher Lauf übernommen ist und ob der erzeugte Block zu ihm passt. **Prüffall gelaufen
-  (2026-11-01): Die Gültigkeitsbehauptung deckt heute keine Stufe.** Das Bericht-Review ist nur
-  bei einem Diskussionsblock verlangt, und `labkit-audit --report-review` lehnt einen Bericht ohne
-  einen ab („nothing to review“, Exit 2), beim Original von 15 t2 wie bei der vorläufig
-  formulierten Fassung; in Probelauf 2 lief kein einziges Bericht-Review. **Offen
-  (Entscheidung):** was einen Bericht ohne Diskussionsblock liest, der einen Lauf eines Protokolls
-  zitiert. Begründung: `docs/notes/2026-10-23-report-without-adoption.md` (Status).
+- C1 **Pauschale Zitatsperre nicht gebaut; stattdessen Bericht-Review des registrierten Berichts
+  (entschieden 2026-11-01, 0.107.0).** Beobachtet: 15 t2 schrieb „PASS“ für einen älteren Lauf in
+  REPORT.md (report-check Exit 0 mit Warnung); sts512 t2 „[criterion-1] is MET“ ohne Lauf-Kennung.
+  Prüffall: Das Review war nur bei Diskussionsblock verlangt und lehnte jeden anderen Bericht ab
+  („nothing to review“); in Probelauf 2 lief keins. Gebaut: `--report-review` liest jeden Bericht;
+  der im Kopf registrierte Bericht schuldet nach Ergebnis- oder Übergabeblock ein sauberes Review
+  seiner Endfassung (Änderung danach → neues Review); `labkit-adopt` nennt es als Schritt 4; ein
+  nie geschriebener registrierter Bericht nach einer Messung hält den Stop (unvollständige Abgabe).
+  Forschungsnotizen bleiben frei. **Offen:** ob das Review „PASS“ von einer vorläufigen Erwähnung
+  trennt (Prüffall 15 t2, Original gegen vorläufige Fassung); für Probelauf 3 trägt jedes
+  Protokoll `report = "REPORT.md"` im Kopf. Begründung: `docs/notes/2026-10-23-report-without-adoption.md`.
 - C2 `labkit-adopt` „kein Bericht registriert“ und `labkit-next` „nichts hält es“, während Hooks
   REPORT.md sperren (21, 34 t2). Test: REPORT.md zitiert den übernommenen Lauf ohne Block → next
   nennt `--into`. Gegenprobe: mit Block → nichts.
