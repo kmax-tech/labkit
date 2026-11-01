@@ -150,15 +150,15 @@ owes now: `protocol-check --contract`. To fill a field:
 # `[result] run = "<run_id>"` below [protocol] is written by `labkit-adopt`:
 # the one declaration that this protocol reports a number.
 [protocol]
-standard = "0.23"
+standard = "0.24"
 id = "<protocol-id>"
 type = "<exploratory | confirmatory>"
 repeat_cost = "<low | high>"
 kind = "<compute | fit | apply>"
 frozen = false
 preflight_audit = ""
-# With a model: `[model] alias` (stamped by --model), `[model.arms.<arm>]` with
-# profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
+# A computation: `[kept]` key and unit. With a model: `[model] alias` (stamped by --model),
+# `[model.arms.<arm>]` with profile, fingerprint, alias (finalize holds them to the run); `[gate] labels = […]`.
 
 # The promises as data, one table per id: the key the run reports, the
 # sentence (no `<…>` left at the freeze), the code region, and the constants

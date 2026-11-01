@@ -103,7 +103,7 @@ TOML block under `## Head`. `protocol-check` reads them with a TOML
 parser. A typo is an error that names the field. The same block holds the
 `[[promise]]` tables (labkit `docs/promise-block.md`).
 
-- **standard:** `"0.23"`, stamped. Never edit it. labkit refuses a protocol
+- **standard:** `"0.24"`, stamped. Never edit it. labkit refuses a protocol
   of another version. Reproduce a protocol with runs with its own labkit
   release. Use a checkout of its commit, with a venv from its
   `requirements.lock`. Never convert it. A frozen protocol and every full
@@ -127,6 +127,19 @@ parser. A typo is an error that names the field. The same block holds the
   registers a criterion, a quality check and a null condition in the same
   run. A run that only produces predictions declares no result and needs
   no kind.
+- **[kept] key, unit:** owed with `kind = "compute"`, refused on a fit or
+  an apply (they bind their answer through their promise keys). `key` is
+  the metrics.json key of the number the computation reports — the value
+  the Unit field and the question describe, never a flag such as
+  `hrv_computed`. `unit` is its unit, a short text (`"ms"`, `"documents"`;
+  `"1"` for a dimensionless number). The compute skeleton reads the key
+  from here; finalize refuses a run that does not hold it as a finite
+  number, and the Recorded results line names it first with its unit.
+  `labkit-init exp --kind compute --kept KEY --unit UNIT` stamps it; else
+  `protocol-fill <PROTOCOL> "kept.key=KEY" "kept.unit=UNIT"`. A stated
+  value the task gives is compared in `[reference]`, on this key. The check
+  binds the name only: a wrong computation stored under the right key
+  passes it; the area's test and the analysis audit judge that.
 - **[model] number_describes:** only with `kind = "compute"` and a
   `[model]` table. Write `"model_outputs"` when the number describes what
   the model marked ("the model marked 30 % as causal"). Write

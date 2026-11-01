@@ -2,7 +2,8 @@
 
     labkit-init lab [DIR] [--name NAME] [--labkit-ref REF]
     labkit-init exp NAME [--repo DIR] [--repeat-cost low|high] --kind compute|fit|apply [--model [ALIAS]]
-                         [--reference KEY=VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT]]
+                         [--kept KEY] [--unit UNIT]
+                         [--reference VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT]]
                          [--report] [--report-file PATH] [--explore]
     labkit-init exp NAME --kind compute|fit|apply --change-kind
     labkit-init numbers [--repo DIR] [--staged]
@@ -25,13 +26,19 @@ skeletons the kind calls for (`standard_contract.skeleton`: a computation
 the compute skeleton, `01_measure` and `02_analyze`; a fit, and an apply
 without `--model`, the estimator skeleton; an apply with `--model` the
 prompt skeleton — both with `00_prepare` before them), the area README and
-the area's test under `tests/`. `--reference KEY=VALUE[±TOL]` stamps a
-computation's `[reference]` table — the stated value the task asks the
-kept number to match (`protocol_block.reference`; `KEY` is the metrics key
-compared, the skeleton's `METRIC_KEY`; `±TOL`, also written `+-TOL`, the
-absolute tolerance of `within`; `--relation at_least|at_most` without a
-tolerance; `--reference-source` who states the value) — refused with a kind
-that has a bar, which compares in a criterion. `--explore` stamps only
+the area's test under `tests/`. A computation's head carries the `[kept]`
+table — the metrics key of its kept number and its unit
+(`protocol_block.kept`), which the compute skeleton reads and finalize
+holds the run to: `--kept KEY` and `--unit UNIT` stamp the two values,
+absent each is stamped as its placeholder for `protocol-fill`; both are
+refused with a kind that has a bar, which binds its answer through its
+promise keys. `--reference VALUE[±TOL]` stamps a computation's
+`[reference]` table — the stated value the task asks the kept number to
+match (`protocol_block.reference`; the number compared is the `[kept]`
+key; `±TOL`, also written `+-TOL`, the absolute tolerance of `within`;
+`--relation at_least|at_most` without a tolerance; `--reference-source`
+who states the value) — refused with a kind that has a bar, which compares
+in a criterion. `--explore` stamps only
 `experiments/explore/<name>.py`, the entry before an area exists; the plain
 command later moves it into the area. `--change-kind` restamps an area under
 another kind before its first measurement (`change_kind`).
@@ -505,8 +512,9 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
         "`scripts/01_measure.py` (`evaluate_rows()`); `02_analyze.py --check` and the\n"
         "test call it there, and `intent-check` holds the protocol's ids to these keys."
         if skeleton
-        else "**What `evaluate_rows()` returns.** The number under `METRIC_KEY` of\n"
-        "`scripts/01_measure.py`; a computation registers no ids. The formula lives once, there;\n"
+        else "**What `evaluate_rows()` returns.** The kept number under the key the\n"
+        "protocol head's `[kept]` names (with its unit); a computation registers no ids.\n"
+        "The formula lives once, in `scripts/01_measure.py`;\n"
         "`02_analyze.py --check` and the test call it, and `--check` holds the protocol's\n"
         "Recorded results line to the run's `metrics.json`."
     )
@@ -704,6 +712,7 @@ def stamp_area(
     deliverables: tuple[str, ...] = (),
     deliverable_columns: tuple[str, ...] = (),
     reference: protocol_block.Reference | None = None,
+    kept: protocol_block.Kept | None = None,
 ) -> tuple[Path, str]:
     """Stamp `experiments/NN-<name>/` (or promote it with REPORT): the area
     and the report to print (what was written, then the next steps) — the
@@ -715,12 +724,16 @@ def stamp_area(
     DELIVERABLES and DELIVERABLE_COLUMNS are stamped into the measure
     script (`script_stamps`). REFERENCE is stamped as the head's
     `[reference]` table (`protocol_block.reference_toml`): the stated value
-    a computation's kept number is compared with.
+    a computation's kept number is compared with. KEPT is the `[kept]`
+    table a computation's head carries (`protocol_block.kept_toml`), each
+    value None stamped as its placeholder; a computation without KEPT gets
+    both placeholders.
     Raises `console.Refused` too for an area of NAME that exists without
     REPORT, with REPORT where NAME names no one area (`existing_area`),
-    with REPORT_FILE on a promotion, and with REFERENCE on a kind with a
+    with REPORT_FILE on a promotion, with REFERENCE on a kind with a
     bar (`protocol_check.reference_gap`: a fit or an apply compares in
-    a criterion) — before anything is written."""
+    a criterion), and with KEPT on such a kind (`protocol_check.kept_gaps`)
+    — before anything is written."""
     slug = area_slug(name)
     experiments = root / EXPERIMENTS
     if report_file is not None:
@@ -745,6 +758,7 @@ def stamp_area(
         _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
         return found, "\n".join(promote(found, blocks))
     kind = asked_kind(kind)
+    refuse_kept_with_bar(kind, kept)
     quick = standard_contract.lane(repeat_cost).cut == standard_contract.LOW_CUT
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     stamped = protocol_stamp(
@@ -756,6 +770,7 @@ def stamp_area(
         report,
         report_file=report_file,
         reference=reference,
+        kept=kept,
     )
     gap = protocol_check.reference_gap(stamped, protocol_block.head(stamped))
     if gap:
@@ -814,11 +829,13 @@ def protocol_stamp(
     pid: str | None = None,
     report_file: str | None = None,
     reference: protocol_block.Reference | None = None,
+    kept: protocol_block.Kept | None = None,
 ) -> str:
     """The protocol `exp` stamps for these answers: the low cut, or the
     pilot part — with REPORT the whole — under a fresh id, or PID, with
-    REPORT_FILE registered in the head and REFERENCE as its `[reference]`
-    table. Reads
+    REPORT_FILE registered in the head, REFERENCE as its `[reference]`
+    table and, for a computation, KEPT as its `[kept]` (None: both
+    placeholders). Reads
     the template (and, without PID, the ids taken under ROOT); writes
     nothing. The cut and the skeleton are the contract's answers, not read
     off the tier here (a tier compared by hand outside the contract is a
@@ -835,6 +852,7 @@ def protocol_stamp(
         pid,
         report_file,
         reference,
+        kept,
     )
     clean = CUT_MARK.sub(
         "", bar_cut(tmpl, kind)
@@ -860,7 +878,9 @@ def protocol_stamp(
     if not quick:
         stamped = owed_cut(stamped)  # the full form owes by kind and model too
     stamped = name_promise_ids(stamped, kind)
-    check_stamped_head(stamped, repeat_cost, kind, bool(model), report_file, reference)
+    check_stamped_head(
+        stamped, repeat_cost, kind, bool(model), report_file, reference, kept
+    )
     return stamped
 
 
@@ -1085,6 +1105,17 @@ def plan_kind_change(root: Path, area: Path, slug: str, kind: str) -> KindChange
             f"{protocol.name}: [reference] is written — a {kind} compares in a criterion and "
             f"has no place for it"
         )
+    old_kept = protocol_block.kept(old)
+    if (
+        old_kept is not None
+        and old_kept != protocol_block.Kept(None, None)
+        and standard_contract.has_bar(kind)
+    ):
+        held.append(
+            f"{protocol.name}: [kept] is filled — a {kind} binds its answer through "
+            f"its promise keys and has no place for it; delete the table from the "
+            f"head, then change the kind"
+        )
     text, unplaced = carried_fields(
         old,
         fresh_old,
@@ -1268,17 +1299,17 @@ def write_kind_change(area: Path, plan: KindChange) -> list[str]:
     return log
 
 
-#: `--reference KEY=VALUE` or `KEY=VALUE±TOL` (`+-` for the sign too)
-REFERENCE_FLAG = re.compile(
-    r"^(?P<key>\S+?)=(?P<value>[^±]+?)(?:(?:±|\+-)(?P<tolerance>.+))?$"
-)
+#: `--reference VALUE` or `VALUE±TOL` (`+-` for the sign too); the number
+#: compared is the `[kept]` key's
+REFERENCE_FLAG = re.compile(r"^(?P<value>[^±=]+?)(?:(?:±|\+-)(?P<tolerance>.+))?$")
 
 
 def parse_reference_flag(
     spec: str, relation: str | None, source: str | None
 ) -> protocol_block.Reference:
-    """The `[reference]` the flags ask for: SPEC `KEY=VALUE[±TOL]` (`+-`
-    writes the sign too; VALUE and TOL read as floats), RELATION — with a
+    """The `[reference]` the flags ask for: SPEC `VALUE[±TOL]` (`+-`
+    writes the sign too; VALUE and TOL read as floats; the number compared
+    is the head's `[kept]` key, `--kept`), RELATION — with a
     tolerance `within`, the default there; without one `at_least` or
     `at_most`, owed — and SOURCE. Raises `console.Refused` naming the
     part that does not read: a spec in another shape, a value or
@@ -1288,8 +1319,9 @@ def parse_reference_flag(
     if m is None:
         raise console.Refused(
             "labkit-init",
-            f"--reference {spec!r}: KEY=VALUE or KEY=VALUE±TOL (also +-TOL) — the "
-            f"metrics key, the stated value, its tolerance",
+            f"--reference {spec!r}: VALUE or VALUE±TOL (also +-TOL) — the stated "
+            f"value and its tolerance; the key compared is the kept number's "
+            f"(--kept KEY)",
         )
     try:
         value = float(m.group("value"))
@@ -1305,11 +1337,10 @@ def parse_reference_flag(
             raise console.Refused(
                 "labkit-init",
                 f"--reference {spec!r} names no tolerance: say --relation at_least "
-                f"or at_most, or write KEY=VALUE±TOL for within",
+                f"or at_most, or write VALUE±TOL for within",
             )
         relation = protocol_block.WITHIN
     ref = protocol_block.Reference(
-        key=m.group("key"),
         value=value,
         tolerance=tolerance,
         relative=False,
@@ -1319,11 +1350,50 @@ def parse_reference_flag(
     # the head's own rule for the table, told before anything is written
     try:
         protocol_block.reference(
-            "```toml\n[protocol]\n" + protocol_block.reference_toml(ref) + "```\n"
+            "```toml\n"
+            + protocol_block.kept_toml(protocol_block.Kept(None, None))
+            + protocol_block.reference_toml(ref)
+            + "```\n"
         )
     except protocol_block.BlockError as exc:
         raise console.Refused("labkit-init", f"--reference: {exc}") from exc
     return ref
+
+
+def refuse_kept_with_bar(kind: str, kept: protocol_block.Kept | None) -> None:
+    """Raise `console.Refused` when KEPT is asked for a KIND with a bar: a
+    fit or an apply binds its answer through its promise keys, so the kept
+    number's key and unit are a computation's (`protocol_check.kept_gaps`)."""
+    if kept is not None and standard_contract.has_bar(kind):
+        raise console.Refused(
+            "labkit-init",
+            f"--kept/--unit with --kind {kind} — a {kind} binds its answer through "
+            f"its promise keys; the kept number's key and unit are a computation's",
+        )
+
+
+def parse_kept_flags(key: str | None, unit: str | None) -> protocol_block.Kept | None:
+    """The `[kept]` `--kept KEY` and `--unit UNIT` ask for, a value not given
+    left None (stamped as its placeholder); None when neither is given.
+    Raises `console.Refused` with the head's own sentence where a value
+    does not read (`protocol_block.kept`: a key of more than one word, an
+    empty unit) — before anything is written."""
+    if key is None and unit is None:
+        return None
+    kept = protocol_block.Kept(key, unit)
+    try:
+        read = protocol_block.kept(
+            "```toml\n" + protocol_block.kept_toml(kept) + "```\n"
+        )
+    except protocol_block.BlockError as exc:
+        raise console.Refused("labkit-init", f"--kept/--unit: {exc}") from exc
+    if read != kept:
+        raise console.Refused(
+            "labkit-init",
+            f"--kept/--unit: {key!r}, {unit!r} read back as a placeholder — name "
+            f"the key and the unit without angle brackets",
+        )
+    return kept
 
 
 def asked_kind(kind: str | None) -> str:
@@ -1415,6 +1485,7 @@ def stamped_head(
     pid: str | None = None,
     report_file: str | None = None,
     reference: protocol_block.Reference | None = None,
+    kept: protocol_block.Kept | None = None,
 ) -> str:
     """The template with its head tokens replaced: the name once, a fresh
     protocol id (PID when given), COST when asked, KIND always, with MODEL a `[model]`
@@ -1422,8 +1493,9 @@ def stamped_head(
     its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21),
     and for a computation the claim keys (`COMPUTE_CLAIM`) —, with
     REFERENCE the `[reference]` table (`protocol_block.reference_toml`)
-    after it, and with REPORT_FILE the head's `report` line after
-    `preflight_audit`."""
+    after it, for a computation the `[kept]` table before them
+    (`protocol_block.kept_toml`; KEPT, or both placeholders), and with
+    REPORT_FILE the head's `report` line after `preflight_audit`."""
     out = tmpl.replace("<name>", slug, 1).replace(
         "<protocol-id>", pid or new_protocol_id(root)
     )
@@ -1447,6 +1519,15 @@ def stamped_head(
             'preflight_audit = ""\n\n' + protocol_block.reference_toml(reference),
             1,
         )
+    if kind == standard_contract.COMPUTE_KIND:
+        # after the reference: each table lands right below preflight_audit,
+        # so the last one written stands first
+        out = out.replace(
+            'preflight_audit = ""\n',
+            'preflight_audit = ""\n\n'
+            + protocol_block.kept_toml(kept or protocol_block.Kept(None, None)),
+            1,
+        )
     if report_file is not None:
         # after the model and reference tables: the line stays in
         # [protocol], the table it opens would otherwise take it
@@ -1465,11 +1546,14 @@ def check_stamped_head(
     model: bool = False,
     report_file: str | None = None,
     reference: protocol_block.Reference | None = None,
+    kept: protocol_block.Kept | None = None,
 ) -> None:
     """Raise ValueError unless the stamped protocol's head carries a real
     id, the KIND asked, when COST was asked for that tier, when MODEL was
-    asked a `[model]` table, REPORT_FILE as its `report` (None: none) and
-    REFERENCE as its `[reference]` (None: none).
+    asked a `[model]` table, REPORT_FILE as its `report` (None: none) and,
+    for a computation, REFERENCE as its `[reference]` (None: none) and KEPT
+    as its `[kept]` (None: both placeholders); another kind carries no
+    `[kept]`.
     The stamp writes them by replacing template
     tokens; a token the template no longer carried would leave the
     placeholder without a word."""
@@ -1491,10 +1575,19 @@ def check_stamped_head(
             f"labkit-init: the stamped head says report = {head.report!r}, "
             f"asked {report_file!r}"
         )
-    if protocol_block.reference(text) != reference:
+    compute = kind == standard_contract.COMPUTE_KIND
+    # a fit's [reference] cannot read without [kept]: stamp_area refuses it
+    # by kind right after the stamp (`protocol_check.reference_gap`)
+    if compute and protocol_block.reference(text) != reference:
         raise ValueError(
             f"labkit-init: the stamped head carries [reference] "
             f"{protocol_block.reference(text)!r}, asked {reference!r}"
+        )
+    want = kept or protocol_block.Kept(None, None) if compute else None
+    if protocol_block.kept(text) != want:
+        raise ValueError(
+            f"labkit-init: the stamped head carries [kept] "
+            f"{protocol_block.kept(text)!r}, asked {want!r}"
         )
 
 
@@ -1520,8 +1613,10 @@ def step_fields(sk: standard_contract.Skeleton, kind: str, model: bool) -> str:
     every = "terms, question, unit, data, exclusions"
     if not standard_contract.has_bar(kind):
         bar = (
-            f"{every} — no criterion, no promise table: a computation "
-            "judges no prediction, so it has no bar to clear"
+            f"{every}, the kept number's key and unit (the head's [kept]: "
+            '`protocol-fill PROTOCOL "kept.key=<metrics key>" "kept.unit=<unit>"` '
+            "where the stamp left them open) — no criterion, no promise table: a "
+            "computation judges no prediction, so it has no bar to clear"
         )
     elif sk is standard_contract.MODEL:
         bar = f"{every}, criterion, quality check, prompt, null condition{CONSTANTS}"
@@ -1882,13 +1977,28 @@ def main(argv: list[str]) -> int:
         "`number_describes` and the `annotation_validity` it may owe",
     )
     exp.add_argument(
+        "--kept",
+        metavar="KEY",
+        help="a computation's kept number: its metrics.json key, stamped as the "
+        "head's `[kept] key` — the compute skeleton reads it, finalize holds the "
+        "run to it as a finite number; absent, a placeholder for protocol-fill "
+        "(`kept.key=…`); refused with --kind fit|apply",
+    )
+    exp.add_argument(
+        "--unit",
+        metavar="UNIT",
+        help='the kept number\'s unit, a short text ("ms", "documents"; "1" for a '
+        "dimensionless number), stamped as `[kept] unit`; absent, a placeholder "
+        "(`kept.unit=…`); refused with --kind fit|apply",
+    )
+    exp.add_argument(
         "--reference",
-        metavar="KEY=VALUE[±TOL]",
-        help="a computation's stated value: the metrics key compared (the skeleton's "
-        "METRIC_KEY), the value the task states, with ±TOL (or +-TOL) the "
-        "tolerance of `within`; stamped as the head's [reference] table, which "
-        "the run compares and the Recorded results line carries; refused with "
-        "--kind fit|apply (they compare in a criterion)",
+        metavar="VALUE[±TOL]",
+        help="a computation's stated value: the value the task states for the kept "
+        "number (the [kept] key), with ±TOL (or +-TOL) the tolerance of `within`; "
+        "stamped as the head's [reference] table, which the run compares and the "
+        "Recorded results line carries; refused with --kind fit|apply (they "
+        "compare in a criterion)",
     )
     exp.add_argument(
         "--relation",
@@ -1984,7 +2094,7 @@ def main(argv: list[str]) -> int:
     # before the explore branch returns, or `--explore --change-kind` stamps
     # the explore file and exits 0 (audit 2026-10-27, C13)
     if (a.relation or a.reference_source) and not a.reference:
-        ap.error("--relation and --reference-source go with --reference KEY=VALUE")
+        ap.error("--relation and --reference-source go with --reference VALUE")
     if a.change_kind and (
         a.repeat_cost
         or a.model
@@ -1992,19 +2102,28 @@ def main(argv: list[str]) -> int:
         or a.report_file
         or a.explore
         or a.reference
+        or a.kept
+        or a.unit
     ):
         ap.error(
             "--change-kind takes only --kind: the repeat cost, the model, the "
-            "report fields, the report file and the reference come from the "
-            "protocol, and --explore stamps no area"
+            "report fields, the report file, the kept number and the reference "
+            "come from the protocol, and --explore stamps no area"
         )
     if a.explore and (
-        a.kind or a.repeat_cost or a.model or a.report or a.report_file or a.reference
+        a.kind
+        or a.repeat_cost
+        or a.model
+        or a.report
+        or a.report_file
+        or a.reference
+        or a.kept
+        or a.unit
     ):
         ap.error(
             "--explore stamps only experiments/explore/<name>.py: --kind, "
-            "--repeat-cost, --model, --reference, --report and --report-file "
-            "belong to the area's stamp, the step --explore prints next"
+            "--repeat-cost, --model, --kept, --unit, --reference, --report and "
+            "--report-file belong to the area's stamp, the step --explore prints next"
         )
     if a.explore:
         print("\n".join(stamp_explore(root / EXPERIMENTS, area_slug(a.name))))
@@ -2031,6 +2150,7 @@ def main(argv: list[str]) -> int:
             if a.reference
             else None
         ),
+        kept=parse_kept_flags(a.kept, a.unit),
     )
     print(report)
     return 0

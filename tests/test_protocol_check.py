@@ -1377,7 +1377,7 @@ class TestHeadValues(unittest.TestCase):
         for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
-                    pilot().replace('standard = "0.23"', f'standard = "{std}"')
+                    pilot().replace('standard = "0.24"', f'standard = "{std}"')
                 )
                 self.assertEqual(rc, 1, out)
                 self.assertIn(f"HEAD (must): [protocol] standard = '{std}'", out)

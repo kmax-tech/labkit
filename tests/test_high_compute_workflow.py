@@ -40,11 +40,7 @@ class HighComputeWorkflow(unittest.TestCase):
             [
                 (
                     'SOURCE = REPO / "data" / "TODO"',
-                    'SOURCE = REPO / "data" / "raw" / "counts.json"',
-                ),
-                (
-                    'METRIC_KEY = "TODO_number"',
-                    'METRIC_KEY = "mean_count"\nCOUNT_FIELD = "count"',
+                    'SOURCE = REPO / "data" / "raw" / "counts.json"\nCOUNT_FIELD = "count"',
                 ),
                 (
                     'raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
@@ -57,7 +53,7 @@ class HighComputeWorkflow(unittest.TestCase):
                 ),
                 (
                     'raise NotImplementedError("evaluate_rows(): compute the number(s) from items")',
-                    "return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
+                    'return {"mean_count": sum(r[COUNT_FIELD] for r in items) / len(ids)}',
                 ),
             ],
         )
@@ -67,7 +63,7 @@ class HighComputeWorkflow(unittest.TestCase):
             '[{"id": "a", "count": 1}, {"id": "b", "count": 3}]',
             '{"mean_count": 2.0}',
         )
-        lab.fill(protocol, "type=exploratory")
+        lab.fill(protocol, "type=exploratory", "kept.key=mean_count", "kept.unit=1")
         lab.fill_open(
             protocol,
             **{

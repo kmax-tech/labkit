@@ -8,7 +8,8 @@ the record (`model_provenance_gap`), a single draw where a model was
 asked (`single_draw`), every JSONL row held to the runs that wrote it
 (`row_provenance_findings`), every arm the protocol names present
 (`arm_findings`), a null lane that moved in the kept rows
-(`null_lane_findings`). Each returns findings; finalize's stations decide
+(`null_lane_findings`), a computation's kept number held as the head's
+`[kept] key` names it (`kept_number_gaps`). Each returns findings; finalize's stations decide
 their grade. Read-only.
 """
 
@@ -891,3 +892,44 @@ def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:
                 f"recorded no such alias"
             )
     return out
+
+
+#: how many of the run's other metrics a kept-number blocker names
+_HELD_SHOWN = 6
+
+
+def kept_number_gaps(
+    key: str, metrics: dict, run: str, area: Path
+) -> list[GateFinding]:
+    """A guaranteed blocker when METRICS, the metrics.json of the run RUN of
+    AREA, does not hold KEY — the computation's `[kept] key` — as a finite
+    number (`protocol_block.finite_number`: a bool, a text, None, NaN or an
+    infinity is none), naming the key, the run and what it holds instead;
+    [] when it does. The compute skeleton's own check (`kept_number`) sits
+    in an agent-editable script; this one reads the head and the run's
+    record. It binds the key, not its meaning: a wrong computation stored
+    under KEY passes — the area's tests and the analysis audit judge that
+    (docs/notes/2026-11-01-kept-key-in-the-head.md)."""
+    if key in metrics and protocol_block.finite_number(metrics[key]):
+        return []
+    others = [(k, v) for k, v in metrics.items() if k != key]
+    held = ", ".join(f"{k} = {v!r}"[:60] for k, v in others[:_HELD_SHOWN]) + (
+        f", … ({len(others) - _HELD_SHOWN} more)" if len(others) > _HELD_SHOWN else ""
+    )
+    what = (
+        f"holds `{key}` = {metrics[key]!r}, which is no finite number"
+        if key in metrics
+        else f"holds no `{key}`"
+    )
+    return [
+        blocker(
+            f"the kept number: metrics.json of {run} {what} — the head's [kept] "
+            f"names `{key}` as the number this computation reports"
+            + (f"; it holds {held}" if held else "; it holds nothing else"),
+            fix=f"write `{key}` as a finite number from evaluate_rows() (the compute "
+            f"skeleton reads the key from the head's [kept]), then "
+            f"{measure_anew(area)}; when [kept] names the wrong number, set it "
+            f"before the first measurement — after it, register anew "
+            f"(`labkit-init exp <new-name> --kind compute`)",
+        )
+    ]

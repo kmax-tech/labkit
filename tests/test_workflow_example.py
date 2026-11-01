@@ -52,10 +52,10 @@ class CountWalkthrough(unittest.TestCase):
         self.assertEqual(p.returncode, 0, out[-4000:])
         for said in (
             "== 1. a lab repo",
-            "filled: SOURCE, INPUTS, METRIC_KEY",
+            "filled: SOURCE, INPUTS, expected_ids()",
             "== 5. finalize",
             "all clear",
-            "- **Recorded results:** mean_docs_per_case = 3.5 (run ",
+            "- **Recorded results:** kept number: mean_docs_per_case = 3.5 documents (run ",
             "<!-- labkit result: experiments/01-docs-per-case/PROTOCOL-docs-per-case.md run ",
             "refused, as it must be: the block differs from what the protocol renders",
             "refused, as it must be: the Recorded results line differs",

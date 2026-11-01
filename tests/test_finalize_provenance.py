@@ -27,10 +27,14 @@ BODY = """
 - **Question / hypothesis:** how many documents per case?
 - **Recorded results:** 3.5, run r1
 """
-SHORT = "# Experiment protocol: x\n\n" + head(repeat_cost="low", promises=None) + BODY
+SHORT = (
+    "# Experiment protocol: x\n\n"
+    + head(repeat_cost="low", promises=None, kept=("mean", "1"))
+    + BODY
+)
 HIGH = (
     "# Experiment protocol: x\n\n"
-    + head(repeat_cost="high", frozen=True, promises=None)
+    + head(repeat_cost="high", frozen=True, promises=None, kept=("mean", "1"))
     + BODY
 )
 

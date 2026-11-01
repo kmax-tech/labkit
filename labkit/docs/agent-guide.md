@@ -98,10 +98,16 @@ Fill the before-run fields, including `type` and each promise's sentence:
   check and a null condition in the same run. The criterion decides which
   conclusion the result supports. The quality check tests whether the
   measurement can carry that conclusion.
+- For a computation, name the kept number in the head's `[kept]` table:
+  the metrics.json key the run must hold as a number, and its unit ("1"
+  for a dimensionless number). `labkit-init exp --kind compute --kept KEY
+  --unit UNIT` stamps it; else `protocol-fill <PROTOCOL> "kept.key=KEY"
+  "kept.unit=UNIT"`. The skeleton reads the key from there; finalize
+  refuses a run that does not hold it as a number.
 - If a computation is compared with a value the task states ("0.62 within
-  0.01"), run this before the first measurement: `labkit-init exp --kind compute --reference
-  KEY=VALUE[±TOL]`, or write the head's `[reference]` table yourself. KEY
-  is the skeleton's `METRIC_KEY`.
+  0.01"), run this before the first measurement: `labkit-init exp --kind compute --kept KEY
+  --reference VALUE[±TOL]`, or write the head's `[reference]` table yourself.
+  The value is compared with the `[kept]` key.
   Register no criterion. A miss is a result, and the run writes the
   verdict.
 - If the head contains a `[model]` table, also fill Data profile. Copy the
@@ -142,7 +148,7 @@ how far the null lane can stray from its target:
 
 After the first measurement, these values stay fixed, and so do the
 question, its terms, the data, the exclusions, the unit and the head's
-`[reference]`: finalize holds a run whose protocol changed them. If the
+`[kept]` and `[reference]`: finalize holds a run whose protocol changed them. If the
 number misses, report the miss. A changed question is a new protocol.
 Decide a finding about them by the ways under "When you are stuck".
 

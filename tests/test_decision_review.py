@@ -71,7 +71,7 @@ def area_with(
         head(repeat_cost="low", result=RUN, promises=promise_block)
         + "- **Question / hypothesis:** does it hold?\n"
         + "- **Conclusion:** the fit is in-sample; nothing more is claimed.\n"
-        + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {RUN})\n",
+        + f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1 (run {RUN})\n",
         encoding="utf-8",
     )
     run = completed_run(
@@ -335,7 +335,7 @@ class TheCall(unittest.TestCase):
             f"- **Limitation (audit {record.stem} #1):** the verdicts stand", sent[0]
         )
         self.assertIn(
-            f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: (run {RUN})",
+            f"- **Recorded results:** criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1 (run {RUN})",
             sent[0],
         )
 

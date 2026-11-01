@@ -51,6 +51,13 @@ each step's condition):
                     included — a blocker (`null_lane_findings`, LAB-034
                     Null condition in the same run); without both lanes, a
                     note
+     kept number    a computation's kept number: the answering run's
+                    metrics.json holds the key the head's `[kept]` names as a
+                    finite number — a blocker naming the key, the run and
+                    what it holds instead (`kept_number_gaps`); a `[kept]`
+                    missing, unfilled or on a fit or an apply blocks too
+                    (`kept_gaps`). The key, not its meaning: a wrong
+                    computation under the right key passes
      reference      a computation's comparison with the stated value its
                     head registers (`[reference]`): the run recorded the
                     verdict and it reads; `not comparable` — the key absent
@@ -95,7 +102,7 @@ from labkit.formats import (
     protocol_block,
     reference,
 )
-from labkit.formats.standard_contract import lane
+from labkit.formats.standard_contract import COMPUTE_KIND, lane
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.runs import (
     ArtefactError,
@@ -146,14 +153,17 @@ from labkit.gates.report_context import pending_adoption
 from labkit.formats.protocol_check import (
     field_name,
     fields,
+    kept_gaps,
     open_holes,
     reference_gap,
 )
 from labkit.checks import data_counts
+from labkit.checks.result_render import kept_phrase
 from labkit.checks.run_record_check import (
     arm_findings,
     code_since_run,
     criterion_n_input_mismatches,
+    kept_number_gaps,
     null_lane_findings,
     model_provenance_gap,
     output_record_findings,
@@ -395,8 +405,8 @@ def scope_changes(
 ) -> list[GateFinding]:
     """The answering RUN holds what its protocol's first measurement said the
     number is about (`protocol_history.scope_differences`: the question and
-    its terms, the data, the exclusions, the unit, the head's kind and
-    `[reference]`), read from the protocol each run saw (`as_measured`) —
+    its terms, the data, the exclusions, the unit, the head's kind,
+    `[kept]` and `[reference]`), read from the protocol each run saw (`as_measured`) —
     at every kind, so a computation, which has no promise block, is held too.
     A change is a BLOCKER naming each field with its old and new value and
     the way out: restore them and measure again, or register anew. A code
@@ -848,21 +858,27 @@ def check_reference(
     (`reference_gap`), blocks too; metrics that do not read block as the
     other stations' do. Without a table: a note, nothing owed — unless the
     run wrote `ref_*` keys. `not met` is a valid outcome, told as a note."""
-    try:
-        ref = protocol_block.reference(text)
-    except protocol_block.BlockError as exc:
-        findings.block(
-            f"{protocol.name}: {exc}",
-            fix=f"repair the [reference] table as the sentence says; `protocol-check "
-            f"{shlex.quote(shown(protocol, Path.cwd()))}` shows it",
-        )
-        return
     gap = reference_gap(text, head)
     if gap:
         findings.block(
             f"{protocol.name}: {gap}",
             fix=f"repair the head as the sentence says, then "
             f"`{gate_command('finalize', protocol.parent)}`",
+        )
+        return
+    if kept_gaps(text, head):
+        # the kept-number station names the [kept] gap; a second blocker on
+        # the same cause would read as a second fault
+        findings.note("  not read — the kept-number station names the [kept] gap")
+        return
+    try:
+        ref = protocol_block.reference(text)
+        key = protocol_block.kept_key(text) if ref is not None else None
+    except protocol_block.BlockError as exc:
+        findings.block(
+            f"{protocol.name}: {exc}",
+            fix=f"repair the [reference] and [kept] tables as the sentence says; "
+            f"`protocol-check {shlex.quote(shown(protocol, Path.cwd()))}` shows them",
         )
         return
     try:
@@ -874,14 +890,78 @@ def check_reference(
             f"and audit that run; the run's own files stay as they are",
         )
         return
-    held = reference.comparison_gaps(ref, metrics)
+    held = reference.comparison_gaps(ref, key, metrics)
     findings.take_all(held)
     if held:
         return
-    if ref is None:
+    if ref is None or key is None:
         findings.note("  n/a — no [reference] registered: a pure computation")
     else:
-        findings.note(f"  {reference.phrase(metrics, ref)} — as the run recorded it")
+        findings.note(
+            f"  {reference.phrase(metrics, ref, key)} — as the run recorded it"
+        )
+
+
+def check_kept_number(
+    findings: Findings,
+    protocol: Path,
+    text: str,
+    head: protocol_block.Head,
+    answering_run: Path,
+) -> None:
+    """Station 7: a computation's kept number — the key the head's `[kept]`
+    names — held as a finite number in the answering run's metrics.json
+    (`run_record_check.kept_number_gaps`, a guaranteed blocker): the check
+    the agent cannot edit away, where the skeleton's own `kept_number()`
+    sits in its script. A `[kept]` table missing, unfilled, malformed or on
+    a fit or an apply (`protocol_check.kept_gaps`) blocks too. A fit or an
+    apply binds its answer through its promise keys: a note. The key binds
+    the name, not the meaning: a wrong computation under the right key
+    passes — the tests and the analysis audit judge that."""
+    gaps = kept_gaps(text, head)
+    named = shlex.quote(shown(protocol, Path.cwd()))
+    for gap in gaps:
+        # an unfilled value is the stamp's placeholder, which protocol-fill
+        # sets; every other gap is a table to add, drop or repair by hand
+        unfilled = gap in {f"[kept] {f}" for f in protocol_block.KEPT_KEYS}
+        findings.block(
+            f"{protocol.name}: {gap}"
+            + (" is still the placeholder" if unfilled else ""),
+            fix=(
+                f'`protocol-fill {named} "kept.{gap.removeprefix("[kept] ")}=<value>"`'
+                if unfilled
+                else f"repair the head as the sentence says, then "
+                f"`{gate_command('finalize', protocol.parent)}`"
+            ),
+        )
+    if gaps:
+        return
+    if head.kind is None:
+        findings.note("  n/a — the head's kind is undecided (open fields name it)")
+        return
+    if head.kind != COMPUTE_KIND:
+        findings.note(
+            f"  n/a — kind = {head.kind!r} binds its answer through its promise keys"
+        )
+        return
+    key = protocol_block.kept_key(text)  # kept_gaps found the table filled
+    try:
+        metrics = runs_metrics(answering_run)
+    except MetricsError as exc:
+        findings.block(
+            f"the metrics of {answering_run.name} do not read: {exc}",
+            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
+            f"and audit that run; the run's own files stay as they are",
+        )
+        return
+    held = kept_number_gaps(
+        key, metrics, answering_run.name, answering_run.parent.parent
+    )
+    findings.take_all(held)
+    if not held:
+        kept = protocol_block.kept(text)
+        assert kept is not None and kept.unit is not None, "kept_gaps found it filled"
+        findings.note(f"  {kept_phrase(key, metrics[key], kept.unit)}")
 
 
 def runs_metrics(answering_run: Path) -> dict:
@@ -941,10 +1021,11 @@ def finalize_area(
        stamped `<…>` placeholders left in the area's README.
     5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
-    7. registered outputs, criterion n, the null lane and the reference
-       comparison — only with a run; an output that is not the file the
-       run recorded (gone, or another sha256 than outputs.json) blocks,
-       criterion n warns, a null lane that did not move blocks, a
+    7. registered outputs, criterion n, the null lane, the kept number and
+       the reference comparison — only with a run; an output that is not
+       the file the run recorded (gone, or another sha256 than outputs.json)
+       blocks, criterion n warns, a null lane that did not move blocks, a
+       computation's run without its `[kept] key` as a finite number blocks, a
        registered reference the run cannot compare (the key absent or no
        finite number) blocks — a missed one is a result.
     8. audit findings — always: an `open` BLOCKER in `audits/` blocks.
@@ -1040,6 +1121,8 @@ def finalize_area(
         check_criterion_n(findings, answering_run)
         findings.header("null lane")
         check_null_lane(findings, answering_run)
+        findings.header("kept number")
+        check_kept_number(findings, chosen, text, head, answering_run)
         findings.header("reference comparison")
         check_reference(findings, chosen, text, head, answering_run)
 

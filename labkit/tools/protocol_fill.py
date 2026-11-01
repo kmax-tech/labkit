@@ -16,6 +16,7 @@ command line.
     protocol-fill PROTOCOL-x.md --line 27 Question "does Y move X?"
     protocol-fill PROTOCOL-x.md "criterion-1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md type=exploratory repeat_cost=low kind=fit "model alias=haiku"   the TOML head's stamped placeholders
+    protocol-fill PROTOCOL-x.md kept.key=HRV_MeanNN kept.unit=ms   a computation's [kept]: its kept number's key and unit
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
                                                Recorded results, Limitation lines (stray ones dropped), Prompt block
@@ -116,6 +117,7 @@ from labkit.formats.protocol_check import (
     placeholder_fields,
 )
 from labkit.tools.protocol_edit import (
+    HEAD_HINTS,
     HEAD_KEYS,
     as_filled,
     assignments_of,
@@ -276,7 +278,7 @@ def _list_open(text: str) -> int:
         (
             n,
             f"{label}  (TOML head: "
-            f"{' | '.join(choices) if choices else 'the alias from models.toml'})",
+            f"{' | '.join(choices) if choices else HEAD_HINTS[label]})",
         )
         for label, (key, choices) in HEAD_KEYS.items()
         if (n := head_open(text, key)) is not None

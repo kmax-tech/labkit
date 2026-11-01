@@ -1,9 +1,11 @@
 # The labkit lab standard
 
-*Version 0.23 — the version a protocol names in its head (`standard =
-"0.23"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.24 — the version a protocol names in its head (`standard =
+"0.24"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
-at the end. 0.23 (2026-10-25): `repeat_cost = "low" | "high"` replaces
+at the end. 0.24 (2026-11-01): a computation names its kept number in the
+head's `[kept]` table (`key`, the metrics key; `unit`), and `[reference]`
+compares on that key, its own `key` gone. 0.23 (2026-10-25): `repeat_cost = "low" | "high"` replaces
 `cost = "seconds" | "minutes" | "hours"` — the gates knew two lanes, the
 head three names. 0.22 (2026-10-23): the head names what the kept number asserts,
 `kind = "compute" | "fit" | "apply"` — a compute judges no prediction and
@@ -1375,6 +1377,17 @@ pitfalls, *Patterns* 5:101046 (pages).
 
 Dated changes that alter no rule; a change to a rule or a field is the next
 version of the standard.
+
+- 2026-11-01 — Protocol standard 0.24: a computation's head carries
+  `[kept]` — `key`, the metrics key of the number it reports, and `unit`.
+  The key stood only in the script (`METRIC_KEY`) and in prose; a run was
+  adopted with a flag (`hrv_computed`) as its kept number while the Unit
+  field named HRV_MeanNN (reference pilot, trial 2, task 34). finalize now
+  holds the answering run to the registered key as a finite number
+  (LAB-041 Generate numbers, don't retype them); `[reference] key` moved
+  there, one home for the key. The key is bound by name, not by meaning:
+  a wrong computation under the right key is the tests' and the analysis
+  audit's to find.
 
 - 2026-10-28 — LAB-077 Own commits, others' state stays with the user: own
   paths are named at the commit (`git add <path> && git commit -m … --

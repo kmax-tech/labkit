@@ -1,22 +1,25 @@
 """reference — a computation's kept number held to a stated value.
 
     ref = protocol_block.reference(text)                 # None: a pure computation
-    metrics = reference.with_verdict(evaluate_rows(…), ref)   # the compute skeleton, and its --check
-    reference.phrase(metrics, ref)                       # "reference 0.62 ± 0.01 (within): not met, distance 0.145"
-    reference.comparison_gaps(ref, metrics)              # finalize's blockers, as data
+    key = protocol_block.kept_key(text)                  # the kept number's key, `[kept] key`
+    metrics = reference.with_verdict(evaluate_rows(…), ref, key)   # the compute skeleton, and its --check
+    reference.phrase(metrics, ref, key)                  # "reference 0.62 ± 0.01 (within): not met, distance 0.145"
+    reference.comparison_gaps(ref, key, metrics)         # finalize's blockers, as data
 
 The one home of the verdict (`reference_verdict`): the compute skeleton
 writes it to the run's metrics after `evaluate_rows`, `02_analyze.py
 --check` recomputes it from the kept rows, `result_render` renders it
 into the Recorded results line, and finalize holds the run to it. A
 reference is registered in the head (`[reference]`,
-docs/notes/2026-10-29-reference-comparison.md) and compared by the run:
+docs/notes/2026-10-29-reference-comparison.md), the number it is compared
+with is the one `[kept] key` names (one home for that key), and it is
+compared by the run:
 the verdict is generated, never typed, like every other number
 (LAB-041 Generate numbers, don't retype them).
 
 Three states, each its own: no `[reference]` — no `ref_*` key is written
 and nothing is owed; `compared` — `ref_met` true or false, a miss is a
-valid outcome with the distance; `not comparable` — the registered key is
+valid outcome with the distance; `not comparable` — the kept key is
 absent from the metrics or no finite number, a blocker, and no "met" can
 be rendered. Pure: nothing here reads or writes a file.
 """
@@ -50,9 +53,9 @@ NOT_COMPARABLE = "not comparable"
 
 
 def reference_verdict(measured: object, ref: Reference) -> dict[str, object]:
-    """The verdict of MEASURED, the metrics value under REF's key, against
+    """The verdict of MEASURED, the metrics value under the kept key, against
     REF, as the run records it: `ref_state` COMPARED with `ref_met` (bool)
-    and `ref_distance` (`|measured - value|`, in the key's unit, for every
+    and `ref_distance` (`|measured - value|`, in the kept unit, for every
     relation), or NOT_COMPARABLE with both None when MEASURED is None (the
     key absent) or no finite number (a string, a bool, NaN, an infinity);
     with `ref_value`, `ref_tolerance` (the absolute tolerance the
@@ -86,9 +89,10 @@ def reference_verdict(measured: object, ref: Reference) -> dict[str, object]:
     return {STATE_KEY: COMPARED, MET_KEY: met, DISTANCE_KEY: distance, **stated}
 
 
-def with_verdict(metrics: dict, ref: Reference | None) -> dict:
+def with_verdict(metrics: dict, ref: Reference | None, key: str) -> dict:
     """METRICS with the verdict against REF added (`reference_verdict` on
-    `metrics[ref.key]`, None when absent); METRICS itself, unchanged,
+    `metrics[KEY]`, KEY the kept number's `[kept] key`, None when absent);
+    METRICS itself, unchanged,
     without a reference. Raises ValueError when METRICS already carries a
     verdict key: the comparison is the head's, never computed beside it
     in `evaluate_rows`, and without a `[reference]` no `ref_*` key may
@@ -102,12 +106,12 @@ def with_verdict(metrics: dict, ref: Reference | None) -> dict:
         )
     if ref is None:
         return metrics
-    return {**metrics, **reference_verdict(metrics.get(ref.key), ref)}
+    return {**metrics, **reference_verdict(metrics.get(key), ref)}
 
 
-def phrase(metrics: dict, ref: Reference) -> str:
+def phrase(metrics: dict, ref: Reference, key: str) -> str:
     """The comparison as the Recorded results line carries it, from the
-    verdict METRICS recorded (not recomputed) and REF's key for the way a
+    verdict METRICS recorded (not recomputed) and KEY, the kept number's, for the way a
     comparison failed: `reference 0.62 ± 0.01 (within): met, distance
     0.003`, `… not met, distance 0.145`, or `… not comparable:
     deforestation_rate absent` / `… = nan is no finite number`. The value,
@@ -130,9 +134,9 @@ def phrase(metrics: dict, ref: Reference) -> str:
         )
     if state == NOT_COMPARABLE:
         why = (
-            f"{ref.key} absent"
-            if ref.key not in metrics
-            else f"{ref.key} = {metrics[ref.key]} is no finite number"
+            f"{key} absent"
+            if key not in metrics
+            else f"{key} = {metrics[key]} is no finite number"
         )
         return f"{stated}: not comparable: {why}"
     raise ValueError(
@@ -140,8 +144,11 @@ def phrase(metrics: dict, ref: Reference) -> str:
     )
 
 
-def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
-    """Why the run's METRICS cannot report the comparison REF registers, one
+def comparison_gaps(
+    ref: Reference | None, key: str | None, metrics: dict
+) -> list[GateFinding]:
+    """Why the run's METRICS cannot report the comparison REF registers on
+    KEY, the kept number's (`[kept] key`; None only without REF), one
     guaranteed blocker each, or []: a `ref_*` key without a registered
     reference (a comparison typed beside the number); a registered
     reference the run recorded no verdict for (the script does not read
@@ -162,15 +169,16 @@ def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
                 f"— a comparison is registered before the run, never written beside "
                 f"the number",
                 fix="register the stated value in the head's [reference] table "
-                "(key, value, tolerance, relation, source), or drop the keys from "
+                "(value, tolerance, relation, source), or drop the keys from "
                 f"evaluate_rows(); then `.venv/bin/python "
                 f"{AREA_SLOT}/scripts/01_measure.py`",
             )
         ]
+    assert key is not None, "a registered [reference] compares the [kept] key"
     if STATE_KEY not in metrics:
         return [
             blocker(
-                f"the head registers [reference] on `{ref.key}`, and the run recorded "
+                f"the head registers [reference] on `{key}`, and the run recorded "
                 f"no verdict (no `{STATE_KEY}` in metrics.json) — the script does "
                 f"not read the head's reference",
                 fix="write the verdict from the head after evaluate_rows() — the "
@@ -181,17 +189,17 @@ def comparison_gaps(ref: Reference | None, metrics: dict) -> list[GateFinding]:
     if metrics[STATE_KEY] == NOT_COMPARABLE:
         why = (
             "is absent from metrics.json"
-            if ref.key not in metrics
-            else f"= {metrics[ref.key]!r} in metrics.json is no finite number"
+            if key not in metrics
+            else f"= {metrics[key]!r} in metrics.json is no finite number"
         )
         return [
             blocker(
-                f"`{ref.key}` {why}, so the registered reference ({phrase(metrics, ref)}) "
+                f"`{key}` {why}, so the registered reference ({phrase(metrics, ref, key)}) "
                 f"cannot be compared and no verdict can be reported",
-                fix=f"write `{ref.key}` as a finite number from evaluate_rows() (the "
-                f"key the head's [reference] names — the compute skeleton's "
-                f"METRIC_KEY), measure anew and audit that run; a reference that "
-                f"names the wrong key is a new registration",
+                fix=f"write `{key}` as a finite number from evaluate_rows() (the "
+                f"key the head's [kept] names, which the compute skeleton reads), "
+                f"measure anew and audit that run; a [kept] key that names the "
+                f"wrong number is a new registration",
             )
         ]
     if metrics[STATE_KEY] != COMPARED or metrics.get(MET_KEY) not in (True, False):

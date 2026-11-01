@@ -120,7 +120,21 @@ HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     # [model] number_describes, a MUST of a computation with a model that no
     # tool could set and `--list` never named (audit 2026-10-27, third, I5)
     "number_describes": ("number_describes", protocol_block.NUMBER_DESCRIBES),
+    # a computation's [kept] (standard 0.24): the key of its kept number and
+    # its unit, stamped as placeholders unless `labkit-init exp --kept/--unit`
+    # named them; `table.key` reads the key inside that table only
+    "kept.key": ("kept.key", None),
+    "kept.unit": ("kept.unit", None),
 }
+#: what `--list` says a free head value takes, by its label in HEAD_KEYS
+HEAD_HINTS: dict[str, str] = {
+    "model alias": "the alias from models.toml",
+    "kept.key": "the metrics.json key of the kept number",
+    "kept.unit": 'its unit, "1" for a dimensionless number',
+}
+#: a `[kept]` value named the way agents write a table's key (`[kept] key`,
+#: `kept key`, `[kept].unit`): read as its HEAD_KEYS label `kept.<value>`
+KEPT_LABEL = re.compile(r"^\[?kept\]?\s*[.\s]\s*(key|unit)$", re.I)
 #: the head's freeze keys: a deliberate edit by the author once preflight is
 #: clean and the preflight audit decided, not a fill — named so a fill of
 #: them says so instead of "no field labelled" (audit 2026-10-27, third, I6)
@@ -132,8 +146,9 @@ TABLE_PREFIX = re.compile(r"^\[(protocol|model)\]\s*")
 #: where they are written instead (round 2: `[reference]` filled as a field)
 NOT_FILLED: dict[str, str] = {
     "reference": "the head's [reference] table is written by `labkit-init exp <name> "
-    "--kind compute --reference KEY=VALUE[±TOL]` before the first measurement, or by "
-    "hand in the TOML head (key, value, tolerance, relation)",
+    "--kind compute --reference VALUE[±TOL]` before the first measurement, or by "
+    "hand in the TOML head (value, tolerance, relation, source; the key compared "
+    "is `[kept] key`)",
     "result": "`[result] run` is written by `labkit-adopt <area> <run_id>`, never by hand",
     "standard": "`standard` is stamped and never edited: labkit refuses a protocol of "
     "another version",
@@ -145,13 +160,33 @@ HEAD_CHOICES: dict[str, tuple[str, ...] | None] = {
 
 
 def _head_line(key: str) -> re.Pattern[str]:
-    """The head's `KEY = "<…>"` placeholder line, its key and `=` kept."""
-    return re.compile(rf'^({re.escape(key)}\s*=\s*)"<[^"\n]*>"\s*$')
+    """The head's `KEY = "<…>"` placeholder line, its key and `=` kept; of a
+    dotted KEY (`kept.key`) the part after the table."""
+    bare = key.rsplit(".", 1)[-1]
+    return re.compile(rf'^({re.escape(bare)}\s*=\s*)"<[^"\n]*>"\s*$')
+
+
+def _table_span(
+    lines: list[str], start: int, end: int, table: str
+) -> tuple[int, int] | None:
+    """The line range (start, end) of the TOML block's `[TABLE]` body within
+    LINES[START:END] — from below its header to the next table header — or
+    None without the table."""
+    header = re.compile(rf"^\s*\[\s*{re.escape(table)}\s*\]\s*(?:#.*)?$")
+    for i in range(start, end):
+        if header.match(lines[i]):
+            j = i + 1
+            while j < end and not protocol_block.TABLE_HEADER.match(lines[j]):
+                j += 1
+            return i + 1, j
+    return None
 
 
 def head_open(text: str, key: str) -> int | None:
     """Line number of the TOML head's `KEY = "<…>"` placeholder, KEY one of
-    `HEAD_CHOICES`, or None once set; ValueError on another key.
+    `HEAD_CHOICES`, or None once set — or, for a dotted KEY (`kept.key`),
+    without its table; ValueError on another key. A dotted KEY is read
+    inside its table only (`[kept]`), so a `key = "<…>"` elsewhere is not it.
 
     The stamp leaves `type` — and `repeat_cost`, when `labkit-init exp` got no
     `--repeat-cost` — as a placeholder in the head; `--list` named only the prose
@@ -170,6 +205,11 @@ def head_open(text: str, key: str) -> int | None:
     if span is None:
         return None
     start, end = span
+    if "." in key:
+        table = _table_span(lines, start, end, key.split(".", 1)[0])
+        if table is None:
+            return None
+        start, end = table
     pattern = _head_line(key)
     for i in range(start, end):
         if pattern.match(lines[i]):
@@ -187,6 +227,18 @@ def fill_head(text: str, key: str, value: str) -> str:
     if not value.strip():
         raise ValueError(f"{key}: an empty value")
     if n is None:
+        table = key.split(".", 1)[0] if "." in key else None
+        span = protocol_block.toml_block_span(text)
+        if (
+            table is not None
+            and span is not None
+            and _table_span(text.splitlines(), *span, table) is None
+        ):
+            raise ValueError(
+                f"the head has no [{table}] table to fill — add it to the TOML head "
+                f'by hand: `[{table}]` with `key = "<metrics.json key>"` and '
+                f'`unit = "<unit>"`'
+            )
         raise ValueError(
             f"the head's {key} is already set (edit the TOML head to change it)"
         )
@@ -316,11 +368,16 @@ def assignments_of(field: str | None, value: list[str]) -> list[tuple[str, str]]
 
 def head_label(label: str) -> str:
     """LABEL as `fill_many` reads it: a head key named with its table
-    (`[protocol] type`, `[model] alias`) is the key (`TABLE_PREFIX`); a head
+    (`[protocol] type`, `[model] alias`) is the key (`TABLE_PREFIX`), a
+    `[kept]` value its dotted label (`[kept] key` → `kept.key`,
+    `KEPT_LABEL`); a head
     part `protocol-fill` does not write (`NOT_FILLED`: `[reference]`,
     `[result]`, `standard`, with or without brackets or a subkey) raises
     ValueError naming where it is written; any other label is returned as
     given."""
+    kept = KEPT_LABEL.match(label.strip())
+    if kept:
+        return f"kept.{kept.group(1).lower()}"
     bare = TABLE_PREFIX.sub("", label.strip())
     table = re.match(r"^\[?(\w+)\]?", bare)
     if (
@@ -343,7 +400,8 @@ def fill_many(
     force: bool = False,
 ) -> str:
     """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`,
-    `model alias` and `number_describes` (`HEAD_KEYS`), `fill_sentence` for
+    `model alias`, `number_describes`, `kept.key` and `kept.unit`
+    (`HEAD_KEYS`), `fill_sentence` for
     `<id> sentence`; the freeze keys (`FREEZE_KEYS`) are refused with how to
     set them by hand;
     the first ValueError leaves the caller's file untouched — all or

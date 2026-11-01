@@ -451,7 +451,12 @@ def print_contract(protocol: Path | None = None) -> None:
         + ", kind one of "
         + ", ".join(protocol_block.KINDS)
         + " (what the kept number asserts: a computation judges no prediction, a fit "
-        "judges a model trained or adjusted here, an apply a model used unchanged)."
+        "judges a model trained or adjusted here, an apply a model used unchanged). "
+        "A computation also carries `[kept]` — `key`, the metrics.json key of the "
+        'number it reports, and `unit` ("1" for a dimensionless number): the '
+        "skeleton reads the key, finalize holds the run to it as a finite number "
+        '(`protocol-fill <PROTOCOL> "kept.key=…" "kept.unit=…"`); a fit or an apply '
+        "carries none."
     )
     print(
         "\nprose-line budget per section (code blocks, table rows exempt; "

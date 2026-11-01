@@ -2,12 +2,13 @@
 
 A protocol carries exactly one fenced ```toml block. Its `[protocol]` table
 holds the fields a machine reads — the head — and its optional
-`[[promise]]` tables hold the promises (`promises.py`); a computation may
-carry a `[reference]` table, the stated value its number is compared with
-(`reference`):
+`[[promise]]` tables hold the promises (`promises.py`); a computation
+names its kept number in a `[kept]` table (`kept`: the metrics key and its
+unit) and may carry a `[reference]` table, the stated value that number is
+compared with (`reference`):
 
     [protocol]
-    standard = "0.23"
+    standard = "0.24"
     id = "p-0123456789abcdef"       # stamped by `labkit-init exp`, never typed
     type = "exploratory"            # exploratory | confirmatory
     repeat_cost = "low"         # low | high — the price of a repeat
@@ -47,14 +48,14 @@ from labkit.formats.runs import RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
-STANDARD = "0.23"
+STANDARD = "0.24"
 #: what a reader of the previous standard changes to read a protocol here —
 #: said in the refusal, so the migration is a sentence, not a legacy path
 MIGRATION = (
-    'from 0.22: set standard = "0.23" and replace `cost = "seconds" | "minutes" | '
-    '"hours"` with `repeat_cost = "low" | "high"` — the price of a repeat, as the '
-    "gates read it: seconds is low, minutes and hours are high (`protocol-fill "
-    "<PROTOCOL> repeat_cost=…` after renaming the key)"
+    'from 0.23: set standard = "0.24"; a compute head gains the `[kept]` table '
+    '— `key = "<the metrics.json key of the kept number>"`, `unit = "<its unit, '
+    '1 for a dimensionless number>"` — and a `[reference]` table moves its `key` '
+    "there (`[reference]` keeps value, tolerance, relative, relation, source)"
 )
 TYPES = ("exploratory", "confirmatory")
 REPEAT_COSTS = ("low", "high")
@@ -68,7 +69,16 @@ KINDS = ("compute", "fit", "apply")
 ID_SHAPE = re.compile(r"^p-[0-9a-f]{16}$")
 
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})\s*([\w+-]*)")
-_TOP_LEVEL = {"protocol", "promise", "result", "model", "gate", "replaces", "reference"}
+_TOP_LEVEL = {
+    "protocol",
+    "promise",
+    "result",
+    "model",
+    "gate",
+    "replaces",
+    "reference",
+    "kept",
+}
 #: the settings every protocol carries in its ```toml head (the block at the
 #: end of the protocol), in the template's order — not the run's config.json,
 #: which runlog writes per run
@@ -465,9 +475,116 @@ def declared_labels(text: str) -> tuple[str, ...] | None:
     return tuple(labels)
 
 
+#: the `[kept]` table of a computation (standard 0.24): the metrics.json key
+#: of its kept number and that number's unit
+#: (docs/notes/2026-11-01-kept-key-in-the-head.md)
+KEPT_KEYS = ("key", "unit")
+#: the stamp's placeholders for the two values, read as None (`kept`)
+KEPT_KEY_PLACEHOLDER = "<metrics key>"
+KEPT_UNIT_PLACEHOLDER = "<unit>"
+#: the unit of a dimensionless number
+DIMENSIONLESS = "1"
+
+
+@dataclass(frozen=True)
+class Kept:
+    """A computation's kept number as the head's `[kept]` registers it: the
+    metrics.json key the run must hold as a finite number, and its unit.
+    None marks a value still holding the stamp's placeholder."""
+
+    key: str | None  # one word, the metrics.json key; None while `"<…>"`
+    unit: str | None  # a short text, DIMENSIONLESS for none; None while `"<…>"`
+
+    @property
+    def placeholders(self) -> list[str]:
+        """The `[kept]` values still holding a placeholder, as the checks name them."""
+        return [f"[kept] {f}" for f in KEPT_KEYS if getattr(self, f) is None]
+
+
+def _metrics_key(value: object) -> bool:
+    """VALUE reads as a metrics key the head names: a non-empty string of one word."""
+    return (
+        isinstance(value, str)
+        and bool(value.strip())
+        and not any(c.isspace() for c in value)
+    )
+
+
+def kept(text: str) -> Kept | None:
+    """The protocol's `[kept]` table — `key`, the metrics.json key of the
+    kept number, and `unit`, its unit ("1" for a dimensionless number) —
+    or None without the table. A value in angle brackets is a placeholder
+    and reads as None (`Kept.placeholders`; protocol-check names it
+    unfilled). Raises BlockError on a non-table, an unknown or a missing
+    key, a `key` that is no one-word string, a `unit` that is no non-empty
+    string. Whether the head's kind owes or refuses the table is
+    `protocol_check.kept_gaps`'s answer.
+
+    The binding is by name only: a run that stores a wrong computation
+    under the registered key passes every check that reads this table —
+    the area's tests and the analysis audit judge what the number means."""
+    table = _table(parse_toml_block(text), "kept")
+    if table is None:
+        return None
+    _only_keys(table, "[kept]", KEPT_KEYS)
+    missing = [f for f in KEPT_KEYS if f not in table]
+    if missing:
+        raise BlockError(
+            f"[kept]: missing {', '.join(f'`{f}`' for f in missing)} — key (the "
+            f"metrics.json key of the kept number) and unit (its unit, "
+            f'"{DIMENSIONLESS}" for a dimensionless number)'
+        )
+    key, unit = table["key"], table["unit"]
+    if _placeholder(key):
+        key = None
+    elif not _metrics_key(key):
+        raise BlockError(
+            f"[kept] key = {key!r} — the metrics.json key of the kept number, one word"
+        )
+    if _placeholder(unit):
+        unit = None
+    elif not isinstance(unit, str) or not unit.strip():
+        raise BlockError(
+            f"[kept] unit = {unit!r} — the kept number's unit, a non-empty "
+            f'string ("{DIMENSIONLESS}" for a dimensionless number)'
+        )
+    return Kept(key=key, unit=unit)
+
+
+def kept_key(text: str) -> str:
+    """The metrics key the head's `[kept]` table names — what the compute
+    skeleton reads (`metric_key()`) and finalize holds the run to. Raises
+    BlockError naming `[kept]` when the table is absent, its key still the
+    placeholder, or the table does not read (`kept`)."""
+    k = kept(text)
+    if k is None:
+        raise BlockError(
+            "the head has no [kept] table — a computation names its kept "
+            'number there: `[kept]` with `key = "<metrics.json key>"` and '
+            '`unit = "<unit>"` (`labkit-init exp <name> --kind compute --kept '
+            "KEY --unit UNIT` stamps it)"
+        )
+    if k.key is None:
+        raise BlockError(
+            "[kept] key is still the placeholder — name the metrics.json key of "
+            'the kept number: `protocol-fill <PROTOCOL> "kept.key=<key>"`'
+        )
+    return k.key
+
+
+def kept_toml(k: Kept) -> str:
+    """K as the `[kept]` table `labkit-init exp` stamps, a None value as its
+    placeholder — the one writer of the table, and the form the registration
+    stamp digests (`protocol_check.registration_stamp`). Reads back as K."""
+    key = KEPT_KEY_PLACEHOLDER if k.key is None else k.key
+    unit = KEPT_UNIT_PLACEHOLDER if k.unit is None else k.unit
+    return f"[kept]\nkey = {toml_string(key)}\nunit = {toml_string(unit)}\n"
+
+
 #: the `[reference]` table of a computation: the stated value its kept
-#: number is compared with, and how (docs/notes/2026-10-29-reference-comparison.md)
-REFERENCE_KEYS = ("key", "value", "tolerance", "relative", "relation", "source")
+#: number — the `[kept]` key — is compared with, and how
+#: (docs/notes/2026-10-29-reference-comparison.md)
+REFERENCE_KEYS = ("value", "tolerance", "relative", "relation", "source")
 #: how the measured value is held to the reference: `within` a tolerance of
 #: it (`|measured - value| <= tolerance`), `at_least` it, `at_most` it — the
 #: last two carry no tolerance
@@ -478,12 +595,12 @@ WITHIN, AT_LEAST, AT_MOST = RELATIONS
 @dataclass(frozen=True)
 class Reference:
     """The stated value a computation's kept number is compared with, as
-    the head's `[reference]` registers it. The verdict is
+    the head's `[reference]` registers it; the number compared is the one
+    `[kept] key` names (`kept_key`). The verdict is
     `reference.reference_verdict`'s; whether the head's kind may carry the
     table is `protocol_check.reference_gap`'s answer."""
 
-    key: str  # the metrics key the comparison reads
-    value: float  # the stated value, in the key's unit (an int as written)
+    value: float  # the stated value, in the kept number's unit (an int as written)
     tolerance: (
         float | None
     )  # `within` only: absolute, or a fraction of `value` when `relative`
@@ -493,7 +610,7 @@ class Reference:
 
     @property
     def absolute_tolerance(self) -> float | None:
-        """The tolerance in the key's unit: `tolerance` itself, or
+        """The tolerance in the kept number's unit: `tolerance` itself, or
         `|value| * tolerance` when relative; None without one."""
         if self.tolerance is None:
             return None
@@ -501,7 +618,7 @@ class Reference:
 
 
 def finite_number(value: object) -> bool:
-    """VALUE is an int or a float that is finite — a bool is no number here, nor NaN or an infinity; the one reading of \"a number\" for the head and the verdict (`reference`)."""
+    """VALUE is an int or a float that is finite — a bool is no number here, nor NaN or an infinity; the one reading of \"a number\" for the head, the kept number and the verdict (`reference`)."""
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
@@ -511,35 +628,44 @@ def finite_number(value: object) -> bool:
 
 def reference(text: str) -> Reference | None:
     """The stated value the protocol's `[reference]` table compares the
-    kept number with — `key`, `value`, `relation`, with `within` a
+    kept number (`[kept] key`) with — `value`, `relation`, with `within` a
     `tolerance` (absolute, or a fraction of `value` with `relative =
     true`), and `source`, who states the value — or None without the
-    table: a pure computation. Raises BlockError on a non-table, an
-    unknown key, a missing `key`, `value` or `relation`, a `value` or
-    `tolerance` that is not a finite number (a bool is none), a negative
-    tolerance, a `relation` outside RELATIONS, `within` without a
-    tolerance, `at_least` or `at_most` with one (or with `relative`), a
-    `relative` that is no bool, or an empty `source`."""
-    table = _table(parse_toml_block(text), "reference")
+    table: a pure computation. Raises BlockError on a non-table, a table
+    without `[kept]` beside it (the key compared lives there), an unknown
+    key (`key` among them: it moved to `[kept]` in standard 0.24), a
+    missing `value` or `relation`, a `value` or `tolerance` that is not a
+    finite number (a bool is none), a negative tolerance, a `relation`
+    outside RELATIONS, `within` without a tolerance, `at_least` or
+    `at_most` with one (or with `relative`), a `relative` that is no bool,
+    or an empty `source`."""
+    data = parse_toml_block(text)
+    table = _table(data, "reference")
     if table is None:
         return None
+    if "key" in table:
+        raise BlockError(
+            "[reference] key — the compared key is the kept number's: move it "
+            'to the `[kept]` table (`key = "…"`, with `unit = "…"`) and drop it '
+            "from [reference]"
+        )
+    if "kept" not in data:
+        raise BlockError(
+            "[reference] without [kept] — the stated value is compared with the "
+            'kept number, which `[kept]` names: add it (`key = "<metrics.json '
+            'key>"`, `unit = "<unit>"`)'
+        )
     _only_keys(table, "[reference]", REFERENCE_KEYS)
-    for field in ("key", "value", "relation"):
+    for field in ("value", "relation"):
         if field not in table:
             raise BlockError(
-                f"[reference]: missing `{field}` — key (the metrics key compared), "
-                f"value (the stated value) and relation ({', '.join(RELATIONS)})"
+                f"[reference]: missing `{field}` — value (the stated value) and "
+                f"relation ({', '.join(RELATIONS)})"
             )
-    key = table["key"]
-    if not isinstance(key, str) or not key.strip() or any(c.isspace() for c in key):
-        raise BlockError(
-            f"[reference] key = {key!r} — the metrics key the comparison reads, "
-            f"one word (the compute skeleton's METRIC_KEY)"
-        )
     value = table["value"]
     if not finite_number(value):
         raise BlockError(
-            f"[reference] value = {value!r} — a finite number in the key's unit"
+            f"[reference] value = {value!r} — a finite number in the kept number's unit"
         )
     relation = table["relation"]
     if relation not in RELATIONS:
@@ -554,7 +680,6 @@ def reference(text: str) -> Reference | None:
             f"string (the task text, a cited analysis), or no `source` line"
         )
     return Reference(
-        key=key,
         value=value,
         tolerance=tolerance,
         relative=relative,
@@ -598,7 +723,6 @@ def reference_toml(ref: Reference) -> str:
     digests (`protocol_check.registration_stamp`). Reads back as REF."""
     lines = [
         "[reference]",
-        f"key = {toml_string(ref.key)}",
         f"value = {ref.value!r}",
     ]
     if ref.tolerance is not None:

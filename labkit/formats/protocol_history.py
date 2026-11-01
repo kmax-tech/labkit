@@ -298,8 +298,8 @@ def check_annotation_validity(
 
 
 #: the fields that say what a number is about — the question and its words,
-#: the data and what is dropped from it, the unit — held with the head's kind
-#: and `[reference]` from the first measurement on (`scope_differences`):
+#: the data and what is dropped from it, the unit — held with the head's kind,
+#: `[kept]` and `[reference]` from the first measurement on (`scope_differences`):
 #: every kind writes them before the commit, and a computation has no promise
 #: block to hold instead (round 2 of the pressure design, 2026-10-31,
 #: docs/notes/2026-10-31-scope-frozen.md)
@@ -332,8 +332,8 @@ def scope_value(value: str) -> str:
 def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     """(what, from, to) for every difference between the protocol texts OLD
     and NEW in what the number is about: each of SCOPE_FIELDS
-    (`scope_value`), the head's kind and its `[reference]` as the head writes
-    it. ABSENT where one text has nothing; a head or a `[reference]` that
+    (`scope_value`), the head's kind, its `[kept]` and its `[reference]` as
+    the head writes them. ABSENT where one text has nothing; a head or a `[reference]` that
     does not read is compared as the sentence its error says, so the fields
     are compared whatever the head held then (round 2, Labor-21 r3: the first
     measurements ran on a commit whose `[reference]` did not read yet). Pure."""
@@ -341,9 +341,10 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     ka, kb = _head_part(old, "kind"), _head_part(new, "kind")
     if ka != kb:
         out.append(("kind", ka, kb))
-    ta, tb = _head_part(old, "reference"), _head_part(new, "reference")
-    if ta != tb:
-        out.append(("[reference]", ta, tb))
+    for table in ("kept", "reference"):
+        ta, tb = _head_part(old, table), _head_part(new, table)
+        if ta != tb:
+            out.append((f"[{table}]", ta, tb))
     fa = {f.label: f.value for f in fields(old)}
     fb = {f.label: f.value for f in fields(new)}
     for label in SCOPE_FIELDS:
@@ -356,20 +357,21 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
 
 def _head_part(text: str, part: str) -> str:
     """The head's PART of TEXT as `scope_differences` compares it: "kind"
-    its kind, "reference" its `[reference]` as TOML on one line (ABSENT
-    without one); `(does not read: …)` with the error where the head or the
-    table does not parse."""
+    its kind, "kept" its `[kept]` and "reference" its `[reference]` as TOML
+    on one line (ABSENT without the table); `(does not read: …)` with the
+    error where the head or the table does not parse."""
     try:
         if part == "kind":
             return str(protocol_block.head(text).kind)
-        ref = protocol_block.reference(text)
+        if part == "kept":
+            kept = protocol_block.kept(text)
+            toml = protocol_block.kept_toml(kept) if kept is not None else None
+        else:
+            ref = protocol_block.reference(text)
+            toml = protocol_block.reference_toml(ref) if ref is not None else None
     except protocol_block.BlockError as exc:
         return f"(does not read: {exc})"
-    return (
-        " ".join(protocol_block.reference_toml(ref).split())
-        if ref is not None
-        else ABSENT
-    )
+    return " ".join(toml.split()) if toml is not None else ABSENT
 
 
 #: the registration fields outside the promise block a replacement compares

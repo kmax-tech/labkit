@@ -23,28 +23,31 @@ LINES = (("a.txt", 1), ("b.txt", 2), ("c.txt", 6))  # mean 3.0
 
 
 def stamp_lines(
-    lab: Lab, name: str, ref: protocol_block.Reference
+    lab: Lab, name: str, ref: protocol_block.Reference, kept: str = "lines_mean"
 ) -> tuple[Path, Path]:
     """The counting skeleton at low repeat cost in LAB under NAME, with REF
-    stamped as its `[reference]`, filled for lines per document over
-    `data/raw/docs` (planted once). Returns (area, protocol); the caller
+    stamped as its `[reference]` and KEPT as its `[kept] key` (unit lines),
+    filled for lines per document over `data/raw/docs` (planted once); the
+    formula writes `lines_mean`. Returns (area, protocol); the caller
     commits."""
     docs = lab.root / "data" / "raw" / "docs"
     if not docs.is_dir():
         docs.mkdir(parents=True)
         for file, lines in LINES:
             (docs / file).write_text("x\n" * lines, encoding="utf-8")
-    area, protocol = lab.exp(name, repeat_cost="low", kind="compute", reference=ref)
+    area, protocol = lab.exp(
+        name,
+        repeat_cost="low",
+        kind="compute",
+        reference=ref,
+        kept=protocol_block.Kept(kept, "lines"),
+    )
     _replace(
         area / "scripts" / "01_measure.py",
         [
             (
                 'SOURCE = REPO / "data" / "TODO"',
-                'SOURCE = REPO / "data" / "raw" / "docs"',
-            ),
-            (
-                'METRIC_KEY = "TODO_number"',
-                'METRIC_KEY = "lines_mean"\nCOUNT_FIELD = "lines"',
+                'SOURCE = REPO / "data" / "raw" / "docs"\nCOUNT_FIELD = "lines"',
             ),
             (
                 '    raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
@@ -56,7 +59,7 @@ def stamp_lines(
             ),
             (
                 '    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")',
-                "    return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
+                '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}',
             ),
         ],
     )
@@ -73,18 +76,24 @@ def stamp_lines(
     return area, protocol
 
 
-def ref(key: str, value: float, tolerance: float | None, relation: str = "within"):
-    return protocol_block.Reference(key, value, tolerance, False, relation, "the task")
+def ref(value: float, tolerance: float | None, relation: str = "within"):
+    return protocol_block.Reference(value, tolerance, False, relation, "the task")
 
 
 class ReferenceOnTheChain(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.lab = Lab()
-        cls.met = stamp_lines(cls.lab, "met", ref("lines_mean", 3.2, 0.5))
-        cls.missed = stamp_lines(cls.lab, "missed", ref("lines_mean", 0.62, 0.01))
+        cls.met = stamp_lines(cls.lab, "met", ref(3.2, 0.5))
+        cls.missed = stamp_lines(cls.lab, "missed", ref(0.62, 0.01))
         cls.absent = stamp_lines(
-            cls.lab, "absent", ref("lines_median", 3.0, None, "at_least")
+            cls.lab, "absent", ref(3.0, None, "at_least"), kept="lines_median"
+        )
+        # the skeleton's own check refuses a kept key the formula does not
+        # write; an agent edits it away — the gate below must still hold
+        _replace(
+            cls.absent[0] / "scripts" / "01_measure.py",
+            [("    kept_number(metrics)\n", "")],
         )
         cls.lab.commit("three computations with a stated value, registered")
 
@@ -135,8 +144,8 @@ class ReferenceOnTheChain(unittest.TestCase):
         line = self.adopted_line(area, protocol, run_id)
         self.assertEqual(
             line,
-            f"- **Recorded results:** lines_mean = 3.0; reference 3.2 ± 0.5 (within): "
-            f"met, distance {abs(3.0 - 3.2)} (run {run_id})",
+            f"- **Recorded results:** kept number: lines_mean = 3.0 lines; reference "
+            f"3.2 ± 0.5 (within): met, distance {abs(3.0 - 3.2)} (run {run_id})",
         )
 
     def test_twin_3_a_missed_reference_is_a_valid_outcome(self):
@@ -148,8 +157,8 @@ class ReferenceOnTheChain(unittest.TestCase):
         line = self.adopted_line(area, protocol, run_id)
         self.assertEqual(
             line,
-            f"- **Recorded results:** lines_mean = 3.0; reference 0.62 ± 0.01 (within): "
-            f"not met, distance {abs(3.0 - 0.62)} (run {run_id})",
+            f"- **Recorded results:** kept number: lines_mean = 3.0 lines; reference "
+            f"0.62 ± 0.01 (within): not met, distance {abs(3.0 - 0.62)} (run {run_id})",
         )
 
     def test_twin_4_a_reference_the_run_cannot_compare_blocks(self):
@@ -159,6 +168,9 @@ class ReferenceOnTheChain(unittest.TestCase):
         self.assertIsNone(metrics["ref_met"])
         rc, out = self.lab.finalize(area)
         self.assertEqual(rc, 1, out)
+        # the kept-number gate, which no script edit reaches
+        self.assertIn(f"metrics.json of {run_id} holds no `lines_median`", out)
+        self.assertIn("it holds lines_mean = 3.0", out)
         self.assertIn("`lines_median` is absent from metrics.json", out)
         self.assertIn("no verdict can be reported", out)
         self.assertIn("write `lines_median` as a finite number", out)

@@ -233,7 +233,8 @@ def stamp_count(
     """The counting skeleton at low repeat cost in LAB, filled and committed:
     lines per document over three documents (1, 2, 6 lines — mean 3.0).
     With DELIVERABLES (stamped into the script) each is one row of the mean
-    under METRIC_KEY; REPORT_FILE registers a report. Returns (area, protocol)."""
+    under the kept key (`[kept] key = "lines_mean"`, filled through
+    protocol-fill); REPORT_FILE registers a report. Returns (area, protocol)."""
     root = lab.root
     docs = root / "data" / "raw" / "docs"
     docs.mkdir(parents=True)
@@ -253,7 +254,7 @@ def stamp_count(
                 [
                     (
                         '    raise NotImplementedError(f"deliverable_rows(): the rows of {path} from items and metrics")',
-                        "    return [{METRIC_KEY: metrics[METRIC_KEY]}]",
+                        '    return [{"lines_mean": metrics["lines_mean"]}]',
                     )
                 ]
                 if deliverables
@@ -261,11 +262,7 @@ def stamp_count(
             ),
             (
                 'SOURCE = REPO / "data" / "TODO"',
-                'SOURCE = REPO / "data" / "raw" / "docs"',
-            ),
-            (
-                'METRIC_KEY = "TODO_number"',
-                'METRIC_KEY = "lines_mean"\nCOUNT_FIELD = "lines"',
+                'SOURCE = REPO / "data" / "raw" / "docs"\nCOUNT_FIELD = "lines"',
             ),
             (
                 '    raise NotImplementedError("expected_ids(): the ids SOURCE lists")',
@@ -277,7 +274,7 @@ def stamp_count(
             ),
             (
                 '    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")',
-                "    return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
+                '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}',
             ),
         ],
     )
@@ -285,6 +282,8 @@ def stamp_count(
     lab.fill(
         protocol,
         "type=exploratory",
+        "kept.key=lines_mean",
+        "kept.unit=lines",
         "Terms of this protocol=n/a — no coinage",
         "Question / hypothesis=How many lines does a document of data/raw/docs hold on average?",
         "Data / scope=data/raw/docs, 3 documents, read directly",
@@ -357,7 +356,10 @@ class Count(unittest.TestCase):
         self.assertIn("read from the proposed protocol", out)
         self.assertIn("finalized, audited, checked", out)
         text = self.protocol.read_text(encoding="utf-8")
-        self.assertIn(f"- **Recorded results:** lines_mean = 3.0 (run {run_id})", text)
+        self.assertIn(
+            f"- **Recorded results:** kept number: lines_mean = 3.0 lines (run {run_id})",
+            text,
+        )
         self.assertIn(f"- {run_id} — the kept run", text)
         return run_id
 
@@ -403,8 +405,8 @@ class Count(unittest.TestCase):
             self.measure,
             [
                 (
-                    "    return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids)}",
-                    "    return {METRIC_KEY: sum(r[COUNT_FIELD] for r in items) / len(ids) + 1}",
+                    '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids)}',
+                    '    return {"lines_mean": sum(r[COUNT_FIELD] for r in items) / len(ids) + 1}',
                 ),
             ],
         )

@@ -694,13 +694,15 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
     computation compares with (`protocol_block.reference`) has no place on
     a kind with a bar (`standard_contract.has_bar`). The one refusal of
     the table by kind: `protocol-check`, the start of a low run
-    (`low_registration_missing`) and finalize read it. Loud, never a
-    fallback: a malformed table is the head check's."""
+    (`low_registration_missing`) and finalize read it. The table is
+    refused by its presence, whatever it holds: a fit carries no `[kept]`,
+    so its `[reference]` never reads, and the way out is to drop it. A
+    block that does not parse is the head check's."""
     try:
-        ref = protocol_block.reference(text)
+        present = "reference" in protocol_block.parse_toml_block(text)
     except protocol_block.BlockError:
         return None
-    if ref is None or head.kind is None or not standard_contract.has_bar(head.kind):
+    if not present or head.kind is None or not standard_contract.has_bar(head.kind):
         return None
     return (
         f'[reference] with kind = "{head.kind}" — a {head.kind} compares its number '
@@ -709,6 +711,39 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
         f"stamp the area as a compute (`labkit-init exp <name> --kind compute "
         f"--change-kind`)"
     )
+
+
+def kept_gaps(text: str, head: protocol_block.Head) -> list[str]:
+    """What the head owes or refuses of its `[kept]` table by its kind, one
+    entry each, or []: a computation names its kept number there (standard
+    0.24) — the table missing, or a value still the placeholder (`[kept]
+    key`, `[kept] unit`, unfilled fields); a fit or an apply binds its
+    answer through its promise keys, so the table is refused there; a
+    table that does not read is named by its sentence. Nothing while the
+    kind is undecided. The one answer `protocol-check`, the start of a low
+    run (`low_registration_missing`) and finalize read."""
+    try:
+        k = protocol_block.kept(text)
+    except protocol_block.BlockError as exc:
+        return [str(exc)]
+    if head.kind is None:
+        return []
+    if head.kind != standard_contract.COMPUTE_KIND:
+        if k is None:
+            return []
+        return [
+            f'[kept] with kind = "{head.kind}" — a {head.kind} binds its answer '
+            f"through its promise keys (`[[promise]] key`), so the kept number a "
+            f"computation names has no place here; drop the table"
+        ]
+    if k is None:
+        return [
+            '[kept] — kind = "compute" names its kept number in the head: '
+            '`[kept]` with `key = "<metrics.json key>"` and `unit = "<unit>"` '
+            '("1" for a dimensionless number); the run must hold that key as a '
+            "finite number"
+        ]
+    return k.placeholders
 
 
 def check_fields(text: str) -> FieldReport:
@@ -725,6 +760,7 @@ def check_fields(text: str) -> FieldReport:
     for contradiction in (kind_gap(text, head), reference_gap(text, head)):
         if contradiction:
             missing_must.append(contradiction)
+    missing_must += kept_gaps(text, head)
     earlier = promises.earlier_ids(text)
     if earlier:
         missing_must.append(
@@ -770,8 +806,9 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     the question written (not a placeholder); for a number that judges a
     prediction (kind fit or apply) also criterion, quality check
     and null condition; with a model named also the judged data profile;
-    the repeat_cost and the kind declared, and the kind not contradicting the
-    head (`kind_gap`, `reference_gap`). Returns what is missing — empty means the gate is
+    the repeat_cost and the kind declared, the kind not contradicting the
+    head (`kind_gap`, `reference_gap`), and a computation's kept number
+    named (`kept_gaps`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
     clear, 0.87.1; the kind since standard 0.22). A head that does not read
     is named as such: nothing falls back to a computation.
@@ -801,7 +838,7 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     missing += [] if head.repeat_cost else ["[protocol] repeat_cost"]
     missing += [] if head.kind else ["[protocol] kind"]
     contradictions = (kind_gap(text, head), reference_gap(text, head))
-    return missing + [c for c in contradictions if c]
+    return missing + [c for c in contradictions if c] + kept_gaps(text, head)
 
 
 #: the key of the kind in a registration stamp, beside the field labels
@@ -813,6 +850,9 @@ REGISTRATION_ABSENT = "<absent>"
 #: without the table, so records written before the table existed drift
 #: nowhere
 REGISTRATION_REFERENCE = "reference"
+#: the key of a computation's `[kept]` in a registration stamp — only while
+#: the head carries one, as REGISTRATION_REFERENCE
+REGISTRATION_KEPT = "kept"
 
 
 def registration_stamp(text: str) -> dict[str, str]:
@@ -826,9 +866,11 @@ def registration_stamp(text: str) -> dict[str, str]:
     computation's `[reference]` is in it (REGISTRATION_REFERENCE, the
     digest of the table as `protocol_block.reference_toml` writes it): a
     stated value changed, added or dropped after the audit is a changed
-    registration. A head that does not read counts as an unset kind — the
-    head check names it; a `[reference]` that does not read counts as
-    none."""
+    registration. So is its `[kept]` (REGISTRATION_KEPT, the digest of
+    `protocol_block.kept_toml`): the kept number named anew after the audit
+    is a changed registration. A head that does not read counts as an unset
+    kind — the head check names it; a `[reference]` or a `[kept]` that does
+    not read counts as none."""
     try:
         kind = protocol_block.head(text).kind
     except protocol_block.BlockError:
@@ -837,6 +879,10 @@ def registration_stamp(text: str) -> dict[str, str]:
         ref = protocol_block.reference(text)
     except protocol_block.BlockError:
         ref = None
+    try:
+        kept = protocol_block.kept(text)
+    except protocol_block.BlockError:
+        kept = None
     labels = standard_contract.registration_fields(
         kind or standard_contract.APPLY_KIND, model_named(text)
     )
@@ -844,6 +890,10 @@ def registration_stamp(text: str) -> dict[str, str]:
     for f in fields(text):
         values.setdefault(f.name, f.value)
     out = {REGISTRATION_KIND: kind or REGISTRATION_ABSENT}
+    if kept is not None:
+        out[REGISTRATION_KEPT] = scope_sha.digest(
+            protocol_block.kept_toml(kept).encode("utf-8")
+        )
     if ref is not None:
         out[REGISTRATION_REFERENCE] = scope_sha.digest(
             protocol_block.reference_toml(ref).encode("utf-8")
