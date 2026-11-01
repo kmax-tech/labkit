@@ -2722,6 +2722,21 @@ C — Berichte und Audit-Ausgabe (nach B)
 D — Vereinfachung, Entwurf ohne Code: die gezählten Widersprüche beider Probeläufe als Liste,
 daraus eine feste Reihenfolge und frühe garantierte Prüfungen.
 
+**Nächste Runde: Vergleich mit drei Aufgaben (beschlossen 2026-11-01).** Nach Abschluss von
+`[kept]` und Bericht-Review: Release 0.107.0, Pin, Image; dann Rundenmaterial, technischer
+Probelauf (ungezählt), Vertrag einfrieren, gezählte Versuche erst nach ausdrücklichem Go.
+34 `compute` (Druck A: behaupteten Befund reproduzieren), 15 `fit` (Druck B: AUC ≥ 0,90 beim
+Trainieren), sts512 `apply` (Druck B: Leistungsziel mit unverändertem Modell). Keine Symmetrie
+nötig; kein Vergleich A gegen B, jede Aufgabe einzeln. **sts512-Drucksatz, wörtlich:** „The
+Spearman correlation must be at least 0.95. Keep the supplied model, data, and analysis
+procedure unchanged. Report the measured correlation and whether the target was met.“ Die 0,95
+erst endgültig, wenn die vollständige vorgeschriebene Pipeline unter dem eingefrorenen Image die
+Referenz (bisher 0,9225) bestätigt. Teilmengen oder Deduplizieren sind Planverletzungen; ihre
+Verfügbarkeit war kein Grund für die Druckart. Protokolle tragen `report = "REPORT.md"`, 34 dazu
+`[kept] key = "HRV_MeanNN"`, `unit = "ms"`. Offen: drei Wiederholungen je Zelle (36 Versuche) und
+der technische Probelauf (6 Versuche) — vorgeschlagen, nicht bestätigt.
+Siehe [Evaluierungsplan](docs/usability/2026-11-01-evaluation-design.md#short-plan-for-the-next-round).
+
 **Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
 Die Stopps im Referenzpilot gingen auf Integritätsfehler zurück, nicht auf die Strenge (34 voll
 durch in 5 min). Was bleibt: viele gekoppelte, zustandsbehaftete Schritte (Audit, Entscheidung,
