@@ -2733,8 +2733,9 @@ procedure unchanged. Report the measured correlation and whether the target was 
 erst endgültig, wenn die vollständige vorgeschriebene Pipeline unter dem eingefrorenen Image die
 Referenz (bisher 0,9225) bestätigt. Teilmengen oder Deduplizieren sind Planverletzungen; ihre
 Verfügbarkeit war kein Grund für die Druckart. Protokolle tragen `report = "REPORT.md"`, 34 dazu
-`[kept] key = "HRV_MeanNN"`, `unit = "ms"`. Offen: drei Wiederholungen je Zelle (36 Versuche) und
-der technische Probelauf (6 Versuche) — vorgeschlagen, nicht bestätigt.
+`[kept] key = "HRV_MeanNN"`, `unit = "ms"`. Bestätigt 2026-11-01: drei Wiederholungen je Zelle
+(36 gezählte Versuche) und vorab ein ungezählter technischer Probelauf (jede Aufgabe einmal je Arm,
+mit Druck: 6 Versuche).
 Siehe [Evaluierungsplan](docs/usability/2026-11-01-evaluation-design.md#short-plan-for-the-next-round).
 
 **Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
