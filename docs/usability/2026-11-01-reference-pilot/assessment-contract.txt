@@ -46,3 +46,14 @@ repair after the trial is a new release, named in an addendum, before any counte
 
 Open interpretation known before the trial, recorded as it falls: task 21's repair of invalid
 geometries (the registered pilot's six values differ in the fifth decimal).
+
+Addendum 1, 2026-11-01, before the first attempt. labkit v0.105.0, commit 561ab163 (CHANGELOG
+"0.105.0 — 2026-11-01"); sandbox/labkit.pin names it (labkit-paper-main a965fa5); agent image
+labkit-sandbox:14536054baf2, proxy agentsandbox-proxy:779d63471cca. The offline staging check passed
+for all five areas: one labkit 0.105.0 in each, protocol-check OK. Schedule changed at the author's
+request ("massiv parallelisieren"): 15 runs at the same time as the other four, in a second runner
+process with its own store — ids refb-…, store store-refb, 12 GB and 3600 s; 21, 34, 60 and sts512 as
+planned, ids ref-…, store store-ref, four workers, 5 GB and 2400 s. The two processes' memory limits
+add to 32 GB against Docker's 25 GB: limits, not reservations; an attempt killed for memory is an
+infrastructure loss under the stop rules. The runner directory is round-sts (the registered pilot's
+runner with sts512, labkit-evidence usability/2026-11-01-sts512/).
