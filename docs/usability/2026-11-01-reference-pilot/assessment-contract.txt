@@ -57,3 +57,52 @@ planned, ids ref-…, store store-ref, four workers, 5 GB and 2400 s. The two pr
 add to 32 GB against Docker's 25 GB: limits, not reservations; an attempt killed for memory is an
 infrastructure loss under the stop rules. The runner directory is round-sts (the registered pilot's
 runner with sts512, labkit-evidence usability/2026-11-01-sts512/).
+
+Addendum 2, 2026-11-01, after the trial. All five attempts ran (12:07–12:47), no host sleep, no API
+failure. Evidence: labkit-evidence usability/2026-11-01-reference-pilot/ (da1bc863, f46ba716):
+stores, scores, logs, the five trace reviews (issues-ref/review-*.md).
+
+| task | time | cost $ | hidden evaluation | outcome |
+| 34 | 5.4 min | 0.36 | passed | adopted, labkit standard met, one audit |
+| 15 | 29.4 min | 1.32 | passed | adopted (AUC 0.893), standard met |
+| 60 | 19.0 min | 1.31 | passed | handed over after 3 audits; finalize held the run |
+| sts512 | 18.1 min | 1.44 | failed at rho_null only | run discussed, not adopted |
+| 21 | 40.0 min, timed out | — | passed | no REPORT.md; 8 audits |
+
+No attempt changed its registration. Against the registered pilot's lab arm (0.104.4): 34 took 5 min
+instead of 26–31, 60 ended in a handover at 19 min instead of three timeouts.
+
+Repairs of 0.105.0, where a trace reached them: another alias named after a failed audit (15: haiku
+3 s later), a running audit named (15), an analysis audit refused over undecided BLOCKERs (60,
+sts512), the check field on its line (21, 60, sts512), decided findings marked (60, sts512), the report
+printed after its record (all), no READ line on fields adopt writes (34, 21) — all held.
+
+Faults found (each checked in the source unless marked):
+- labkit, bugs: a directory source's digest counts __pycache__ (provenance.visible_files), so a run
+  that imports from its source never matches the registered pin — 60's finalize blocker, whose
+  advice then listed the forbidden plot files and .pyc for `git add -f`; the field parser reads a
+  field written as sub-bullets as empty (protocol_check.fields), so the scope hold and the pin
+  lookup see nothing (21); labkit-adopt writes the proposal before its check, and a kill during the
+  check leaves an unchecked [result] in the protocol (21; the score's adopted_run for 21 is that
+  leftover); the refusal of a second try with a failed alias names no alias (audit.py, the stopped
+  path); Run.metrics() takes values JSON cannot hold and fails at the run's end naming no key, with
+  no failure.json (sts512); the generated-block check compares protocol names as written, other
+  checks resolve them (34); the withdraw advice on a refused adoption when none stands (60,
+  reader-verified).
+- labkit, unclear: READ lines rewrite registered scope fields and finalize refuses the rewrite 24
+  minutes later (21); the scope hold runs only at finalize; an answer refused for its form can carry
+  a real BLOCKER that nothing then holds (15); the apply skeleton has no slot for a registered null
+  order and its bar is the permutation expectation, not rho_null (sts512); `limitation` offered on an
+  implementation-error BLOCKER and adopt's refusal ending on `--discuss` (sts512); the stamped test
+  (two hand-checked rows, an accuracy test under AUC) recurs (34, 15); the run's next line puts the
+  Conclusion before adoption (60, sts512); handover and report review invalidate each other
+  (60, suspected).
+- harness and task material: the opus audit alias failed in 4 of 4 attempts across both pilots (the
+  CLI's fallback to claude-opus-5); sts512's registration pins only manifest.json, not labkit's
+  directory digests of the data and the model — the cause of its untracked-source blocker (this
+  author's fault, to fix in fields_sts512.py); no git identity in the image.
+- agents: two final commits with `--no-verify` (60, sts512); `rm -rf runs/` and `audits/` (15); typed
+  numbers in the Conclusion before the audit.
+
+Read: the workflow completes on 34 and 15; on 21, 60 and sts512 it stops at labkit faults or gaps
+named above, each with a concrete repair. Not a rate: one attempt per task.
