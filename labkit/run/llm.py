@@ -225,6 +225,19 @@ def model_entry(alias: str | None, start: Path) -> str:
     )
 
 
+def aliases() -> list[str]:
+    """The aliases the lab's `models.toml` defines, in file order — what a
+    way out names when one alias cannot serve (`audit_decisions.other_alias_way`).
+    FileNotFoundError without the file, ValueError when it is not TOML."""
+    path = _find_models_toml()
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    models = data.get("models", {})
+    return list(models) if isinstance(models, dict) else []
+
+
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
     freezes. For ollama the weights' digest is probed on every endpoint."""

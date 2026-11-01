@@ -103,6 +103,7 @@ from labkit.gates.audit_decisions import (
     decide,
     decide_shape,
     decision_lines,
+    other_alias_way,
     show_findings,
 )
 from labkit.gates.audit_prompt import (
@@ -279,7 +280,8 @@ def _answer_or_record(
             f"{exc}\nlabkit-audit: no audit — {args.model} did not write the answer "
             f"whole; recorded as {tried}. Do not run it again on this state: the "
             f"next try with {args.model} is refused",
-            fix="audit with another alias (--model), or leave the number unreported",
+            fix=other_alias_way(args.area, args.mode, args.model, args.protocol)
+            + ", or leave the number unreported",
         ) from exc
     except llm_backends.BackendError as exc:
         tried = failed_attempts.write_failed(
@@ -515,9 +517,6 @@ def _record(
         running.end("none", error=str(exc))
         console.refuse("labkit-audit", _refusal_without_record(exc, args, running))
         return 2
-    print(report)
-    if args.out:
-        args.out.write_text(report, encoding="utf-8")
     b, w, _ = result["verdict"]
     try:
         recorded = findings.write(
@@ -543,6 +542,12 @@ def _record(
         console.refuse("labkit-audit", _refusal_without_record(exc, args, running))
         return 2
     running.end("record", file=recorded.name)
+    # the report only once its record stands: printed before a refused
+    # write, it read as an audit, and the refusal on stderr went unseen
+    # (registered pilot part 1, 60-r2: fixed code on it, never audited again)
+    print(report)
+    if args.out:
+        args.out.write_text(report, encoding="utf-8")
     _stamp_report(args.area, args.mode, bound.stamp, result["verdict"], recorded)
     # the auditor lists what it read in full; the indexed modules are the
     # caller's to add before the list is held to the stamp (LAB-103 The audit reads by declared scope)

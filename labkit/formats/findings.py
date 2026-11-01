@@ -267,8 +267,10 @@ def check_of(text: str) -> tuple[str, str]:
     the line is part of a dash note and no part of a parenthesis note) —
     or ("", "") when it requires none. Only the key is machine-read; the note is kept whole.
     TEXT is the finding whole, all its lines searched: one check per
-    finding, closing it — on its last line when it goes on below its
-    first. Raises ValueError on a field that does not read and on two
+    finding, closing the line that holds it — the last line, or the first
+    with the finding's bullets below it (two audits were refused whole
+    for that, registered pilot part 1, 34-r3 and 60-r2). Raises
+    ValueError on a field that does not read and on two
     check fields in one finding, quoting the line that holds the last
     one: a requirement half-read, or one of two, would be one nobody can
     be held to (second fixed-followup pilot: six records lost to
@@ -282,7 +284,7 @@ def check_of(text: str) -> tuple[str, str]:
             f"two check fields in one finding: {held.strip()[-160:]!r} — one "
             f"finding requires one diagnostic; {CHECK_FORM}"
         )
-    m = _CHECK.search(text.rstrip())
+    m = _CHECK.search(held.rstrip())
     if m is None:
         raise ValueError(
             f"a check field that does not read: {held.strip()[-160:]!r} — the form "

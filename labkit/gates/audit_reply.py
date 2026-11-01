@@ -27,11 +27,12 @@ from labkit.gates.ways_out import (
 
 #: the grammar of an answer line, one home for the audit and both
 #: reviewers (audit 2026-10-27, third): what may stand before its keyword
-#: (indentation, a quote, a bullet, a code mark) and the separator between
-#: its fields — the ` · ` the instructions ask for, or a dash or colon,
+#: (indentation, a quote, a bullet, a code mark, a heading's hashes) and the
+#: separator between its fields — the ` · ` the instructions ask for, or a
+#: dash or colon,
 #: which agents write too (audit 2026-10-15: two blockers written as
 #: `BLOCKER — …` parsed as none, and the record read as covered)
-LEAD = r"^[\s>*`-]*"
+LEAD = r"^[\s>*`#-]*"
 SEP = r"(?:·|—|–|:)"
 #: a finding line: the grade, then a separator
 FINDING = re.compile(

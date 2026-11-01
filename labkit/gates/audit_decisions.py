@@ -33,6 +33,7 @@ from labkit.formats.repo import (
 )
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
+from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
 
@@ -56,10 +57,15 @@ def decision_lines(
         out.append(f"findings: {where} — no findings to decide")
     else:
         owed = ", ".join(findings.REASON_OWED)
+        # decided ones counted apart and shown with their decision: listed
+        # all "to decide", a record decided minutes before read as open
+        # (registered pilot part 1, 60-r3)
+        n_open = len(record.open)
+        decided = len(record.findings) - n_open
         out.append(
-            f"findings: {where} — {len(record.findings)} to decide "
-            f"({findings.DECIDED_LIST}; a reason "
-            f"owed for {owed}):"
+            f"findings: {where} — {n_open} to decide"
+            + (f", {decided} decided" if decided else "")
+            + f" ({findings.DECIDED_LIST}; a reason owed for {owed}):"
         )
         promised = may_leave_unassessed(area, protocol)
         # the id named with its field: an agent cannot pick `quality-check-2` unnamed
@@ -74,7 +80,7 @@ def decision_lines(
             "leaves every criterion without a verdict by itself, so name the "
             "condition, not the criteria"
         )
-        if any(f.grade == "BLOCKER" for f in record.findings):
+        if findings.open_blockers([record]):
             out.extend(ways_out.blocker_routes(promised, full=False))
         for n, f in enumerate(record.findings, 1):
             text = (
@@ -82,7 +88,8 @@ def decision_lines(
                 if len(f.one_line) <= DECISION_TEXT_WIDTH
                 else f.one_line[: DECISION_TEXT_WIDTH - 1] + "…"
             )
-            out.append(f"  {n} · {text}")
+            mark = "" if f.status == "open" else f"[decided {f.status}] "
+            out.append(f"  {n} · {mark}{text}")
             out.append(
                 "      "
                 + decide_command(
@@ -157,8 +164,17 @@ def record_path(area: Path, record: Path) -> Path:
     AREA's audits/ (`repo.given_or_in`) — the gates name a record by its
     file name (`Limitation (audit <record> #N)`, report-check's `--record
     <name>`), and judge-2 (round on 86e38bc, 2026-10-22) copied the name
-    and was refused with "No such file"."""
-    return given_or_in(record, area / findings.DIR)
+    and was refused with "No such file". FindingsError when neither
+    exists, naming the records the area holds: a guessed name ended in a
+    traceback (registered pilot part 1, 34-r1)."""
+    path = given_or_in(record, area / findings.DIR)
+    if not path.is_file():
+        held = [r.name for r in sorted((area / findings.DIR).glob("*.toml"))]
+        raise findings.FindingsError(
+            f"{record}: no such audit record in {area / findings.DIR} — it holds "
+            + (", ".join(held) if held else "none")
+        )
+    return path
 
 
 def _newest_record(area: Path) -> Path:
@@ -464,7 +480,8 @@ def _print_problems(
             continue
         print(
             f"audit did not complete: {call} — no findings to decide; "
-            "the failed call approves no result"
+            "the failed call approves no result; "
+            + other_alias_way(area, f.mode, f.model, protocol)
         )
     for a in listing.unrecorded:
         kept = ""
@@ -508,6 +525,31 @@ def _superseded_line(c: _Superseded) -> str:
         "(its code may differ)"
     )
     return f"audit call superseded: {c.label} ({c.mode}) by {by} — {SUPERSEDED_MEANS}"
+
+
+def other_alias_way(
+    area: Path, mode: str, failed: str, protocol: Path | None = None
+) -> str:
+    """The way on after an audit FAILED with one alias: the same audit with
+    another alias of models.toml, as a command — the refusal said "another
+    alias (--model)" and named none, and `--findings` offered only the
+    handover, so an agent guessed an alias models.toml lacks or handed over
+    a run that passed every other check (registered pilot part 1, 15-r2,
+    15-r3). Without another alias, or without a readable models.toml, says
+    so."""
+    try:
+        others = [a for a in llm.aliases() if a != failed]
+    except (OSError, ValueError) as exc:
+        return (
+            f"another alias of models.toml (--model), which does not read here: {exc}"
+        )
+    if not others:
+        return f"models.toml holds no alias but {failed}; add one to audit with another model"
+    command = audit_command(
+        area, "--mode", mode, "--model", others[0], protocol=protocol
+    )
+    rest = f" (or {', '.join(others[1:])})" if others[1:] else ""
+    return f"audit with another alias: `{command}`{rest}"
 
 
 def _historical_line(

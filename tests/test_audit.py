@@ -411,6 +411,7 @@ class Audit(unittest.TestCase):
             with (
                 mock.patch.object(audit.llm, "complete", stopped),
                 mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+                mock.patch.object(audit.llm, "aliases", lambda: ["opus", "haiku"]),
                 contextlib.redirect_stdout(io.StringIO()),
                 contextlib.redirect_stderr(err),
             ):
@@ -420,6 +421,20 @@ class Audit(unittest.TestCase):
         rc, err = audit_once()
         self.assertEqual(rc, 2)
         self.assertIn("Do not run it again on this state", err)
+        # the way on names the other alias as a command (registered pilot
+        # part 1, 15-r3 guessed `sonnet`, which models.toml lacks)
+        self.assertIn("audit with another alias: `labkit-audit", err)
+        self.assertIn("--model haiku`", err)
+        out = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "aliases", lambda: ["opus", "haiku"]),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            audit.main([str(area), "--findings"])
+        # --findings offers the other alias beside the handover (15-r2 handed over)
+        self.assertIn("audit did not complete", out.getvalue())
+        self.assertIn("audit with another alias: `labkit-audit", out.getvalue())
         (tried,) = failed_attempts.failed_attempts(area)
         self.assertEqual(tried.cause, "unproven")
         self.assertEqual(calls, ["opus"])
@@ -841,6 +856,39 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(
             len(list((area / "audits").glob("*.toml"))), 1
         )  # no new record
+
+    def _main(self, *argv: str) -> tuple[int, str, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = audit.main(list(argv))
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_findings_counts_a_decided_finding_apart_and_marks_it(self):
+        """Listed "3 to decide" minutes after all three were decided, a
+        record read as open (registered pilot part 1, 60-r3)."""
+        area = repo_with()
+        run(area, WARN)
+        rc, _, err = self._main(str(area), "--decide", "1", "limitation", "--why", "r")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = self._main(str(area), "--findings")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("0 to decide, 1 decided", out)
+        self.assertIn("  1 · [decided limitation] WARNING · a.py:1", out)
+
+    def test_a_decision_on_a_record_that_does_not_exist_is_refused(self):
+        """A guessed --record name ended in a traceback (registered pilot
+        part 1, 34-r1): refused, naming the records the area holds."""
+        area = repo_with()
+        run(area, WARN)
+        (held,) = (area / "audits").glob("*.toml")
+        rc, _, err = self._main(
+            str(area), "--decide", "1", "limitation", "--why", "r",
+            "--record", "2026-11-01T00-31-analysis.toml",
+        )  # fmt: skip
+        self.assertEqual(rc, 2, err)
+        self.assertNotIn("Traceback", err)
+        self.assertIn("2026-11-01T00-31-analysis.toml", err)
+        self.assertIn(held.name, err)
 
     def test_findings_shows_an_earlier_record_with_an_open_note(self):
         """A frozen preflight blocks on every open finding, whatever its
@@ -1961,12 +2009,21 @@ class KeptAnswer(unittest.TestCase):
                 "refused: protocol not filled",
                 "answer what it names, then run the audit again",
             ),
+            # a heading is the refusal still, not an answer out of form
+            # (registered pilot part 1, 15-r1: redrawn for nothing)
+            "the auditor refused as a heading": (
+                "## refused: protocol not filled — the audit reads the FILLED protocol",
+                "answer what it names, then run the audit again",
+            ),
         }
         for name, (answer, fix) in cases.items():
             with self.subTest(name):
                 area = repo_with()
-                rc, _, err, _ = run(area, answer)
+                rc, out, err, _ = run(area, answer)
                 self.assertEqual(rc, 2, err)
+                # no report on stdout beside a refusal: it read as an audit
+                # (registered pilot part 1, 60-r2)
+                self.assertNotIn(answer.splitlines()[0], out)
                 attempt, path = self.kept(area)
                 self.assertEqual(attempt.outcome, "none")
                 findings_command = audit.audit_command(area, "--findings")
@@ -2614,17 +2671,29 @@ class WholeFinding(unittest.TestCase):
         (f,) = findings.area_records(area)[0].findings
         self.assertEqual(f.text, f"{line}\n{bullet}\n· more")
 
-    def test_the_check_still_closes_the_finding(self):
-        """One check per finding, read from its text as before: it closes
-        the finding — on its last line when it goes on below its first."""
+    def test_the_check_closes_the_line_that_holds_it(self):
+        """One check per finding, closing its line: the last, or the first
+        with the finding's bullets below — refused whole before, two audits
+        lost (registered pilot part 1, 34-r3 and 60-r2)."""
         line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
         area = repo_with()
         answer = (
-            f"{line} · check: quality_check_2_spread\n- per seed\n"
+            f"{line} · check: quality_check_2_spread (each seed)\n- per seed\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         rc, _, err, _ = run(area, answer)
-        self.assertEqual(rc, 2, err)
+        self.assertEqual(rc, 1, err)
+        (f,) = findings.area_records(area)[0].findings
+        self.assertEqual(
+            (f.check, f.check_note), ("quality_check_2_spread", "each seed")
+        )
+        area = repo_with()
+        answer = (
+            f"{line} · check: quality_check_2_spread and more\n- per seed\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes"
+        )
+        rc, _, err, _ = run(area, answer)
+        self.assertEqual(rc, 2, err)  # a field that does not read stays refused
         self.assertIn("check field that does not read", err)
         area = repo_with()
         answer = (

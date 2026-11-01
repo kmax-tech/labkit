@@ -36,6 +36,26 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Audit answers are read where they were lost** (registered pilot, part
+  1, read from the 15 lab traces):
+  - a finding's `· check:` field closes the line that holds it, the last
+    line or the first line with the finding's bullets below it; before, the
+    first-line form refused the whole audit (34-r3, 60-r2);
+  - an auditor's refusal written as a heading (`## refused: …`) is that
+    refusal, not an answer out of form to draw again (15-r1); `LEAD` takes
+    a heading's hashes before every answer keyword;
+  - the report is printed once its record is written; printed before a
+    refused write, it read as an audit (60-r2);
+  - `--findings` counts decided findings apart (`0 to decide, 3 decided`)
+    and marks each (`[decided limitation]`); before, a decided record read
+    as open (60-r3);
+  - `--decide … --record <name>` naming no record is refused with the
+    records the area holds, not a traceback (34-r1);
+  - after a failed audit, the refusal and `--findings` name another alias
+    of models.toml as a command (`llm.aliases`); before, the refusal said
+    "another alias" and named none, and `--findings` offered only the
+    handover (15-r2 handed over a run that passed every other check, 15-r3
+    guessed an alias models.toml lacks).
 - **`runlog --wait` waits for the open run past an earlier failure.** A
   crashed run beside an open one ended the wait at once with exit 2 and
   named only the crash; a start refused by the open run's output lock
