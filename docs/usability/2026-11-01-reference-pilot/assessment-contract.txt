@@ -150,3 +150,22 @@ named in a recordable answer — opus 3, sonnet 3, haiku 1 — and of the tie th
 audit model is sonnet (claude-sonnet-5-5), for every task, staged as `[audit] model = "sonnet"` with
 a `[models.sonnet]` alias in the lab's models.toml. Its miss of 60's encoding fault is the one
 recorded weakness against opus; one draw per cell, an indication, not a rate.
+
+Addendum 6, 2026-11-01, before the second trial. The same five tasks, one lab attempt each, on
+labkit v0.106.1 (commit 6558b7ad; sandbox/labkit.pin labkit-paper-main d8ea741; agent image
+labkit-sandbox:14536054baf2 replaced by labkit-sandbox:654b9d723171), the same budgets, solver and
+schedule (21, 34, 60, sts512 in one runner, ids ref2-…, store store-ref2; 15 beside it, ids
+ref2b-…, store store-ref2b, 12 GB and 3600 s). Changed against the first trial:
+- labkit: the repairs of 0.106.0 (adoption kept beside the protocol until checked; READ lines on
+  registered fields left out; sub-bullets read as a field's value; directory digests without
+  __pycache__ (Breaking); a registered null order in the apply skeleton; the smaller faults) and
+  0.106.1 (`[audit] model`);
+- audit model: sonnet (claude-sonnet-5-5) for every task, by addendum 5's rule, staged into each lab
+  arm's models.toml (labkit-paper-main 2227438); a working call is no proof of an audit as thorough
+  as opus's — the comparison saw sonnet miss 60's encoding fault;
+- material: task 60's protocol re-pinned to its directory digest without __pycache__; sts512's Data
+  / scope pins labkit's directory digests of the data and the model (labkit-evidence 272f50c6).
+Measured in addition, from the traces, per attempt (the simplification round's three questions):
+the share of time in labkit's steps (audits, adoption, report-check, the hook), every contradiction
+between two parts of the tool (one advising what another refuses), and every stop caused by a fault
+of the tool. A stop that remains without a fault is evidence of too much coupling.
