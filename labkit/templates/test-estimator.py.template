@@ -12,10 +12,12 @@ registers a band. When the script registers a null order (`NULL_ORDER`, apply)
 the null rows name the donor of their label (`gold_of`) as the run's do: the
 bar is then the null's score plus margin, and a band is owed only where
 [quality-check-2] registers one. The rows below
-serve SCORE = "accuracy" (two labels) and "auc" (0/1 gold, a score per item:
+serve SCORE = "accuracy" (two labels), "auc" (0/1 gold, a score per item:
 0.9 ranks an item as positive, 0.1 as negative, so twelve items with `correct`
-of them right score correct/12 under both); TODO when the score is r2: write
-the cases with float golds — `test_the_score_has_cases_here` fails until then.
+of them right score correct/12 under both) and "spearman" (gold 0 … 11; a
+wrong item predicts the mirrored value 11 − gold, so all right is rho 1 and
+six right rho 0, exactly); TODO when the score is r2: write the cases with
+float golds — `test_the_score_has_cases_here` fails until then.
 """
 from __future__ import annotations
 
@@ -35,20 +37,25 @@ _spec.loader.exec_module(measure)
 SCORE = measure.CONFIG.score
 #: the two classes' gold: labels at accuracy, 1 and 0 at auc
 POS, NEG = ("pos", "neg") if SCORE == "accuracy" else (1, 0)
+#: the twelve items' gold: half of each class, at spearman the values 0 … 11
+GOLDS = [float(i) for i in range(12)] if SCORE == "spearman" else [POS] * 6 + [NEG] * 6
 #: a registered null order: its null rows carry `gold_of`, its band is optional
 ORDERED_NULL = measure.NULL_ORDER is not None
 
 
 def predicted(right: bool, gold):
     """The prediction for an item of class GOLD, RIGHT or not: the label at
-    accuracy; at auc a score, 0.9 when it ranks the item as positive."""
+    accuracy; at auc a score, 0.9 when it ranks the item as positive; at
+    spearman the gold value, or its mirror 11 − GOLD when wrong."""
     if SCORE == "accuracy":
         return gold if right else (NEG if gold == POS else POS)
+    if SCORE == "spearman":
+        return gold if right else 11.0 - gold
     return 0.9 if (gold == POS) == right else 0.1
 
 
 def test_the_score_has_cases_here():
-    assert SCORE in ("accuracy", "auc"), (
+    assert SCORE in ("accuracy", "auc", "spearman"), (
         f"SCORE = {SCORE!r}: write this test's cases for it (float golds for r2)")
 
 
@@ -69,9 +76,8 @@ def rows(registered: list[tuple], null: list[tuple], test: int = 0) -> list[dict
 
 
 def _twelve(correct: int) -> list[tuple]:
-    """Twelve items, `correct` of them predicted right, half of each class."""
-    golds = [POS] * 6 + [NEG] * 6
-    return [(predicted(i < correct, g), g) for i, g in enumerate(golds)]
+    """Twelve items (GOLDS), the first `correct` of them predicted right."""
+    return [(predicted(i < correct, g), g) for i, g in enumerate(GOLDS)]
 
 
 def test_perfect_effect_fires_c1():
@@ -88,6 +94,7 @@ def test_chance_is_derived_from_the_gold():
     """Balanced binary gold: two draws agree half the time."""
     assert measure.chance_of("accuracy", [POS] * 6 + [NEG] * 6) == 0.5
     assert measure.chance_of("auc", [1, 0]) == 0.5 and measure.chance_of("r2", [1.0, 2.0]) == 0.0
+    assert measure.chance_of("spearman", [1.0, 2.0]) == 0
 
 
 def test_missing_predictions_withhold_the_verdict():
@@ -134,7 +141,12 @@ def test_the_test_lane_is_counted_never_scored():
 def test_class_counts_are_the_scored_items_per_gold():
     """Checked by hand: seven pos and five neg in the scored lane, three test
     items without gold — the counts are 7 and 5; the test lane is no class.
+    At spearman the gold is a value, not a class: no counts are stored.
     TODO when the score is r2: drop this test, r2 stores no class counts."""
+    if SCORE == "spearman":
+        m = measure.evaluate_rows(rows(_twelve(12), _twelve(6), test=3))
+        assert "scored_class_counts" not in m and m["n_items"] == 12 and m["n_test"] == 3
+        return
     golds = [POS] * 7 + [NEG] * 5
     reg = [(predicted(True, g), g) for g in golds]
     m = measure.evaluate_rows(rows(reg, [(predicted(True, POS), g) for g in golds], test=3))
@@ -161,17 +173,18 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     assert set(asdict(measure.CONFIG)) == {f.name for f in fields(measure.MeasureConfig)}
     registered = promises.all_constants(promises.load(measure.PROTOCOL))
     assert registered and all(asdict(measure.CONFIG)[k] == v for k, v in registered.items())
-    strict = replace(measure.CONFIG, margin=0.9)
+    strict = replace(measure.CONFIG, margin=1.5)  # past every score's reach from its null
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)), strict)["criterion_1_pass"] is False
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)))["criterion_1_pass"] is True
 
 
 def test_a_lane_exactly_at_null_plus_margin_passes():
     """8/12 against 5/12 + 0.25 is exactly the bar (accuracy and auc alike,
-    `predicted`): in floats it fell one ulp short (2026-10-14); the scores are
-    fractions, so it passes."""
+    `predicted`), at spearman rho 1 against 0 + 1: in floats it fell one ulp
+    short (2026-10-14); the scores are exact, so it passes."""
     from dataclasses import replace
 
-    cfg = replace(measure.CONFIG, margin=0.25, null_band=0.25)
-    assert measure.evaluate_rows(rows(_twelve(8), _twelve(5)), cfg)["criterion_1_pass"] is True
-    assert measure.evaluate_rows(rows(_twelve(7), _twelve(5)), cfg)["criterion_1_pass"] is False
+    margin, at, below, null = (1.0, 12, 11, 6) if SCORE == "spearman" else (0.25, 8, 7, 5)
+    cfg = replace(measure.CONFIG, margin=margin, null_band=0.25)
+    assert measure.evaluate_rows(rows(_twelve(at), _twelve(null)), cfg)["criterion_1_pass"] is True
+    assert measure.evaluate_rows(rows(_twelve(below), _twelve(null)), cfg)["criterion_1_pass"] is False

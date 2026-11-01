@@ -1637,6 +1637,32 @@ class Exp(unittest.TestCase):
                     "12 passed", r.stdout
                 )  # with the score guard (test_the_score_has_cases_here)
 
+    def test_the_stamped_estimator_test_has_spearman_cases(self) -> None:
+        """An area that registers Spearman (`SCORE = "spearman"`) gets cases
+        in its stamped test, at fit and at apply: the score guard passes and
+        every test runs green; the twin, r2, still fails the guard."""
+        for kind in ("fit", "apply"):
+            with self.subTest(kind=kind):
+                root, area = self._stamped_estimator_lab(kind)
+                script = area / "scripts" / "01_measure.py"
+                stamped = script.read_text(encoding="utf-8")
+                self.assertEqual(stamped.count('SCORE = "accuracy"'), 1)
+                script.write_text(
+                    stamped.replace('SCORE = "accuracy"', 'SCORE = "spearman"'),
+                    encoding="utf-8",
+                )
+                r = self._run_stamped_test(root)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertIn("12 passed", r.stdout)
+                script.write_text(
+                    stamped.replace('SCORE = "accuracy"', 'SCORE = "r2"'),
+                    encoding="utf-8",
+                )
+                r = self._run_stamped_test(root)
+                self.assertEqual(r.returncode, 1, r.stdout)
+                self.assertIn("FAILED", r.stdout)
+                self.assertIn("test_the_score_has_cases_here", r.stdout)
+
     def test_the_stamped_estimator_test_serves_a_registered_null_order(
         self,
     ) -> None:

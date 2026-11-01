@@ -344,7 +344,8 @@ class ApplySkeleton(unittest.TestCase):
     def test_the_permutation_expectation_is_exact(self):
         """The bar at apply: the mean score over EVERY permutation of the gold,
         computed in closed form — checked against all 720 orderings of six
-        items, for accuracy (with a missing prediction), auc and r2."""
+        items, for accuracy (with a missing prediction), auc, r2 and
+        spearman (tied gold, so the draws are floats)."""
         import itertools
         from fractions import Fraction
 
@@ -356,6 +357,10 @@ class ApplySkeleton(unittest.TestCase):
             ),
             "auc": ([0.9, 0.2, 0.7, 0.4, None, 0.1], [1, 0, 1, 0, 1, 0]),
             "r2": ([1.0, 2.5, 0.5, None, 3.0, 2.0], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            "spearman": (
+                [1.0, 2.5, 0.5, None, 3.0, 2.0],
+                [1.0, 2.0, 2.0, 4.0, 5.0, 6.0],
+            ),
         }
         for score, (preds, golds) in cases.items():
             with self.subTest(score=score):
@@ -364,10 +369,38 @@ class ApplySkeleton(unittest.TestCase):
                     for perm in itertools.permutations(golds)
                 ]
                 exact = measure.permutation_expectation(score, list(zip(preds, golds)))
-                if score == "r2":
+                if score in ("r2", "spearman"):
                     self.assertAlmostEqual(exact, sum(draws) / len(draws), places=12)
                 else:
                     self.assertEqual(exact, sum(draws, Fraction(0)) / len(draws))
+
+    def test_spearman_is_the_pearson_correlation_of_mean_ranks(self):
+        """sts512 registers Spearman, and the skeleton offered accuracy, r2
+        and auc only (reference pilot trial 2, 2026-11-01). Checked by hand:
+        x = 1, 2, 2, 3 ranks 1, 2.5, 2.5, 4; y = 0.5, 0.1, 0.9, 0.7 ranks
+        2, 1, 4, 3; the centred products sum to 1.5, the squares to 4.5 and
+        5, so rho = 1.5 / sqrt(22.5). Without ties rho is exact: 1 and -1
+        for a monotone pair; a missing prediction ranks below every real
+        one. A constant vector has no rank correlation and is refused,
+        never 0; chance and the permutation expectation are 0."""
+        from fractions import Fraction
+
+        _, measure = self.measure_module("apply")
+        rho = measure.SCORES["spearman"]
+        tied = rho(list(zip([1, 2, 2, 3], [0.5, 0.1, 0.9, 0.7])))
+        self.assertAlmostEqual(tied, 1.5 / math.sqrt(22.5), places=15)
+        self.assertEqual(rho([(1, 10.0), (2, 20.0), (3, 30.0)]), Fraction(1))
+        self.assertEqual(rho([(1, 30.0), (2, 20.0), (3, 10.0)]), Fraction(-1))
+        self.assertIsInstance(rho([(1, 30.0), (2, 20.0), (3, 10.0)]), Fraction)
+        self.assertEqual(rho([(None, 0.0), (2, 20.0), (3, 30.0)]), Fraction(1))
+        with self.assertRaisesRegex(ValueError, "predictions are constant"):
+            rho([(1.0, 1.0), (1.0, 2.0), (1.0, 3.0)])
+        with self.assertRaisesRegex(ValueError, "gold values are constant"):
+            rho([(1.0, 5.0), (2.0, 5.0), (3.0, 5.0)])
+        self.assertEqual(measure.chance_of("spearman", [1.0, 2.0]), 0)
+        self.assertEqual(
+            measure.permutation_expectation("spearman", [(1, 2.0), (2, 1.0)]), 0
+        )
 
     def test_a_registered_null_order_is_the_control_and_its_score_the_bar(self):
         """sts512 registers a staged permutation, read, never regenerated; the

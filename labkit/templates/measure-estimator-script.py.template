@@ -72,9 +72,10 @@ Unlabelled predictions are never scored.
 Measurement contract:
   - Every labelled item is predicted once per scored lane in the same run;
     `fit` uses out-of-fold fitting, `apply` uses unchanged predictors.
-  - The score (`SCORE`: accuracy · r2 · auc) is over EVERY labelled item of
-    the lane: an item without a prediction scores as wrong (accuracy, auc)
-    or as the mean (r2) and is counted on its own as `quality_check_1_empty`.
+  - The score (`SCORE`: accuracy · r2 · auc · spearman) is over EVERY
+    labelled item of the lane: an item without a prediction scores as wrong
+    (accuracy), as the mean (r2) or ranks below every real prediction (auc,
+    spearman), and is counted on its own as `quality_check_1_empty`.
   - [criterion-1] passes when the registered lane's score is at least the bar plus
     `margin`: at apply with the permuted null its exact expectation
     (`permutation_expectation`), at fit the mean of the `null_refits`
@@ -164,7 +165,7 @@ DELIVERABLE_COLUMNS: tuple[str, ...] = ()       # the columns the task names for
 FEATURES_FIELD = "features"                     # TODO: the item field holding the numeric features
 GOLD_FIELD = "gold"
 SPLIT_FIELD = "split"
-SCORE = "accuracy"                              # TODO: accuracy | r2 | auc — the one the criterion names
+SCORE = "accuracy"                              # TODO: accuracy | r2 | auc | spearman — the one the criterion names
 #: the fit plan by repeat cost — (folds, permuted-label refits per fold) —
 #: read from the protocol's head, so the cost of a run follows what the
 #: protocol registered: at `low` 3 × (1 + 2) = 9 fits, at `high` 5 × (1 + 5)
@@ -541,7 +542,45 @@ def _auc(pairs: list[tuple]) -> Fraction:
     return Fraction(wins, 2 * len(pos) * len(neg))
 
 
-SCORES = {"accuracy": _accuracy, "r2": _r2, "auc": _auc}
+def _mean_ranks(values: list[float]) -> list[Fraction]:
+    """The rank of each value, 1 for the smallest; tied values share the mean
+    of the ranks they span."""
+    order = sorted(range(len(values)), key=lambda i: values[i])
+    ranks: list[Fraction] = [Fraction(0)] * len(values)
+    start = 0
+    while start < len(order):
+        end = start
+        while end + 1 < len(order) and values[order[end + 1]] == values[order[start]]:
+            end += 1
+        for i in order[start:end + 1]:
+            ranks[i] = Fraction(start + end + 2, 2)
+        start = end + 1
+    return ranks
+
+
+def _spearman(pairs: list[tuple]) -> Fraction | float:
+    """Spearman's rho over every item: the Pearson correlation of the mean
+    ranks (ties share their mean rank); a missing prediction ranks below every
+    real one. Exact (Fraction) when the denominator's square root is
+    rational — always without ties —, else a float. Raises ValueError when
+    the predictions or the gold are constant: rho is undefined there, not 0."""
+    x = _mean_ranks([float("-inf") if p is None else float(p) for p, _ in pairs])
+    y = _mean_ranks([float(g) for _, g in pairs])
+    mean = Fraction(len(pairs) + 1, 2)
+    sxx = sum((a - mean) ** 2 for a in x)
+    syy = sum((b - mean) ** 2 for b in y)
+    for name, spread in (("predictions", sxx), ("gold values", syy)):
+        if spread == 0:
+            raise ValueError(f"spearman: the {name} are constant — rank correlation is undefined")
+    sxy = sum((a - mean) * (b - mean) for a, b in zip(x, y))
+    product = sxx * syy
+    num, den = math.isqrt(product.numerator), math.isqrt(product.denominator)
+    if num * num == product.numerator and den * den == product.denominator:
+        return sxy / Fraction(num, den)
+    return float(sxy) / math.sqrt(product)
+
+
+SCORES = {"accuracy": _accuracy, "r2": _r2, "auc": _auc, "spearman": _spearman}
 
 
 def band_rule(cfg: MeasureConfig) -> tuple[float, int] | None:
@@ -664,7 +703,7 @@ def chance_of(score: str, golds: list) -> Fraction | float:
     accuracy — the sum of squared class shares (two independent draws from the
     label distribution agree that often; 1/2 on balanced binary gold);
     r2 — 0 (the mean explains nothing; a fitted forest sits slightly below);
-    auc — 1/2 (a random ranking)."""
+    auc — 1/2 (a random ranking); spearman — 0 (an unrelated ranking)."""
     if score == "accuracy":
         n = len(golds)
         counts: dict = {}
@@ -675,6 +714,8 @@ def chance_of(score: str, golds: list) -> Fraction | float:
         return 0.0
     if score == "auc":
         return Fraction(1, 2)
+    if score == "spearman":
+        return Fraction(0)
     raise ValueError(f"chance_of(): no chance rule for score {score!r} — one of {', '.join(SCORES)}")
 
 
@@ -683,7 +724,9 @@ def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction | float:
     average, against their gold permuted uniformly — exact, no draw: each
     item's permuted label is distributed as the gold. accuracy — the sum
     over classes of the predictions' share times the gold's (a missing
-    prediction is never correct); auc — 1/2; r2 — −Σ(ŷ − ȳ)² / Σ(y − ȳ)²,
+    prediction is never correct); auc — 1/2; spearman — 0 (the gold's
+    ranks keep their spread under a permutation, and each item's expected
+    deviation is zero); r2 — −Σ(ŷ − ȳ)² / Σ(y − ȳ)²,
     since the total sum of squares does not move under a permutation (a
     missing prediction counts as the mean). [criterion-1]'s bar and [quality-check-2]'s target at
     apply with the permuted null: one permutation's draw put the bar
@@ -698,6 +741,8 @@ def permutation_expectation(score: str, pairs: list[tuple]) -> Fraction | float:
         return sum((Fraction(preds[c], n) * Fraction(k, n) for c, k in golds.items()), Fraction(0))
     if score == "auc":
         return Fraction(1, 2)
+    if score == "spearman":
+        return Fraction(0)
     if score == "r2":
         ys = [float(g) for _, g in pairs]
         mean = sum(ys) / n
@@ -778,7 +823,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
                      "quality_check_2_pass": in_band}
     if len(draw_scores) > 1:
         metrics["quality_check_2_draw_scores"] = [float(s) for s in draw_scores]
-    if cfg.score != "r2":
+    if cfg.score in ("accuracy", "auc"):
         metrics["scored_class_counts"] = scored_class_counts(reg)
     if not (metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]):
         metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
