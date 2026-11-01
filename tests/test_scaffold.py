@@ -1621,7 +1621,9 @@ class Exp(unittest.TestCase):
             timeout=120,
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("10 passed", r.stdout)
+        self.assertIn(
+            "11 passed", r.stdout
+        )  # with the score guard (test_the_score_has_cases_here)
 
     def test_the_stamped_area_test_holds_the_registered_null_band(self) -> None:
         """AGENTS.md calls the stamped promise numbers examples to set; the

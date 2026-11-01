@@ -7,9 +7,11 @@ pytest run must not share `01_measure`) and never copies its formula; the
 estimator itself is not needed here, only `evaluate_rows()`. The check runs
 it on synthetic rows in the run's real shape — perfect effect fires [criterion-1], a
 null-like registered lane stays silent, missing predictions fail [quality-check-1] and
-withhold the verdict, a null lane off chance fails [quality-check-2]. The rows below are
-for SCORE = "accuracy" with two classes; TODO when the score changes: make
-the golds numeric (auc: 0/1 gold and a score per item; r2: floats).
+withhold the verdict, a null lane off chance fails [quality-check-2]. The rows below
+serve SCORE = "accuracy" (two labels) and "auc" (0/1 gold, a score per item:
+0.9 ranks an item as positive, 0.1 as negative, so twelve items with `correct`
+of them right score correct/12 under both); TODO when the score is r2: write
+the cases with float golds — `test_the_score_has_cases_here` fails until then.
 """
 from __future__ import annotations
 
@@ -26,7 +28,22 @@ measure = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = measure
 _spec.loader.exec_module(measure)
 
-POS, NEG = "pos", "neg"
+SCORE = measure.CONFIG.score
+#: the two classes' gold: labels at accuracy, 1 and 0 at auc
+POS, NEG = ("pos", "neg") if SCORE == "accuracy" else (1, 0)
+
+
+def predicted(right: bool, gold):
+    """The prediction for an item of class GOLD, RIGHT or not: the label at
+    accuracy; at auc a score, 0.9 when it ranks the item as positive."""
+    if SCORE == "accuracy":
+        return gold if right else (NEG if gold == POS else POS)
+    return 0.9 if (gold == POS) == right else 0.1
+
+
+def test_the_score_has_cases_here():
+    assert SCORE in ("accuracy", "auc"), (
+        f"SCORE = {SCORE!r}: write this test's cases for it (float golds for r2)")
 
 
 def rows(registered: list[tuple], null: list[tuple], test: int = 0) -> list[dict]:
@@ -38,15 +55,14 @@ def rows(registered: list[tuple], null: list[tuple], test: int = 0) -> list[dict
             out.append({"id": f"{lane}:{i}", "lane": lane, "item": str(i), "fold": 0,
                         "pred": pred, "gold": gold})
     out += [{"id": f"test:{i}", "lane": "test", "item": f"t{i}", "fold": None,
-             "pred": POS, "gold": None} for i in range(test)]
+             "pred": predicted(True, POS), "gold": None} for i in range(test)]
     return out
 
 
 def _twelve(correct: int) -> list[tuple]:
     """Twelve items, `correct` of them predicted right, half of each class."""
     golds = [POS] * 6 + [NEG] * 6
-    other = {POS: NEG, NEG: POS}
-    return [(g if i < correct else other[g], g) for i, g in enumerate(golds)]
+    return [(predicted(i < correct, g), g) for i, g in enumerate(golds)]
 
 
 def test_perfect_effect_fires_c1():
@@ -87,9 +103,9 @@ def test_class_counts_are_the_scored_items_per_gold():
     items without gold — the counts are 7 and 5; the test lane is no class.
     TODO when the score is r2: drop this test, r2 stores no class counts."""
     golds = [POS] * 7 + [NEG] * 5
-    reg = [(g, g) for g in golds]
-    m = measure.evaluate_rows(rows(reg, [(POS, g) for g in golds], test=3))
-    assert m["scored_class_counts"] == {NEG: 5, POS: 7}
+    reg = [(predicted(True, g), g) for g in golds]
+    m = measure.evaluate_rows(rows(reg, [(predicted(True, POS), g) for g in golds], test=3))
+    assert m["scored_class_counts"] == {str(NEG): 5, str(POS): 7}
     assert m["n_items"] == 12 and m["n_test"] == 3
 
 
@@ -97,7 +113,7 @@ def test_a_scored_lane_without_gold_is_refused():
     """A withheld label stored as 0 or -999 is no label: the prepare step writes
     null, and a scored lane carrying one is a refusal, never a number."""
     reg = _twelve(12)
-    reg[0] = (POS, None)
+    reg[0] = (predicted(True, POS), None)
     with pytest.raises(ValueError, match="without gold"):
         measure.evaluate_rows(rows(reg, _twelve(6)))
 
@@ -118,8 +134,9 @@ def test_the_formula_reads_its_thresholds_from_the_config():
 
 
 def test_a_lane_exactly_at_null_plus_margin_passes():
-    """8/12 against 5/12 + 0.25 is exactly the bar: in floats it fell one ulp
-    short (2026-10-14); the scores are fractions, so it passes."""
+    """8/12 against 5/12 + 0.25 is exactly the bar (accuracy and auc alike,
+    `predicted`): in floats it fell one ulp short (2026-10-14); the scores are
+    fractions, so it passes."""
     from dataclasses import replace
 
     cfg = replace(measure.CONFIG, margin=0.25, null_band=0.25)

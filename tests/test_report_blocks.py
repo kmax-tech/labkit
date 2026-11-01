@@ -416,6 +416,30 @@ class ReportFiles(unittest.TestCase):
         code, out = self._gate(root, report)
         self.assertEqual(code, 0, out)  # the twin: the block written, the prose stays
 
+    def test_a_block_naming_its_protocol_by_another_path_is_that_block(self):
+        """A block written from a scratch file named its protocol as
+        `../work/experiments/…`: compared as written, the commit was held for
+        a block that stood there, while the block's own check resolved the
+        path and accepted it (reference pilot 2026-11-01, task 34)."""
+        area = self._area(
+            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+        )
+        root = area.parent.parent
+        report = root / "REPORT.md"
+        report.write_text(
+            f"criterion_1_pass = True (run {self.RUN})\n", encoding="utf-8"
+        )
+        detour = f"../{root.name}/experiments/01-x/PROTOCOL-x.md"
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        written, _ = protocol_fill.into_report(
+            text, area, report.read_text(encoding="utf-8"), detour
+        )
+        self.assertIn(detour, written)
+        report.write_text(written, encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertNotIn("without its generated block", out)
+        self.assertEqual(code, 0, out)
+
     def test_the_twin_a_cited_probe_no_protocol_declares_owes_no_block(self):
         """An exploration's run is cited, not reported: a warning says no
         protocol declares it; nothing is owed, nothing blocks. A probe's

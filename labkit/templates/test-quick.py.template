@@ -23,7 +23,7 @@ sys.modules[_spec.name] = measure
 _spec.loader.exec_module(measure)
 
 
-#: TODO: a case you checked by hand — two or more rows in the shape rows()
+#: TODO: a case you checked by hand — one or more rows in the shape rows()
 #: returns, the ids they answer, and the number(s) evaluate_rows() must give
 #: for them under their metrics keys, METRIC_KEY among them — worked out by
 #: hand, never by calling the code
@@ -33,7 +33,7 @@ KNOWN_METRICS: dict = {}
 
 
 def test_known_rows_give_the_known_number():
-    assert len(KNOWN_ROWS) >= 2 and measure.METRIC_KEY in KNOWN_METRICS, (
+    assert len(KNOWN_ROWS) >= 1 and measure.METRIC_KEY in KNOWN_METRICS, (
         "fill KNOWN_IDS, KNOWN_ROWS and KNOWN_METRICS with a case checked by hand"
     )
     metrics = measure.evaluate_rows(KNOWN_ROWS, KNOWN_IDS)
@@ -42,7 +42,9 @@ def test_known_rows_give_the_known_number():
 
 
 def test_a_lost_row_is_a_refusal_not_a_smaller_denominator():
-    assert len(KNOWN_ROWS) >= 2, "the hand-checked case owes two rows at least"
+    # one row is enough: a task with one unit has one (the registered and the
+    # reference pilot's 21 and 34 invented a second, copied from the run)
+    assert len(KNOWN_ROWS) >= 1, "the hand-checked case owes one row at least"
     with pytest.raises(ValueError):
         measure.evaluate_rows(KNOWN_ROWS[:-1], KNOWN_IDS)
 

@@ -791,8 +791,10 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     names the withdrawal first (`ways_out.declared_first`): the declared
     number no longer holds for the code, the commit hook holds the code to
     it, and an audit made while it stands declared does not cover the next
-    run."""
-    if ctx.run is None or ctx.declared != ctx.run.name:
+    run. Not on the PROPOSED state: the adoption's own check sees its
+    proposal declare the run, and "withdraw the adoption first" named an
+    adoption that did not stand (reference pilot 2026-11-01, task 60)."""
+    if ctx.state == PROPOSED or ctx.run is None or ctx.declared != ctx.run.name:
         return None
     mark = f"changed since {ctx.declared}"
     return ctx.protocol if any(mark in f.text for f in finalized) else None

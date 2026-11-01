@@ -139,6 +139,7 @@ from labkit.gates.ways_out import (
 )
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
+from labkit.gates.report_context import pending_adoption
 from labkit.formats.protocol_check import (
     field_name,
     fields,
@@ -975,10 +976,14 @@ def finalize_area(
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        # the protocol that declares this very run: its holds withdraw first
+        # the protocol that declares this very run: its holds withdraw first —
+        # unless the declaration is an adoption's proposal under its own check
+        # (`report_context.pending_adoption`): no adoption stands to withdraw
+        # (reference pilot 2026-11-01, task 60)
         held_by = (
             chosen
             if protocol_block.declared_run_shown(text) == answering_run.name
+            and not pending_adoption(chosen).is_file()
             else None
         )
         check_run_code(findings, area, answering_run, held_by)

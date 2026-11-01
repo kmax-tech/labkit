@@ -129,6 +129,32 @@ class TestWait(unittest.TestCase):
         self.assertEqual(code, 2, out)
         self.assertIn("broke off with RuntimeError: claude-cli: requested m", out)
 
+    def test_a_metric_json_cannot_hold_is_refused_naming_its_key(self):
+        """A numpy `bool_` passed to run.metrics() failed only when the run
+        wrote metrics.json — a bare json error naming no key, no failure.json
+        (reference pilot 2026-11-01, sts512). Refused at the call now, the run
+        breaks off with its reason recorded. The twin: plain values pass."""
+
+        class NotJson:
+            pass
+
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                head(repeat_cost="low", promises=None)
+                + "\n- **Question / hypothesis:** how many?\n",
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(
+                    TypeError, r"run.metrics\(passed=…\): a NotJson"
+                ):
+                    with runlog.run("x", {"n": 1}, area, run_kind="measurement") as run:
+                        run.metrics(count=3, rate=0.5, ok=True, note="fine")
+                        run.metrics(passed=NotJson())
+            (dead,) = (area / "runs").iterdir()
+            self.assertIn("run.metrics(passed=…)", runs.read_failure(dead) or "")
+
     def test_running_run_exits_3_at_max_seconds(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "2026-09-09T10-00-00_live"

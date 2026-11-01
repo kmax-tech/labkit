@@ -540,7 +540,15 @@ def owed_blocks(
             fix=f"`{into_command(named[protocol], report)}` writes it",
         )
         for n, run_id, protocol in report_blocks.blocks_owed(
-            cited, declaring, {b.protocol for b in found}
+            cited,
+            declaring,
+            # each block's protocol resolved and named as the owed ones are:
+            # compared as written, `../work/experiments/…` was a block
+            # missing and present at once (reference pilot 2026-11-01, 34)
+            {
+                report_blocks.path_from_report(block_protocol(report, b), report)
+                for b in found
+            },
         )
     ]
 

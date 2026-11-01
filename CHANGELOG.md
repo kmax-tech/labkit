@@ -21,6 +21,24 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **Smaller faults from the reference pilot's traces:**
+  - the refusal of a second try with a failed audit alias names another
+    alias as a command, as the first failure and `--findings` do (15);
+  - an adoption refused because its run's code changed no longer says
+    "withdraw the adoption first": its own check sees the proposal, and no
+    adoption stood (finalize and report-check, 60);
+  - `Run.metrics()` refuses a value JSON cannot hold at the call, naming the
+    key; it failed at the run's end naming none, with no failure.json
+    (sts512);
+  - a result block that names its protocol by another path to the same file
+    is that protocol's block; compared as written, the commit was held for a
+    block that stood there (34);
+  - the quick test template asks for one hand-checked row, not two; tasks
+    with one unit invented a second (21, 34);
+  - the estimator test template serves `auc` as well as `accuracy` (0/1 gold,
+    a score per item); under `auc` eight of its ten tests failed against
+    string golds (15). For `r2` a first test says the cases are still owed.
+
 - **The apply skeleton takes a registered null order (`NULL_ORDER`).** It
   had only the seeded shuffle; sts512 registers a staged permutation, and
   the agent kept the skeleton's draw, which the audit and the evaluator both

@@ -637,7 +637,20 @@ class Run:
         return p
 
     def metrics(self, **kv: object) -> None:
-        """Add numbers to the run's metrics.json (written when the run finishes)."""
+        """Add numbers to the run's metrics.json (written when the run
+        finishes). Raises TypeError naming the key for a value JSON cannot
+        hold (a numpy `bool_`): checked here, the run breaks off with its
+        reason recorded; at the end it failed as a bare json error naming no
+        key and left no failure.json (reference pilot 2026-11-01, sts512)."""
+        for key, value in kv.items():
+            try:
+                json.dumps(value, allow_nan=True)
+            except (TypeError, ValueError) as exc:
+                raise TypeError(
+                    f"run.metrics({key}=…): a {type(value).__name__} is not a JSON "
+                    f"value ({exc}) — pass a plain number, bool, string, list or dict "
+                    f"(e.g. bool(x), float(x))"
+                ) from exc
         self._metrics.update(kv)
 
     def note(self, text: str) -> None:

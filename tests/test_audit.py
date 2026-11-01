@@ -442,6 +442,8 @@ class Audit(unittest.TestCase):
         rc, err = audit_once()
         self.assertEqual(rc, 2)
         self.assertIn("no further try on the same code, promises and model", err)
+        # the second try names the other alias too (reference pilot, 15)
+        self.assertIn("--model haiku`", err)
         self.assertEqual(calls, ["opus"])  # refused before any call
         self.assertEqual(len(failed_attempts.failed_attempts(area)), 1)
 

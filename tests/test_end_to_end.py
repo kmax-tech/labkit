@@ -798,6 +798,23 @@ class Withdraw(CountCommands):
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.records(), records)
 
+    # -- no adoption stands: the refusal does not tell to withdraw one
+    def test_adopting_a_run_whose_code_changed_names_no_withdrawal(self):
+        """The adoption's own check sees its proposal declare the run; with
+        that run's code changed it told the agent to "withdraw the adoption
+        first", and the withdrawal then found nothing (reference pilot
+        2026-11-01, task 60). The twin is the test below: a standing
+        adoption is told to withdraw first."""
+        run_a = self.measure()
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        self.change_code()
+        rc, out = self.lab.adopt(self.protocol, run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"changed since {run_a}", out)
+        self.assertNotIn("withdraw the adoption first", out)
+        self.assertIsNone(self.declared())
+
     # -- after an adoption, a code change is told to withdraw first
     def test_a_code_change_after_the_adoption_is_told_to_withdraw_first(self):
         """The commit of a fix after an adoption is held (the hook holds the

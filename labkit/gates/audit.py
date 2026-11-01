@@ -242,8 +242,9 @@ def _answer_or_record(
             f"this state whole — {stopped.error}\nlabkit-audit: no further try on "
             f"the same code, promises and model; each costs as much and was stopped "
             f"again",
-            fix="audit with another alias (--model), or leave the number "
-            "unreported (report-check refuses it without an audit)",
+            fix=other_alias_way(args.area, args.mode, args.model, args.protocol)
+            + ", or leave the number unreported (report-check refuses it without an "
+            "audit)",
         )
     # the alias is resolved before the attempt begins: an alias models.toml
     # does not know is a usage error (KeyError), not an attempt
