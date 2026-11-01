@@ -2571,6 +2571,34 @@ eine Aufgabe, jede Spur ganz gelesen (Belege: labkit-evidence
 registriert). Code unter `labkit/` unverändert seit v0.104.4, Zeilen gelten. Mit „geprüft“
 markiert, was ich im Quelltext nachgesehen habe.
 
+Lesart: Die Spuren zeigen vermeidbare technische Kosten. Wie viel Aufwand nach den Reparaturen
+durch berechtigte Prüfungen bleibt, zeigt erst die nächste Runde. Test dafür: Kommt derselbe
+Anspruch mit weniger Runden und einem vollständigen Bericht durch?
+
+Reihenfolge nach Problem (Rückmeldung 2026-11-01). Vor einer pubmedqa50-Wiederholung nötig ist,
+was diesen Versuch oder seine Bewertung betrifft (P1, P2, P3, P4); der Rest folgt getrennt.
+
+- **P1 Laufüberwachung und Sperren** (Fehler 2, 11): `--wait` wartet am frühen Absturz vorbei,
+  die Sperrmeldung prüft die pid selbst — erledigt ee306b76; Flush des Fortschritts — erledigt
+  7662e548. Offen: ein von der Sperre abgewiesener Start legt weiter einen CRASHED-Lauf an.
+- **P2 Modellaufrufe wie registriert** (Fehler 10): Parallelität ist Sache des Bereichs
+  (`workers`, Vorlage 1) — erledigt 7662e548. Offen: den Zusatzkontext der CLI klären. CLI
+  2.1.309 hat `--system-prompt` (ersetzt den Agenten-Systemprompt) und `--bare`; ob Thinking
+  abschaltbar ist und was danach wirklich gesendet wird, muss ein echter Aufruf hinter dem
+  Proxy zeigen (request body). Den tatsächlich gesendeten Eingang festhalten (Flags, Version,
+  Digest des Systemprompts).
+- **P3 Audit-Antworten zuverlässig lesen** (Fehler 1, 6, 4, 5; Unklar 13): eine gültige
+  Ablehnung oder ein zulässiger Befund darf keinen weiteren teuren Aufruf auslösen.
+- **P4 Fortschritt und fehlende Schritte** (Unklar 12, 16): Audit-Zustand sichtbar
+  (laufend/gescheitert/entschieden), Prompt-Abgleich vor der Messung, Testset-Abgabe im Ablauf.
+- **P5 Audit-Schleife** (Unklar 17): konkreten Vorschlag ausarbeiten. Bedingungen: eine
+  Rundengrenze gibt nie automatisch frei; bei erreichtem Budget entsteht ein nachvollziehbarer
+  Abschluss (gesicherter Zwischenstand, offene Befunde, zulässige Aussagen, nächster Schritt).
+  Ein Konvergenzhinweis (Befunde kehren wieder, Anweisungen widersprechen sich) ist zunächst
+  nur ein Hinweis zur Entscheidung; dass er sich sicher automatisch erkennen lässt, ist nicht
+  belegt.
+- Danach getrennt: Fehler 3, 7, 8, 9; Unklar 14, 15, 18.
+
 Fehler (labkit verhält sich gegen die eigene Doku):
 
 1. **Audit-Ablehnung als Überschrift nicht erkannt** (geprüft): `REFUSED` nutzt `LEAD`
