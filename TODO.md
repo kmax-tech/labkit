@@ -2690,12 +2690,17 @@ B — Läufe (Zustandslogik, ein Verantwortlicher)
   neuen OUT-Namen im Skript und „die alte Datei behalten“.
 
 C — Berichte und Audit-Ausgabe (nach B)
-- C1 Bericht zitiert einen nicht übernommenen Lauf außerhalb jedes Ergebnis- oder Diskussionsblocks
-  (sts512 t2: „criterion MET“; 15 t2: „PASS“). Garantierte Regel nur strukturell: so ein Zitat
-  sperrt, Ausweg `--discuss` (Wert als vorläufig, gescheitert oder ungeklärt). Ob Freitext Erfolg
-  behauptet, bleibt Sache des Bericht-Reviews (Audit), keine Textheuristik als Blocker. Gegenproben:
-  derselbe Lauf im Diskussionsblock geht durch; die ehrliche negative Antwort geht durch; ein
-  übernommener Lauf mit Ergebnisblock geht durch.
+- C1 **nicht gebaut, bekannte Grenze (entschieden 2026-11-01).** Bericht zitiert einen nicht
+  übernommenen Lauf als gültiges Ergebnis (15 t2: älterer Lauf mit „PASS“, report-check Exit 0 mit
+  Warnung; sts512 t2: „[criterion-1] is MET“ ganz ohne Lauf-Kennung). Eine Sperre jedes Zitats
+  setzte Erwähnung mit Freigabe gleich („Probelauf ergab 0,89, ungeprüft“, „früherer Lauf
+  verworfen“, „Abbruch vor dem Audit“ müssen ohne Diskussionsblock und Review gehen); „Protokoll
+  hat schon ein Ergebnis“ entscheidet die Gültigkeit der Aussage auch nicht. Mechanisch bleibt:
+  welcher Lauf übernommen ist und ob der erzeugte Block zu ihm passt. Ob ein anderer Lauf als
+  gültig präsentiert wird, prüft das Bericht-Review. **Offen: Prüffall fürs Review** — der
+  REPORT.md von 15 t2 (Fang: die unbegründete „PASS“-Behauptung) und dieselbe Stelle ausdrücklich
+  vorläufig formuliert (Gegenprobe: geht durch). Erst wenn das Review das nicht trennt, eine
+  gezielte Änderung. Begründung: `docs/notes/2026-10-23-report-without-adoption.md` (Status).
 - C2 `labkit-adopt` „kein Bericht registriert“ und `labkit-next` „nichts hält es“, während Hooks
   REPORT.md sperren (21, 34 t2). Test: REPORT.md zitiert den übernommenen Lauf ohne Block → next
   nennt `--into`. Gegenprobe: mit Block → nichts.
