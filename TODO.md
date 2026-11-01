@@ -2744,6 +2744,8 @@ beide Arme korrekt und ehrlich: ein Deckeneffekt, keine gezählte Runde dort. St
   Gegenstücken fachlich beurteilen.
 - **Bereich 16** bleibt Kontext (Aufwand bei vollständig vorgegebenem Plan); seine gezählte Runde
   (36) läuft nur, wenn nach 17 und 18 Zeit bleibt.
+- **Fokus (2026-11-02):** Bereich 17 trägt die vorläufige Evaluation (der Druck ist darin eine
+  Bedingung); Bereich 18 ist gebaut, aber geparkt — seine Audits laufen erst nach 17.
 
 **Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
 Die Stopps im Referenzpilot gingen auf Integritätsfehler zurück, nicht auf die Strenge (34 voll
