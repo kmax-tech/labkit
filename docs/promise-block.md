@@ -131,26 +131,57 @@ says what releases it), the
 `[[promise]]` tables and — once a number is reported — the `[result]` table
 naming the run (`protocol_block.declared_run`, written by `protocol-fill
 --from-run`; the binding document says what the gates hold it to). A
-computation (`kind = "compute"`) may carry one more optional table,
-`[reference]` — the stated value its kept number is compared with:
+computation (`kind = "compute"`) carries the `[kept]` table (standard 0.24)
+— the number it reports, by its metrics key and unit:
+
+```toml
+[kept]
+key = "deforestation_rate"   # the metrics.json key of the kept number
+unit = "1"                   # its unit, a short text ("ms", "documents"); "1" for a dimensionless number
+```
+
+`protocol_block.kept` reads it exactly or refuses it by name; a value in
+angle brackets is a placeholder, named unfilled by `protocol-check`
+(`labkit-init exp --kind compute` stamps both as placeholders unless
+`--kept KEY --unit UNIT` names them; `protocol-fill <PROTOCOL>
+"kept.key=…" "kept.unit=…"` fills them). It is owed by a computation and
+refused on a fit or an apply, which bind their answer through their promise
+keys (`protocol_check.kept_gaps`). The compute skeleton reads the key from
+here (`metric_key()`), never from a constant of its own; finalize holds the
+answering run — and so the adoption, whose check runs finalize on the
+proposal — to it: metrics.json must hold the key as a finite number, else a
+guaranteed blocker names the key, the run and what it holds instead
+(`run_record_check.kept_number_gaps`). The Recorded results line names the
+kept number first, with its unit (`kept number: deforestation_rate = 0.48;
+also recorded: …`). The registration stamp digests the table, and a key
+changed after the first measurement is held like the scope.
+
+**What it does not prove.** The check binds the key, not its meaning: a run
+that stores a wrong computation under the registered key passes it. Whether
+the number under the key is the one the Unit field and the question
+describe is the area's test's and the analysis audit's to judge
+(docs/notes/2026-11-01-kept-key-in-the-head.md).
+
+A computation may carry one more optional table, `[reference]` — the stated
+value its kept number (the `[kept]` key) is compared with:
 
 ```toml
 [reference]
-key = "deforestation_rate"   # the metrics key compared (the compute skeleton's METRIC_KEY)
-value = 0.62                 # the stated value, in the key's unit
+value = 0.62                 # the stated value, in the kept number's unit
 tolerance = 0.01             # within: |measured − value| ≤ tolerance; `relative = true` makes it a fraction of value
 relation = "within"          # within | at_least | at_most (the last two carry no tolerance)
 source = "the project's expectation (task text)"   # who states the value; optional
 ```
 
-`protocol_block.reference` reads it exactly or refuses it by name; on a
+`protocol_block.reference` reads it exactly or refuses it by name — without
+`[kept]` beside it, too (the key compared lives there); on a
 fit or an apply it is refused naming the criterion — those kinds compare in a
 criterion (`protocol_check.reference_gap`). It is no promise and no bar:
 the compute skeleton writes the verdict (`ref_state`, `ref_met`,
 `ref_distance`, …; `formats/reference`) beside the number, `02_analyze.py
 --check` recomputes it, the Recorded results line carries it generated,
-and finalize blocks a reference the run cannot compare (the key absent
-from metrics.json, or no finite number) — a `not met` is a valid outcome.
+and finalize blocks a reference the run cannot compare (the kept key
+absent from metrics.json, or no finite number) — a `not met` is a valid outcome.
 The registration stamp digests the table: a value changed after the audit
 is drift (docs/notes/2026-10-29-reference-comparison.md).
 
@@ -158,7 +189,7 @@ The head and the tables:
 
 ```toml
 [protocol]
-standard = "0.23"
+standard = "0.24"
 id = "p-9e2341c0390948dc"
 type = "confirmatory"
 repeat_cost = "high"

@@ -43,6 +43,9 @@ scope = ["scripts/01_measure.py"]
 #: metrics key a block id lacks, fails intent-check
 C1_BLOCK = DEFAULT_BLOCK.split("\n\n")[0] + "\n"
 C1_PROSE = "- **Inference criterion:** [criterion-1] the criterion holds\n"
+#: the `[kept]` a computation's fixture head carries unless it says otherwise
+#: (standard 0.24): the key its runs hold as their kept number, and its unit
+KEPT = ("n", "1")
 
 
 def registration_of(area: Path) -> dict[str, str]:
@@ -157,13 +160,17 @@ def completed_run(
     completion: bool = True,
     run_kind: RunKind = "measurement",
     unfrozen_ack: bool = False,
+    kept_number: bool = True,
 ) -> Path:
     """A run directory as runlog leaves one: bound to PID, its promise
     snapshot taken from the area's PROTOCOL-x.md (0.71: a run under a frozen
     protocol recorded its block), a full run unless LONG says a probe, not
     acknowledged unless UNFROZEN_ACK (0.99.0: both recorded, `runs.unreportable`),
-    METRICS written when given, finished when COMPLETION. The one home for the
-    shape (finalize, report-check)."""
+    METRICS written when given, finished when COMPLETION. Under a computation
+    whose head names a `[kept] key` the run holds it, as the compute skeleton
+    writes it: METRICS without that key gain it as 1 unless KEPT_NUMBER is
+    False (a test of the kept-number hold). The one home for the shape
+    (finalize, report-check)."""
     d = area / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
     script = scope_file(area)  # the block's scopes name the fixture's script
@@ -177,6 +184,9 @@ def completed_run(
     )
     (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
     if metrics is not None:
+        key = _kept_key(area / "PROTOCOL-x.md")
+        if kept_number and key is not None and key not in metrics:
+            metrics = {key: 1, **metrics}
         (d / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if completion:
         (d / "completion.json").write_text(
@@ -210,6 +220,7 @@ def head(
     labels: tuple[str, ...] | None = None,
     report: str | None = None,
     reference: str | None = None,
+    kept: tuple[str, str] | None = KEPT,
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
     frozen or low head without an explicit block carries `DEFAULT_BLOCK`;
@@ -224,7 +235,8 @@ def head(
     writes the placeholder. REPORT is the head's optional `report`, the
     registered report file (standard 0.23, 2026-10-29). REFERENCE is TOML
     written into a `[reference]` table verbatim — a computation's stated
-    value (2026-10-29)."""
+    value (2026-10-29). KEPT is a computation's `[kept]` (key, unit), written
+    only with kind = "compute"; None leaves the table out (standard 0.24)."""
     if kind is None:
         kind = "apply" if model is not None else "compute"
     if promises == "" and (frozen or repeat_cost == "low"):
@@ -235,7 +247,7 @@ def head(
     lines = [
         "```toml",
         "[protocol]",
-        'standard = "0.23"',
+        'standard = "0.24"',
         f'id = "{id}"',
         f'type = "{type}"',
         f'repeat_cost = "{repeat_cost}"',
@@ -249,6 +261,8 @@ def head(
         lines += ["", "[result]", f'run = "{result}"']
     if model is not None:
         lines += _model_tables(model, claim, arms)
+    if kept is not None and kind == "compute":
+        lines += ["", "[kept]", f'key = "{kept[0]}"', f'unit = "{kept[1]}"']
     if reference is not None:
         lines += ["", "[reference]", *reference.strip().splitlines()]
     if labels is not None:
@@ -261,6 +275,20 @@ def head(
     if promises:
         body += "\n" + promises.strip() + "\n"
     return body + "```\n"
+
+
+def _kept_key(protocol: Path) -> str | None:
+    """The `[kept] key` PROTOCOL's head names, None without the file, the
+    table or a filled key, or where the head does not read."""
+    from labkit.formats import protocol_block
+
+    if not protocol.is_file():
+        return None
+    try:
+        k = protocol_block.kept(protocol.read_text(encoding="utf-8"))
+    except protocol_block.BlockError:
+        return None
+    return k.key if k is not None else None
 
 
 def _model_tables(

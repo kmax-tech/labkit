@@ -13,8 +13,9 @@ them from memory.
 1. `<AREA>/PROTOCOL-*.md` — the registration and the ground truth you audit
    the code against: the question, for a fit or an apply (the head's
    `kind`) the success criterion, quality check, branch and null
-   condition, the free knobs, the prompt verbatim, for a `compute` with a
-   stated value its `[reference]` table.
+   condition, the free knobs, the prompt verbatim, for a `compute` its
+   `[kept]` table (the metrics key and unit of the kept number) and, with a
+   stated value, its `[reference]` table.
 2. `<AREA>/scripts/*.py` and `<AREA>/analysis/*.py`, completely.
 3. The files the `[[promise]]` tables declare as scope, and the repo-local
    modules (`lib/`, `src/`) the scripts and those files import directly,
@@ -57,19 +58,24 @@ refused: protocol not filled — the audit reads the FILLED protocol (LAB-015 Pr
 ## A computation owes no criterion
 
 A `compute` protocol judges no prediction. It registers question, unit,
-data and exclusions, and no criterion, quality check or promise table:
-never demand a criterion of a computation, and never grade its absence. A value the task
+data and exclusions, its kept number in the head's `[kept]` table (key and
+unit), and no criterion, quality check or promise table:
+never demand a criterion of a computation, and never grade its absence.
+finalize holds the run to the `[kept]` key by name only: judge whether the
+code computes under that key the number the Unit field and the question
+describe (a flag such as `hrv_computed` under the key is the finding). A value the task
 states ("0.62 within 0.01") is compared only through the head's optional
-`[reference]` table (key, value, tolerance, relation, source). The run
-writes the verdict (`ref_met`, `ref_distance`). Judge two things:
+`[reference]` table (value, tolerance, relation, source), on the `[kept]`
+key. The run writes the verdict (`ref_met`, `ref_distance`). Judge two
+things:
 
 - The task states a value and the head registers no `[reference]`: write a
   WARNING — "the task states a value; no reference is registered; the
   report cannot claim the comparison" — never a BLOCKER for a missing
   criterion.
-- `[reference]` is registered: judge whether the code's kept number is the
-  registered `key` (a verdict on another number compares nothing), and
-  whether the value and the tolerance are the task's.
+- `[reference]` is registered: judge whether the `[kept] key` is the
+  number the task states a value for (a verdict on another number compares
+  nothing), and whether the value and the tolerance are the task's.
 
 A `not met` is a valid outcome. A number or a value moved to meet it is the
 finding.

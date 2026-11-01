@@ -9,6 +9,44 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A computation registers its kept number in the head: `[kept]`
+  (protocol standard 0.24).** Task 34 of the second reference trial adopted
+  `hrv_computed = True` while its Unit named HRV_MeanNN: the key lived only
+  in the script's `METRIC_KEY` and in prose, so nothing held the run to the
+  number the protocol meant. Now:
+  - a compute head carries `[kept]` with `key` (the metrics.json key) and
+    `unit` (`"1"` for a dimensionless number), owed by `protocol-check` and
+    at the start of a low run; a fit or an apply refuses the table
+    (`protocol_check.kept_gaps`);
+  - `labkit-init exp --kind compute --kept KEY --unit UNIT` stamps it;
+    without them both values are stamped as placeholders, and
+    `protocol-fill <PROTOCOL> "kept.key=…" "kept.unit=…"` fills them
+    (`[kept] key` and `kept key` read the same);
+  - the compute skeleton reads the key from the head (`metric_key()`);
+    `METRIC_KEY` is gone, and the stamped test reads the key the same way;
+  - finalize — and the adoption, whose check runs finalize — blocks an
+    answering run whose metrics.json does not hold the key as a finite
+    number, naming the key, the run and what it holds instead
+    (`run_record_check.kept_number_gaps`, guaranteed); the skeleton's own
+    check is in an agent-editable file, this one is not;
+  - the Recorded results line, and the report block with it, names the kept
+    number first with its unit — `kept number: HRV_MeanNN = 694.07 ms; also
+    recorded: …` — and keeps the other metrics;
+  - `[reference]` loses its `key`: the stated value is compared with the
+    `[kept]` key, and a `[reference]` without `[kept]` is refused;
+    `--reference` takes `VALUE[±TOL]` (no `KEY=`); `reference.with_verdict`,
+    `phrase` and `comparison_gaps` take the key as an argument;
+  - the registration stamp and the scope held since the first measurement
+    include `[kept]`.
+
+  The limit stays explicit: the key is bound by name, not by meaning. A
+  wrong computation stored under the registered key passes; the area's test
+  and the analysis audit judge what the number is
+  (`docs/notes/2026-11-01-kept-key-in-the-head.md`). 0.106.1 is the last
+  release that reads standard 0.23 heads and `[reference] key`; a protocol
+  not yet run migrates by adding `[kept]` (key and unit) and moving
+  `[reference] key` there.
+
 - **A report review reads the adopted run and every cited run.** Its
   inputs (`report_review_inputs.review_pieces`) gained the adopted run,
   the discussion blocks or "none", and the metrics of each cited run of
@@ -62,11 +100,11 @@ pins (`requirements.txt` / `requirements.lock`).
     of mean ranks, a constant vector refused, chance and the permutation
     expectation 0; offered only accuracy, r2 and auc, the sts512 agent
     switched to r2 against its registration;
-  - the compute skeleton's kept number (`METRIC_KEY`) must be a number: a
-    bool, a text or a missing key is refused naming it; task 34 adopted
-    "hrv_computed = True" while its Unit named HRV_MeanNN. A type check
-    only: nothing holds METRIC_KEY to the key the Unit names (a
-    `hrv_computed = 1` passes) — a known limit (TODO, plan A3);
+  - the compute skeleton's kept number must be a number: a bool, a text or
+    a missing key is refused naming it; task 34 adopted "hrv_computed =
+    True" while its Unit named HRV_MeanNN. A type check only — the key
+    itself is registered in the head's `[kept]` and held by finalize
+    (Breaking, above);
   - the stamped comments state the rule; the history went into
     `docs/notes/2026-11-01-hand-checked-case-one-row.md` and
     `docs/notes/2026-11-01-registered-null-order.md`.

@@ -489,7 +489,7 @@ class Exp(unittest.TestCase):
         self.assertIn("tests/test_01_foo_bar.py", readme)
         self.assertTrue((self.root / "tests" / "test_01_foo_bar.py").is_file())
         self.assertIn('"_prov": {"run": run.run_id}', script)  # rows name their run
-        self.assertLess(len(proto.splitlines()), 50)  # was 102 lines of guide prose
+        self.assertLess(len(proto.splitlines()), 53)  # was 102 lines of guide prose
 
     def test_low_with_a_model_keeps_criterion_promises_and_the_null_lane(
         self,
@@ -1126,32 +1126,31 @@ class Exp(unittest.TestCase):
         )
 
     def test_a_reference_is_stamped_into_the_head_and_refused_on_a_bar(self) -> None:
-        """`--reference KEY=VALUE[±TOL]` stamps a computation's `[reference]`
-        table — the stated value the task asks the number to match
-        (2026-10-29); with a report file the `report` line stays in
+        """`--reference VALUE[±TOL]` stamps a computation's `[reference]`
+        table — the stated value the task asks the kept number (`--kept`) to
+        match (2026-10-29); with a report file the `report` line stays in
         [protocol]; a fit or an apply is refused naming [C] with nothing
         written, `--change-kind` to one is held by the written table, and
         `--relation` without `--reference` is an argument error."""
-        ref = scaffold.parse_reference_flag("lines_mean=0.62±0.01", None, "the task")
+        ref = scaffold.parse_reference_flag("0.62±0.01", None, "the task")
         self.assertEqual(
             ref,
-            protocol_block.Reference(
-                "lines_mean", 0.62, 0.01, False, "within", "the task"
-            ),
+            protocol_block.Reference(0.62, 0.01, False, "within", "the task"),
         )
         self.assertEqual(
-            scaffold.parse_reference_flag("k=0.2", "at_least", None).relation,
+            scaffold.parse_reference_flag("0.2", "at_least", None).relation,
             "at_least",
         )
         self.assertEqual(
-            scaffold.parse_reference_flag("k=3+-0.5", None, None).tolerance, 0.5
+            scaffold.parse_reference_flag("3+-0.5", None, None).tolerance, 0.5
         )
         for spec, relation, said in (
-            ("lines_mean", None, "KEY=VALUE"),
-            ("k=abc", None, "are numbers"),
-            ("k=0.2", None, "names no tolerance"),
-            ("k=0.2±0.1", "at_least", "takes no tolerance"),
-            ("k=0.2±-0.1", None, "finite number >= 0"),
+            # the key of 0.23's `KEY=VALUE` is the [kept] key's now
+            ("lines_mean=0.62±0.01", None, "the key compared is the kept number's"),
+            ("abc", None, "are numbers"),
+            ("0.2", None, "names no tolerance"),
+            ("0.2±0.1", "at_least", "takes no tolerance"),
+            ("0.2±-0.1", None, "finite number >= 0"),
         ):
             with self.subTest(spec=spec), self.assertRaises(console.Refused) as caught:
                 scaffold.parse_reference_flag(spec, relation, None)
@@ -1164,8 +1163,12 @@ class Exp(unittest.TestCase):
                     *argv,
                     "--kind",
                     "compute",
+                    "--kept",
+                    "lines_mean",
+                    "--unit",
+                    "lines",
                     "--reference",
-                    "lines_mean=0.62±0.01",
+                    "0.62±0.01",
                     "--reference-source",
                     "the task",
                 ],
@@ -1175,9 +1178,11 @@ class Exp(unittest.TestCase):
         proto = self.area() / "PROTOCOL-foo-bar.md"
         text = proto.read_text(encoding="utf-8")
         self.assertEqual(protocol_block.reference(text), ref)
+        self.assertEqual(protocol_block.kept_key(text), "lines_mean")
         self.assertIn(
-            'preflight_audit = ""\n\n[reference]\nkey = "lines_mean"\nvalue = 0.62\n'
-            'tolerance = 0.01\nrelation = "within"\nsource = "the task"\n',
+            'preflight_audit = ""\n\n[kept]\nkey = "lines_mean"\nunit = "lines"\n\n'
+            '[reference]\nvalue = 0.62\ntolerance = 0.01\nrelation = "within"\n'
+            'source = "the task"\n',
             text,
         )
         self.assertEqual(
@@ -1220,6 +1225,67 @@ class Exp(unittest.TestCase):
         self.assertEqual(exited.exception.code, 2)
         self.assertIn("go with --reference", err.getvalue())
 
+    def test_the_kept_number_is_stamped_for_a_computation_and_refused_on_a_bar(
+        self,
+    ) -> None:
+        """A computation's head carries `[kept]`: `--kept KEY --unit UNIT`
+        stamp it filled, without them it stands as placeholders the checks
+        name unfilled; a fit or an apply is refused with nothing written, and
+        a key of two words is refused before anything is written."""
+        argv = ["exp", "hrv", "--repo", str(self.root), "--repeat-cost", "low"]
+        self.assertEqual(
+            quiet(
+                scaffold.main,
+                [*argv, "--kind", "compute", "--kept", "HRV_MeanNN", "--unit", "ms"],
+            ),
+            0,
+        )
+        (area,) = (self.root / "experiments").glob("*-hrv")
+        text = (area / "PROTOCOL-hrv.md").read_text(encoding="utf-8")
+        self.assertEqual(
+            protocol_block.kept(text), protocol_block.Kept("HRV_MeanNN", "ms")
+        )
+        head = protocol_block.head(text)
+        self.assertEqual(protocol_check.kept_gaps(text, head), [])
+        # the twin: no flags, both placeholders, named unfilled
+        quiet(scaffold.stamp_area, self.root, "open", "low", kind="compute")
+        (open_area,) = (self.root / "experiments").glob("*-open")
+        open_text = (open_area / "PROTOCOL-open.md").read_text(encoding="utf-8")
+        self.assertEqual(
+            protocol_block.kept(open_text), protocol_block.Kept(None, None)
+        )
+        missing = protocol_check.check_fields(open_text).missing_must
+        self.assertIn("[kept] key", missing)
+        self.assertIn("[kept] unit", missing)
+        for kind in ("fit", "apply"):
+            with self.subTest(kind=kind), self.assertRaises(console.Refused) as caught:
+                scaffold.stamp_area(
+                    self.root,
+                    "fitted",
+                    "low",
+                    kind=kind,
+                    kept=protocol_block.Kept("n", "1"),
+                )
+            self.assertIn(
+                "binds its answer through its promise keys", caught.exception.why
+            )
+            self.assertEqual(list((self.root / "experiments").glob("*-fitted")), [])
+        # a fit stamped without it carries no [kept]
+        quiet(scaffold.stamp_area, self.root, "fit-plain", "low", kind="fit")
+        (fit_area,) = (self.root / "experiments").glob("*-fit-plain")
+        self.assertIsNone(
+            protocol_block.kept(
+                (fit_area / "PROTOCOL-fit-plain.md").read_text(encoding="utf-8")
+            )
+        )
+        with self.assertRaises(console.Refused) as caught:
+            scaffold.parse_kept_flags("two words", "ms")
+        self.assertIn("one word", caught.exception.why)
+        self.assertEqual(
+            scaffold.parse_kept_flags("n", None), protocol_block.Kept("n", None)
+        )
+        self.assertIsNone(scaffold.parse_kept_flags(None, None))
+
     def test_explore_refuses_the_flags_of_an_area_stamp(self) -> None:
         """`--explore` dropped `--kind`, `--repeat-cost`, `--model` and
         `--report` without a word: the person believed them stamped. Each is
@@ -1233,7 +1299,9 @@ class Exp(unittest.TestCase):
             ["--model"],
             ["--report"],
             ["--report-file", "REPORT.md"],
-            ["--reference", "k=1±0.1"],
+            ["--reference", "1±0.1"],
+            ["--kept", "n"],
+            ["--unit", "ms"],
         ):
             with self.subTest(extra=extra):
                 err = io.StringIO()

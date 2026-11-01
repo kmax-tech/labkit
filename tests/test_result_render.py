@@ -87,7 +87,7 @@ class Rendering(unittest.TestCase):
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
             r.recorded_results,
-            f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: criterion_1_accuracy = 0.83 (run {RUN}); "
+            f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1; also recorded: criterion_1_accuracy = 0.83 (run {RUN}); "
             "subject to 1 recorded limitation (the Limitation lines below)",
         )
         ((label, value),) = r.limits
@@ -102,7 +102,7 @@ class Rendering(unittest.TestCase):
         r = result_render.rendering(area, text, area / "runs" / RUN)
         self.assertEqual(
             r.recorded_results,
-            f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: criterion_1_accuracy = 0.83 (run {RUN})",
+            f"criterion-1 met; quality-check-1 met; quality-check-2 met · recorded: kept number: n = 1; also recorded: criterion_1_accuracy = 0.83 (run {RUN})",
         )
         self.assertEqual(r.limits, ())
 

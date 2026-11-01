@@ -247,7 +247,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         sha = self._commit(REGISTRATION.replace("", ""))
         self.proto.write_text(
             self.proto.read_text(encoding="utf-8").replace(
-                'standard = "0.23"', 'standard = "0.21"'
+                'standard = "0.24"', 'standard = "0.21"'
             ),
             encoding="utf-8",
         )
@@ -483,7 +483,7 @@ ALL_ROADS = (
     "- **Exclusions / filters:** areas outside the buffer\n"
     "- **Unit:** a fraction of the buffer's area\n"
 )
-REFERENCE = 'key = "percentage_deforestation"\nvalue = 0.62\ntolerance = 0.01\nrelation = "within"\n'
+REFERENCE = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
 
 
 class ScopeAsFirstMeasured(_Repository):
@@ -498,7 +498,11 @@ class ScopeAsFirstMeasured(_Repository):
     FIRST = "2026-10-07T09-25-31_98dd"
 
     def _register(
-        self, fields: str, reference: str = REFERENCE, result: str = RUN
+        self,
+        fields: str,
+        reference: str = REFERENCE,
+        result: str = RUN,
+        kept: tuple[str, str] = ("percentage_deforestation", "1"),
     ) -> str:
         self.proto.write_text(
             head(
@@ -507,6 +511,7 @@ class ScopeAsFirstMeasured(_Repository):
                 promises=None,
                 reference=reference,
                 result=result,
+                kept=kept,
             )
             + fields,
             encoding="utf-8",
@@ -556,13 +561,23 @@ class ScopeAsFirstMeasured(_Repository):
         self.assertIn("value = 0.62", line)
         self.assertIn("value = 0.48", line)
 
+    def test_the_kept_key_named_anew_after_the_first_measurement_is_held(self):
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        self._run(self._register(ALL_ROADS, kept=("roads_total", "1")), RUN)
+        (line,) = self._changes()
+        self.assertIn("[kept]", line)
+        self.assertIn('key = "percentage_deforestation"', line)
+        self.assertIn('key = "roads_total"', line)
+
     def test_a_first_measurement_whose_reference_did_not_read_yet_still_holds_the_fields(
         self,
     ):
         """Labor-21 r3: the first runs started on a commit whose [reference]
         did not parse, the table was repaired, the fields rewritten later —
         the fields are compared whatever the head held then."""
-        broken = 'key = "percentage_deforestation"\nvalue = 0.62\ntolerance = 0.01\nrelation = "within"\nunit = "fraction"\n'
+        broken = (
+            'value = 0.62\ntolerance = 0.01\nrelation = "within"\nunit = "fraction"\n'
+        )
         self._run(self._register(ALL_ROADS, reference=broken), self.FIRST)
         narrowed = ALL_ROADS.replace(
             "roads.geojson and", "roads.geojson (BR highways only) and"

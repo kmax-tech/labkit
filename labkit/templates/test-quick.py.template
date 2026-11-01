@@ -25,15 +25,15 @@ _spec.loader.exec_module(measure)
 
 #: TODO: a case you checked by hand — one or more rows in the shape rows()
 #: returns, the ids they answer, and the number(s) evaluate_rows() must give
-#: for them under their metrics keys, METRIC_KEY among them — worked out by
-#: hand, never by calling the code
+#: for them under their metrics keys, the head's `[kept] key` among them
+#: (`measure.metric_key()`) — worked out by hand, never by calling the code
 KNOWN_IDS: list[str] = []
 KNOWN_ROWS: list[dict] = []
 KNOWN_METRICS: dict = {}
 
 
 def test_known_rows_give_the_known_number():
-    assert len(KNOWN_ROWS) >= 1 and measure.METRIC_KEY in KNOWN_METRICS, (
+    assert len(KNOWN_ROWS) >= 1 and measure.metric_key() in KNOWN_METRICS, (
         "fill KNOWN_IDS, KNOWN_ROWS and KNOWN_METRICS with a case checked by hand"
     )
     metrics = measure.evaluate_rows(KNOWN_ROWS, KNOWN_IDS)

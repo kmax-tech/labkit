@@ -49,7 +49,8 @@ class Stamp(unittest.TestCase):
         )
         self.assertEqual(stamp["kind"], "fit")
         compute = protocol_check.registration_stamp(_protocol("compute"))
-        self.assertEqual(list(compute), ["kind", "Question / hypothesis"])
+        # a computation's [kept] is part of its registration (standard 0.24)
+        self.assertEqual(list(compute), ["kind", "kept", "Question / hypothesis"])
 
     def test_a_reflowed_field_keeps_its_stamp_and_a_reworded_one_does_not(self):
         text = _protocol()

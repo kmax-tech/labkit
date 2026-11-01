@@ -29,7 +29,7 @@ cd "$LAB"
 V=.venv/bin
 run git log --oneline
 
-say "2. the measurement: the skeleton's TODOs filled (four constants, three functions)"
+say "2. the measurement: the skeleton's TODOs filled (two constants, three functions)"
 "$V/python" - <<'EOF'
 import re
 from pathlib import Path
@@ -39,7 +39,6 @@ s = p.read_text(encoding="utf-8")
 consts = {
     "SOURCE": 'REPO / "data" / "raw" / "cases.jsonl"',
     "INPUTS": 'REPO / "data" / "raw" / "inputs"',
-    "METRIC_KEY": '"mean_docs_per_case"',
 }
 for name, value in consts.items():
     s, n = re.subn(rf"^{name} = .*$", f"{name} = {value}", s, count=1, flags=re.M)
@@ -61,7 +60,7 @@ bodies = {
         "    return out"
     ),
     'raise NotImplementedError("evaluate_rows(): compute the number(s) from items")': (
-        "return {METRIC_KEY: sum(r['n_docs'] for r in items) / len(items)}"
+        "return {'mean_docs_per_case': sum(r['n_docs'] for r in items) / len(items)}"
     ),
 }
 for old, new in bodies.items():
@@ -79,12 +78,13 @@ for stamped, filled in (
     assert stamped in u, stamped
     u = u.replace(stamped, filled, 1)
 t.write_text(u, encoding="utf-8")
-print("filled: SOURCE, INPUTS, METRIC_KEY, expected_ids(), rows(), evaluate_rows(), the test's hand-checked case")
+print("filled: SOURCE, INPUTS, expected_ids(), rows(), evaluate_rows(), the test's hand-checked case")
 EOF
 run "$V/code-check" "$AREA"
 
 say "3. the registration, written before the run (the fields the low cut owes: protocol-check --contract)"
 run "$V/protocol-fill" "$P" type=exploratory \
+    kept.key=mean_docs_per_case kept.unit=documents \
     "Terms of this protocol=n/a — no coinage" \
     "Question / hypothesis=What is the mean number of input documents per case over the cases in data/raw/cases.jsonl?" \
     "Data / scope=data/raw/cases.jsonl (12 cases); a case's documents are the files under data/raw/inputs/<case_id>/" \
@@ -150,7 +150,7 @@ fi
 echo "   refused, as it must be: the block differs from what the protocol renders"
 run git checkout -q REPORT.md
 echo "   retyping 3.5 as 3.6 in the protocol's Recorded results line"
-sed -i.bak 's/mean_docs_per_case = 3\.5 (run/mean_docs_per_case = 3.6 (run/' "$P" && rm "$P.bak"
+sed -i.bak 's/mean_docs_per_case = 3\.5 documents/mean_docs_per_case = 3.6 documents/' "$P" && rm "$P.bak"
 printf '$ %s\n' "$V/report-check $AREA"
 if "$V/report-check" "$AREA"; then
     echo "UNEXPECTED: the retyped Recorded results passed"; exit 1

@@ -592,7 +592,9 @@ class IfReported(unittest.TestCase):
         reopened — the hook read the tree and passed the commit (audit
         2026-10-19)."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=True,
         )
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
@@ -619,7 +621,9 @@ class IfReported(unittest.TestCase):
 
     def test_staged_names_the_index_as_the_state_held(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=True,
         )
         code, out = self._staged_gate(area.parent.parent, area / "PROTOCOL-x.md")
         self.assertEqual(code, 0, out)
@@ -629,7 +633,9 @@ class IfReported(unittest.TestCase):
         """A script modified and one untracked under a reported number: the
         stations would judge a state the commit does not hold."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=True,
         )
         root = area.parent.parent
         (area / "scripts" / "02_analyze.py").write_text(
@@ -649,7 +655,9 @@ class IfReported(unittest.TestCase):
         not in the index: the commit keeps the protocol, so the gate holds
         it — the search for protocols read the tree and found none."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=True,
         )
         root = area.parent.parent
         script = area / "scripts" / "02_analyze.py"
@@ -694,7 +702,7 @@ class IfReported(unittest.TestCase):
         """lib/scoring.py lies in no area; an area whose script imports it is
         touched by its change, and one that does not is not."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})",
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
             git=False,
         )
@@ -739,7 +747,8 @@ class IfReported(unittest.TestCase):
         """The protocol untouched, a script under it edited: the analysis
         audit saw other code, and both hooks passed it (audit 2026-10-19)."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
         )
         script = area / "scripts" / "02_analyze.py"
         code, out = self._gate(area, script)
@@ -784,7 +793,8 @@ class IfReported(unittest.TestCase):
     def test_a_reported_full_run_passes(self):
         code, out = self._gate(
             self._area(
-                f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+                f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+                declared=self.RUN,
             )
         )
         self.assertEqual(code, 0, out)
@@ -795,7 +805,7 @@ class IfReported(unittest.TestCase):
         """Third haiku round, t3 and t5: the probe's number, written back."""
         code, out = self._gate(
             self._area(
-                f"criterion-1 met · recorded: (run {self.RUN})",
+                f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
                 declared=self.RUN,
                 run_kind="probe",
             )
@@ -815,7 +825,7 @@ class IfReported(unittest.TestCase):
     def test_a_reported_run_without_its_analysis_audit_blocks(self):
         code, out = self._gate(
             self._area(
-                f"criterion-1 met · recorded: (run {self.RUN})",
+                f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
                 declared=self.RUN,
                 audited=False,
             )
@@ -850,7 +860,7 @@ class RegisteredReport(unittest.TestCase):
         git: bool = False,
     ) -> Path:
         return self._fixture(
-            f"criterion-1 met · recorded: (run {self.RUN})",
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=declared,
             git=git,
             report=report,

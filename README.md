@@ -60,7 +60,7 @@ An **area** is a directory for one question, its protocol, scripts, outputs
 and runs. Create one from the repo root:
 
 ```bash
-.venv/bin/labkit-init exp document-count --repeat-cost low --kind compute
+.venv/bin/labkit-init exp document-count --repeat-cost low --kind compute --kept docs_mean --unit documents
 ```
 
 In a fresh repo this creates `experiments/01-document-count/` and its test
@@ -265,7 +265,8 @@ labkit-next AREA [--protocol FILE]    # where the area stands, the one next step
 labkit-next --guide                   # the workflow in full (labkit/docs/agent-guide.md), which the stamped AGENTS.md keeps short
 labkit-adopt AREA [RUN] [--protocol FILE]  # adopt the run: --from-run, the registered report's --into, report-check — stops at the first that does not pass
 labkit-init exp NAME [--repeat-cost T] --kind compute|fit|apply [--model ALIAS] [--report] [--report-file PATH] [--explore]
-labkit-init exp NAME --kind compute --reference KEY=VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT] # a computation compared with a stated value: the head's [reference]
+labkit-init exp NAME --kind compute [--kept KEY] [--unit UNIT] # a computation's kept number: the head's [kept] (metrics key and unit; placeholders for protocol-fill without them)
+labkit-init exp NAME --kind compute --kept KEY --reference VALUE[±TOL] [--relation within|at_least|at_most] [--reference-source TEXT] # a computation compared with a stated value: the head's [reference], on the [kept] key
 labkit-init exp NAME --kind KIND --change-kind # another kind before the first measurement, written fields kept
 labkit-init numbers [--staged]      # one number per area (--staged: the index); the next free one over every branch and worktree
 protocol-check PROTOCOL             # check required fields and promise tables
@@ -338,6 +339,7 @@ its protocol. The [promise format](docs/promise-block.md) and
 | **intent id** | Identifier of a checked promise: `[criterion-1]`, `[quality-check-1]`, `[branch-1]`, etc. |
 | **bundle** | Protocol, code and extracted facts packed by `code-check --bundle` for an agent the lab runs on it; labkit ships none. |
 | **frozen** | Protocol committed to its declared specification, with `frozen = true`. |
+| **kept number** | The one number a protocol reports. A computation names it in the head's `[kept]` table (`key`, its metrics.json key; `unit`); the compute skeleton reads the key from there, finalize refuses an answering run that does not hold it as a finite number, and the Recorded results line names it first with its unit. Bound by name, not by meaning: what the number under the key is stays the tests' and the audit's to judge. A fit or an apply binds its answer through its promise keys. |
 | **kind** | What the kept number asserts, in the head (`kind`): `compute` judges no prediction, `fit` judges a model trained or adjusted in the experiment, `apply` judges a model used unchanged. The registration and the skeleton follow it; a run that only produces predictions declares no result and needs none. |
 | **number_describes** | `[model]` key of a `compute` with a model in the loop: `model_outputs` (the number describes what the model marked) or `target_property` (a property of the data, the model as annotator). |
 | **annotation validity** | Evidence that a model suits as annotator, owed with `target_property` (`[model] annotation_validity`): an apply protocol of the repo with an adopted result, bound by protocol-check and preflight, or a DOI, checked for its form only; whether it carries the annotation stays the audit's. |

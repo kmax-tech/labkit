@@ -284,7 +284,9 @@ class ReportFiles(unittest.TestCase):
     def _reported(self, git: bool = False) -> tuple[Path, Path]:
         """(the repo root, its REPORT.md with the declared result's block)."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN, git=git
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=git,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -323,13 +325,17 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_block_of_a_run_no_protocol_declares_blocks(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
         report.write_text(
             report_blocks.with_block(
-                "", P, self.RUN, f"criterion-1 met · recorded: (run {self.RUN})"
+                "",
+                P,
+                self.RUN,
+                f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             ),
             encoding="utf-8",
         )
@@ -343,7 +349,7 @@ class ReportFiles(unittest.TestCase):
         """A block of an area whose chain fails blocks the report: here the
         run is a probe, and the report lies outside every area."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})",
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
             run_kind="probe",
         )
@@ -351,7 +357,10 @@ class ReportFiles(unittest.TestCase):
         report = root / "REPORT.md"
         report.write_text(
             report_blocks.with_block(
-                "", P, self.RUN, f"criterion-1 met · recorded: (run {self.RUN})"
+                "",
+                P,
+                self.RUN,
+                f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             ),
             encoding="utf-8",
         )
@@ -364,7 +373,7 @@ class ReportFiles(unittest.TestCase):
         its protocol's chain is held as for a block (here: a probe), and the
         block it owes is named."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})",
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
             run_kind="probe",
         )
@@ -382,7 +391,8 @@ class ReportFiles(unittest.TestCase):
         here — the missing block alone blocks, and the sentence carries the
         command with the paths as the report names them."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
         )
         root = area.parent.parent
         report = root / "notes" / "REPORT.md"
@@ -422,7 +432,8 @@ class ReportFiles(unittest.TestCase):
         a block that stood there, while the block's own check resolved the
         path and accepted it (reference pilot 2026-11-01, task 34)."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -445,7 +456,7 @@ class ReportFiles(unittest.TestCase):
         protocol declares it; nothing is owed, nothing blocks. A probe's
         number could not be reported, so its citation is no promotion."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})",
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=None,
             run_kind="probe",
         )
@@ -465,7 +476,8 @@ class ReportFiles(unittest.TestCase):
         """A run that is not the one every gate holds the protocol to — here
         an older full run — is an exploration's run: the warning, no block."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         older = "2026-10-06T10-00-00_aa11"
         completed_run(area, older, metrics={"criterion_1_pass": False})
@@ -532,7 +544,8 @@ class ReportFiles(unittest.TestCase):
         answering run that declares no result blocks, wherever the report
         lies; the sentence names the adoption and the discussion block."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "notes" / "REPORT.md"
@@ -565,7 +578,8 @@ class ReportFiles(unittest.TestCase):
         the citation is held as the promotion, the sentence names the
         discussion block."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -586,7 +600,8 @@ class ReportFiles(unittest.TestCase):
         why. No blocker, no exploration warning — the report says so; the
         review is named."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -616,7 +631,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_claim_holds_and_a_later_clean_draw_does_not_release(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -653,7 +669,9 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_clean_review_of_the_tree_does_not_release_another_staged_report(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
+            git=True,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -681,7 +699,9 @@ class ReportFiles(unittest.TestCase):
         commit did not hold. At the commit the area's tree must be the
         index's."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
+            git=True,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -703,7 +723,9 @@ class ReportFiles(unittest.TestCase):
         """Review 2026-10-26: only a source of the review changed — the
         report untouched — and the commit passed with a stale review."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
+            git=True,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -729,7 +751,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_discussion_without_its_why_or_edited_by_hand_blocks(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -750,7 +773,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_discussion_of_a_run_its_protocols_area_lacks_blocks(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -776,7 +800,8 @@ class ReportFiles(unittest.TestCase):
         named when they state numbers; a number in another paragraph is only
         among the unsourced ones. Nothing blocks."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -811,7 +836,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_discuss_refuses_a_declared_run_and_a_run_the_area_lacks(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=self.RUN
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
         )
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "is the protocol's adopted result"):
@@ -822,7 +848,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_discuss_needs_why_and_into(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         proto = str(area / "PROTOCOL-x.md")
         for argv in (
@@ -838,7 +865,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_discuss_writes_then_replaces_its_block_and_keeps_others(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -880,7 +908,8 @@ class ReportFiles(unittest.TestCase):
         and the gate refused the report (audit 2026-10-27, C15). A lone
         surrogate ended in a traceback; it is refused, nothing written."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -943,7 +972,7 @@ class ReportFiles(unittest.TestCase):
         report.write_text(written, encoding="utf-8")
         self.assertEqual(
             [(b.run_id, b.body) for b in report_blocks.blocks(written)],
-            [(new, f"criterion-1 missed · recorded: (run {new})")],
+            [(new, f"criterion-1 missed · recorded: kept number: n = 1 (run {new})")],
         )
         _, out = self._gate(root, report)
         self.assertNotIn("the result block of", out)
@@ -966,7 +995,8 @@ class ReportFiles(unittest.TestCase):
 
     def test_into_refuses_without_a_declared_run(self):
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
         )
         text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
         with self.assertRaisesRegex(
@@ -983,7 +1013,9 @@ class ReportFiles(unittest.TestCase):
         held again. Now a protocol whose declaration differs from HEAD's
         reaches the committed reports citing that run."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
+            git=True,
         )
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -1052,7 +1084,9 @@ class ReportFiles(unittest.TestCase):
         protocol now declares — held, and clean. A protocol staged again
         with the declaration HEAD already holds reaches nothing."""
         area = self._area(
-            f"criterion-1 met · recorded: (run {self.RUN})", declared=None, git=True
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=None,
+            git=True,
         )
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"

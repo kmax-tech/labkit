@@ -18,7 +18,9 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
+from labkit.formats import protocol_block
 from labkit.tools import scaffold
+from labkit.tools.protocol_edit import fill_many
 
 
 def stamp_compute_area(case: unittest.TestCase) -> tuple[Path, ModuleType]:
@@ -102,7 +104,6 @@ class FillList(unittest.TestCase):
             sorted(blanks),
             [
                 "INPUTS",
-                "METRIC_KEY",
                 "SOURCE",
                 "deliverable_rows",
                 "evaluate_rows",
@@ -113,20 +114,34 @@ class FillList(unittest.TestCase):
         for name in blanks:
             self.assertIn(name, doc, name)
         self.assertNotRegex(doc, r"\b(three|four|five) TODOs\b")
+        # the kept number's key is the head's, never a constant to fill here
+        self.assertNotIn("METRIC_KEY", text)
+        self.assertIn("`[kept]`", doc)
 
 
 class KeptNumber(unittest.TestCase):
-    """The kept number (METRIC_KEY) is a number. Reference pilot trial 2,
-    task 34 (2026-11-01): METRIC_KEY named a flag, `hrv_computed = True`
-    became the adopted result while the protocol's Unit named HRV_MeanNN.
-    The run and `--check` (`metrics_of`) and the area's test refuse a bool,
-    a text or a missing key, naming the key; the twin, a numeric kept
-    number, passes all three."""
+    """The kept number is the one the head's `[kept] key` names, and a
+    number. Reference pilot trial 2, task 34 (2026-11-01): the script's
+    METRIC_KEY named a flag, `hrv_computed = True` became the adopted result
+    while the protocol's Unit named HRV_MeanNN. The skeleton reads the key
+    from the head (`metric_key`); the run and `--check` (`metrics_of`) and
+    the area's test refuse a bool, a text or a missing key, naming the key;
+    the twin, a numeric kept number, passes all three."""
 
     ROWS = [{"id": "s1", "mean_nn": 812.5, "computed": True}]
 
     def setUp(self) -> None:
         self.root, self.measure = stamp_compute_area(self)
+        self.protocol = self.root / "experiments" / "01-docs" / "PROTOCOL-docs.md"
+        self.stamped = self.protocol.read_text(encoding="utf-8")
+
+    def keep(self, key: str) -> None:
+        """The head's `[kept]` names KEY, unit ms — as `protocol-fill
+        PROTOCOL kept.key=KEY kept.unit=ms` writes it."""
+        self.protocol.write_text(
+            fill_many(self.stamped, [("kept.key", key), ("kept.unit", "ms")]),
+            encoding="utf-8",
+        )
 
     def evaluating(self, key: str) -> None:
         def evaluate_rows(items: list[dict], ids: list[str]) -> dict:
@@ -136,8 +151,28 @@ class KeptNumber(unittest.TestCase):
                 "unit": "ms",
             }
 
-        setattr(self.measure, "METRIC_KEY", key)
+        self.keep(key)
         setattr(self.measure, "evaluate_rows", evaluate_rows)
+
+    def test_the_key_is_read_from_the_head(self) -> None:
+        self.keep("hrv_mean_nn")
+        self.assertEqual(self.measure.metric_key(), "hrv_mean_nn")
+
+    def test_a_placeholder_or_a_missing_table_is_refused_naming_kept(self) -> None:
+        self.assertEqual(
+            protocol_block.kept(self.stamped), protocol_block.Kept(None, None)
+        )
+        with self.assertRaisesRegex(
+            ValueError, r"\[kept\] key is still the placeholder"
+        ):
+            self.measure.metric_key()
+        start = self.stamped.index("[kept]")
+        end = self.stamped.index('unit = "<unit>"\n') + len('unit = "<unit>"\n')
+        self.protocol.write_text(
+            self.stamped[:start] + self.stamped[end:], encoding="utf-8"
+        )
+        with self.assertRaisesRegex(ValueError, r"no \[kept\] table"):
+            self.measure.metric_key()
 
     def test_a_flag_text_or_missing_key_is_refused_naming_the_key(self) -> None:
         for key, says in (
@@ -162,9 +197,8 @@ class KeptNumber(unittest.TestCase):
         stamped_script = script.read_text(encoding="utf-8")
         stamped_test = test.read_text(encoding="utf-8")
         evaluate = '    raise NotImplementedError("evaluate_rows(): compute the number(s) from items")\n'
-        metric_key = 'METRIC_KEY = "TODO_number"'
         self.assertEqual(stamped_script.count(evaluate), 1)
-        self.assertEqual(stamped_script.count(metric_key), 1)
+        self.assertNotIn("METRIC_KEY", stamped_script)
         filled = stamped_script.replace(
             evaluate,
             '    return {"hrv_mean_nn": items[0]["mean_nn"], "hrv_computed": True}\n',
@@ -180,10 +214,8 @@ class KeptNumber(unittest.TestCase):
             ("hrv_mean_nn", "{'hrv_mean_nn': 812.5}", 0),
         ):
             with self.subTest(key=key):
-                script.write_text(
-                    filled.replace(metric_key, f'METRIC_KEY = "{key}"'),
-                    encoding="utf-8",
-                )
+                script.write_text(filled, encoding="utf-8")
+                self.keep(key)
                 test.write_text(
                     stamped_test.replace(
                         blanks,

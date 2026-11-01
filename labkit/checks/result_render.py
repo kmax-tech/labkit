@@ -8,7 +8,9 @@ criterion not assessable, so a criterion's own `True` never reads as a
 pass beside it (the repair case, 2026-10-27, K2). The declared run's other
 reported keys follow as recorded values — descriptive; the registered
 promises' keys stay in `metrics.json`, unchanged, and are not repeated as
-values —, then, for a computation whose head registers a `[reference]`,
+values —, a computation's kept number first, named with its unit
+(`kept number: HRV_MeanNN = 694.07 ms; also recorded: …`, `kept_phrase`;
+the head's `[kept]`), then, for a computation whose head registers a `[reference]`,
 the comparison as the run recorded it (`reference 0.62 ± 0.01 (within):
 not met, distance 0.145`, or `not comparable: <key> absent` — never a
 "met" the run did not record; `comparison_phrase`), then the run id and
@@ -51,26 +53,49 @@ class Rendering:
     limits: tuple[tuple[str, str], ...]  # (label, value) per limit, in record order
 
 
+def kept_phrase(key: str, value: object, unit: str) -> str:
+    """`kept number: KEY = VALUE UNIT` — the kept number as the Recorded
+    results line opens with it, VALUE written as the run recorded it (as
+    `recheck.plain_numbers` writes it); a dimensionless UNIT
+    (`protocol_block.DIMENSIONLESS`) writes no unit."""
+    suffix = "" if unit == protocol_block.DIMENSIONLESS else f" {unit}"
+    return f"kept number: {key} = {value}{suffix}"
+
+
 def recorded_results_line(
     metrics: dict,
     run_id: str,
     verdict_keys: frozenset[str] = frozenset(),
     comparison: str = "",
+    kept: protocol_block.Kept | None = None,
 ) -> str:
     """`key = value, …; reference … (run <id>)` — every reported key and
     value as the run recorded them but the registered promises' keys
     (VERDICT_KEYS, read as `verdicts`) and the reference verdict's
     (`reference.VERDICT_KEYS`, read as COMPARISON: the phrase of the
     comparison with a stated value, `reference.phrase`, "" without one),
-    so `recheck.cited` finds each number and the run id."""
-    kept = {
+    so `recheck.cited` finds each number and the run id. With KEPT, a
+    computation's `[kept]` whose key the run recorded, its value comes first
+    (`kept_phrase`) and the rest follows as `also recorded: …`; without it
+    (a fit, an apply, or a `[kept]` the run does not hold — finalize names
+    that) the values stand in the run's order."""
+    rest = {
         k: v
         for k, v in metrics.items()
         if k not in LABKIT_KEYS
         and k not in verdict_keys
         and k not in reference.VERDICT_KEYS
     }
-    body = ", ".join(f"{k} = {v}" for k, v in kept.items())
+    body = ", ".join(f"{k} = {v}" for k, v in rest.items())
+    if (
+        kept is not None
+        and kept.key is not None
+        and kept.unit is not None
+        and kept.key in rest
+    ):
+        first = kept_phrase(kept.key, rest.pop(kept.key), kept.unit)
+        also = ", ".join(f"{k} = {v}" for k, v in rest.items())
+        body = f"{first}; also recorded: {also}" if also else first
     if comparison:
         body = f"{body}; {comparison}" if body else comparison
     return f"{body} (run {run_id})" if body else f"(run {run_id})"
@@ -78,20 +103,31 @@ def recorded_results_line(
 
 def comparison_phrase(text: str, metrics: dict) -> str:
     """The comparison with the stated value TEXT's head registers
-    (`[reference]`), as METRICS recorded its verdict (`reference.phrase`),
-    or "": no table, a table that does not read, no verdict recorded, or
-    one that does not read — finalize names each of those
-    (`reference.comparison_gaps`); the rendering shows what can be shown."""
+    (`[reference]`, on the `[kept]` key), as METRICS recorded its verdict
+    (`reference.phrase`), or "": no table, a table that does not read, no
+    kept key, no verdict recorded, or one that does not read — finalize
+    names each of those (`reference.comparison_gaps`); the rendering shows
+    what can be shown."""
     try:
         ref = protocol_block.reference(text)
+        if ref is None or reference.STATE_KEY not in metrics:
+            return ""
+        key = protocol_block.kept_key(text)
     except protocol_block.BlockError:
         return ""
-    if ref is None or reference.STATE_KEY not in metrics:
-        return ""
     try:
-        return reference.phrase(metrics, ref)
+        return reference.phrase(metrics, ref, key)
     except ValueError:
         return ""
+
+
+def kept_of(text: str) -> protocol_block.Kept | None:
+    """TEXT's `[kept]` for the rendering, None where the head carries none
+    or it does not read — protocol-check and finalize name that."""
+    try:
+        return protocol_block.kept(text)
+    except protocol_block.BlockError:
+        return None
 
 
 def verdicts(
@@ -183,12 +219,15 @@ def _verdicts_and_values(
     `recorded_results_line`."""
     metrics = runs.read_metrics(runs.metrics_path(run))
     comparison = comparison_phrase(text, metrics)
+    kept = kept_of(text)
     try:
         block = promises.parse_block(text)
     except promises.PromiseError:
         block = None  # the head station names an unreadable block
     if block is None:
-        return "", recorded_results_line(metrics, run.name, comparison=comparison)
+        return "", recorded_results_line(
+            metrics, run.name, comparison=comparison, kept=kept
+        )
     unjudged: dict[str, str] = {}
     for label, _, effect in limits:
         for pid in findings.effect_ids(effect):
@@ -196,7 +235,7 @@ def _verdicts_and_values(
     keys = frozenset(p.key for p in block.promises)
     return (
         "; ".join(verdicts(block, metrics, unjudged)),
-        recorded_results_line(metrics, run.name, keys, comparison),
+        recorded_results_line(metrics, run.name, keys, comparison, kept),
     )
 
 

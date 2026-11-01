@@ -162,8 +162,8 @@ class HeadType(unittest.TestCase):
 
     def test_a_head_part_protocol_fill_does_not_write_names_where_it_is_written(self):
         for label, way in (
-            ("[reference]", "--reference KEY=VALUE"),
-            ("reference value", "--reference KEY=VALUE"),
+            ("[reference]", "--reference VALUE"),
+            ("reference value", "--reference VALUE"),
             ("[result] run", "labkit-adopt"),
             ("standard", "stamped and never edited"),
         ):
@@ -772,7 +772,9 @@ class Adopt(unittest.TestCase):
         rc, out, text = self._adopt(self._area())
         self.assertEqual(rc, 0, out)
         self.assertIn("report-check: all clear", out)
-        self.assertIn(f"criterion-1 met · recorded: (run {self.RUN})", text)
+        self.assertIn(
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})", text
+        )
         self.assertEqual(protocol_block.declared_run(text), self.RUN)
 
     def test_a_probe_is_refused_and_the_file_is_as_it_was(self):
@@ -836,7 +838,10 @@ class Adopt(unittest.TestCase):
             rc = protocol_fill.main([str(proto), "--from-run"])
         self.assertEqual(rc, 0)
         self.assertEqual(seen["state"], protocol_fill.report_check.PROPOSED)
-        self.assertIn(f"criterion-1 met · recorded: (run {self.RUN})", seen["text"])
+        self.assertIn(
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            seen["text"],
+        )
         # the protocol as it stood, kept beside it, then the proposal — each whole
         written = [c.args[0] for c in atomic.call_args_list]
         self.assertEqual(

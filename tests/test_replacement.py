@@ -298,7 +298,7 @@ class Gate(_Areas):
         )
         self.assertTrue(
             plain.recorded_results.startswith(
-                "criterion-1 missed; quality-check-1 met · recorded: criterion_1_score = 0.7"
+                "criterion-1 missed; quality-check-1 met · recorded: kept number: n = 1; also recorded: criterion_1_score = 0.7"
             )
         )
 

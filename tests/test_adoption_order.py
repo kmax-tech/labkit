@@ -37,7 +37,7 @@ class AdoptionOrder(unittest.TestCase):
         self.assertIsNone(adoption_order_note([]))
 
 
-HEAD = '```toml\n[protocol]\nstandard = "0.23"\nid = "p-0123456789abcdef"\ntype = "exploratory"\nrepeat_cost = "{cost}"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'
+HEAD = '```toml\n[protocol]\nstandard = "0.24"\nid = "p-0123456789abcdef"\ntype = "exploratory"\nrepeat_cost = "{cost}"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n```\n'
 
 
 class FirstStepBeforeARun(unittest.TestCase):
