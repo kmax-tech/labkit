@@ -22,6 +22,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.scope_sha import area_stamp, validation_note
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
+from labkit.formats.attempts import AttemptError, running, running_words
 from labkit.formats.failed_attempts import unproven_attempts
 from labkit.formats.findings import (
     AuditedState,
@@ -128,6 +129,14 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
                 f"answer whole (a safety stop or another model; "
                 f"{stopped[-1].path.name}); the same model is not tried again on "
                 f"this state: `labkit-audit <area> --mode {mode} --model <alias>`"
+            )
+        try:
+            under_way = running(area, mode)
+        except AttemptError:
+            under_way = []  # an unreadable journal is the evidence gates' finding
+        if under_way:
+            return f"no {mode} audit record covers the area yet — " + running_words(
+                under_way[-1]
             )
         # before any audit "a change after the audit" spoke of one that
         # never ran (audit 2026-10-27, third, I12)

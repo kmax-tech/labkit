@@ -46,7 +46,9 @@ areas.
 After reading the protocol, check the Intent MUST fields the head's `kind`
 owes: the question, and for a fit or an apply also the success criterion and
 the quality check — a `compute` owes neither. If one still holds a template placeholder (`<...>`),
-return only this line and stop:
+return only this line and stop. Only these fields decide it: the Result part,
+the Runs list and the Conclusion hold placeholders until `labkit-adopt` and
+the person write them after this audit.
 
 ```
 refused: protocol not filled — the audit reads the FILLED protocol (LAB-015 Preflight audit before freezing)
@@ -186,9 +188,12 @@ scope for this protocol: it names one of the ways under
 criterion to be correct, that IS the finding.
 
 **MODE analysis: read the result part as a stranger would.** After the
-findings, one pass over Summary, Result, Runs and Follow-up. Report at most
-seven `READ` lines, the worst first. They carry no failure scenario and do
-not enter the verdict:
+findings, one pass over Summary, Result, Runs and Follow-up as far as they
+are written. Report at most seven `READ` lines, the worst first. They carry
+no failure scenario and do not enter the verdict. This audit runs before the
+result is adopted: a placeholder in Recorded results, the Runs list or the
+Conclusion is no `READ` line — `labkit-adopt` writes the first two from the
+run, and the Conclusion follows it:
 
 - a Summary that does not open with the result, or intent ids, metric keys
   and run ids in the lines meant for a person
@@ -203,7 +208,7 @@ not enter the verdict:
 - a field holding the wrong kind of content, such as a prediction written
   after the outcome
 - tense that hides what was registered and what was done
-- a stamped placeholder still standing in a written-back protocol.
+- a stamped placeholder still standing in a field written before the run.
 
 ## Report format
 

@@ -421,6 +421,7 @@ def show_findings(area: Path, record: Path | None, protocol: Path | None = None)
     not stored.
 
         exit 0   nothing failed: the decisions shown are all there is
+        exit 3   no audit record yet, and an audit is running (named)
         exit 2   no audit record and no attempt (refused, nothing to
                  decide); an evidence error of the area (also with
                  RECORD); a failed call no completed audit covers;
@@ -429,6 +430,7 @@ def show_findings(area: Path, record: Path | None, protocol: Path | None = None)
                  handover does not settle it)
     """
     listing = _recovery_records(area, record)
+    under_way = _print_running(area)
     records, errors = listing.records, listing.errors
     failed, unrecorded = listing.failed, listing.unrecorded
     changed = listing.changed
@@ -437,6 +439,8 @@ def show_findings(area: Path, record: Path | None, protocol: Path | None = None)
     if not records and not errors and not failed and not unrecorded:
         if changed:
             return 2
+        if under_way:
+            return 3
         console.refuse(
             "labkit-audit",
             f"{area}: no audit record yet — nothing to decide; the area's "
@@ -459,6 +463,19 @@ def show_findings(area: Path, record: Path | None, protocol: Path | None = None)
         return 2 if changed else 0
     _print_handover_steps(area, blockers, protocol)
     return 2 if errors or failed or unrecorded or changed else 0
+
+
+def _print_running(area: Path) -> list[attempts.Attempt]:
+    """Print each audit of AREA under way (`attempts.running_words`) and
+    return them; none when the journal does not read — `--findings` lists
+    that error itself."""
+    try:
+        under_way = attempts.running(area)
+    except attempts.AttemptError:
+        return []
+    for a in under_way:
+        print(attempts.running_words(a))
+    return under_way
 
 
 def _print_problems(

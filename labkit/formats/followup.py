@@ -158,6 +158,23 @@ def earlier_blockers(
     ]
 
 
+def undecided_earlier(
+    records: list[Record], current: Callable[[Record], bool]
+) -> list[Member]:
+    """The heads that are BLOCKERs still open in a record not of the state
+    CURRENT tells — what a follow-up audit cannot judge, since it is shown
+    decided BLOCKERs only (`earlier_blockers`). An audit run over them
+    followed nothing up and owed one more (registered pilot part 1, 60-r3).
+    Raises what `chain` raises."""
+    return [
+        m
+        for m in chain(records).heads()
+        if m.finding.grade == "BLOCKER"
+        and m.finding.status == "open"
+        and not current(m.record)
+    ]
+
+
 def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Finding:
     """The open BLOCKER a new record carries for MEMBER after VERDICT did not
     find it resolved: the ORIGIN's text under one prefix naming what it

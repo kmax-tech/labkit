@@ -493,6 +493,27 @@ def _is_free(path: Path) -> bool:
         return True
 
 
+def running(area: Path, mode: str | None = None) -> list[Attempt]:
+    """The attempts of AREA (of MODE, when given) whose process holds its
+    lock now (`alive_of`): an audit under way, whose record is not written
+    yet. Raises AttemptError on a journal that does not read."""
+    attempts = read_journal(area)
+    alive = alive_of(area, attempts)
+    return [a for a in attempts if alive.get(a.id) is True and mode in (None, a.mode)]
+
+
+def running_words(a: Attempt) -> str:
+    """What an audit under way is, for the views that read the records: a
+    running audit read as "no audit record yet" and "none has run yet", and
+    agents started a second, polled or deleted records (registered pilot
+    part 1: 15, 34, 60)."""
+    return (
+        f"a {a.mode} audit is running — attempt {a.id} ({a.model}, started "
+        f"{a.started}); its record is written when it ends: wait for it, then "
+        f"read `--findings`, never start a second one"
+    )
+
+
 def alive_of(area: Path, attempts: list[Attempt]) -> dict[str, bool | None]:
     """Per attempt of AREA without an end: True while its process holds
     its lock, False when the lock is free, None when it started on another

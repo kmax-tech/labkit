@@ -87,6 +87,7 @@ from labkit.formats.gate import GUARANTEED, WARNING, GateFinding, coded, with_wa
 from labkit.formats.repo import (
     area_path,
     audit_command,
+    decide_command,
     no_such_area,
     shown,
 )
@@ -470,6 +471,8 @@ def main(argv: list[str]) -> int:
         for finding in early_for_tier(args.area, protocol, args.mode):
             console.progress("labkit-audit", finding.line)
         bound = bound_prompt(args.mode, args.area, reading)
+        if args.mode == ANALYSIS:
+            _refuse_undecided(args.area, bound, protocol)
         console.progress(
             "labkit-audit",
             f"{args.mode} · {protocol.name} · {len(code)} code file(s) "
@@ -487,6 +490,30 @@ def main(argv: list[str]) -> int:
     finally:
         if not running.ended:
             running.end("none", error="the command ended before the record")
+
+
+def _refuse_undecided(area: Path, bound: BoundPrompt, protocol: Path) -> None:
+    """Refuse an analysis audit, before the call, while an earlier analysis
+    record of another state holds a BLOCKER undecided: the follow-up is
+    shown decided BLOCKERs only, so the call would judge none of them and
+    leave one more audit owed (registered pilot part 1, 60-r3: a third
+    audit, and the limit came during it). Raises AuditError naming each
+    with the command that decides it."""
+    records = [r for r in findings.area_records(area) if r.mode == ANALYSIS]
+    open_heads = followup.undecided_earlier(records, lambda r: r.state == bound.state)
+    if not open_heads:
+        return
+    raise AuditError(
+        f"{len(open_heads)} BLOCKER(s) of an earlier analysis audit stand "
+        f"undecided ({', '.join(m.ref for m in open_heads)}) — a follow-up "
+        f"judges decided ones only, so this call would follow nothing up",
+        fix="decide each first ("
+        + "; ".join(
+            f"`{decide_command(area, m.n, 'STATUS', '<why>', m.record.path.name, protocol=protocol)}`"
+            for m in open_heads
+        )
+        + "), then run the audit again",
+    )
 
 
 def _record(

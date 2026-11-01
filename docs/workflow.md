@@ -186,7 +186,10 @@ run audited moves nothing; and with the setup's prose the audit read
 Unit), so a description corrected in place is followed up too. The fields
 written after the audit (the Summary, Recorded results, the Limitation lines,
 the run list) are not bound. The person decides every finding; labkit stores the
-decision and never makes one. An accepted BLOCKER says its effect: the
+decision and never makes one. An earlier analysis record's BLOCKERs are decided
+before the next analysis audit: a follow-up is shown decided BLOCKERs only, so
+`labkit-audit --mode analysis` refuses, before the call, while one stands
+undecided in a record of another state, naming the `--decide` line of each. An accepted BLOCKER says its effect: the
 verdicts stand within the limit (`stands`), or the run cannot judge the
 named promise (`not assessable`) — where the protocol registers one: a
 computation has no [[promise]] table, `--decide` refuses every id there,

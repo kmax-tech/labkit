@@ -58,6 +58,26 @@ pins (`requirements.txt` / `requirements.lock`).
     "another alias" and named none, and `--findings` offered only the
     handover (15-r2 handed over a run that passed every other check, 15-r3
     guessed an alias models.toml lacks).
+- **An audit under way is named where the records are read.** `--findings`
+  prints `a <mode> audit is running — attempt <id> …` first and exits 3
+  when no record exists yet; adopt's audit gap says the same instead of
+  "none has run yet" (`attempts.running`). A running audit had read as "no
+  audit record yet", and agents started a second, polled, or deleted the
+  records (registered pilot, part 1: 15, 34, 60).
+- **`labkit-audit --mode analysis` refuses, before the call, while an
+  earlier analysis record's BLOCKER stands undecided** in a record of
+  another state (`followup.undecided_earlier`), naming each `--decide`
+  line: a follow-up is shown decided BLOCKERs only, so the call followed
+  nothing up and one more audit was owed (60-r3: the third audit, and the
+  limit came during it).
+- **The analysis audit gives no READ line on a placeholder that adopt or
+  the person writes after it** (Recorded results, the Runs list, the
+  Conclusion), and its refusal precondition reads the Intent MUST fields
+  only. Agents hand-filled those fields before adoption, and the next audit
+  flagged the hand-written lines (21, 34); haiku refused an audit over the
+  Result's placeholder (15-r1).
+- **A live run whose script cannot be checked (no `ps`) is shown as
+  running** in `runlog <area>`, never to have its lock deleted.
 - **`runlog --wait` waits for the open run past an earlier failure.** A
   crashed run beside an open one ended the wait at once with exit 2 and
   named only the crash; a start refused by the open run's output lock

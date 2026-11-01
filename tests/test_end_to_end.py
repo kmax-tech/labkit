@@ -1023,6 +1023,8 @@ class CorrectedDescription(CountCommands):
         """The twin of the binding: the Conclusion and the adoption's own
         lines are not bound, so the usual audit-then-adopt order holds."""
         self.describe(self.RIGHT)
+        # decided before the next audit, which a follow-up then judges
+        self.decide(self.blocking, 1, "fixed", "Data / scope corrected")
         rc, out, _ = self.analysis(self.clean)
         self.lab.fill(
             self.protocol, "Conclusion=Three documents hold 3.0 lines on average."

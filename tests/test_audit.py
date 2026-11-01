@@ -572,6 +572,39 @@ class Audit(unittest.TestCase):
             or "",
         )
 
+    def test_a_running_audit_is_named_where_the_records_are_read(self):
+        """A running audit read as "no audit record yet" (--findings) and
+        "none has run yet" (adopt's gap); agents started a second, polled
+        and deleted records (registered pilot part 1: 15, 34, 60)."""
+        area = repo_with()
+        stamp = scope_sha.area_stamp(area)[0]
+        block = promises.NO_BLOCK
+        running = attempts.begin(
+            area, "preflight", "opus", stamp, block_sha=block, protocol=None
+        )
+        try:
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = audit.main([str(area), "--findings"])
+            self.assertEqual(rc, 3, err.getvalue())
+            self.assertIn("a preflight audit is running — attempt", out.getvalue())
+            self.assertNotIn("no audit record yet", err.getvalue())
+            gap = audit_gaps.audit_coverage(
+                area,
+                "preflight",
+                findings.AuditedState(stamp, block, registration_of(area)),
+            )
+            self.assertIn("a preflight audit is running", gap or "")
+            self.assertNotIn("none has run yet", gap or "")
+        finally:
+            running.end("none", error="test")
+        gap = audit_gaps.audit_coverage(
+            area,
+            "preflight",
+            findings.AuditedState(stamp, block, registration_of(area)),
+        )
+        self.assertIn("none has run yet", gap or "")  # the twin: none running
+
     def test_a_finding_written_with_a_dash_or_colon_is_read(self):
         """`BLOCKER — …` and `BLOCKER: …` parsed as no finding while the
         verdict counted two; the record then read as covered (audit
@@ -1559,7 +1592,15 @@ class FixVerdicts(unittest.TestCase):
                 )
                 if status != "open":
                     findings.write_decision(rec, 1, status, "gone")
-                _, _, _, sent = self.audit(area, CLEAN)
+                rc, _, err, sent = self.audit(area, CLEAN)
+                if status == "open":
+                    # refused before the call: a follow-up judges decided
+                    # BLOCKERs only (registered pilot part 1, 60-r3)
+                    self.assertEqual((rc, sent), (2, []), err)
+                    self.assertIn("stand undecided", err)
+                    self.assertIn(f"{rec.name}#1", err)
+                    self.assertIn("--decide 1 STATUS", err)
+                    continue
                 self.assertIn("===== EARLIER DECIDED BLOCKERS =====\nnone:", sent[0])
 
     def test_the_record_holds_its_fix_verdicts_to_their_form(self):
