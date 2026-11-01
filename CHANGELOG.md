@@ -37,7 +37,9 @@ pins (`requirements.txt` / `requirements.lock`).
     switched to r2 against its registration;
   - the compute skeleton's kept number (`METRIC_KEY`) must be a number: a
     bool, a text or a missing key is refused naming it; task 34 adopted
-    "hrv_computed = True" while its Unit named HRV_MeanNN;
+    "hrv_computed = True" while its Unit named HRV_MeanNN. A type check
+    only: nothing holds METRIC_KEY to the key the Unit names (a
+    `hrv_computed = 1` passes) — a known limit (TODO, plan A3);
   - the stamped comments state the rule; the history went into
     `docs/notes/2026-11-01-hand-checked-case-one-row.md` and
     `docs/notes/2026-11-01-registered-null-order.md`.
