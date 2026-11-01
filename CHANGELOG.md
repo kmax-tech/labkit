@@ -17,6 +17,11 @@ pins (`requirements.txt` / `requirements.lock`).
   hands the area over naming the loss or registers anew. A handover said "no
   run of it was measured" while runs.tsv listed five deleted runs; it now
   names them as measured and gone (`runlog.indexed_runs`).
+- **Deleting a run is told right after the tool.** The post-change hook
+  told a deleted audit record but not a deleted run: an untracked run gone
+  leaves nothing for git status (task 60 deleted runs/ five times without a
+  word). It now tells every run the area's runs.tsv lists whose directory is
+  gone (`agent_hooks.gone_run_areas`).
 
 ## 0.106.1 — 2026-11-01
 

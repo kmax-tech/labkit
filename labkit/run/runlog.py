@@ -863,11 +863,11 @@ class run:
         return False
 
 
-def indexed_runs(base_dir: str | Path, protocol_id: str) -> list[str]:
-    """The run ids the area's run index lists for PROTOCOL_ID, in index
-    order — the runs measured to the end, whether or not their directories
-    still stand. Reads without the lock (a row is appended whole); [] without
-    an index."""
+def indexed_runs(base_dir: str | Path, protocol_id: str | None = None) -> list[str]:
+    """The run ids the area's run index lists for PROTOCOL_ID (every one when
+    None), in index order — the runs measured to the end, whether or not
+    their directories still stand. Reads without the lock (a row is
+    appended whole); [] without an index."""
     header, rows = _read_index(Path(base_dir) / RUN_INDEX)
     if not header:
         return []
@@ -879,7 +879,8 @@ def indexed_runs(base_dir: str | Path, protocol_id: str) -> list[str]:
     return [
         r[at["run_id"]]
         for r in rows
-        if len(r) > at["protocol_id"] and r[at["protocol_id"]] == protocol_id
+        if protocol_id is None
+        or (len(r) > at["protocol_id"] and r[at["protocol_id"]] == protocol_id)
     ]
 
 

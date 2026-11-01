@@ -170,7 +170,10 @@ from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.report_review import review_hint
+from labkit.formats.runs import run_path
+from labkit.run.runlog import indexed_runs
 from labkit.formats.repo import (
+    EXPERIMENTS,
     PROTOCOL_NAME,
     area_protocols,
     repo_protocols,
@@ -512,6 +515,26 @@ def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
     return out
 
 
+def gone_run_areas(repo: Path) -> list[Path]:
+    """The areas of REPO's `experiments/` whose run index lists a run whose
+    directory is gone. Deleting an untracked run leaves nothing for git
+    status to name, so `evidence_areas` never saw it: an agent deleted runs/
+    five times without a word (reference pilot 2026-11-01, task 60)."""
+    base = repo / EXPERIMENTS
+    if not base.is_dir():
+        return []
+    return [
+        area
+        for area in sorted(p for p in base.iterdir() if p.is_dir())
+        if gone_runs(area)
+    ]
+
+
+def gone_runs(area: Path) -> list[str]:
+    """The runs AREA's run index lists whose directories are gone."""
+    return [r for r in indexed_runs(area) if not run_path(area, r).is_dir()]
+
+
 #: the post-change cache's key of an area's evidence state, before the area
 EVIDENCE_KEY = "evidence:"
 
@@ -529,6 +552,12 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
             *attempts.area_integrity(area).problems,
             *evidence.changes(area),
             *evidence.ignored(area),
+            *(
+                f"run {r}: its directory is gone — runs.tsv lists it as measured; never delete a "
+                f"run: an audit that read it holds the adoption, and only git, where "
+                f"it holds the run, restores its rows"
+                for r in gone_runs(area)
+            ),
         ]
         key = f"{EVIDENCE_KEY}{area}"
         if not lines:
@@ -620,6 +649,7 @@ def post_change(event: dict) -> int:
         if (hint := _report_hint(text, path, repo))
     ]
     areas = evidence_areas(repo, entries)
+    areas += [a for a in gone_run_areas(repo) if a not in areas]
     cache_file = _cache_path(event.get("session_id"))
     cache = _load_cache(cache_file)
     before = dict(cache)

@@ -348,6 +348,22 @@ class Told(unittest.TestCase):
         ctx = self._told()
         self.assertIn(f"runs/{CLOSED}: the closed run's metrics.json (changed)", ctx)
 
+    def test_an_untracked_run_runs_tsv_lists_deleted_is_told(self):
+        """An untracked run deleted leaves nothing for git status: an agent
+        deleted runs/ five times without a word (reference pilot 2026-11-01,
+        task 60). The index keeps it, so the hook tells. The twin: a run the
+        index lists and that stands is silent."""
+        gone = "2026-11-01T15-21-44_e8a0"
+        (self.area / "runs.tsv").write_text(
+            "run_id\tgit\tscript\tdata\tconfig\tmetrics\tnote\tprotocol_id\n"
+            f"{CLOSED}\tx\t01_measure.py\t{{}}\t{{}}\t{{}}\t\tp-1\n"
+            f"{gone}\tx\t01_measure.py\t{{}}\t{{}}\t{{}}\t\tp-1\n",
+            encoding="utf-8",
+        )
+        ctx = self._told()
+        self.assertIn(f"run {gone}: its directory is gone — runs.tsv lists it", ctx)
+        self.assertNotIn(f"run {CLOSED}: its directory is gone", ctx)
+
     def test_a_decision_and_a_new_run_are_silent(self):
         findings.write_decision(self.record, 1, "limitation", "noted", "stands")
         _run_dir(self.area, OPEN, closed=False)
