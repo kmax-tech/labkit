@@ -193,7 +193,10 @@ are written. Report at most seven `READ` lines, the worst first. They carry
 no failure scenario and do not enter the verdict. This audit runs before the
 result is adopted: a placeholder in Recorded results, the Runs list or the
 Conclusion is no `READ` line — `labkit-adopt` writes the first two from the
-run, and the Conclusion follows it:
+run, and the Conclusion follows it. A registered field (the Intent fields,
+Terms, Data / scope, Exclusions / filters, Unit) is never a `READ` line: it
+stands as measured, and a rewrite there is a departure; a fault in it is a
+finding. labkit leaves such lines out:
 
 - a Summary that does not open with the result, or intent ids, metric keys
   and run ids in the lines meant for a person

@@ -18,7 +18,11 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_block import COUNTS
-from labkit.formats.protocol_check import fields, low_registration_missing
+from labkit.formats.protocol_check import (
+    REGISTERED_FIELDS,
+    fields,
+    low_registration_missing,
+)
 
 if TYPE_CHECKING:
     from labkit.formats.runs import RunDir
@@ -306,6 +310,12 @@ SCOPE_FIELDS = (
     "Exclusions / filters",
     "Unit",
 )
+
+
+#: the fields held once registered: the registration's own (`protocol_check`)
+#: and what the number is about (SCOPE_FIELDS) — a reading hint that rewrites
+#: one is a departure, not a hint (`audit_decisions.read_hints`)
+HELD_FIELDS = tuple(dict.fromkeys(REGISTERED_FIELDS + SCOPE_FIELDS))
 
 
 def scope_value(value: str) -> str:

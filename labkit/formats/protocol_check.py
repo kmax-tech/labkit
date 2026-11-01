@@ -158,7 +158,7 @@ FIELDS = (
 #: list) and the reportable run's further fields are not in it, so writing
 #: them leaves the audit standing. Why: a corrected Data / scope could never
 #: be followed up (fifth SAB-like draw, 2026-10-28)
-_REGISTERED = (
+REGISTERED_FIELDS = (
     standard_contract.REGISTRATION_FIELDS
     + standard_contract.REGISTRATION_FIELDS_WITH_BAR
     + standard_contract.REGISTRATION_FIELDS_WITH_MODEL
@@ -166,7 +166,7 @@ _REGISTERED = (
 AUDITED_FIELDS = tuple(
     f.label
     for f in FIELDS
-    if f.level == "must" and f.label != "Prompt" and f.label not in _REGISTERED
+    if f.level == "must" and f.label != "Prompt" and f.label not in REGISTERED_FIELDS
 )
 
 

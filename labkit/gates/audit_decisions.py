@@ -6,6 +6,7 @@ numbered findings both show after an audit.
 
 from __future__ import annotations
 
+import re
 import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ from labkit.formats.repo import (
     shown,
     the_protocol,
 )
+from labkit.formats.protocol_check import field_name, fields
+from labkit.formats.protocol_history import HELD_FIELDS
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
 from labkit.run import llm
@@ -125,11 +128,64 @@ def decision_lines(
                     "      limitation: the verdicts hold, read within it (its missing "
                     "review warns)" + (f" | {unassessed}" if promised else "")
                 )
-    hints = [ln.strip() for ln in report.splitlines() if READ_HINT.match(ln)]
+    hints, held = read_hints(report, area, protocol)
     if hints:
         out.append("reading hints — not recorded, nothing to decide:")
         out += [f"  {h}" for h in hints]
+    if held:
+        out.append(
+            f"{held} reading hint(s) on registered fields left out — those fields "
+            "are the registration as measured; a rewrite there is a departure "
+            "that finalize refuses (the kept answer holds them)"
+        )
     return out
+
+
+#: a reading hint's place: `READ · <file>:<line> · …`
+_READ_PLACE = re.compile(r"READ\**\s*\S+\s*`?(?P<file>[^\s:`]+):(?P<line>\d+)")
+
+
+def read_hints(
+    report: str, area: Path, protocol: Path | None = None
+) -> tuple[list[str], int]:
+    """(the READ lines of REPORT to print, how many were left out): a line
+    whose `<file>:<line>` falls in a registered field of the area's protocol
+    (`protocol_history.HELD_FIELDS`) is left out. The auditor's instructions
+    keep reading hints to the result part; printed unfiltered, hints on the
+    question, the terms and the data scope were taken as harmless, the agent
+    rewrote those fields over four rounds, and finalize refused the rewrite
+    24 minutes later (reference pilot 2026-11-01, task 21)."""
+    shown_lines: list[str] = []
+    held = 0
+    texts: dict[str, str] = {}
+    for ln in report.splitlines():
+        if not READ_HINT.match(ln):
+            continue
+        m = _READ_PLACE.search(ln)
+        if m is not None and _in_held_field(
+            area, protocol, m["file"], int(m["line"]), texts
+        ):
+            held += 1
+            continue
+        shown_lines.append(ln.strip())
+    return shown_lines, held
+
+
+def _in_held_field(
+    area: Path, protocol: Path | None, file: str, line: int, texts: dict[str, str]
+) -> bool:
+    """Does LINE of FILE, a protocol of AREA, fall in one of HELD_FIELDS?"""
+    name = Path(file).name
+    if not (name.startswith("PROTOCOL-") and name.endswith(".md")):
+        return False
+    path = protocol if protocol is not None and protocol.name == name else area / name
+    if name not in texts:
+        if not path.is_file():
+            return False
+        texts[name] = path.read_text(encoding="utf-8")
+    held = {field_name(label) for label in HELD_FIELDS}
+    at = [f for f in fields(texts[name]) if f.line <= line]
+    return bool(at) and at[-1].name in held
 
 
 #: how `--decide` takes its values, as its refusals name the form

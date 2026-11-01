@@ -3351,3 +3351,44 @@ class PilotRecords(unittest.TestCase):
         (d,) = self.holds("D2", PILOT2 / "D2-1.record.toml")
         self.assertIn("said not_assessable", d.why)
         self.assertEqual(self.holds("C", GATE / "C-1.replay.toml"), [])
+
+
+class ReadHintsOnRegisteredFields(unittest.TestCase):
+    """A reading hint that rewrites a registered field is no hint: printed
+    unfiltered, hints on the question, the terms and the data scope were
+    taken as harmless, rewritten over four rounds, and finalize refused the
+    rewrite 24 minutes later (reference pilot 2026-11-01, task 21)."""
+
+    PROTOCOL = (
+        "# Experiment protocol: x\n\n"
+        "## Summary (after the run, for a person)\n\n"
+        "- **Conclusion:** three documents hold 3.0 lines on average\n\n"
+        "## Intent (before the run)\n\n"
+        "- **Question / hypothesis:** how many lines?\n\n"
+        "## Setup\n\n"
+        "- **Data / scope:** data/raw/docs, 3 documents\n"
+    )
+
+    def test_a_hint_in_a_registered_field_is_left_out_and_counted(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(self.PROTOCOL, encoding="utf-8")
+            lines = self.PROTOCOL.splitlines()
+            at = {
+                key: n + 1
+                for n, ln in enumerate(lines)
+                for key in ("Conclusion", "Question", "Data / scope")
+                if f"**{key}" in ln
+            }
+            report = (
+                f"READ · PROTOCOL-x.md:{at['Conclusion']} · reads as a list · one sentence\n"
+                f"READ · PROTOCOL-x.md:{at['Question']} · vague · name the documents\n"
+                f"READ · `PROTOCOL-x.md:{at['Data / scope']}` · count unclear · say 3 files\n"
+                "READ · scripts/01_measure.py:4 · a name · rename\n"
+            )
+            shown_hints, held = audit_decisions.read_hints(report, area)
+            self.assertEqual(held, 2)
+            self.assertEqual(
+                [h.split(" · ")[1] for h in shown_hints],
+                [f"PROTOCOL-x.md:{at['Conclusion']}", "scripts/01_measure.py:4"],
+            )

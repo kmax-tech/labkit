@@ -9,6 +9,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A reading hint on a registered field is left out.** The analysis
+  audit's READ lines rewrote the question, the terms and the data scope;
+  printed as harmless, they were followed over four rounds, and finalize
+  refused the rewrite 24 minutes later (reference pilot, task 21).
+  `audit_decisions.read_hints` now leaves out a READ line whose place falls
+  in a held field (`protocol_history.HELD_FIELDS`: the registration's own
+  and the scope fields) and says how many it left out; the auditor's
+  instructions say the same. `protocol_check._REGISTERED` is public as
+  `REGISTERED_FIELDS`.
+
 - **An adoption cut off during its check leaves no unchecked result.**
   `labkit-adopt` writes its proposal into the protocol and checks it there;
   a kill during the check skipped both restores, and the proposal's
