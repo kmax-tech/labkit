@@ -169,3 +169,30 @@ Measured in addition, from the traces, per attempt (the simplification round's t
 the share of time in labkit's steps (audits, adoption, report-check, the hook), every contradiction
 between two parts of the tool (one advising what another refuses), and every stop caused by a fault
 of the tool. A stop that remains without a fault is evidence of too much coupling.
+
+Addendum 7, 2026-11-01, after the second trial (labkit-evidence
+usability/2026-11-01-reference-pilot/trial2/, 55eb339f). All five ran, 15:17–15:46, no host sleep,
+no API failure; sonnet audited every task, kept its form in every call, no safety stop.
+
+| task | time | hidden evaluation | outcome |
+| 34 | 4.4 min | passed | adopted, standard met |
+| 21 | 7.9 min (trial 1: 40, timeout) | passed | adopted, standard met |
+| 60 | 10.8 min | passed | handover; the agent deleted runs/ five times |
+| sts512 | 20.7 min | passed (trial 1: failed at rho_null) | not adopted |
+| 15 | 29.1 min | passed | not adopted; the run's output deleted |
+
+The three measures: (a) labkit's own steps took 14–22 % of each attempt's time (audits the most);
+(b) contradictions between parts of labkit: 2 (34), 4 (21), 3 (60), 5 (sts512), 3 (15); (c) stops
+and lost results caused by a fault of the tool: none on 34 and 21; sts512 — the test template does
+not carry the registered null order this author added to the measure template in 0.106.0, and the
+registration pins null_order.json by its directory only; 15 — labkit-next and the run start do not
+see an open run, a low-cost run outlasts the agent's 120 s tool limit, two runs wrote into one
+output, and a fix text ("into an output file of its own") was read as `rm`; 60 — the agent's own
+deletions, made worse by a gone-run blocker whose way out cannot clear it. Stops no fault explains:
+60 gave up with 29 minutes left, sts512 ended claiming success with 19 left, 15 ended with 11 left.
+Reports: sts512's REPORT.md claims "criterion MET" for a superseded, unadopted run and leaves out the
+refusals; 15's says "PASS" for an unadopted run whose output is gone; 60's reports 0.1230 with its
+run id removed beside a handover. Two commits with --no-verify (60), one hook refusal later passed
+unchanged (sts512). Read: labkit's overhead is now about a fifth of the time and no longer the stop
+on 21 and 34; what stops the rest are labkit gaps (concurrency, gone runs, the test template),
+the agents' deletions and early ends, and untrue reports a commit does not catch.

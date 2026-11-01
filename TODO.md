@@ -2635,6 +2635,31 @@ Runden-Material neu gepinnt labkit-evidence 272f50c6):
    protokolliert, nur bei technischem Fehler oder fehlender Antwort) erst nach Entscheidung; sts512-Registrierung: labkits Verzeichnis-Digests
    für Daten und Modell in Data / scope (`fields_sts512.py`); Git-Identität im Image.
 
+**Stand 2026-11-01 abends — zweiter Probelauf auf 0.106.1, Sonnet als Auditor** (Nachtrag 7,
+Belege labkit-evidence 55eb339f). 34 und 21 übernommen (21 in 8 statt 40 min), alle fünf
+Ausgaben bestehen die versteckte Bewertung, labkit-Anteil 14–22 % der Zeit. Offen, nach Wirkung:
+
+1. **Testvorlage kennt `NULL_ORDER` nicht** (meine 0.106.0-Lücke): synthetische Null-Zeilen ohne
+   `gold_of` → `evaluate_rows` bricht ohne Band ab, finalize lehnt den richtigen sts512-Lauf ab;
+   Spearman fehlt unter den Scores.
+2. **Gleichzeitige Läufe:** `labkit-next` und der Laufstart sehen offene Läufe nicht; ein Lauf über
+   120 s geht in den Hintergrund; die Ausgabe setzt in den Zeilen eines anderen Laufs fort (15).
+3. **Gelöschte Läufe:** Blocker mit unwirksamem Rat „measure anew“ (Fehler 7 aus Teil 1, noch
+   offen); keine Live-Warnung bei gelöschtem runs/ (nur audits/ hat Spiegel und Hook); Übergabe
+   sagt „kein Lauf gemessen“, obwohl runs.tsv fünf nennt (60).
+4. **Berichte:** ein überholter, nicht übernommener Lauf mit „criterion MET“ geht durch den Commit
+   (nur Warnung, sts512); „PASS“ für einen Lauf ohne Ausgabe (15); `--not-assessable` auf das einzige
+   Kriterium, während Conclusion und Bericht PASS sagen (15) — keine Prüfung.
+5. Kleiner: READ-Filter greift nicht bei `:Feldname` statt Zeilennummer; `scope_list` streicht
+   `scope:` nur in der ersten Zeile; Scope-Warnung auf das Protokoll ist Rauschen; „check owed“ bei
+   WARNINGs verspricht eine Nachprüfung, die nie kommt; unklarer Fix-Text „into an output file of
+   its own“ (als `rm` gelesen); `labkit-adopt` „kein Bericht registriert“ und `labkit-next` „nichts
+   hält es“ gegen Hooks, die REPORT.md sperren; METRIC_KEY nicht an die registrierte Einheit
+   gebunden (34: Konstante True); Pilot-Historie im Kommentar der Testvorlage (gehört in eine Note).
+6. **Material:** sts512 pinnt null_order.json nur über das Verzeichnis, der Lauf liest es als Datei.
+7. **Agenten:** löschen Läufe/Ausgaben, `--no-verify`, beenden mit 11–29 min Restzeit — für die
+   Evaluation zu zählen, nicht in labkit zu reparieren.
+
 **Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
 Die Stopps im Referenzpilot gingen auf Integritätsfehler zurück, nicht auf die Strenge (34 voll
 durch in 5 min). Was bleibt: viele gekoppelte, zustandsbehaftete Schritte (Audit, Entscheidung,
