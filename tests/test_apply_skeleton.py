@@ -369,6 +369,46 @@ class ApplySkeleton(unittest.TestCase):
                 else:
                     self.assertEqual(exact, sum(draws, Fraction(0)) / len(draws))
 
+    def test_a_registered_null_order_is_the_control_and_its_score_the_bar(self):
+        """sts512 registers a staged permutation, read, never regenerated; the
+        skeleton had only the seeded shuffle, and the agent kept it (reference
+        pilot 2026-11-01). With NULL_ORDER the null lane follows the file, its
+        score plus margin is the bar, and no band is forced where none is
+        registered. The twins: no band and no order is refused; an order that
+        is no permutation of the items is refused."""
+        import json as _json
+
+        area, measure = self.measure_module("apply")
+        order = [11, 0, 5, 3, 7, 1, 9, 2, 10, 4, 8, 6]
+        (area / "null_order.json").write_text(_json.dumps(order), encoding="utf-8")
+        primary = mock.Mock()
+        primary.predict.side_effect = lambda xs: [x[0] for x in xs]
+        cfg = replace(measure.CONFIG, null_band=None)
+        with (
+            mock.patch.object(measure, "NULL_ORDER", area / "null_order.json"),
+            mock.patch.object(measure, "make_estimator", return_value=primary),
+        ):
+            rows = measure.apply_rows(cfg, self.items(), False)
+            null = [r for r in rows if r["lane"] == "null"]
+            self.assertEqual([r["gold_of"] for r in null], [str(j) for j in order])
+            m = measure.evaluate_rows(rows, cfg)
+            self.assertAlmostEqual(
+                m["criterion_1_threshold"],
+                m["quality_check_2_score"] + cfg.margin,
+                places=12,
+            )
+            self.assertTrue(m["quality_check_2_pass"])
+            self.assertIn("null_order", measure.data_files())
+            (area / "null_order.json").write_text(
+                _json.dumps(order[:-1]), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "not a permutation"):
+                measure.apply_rows(cfg, self.items(), False)
+        with mock.patch.object(measure, "make_estimator", return_value=primary):
+            rows = measure.apply_rows(cfg, self.items(), False)
+        with self.assertRaisesRegex(ValueError, "registers no null_band"):
+            measure.evaluate_rows(rows, cfg)
+
     def test_apply_holds_the_bar_and_the_null_to_the_expectation(self):
         """A permuted null's draw is the anchor, not the bar: the same
         registered lane passes or fails by the expectation alone, whatever

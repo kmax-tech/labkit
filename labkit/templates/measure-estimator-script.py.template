@@ -51,7 +51,12 @@ seed; `band_by_rule`): `--calibrate-null --write` registers it before the
 first measurement, and the first measurement refuses a band the rule does
 not give, before its run opens. Without a registered rule the band is a
 reasoned value, and `--calibrate-null` shows the fixed rule here
-(`NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). A protocol that registers a fixed null predictor
+(`NULL_PERMUTATIONS`, `NULL_BAND_QUANTILE`). A protocol that registers a
+fixed null order (`NULL_ORDER`: a permutation file the organizer drew once)
+gets that order in the seed's place: it is one fixed control, so its score
+plus `margin` is the bar, and [quality-check-2]'s band applies only where the
+protocol registers one (the order's validity is checked when it is read). A
+protocol that registers a fixed null predictor
 returns it from `make_null_predictor()` instead; its score plus `margin`
 is the bar, and [quality-check-2] holds it within `null_band` of `chance_of()`. At fit
 the null lane refits on permuted labels `null_refits` times per fold (the
@@ -145,6 +150,10 @@ ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"
 # need none. These bytes bind the config, resumed rows and run provenance.
 # Fit hashes no model files unless they are explicitly declared here.
 PREDICTOR_FILES: dict[str, Path] = {}
+# apply, only when the protocol registers one: a JSON list, a permutation of
+# the labelled items' positions — the null lane's row i carries the gold of
+# labelled item NULL_ORDER[i]. None: the seeded shuffle.
+NULL_ORDER: Path | None = None
 # One run, one output file; a new measurement — other estimator, other
 # features, other items, the code repaired — gets a new file name, never two
 # measurements in one: the row identity (`instrument()`) refuses a resume
@@ -194,7 +203,9 @@ def data_files() -> dict[str, Path | provenance.BinaryInput]:
     dependency (the primary's, and a registered fixed null's). Predictor names are prefixed to keep the prepared input.
     Returns paths without reading or changing any file.
     """
-    return {"prepared": ITEMS, **{f"predictor_{name}": provenance.BinaryInput(path) for name, path in PREDICTOR_FILES.items()}}
+    order = {"null_order": NULL_ORDER} if NULL_ORDER is not None else {}
+    return {"prepared": ITEMS, **order,
+            **{f"predictor_{name}": provenance.BinaryInput(path) for name, path in PREDICTOR_FILES.items()}}
 
 
 def make_estimator(seed: int, probe: bool = False):
@@ -246,7 +257,8 @@ class MeasureConfig:
     margin: float               # [criterion-1]: registered score ≥ bar + margin, in score units (apply:
                                 # the permutation expectation; fit: the refits' mean)
     max_empty: int              # [quality-check-1]: at most this many labelled items without a prediction
-    null_band: float            # [quality-check-2]: the null lane scores within this of its target, in score units;
+    null_band: float | None = None  # [quality-check-2]: the null lane scores within this of its target, in score units;
+                                # owed by every null but a registered NULL_ORDER (evaluate_rows refuses its absence);
                                 # apply: `--calibrate-null --write` derives it before the first measurement
     # [quality-check-2]'s band rule, registered beside null_band (apply): the quantile of
     # |null − permutation expectation| over this many permutations; with
@@ -425,8 +437,9 @@ def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool,
         registered = predict(primary, train) if train else []
     rows = [lane_row("registered", it, p, it[GOLD_FIELD]) for it, p in zip(train, registered)]
     if null is None:
-        donors = list(train)
-        random.Random(f"apply-null:{cfg.seed}").shuffle(donors)
+        donors = registered_donors(train) if NULL_ORDER is not None else list(train)
+        if NULL_ORDER is None:
+            random.Random(f"apply-null:{cfg.seed}").shuffle(donors)
         rows += [lane_row("null", it, p, d[GOLD_FIELD], gold_of=d["id"])
                  for it, p, d in zip(train, registered, donors)]
     elif train:
@@ -434,6 +447,20 @@ def apply_rows(cfg: MeasureConfig, items: list[dict], probe: bool,
     if test:
         rows += [lane_row("test", it, p, None) for it, p in zip(test, predict(primary, test))]
     return rows
+
+
+def registered_donors(train: list[dict]) -> list[dict]:
+    """The labelled items in NULL_ORDER's order: row i's label comes from
+    TRAIN[order[i]]. Raises ValueError when the file is not a JSON list of
+    the positions 0 … len(TRAIN) − 1, each once — a registered order that
+    does not fit the items is no control (sts512's plan: the staged
+    permutation, never regenerated; reference pilot 2026-11-01)."""
+    order = json.loads(Path(NULL_ORDER).read_text(encoding="utf-8"))
+    if not isinstance(order, list) or sorted(order) != list(range(len(train))):
+        raise ValueError(
+            f"{NULL_ORDER}: not a permutation of the {len(train)} labelled items' "
+            f"positions (0 … {len(train) - 1}, each once)")
+    return [train[j] for j in order]
 
 
 def fit_rows(cfg: MeasureConfig, items: list[dict], probe: bool,
@@ -731,17 +758,24 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     # a permuted null (its rows name the donor of their label): the bar and
     # [quality-check-2]'s target are the exact permutation expectation, the draw only the
     # anchor; a fitted or fixed null: chance is the target, its score the bar
-    if all("gold_of" in r for r in null):
+    permuted = all("gold_of" in r for r in null)
+    if permuted:
         target = permutation_expectation(cfg.score, [(r["pred"], r["gold"]) for r in reg])
-        base = target
+        # a registered order is one fixed control, its score the bar; the
+        # seed's draw is only the anchor of the expectation
+        base = null_score if NULL_ORDER is not None else target
     else:
         target = chance_of(cfg.score, [r["gold"] for r in reg])
         base = null_score
-    band = Fraction(str(cfg.null_band))
+    if cfg.null_band is None and not (permuted and NULL_ORDER is not None):
+        raise ValueError("evaluate_rows(): [quality-check-2] registers no null_band — only a "
+                         "registered NULL_ORDER may go without one")
+    in_band = (cfg.null_band is None
+               or abs(null_score - target) <= Fraction(str(cfg.null_band)))
     metrics: dict = {"n_items": len(reg), "n_rows": len(rows), "n_test": len(test),
                      "quality_check_1_empty": reg_empty, "quality_check_1_pass": reg_empty <= cfg.max_empty,
                      "quality_check_2_score": float(null_score), "quality_check_2_target": float(target),
-                     "quality_check_2_pass": abs(null_score - target) <= band}
+                     "quality_check_2_pass": in_band}
     if len(draw_scores) > 1:
         metrics["quality_check_2_draw_scores"] = [float(s) for s in draw_scores]
     if cfg.score != "r2":

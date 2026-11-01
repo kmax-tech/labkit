@@ -21,6 +21,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The apply skeleton takes a registered null order (`NULL_ORDER`).** It
+  had only the seeded shuffle; sts512 registers a staged permutation, and
+  the agent kept the skeleton's draw, which the audit and the evaluator both
+  caught (reference pilot, 2026-11-01). With `NULL_ORDER` set, the null
+  lane's row i carries the gold of labelled item `NULL_ORDER[i]` (read and
+  checked as a permutation, recorded as a run input), its score plus
+  `margin` is the bar — one fixed control, like a fixed null predictor —
+  and [quality-check-2]'s `null_band` is applied only where registered.
+  `null_band` now defaults to None, and every other null refuses its absence.
+
 - **A field written as a list holds that list as its value.** The field
   parser stopped at the first sub-bullet and read a Data / scope written as
   a list as empty: the scope hold compared nothing, and the source digest

@@ -362,7 +362,7 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
             [
                 "instrument: the unchanged predictor, exposing predict(X); no training; "
                 "its null lane scores the same predictions against labels permuted "
-                "with the seed (or a registered fixed null predictor)"
+                "with the seed (or a registered null order, NULL_ORDER, or a registered fixed null predictor)"
             ]
             if kind == APPLY_KIND and not model
             else []
