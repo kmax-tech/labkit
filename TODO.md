@@ -2673,6 +2673,13 @@ A — Vorlagen
   accuracy, auc, r2 unverändert.
 - A3 METRIC_KEY auf einen Wahrheitswert (34 t2: „hrv_computed = True“ als Ergebnis). Test: ein
   bool als gehaltene Zahl wird abgelehnt. Gegenprobe: eine Zahl geht durch.
+  **Grenze (am echten Fall geprüft 2026-11-01):** Die Typprüfung sichert nicht den verlangten
+  Messwert. 34 t2 hielt `METRIC_KEY = "hrv_computed"`, die Unit nannte `HRV_MeanNN` in ms; mit
+  `hrv_computed = 1` ginge das durch. Ein `compute`-Kopf registriert den gehaltenen Schlüssel nur
+  mit `[reference]` (wenn die Aufgabe einen Wert nennt); sonst steht er nur im Freitext der Unit,
+  und das Analyse-Audit von 34 t2 nannte die Abweichung nicht. **Offen (Entscheidung):** den
+  Schlüssel strukturiert in den Kopf, das Gerüst liest ihn von dort (eine Heimat) — ein
+  Formatwechsel.
 - A4 Pilot-Historie im Vorlagenkommentar → Note (Hausregel). Test: Vorlage ohne Vorfallsdatum.
 
 B — Läufe (Zustandslogik, ein Verantwortlicher)
@@ -2696,11 +2703,13 @@ C — Berichte und Audit-Ausgabe (nach B)
   setzte Erwähnung mit Freigabe gleich („Probelauf ergab 0,89, ungeprüft“, „früherer Lauf
   verworfen“, „Abbruch vor dem Audit“ müssen ohne Diskussionsblock und Review gehen); „Protokoll
   hat schon ein Ergebnis“ entscheidet die Gültigkeit der Aussage auch nicht. Mechanisch bleibt:
-  welcher Lauf übernommen ist und ob der erzeugte Block zu ihm passt. Ob ein anderer Lauf als
-  gültig präsentiert wird, prüft das Bericht-Review. **Offen: Prüffall fürs Review** — der
-  REPORT.md von 15 t2 (Fang: die unbegründete „PASS“-Behauptung) und dieselbe Stelle ausdrücklich
-  vorläufig formuliert (Gegenprobe: geht durch). Erst wenn das Review das nicht trennt, eine
-  gezielte Änderung. Begründung: `docs/notes/2026-10-23-report-without-adoption.md` (Status).
+  welcher Lauf übernommen ist und ob der erzeugte Block zu ihm passt. **Prüffall gelaufen
+  (2026-11-01): Die Gültigkeitsbehauptung deckt heute keine Stufe.** Das Bericht-Review ist nur
+  bei einem Diskussionsblock verlangt, und `labkit-audit --report-review` lehnt einen Bericht ohne
+  einen ab („nothing to review“, Exit 2), beim Original von 15 t2 wie bei der vorläufig
+  formulierten Fassung; in Probelauf 2 lief kein einziges Bericht-Review. **Offen
+  (Entscheidung):** was einen Bericht ohne Diskussionsblock liest, der einen Lauf eines Protokolls
+  zitiert. Begründung: `docs/notes/2026-10-23-report-without-adoption.md` (Status).
 - C2 `labkit-adopt` „kein Bericht registriert“ und `labkit-next` „nichts hält es“, während Hooks
   REPORT.md sperren (21, 34 t2). Test: REPORT.md zitiert den übernommenen Lauf ohne Block → next
   nennt `--into`. Gegenprobe: mit Block → nichts.

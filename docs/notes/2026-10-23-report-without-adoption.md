@@ -11,9 +11,15 @@
 > on whether the protocol has adopted another run does not decide it
 > either: the same false claim about an older run beside an adopted one
 > would pass. The guaranteed tier holds which run is adopted and that its
-> generated block matches it; whether a report presents another run as a
-> valid result is the report review's question. Task 15's report is its
-> test case (TODO, plan C1).
+> generated block matches it. Whether a report presents another run as a
+> valid result is **covered by no tier today**: the report review is owed
+> only for a report with a discussion block (`report_review_owed`), and
+> `labkit-audit --report-review` refuses a report without one ("nothing
+> to review", exit 2) — checked on task 15's report and on the same
+> report worded as provisional, 2026-11-01. In the second trial no
+> report held a discussion block and no report review ran. The citation
+> gets this note's warning only; what should read such a report is open
+> (TODO, plan C1).
 
 > **Status 2026-10-26:** the prose marker `run <id> (not reported: …)` this
 > note proposes is replaced by a discussion block
