@@ -2606,6 +2606,31 @@ was diesen Versuch oder seine Bewertung betrifft (P1, P2, P3, P4); der Rest folg
   belegt.
 - Danach getrennt: Fehler 3, 7, 8, 9; Unklar 14, 15, 18.
 
+**Stand 2026-11-01 abends — Referenzpilot auf 0.105.0** (Vertrag und Nachträge
+`docs/usability/2026-11-01-reference-pilot/`, Belege labkit-evidence f46ba716). Je ein Laborversuch:
+34 übernommen in 5 min, 15 übernommen, 60 Übergabe nach 19 min, sts512 diskutiert (Null-Spur nicht
+registriert), 21 Zeitlimit. Reparaturen aus 0.105.0 hielten, wo erreicht. Zu reparieren, nach
+Wirkung auf die drei Stopps geordnet:
+
+1. **`__pycache__` im Verzeichnis-Digest** (`provenance.visible_files`): bricht jede registrierte
+   Prüfsumme, sobald ein Lauf aus seiner Quelle importiert (60); der Rat nennt dann verbotene
+   Dateien und .pyc für `git add -f`. Ausschließen wie überall sonst in labkit.
+2. **Feldparser liest Unterpunkte als leer** (`protocol_check.fields:391`): Scope-Prüfung und
+   Prüfsummensuche blind (21). Unterpunkte zum Wert zählen, wie der Docstring sagt.
+3. **READ-Hinweise auf registrierte Scope-Felder** (21): nur Summary, Result, Runs, Follow-up
+   zulassen (Prompt sagt es, labkit filtert nicht); Scope-Prüfung früher als erst bei finalize.
+4. **adopt: Kill während der Prüfung lässt ungeprüftes `[result]` stehen** (`protocol_fill:154`):
+   erst prüfen, dann schreiben, oder Vorschlag in Datei daneben.
+5. **apply-Skelett: Null-Spur aus registrierter Reihenfolge, Schwelle rho_null + margin**
+   (sts512); `limitation` bei einem Implementierungsfehler nicht anbieten oder klar warnen.
+6. Kleiner: zweiter Versuch mit gescheitertem Alias nennt keinen Alias (`audit.py`, stopped);
+   `Run.metrics()` prüft JSON-Fähigkeit sofort mit Schlüssel; `blocks_owed` löst Pfade auf;
+   withdraw-Rat ohne Übernahme; formverworfene Antwort mit echtem BLOCKER; Testvorlage (zwei
+   Zeilen, accuracy unter AUC); „Conclusion vor adopt“ in der Lauf-Zeile.
+7. **Harness/Material:** opus-Audit scheitert 4/4 in der Sandbox (CLI-Fallback) — Audit-Alias der
+   Sandbox auf haiku oder Fallback abschalten; sts512-Registrierung: labkits Verzeichnis-Digests
+   für Daten und Modell in Data / scope (`fields_sts512.py`); Git-Identität im Image.
+
 **Stand 2026-11-01 nachmittags — Evaluationsdesign und STS-Aufgabe.** Vorschlag (noch nicht
 beschlossen): zwei Behauptungen, zwei Methoden — (A) Erkennung: eingepflanzte Fehler auf
 Referenzumsetzungen, Trefferquote und Fehlalarme je Stufe und Ebene; (B) Nutzen im Gebrauch:
