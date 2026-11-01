@@ -2660,6 +2660,56 @@ Ausgaben bestehen die versteckte Bewertung, labkit-Anteil 14–22 % der Zeit. Of
 7. **Agenten:** löschen Läufe/Ausgaben, `--no-verify`, beenden mit 11–29 min Restzeit — für die
    Evaluation zu zählen, nicht in labkit zu reparieren.
 
+**Reparaturplan nach Probelauf 2** — jede Reparatur mit beobachtetem Fehler, Test und korrekter
+Gegenprobe, die weiter passieren muss. A unabhängig (Worktree), B und C nacheinander bei einem
+Verantwortlichen (Zustandslogik), D parallel nur als Entwurf.
+
+A — Vorlagen
+- A1 Testvorlage kennt `NULL_ORDER` nicht (sts512 t2: 9 von 11 Tests rot, finalize lehnt den
+  richtigen Lauf ab). Test: gestempelter apply-Bereich mit `NULL_ORDER`, ohne Band → Vorlagentests
+  grün. Gegenprobe: gesäte Null mit Band grün; ohne Band und ohne `NULL_ORDER` weiter abgelehnt.
+- A2 Kein Spearman unter den Scores (sts512 t2: Umweg über r2, ein Lauf und ein Audit mehr). Test:
+  Spearman mit Rangbindungen von Hand gerechnet; konstanter Vektor undefiniert, nie 0. Gegenprobe:
+  accuracy, auc, r2 unverändert.
+- A3 METRIC_KEY auf einen Wahrheitswert (34 t2: „hrv_computed = True“ als Ergebnis). Test: ein
+  bool als gehaltene Zahl wird abgelehnt. Gegenprobe: eine Zahl geht durch.
+- A4 Pilot-Historie im Vorlagenkommentar → Note (Hausregel). Test: Vorlage ohne Vorfallsdatum.
+
+B — Läufe (Zustandslogik, ein Verantwortlicher)
+- B1 Gelöschter Lauf: Rat „measure anew“ hebt den Blocker nie (60 t1 und t2). Test: Datensatz
+  nennt fehlenden Lauf → Rat nennt Übergabe (Verlust) und neue Registrierung, nicht neu messen.
+  Gegenprobe: Lauf vorhanden → kein Blocker.
+- B2 Übergabe sagt „kein Lauf gemessen“, runs.tsv nennt fünf (60 t2). Test: runs.tsv-Zeilen ohne
+  Verzeichnis → Übergabe nennt sie als gemessen und gelöscht. Gegenprobe: nie gemessen → „not measured“.
+- B3 Keine Live-Warnung bei gelöschtem Lauf (60 t2; nur audits/ hat eine). Test: Hook nach
+  Löschen eines in runs.tsv geführten Laufverzeichnisses warnt. Gegenprobe: nichts gelöscht → still.
+- B4 Gleichzeitige Läufe: `labkit-next` und Laufstart sehen den offenen Lauf nicht (15 t2: drei
+  überlappende Läufe, Zeilen aus fremdem Lauf). Test: lebender Lauf im Bereich → next sagt warten,
+  ein zweiter Messstart wird abgelehnt. Gegenprobe: abgestürzter oder fertiger Lauf → Start geht.
+- B5 Fix-Text „into an output file of its own“ als `rm` gelesen (15 t2). Test: der Text nennt den
+  neuen OUT-Namen im Skript und „die alte Datei behalten“.
+
+C — Berichte und Audit-Ausgabe (nach B)
+- C1 Bericht zitiert einen nicht übernommenen Lauf außerhalb jedes Ergebnis- oder Diskussionsblocks
+  (sts512 t2: „criterion MET“; 15 t2: „PASS“). Garantierte Regel nur strukturell: so ein Zitat
+  sperrt, Ausweg `--discuss` (Wert als vorläufig, gescheitert oder ungeklärt). Ob Freitext Erfolg
+  behauptet, bleibt Sache des Bericht-Reviews (Audit), keine Textheuristik als Blocker. Gegenproben:
+  derselbe Lauf im Diskussionsblock geht durch; die ehrliche negative Antwort geht durch; ein
+  übernommener Lauf mit Ergebnisblock geht durch.
+- C2 `labkit-adopt` „kein Bericht registriert“ und `labkit-next` „nichts hält es“, während Hooks
+  REPORT.md sperren (21, 34 t2). Test: REPORT.md zitiert den übernommenen Lauf ohne Block → next
+  nennt `--into`. Gegenprobe: mit Block → nichts.
+- C3 „check owed“ bei WARNINGs verspricht eine Nachprüfung, die nicht kommt (21 t2). Test: nur bei
+  BLOCKER gedruckt. Gegenprobe: BLOCKER mit check unverändert.
+- C4 `scope_list` streicht `scope:` nur in der ersten Zeile; Protokoll in der Scope-Warnung (21, 60,
+  15, sts512 t2). Test: Präfix in jeder Zeile → keine Doppelmeldung; Protokoll ohne Warnung.
+  Gegenprobe: eine wirklich fehlende Datei warnt weiter.
+- C5 READ-Filter bei `:Feldname` statt Zeilennummer (60 t2). Test: `PROTOCOL-x.md:Terms` wird
+  weggelassen. Gegenprobe: `:Conclusion` bleibt.
+
+D — Vereinfachung, Entwurf ohne Code: die gezählten Widersprüche beider Probeläufe als Liste,
+daraus eine feste Reihenfolge und frühe garantierte Prüfungen.
+
 **Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
 Die Stopps im Referenzpilot gingen auf Integritätsfehler zurück, nicht auf die Strenge (34 voll
 durch in 5 min). Was bleibt: viele gekoppelte, zustandsbehaftete Schritte (Audit, Entscheidung,
