@@ -9,6 +9,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A field written as a list holds that list as its value.** The field
+  parser stopped at the first sub-bullet and read a Data / scope written as
+  a list as empty: the scope hold compared nothing, and the source digest
+  inside the list was not found (reference pilot, task 21). Sub-bullets
+  deeper than the field's own line are now its value; a deeper line that
+  opens a field of its own (`- **registered:**`) still ends it.
+
 - **A reading hint on a registered field is left out.** The analysis
   audit's READ lines rewrote the question, the terms and the data scope;
   printed as harmless, they were followed over four rounds, and finalize

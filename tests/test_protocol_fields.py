@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
-from labkit.formats import protocol_check
+from labkit.formats import protocol_check, protocol_history
 from labkit.checks import protocol_report
 from protocol_fixture import head
 
@@ -323,3 +323,38 @@ class BareReferences(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SubBulletValues(unittest.TestCase):
+    """A field written as a list below its label holds that list as its value:
+    read as nothing, a Data / scope list compared empty in the scope hold and
+    hid its source digest (reference pilot 2026-11-01, task 21)."""
+
+    TEXT = (
+        "- **Data / scope:**\n"
+        "  - roads.geojson and deforestedArea.geojson\n"
+        "  - source digest abc123\n"
+        "- **Unit:** one road buffer\n"
+        "- **Prompt (verbatim):**\n"
+        "  - **registered:** Q\n"
+    )
+
+    def test_deeper_sub_bullets_are_the_value_and_a_nested_field_is_not(self):
+        got = {f.name: f.value for f in protocol_check.fields(self.TEXT)}
+        self.assertEqual(
+            got["data / scope"],
+            "roads.geojson and deforestedArea.geojson source digest abc123",
+        )
+        self.assertEqual(got["unit"], "one road buffer")
+        self.assertEqual(got["prompt"], "")  # its nested field is its own
+        self.assertEqual(got["registered"], "Q")
+
+    def test_a_change_inside_the_list_is_a_scope_difference(self):
+        changed = self.TEXT.replace("roads.geojson and", "BR roads.geojson and")
+        diffs = protocol_history.scope_differences(self.TEXT, changed)
+        self.assertEqual([d[0] for d in diffs], ["Data / scope"])
+
+    def test_a_sibling_bullet_at_the_fields_own_depth_ends_it(self):
+        text = "- **Unit:** one\n- a sibling bullet, not the Unit's\n"
+        got = {f.name: f.value for f in protocol_check.fields(text)}
+        self.assertEqual(got["unit"], "one")

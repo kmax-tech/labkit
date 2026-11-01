@@ -192,6 +192,17 @@ _FIELD_OPEN = re.compile(
 )
 HTML_COMMENT = re.compile(r"<!--.*?-->")
 
+
+def _continues(line: str, own: int) -> bool:
+    """Does LINE, below a field opened at indent OWN, continue its value? A
+    plain indented line does; a list item does when it sits deeper than the
+    field's own line and opens no field of its own."""
+    item = re.match(r"\s*(?:[-*]\s+|\d+[.)]\s)", line)
+    if item is None:
+        return True
+    return len(line) - len(line.lstrip()) > own and not _FIELD_OPEN.match(line)
+
+
 #: the one protocol template labkit stamps (`labkit-init exp`); the readers
 #: that compare a protocol with it, or recognise its placeholders, start here
 PROTOCOL_TEMPLATE = PACKAGE_DIR / "templates" / "experiment-protocol.md.template"
@@ -382,16 +393,21 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
         # `- **Label:**` with the text below is written, not empty (the 25er
         # protocol writes them that way; reading the first line only made
         # the registration gate refuse a written registration, review 2026-10-07).
+        # Sub-bullets deeper than the field's own line are its value too, as
+        # the placeholder rule already counts them: read as nothing, a Data /
+        # scope written as a list compared empty in the scope hold and hid
+        # its source digest (reference pilot 2026-11-01, task 21). A deeper
+        # line that opens a field of its own (`- **registered:**`) ends it.
+        own = len(line) - len(line.lstrip())
         parts = [m.group("value")]
         while (
             nxt < len(lines)
             and lines[nxt].startswith((" ", "\t"))
             and lines[nxt].strip()
             and not protocol_block.FENCE.match(lines[nxt])
-            and not lines[nxt].strip().startswith(("- ", "* "))
-            and not re.match(r"\d+[.)]\s", lines[nxt].strip())
+            and _continues(lines[nxt], own)
         ):
-            parts.append(lines[nxt].strip())
+            parts.append(re.sub(_BULLET, "", lines[nxt]).strip())
             nxt += 1
         value = HTML_COMMENT.sub("", " ".join(parts)).strip()
         label = " ".join(m.group("label").split())
