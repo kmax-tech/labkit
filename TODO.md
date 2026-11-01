@@ -2610,7 +2610,9 @@ was diesen Versuch oder seine Bewertung betrifft (P1, P2, P3, P4); der Rest folg
 `docs/usability/2026-11-01-reference-pilot/`, Belege labkit-evidence f46ba716). Je ein Laborversuch:
 34 übernommen in 5 min, 15 übernommen, 60 Übergabe nach 19 min, sts512 diskutiert (Null-Spur nicht
 registriert), 21 Zeitlimit. Reparaturen aus 0.105.0 hielten, wo erreicht. Zu reparieren, nach
-Wirkung auf die drei Stopps geordnet:
+Wirkung auf die drei Stopps geordnet (1–5 erledigt, unveröffentlicht: f85b2a71 Übernahme,
+d7d22825 Lesehinweise, 305b2808 Feldparser, 02266227 Prüfsumme (Breaking), 236c4913 Null-Reihenfolge;
+Runden-Material neu gepinnt labkit-evidence 272f50c6):
 
 1. **`__pycache__` im Verzeichnis-Digest** (`provenance.visible_files`): bricht jede registrierte
    Prüfsumme, sobald ein Lauf aus seiner Quelle importiert (60); der Rat nennt dann verbotene
@@ -2632,6 +2634,20 @@ Wirkung auf die drei Stopps geordnet:
    opus-5-5. Ein erklärtes, von labkit gesteuertes Ausweichen (eigener Aufruf, Grund und Modell
    protokolliert, nur bei technischem Fehler oder fehlender Antwort) erst nach Entscheidung; sts512-Registrierung: labkits Verzeichnis-Digests
    für Daten und Modell in Data / scope (`fields_sts512.py`); Git-Identität im Image.
+
+**Danach: Vereinfachungsrunde — gleiche Strenge, weniger Zustände** (Rückmeldung 2026-11-01).
+Die Stopps im Referenzpilot gingen auf Integritätsfehler zurück, nicht auf die Strenge (34 voll
+durch in 5 min). Was bleibt: viele gekoppelte, zustandsbehaftete Schritte (Audit, Entscheidung,
+Lauf, Folgeaudit, Übernahme, Bericht, Review), deren Bindungen Widersprüche erzeugen können.
+1. Garantierte Prüfungen so früh wie möglich: Scope und Prüfsummen schon beim Messen, nicht erst
+   bei finalize (21: 24 min bis zur Ablehnung).
+2. Eine feste Reihenfolge, in der keine Stelle vorschlägt, was eine spätere verbietet
+   (Conclusion-vor-adopt-Zeile; Übergabe und Bericht-Review machen sich gegenseitig ungültig).
+3. Weniger Wege, auf denen ein LLM-Urteil blockieren muss; eine formverworfene Antwort mit
+   echtem BLOCKER darf nicht verloren gehen.
+4. Im nächsten Probelauf messen: Zeitanteil der labkit-Schritte, Zahl der Widersprüche zwischen
+   Werkzeugteilen, Zahl der Stopps durch Werkzeugfehler. Bleiben Stopps ohne Fehlerursache, ist
+   das der Beleg für zu viel Kopplung.
 
 **Stand 2026-11-01 nachmittags — Evaluationsdesign und STS-Aufgabe.** Vorschlag (noch nicht
 beschlossen): zwei Behauptungen, zwei Methoden — (A) Erkennung: eingepflanzte Fehler auf
