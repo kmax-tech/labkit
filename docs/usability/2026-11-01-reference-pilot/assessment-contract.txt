@@ -117,3 +117,20 @@ claude-opus-5-5 requests) no classifier note appears and opus-5-5 answered. So t
 safety-classifier stop specific to task 15's audit prompt (Ames mutagenicity), followed by the CLI's
 own fallback; labkit's refusal of the mixed reply is what its provenance rule requires. Why the
 classifier stops that prompt is not established from the records.
+
+Addendum 4, 2026-11-01, before the auditor comparison. Which model audits the next trial: three
+recorded analysis-audit prompts with a known fault, replayed unchanged (the text labkit sent, as
+the proxies recorded it) through `claude -p` with labkit's flags, once each with claude-haiku-4-5,
+claude-sonnet-5-5 and claude-opus-5-5 — 9 calls, at most 1.50 $ each, 8 $ in all:
+- 60 (registered pilot, rp-t60-labkit-r1): the response encoding matched by the set of terms, and
+  NVC scored 0 inside a multi-answer prediction — the two BLOCKERs opus found there;
+- sts512 (reference pilot): the null lane from the seeded shuffle, never reading null_order.json —
+  the BLOCKER opus found there;
+- 15 (reference pilot): predict() under an AUC criterion — the BLOCKER haiku found there, in an
+  answer refused for its form.
+Counted per call: the known fault named as a finding (BLOCKER, or WARNING noted apart), the answer
+readable by labkit's parser (form kept), a safety stop or a switch to another model (no usable
+answer), cost. Decision rule, fixed now: the model that names all three known faults with its form
+kept is the trial's audit model, the same for every task; of several, the cheaper; of none, the one
+with most faults named, a tie to the cheaper. One draw per cell: a cell's result is an indication,
+not a rate. A finding beyond the known fault is recorded, not scored.
