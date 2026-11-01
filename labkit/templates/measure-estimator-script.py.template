@@ -454,8 +454,8 @@ def registered_donors(train: list[dict]) -> list[dict]:
     """The labelled items in NULL_ORDER's order: row i's label comes from
     TRAIN[order[i]]. Raises ValueError when the file is not a JSON list of
     the positions 0 … len(TRAIN) − 1, each once — a registered order that
-    does not fit the items is no control (sts512's plan: the staged
-    permutation, never regenerated; reference pilot 2026-11-01)."""
+    does not fit the items is no control; the staged file is read, never
+    regenerated (docs/notes/2026-11-01-registered-null-order.md)."""
     order = json.loads(Path(NULL_ORDER).read_text(encoding="utf-8"))
     if not isinstance(order, list) or sorted(order) != list(range(len(train))):
         raise ValueError(

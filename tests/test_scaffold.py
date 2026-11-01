@@ -1671,7 +1671,8 @@ class Exp(unittest.TestCase):
         every test runs, the band tests only where a band is registered.
         Reference pilot trial 2, sts512 (2026-11-01): the synthetic null rows
         carried no donors, nine of eleven tests raised "registers no
-        null_band", and finalize refused a correct run. The twins: with a
+        null_band", and finalize refused a correct run
+        (docs/notes/2026-11-01-registered-null-order.md). The twins: with a
         band beside the order it passes too; without the order, the same
         missing band is refused."""
         root, area = self._stamped_estimator_lab("apply")
