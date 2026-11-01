@@ -2534,6 +2534,37 @@ Laborarmen 21 und pubmedqa50 im echten Image geprüft: zweimal „one labkit:
 0.104.3“, zweimal `protocol-check` OK, null Modellaufrufe. Kein
 kostenpflichtiger Start durch diesen Umbau.
 
+**Stand 2026-11-01 morgens:** Teil 0 und Teil 1 gelaufen (Nachträge 3–7 im Vertrag; Belege
+labkit-evidence b077c2fd). Teil 1 in Kürze (zwei Gutachter, 26 von 30 identisch): keine
+Übergabe wegen selbst verschärfter Registrierung (0 von 30); Laborarm braucht 2- bis 13-mal so
+lange, 60 sprengt das Budget (0 von 3 mit Ergebnis); Kontrollarm 60-r1/-r3 meldet „Plan
+befolgt“ über eine Umsetzung, die vom Plan abweicht — im Laborarm fing das Audit genau das
+(60-r1, 0,071 → 0,123). Übertreibungen des Laborarms nur in Prosa neben richtiger generierter
+Zahl. pubmedqa50 nicht lesbar (Infrastruktur, siehe 1). Offen:
+
+1. **pubmedqa50 wiederholen**, beide Arme × 3, einzeln (`WORKERS=1`), Nachtrag vorher. Ursache
+   des Ausfalls: vier Versuche gleichzeitig auf einem API-Schlüssel, Ausgaberate 2–8 statt
+   15–35 Token/s, für alle dann laufenden Versuche. Forschungsentscheidung beim Nutzer.
+2. **Läufer: Arme abwechselnd starten** statt Arm nach Arm (Teil 1 lief erst ganz Kontrolle,
+   dann ganz Labor — Drift trifft die Arme ungleich); und Modell-Tasks nie parallel auf einem
+   Schlüssel.
+3. **Prosa-Zahlen neben dem generierten Block** (21-r3 Flächen aus Test-Fixture, 34-r2
+   Werte falscher Spalten, 15-r3 Schwelle 0,75 statt 0,732): report-check prüft den Block, nicht
+   die Prosa. Statische Evidenz denkbar: Zahlen im REPORT.md, die in keinem Lauf-Output
+   vorkommen, als Warnung. Wartet laut Reihenfolge auf Bedarf — hier ist der Bedarf belegt.
+4. **Gelöschte Aufzeichnungen** (34-r3 `rm -rf runs/ audits/`, Rückkopie aus
+   `.git/labkit-attempts`, Übergabe sagt „lost during development iterations“; pubmedqa50-r1
+   ebenso): der Spiegel in `.git/labkit-attempts` macht das prüfbar — Standardprüfung könnte
+   Läufe/Audits melden, die im Spiegel stehen und im Bereich fehlen.
+5. **Audit-Modellprüfung bei CLI-Fallback**: `claude-opus-5-5` gab eine leere Antwort (0 Token,
+   200), die CLI wich still auf `claude-opus-5` aus, labkit verwarf richtig („not an answer
+   of claude-opus-5-5“, alle drei 15-Laborversuche). Meldung sollte die Ursache nennen
+   (leere Antwort, Fallback) und den nächsten Schritt (Audit wiederholen); ggf. Fallback der CLI
+   abschalten, wenn es eine Option dafür gibt.
+6. **60 im Laborarm**: Gold-Ausgabe nach 25 min (60-r3), danach drei Audit-Runden bis zum
+   Timeout — die Schleife Messen → Audit → Entscheiden aus dem Abschnitt unten, jetzt bei
+   vorgegebener Registrierung. Kandidat für den nächsten Schnitt.
+
 
 ## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)
 
