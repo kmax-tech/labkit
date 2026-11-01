@@ -323,6 +323,32 @@ class WorkersAreTheAreas(Case):
             self.assertEqual(set(seen), {1})
             self.assertIn("1 call(s) at a time", out.getvalue())
 
+    def test_the_calls_in_flight_never_exceed_the_areas_workers(self):
+        """Through the real `llm.complete_many`, counted at the call: the area's
+        number is what runs at once — 1 stays one call at a time, 3 reaches 3
+        (the pool, not just the argument)."""
+        for workers in (1, 3):
+            with self.subTest(workers=workers), tempfile.TemporaryDirectory() as d:
+                run, items = lanes_in(Path(d), n=12)
+                run = dataclasses.replace(run, workers=workers)
+                lock, now, peak = threading.Lock(), [0], [0]
+
+                def one_call(alias, prompt, **kw):
+                    with lock:
+                        now[0] += 1
+                        peak[0] = max(peak[0], now[0])
+                    time.sleep(0.02)
+                    with lock:
+                        now[0] -= 1
+                    return "Yes"
+
+                with (
+                    mock.patch.object(llm, "complete", one_call),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    run.measure(Cfg(), run.plan(items), run.out)
+                self.assertEqual(peak[0], workers)
+
     def test_workers_below_one_are_refused_before_any_call(self):
         with tempfile.TemporaryDirectory() as d:
             run, items = lanes_in(Path(d))

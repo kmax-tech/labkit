@@ -113,6 +113,13 @@ def _print_status(
     for r in live:
         pid, script = (r.config.pid, r.config.script) if r.config else (None, None)
         print(f"{r.run_id}  {r.state:12s} pid={pid}  {script}")
+        if r.state == "unknown":
+            # a live run in a sandbox without `ps` read as a bare "unknown",
+            # and its lock as stale (registered pilot part 1, pubmedqa50-r2)
+            print(
+                f"    pid {pid} exists; whether it still runs {script} cannot be "
+                f"checked here (no `ps`) — treat it as running, never delete its lock"
+            )
         if r.config is None:
             print(f"    {r.error}")
         else:

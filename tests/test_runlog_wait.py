@@ -20,6 +20,7 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
@@ -154,6 +155,31 @@ class TestWait(unittest.TestCase):
             self.assertEqual(code, 3)
             self.assertIn("still running", out)
             self.assertLess(time.monotonic() - t0, 5)
+
+    def test_a_live_run_whose_script_cannot_be_checked_is_shown_as_running(self):
+        """No `ps` in a sandbox: the pid exists, its command line cannot be
+        read; the status says to treat it as running (pubmedqa50-r2)."""
+        with tempfile.TemporaryDirectory() as d:
+            run_dir = Path(d) / "runs" / "2026-09-09T10-00-00_live"
+            run_dir.mkdir(parents=True)
+            (run_dir / "config.json").write_text(
+                json.dumps(
+                    run_record(
+                        {
+                            "schema_version": 4,
+                            "run_kind": "measurement",
+                            "pid": os.getpid(),
+                            "script": "01_measure.py",
+                        }
+                    )
+                ),
+                encoding="utf-8",
+            )
+            with unittest.mock.patch.object(runs, "_command_of", lambda pid: None):
+                code, out = _run_main([d])
+            self.assertEqual(code, 0, out)
+            self.assertIn("unknown", out)
+            self.assertIn("treat it as running, never delete its lock", out)
 
     def test_an_earlier_crash_beside_a_running_run_does_not_end_the_wait(self):
         """A start refused by the open run's output lock leaves a crashed
@@ -494,6 +520,73 @@ def _run_script(run_dir: Path, *, finished: bool, then: str) -> str:
 
 def _wait_for(d: str, max_seconds: str = "20") -> tuple[int, str]:
     return _run_main([d, "--wait", "--max-seconds", max_seconds, "--interval", "0.1"])
+
+
+class TestARefusedSecondWriterBesideALiveRun(unittest.TestCase):
+    """The scene of pubmedqa50-r2 (registered pilot part 1, 2026-11-01), with
+    real processes: a measurement writes its output under the lock; a
+    second start of the same script is refused by that lock and leaves a
+    crashed run. The refusal says the holder is alive, `--wait` waits for
+    the live run and names the crash as earlier, and ends 0 once the live
+    run finished — before, it ended at once with exit 2 naming the crash
+    alone, and the agent deleted the live run's lock."""
+
+    SCRIPT = (
+        "import sys, time\n"
+        "from pathlib import Path\n"
+        f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
+        "from labkit.run import batch, runlog\n"
+        "area = Path(sys.argv[1])\n"
+        "with runlog.run('x', {'n': 1}, area, run_kind='measurement') as run:\n"
+        "    out = area / 'out.jsonl'\n"
+        "    run.output(out)\n"
+        "    with batch.Store(out) as store:\n"
+        "        time.sleep(float(sys.argv[2]))\n"
+        "        store.append({'id': 'a'})\n"
+        "    run.metrics(count=1)\n"
+    )
+
+    def test_the_wait_follows_the_live_run_past_the_refused_start(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                head(repeat_cost="low", promises=None)
+                + "\n- **Question / hypothesis:** how many?\n",
+                encoding="utf-8",
+            )
+            script = area / "01_measure.py"
+            script.write_text(self.SCRIPT, encoding="utf-8")
+            env = {**os.environ, "LABKIT_DETACHED": "1"}
+            live = subprocess.Popen(
+                [sys.executable, str(script), d, "4"], env=env, cwd=d,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )  # fmt: skip
+            try:
+                lock = area / "out.jsonl.lock"
+                for _ in range(100):
+                    if lock.exists():
+                        break
+                    time.sleep(0.05)
+                self.assertTrue(lock.exists(), "the live run never took its lock")
+                second = subprocess.run(
+                    [sys.executable, str(script), d, "0"], env=env, cwd=d,
+                    capture_output=True, text=True, timeout=60,
+                )  # fmt: skip
+                self.assertNotEqual(second.returncode, 0)
+                self.assertIn(f"pid {live.pid} is alive", second.stderr)
+                self.assertIn("never delete its lock", second.stderr)
+                code, out = _wait_for(d, "30")
+                self.assertEqual(code, 0, out)
+                self.assertIn("not what it waits for", out)
+                self.assertIn("CRASHED", out)
+                self.assertIn("no open runs", out)
+                _, live_err = live.communicate(timeout=30)
+                self.assertEqual(live.returncode, 0, live_err)
+                rows = (area / "out.jsonl").read_text(encoding="utf-8").splitlines()
+                self.assertEqual(len(rows), 1)  # one writer, one row
+            finally:
+                if live.poll() is None:
+                    live.kill()
 
 
 class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
