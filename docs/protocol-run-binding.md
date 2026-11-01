@@ -12,7 +12,7 @@ block (the head, `labkit/formats/protocol_block.py`):
 
 ```toml
 [protocol]
-standard = "0.23"
+standard = "0.24"
 id = "p-9e2341c0390948dc"
 ```
 

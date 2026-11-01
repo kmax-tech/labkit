@@ -84,10 +84,15 @@ kind, not the repeat cost (`standard_contract.registration_fields(kind, model)`)
 every kind the question; a fit or an apply also the success criterion, the
 quality check and the null condition / anchors; a `[model]` table
 adds the data profile, and a computation with one says in the head what its
-number describes (`number_describes`). A computation a task asks to match
+number describes (`number_describes`). A computation names its kept
+number in the head's `[kept]` table — the metrics key and its unit
+(`labkit-init exp --kind compute --kept KEY --unit UNIT` stamps them, else
+`protocol-fill <PROTOCOL> "kept.key=…" "kept.unit=…"`); the compute
+skeleton reads the key from there, and finalize refuses a run that does
+not hold it as a finite number. A computation a task asks to match
 a stated value registers it in the head's optional `[reference]` table
-(key — the metrics key compared —, value, tolerance, relation, source;
-`labkit-init exp --kind compute --reference KEY=VALUE[±TOL]` stamps it,
+(value, tolerance, relation, source — compared on the `[kept]` key;
+`labkit-init exp --kind compute --kept KEY --reference VALUE[±TOL]` stamps it,
 `docs/promise-block.md`): the run writes the verdict beside the number,
 the Recorded results line carries it generated, and a `not met` is a
 valid outcome; without the table nothing is compared. `protocol-check`
