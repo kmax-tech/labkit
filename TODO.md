@@ -2582,16 +2582,19 @@ was diesen Versuch oder seine Bewertung betrifft (P1, P2, P3, P4); der Rest folg
   die Sperrmeldung prüft die pid selbst — erledigt ee306b76; Flush des Fortschritts — erledigt
   7662e548. Offen: ein von der Sperre abgewiesener Start legt weiter einen CRASHED-Lauf an.
 - **P2 Modellaufrufe wie registriert** (Fehler 10): Parallelität ist Sache des Bereichs
-  (`workers`, Vorlage 1) — erledigt 7662e548. Offen: den Zusatzkontext der CLI klären. CLI
-  2.1.309 hat `--system-prompt` (ersetzt den Agenten-Systemprompt) und `--bare`; ob Thinking
-  abschaltbar ist und was danach wirklich gesendet wird, muss ein echter Aufruf hinter dem
-  Proxy zeigen (request body). Den tatsächlich gesendeten Eingang festhalten (Flags, Version,
-  Digest des Systemprompts).
-- **P3 Audit-Antworten zuverlässig lesen** (Fehler 1, 6, 4, 5; Unklar 13): eine gültige
-  Ablehnung oder ein zulässiger Befund darf keinen weiteren teuren Aufruf auslösen.
+  (`workers`, Vorlage 1) — erledigt 7662e548. CLI-Zusatzkontext — erledigt 0f09e961: Alias-Option
+  `input = "prompt"` (`--bare`, eigener Systemprompt, `MAX_THINKING_TOKENS=0`), hinter dem
+  Proxy geprüft: eine Nachricht, der Prompt; System nur die feste CLI-Kennzeile (139 Zeichen);
+  Thinking aus. Braucht ANTHROPIC_API_KEY (Sandbox hat ihn). Für die pubmedqa50-Wiederholung:
+  im gestagten `models.toml` den haiku-Alias auf `input = "prompt"` setzen, im Nachtrag nennen.
+- **P3 Audit-Antworten zuverlässig lesen** (Fehler 1, 6, 4, 5; Unklar 13) — erledigt 8ae3345f:
+  check-Feld auf seiner Zeile, Ablehnung als Überschrift, Bericht erst nach dem Datensatz,
+  entschiedene Befunde markiert, fehlender `--record` abgelehnt, anderer Alias als Befehl.
 - **P4 Fortschritt und fehlende Schritte** (Unklar 12, 16): Audit-Zustand sichtbar
   (laufend/gescheitert/entschieden), Prompt-Abgleich vor der Messung, Testset-Abgabe im Ablauf.
-- **P5 Audit-Schleife** (Unklar 17): konkreten Vorschlag ausarbeiten. Bedingungen: eine
+- **P5 Audit-Schleife** (Unklar 17): Vorschlag in `docs/notes/2026-11-01-audit-loop-close.md`
+  (Runden zählen, ab Runde 3 Abschluss als generierte Übergabe, Hinweise statt Gates); wartet
+  auf Entscheidung. Bedingungen: eine
   Rundengrenze gibt nie automatisch frei; bei erreichtem Budget entsteht ein nachvollziehbarer
   Abschluss (gesicherter Zwischenstand, offene Befunde, zulässige Aussagen, nächster Schritt).
   Ein Konvergenzhinweis (Befunde kehren wieder, Anweisungen widersprechen sich) ist zunächst
