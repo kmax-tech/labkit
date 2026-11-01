@@ -1,0 +1,48 @@
+Recorded before any attempt, 2026-11-01. The reference pilot: a technical trial, not counted. Does
+the labkit workflow, after the repairs read from the registered pilot's traces, run end to end on
+each task of the coming rounds, and which faults remain in labkit, the harness or the task
+material?
+
+Design: the lab arm only, one attempt per task, no pressure — the supplied-plan situation of
+docs/usability/2026-11-01-evaluation-design.md. Tasks:
+- 21, 34, 60 (compute) and 15 (fit): the registered pilot's protocols, unchanged
+  (labkit-evidence usability/2026-10-31-registered-pilot/protocols/);
+- sts512 (apply, a local encoder): the protocol rendered by fields_sts512.py
+  (labkit-evidence usability/2026-11-01-sts512/, fdfdde0b), the task labkit-paper-main
+  benchmarks/sts512 (4c8c736).
+pubmedqa50 is not part of it: its trial needs its own configuration (the alias with
+input = "prompt", calls one at a time, attempts one after another) and follows separately.
+
+Held from the registered pilot (contract of 2026-10-31): the solver (the haiku alias,
+claude-haiku-4-5-20251001), the budgets (2400 s, 500 turns, 20 $ an attempt; task 15 3600 s and
+12 GB), the API key through the proxy, TZ=UTC, the lab arm's PATH and setup with its one-labkit
+check, the lab arm's sentence (run_pilot.py, GIVEN: the registration is given, implement it, do not
+change it, say where it cannot be followed). The runner is the registered pilot's with sts512 added
+(its own task text, no model route; labkit-evidence usability/2026-11-01-sts512/run_pilot.py).
+
+labkit under test: the release carrying the repairs since v0.104.4 (CHANGELOG "Unreleased" as of
+labkit 16ac6d9b: runlog --wait and the output lock, the area's workers, the prompt check before a
+paid call, claude-cli input = "prompt", the audit answers read where part 1 lost them, a running
+audit named, an analysis audit refused over undecided earlier BLOCKERs, no READ line on fields
+adopt writes). sandbox/labkit.pin names it by its commit; the image tag and the commit are named in
+an addendum before the first attempt.
+
+Schedule: 21, 34, 60 and sts512 in one batch of four workers (ids ref-…, store store-ref); then 15
+alone with 12 GB. No task calls a model in its measurement, so the API carries the agents only.
+
+Recorded per attempt, as in the registered pilot: the hidden evaluation (for sts512 its own
+evaluator: delivery, agreement within 1e-5, metrics recomputed within 1e-6), REPORT.md, the
+adopted run and the handovers, the labkit standard on the delivered state, the registration against
+the staged one, time, turns, cost. Then every trace is read end to end for labkit faults, as on
+2026-11-01 (labkit_issues.py, one reader per task), each fault classed BUG, UNCLEAR, FRICTION or
+AGENT and checked in the source before it is called a bug.
+
+What it can show: that the workflow completes or where it stops, and the faults on the way. What it
+cannot show: any comparison with the control arm, or a rate — one attempt per task.
+
+Stop rules: an attempt lost to the infrastructure (host sleep, a slowed or failing API, the harness)
+is repeated once and both are kept; a labkit fault is recorded, not repaired during the trial. A
+repair after the trial is a new release, named in an addendum, before any counted round.
+
+Open interpretation known before the trial, recorded as it falls: task 21's repair of invalid
+geometries (the registered pilot's six values differ in the fifth decimal).
