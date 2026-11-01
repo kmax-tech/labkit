@@ -134,3 +134,19 @@ answer), cost. Decision rule, fixed now: the model that names all three known fa
 kept is the trial's audit model, the same for every task; of several, the cheaper; of none, the one
 with most faults named, a tie to the cheaper. One draw per cell: a cell's result is an indication,
 not a rate. A finding beyond the known fault is recorded, not scored.
+
+Addendum 5, 2026-11-01, the auditor comparison's result (labkit-evidence
+usability/2026-11-01-reference-pilot/auditor-comparison/). 9 calls, 3.13 $ in all.
+- haiku (0.39 $): named 60's NVC scoring, sts512's null order and 15's predict(); 60's encoding
+  missed; two of three answers refused by labkit's parser (text after the last finding below a
+  blank line), so only sts512's would have been recorded.
+- sonnet (0.54 $): named 60's NVC scoring, sts512's null order (and the bar), 15's predict(); 60's
+  encoding (matched by the set of terms) missed; form kept in all three.
+- opus (2.20 $): named both of 60's faults and sts512's null order (and the bar, five warnings);
+  on 15 a safety classifier stopped claude-opus-5-5 again and the CLI switched to claude-opus-5 —
+  no usable answer under labkit's provenance rule.
+No model named every known fault with its form kept. By the rule fixed in addendum 4: most faults
+named in a recordable answer — opus 3, sonnet 3, haiku 1 — and of the tie the cheaper: the trial's
+audit model is sonnet (claude-sonnet-5-5), for every task, staged as `[audit] model = "sonnet"` with
+a `[models.sonnet]` alias in the lab's models.toml. Its miss of 60's encoding fault is the one
+recorded weakness against opus; one draw per cell, an indication, not a rate.
