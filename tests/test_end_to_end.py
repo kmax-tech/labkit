@@ -1148,7 +1148,7 @@ class Judge(unittest.TestCase):
         cls.lab.close()
 
     @staticmethod
-    def _model(alias: str, prompts: list[str]) -> list[str]:
+    def _model(alias: str, prompts: list[str], *, workers: int) -> list[str]:
         """The faked model: reads the causal claim off the text; answers the
         placebo with Yes for every item (null accuracy = the causal share)."""
         out = []

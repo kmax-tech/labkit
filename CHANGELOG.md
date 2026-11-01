@@ -7,6 +7,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Breaking
+
+- **`lanes.Lanes` takes `workers`, the calls in flight at once; the model
+  template sets `WORKERS = 1`.** A model area ran four calls at a time,
+  fixed in `llm.complete_many`'s default, while its protocol registered one
+  request at a time (registered pilot, part 1, pubmedqa50). The area names
+  the number now, where the audit reads it. An area stamped on 0.104.4 or
+  earlier passes `workers=` to `lanes.Lanes(...)` or is refused with a
+  TypeError. A measurement's progress lines are flushed and say how many
+  calls run at once and that rows land every 40 calls: run in the
+  background, an unflushed line made a live measurement look dead.
+
 ### Changed
 
 - **`runlog --wait` waits for the open run past an earlier failure.** A

@@ -80,6 +80,9 @@ from labkit.run import lanes
 ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"   # written by 00_prepare.py: id · text · gold
 TEXT_FIELD = "text"                                     # TODO: the item field the prompt shows
 MODEL = "<model>"                                       # alias from models.toml, never an endpoint
+# Calls in flight at once: 1 is one request at a time. More only where the
+# protocol allows parallel requests (on claude-cli each one is a process).
+WORKERS = 1
 
 # The answer vocabulary — one constant, two readers (prompt and parser).
 # TODO: map each answer word to the gold label it means.
@@ -264,7 +267,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
 
 RUN = lanes.Lanes(name="<name>", protocol=PROTOCOL, items=ITEMS, out=OUT, prompts=LANES,
                   text_field=TEXT_FIELD, parse_answer=parse_answer,
-                  evaluate_rows=evaluate_rows, case_classes=CASE_CLASSES,
+                  evaluate_rows=evaluate_rows, workers=WORKERS, case_classes=CASE_CLASSES,
                   probe_cases_in="tests/test_<NN>_<name>.py")
 # the names 02_analyze.py and the area test read
 plan, measure, probe, evaluate, instrument = RUN.plan, RUN.measure, RUN.probe, RUN.evaluate, RUN.instrument

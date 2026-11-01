@@ -245,7 +245,7 @@ class HonestMiss(_Chain):
     a pass."""
 
     @staticmethod
-    def _misses(alias: str, prompts: list[str]) -> list[str]:
+    def _misses(alias: str, prompts: list[str], *, workers: int) -> list[str]:
         """A model that answers No on the registered lane: accuracy at the
         null's, below the margin; the placebo at chance as registered."""
         return [

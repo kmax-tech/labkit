@@ -101,7 +101,7 @@ class Pairing(unittest.TestCase):
     JOBS_FROM = [{"id": f"x{i}", "text": f"item {i}"} for i in range(5)]
 
     def _answering(self, short_by: int):
-        def complete_many(model, prompts):
+        def complete_many(model, prompts, *, workers):
             return ["Yes"] * (len(prompts) - short_by)
 
         return mock.patch.object(self.judge.lanes.llm, "complete_many", complete_many)
@@ -156,7 +156,7 @@ class Balance(unittest.TestCase):
     def _judged(self, items: list[dict]) -> list[dict]:
         m = self.judge
         jobs = m.plan(items)
-        answer = lambda model, prompts: ["Yes"] * len(prompts)  # noqa: E731
+        answer = lambda model, prompts, *, workers: ["Yes"] * len(prompts)  # noqa: E731
         with mock.patch.object(m.lanes.llm, "complete_many", answer):
             m.measure(m.CONFIG, jobs, self.out)
         return jobs
@@ -193,7 +193,7 @@ class Balance(unittest.TestCase):
         """The probe resumed its file: an item edited since the last probe
         made no new call and showed the old answer (review 2026-10-20)."""
         m = self.judge
-        answer = lambda model, prompts: [  # noqa: E731
+        answer = lambda model, prompts, *, workers: [  # noqa: E731
             "Yes" if "corrected" in p else "No" for p in prompts
         ]
         items = self._items()

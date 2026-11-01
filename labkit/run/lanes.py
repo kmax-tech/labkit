@@ -38,8 +38,9 @@ from labkit.formats import protocol_block, runs, standard_contract
 from labkit.formats.repo import next_after_run
 from labkit.run import batch, llm, runlog
 
-#: calls per batch handed to `llm.complete_many` (four workers); each batch
-#: is written before the next starts, so a break loses at most one batch
+#: calls per batch handed to `llm.complete_many` (the area's `workers` at a
+#: time); each batch is written before the next starts, so a break loses at
+#: most one batch
 CHUNK = 40
 
 
@@ -103,6 +104,10 @@ class Lanes:
     text_field: str
     parse_answer: Callable[[str], str | None]
     evaluate_rows: Callable[..., dict]  # (rows, config) -> metrics
+    # calls in flight at once — the area names it, as its protocol registers
+    # the request discipline: `llm.complete_many` held four, and a protocol's
+    # "one request at a time" ran as four (pubmedqa50, 2026-11-01)
+    workers: int
     probe_cases_in: str  # the area test the probe's parser cases are pasted into
     case_classes: Path | None = None
 
@@ -178,16 +183,27 @@ class Lanes:
         another instrument. `llm.complete_many` returns the answers in the
         order of the prompts, whatever order the calls finish in; the
         pairing is strict — a shorter or longer answer list raises
-        ValueError, never a cut. PROV stamps every row (`_prov`)."""
+        ValueError, never a cut. PROV stamps every row (`_prov`). Each line
+        is flushed: a run in the background writes to a file, and an
+        unflushed one made a live measurement look dead (pubmedqa50,
+        2026-11-01). Raises ValueError when `workers` is below 1."""
+        if not isinstance(self.workers, int) or self.workers < 1:
+            raise ValueError(f"Lanes workers = {self.workers!r}; expected 1 or more")
         with batch.Store(out, prov=prov, instrument=self.instrument(cfg)) as store:
             todo = list(store.pending(jobs))
-            print(f"to measure: {len(todo)} of {len(jobs)}")
+            print(
+                f"to measure: {len(todo)} of {len(jobs)} · {self.workers} call(s) at "
+                f"a time · rows written every {CHUNK} calls to {out}",
+                flush=True,
+            )
             for start in range(0, len(todo), CHUNK):
                 chunk = todo[start : start + CHUNK]
-                answers = llm.complete_many(cfg.model, [self.render(j) for j in chunk])
+                answers = llm.complete_many(
+                    cfg.model, [self.render(j) for j in chunk], workers=self.workers
+                )
                 for j, text in zip(chunk, answers, strict=True):
                     store.append({**j, "answer": text})
-                print(f"  {min(start + CHUNK, len(todo))}/{len(todo)}")
+                print(f"  {min(start + CHUNK, len(todo))}/{len(todo)}", flush=True)
 
     def probe(self, cfg: Any, items: list[dict], n: int) -> list[dict]:
         """N jobs per lane through the real pipeline into a throwaway file,

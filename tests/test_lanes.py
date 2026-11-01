@@ -11,6 +11,7 @@ config and the formulas — the audit's prompt carries them.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import io
 import json
 from dataclasses import replace
@@ -74,7 +75,7 @@ def lanes_in(d: Path, n: int = 6) -> tuple[lanes.Lanes, list[dict]]:
         name="x", protocol=d / "PROTOCOL-x.md", items=d / "items.jsonl", out=d / "out.jsonl",
         prompts={"registered": "Q: {text}", "null": "N: {text}"}, text_field="text",
         parse_answer=lambda t: t.strip() or None, evaluate_rows=evaluate_rows,
-        probe_cases_in="tests/test_01_x.py",
+        workers=1, probe_cases_in="tests/test_01_x.py",
     )  # fmt: skip
     return run, items
 
@@ -296,6 +297,39 @@ class ResumeKeepsOneModel(Case):
             ):
                 with self.assertRaises(batch.InstrumentError):
                     run.measure(Cfg(), jobs, run.out)
+            asked.assert_not_called()
+
+
+class WorkersAreTheAreas(Case):
+    """The calls in flight are the area's `workers`, not the backend's
+    default: a protocol registering one request at a time ran as four
+    (pubmedqa50, 2026-11-01)."""
+
+    def test_measure_hands_the_areas_workers_to_every_batch(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, items = lanes_in(Path(d))
+            seen = []
+
+            def answer(alias, prompts, **kw):
+                seen.append(kw.get("workers"))
+                return ["Yes"] * len(prompts)
+
+            out = io.StringIO()
+            with (
+                mock.patch.object(llm, "complete_many", answer),
+                contextlib.redirect_stdout(out),
+            ):
+                run.measure(Cfg(), run.plan(items), run.out)
+            self.assertEqual(set(seen), {1})
+            self.assertIn("1 call(s) at a time", out.getvalue())
+
+    def test_workers_below_one_are_refused_before_any_call(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, items = lanes_in(Path(d))
+            run = dataclasses.replace(run, workers=0)
+            with mock.patch.object(llm, "complete_many") as asked:
+                with self.assertRaisesRegex(ValueError, "workers = 0"):
+                    run.measure(Cfg(), run.plan(items), run.out)
             asked.assert_not_called()
 
 
