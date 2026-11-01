@@ -10,6 +10,7 @@ what is read; a record that names another path is refused.
 import contextlib
 import importlib.util
 import io
+import os
 import subprocess
 import sys
 import tempfile
@@ -208,6 +209,10 @@ class KeptNumber(unittest.TestCase):
                     capture_output=True,
                     text=True,
                     timeout=120,
+                    # both rewrites of the test file have the same size within
+                    # the same second: a cached .pyc of the first was run for
+                    # the second (the merged suite, 2026-11-01)
+                    env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
                 )
                 self.assertEqual(r.returncode, code, r.stdout + r.stderr)
                 if code:

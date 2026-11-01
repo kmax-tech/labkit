@@ -9,6 +9,22 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The templates after the second trial** (reference pilot, 2026-11-01):
+  - the stamped estimator test serves a registered null order: its
+    synthetic null rows name their donors, and the band tests hold only
+    where a band is registered; sts512 (`NULL_ORDER`, no band) failed 9 of
+    11 stamped tests, and finalize refused a correct run;
+  - `spearman` is a score of the estimator skeleton: the Pearson correlation
+    of mean ranks, a constant vector refused, chance and the permutation
+    expectation 0; offered only accuracy, r2 and auc, the sts512 agent
+    switched to r2 against its registration;
+  - the compute skeleton's kept number (`METRIC_KEY`) must be a number: a
+    bool, a text or a missing key is refused naming it; task 34 adopted
+    "hrv_computed = True" while its Unit named HRV_MeanNN;
+  - the stamped comments state the rule; the history went into
+    `docs/notes/2026-11-01-hand-checked-case-one-row.md` and
+    `docs/notes/2026-11-01-registered-null-order.md`.
+
 - **A deleted run is named, and its way out lifts its blocker.** An audit
   record naming a run whose directory is gone told the agent to "measure
   anew", which could never lift it — the record stays; agents measured,
