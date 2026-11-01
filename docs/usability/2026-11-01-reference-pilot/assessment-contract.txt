@@ -106,3 +106,14 @@ Faults found (each checked in the source unless marked):
 
 Read: the workflow completes on 34 and 15; on 21, 60 and sts512 it stops at labkit faults or gaps
 named above, each with a concrete repair. Not a rate: one attempt per task.
+
+Addendum 3, 2026-11-01, a correction to addendum 2. "The opus audit alias failed in 4 of 4 attempts
+across both pilots" is wrong as a statement about the sandbox. Read from the proxies' recorded
+request bodies (no new call): in every task-15 attempt (rp r1–r3, refb) the CLI appended to its
+second claude-opus-5-5 request "Your response above was stopped by a safety classifier — this is not
+a tool or API error", added the beta header fallback-credit-2026-06-01, and then sent the audit to
+claude-opus-5. In every other lab attempt of both pilots (21, 34, 60, pubmedqa50, sts512; over 60
+claude-opus-5-5 requests) no classifier note appears and opus-5-5 answered. So the failure is a
+safety-classifier stop specific to task 15's audit prompt (Ames mutagenicity), followed by the CLI's
+own fallback; labkit's refusal of the mixed reply is what its provenance rule requires. Why the
+classifier stops that prompt is not established from the records.

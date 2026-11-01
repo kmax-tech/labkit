@@ -2627,8 +2627,10 @@ Wirkung auf die drei Stopps geordnet:
    `Run.metrics()` prüft JSON-Fähigkeit sofort mit Schlüssel; `blocks_owed` löst Pfade auf;
    withdraw-Rat ohne Übernahme; formverworfene Antwort mit echtem BLOCKER; Testvorlage (zwei
    Zeilen, accuracy unter AUC); „Conclusion vor adopt“ in der Lauf-Zeile.
-7. **Harness/Material:** opus-Audit scheitert 4/4 in der Sandbox (CLI-Fallback) — Audit-Alias der
-   Sandbox auf haiku oder Fallback abschalten; sts512-Registrierung: labkits Verzeichnis-Digests
+7. **Harness/Material:** opus-Audit scheitert nur bei Aufgabe 15 (4/4): Sicherheitsklassifikator
+   stoppt opus-5-5, die CLI weicht auf opus-5 aus (Nachtrag 3); bei allen anderen Aufgaben läuft
+   opus-5-5. Ein erklärtes, von labkit gesteuertes Ausweichen (eigener Aufruf, Grund und Modell
+   protokolliert, nur bei technischem Fehler oder fehlender Antwort) erst nach Entscheidung; sts512-Registrierung: labkits Verzeichnis-Digests
    für Daten und Modell in Data / scope (`fields_sts512.py`); Git-Identität im Image.
 
 **Stand 2026-11-01 nachmittags — Evaluationsdesign und STS-Aufgabe.** Vorschlag (noch nicht
