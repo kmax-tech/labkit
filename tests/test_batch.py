@@ -48,8 +48,21 @@ class TestStore(unittest.TestCase):
 
     def test_second_writer_is_refused_while_locked(self):
         with batch.Store(self.out):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(SystemExit) as ctx:
                 batch.Store(self.out).__enter__()
+        # the holder (this process) is alive: the refusal says so itself
+        self.assertIn("is alive", str(ctx.exception))
+        self.assertIn("never delete its lock", str(ctx.exception))
+
+    def test_a_dead_holders_lock_is_named_stale(self):
+        """The refusal checks the holder's pid itself — a sandbox without
+        `ps` left the agent guessing (pubmedqa50, 2026-11-01)."""
+        lock = self.out.with_suffix(".jsonl.lock")
+        lock.write_text("pid 99999999 · 2026-11-01T01:00:00 · x.py\n", encoding="utf-8")
+        with self.assertRaises(SystemExit) as ctx:
+            batch.Store(self.out).__enter__()
+        self.assertIn("pid 99999999 is gone", str(ctx.exception))
+        self.assertIn("the lock is stale", str(ctx.exception))
 
     def test_lock_is_released_after_the_block(self):
         with batch.Store(self.out):

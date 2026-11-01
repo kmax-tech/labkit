@@ -155,6 +155,40 @@ class TestWait(unittest.TestCase):
             self.assertIn("still running", out)
             self.assertLess(time.monotonic() - t0, 5)
 
+    def test_an_earlier_crash_beside_a_running_run_does_not_end_the_wait(self):
+        """A start refused by the open run's output lock leaves a crashed
+        run; --wait ended at once with exit 2 and named only that one, and
+        the agent took the running run's lock for stale (pubmedqa50, 2026-11-01)."""
+        with tempfile.TemporaryDirectory() as d:
+            me = runs._command_of(os.getpid()) or "python"
+            for name, pid, script in (
+                ("2026-09-09T10-00-00_live", os.getpid(), me.split()[0]),
+                ("2026-09-09T10-05-00_dead", 999_999_99, "01_measure.py"),
+            ):
+                run_dir = Path(d) / "runs" / name
+                run_dir.mkdir(parents=True)
+                (run_dir / "config.json").write_text(
+                    json.dumps(
+                        run_record(
+                            {
+                                "schema_version": 4,
+                                "run_kind": "measurement",
+                                "pid": pid,
+                                "script": script,
+                            }
+                        )
+                    ),
+                    encoding="utf-8",
+                )
+            code, out = _run_main(
+                [d, "--wait", "--max-seconds", "0.3", "--interval", "0.1"]
+            )
+            self.assertEqual(code, 3, out)
+            self.assertIn("waiting for 2026-09-09T10-00-00_live", out)
+            self.assertIn("not what it waits for", out)
+            self.assertIn("2026-09-09T10-05-00_dead  CRASHED", out)
+            self.assertIn("still running after 0s — 2026-09-09T10-00-00_live", out)
+
 
 class TestStartDetaches(unittest.TestCase):
     def test_child_runs_in_its_own_session_and_survives_to_completion(self):

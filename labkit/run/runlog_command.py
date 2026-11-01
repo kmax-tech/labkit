@@ -219,37 +219,74 @@ def _wait(
     start` detached that still runs without one (`_unopened`). Exit codes
     are the contract: 0 = idle (finished) · 2 = a run crashed, or a started
     command ended without a run record and not with exit 0
-    (`_failed_starts`) · 3 = still running at --max-seconds. The waiter
-    only OBSERVES — the run owns its process group and its lock, so a
-    killed waiter is harmless (verified in the detach probe: killing the
-    waiter left run and lock untouched)."""
+    (`_failed_starts`) · 3 = still running at --max-seconds.
+
+    What it waits for is what is open when it begins and what opens while
+    it waits. A failure that stands when it begins beside an open run is
+    named once as not waited on, and decides no exit: a start refused by
+    the open run's lock ended the wait at once and hid the run still
+    writing. With nothing open when it begins, a standing failure is the
+    area's latest word: exit 2. The waiter only OBSERVES — the run owns its
+    process group and its lock, so a killed waiter is harmless (verified in
+    the detach probe: killing the waiter left run and lock untouched)."""
     t0 = time.monotonic()
     apath = Path(area)
+    earlier: set[str] | None = None
     while True:
         live = active(area)
         starts = detached.starts(apath)
         pending = _unopened(starts, live)
         failed_starts = _failed_starts(apath, starts)
-        if not live and not pending and not failed_starts:
-            print(f"{area}: no open runs — {_finished_line(apath)}")
+        failed = [r for r in live if r.state in FAILED_STATES]
+        running = [r for r in live if r.state not in FAILED_STATES]
+        if earlier is None:
+            earlier = (
+                {r.run_id for r in failed} | {_start_key(s) for s in failed_starts}
+                if running or pending
+                else set()
+            )
+            if earlier:
+                print(
+                    f"{area}: waiting for "
+                    + ", ".join(
+                        [r.run_id for r in running] + [f"pid={s.pid}" for s in pending]
+                    )
+                    + " — these failed before this wait and are not what it waits for:",
+                    flush=True,
+                )
+                _print_failures(failed, failed_starts)
+        new_failed = [r for r in failed if r.run_id not in earlier]
+        new_starts = [s for s in failed_starts if _start_key(s) not in earlier]
+        if new_failed or new_starts:
+            _print_failures(new_failed, new_starts)
+            if notify:
+                what = (
+                    f"run {new_failed[0].state}"
+                    if new_failed
+                    else "started command ended"
+                )
+                notify_desktop("runlog --wait", f"{area}: {what}")
+            return 2
+        if not running and not pending:
+            print(
+                f"{area}: no open runs — {_finished_line(apath)}"
+                + (
+                    f" ({len(earlier)} earlier failure(s) named above)"
+                    if earlier
+                    else ""
+                )
+            )
             if notify:
                 notify_desktop("runlog --wait", f"{area}: no open runs")
             return 0
-        failed = [r for r in live if r.state in FAILED_STATES]
-        if failed or failed_starts:
-            _print_failures(failed, failed_starts)
-            if notify:
-                what = f"run {failed[0].state}" if failed else "started command ended"
-                notify_desktop("runlog --wait", f"{area}: {what}")
-            return 2
-        _, unopened = _unopened_words(live)
+        _, unopened = _unopened_words(running)
         starting = [f"pid={s.pid} (detached, {unopened})" for s in pending]
         if follow:
             stamp = time.strftime("%H:%M:%S")
             extra = _newest_output(apath)
             print(
-                f"[{stamp}] {len(live)} open run(s): "
-                + ", ".join([r.run_id for r in live] + starting)
+                f"[{stamp}] {len(running)} open run(s): "
+                + ", ".join([r.run_id for r in running] + starting)
                 + (f" · {extra}" if extra else ""),
                 flush=True,
             )
@@ -260,7 +297,7 @@ def _wait(
                 + ", ".join(
                     [
                         f"{r.run_id} pid={r.config.pid if r.config else None}"
-                        for r in live
+                        for r in running
                     ]
                     + starting
                 )
@@ -271,6 +308,11 @@ def _wait(
             )
             return 3
         time.sleep(interval)
+
+
+def _start_key(s: DetachedStart) -> str:
+    """A failed start's key beside the run ids in `_wait`'s earlier set."""
+    return f"start pid={s.pid} {s.started}"
 
 
 #: how long `runlog start` waits for the run's directory by default: the

@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -231,6 +232,36 @@ class InstrumentError(ValueError):
     measuring code)."""
 
 
+def lock_holder_words(holder: str) -> str:
+    """What to do about an output lock whose first line is HOLDER (`pid N ·
+    <time> · <argv>`): its pid checked here, so the advice does not hang
+    on `ps`, which a sandbox may lack (pubmedqa50, 2026-11-01: a live
+    run's lock deleted twice, two writers in one output). A pid the OS
+    knows is held alive — it may be another process that reuses it, which
+    only costs a wait; a pid it does not know is gone."""
+    m = re.match(r"pid (\d+)\b", holder)
+    if m is None:
+        return (
+            "The lock names no pid — read it, and delete it only when no run "
+            "writes this output (`.venv/bin/runlog <area>`)."
+        )
+    pid = int(m.group(1))
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return (
+            f"pid {pid} is gone: that run is dead and the lock is stale — "
+            f"delete it, then start again (the output resumes)."
+        )
+    except PermissionError:
+        pass  # exists, belongs to someone else
+    return (
+        f"pid {pid} is alive: that run is still writing — wait for it "
+        f"(`.venv/bin/runlog <area> --wait`), never delete its lock; a "
+        f"second writer would append the same rows again."
+    )
+
+
 class Store:
     """Append-only JSONL output with a lock, resume-by-id and a status view.
 
@@ -312,12 +343,10 @@ class Store:
                     f"pid {os.getpid()} · {runs.now_stamp()} · {' '.join(sys.argv)}\n"
                 )
         except FileExistsError:
+            holder = self.lock.read_text(encoding="utf-8").strip()
             raise SystemExit(
                 f"{self.lock} exists — another run is writing this output:\n"
-                f"  {self.lock.read_text(encoding='utf-8').strip()}\n"
-                f"Use a different output file, or delete the lock if that run "
-                f"is dead (`.venv/bin/runlog <area>` shows which "
-                f"runs are still alive)."
+                f"  {holder}\n{lock_holder_words(holder)}"
             )
         try:
             self._open()

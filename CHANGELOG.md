@@ -5,6 +5,23 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **`runlog --wait` waits for the open run past an earlier failure.** A
+  crashed run beside an open one ended the wait at once with exit 2 and
+  named only the crash; a start refused by the open run's output lock
+  leaves such a crash, and an agent took the writing run's lock for stale
+  and deleted it — two writers in one output (registered pilot, part 1,
+  pubmedqa50). A failure standing when the wait begins beside an open run
+  is now named once as not waited on and decides no exit; with nothing
+  open, a standing failure still exits 2.
+- **The output lock's refusal says whether its holder is alive.** It checks
+  the recorded pid itself instead of sending the reader to `ps`, which a
+  sandbox may lack: alive — wait, never delete the lock; gone — the lock is
+  stale.
+
 ## 0.104.4 — 2026-10-31
 
 ### Changed
