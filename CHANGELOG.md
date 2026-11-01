@@ -9,6 +9,13 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **A report that cites the adopted run without its block is named before
+  the commit.** `labkit-next` said "nothing holds it" and `labkit-adopt`
+  "none registered in the head" while the hooks held a REPORT.md the head
+  does not register (21, 34 in trial 2). Both now name the report and the
+  `protocol-fill --into` line that writes its block
+  (`report_hold.reports_without_block`).
+
 - **The audit's output says only what holds** (reference pilot, trial 2):
   - a READ line that names a registered field instead of a line
     (`PROTOCOL-x.md:Terms`) is left out too (60);

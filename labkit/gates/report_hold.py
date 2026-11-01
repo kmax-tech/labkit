@@ -200,6 +200,30 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
 
 
+def reports_without_block(repo: Path, protocol: Path, run_id: str) -> list[Path]:
+    """The reports under REPO (`held_place`) that cite RUN_ID, the run PROTOCOL
+    has adopted, and carry no result block of PROTOCOL — what the stop and
+    the commit refuse (`hold_report`), found before them: labkit-next said
+    "nothing holds it" and labkit-adopt "none registered", and then the hook
+    held REPORT.md (reference pilot 2026-11-01, tasks 21 and 34). A block
+    that does not read counts as none."""
+    out: list[Path] = []
+    root = repo.resolve()
+    for path in sorted(root.rglob(f"*{REPORT_SUFFIX}")):
+        if not held_place(repo, path) or not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if run_id not in {r for _, r in report_blocks.cited_run_ids(text)}:
+            continue
+        try:
+            found = report_blocks.blocks(text)
+        except report_blocks.ReportBlockError:
+            found = []
+        if not any(block_protocol(path, b) == protocol.resolve() for b in found):
+            out.append(path)
+    return out
+
+
 def report_files(
     paths: list[Path], repo: Path, *, staged: bool
 ) -> list[tuple[Path, str]]:

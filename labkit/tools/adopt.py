@@ -68,6 +68,15 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
     report = protocol_block.head(text).report
     if report is None:
         print("labkit-adopt: 2. report — none registered in the head")
+        # a report the head does not register, which the hooks still hold
+        from labkit.formats.repo import into_command
+        from labkit.gates.report_hold import reports_without_block
+
+        for path in reports_without_block(layout_root(area), protocol, adopted or ""):
+            print(
+                f"  {shown(path, Path.cwd())} cites {adopted} without its block — "
+                f"`{into_command(protocol, path)}` writes it before the commit"
+            )
     else:
         path = own_path(layout_root(area).resolve() / report)
         print(f"labkit-adopt: 2. report — {shown(path, Path.cwd())}")

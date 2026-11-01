@@ -197,6 +197,22 @@ class Adopt(unittest.TestCase):
         self.assertIn("none registered", out)
         text = protocol.read_text(encoding="utf-8")
         self.assertEqual(protocol_block.declared_run(text), run_id)
+        self.assertNotIn("--into", out)
+
+    def test_an_unregistered_report_citing_the_run_is_named_with_its_command(self):
+        """A REPORT.md the head does not register still holds the commit
+        when it cites the adopted run without its block; step 2 named no
+        report and the agent stopped there (reference pilot 2026-11-01,
+        tasks 21 and 34). The twin above: no such report, no hint."""
+        area, protocol, run_id = self.measured(None)
+        self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        (self.lab.root / "REPORT.md").write_text(
+            f"The mean is 3.0 (run {run_id}).\n", encoding="utf-8"
+        )
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(f"REPORT.md cites {run_id} without its block", out)
+        self.assertIn("--into", out)
 
 
 if __name__ == "__main__":

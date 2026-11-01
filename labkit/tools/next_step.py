@@ -143,6 +143,19 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "names its step",
             "the number in any report: report only an adopted number",
         )
+    from labkit.formats.repo import into_command
+    from labkit.gates.report_hold import reports_without_block
+
+    unblocked = reports_without_block(ctx.repo, protocol, ctx.declared)
+    if unblocked:
+        first = unblocked[0]
+        return Step(
+            f"{shown(first, Path.cwd())} cites {ctx.declared}, the adopted result, "
+            "without its generated block",
+            f"`{into_command(protocol, first)}` writes it",
+            "the commit and the stop: they hold a report that cites an adopted "
+            "run without its block",
+        )
     return Step(
         f"{protocol.name} has adopted {ctx.declared}; nothing holds it",
         "nothing — the number may be reported (`protocol-fill "

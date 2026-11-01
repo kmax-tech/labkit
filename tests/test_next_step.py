@@ -85,6 +85,17 @@ class TheChain(unittest.TestCase):
         self.assertIn(f"has adopted {run_id}", step.where)
         self.assertTrue(step.next.startswith("nothing"), step)
         self.assertEqual(step.held, "")
+        # a report citing the adopted run without its block is what the hooks
+        # hold: named here first (reference pilot 2026-11-01, tasks 21 and 34)
+        report = self.lab.root / "REPORT.md"
+        report.write_text(f"The mean is 3.0 (run {run_id}).\n", encoding="utf-8")
+        self.addCleanup(report.unlink, missing_ok=True)
+        step = self.step()
+        self.assertIn("REPORT.md cites", step.where)
+        self.assertIn("--into", step.next)
+        rc = protocol_fill.main([str(self.protocol), "--into", str(report)])
+        self.assertEqual(rc, 0)
+        self.assertTrue(self.step().next.startswith("nothing"))  # the twin
 
     def test_an_open_run_is_the_step_before_any_other(self):
         """A run still open read as nothing, and labkit-next sent the agent to
