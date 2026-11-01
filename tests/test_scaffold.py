@@ -1598,14 +1598,17 @@ class Exp(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             measure.make_estimator(0)
 
-    def test_the_stamped_estimator_test_passes_as_stamped(self) -> None:
-        """The area's test (`test-estimator.py.template`) runs green on the
-        fresh stamp: the resolution check needs no estimator library."""
-        import subprocess
-        import sys
+    def _stamped_estimator_lab(self, kind: str) -> tuple[Path, Path]:
+        """A fresh lab with one estimator area of KIND: (lab root, area)."""
+        root = Path(self.tmp.name) / f"estimator-{kind}"
+        root.mkdir()
+        quiet(scaffold.stamp_lab, root, "lab")
+        quiet(scaffold.stamp_area, root, "foo-bar", repeat_cost="high", kind=kind)
+        (area,) = (root / "experiments").glob("[0-9]*-foo-bar")
+        return root, area
 
-        quiet(scaffold.stamp_area, self.root, "foo-bar", repeat_cost="high", kind="fit")
-        r = subprocess.run(
+    def _run_stamped_test(self, root: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -1613,17 +1616,71 @@ class Exp(unittest.TestCase):
                 "-q",
                 "-p",
                 "no:cacheprovider",
-                str(self.root / "tests" / "test_01_foo_bar.py"),
+                str(root / "tests" / "test_01_foo_bar.py"),
             ],
-            cwd=self.root,
+            cwd=root,
             capture_output=True,
             text=True,
             timeout=120,
         )
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn(
-            "11 passed", r.stdout
-        )  # with the score guard (test_the_score_has_cases_here)
+
+    def test_the_stamped_estimator_test_passes_as_stamped(self) -> None:
+        """The area's test (`test-estimator.py.template`) runs green on the
+        fresh stamp of a fit and of an apply (the seeded null, a band): the
+        resolution check needs no estimator library."""
+        for kind in ("fit", "apply"):
+            with self.subTest(kind=kind):
+                root, _ = self._stamped_estimator_lab(kind)
+                r = self._run_stamped_test(root)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertIn(
+                    "12 passed", r.stdout
+                )  # with the score guard (test_the_score_has_cases_here)
+
+    def test_the_stamped_estimator_test_serves_a_registered_null_order(
+        self,
+    ) -> None:
+        """An apply that registers a null order (`NULL_ORDER`) and no band:
+        the stamped test's null rows name their donors as the run's do, so
+        every test runs, the band tests only where a band is registered.
+        Reference pilot trial 2, sts512 (2026-11-01): the synthetic null rows
+        carried no donors, nine of eleven tests raised "registers no
+        null_band", and finalize refused a correct run. The twins: with a
+        band beside the order it passes too; without the order, the same
+        missing band is refused."""
+        root, area = self._stamped_estimator_lab("apply")
+        proto = area / "PROTOCOL-foo-bar.md"
+        script = area / "scripts" / "01_measure.py"
+        band = (
+            "constants = { null_band = 0.1, null_band_quantile = 0.99, "
+            "null_permutations = 200 }\n"
+        )
+        no_order = "NULL_ORDER: Path | None = None"
+        stamped_proto = proto.read_text(encoding="utf-8")
+        stamped_script = script.read_text(encoding="utf-8")
+        self.assertEqual(stamped_proto.count(band), 1)
+        self.assertEqual(stamped_script.count(no_order), 1)
+        (area / "data" / "null_order.json").write_text("[2, 0, 1]", encoding="utf-8")
+        script.write_text(
+            stamped_script.replace(
+                no_order, 'NULL_ORDER: Path | None = AREA / "data" / "null_order.json"'
+            ),
+            encoding="utf-8",
+        )
+        for with_band in (False, True):
+            with self.subTest(band=with_band):
+                proto.write_text(
+                    stamped_proto if with_band else stamped_proto.replace(band, ""),
+                    encoding="utf-8",
+                )
+                r = self._run_stamped_test(root)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertIn("12 passed", r.stdout)
+        script.write_text(stamped_script, encoding="utf-8")
+        proto.write_text(stamped_proto.replace(band, ""), encoding="utf-8")
+        r = self._run_stamped_test(root)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("registers no null_band", r.stdout)
 
     def test_the_stamped_area_test_holds_the_registered_null_band(self) -> None:
         """AGENTS.md calls the stamped promise numbers examples to set; the
