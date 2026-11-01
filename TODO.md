@@ -2590,11 +2590,15 @@ was diesen Versuch oder seine Bewertung betrifft (P1, P2, P3, P4); der Rest folg
 - **P3 Audit-Antworten zuverlässig lesen** (Fehler 1, 6, 4, 5; Unklar 13) — erledigt 8ae3345f:
   check-Feld auf seiner Zeile, Ablehnung als Überschrift, Bericht erst nach dem Datensatz,
   entschiedene Befunde markiert, fehlender `--record` abgelehnt, anderer Alias als Befehl.
-- **P4 Fortschritt und fehlende Schritte** (Unklar 12, 16): Audit-Zustand sichtbar
-  (laufend/gescheitert/entschieden), Prompt-Abgleich vor der Messung, Testset-Abgabe im Ablauf.
-- **P5 Audit-Schleife** (Unklar 17): Vorschlag in `docs/notes/2026-11-01-audit-loop-close.md`
-  (Runden zählen, ab Runde 3 Abschluss als generierte Übergabe, Hinweise statt Gates); wartet
-  auf Entscheidung. Bedingungen: eine
+- **P4 Fortschritt und fehlende Schritte** (Unklar 12, 16): laufendes Audit benannt, Audit über
+  unentschiedene BLOCKER vor dem Aufruf abgelehnt, keine READ-Hinweise auf Felder, die adopt
+  schreibt — erledigt 161260b7; Prompt-Abgleich vor jedem bezahlten Aufruf — erledigt 55578329.
+  Nachweise: echte Prozesse für `--wait`/Sperre, echter Pool für `workers` — fb4f9e39.
+  Offen (Versuchsdesign): Testset-Abgabe als gemeinsame Aufgabenanforderung beider Arme.
+- **P5 Audit-Schleife** (Unklar 17): Vorschlag in `docs/notes/2026-11-01-audit-loop-close.md`,
+  nach Rückmeldung überarbeitet (Abschluss von Anfang an, ab Runde 3 hervorgehoben; bestehende
+  Übergabe um generierten Zwischenstand ergänzen; Lauf an Code und Registrierung gebunden;
+  „rechnerisch erfüllt“ ≠ „freigegeben“). Nicht gebaut — erst nach der Design-Diskussion. Bedingungen: eine
   Rundengrenze gibt nie automatisch frei; bei erreichtem Budget entsteht ein nachvollziehbarer
   Abschluss (gesicherter Zwischenstand, offene Befunde, zulässige Aussagen, nächster Schritt).
   Ein Konvergenzhinweis (Befunde kehren wieder, Anweisungen widersprechen sich) ist zunächst

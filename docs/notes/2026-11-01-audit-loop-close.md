@@ -1,6 +1,6 @@
 # 2026-11-01 — the analysis audit loop ends in a stated state, never a release (proposal)
 
-Status: proposal, nothing built. Evidence: the registered pilot's part 1, the 15 lab traces
+Status: proposal, revised; the close is not built (waits for the experiment design discussion). Evidence: the registered pilot's part 1, the 15 lab traces
 read end to end (labkit-evidence `usability/2026-10-31-registered-pilot/issues-rp/review-*.md`).
 
 **Problem.** The loop measure → analysis audit → decide → measure again has no end but a
@@ -60,6 +60,23 @@ only in the trace.
      Conclusion before adoption. These are adopt's to write (`TODO.md` P4, Unklar 15).
    - `--findings` and `labkit-next` say "decide the open findings before auditing again";
      a round run on undecided BLOCKERs follows nothing up (60-r3).
+
+**Revised after the author's reading (2026-11-01).**
+- The close is offered from the first round on. From round 3 it is shown more
+  prominently. The threshold is a chosen operating decision, not a scientific limit.
+- No second way to end an area: the existing handover (`protocol-fill --handover`)
+  is kept and gains the generated interim state. A second closing path would make
+  new overlaps.
+- The run the close shows must be bound to code and registration (the record's
+  `scope_sha`, `block_sha` and registration stamp), not merely be "the newest
+  kept".
+- Criterion values already stored stay traceable. The close tells "met by
+  computation" (the run's metrics) from "released as a scientific result"
+  (adopted, audited, decided), and only the second is a result.
+- Recurring or contradicting findings stay hints until their detection is checked.
+- Independent of the close, the rounds the loop made itself are removed:
+  premature READ hints and an audit over undecided BLOCKERs (done, labkit
+  161260b7).
 
 **How it is judged.** This does not run before part 2 or the pubmedqa50 repeat, and it is
 measured there per lab attempt:
