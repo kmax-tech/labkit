@@ -61,6 +61,65 @@ class Adopt(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn(f"has adopted {run_id} already", out)
 
+    def test_an_adoption_killed_during_its_check_is_held_and_put_back(self):
+        """A kill during the adoption's check skips every restore: the time
+        limit landed 2.3 min into the check, and the unchecked `[result]`
+        stayed in the head (reference pilot 2026-11-01, task 21). Killed for
+        real here (SIGKILL in a child process): the kept copy stands,
+        report-check refuses on it, and the next labkit-adopt puts the
+        protocol back first and adopts with its check."""
+        import signal
+        import subprocess
+
+        area, protocol, run_id = self.measured("REPORT.md")
+        self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        before = protocol.read_text(encoding="utf-8")
+        child = (
+            "import os, signal, sys\n"
+            f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
+            "from labkit.gates import report_check\n"
+            "from labkit.tools import adopt\n"
+            "report_check.report_check = lambda *a, **k: os.kill(os.getpid(), signal.SIGKILL)\n"
+            f"os.chdir({str(self.lab.root)!r})\n"
+            f"adopt.main([{str(area)!r}, {run_id!r}])\n"
+        )
+        killed = subprocess.run(
+            [sys.executable, "-c", child], capture_output=True, text=True
+        )
+        self.assertEqual(killed.returncode, -signal.SIGKILL, killed.stderr)
+        pending = report_context.pending_adoption(protocol)
+        self.assertEqual(pending.read_text(encoding="utf-8"), before)
+        self.assertEqual(
+            protocol_block.declared_run(protocol.read_text(encoding="utf-8")), run_id
+        )
+
+        from labkit.gates import report_check
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = report_check.report_check(area, protocol)
+        self.assertEqual(rc, 1, out.getvalue())
+        self.assertIn("an adoption was cut off during its check", out.getvalue())
+
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(
+            "was cut off during its check; its unchecked proposal is withdrawn", out
+        )
+        # adopted anew with its check, not skipped as adopted already
+        self.assertIn("labkit-adopt: 1. adopt\n", out)
+        self.assertNotIn("already", out)
+        self.assertFalse(pending.exists())
+        self.assertEqual(
+            protocol_block.declared_run(protocol.read_text(encoding="utf-8")), run_id
+        )
+
+    def test_a_refused_adoption_leaves_no_kept_copy(self):
+        area, protocol, run_id = self.measured("REPORT.md")
+        rc, _ = self.labkit_adopt(area, run_id)  # unaudited: refused
+        self.assertEqual(rc, 1)
+        self.assertFalse(report_context.pending_adoption(protocol).exists())
+
     def test_an_unaudited_run_is_refused_and_nothing_is_written(self):
         """The twin: the same run before its analysis audit stops at step 1,
         the protocol as it was and no report written."""

@@ -5,6 +5,20 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **An adoption cut off during its check leaves no unchecked result.**
+  `labkit-adopt` writes its proposal into the protocol and checks it there;
+  a kill during the check skipped both restores, and the proposal's
+  `[result]` stayed in the head as if it had passed (reference pilot,
+  2026-11-01, task 21: the time limit landed 2.3 minutes into the check).
+  The protocol as it stood before is now kept beside it
+  (`.<protocol>.before-adoption`) until the check passes or it is back.
+  While that file stands, report-check refuses, and the next
+  `labkit-adopt` puts the protocol back first and adopts with its check.
+
 ## 0.105.0 — 2026-11-01
 
 ### Breaking

@@ -150,7 +150,13 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     2026-10-19, a check script printing a byte no codec reads). Both writes
     go whole or not at all (`files.write_atomic`): a reader, or the next
     check, sees the protocol as it was or as proposed, never half of
-    either; the check is told it holds the proposal (`report_context.PROPOSED`)."""
+    either; the check is told it holds the proposal (`report_context.PROPOSED`).
+    BEFORE is kept beside the protocol (`report_context.pending_adoption`)
+    until the check passed or BEFORE is back: a kill during the check skips
+    both restores, and the file left behind is what report-check refuses on
+    and the next adoption restores from (`restore_cut_adoption`)."""
+    pending = report_context.pending_adoption(protocol)
+    files.write_atomic(pending, before)
     files.write_atomic(protocol, after)
     try:
         rc = report_check.report_check(
@@ -158,10 +164,13 @@ def adopt(protocol: Path, before: str, after: str) -> int:
         )
     except BaseException:
         files.write_atomic(protocol, before)
+        pending.unlink(missing_ok=True)
         raise
     if rc == 0:
+        pending.unlink()
         return 0
     files.write_atomic(protocol, before)
+    pending.unlink()
     # the discussion owes a report review, which `attempts.begin` refuses
     # while the area's evidence is gone (pilot t60)
     lost = report_hold.lost_evidence(protocol)
@@ -182,10 +191,31 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     return 1
 
 
+def restore_cut_adoption(protocol: Path) -> str | None:
+    """PROTOCOL as it stood before an adoption cut off during its check —
+    written back, the kept copy removed, and the text returned; None when no
+    adoption was cut off (`report_context.pending_adoption`)."""
+    pending = report_context.pending_adoption(protocol)
+    if not pending.is_file():
+        return None
+    before = pending.read_text(encoding="utf-8")
+    files.write_atomic(protocol, before)
+    pending.unlink()
+    print(
+        f"protocol-fill: an earlier adoption of {protocol.name} was cut off during "
+        f"its check; its unchecked proposal is withdrawn and the protocol is as it "
+        f"was before it"
+    )
+    return before
+
+
 def _write_back(args: argparse.Namespace, text: str) -> int:
     """`--from-run`: the number from the run's metrics.json into the protocol,
     adopted as the result only when report-check passes on it (`adopt`)."""
     protocol = args.protocol.resolve()
+    restored = restore_cut_adoption(protocol)
+    if restored is not None:
+        text = restored
     try:
         new, filled, run_id = from_run(
             text,

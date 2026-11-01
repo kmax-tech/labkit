@@ -211,6 +211,7 @@ from labkit.gates.report_context import (
     TREE,
     checked,
     declaration,
+    pending_adoption,
 )
 from labkit.gates.report_decisions import followup_findings, limit_gaps, review_findings
 from labkit.gates.report_replacement import replacement_gaps
@@ -633,6 +634,18 @@ def report_gaps(ctx: Checked, *, adoption_pending: bool = False) -> list[GateFin
     Prints nothing."""
     ln = lane(ctx.head.repeat_cost)
     out: list[GateFinding] = []
+    # 0. an adoption cut off during its check: the head may hold a proposal
+    # no check passed (`report_context.pending_adoption`)
+    if ctx.state != PROPOSED and pending_adoption(ctx.protocol).is_file():
+        out.append(
+            blocker(
+                f"{ctx.protocol.name}: an adoption was cut off during its check — "
+                f"the protocol may hold a proposal no check passed "
+                f"({pending_adoption(ctx.protocol).name} keeps it as it was before)",
+                fix=f"`{adopt_command(ctx.protocol)}` puts it back first and "
+                f"adopts again",
+            )
+        )
     # 1. declaration
     if ctx.declaration_gap:
         out.append(

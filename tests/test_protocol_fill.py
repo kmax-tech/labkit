@@ -837,7 +837,15 @@ class Adopt(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(seen["state"], protocol_fill.report_check.PROPOSED)
         self.assertIn(f"criterion-1 met · recorded: (run {self.RUN})", seen["text"])
-        self.assertEqual(atomic.call_count, 1)
+        # the protocol as it stood, kept beside it, then the proposal — each whole
+        written = [c.args[0] for c in atomic.call_args_list]
+        self.assertEqual(
+            written,
+            [
+                protocol_fill.report_context.pending_adoption(proto.resolve()),
+                proto.resolve(),
+            ],
+        )
         self.assertEqual(proto.read_text(encoding="utf-8"), seen["text"])
         self.assertEqual([p.name for p in area.glob(".PROTOCOL-*")], [])
 

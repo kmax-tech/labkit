@@ -47,7 +47,10 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
     from labkit.gates import report_check
     from labkit.tools import protocol_fill
 
-    text = protocol.read_text(encoding="utf-8")
+    # an adoption cut off during its check left its unchecked proposal in
+    # the head: put the protocol back before reading what it has adopted
+    restored = protocol_fill.restore_cut_adoption(protocol)
+    text = restored if restored is not None else protocol.read_text(encoding="utf-8")
     declared = protocol_block.declared_run(text)
     wanted = run_id
     if wanted is None and declared is not None:
