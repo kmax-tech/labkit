@@ -145,6 +145,13 @@ class OpenFindings(unittest.TestCase):
             f"{path.name}: names r0 as the run it read, and there is no runs/r0/", out
         )
         self.assertIn("a run an audit read is a kept run", out)
+        # the way out lifts the blocker: git, a handover or a new registration —
+        # never "measure anew", which left the record standing (reference
+        # pilot 2026-11-01, task 60, both trials)
+        self.assertIn("git checkout HEAD -- ", out)
+        self.assertIn("--handover", out)
+        self.assertIn("register anew", out)
+        self.assertNotIn("measure anew", out)
 
     def test_the_twin_a_record_of_a_kept_run_and_of_no_run_pass(self):
         self._record([], mode="analysis")  # names r1, which stands

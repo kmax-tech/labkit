@@ -84,7 +84,7 @@ import shlex
 from dataclasses import replace
 from pathlib import Path
 
-from labkit.formats.repo import gate_command, measure_anew
+from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
 from labkit.formats.runs import metrics_path, read_metrics
 from labkit.formats import (
@@ -108,6 +108,7 @@ from labkit.formats.runs import (
     run_dirs,
     unreportable,
     read_run_config,
+    run_path,
 )
 from labkit.formats.answering_run import (
     adopted_run,
@@ -120,8 +121,10 @@ from labkit.formats.repo import (
     adopt_command,
     AmbiguousArea,
     area_path,
+    area_protocols,
     audit_command,
     git_root,
+    handover_command,
     layout_root,
     measure_command,
     no_such_area,
@@ -535,6 +538,23 @@ def check_registration(
         )
 
 
+def gone_run_way(area: Path, run_id: str) -> str:
+    """The way out of an audit record whose run RUN_ID is gone from AREA:
+    put it back where git holds it, else hand the area over naming the
+    loss, or register anew. Measuring again lifts nothing — the record
+    stays and names the gone run; "measure anew" sent agents round that
+    loop until they deleted the next runs (reference pilot 2026-11-01,
+    task 60, both trials)."""
+    protocols = area_protocols(area)
+    protocol = protocols[0] if len(protocols) == 1 else area / "PROTOCOL-<name>.md"
+    return (
+        f"put it back where git holds it (`git checkout HEAD -- "
+        f"{shown(run_path(area, run_id), Path.cwd())}`); else it is lost, and a new run "
+        f"does not lift this — hand the area over naming the loss "
+        f"(`{handover_command(protocol)}`), or {register_anew()}"
+    )
+
+
 def check_open_audit_findings(findings: Findings, area: Path) -> None:
     """Station 8: every finding still `open` in the area's audit records, any
     mode (`findings.open_findings`, with the table of the gates' rules) — a
@@ -551,11 +571,12 @@ def check_open_audit_findings(findings: Findings, area: Path) -> None:
     known = {rd.dir.name for rd in run_dirs(area)}
     gone = audit_gaps.records_of_gone_runs(records, known)
     for rec in gone:
+        assert rec.run_id is not None  # records_of_gone_runs keeps only named runs
         findings.block(
             f"{rec.path.name}: names {rec.run_id} as the run it read, and there is "
             f"no runs/{rec.run_id}/ in this area — a run an audit read is a kept run, "
             f"and nothing restores its rows (LAB-043 Runs go through `runlog`)",
-            fix=measure_anew(area),
+            fix=gone_run_way(area, rec.run_id),
         )
     seen = len(gone)
     for u in audit_findings.open_findings(records):

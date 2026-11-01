@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **A deleted run is named, and its way out lifts its blocker.** An audit
+  record naming a run whose directory is gone told the agent to "measure
+  anew", which could never lift it — the record stays; agents measured,
+  were refused again and deleted the next runs (reference pilot, task 60,
+  both trials). The way out now puts the run back where git holds it, else
+  hands the area over naming the loss or registers anew. A handover said "no
+  run of it was measured" while runs.tsv listed five deleted runs; it now
+  names them as measured and gone (`runlog.indexed_runs`).
+
 ## 0.106.1 — 2026-11-01
 
 ### Added

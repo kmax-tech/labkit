@@ -195,7 +195,8 @@ from labkit.formats.repo import (
     state_text,
     withdraw_command,
 )
-from labkit.formats.runs import read_run_config, recorded_commit, unreportable
+from labkit.formats.runs import read_run_config, recorded_commit, run_path, unreportable
+from labkit.run.runlog import indexed_runs
 from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
@@ -713,6 +714,20 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     ours = [f for f in rest if f.binding.id == pid or f.state == runs.UNREADABLE]
     measured = [f for f in [*taken, *ours] if is_measurement(f)]
     if not measured:
+        # measured to the end and deleted since: the index keeps them, and a
+        # handover saying "no run of it was measured" hid five deleted runs
+        # (reference pilot 2026-11-01, task 60)
+        gone = [r for r in indexed_runs(area, pid) if not run_path(area, r).is_dir()]
+        if gone:
+            return handovers.RunAccount(
+                max(gone),
+                handovers.UNUSABLE,
+                tuple(
+                    f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
+                    f"its rows are lost"
+                    for r in gone
+                ),
+            )
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
     choice = bound_answering_run(area, pid, adopted_run(text))
     if choice.run_dir is None or not any(f.dir == choice.run_dir for f in measured):

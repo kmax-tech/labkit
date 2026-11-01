@@ -863,6 +863,26 @@ class run:
         return False
 
 
+def indexed_runs(base_dir: str | Path, protocol_id: str) -> list[str]:
+    """The run ids the area's run index lists for PROTOCOL_ID, in index
+    order — the runs measured to the end, whether or not their directories
+    still stand. Reads without the lock (a row is appended whole); [] without
+    an index."""
+    header, rows = _read_index(Path(base_dir) / RUN_INDEX)
+    if not header:
+        return []
+    at = {name: i for i, name in enumerate(header)}
+    if "run_id" not in at or "protocol_id" not in at:
+        raise ValueError(
+            f"{Path(base_dir) / RUN_INDEX}: no run_id or protocol_id column"
+        )
+    return [
+        r[at["run_id"]]
+        for r in rows
+        if len(r) > at["protocol_id"] and r[at["protocol_id"]] == protocol_id
+    ]
+
+
 def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
     """(header, rows) of the run index. Callers hold the lock."""
     if not index.exists():

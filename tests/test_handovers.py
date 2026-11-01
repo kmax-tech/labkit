@@ -461,6 +461,21 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("a missed criterion is a result", out)
         self.assertRegex(out, rf"`labkit-adopt \S+01-judge {self.run_id}`")
 
+    def test_a_measured_run_deleted_since_is_named_not_hidden(self):
+        """The agent deleted runs/ five times; the handover said "no run of it
+        was measured" while runs.tsv listed five (reference pilot 2026-11-01,
+        task 60). The twin is the test below: never measured stays so."""
+        import shutil
+
+        shutil.rmtree(self.area / "runs" / self.run_id)
+        rc, out = self.handover()
+        self.assertEqual(rc, 0, out)
+        record = self.record_of_handover()
+        self.assertEqual(
+            (record.run, record.run_state), (self.run_id, handovers.UNUSABLE)
+        )
+        self.assertIn(f"{self.run_id}: measured (runs.tsv lists it)", record.run_why[0])
+
     def test_a_protocol_never_measured_is_handed_over_as_not_measured(self):
         area, protocol = e2e.judge_area(self.lab, "unmeasured")
         self.lab.commit("registered, not measured")
