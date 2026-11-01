@@ -128,7 +128,7 @@ from labkit.gates.ways_out import (
 )
 from labkit.run import llm, llm_backends
 
-DEFAULT_MODEL = "opus"  # the agent's model; any alias of models.toml works
+DEFAULT_MODEL = "opus"  # without `[audit] model` in models.toml (`llm.audit_alias`)
 REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
     failed_attempts.ATTEMPT_TIMEOUT_S
@@ -439,8 +439,8 @@ def main(argv: list[str]) -> int:
     )
     ap.add_argument(
         "--model",
-        default=DEFAULT_MODEL,
-        help=f"models.toml alias (default {DEFAULT_MODEL})",
+        default=None,
+        help=f"models.toml alias (default: `[audit] model` of models.toml, else {DEFAULT_MODEL})",
     )
     ap.add_argument(
         "--timeout",
@@ -672,8 +672,17 @@ def _check_args(ap: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Exactly one of --mode (audit), --decide (store a decision), --findings
     (show what there is to decide), --review (a second auditor on the
     decisions) and --report-review (a cold reader on a report); --record
-    never with --mode or --report-review. A usage error exits 2 through
+    never with --mode or --report-review; an unset --model becomes the
+    lab's `[audit] model` (`llm.audit_alias`), else DEFAULT_MODEL. A usage
+    error, an `[audit]` that does not read included, exits 2 through
     argparse."""
+    if args.model is None:
+        try:
+            args.model = llm.audit_alias(DEFAULT_MODEL)
+        except FileNotFoundError:
+            args.model = DEFAULT_MODEL  # no models.toml: the call itself says so
+        except ValueError as exc:
+            ap.error(str(exc))
     chosen = [
         args.mode is not None,
         args.decide is not None,

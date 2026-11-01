@@ -3394,3 +3394,55 @@ class ReadHintsOnRegisteredFields(unittest.TestCase):
                 [h.split(" · ")[1] for h in shown_hints],
                 [f"PROTOCOL-x.md:{at['Conclusion']}", "scripts/01_measure.py:4"],
             )
+
+
+class LabAuditAlias(unittest.TestCase):
+    """A round fixes its audit model in the lab's models.toml (`[audit] model`),
+    so every record names the alias that answered — repointing `opus` at
+    another model would have recorded "opus" (reference pilot 2026-11-01)."""
+
+    TOML = (
+        '[models.haiku]\nbackend = "claude-cli"\nmodel = "claude-haiku-4-5-20251001"\n'
+        '[models.opus]\nbackend = "claude-cli"\nmodel = "claude-opus-5-5"\n'
+    )
+
+    def audit_with(self, toml: str) -> tuple[int, list[str], str, Path]:
+        area = repo_with()
+        path = area / "models.toml"
+        path.write_text(toml, encoding="utf-8")
+        called: list[str] = []
+
+        def answer(alias, prompt, **kw):
+            called.append(alias)
+            return WARN
+
+        err = io.StringIO()
+        with (
+            mock.patch.object(audit.llm, "_find_models_toml", lambda: path),
+            mock.patch.object(audit.llm, "complete", answer),
+            mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(err),
+        ):
+            try:
+                rc = audit.main([str(area), "--mode", "preflight"])
+            except SystemExit as exc:  # argparse's usage error
+                rc = int(exc.code or 0)
+        return rc, called, err.getvalue(), area
+
+    def test_the_labs_audit_alias_is_the_default_and_the_record_names_it(self):
+        rc, called, err, area = self.audit_with(
+            self.TOML + '[audit]\nmodel = "haiku"\n'
+        )
+        self.assertEqual(called, ["haiku"], err)
+        (record,) = findings.area_records(area)
+        self.assertEqual(record.model, "haiku")
+
+    def test_without_an_audit_table_opus_stays_the_default(self):
+        _, called, err, _ = self.audit_with(self.TOML)
+        self.assertEqual(called, ["opus"], err)
+
+    def test_an_audit_alias_models_toml_lacks_is_refused_before_any_call(self):
+        rc, called, err, _ = self.audit_with(self.TOML + '[audit]\nmodel = "sonnet"\n')
+        self.assertEqual((rc, called), (2, []))
+        self.assertIn("[audit] model = 'sonnet': no such alias under [models]", err)

@@ -5,6 +5,19 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Added
+
+- **A lab names its audit model in models.toml: `[audit] model = "<alias>"`.**
+  `labkit-audit` without `--model` calls that alias, else `opus` as
+  before; an alias `[models]` lacks is refused before any call. A round
+  fixes its audit model there, and every record names the alias that
+  answered — pointing the `opus` alias at another model would have recorded
+  "opus" for it. Why: the reference pilot's next round audits with haiku
+  throughout, since opus-5-5's analysis audit of task 15 is stopped by a
+  safety classifier (addendum 3).
+
 ## 0.106.0 — 2026-11-01
 
 ### Breaking

@@ -37,6 +37,10 @@ alias is first resolved):
                                       # unset, "harness": the CLI adds its agent
                                       # system prompt, reminders and thinking
 
+    [audit]
+    model = "haiku"                   # labkit-audit's alias without --model
+                                      # (`audit_alias`; unset: opus)
+
     [models.gpt-oss]
     backend = "ollama"
     model = "gpt-oss:latest"
@@ -238,6 +242,33 @@ def aliases() -> list[str]:
         raise ValueError(f"{path}: not TOML ({exc})") from exc
     models = data.get("models", {})
     return list(models) if isinstance(models, dict) else []
+
+
+def audit_alias(fallback: str) -> str:
+    """The alias a lab names for its audits: `[audit] model` of `models.toml`,
+    else FALLBACK. A round fixes its audit model in the lab's own file, so
+    every audit record names the alias that answered; repointing the
+    `opus` alias at another model would have recorded "opus" for it
+    (reference pilot, 2026-11-01). Raises ValueError for an `[audit]` that
+    is no table, a model that is no string, or an alias `[models]` lacks;
+    FileNotFoundError without the file."""
+    path = _find_models_toml()
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ValueError(f"{path}: not TOML ({exc})") from exc
+    audit = data.get("audit")
+    if audit is None:
+        return fallback
+    if not isinstance(audit, dict) or not isinstance(audit.get("model"), str):
+        raise ValueError(f'{path} [audit]: expected a table with model = "<alias>"')
+    alias = audit["model"]
+    models = data.get("models", {})
+    if not isinstance(models, dict) or alias not in models:
+        raise ValueError(
+            f"{path} [audit] model = {alias!r}: no such alias under [models]"
+        )
+    return alias
 
 
 def _load_spec(alias: str) -> BackendSpec:
