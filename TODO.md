@@ -2565,6 +2565,79 @@ Zahl. pubmedqa50 nicht lesbar (Infrastruktur, siehe 1). Offen:
    Timeout — die Schleife Messen → Audit → Entscheiden aus dem Abschnitt unten, jetzt bei
    vorgegebener Registrierung. Kandidat für den nächsten Schnitt.
 
+**Stand 2026-11-01 mittags — labkit-Fehler in den 15 Laborspuren von Teil 1.** Fünf Leser, je
+eine Aufgabe, jede Spur ganz gelesen (Belege: labkit-evidence
+`usability/2026-10-31-registered-pilot/issues-rp/review-*.md`). Agent war Haiku 4.5 (so
+registriert). Code unter `labkit/` unverändert seit v0.104.4, Zeilen gelten. Mit „geprüft“
+markiert, was ich im Quelltext nachgesehen habe.
+
+Fehler (labkit verhält sich gegen die eigene Doku):
+
+1. **Audit-Ablehnung als Überschrift nicht erkannt** (geprüft): `REFUSED` nutzt `LEAD`
+   ohne `#`, `## refused: …` liest sich als Formfehler, Rat „noch einmal ziehen“ —
+   `labkit/gates/audit_reply.py:34`, `:51`, `:217` (15-r1).
+2. **`runlog --wait` endet mit Exit 2, sobald ein CRASHED-Lauf im Bereich liegt, und nennt
+   den schreibenden Lauf nicht** (geprüft) — `labkit/run/runlog_command.py:238`. Dazu legt
+   jeder von der Sperre abgewiesene Start einen bleibenden CRASHED-Lauf an. Folge in
+   pubmedqa50-r2: Agent hielt die Sperre für tot, löschte sie zweimal, zwei Schreiber in
+   einer Ausgabe (120 Zeilen, 40 doppelt).
+3. **`__pycache__/*.pyc` zählt als Quelldatei eines Datenverzeichnisses** (geprüft):
+   `visible_files` schließt nur Punkt-Pfade aus — `labkit/run/provenance.py:315`; finalize
+   rät dann `git add -f` der .pyc gegen die eigene `.gitignore`, und der Digest hängt vom
+   Interpreter ab (60-r1, 60-r3).
+4. **`--findings` zählt entschiedene Befunde als „to decide“** (geprüft) —
+   `labkit/gates/audit_decisions.py:59` (60-r3).
+5. **`--decide … --record <falscher Name>` endet im Traceback** (geprüft): `findings.read`
+   fängt nur UnicodeDecodeError — `labkit/formats/findings.py:1099` (34-r1).
+6. **`· check:` am Ende der ersten Befundzeile, darunter Spiegelstriche → ganzes Audit ohne
+   Aufzeichnung verworfen**; `_CHECK` verankert am Ende des ganzen Befunds, die Meldung sagt
+   „to the end of the line“ und zitiert ein Feld, das der Form genügt —
+   `labkit/formats/findings.py:246`, `:256`. In 60-r2 kam der Bericht vor der Ablehnung auf
+   die Ausgabe (`labkit/gates/audit.py:519` vor `:538`), der Agent hielt ihn für gültig.
+   Zwei Audits verloren (34-r3, 60-r2).
+7. **Blocker „Audit nennt gelöschten Lauf“ rät „measure anew“, das hebt ihn nicht**
+   (geprüft) — `labkit/gates/finalize.py:551` (34-r3, 7 min, dann Übergabe).
+8. **Adopt-Ablehnung rät „withdraw the adoption first“, obwohl keine besteht** —
+   `labkit/gates/report_check.py:782` (34-r2; nicht selbst geprüft).
+9. **Vorlagenkommentar: finalize lehne ungetrackte OUT ab — es warnt nur** (geprüft) —
+   `labkit/templates/measure-quick-script.py.template:158` gegen
+   `labkit/checks/run_record_check.py:467`.
+10. **claude-cli-Backend schickt den Systemprompt der CLI (26 k Zeichen) und Thinking mit**,
+    gegen „only question and contexts“ der Registrierung und LAB-029; `prompt_sha` hält es
+    nicht fest — `labkit/run/llm_backends.py:205`, `:313`. `Lanes.measure` ruft fest mit
+    4 Workern, ohne Einstellung — `labkit/run/lanes.py:41`, `:187`. Alle drei
+    pubmedqa50-Versuche wichen fürs Testset auf das SDK aus: zwei Instrumente.
+11. **Fortschritt ohne flush, Zeilen erst je 40 Aufrufe** (geprüft) — `labkit/run/lanes.py:184`,
+    `:190`: laufende Messung sieht tot aus (pubmedqa50 alle drei; führte zu 2).
+
+Unklar (Meldung oder Vorlage schickt den Agenten falsch):
+
+12. **Zustand eines Audits unsichtbar**: ein laufendes liest sich als „no audit record yet“,
+    `--findings` zeigt den alten Datensatz als offen (15, 34, 60). Folgen: Doppelstarts,
+    Schlaf-Schleifen, 34-r3 löschte `audits/` nach so einer Lesung. Audits dauern 1–3 min,
+    länger als das Bash-Limit des Agenten.
+13. **Nach gescheitertem Audit bietet `--findings` nur die Übergabe**, kein „wiederhole mit
+    `--model <alias>`“, und die Fehlermeldung nennt keinen Alias (15-r2: bestehender Lauf nie
+    übernommen; 15-r3 riet `sonnet`).
+14. **Test-Vorlage verlangt ≥ 2 handgeprüfte Zeilen** — 21 und 34 haben eine Einheit; 6 von 6
+    Versuchen erfanden Zeilen, „handgeprüft“ aus dem Code-Output kopiert
+    (`labkit/templates/test-quick.py.template:26`). Schätzer-Test fest auf accuracy, 15
+    registriert AUC: 8 von 10 Tests rot, erst beim Adopt sichtbar.
+15. **Runs-Liste „via `runlog`“** in der Protokollvorlage (`:128`) und READ-Hinweise des
+    Analyse-Audits, Runs/Recorded results zu füllen, die erst adopt schreibt (21, 34):
+    Handeinträge, die das nächste Audit wieder anmerkt.
+16. **`labkit-next`-Pfad nennt weder Test noch Prompt-Abgleich (code-check) noch den
+    Testset-Schritt** (pubmedqa50: falscher Prompt erst nach 16 min vom Audit gefunden;
+    Testset-Vorhersagen in keinem Versuch).
+17. **Audit-Schleife ohne Abbruchregel**: „Assignment:“ → neue Kennzahl → neuer Lauf → neues
+    Audit; 21-r2 widersprach das Audit seiner eigenen Anweisung der Runde davor; jede
+    handgeschriebene Conclusion bringt neue WARNINGs. Audit-Runden 15–23 min von 25–40 in 34;
+    wer früh `limitation` wählte (21-r3), war in der halben Zeit fertig.
+18. Kleineres: adopt nennt `protocol-fill --into REPORT.md` nicht (21); `--probe` steht in der
+    Usage auch bei niedrigen Kosten (15); ein geändertes auditiertes Feld zeigt sich nur als
+    anderer „shown“-Digest (21-r2); `run.metrics()` nimmt ein Dict aus Strings (34-r2,
+    vermutet).
+
 
 ## Wo die Vollendung stirbt — Auswertung der 48 Laborversuche der Runde 2 (2026-10-31 nachts)
 
