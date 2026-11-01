@@ -32,6 +32,9 @@ alias is first resolved):
     [models.haiku]
     backend = "claude-cli"            # subprocess `claude -p` (CLI auth, headless-safe)
     model = "claude-haiku-4-5-20251001"
+    input = "prompt"                  # the prompt alone (needs ANTHROPIC_API_KEY);
+                                      # unset, "harness": the CLI adds its agent
+                                      # system prompt, reminders and thinking
 
     [models.gpt-oss]
     backend = "ollama"
@@ -108,6 +111,8 @@ from labkit.run.llm_backends import (
     NO_USAGE,
     Usage,
     CLI_ISOLATION,
+    CLI_PROMPT_ONLY,
+    CLI_PROMPT_ONLY_ENV,
     CALL_STATE,
     auth_headers,
     cli_version,
@@ -347,15 +352,20 @@ def provenance(alias: str) -> dict:
     alias the answering server differs from row to row. Add the run pointer
     yourself: `{**llm.provenance(alias), "run": run.run_id}`.
 
-    For claude-cli the stamp also carries the CLI version and the isolation
-    flags — the system prompt is the harness's own, and these two decide
-    what else went into it.
+    For claude-cli the stamp also carries the CLI version, the flags and
+    what the call sent besides the prompt (`cli_input`, `llm_specs.CliInput`):
+    with `harness` the system prompt is the CLI's own, and these decide what
+    else went into it.
     """
     used = spec(alias)
     prov: dict[str, Any] = {"model": _answering_model(used), "endpoint": last_endpoint}
     if isinstance(used, ClaudeCliSpec):
         prov["cli_version"] = cli_version()
-        prov["cli_flags"] = shlex.join(CLI_ISOLATION)
+        prompt_only = used.input == "prompt"
+        prov["cli_flags"] = shlex.join(
+            CLI_ISOLATION + (CLI_PROMPT_ONLY if prompt_only else [])
+        ) + "".join(f" {k}={v}" for k, v in CLI_PROMPT_ONLY_ENV.items() if prompt_only)
+        prov["cli_input"] = used.input
     return prov
 
 

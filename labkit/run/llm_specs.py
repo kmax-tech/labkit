@@ -18,13 +18,26 @@ from typing import Literal, TypeAlias, cast
 from labkit.formats.runs import JsonObject
 
 
+#: what a claude-cli call sends besides the prompt. `harness`: the CLI's
+#: agent system prompt (~27 k characters), its environment reminders (cwd,
+#: model, date) and extended thinking — the CLI's own defaults. `prompt`:
+#: the prompt as the one message, the caller's system prompt (or none) after
+#: the CLI's fixed identity line, thinking off; it needs ANTHROPIC_API_KEY,
+#: since `--bare` reads no login (`llm_backends.complete_claude_cli`).
+#: Checked on CLI 2.1.309 behind a logging proxy (registered pilot, 2026-11-01).
+CliInput: TypeAlias = Literal["harness", "prompt"]
+CLI_INPUTS: tuple[CliInput, ...] = ("harness", "prompt")
+
+
 @dataclass(frozen=True)
 class ClaudeCliSpec:
     """`claude -p` (CLI auth, headless-safe): a model id and nothing to
-    serve it — no endpoint, no key, no sampling control."""
+    serve it — no endpoint, no key, no sampling control. `input` is what
+    the call sends besides the prompt (`CLI_INPUTS`)."""
 
     alias: str
     model: str
+    input: CliInput = "harness"
     backend: Literal["claude-cli"] = "claude-cli"
 
 
@@ -67,7 +80,7 @@ ServedSpec: TypeAlias = OllamaSpec | OpenAISpec
 #: outside its backend's set is refused, never dropped: `num_ctx` on an
 #: OpenAI-compatible server or `reasoning` on ollama would do nothing
 OPTIONS: dict[str, frozenset[str]] = {
-    "claude-cli": frozenset({"backend", "model"}),
+    "claude-cli": frozenset({"backend", "model", "input"}),
     "ollama": frozenset(
         {"backend", "model", "endpoints", "num_ctx", "api_key_env", "api_key"}
     ),
@@ -155,7 +168,12 @@ def parse_spec(
     if not isinstance(model, str) or not model:
         raise ValueError(f"{where}: model = {model!r}, not a model id")
     if backend == "claude-cli":
-        return ClaudeCliSpec(alias, model)
+        cli_input = table.get("input", "harness")
+        if cli_input not in CLI_INPUTS:
+            raise ValueError(
+                f"{where}: input = {cli_input!r} — one of {', '.join(CLI_INPUTS)}"
+            )
+        return ClaudeCliSpec(alias, model, cli_input)
     endpoints = _endpoints(where, alias, table.get("endpoints"), endpoint_names)
     key_env = _optional_str(where, table, "api_key_env")
     key = _optional_str(where, table, "api_key")
@@ -237,6 +255,9 @@ def record(spec: BackendSpec) -> JsonObject:
         for key in ("api_key_env", "api_key"):
             if getattr(spec, key) is not None:
                 out[key] = getattr(spec, key)
+    if isinstance(spec, ClaudeCliSpec) and spec.input != "harness":
+        # the default stays unrecorded, as runs before the option hold it
+        out["input"] = spec.input
     if isinstance(spec, OllamaSpec):
         if spec.num_ctx is not None:
             out["num_ctx"] = spec.num_ctx

@@ -203,6 +203,17 @@ NO_USAGE = Usage(None, None, None, None)
 # answer then depends on what lies there (preflight audit of labkit-paper
 # area 03, 2026-10-06). `--tools ""` disables the whole built-in set.
 CLI_ISOLATION = ["--setting-sources", "", "--tools", ""]
+#: what `input = "prompt"` adds (`llm_specs.CliInput`): `--bare` drops the
+#: environment reminders (cwd, model, date) the CLI puts before the prompt,
+#: and `--system-prompt` replaces its agent system prompt (~27 k characters)
+#: with the caller's own, the empty string for none — what remains is the
+#: CLI's fixed identity line. Thinking goes off through the environment,
+#: the CLI has no flag for it. Checked on CLI 2.1.309 behind a logging proxy
+#: (registered pilot, 2026-11-01): one message, the prompt; system 139
+#: characters; `thinking` disabled. `--bare` reads no login, only
+#: ANTHROPIC_API_KEY.
+CLI_PROMPT_ONLY = ["--bare"]
+CLI_PROMPT_ONLY_ENV = {"MAX_THINKING_TOKENS": "0"}
 
 
 #: `claude -p` runs from a neutral directory, never from the repo: the CLI
@@ -215,14 +226,24 @@ _CLI_CWD = tempfile.gettempdir()
 
 
 def _cli_run(
-    cmd: list[str], timeout: float | None, stdin: str | None = None
+    cmd: list[str],
+    timeout: float | None,
+    stdin: str | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
     """The one place `claude -p` is spawned: isolated flags, neutral cwd, the
-    prompt on STDIN. As an argument it hit Linux's 128 kB cap per argv entry
-    (`OSError: Argument list too long`) — an audit prompt is 200 kB, and
-    only macOS let it through (audit 2026-10-15)."""
+    prompt on STDIN, ENV over the caller's environment. As an argument the
+    prompt hit Linux's 128 kB cap per argv entry (`OSError: Argument list
+    too long`) — an audit prompt is 200 kB, and only macOS let it through
+    (audit 2026-10-15)."""
     return subprocess.run(
-        cmd, capture_output=True, text=True, timeout=timeout, cwd=_CLI_CWD, input=stdin
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        cwd=_CLI_CWD,
+        input=stdin,
+        env={**os.environ, **env} if env else None,
     )
 
 
@@ -319,9 +340,20 @@ def complete_claude_cli(
         "json",
         *CLI_ISOLATION,
     ]
-    if system:
+    env = None
+    if spec.input == "prompt":
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            raise ValueError(
+                f"alias '{alias}' sends the prompt alone (input = \"prompt\"), "
+                f"which needs ANTHROPIC_API_KEY: the CLI's --bare reads no login, "
+                f"and without it the CLI adds its environment reminders. Set the "
+                f'key, or use input = "harness" and record the CLI\'s additions'
+            )
+        cmd += [*CLI_PROMPT_ONLY, "--system-prompt", system or ""]
+        env = CLI_PROMPT_ONLY_ENV
+    elif system:
         cmd += ["--append-system-prompt", system]
-    r = _cli_run(cmd, timeout, stdin=prompt)
+    r = _cli_run(cmd, timeout, stdin=prompt, env=env)
     if r.returncode != 0:
         detail = r.stderr.strip() or r.stdout.strip() or "no output on stderr or stdout"
         raise BackendError(f"claude-cli exit {r.returncode}: {detail[:300]}")

@@ -10,6 +10,10 @@
 [models.haiku]
 backend = "claude-cli"            # `claude -p` subprocess: CLI auth, headless-safe
 model = "claude-haiku-4-5-20251001"
+# input = "prompt"               # send the prompt alone: no agent system prompt,
+#                                 # no environment reminders, thinking off — needs
+#                                 # ANTHROPIC_API_KEY (the CLI's --bare reads no
+#                                 # login). Unset ("harness"), the CLI adds its own.
 
 [models.opus]
 backend = "claude-cli"            # the auditor: `labkit-audit` calls this alias by default

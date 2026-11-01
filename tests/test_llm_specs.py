@@ -242,6 +242,19 @@ class Frozen(unittest.TestCase):
 
 
 class Record(unittest.TestCase):
+    def test_a_claude_cli_input_parses_records_and_refuses_another_value(self):
+        spec = parse_spec(
+            "h", {"backend": "claude-cli", "model": "haiku", "input": "prompt"}, NAMES
+        )
+        self.assertEqual(spec, ClaudeCliSpec("h", "haiku", "prompt"))
+        self.assertEqual(record(spec)["input"], "prompt")
+        with self.assertRaisesRegex(
+            ValueError, "input = 'bare' — one of harness, prompt"
+        ):
+            parse_spec(
+                "h", {"backend": "claude-cli", "model": "haiku", "input": "bare"}, NAMES
+            )
+
     def test_the_record_keeps_the_shape_runs_hold(self):
         """models_resolved in config.json is a format: the typed spec writes
         the keys the dict spec wrote — options only where models.toml set them."""

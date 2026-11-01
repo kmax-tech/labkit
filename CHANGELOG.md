@@ -19,6 +19,21 @@ pins (`requirements.txt` / `requirements.lock`).
   calls run at once and that rows land every 40 calls: run in the
   background, an unflushed line made a live measurement look dead.
 
+### Added
+
+- **A claude-cli alias can send the prompt alone: `input = "prompt"`.**
+  Behind a logging proxy (CLI 2.1.309), a `claude -p` call carried a
+  27,000-character agent system prompt, environment reminders (cwd, model,
+  date) and extended thinking beside the registered prompt; a protocol's
+  "only the question and the contexts" did not hold (registered pilot, part
+  1, pubmedqa50). With `input = "prompt"` the call adds `--bare`, replaces
+  the system prompt with the caller's own (or none) and turns thinking off.
+  What remains is the CLI's fixed identity line (139 characters). It needs
+  ANTHROPIC_API_KEY, since `--bare` reads no login, and is refused without it.
+  The default `harness` keeps today's call. A row's `_prov` names
+  `cli_input` and the flags; a run records `input` when it is not the
+  default.
+
 ### Changed
 
 - **`runlog --wait` waits for the open run past an earlier failure.** A
