@@ -1,7 +1,8 @@
 # 2026-11-02 — grounds for a decision review that does not uphold (proposal)
 
-Status: proposal. The reviewer's instructions (`labkit/agents/decision-review.agent.md`)
-and the gates are unchanged.
+Status: **not adopted in this form** (replay, 2026-11-02). The reviewer's
+instructions (`labkit/agents/decision-review.agent.md`) and the gates are
+unchanged.
 
 **Problem.** A decision review answers one question per `stands` decision —
 does the reason show that the reported claim stands with the finding
@@ -68,3 +69,24 @@ out, since the Conclusion drawn from it can be wrong. Only if both hold
 does a change follow: the instructions, the parser
 (`decision_review.parse_review`), the record (`formats/reviews`) and
 `rejected_way` in one step, with twin tests per ground.
+
+**Replay (2026-11-02).** The stored review prompts of the reviewed cases,
+and prompts rebuilt with the labkit each review ran with, were answered
+under the shipped instructions and under the amended ones, two draws each,
+with acceptance limits fixed before any call. Stopped after 37 of 68
+answers: one limit failed — `claim` named twice on a correct decision whose
+number and Conclusion had been checked. The verdicts did not move (the two
+arms agreed on every pair made), and no faulty decision was upheld. Two
+counter-examples carry forward to any next version:
+
+- `effect` and `registration` overlap: a promise the run never computes is
+  both unjudged and a departure from the registration, and the reviewers
+  named `registration` every time. A main ground steers the way out only
+  if the grounds are disjoint for such cases, or their order is fixed.
+- `claim` as worded ("the Conclusion drawn from them does not hold") let the
+  reviewer judge an unqualified Conclusion against the world rather than
+  against its registration and the task's own method.
+
+The open limits and the cases are kept in the internal evidence. A new
+round waits until both points are settled.
+
