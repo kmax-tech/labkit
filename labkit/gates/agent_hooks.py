@@ -1153,17 +1153,26 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
 
 
 def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
-    """Per protocol of every area PATHS touch (`areas_touched`) whose
-    registered report is not written though the area measured
+    """Per protocol of every area PATHS touch (`areas_touched`), and every
+    protocol whose head registers a file among PATHS as its report
+    (`report_hold.registering_protocols`: a REPORT.md at the root touches no
+    area), whose registered report is not written though the area measured
     (`report_hold.missing_report`): the sentence with its way out. A head
     that does not read is left to the checks that hold it where it is
     touched."""
     out: list[str] = []
-    for area in areas_touched(paths, repo):
+    registering = report_hold.registering_protocols(paths, repo, staged=False)
+    touched = list(areas_touched(paths, repo))
+    touched = [a.resolve() for a in touched]
+    touched += [
+        p.parent.resolve() for p in registering if p.parent.resolve() not in touched
+    ]
+    for area in touched:
         for protocol in area_protocols(area):
             try:
+                text = protocol.read_text(encoding="utf-8")
                 gap = report_hold.missing_report(
-                    protocol, protocol.read_text(encoding="utf-8"), repo
+                    protocol, text, repo, declared=protocol_block.declared_run(text)
                 )
             except (OSError, UnicodeError, protocol_block.BlockError):
                 continue  # held as a protocol where it is touched

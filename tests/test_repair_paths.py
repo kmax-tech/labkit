@@ -376,7 +376,6 @@ class RegisteredReportRepairs(RepairPaths):
     test_the_twin_a_conclusion_rewritten_owes_no_measurement_and_no_audit = None  # type: ignore[assignment]
     test_the_twin_a_code_repair_is_measured_again_and_audited = None  # type: ignore[assignment]
 
-    @unittest.expectedFailure  # F2 of the probe note, repaired next
     def test_a_registered_report_deleted_after_the_adoption_is_held(self):
         """`git rm REPORT.md`, committed alone, passed the commit,
         report-check and labkit-next ("the number may be reported"); only
@@ -405,7 +404,6 @@ class RegisteredReportRepairs(RepairPaths):
         self.run_("git", "checkout", "HEAD", "--", "REPORT.md")
         self.run_(".venv/bin/report-check", AREA)
 
-    @unittest.expectedFailure  # F2 of the probe note, repaired next
     def test_a_registered_report_deleted_before_the_adoption_is_held_at_the_commit(
         self,
     ):

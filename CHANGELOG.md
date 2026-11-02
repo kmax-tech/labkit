@@ -57,6 +57,18 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   --decide N limitation` names a required metrics key the audited run does
   not carry — a hint under the decision, no hold, no measurement owed
   otherwise (`audit_decisions.stands_check_hint`).
+
+- **A registered report removed is held where it is delivered.** Probe
+  2026-11-02 (`docs/notes/2026-11-02-repair-path-probe.md`): `git rm
+  REPORT.md` after the adoption passed the commit, `report-check` and
+  `labkit-next` ("the number may be reported"); only the stop named a
+  missing report, and only for an area the session touched. Now
+  `report_hold.missing_report` holds it in `report-check` once a result is
+  adopted (tree and index) and at a commit that removes a report HEAD
+  holds; the stop also reaches the protocols that register a changed
+  report path. A registered report not yet written before the adoption
+  still owes nothing at the commit — the stop names it.
+
 - **`protocol-fill` names the correct address for misaddressed fields:**
   bare promise ids point to `"criterion-1 sentence=VALUE"` instead of a
   similarly named prose field; `key`, `[kept]key` and `protocol.type` point

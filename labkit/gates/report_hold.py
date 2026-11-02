@@ -610,33 +610,58 @@ def formerly_registering(paths: list[Path], repo: Path, *, staged: bool) -> list
     return out
 
 
-def missing_report(protocol: Path, text: str, repo: Path) -> GateFinding | None:
+def missing_report(
+    protocol: Path,
+    text: str,
+    repo: Path,
+    *,
+    staged: bool = False,
+    declared: str | None = None,
+) -> GateFinding | None:
     """Why PROTOCOL (its TEXT) is delivered incomplete: its head registers
-    a report (`[protocol] report`, relative to REPO) that the working tree
-    lacks, while its area holds a measurement of it — bound and present
-    (`answering_run.bound_runs`, `is_measurement`) or listed in runs.tsv
-    and deleted since (`runlog.indexed_runs`). One blocker naming the two
-    ways to write it: the adoption (its result block) and the handover
-    (an end without a result). None when nothing is registered, the
-    report is there, or nothing was measured — before a measurement a
-    report owes nothing. Why: the registered report owes its review
-    (`report_owed`); left unwritten, it owed none, and an agent could end
-    without one (reference pilot 2026-11-01). Raises
+    a report (`[protocol] report`, relative to REPO) that the state lacks —
+    the working tree, or the index when STAGED —, while its area holds a
+    measurement of it — bound and present (`answering_run.bound_runs`,
+    `is_measurement`) or listed in runs.tsv and deleted since
+    (`runlog.indexed_runs`). One blocker naming the two ways to write it:
+    the adoption (its result block) and the handover (an end without a
+    result). None when nothing is registered, the report is there, or
+    nothing was measured — before a measurement a report owes nothing. At
+    the commit (STAGED) a report not yet written is held only where the
+    commit removes one HEAD holds or the head has adopted a result
+    (DECLARED): a run committed before its progress account stays a
+    checkpoint. Why: the registered report owes its review (`report_owed`);
+    left unwritten, it owed none, and an agent could end without one
+    (reference pilot 2026-11-01); a report deleted after the adoption passed
+    the commit, report-check and labkit-next (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md). Raises
     `protocol_block.BlockError` on a head that does not read."""
     head = protocol_block.head(text)
     if head.report is None or not head.id:
         return None
     report = own_path(repo.resolve() / head.report)
-    if report.exists():
+    if (text_at(repo, report) is not None) if staged else report.exists():
         return None
     if not has_measured(protocol.parent, head.id):
         return None
+    if staged and declared is None and text_at(repo, report, "HEAD") is None:
+        return None
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
-    return blocker(
+    what = (
         f"{name_p} registers {name_r} as its report, which is not written, and "
         f"its area holds a measurement of it — without its registered report "
-        f"the delivery is incomplete",
+        f"the delivery is incomplete"
+    )
+    if declared is not None:
+        return blocker(
+            what,
+            fix=f"restore it (`git checkout HEAD -- {name_r}` where the last commit "
+            f"holds it), or `{into_command(protocol, report)}` writes its result "
+            f"block of {declared} again; then the report review it owes",
+        )
+    return blocker(
+        what,
         fix=f"`{report_blocks.discuss_command(name_p, '<run_id>', name_r, report_blocks.WHY_PROGRESS)}` writes "
         f"the progress account (the commit takes it, it releases nothing); "
         f"`{adopt_command(protocol)}` adopts a run and writes its result "

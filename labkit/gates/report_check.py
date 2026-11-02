@@ -175,6 +175,7 @@ from labkit.gates.report_hold import (
     hold_report,
     reached_reports,
     formerly_registering,
+    missing_report,
     registering_protocols,
     report_binding_gap,
     repo_sources,
@@ -789,8 +790,10 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     """The registered report's obligation (`report_hold.report_owed`): the
     file the head's `report` names, as the state holds it, carries the
     result block of the declared run or the protocol's handover block —
-    else one blocker; nothing registered or not delivered: []. The file
-    is read relative to the area's layout root (`Checked.repo`: the git
+    else one blocker; nothing registered: []. Not delivered: held where a
+    result is adopted, or where the commit removes a report HEAD holds
+    (`report_hold.missing_report`); else [] — before the adoption the stop
+    names a report not yet written. The file is read relative to the area's layout root (`Checked.repo`: the git
     repository where there is one), from the index when the state is the
     index. Not held on the PROPOSED state — the adoption's own check of the
     protocol it is about to write: the result block can only be written
@@ -801,6 +804,18 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     owes a clean report review of its state too (`report_owed`)."""
     if ctx.state == PROPOSED:
         return []
+    # before the adoption the tree's missing report is the stop's to name
+    # (`agent_hooks.missing_reports`); a commit removing it is held here
+    staged = ctx.state == INDEX
+    gone = (
+        missing_report(
+            ctx.protocol, ctx.text, ctx.repo, staged=staged, declared=ctx.declared
+        )
+        if staged or ctx.declared is not None
+        else None
+    )
+    if gone is not None:
+        return [gone]
     gap = report_owed(
         ctx.protocol,
         ctx.text,
@@ -994,7 +1009,8 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
     """The registered report's obligation of PROTOCOL, a protocol that
     declares no result (`report_hold.report_owed` with no declared run):
     0 when the head registers no report, the file is not delivered in the
-    state, or it carries the protocol's handover block; 1 held, the
+    state (but for a commit that removes one HEAD holds,
+    `report_hold.missing_report`), or it carries the protocol's handover block; 1 held, the
     blocker told under its own heading. Raises `protocol_block.BlockError`
     on a head that does not read — the caller read the declaration off
     the same text first."""
@@ -1002,7 +1018,8 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
         g
         for g in (
             report_binding_gap(protocol, text, unread=True),
-            report_owed(protocol, text, None, repo, staged=staged, progress=staged),
+            (missing_report(protocol, text, repo, staged=True) if staged else None)
+            or report_owed(protocol, text, None, repo, staged=staged, progress=staged),
         )
         if g is not None
     ]
