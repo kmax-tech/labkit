@@ -915,3 +915,62 @@ class StandsCheckHint(unittest.TestCase):
                 rc, out = decide_cmd(area, record, *words)
                 self.assertEqual(rc, 0, out)
                 self.assertNotIn("hint: this limitation rests", out)
+
+
+#: a WARNING placed in the protocol, as a unit finding is (round 2, t34 r1)
+IN_PROTOCOL: tuple[str, str] = (
+    "WARNING",
+    "WARNING · experiments/01-x/PROTOCOL-x.md:Unit · the Unit field calls the "
+    "powers ms² · every power is misread · LAB-015 Preflight audit before "
+    "freezing · state the unit the run computes",
+)
+SCRIPT_PIECE = "===== FILE: experiments/01-x/scripts/01_measure.py ====="
+
+
+class TheMeasuringScriptWithoutANamedFile(unittest.TestCase):
+    """A finding placed in the protocol names no code; the review then shows
+    the reviewed run's measuring script (round 2, t34 r1: a Unit finding on
+    band powers reviewed without the call that computed them)."""
+
+    def test_a_finding_in_the_protocol_gets_the_runs_measuring_script(self):
+        area, _ = area_with(
+            [IN_PROTOCOL], {1: ("limitation", "the library normalizes", "stands")}
+        )
+        rc, out, err, sent = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(sent[0].count(SCRIPT_PIECE), 1)
+        self.assertNotIn(decision_review.SCRIPT_NOT_SHOWN, sent[0])
+
+    def test_the_twin_a_finding_naming_the_script_shows_it_once(self):
+        area, _ = area_with(
+            [BLOCKER, IN_PROTOCOL],
+            {
+                1: ("limitation", "in-sample, said so", "stands"),
+                2: ("limitation", "noted", "stands"),
+            },
+        )
+        rc, out, err, sent = run_review(
+            area,
+            "DECISION #1 · upheld · x\nDECISION #2 · upheld · y\n"
+            "verdict: 2 upheld, 0 rejected, 0 insufficient\n",
+        )
+        self.assertEqual(rc, 0, out + err)
+        self.assertEqual(sent[0].count(SCRIPT_PIECE), 1)
+
+    def test_a_script_that_cannot_be_told_is_said_not_shown(self):
+        area, _ = area_with(
+            [IN_PROTOCOL], {1: ("limitation", "the library normalizes", "stands")}
+        )
+        cfg = area / "runs" / RUN / "config.json"
+        data = json.loads(cfg.read_text(encoding="utf-8"))
+        data["command"] = []
+        data["script"] = "02_gone.py"
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        found, missing = decision_review.measuring_script(
+            area, area / "runs" / RUN, scope_sha.area_snapshot(area)
+        )
+        self.assertEqual(found, [])
+        self.assertEqual(
+            missing,
+            [(decision_review.SCRIPT_NOT_SHOWN, "its script 02_gone.py is gone")],
+        )

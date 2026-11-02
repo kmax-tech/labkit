@@ -61,8 +61,9 @@ import re
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit.formats.runs import run_path
+from labkit.formats.runs import read_run_config, run_path
 from labkit.checks.audit_binding import AuditError, run_shown
+from labkit.checks.run_record_check import script_of
 from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
@@ -210,6 +211,33 @@ def decisions_text(
     return "\n\n".join(blocks)
 
 
+#: the piece that says why the reviewed run's measuring script is not shown
+SCRIPT_NOT_SHOWN = "MEASURING SCRIPT — not inlined"
+
+
+def measuring_script(
+    area: Path, run_dir: Path, snap: Snapshot
+) -> tuple[list[Path], list[tuple[str, str]]]:
+    """([the script RUN_DIR ran], []) when the area snapshot SNAP holds it
+    (`run_record_check.script_of`: the path its command names, else the one
+    file of its name) — what the review shows when no finding under review
+    names a code file: a finding placed in the protocol left the reviewer
+    no code (round 2, t34 r1: a Unit finding on band powers, judged without
+    the call that computed them); else ([], one piece saying why it is not
+    shown). Read-only."""
+    cfg = read_run_config(run_dir)
+    if cfg is None:
+        return [], [(SCRIPT_NOT_SHOWN, f"run {run_dir.name} has no readable record")]
+    script = script_of(area, cfg)
+    if isinstance(script, str):
+        return [], [(SCRIPT_NOT_SHOWN, script)]
+    if script.resolve() not in snap.contents:
+        return [], [
+            (SCRIPT_NOT_SHOWN, f"{script.name} is not in the area's code stamp")
+        ]
+    return [script], []
+
+
 class Evidence(NamedTuple):
     """What one review call rests on: the prompt, the record's code stamp
     (the snapshot's sha, equal by construction), what was shown of the
@@ -283,9 +311,12 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         (f"FILE: {shown(protocol, repo)}", text),
         (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]
-    for f in named_files(decided, repo, area):
-        if f.resolve() in snap.contents:
-            pieces.append((f"FILE: {shown(f, repo)}", snap.text(f)))
+    code = [f for f in named_files(decided, repo, area) if f.resolve() in snap.contents]
+    if not code and run_dir is not None:
+        code, missing = measuring_script(area, run_dir, snap)
+        pieces += missing
+    for f in code:
+        pieces.append((f"FILE: {shown(f, repo)}", snap.text(f)))
     pieces += list(seen.pieces)
     pieces.append((f"FILE: {label}", rules_text))
     body = prompt_body(pieces)

@@ -136,7 +136,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
                 fix=measure_anew(area),
             )
         ], []
-    script = _script_of(area, cfg)
+    script = script_of(area, cfg)
     kept = script_copy_path(run, Path(cfg.script).suffix)
     if isinstance(script, str):
         return [
@@ -172,7 +172,7 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
     return out + b, w
 
 
-def _script_of(area: Path, cfg: RunConfig) -> Path | str:
+def script_of(area: Path, cfg: RunConfig) -> Path | str:
     """The script the run ran, as it stands here now: the path its command
     names (`sys.argv[0]`, relative to the area, the repository or the
     area's scripts/ — the working directory then is not recorded), else
