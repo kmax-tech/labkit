@@ -9,6 +9,15 @@ was read in the code; the one probe is named.*
 > no longer promises a check (`f5f68bc`), and the check comes together
 > with the fresh attempt that keeps its predecessor (TODO, decided
 > 2026-10-26).
+>
+> Correction, 2026-11-02: row 13's reason no longer holds — decision and
+> report reviews are journaled (`attempts`, modes `review` and
+> `report-review`) — but journaling did not close the row: a review
+> record's content is still compared with no journal line, kept answer or
+> evidence copy, so one edited before its first commit releases what the
+> review held; a record HEAD holds is refused at the commit only. Row 12
+> holds for review records as well
+> ([forgery note](2026-11-02-review-record-forgery.md)).
 
 ## The question
 
