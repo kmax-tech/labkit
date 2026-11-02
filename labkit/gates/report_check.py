@@ -147,7 +147,10 @@ from labkit.formats.answering_run import (
     is_measurement,
 )
 from labkit.formats.protocol_history import (
-    registration_in_commit,
+    NO_COMMIT,
+    UNKNOWN_COMMIT,
+    committed_at,
+    registration_missing,
 )
 from labkit.formats import (
     attempts,
@@ -185,7 +188,6 @@ from labkit.formats.repo import (
     area_protocols,
     audit_command,
     choose_protocol,
-    commit_known,
     git_root,
     indexed_protocols,
     measure_command,
@@ -195,7 +197,7 @@ from labkit.formats.repo import (
     state_text,
     withdraw_command,
 )
-from labkit.formats.runs import read_run_config, recorded_commit, run_path, unreportable
+from labkit.formats.runs import read_run_config, run_path, unreportable
 from labkit.run.runlog import indexed_runs
 from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
@@ -337,7 +339,8 @@ def _registration_at(
     # several are first on diverged history or beside a run git cannot
     # place: without the why, a reader takes the second blocker for a bug
     among = "" if held == 1 else f"; one of {held} that git's history does not order"
-    commit = recorded_commit(cfg)
+    then = committed_at(ctx.protocol, rd, root)
+    commit = then.commit
     # what stood before the number cannot be repaired afterwards: a new
     # registration, committed before its own first run, or the handover
     anew = (
@@ -345,7 +348,7 @@ def _registration_at(
         f"states, {ways_out.register_anew(str(ctx.head.id))}; else "
         f"{ways_out.HANDOVER}"
     )
-    if commit is None:
+    if then.cause == NO_COMMIT:
         return [
             blocker(
                 f"{at} recorded no commit ({cfg.git!r}{among}) — the registration "
@@ -354,7 +357,7 @@ def _registration_at(
                 fix=anew,
             )
         ]
-    if not commit_known(root, commit):
+    if then.cause == UNKNOWN_COMMIT:
         return [
             blocker(
                 f"{at} ({commit}{among}) recorded a commit this repository does not "
@@ -365,8 +368,8 @@ def _registration_at(
                 "--unshallow` in a shallow clone)",
             )
         ]
-    missing = registration_in_commit(ctx.protocol, commit, ctx.head.kind)
-    if missing is None:
+    assert commit is not None, "a recorded commit the repository holds"
+    if then.text is None:
         return [
             blocker(
                 f"{ctx.protocol.name} was not committed at {at} ({commit[:12]}{among}) "
@@ -376,6 +379,7 @@ def _registration_at(
                 fix=anew,
             )
         ]
+    missing = registration_missing(then.text, ctx.head.kind)
     if missing:
         return [
             blocker(

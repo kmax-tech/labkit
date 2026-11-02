@@ -125,6 +125,13 @@ def registration_in_commit(
     shown = text_at(root, path, commit)
     if shown is None:
         return None
+    return registration_missing(shown, kind_now)
+
+
+def registration_missing(shown: str, kind_now: str | None = None) -> list[str]:
+    """What the low registration lacks in SHOWN, a protocol as a commit held
+    it (`registration_in_commit`): the fields KIND_NOW owes, the repeat_cost,
+    or a head this labkit cannot read — [] when it stood whole. Pure."""
     try:
         protocol_block.head(shown)
     except protocol_block.BlockError as exc:
@@ -133,6 +140,47 @@ def registration_in_commit(
         # sentence says so instead of naming a field
         return [f"a head this labkit reads ({exc})"]
     return low_registration_missing(shown, kind_now)
+
+
+#: why the protocol a first measurement's commit holds cannot be read
+#: (`CommittedAt.cause`): the run recorded no commit, the repository does not
+#: hold the commit it recorded, or that commit does not hold the protocol
+NO_COMMIT = "no commit"
+UNKNOWN_COMMIT = "unknown commit"
+NOT_COMMITTED = "not committed"
+
+
+@dataclass(frozen=True)
+class CommittedAt:
+    """A protocol as the commit one run recorded holds it: TEXT, or None
+    with CAUSE (`NO_COMMIT`, `UNKNOWN_COMMIT`, `NOT_COMMITTED`); COMMIT the
+    full sha the run recorded, None without one."""
+
+    run: str
+    commit: str | None
+    text: str | None
+    cause: str | None
+
+
+def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
+    """The protocol PATH as the commit run RD recorded (`runs.recorded_commit`)
+    holds it in the repository ROOT — the one reading of "what stood
+    before the number" that the registration station
+    (`report_check.registration_gaps`) and the binding of the report
+    registered before it share. RD's config must read. Raises
+    GitError when git cannot run."""
+    from labkit.formats.runs import recorded_commit
+
+    assert rd.config is not None, "a run whose config reads"
+    commit = recorded_commit(rd.config)
+    if commit is None:
+        return CommittedAt(rd.dir.name, None, None, NO_COMMIT)
+    if not commit_known(root, commit):
+        return CommittedAt(rd.dir.name, commit, None, UNKNOWN_COMMIT)
+    text = text_at(root, path, commit)
+    if text is None:
+        return CommittedAt(rd.dir.name, commit, None, NOT_COMMITTED)
+    return CommittedAt(rd.dir.name, commit, text, None)
 
 
 def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:

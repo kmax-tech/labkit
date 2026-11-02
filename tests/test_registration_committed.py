@@ -279,6 +279,42 @@ class RegistrationAtTheFirstMeasurement(_Repository):
         self.assertIsNone(runs.recorded_commit(cfg(runs.NO_GIT, "")))
 
 
+class CommittedAtTheFirstMeasurement(_Repository):
+    """`protocol_history.committed_at`: the one reading of the protocol a
+    first measurement's commit holds, shared by the registration station and
+    the registered report's binding — read, or one of three causes."""
+
+    def _at(self, run: Path) -> protocol_history.CommittedAt:
+        (rd,) = answering_run.first_measurements(self.area, PID, self.root)
+        self.assertEqual(rd.dir, run)
+        return protocol_history.committed_at(self.proto, rd, self.root)
+
+    def test_the_protocol_as_committed_is_read(self):
+        commit = self._commit("- **Question / hypothesis:** q\n")
+        self.proto.write_text("changed since\n", encoding="utf-8")
+        at = self._at(self._run(commit))
+        self.assertIsNone(at.cause)
+        self.assertEqual(at.commit, commit)
+        self.assertIn("**Question / hypothesis:** q", at.text or "")
+
+    def test_no_commit_an_unknown_commit_and_an_uncommitted_protocol(self):
+        self._commit("- **Question / hypothesis:** q\n")
+        run = self._run(None)
+        self.assertEqual(self._at(run).cause, protocol_history.NO_COMMIT)
+        shutil.rmtree(run)
+        run = self._run("0" * 40)
+        at = self._at(run)
+        self.assertEqual(at.cause, protocol_history.UNKNOWN_COMMIT)
+        self.assertIsNone(at.text)
+        shutil.rmtree(run)
+        _git(self.root, "rm", "-q", "--cached", str(self.proto))
+        _git(self.root, "commit", "-qm", "protocol untracked")
+        commit = _git(self.root, "rev-parse", "HEAD")
+        self.assertEqual(
+            self._at(self._run(commit)).cause, protocol_history.NOT_COMMITTED
+        )
+
+
 def _block(null_band: float, sentence: str = "the null lane stays near chance") -> str:
     """A promise block whose [quality-check-2] carries NULL_BAND, as the repair case's did."""
     return (
