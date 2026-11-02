@@ -2152,6 +2152,43 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+### LLM-Schicht: öffentliche Schnittstelle, Cache, Anschluss großer Pipelines (2026-11-02)
+
+Anlass: Vergleich mit `~/projects/fallacy-detection`, einem Pipeline-Gerüst
+mit eigenen Backends. Drei Teile, in dieser Reihenfolge:
+
+1. **Öffentliche Schnittstelle festlegen.** Die Schichtentabelle hält die
+   Importe nach innen (`tests/test_architecture.py`); nach außen fehlt ein
+   Vertrag, welche Namen Labor-Repos nutzen dürfen. Kandidaten:
+   `llm.complete`, `complete_many`, `resolve`, `spec`, `last_usage`,
+   `last_endpoint`, das Schema von `models.toml`, dazu `batch.Store` und
+   `runlog.run`. Die Liste steht an einer Stelle (`docs/architecture.md`),
+   ein Test hält sie; ein Bruch nur mit Übergangsversion, in der der alte
+   Name warnt. Auslöser: elf Releases mit Breaking-Abschnitt seit 2026-10-12
+   ([Audit 2026-10-23](docs/audit-2026-10-23.md)). Labor-Repos importieren
+   `llm` fast immer zusammen mit `runlog`, `batch` oder `promises` — darum
+   kein eigenes Backend-Paket, bis etwas die Backends ohne labkit braucht.
+2. **Antwort-Cache aus fallacy-detection übernehmen.** labkit kennt nur die
+   Wiederaufnahme pro Ausgabedatei (`batch.Store`), keinen Cache über Läufe.
+   `fallacy-detection/src/models/llm_cache.py` (≈480 Zeilen, Standardbibliothek
+   plus `save_json`): Schlüssel aus Prompt-Text, Parser, Template-Hash und
+   Backend-Name; speichert die geparste Antwort; prozesssicher per `flock`.
+   Offen: der Schlüssel gegen Alias aus `models.toml` und `prompt_sha`, die
+   Cache-Version im Lauf-Record. Umgekehrt fehlen fallacy-detection
+   `endpoint_lease`, Failover, die Ablehnung abgeschnittener Prompts und
+   `last_usage`; nach dem Umzug stellt es auf `labkit.run.llm` um.
+3. **Große Pipelines laufen unter einem labkit-Run.** Ein Lauf von
+   fallacy-detection (`scripts/run_experiment.py`) öffnet einen `runlog.run`
+   gegen das Protokoll; der Record hält Config, Daten-Hashes, `repro_hash`
+   und den Ausgabepfad. Dann stehen pro Experiment Protokoll, Config, Daten
+   und Herkunft des Laufs beieinander und sind über `runs.tsv` wiederzufinden
+   statt über die Ausgabeordner des Gerüsts. Offen: `RunIndex`/`repro_hash`
+   des Gerüsts und labkits Lauf-Index doppeln sich — einer führt, der andere
+   verweist.
+
+Kein Bauauftrag. Jeder Teil ist ein eigener Auftrag; 3 berührt auch
+fallacy-detection.
+
 ### Lange Dateien (2026-10-31)
 
 Geteilt auf Zweig `split-modules` (vier Commits, Verhalten unverändert,
