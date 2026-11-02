@@ -43,7 +43,14 @@ from protocol_fixture import (
     shown_sha,
 )
 
-from labkit.formats import findings, handovers, promises, scope_sha, standard_contract
+from labkit.formats import (
+    findings,
+    handovers,
+    promises,
+    protocol_block,
+    scope_sha,
+    standard_contract,
+)
 from labkit.gates import report_check
 from labkit.gates import report_context
 
@@ -935,7 +942,9 @@ class RegisteredReport(unittest.TestCase):
                 )
                 self.assertIn(f"--discuss {self.RUN} --why", out)
                 self.assertIn(
-                    "releases nothing — the report then still owes the result or the handover",
+                    "writes the progress account of the run the gates hold it to — "
+                    "the commit takes it, it releases nothing and the result or the "
+                    "handover stays owed",
                     out,
                 )
                 self.assertIn("--handover --why", out)
@@ -1161,23 +1170,62 @@ class RegisteredReport(unittest.TestCase):
         self.assertIn(self.OWED, out)
         self.assertIn("its handover block at line 3 names no record that reads", out)
 
-    def test_a_discussion_block_alone_is_held(self):
-        area = self._area()
+    def _discussed(self, area: Path, run_id: str) -> Path:
+        """REPORT.md at the root with the progress account of RUN_ID."""
         root = area.parent.parent
-        proto = area / "PROTOCOL-x.md"
         report = root / "REPORT.md"
         report.write_text(
             protocol_fill.discuss_into(
-                proto.read_text(encoding="utf-8"),
+                (area / "PROTOCOL-x.md").read_text(encoding="utf-8"),
                 area,
-                "# Report\n\n",
+                "# Report\n\nmeasured; the audit is still open\n",
                 self.P,
-                self.RUN,
-                "looked at, not adopted",
+                run_id,
+                "measured, the analysis audit still open",
             ),
             encoding="utf-8",
         )
+        return report
+
+    def test_the_progress_account_passes_the_commit_and_the_stop_names_the_next_step(
+        self,
+    ):
+        """B (2026-11-02): while nothing is adopted, a discussion of the
+        answering run is the progress account — the commit takes it without a
+        model call, the stop names the adoption or the handover once. The
+        release is unchanged: nothing is adopted, and report-check of the
+        protocol still owes the analysis audit."""
+        area = self._fixture(
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            git=True,
+            report="REPORT.md",
+            audited=False,
+        )
+        root = area.parent.parent
+        report = self._discussed(area, self.RUN)
+        self._git(root, "add", "-A")
+        code, out = self._gate(root, report, staged=True)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("report review", out.lower().replace("report-check", ""))
         code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("carries the progress account of run", out)
+        self.assertIn("labkit-adopt", out)
+        self.assertIn("--handover", out)
+        proto = area / "PROTOCOL-x.md"
+        self.assertIsNone(protocol_block.declared_run(proto.read_text("utf-8")))
+        ctx = report_context.checked(area, proto)
+        gaps = report_check.report_gaps(ctx, adoption_pending=True)
+        self.assertTrue(any("analysis" in g.text for g in gaps), gaps)
+
+    def test_the_twin_a_discussion_of_another_run_is_no_progress_account(self):
+        area = self._area(git=True)
+        root = area.parent.parent
+        other = completed_run(area, "2026-10-01T00-00-00_0000", metrics={"n": 1})
+        started_at(other, root)
+        report = self._discussed(area, other.name)
+        self._git(root, "add", "-A")
+        code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(self.OWED, out)
 

@@ -1002,7 +1002,7 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
         g
         for g in (
             report_binding_gap(protocol, text, unread=True),
-            report_owed(protocol, text, None, repo, staged=staged),
+            report_owed(protocol, text, None, repo, staged=staged, progress=staged),
         )
         if g is not None
     ]

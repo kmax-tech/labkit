@@ -26,7 +26,9 @@ must pass `--protocol <PROTOCOL>` to every command that accepts it.
    step, then return to 1.
 4. Stop when `labkit-next` prints `next: nothing`, or when you hand over.
 
-Every refusal names its next step. Never get past a refusal with
+Report file required? Pass `--report-file REPORT.md` before measuring.
+
+Never get past a refusal with
 `--no-verify`. Never edit or delete audit or run records, and never add
 ignore rules for them. You can edit the protocol.
 `labkit-next --guide` prints the full workflow with the reason for each

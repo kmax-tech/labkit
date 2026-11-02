@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats import protocol_block  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.tools import next_step, protocol_fill  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
@@ -62,13 +63,20 @@ class TheChain(unittest.TestCase):
             os.chdir(old)
 
     def test_the_walk_from_registered_to_adopted(self):
-        # registered, not measured: measure
+        # registered, not measured: measure; no report registered: how to
+        # register one, before the first measurement only
         step = self.step()
         self.assertIn("01_measure.py", step.next, step)
+        self.assertIn(
+            "report=REPORT.md` — before the first measurement only", step.next
+        )
         self.assertIn("blocker(s) stand, and this is the first", step.held)
         run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
-        # measured, no analysis audit: audit the run that answers
+        # measured, no analysis audit: audit the run that answers; no report
+        # registered, so no progress account and no registration hint
         step = self.step()
+        self.assertNotIn("report=REPORT.md", step.next)
+        self.assertNotIn("--discuss", step.next)
         self.assertIn("labkit-audit", step.next, step)
         self.assertIn("--mode analysis", step.next, step)
         # the slot a check leaves is filled, as a gate fills it
@@ -238,3 +246,185 @@ class BeforeTheChain(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ProgressAccount(unittest.TestCase):
+    """B (2026-11-02): with a registered report, the step after a measurement
+    is the progress account — a discussion block of the answering run —,
+    before the audit and before any gap; it releases nothing, the commit
+    takes it, the stop names the next step once, and the adoption puts the
+    result block where it stood (labkit-paper area 17: five of six timed-out
+    attempts left no report, the report being written last)."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab, report_file="REPORT.md")
+        self.report = self.lab.root / "REPORT.md"
+
+    def step(self) -> next_step.Step:
+        old = Path.cwd()
+        os.chdir(self.lab.root)
+        try:
+            return next_step.next_step(self.area, self.protocol.resolve())
+        finally:
+            os.chdir(old)
+
+    def measure(self) -> str:
+        return self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+
+    def account(self, run_id: str) -> None:
+        rc = protocol_fill.main(
+            [
+                str(self.protocol),
+                "--discuss",
+                run_id,
+                "--why",
+                "lines counted; the analysis audit is still open",
+                "--into",
+                str(self.report),
+            ]
+        )
+        self.assertEqual(rc, 0)
+
+    def test_before_the_measurement_no_account_and_no_report_hint(self):
+        step = self.step()
+        self.assertIn("01_measure.py", step.next, step)
+        self.assertNotIn("--discuss", step.next)
+        self.assertNotIn("report=REPORT.md", step.next)  # registered already
+
+    def test_the_account_comes_first_then_the_audit_and_the_stop_names_it_once(self):
+        run_id = self.measure()
+        step = self.step()
+        self.assertIn(f"--discuss {run_id}", step.next, step)
+        self.assertIn("<what was measured, what is still open>", step.next)
+        self.assertIn("carries no account of it yet", step.where)
+        self.assertIn("only the adoption releases it", step.held)
+        self.account(run_id)
+        step = self.step()
+        self.assertIn("labkit-audit", step.next, step)
+        self.assertIn("--mode analysis", step.next)
+        # the commit takes the account; the release is unchanged: nothing adopted
+        from labkit.gates import report_check
+
+        self.lab.git("add", "-A")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = report_check.if_reported(
+                [self.report, self.protocol], self.lab.root, staged=True
+            )
+        self.assertEqual(rc, 0, out.getvalue())
+        self.lab.commit("progress")
+        self.assertIsNone(protocol_block.declared_run(self.protocol.read_text("utf-8")))
+        # the stop names the next step: the adoption or the handover
+        rc, err = self.lab.stop_hook()
+        self.assertEqual(rc, 2, err)
+        self.assertIn("progress account", err)
+
+    def test_an_interrupted_audit_leaves_the_account_and_the_audit_owed(self):
+        import signal
+        import subprocess
+
+        run_id = self.measure()
+        self.account(run_id)
+        child = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                "import sys, time; from pathlib import Path;"
+                "from labkit.formats import attempts;"
+                "attempts.begin(Path(sys.argv[1]), 'analysis', 'opus', 's', "
+                "block_sha='b', protocol='PROTOCOL-lines.md');"
+                "print('begun', flush=True); time.sleep(60)",
+                str(self.area),
+            ],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            assert child.stdout is not None
+            self.assertEqual(child.stdout.readline().strip(), "begun")
+        finally:
+            os.kill(child.pid, signal.SIGKILL)
+            child.wait()
+        self.assertIn(f"Run {run_id} — discussed", self.report.read_text("utf-8"))
+        step = self.step()
+        self.assertNotIn("--discuss", step.next)
+        self.assertIn("labkit-audit", step.next, step)
+        self.assertIsNone(protocol_block.declared_run(self.protocol.read_text("utf-8")))
+
+    def test_an_open_audit_blocker_still_holds_the_commit_beside_the_account(self):
+        """Retained protection: the account changes the commit rule for the
+        report only; an undecided audit BLOCKER still holds the commit."""
+        from labkit.formats import findings, promises, scope_sha
+        from labkit.gates import agent_hooks
+        from protocol_fixture import registration_of, shown_sha
+
+        run_id = self.measure()
+        self.account(run_id)
+        findings.write(
+            self.area,
+            sc.ANALYSIS_AUDIT,
+            "test",
+            scope_sha.area_stamp(self.area)[0],
+            promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
+            (1, 0, 0),
+            [("BLOCKER", "the mean counts a hidden file")],
+            run_id=run_id,
+            shown_sha=shown_sha(self.area, self.area / "runs" / run_id),
+            registration=registration_of(self.area),
+        )
+        self.lab.git("add", "-A")
+        lines = agent_hooks.undecided_blockers(
+            self.lab.root, [self.report, self.protocol], staged=True
+        )
+        self.assertTrue(
+            any("the mean counts a hidden file" in ln for ln in lines), lines
+        )
+        step = self.step()
+        self.assertNotIn("--discuss", step.next)
+        self.assertIn("--decide", step.next, step)
+
+    def test_a_code_change_after_the_run_keeps_its_blocker_after_the_account(self):
+        run_id = self.measure()
+        script = self.area / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "\n# changed after the run\n",
+            encoding="utf-8",
+        )
+        step = self.step()
+        self.assertIn(f"--discuss {run_id}", step.next, step)  # saved first
+        self.account(run_id)
+        step = self.step()
+        self.assertNotIn("--discuss", step.next)
+        self.assertIn("01_measure.py", step.where + step.next, step)
+        self.assertIn("blocker(s) stand", step.held, step)
+        # the account lifts nothing: the adoption is still refused
+        self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
+        rc, out = self.lab.adopt(self.protocol, run_id)
+        self.assertNotEqual(rc, 0, out)
+
+    def test_the_adoption_puts_the_result_block_where_the_account_stood(self):
+        from labkit.checks import report_blocks
+        from labkit.tools import adopt
+
+        run_id = self.measure()
+        self.report.write_text("# Report\n\nIntro.\n\n", encoding="utf-8")
+        self.account(run_id)
+        with self.report.open("a", encoding="utf-8") as f:
+            f.write("\nClosing words.\n")
+        self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
+        old = Path.cwd()
+        os.chdir(self.lab.root)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = adopt.adopt_in_one_step(self.area, self.protocol, run_id)
+        finally:
+            os.chdir(old)
+        self.assertEqual(rc, 0)
+        text = self.report.read_text(encoding="utf-8")
+        self.assertEqual(report_blocks.discussions(text), [])
+        (block,) = report_blocks.blocks(text)
+        self.assertEqual(block.run_id, run_id)
+        self.assertLess(text.index("Intro."), text.index(block.body))
+        self.assertLess(text.index(block.body), text.index("Closing words."))

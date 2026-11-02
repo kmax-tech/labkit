@@ -5,6 +5,59 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
+
+### Changed
+
+- **A registered report can be saved before the adoption (the progress
+  account).** labkit-paper area 17 (2026-11-02): six of 18 labkit attempts
+  reached the 2400-second limit, five of them without a `REPORT.md`, all in
+  the audit, decision and adoption loop that wrote the report last. Now:
+  - `labkit-next` names, right after a measurement and before the audit or
+    any gap, `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what was
+    measured, what is still open>" --into REPORT.md` when the head registers
+    a report, nothing is adopted and the report does not yet discuss that
+    run; on the next call it names the gap as before — a code change since
+    the run, the audit owed (`next_step._progress_step`);
+  - while nothing is adopted, a registered report carrying that discussion
+    of the run the gates hold the protocol to passes the commit, without a
+    report review; the stop holds it once, naming the audit and the
+    adoption or the handover (`report_hold.report_owed`, `progress_hold`).
+    This loosens the commit rule for the intermediate state on purpose; the
+    release is unchanged: only the adoption releases a result, after every
+    check it owes, and an open audit BLOCKER still holds the commit;
+  - `protocol-fill --into` (step 2 of `labkit-adopt`) puts the result block
+    where the discussion of the adopted run stood and removes a discussion
+    of that run beside an existing result block; other protocols' blocks,
+    other runs' discussions and the prose stay (`report_blocks.with_block`).
+    Before, the discussion stayed and blocked the adoption's own check.
+- **`protocol-fill <PROTOCOL> report=REPORT.md` registers the report** on a
+  protocol stamped without `--report-file`, before the first measurement
+  only; another file with `--force`. After the first measurement no fill,
+  `--force` included, registers, moves or drops it — registering a report
+  after the first measurement is not supported. None of the 18 self-planned
+  area 17 protocols registered the report their task asked for.
+  `labkit-next` adds this line to every step before the first measurement
+  of a protocol that registers none; `AGENTS.md` says it in one line.
+
+### New blockers (low repeat cost; high is unchanged)
+
+- **The report a protocol registered before its first measurement is
+  bound** to what that measurement's commit holds
+  (`report_hold.report_binding_gap`): dropped or moved since → BLOCKER, with
+  the way back (restore it) or the explicit end (the handover, then a new
+  registration; earlier runs, results and findings stay); first measurements
+  that registered different reports → BLOCKER; a first measurement whose
+  commit cannot be read → BLOCKER where the registration station did not
+  run and a report is registered. The gate reaches the protocol by its area
+  and by the report its first measurements registered
+  (`report_hold.formerly_registering`), not only by the report its head
+  names now. The first measurement starts only with the report the tree
+  registers committed (`start_check`). At high repeat cost the freeze holds
+  the protocol; this binding claims nothing there.
+
 ## 0.107.0 — 2026-11-01
 
 ### Breaking

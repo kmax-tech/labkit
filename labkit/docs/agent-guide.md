@@ -35,10 +35,21 @@ once. Write it again from the next adopted run. Until then, keep the file
 away. Say in the report which you did, and why.
 
 A protocol head can register a report (`report = "REPORT.md"`, stamped
-by `labkit-init exp --report-file`). Then the stop and the commit hold
-that file. They release it when it carries the adopted run's generated result
-block or the handover block. A number without its run id, a typed run id
-or a discussion block releases nothing. Other notes owe nothing.
+by `labkit-init exp --report-file`, or set by `protocol-fill <PROTOCOL>
+report=REPORT.md` before the first measurement). If your task asks for a
+report file, register it before you measure: after the first measurement
+no fill registers, moves or drops it. Then the stop and the commit hold
+that file. They release it when it carries the adopted run's generated
+result block or the handover block. A number without its run id or a typed
+run id releases nothing. Other notes owe nothing.
+
+Write the progress account right after the measurement, before the audit:
+`labkit-next` names `protocol-fill <PROTOCOL> --discuss <run_id> --why
+"<what was measured, what is still open>" --into REPORT.md`. While nothing
+is adopted, the commit takes that account; it releases no result and owes
+no report review yet. The stop names the next step once: the audit and the
+adoption, or the handover. The adoption puts the result block where the
+account stood.
 
 ## Choose the experiment: three separate decisions
 
@@ -272,7 +283,8 @@ After you change an audit decision, run `protocol-fill <PROTOCOL>
 
 To discuss a run without adoption, run `protocol-fill <PROTOCOL> --discuss
 <run_id> --why "<what refused adoption, what you found>" --into
-REPORT.md`. Say that the question stays open. A discussion owes
+REPORT.md`. Say that the question stays open. In a report the head does
+not register, a discussion owes
 `labkit-audit <area> --report-review REPORT.md` of the finished report, in
 this order:
 

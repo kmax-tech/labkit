@@ -299,6 +299,7 @@ def report_owed(
     *,
     staged: bool,
     review: bool = True,
+    progress: bool = False,
 ) -> GateFinding | None:
     """Why PROTOCOL's registered report owes its result — one blocker with
     the three ways out — or None.
@@ -328,7 +329,14 @@ def report_owed(
     its prose may still present another run as the result — the block
     shows the adopted number, it cannot tell what the text around it
     claims (reference pilot 2026-11-01, task 15: an older run's "PASS",
-    no review owed or possible)."""
+    no review owed or possible). The progress account: while nothing is
+    adopted, a discussion block of this protocol for the run the gates hold
+    it to says what was measured and what is still open; with PROGRESS (the
+    commit) it passes — saved, releasing nothing, owing no review yet —,
+    without (the stop, a check by hand) it is one blocker naming the next
+    step: the adoption or the handover (labkit-paper area 17, 2026-11-02:
+    five of six timed-out attempts left no report, the report being written
+    last)."""
     head = protocol_block.head(text)
     if head.report is None:
         return None
@@ -372,6 +380,9 @@ def report_owed(
             )
         why.append(f"its handover block at line {h.first} {gap}")
     run, _ = audited_run(protocol.parent.resolve(), protocol, text)
+    pending = None if declared is not None or run is None or why else run.name
+    if pending is not None and progress_account(written, block_owner, pending):
+        return progress_hold(protocol, name_r, pending, progress=progress)
     newest = declared or (run.name if run is not None else "<run_id>")
     what = (
         f"the result block of run {declared}, its adopted result"
@@ -394,10 +405,46 @@ def report_owed(
         "one; a number with its run id removed, or a run id typed in, releases "
         "nothing",
         fix=f"{write}; "
-        f"`{report_blocks.discuss_command(name_p, newest, name_r)}` discusses a "
-        f"run only looked at and releases nothing — the report then still owes "
-        f"the result or the handover; `{handover_command(protocol, name_r)}` "
-        f"ends the protocol without a result",
+        f"`{report_blocks.discuss_command(name_p, newest, name_r, report_blocks.WHY_PROGRESS)}` writes the "
+        f"progress account of the run the gates hold it to — the commit takes it, "
+        f"it releases nothing and the result or the handover stays owed; "
+        f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
+    )
+
+
+def progress_hold(
+    protocol: Path, name_r: str, run_id: str, *, progress: bool
+) -> GateFinding | None:
+    """`report_owed` on a registered report (NAME_R as shown) carrying the
+    progress account of RUN_ID for PROTOCOL while nothing is adopted: None
+    with PROGRESS (the commit: saved, releasing nothing), else one blocker
+    naming the next step — the adoption or the handover."""
+    if progress:
+        return None
+    here = Path.cwd()
+    return blocker(
+        f"{shown(protocol, here)}: {name_r} carries the progress account of run "
+        f"{run_id} (its discussion block) and no result yet — the progress is "
+        f"saved and may be committed; a result is released only by the adoption",
+        fix=f"take the next step `labkit-next {shown(protocol.parent, here)}` "
+        f"names — the analysis audit and its decisions, then "
+        f"`{adopt_command(protocol, run_id)}`; or end without a result: "
+        f"`{handover_command(protocol, name_r)}`",
+    )
+
+
+def progress_account(written: str, owner: str, run_id: str) -> bool:
+    """Does the report text WRITTEN carry a discussion block of the
+    protocol OWNER (its path relative to the report) for RUN_ID — the
+    progress account `report_owed` accepts at the commit while nothing is
+    adopted? A discussion that does not read is none: the report's own hold
+    names it (`hold_report`). Pure."""
+    try:
+        found = report_blocks.discussions(written)
+    except report_blocks.ReportBlockError:
+        return False
+    return any(
+        (d.protocol, d.run_id) == (owner, run_id) and d.why.strip() for d in found
     )
 
 
@@ -590,7 +637,9 @@ def missing_report(protocol: Path, text: str, repo: Path) -> GateFinding | None:
         f"{name_p} registers {name_r} as its report, which is not written, and "
         f"its area holds a measurement of it — without its registered report "
         f"the delivery is incomplete",
-        fix=f"`{adopt_command(protocol)}` adopts a run and writes its result "
+        fix=f"`{report_blocks.discuss_command(name_p, '<run_id>', name_r, report_blocks.WHY_PROGRESS)}` writes "
+        f"the progress account (the commit takes it, it releases nothing); "
+        f"`{adopt_command(protocol)}` adopts a run and writes its result "
         f"block into {name_r}; `{handover_command(protocol, name_r)}` ends the "
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",

@@ -15,11 +15,20 @@ first that applies is the step:
                                    (`protocol_check.check_fields`)
     a current handover of it     → nothing: the protocol ended without a
                                    result (`handovers.protocol_handed_over`)
+    a measured run, nothing adopted, → the progress account: `protocol-fill
+      the registered report without     … --discuss RUN --why … --into REPORT`
+      its account of that run           (`report_hold.progress_account`), before
+                                        any gap — saved first, released by nothing
     a gap report-check holds     → its way out, the first in the chain's
                                    order (`report_check.report_gaps`)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
                                    that answers
     adopted, nothing held        → nothing: the number may be reported
+
+Before the first measurement of a protocol whose head registers no report,
+the step adds how to register one (`protocol-fill … report=REPORT.md`):
+labkit cannot tell whether the task asks for a report file, and after the
+first measurement the registration is refused.
 
 Prints where the area stands, the next step, and what is held until it is
 taken. Exit 0 when a step is named or nothing is owed; 2 on no such area,
@@ -32,6 +41,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, handovers, protocol_block, protocol_check
@@ -47,6 +57,9 @@ from labkit.formats.repo import (
     stamped_areas,
 )
 
+
+if TYPE_CHECKING:
+    from labkit.gates.report_context import Checked
 
 #: the workflow in full, which `AGENTS.md` keeps short
 GUIDE = PACKAGE_DIR / "docs" / "agent-guide.md"
@@ -82,6 +95,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     report = protocol_check.check_fields(text)
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
+    hint = _report_hint(area, protocol, text)
     if report.missing_must:
         named = shown(protocol, Path.cwd())
         fill = _fill_line(named, report.missing_must[0])
@@ -90,7 +104,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             + ", ".join(report.missing_must),
             (f"`{fill}` fills the first; " if fill else "")
             + f"`protocol-fill {named} --list` names every open field with its "
-            f"values, `protocol-check {named} --contract` what each one owes",
+            f"values, `protocol-check {named} --contract` what each one owes" + hint,
             "the first measurement: fill and commit the registration first, "
             "because it cannot change after that run",
         )
@@ -116,6 +130,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "every step on its rows: a second measurement beside it is refused",
         )
     ctx = report_context.checked(area, protocol)
+    account = _progress_step(ctx)
+    if account is not None:
+        return account
     pending = ctx.declared is None and ctx.run is not None
     gaps = report_check.report_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
@@ -130,7 +147,8 @@ def next_step(area: Path, protocol: Path | None) -> Step:
         first = held[0]
         return Step(
             first.text,
-            first.fix or "the line above names what holds",
+            (first.fix or "the line above names what holds")
+            + (hint if ctx.run is None else ""),
             f"the adoption and any report of the number: {len(held)} "
             "blocker(s) stand, and this is the first",
         )
@@ -162,6 +180,53 @@ def next_step(area: Path, protocol: Path | None) -> Step:
         f"{shown(protocol, Path.cwd())} --into REPORT.md` writes its result "
         "block into a report the head does not register)",
         "",
+    )
+
+
+def _report_hint(area: Path, protocol: Path, text: str) -> str:
+    """The sentence a step before the first measurement adds when the head
+    registers no report: how to register one — labkit cannot tell whether
+    the task asks for a report file, and once the area measured the
+    registration is refused (`protocol_fill.report_bound`). "" otherwise."""
+    from labkit.gates.report_hold import has_measured
+
+    head = protocol_block.head(text)
+    if head.report is not None or not head.id or has_measured(area, head.id):
+        return ""
+    return (
+        f"; if the task asks for a report file, register it now: `protocol-fill "
+        f"{shown(protocol, Path.cwd())} report=REPORT.md` — before the first "
+        f"measurement only"
+    )
+
+
+def _progress_step(ctx: "Checked") -> Step | None:
+    """The progress account as the step, or None: the head registers a
+    report, the gates hold the protocol to a measured run, nothing is
+    adopted, and the report does not yet carry its discussion of that run
+    (`report_hold.progress_account`). It comes before every gap: the account
+    is saved first and releases nothing, so a gap that holds — a change
+    since the run, the audit still owed — is named on the next call."""
+    from labkit.checks import report_blocks
+    from labkit.formats.repo import own_path
+    from labkit.gates.report_hold import progress_account
+
+    report_rel = ctx.head.report
+    if report_rel is None or ctx.declared is not None or ctx.run is None:
+        return None
+    report = own_path(ctx.repo.resolve() / report_rel)
+    written = report.read_text(encoding="utf-8") if report.is_file() else ""
+    owner = report_blocks.path_from_report(ctx.protocol, report)
+    if progress_account(written, owner, ctx.run.name):
+        return None
+    here = Path.cwd()
+    return Step(
+        f"run {ctx.run.name} is measured, and {shown(report, here)} carries no "
+        f"account of it yet",
+        f"`{report_blocks.discuss_command(shown(ctx.protocol, here), ctx.run.name, shown(report, here), report_blocks.WHY_PROGRESS)}`"
+        f" writes it, saved before the checks (replace the placeholder after "
+        f"--why); then `labkit-next` again",
+        "the result: only the adoption releases it, after the checks it owes",
     )
 
 
