@@ -1736,6 +1736,39 @@ class Exp(unittest.TestCase):
                     self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
                     self.assertIn("14 passed", r.stdout)
 
+    def test_the_stamped_prompt_test_passes_with_either_bar(self) -> None:
+        """The prompt skeleton's area test (`test-area.py.template`) runs green
+        on a fresh low stamp whose [criterion-1] registers `margin`, and on one
+        that registers a bar the task states (`at_least`), the two bar tests
+        among them (docs/notes/2026-11-02-absolute-task-bar.md)."""
+        for constants in ("margin = 0.25", "at_least = 0.9"):
+            with self.subTest(constants=constants):
+                root = Path(self.tmp.name) / f"judge-{constants.split()[0]}"
+                root.mkdir()
+                quiet(scaffold.stamp_lab, root, "lab")
+                quiet(
+                    scaffold.stamp_area,
+                    root,
+                    "foo-bar",
+                    repeat_cost="low",
+                    kind="apply",
+                    model="haiku",
+                )
+                (area,) = (root / "experiments").glob("[0-9]*-foo-bar")
+                protocol = next(area.glob("PROTOCOL-*.md"))
+                text = protocol.read_text(encoding="utf-8")
+                self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)
+                protocol.write_text(
+                    text.replace(
+                        "constants = { margin = 0.25 }",
+                        f"constants = {{ {constants} }}",
+                    ),
+                    encoding="utf-8",
+                )
+                r = self._run_stamped_test(root)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertIn("19 passed", r.stdout)
+
     def test_the_stamped_estimator_test_has_spearman_cases(self) -> None:
         """An area that registers Spearman (`SCORE = "spearman"`) gets cases
         in its stamped test, at fit and at apply: the score guard passes and

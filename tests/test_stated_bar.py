@@ -324,6 +324,37 @@ class PromptSkeleton(unittest.TestCase):
                     self.stamp(constants, name)
                 self.assertIn(says, str(cm.exception))
 
+    def test_a_stated_bar_does_not_pass_a_failed_quality_check(self):
+        """A perfect registered lane over a stated bar still has no verdict
+        when [quality-check-2] fails (the null lane 30 items off chance) or
+        [quality-check-1] fails (one empty answer past max_empty = 0): no
+        threshold, no pass. The twin: the same lanes inside both checks pass."""
+        measure = self.stamp("constants = { at_least = 0.9 }")
+        cfg = replace(measure.CONFIG, null_band_items=5, max_empty=0)
+        off_chance = measure.evaluate_rows(
+            self.lane("registered", 100) + self.lane("null", 80), cfg
+        )
+        self.assertEqual(
+            (
+                off_chance["quality_check_2_pass"],
+                off_chance["criterion_1_threshold"],
+                off_chance["criterion_1_pass"],
+            ),
+            (False, None, None),
+        )
+        empty = self.lane("registered", 100)
+        empty[0]["answer"] = ""
+        too_empty = measure.evaluate_rows(empty + self.lane("null", 50), cfg)
+        self.assertEqual(
+            (
+                too_empty["quality_check_1_pass"],
+                too_empty["criterion_1_threshold"],
+                too_empty["criterion_1_pass"],
+            ),
+            (False, None, None),
+        )
+        self.assertEqual(self.verdict(measure, cfg, 100, 50), (1.0, 0.9, True))
+
     def test_the_stamped_sentence_names_both_forms(self):
         with contextlib.redirect_stdout(io.StringIO()):
             area, _ = scaffold.stamp_area(
