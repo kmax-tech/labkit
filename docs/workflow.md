@@ -24,6 +24,34 @@ An executable walk of these steps on the stamped count task is
 in an empty directory with a venv that has labkit, read its output beside
 this page; `tests/test_workflow_example.py` keeps it true.
 
+## The steps at a glance
+
+One row per step below: when the area has reached it (read from the
+records, never from a status file), what the agent may change there, the
+command, what it writes, what ends the step, and the way out when a check
+holds. `labkit-next <AREA>` names the step an area stands at today
+(`labkit/tools/next_step.py`); the sections below carry the details and
+the `high` additions.
+
+| Step | Reached when | The agent may change | Command | Writes | Done when | Held → way out |
+|---|---|---|---|---|---|---|
+| 0 area | no protocol in the area | — | `labkit-init exp <name> --kind compute\|fit\|apply` (`--report-file REPORT.md` when the task asks for a report) | the area, its protocol, the skeleton, the area test | the area is stamped with its own number | two areas with one number → `labkit-init numbers` names them |
+| 1 code | the area exists | the scripts, the area test | `code-check <AREA>` after each change | nothing | every declared key, prompt line and parser fixture found | a missing key or fixture → write it |
+| 2 registration | a MUST field is open | the protocol's fields through `protocol-fill`; the kind only before the first measurement (`--change-kind`) | `protocol-fill`, `protocol-check`, commit | the protocol | `protocol-check` finds every field the kind owes, and they are committed (`high`: frozen after preflight and its audit) | an open field → `protocol-fill <PROTOCOL> --list` |
+| 3 run | the registration is committed | the code before the run; nothing under `runs/` | `scripts/01_measure.py` (through `runlog`) | `runs/<run_id>/`, the output, `runs.tsv` | the run completed | an unregistered or unbound run → refused before it starts |
+| 4 finalize | a completed run answers the protocol | nothing (it only reads) | `finalize <AREA>` | nothing | no blocker: the run can carry a number | code or registration changed since the run → measure again, or restore, or register anew |
+| 5 analysis audit and decisions | finalize is clean and no analysis record covers the area as it is now | each finding's decision, through `--decide` | `labkit-audit <AREA> --mode analysis`, then `--decide` per finding | `audits/<minute>-analysis.toml` and its decisions | every finding decided, the record covers code, promises, run and what was shown | code changed after the audit → the record is stale, audit again; an earlier BLOCKER undecided → decide it first |
+| 6 decision review | a BLOCKER was accepted with `stands`, or a decision a review did not uphold was closed | the Conclusion, the decision | `labkit-audit <AREA> --review` | `audits/<minute>-review.toml` | every such decision `upheld` | `rejected` → decide again (limit, change the effect, fix); `insufficient` → add evidence |
+| 7 adoption | nothing but the adoption holds | — | `labkit-adopt <AREA> [RUN_ID]` (or `protocol-fill <PROTOCOL> --from-run`) | the protocol only: `[result] run`, Recorded results, Limitation lines, Runs | `report-check` passes on the written protocol | a blocker → the file is restored and the blocker named |
+| 8 report | an adopted run, or a run the report discusses | the report's prose; the blocks only through `protocol-fill` | `protocol-fill <PROTOCOL> --into REPORT.md` (`--discuss RUN --why …` for a run only looked at), then `labkit-audit <AREA> --report-review REPORT.md` | the generated block; `audits/report-reviews/<minute>-review.toml` | the block equals its rendering, and the review of this state names no claim | a registered report without its result or handover block, or a claim → adopt and `--into`, `--discuss` (releases nothing), or `--handover` |
+| 9 stop and commit | the agent ends its turn, or commits | — (the hooks run unasked) | `claude-hook stop`, `.githooks/pre-commit` (`report-check --if-reported`) | nothing | no blocker in the areas touched or staged | the line names its command; no result to be had → `protocol-fill <PROTOCOL> --handover --why … --tried … --into REPORT.md` |
+
+A repair after an adoption runs the steps again from the withdrawal:
+`protocol-fill <PROTOCOL> --withdraw --why "…"` → change the code (step 1)
+→ measure again (3) → finalize (4) → the analysis audit follows the
+earlier decided BLOCKERs up (5) → adopt the new run (7). The withdrawal
+removes the adoption and the result blocks, never a run or an audit record.
+
 ## 0. The area
 
 ```
