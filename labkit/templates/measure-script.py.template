@@ -23,8 +23,11 @@ Measurement contract:
   - Accuracy is correct answers over EVERY item of the lane: an empty or
     unreadable answer counts as not correct (else a model would gain
     accuracy by not answering) and is counted on its own as `*_empty`.
-  - [criterion-1] passes when the registered lane's accuracy is at least the null
-    lane's plus `margin`.
+  - [criterion-1] passes when the registered lane's accuracy is at least its
+    bar, registered in one of two forms (LAB-035 Thresholds belong to the
+    run, not to the measure; `criterion_bar`): `at_least`, a bar the task
+    states, is the bar as written, whatever the null lane answers;
+    `margin` is a lead over the null lane's accuracy.
   - [quality-check-1] checks the registered lane's readable yield, [quality-check-2] that the null
     lane sits near chance: the correct count its own answers reach on
     average against the gold permuted, exact (`_expected_correct`). If
@@ -72,7 +75,7 @@ AREA = HERE.parent
 PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
-from labkit.formats import promises
+from labkit.formats import criterion_bar, promises
 from labkit.run import lanes
 
 # ===== What this measurement asks — fill every TODO of this block ==========
@@ -137,18 +140,25 @@ class MeasureConfig:
     `promises.all_constants()`; runlog refuses a run whose config lacks a
     registered constant or carries another value, and a constant this class
     does not know fails at import (TypeError: unexpected keyword).
+    [criterion-1] registers exactly one of `at_least` and `margin`; both or
+    neither raise ValueError here, before any row is read.
     """
 
-    margin: float               # [criterion-1]: registered accuracy ≥ null accuracy + margin
     max_empty: int              # [quality-check-1]: at most this many empty/unreadable answers on the registered lane;
                                 # the stamped value is a placeholder: derive it for THIS item count, from how
                                 # many empty answers still leave the number readable (LAB-028 An endpoint is a
                                 # model slot) — and again when ITEMS changes
     null_band_items: int        # [quality-check-2]: the null lane sits within this many ITEMS of chance (counted, not a share)
+    # [criterion-1], one of the two (LAB-035 Thresholds belong to the run, not to the measure):
+    at_least: float | None = None  # a bar the task states: registered accuracy ≥ at_least; its source named in the sentence
+    margin: float | None = None    # a bar of your own: registered accuracy ≥ null accuracy + margin
     model: str = MODEL          # alias from models.toml; runlog resolves it into models_resolved
     # the instrument's version: both prompts, so a reworded prompt is a
     # different config even when every threshold stays
     prompt_sha: str = hashlib.sha256((PROMPT + PROMPT_NULL).encode()).hexdigest()[:12]
+
+    def __post_init__(self) -> None:
+        criterion_bar.require_one_form(self.at_least, self.margin)
 
 
 # The registered execution: thresholds from the protocol, nothing copied;
@@ -223,22 +233,14 @@ def _within_chance(rows: list[dict], items: int) -> bool:
     return n > 0 and abs(correct - _expected_correct(rows)) <= items
 
 
-def _at_least(reg: list[dict], null: list[dict], margin: float) -> bool:
-    """[criterion-1] exactly: correct/items of the registered lane >= that of the null
-    lane + margin, in fractions (margin as written, 0.25 = 1/4) — in floats
-    a lane exactly at null + margin failed by one ulp."""
-    rc, rn, _ = _counts(reg)
-    nc, nn, _ = _counts(null)
-    return Fraction(rc, rn) >= Fraction(nc, nn) + Fraction(str(margin))
-
-
 def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     """THE experiment, as a pure function of the stored rows and the config — gates first.
 
     Returns every registered id's keys on every lane:
       quality_check_1_empty · quality_check_1_pass           quality check: yield of the registered lane
       quality_check_2_accuracy · quality_check_2_expected · quality_check_2_pass   quality check: the null lane inside its band around chance
-      criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against null + cfg.margin
+      criterion_1_accuracy · criterion_1_threshold · criterion_1_pass   criterion: registered lane against cfg.at_least as
+                                   registered, else the null lane's accuracy + cfg.margin
       n_items · n_rows             yield (→ LAB-023 No silent loss)
     A failed quality check reports its keys and no criterion verdict (`criterion_1_pass` None)."""
     if not rows:
@@ -258,8 +260,13 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if not admissible:
         metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
-    metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": null_acc + cfg.margin,
-                    "criterion_1_pass": _at_least(reg, null, cfg.margin)})
+    # in fractions, the bar as registered (`criterion_bar`): a lane exactly at
+    # the bar passes
+    rc, rn, _ = _counts(reg)
+    nc, nn, _ = _counts(null)
+    bar = criterion_bar.bar_of(cfg.at_least, cfg.margin, Fraction(nc, nn))
+    metrics.update({CRITERION_VALUE_KEY: reg_acc, "criterion_1_threshold": float(bar),
+                    "criterion_1_pass": Fraction(rc, rn) >= bar})
     return metrics
 
 

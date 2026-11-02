@@ -506,7 +506,7 @@ class TheAuditStillSeesTheExperiment(unittest.TestCase):
             "class MeasureConfig",
             "def parse_answer",
             "def _within_chance",
-            "def _at_least",
+            "criterion_bar.bar_of(",
             "def evaluate_rows",
             "cfg.null_band_items",
             "lanes.Lanes(",

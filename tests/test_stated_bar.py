@@ -1,6 +1,7 @@
-"""[criterion-1]'s bar in the estimator skeleton: `at_least`, a bar the task
-states, or `margin`, a lead over the null value — exactly one
-(docs/notes/2026-11-02-absolute-task-bar.md). The cases are labkit-paper
+"""[criterion-1]'s bar in the estimator and the prompt skeleton: `at_least`,
+a bar the task states, or `margin`, a lead over the null value — exactly
+one, from one home (`labkit.formats.criterion_bar`;
+docs/notes/2026-11-02-absolute-task-bar.md). The cases are labkit-paper
 area 17's: a task's absolute bar written as a margin passed a value below
 it; here the stated bar holds at its boundary whatever the null scores."""
 
@@ -222,6 +223,151 @@ class StatedBar(unittest.TestCase):
                     "plus margin — or, for a bar the task states, at least at_least",
                     text,
                 )
+
+
+class PromptSkeleton(unittest.TestCase):
+    """The prompt skeleton (apply with a model) reads the same two forms
+    through `criterion_bar`; its null value is the null lane's accuracy."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        scaffold.stamp_lab(self.root, "stated-bar-prompt")
+
+    def stamp(self, constants: str, name: str = "judge"):
+        """A stamped prompt-skeleton area NAME, [criterion-1]'s constants
+        CONSTANTS, its measure script loaded with the answers pos and neg."""
+        with contextlib.redirect_stdout(io.StringIO()):
+            area, _ = scaffold.stamp_area(
+                self.root, name, repeat_cost="low", kind="apply", model="haiku"
+            )
+        protocol = next(area.glob("PROTOCOL-*.md"))
+        text = protocol.read_text(encoding="utf-8")
+        self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)
+        protocol.write_text(
+            text.replace("constants = { margin = 0.25 }", constants), encoding="utf-8"
+        )
+        module_name = f"stated_bar_prompt_{name}_{id(self)}"
+        spec = importlib.util.spec_from_file_location(
+            module_name, area / "scripts" / "01_measure.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        self.addCleanup(sys.modules.pop, module_name, None)
+        spec.loader.exec_module(module)
+        module.ANSWERS.update({"Yes": "pos", "No": "neg"})
+        return module
+
+    @staticmethod
+    def lane(name: str, correct: int) -> list[dict]:
+        """100 items, gold half pos and half neg (chance: 50 right), the first
+        CORRECT answered right."""
+        rows = []
+        for i in range(100):
+            gold = "pos" if i % 2 == 0 else "neg"
+            right = {"pos": "Yes", "neg": "No"}[gold]
+            wrong = {"pos": "No", "neg": "Yes"}[gold]
+            rows.append(
+                {"lane": name, "gold": gold, "answer": right if i < correct else wrong}
+            )
+        return rows
+
+    def verdict(
+        self, measure, cfg, registered: int, null: int
+    ) -> tuple[float, float, bool]:
+        m = measure.evaluate_rows(
+            self.lane("registered", registered) + self.lane("null", null), cfg
+        )
+        self.assertTrue(m["quality_check_2_pass"])
+        return (
+            m["criterion_1_accuracy"],
+            m["criterion_1_threshold"],
+            m["criterion_1_pass"],
+        )
+
+    def test_a_bar_the_task_states_holds_at_its_boundary_whatever_the_null(self):
+        """Accuracy at least 0.90: 0.89 misses and 0.90 meets it with the null
+        lane at 46 or 54 of 100; the twin, the same bar as a margin of 0.40,
+        passes 0.89 over a null of 46 (bar 0.86)."""
+        measure = self.stamp("constants = { at_least = 0.9 }")
+        cfg = replace(measure.CONFIG, null_band_items=5)
+        for null in (46, 54):
+            with self.subTest(null=null):
+                self.assertEqual(self.verdict(measure, cfg, 90, null), (0.9, 0.9, True))
+                self.assertEqual(
+                    self.verdict(measure, cfg, 89, null), (0.89, 0.9, False)
+                )
+        as_margin = replace(cfg, at_least=None, margin=0.4)
+        self.assertIs(self.verdict(measure, as_margin, 89, 46)[2], True)
+
+    def test_a_lead_over_the_null_holds_at_its_boundary(self):
+        """At least 0.05 over a null lane at 0.50: 0.55 meets the bar, 0.54
+        misses it."""
+        measure = self.stamp("constants = { margin = 0.05 }")
+        cfg = replace(measure.CONFIG, null_band_items=5)
+        self.assertEqual(self.verdict(measure, cfg, 55, 50), (0.55, 0.55, True))
+        self.assertEqual(self.verdict(measure, cfg, 54, 50), (0.54, 0.55, False))
+
+    def test_both_bars_or_none_are_refused_before_any_row(self):
+        for name, constants, says in (
+            (
+                "both",
+                "constants = { at_least = 0.9, margin = 0.05 }",
+                "both `at_least` and `margin`",
+            ),
+            ("neither", "constants = { }", "neither `at_least` nor `margin`"),
+        ):
+            with self.subTest(constants=constants):
+                with self.assertRaises(ValueError) as cm:
+                    self.stamp(constants, name)
+                self.assertIn(says, str(cm.exception))
+
+    def test_the_stamped_sentence_names_both_forms(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            area, _ = scaffold.stamp_area(
+                self.root, "sentence", repeat_cost="low", kind="apply", model="haiku"
+            )
+        text = next(area.glob("PROTOCOL-*.md")).read_text(encoding="utf-8")
+        self.assertIn("+ margin — or, for a bar the task states, >= at_least", text)
+
+
+class CriterionBar(unittest.TestCase):
+    """The one home of the two forms (`labkit.formats.criterion_bar`)."""
+
+    def test_the_bar_is_the_registered_value_read_as_written(self):
+        from fractions import Fraction
+
+        from labkit.formats import criterion_bar
+
+        self.assertEqual(
+            criterion_bar.bar_of(0.9, None, Fraction(1, 3)), Fraction(9, 10)
+        )
+        self.assertEqual(
+            criterion_bar.bar_of(None, 0.25, Fraction(5, 12)), Fraction(2, 3)
+        )
+        self.assertEqual(
+            criterion_bar.bar_of(None, 0.05, Fraction(7, 10)), Fraction(3, 4)
+        )
+        self.assertEqual(
+            criterion_bar.bar_of(None, 0.95, 0.0), 0.95
+        )  # a float null stays a float
+        self.assertEqual(criterion_bar.bar_of(0.95, None, -0.11), Fraction(19, 20))
+
+    def test_both_or_neither_form_is_refused(self):
+        from labkit.formats import criterion_bar
+
+        for at_least, margin, says in (
+            (0.9, 0.05, "both `at_least` and `margin`"),
+            (None, None, "neither `at_least` nor `margin`"),
+        ):
+            with self.subTest(at_least=at_least, margin=margin):
+                with self.assertRaises(ValueError) as cm:
+                    criterion_bar.bar_of(at_least, margin, 0.5)
+                self.assertIn(says, str(cm.exception))
+        criterion_bar.require_one_form(0.9, None)
+        criterion_bar.require_one_form(None, 0.05)
 
 
 if __name__ == "__main__":

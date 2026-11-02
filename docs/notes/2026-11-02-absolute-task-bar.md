@@ -43,9 +43,14 @@ how does the method behave against the null condition (a quality check).
   relative to the null condition. The version follows the standard's own
   rule (a changed rule is the next version), although the change forbids
   nothing.
-- The estimator skeleton registers exactly one of `at_least` (absolute)
-  and `margin` (over the null value) in [criterion-1]'s table; both or
-  neither are refused. The null lane and [quality-check-2] stay unchanged.
+- The estimator and the prompt skeleton register exactly one of
+  `at_least` (absolute) and `margin` (over the null value) in
+  [criterion-1]'s table; both or neither are refused. The two forms, the
+  refusal and the arithmetic have one home, `labkit/formats/criterion_bar.py`,
+  which both skeletons import (the null value stays each skeleton's own:
+  the estimator's permutation expectation or refit mean, the prompt
+  skeleton's null-lane accuracy). The null lane and [quality-check-2] stay
+  unchanged.
 
 **Rejected.**
 
@@ -57,6 +62,3 @@ how does the method behave against the null condition (a quality check).
   promise constant already carries (registered, digested, held by runlog).
 - A check of the number in the criterion sentence against the computed
   bar: static evidence at best; the sentence's meaning is the audit's.
-
-The prompt skeleton (`measure-script.py.template`) has the same single
-form; moving it is a separate step.

@@ -19,11 +19,23 @@ from pathlib import Path
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
 #: rules that also hold in the stamped script templates — a stamped area reads
 #: its tier off the contract like labkit does (review 2026-10-19)
-IN_TEMPLATES = {"a tier rule read off the head", "an adopt command spelled by hand"}
+IN_TEMPLATES = {
+    "a tier rule read off the head",
+    "an adopt command spelled by hand",
+    "a criterion bar computed by hand",
+}
 
 #: (what, the shape of a copy, the module(s) where it belongs)
 RULES: list[tuple[str, str, set[str]]] = [
     ("sha256 by hand", r"hashlib\.", {"scope_sha"}),
+    # the estimator skeleton and the prompt skeleton each added a margin by
+    # hand, and a bar the task states fitted neither (labkit-paper area 17,
+    # 2026-11-02): `criterion_bar.bar_of`
+    (
+        "a criterion bar computed by hand",
+        r"Fraction\(str\([^)]*\b(margin|at_least)\)\)",
+        {"criterion_bar"},
+    ),
     (
         "git outside repo.git_run",
         r"subprocess\.\w+\(\s*\[\s*\"git\"",
@@ -308,6 +320,7 @@ class OneHome(unittest.TestCase):
         nothing guards nothing)."""
         samples = {
             "sha256 by hand": "h = hashlib.sha256(data).hexdigest()",
+            "a criterion bar computed by hand": "bar = base + Fraction(str(cfg.margin))",
             "git outside repo.git_run": 'subprocess.run(["git", "status"])',
             "a PROTOCOL-*.md scan": 'for f in root.rglob("PROTOCOL-*.md"):',
             "pip's name normalisation": 'name.lower().replace("_", "-")',

@@ -25,16 +25,18 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
-- **The estimator skeleton registers a bar the task states as `at_least`.**
-  [criterion-1]'s constants hold exactly one of `at_least` (the bar as
-  written, whatever the null lane scores) and `margin` (a lead over the
-  null value, as before); both or neither are refused when the script
-  loads, naming the two forms. `criterion_1_threshold` is the registered
-  value, so the Recorded results line shows it. The null lane and
-  [quality-check-2] are unchanged. The stamped criterion sentence and the
-  agent guide name both forms; the stamped area test holds each form at
-  its boundary. Areas stamped earlier keep their scripts; the prompt
-  skeleton still has `margin` alone
+- **The estimator and the prompt skeleton register a bar the task states
+  as `at_least`.** [criterion-1]'s constants hold exactly one of
+  `at_least` (the bar as written, whatever the null lane scores) and
+  `margin` (a lead over the null value, as before); both or neither are
+  refused when the script loads, naming the two forms. The forms, the
+  refusal and the arithmetic live in `labkit.formats.criterion_bar`, which
+  both skeletons import; a bar computed by hand elsewhere fails the
+  one-home test. `criterion_1_threshold` is the registered value, so the
+  Recorded results line shows it. The null lane and [quality-check-2] are
+  unchanged. The stamped criterion sentence and the agent guide name both
+  forms; each stamped area test holds both forms at their boundaries.
+  Areas stamped earlier keep their scripts
   (`docs/notes/2026-11-02-absolute-task-bar.md`).
 
 - **A decision review on a finding in the protocol sees the measuring

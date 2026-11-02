@@ -7,7 +7,10 @@ pytest run must not share `01_measure`) and never copies its formula. The
 resolution check runs `evaluate_rows()` on synthetic rows in the run's real
 shape — perfect effect fires [criterion-1], a null-like registered lane stays silent,
 too many empty answers fail [quality-check-1] and withhold the verdict, the registered
-null band holds the null lane symmetric around chance. The parser cases
+null band holds the null lane symmetric around chance. [criterion-1]'s bar is
+held in both forms, whichever the protocol registers: `at_least`, a bar the
+task states, is the bar as written whatever the null lane answers; `margin`
+a lead over the null lane's accuracy. The parser cases
 are the canonical answer forms plus the forms `--probe` prints (pasteable);
 until those are pasted the probe test is a TODO, except at repeat_cost = low.
 """
@@ -28,6 +31,8 @@ _spec.loader.exec_module(measure)
 
 POS, NEG, *_ = list(measure.ANSWERS.values())  # two gold labels, from the one constant
 YES, NO, *_ = list(measure.ANSWERS)             # their answer words
+#: [criterion-1] registers a bar the task states (`at_least`), not a lead over the null (`margin`)
+ABSOLUTE = measure.CONFIG.at_least is not None
 
 
 def rows(registered: list[tuple[str, str]], null: list[tuple[str, str]]) -> list[dict]:
@@ -101,7 +106,8 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     # every registered constant is a field, read from the block, not copied
     registered = promises.all_constants(promises.load(measure.PROTOCOL))
     assert registered and all(asdict(measure.CONFIG)[k] == v for k, v in registered.items())
-    strict = replace(measure.CONFIG, margin=0.9)
+    # past the reach of twelve right (over a null of six)
+    strict = replace(measure.CONFIG, at_least=1.5) if ABSOLUTE else replace(measure.CONFIG, margin=0.9)
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)), strict)["criterion_1_pass"] is False
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)))["criterion_1_pass"] is True
 
@@ -183,3 +189,37 @@ def test_probe_cases_are_pasted():
 @pytest.mark.parametrize("raw,expected", PARSER_CASES)
 def test_parser_reads_the_probe_forms(raw, expected):
     assert measure.parse_answer(raw) == expected
+
+
+def test_a_lane_exactly_at_null_plus_margin_passes():
+    """8/12 against 5/12 + 0.25 is exactly the bar and passes, 7/12 fails:
+    in floats a lane exactly at null + margin failed by one ulp."""
+    from dataclasses import replace
+
+    cfg = replace(measure.CONFIG, at_least=None, margin=0.25, null_band_items=1)
+    assert measure.evaluate_rows(rows(_twelve(8), _twelve(5)), cfg)["criterion_1_pass"] is True
+    assert measure.evaluate_rows(rows(_twelve(7), _twelve(5)), cfg)["criterion_1_pass"] is False
+
+
+def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
+    """`at_least`, a bar the task states, is the bar as written: 9/12
+    against 0.75 passes and 8/12 fails, with the null lane at 5 or 7 of 12 —
+    the null moves [quality-check-2], never the bar."""
+    from dataclasses import replace
+
+    cfg = replace(measure.CONFIG, margin=None, at_least=0.75, null_band_items=1)
+    for null in (5, 7):
+        m = measure.evaluate_rows(rows(_twelve(9), _twelve(null)), cfg)
+        assert m["criterion_1_threshold"] == 0.75 and m["criterion_1_pass"] is True
+        assert measure.evaluate_rows(rows(_twelve(8), _twelve(null)), cfg)["criterion_1_pass"] is False
+
+
+def test_criterion_1_registers_exactly_one_bar():
+    """Both forms or neither are refused before any row is read: a task's bar
+    beside a margin would leave the verdict to whichever the code reads."""
+    from dataclasses import replace
+
+    with pytest.raises(ValueError, match="both `at_least` and `margin`"):
+        replace(measure.CONFIG, at_least=0.9, margin=0.25)
+    with pytest.raises(ValueError, match="neither `at_least` nor `margin`"):
+        replace(measure.CONFIG, at_least=None, margin=None)

@@ -140,7 +140,7 @@ PROTOCOL = AREA / "PROTOCOL-<name>.md"
 REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
-from labkit.formats import deliverable, promises, protocol_block, scope_sha, standard_contract, timebox
+from labkit.formats import criterion_bar, deliverable, promises, protocol_block, scope_sha, standard_contract, timebox
 from labkit.formats.repo import next_after_run
 from labkit.formats.answering_run import first_measurements
 
@@ -289,12 +289,7 @@ class MeasureConfig:
     predictor_sha: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if (self.at_least is None) == (self.margin is None):
-            given = "both `at_least` and `margin`" if self.margin is not None else "neither `at_least` nor `margin`"
-            raise ValueError(
-                f"[criterion-1] registers {given} — register one in its constants: "
-                "`at_least = <value>` for a bar the task states (absolute; name its source in the sentence), "
-                "or `margin = <value>` for a lead over the null value")
+        criterion_bar.require_one_form(self.at_least, self.margin)
 
 
 # The registered execution: thresholds from the protocol, nothing copied;
@@ -849,7 +844,7 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
         return metrics
     # a bar the task states is the bar as registered; the null lane stays
     # [quality-check-2]'s anchor and moves it not
-    bar = Fraction(str(cfg.at_least)) if cfg.at_least is not None else base + Fraction(str(cfg.margin))
+    bar = criterion_bar.bar_of(cfg.at_least, cfg.margin, base)
     metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
                     "criterion_1_pass": reg_score >= bar})
     return metrics
