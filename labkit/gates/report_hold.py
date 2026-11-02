@@ -399,6 +399,21 @@ def report_owed(
     )
 
 
+def has_measured(area: Path, pid: str) -> bool:
+    """Does AREA hold a measurement of protocol PID — a bound run that
+    declared itself one (`answering_run.is_measurement`), present, or one
+    `runs.tsv` lists whose directory is gone (`runlog.indexed_runs`)? A run
+    whose config cannot be read counts, as `report_check.adoption_state`
+    counts it: it may be one. What a registered report owes from
+    (`missing_report`) and what binds the report registered before it
+    (`protocol_fill`)."""
+    taken, rest = bound_runs(area, pid)
+    ours = [f for f in rest if f.binding.id == pid or f.state == UNREADABLE]
+    if any(is_measurement(f) for f in [*taken, *ours]):
+        return True
+    return any(not run_path(area, r).is_dir() for r in indexed_runs(area, pid))
+
+
 def missing_report(protocol: Path, text: str, repo: Path) -> GateFinding | None:
     """Why PROTOCOL (its TEXT) is delivered incomplete: its head registers
     a report (`[protocol] report`, relative to REPO) that the working tree
@@ -418,13 +433,7 @@ def missing_report(protocol: Path, text: str, repo: Path) -> GateFinding | None:
     report = own_path(repo.resolve() / head.report)
     if report.exists():
         return None
-    area = protocol.parent
-    taken, rest = bound_runs(area, head.id)
-    # as `report_check.adoption_state` counts them: an unreadable config may be one
-    ours = [f for f in rest if f.binding.id == head.id or f.state == UNREADABLE]
-    measured = [f for f in [*taken, *ours] if is_measurement(f)]
-    gone = [r for r in indexed_runs(area, head.id) if not run_path(area, r).is_dir()]
-    if not measured and not gone:
+    if not has_measured(protocol.parent, head.id):
         return None
     here = Path.cwd()
     name_p, name_r = shown(protocol, here), shown(report, here)
