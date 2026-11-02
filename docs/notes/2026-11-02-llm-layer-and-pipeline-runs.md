@@ -142,6 +142,33 @@ Open seam, the same as part 3: the callers checked
 `runlog.run`, so an attempt's manifest and costs are not tied to a labkit
 run record.
 
+Recording an agentic experiment, three levels:
+
+| Level | What is recorded | Where |
+|---|---|---|
+| Attempt | agent, model, CLI version, image digests, limits, command, input hashes and whether the agent modified them, every model call through the proxy, usage, result, CPU; the attempt directory, archived | agentsandbox manifest (`<attempt_id>.manifest.json`, `attempt.py:237`) — exists |
+| Row per attempt | attempt id, condition, task, manifest sha256, score, outcome class | `batch.Store` in the caller — exists |
+| Series | protocol and question, frozen config (model, limits, prompt sha, image tag), which rows belong to it, the reported number | `runlog.run` — missing |
+
+Rules particular to agents:
+
+1. **An infrastructure failure is its own outcome, never a score of 0.**
+   agentsandbox already separates them (`InfrastructureFailure`, HTTP 429,
+   a container that did not run); the row keeps the class and the report
+   counts the yield.
+2. **Pin what changes behaviour.** CLI version, image digest, model id,
+   limits and prompt sha are in the manifest; the series freezes them, and a
+   resume refuses when one changed.
+3. **Several attempts per task, no cache.** Agents are not deterministic;
+   the spread is part of the result. Decision 1's cache does not apply to
+   attempts at all.
+4. **Score from the stored attempt, not during it.** Scoring reads the
+   archived attempt directory, so a corrected scorer re-scores without
+   re-running agents.
+5. **Reference, don't copy.** The labkit record holds the attempt
+   directory's path and the manifest's hash; transcripts and proxy logs stay
+   where agentsandbox put them.
+
 ### Datasets and artifacts of a topic
 
 Three roles, none of them labkit's alone:
