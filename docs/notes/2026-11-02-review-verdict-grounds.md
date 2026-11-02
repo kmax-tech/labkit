@@ -55,10 +55,16 @@ out, not a release. Parsing gains a field (refused when missing or
 outside the list, as a verdict word is). Agreement on the ground across
 draws is unknown; the verdicts agreed on 13 of 15 in the earlier replay.
 
-**Before adoption.** Replay the stored review prompts of the 26 decisions
-with the amended instructions, two draws each (model calls): accept when
-every faulty decision gets `claim` or `effect`, no correct one gets `claim`,
-and the grounds of the two draws agree on most decisions; then change the
-instructions, the parser (`decision_review.parse_review`), the record
-(`formats/reviews`) and `rejected_way` in one step, with twin tests per
-ground.
+**Before adoption.** Replay the stored review prompts with the amended
+instructions (model calls; the plan, cases, expectations and cost are
+fixed beforehand in the internal evidence). The grounds may overlap — a
+scope not implemented can make the claim wrong too — so the replay asks
+for one main ground and allows further ones. Two questions, judged apart:
+*repeatability* (do two draws give the same verdict and the same main
+ground) and *correctness* (does the main ground fit the case as checked
+against code and data). A faulty acceptance may rightly get
+`registration` as well as `claim`; a right number does not rule `claim`
+out, since the Conclusion drawn from it can be wrong. Only if both hold
+does a change follow: the instructions, the parser
+(`decision_review.parse_review`), the record (`formats/reviews`) and
+`rejected_way` in one step, with twin tests per ground.
