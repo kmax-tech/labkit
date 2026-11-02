@@ -136,11 +136,11 @@ call, and labkit already isolates single Claude CLI calls. It earns its
 place when the measured subject is an agent at work. It stays out of
 labkit: Docker is a runtime dependency, and the unit differs.
 
-Open seam, the same as part 3: the callers checked
-(`docs/usability/2026-10-31-registered-pilot/run_pilot.py`,
-`2026-10-30-gptoss-pilot/run_gptoss_pilot.py`) use `batch` but no
-`runlog.run`, so an attempt's manifest and costs are not tied to a labkit
-run record.
+The labkit-paper areas already tie attempts to a labkit run:
+`experiments/17-supported-answers-when-agents-plan-themselves/scripts/01_measure.py`
+imports `runlog` and runs its attempts through `sandboxlab` (see the runner
+section below). The usability scripts under `docs/usability/` use `batch`
+but no `runlog.run`; they are dated study records, not the current path.
 
 Recording an agentic experiment, three levels:
 
@@ -169,34 +169,63 @@ Rules particular to agents:
    directory's path and the manifest's hash; transcripts and proxy logs stay
    where agentsandbox put them.
 
-### A configurable runner for agentic tasks
+### The runner for agentic tasks exists: `sandboxlab`
 
-The callers repeat the layer above one attempt. `docs/usability/` holds nine
-runner scripts written between 2026-10-27 and 2026-10-31, each with its own
-loop and its own `score()`, growing copy by copy from 101 lines
-(`2026-10-27-sab-cases-haiku/run_sab_probes.py`) to 636
-(`2026-10-31-registered-pilot/run_pilot.py`); 41 files in labkit and
-labkit-paper call `run_attempt`. That is the copy pattern the framework
-showed, and the trigger for a shared runner.
+The layer above one attempt is already shared. `labkit-paper/lib/sandboxlab`
+(about 1,700 lines; the current branch is the `main-round` worktree
+`labkit-paper-main`) holds it:
 
-What it would be — the same contract idea as the framework's, for agents:
+| Module | What it does |
+|---|---|
+| `batch` | `run_batch`: the registered attempt list, resumable, `workers` at a time; infrastructure failures to a ledger and rerun in a fresh directory; a rate limit stops the batch |
+| `comparison` (since 2026-11-01, `e840f10`) | a two-arm round's shared parts: `attempt_of`, offline `check_setups`, `run_attempts`, `score_attempts` (hidden evaluation, report, effort, tokens per model) |
+| `arms`, `benches/sab`, `standard_check` | the arms' wording, the benchmark's task texts, labkit's standard read off a finished attempt |
+| `infra`, `config`, `pilot_checks` | images, token, capacity, setup checks |
 
-- **A task contract** the caller implements: stage the repository, build the
-  prompt, score a stored attempt directory into a row. Registered from
-  outside; the runner never names a task.
-- **Conditions as config axes**: agent adapter, model, limits, prompt
-  variant, arm, repeats per task. A new study is a config, not a copied
-  script.
-- **The loop once**: tasks × conditions × repeats, resume through
-  `batch.Store`, infrastructure failures as their own outcome, scoring as a
-  separate pass over stored attempts (rules 1–5 above).
-- **A conformance check** for tasks: staging is reproducible (same input
-  hashes), `score` reads only the attempt directory, every outcome class is
-  handled.
+Areas 16 and 17 run through it under `runlog`. It imports labkit
+(`batch.py`: `from labkit import batch`), so it cannot move into
+agentsandbox, which is standard library only and labkit-free.
 
-agentsandbox keeps its boundary — task and scoring remain the caller's,
-supplied through the contract. Before building: diff the nine scripts and
-extract only what they share; what differs stays in the task.
+#### The nine usability scripts compared (2026-11-02)
+
+`docs/usability/*/run_*.py`, written 2026-10-27 to 2026-10-31, read by their
+top-level definitions. Four generations, each taking a step toward
+`sandboxlab`:
+
+| Generation | Scripts | Shape |
+|---|---|---|
+| 1 | `2026-10-27-sab-cases-haiku`, `2026-10-28-repair-case-haiku-4054343`, `2026-10-28-sab-cases-haiku-main` (101–106 lines) | own loop over `run_attempt`, `to_container(task)`, `score(task)`; three sab-cases tasks |
+| 2 | `2026-10-29-two-arms-haiku-ab4ce6d` (161) | arm and draw from the environment, setup per task, `evaluate` and a report replay |
+| 3 | `2026-10-29-sab-pressure`, `2026-10-29-sab-round1`, `2026-10-30-gptoss-pilot`, `2026-10-31-sab-round2` (198–297) | `sandboxlab.batch.run_batch`, `arms`, `standard_check`, `benches.sab`; task texts from area 14; requirement and closing sentence; two arms; workers and repeats |
+| 4 | `2026-10-31-registered-pilot` (636) | adds registration and venv change checks, staged directories, a check report |
+
+Shared by all: bootstrapping `labkit-paper-main` onto the path; building
+`Attempt` with `ClaudeCode` (Codex in the gptoss pilot) and `Limits`;
+images and token from `sandboxlab.infra`; attempt ids; staging; prompt;
+run; a separate `score` pass.
+
+Specific to a study, and rightly kept there: the task list, task texts and
+requirement, the prompt's wording (route, closing, the labkit sentence),
+staging details, scoring criteria, per-task budgets (gptoss), the agent
+adapter.
+
+Drift in the knobs — the same concept under different environment
+variables and defaults, which a config would make one:
+
+- attempt id prefix: `TAG`, `RUN_TAG`, `ID_PREFIX`, `ATTEMPT_PREFIX`
+- timeout default: 600, 1800 or 2400 s (`PROBE_TIMEOUT`)
+- workers default: 2, 4 or 8 (`WORKERS`)
+- store name: `store`, `store-oss`, `store-round2`, `store-rp`, …
+
+One duplicate: `docs/usability/2026-10-31-registered-pilot/pilot_checks.py`
+and `labkit-paper-main/lib/sandboxlab/pilot_checks.py` are byte-identical;
+labkit's copy is the one `tests/test_pilot_checks.py` tests.
+
+Verdict: the scripts are dated study records and stay as they ran — a
+refactor would change what they document. New studies go through
+`sandboxlab.comparison`. What is left for the runner: the knobs as one
+config instead of environment variables per script, and `pilot_checks.py`
+in one home.
 
 ### Datasets and artifacts of a topic
 
@@ -287,11 +316,13 @@ The numbers stay as first written; 1 is decided above.
 9. **The second case** the contract is tested against before the framework
    becomes a package: a text topic (lower risk) or one of the image
    projects (forces `text` to become optional or an `input` field).
-10. **Home of the agentic runner**: an optional module in agentsandbox
-    (`agentsandbox.series`, standard library, both callers already import
-    the package; the labkit record stays with the caller), or a module in
-    labkit-paper's `lib/` (closer to the experiments, but labkit's usability
-    probes would then import the paper repo).
+10. **Home of the agentic runner**: it exists as `labkit-paper/lib/sandboxlab`
+    and imports labkit, so agentsandbox is ruled out. Open: stay in
+    labkit-paper (today's callers are its areas and labkit's usability
+    probes, which already put `labkit-paper-main` on their path), or become
+    a package of its own once a caller outside the labkit evaluation needs
+    it. Smaller and due now: one config for the knobs, and one home for
+    `pilot_checks.py`.
 
 ## Not in scope
 
