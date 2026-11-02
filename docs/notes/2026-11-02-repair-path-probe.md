@@ -115,3 +115,24 @@ Stand-in model answers: whether a real auditor flags, resolves or
 withholds a verdict is not tested here, and F6 depends on that judgement.
 Only low repeat cost, kind `compute`, one protocol per area. The stop hook
 was checked through the functions it calls, not in a live session.
+
+## Repairs (same day)
+
+Each fault first kept as an expected failure (`8a18014c`), then repaired
+with its correct twin; every commit passed the full hook.
+
+| Finding | Commit | What changed |
+|---|---|---|
+| F2 deleted report | `d1d8e883` | `missing_report` reads the gate's state; `report-check` holds it once a result is adopted, the commit holds the removal of a report HEAD holds, the stop reaches the protocols registering a changed path |
+| F1 handover and review | `14a7fad7` | the handover binds `audits/` without the report review's record, answer and journal lines (`handovers.review_trace`, `journal_digest`); `labkit-next` names the review owed after a handover |
+| F3 Conclusion BLOCKER | `9c5ce7e9` | `findings.fixed_claim`; `--review` takes it, `report-check` holds it until an upheld review bound to the claim (`report_decisions.repaired_claims`), `--decide` names the review; a BLOCKER `fixed` with nothing changed is told it is not repaired |
+| F4 successor declaration | `fe40f50d` | `registration_differences` includes `scope_differences`, the comparison finalize holds the predecessor to |
+
+Decided, not built: F5 gets no start refusal for changed prose fields
+until a description correction followed by a needed code correction has
+a defined route — a refusal alone could be the next dead end. F6: a
+mean → median rewrite changes the question and needs a new registration;
+a given `resolved` shows only that labkit trusts the auditor, so the
+contradiction between the agent guide and the correction contract is to
+be settled explicitly. The smaller points follow where the repaired paths
+have not removed them.
