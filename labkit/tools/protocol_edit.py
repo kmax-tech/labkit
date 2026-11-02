@@ -36,7 +36,8 @@ def field_for(text: str, field: str, line_no: int | None = None) -> str:
     this protocol`) — a label typed short names its field when no other
     begins the same. Raises ValueError naming the fields a prefix begins
     when several do, else the nearest names (`difflib`) and the open
-    placeholder fields. LINE_NO restricts the fields to that line."""
+    placeholder fields. Misaddressed head keys and promise ids name their
+    existing write syntax instead. LINE_NO restricts the fields to that line."""
     want = field_name(field)
     names = sorted(
         {f.name for f in fields(text) if line_no is None or f.line == line_no}
@@ -53,6 +54,9 @@ def field_for(text: str, field: str, line_no: int | None = None) -> str:
             + " · ".join(begun)
             + " — name one in full"
         )
+    hint = field_address_hint(text, field)
+    if hint is not None:
+        raise ValueError(hint)
     near = difflib.get_close_matches(want, names, n=3, cutoff=0.6)
     labels = sorted({lbl for _, lbl in placeholder_fields(text)})
     raise ValueError(
@@ -64,6 +68,52 @@ def field_for(text: str, field: str, line_no: int | None = None) -> str:
             else " No placeholder fields left."
         )
     )
+
+
+def field_address_hint(text: str, label: str) -> str | None:
+    """Explain a misaddressed head key, promise id or generated Runs section.
+
+    Return None for other labels, including kept keys without a [kept]
+    table. Call after matching real prose fields and their unique prefixes,
+    so guidance does not reserve additional field names. No input is changed.
+    """
+    name = label.strip().lower()
+    pid = name.removeprefix("[").removesuffix("]")
+    if promises.is_block_id(pid):
+        return (
+            f"{label!r} names a promise, not a prose field — use "
+            f'`"{pid} sentence=VALUE"` without --line; --list shows open entries'
+        )
+    if name == "runs":
+        return (
+            "Runs is a generated section, not a field — `labkit-adopt <area> "
+            "<run_id>` records an adopted result; `runlog <area>` lists runs"
+        )
+    target = head_address_suggestion(name)
+    if target is None:
+        return None
+    if target.startswith("kept."):
+        span = protocol_block.toml_block_span(text)
+        if span is None or _table_span(text.splitlines(), *span, "kept") is None:
+            return None
+    return f'{label!r} names a head key — use `"{target}=VALUE"`'
+
+
+def head_address_suggestion(label: str) -> str | None:
+    """Suggest existing head-key syntax for a known malformed address.
+
+    LABEL is stripped lowercase text. This only supplies error guidance;
+    it does not accept aliases or change the head-key catalogue.
+    """
+    if label == "key":
+        return "kept.key"
+    if label.startswith("[kept]"):
+        target = label.replace("[kept]", "kept.", 1)
+    elif label.startswith("protocol."):
+        target = label.removeprefix("protocol.")
+    else:
+        return None
+    return target if target in HEAD_KEYS else None
 
 
 def fill(

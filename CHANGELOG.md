@@ -11,6 +11,13 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **`protocol-fill` names the correct address for misaddressed fields:**
+  bare promise ids point to `"criterion-1 sentence=VALUE"` instead of a
+  similarly named prose field; `key`, `[kept]key` and `protocol.type` point
+  to the existing head-key syntax; `Runs` points to adoption and run listing.
+  Incorrect addresses still fail without writing, and existing prose-field
+  matching and overwrite protection remain in force.
+
 - **A field corrected after the first measurement has one route, and the
   decision says what a repair owes.** labkit-paper area 17 (2026-11-02): a
   registered Unit rewritten on an audit finding was answered "measure

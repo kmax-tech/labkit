@@ -1115,6 +1115,76 @@ class PromiseSentencesReview(unittest.TestCase):
             )
 
 
+class FieldAddressGuidance(unittest.TestCase):
+    """Misaddressed fields name the existing write path without changing input."""
+
+    def test_head_misses_show_a_valid_address_and_leave_the_file_untouched(self):
+        for wrong, correct, value in (
+            ("key", "kept.key", "mean_score"),
+            ("[kept]key", "kept.key", "mean_score"),
+            ("protocol.type", "type", "exploratory"),
+        ):
+            with self.subTest(wrong=wrong), tempfile.TemporaryDirectory() as tmp:
+                protocol = Path(tmp) / "PROTOCOL-x.md"
+                before = head(
+                    type="<exploratory | confirmatory>",
+                    kind="compute",
+                    kept=("<metrics key>", "<unit>"),
+                    promises=None,
+                )
+                protocol.write_text(before, encoding="utf-8")
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                    code = protocol_fill.main([str(protocol), f"{wrong}={value}"])
+                self.assertEqual(code, 2, out.getvalue())
+                self.assertIn(f'"{correct}=VALUE"', out.getvalue())
+                self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(
+                        protocol_fill.main([str(protocol), f"{correct}={value}"]), 0
+                    )
+
+    def test_a_bare_promise_id_points_to_its_sentence_not_a_prose_field(self):
+        before = head(kind="fit", promises=PromiseSentences.BLOCK)
+        before += "\n- **Inference criterion:** <the criterion>\n"
+        for wrong in ("criterion-1", "[criterion-1]"):
+            with self.subTest(wrong=wrong), tempfile.TemporaryDirectory() as tmp:
+                protocol = Path(tmp) / "PROTOCOL-x.md"
+                protocol.write_text(before, encoding="utf-8")
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                    code = protocol_fill.main([str(protocol), f"{wrong}=score >= 0.9"])
+                self.assertEqual(code, 2, out.getvalue())
+                self.assertIn('"criterion-1 sentence=VALUE"', out.getvalue())
+                self.assertNotIn("did you mean inference criterion", out.getvalue())
+                self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(
+                        protocol_fill.main(
+                            [str(protocol), "criterion-1 sentence=score >= 0.9"]
+                        ),
+                        0,
+                    )
+
+    def test_runs_points_to_adoption_instead_of_a_handwritten_field(self):
+        with self.assertRaises(ValueError) as cm:
+            protocol_edit.fill_many(SAMPLE, [("Runs", "some run")])
+        self.assertIn("generated", str(cm.exception))
+        self.assertIn("labkit-adopt", str(cm.exception))
+
+    def test_real_prose_fields_and_ordinary_typo_suggestions_keep_working(self):
+        text = SAMPLE + "\n- **Key:** <an ordinary prose field>\n"
+        self.assertIn(
+            "- **Key:** chosen", protocol_edit.fill_many(text, [("key", "chosen")])
+        )
+        with self.assertRaises(ValueError) as cm:
+            protocol_edit.fill_many(SAMPLE, [("Concluion", "answer")])
+        self.assertIn("did you mean conclusion", str(cm.exception))
+        with self.assertRaises(ValueError) as cm:
+            protocol_edit.fill_many(head(kind="fit"), [("key", "score")])
+        self.assertNotIn("kept.key", str(cm.exception))
+
+
 class ReportSetter(unittest.TestCase):
     """`protocol-fill P report=REPORT.md`: the head's `[protocol] report`
     registered on a stamped protocol before its first measurement — the
