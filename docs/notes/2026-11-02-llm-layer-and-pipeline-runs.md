@@ -119,6 +119,29 @@ at the boundary):
    run id.
 5. **One experiment end to end first**, then the rest.
 
+### agentsandbox: the sibling for agent attempts
+
+`~/projects/agentsandbox` runs one coding-agent attempt (Claude Code, Codex)
+in a sealed Docker container whose only exit is a logging proxy; standard
+library only, about 3,100 lines. It already is what this plan asks of the
+framework: its own package, with two real callers (labkit's usability
+probes under `docs/usability/`, `labkit-paper/sandbox/`), and a stated
+boundary — task, scoring, staging and token stay with the caller.
+
+In the layers it stands beside the bottom one, not inside it: `labkit.llm`
+answers "call a model with a prompt", agentsandbox answers "let an agent
+work on a repository". It is not an LLM backend for the framework — one
+container per item costs minutes and dollars where a fallacy label needs one
+call, and labkit already isolates single Claude CLI calls. It earns its
+place when the measured subject is an agent at work. It stays out of
+labkit: Docker is a runtime dependency, and the unit differs.
+
+Open seam, the same as part 3: the callers checked
+(`docs/usability/2026-10-31-registered-pilot/run_pilot.py`,
+`2026-10-30-gptoss-pilot/run_gptoss_pilot.py`) use `batch` but no
+`runlog.run`, so an attempt's manifest and costs are not tied to a labkit
+run record.
+
 ### Datasets and artifacts of a topic
 
 Three roles, none of them labkit's alone:
@@ -176,11 +199,18 @@ contract is text-only. The image projects that copied the framework
 (`arg-images`, `aspect-based-image-generation`) would not fit. Generalize
 against one real second case, not in advance.
 
+## Decisions
+
+1. **The cache lives in each lab repo that uses it** (2026-11-02, Max). A
+   lab stays self-contained: cloned elsewhere, it gives the same result
+   without the machine's state. A repeat run (`--repeat-of`, a new seed)
+   bypasses the cache or carries the seed in the key — otherwise every
+   repeat is answered from the cache and the measured spread is zero.
+
 ## Open decisions
 
-1. **Where the cache lives**: one cache per lab repo, or one shared across
-   repos? Shared saves calls between labs but couples them; per repo keeps a
-   lab self-contained.
+The numbers stay as first written; 1 is decided above.
+
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
    How `prompt_sha` and the cache version enter the run record.
