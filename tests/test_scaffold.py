@@ -1666,9 +1666,10 @@ class Exp(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             measure.make_estimator(0)
 
-    def _stamped_estimator_lab(self, kind: str) -> tuple[Path, Path]:
-        """A fresh lab with one estimator area of KIND: (lab root, area)."""
-        root = Path(self.tmp.name) / f"estimator-{kind}"
+    def _stamped_estimator_lab(self, kind: str, label: str = "") -> tuple[Path, Path]:
+        """A fresh lab with one estimator area of KIND, its directory told
+        apart by LABEL: (lab root, area)."""
+        root = Path(self.tmp.name) / f"estimator-{kind}{label}"
         root.mkdir()
         quiet(scaffold.stamp_lab, root, "lab")
         quiet(scaffold.stamp_area, root, "foo-bar", repeat_cost="high", kind=kind)
@@ -1702,8 +1703,38 @@ class Exp(unittest.TestCase):
                 r = self._run_stamped_test(root)
                 self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
                 self.assertIn(
-                    "12 passed", r.stdout
+                    "14 passed", r.stdout
                 )  # with the score guard (test_the_score_has_cases_here)
+
+    def test_the_stamped_estimator_test_passes_with_a_stated_bar(self) -> None:
+        """An area whose [criterion-1] registers a bar the task states
+        (`at_least` in place of `margin`) runs its stamped test green, at
+        accuracy and at spearman, fit and apply
+        (docs/notes/2026-11-02-absolute-task-bar.md)."""
+        for kind in ("fit", "apply"):
+            for score in ("accuracy", "spearman"):
+                with self.subTest(kind=kind, score=score):
+                    root, area = self._stamped_estimator_lab(kind, f"-{score}")
+                    protocol = next(area.glob("PROTOCOL-*.md"))
+                    text = protocol.read_text(encoding="utf-8")
+                    self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)
+                    protocol.write_text(
+                        text.replace(
+                            "constants = { margin = 0.25 }",
+                            "constants = { at_least = 0.9 }",
+                        ),
+                        encoding="utf-8",
+                    )
+                    script = area / "scripts" / "01_measure.py"
+                    script.write_text(
+                        script.read_text(encoding="utf-8").replace(
+                            'SCORE = "accuracy"', f'SCORE = "{score}"'
+                        ),
+                        encoding="utf-8",
+                    )
+                    r = self._run_stamped_test(root)
+                    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                    self.assertIn("14 passed", r.stdout)
 
     def test_the_stamped_estimator_test_has_spearman_cases(self) -> None:
         """An area that registers Spearman (`SCORE = "spearman"`) gets cases
@@ -1721,7 +1752,7 @@ class Exp(unittest.TestCase):
                 )
                 r = self._run_stamped_test(root)
                 self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                self.assertIn("12 passed", r.stdout)
+                self.assertIn("14 passed", r.stdout)
                 script.write_text(
                     stamped.replace('SCORE = "accuracy"', 'SCORE = "r2"'),
                     encoding="utf-8",
@@ -1770,7 +1801,7 @@ class Exp(unittest.TestCase):
                 )
                 r = self._run_stamped_test(root)
                 self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                self.assertIn("12 passed", r.stdout)
+                self.assertIn("14 passed", r.stdout)
         script.write_text(stamped_script, encoding="utf-8")
         proto.write_text(stamped_proto.replace(band, ""), encoding="utf-8")
         r = self._run_stamped_test(root)

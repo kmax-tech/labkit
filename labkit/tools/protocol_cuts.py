@@ -442,7 +442,7 @@ NO_MODEL_FIELDS = (
 ESTIMATOR_PROMISES = (
     (
         r'sentence = "<the criterion in one sentence:[^"]*"',
-        "sentence = \"<the criterion · the registered lane's out-of-fold SCORE is at least the mean of the null lane's permuted-label refits plus margin>\"",
+        "sentence = \"<the criterion · the registered lane's out-of-fold SCORE is at least the mean of the null lane's permuted-label refits plus margin — or, for a bar the task states, at least at_least, its source named (constants = { at_least = … } in place of margin)>\"",
     ),
     (
         r'sentence = "<the yield condition:[^"]*"',
@@ -461,7 +461,7 @@ ESTIMATOR_PROMISES = (
 #: target are the exact permutation expectation, not one permuted draw
 #: (null-lane decision, 2026-10-28)
 APPLY_PROMISES = {
-    r'sentence = "<the criterion in one sentence:[^"]*"': 'sentence = "<the criterion · the registered lane\'s SCORE is at least the permutation expectation plus margin>"',
+    r'sentence = "<the criterion in one sentence:[^"]*"': 'sentence = "<the criterion · the registered lane\'s SCORE is at least the permutation expectation plus margin — or, for a bar the task states, at least at_least, its source named (constants = { at_least = … } in place of margin)>"',
     r'sentence = "<the null condition:[^"]*"': 'sentence = "<the null condition · the permuted-label lane scores within null_band of the permutation expectation, what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly>"',
     # the band's rule registered beside it: the first measurement refuses a
     # band the rule does not give, `--calibrate-null --write` registers it

@@ -11,7 +11,9 @@ withhold the verdict, a null lane off its target fails [quality-check-2] where i
 registers a band. When the script registers a null order (`NULL_ORDER`, apply)
 the null rows name the donor of their label (`gold_of`) as the run's do: the
 bar is then the null's score plus margin, and a band is owed only where
-[quality-check-2] registers one. The rows below
+[quality-check-2] registers one. [criterion-1]'s bar is held in both forms,
+whichever the protocol registers: `at_least`, a bar the task states, is the
+bar as written whatever the null scores; `margin` a lead over the null. The rows below
 serve SCORE = "accuracy" (two labels), "auc" (0/1 gold, a score per item:
 0.9 ranks an item as positive, 0.1 as negative, so twelve items with `correct`
 of them right score correct/12 under both) and "spearman" (gold 0 … 11; a
@@ -41,6 +43,8 @@ POS, NEG = ("pos", "neg") if SCORE == "accuracy" else (1, 0)
 GOLDS = [float(i) for i in range(12)] if SCORE == "spearman" else [POS] * 6 + [NEG] * 6
 #: a registered null order: its null rows carry `gold_of`, its band is optional
 ORDERED_NULL = measure.NULL_ORDER is not None
+#: [criterion-1] registers a bar the task states (`at_least`), not a lead over the null (`margin`)
+ABSOLUTE = measure.CONFIG.at_least is not None
 
 
 def predicted(right: bool, gold):
@@ -129,7 +133,8 @@ def test_only_a_registered_null_order_goes_without_a_band():
         measure.evaluate_rows(without_donors, no_band)
     if ORDERED_NULL:
         m = measure.evaluate_rows(kept, no_band)
-        assert m["criterion_1_threshold"] == pytest.approx(m["quality_check_2_score"] + no_band.margin)
+        bar = no_band.at_least if ABSOLUTE else m["quality_check_2_score"] + no_band.margin
+        assert m["criterion_1_threshold"] == pytest.approx(bar)
         assert m["quality_check_2_pass"] is True and m["criterion_1_pass"] is True
 
 
@@ -173,7 +178,8 @@ def test_the_formula_reads_its_thresholds_from_the_config():
     assert set(asdict(measure.CONFIG)) == {f.name for f in fields(measure.MeasureConfig)}
     registered = promises.all_constants(promises.load(measure.PROTOCOL))
     assert registered and all(asdict(measure.CONFIG)[k] == v for k, v in registered.items())
-    strict = replace(measure.CONFIG, margin=1.5)  # past every score's reach from its null
+    # past every score's reach (from its null)
+    strict = replace(measure.CONFIG, at_least=1.5) if ABSOLUTE else replace(measure.CONFIG, margin=1.5)
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)), strict)["criterion_1_pass"] is False
     assert measure.evaluate_rows(rows(_twelve(12), _twelve(6)))["criterion_1_pass"] is True
 
@@ -185,6 +191,32 @@ def test_a_lane_exactly_at_null_plus_margin_passes():
     from dataclasses import replace
 
     margin, at, below, null = (1.0, 12, 11, 6) if SCORE == "spearman" else (0.25, 8, 7, 5)
-    cfg = replace(measure.CONFIG, margin=margin, null_band=0.25)
+    cfg = replace(measure.CONFIG, at_least=None, margin=margin, null_band=0.25)
     assert measure.evaluate_rows(rows(_twelve(at), _twelve(null)), cfg)["criterion_1_pass"] is True
     assert measure.evaluate_rows(rows(_twelve(below), _twelve(null)), cfg)["criterion_1_pass"] is False
+
+
+def test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null():
+    """`at_least`, a bar the task states, is the bar as written: 9/12
+    against 0.75 passes and 8/12 fails with the null lane at 5 or 7 of 12
+    (at spearman rho 1 against 1.0 passes and eleven of twelve right fails,
+    the null at rho 0) — the null moves [quality-check-2], never the bar."""
+    from dataclasses import replace
+
+    bar, at, below = (1.0, 12, 11) if SCORE == "spearman" else (0.75, 9, 8)
+    cfg = replace(measure.CONFIG, margin=None, at_least=bar, null_band=0.25)
+    for null in (6,) if SCORE == "spearman" else (5, 7):
+        m = measure.evaluate_rows(rows(_twelve(at), _twelve(null)), cfg)
+        assert m["criterion_1_threshold"] == bar and m["criterion_1_pass"] is True
+        assert measure.evaluate_rows(rows(_twelve(below), _twelve(null)), cfg)["criterion_1_pass"] is False
+
+
+def test_criterion_1_registers_exactly_one_bar():
+    """Both forms or neither are refused before any row is read: a task's bar
+    beside a margin would leave the verdict to whichever the code reads."""
+    from dataclasses import replace
+
+    with pytest.raises(ValueError, match="both `at_least` and `margin`"):
+        replace(measure.CONFIG, at_least=0.9, margin=0.25)
+    with pytest.raises(ValueError, match="neither `at_least` nor `margin`"):
+        replace(measure.CONFIG, at_least=None, margin=None)

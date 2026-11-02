@@ -1,0 +1,228 @@
+"""[criterion-1]'s bar in the estimator skeleton: `at_least`, a bar the task
+states, or `margin`, a lead over the null value — exactly one
+(docs/notes/2026-11-02-absolute-task-bar.md). The cases are labkit-paper
+area 17's: a task's absolute bar written as a margin passed a value below
+it; here the stated bar holds at its boundary whatever the null scores."""
+
+from __future__ import annotations
+
+import contextlib
+import importlib.util
+import io
+import random
+import sys
+import tempfile
+import unittest
+from dataclasses import replace
+from pathlib import Path
+
+from labkit.tools import scaffold
+
+
+def binary(tp1: int, fn1: int, fp0: int, tn0: int) -> list[tuple]:
+    """(pred, gold) pairs by count: (1, 1), (0, 1), (1, 0), (0, 0)."""
+    return [(1, 1)] * tp1 + [(0, 1)] * fn1 + [(1, 0)] * fp0 + [(0, 0)] * tn0
+
+
+def three_classes(wrong: int) -> list[tuple]:
+    """100 items of each of three classes, WRONG of each predicted as the
+    next class: accuracy (300 − 3 WRONG) / 300, permutation expectation 1/3
+    whatever the predictions."""
+    return [
+        pair
+        for c in range(3)
+        for pair in [(c, c)] * (100 - wrong) + [((c + 1) % 3, c)] * wrong
+    ]
+
+
+class StatedBar(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        scaffold.stamp_lab(self.root, "stated-bar")
+
+    def stamp(self, kind: str, constants: str | None = None, name: str = "bar"):
+        """A stamped area NAME of KIND, its [criterion-1] constants replaced by
+        CONSTANTS when given, and its measure script loaded as a module."""
+        with contextlib.redirect_stdout(io.StringIO()):
+            area, _ = scaffold.stamp_area(
+                self.root, f"{name}-{kind}", repeat_cost="low", kind=kind
+            )
+        if constants is not None:
+            protocol = next(area.glob("PROTOCOL-*.md"))
+            text = protocol.read_text(encoding="utf-8")
+            self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)
+            protocol.write_text(
+                text.replace("constants = { margin = 0.25 }", constants),
+                encoding="utf-8",
+            )
+        module_name = f"stated_bar_{name}_{kind}_{id(self)}"
+        spec = importlib.util.spec_from_file_location(
+            module_name, area / "scripts" / "01_measure.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        self.addCleanup(sys.modules.pop, module_name, None)
+        spec.loader.exec_module(module)
+        return module
+
+    @staticmethod
+    def apply_rows(measure, pairs: list[tuple]) -> list[dict]:
+        """The registered lane over PAIRS and the null lane as apply keeps
+        it: the same predictions against the gold permuted, each row naming
+        its donor (`gold_of`)."""
+        donors = list(range(len(pairs)))
+        random.Random(0).shuffle(donors)
+        reg = [
+            measure.lane_row("registered", {"id": str(i)}, p, g)
+            for i, (p, g) in enumerate(pairs)
+        ]
+        null = [
+            measure.lane_row("null", {"id": str(i)}, p, pairs[d][1], gold_of=str(d))
+            for i, ((p, _), d) in enumerate(zip(pairs, donors))
+        ]
+        return reg + null
+
+    def verdict(self, measure, cfg, pairs: list[tuple]) -> tuple[float, float, bool]:
+        m = measure.evaluate_rows(self.apply_rows(measure, pairs), cfg)
+        return m["criterion_1_score"], m["criterion_1_threshold"], m["criterion_1_pass"]
+
+    def test_a_bar_the_task_states_holds_at_its_boundary_whatever_the_expectation(self):
+        """Accuracy at least 0.90: 0.89 misses and 0.90 meets it, with the
+        permutation expectation at 0.52, 0.518, 0.498 and 1/3 — the bar is
+        0.90 in every case. The twin: the same bar written as a margin of
+        0.40 over the null (area 17's translation) passes 0.89 at 1/3."""
+        measure = self.stamp("apply", "constants = { at_least = 0.9 }")
+        self.assertEqual((measure.CONFIG.at_least, measure.CONFIG.margin), (0.9, None))
+        cfg = replace(measure.CONFIG, null_band=1.0)  # the criterion alone
+        cases = [
+            (binary(55, 5, 5, 35), 0.90, True),  # expectation 0.52
+            (binary(54, 6, 5, 35), 0.89, False),  # 0.518
+            (binary(49, 11, 0, 40), 0.89, False),  # 0.498
+            (three_classes(10), 0.90, True),  # 1/3
+            (three_classes(11), 0.89, False),  # 1/3
+        ]
+        for pairs, score, met in cases:
+            with self.subTest(score=score, n=len(pairs)):
+                self.assertEqual(self.verdict(measure, cfg, pairs), (score, 0.9, met))
+        as_margin = replace(cfg, at_least=None, margin=0.4)
+        self.assertEqual(self.verdict(measure, as_margin, three_classes(11))[2], True)
+
+    def test_a_lead_over_the_null_holds_at_its_boundary(self):
+        """At least 0.05 over the null: with the permutation expectation at
+        0.70 exactly (gold 150/50, predictions 180/20), 0.75 meets the bar
+        0.75 and 0.74 misses it — exact, no float short by one ulp."""
+        measure = self.stamp("apply", "constants = { margin = 0.05 }")
+        cfg = replace(measure.CONFIG, null_band=1.0)
+        self.assertEqual(
+            self.verdict(measure, cfg, binary(140, 10, 40, 10)), (0.75, 0.75, True)
+        )
+        self.assertEqual(
+            self.verdict(measure, cfg, binary(139, 11, 41, 9)), (0.74, 0.75, False)
+        )
+
+    def test_both_bars_or_none_are_refused_before_any_row(self):
+        for name, constants, says in (
+            (
+                "both",
+                "constants = { at_least = 0.9, margin = 0.05 }",
+                "both `at_least` and `margin`",
+            ),
+            ("neither", "constants = { }", "neither `at_least` nor `margin`"),
+        ):
+            with self.subTest(constants=constants):
+                with self.assertRaises(ValueError) as cm:
+                    self.stamp("apply", constants, name)
+                self.assertIn(says, str(cm.exception))
+                self.assertIn("for a bar the task states", str(cm.exception))
+
+    def test_a_stated_bar_still_owes_the_null_lane(self):
+        """The null lane and [quality-check-2] are unchanged: a null off its
+        band withholds the verdict, and a band is owed as before."""
+        measure = self.stamp("apply", "constants = { at_least = 0.9 }")
+        pairs = binary(60, 0, 0, 40)
+        reg = self.apply_rows(measure, pairs)[: len(pairs)]
+        null_as_registered = [
+            measure.lane_row(
+                "null", {"id": r["item"]}, r["pred"], r["gold"], gold_of=r["item"]
+            )
+            for r in reg
+        ]
+        m = measure.evaluate_rows(
+            reg + null_as_registered, replace(measure.CONFIG, null_band=0.1)
+        )
+        self.assertEqual(
+            (m["quality_check_2_pass"], m["criterion_1_pass"]), (False, None)
+        )
+        with self.assertRaisesRegex(ValueError, "registers no null_band"):
+            measure.evaluate_rows(
+                self.apply_rows(measure, pairs), replace(measure.CONFIG, null_band=None)
+            )
+
+    def test_fit_holds_a_stated_bar_whatever_its_refits(self):
+        """At fit the null value is the mean of random refits; a stated bar
+        does not move with them."""
+        measure = self.stamp("fit", "constants = { at_least = 0.75 }")
+        golds = ["pos"] * 6 + ["neg"] * 6
+        flip = {"pos": "neg", "neg": "pos"}
+        reg = [
+            measure.lane_row("registered", {"id": str(i)}, g if i < 9 else flip[g], g)
+            for i, g in enumerate(golds)
+        ]
+        for correct in ((4, 5, 6), (6, 7, 8)):
+            nulls = [
+                measure.lane_row(
+                    "null", {"id": str(i)}, g if i < c else flip[g], g, draw=d
+                )
+                for d, c in enumerate(correct)
+                for i, g in enumerate(golds)
+            ]
+            m = measure.evaluate_rows(
+                reg + nulls, replace(measure.CONFIG, null_band=0.5)
+            )
+            self.assertEqual(
+                (
+                    m["criterion_1_score"],
+                    m["criterion_1_threshold"],
+                    m["criterion_1_pass"],
+                ),
+                (0.75, 0.75, True),
+            )
+
+    def test_a_stated_spearman_bar_is_not_a_margin_over_zero(self):
+        """sts512 (area 17): "Spearman at least 0.95" registered as margin
+        0.05 put the bar at 0.05. As `at_least = 0.95`, ten items with four
+        adjacent pairs swapped (rho 0.9515) meet it and five swapped (rho
+        0.9394) miss it."""
+        measure = self.stamp("apply", "constants = { at_least = 0.95 }")
+        cfg = replace(measure.CONFIG, score="spearman", null_band=1.0)
+
+        def swapped(k: int) -> list[tuple]:
+            preds = [float(i) for i in range(10)]
+            for j in range(k):
+                preds[2 * j], preds[2 * j + 1] = preds[2 * j + 1], preds[2 * j]
+            return [(p, float(g)) for g, p in enumerate(preds)]
+
+        score, bar, met = self.verdict(measure, cfg, swapped(4))
+        self.assertEqual((round(score, 4), bar, met), (0.9515, 0.95, True))
+        score, bar, met = self.verdict(measure, cfg, swapped(5))
+        self.assertEqual((round(score, 4), bar, met), (0.9394, 0.95, False))
+
+    def test_the_stamped_sentence_names_both_forms(self):
+        for kind in ("apply", "fit"):
+            with self.subTest(kind=kind):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    area, _ = scaffold.stamp_area(
+                        self.root, f"sentence-{kind}", repeat_cost="low", kind=kind
+                    )
+                text = next(area.glob("PROTOCOL-*.md")).read_text(encoding="utf-8")
+                self.assertIn(
+                    "plus margin — or, for a bar the task states, at least at_least",
+                    text,
+                )
+
+
+if __name__ == "__main__":
+    unittest.main()

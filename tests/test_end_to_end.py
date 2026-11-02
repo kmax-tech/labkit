@@ -1813,5 +1813,91 @@ class Estimator(unittest.TestCase):
         lab.git("add", "REPORT.md")
 
 
+class StatedBar(unittest.TestCase):
+    """A bar the task states, end to end at low repeat cost: "accuracy at
+    least 0.90" registered as `at_least`, an unchanged predictor right on
+    10 of the 12 labelled points. labkit-paper area 17 wrote such a bar as a
+    margin over the null and adopted a false pass; here the run records the
+    registered bar, and the adoption renders the miss
+    (docs/notes/2026-11-02-absolute-task-bar.md)."""
+
+    def test_the_registered_bar_reaches_the_run_and_the_result(self):
+        lab = Lab()
+        self.addCleanup(lab.close)
+        area, protocol = points_area(lab, "low", "apply")
+        _replace(
+            area / "scripts" / "01_measure.py",
+            [
+                (
+                    'ITEMS = AREA / "data" / "prepared" / "TODO_v1.jsonl"',
+                    'ITEMS = AREA / "data" / "prepared" / "points_v1.jsonl"',
+                ),
+                (
+                    'ESTIMATOR = "TODO: e.g. RandomForestClassifier(n_estimators=500, random_state=seed)"',
+                    'ESTIMATOR = "FixedThreshold(feature 0 > 4)"',
+                ),
+                (
+                    '    raise NotImplementedError(f"make_estimator(): {ESTIMATOR}")',
+                    "    return FixedThreshold()\n\n\n"
+                    "class FixedThreshold:\n"
+                    '    """pos above 4 on feature 0, never fitted."""\n\n'
+                    "    def predict(self, X):\n"
+                    '        return ["pos" if x[0] > 4 else "neg" for x in X]',
+                ),
+            ],
+        )
+        _replace(
+            protocol,
+            [("constants = { margin = 0.25 }", "constants = { at_least = 0.9 }")],
+        )
+        lab.fill(
+            protocol,
+            "type=exploratory",
+            "criterion-1 sentence=registered accuracy is at least at_least = 0.90, "
+            "the bar the task text states",
+            "quality-check-1 sentence=at most max_empty labelled items without a prediction",
+            "quality-check-2 sentence=the permuted-label lane within null_band of the "
+            "permutation expectation, by the rule null_band_quantile over null_permutations",
+        )
+        lab.fill_open(
+            protocol,
+            **{
+                "Terms of this protocol": "n/a — no coinage",
+                "Question / hypothesis": "Does the fixed threshold reach the accuracy the task asks for?",
+                "Inference criterion": "[criterion-1] registered accuracy at least 0.90, the task's bar",
+                "Quality check": "[quality-check-1] at most max_empty items without a prediction; "
+                "[quality-check-2] the null lane within null_band of the permutation expectation",
+                "Data / scope": "data/prepared/points_v1.jsonl, 12 labelled and 4 test points",
+                "Exclusions / filters": "none",
+                "Unit": "one point",
+            },
+        )
+        lab.script(area, "00_prepare.py")
+        lab.script(area, "01_measure.py", "--calibrate-null", "--write")
+        lab.commit("registered: the task's bar as at_least")
+        run_id = lab.run_id_of(lab.script(area, "01_measure.py"))
+        metrics = json.loads(
+            (area / "runs" / run_id / "metrics.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            (
+                metrics["criterion_1_score"],
+                metrics["criterion_1_threshold"],
+                metrics["criterion_1_pass"],
+                metrics["quality_check_2_pass"],
+            ),
+            (10 / 12, 0.9, False, True),
+        )
+        lab.commit("the run")
+        rc, out = lab.finalize(area)
+        self.assertEqual(rc, 0, out)
+        lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        rc, out = lab.adopt(protocol, run_id)
+        self.assertEqual(rc, 0, out)
+        text = protocol.read_text(encoding="utf-8")
+        self.assertIn("- **Recorded results:** criterion-1 missed;", text)
+        self.assertIn("criterion_1_threshold = 0.9 ", text)
+
+
 if __name__ == "__main__":
     unittest.main()

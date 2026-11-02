@@ -76,10 +76,15 @@ Measurement contract:
     labelled item of the lane: an item without a prediction scores as wrong
     (accuracy), as the mean (r2) or ranks below every real prediction (auc,
     spearman), and is counted on its own as `quality_check_1_empty`.
-  - [criterion-1] passes when the registered lane's score is at least the bar plus
-    `margin`: at apply with the permuted null its exact expectation
+  - [criterion-1] passes when the registered lane's score is at least its
+    bar, registered in one of two forms (LAB-035 Thresholds belong to the
+    run, not to the measure): `at_least`, a bar the task states, is the
+    bar as written, whatever the null lane scores; `margin` is a lead over
+    the null value — at apply with the permuted null its exact expectation
     (`permutation_expectation`), at fit the mean of the `null_refits`
-    permuted-label refits, with a fixed null predictor its score.
+    permuted-label refits, with a fixed null predictor its score. A task's
+    absolute bar written as a margin moves with the predictions: accuracy's
+    expectation is theirs, a fit's refits are random.
   - [quality-check-1] checks the yield (at most `max_empty` labelled items without a
     prediction); [quality-check-2] that the null lane scores within `null_band` of its
     target — the permutation expectation at apply, chance otherwise
@@ -252,12 +257,17 @@ class MeasureConfig:
     default: they come from the protocol's [[promise]] tables under the SAME
     name (`constants = { margin = 0.25 }` ↔ `margin`) through
     `promises.all_constants()`; runlog refuses a run whose config lacks a
-    registered constant or carries another value.
+    registered constant or carries another value. [criterion-1] registers
+    exactly one of `at_least` and `margin`; both or neither raise
+    ValueError here, before any row is read.
     """
 
-    margin: float               # [criterion-1]: registered score ≥ bar + margin, in score units (apply:
-                                # the permutation expectation; fit: the refits' mean)
     max_empty: int              # [quality-check-1]: at most this many labelled items without a prediction
+    # [criterion-1], one of the two (LAB-035 Thresholds belong to the run, not to the measure):
+    at_least: float | None = None  # a bar the task states: registered score ≥ at_least, in score units;
+                                # its source named in the criterion's sentence
+    margin: float | None = None    # a bar of your own: registered score ≥ null value + margin, in score units
+                                # (apply: the permutation expectation; fit: the refits' mean)
     null_band: float | None = None  # [quality-check-2]: the null lane scores within this of its target, in score units;
                                 # owed by every null but a registered NULL_ORDER (evaluate_rows refuses its absence);
                                 # apply: `--calibrate-null --write` derives it before the first measurement
@@ -277,6 +287,14 @@ class MeasureConfig:
     # the declared predictor files' digests, set by main() from the files as
     # they are then — never at import: the area's test imports this file
     predictor_sha: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if (self.at_least is None) == (self.margin is None):
+            given = "both `at_least` and `margin`" if self.margin is not None else "neither `at_least` nor `margin`"
+            raise ValueError(
+                f"[criterion-1] registers {given} — register one in its constants: "
+                "`at_least = <value>` for a bar the task states (absolute; name its source in the sentence), "
+                "or `margin = <value>` for a lead over the null value")
 
 
 # The registered execution: thresholds from the protocol, nothing copied;
@@ -775,7 +793,8 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
       quality_check_2_score · quality_check_2_target · quality_check_2_pass     quality check: the null lane inside its band around its target
                                          (apply, permuted null: the permutation expectation; else chance);
                                          at fit quality_check_2_score is the mean of the draws, quality_check_2_draw_scores each
-      criterion_1_score · criterion_1_threshold · criterion_1_pass  criterion: registered lane against the bar + cfg.margin
+      criterion_1_score · criterion_1_threshold · criterion_1_pass  criterion: registered lane against cfg.at_least as
+                                         registered, else the null value + cfg.margin
                                          (apply, permuted null: the permutation expectation; else the null)
       n_items · n_rows · n_test          yield (→ LAB-023 No silent loss)
       scored_class_counts                accuracy/auc: items per gold value in the scored
@@ -828,7 +847,9 @@ def evaluate_rows(rows: list[dict], cfg: MeasureConfig = CONFIG) -> dict:
     if not (metrics["quality_check_1_pass"] and metrics["quality_check_2_pass"]):
         metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": None, "criterion_1_pass": None})
         return metrics
-    bar = base + Fraction(str(cfg.margin))
+    # a bar the task states is the bar as registered; the null lane stays
+    # [quality-check-2]'s anchor and moves it not
+    bar = Fraction(str(cfg.at_least)) if cfg.at_least is not None else base + Fraction(str(cfg.margin))
     metrics.update({CRITERION_VALUE_KEY: float(reg_score), "criterion_1_threshold": float(bar),
                     "criterion_1_pass": reg_score >= bar})
     return metrics

@@ -140,7 +140,12 @@ promises omits the criterion-1 assignment. Set criteria and constants
 before you see results.
 
 State each promise value in its sentence before the commit. `margin` is
-the smallest lead over the null lane that you call success. `null_band` is
+the smallest lead over the null lane that you call success. Where the task
+states the bar itself ("accuracy at least 0.90"), the estimator skeleton
+registers it as `at_least` in place of `margin` in criterion-1's
+constants, its source named in the sentence: the run compares with
+exactly that value. A task's bar written as a margin moves with the
+predictions. `null_band` is
 how far the null lane can stray from its target:
 
 - At `apply` with the estimator skeleton, the target is the score against
