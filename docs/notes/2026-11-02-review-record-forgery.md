@@ -1,4 +1,4 @@
-# 2026-11-02 — a review record edited by hand releases what the review held
+# 2026-11-02 — a review or audit record edited by hand releases what it held
 
 **Question.** While checking the handover repair (`14a7fad7`: the handover
 no longer binds what a report review writes): can an agent turn a review
@@ -37,6 +37,18 @@ counts as complete.
   it judged — here a BLOCKER on the Conclusion decided `fixed`
   (`9c5ce7e9`); the same holds for a `limitation` with `stands` and a
   BLOCKER decided `false-positive`.
+- *An analysis record* (`audits/<minute>-analysis.toml`, added on
+  `7e80e7a0`): its one `[[finding]]` table deleted and `blockers = 1` →
+  `0`, before the record's first commit. Read station by station against
+  the unedited twin, which every station holds: `labkit-next` advises the
+  adoption; `labkit-adopt` adopts ("finalized, audited, checked") and
+  writes the Recorded results; `finalize` says all clear and
+  `report-check AREA` holds only for the registered report's missing
+  review; once the result block is written and a clean report review
+  drawn, report-check is clear, the pre-commit hook passes the commit, and
+  `labkit-next` says the number may be reported. The advice alone would
+  prove no release; every later station releases too. The kept answer
+  still names the BLOCKER.
 - *A record deleted* is caught: the journal names it as lost evidence, and
   labkit-audit starts nothing until it is restored.
 
@@ -62,6 +74,8 @@ every copy.
 **Out of scope here.** By decision of 2026-11-02 no provenance protection
 is added in this work; the limit is recorded. Reproduction: labkit-evidence
 `usability/2026-11-02-repair-paths/scripts/forgery.sh`, log
-`logs-fe40f50d/forgery.log`; the boundary tests in
+`logs-fe40f50d/forgery.log`; the analysis record
+`scripts/forgery-analysis.sh`, log `logs-7e80e7a0/forgery-analysis.log`
+(labkit-evidence `b69edafa`); the boundary tests in
 `tests/test_repair_paths.py` show what does hold (a changed input owes the
 review again, a deleted record is lost evidence).
