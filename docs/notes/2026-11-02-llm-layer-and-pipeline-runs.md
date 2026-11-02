@@ -141,10 +141,40 @@ Two places in `fallacy-detection` stop this today:
 - `src/data_loader/registry.py` lists loader modules in the framework's own
   source (`LOADER_MODULE_MAP = {"argument": "src.data_loader.argument"}`); a
   topic cannot add a loader without editing the framework.
-- `src/data_loader/base.py` types the base loader's result as
-  `ArgumentDataset`, a domain type in the general layer.
+- `src/data_loader/base.py:84` types the base loader's result as
+  `ArgumentDataset`. Most of it is general (`ids`, `texts`, `labels`, split
+  indices, `cache_id`); only `components` and `component_label2id` are
+  argument-specific.
 
 Both have to open before the middle layer can become a package.
+
+### The extension contract
+
+Half of it exists. The record contract between data and stages is
+`CanonicalRecord` (`src/stages/canonical/schema.py`): `id` and `text`
+required; `labels`, `context`, `_meta`, `enrichments` (dicts) and
+`components` optional; `validate_canonical_record` checks it, and stricter
+levels (`ClassificationRecord`, `PredictionRecord`) build on it. What a
+general framework still needs:
+
+1. **A general dataset type.** `Dataset` in the framework: ids, records
+   (`CanonicalRecord`), split indices, `cache_id`. The two argument fields go
+   into the record (`components`, `labels`) or into the topic's own type.
+2. **Registration from outside.** `LOADER_MODULE_MAP` goes; the topic
+   decorates its loaders (`register_dataset("argument")`, exists), and the
+   config names the topic packages to import — the framework never names
+   them.
+3. **A conformance check every extension must pass**, shipped by the
+   framework: ids unique, every record validates, splits disjoint and in
+   range, `cache_id` set. The same for stages (declared inputs and outputs
+   validate) and for prompt/parser pairs. The contract is that check, not a
+   paragraph.
+4. **A contract version**, raised when a required field or a check changes.
+
+Limit to test before calling it general: `text` is required, so the
+contract is text-only. The image projects that copied the framework
+(`arg-images`, `aspect-based-image-generation`) would not fit. Generalize
+against one real second case, not in advance.
 
 ## Open decisions
 
@@ -168,6 +198,9 @@ Both have to open before the middle layer can become a package.
 8. **How a topic registers** its loaders, stages and prompts: on import of
    its package (simple, explicit) or via entry points (discovered, works
    across installed packages).
+9. **The second case** the contract is tested against before the framework
+   becomes a package: a text topic (lower risk) or one of the image
+   projects (forces `text` to become optional or an `input` field).
 
 ## Not in scope
 
