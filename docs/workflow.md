@@ -139,7 +139,11 @@ after the measurement holds the report. The answering run's promise block
 is also held to the first measurements' recorded registration: changing a
 registered constant after seeing a run does not release its result.
 Changing implementation bytes under unchanged promises still allows a
-repair, new measurement and audit. A kind chosen wrong
+repair, new measurement and audit. The report the head registers
+(`report = "REPORT.md"`, step 8) is bound the same way at `low`: the first
+measurement starts only with it committed, and dropped or moved after it
+the stop and the commit hold it — restore it, or hand the protocol over and
+register anew; `high` is unchanged. A kind chosen wrong
 is corrected before the first measurement (`labkit-init exp NAME --kind KIND
 --change-kind`); after it, a new protocol registers the other kind. At `high`
 the registration becomes a freeze instead: `preflight` clean, the

@@ -161,6 +161,17 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
             f"commit holds; commit the written registration, then start the run "
             f"(LAB-003 No run without an intent paragraph)"
         ]
+    # the report registered before the first measurement is bound to what its
+    # commit holds (`report_hold.report_binding_gap`): uncommitted, it binds nothing
+    committed = repo.text_at(root, protocol, "HEAD")
+    then = protocol_block.head(committed).report if committed is not None else None
+    if head.report != then:
+        return [
+            f"{protocol.name} registers {head.report or 'no report'} as its report, "
+            f"and HEAD registers {then or 'none'} — the report the first measurement "
+            f"stands under is what its commit holds; commit the protocol, then start "
+            f"the run"
+        ]
     return []
 
 

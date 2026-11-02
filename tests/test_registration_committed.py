@@ -801,3 +801,161 @@ class OutsideARepository(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
+    """The report a low protocol registered before its first measurement is
+    bound to what that measurement's commit holds
+    (`report_hold.report_binding_gap`): dropped or moved since, held; the
+    high lane is unchanged (its freeze holds it). Both selections reach the
+    protocol: by its area where the head no longer names the report, and by
+    the former report path where only that file changes
+    (`report_hold.formerly_registering`). Each with its correct twin."""
+
+    def _register(
+        self,
+        report: str | None,
+        *,
+        result: str | None = None,
+        repeat_cost: str = "low",
+    ) -> str:
+        """The protocol registering REPORT, committed; HEAD's full sha."""
+        self.proto.write_text(
+            head(repeat_cost=repeat_cost, result=result, report=report) + REGISTRATION,
+            encoding="utf-8",
+        )
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "protocol")
+        return _git(self.root, "rev-parse", "HEAD")
+
+    def _head_now(self, report: str | None, repeat_cost: str = "low") -> str:
+        """The protocol's text with its head registering REPORT now (tree)."""
+        text = head(repeat_cost=repeat_cost, report=report) + REGISTRATION
+        self.proto.write_text(text, encoding="utf-8")
+        return text
+
+    def _gap(self, text: str, *, unread: bool = True) -> str | None:
+        from labkit.gates import report_hold
+
+        gap = report_hold.report_binding_gap(self.proto, text, unread=unread)
+        return None if gap is None else gap.text + " | " + (gap.fix or "")
+
+    def test_the_twin_unchanged_passes(self):
+        self._run(self._register("REPORT.md"))
+        self.assertIsNone(self._gap(self._head_now("REPORT.md")))
+        self.assertIsNone(self._gap(self._head_now("./REPORT.md")))
+
+    def test_a_report_dropped_after_the_first_measurement_is_held(self):
+        self._run(self._register("REPORT.md"))
+        gap = self._gap(self._head_now(None))
+        assert gap is not None
+        self.assertIn(
+            f"registered REPORT.md as its report before its first measurement {RUN}",
+            gap,
+        )
+        self.assertIn("now registers none", gap)
+        self.assertIn('restore `report = "REPORT.md"`', gap)
+        self.assertIn("--handover", gap)
+        # restored: nothing
+        self.assertIsNone(self._gap(self._head_now("REPORT.md")))
+
+    def test_a_report_moved_after_the_first_measurement_is_held(self):
+        self._run(self._register("REPORT.md"))
+        gap = self._gap(self._head_now("docs/OTHER.md"))
+        assert gap is not None
+        self.assertIn("REPORT.md", gap)
+        self.assertIn("now registers docs/OTHER.md", gap)
+
+    def test_the_twin_no_report_registered_before_holds_nothing(self):
+        """An area without a report obligation stays admissible; a report
+        added after the first measurement is not bound by this check."""
+        self._run(self._register(None))
+        self.assertIsNone(self._gap(self._head_now(None)))
+        self.assertIsNone(self._gap(self._head_now("REPORT.md")))
+
+    def test_the_high_lane_is_unchanged(self):
+        self._run(self._register("REPORT.md", repeat_cost="high"))
+        self.assertIsNone(self._gap(self._head_now(None, repeat_cost="high")))
+
+    def test_an_unreadable_first_measurement_holds_where_a_report_is_registered(self):
+        self._register("REPORT.md")
+        self._run("0" * 40)  # a commit this clone does not hold
+        gap = self._gap(self._head_now("REPORT.md"))
+        assert gap is not None
+        self.assertIn("cannot be read", gap)
+        self.assertIn("git fetch", gap)
+        # where the registration station runs, it names the commit: not twice
+        self.assertIsNone(self._gap(self._head_now("REPORT.md"), unread=False))
+        # the twin: no report registered anywhere — nothing to tell
+        self.assertIsNone(self._gap(self._head_now(None)))
+
+    def test_first_measurements_that_registered_different_reports_are_held(self):
+        first = self._register("REPORT.md")
+        self._run(first)
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the run")  # kept across the checkouts
+        # a second first measurement on diverged history, registering none
+        main = _git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
+        _git(self.root, "checkout", "-q", "--orphan", "side")
+        side = self._register(None)
+        _git(self.root, "checkout", "-q", "-f", main)
+        self._run(side, name="2026-10-07T10-00-01_cd34")
+        gap = self._gap(self._head_now("REPORT.md"))
+        assert gap is not None
+        self.assertIn("registered different reports", gap)
+        self.assertIn(f"{RUN}: REPORT.md", gap)
+
+    def test_the_gate_reaches_a_protocol_whose_head_no_longer_names_the_report(self):
+        """Selection by the area: the commit that drops the report touches
+        the protocol, an exploration, whose head names no report now."""
+        self._run(self._register("REPORT.md"))
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the run")
+        self._head_now(None)
+        _git(self.root, "add", str(self.proto))
+        code, out = self._if_reported([self.proto])
+        self.assertEqual(code, 1, out)
+        self.assertIn("now registers none", out)
+        # the twin: the head unchanged, the same commit passes this hold
+        self._head_now("REPORT.md")
+        _git(self.root, "add", str(self.proto))
+        code, out = self._if_reported([self.proto])
+        self.assertNotIn("now registers", out)
+
+    def test_the_gate_reaches_the_protocol_through_its_former_report(self):
+        """Selection by the former path: the head moved the report in an
+        earlier state, and only the old file changes now."""
+        self._run(self._register("REPORT.md"))
+        self._head_now("docs/OTHER.md")
+        report = self.root / "REPORT.md"
+        report.write_text("# Report\n\n0.93\n", encoding="utf-8")
+        _git(self.root, "add", "-A")
+        code, out = self._if_reported([report])
+        self.assertEqual(code, 1, out)
+        self.assertIn("now registers docs/OTHER.md", out)
+        # the twin: a report no first measurement registered reaches nothing
+        note = self.root / "NOTE.md"
+        note.write_text("# Note\n", encoding="utf-8")
+        _git(self.root, "add", "-A")
+        code, out = self._if_reported([note])
+        self.assertNotIn("now registers", out)
+
+    def test_the_first_measurement_starts_only_with_its_report_committed(self):
+        from labkit.run import start_check
+
+        self._register(None)
+        self._head_now("REPORT.md")  # registered in the tree, not committed
+        bound = start_check.protocol_binding(self.area, "PROTOCOL-x.md")
+        problems = start_check._freeze_findings(self.area, bound)
+        self.assertTrue(any("HEAD registers none" in p for p in problems), problems)
+        # committed: the run may start
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "report registered")
+        bound = start_check.protocol_binding(self.area, "PROTOCOL-x.md")
+        self.assertEqual(start_check._freeze_findings(self.area, bound), [])
+
+    def _if_reported(self, paths: list[Path]) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = report_check.if_reported(paths, self.root, staged=True)
+        return code, out.getvalue()

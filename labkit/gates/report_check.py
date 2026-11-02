@@ -174,7 +174,9 @@ from labkit.gates.report_hold import (
     held_by_reports,
     hold_report,
     reached_reports,
+    formerly_registering,
     registering_protocols,
+    report_binding_gap,
     repo_sources,
     report_files,
     report_owed,
@@ -619,6 +621,26 @@ def report_check(
     return findings.report("report-check", "reporting")
 
 
+def registration_stage(ctx: Checked) -> list[GateFinding]:
+    """Stage 2 of `report_gaps`: the freeze where CTX's lane owes it, else
+    the first measurement's committed registration where owed
+    (`registration_gaps`); a declared replacement's changes; and the report
+    registered before the first measurement (`report_hold.report_binding_gap`)
+    — its unreadable commits are the registration station's to name where
+    that station ran."""
+    ln = lane(ctx.head.repeat_cost)
+    out: list[GateFinding] = []
+    if ln.freeze:
+        out += freeze_gaps(ctx)
+    elif ln.registration:
+        out += registration_gaps(ctx)
+    out += replacement_gaps(ctx)
+    binding = report_binding_gap(ctx.protocol, ctx.text, unread=not ln.registration)
+    if binding is not None:
+        out.append(binding)
+    return out
+
+
 def report_gaps(
     ctx: Checked, *, adoption_pending: bool = False, review: bool = True
 ) -> list[GateFinding]:
@@ -669,11 +691,7 @@ def report_gaps(
             )
         )
     # 2. registration
-    if ln.freeze:
-        out += freeze_gaps(ctx)
-    elif ln.registration:
-        out += registration_gaps(ctx)
-    out += replacement_gaps(ctx)
+    out += registration_stage(ctx)
     # 3. finalize
     finalized = finalize_gaps(ctx.area, ctx.protocol)
     out += finalized
@@ -897,7 +915,10 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     (`report_hold.report_owed`, through `hold_declared`). Returns the worst
     exit code."""
     protocols = affected_protocols(paths, repo, staged=staged)
-    for p in registering_protocols(paths, repo, staged=staged):
+    for p in [
+        *registering_protocols(paths, repo, staged=staged),
+        *formerly_registering(paths, repo, staged=staged),
+    ]:
         if p not in protocols:
             protocols.append(p)
     reports = report_files(paths, repo, staged=staged)
@@ -977,15 +998,22 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
     blocker told under its own heading. Raises `protocol_block.BlockError`
     on a head that does not read — the caller read the declaration off
     the same text first."""
-    gap = report_owed(protocol, text, None, repo, staged=staged)
-    if gap is None:
+    gaps = [
+        g
+        for g in (
+            report_binding_gap(protocol, text, unread=True),
+            report_owed(protocol, text, None, repo, staged=staged),
+        )
+        if g is not None
+    ]
+    if not gaps:
         return 0
     print(
         f"═══ report-check {protocol} (its head has adopted no result; its "
         f"registered report is delivered) ═══"
     )
     out = Findings()
-    out.take(gap)
+    out.take_all(gaps)
     return out.report("report-check", "reporting")
 
 
