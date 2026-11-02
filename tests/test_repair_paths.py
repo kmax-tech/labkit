@@ -251,3 +251,265 @@ class RepairPaths(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+#: the answers the stand-in model gives (`tests/answer_audit.py`)
+CLEAN_ANALYSIS = (
+    f"verdict: 0 blockers, 0 warnings, 0 notes\nscope:\n{AREA}/scripts/01_measure.py"
+)
+CLEAN_REPORT_REVIEW = "verdict: 0 claim(s)"
+OVERCLAIM = (
+    "The twelve cases hold 3.5 documents each, which shows the inputs are complete."
+)
+
+
+def review_answer(verdict: str) -> str:
+    """The decision reviewer's answer: VERDICT on decision #1."""
+    return (
+        f"DECISION #1 · {verdict} · the Conclusion as it stands claims only the mean\n"
+        f"verdict: {int(verdict == 'upheld')} upheld, {int(verdict == 'rejected')} "
+        f"rejected, {int(verdict == 'insufficient')} insufficient"
+    )
+
+
+@unittest.skipUnless(
+    (VENV / "bin" / "usability").is_file() and shutil.which("git"),
+    "needs the suite's venv with labkit's commands, and git",
+)
+class RegisteredReportRepairs(RepairPaths):
+    """The same lab with `report = "REPORT.md"` registered before the first
+    measurement and its progress account committed — the repair paths that
+    end at the report (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md): a report deleted after the
+    adoption, a handover that owes the report review, a BLOCKER on the
+    Conclusion decided `fixed`. The model is given its answer
+    (`tests/answer_audit.py`); every other step is a command."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.base = Path(tempfile.mkdtemp()) / "lab"
+        rc, out = sh(
+            cls.base.parent,
+            str(VENV / "bin" / "usability"),
+            "stage",
+            str(cls.base),
+            "--task",
+            "count",
+            "--venv",
+            str(VENV),
+        )
+        assert rc == 0, out
+        lab = cls.base
+        steps: list[list[str]] = [
+            [".venv/bin/python", str(EXAMPLES / "count-fill.py")],
+            [
+                ".venv/bin/protocol-fill",
+                P,
+                "type=exploratory",
+                "kept.key=mean_docs_per_case",
+                "kept.unit=documents",
+                f"Terms of this protocol={TERMS}",
+                "Question / hypothesis=What is the mean number of input documents per case?",
+                "Data / scope=data/raw/cases.jsonl (12 cases) and data/raw/inputs/<case_id>/",
+                "Exclusions / filters=hidden files and nested directories are not counted",
+                f"Unit={UNIT}",
+                "report=REPORT.md",
+            ],
+            ["git", "add", AREA, "tests"],
+            ["git", "commit", "-q", "-m", "register", "--", AREA, "tests"],
+            [".venv/bin/python", f"{AREA}/scripts/01_measure.py"],
+        ]
+        for step in steps:
+            rc, out = sh(lab, *step)
+            assert rc == 0, (step, out)
+        (lab / "REPORT.md").write_text("# Report\n\nThe mean per case.\n", "utf-8")
+        run = sorted(p.name for p in (lab / AREA / "runs").iterdir())[-1]
+        for step in (
+            [
+                ".venv/bin/protocol-fill",
+                P,
+                "--discuss",
+                run,
+                "--why",
+                "measured; the audit and the adoption are open",
+                "--into",
+                "REPORT.md",
+            ],
+            ["git", "add", AREA, "REPORT.md"],
+            ["git", "commit", "-q", "-m", "run 1", "--", AREA, "REPORT.md"],
+        ):
+            rc, out = sh(lab, *step)
+            assert rc == 0, (step, out)
+
+    def commit(self, message: str, ok: bool | None = True) -> str:  # type: ignore[override]
+        self.run_("git", "add", AREA, "REPORT.md")
+        return self.run_(
+            "git", "commit", "-q", "-m", message, "--", AREA, "REPORT.md", ok=ok
+        )
+
+    def answered(self, answer: str, *args: str, ok: bool | None = None) -> str:
+        """`labkit-audit AREA ARGS`, the model answering ANSWER."""
+        given = self.lab.parent / "answer.txt"
+        given.write_text(answer, encoding="utf-8")
+        return self.run_(
+            ".venv/bin/python",
+            str(ROOT / "tests" / "answer_audit.py"),
+            str(given),
+            "--",
+            AREA,
+            *args,
+            ok=ok,
+        )
+
+    def adopted(self) -> None:
+        """The run audited clean, adopted, its report reviewed and committed."""
+        self.answered(CLEAN_ANALYSIS, "--mode", "analysis", ok=True)
+        self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
+        run = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.run_(".venv/bin/labkit-adopt", AREA, run)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("adopted")
+
+    # -- not the tests of the base class: this lab registers a report
+    test_a_unit_named_as_its_place_takes_the_correction_route = None  # type: ignore[assignment]
+    test_a_field_not_named_by_its_label_is_held = None  # type: ignore[assignment]
+    test_the_twin_a_conclusion_rewritten_owes_no_measurement_and_no_audit = None  # type: ignore[assignment]
+    test_the_twin_a_code_repair_is_measured_again_and_audited = None  # type: ignore[assignment]
+
+    @unittest.expectedFailure  # F2 of the probe note, repaired next
+    def test_a_registered_report_deleted_after_the_adoption_is_held(self):
+        """`git rm REPORT.md`, committed alone, passed the commit,
+        report-check and labkit-next ("the number may be reported"); only
+        the stop named a missing report, and only for an area the session
+        touched. The twin: the report restored passes."""
+        self.adopted()
+        self.run_("git", "rm", "-q", "REPORT.md")
+        refused = self.run_(
+            "git", "commit", "-q", "-m", "drop", "--", "REPORT.md", ok=False
+        )
+        self.assertIn(
+            "registers REPORT.md as its report, which is not written", refused
+        )
+        self.assertIn(
+            "registers REPORT.md as its report, which is not written",
+            self.run_(".venv/bin/report-check", AREA, ok=False),
+        )
+        self.assertIn("which is not written", self.run_(".venv/bin/labkit-next", AREA))
+        stop = self.run_(
+            ".venv/bin/python",
+            "-c",
+            "from pathlib import Path; from labkit.gates import agent_hooks; "
+            "r = Path('.').resolve(); print(agent_hooks.missing_reports(r, [r / 'REPORT.md']))",
+        )
+        self.assertIn("which is not written", stop)
+        self.run_("git", "checkout", "HEAD", "--", "REPORT.md")
+        self.run_(".venv/bin/report-check", AREA)
+
+    @unittest.expectedFailure  # F2 of the probe note, repaired next
+    def test_a_registered_report_deleted_before_the_adoption_is_held_at_the_commit(
+        self,
+    ):
+        """The progress account committed, then the file removed: a commit
+        that removes it is a commit without the registered report."""
+        self.run_("git", "rm", "-q", "REPORT.md")
+        refused = self.run_(
+            "git", "commit", "-q", "-m", "drop", "--", "REPORT.md", ok=False
+        )
+        self.assertIn(
+            "registers REPORT.md as its report, which is not written", refused
+        )
+
+    @unittest.expectedFailure  # F1 of the probe note, repaired next
+    def test_a_handover_with_its_report_review_stays_a_handover(self):
+        """The handover's record bound every file under audits/, and the
+        report review it owes writes there: the review voided the handover,
+        a new handover voided the review. The twin: an analysis audit after
+        the handover still voids it — new evidence is not acknowledged."""
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--handover",
+            "--why",
+            "the report must live elsewhere; a successor registers it",
+            "--tried",
+            "measured once",
+            "--into",
+            "REPORT.md",
+        )
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("--report-review", nxt)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        self.commit("handed over, the report reviewed")
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertIn("nothing", self.run_(".venv/bin/labkit-next", AREA))
+        self.answered(CLEAN_ANALYSIS, "--mode", "analysis")
+        self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+
+    def conclusion_blocker(self) -> tuple[str, str]:
+        """An overclaiming Conclusion flagged as a BLOCKER at its field,
+        rewritten and decided `fixed`; the record and the decision's line."""
+        self.fill(f"Conclusion={OVERCLAIM}")
+        self.commit("the Conclusion")
+        self.answered(
+            "BLOCKER · PROTOCOL-docs-per-case.md:Conclusion · the Conclusion claims "
+            "completeness nothing measured · the claim outruns the number · LAB-050 "
+            "Analysis audit before reporting · drop the claim\n"
+            "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\n"
+            f"{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        record = sorted((self.lab / AREA / "audits").glob("*-analysis*.toml"))[-1].name
+        self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
+        said = self.decide(record, "fixed", "dropped the completeness claim")
+        self.commit("the Conclusion rewritten; finding 1 decided")
+        return record, said
+
+    @unittest.expectedFailure  # F3 of the probe note, repaired next
+    def test_a_conclusion_blocker_fixed_is_released_by_the_decision_review(self):
+        """The follow-up audit the decision named was never shown the
+        finding (the Conclusion is not in the audited state), a FIX verdict
+        on it was refused, and nothing else released it. The decision
+        review judges the claim as it stands and binds it."""
+        record, said = self.conclusion_blocker()
+        self.assertIn("--review", said)
+        self.assertNotIn("waits for the follow-up audit", said)
+        self.assertIn("--review", self.run_(".venv/bin/labkit-next", AREA))
+        self.adopt(ok=False)
+        self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
+        self.assertIn("finalized, audited, checked", self.adopt(ok=True))
+        self.assertEqual(self.runs(), 1)
+
+    def test_the_twin_a_rejected_review_holds(self):
+        record, _ = self.conclusion_blocker()
+        self.answered(
+            review_answer("rejected"), "--review", "--record", record, ok=False
+        )
+        self.adopt(ok=False)
+
+    @unittest.expectedFailure  # F3 of the probe note, repaired next
+    def test_the_twin_a_claim_changed_after_the_review_holds(self):
+        record, _ = self.conclusion_blocker()
+        self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
+        self.fill(f"Conclusion={OVERCLAIM}")
+        self.adopt(ok=False)
+
+    @unittest.expectedFailure  # F3 of the probe note, repaired next
+    def test_a_code_blocker_decided_fixed_with_nothing_changed_is_not_sent_to_a_followup(
+        self,
+    ):
+        """Nothing the record binds changed: no follow-up will be shown it,
+        so the line names the repair still owed, not the follow-up."""
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "mean is over 11 cases · LAB-050 Analysis audit before reporting · remove "
+            "the filter\nverdict: 1 blockers, 0 warnings, 0 notes\nscope:\n"
+            f"{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        record = sorted((self.lab / AREA / "audits").glob("*-analysis*.toml"))[-1].name
+        said = self.decide(record, "fixed", "fixed")
+        self.assertNotIn("waits for the follow-up audit", said)
+        self.assertIn("not repaired", said)
