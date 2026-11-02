@@ -1899,5 +1899,111 @@ class StatedBar(unittest.TestCase):
         self.assertIn("criterion_1_threshold = 0.9 ", text)
 
 
+class StatedBarJudge(unittest.TestCase):
+    """A bar the task states in the prompt skeleton, end to end at low repeat
+    cost, the model faked: fixed answers test the arithmetic and the route
+    from registration to adoption, not the quality of any judgement. The
+    faked model misses three of the six causal sentences — accuracy 9/12 =
+    0.75 — and answers the placebo Yes throughout (null 0.50, at chance).
+    Registered `at_least = 0.75` meets the bar exactly; `at_least = 0.76`
+    misses it. metrics.json, the run's printout and the Recorded results
+    line carry the registered value (docs/notes/2026-11-02-absolute-task-bar.md)."""
+
+    @staticmethod
+    def _model(alias: str, prompts: list[str], *, workers: int) -> list[str]:
+        out = []
+        for p in prompts:
+            if p.startswith("Is this text written in English?"):
+                out.append("Yes")
+            else:
+                missed = any(f"Text: {i}: " in p for i in (0, 2, 4))
+                out.append("No" if missed or "Rain causes" not in p else "Yes")
+        return out
+
+    def _run_to_adoption(self, name: str, bar: str) -> tuple[dict, str, str]:
+        """Register `at_least = BAR` in a judge area NAME, run it with the
+        faked model, finalize, record the analysis audit, adopt. Returns
+        (metrics.json, the run's printout, the protocol as adopted)."""
+        lab = Lab()
+        self.addCleanup(lab.close)
+        area, protocol = judge_area(lab, name)
+        text = protocol.read_text(encoding="utf-8")
+        self.assertEqual(text.count("constants = { margin = 0.25 }"), 1)
+        text = text.replace(
+            "constants = { margin = 0.25 }", f"constants = {{ at_least = {bar} }}"
+        )
+        text = re.sub(
+            r'(id = "criterion-1"\nkey = "criterion_1_pass"\nsentence = )"[^"]*"',
+            rf'\1"registered accuracy is at least at_least = {bar}, the bar the task text states"',
+            text,
+        )
+        self.assertIn(f"at least at_least = {bar}, the bar the task text states", text)
+        protocol.write_text(text, encoding="utf-8")
+        lab.fill(
+            protocol,
+            "--force",
+            f"Inference criterion=[criterion-1] registered accuracy at least {bar}, "
+            "the bar the task text states",
+        )
+        lab.commit("the judge, registered with the task's bar")
+        measure = area / "scripts" / "01_measure.py"
+        from labkit.run import llm
+
+        out = io.StringIO()
+        with (
+            mock.patch.object(llm, "complete_many", self._model),
+            mock.patch.object(
+                llm,
+                "provenance",
+                lambda alias: {"model": "fake@e2e", "endpoint": "fake"},
+            ),
+            mock.patch.object(sys, "argv", [str(measure)]),
+            mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(lab.root)}),
+            contextlib.redirect_stdout(out),
+        ):
+            _load(measure, f"e2e_stated_{name.replace('-', '_')}").main()
+        run_id = lab.run_id_of(out.getvalue())
+        metrics = json.loads(
+            (area / "runs" / run_id / "metrics.json").read_text(encoding="utf-8")
+        )
+        lab.commit("the run")
+        rc, out_text = lab.finalize(area)
+        self.assertEqual(rc, 0, out_text)
+        lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        rc, out_text = lab.adopt(protocol, run_id)
+        self.assertEqual(rc, 0, out_text)
+        return metrics, out.getvalue(), protocol.read_text(encoding="utf-8")
+
+    def test_a_lane_exactly_at_the_stated_bar_is_adopted_as_met(self):
+        metrics, printed, text = self._run_to_adoption("judge-at-bar", "0.75")
+        self.assertEqual(
+            (
+                metrics["criterion_1_accuracy"],
+                metrics["criterion_1_threshold"],
+                metrics["criterion_1_pass"],
+                metrics["quality_check_2_accuracy"],
+                metrics["quality_check_2_pass"],
+            ),
+            (0.75, 0.75, True, 0.5, True),
+        )
+        self.assertRegex(printed, r"criterion_1_threshold +0\.75\b")
+        self.assertIn("- **Recorded results:** criterion-1 met;", text)
+        self.assertIn("criterion_1_threshold = 0.75 ", text)
+
+    def test_a_lane_just_below_the_stated_bar_is_adopted_as_missed(self):
+        metrics, printed, text = self._run_to_adoption("judge-below-bar", "0.76")
+        self.assertEqual(
+            (
+                metrics["criterion_1_accuracy"],
+                metrics["criterion_1_threshold"],
+                metrics["criterion_1_pass"],
+            ),
+            (0.75, 0.76, False),
+        )
+        self.assertRegex(printed, r"criterion_1_threshold +0\.76\b")
+        self.assertIn("- **Recorded results:** criterion-1 missed;", text)
+        self.assertIn("criterion_1_threshold = 0.76 ", text)
+
+
 if __name__ == "__main__":
     unittest.main()
