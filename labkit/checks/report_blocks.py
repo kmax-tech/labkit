@@ -169,19 +169,31 @@ def blocks(text: str) -> list[Block]:
 def with_block(text: str, protocol: str, run_id: str, body: str) -> str:
     """TEXT with PROTOCOL's block showing RUN_ID with BODY (`block_body`):
     every block of PROTOCOL replaced in place, whichever run it showed — a
-    newly adopted run replaces the old one —, or one appended at the end
-    when there is none. Raises ReportBlockError on a block that does not
-    read."""
+    newly adopted run replaces the old one —; where there is none, the
+    block discussing RUN_ID for PROTOCOL — the progress account written
+    before the adoption — replaced in place, else one appended at the end.
+    A discussion of RUN_ID for PROTOCOL left beside a result block is
+    removed: a run shown as the result is not discussed as not reported.
+    Other protocols' blocks, other runs' discussions and the prose stay.
+    Raises ReportBlockError on a block that does not read."""
     found = [b for b in blocks(text) if b.protocol == protocol]
+    mine = [
+        d for d in discussions(text) if (d.protocol, d.run_id) == (protocol, run_id)
+    ]
     lines = text.split("\n")
     new = block_lines(protocol, run_id, body)
-    if not found:
-        while lines and lines[-1] == "":
-            lines.pop()
-        return "\n".join([*lines, "", *new, ""])
-    for b in reversed(found):
-        lines[b.first - 1 : b.last] = new
-    return "\n".join(lines)
+    spans = sorted(
+        [(b.first, b.last, True) for b in found]
+        + [(d.first, d.last, not found and i == 0) for i, d in enumerate(mine)],
+        reverse=True,
+    )
+    for first, last, replace in spans:
+        lines[first - 1 : last] = new if replace else []
+    if found or mine:
+        return "\n".join(lines)
+    while lines and lines[-1] == "":
+        lines.pop()
+    return "\n".join([*lines, "", *new, ""])
 
 
 def withdraw_result_blocks(text: str, protocol: Path, report: Path) -> str:
@@ -348,14 +360,19 @@ DISCUSS_KEYS = ("protocol", "run", "why")
 REPORT_CHECK_AGAIN = "`report-check --if-reported <REPORT>`"
 
 
-def discuss_command(protocol: str, run_id: str, report: str) -> str:
+#: the placeholder of a discussion's why in a printed command
+WHY_LOOKED_AT = "<what refused the adoption, what you found>"
+#: the placeholder of the progress account's why (`report_hold.progress_account`)
+WHY_PROGRESS = "<what was measured, what is still open>"
+
+
+def discuss_command(
+    protocol: str, run_id: str, report: str, why: str = WHY_LOOKED_AT
+) -> str:
     """The `protocol-fill … --discuss` line that writes the block
     discussing RUN_ID of PROTOCOL into REPORT, each path as the caller
-    names it."""
-    return (
-        f'protocol-fill {protocol} --discuss {run_id} --why "<what refused the '
-        f'adoption, what you found>" --into {report}'
-    )
+    names it, WHY the placeholder of its reason."""
+    return f'protocol-fill {protocol} --discuss {run_id} --why "{why}" --into {report}'
 
 
 @dataclass(frozen=True)

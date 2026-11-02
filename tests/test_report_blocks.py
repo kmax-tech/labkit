@@ -266,6 +266,68 @@ class Discussions(unittest.TestCase):
         self.assertNotIn(9, [n for n, _ in report_blocks.unsourced_numbers(text)])
 
 
+class AdoptionReplacesTheAccount(unittest.TestCase):
+    """`with_block` after a progress account (B, 2026-11-02): the result
+    block takes the place of the discussion of the same protocol and run;
+    other protocols' blocks, other runs' discussions and the prose stay."""
+
+    P, Q, RUN, OLD = (
+        "a/PROTOCOL-a.md",
+        "b/PROTOCOL-b.md",
+        "2026-11-02T00-00-00_aaaa",
+        "2026-11-01T00-00-00_bbbb",
+    )
+
+    def text(self) -> str:
+        return "\n".join(
+            [
+                "# Report",
+                "",
+                "Intro.",
+                *report_blocks.discussion_lines(self.P, self.OLD, "an earlier run"),
+                *report_blocks.discussion_lines(
+                    self.P, self.RUN, "measured, audit open"
+                ),
+                "Middle.",
+                *report_blocks.block_lines(self.Q, self.OLD, "other protocol's result"),
+                "End.",
+                "",
+            ]
+        )
+
+    def test_the_result_block_stands_where_the_account_stood(self):
+        new = report_blocks.with_block(self.text(), self.P, self.RUN, "the result")
+        (mine,) = [b for b in report_blocks.blocks(new) if b.protocol == self.P]
+        self.assertEqual((mine.run_id, mine.body), (self.RUN, "the result"))
+        self.assertEqual(
+            [(d.protocol, d.run_id) for d in report_blocks.discussions(new)],
+            [(self.P, self.OLD)],
+        )
+        self.assertTrue(any(b.protocol == self.Q for b in report_blocks.blocks(new)))
+        self.assertLess(new.index("Intro."), new.index("the result"))
+        self.assertLess(new.index("the result"), new.index("Middle."))
+        self.assertIn("End.", new)
+
+    def test_beside_an_existing_result_block_the_account_is_removed(self):
+        # OLD adopted first: its result block takes its discussion's place
+        text = report_blocks.with_block(self.text(), self.P, self.OLD, "old result")
+        new = report_blocks.with_block(
+            text + "\n".join(report_blocks.discussion_lines(self.P, self.RUN, "again")),
+            self.P,
+            self.RUN,
+            "new result",
+        )
+        mine = [b for b in report_blocks.blocks(new) if b.protocol == self.P]
+        self.assertEqual([(b.run_id, b.body) for b in mine], [(self.RUN, "new result")])
+        self.assertEqual(report_blocks.discussions(new), [])
+
+    def test_the_twin_without_an_account_the_block_is_appended(self):
+        text = "# Report\n\nIntro.\n"
+        new = report_blocks.with_block(text, self.P, self.RUN, "the result")
+        self.assertTrue(new.startswith(text.rstrip("\n")))
+        self.assertEqual(report_blocks.blocks(new)[0].run_id, self.RUN)
+
+
 class ReportFiles(unittest.TestCase):
     """The gate: a changed report citing runs is held — its blocks to the
     declaring protocol (which the stations hold too), its run ids to the
