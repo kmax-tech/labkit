@@ -45,7 +45,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 - **A registered report can be saved before the adoption (the progress
   account).** labkit-paper area 17 (2026-11-02): six of 18 labkit attempts
   reached the 2400-second limit, five of them without a `REPORT.md`, all in
-  the audit, decision and adoption loop that wrote the report last. Now:
+  the audit, decision and adoption loop that wrote the report last. Four
+  attempts also lost about 16 minutes each to a shared proxy outage; no
+  control ran in that window, so the timeout contrast is confounded
+  (`docs/notes/2026-11-02-workflow-simplification.md`). Now:
   - `labkit-next` names, right after a measurement and before the audit or
     any gap, `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what was
     measured, what is still open>" --into REPORT.md` when the head registers

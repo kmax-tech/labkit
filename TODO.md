@@ -9,6 +9,10 @@ Messungen sind Belege für ihren damaligen Stand, keine aktuellen Aufgabenlisten
 
 ## Reihenfolge
 
+[Vereinfachung planen (2026-11-02)](docs/notes/2026-11-02-workflow-simplification.md).
+Ziel: fachlich korrekte Arbeit mit weniger Prüfpflichten abschließen.
+Nächster Schritt: C anhand von Fehlerfang und Kosten gesondert entscheiden; B und A1 sind gemeinsam geprüft. Auswertungsfolge 17 → 18 bleibt bestehen.
+
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
 Linie für 1.0. Die fünf Umbauphasen sind umgesetzt; Verträge stehen in

@@ -1,481 +1,302 @@
 # The workflow: from a registered question to a kept number
 
-One pass through labkit for one experiment area, step by step: the command,
-what it reads and what it changes, what must hold before it, and what a
-clean exit means. The rules behind each step are linked, not restated —
-the chain of checks is in [architecture](architecture.md), the promise
-format in [promise-block](promise-block.md), which run answers in
-[protocol-run-binding](protocol-run-binding.md), the lab standard in
-`labkit/docs/standard.md` (`python -m labkit.formats.rules show LAB-nnn`).
-Terms are the README's glossary. The steps are those of repeat cost `low`; what
-`high` owes on top is said inside the step it belongs to.
+Use `labkit-next <AREA>` for the current next action. This page explains
+when each step applies, what may change, what the command writes, and what
+allows progress. It describes current behaviour; proposed simplifications
+are in the [plan](notes/2026-11-02-workflow-simplification.md).
 
-Five words the page leans on: a **full run** is one started with
-`run_kind="measurement"` (not a probe, not a preparation); a **station** is
-one named check of a gate, told in the gate's output in its order; the
-**release** is the moment a number leaves the area as a reported result
-(the adoption, the stop, the commit); a **hint** is static evidence —
-named, never blocking; the **adopted run** (`[result] run` in the head)
-and the **answering run** (the choice below) must be the same run, or
-`report-check` blocks.
+Commands run from the repository root with its venv active, or through
+`.venv/bin/<command>`. `AREA` means an experiment directory; `PROTOCOL`
+means its protocol file. A **measurement** is a full run, not a probe or
+preparation. A check being clean establishes only the conditions it checks.
+Exact conditions, static hints and semantic audits have different limits;
+see [the evidence tiers](../README.md#what-the-checks-establish).
 
-An executable walk of these steps on the stamped count task is
-[`examples/count-walkthrough.sh`](examples/count-walkthrough.sh) — run it
-in an empty directory with a venv that has labkit, read its output beside
-this page; `tests/test_workflow_example.py` keeps it true.
+The [executable count walkthrough](examples/count-walkthrough.sh) takes a
+small task through these steps. Its audit record is explicitly a stand-in,
+so the example needs no model call. `tests/test_workflow_example.py` checks
+the real commands and the resulting artifacts.
 
 ## The steps at a glance
 
-One row per step below: when the area has reached it (read from the
-records, never from a status file), what the agent may change there, the
-command, what it writes, what ends the step, and the way out when a check
-holds. `labkit-next <AREA>` names the step an area stands at today
-(`labkit/tools/next_step.py`); the sections below carry the details and
-the `high` additions.
+| Step | Purpose | Main command |
+|---|---|---|
+| 0. Area | Create the question's workspace and skeleton. | `labkit-init exp` |
+| 1. Code | Implement and test the measurement. | `code-check AREA` |
+| 2. Registration | Record and commit the scientific choices. | `protocol-fill`, `protocol-check` |
+| 3. Run | Measure with recorded inputs and code. | The area's measurement script |
+| 4. Finalize | Check the completed run. | `finalize AREA` |
+| 5. Analysis audit | Review the evidence and decide findings. | `labkit-audit AREA --mode analysis` |
+| 6. Decision review | Check decisions that require another reviewer. | `labkit-audit AREA --review` |
+| 7. Adoption | Select and generate the reported result. | `labkit-adopt AREA` |
+| 8. Report | Complete the text and its required review. | `protocol-fill --into`, `labkit-audit --report-review` |
+| 9. Stop and commit | Check the delivered state. | Hooks; `report-check` |
 
-| Step | Reached when | The agent may change | Command | Writes | Done when | Held → way out |
-|---|---|---|---|---|---|---|
-| 0 area | no protocol in the area | — | `labkit-init exp <name> --kind compute\|fit\|apply` (`--report-file REPORT.md` when the task asks for a report) | the area, its protocol, the skeleton, the area test | the area is stamped with its own number | two areas with one number → `labkit-init numbers` names them |
-| 1 code | the area exists | the scripts, the area test | `code-check <AREA>` after each change | nothing | every declared key, prompt line and parser fixture found | a missing key or fixture → write it |
-| 2 registration | a MUST field is open | the protocol's fields through `protocol-fill`; the kind only before the first measurement (`--change-kind`) | `protocol-fill`, `protocol-check`, commit | the protocol | `protocol-check` finds every field the kind owes, and they are committed (`high`: frozen after preflight and its audit) | an open field → `protocol-fill <PROTOCOL> --list` |
-| 3 run | the registration is committed | the code before the run; nothing under `runs/` | `scripts/01_measure.py` (through `runlog`) | `runs/<run_id>/`, the output, `runs.tsv` | the run completed; with a registered report and nothing adopted, `labkit-next` names the progress account next (`--discuss RUN --why …`), before the audit and any gap — it releases nothing | an unregistered or unbound run → refused before it starts |
-| 4 finalize | a completed run answers the protocol | nothing (it only reads) | `finalize <AREA>` | nothing | no blocker: the run can carry a number | code or registration changed since the run → measure again, or restore, or register anew |
-| 5 analysis audit and decisions | finalize is clean and no analysis record covers the area as it is now | each finding's decision, through `--decide` | `labkit-audit <AREA> --mode analysis`, then `--decide` per finding | `audits/<minute>-analysis.toml` and its decisions | every finding decided, the record covers code, promises, run and what was shown | code changed after the audit → the record is stale, audit again; an earlier BLOCKER undecided → decide it first |
-| 6 decision review | a BLOCKER was accepted with `stands`, or a decision a review did not uphold was closed | the Conclusion, the decision | `labkit-audit <AREA> --review` | `audits/<minute>-review.toml` | every such decision `upheld` | `rejected` → decide again (limit, change the effect, fix); `insufficient` → add evidence |
-| 7 adoption | nothing but the adoption holds | — | `labkit-adopt <AREA> [RUN_ID]` (or `protocol-fill <PROTOCOL> --from-run`) | the protocol: `[result] run`, Recorded results, Limitation lines, Runs; with a registered report its result block, where the run's progress account stood | `report-check` passes on the written protocol | a blocker → the file is restored and the blocker named |
-| 8 report | an adopted run, or a run the report discusses | the report's prose; the blocks only through `protocol-fill` | `protocol-fill <PROTOCOL> --into REPORT.md` (`--discuss RUN --why …` for a run only looked at), then `labkit-audit <AREA> --report-review REPORT.md` | the generated block; `audits/report-reviews/<minute>-review.toml` | the block equals its rendering, and the review of this state names no claim | a registered report without its result or handover block, or a claim → adopt and `--into`, `--discuss` (the progress account before the adoption; releases nothing), or `--handover` |
-| 9 stop and commit | the agent ends its turn, or commits | — (the hooks run unasked) | `claude-hook stop`, `.githooks/pre-commit` (`report-check --if-reported`) | nothing | no blocker in the areas touched or staged; a registered report carrying only the progress account passes the commit, the stop names the next step once | the line names its command; no result to be had → `protocol-fill <PROTOCOL> --handover --why … --tried … --into REPORT.md` |
-
-A repair after an adoption runs the steps again from the withdrawal:
-`protocol-fill <PROTOCOL> --withdraw --why "…"` → change the code (step 1)
-→ measure again (3) → finalize (4) → the analysis audit follows the
-earlier decided BLOCKERs up (5) → adopt the new run (7). The withdrawal
-removes the adoption and the result blocks, never a run or an audit record.
+Code and registration may be developed together before measurement.
+Later changes use the [repair path](#repair-and-recovery); they do not
+rewrite the evidence of earlier work. The steps below describe repeat cost
+`low`, with additional `high` requirements where relevant.
 
 ## 0. The area
 
-```
-labkit-init lab <dir>                       # once per lab repo
-labkit-init exp <name> --repeat-cost low --kind compute   # one area per question; --kind fit|apply when the number judges predictions; --model ALIAS with a model in the loop
-```
+**When:** a new question needs its own experiment area.
 
-Reads: the templates shipped with labkit. Writes: `experiments/NN-<name>/`
-with `PROTOCOL-<name>.md` (its TOML head stamped with a protocol id, the
-repeat cost, `frozen = false`), `scripts/01_measure.py` and `02_analyze.py`
-(the skeleton for the instrument: compute, estimator or model), the area
-test, the README card. Nothing is owed yet; `protocol-check <PROTOCOL>
---contract` prints what its repeat cost and kind will owe and when.
-`NN` is one above every number the repository holds — this tree,
-`_archiv/`, every branch this clone knows, every other worktree — so two
-branches do not both stamp the same next area; `labkit-init numbers`
-checks that each area has a number of its own, and the pre-commit and
-pre-merge-commit hooks run it on the index.
+**Allowed changes:** choose `compute`, `fit` or `apply` by what the number
+asserts. Choose the repeat cost and register a report path when the task
+requires one. The [field contract](../README.md#run-an-experiment) determines
+the skeleton and obligations.
+
+**Command and output:** `labkit-init lab <dir>` creates the lab once;
+`labkit-init exp <name> --repeat-cost low --kind compute` creates the area,
+protocol, scripts and test. Add `--report-file REPORT.md` for a required
+report. Use the actual kind and any model options the task needs.
+
+**Done / way out:** the numbered area exists. `protocol-check PROTOCOL
+--contract` explains its requirements. If numbering conflicts, run
+`labkit-init numbers` and resolve the named areas.
 
 ## 1. The measurement code
 
-```
-<edit scripts/01_measure.py>                # the TODOs: what is counted, how, the number
-code-check experiments/NN-<name>            # after every code change
-```
+**When:** the area exists and its instrument is not yet implemented.
 
-Reads: the scripts, the protocol's promise tables. Changes: nothing.
-Clean means: every declared key appears in the code, every `PROMPT`
-constant stands in the protocol, the parsers have fixtures — the static
-part of the promise → code link. It proves nothing about meaning; that is
-the audit's question. A local `apply` loads the unchanged predictor; it
-neither receives labels nor trains, and its null lane scores the same
-predictions against labels permuted with the seed (or a registered fixed
-null predictor). The author declares the model's files in
-`PREDICTOR_FILES`, whose digests are recorded
-in the config, run inputs and output fingerprint. A changed artifact cannot
-resume old rows or count as an unchanged repeat.
-At `high` the `--probe` checks the instrument on a few items before anything
-is frozen (real model calls, a reduced fitted estimator, or unchanged local
-apply predictors); a computation has none.
+**Allowed changes:** fill the scripts and area tests. Test the functions
+that produce numbers with independently checked examples. A local `apply`
+uses an unchanged predictor; declare its loaded artifacts as run inputs.
+
+**Command and output:** edit the code, run the area tests, then
+`code-check AREA`. That command reads the code and promises and writes
+nothing unless a bundle is requested.
+
+**Done / way out:** correct tests pass and required structural references
+are present. Fix missing keys, prompt declarations or parser fixtures as
+named. Structural checks do not establish scientific meaning. At `high`,
+complete the instrument probe where the skeleton provides one before
+freezing. Details: [checks and their limits](architecture.md#the-chain).
 
 ## 2. The registration
 
-```
-protocol-fill PROTOCOL-<name>.md "Question / hypothesis=…" "Unit=…" …
-protocol-check PROTOCOL-<name>.md
-git add experiments/NN-<name> tests/test_NN_<name>.py && git commit -m "…" -- experiments/NN-<name> tests/test_NN_<name>.py
-```
+**When:** before the first measurement; scientific choices remain open.
 
-The commit names its paths (LAB-077 Own commits, others' state stays with
-the user): `git add` makes new files known, and the paths after `--` keep
-whatever else is staged — another session's work, the state you found —
-out of it.
+**Allowed changes:** fill the fields required for this kind. Use
+`protocol-check PROTOCOL --contract` for the applicable list and
+`protocol-fill PROTOCOL --list` for missing values. Choose the kind correctly
+before measuring; `labkit-init exp NAME --kind KIND --change-kind` restamps
+an eligible unmeasured area.
 
-Reads and changes: the protocol's prose fields, by exact label
-(`protocol-fill --list` names what is still open). Which fields follow the
-kind, not the repeat cost (`standard_contract.registration_fields(kind, model)`):
-every kind the question; a fit or an apply also the success criterion, the
-quality check and the null condition / anchors; a `[model]` table
-adds the data profile, and a computation with one says in the head what its
-number describes (`number_describes`). A computation names its kept
-number in the head's `[kept]` table — the metrics key and its unit
-(`labkit-init exp --kind compute --kept KEY --unit UNIT` stamps them, else
-`protocol-fill <PROTOCOL> "kept.key=…" "kept.unit=…"`); the compute
-skeleton reads the key from there, and finalize refuses a run that does
-not hold it as a finite number. A computation a task asks to match
-a stated value registers it in the head's optional `[reference]` table
-(value, tolerance, relation, source — compared on the `[kept]` key;
-`labkit-init exp --kind compute --kept KEY --reference VALUE[±TOL]` stamps it,
-`docs/promise-block.md`): the run writes the verdict beside the number,
-the Recorded results line carries it generated, and a `not met` is a
-valid outcome; without the table nothing is compared. `protocol-check`
-says "all must and should fields filled" once these stand; the Conclusion is not among
-them — it is owed after the run (step 7), and `--list` keeps it under
-"after the run — yours". The commit matters: the release
-holds the registration to the commit of the first measurement, not to the
-tree at the time of the run (`report-check` stage 2, the registration).
-Which measurement is first, git's history says — the commit each run
-recorded —, not the run id, which is local time; after a rebase or an
-amend the first of each branch is held, and so is a run whose commit the
-clone does not hold. The
-fields the kind owes must stand in that commit — the kind included: that
-commit is judged by the kind the protocol declares today, so a kind changed
-after the measurement holds the report. The answering run's promise block
-is also held to the first measurements' recorded registration: changing a
-registered constant after seeing a run does not release its result.
-Changing implementation bytes under unchanged promises still allows a
-repair, new measurement and audit. The report the head registers
-(`report = "REPORT.md"`, step 8) is bound the same way at `low`: the first
-measurement starts only with it committed, and dropped or moved after it
-the stop and the commit hold it — restore it, or hand the protocol over and
-register anew; `high` is unchanged. A kind chosen wrong
-is corrected before the first measurement (`labkit-init exp NAME --kind KIND
---change-kind`); after it, a new protocol registers the other kind. At `high`
-the registration becomes a freeze instead: `preflight` clean, the
-preflight audit run and decided, `frozen = true`.
+**Command and output:** `protocol-fill PROTOCOL "Question / hypothesis=…"`
+fills the named field; `protocol-check PROTOCOL` validates registration.
+Commit the protocol and relevant implementation, naming only your paths
+in `git add` and `git commit -- <paths>` so other staged work stays out.
+
+**Done / way out:** at `low`, the required registration stands in the commit
+of the first measurement. A required report can be added to an existing
+unmeasured protocol with `protocol-fill PROTOCOL report=REPORT.md`; a
+pre-measurement replacement needs `--force`. The registered path must be
+committed before the first measurement. Removing or moving that bound path
+later holds release: restore it, or explicitly hand over and register anew.
+`--force` does not bypass the post-measurement restriction. At `high`, pass
+preflight, decide its audit, set the matching freeze evidence and freeze
+and commit the protocol. The new report-path binding applies only at `low`.
+
+See [the promise format](promise-block.md#the-block) for technical fields
+and [the chain](architecture.md#the-chain) for registration binding. A missed
+registered criterion is a valid result; it does not justify changing the bar.
 
 ## 3. The run
 
-```
-.venv/bin/python experiments/NN-<name>/scripts/01_measure.py
-git add experiments/NN-<name> && git commit -m "…" -- experiments/NN-<name>
-```
+**When:** the registration and the lane's start requirements hold.
 
-Reads: the data the script names (`SOURCE`, `INPUTS`). Writes:
-`runs/<run_id>/` (the run record: `config.json` with the protocol binding,
-the frozen inputs and the git state; `metrics.json`; `outputs.json`;
-`completion.json`), the output file, a row in `runs.tsv`. Before the
-directory exists `runlog` refuses: a run without the registration, an
-unbound run, a full run under an unfrozen protocol at `high`
-(`labkit/run/start_check.py`). At `low` this run is the instrument check
-too; rerun it at will. The run id is `runlog`'s, never typed. With a
-registered report and nothing adopted, `labkit-next` names the progress
-account next — `protocol-fill <PROTOCOL> --discuss <run_id> --why "<what was
-measured, what is still open>" --into REPORT.md` —, before the audit and
-before any gap; it saves the state and releases nothing, and the next call
-names the remaining gap as before.
+**Allowed changes:** run the instrument; let runlog write its records.
+Do not edit a completed run's metrics or outputs to repair the experiment.
+
+**Command and output:** run `.venv/bin/python AREA/scripts/01_measure.py`.
+It records the run under `runs/<run_id>/`, its inputs, code and protocol
+binding, outputs and completion, and updates the run index. Commit the
+relevant source, outputs and records using explicit paths.
+
+**Done / way out:** the measurement completed. With a registered report and
+nothing adopted, `labkit-next` names the progress account next, before the
+audit and before any gap: `protocol-fill PROTOCOL --discuss RUN_ID --why
+"WHAT WAS MEASURED, WHAT IS STILL OPEN" --into REPORT.md`. It saves the state
+and releases nothing; the next call names the remaining gap as before. A
+start refusal names the missing prerequisite before creating the run. A
+failed execution uses the repair path. For long commands use [detached execution and waiting](architecture.md#long-running-commands).
+Run-record details: [protocol/run binding](protocol-run-binding.md).
 
 ## 4. finalize
 
-```
-finalize experiments/NN-<name>
-```
+**When:** a completed run answers the protocol.
 
-Reads: the protocol, every run record of the area, the audit records, git.
-Changes: nothing. Its first station chooses the **answering run**
-(`answering_run.bound_answering_run`): the run the head adopted, once
-it adopted one; before that the newest completed run bound to this
-protocol id that reports an intent key — a computation registers no ids,
-so for a computation it is simply the newest completed bound run. Every later
-station holds that run, and so does every other gate: nobody chooses
-twice. Then the stations: an adopted run that cannot answer blocks with
-the withdrawal, and bound runs newer by name than it are a warning; the
-output rows were written by it; its
-promise block is the one the first measurement registered — a change
-after it is held here, every changed sentence, key, constant and scope
-named with the way back, and not first at the adoption; the
-promises against its metrics; the code it ran — the measurement script
-and the modules it imports, not the analysis code or the pin — and the
-declared scopes unchanged since it ran (a fix after the run means:
-measure anew with the fixed code and audit that run — restoring the old
-code removes the difference, not the fault; it is the way out only for a
-change not meant); no field left open; at `low` the source frozen in the run and
-source and output tracked in git; the area test; every registered
-output — the rows, and a deliverable the task names — the file the run
-recorded (gone or another sha256 than outputs.json is a blocker); the
-denominators; the audit records — one of a deleted run is a blocker; and
-a kept output's null lane moved against its registered lane. Clean means
-the run can carry a number; it does not release one.
+**Allowed changes:** none through this command; it only reads evidence.
+
+**Command and output:** `finalize AREA` checks the selected answering run,
+registration, code, provenance, outputs, promises, area tests and audit
+evidence. It prints findings and writes no result declaration.
+
+**Done / way out:** no blocker remains. This permits the next checks; it
+does not release a result. A real implementation repair needs a new run
+and affected follow-up checks. Restore source only for accidental changes.
+The [answering-run rules](protocol-run-binding.md#the-answering-run) select
+the run; [the chain](architecture.md#the-chain) lists the exact checks.
 
 ## 5. The analysis audit and the decisions
 
-```
-labkit-audit experiments/NN-<name> --mode analysis
-labkit-audit experiments/NN-<name> --decide N STATUS --why "REASON" [--not-assessable criterion-1] --record <file>
-```
+**When:** a completed run needs analysis review, or a decided correction
+needs follow-up. Both repeat costs require analysis review before release.
+A hold awaiting that follow-up is resolved through this step.
 
-Reads: the protocol, the scripts and the repo-local modules they import,
-the answering run's rows and `metrics.json`, the files it declared as
-dependencies (a predictor's weights: small text whole, others by digest),
-the cited rules of the standard — one model call. Writes: `audits/<minute>-analysis.toml`, one
-`[[finding]]` per finding — its grade line and the lines the auditor wrote
-below it, up to the next finding or section (a FIX, READ, notes tally,
-verdict or scope line, a code fence; a blank line ends none), kept whole
-in `text` —, each `open`, bound to the code (`scope_sha`), the
-promise block (`block_sha`), the registration it judged — the kind and the
-question with the other fields the kind owes (`registration`; the report
-fields written later do not move it) — the run and what the auditor was
-shown of it (`shown_sha`) — with the run the protocol has adopted when that
-is another one, so withdrawing that adoption moves the state and the
-next audit follows earlier findings up, while the first adoption of the
-run audited moves nothing; and with the setup's prose the audit read
-(Terms, Data / scope, Model / tool, Model I/O, Exclusions / filters,
-Unit), so a description corrected in place is followed up too. The fields
-written after the audit (the Summary, Recorded results, the Limitation lines,
-the run list) are not bound. The person decides every finding; labkit stores the
-decision and never makes one. An earlier analysis record's BLOCKERs are decided
-before the next analysis audit: a follow-up is shown decided BLOCKERs only, so
-`labkit-audit --mode analysis` refuses, before the call, while one stands
-undecided in a record of another state, naming the `--decide` line of each. An accepted BLOCKER says its effect: the
-verdicts stand within the limit (`stands`), or the run cannot judge the
-named promise (`not assessable`) — where the protocol registers one: a
-computation has no [[promise]] table, `--decide` refuses every id there,
-and the printed ways out name `stands`, a fix, or the
-handover instead. At `low` this is the lane's one
-audit (LAB-017 The number of audits follows the cost tier); at
-`high` the preflight audit came before the freeze and this one
-comes before the number leaves (LAB-050 Analysis audit before reporting).
+**Allowed changes:** record decisions on findings through the decision tool.
+Keep the original findings. A corrected setup description needs the exact
+field named in the finding, a `fixed` decision and the follow-up audit's
+`resolved` for this state. A fresh audit alone does not release it. Follow
+the repair path for changed code or scientific choices.
+
+**Command and output:** `labkit-audit AREA --mode analysis` calls the auditor
+and writes its bound record under `audits/`. Use `labkit-audit AREA --findings`
+to inspect it without a model call, then `labkit-audit AREA --decide N STATUS
+--why "REASON" --record FILE` for each decision.
+
+**Done / way out:** required decisions and follow-up evidence cover the
+current state. `fixed` records a repair decision, not proof that the old
+run is corrected. Earlier undecided BLOCKERs must be decided before the
+next analysis audit. A limitation must state what claims remain supported
+or which promises cannot be assessed. See [audit and follow-up contracts](architecture.md#the-chain)
+and [decision guidance](../labkit/docs/agent-guide.md#4-finalize-audit-and-decide).
 
 ## 6. The decision review — when a BLOCKER was decided `limitation` with `stands`
 
-```
-protocol-fill PROTOCOL-<name>.md "Conclusion=…"      # the claim, first
-labkit-audit experiments/NN-<name> --review [--record <file>]
-```
+**When:** an accepted BLOCKER says its verdicts stand within a limitation,
+or another decision falls under the existing review rules. These include
+closing a previously unconfirmed decision and dismissing a carried finding.
 
-Needed only when an accepted BLOCKER carries `stands`: a severe finding is
-not settled by a reason alone. A second, cold auditor gets the decisions,
-the Conclusion, the result as it will render, the files the findings name
-and the run as shown, and says per decision `upheld`, `rejected` or
-`insufficient` (`audits/<minute>-review.toml`). Only `upheld` releases;
-it is bound to the decision and the Conclusion as reviewed — change
-either and the review is stale. `rejected` means deciding again (limit the
-Conclusion, change the effect, fix the fault), not drawing again; the
-command refuses a second draw on an unchanged state. `--again` draws
-anyway: its verdicts count, and it releases nothing — an `upheld` from
-`--again` draws alone releases no decision. The exit says the state, not
-the draw: 0 every decision reviewed released, 1 one held. Deciding again is
-not closing: once a review did not uphold a decision on a finding, a
-`false-positive` or `fixed` on it is under review as well — the
-reviewer is asked whether the reason shows the finding inapplicable, the
-fault gone in the files as audited, or the task somebody else's — and
-`report-check` holds it by the finding's grade until a review upholds
-the new decision. The same holds for a carried finding — one a follow-up
-audit did not find gone — closed `false-positive`. A reason alone
-releases nothing. An accepted WARNING with `stands` owes no review yet;
-`report-check` names it as a warning.
+**Allowed changes:** correct the Conclusion, decision or supporting evidence
+as required. Changing the reviewed claim or decision makes its review stale.
+
+**Command and output:** write the Conclusion through `protocol-fill`, then
+run `labkit-audit AREA --review [--record FILE]`. It writes the second
+reviewer's verdicts under `audits/`.
+
+**Done / way out:** required decisions are upheld. On `rejected`, change the
+claim, decision or faulty work; on `insufficient`, supply the missing evidence.
+Repeated draws do not erase a rejection. Details and exceptional cases:
+[decision review in the chain](architecture.md#the-chain). An accepted WARNING
+with `stands` does not carry the general BLOCKER review duty.
 
 ## 7. The adoption
 
-```
-protocol-fill PROTOCOL-<name>.md --from-run <run_id>
-```
+**When:** the run and decisions meet the release requirements.
 
-Reads: the run's `metrics.json` and the covering audit records (the
-analysis records whose code, promise and run stamps are the area's now).
-Changes: **the protocol file only** — the head's `[result] run =
-"<run_id>"` (the one adoption that this protocol reports a number: the
-**adopted run**), the `Recorded results` line (the reportable verdict of
-every registered promise — a quality check not assessable or
-not met leaves each criterion not assessable —, then the other metric keys
-and values as recorded, the run id, a note on the limits), one `Limitation (audit <record>
-#N)` line per decided limitation, and the run's entry in the protocol run
-list; the command names them as "Recorded results, [result] run, Runs".
-Before writing it runs `report-check` on the written text and restores
-the file on a blocker: a result adopted this way has passed every check.
-The `Conclusion` is the author's sentence, written before this step (the
-walkthrough does so); `--render` writes the generated lines again after
-a change.
+**Allowed changes:** write the author's Conclusion; generate the numerical
+result and limitations from their sources through the tools.
 
-An adopted result is replaced, never overwritten: `protocol-fill
-PROTOCOL-<name>.md --withdraw --why "<why>"` removes `[result]`, resets
-the generated lines and marks the run's entry in the run list `withdrawn
-<date>: <why>` (with `--into REPORT.md` it also withdraws the result
-blocks there). It touches no audit record and releases nothing: the
-analysis audit of the run that answers comes next — it follows earlier
-decided BLOCKERs up —, then this step for that run. An audit made while
-another run was adopted does not cover the new adoption. The commit
-hook holds the code to an adopted run, so a change of the measuring code
-after an adoption starts with the withdrawal.
+**Command and output:** `labkit-adopt AREA [RUN_ID]` adopts the result, writes
+the registered report block — where the run's progress account stood, which
+it replaces — and checks the chain. For the protocol alone,
+`protocol-fill PROTOCOL --from-run RUN_ID` writes `[result]`, Recorded
+results, limitations and the Runs entry; a failed adoption check restores
+that protocol edit.
+
+**Done / way out:** the result is adopted and generated blocks agree with
+its sources. A registered report still needs its final text and review
+(step 8). If a later stage of `labkit-adopt` fails, read which earlier
+writes remain and resume after fixing the named issue. To repair an adopted
+result, withdraw first. See [the declared run](protocol-run-binding.md#the-declared-run).
 
 ## 8. The report block — the number outside the protocol
 
-```
-protocol-fill PROTOCOL-<name>.md --into REPORT.md
-```
+**When:** the result has been adopted, or the report discusses a run without
+adopting it.
 
-Changes: `REPORT.md` (or any note) gets a generated **report result
-block** between two markers: the Recorded results line and the Limit
-lines as the protocol renders them, owned by the protocol named in the
-opening marker; after a new run is adopted the same command replaces it.
-What the block guarantees: it equals what its protocol's bound sources
-render — the run's metrics, the records' decided limitations — and the
-protocol's whole chain holds. What it does not: the prose beside it. A
-count or median the run never stored has no source; numbers outside the
-block are named as unsourced (a hint), and whether the prose reads the
-number rightly, and whether a decided limitation is enough, stay the audit's
-and the reader's judgement. The report is a file at its own path: a
-report that is a symbolic link, wherever it points, is refused at the
-stop and the commit — the file a link points to can lie where no report
-is read, as `data/` — and the refusal names the copy that replaces the
-link; its other checks follow once the copy is in place.
+**Allowed changes:** edit the report's prose. Use tools for generated blocks
+and values. Store measured quantities in the run rather than retyping them.
 
-A number about the inputs — records per split, class sizes, a median or
-threshold the code derives — therefore belongs in `metrics.json`: the
-measuring code's `evaluate_rows` computes it from the kept rows, and the
-block shows it. If the rows cannot give it, the rows must keep what it
-needs; writing it by hand into the report is no way out. The estimator
-skeleton stores `scored_class_counts` (accuracy and auc): the items per
-gold value in the scored rows — not the class distribution of the input
-file, which also holds the unlabelled split. `02_analyze.py --check`
-holds a stored key that vanished from the recomputation; it does not
-notice a number left out of the dict and written in prose.
+**Command and output:** `protocol-fill PROTOCOL --into REPORT.md` writes or
+updates that protocol's result block. For a run only discussed, use
+`protocol-fill PROTOCOL --discuss RUN_ID --why "REASON" --into REPORT.md`.
+Then `labkit-audit AREA --report-review REPORT.md` writes the required
+semantic review for the final state.
 
-A report that cites a protocol's **answering run** while that protocol
-has adopted no result is blocked: at `low` the report is the promotion,
-and this is its shape without the adoption (`report_check.promotions`;
-sixth haiku round, t3 and t18: `--from-run` refused, REPORT.md written
-from `metrics.json` by hand). The sentence names the adoption
-(`protocol-fill <PROTOCOL> --from-run <run_id>`, which says what it still
-owes) and the way out for a run only looked at: a discussion block,
-`protocol-fill <PROTOCOL> --discuss <run_id> --why "<what refused the
-adoption, what you found>" --into REPORT.md` — its head holds the
-protocol, the run and the why as TOML, its line is written from them. A
-block without its why, one whose line differs from its head, a second
-block of the same protocol and run, and a discussion of a run some
-protocol has adopted block (the result block shows that number); numbers
-in and beside a discussion are named as a hint. A report with a
-discussion block owes a report review of its state: `labkit-audit <AREA>
---report-review REPORT.md` writes `audits/report-reviews/<minute>-review.toml`
-with the fingerprint of the inputs it read, and the gate holds the report
-until a review of the state it reads names no claim; a claim holds that
-state, and only a changed report or source and a review of it release it.
-The report the head registers (`report = "REPORT.md"`) owes the same
-review of its own state once its result or handover block stands —
-whether or not it discusses a run: its prose may still present an older
-run's verdict as the result. `labkit-adopt` names that review as its
-fourth step and does not hold it (the text comes after); the stop and the
-commit do. A registered report never written after the area measured
-holds the stop as an incomplete delivery; a research note citing a run
-owes no review unless it discusses one, and `--report-review` reads any
-report on request.
-While the area's audit evidence is gone (`attempts.evidence_gaps`) no
-review can start, so the hold, the review's refusal, the adoption's and
-the handover name the route that works: restore the evidence, or the
-report cites no run of the area (`report_hold.lost_evidence`).
-`--again` draws once more on a judged state: its claims hold the state
-like any review's, and it releases nothing. The command prints this
-draw's claims and the state apart, and its exit code is the state's — 0
-once the state is released, 1 after a draw while a claim or only
-`--again` draws hold it (the commit counts the review records the index
-holds); a plain re-run on a claimed state is refused before any call,
-exit 2. A probe's or an older run's citation stays the warning it was:
-an exploration's run is looked at.
+**Done / way out:** generated blocks match their sources and any required
+review names no unsupported claim. A registered report takes its final
+form with a result or handover block and still owes review of its final text. Before
+the adoption, a discussion of the run the gates hold the protocol to is its
+progress account: the commit takes it without a review; it releases no
+result. Any other discussion, and a discussion in a report the head does not
+register, owes review under the applicable report rules. Correct the text or
+evidence and review the changed state. Do not redraw an unchanged claimed
+state until it passes. A missing registered report after measurement holds
+the stop.
 
-**The registered report owes its result.** A protocol whose head names
-its report file (`report = "REPORT.md"`, a path relative to the
-repository root, stamped by `labkit-init exp --report-file REPORT.md`, or
-on a protocol stamped without it registered by `protocol-fill <PROTOCOL>
-report=REPORT.md` — before the first measurement only, another file with
-`--force`; once the area measured, no fill moves or drops it;
-`usability stage` registers it for the SAB tasks, whose sheet asks for
-the file) is owed that result by that file, run id or not: once the
-file exists — in the tree at the stop, in the index at the commit — it
-carries the protocol's result block of the adopted run or the
-protocol's handover block, else the stop, the commit and the plain
-`report-check` hold it with the three ways out: adopt the newest kept
-run and `--into`; `--discuss`, which releases nothing (the report then
-still owes the result or the handover); `--handover`. While nothing is
-adopted, a discussion of the run the gates hold the protocol to is the
-**progress account**: the commit takes it without a report review, the
-stop holds it once naming the audit and the adoption or the handover —
-the commit rule for this state is deliberately looser, the release
-requirements are not —, and the adoption's `--into` puts the result block
-where it stood (`report_hold.progress_account`, `report_blocks.with_block`).
-A number with the run id removed, a run id typed in, a discussion of
-another run, a handover block typed by hand without its record: all held (`report_hold.report_owed`;
-pressure pilot 2026-10-29, tasks 34, 15, 60: the hook refused the
-citation, the agents deleted the run id, the commit passed). A report
-not yet written owes nothing — the obligation is on what is delivered
-—, and a protocol that registers none holds no file to this; general
-notes and input descriptions elsewhere stay outside it.
+The block guarantees exact rendering of bound values, not the meaning of
+prose beside it. Numbers outside blocks are static hints. Exact report,
+review, citation and file rules are in [the chain](architecture.md#the-chain).
 
 ## 9. The gate — at the stop and the commit
 
-To end a protocol without a result (a handover), use `labkit-audit <AREA> --findings`
-first: it reads all open BLOCKER records and evidence errors without a
-model call and prints complete commands. For a failed audit call — a
-`-failed.toml` or an attempt the journal ended without a record (its
-answer kept under `audits/answers/`) — it names the call, its error and
-its kept answer and offers the handover, exit 2; that call left no
-findings to decide. A later completed audit of the same mode and the
-same protocol with the same promise block supersedes it, also after a
-code change: `--findings` then shows it as superseded, informational.
-The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. Whether the current result may be adopted is decided
-by the checks of the current code and run (the follow-up holds,
-report-check), not by the supersession. The protocol is named by its file name in the area, not by the head's `id` (a protocol without an `id` must still be nameable; Max, 2026-10-28): a protocol file renamed since counts as another protocol, so its earlier failed calls stay named until the file is renamed back and audited, or the area is handed over. A historical call (a start of
-labkit 0.103.0 or earlier, which names no promise block and protocol, or
-a `-failed.toml` no journal attempt names) is named as such with the
-audit, run again now in the current format, that supersedes it — an
-audit of its mode, of any protocol of the area, since the old start
-names none. A readable BLOCKER that stays unresolved stays `open`;
-use its `protocol-fill <PROTOCOL>
---handover --why "<what blocks>" --tried "<what you tried>" --into
-REPORT.md` command. It withdraws the result's adoption, keeps an
-immutable handover record in `audits/handovers/` — with the run the
-protocol stands at and what held its adoption, computed, and a warning
-when nothing held it (a missed criterion is a result) — and writes its handover
-block into the report (one per protocol, replaced in place). The selected
-protocol's result blocks in that report are withdrawn; other text and
-other protocols' blocks stay. Citations in prose or other reports must
-still be removed or explicitly discussed. Only an unchanged block, protocol and audit state can
-finish despite documented integrity loss; a changed block or new evidence
-needs a new handover, prose beside the block does not. The commit
-requires the same files staged together. Normal audit/adoption
-still holds missing evidence. See [recovery contract](notes/2026-10-27-handover-recovery.md).
+**When:** the agent ends its turn or commits changed work.
 
-```
-report-check experiments/NN-<name>                       # by hand
-report-check --if-reported [--staged] <paths>            # what the stop hook and the pre-commit run
-```
+**Allowed changes:** none by the checks themselves. Fix the named issue
+through the appropriate command or repair path.
 
-Reads: the protocol as the named state holds it (the tree at the stop,
-the index at the commit), the runs, the records, the reviews, the citing
-reports. Changes: nothing. The stations, every one named in its output:
-the freeze (`high`) or the registration as committed at the
-first measurement (`low`); finalize clean and the answering run a
-full run; a decided analysis record covering code, promises, run and what
-was shown; every generated line equal to its rendering, written once;
-every BLOCKER's `stands` upheld by a review; `02_analyze.py --check`
-passing. A report that cites an adopted run owes that protocol's block —
-also a committed, untouched report, when the protocol among the paths
-adopts that run newly against HEAD (a report committed before the
-adoption, then the adoption committed alone, left the delivered
-state with a blocker no commit saw). A protocol that has adopted no result
-owes nothing but its registered report: an exploration ends without a
-reported number, and a REPORT.md its head registers, once delivered,
-carries its handover block or its result block (section 8; the
-protocols registering a file among the paths are held too, the report
-at the repository root lying in no area).
+**Command and output:** hooks check automatically; `report-check AREA` runs
+the result gate explicitly. `report-check --if-reported [--staged] PATH...`
+checks affected delivered work. The stop reads the working tree; the commit
+reads staged evidence. These checks print findings and do not write approval.
+
+**Done / way out:** the applicable checks have no blocker. A registered
+report carrying only the progress account passes the commit; the stop holds
+it once, naming the audit and the adoption or the handover — the commit rule
+for this intermediate state is deliberately looser, the release requirements
+are not. A clean commit check alone does not mean every scientific claim was
+assessed. If work must end without a result, record a handover through the commands below.
+Selection and enforcement: [run and hook enforcement](architecture.md#run-and-hook-enforcement).
+
+## Repair and recovery
+
+1. Inspect `labkit-next AREA` and `labkit-audit AREA --findings`. Their
+   messages name the held evidence, allowed action and next command.
+2. If repairing an adopted result, use `protocol-fill PROTOCOL --withdraw
+   --why "REASON" --into REPORT.md` for the affected report. This withdraws
+   the result and generated blocks; it does not restore source or delete
+   the old run and audits.
+3. Choose the repair that matches the change:
+   - **Implementation:** repair code and tests, record the decision, repeat
+     the affected measurement, then finalize and obtain the required
+     follow-up audit and reviews. Adopt the new result.
+   - **Setup description of the same run:** correct the named field and
+     decide its finding `fixed`. Obtain an explicit `resolved` on that
+     finding in a follow-up audit of the current state; no new measurement
+     is needed for this correction. A fresh audit without that verdict
+     does not suffice, even for a WARNING. Whether it describes the same
+     experiment is the auditor's judgement; see the [correction contract](notes/2026-11-02-registered-field-repair.md).
+   - **Conclusion alone:** update the claim; this alone needs no new
+     measurement or analysis audit. Required decision and report reviews
+     still apply.
+4. A changed registered scientific choice needs an explicit new registration
+   with the departure and earlier results retained. An accidental edit needs
+   restoration from the named source, not a changed scientific explanation.
+   Do not clear holds by deleting evidence or resetting the repository.
+
+To end without a result, use `protocol-fill PROTOCOL --handover --why
+"REASON" --tried "WHAT WAS TRIED" --into REPORT.md`. It records the remaining
+state and writes its handover block. Stage the related protocol, report and
+evidence together. A handover does not approve a result or let new audits
+ignore lost evidence. Other citations may still need correction.
+
+For failed audit calls and missing evidence, follow the specific recovery
+commands from `--findings`; an execution failure is not an audit verdict.
+The [handover recovery contract](notes/2026-10-27-handover-recovery.md)
+explains retained losses, open findings and when an acknowledgement expires.
+Detailed command options are in the [command reference](../README.md#command-reference)
+and [agent guide](../labkit/docs/agent-guide.md#when-you-are-stuck--both-repeat-costs).
 
 ## The questions a reader should be able to answer
 
-- *Where is the answering run chosen?* Once, in
-  `answering_run.bound_answering_run`, called by finalize's first station;
-  every other gate reads that choice (`audit_binding.audited_run`).
-- *When is a decision review needed?* When an accepted BLOCKER carries
-  `stands`; `report-check` blocks until one upholds it. And when a
-  finding a review did not uphold is closed instead (`false-positive`,
-  `fixed`): the new decision owes its own review. And when a
-  carried finding is closed `false-positive`. Not for
-  `not assessable`, not (yet) for a WARNING.
-- *Which file does `--from-run` change?* The protocol, and only it.
-- *What does the report block guarantee, and what remains judgement?* The
-  block equals its bound sources and its protocol's chain holds; the
-  prose, the reading of the number and whether a limit is enough do not
-  follow from it.
+- **Which run supplies this number?** The protocol's declared result must
+  be its [answering run](protocol-run-binding.md#the-answering-run).
+- **Which decision still needs review?** Follow the finding's printed
+  command; the [chain](architecture.md#the-chain) states the review rules.
+- **What does `--from-run` change?** The protocol only. `labkit-adopt`
+  additionally writes the registered report block and checks the chain.
+- **What remains scientific judgement?** Whether the method and claim are
+  justified. Matching records and generated values establish narrower facts.
