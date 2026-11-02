@@ -151,6 +151,38 @@ class SameComparison(unittest.TestCase):
         for change in held:
             self.assertIn(change, declared)
 
+    def test_the_promises_and_their_constants_are_still_compared(self):
+        """The shared comparison adds what the number is about; it keeps
+        every promise difference: sentence, key, scope, a constant changed,
+        added or dropped, and an id added or dropped."""
+        old = head(promises=block(0.25)) + BODY
+        changed = (
+            block(0.25)
+            .replace('key = "criterion_1_pass"', 'key = "criterion_1_ok"')
+            .replace(
+                'scope = ["scripts/01_measure.py"]\nconstants',
+                'scope = ["scripts/02_analyze.py"]\nconstants',
+            )
+            .replace("{ margin = 0.25 }", "{ margin = 0.25, floor = 0.5 }")
+        )
+        new = head(promises=changed) + BODY
+        named = [
+            what for what, _, _ in protocol_history.registration_differences(old, new)
+        ]
+        self.assertEqual(
+            named,
+            ["criterion-1 key", "criterion-1 scope", "criterion-1 floor"],
+        )
+        dropped = head(promises=block(0.25).split("\n\n[[promise]]")[0] + "\n") + BODY
+        self.assertEqual(
+            protocol_history.registration_differences(old, dropped),
+            [("quality-check-1", "every item predicted", "(none)")],
+        )
+        self.assertEqual(
+            protocol_history.registration_differences(dropped, old),
+            [("quality-check-1", "(none)", "every item predicted")],
+        )
+
 
 class _Areas(unittest.TestCase):
     """Two areas in one repository: A registered and measured, B replacing it."""

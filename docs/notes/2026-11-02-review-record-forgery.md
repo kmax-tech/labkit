@@ -1,0 +1,67 @@
+# 2026-11-02 — a review record edited by hand releases what the review held
+
+**Question.** While checking the handover repair (`14a7fad7`: the handover
+no longer binds what a report review writes): can an agent turn a review
+that holds a report, or a decision, into one that releases it, and which
+checks does it pass? This note records the limit; it adds no protection.
+
+**Smallest case.** Count lab, `report = "REPORT.md"` registered, the run
+adopted, `labkit-audit --report-review REPORT.md` naming one claim — the
+gate holds the report ("the report review holds this state"). The agent
+edits one file, `audits/report-reviews/<minute>-review.toml`, before that
+file is first committed: `claims = 1` → `claims = 0`, the `[[claim]]`
+table deleted. Nothing else changes. The kept answer
+(`audits/answers/<id>-report-review-<hex>.txt`), the journal lines and the
+evidence copy in the git directory still name the claim; nothing compares
+a record with them (`attempts.evidence_copy`: "it is no check of a
+record's content").
+
+| Check | Result after the edit |
+|---|---|
+| `report-check AREA`, `report-check --if-reported --staged` | all clear |
+| pre-commit hook | passes; the commit is made |
+| `labkit-next` | "nothing holds it — the number may be reported" |
+| `labkit-audit --findings`, `attempts.evidence_gaps` (tree, index) | nothing |
+
+The release: the registered report counts as reviewed clean, so the
+adopted number may be reported; with a handover, the end without a result
+counts as complete.
+
+**Variants.**
+
+- *The record committed first, then edited:* the commit refuses it
+  ("changed in the index since HEAD — labkit writes it once"); the tree
+  checks (`labkit-next`, `report-check AREA`) still say nothing holds.
+- *A decision review* (`audits/<minute>-review.toml`): `rejected` → `upheld`
+  in three lines (`verdict`, `upheld`, `rejected`) releases the decision
+  it judged — here a BLOCKER on the Conclusion decided `fixed`
+  (`9c5ce7e9`); the same holds for a `limitation` with `stands` and a
+  BLOCKER decided `false-positive`.
+- *A record deleted* is caught: the journal names it as lost evidence, and
+  labkit-audit starts nothing until it is restored.
+
+**What the repairs changed.** Nothing for the cases above: they passed on
+`da7b2213` as well. One incidental guard went: before `14a7fad7`, an edited
+review record after a handover voided the handover, so the stop held —
+for the wrong reason, and the same binding voided the honest review.
+
+**Where the documentation states this limit.** Explicitly only in a
+dated note, `docs/notes/2026-10-26-escape-routes-checks-and-exits.md`,
+rows 12 ("well-formed: no — no check ties a record to a journal entry")
+and 13 ("a review with claims deleted — only when committed"); row 13's
+reason, that report and decision reviews are not journaled, is outdated —
+they are now (`attempts`, modes `report-review` and `review`). The code
+says it in `attempts.evidence_copy`. The current contracts do not:
+README's tier table and its instruction "the record is never edited by
+hand", `docs/architecture.md` (the chain), `docs/workflow.md` and the
+standard name no check of a record's content and no such limit.
+`docs/notes/2026-11-02-workflow-simplification.md` says in general that
+local files are no immutable history against an agent that can rewrite
+every copy.
+
+**Out of scope here.** By decision of 2026-11-02 no provenance protection
+is added in this work; the limit is recorded. Reproduction: labkit-evidence
+`usability/2026-11-02-repair-paths/scripts/forgery.sh`, log
+`logs-fe40f50d/forgery.log`; the boundary tests in
+`tests/test_repair_paths.py` show what does hold (a changed input owes the
+review again, a deleted record is lost evidence).

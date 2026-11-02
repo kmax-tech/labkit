@@ -443,6 +443,67 @@ class RegisteredReportRepairs(RepairPaths):
         self.answered(CLEAN_ANALYSIS, "--mode", "analysis")
         self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
 
+    def handed_over_and_reviewed(self) -> None:
+        """The handover written, its report reviewed clean, committed."""
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--handover",
+            "--why",
+            "the report must live elsewhere; a successor registers it",
+            "--tried",
+            "measured once",
+            "--into",
+            "REPORT.md",
+        )
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("handed over, the report reviewed")
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+
+    def test_after_the_handover_a_changed_input_of_the_review_owes_it_again(self):
+        """Only what the review writes is left out of the handover: the
+        report it read, edited, owes a new review; the review record gone
+        is lost evidence the journal names, restored it counts again. The
+        handover stands through both — its block and the evidence it binds
+        are unchanged. (A record edited in place passes: no check reads a
+        record's content against its kept copy — the limit
+        docs/notes/2026-11-02-review-record-forgery.md describes.)"""
+        self.handed_over_and_reviewed()
+        report = self.lab / "REPORT.md"
+        report.write_text(
+            report.read_text(encoding="utf-8") + "\nThe mean is final.\n", "utf-8"
+        )
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("is handed over", nxt)
+        self.assertIn("--report-review", nxt)
+        self.assertIn("--report-review", self.commit("prose", ok=False))
+        self.run_("git", "checkout", "HEAD", "--", "REPORT.md")  # the refusal staged it
+        self.assertNotIn("--report-review", self.run_(".venv/bin/labkit-next", AREA))
+        (review,) = (self.lab / AREA / "audits" / "report-reviews").glob("*.toml")
+        written = review.read_bytes()
+        review.unlink()  # an output gone is lost evidence the journal names
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("audit evidence is gone", nxt)
+        self.assertIn(
+            review.name,
+            self.run_(".venv/bin/labkit-audit", AREA, "--findings", ok=None),
+        )
+        review.write_bytes(written)
+        self.assertNotIn("--report-review", self.run_(".venv/bin/labkit-next", AREA))
+
+    def test_after_the_handover_other_evidence_or_the_protocol_voids_it(self):
+        """The handover still binds everything else: an answer file of
+        another attempt, and the protocol."""
+        self.handed_over_and_reviewed()
+        lab = self.lab
+        stray = lab / AREA / "audits" / "answers" / "2026-11-02T10-00-analysis-ab12.txt"
+        stray.write_text("verdict: 0 blockers\n", encoding="utf-8")
+        self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        stray.unlink()
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        self.fill(f"Terms of this protocol={TERMS}; mean: the arithmetic mean")
+        self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+
     def conclusion_blocker(self) -> tuple[str, str]:
         """An overclaiming Conclusion flagged as a BLOCKER at its field,
         rewritten and decided `fixed`; the record and the decision's line."""
@@ -489,6 +550,26 @@ class RegisteredReportRepairs(RepairPaths):
         self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
         self.fill(f"Conclusion={OVERCLAIM}")
         self.adopt(ok=False)
+
+    def test_the_twin_a_decision_changed_after_the_review_holds(self):
+        """The upheld review binds the decision as it stood: decided again
+        with another reason, the BLOCKER is held until a review of that."""
+        record, _ = self.conclusion_blocker()
+        self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
+        self.decide(record, "fixed", "the Conclusion now states the mean alone")
+        self.adopt(ok=False)
+        self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
+        self.assertIn("finalized, audited, checked", self.adopt(ok=True))
+
+    def test_the_twin_a_review_of_another_claim_does_not_carry_over(self):
+        """Upheld for one Conclusion, rewritten, then put back: the review
+        of the first text counts again only for exactly that text."""
+        record, _ = self.conclusion_blocker()
+        self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
+        self.fill("Conclusion=The twelve cases hold 3.5 documents each.")
+        self.adopt(ok=False)
+        self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
+        self.assertIn("finalized, audited, checked", self.adopt(ok=True))
 
     def test_a_code_blocker_decided_fixed_with_nothing_changed_is_not_sent_to_a_followup(
         self,
