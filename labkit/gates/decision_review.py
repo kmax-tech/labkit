@@ -61,9 +61,9 @@ import re
 from pathlib import Path
 from typing import NamedTuple
 
-from labkit.formats.runs import read_run_config, run_path
+from labkit.formats.runs import run_path
 from labkit.checks.audit_binding import AuditError, run_shown
-from labkit.checks.run_record_check import script_of
+from labkit.checks.run_record_check import script_as_run
 from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
@@ -217,25 +217,29 @@ SCRIPT_NOT_SHOWN = "MEASURING SCRIPT — not inlined"
 
 def measuring_script(
     area: Path, run_dir: Path, snap: Snapshot
-) -> tuple[list[Path], list[tuple[str, str]]]:
-    """([the script RUN_DIR ran], []) when the area snapshot SNAP holds it
-    (`run_record_check.script_of`: the path its command names, else the one
-    file of its name) — what the review shows when no finding under review
-    names a code file: a finding placed in the protocol left the reviewer
-    no code (round 2, t34 r1: a Unit finding on band powers, judged without
-    the call that computed them); else ([], one piece saying why it is not
-    shown). Read-only."""
-    cfg = read_run_config(run_dir)
-    if cfg is None:
-        return [], [(SCRIPT_NOT_SHOWN, f"run {run_dir.name} has no readable record")]
-    script = script_of(area, cfg)
-    if isinstance(script, str):
-        return [], [(SCRIPT_NOT_SHOWN, script)]
-    if script.resolve() not in snap.contents:
-        return [], [
-            (SCRIPT_NOT_SHOWN, f"{script.name} is not in the area's code stamp")
-        ]
-    return [script], []
+) -> list[tuple[str, str]]:
+    """The piece the review shows of the script RUN_DIR ran, when no
+    finding under review names a code file — a finding placed in the
+    protocol left the reviewer no code (round 2, t34 r1: a Unit finding on
+    band powers, judged without the call that computed them). The script
+    as the run ran it (`run_record_check.script_as_run`): the area's file
+    from SNAP when its digest is the one the run recorded, else the run's
+    own copy, labelled as such; else one piece saying why none is shown. A
+    script changed since the run never stands in for the one it ran.
+    Read-only."""
+    script, note = script_as_run(area, run_dir)
+    repo = layout_root(area)
+    if script is None:
+        return [(SCRIPT_NOT_SHOWN, note)]
+    if not note:
+        if script.resolve() not in snap.contents:
+            return [
+                (SCRIPT_NOT_SHOWN, f"{script.name} is not in the area's code stamp")
+            ]
+        return [(f"FILE: {shown(script, repo)}", snap.text(script))]
+    return [
+        (f"FILE: {shown(script, repo)} ({note})", script.read_text(encoding="utf-8"))
+    ]
 
 
 class Evidence(NamedTuple):
@@ -312,11 +316,10 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]
     code = [f for f in named_files(decided, repo, area) if f.resolve() in snap.contents]
-    if not code and run_dir is not None:
-        code, missing = measuring_script(area, run_dir, snap)
-        pieces += missing
     for f in code:
         pieces.append((f"FILE: {shown(f, repo)}", snap.text(f)))
+    if not code and run_dir is not None:
+        pieces += measuring_script(area, run_dir, snap)
     pieces += list(seen.pieces)
     pieces.append((f"FILE: {label}", rules_text))
     body = prompt_body(pieces)

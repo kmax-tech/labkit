@@ -16,6 +16,7 @@ import json
 import os
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -57,12 +58,14 @@ def area_with(
     *,
     promise_block: str | None = "",
     metrics: dict | None = None,
+    before_audit: Callable[[Path], None] | None = None,
 ) -> tuple[Path, Path]:
     """(area, record) — a low-lane area whose one run is audited with ROWS,
     each finding N decided as DECIDE[N] = (status, reason, effect); its
     protocol's [[promise]] tables PROMISE_BLOCK (`head`'s `promises`: the
     default tables, None for none — a computation's); METRICS more keys of
-    the run's metrics.json."""
+    the run's metrics.json; BEFORE_AUDIT called with the area between the
+    run and the audit that writes the record."""
     root = Path(tempfile.mkdtemp())
     (root / ".git").mkdir()  # the layout root, so paths show repo-relative
     area = root / "experiments" / "01-x"
@@ -93,6 +96,8 @@ def area_with(
     data = json.loads(cfg.read_text(encoding="utf-8"))
     data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}
     cfg.write_text(json.dumps(data), encoding="utf-8")
+    if before_audit is not None:
+        before_audit(area)
     record = findings.write(
         area,
         "analysis",
@@ -957,6 +962,67 @@ class TheMeasuringScriptWithoutANamedFile(unittest.TestCase):
         self.assertEqual(rc, 0, out + err)
         self.assertEqual(sent[0].count(SCRIPT_PIECE), 1)
 
+    def test_a_script_changed_between_the_run_and_the_audit_shows_the_runs_copy(self):
+        """The record's stamp holds the changed code, the run recorded the
+        old: the review shows the copy the run kept, labelled, never the
+        tree's script as the one that ran."""
+
+        def change(area: Path) -> None:
+            script = area / "scripts" / "01_measure.py"
+            ran = script.read_text(encoding="utf-8")
+            (area / "runs" / RUN / "script-source.py").write_text(ran, encoding="utf-8")
+            script.write_text(ran + "CHANGED_AFTER_THE_RUN = 1\n", encoding="utf-8")
+
+        area, _ = area_with(
+            [IN_PROTOCOL],
+            {1: ("limitation", "the library normalizes", "stands")},
+            before_audit=change,
+        )
+        rc, out, err, sent = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn(
+            f"===== FILE: experiments/01-x/runs/{RUN}/script-source.py (the copy {RUN} "
+            f"kept as it ran it — 01_measure.py changed since {RUN} ran it) =====",
+            sent[0],
+        )
+        self.assertNotIn("CHANGED_AFTER_THE_RUN", sent[0])
+        self.assertNotIn(SCRIPT_PIECE, sent[0])
+
+    def test_a_changed_script_without_the_runs_copy_is_said_not_shown(self):
+        def change(area: Path) -> None:
+            script = area / "scripts" / "01_measure.py"
+            script.write_text(
+                script.read_text(encoding="utf-8") + "CHANGED_AFTER_THE_RUN = 1\n",
+                encoding="utf-8",
+            )
+
+        area, _ = area_with(
+            [IN_PROTOCOL],
+            {1: ("limitation", "the library normalizes", "stands")},
+            before_audit=change,
+        )
+        rc, out, err, sent = run_review(area, UPHELD)
+        self.assertIn(f"===== {decision_review.SCRIPT_NOT_SHOWN} =====", sent[0])
+        self.assertIn(
+            f"01_measure.py changed since {RUN} ran it, and {RUN} keeps no copy",
+            sent[0],
+        )
+        self.assertNotIn("CHANGED_AFTER_THE_RUN", sent[0])
+
+    def test_a_script_changed_after_the_audit_refuses_the_review(self):
+        """The tree changed after the record: no review rests on it at all."""
+        area, _ = area_with(
+            [IN_PROTOCOL], {1: ("limitation", "the library normalizes", "stands")}
+        )
+        script = area / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "LATER = 1\n", encoding="utf-8"
+        )
+        rc, out, err, sent = run_review(area, UPHELD)
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(sent, [])
+        self.assertIn("the record's auditor read", out + err)
+
     def test_a_script_that_cannot_be_told_is_said_not_shown(self):
         area, _ = area_with(
             [IN_PROTOCOL], {1: ("limitation", "the library normalizes", "stands")}
@@ -966,11 +1032,38 @@ class TheMeasuringScriptWithoutANamedFile(unittest.TestCase):
         data["command"] = []
         data["script"] = "02_gone.py"
         cfg.write_text(json.dumps(data), encoding="utf-8")
-        found, missing = decision_review.measuring_script(
+        pieces = decision_review.measuring_script(
             area, area / "runs" / RUN, scope_sha.area_snapshot(area)
         )
-        self.assertEqual(found, [])
-        self.assertEqual(
-            missing,
-            [(decision_review.SCRIPT_NOT_SHOWN, "its script 02_gone.py is gone")],
-        )
+        self.assertEqual(len(pieces), 1)
+        label, text = pieces[0]
+        self.assertEqual(label, decision_review.SCRIPT_NOT_SHOWN)
+        self.assertIn("its script 02_gone.py is gone", text)
+
+
+class FalseAndZeroAreValues(unittest.TestCase):
+    """A required check whose value is `false` or `0` stands in the run: it is
+    shown as that value, never as missing, and draws no hint."""
+
+    def test_false_and_zero_are_shown_as_values_and_draw_no_hint(self):
+        for value, shown_as in ((False, "false"), (0, "0"), (0.0, "0.0")):
+            with self.subTest(value=value):
+                area, record = area_with(
+                    [CHECKED],
+                    {1: ("limitation", "the run counts it", "stands")},
+                    metrics={"feature_count": value},
+                )
+                rc, out, err, sent = run_review(area, UPHELD)
+                self.assertIn(
+                    f"   required check `feature_count` (must be 1) = {shown_as}",
+                    sent[0],
+                )
+                self.assertNotIn("feature_count`: missing", sent[0])
+                area, record = area_with(
+                    [CHECKED], {}, metrics={"feature_count": value}
+                )
+                rc, out = decide_cmd(
+                    area, record, "limitation", "--why", "the run counts it"
+                )
+                self.assertEqual(rc, 0, out)
+                self.assertNotIn("hint: this limitation rests", out)

@@ -29,9 +29,11 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   code.** Round 2 (t34 r1): a Unit finding on band powers was reviewed
   without the call that computed them — a finding placed in the protocol
   names no code file. When no finding under review names one, the review
-  shows the reviewed run's measuring script (`decision_review.
-  measuring_script`, resolved as the code binding resolves it,
-  `run_record_check.script_of`), or a line saying why it is not shown.
+  shows the reviewed run's measuring script as the run ran it
+  (`run_record_check.script_as_run`: the area's file when its digest is
+  the run's `script_sha`, else the copy the run kept, labelled), or a line
+  saying why none is shown — a script changed since the run never stands
+  in for the one it ran.
 - **A `stands` meets its required check.** Round 2 (t21 r10): a limitation
   resting on "verified: one feature" was judged `insufficient`, the count
   being in no run; the same finding with the count recorded was upheld

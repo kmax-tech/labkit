@@ -200,6 +200,39 @@ def script_of(area: Path, cfg: RunConfig) -> Path | str:
     return f"its script {named} is gone"
 
 
+def script_as_run(area: Path, run: Path) -> tuple[Path | None, str]:
+    """(the file that holds the script RUN ran, as it ran it; a note): the
+    area's script (`script_of`) when its digest is the `script_sha` the run
+    recorded (note ""), else the run's own copy (`runs.script_copy_path`)
+    when that copy's is (the note says so and why the tree's is not shown);
+    (None, why) when neither is — a script changed since the run is never
+    shown as the one it ran. Exact over the script's bytes; the modules it
+    imports are `code_since_run`'s question. Read-only."""
+    cfg = read_run_config(run)
+    if cfg is None:
+        return None, f"run {run.name} has no readable record"
+    if cfg.script_sha == "no-script":
+        return None, f"run {run.name} recorded no script"
+    script = script_of(area, cfg)
+    if (
+        isinstance(script, Path)
+        and file_digest(script)[:DIGEST_CHARS] == cfg.script_sha
+    ):
+        return script, ""
+    tree = (
+        script
+        if isinstance(script, str)
+        else f"{script.name} changed since {run.name} ran it"
+    )
+    kept = script_copy_path(run, Path(cfg.script).suffix)
+    if kept.is_file() and file_digest(kept)[:DIGEST_CHARS] == cfg.script_sha:
+        return kept, f"the copy {run.name} kept as it ran it — {tree}"
+    return None, (
+        f"{tree}, and {run.name} keeps no copy whose digest is the "
+        f"{cfg.script_sha} it recorded"
+    )
+
+
 def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can differ
     helpers: list[Path], script: Path, repo: Path | None, run_dir: Path, cfg: RunConfig
 ) -> tuple[list[GateFinding], list[str]]:
