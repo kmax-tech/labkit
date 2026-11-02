@@ -31,6 +31,18 @@ def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test hel
         return fn(*args, **kw)
 
 
+#: the tests of [criterion-1]'s bar that both stamped area tests carry
+#: (test-estimator.py.template, test-area.py.template): the reach of a
+#: perfect lane, `margin` and `at_least` each at its boundary, and the
+#: refusal of both or neither (docs/notes/2026-11-02-absolute-task-bar.md)
+STAMPED_BAR_TESTS = (
+    "test_perfect_effect_fires_c1",
+    "test_a_lane_exactly_at_null_plus_margin_passes",
+    "test_a_lane_exactly_at_the_stated_bar_passes_whatever_the_null",
+    "test_criterion_1_registers_exactly_one_bar",
+)
+
+
 class Lab(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -1677,12 +1689,15 @@ class Exp(unittest.TestCase):
         return root, area
 
     def _run_stamped_test(self, root: Path) -> subprocess.CompletedProcess[str]:
+        """The lab's stamped area test under pytest, every outcome reported
+        by name (`-rA`, read by `assert_passed`)."""
         return subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "pytest",
                 "-q",
+                "-rA",
                 "-p",
                 "no:cacheprovider",
                 str(root / "tests" / "test_01_foo_bar.py"),
@@ -1693,6 +1708,14 @@ class Exp(unittest.TestCase):
             timeout=120,
         )
 
+    def assert_passed(self, r: subprocess.CompletedProcess[str], *names: str) -> None:
+        """R, a stamped test run with `-rA`, exited 0 and reports each test of
+        NAMES as passed — named, not counted, so a test added to the template
+        leaves this proof standing and a renamed one fails it."""
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        passed = set(re.findall(r"^PASSED \S+::(\w+)", r.stdout, re.M))
+        self.assertEqual([n for n in names if n not in passed], [], r.stdout)
+
     def test_the_stamped_estimator_test_passes_as_stamped(self) -> None:
         """The area's test (`test-estimator.py.template`) runs green on the
         fresh stamp of a fit and of an apply (the seeded null, a band): the
@@ -1701,10 +1724,13 @@ class Exp(unittest.TestCase):
             with self.subTest(kind=kind):
                 root, _ = self._stamped_estimator_lab(kind)
                 r = self._run_stamped_test(root)
-                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                self.assertIn(
-                    "14 passed", r.stdout
-                )  # with the score guard (test_the_score_has_cases_here)
+                self.assertNotIn(" skipped", r.stdout)
+                self.assert_passed(
+                    r,
+                    "test_the_score_has_cases_here",
+                    "test_null_like_registered_lane_stays_silent",
+                    *STAMPED_BAR_TESTS,
+                )
 
     def test_the_stamped_estimator_test_passes_with_a_stated_bar(self) -> None:
         """An area whose [criterion-1] registers a bar the task states
@@ -1733,8 +1759,10 @@ class Exp(unittest.TestCase):
                         encoding="utf-8",
                     )
                     r = self._run_stamped_test(root)
-                    self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                    self.assertIn("14 passed", r.stdout)
+                    self.assertNotIn(" skipped", r.stdout)
+                    self.assert_passed(
+                        r, "test_the_score_has_cases_here", *STAMPED_BAR_TESTS
+                    )
 
     def test_the_stamped_prompt_test_passes_with_either_bar(self) -> None:
         """The prompt skeleton's area test (`test-area.py.template`) runs green
@@ -1766,8 +1794,7 @@ class Exp(unittest.TestCase):
                     encoding="utf-8",
                 )
                 r = self._run_stamped_test(root)
-                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                self.assertIn("19 passed", r.stdout)
+                self.assert_passed(r, *STAMPED_BAR_TESTS)
 
     def test_the_stamped_estimator_test_has_spearman_cases(self) -> None:
         """An area that registers Spearman (`SCORE = "spearman"`) gets cases
@@ -1784,8 +1811,10 @@ class Exp(unittest.TestCase):
                     encoding="utf-8",
                 )
                 r = self._run_stamped_test(root)
-                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                self.assertIn("14 passed", r.stdout)
+                self.assertNotIn(" skipped", r.stdout)
+                self.assert_passed(
+                    r, "test_the_score_has_cases_here", *STAMPED_BAR_TESTS
+                )
                 script.write_text(
                     stamped.replace('SCORE = "accuracy"', 'SCORE = "r2"'),
                     encoding="utf-8",
@@ -1833,8 +1862,12 @@ class Exp(unittest.TestCase):
                     encoding="utf-8",
                 )
                 r = self._run_stamped_test(root)
-                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-                self.assertIn("14 passed", r.stdout)
+                self.assert_passed(
+                    r,
+                    "test_only_a_registered_null_order_goes_without_a_band",
+                    "test_null_out_of_band_withholds_the_verdict",
+                    *STAMPED_BAR_TESTS,
+                )
         script.write_text(stamped_script, encoding="utf-8")
         proto.write_text(stamped_proto.replace(band, ""), encoding="utf-8")
         r = self._run_stamped_test(root)
@@ -1878,6 +1911,7 @@ class Exp(unittest.TestCase):
                     "-m",
                     "pytest",
                     "-q",
+                    "-rA",
                     "-p",
                     "no:cacheprovider",
                     "-k",
@@ -1892,8 +1926,12 @@ class Exp(unittest.TestCase):
 
         for band in (1, 5, 7):
             r = band_tests(band)
-            self.assertEqual(r.returncode, 0, f"band {band}: {r.stdout}{r.stderr}")
-            self.assertIn("3 passed", r.stdout)
+            self.assert_passed(
+                r,
+                "test_null_band_is_symmetric_at_the_registered_band",
+                "test_null_out_of_band_withholds_the_verdict",
+                "test_perfect_effect_fires_c1",
+            )
         for wrong in (
             "abs(correct - _expected_correct(rows)) < items",  # one item too narrow
             "correct - _expected_correct(rows) <= items",  # open below chance
