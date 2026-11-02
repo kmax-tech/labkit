@@ -323,6 +323,19 @@ The numbers stay as first written; 1 is decided above.
     a package of its own once a caller outside the labkit evaluation needs
     it. Smaller and due now: one config for the knobs, and one home for
     `pilot_checks.py`.
+    Recommendation (2026-11-02), by what each module is: most of sandboxlab
+    is the evaluation of labkit — `arms` (plain, instructions_only, labkit),
+    `benches/sab`, `standard_check`, `comparison`'s scoring — and stays in
+    labkit-paper. Not into labkit: the instrument that measures whether
+    labkit helps must not live inside labkit, and Docker would become its
+    dependency. Only `batch` is general ("many attempts, robustly": resume,
+    infrastructure-failure ledger, requeue, stop on rate limit; 210 lines);
+    it moves into agentsandbox as `agentsandbox.batch` when the first agentic
+    study outside the labkit evaluation starts, with the resume store passed
+    in by the caller (labkit's `batch.Store`) so agentsandbox stays
+    labkit-free. Today every importer of sandboxlab is labkit-paper or a
+    record of its runs (`labkit-evidence`, `labkit-anonymous` carry run
+    scripts, not code).
 
 ## Not in scope
 
