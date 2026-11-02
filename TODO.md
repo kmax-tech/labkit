@@ -2195,7 +2195,8 @@ mit eigenen Backends. Drei Teile, in dieser Reihenfolge:
    übrigen.
 
 Kein Bauauftrag. Jeder Teil ist ein eigener Auftrag; 3 berührt auch
-fallacy-detection.
+fallacy-detection. Plan mit Bestand, Vergleich und offenen Entscheidungen:
+[LLM-Schicht und Pipeline-Läufe](docs/notes/2026-11-02-llm-layer-and-pipeline-runs.md).
 
 ### Lange Dateien (2026-10-31)
 
