@@ -25,6 +25,15 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **A `stands` meets its required check.** Round 2 (t21 r10): a limitation
+  resting on "verified: one feature" was judged `insufficient`, the count
+  being in no run; the same finding with the count recorded was upheld
+  twice. Now the decision review shows each decision's required check
+  with its value in the run or that it is missing (the follow-up's line,
+  one home: `audit_prompt.required_check_line`), and `labkit-audit
+  --decide N limitation` names a required metrics key the audited run does
+  not carry — a hint under the decision, no hold, no measurement owed
+  otherwise (`audit_decisions.stands_check_hint`).
 - **`protocol-fill` names the correct address for misaddressed fields:**
   bare promise ids point to `"criterion-1 sentence=VALUE"` instead of a
   similarly named prose field; `key`, `[kept]key` and `protocol.type` point

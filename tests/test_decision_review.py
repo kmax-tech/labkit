@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -55,11 +56,13 @@ def area_with(
     decide: dict[int, tuple[str, str, str]],
     *,
     promise_block: str | None = "",
+    metrics: dict | None = None,
 ) -> tuple[Path, Path]:
     """(area, record) — a low-lane area whose one run is audited with ROWS,
     each finding N decided as DECIDE[N] = (status, reason, effect); its
     protocol's [[promise]] tables PROMISE_BLOCK (`head`'s `promises`: the
-    default tables, None for none — a computation's)."""
+    default tables, None for none — a computation's); METRICS more keys of
+    the run's metrics.json."""
     root = Path(tempfile.mkdtemp())
     (root / ".git").mkdir()  # the layout root, so paths show repo-relative
     area = root / "experiments" / "01-x"
@@ -81,6 +84,7 @@ def area_with(
             "criterion_1_pass": True,
             "quality_check_1_pass": True,
             "quality_check_2_pass": True,
+            **(metrics or {}),
         },
     )
     src = area / "data.jsonl"
@@ -799,3 +803,115 @@ class Journal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+#: a BLOCKER whose closing field requires a check — the key a repair, or a
+#: limitation resting on it, shows in the run (`findings.Finding.check`)
+CHECKED: tuple[str, str] = (
+    "BLOCKER",
+    BLOCKER[1] + " · check: feature_count (must be 1)",
+)
+
+
+class RequiredCheckBesideTheDecision(unittest.TestCase):
+    """A `stands` resting on what a required check would show meets what the
+    run records (round 2, t21 r10: "verified: one feature" against a run
+    that never counted them, judged `insufficient`; the same finding with
+    the count in the run was upheld twice). The review shows the check's
+    value beside the decision, and the decision names a key the run lacks —
+    a hint, never a hold."""
+
+    def test_the_review_shows_a_required_check_missing_in_the_run(self):
+        area, _ = area_with(
+            [CHECKED], {1: ("limitation", "verified: one feature", "stands")}
+        )
+        rc, out, err, sent = run_review(area, INSUFFICIENT)
+        self.assertEqual(rc, 1, out + err)
+        decisions = sent[0].split(f"===== {decision_review.DECISIONS_LABEL} =====")[1]
+        decisions = decisions.split("=====")[0]
+        self.assertIn(
+            "   required check `feature_count`: missing in the answering "
+            "run's metrics.json",
+            decisions,
+        )
+
+    def test_the_twin_a_required_check_the_run_carries_shows_its_value(self):
+        area, _ = area_with(
+            [CHECKED],
+            {1: ("limitation", "one feature, counted in the run", "stands")},
+            metrics={"feature_count": 1},
+        )
+        rc, out, err, sent = run_review(area, UPHELD)
+        self.assertEqual(rc, 0, out + err)
+        self.assertIn("   required check `feature_count` (must be 1) = 1", sent[0])
+
+    def test_the_twin_a_finding_without_a_check_shows_none(self):
+        area, _ = area_with(
+            [BLOCKER], {1: ("limitation", "in-sample, said so", "stands")}
+        )
+        rc, out, err, sent = run_review(area, UPHELD)
+        self.assertNotIn("required check", sent[0])
+
+
+def decide_cmd(area: Path, record: Path, *words: str) -> tuple[int, str]:
+    """`labkit-audit AREA --decide 1 …` run from the repo root, as an agent runs it."""
+    out = io.StringIO()
+    old = Path.cwd()
+    os.chdir(area.parents[1])
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            rc = audit.main(
+                ["experiments/01-x", "--decide", "1", *words, "--record", str(record)]
+            )
+    finally:
+        os.chdir(old)
+    return rc, out.getvalue()
+
+
+class StandsCheckHint(unittest.TestCase):
+    """`--decide 1 limitation` on a finding with a required check the run
+    does not carry: a hint under the decision — the decision is stored as
+    given (exit 0), no hold, no measurement owed otherwise."""
+
+    HINT = "hint: this limitation rests on the finding's required check `feature_count`"
+
+    def test_a_stands_on_a_check_the_run_lacks_is_told_so(self):
+        area, record = area_with([CHECKED], {})
+        rc, out = decide_cmd(
+            area, record, "limitation", "--why", "verified: one feature"
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertIn(self.HINT, out)
+        self.assertIn(
+            "and run 2026-10-07T10-00-00_ab12's metrics.json does not carry it", out
+        )
+        self.assertIn("judges a reason the run does not show `insufficient`", out)
+        self.assertIn("feature_count", out)
+        self.assertEqual(findings.read(record).findings[0].status, "limitation")
+
+    def test_the_twins_a_key_the_run_carries_no_check_or_another_status(self):
+        for rows, words, metrics in (
+            (
+                [CHECKED],
+                ("limitation", "--why", "one feature, counted"),
+                {"feature_count": 1},
+            ),
+            ([BLOCKER], ("limitation", "--why", "in-sample, said so"), None),
+            ([CHECKED], ("fixed", "--why", "counted now"), None),
+            (
+                [CHECKED],
+                (
+                    "limitation",
+                    "--why",
+                    "the run cannot judge it",
+                    "--not-assessable",
+                    "criterion-1",
+                ),
+                None,
+            ),
+        ):
+            with self.subTest(words=words):
+                area, record = area_with(list(rows), {}, metrics=metrics)
+                rc, out = decide_cmd(area, record, *words)
+                self.assertEqual(rc, 0, out)
+                self.assertNotIn("hint: this limitation rests", out)

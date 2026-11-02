@@ -176,10 +176,16 @@ def decisions_text(
     record: findings.Record,
     decided: list[tuple[int, findings.Finding]],
     found: list[reviews.Review],
+    metrics: dict | None,
 ) -> str:
     """The decisions of RECORD under review, as the reviewer reads them:
     number, grade, finding text, the status, the reason, the effect
-    (accepted only) — and, for a finding closed after a review did not
+    (accepted only), the finding's required check with its value in
+    METRICS — the run's snapshot the prompt shows — or that it is missing
+    (`audit_prompt.required_check_line`), so a reason resting on the check
+    meets what the run records beside it (round 2, t21 r10: "verified: one
+    feature" against a run that never counted them, judged
+    `insufficient`) — and, for a finding closed after a review did not
     uphold a decision on it, that earlier verdict with its sentence
     (`reviews.once_not_upheld`), so the reviewer knows what the new
     decision answers to."""
@@ -192,6 +198,9 @@ def decisions_text(
         ]
         if f.effect:
             lines.append(f"   effect: {f.effect}")
+        check = audit_prompt.required_check_line(f, metrics)
+        if check:
+            lines.append(f"   {check}")
         was = reviews.once_not_upheld(record, n, found)
         if f.status in findings.CLOSING and was is not None:
             lines.append(
@@ -270,7 +279,7 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
         )
     label, rules_text = audit_prompt.standard_excerpt(REVIEW)
     pieces: list[tuple[str, str]] = [
-        (DECISIONS_LABEL, decisions_text(record, decided, found)),
+        (DECISIONS_LABEL, decisions_text(record, decided, found, seen.evidence())),
         (f"FILE: {shown(protocol, repo)}", text),
         (RESULT_LABEL, rendered_result(area, text, run_dir)),
     ]

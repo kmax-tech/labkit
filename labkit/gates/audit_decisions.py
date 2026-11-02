@@ -40,7 +40,13 @@ from labkit.formats.repo import (
 )
 from labkit.formats.protocol_check import field_name, fields
 from labkit.formats.protocol_history import HELD_FIELDS
-from labkit.formats.runs import RunDir, run_path
+from labkit.formats.runs import (
+    MetricsError,
+    RunDir,
+    metrics_path,
+    read_metrics,
+    run_path,
+)
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
 from labkit.gates.finalize import CORRECTION_ROUTE, quoted_changes, shown_then
@@ -695,9 +701,8 @@ def decide(
     `limitation` on a BLOCKER or WARNING records its effect: `stands`, or the
     ids NOT_ASSESSABLE names (`<ids> not assessable`), held to the promises
     the protocol registers; `--not-assessable` with another status is
-    refused. Print what was written and how many findings stay open, what
-    the status entails (`findings.decision_entails`) and, under `fixed`,
-    the hint that nothing changed since the audit (`repair_hint`). Exit 2
+    refused. Print what was written and how many findings stay open, then
+    what the status entails and owes (`decision_lines_after`). Exit 2
     on a decision that cannot be stored, the file untouched; a refusal of
     the ids adds, for a protocol without promises, the routes that work
     there (`ways_out.NO_PROMISE_ROUTE`)."""
@@ -741,11 +746,62 @@ def decide(
         + (f" — {reason.strip()}" if reason.strip() else "")
         + f" · {len(rec.open)} open"
     )
-    decided = rec.findings[int(n_text) - 1]
-    print(findings.decision_entails(decided, area, record, protocol))
-    if status == "fixed":
-        print(repair_hint(area, record, protocol, decided))
+    for line in decision_lines_after(area, record, protocol, rec, int(n_text)):
+        print(line)
     return 0
+
+
+def decision_lines_after(
+    area: Path, record: Path, protocol: Path | None, rec: findings.Record, n: int
+) -> list[str]:
+    """What `--decide` prints under the decision it recorded on finding N
+    of REC (RECORD's file): what the status entails
+    (`findings.decision_entails`), under `fixed` what the repair owes
+    (`repair_hint`), under `limitation` the hint on a required check the
+    run does not carry (`stands_check_hint`)."""
+    decided = rec.findings[n - 1]
+    out = [findings.decision_entails(decided, area, record, protocol)]
+    if decided.status == "fixed":
+        out.append(repair_hint(area, record, protocol, decided))
+    if decided.status == "limitation":
+        out += [h for h in [stands_check_hint(area, rec, decided)] if h]
+    return out
+
+
+def stands_check_hint(area: Path, record: findings.Record, f: findings.Finding) -> str:
+    """The line under a `limitation` with effect `stands` on F, a finding
+    of RECORD that requires a check (a metrics key, not a `file:` check):
+    when the run RECORD audited does not carry the key in its metrics.json,
+    a `hint:` that the second auditor reads the run, not the reason — a
+    reason resting on what the check would show is judged `insufficient`
+    (round 2, t21 r10: "verified: one feature", the count in no run; the
+    same finding with the count recorded was upheld twice) — with what the
+    check asks (`findings.check_order`). "" when F requires no key check,
+    the effect is not `stands`, the record names no run, or the key
+    stands. A hint, never a hold: the decision stands as given, and a
+    limitation that rests on something else owes no measurement. Names
+    the run's metrics that cannot be read."""
+    if f.effect != findings.EFFECT_STANDS or not f.check:
+        return ""
+    if f.check.startswith(findings.FILE_CHECK):
+        return ""
+    if record.run_id is None or record.run_id == findings.NO_RUN:
+        return ""
+    path = metrics_path(run_path(area, record.run_id))
+    try:
+        metrics = read_metrics(path)
+    except (MetricsError, FileNotFoundError) as exc:
+        return f"hint: the metrics of run {record.run_id} cannot be read ({exc}) — the second auditor will not see the required check `{f.check}` either"
+    if f.check in metrics:
+        return ""
+    return (
+        f"hint: this limitation rests on the finding's required check `{f.check}`, "
+        f"and run {record.run_id}'s metrics.json does not carry it — the second "
+        f"auditor reads the run, not the reason, and judges a reason the run does "
+        f"not show `insufficient`. To show it: {findings.check_order(f.check, f.check_note)}, "
+        f"then measure and decide again; or let the reason rest on what the run "
+        f"already shows"
+    )
 
 
 def repair_hint(

@@ -454,6 +454,31 @@ class Followup(NamedTuple):
         return self.metrics is not None and e.finding.check in self.metrics
 
 
+def required_check_line(f: findings.Finding, metrics: dict | None) -> str:
+    """The line a prompt shows under F when F requires a check: the
+    metrics.json key with its note and its whole value as METRICS shows it
+    (a `file:` check: where the dependency is shown whole), or that it is
+    missing; "" when F requires none. METRICS is the snapshot the prompt
+    renders (`RunShown.evidence`), never the file read again. The one
+    wording of the follow-up piece (`earlier_piece`) and the decision
+    review (`decision_review.decisions_text`)."""
+    if not f.check:
+        return ""
+    note = f" ({f.check_note})" if f.check_note else ""
+    present = metrics is not None and f.check in metrics
+    if present and f.check.startswith(findings.FILE_CHECK):
+        return f"required check `{f.check}`{note}: shown above under `{(metrics or {})[f.check]}`"
+    if present:
+        value = json.dumps((metrics or {})[f.check], ensure_ascii=False)
+        return f"required check `{f.check}`{note} = {value}"
+    if f.check.startswith(findings.FILE_CHECK):
+        return (
+            f"required check `{f.check}`: not among the answering run's "
+            f"dependencies shown whole"
+        )
+    return f"required check `{f.check}`: missing in the answering run's metrics.json"
+
+
 def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     """What MODE analysis shows of the earlier decisions: one `(label,
     text)` piece with every earlier decided BLOCKER and correction as
@@ -485,26 +510,9 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
                 else f"\n  {change.label} registered: cannot be read back — {change.where}"
             )
             entry += f"{then}\n  {change.label} now: {change.now}"
-        present = shown.check_present(e)
-        note = f" ({f.check_note})" if f.check_note else ""
-        if present is True and f.check.startswith(findings.FILE_CHECK):
-            entry += (
-                f"\n  required check `{f.check}`{note}: shown above under "
-                f"`{(shown.metrics or {})[f.check]}`"
-            )
-        elif present is True:
-            value = json.dumps((shown.metrics or {})[f.check], ensure_ascii=False)
-            entry += f"\n  required check `{f.check}`{note} = {value}"
-        elif present is False and f.check.startswith(findings.FILE_CHECK):
-            entry += (
-                f"\n  required check `{f.check}`: not among the answering run's "
-                f"dependencies shown whole"
-            )
-        elif present is False:
-            entry += (
-                f"\n  required check `{f.check}`: missing in the answering "
-                f"run's metrics.json"
-            )
+        line = required_check_line(f, shown.metrics)
+        if line:
+            entry += f"\n  {line}"
         entries.append(entry)
     text = "\n".join(entries)
     size = len(text.encode("utf-8"))
