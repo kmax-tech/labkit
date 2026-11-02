@@ -2177,14 +2177,22 @@ mit eigenen Backends. Drei Teile, in dieser Reihenfolge:
    Cache-Version im Lauf-Record. Umgekehrt fehlen fallacy-detection
    `endpoint_lease`, Failover, die Ablehnung abgeschnittener Prompts und
    `last_usage`; nach dem Umzug stellt es auf `labkit.run.llm` um.
-3. **Große Pipelines laufen unter einem labkit-Run.** Ein Lauf von
-   fallacy-detection (`scripts/run_experiment.py`) öffnet einen `runlog.run`
-   gegen das Protokoll; der Record hält Config, Daten-Hashes, `repro_hash`
-   und den Ausgabepfad. Dann stehen pro Experiment Protokoll, Config, Daten
-   und Herkunft des Laufs beieinander und sind über `runs.tsv` wiederzufinden
-   statt über die Ausgabeordner des Gerüsts. Offen: `RunIndex`/`repro_hash`
-   des Gerüsts und labkits Lauf-Index doppeln sich — einer führt, der andere
-   verweist.
+3. **Große Pipelines laufen unter einem labkit-Run.** Pro Experiment stehen
+   dann Protokoll, Config, Daten und Herkunft des Laufs beieinander und sind
+   über `runs.tsv` wiederzufinden statt über die Ausgabeordner des Gerüsts.
+   Anschlussstelle ist die vorhandene Tracker-Schnittstelle des Gerüsts
+   (`src/run/tracker.py` `RunTracker`, erzeugt in `src/run/manager.py:165`;
+   MLflow und W&B dort per `config/tracking/default.yaml` aus). Aber labkit
+   ist kein weiteres stilles Tracker-Backend: `runlog.run` prüft vor dem
+   Start und darf den Lauf verweigern, während `RunTracker` ein fehlendes
+   Backend nur mit Warnung überspringt — der Adapter sitzt also beim Erzeugen
+   des Run-Managers und bricht laut ab. Die Stufen kennen labkit nicht.
+   Rollen: labkit führt für „welcher Lauf gehört zu welcher Frage, welche Zahl
+   wurde berichtet“; `output/` mit `repro_hash` bleibt Inhaltsspeicher und
+   Cache. Verknüpft wird über IDs in beide Richtungen (labkit-Record hält
+   `repro_hash` und Ausgabepfad, `pipeline_summary.json` die labkit-Run-ID),
+   nichts wird kopiert. Erst ein Experiment durchgängig als Pilot, dann die
+   übrigen.
 
 Kein Bauauftrag. Jeder Teil ist ein eigener Auftrag; 3 berührt auch
 fallacy-detection.
