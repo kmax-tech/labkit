@@ -9,6 +9,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
+### Breaking
+
+- **Protocol standard 0.25: a bar the task states may be absolute (LAB-035
+  Thresholds belong to the run, not to the measure).** labkit-paper area
+  17 (2026-11-02): two tasks stated an absolute bar, the agents wrote it
+  as a margin over the null value, and both runs recorded a false pass
+  that only the analysis audit found
+  (`docs/notes/2026-11-02-absolute-task-bar.md`). The rule now admits a
+  success bar set from outside the experiment, registered as that value
+  before the first measurement with its source named; the null condition
+  still runs in the same run. The head format is otherwise unchanged:
+  a protocol not yet run sets `standard = "0.25"`; a protocol with runs
+  is reproduced with 0.107.0, the last release reading 0.24.
+
 ### Changed
 
 - **`protocol-fill` names the correct address for misaddressed fields:**

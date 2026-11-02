@@ -99,7 +99,7 @@ class Parse(unittest.TestCase):
 
     def test_block_without_promise_tables_declares_none(self):
         self.assertIsNone(
-            promises.parse_block('```toml\n[protocol]\nstandard = "0.24"\n```\n')
+            promises.parse_block('```toml\n[protocol]\nstandard = "0.25"\n```\n')
         )
 
     def test_unknown_top_level_table(self):

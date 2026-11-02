@@ -104,14 +104,14 @@ class RepeatCostLowered(unittest.TestCase):
         root, protocol = _repo("high")
         old = (
             protocol.read_text(encoding="utf-8")
-            .replace('standard = "0.24"', 'standard = "0.22"')
+            .replace('standard = "0.25"', 'standard = "0.22"')
             .replace('repeat_cost = "high"', 'cost = "hours"')
         )
         protocol.write_text(old, encoding="utf-8")
         _git(root, "add", "-A")
         _git(root, "commit", "-q", "--amend", "-m", "registered at 0.22")
         protocol.write_text(
-            old.replace('standard = "0.22"', 'standard = "0.24"').replace(
+            old.replace('standard = "0.22"', 'standard = "0.25"').replace(
                 'cost = "hours"', 'repeat_cost = "high"'
             ),
             encoding="utf-8",

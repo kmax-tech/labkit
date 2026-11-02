@@ -99,7 +99,7 @@ class StampReadBack(unittest.TestCase):
     def test_a_head_without_the_asked_tier_is_refused(self):
         from labkit.tools import scaffold as sc
 
-        good = '```toml\n[protocol]\nstandard = "0.24"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\nrepeat_cost = "low"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n\n[kept]\nkey = "<metrics key>"\nunit = "<unit>"\n```\n'
+        good = '```toml\n[protocol]\nstandard = "0.25"\nid = "p-0123456789abcdef"\ntype = "<exploratory | confirmatory>"\nrepeat_cost = "low"\nkind = "compute"\nfrozen = false\npreflight_audit = ""\n\n[kept]\nkey = "<metrics key>"\nunit = "<unit>"\n```\n'
         sc.check_stamped_head(good, "low", "compute")
         with self.assertRaisesRegex(ValueError, r"\[kept\]"):
             sc.check_stamped_head(

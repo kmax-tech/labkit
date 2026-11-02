@@ -1,9 +1,12 @@
 # The labkit lab standard
 
-*Version 0.24 — the version a protocol names in its head (`standard =
-"0.24"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.25 — the version a protocol names in its head (`standard =
+"0.25"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
-at the end. 0.24 (2026-11-01): a computation names its kept number in the
+at the end. 0.25 (2026-11-02): a success bar the task states is
+registered as an absolute value, before the first measurement and with its
+source (LAB-035 Thresholds belong to the run, not to the measure); the null
+condition still runs beside it. 0.24 (2026-11-01): a computation names its kept number in the
 head's `[kept]` table (`key`, the metrics key; `unit`), and `[reference]`
 compares on that key, its own `key` gone. 0.23 (2026-10-25): `repeat_cost = "low" | "high"` replaces
 `cost = "seconds" | "minutes" | "hours"` — the gates knew two lanes, the
@@ -781,6 +784,7 @@ evidence file under the same ID (top of this document).*
   > a wrong number was close to making it into the report.
 
 - **LAB-035 · Thresholds belong to the run, not to the measure.** *(was §2.C7)* What can be preregistered is the *rule* ("defeating means above the noise floor"), not the *value*. A threshold with no reference to the null condition of the same run is a number without a unit — the same number can be right on other material and wave everything through here.
+  **Exception — a bar the task states.** A success bar set from outside the experiment (a requirement such as "accuracy at least 0.90", stated by the task, a client or a cited benchmark — never chosen by the experimenter) is registered as that absolute value before the first measurement, with its source named in the protocol, and the criterion compares with exactly that value (`at_least`). It answers whether the requirement is met, not whether the method beats the noise floor: the null condition still runs in the same run as a quality check, and a bar the experimenter chooses stays relative to it.
 
 - **LAB-036 · Validate, don't trust a single run:** *(was §2.C8)* Second model/self-consistency, known
   anchors (items with a known outcome), cross-check against an
