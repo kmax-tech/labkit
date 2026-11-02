@@ -58,6 +58,19 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   not carry — a hint under the decision, no hold, no measurement owed
   otherwise (`audit_decisions.stands_check_hint`).
 
+- **A successor declares the changes its predecessor is held for.**
+  Probe 2026-11-02: finalize held a changed Exclusions / filters and named
+  a new registration with one `[[replaces.change]]` per change, and the
+  replacement station refused that declaration ("declares a change the
+  registrations do not show") — it compared only the kind, the promises
+  and Data profile. `registration_differences` now includes what the number
+  is about as finalize compares it (`scope_differences`: Question /
+  hypothesis, Terms, Data / scope, Exclusions / filters, Unit, `[kept]`,
+  `[reference]`). **Breaking:** a protocol with `[replaces]` written for
+  labkit 0.107.0 or earlier that differs from its predecessor in one of
+  these and does not declare it is now held; add the `[[replaces.change]]`
+  the blocker names.
+
 - **A BLOCKER on the Conclusion decided `fixed` is released by the
   decision review.** Probe 2026-11-02: the decision named a follow-up
   audit, which is never shown a rewritten claim (the Conclusion is not in

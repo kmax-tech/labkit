@@ -113,10 +113,43 @@ class Differences(unittest.TestCase):
                     "R² beats the null",
                 ),
                 ("criterion-1 margin", "0.25", "0.15"),
+                # the fixture's fit head stamps no [kept]: what the number is
+                # about, compared as finalize compares a first measurement
+                ("[kept]", '[kept] key = "n" unit = "1"', "(none)"),
                 ("Data profile", "944 compounds", "232 compounds"),
             ],
         )
         self.assertEqual(protocol_history.registration_differences(old, old), [])
+
+
+class SameComparison(unittest.TestCase):
+    """The predecessor's hold and the successor's declaration compare one
+    set of differences (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md): finalize held a changed
+    Exclusions / filters and pointed to a new registration with one
+    `[[replaces.change]]` per change, and the replacement station refused
+    that declaration — it compared only the kind, the promises and Data
+    profile."""
+
+    def test_every_difference_the_scope_hold_names_is_a_registration_difference(self):
+        old = (
+            head(promises=block(0.25))
+            + BODY
+            + (
+                "- **Exclusions / filters:** hidden files are not counted\n"
+                "- **Unit:** one visible file\n"
+            )
+        )
+        new = old.replace("hidden files are not counted", "hidden files count").replace(
+            "one visible file", "one file, hidden or not"
+        )
+        held = protocol_history.scope_differences(old, new)
+        self.assertEqual(
+            [what for what, _, _ in held], ["Exclusions / filters", "Unit"]
+        )
+        declared = protocol_history.registration_differences(old, new)
+        for change in held:
+            self.assertIn(change, declared)
 
 
 class _Areas(unittest.TestCase):

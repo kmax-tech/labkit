@@ -423,22 +423,28 @@ def _head_part(text: str, part: str) -> str:
     return " ".join(toml.split()) if toml is not None else ABSENT
 
 
-#: the registration fields outside the promise block a replacement compares
+#: the registration fields outside the promise block and what the number is
+#: about (SCOPE_FIELDS) that a replacement compares
 COMPARED_FIELDS = ("Data profile",)
 
 
 def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     """(what, from, to) for every difference of the registration between the
-    protocol texts OLD and NEW (K1): per promise id its sentence, key, each
-    constant and its scope, an id added or dropped, the head's kind, and
-    COMPARED_FIELDS. Values as the registrations write them; `(none)` where
-    one has nothing. Pure; raises BlockError or PromiseError on a head or a
-    block that does not read."""
-    out: list[tuple[str, str, str]] = []
-    ka, kb = protocol_block.head(old).kind, protocol_block.head(new).kind
-    if ka != kb:
-        out.append(("kind", str(ka), str(kb)))
+    protocol texts OLD and NEW (K1): the head's kind, per promise id its
+    sentence, key, each constant and its scope, an id added or dropped,
+    what the number is about (`scope_differences`: `[kept]`, `[reference]`
+    and SCOPE_FIELDS — the one comparison finalize holds a protocol's first
+    measurement to, so the hold that points to a new registration and the
+    declaration it asks for name the same changes), and COMPARED_FIELDS.
+    Values as the registrations write them; `(none)` where one has nothing.
+    Pure; raises BlockError or PromiseError on a head or a block that does
+    not read. Why: a successor declaring the changed Exclusions / filters
+    its predecessor was held for was refused (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md)."""
+    scope = scope_differences(old, new)
+    out = [d for d in scope if d[0] == "kind"]
     out += promise_differences(old, new)
+    out += [d for d in scope if d[0] != "kind"]
     fa = {f.label: f.value for f in fields(old)}
     fb = {f.label: f.value for f in fields(new)}
     for label in COMPARED_FIELDS:
