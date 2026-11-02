@@ -81,7 +81,7 @@ from labkit.gates.ways_out import ANSWER_AGAIN
 
 REPORT_REVIEW = "report"
 #: the mode of its attempts in the area's journal (`attempts`)
-ATTEMPT_MODE = "report-review"
+ATTEMPT_MODE = report_reviews.ATTEMPT_MODE
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
     audit_reply.LEAD

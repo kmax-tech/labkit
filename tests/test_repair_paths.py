@@ -417,7 +417,6 @@ class RegisteredReportRepairs(RepairPaths):
             "registers REPORT.md as its report, which is not written", refused
         )
 
-    @unittest.expectedFailure  # F1 of the probe note, repaired next
     def test_a_handover_with_its_report_review_stays_a_handover(self):
         """The handover's record bound every file under audits/, and the
         report review it owes writes there: the review voided the handover,

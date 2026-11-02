@@ -69,6 +69,9 @@ from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.scope_sha import digest
 
 FOLDER = "report-reviews"
+#: the mode of a report review's attempts in the area's journal (`attempts`):
+#: its ids and answer files carry it (`<minute>-report-review-<hex>`)
+ATTEMPT_MODE = "report-review"
 #: what a claim says of a report line: a discussed run's number stated as a
 #: result, or a statement the audit records contradict
 KINDS = ("result", "contradiction")

@@ -10,11 +10,13 @@ import contextlib
 import io
 import json
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 import test_counter_cases as cases
 import test_end_to_end as e2e
-from labkit.formats import attempts, findings, handovers, protocol_block
+from labkit.formats import attempts, findings, handovers, protocol_block, scope_sha
 from labkit.checks import report_blocks
 from labkit.gates import audit, agent_hooks, report_check
 from labkit.tools import protocol_fill
@@ -766,3 +768,46 @@ class HandoverRecovery(cases._Chain):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewTrace(unittest.TestCase):
+    """What a report review writes is not handover evidence
+    (`handovers.review_trace`, `journal_digest`): the review a registered
+    report owes after its handover block must not void the handover (probe
+    2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+
+    ANALYSIS = '{"event": "started", "id": "2026-11-02T10-00-analysis-ab12", "mode": "analysis"}\n'
+    REVIEW = (
+        '{"event": "started", "id": "2026-11-02T10-05-report-review-cd34", "mode": "report-review"}\n'
+        '{"event": "ended", "id": "2026-11-02T10-05-report-review-cd34", "outcome": "record"}\n'
+    )
+
+    def digest(self, text: str) -> str | None:
+        path = Path(tempfile.mkdtemp()) / "attempts.jsonl"
+        path.write_text(text, encoding="utf-8")
+        return handovers.journal_digest(path.parent, path, "given", staged=False)
+
+    @staticmethod
+    def without(text: str) -> str:
+        """The digest the journal TEXT is bound by once lines are left out."""
+        return scope_sha.digest(text.encode("utf-8"), chars=None)
+
+    def test_the_journal_is_bound_without_the_report_reviews_lines(self):
+        self.assertEqual(self.digest(self.ANALYSIS), "given")  # nothing to leave out
+        self.assertEqual(
+            self.digest(self.ANALYSIS + self.REVIEW), self.without(self.ANALYSIS)
+        )
+        self.assertIsNone(self.digest(self.REVIEW))  # a journal the review began
+        torn = "{not json\n"
+        self.assertEqual(self.digest(torn + self.REVIEW), self.without(torn))
+
+    def test_only_the_review_record_and_its_answer_are_left_out(self):
+        for rel, left_out in (
+            ("report-reviews/2026-11-02T10-05-review.toml", True),
+            ("answers/2026-11-02T10-05-report-review-cd34.txt", True),
+            ("answers/2026-11-02T10-00-analysis-ab12.txt", False),
+            ("2026-11-02T10-00-analysis.toml", False),
+            ("reviews/2026-11-02T10-05-review.toml", False),
+        ):
+            with self.subTest(rel=rel):
+                self.assertEqual(handovers.review_trace(rel), left_out)

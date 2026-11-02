@@ -45,7 +45,9 @@ from labkit.formats import (
     answering_run,
     files,
     findings,
+    jsonl,
     protocol_block,
+    report_reviews,
     runs,
     scope_sha,
 )
@@ -70,6 +72,7 @@ from labkit.formats.repo import (
     own_path,
     protocol_links,
     state_text,
+    text_at,
     under_root,
 )
 
@@ -147,7 +150,14 @@ def protocol_fingerprint(text: str) -> str:
 def evidence(
     area: Path, *, staged: bool = False, omit: Path | None = None
 ) -> dict[str, str]:
-    """Audit paths and blob ids in tree/index, including malformed bytes.
+    """Audit paths and blob ids in tree/index, including malformed bytes —
+    but what a report review writes (`review_trace`): its record and kept
+    answer are left out, and the journal is fingerprinted without its
+    report-review lines (`journal_digest`). A registered report owes its
+    review once its handover block stands, and the review must not void
+    the handover it completes (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md); any other audit added
+    still does.
 
     Omit only the handover being validated to avoid self-reference.
     Raise HandoverError outside git, for symbolic-link evidence and when
@@ -173,11 +183,64 @@ def evidence(
         # an unmerged or link entry in the index: a sentence, not a
         # traceback at the commit (audit 2026-10-27, third, K3)
         raise HandoverError(f"{folder}: {exc}") from exc
-    return {
-        p.relative_to(folder).as_posix(): sha
-        for p, sha in sorted(held.items())
-        if p != omit
-    }
+    from labkit.formats.attempts import JOURNAL  # attempts imports this module
+
+    out: dict[str, str] = {}
+    for p, sha in sorted(held.items()):
+        rel = p.relative_to(folder).as_posix()
+        if p == omit or review_trace(rel):
+            continue
+        bound = journal_digest(root, p, sha, staged=staged) if rel == JOURNAL else sha
+        if bound is not None:
+            out[rel] = bound
+    return out
+
+
+def review_trace(rel: str) -> bool:
+    """Is REL, a path under an area's audits/, what a report review writes:
+    its record (`report_reviews.FOLDER`) or its kept answer
+    (`answers/<id>.txt`, the id naming `report_reviews.ATTEMPT_MODE`)? Pure."""
+    from labkit.formats.attempts import ANSWERS  # attempts imports this module
+
+    first, _, name = rel.partition("/")
+    return first == report_reviews.FOLDER or (
+        first == ANSWERS and f"-{report_reviews.ATTEMPT_MODE}-" in name
+    )
+
+
+def journal_digest(root: Path, path: Path, sha: str, *, staged: bool) -> str | None:
+    """The journal at PATH as the handover binds it: SHA, its blob id, when
+    no line is a report review's attempt (an id naming
+    `report_reviews.ATTEMPT_MODE`); else the digest of its other lines
+    (`jsonl.record_lines`, each ended by "\\n"; `scope_sha.digest`) — None
+    when no other line is left: a journal the review began counts as none.
+    A line that is no JSON object stays — raw evidence. The index's journal
+    is read from git (`text_at`), the tree's from disk; one that is not
+    UTF-8 is bound as it is."""
+    try:
+        text = (text_at(root, path) or "") if staged else path.read_text("utf-8")
+    except UnicodeDecodeError:
+        return sha
+    lines = jsonl.record_lines(text)
+    mark = f"-{report_reviews.ATTEMPT_MODE}-"
+    kept = [line for line in lines if mark not in _attempt_id(line, path)]
+    if len(kept) == len(lines):
+        return sha
+    if not kept:
+        return None
+    return scope_sha.digest("".join(f"{ln}\n" for ln in kept).encode(), chars=None)
+
+
+def _attempt_id(line: str, path: Path) -> str:
+    """The `id` of a journal LINE of PATH, or "" for a line that is no JSON
+    object with a string id."""
+    try:
+        found = jsonl.objects(line, str(path))
+    except ValueError:
+        return ""
+    event = found[0][1] if found else None
+    aid = event.get("id") if isinstance(event, dict) else None
+    return aid if isinstance(aid, str) else ""
 
 
 def entry(record: findings.Record, n: int) -> str:

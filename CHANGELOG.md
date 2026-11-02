@@ -58,6 +58,19 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   not carry — a hint under the decision, no hold, no measurement owed
   otherwise (`audit_decisions.stands_check_hint`).
 
+- **A handover stays a handover through the report review it owes.**
+  Probe 2026-11-02: the handover's record bound every file under
+  `audits/`, and the review a registered report owes once its handover
+  block stands writes there — the review voided the handover, a new
+  handover rewrote the block and voided the review; `labkit-next` said
+  "nothing" while the commit held the review. Now the record binds
+  `audits/` without what a report review writes (its record, its kept
+  answer, its journal lines: `handovers.review_trace`, `journal_digest`),
+  and `labkit-next` names the review owed after a handover. Any other
+  audit added after a handover still voids it. **Breaking:** a handover
+  record written by labkit 0.107.0 or earlier whose `audits/` held a report
+  review no longer matches; write the handover again.
+
 - **A registered report removed is held where it is delivered.** Probe
   2026-11-02 (`docs/notes/2026-11-02-repair-path-probe.md`): `git rm
   REPORT.md` after the adoption passed the commit, `report-check` and

@@ -109,12 +109,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "because it cannot change after that run",
         )
     if handovers.protocol_handed_over(area, protocol):
-        return Step(
-            f"{protocol.name} is handed over: it ended without a result, its open "
-            "findings recorded in the handover",
-            "nothing — a new attempt at the question is a new registration",
-            "",
-        )
+        return _handed_over(area, protocol, text)
     # a run still open comes first: read as nothing, it sent agents to
     # measure again beside it (reference pilot 2026-11-01, task 15)
     from labkit.run.runlog import open_runs
@@ -179,6 +174,29 @@ def next_step(area: Path, protocol: Path | None) -> Step:
         "nothing — the number may be reported (`protocol-fill "
         f"{shown(protocol, Path.cwd())} --into REPORT.md` writes its result "
         "block into a report the head does not register)",
+        "",
+    )
+
+
+def _handed_over(area: Path, protocol: Path, text: str) -> Step:
+    """The step of a PROTOCOL (its TEXT) a current handover ended: the
+    review its registered report owes once the handover block stands
+    (`report_hold.report_owed`), else nothing — a new attempt is a new
+    registration. It said "nothing" while the commit held the report for
+    its review (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+    from labkit.gates.report_hold import report_owed
+
+    owed = report_owed(protocol, text, None, layout_root(area), staged=False)
+    if owed is not None:
+        return Step(
+            f"{protocol.name} is handed over, and {owed.text}",
+            owed.fix or f"`labkit-audit {area} --report-review <REPORT>`",
+            "the commit and the stop: the report's final text is reviewed once",
+        )
+    return Step(
+        f"{protocol.name} is handed over: it ended without a result, its open "
+        "findings recorded in the handover",
+        "nothing — a new attempt at the question is a new registration",
         "",
     )
 
