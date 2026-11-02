@@ -10,6 +10,7 @@ apply protocol an annotation validity names (`bound_validation`).
 Read-only; git is asked through `repo.git_run`.
 """
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
@@ -532,6 +533,33 @@ def registrations_as_first_measured(
             return [], where
         texts.setdefault(text, where)
     return list(texts.items()), ""
+
+
+def first_measured_differences(
+    protocol: Path,
+    firsts: "Sequence[RunDir]",
+    text: str,
+    root: Path | None,
+    compare: "Callable[[str, str], list[tuple[str, str, str]]]",
+) -> "tuple[RunDir, list[tuple[str, str, str]]] | None":
+    """(first, differences): the first of FIRSTS — first measurements of
+    PROTOCOL — whose protocol as it saw it (`as_measured`) differs from
+    TEXT under COMPARE (`scope_differences`, `promise_differences`), with
+    COMPARE's (what, from, to); None when every first measurement that can
+    be read back agrees. A first measurement whose protocol cannot be read
+    back is passed over: the registration station names that state. The one
+    comparison of a text with the first measurements — finalize holds the
+    answering run's text and the protocol as it stands to it, the `fixed`
+    line of `labkit-audit --decide` names what it would hold. Raises
+    RuntimeError when git fails, and what COMPARE raises."""
+    for first in firsts:
+        then, _ = as_measured(protocol, first, root)
+        if then is None:
+            continue
+        diffs = compare(then, text)
+        if diffs:
+            return first, diffs
+    return None
 
 
 def as_measured(

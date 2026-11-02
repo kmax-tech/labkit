@@ -1095,3 +1095,55 @@ class AuditedStateMatch(unittest.TestCase):
         self.assertEqual(audit_gaps.covering_records([record], now), [record])
         other = findings.AuditedState("c", "b", reg, RUN, "0" * 12)
         self.assertEqual(audit_gaps.covering_records([record], other), [])
+
+
+class CorrectedField(unittest.TestCase):
+    """A correction names its field exactly: the grade line's place is the
+    protocol's file and a label the protocol holds once (`Finding.place`,
+    `protocol_check.named_field`, `findings.corrected_field`) — no part of
+    a label, no line number, no search in the finding's text."""
+
+    TEXT = (
+        "- **Terms of this protocol:** n/a — no coinage\n"
+        "- **Data / scope:** data/raw/docs, 4 documents\n"
+        "- **Null condition / anchors (in the same run):** [quality-check-2] none\n"
+    )
+    PROTOCOL = Path("experiments/01-x/PROTOCOL-x.md")
+
+    def finding(self, line: str, status: str = "fixed") -> findings.Finding:
+        return findings.Finding(
+            line.split(" · ")[0], line + "\n  evidence", status, "r"
+        )
+
+    def test_the_place_is_read_from_the_grade_line(self):
+        f = self.finding("WARNING · `PROTOCOL-x.md:Data / scope` · says 4 · fix")
+        self.assertEqual(f.place, ("PROTOCOL-x.md", "Data / scope"))
+        self.assertIsNone(
+            self.finding("WARNING — PROTOCOL-x.md:Data / scope — x").place
+        )
+        self.assertIsNone(self.finding("WARNING · PROTOCOL-x.md · x · y").place)
+
+    def test_a_label_named_whole_is_the_corrected_field(self):
+        for place, name in (
+            ("Data / scope", "data / scope"),
+            ("terms of this protocol", "terms of this protocol"),
+            ("Null condition / anchors (in the same run)", "null condition / anchors"),
+        ):
+            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · x · y")
+            self.assertEqual(
+                findings.corrected_field(f, self.PROTOCOL, self.TEXT), name
+            )
+
+    def test_the_twins_part_of_a_label_a_line_another_file_or_status_name_none(self):
+        for line, status in (
+            ("WARNING · PROTOCOL-x.md:Terms · x · y", "fixed"),
+            ("WARNING · PROTOCOL-x.md:2 · x · y", "fixed"),
+            ("WARNING · PROTOCOL-y.md:Data / scope · x · y", "fixed"),
+            ("WARNING · scripts/01_measure.py:Data / scope · x · y", "fixed"),
+            ("WARNING · PROTOCOL-x.md:Data / scope · x · y", "limitation"),
+            ("WARNING · PROTOCOL-x.md:Unit · x · y", "fixed"),  # no such field
+        ):
+            f = self.finding(line, status)
+            self.assertIsNone(
+                findings.corrected_field(f, self.PROTOCOL, self.TEXT), line
+            )

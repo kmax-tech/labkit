@@ -88,7 +88,7 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
     a `resolved` on a missing key is kept as the auditor wrote it."""
     m = list(VERDICT.finditer(text or ""))
     lines = ((text or "")[: m[-1].start()] if m else (text or "")).splitlines()
-    shown = {e.ref: e for e in earlier_repairs.blockers}
+    shown = {e.ref: e for e in earlier_repairs.entries}
     out: list[findings.FixVerdict] = []
     for i, line in enumerate(lines):
         if not FIX_OPEN.match(line):

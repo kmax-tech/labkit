@@ -97,14 +97,13 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
-from labkit.formats.protocol_check import registration_stamp
+from labkit.formats.protocol_check import named_field, registration_stamp
 from labkit.formats.repo import (
     INDEX_REV,
     audit_command,
     decide_command,
     files_at,
     git_root,
-    measure_command,
     shown,
     text_at,
 )
@@ -189,6 +188,23 @@ class Finding:
         gives each finding one line shows it (the decision list, a gate's
         line, a reminder); the record and the prompts keep TEXT."""
         return " ".join(self.text.splitlines())
+
+    @property
+    def place(self) -> tuple[str, str] | None:
+        """(file, place) of the grade line as the instructions write it,
+        `<GRADE> · <file>:<place> · …`: the file's name and what follows its
+        first colon, backticks and spaces trimmed; None for a line in
+        another form. Read from that one field, never searched for in the
+        text."""
+        first = self.text.splitlines()[0] if self.text else ""
+        parts = first.split(" · ")
+        if len(parts) < 3 or parts[0].strip() != self.grade:
+            return None
+        file, colon, place = parts[1].strip().strip("`").partition(":")
+        place = place.strip().strip("`").strip()
+        if not colon or not file.strip() or not place:
+            return None
+        return Path(file.strip()).name, place
 
     @property
     def effect_owed(self) -> bool:
@@ -332,9 +348,11 @@ def decision_entails(
     """What F's decided status entails — the line `labkit-audit --decide`
     prints under the decision it recorded on F, a finding of RECORD in
     AREA, and the one home of the five texts. `fixed`: a repair is
-    claimed, confirmation pending; the follow-up audit judges it after a
-    new measurement, the check owed named when F carries one
-    (`check_order`), then the measure and analysis-audit commands.
+    claimed, confirmation pending; the next analysis audit judges it, a
+    BLOCKER's number does not leave before, the check owed named when F
+    carries one (`check_order`); what the repair owes — a new measurement,
+    an audit, nothing, or a way back — depends on what it changed, and
+    `audit_decisions.repair_hint` says it in the line below.
     `limitation` with effect `stands`: the claim stands within the finding;
     a second auditor's review is owed at every repeat cost (`--review
     --record`) — a BLOCKER's number does not leave without it, a WARNING's
@@ -357,13 +375,10 @@ def decision_entails(
         owed = (
             f"; the check owed: {check_order(f.check, f.check_note)}" if f.check else ""
         )
-        analysis = audit_command(
-            area, "--mode", ANALYSIS_AUDIT, protocol=protocol, base=here
-        )
         return (
-            "fixed: a repair is claimed, confirmation pending — the follow-up audit "
-            "judges it after a new measurement; until then it releases nothing"
-            f"{owed}; then `{measure_command(area)}` and `{analysis}`"
+            "fixed: a repair is claimed, confirmation pending — the next analysis "
+            "audit judges it, and a BLOCKER's number does not leave before"
+            f"{owed}; what the repair owes in this area is the line below"
         )
     if f.status == "limitation" and f.effect == EFFECT_STANDS:
         # the review is owed at every repeat cost; agents read a low one as
@@ -419,6 +434,21 @@ def state_unchanged(record: Record, area: Path, text: str) -> bool:
         AuditedState(record.scope_sha, record.block_sha, dict(record.registration))
         == now
     )
+
+
+def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
+    """The field F corrects in PROTOCOL, TEXT its text, as `field_name`
+    gives it: F decided `fixed`, its place (`Finding.place`) PROTOCOL's
+    file name and a field label TEXT holds once (`named_field`). None
+    otherwise — a line number, a section or another file names no field.
+    What a correction in place is bound to: a follow-up audit judges it on
+    the field's change (`followup.earlier_corrections`), and finalize
+    releases that change only on its `resolved` (`finalize.scope_changes`)."""
+    at = f.place
+    if f.status != "fixed" or at is None or at[0] != protocol.name:
+        return None
+    hit = named_field(text, at[1])
+    return hit.name if hit is not None else None
 
 
 def decision_digest(f: Finding) -> str:

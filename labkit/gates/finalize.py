@@ -88,7 +88,7 @@ read-only gate that reports findings.
 from __future__ import annotations
 
 import shlex
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.repo import gate_command
@@ -147,6 +147,7 @@ from labkit.gates.ways_out import (
     declared_first,
     register_anew,
 )
+from labkit.checks.audit_binding import covering_analysis
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.gates.report_context import pending_adoption
@@ -174,6 +175,8 @@ from labkit.checks.run_record_check import (
 from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
+from labkit.formats.findings import area_records, corrected_field, decision_digest
+from labkit.formats.followup import chain
 
 
 def choose_answering_run(
@@ -364,7 +367,7 @@ def registration_changes(
     changes, restores = named_changes(
         protocol, first, read_run_dir(run), snap, now, root
     )
-    shown_then = _shown_then(protocol, first, root)
+    restore_from = shown_then(protocol, first, root)
     return scope + [
         blocker(
             f"the registration changed after the first measurement {first.dir.name}: "
@@ -372,7 +375,7 @@ def registration_changes(
             f"bar set after a result was seen does not answer the registered "
             f"question",
             fix=f"restore the [[promise]] tables as {first.dir.name} "
-            f"registered them ({'; '.join(restores)}){shown_then}, "
+            f"registered them ({'; '.join(restores)}){restore_from}, "
             f"and measure again, then audit that run (the earlier runs stay); or, "
             f"when the registration cannot be answered as written, "
             + register_anew(pid)
@@ -381,7 +384,7 @@ def registration_changes(
     ]
 
 
-def _shown_then(protocol: Path, first: RunDir, root: Path | None) -> str:
+def shown_then(protocol: Path, first: RunDir, root: Path | None) -> str:
     """The clause that shows PROTOCOL as the first measurement FIRST saw it:
     the `git show` of its recorded commit, and its uncommitted.patch where
     the run kept one; "" without a recorded commit or a repository."""
@@ -408,53 +411,196 @@ def scope_changes(
     its terms, the data, the exclusions, the unit, the head's kind,
     `[kept]` and `[reference]`), read from the protocol each run saw (`as_measured`) —
     at every kind, so a computation, which has no promise block, is held too.
-    A change is a BLOCKER naming each field with its old and new value and
-    the way out: restore them and measure again, or register anew. A code
-    change measured again under the same fields passes: what the run computes
-    is the analysis audit's question, not this one. The first measurements are
-    every run at each first position (`first_measurement_groups`); the
-    answering run, when it is one of them, has nothing to compare. Empty when
-    the protocol a run saw cannot be read back: the registration station and
-    the promise-block hold name that state.
+    Two texts are held to it, in this order: the protocol as the answering
+    run saw it, and the protocol as it stands — a field rewritten after the
+    last measurement is a change before any run carries it, and an audit of
+    the first run on the rewritten text would release it otherwise (probe
+    2026-11-02, docs/notes/2026-11-02-registered-field-repair.md). A change
+    is a BLOCKER naming each field with its old and new value and the way
+    out: restore them — and, when a run measured under the change, measure
+    again — or register anew. A code change measured again under the same
+    fields passes: what the run computes is the analysis audit's question,
+    not this one. The first measurements are every run at each first
+    position (`first_measurement_groups`); the answering run, when it is
+    one of them, has no run text to compare, the text as it stands still
+    is. A text that cannot be read back is passed over: the registration
+    station and the promise-block hold name that state.
     Raises RuntimeError when git fails."""
-    answering = read_run_dir(run)
-    firsts = [
-        rd
-        for group in first_measurement_groups(area, pid, root)
-        for rd in group
-        if rd.dir.resolve() != run.resolve()
-    ]
-    if not firsts:
-        return []
-    current, _ = protocol_history.as_measured(protocol, answering, root)
-    if current is None:
-        return []
-    for first in firsts:
-        then, _ = protocol_history.as_measured(protocol, first, root)
-        if then is None:
-            continue
-        diffs = protocol_history.scope_differences(then, current)
-        if not diffs:
-            continue
-        changes = "; ".join(
-            f'{what} "{_quoted(old)}" → "{_quoted(new)}"' for what, old, new in diffs
+    firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
+    others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
+    seen, _ = (
+        protocol_history.as_measured(protocol, read_run_dir(run), root)
+        if others
+        else (None, "")
+    )
+    if seen is not None:
+        held = protocol_history.first_measured_differences(
+            protocol, others, seen, root, protocol_history.scope_differences
         )
-        labels = ", ".join(what for what, _, _ in diffs)
-        return [
-            blocker(
-                f"what the number is about changed after the first measurement "
-                f"{first.dir.name}: {changes} (as the answering run {run.name} saw the "
-                f"protocol) — a scope set after a result was seen does not answer the "
-                f"registered question",
-                fix=f"restore {labels} as {first.dir.name} registered them"
-                f"{_shown_then(protocol, first, root)}, and measure again, then audit "
-                f"that run (the earlier runs stay); or, when the registration cannot "
-                f"be answered as written, "
-                + register_anew(pid)
-                + " — the earlier protocol, its runs and their verdict stay",
-            )
-        ]
-    return []
+        if held is not None:
+            first, diffs = held
+            return [
+                blocker(
+                    f"what the number is about changed after the first measurement "
+                    f"{first.dir.name}: {quoted_changes(diffs)} (as the answering run "
+                    f"{run.name} saw the protocol) — a scope set after a result was "
+                    f"seen does not answer the registered question",
+                    fix=f"restore {_labels(diffs)} as {first.dir.name} registered them"
+                    f"{shown_then(protocol, first, root)}, and measure again, then "
+                    f"audit that run (the earlier runs stay); or, when the registration "
+                    f"cannot be answered as written, "
+                    + register_anew(pid)
+                    + " — the earlier protocol, its runs and their verdict stay",
+                )
+            ]
+    now = scope_now(area, protocol, pid, run, root)
+    if now is None or not now.held:
+        return []
+    return [
+        blocker(
+            f"what the number is about changed after the first measurement "
+            f"{now.first.dir.name}: {quoted_changes(now.held)} (as the protocol stands "
+            f"now; no run measured under it yet) — a scope set after a result was seen "
+            f"does not answer the registered question, and a new measurement would "
+            f"carry the change",
+            fix=f"restore {_labels(now.held)} as {now.first.dir.name} registered them"
+            f"{shown_then(protocol, now.first, root)} — the runs measured under them "
+            f"stay; an audit that read the rewritten fields is owed again "
+            f"(`labkit-next` names it); or, a field that misdescribed the unchanged "
+            f"run: {CORRECTION_ROUTE}; or, when the registration cannot be answered "
+            f"as written, "
+            + register_anew(pid)
+            + " — the earlier protocol, its runs and their verdict stay",
+        )
+    ]
+
+
+#: the way a field corrected in place is released (`scope_now`)
+CORRECTION_ROUTE = (
+    "an audit finding that names the field as its place decided `fixed`, "
+    "then a follow-up analysis audit on the run as it stands whose `resolved` "
+    "on that finding judged exactly this text — a fresh audit without that "
+    "verdict releases nothing"
+)
+
+
+@dataclass(frozen=True)
+class ScopeNow:
+    """The protocol as it stands against its first measurement FIRST in
+    what the number is about: HELD the differences (what, from, to) no
+    correction releases, CORRECTED those a follow-up's `resolved` on a
+    correction of that field released (`Correction`)."""
+
+    first: RunDir
+    held: list[tuple[str, str, str]]
+    corrected: list[tuple[tuple[str, str, str], Correction]]
+
+
+@dataclass(frozen=True)
+class Correction:
+    """A field corrected in place and judged: the correction's REF
+    (`<record>#<n>`), the follow-up record JUDGED_IN that holds its
+    `resolved`, and the verdict's WHY."""
+
+    ref: str
+    judged_in: str
+    why: str
+
+
+def scope_now(
+    area: Path, protocol: Path, pid: str, run: Path, root: Path | None
+) -> ScopeNow | None:
+    """PROTOCOL as it stands against the first measurements in what the
+    number is about (`protocol_history.first_measured_differences`,
+    `scope_differences`), each difference sorted by whether a correction
+    releases it (`resolved_corrections`): a difference in a field whose
+    correction RUN's covering follow-up judged `resolved`. Generic: any
+    prose field the hold compares is released that way, the head's kind,
+    `[kept]` and `[reference]` never — they name no field a finding can
+    place itself in. None without a difference. Raises RuntimeError when
+    git fails."""
+    firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
+    text = protocol.read_text(encoding="utf-8")
+    found = protocol_history.first_measured_differences(
+        protocol, firsts, text, root, protocol_history.scope_differences
+    )
+    if found is None:
+        return None
+    first, diffs = found
+    resolved = resolved_corrections(area, protocol, text, run)
+    held = [d for d in diffs if field_name(d[0]) not in resolved]
+    corrected = [
+        (d, resolved[field_name(d[0])]) for d in diffs if field_name(d[0]) in resolved
+    ]
+    return ScopeNow(first, held, corrected)
+
+
+def resolved_corrections(
+    area: Path, protocol: Path, text: str, run: Path
+) -> dict[str, Correction]:
+    """The fields of PROTOCOL (TEXT as it stands) a correction releases, by
+    `field_name`: a finding that names the field as its place, decided
+    `fixed` (`findings.corrected_field`), with a `resolved` verdict bound to
+    that decision as it stands (`decision_digest`) in an analysis record
+    that covers the area now — its code, promises, registration, the fields
+    read before the run, RUN and what was shown of it
+    (`audit_binding.covering_analysis`). A text edited after that verdict
+    leaves the record covering nothing, a fresh audit carries no verdict,
+    and a verdict on a finding of another field releases this one not:
+    each is no correction. Empty when the area's records or the covering
+    state cannot be read — finalize's audit station names that."""
+    try:
+        records = area_records(area)
+        covering = covering_analysis(area, text, run)
+        members = chain(records).members
+    except (ValueError, FileNotFoundError, RuntimeError):
+        return {}
+    out: dict[str, Correction] = {}
+    for record in covering:
+        for v in record.fix_verdicts:
+            m = members.get(v.ref)
+            if v.verdict != "resolved" or m is None:
+                continue
+            if decision_digest(m.finding) != v.decision_sha:
+                continue
+            name = corrected_field(m.finding, protocol, text)
+            if name is not None:
+                out.setdefault(name, Correction(v.ref, record.path.name, v.why))
+    return out
+
+
+def corrected_in_place(
+    area: Path, protocol: Path, pid: str | None, run: Path | None
+) -> list[str]:
+    """One line per field of PROTOCOL changed since its first measurement
+    that a correction released (`scope_now`): the field, its old and new
+    value, the correction and the follow-up's why — what the release says
+    of a description corrected in place. Empty without an answering run, a
+    stamped id or such a field. Raises RuntimeError when git fails."""
+    if pid is None or run is None:
+        return []
+    now = scope_now(area, protocol, pid, run, git_root(protocol))
+    if now is None:
+        return []
+    return [
+        f"corrected in place after the first measurement {now.first.dir.name}: "
+        f'{what} "{_quoted(old)}" → "{_quoted(new)}" — {c.ref} resolved in '
+        f"{c.judged_in}: {_quoted(c.why)}"
+        for (what, old, new), c in now.corrected
+    ]
+
+
+def quoted_changes(diffs: list[tuple[str, str, str]]) -> str:
+    """DIFFS — (what, from, to) — as a hold names them: `what "from" → "to"`,
+    each value cut to SCOPE_QUOTE characters, joined by "; "."""
+    return "; ".join(
+        f'{what} "{_quoted(old)}" → "{_quoted(new)}"' for what, old, new in diffs
+    )
+
+
+def _labels(diffs: list[tuple[str, str, str]]) -> str:
+    """The fields DIFFS name, in order, for a way back."""
+    return ", ".join(what for what, _, _ in diffs)
 
 
 def _quoted(value: str) -> str:
@@ -538,14 +684,19 @@ def check_registration(
 ) -> None:
     """Hold the answering RUN to the registration of the first measurement
     (`registration_changes`: what the number is about, and the promise
-    block); a note when it holds."""
+    block); a note when it holds, and one per field a correction released
+    (`corrected_in_place`), so the release names what changed and why."""
     held = registration_changes(area, protocol, pid, run)
     findings.take_all(held)
     if not held:
+        corrected = corrected_in_place(area, protocol, pid, run)
         findings.note(
             "  what the number is about and the promise block are the ones the first "
             "measurement registered"
+            + (", but for the fields corrected in place below" if corrected else "")
         )
+        for line in corrected:
+            findings.note(f"  {line}")
 
 
 def gone_run_way(area: Path, run_id: str) -> str:

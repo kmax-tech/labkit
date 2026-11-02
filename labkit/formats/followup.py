@@ -158,6 +158,28 @@ def earlier_blockers(
     ]
 
 
+def earlier_corrections(
+    records: list[Record],
+    current: Callable[[Record], bool],
+    field_of: Callable[[Finding], str | None],
+) -> list[Member]:
+    """The heads of another grade than BLOCKER, decided `fixed`, that
+    FIELD_OF tells as a correction of a protocol field
+    (`findings.corrected_field`), in a record that is not of the state
+    CURRENT tells — shown to a follow-up audit beside `earlier_blockers`,
+    which judges each on the field's change: a description corrected in
+    place is released by that `resolved` alone, at every grade (probe
+    2026-11-02, docs/notes/2026-11-02-registered-field-repair.md). Raises
+    what `chain` raises."""
+    return [
+        m
+        for m in chain(records).heads()
+        if m.finding.grade != "BLOCKER"
+        and field_of(m.finding) is not None
+        and not current(m.record)
+    ]
+
+
 def undecided_earlier(
     records: list[Record], current: Callable[[Record], bool]
 ) -> list[Member]:

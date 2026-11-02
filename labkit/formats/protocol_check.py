@@ -282,6 +282,16 @@ def field_name(label: str) -> str:
     return label.split("(")[0].replace("†", "").strip().casefold()
 
 
+def named_field(text: str, place: str) -> "FieldLine | None":
+    """The field of TEXT whose label PLACE names — `field_name` of both
+    equal, so case, a parenthesised gloss and † aside, never a part of a
+    label; None for a line number, a section, a label TEXT does not hold,
+    or one it holds more than once."""
+    name = field_name(place)
+    hits = [f for f in fields(text) if f.name == name]
+    return hits[0] if len(hits) == 1 else None
+
+
 @dataclass(frozen=True)
 class FieldLine:
     """One labelled field of a protocol: where it is, what it says."""

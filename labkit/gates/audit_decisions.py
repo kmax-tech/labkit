@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.checks import audit_binding
 from labkit.formats import (
     attempts,
     console,
@@ -19,13 +20,18 @@ from labkit.formats import (
     failed_attempts,
     findings,
     promises,
+    protocol_block,
     protocol_check,
+    protocol_history,
 )
+from labkit.formats.answering_run import first_measurement_groups
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_protocols,
     audit_command,
     decide_command,
+    git_root,
     given_or_in,
     handover_command,
     measure_command,
@@ -34,8 +40,10 @@ from labkit.formats.repo import (
 )
 from labkit.formats.protocol_check import field_name, fields
 from labkit.formats.protocol_history import HELD_FIELDS
+from labkit.formats.runs import RunDir, run_path
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
+from labkit.gates.finalize import CORRECTION_ROUTE, quoted_changes, shown_then
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
@@ -733,45 +741,171 @@ def decide(
         + (f" — {reason.strip()}" if reason.strip() else "")
         + f" · {len(rec.open)} open"
     )
-    print(
-        findings.decision_entails(rec.findings[int(n_text) - 1], area, record, protocol)
-    )
+    decided = rec.findings[int(n_text) - 1]
+    print(findings.decision_entails(decided, area, record, protocol))
     if status == "fixed":
-        print(repair_hint(area, record, protocol))
+        print(repair_hint(area, record, protocol, decided))
     return 0
 
 
-def repair_hint(area: Path, record: Path, protocol: Path | None) -> str:
-    """The line under a `fixed` decision on RECORD. `hint:` when nothing the
-    record binds — code, promise block, registration
-    (`findings.state_unchanged`) — has changed since the audit, so the
-    claimed repair is not in the area yet, or when the state could not be
-    compared, naming why (no one protocol to read, nothing to stamp).
-    `next:` when the state changed: measure again, then audit that run — a
-    review of RECORD's decisions holds them to the code RECORD read, so the
-    repaired code is judged by the next audit, not by a review of this one
-    (round 2: seven of eight `--review` calls came after a repair and were
-    refused). A line, never a refusal: the decision stands as given. Agents
-    decided `fixed` on the audited state itself (SAB round 1, 2026-10-29)."""
+def repair_hint(
+    area: Path,
+    record: Path,
+    protocol: Path | None,
+    decided: findings.Finding | None = None,
+) -> str:
+    """The line under a `fixed` decision on RECORD — what the repair in the
+    area owes, checked in this order:
+
+    - the protocol as it stands differs from what its first measurement
+      registered — what the number is about or a promise
+      (`protocol_history.first_measured_differences`, the comparison
+      finalize holds the run to). `next:` when DECIDED is a correction of a
+      changed field (`findings.corrected_field`): no new measurement, the
+      follow-up audit's `resolved` on it releases that field
+      (`finalize.resolved_corrections`). Else `held:` — finalize refuses
+      the edit, a new measurement would carry it — with the way back, the
+      correction route and the new registration, never "measure again".
+      Agents rewrote the Unit on the audit's word, measured again on this
+      line's word, and finalize refused the rewrite (area 17, 2026-11-02).
+    - `next:` the code, the promise block or the registration changed
+      (`findings.state_unchanged`): measure again, then audit that run — a
+      review of RECORD's decisions holds them to the code RECORD read
+      (round 2: seven of eight `--review` calls came after a repair and
+      were refused).
+    - `next:` only the fields the analysis audit read before the run
+      changed (`audit_binding.analysis_now`): audit the run again as it
+      stands; no new measurement.
+    - `hint:` nothing the record binds changed. A repair written after the
+      audit — the Conclusion, the other Summary fields — owes no new
+      measurement and no new analysis audit by itself; a BLOCKER decided
+      `fixed` in the audited state still waits for its follow-up audit
+      (`followup.holds`); the decision and report reviews the protocol owes
+      stand. A repair of code, inputs or configuration is not in the area
+      yet (agents decided `fixed` on the audited state itself, SAB round 1,
+      2026-10-29).
+
+    Also `hint:` when the state could not be compared, naming why. A line,
+    never a refusal: the decision stands as given."""
     repair = (
         "a repair changes code, inputs or configuration — repair first, then "
         "measure and audit again"
     )
     try:
-        text = the_protocol(area, protocol).read_text(encoding="utf-8")
-        unchanged = findings.state_unchanged(findings.read(record), area, text)
-    except (ValueError, FileNotFoundError) as exc:
+        path = the_protocol(area, protocol)
+        text = path.read_text(encoding="utf-8")
+        rec = findings.read(record)
+        unchanged = findings.state_unchanged(rec, area, text)
+        departed = _departure(area, path, text)
+    except (ValueError, FileNotFoundError, RuntimeError) as exc:
         return f"hint: the audited state could not be compared ({exc}); {repair}"
+    analysis = audit_command(area, "--mode", "analysis", protocol=protocol)
+    if departed is not None:
+        first, diffs = departed
+        root = git_root(path)
+        pid = protocol_block.head(text).id or "<id>"
+        named = (
+            findings.corrected_field(decided, path, text)
+            if decided is not None
+            else None
+        )
+        own = [d for d in diffs if named is not None and field_name(d[0]) == named]
+        others = [d for d in diffs if d not in own]
+        if own:
+            still = (
+                f" Still held, no correction names them: {quoted_changes(others)}."
+                if others
+                else ""
+            )
+            return (
+                f"next: a correction in place — {quoted_changes(own)} since the first "
+                f"measurement {first.dir.name} — owes no new measurement: a follow-up "
+                f"analysis audit on the run as it stands (`{analysis}`) judges it, and "
+                f"only its `resolved` on this finding, for exactly this text, releases "
+                f"the change; a text edited after that verdict is held again. A changed "
+                f"definition, population or question is no correction: restore it"
+                f"{shown_then(path, first, root)}, or "
+                + ways_out.register_anew(pid)
+                + "."
+                + still
+            )
+        labels = ", ".join(what for what, _, _ in diffs)
+        return (
+            f"held: this repair changes what the first measurement {first.dir.name} "
+            f"registered — {quoted_changes(diffs)} — and finalize refuses it; a new "
+            f"measurement would carry the change, not repair it. Restore {labels}"
+            f"{shown_then(path, first, root)}, then decide the finding again "
+            f"(`limitation` with its effect on the claim, or `false-positive`); or, a "
+            f"field that misdescribed the unchanged run: {CORRECTION_ROUTE}; or, when "
+            f"the registration cannot be answered as written, "
+            + ways_out.register_anew(pid)
+        )
     if not unchanged:
         return (
             f"next: the repair is in the area — measure again (`{measure_command(area)}`), "
-            f"then `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` on that "
+            f"then `{analysis}` on that "
             f"run, and decide its findings; {record.name} judged the code before the repair, "
             f"so a decision review of it no longer applies"
         )
+    if rec.mode != ANALYSIS_AUDIT or rec.run_id in (None, findings.NO_RUN):
+        return (
+            f"hint: nothing relevant changed since the audit {record.name} (code, "
+            f"promise block and registration stamp as it saw them): {repair}"
+        )
+    try:
+        now = audit_binding.analysis_now(area, text, run_path(area, rec.run_id))
+    except (ValueError, FileNotFoundError, RuntimeError) as exc:
+        return f"hint: the audited state could not be compared ({exc}); {repair}"
+    if rec.state != now:
+        return (
+            f"next: the fields {record.name} read before the run changed — audit the run "
+            f"again as it stands (`{analysis}`) and decide its findings; the repair owes "
+            f"no new measurement"
+        )
+    followup = (
+        f" A BLOCKER decided `fixed` in the audited state waits for the follow-up "
+        f"audit that sees the repair: `{analysis}` on the run as it stands, no new "
+        f"measurement."
+        if decided is not None and decided.grade == "BLOCKER"
+        else ""
+    )
     return (
-        f"hint: nothing relevant changed since the audit {record.name} (code, "
-        f"promise block and registration stamp as it saw them): {repair}"
+        f"hint: nothing {record.name} binds changed since the audit (code, promise "
+        f"block, registration, the fields read before the run, the run). A repair "
+        f"written after the audit — the Conclusion, the other Summary fields — owes "
+        f"no new measurement and no new analysis audit by itself.{followup} The "
+        f"decision and report reviews the protocol owes stand (`labkit-next` names "
+        f"the next step). A repair of code, inputs or configuration is not in the "
+        f"area yet: {repair}"
+    )
+
+
+def _departure(
+    area: Path, protocol: Path, text: str
+) -> tuple[RunDir, list[tuple[str, str, str]]] | None:
+    """The first measurement TEXT, PROTOCOL as it stands, departs from in
+    what the number is about or in a promise, with the differences; None
+    without a head that reads, a stamped id, a measurement or a difference
+    (a head that does not read is protocol-check's to name). Raises
+    RuntimeError when git fails, PromiseError (a ValueError) on a block
+    that does not read."""
+    try:
+        pid = protocol_block.head(text).id
+    except protocol_block.BlockError:
+        return None
+    if pid is None:
+        return None
+    root = git_root(protocol)
+    firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
+    return protocol_history.first_measured_differences(
+        protocol,
+        firsts,
+        text,
+        root,
+        lambda then, now: (
+            protocol_history.scope_differences(then, now)
+            + protocol_history.promise_differences(then, now)
+        ),
     )
 
 

@@ -5,7 +5,7 @@ before the call.
 The instructions ship with the package (`labkit/agents/*.agent.md`);
 `render` inlines the files they tell the auditor to read, the rules of the
 standard they cite (`cited_rules`) and, in a follow-up, the earlier decided
-blockers (`earlier_piece`). `bound_prompt` takes the stamp once, before the
+blockers and corrections (`earlier_piece`). `bound_prompt` takes the stamp once, before the
 call, so the record names the sha the auditor read. Nothing here calls a
 model or writes a file; `gates.audit` does.
 """
@@ -38,12 +38,15 @@ from labkit.formats.answering_run import recorded_models
 from labkit.formats.prompts import prompt_body
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_history import (
+    ABSENT,
     BoundValidation,
     bound_validation,
+    registrations_as_first_measured,
 )
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_protocols,
+    git_root,
     layout_root,
     no_such_area,
     shown,
@@ -86,8 +89,8 @@ INLINE_NOTE = (
     "`<line>: <row>`, and for a computation over a model's annotations the "
     "evidence that the annotator suits under `===== EVIDENCE: … =====` lines "
     "(the bound apply protocol and its result as FILE lines), and the area's "
-    "earlier decided BLOCKERs under one `===== EARLIER DECIDED BLOCKERS =====` "
-    "line. Nothing else is in scope."
+    "earlier decided BLOCKERs and corrections under one `===== EARLIER DECIDED "
+    "BLOCKERS AND CORRECTIONS =====` line. Nothing else is in scope."
 )
 
 
@@ -404,7 +407,7 @@ def render(
 
 
 #: the label of the piece that shows the earlier decided BLOCKERs
-EARLIER_LABEL = "EARLIER DECIDED BLOCKERS"
+EARLIER_LABEL = "EARLIER DECIDED BLOCKERS AND CORRECTIONS"
 #: the label of the piece that shows the ways out of a BLOCKER (MODE analysis)
 WAYS_OUT_LABEL = "WAYS OUT OF A BLOCKER"
 #: operating limits of that piece, not thresholds of meaning: past either
@@ -415,16 +418,32 @@ EARLIER_MAX_ENTRIES = 40
 EARLIER_MAX_BYTES = 60_000
 
 
+class FieldChange(NamedTuple):
+    """A corrected field as the follow-up shows it: its LABEL, its value as
+    the first measurement registered it — REGISTERED, None when that text
+    cannot be read back, WHERE saying which text it is or why not — and its
+    value NOW."""
+
+    label: str
+    registered: str | None
+    where: str
+    now: str
+
+
 class Followup(NamedTuple):
     """What an analysis audit is shown to judge earlier decisions, taken
-    once: the area's earlier decided BLOCKERs (`followup.earlier_blockers`),
-    the answering run's metrics.json as the prompt shows it
-    (`RunShown.metrics`; None when it shows none), and the origin of each
-    shown finding's chain (its ref → the origin's finding)."""
+    once: the ENTRIES — the area's earlier decided BLOCKERs
+    (`followup.earlier_blockers`), then its earlier corrections of a
+    protocol field (`followup.earlier_corrections`) —, the answering run's
+    metrics.json as the prompt shows it (`RunShown.metrics`; None when it
+    shows none), the origin of each shown finding's chain (its ref → the
+    origin's finding), and for each correction the change it is judged on
+    (its ref → `FieldChange`)."""
 
-    blockers: list[followup.Member]
+    entries: list[followup.Member]
     metrics: dict | None
     origins: dict[str, findings.Finding]
+    changes: dict[str, FieldChange]
 
     def check_present(self, e: followup.Member) -> bool | None:
         """Whether E's required check key stands in the metrics shown —
@@ -437,21 +456,35 @@ class Followup(NamedTuple):
 
 def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     """What MODE analysis shows of the earlier decisions: one `(label,
-    text)` piece with every earlier decided BLOCKER as `<record>#<n>`, its
-    text, its decision (status, reason, effect) and, when the finding
-    requires a check, that metrics.json key with its note and its whole
-    value as shown, or that it is missing — or one piece saying there is
-    none."""
-    if not shown.blockers:
-        return ((EARLIER_LABEL, "none: no earlier decided BLOCKER in this area"),)
+    text)` piece with every earlier decided BLOCKER and correction as
+    `<record>#<n>`, its text, its decision (status, reason, effect), for a
+    correction the field as first registered and as it reads now, and, when
+    the finding requires a check, that metrics.json key with its note and
+    its whole value as shown, or that it is missing — or one piece saying
+    there is none."""
+    if not shown.entries:
+        return (
+            (
+                EARLIER_LABEL,
+                "none: no earlier decided BLOCKER or correction in this area",
+            ),
+        )
     entries = []
-    for e in shown.blockers:
+    for e in shown.entries:
         f = e.finding
         effect = f" (effect: {f.effect})" if f.effect else ""
         entry = (
             f"{e.ref}\n  finding: {f.text}\n  decided: {f.status}{effect} — "
             f"{f.reason or '(no reason given)'}"
         )
+        change = shown.changes.get(e.ref)
+        if change is not None:
+            then = (
+                f"\n  {change.label} registered ({change.where}): {change.registered}"
+                if change.registered is not None
+                else f"\n  {change.label} registered: cannot be read back — {change.where}"
+            )
+            entry += f"{then}\n  {change.label} now: {change.now}"
         present = shown.check_present(e)
         note = f" ({f.check_note})" if f.check_note else ""
         if present is True and f.check.startswith(findings.FILE_CHECK):
@@ -477,7 +510,7 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     size = len(text.encode("utf-8"))
     if len(entries) > EARLIER_MAX_ENTRIES or size > EARLIER_MAX_BYTES:
         raise AuditError(
-            f"{len(entries)} earlier decided BLOCKERs, {size} bytes — past the "
+            f"{len(entries)} earlier decided BLOCKERs and corrections, {size} bytes — past the "
             f"follow-up's operating limit ({EARLIER_MAX_ENTRIES} entries, "
             f"{EARLIER_MAX_BYTES} bytes); none is cut from what the auditor must "
             f"judge, so the audit does not run",
@@ -504,7 +537,7 @@ def followup_size(shown: Followup) -> tuple[int, int]:
     """(entries, bytes) of the follow-up piece SHOWN renders — what the
     record keeps to revisit the operating limits."""
     ((_, text),) = earlier_piece(shown)
-    return len(shown.blockers), len(text.encode("utf-8")) if shown.blockers else 0
+    return len(shown.entries), len(text.encode("utf-8")) if shown.entries else 0
 
 
 def carried_of(
@@ -512,41 +545,91 @@ def carried_of(
 ) -> list[findings.Finding]:
     """The findings the new record carries: one per shown BLOCKER whose
     verdict is not `resolved` (`followup.carried_finding`). A shown one
-    without a verdict is not carried — unchecked, it stays where it is."""
-    by_ref = {e.ref: e for e in shown.blockers}
+    without a verdict is not carried — unchecked, it stays where it is. A
+    correction of another grade is not carried: without its `resolved` the
+    field's change stays held where finalize compares it."""
+    by_ref = {e.ref: e for e in shown.entries}
     return [
         followup.carried_finding(by_ref[v.ref], v, shown.origins[v.ref])
         for v in fixes
-        if v.verdict != "resolved"
+        if v.verdict != "resolved" and by_ref[v.ref].finding.grade == "BLOCKER"
     ]
 
 
 def earlier_of(
     area: Path, current: Callable[[findings.Record], bool], metrics: dict | None
 ) -> Followup:
-    """The follow-up of AREA: its earlier decided BLOCKERs — those of a
-    record that CURRENT does not tell as the state now audited — with the
-    origin of each, and METRICS as shown. Raises AuditError when there are
-    earlier BLOCKERs and the area holds more than one protocol: the records
-    carry no protocol id, so whose question an earlier finding judged is
-    not certain."""
+    """The follow-up of AREA: its earlier decided BLOCKERs and its earlier
+    corrections of a field of its one protocol
+    (`followup.earlier_corrections`, `findings.corrected_field`) — those of
+    a record that CURRENT does not tell as the state now audited — with the
+    origin of each, each correction's change — a BLOCKER's too —
+    (`FieldChange`: the field as
+    the first measurement registered it, `protocol_history.
+    registrations_as_first_measured`, and as it reads now), and METRICS as
+    shown. Raises AuditError when there are earlier BLOCKERs and the area
+    holds more than one protocol: the records carry no protocol id, so
+    whose question an earlier finding judged is not certain; with several
+    protocols no correction is shown, and the field's change stays held."""
     records = findings.area_records(area)
+    protocols = area_protocols(area)
+    protocol = protocols[0] if len(protocols) == 1 else None
+    text = protocol.read_text(encoding="utf-8") if protocol is not None else ""
+
+    def field_of(f: findings.Finding) -> str | None:
+        """The field F corrects in the area's one protocol, or None."""
+        if protocol is None:
+            return None
+        return findings.corrected_field(f, protocol, text)
+
     try:
         c = followup.chain(records)
-        shown = followup.earlier_blockers(records, current)
+        blockers = followup.earlier_blockers(records, current)
+        corrections = followup.earlier_corrections(records, current, field_of)
     except findings.FindingsError as exc:
         raise AuditError(str(exc), fix=findings.record_way(area)) from exc
-    if shown and len(area_protocols(area)) > 1:
+    if blockers and len(protocols) > 1:
         raise AuditError(
-            f"{len(shown)} earlier decided BLOCKER(s) and {len(area_protocols(area))} "
+            f"{len(blockers)} earlier decided BLOCKER(s) and {len(protocols)} "
             f"protocols in {area.name}: the records name no protocol, so which "
             f"question an earlier finding judged is not certain — the follow-up "
             f"does not guess, and deciding an earlier finding again does not remove "
             f"it from what is followed up; no step labkit offers clears this here yet",
             fix=HANDOVER,
         )
+    shown = blockers + corrections
     origins = {e.ref: c.members[c.origin[e.ref]].finding for e in shown}
-    return Followup(shown, metrics, origins)
+    changes = (
+        {
+            e.ref: _field_change(protocol, text, e.finding)
+            for e in shown
+            if field_of(e.finding) is not None
+        }
+        if protocol is not None
+        else {}
+    )
+    return Followup(shown, metrics, origins, changes)
+
+
+def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange:
+    """The change of the field F corrects in PROTOCOL (TEXT now): its value
+    as the first measurement registered it and as it reads now. Raises
+    RuntimeError when git fails."""
+    at = f.place
+    hit = protocol_check.named_field(text, at[1]) if at is not None else None
+    if at is None or hit is None:
+        raise ValueError(f"{f.one_line}: names no field of {protocol.name}")
+    pid = protocol_block.head(text).id
+    if pid is None:
+        return FieldChange(hit.label, None, "the protocol has no id", hit.value)
+    texts, why = registrations_as_first_measured(protocol, pid, git_root(protocol))
+    if not texts:
+        return FieldChange(hit.label, None, why, hit.value)
+    then, where = texts[0]
+    old = protocol_check.named_field(then, at[1])
+    return FieldChange(
+        hit.label, old.value if old is not None else ABSENT, where, hit.value
+    )
 
 
 class Stamp(NamedTuple):
@@ -622,7 +705,7 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     earlier_repairs = (
         earlier_of(area, current, shown.evidence() if shown else None)
         if mode == ANALYSIS
-        else Followup([], None, {})
+        else Followup([], None, {}, {})
     )
     changed = "the area changed while it was read"
     try:

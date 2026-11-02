@@ -534,7 +534,7 @@ def _record(
     try:
         result = parse(report)
         fixes = parse_fixes(report, bound.earlier_repairs)
-        moved = decisions_moved(bound.earlier_repairs.blockers, args.area)
+        moved = decisions_moved(bound.earlier_repairs.entries, args.area)
         if moved:
             raise AuditError(
                 f"the decision on {', '.join(moved)} changed while the auditor read "
@@ -590,7 +590,7 @@ def _record(
         findings.read(recorded), args.area, report, args.protocol
     ):
         print(line)
-    for line in fix_lines(bound.earlier_repairs.blockers, fixes):
+    for line in fix_lines(bound.earlier_repairs.entries, fixes):
         print(line)
     return 1 if b or w or carried_of(bound.earlier_repairs, fixes) else 0
 

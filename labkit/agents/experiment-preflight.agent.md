@@ -140,9 +140,12 @@ shown nowhere names the file and what it must show. Under
 `===== DECLARED RUN =====` stands the run the protocol's `[result]` declares
 when it is not the run shown.
 
-**MODE analysis: judge every earlier decided BLOCKER.** Under
-`===== EARLIER DECIDED BLOCKERS =====` stand the BLOCKERs a person decided
-in an earlier state (`fixed`, `limitation` or `false-positive`), each as
+**MODE analysis: judge every earlier decided BLOCKER and correction.** Under
+`===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====` stand the BLOCKERs a
+person decided in an earlier state (`fixed`, `limitation` or
+`false-positive`) and the corrections: a finding of any grade that names a
+protocol field as its place, decided `fixed`, shown with the field as the
+first measurement registered it and as it reads now. Each stands as
 `<record>#<n>` with the finding and the decision. A finding that begins
 `carried from …` continues an earlier one. Judge the fault it names. The
 decision is a claim, not evidence. Write exactly one line for each:
@@ -162,14 +165,18 @@ FIX · <record>#<n> · resolved|unresolved|not_assessable · <why, citing file:l
   belongs to an older run. A diagnostic the reason only describes is not
   shown.
 
-A finding on a description in the protocol's setup — a count, a path, a
-name in Terms, Data / scope, Model / tool, Model I/O, Exclusions / filters
-or Unit — is repaired by correcting the description in place while the
-run's data and code stay as they were: `resolved` when the text now matches
-the run's inputs and rows, `unresolved` when it does not. A change of the
-data or code the run used owes a new measurement instead. The
-registration's own fields (question, criterion, quality check, null
-condition) are not corrected in place.
+A correction is a description of the unchanged run repaired in place: the
+run's data, code and rows stay as they were, the field's text changes. Judge
+the change shown, the registered text against the text now. `resolved` only
+when both hold: the old text misdescribed the run, and the new text
+describes the same run, so that run answers the question it answered under
+the registration. `unresolved` when the new text still does not match the
+run's inputs and rows, or when the change redefines what is measured — what
+a unit or a term means, which items count, the question — rather than
+describing it: that is a new registration, not a correction ("ms" for
+"milliseconds" describes; seconds for milliseconds over the same numbers
+redefines). A change of the data or code the run used owes a new
+measurement instead.
 
 An entry with a `required check` shows the diagnostic the finding fixed for
 its repair: judge its value. A check marked missing leaves the repair
@@ -229,6 +236,10 @@ BLOCKER|WARNING|NOTE · <file>:<line> · <what is wrong> · <which reported numb
 goes wrong, with what input> · <LAB-nnn rule name, or "new class"> · <smallest change that
 would remove the failure>
 ```
+
+A finding on a protocol field names the field by its label as the place —
+`PROTOCOL-<name>.md:Unit`, `PROTOCOL-<name>.md:Data / scope` — not a line
+number: only a field named so can be corrected in place and followed up.
 
 It can go on below that line with bullets or a few lines of evidence. It
 ends at the next finding line or the next section: a `FIX`, `READ`,

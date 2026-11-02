@@ -11,6 +11,30 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **A field corrected after the first measurement has one route, and the
+  decision says what a repair owes.** labkit-paper area 17 (2026-11-02): a
+  registered Unit rewritten on an audit finding was answered "measure
+  again" and held by finalize after the new run; an audit of the first run
+  on the rewritten text adopted it unjudged
+  (`docs/notes/2026-11-02-registered-field-repair.md`). Now:
+  - finalize holds the protocol as it stands to the first measurements in
+    what the number is about, besides the runs' snapshots
+    (`scope_changes`);
+  - a correction in place — an audit finding that names the field as its
+    place, `<protocol file>:<label>` with the whole label, decided `fixed` —
+    is shown to the follow-up audit at every grade with the field as
+    registered and as it reads now, and only that audit's `resolved`, in a
+    record of exactly this state, releases the change; finalize names each
+    released correction. A finding placed by line number names no field;
+    the auditor's instructions ask for the label;
+  - `labkit-audit --decide N fixed` says what the repair owes by what it
+    changed — a correction: no new measurement; another change of the
+    registration: the way back or a new registration; changed code:
+    measure again; a Conclusion: no measurement and no analysis audit by
+    itself (the reviews owed stand). The status line no longer says "after
+    a new measurement".
+  The follow-up piece is labelled `EARLIER DECIDED BLOCKERS AND
+  CORRECTIONS`.
 - **A registered report can be saved before the adoption (the progress
   account).** labkit-paper area 17 (2026-11-02): six of 18 labkit attempts
   reached the 2400-second limit, five of them without a `REPORT.md`, all in

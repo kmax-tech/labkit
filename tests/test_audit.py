@@ -1167,17 +1167,15 @@ class DecisionListReachesThePerson(unittest.TestCase):
             review = f"`labkit-audit experiments/01-x --review --record {record.name}`"
             said = decide("fixed", "dropped the feature")
             self.assertIn(
-                "fixed: a repair is claimed, confirmation pending — the follow-up "
-                "audit judges it after a new measurement; until then it releases "
-                "nothing; the check owed: extend the measuring script so that its "
+                "fixed: a repair is claimed, confirmation pending — the next "
+                "analysis audit judges it, and a BLOCKER's number does not leave "
+                "before; the check owed: extend the measuring script so that its "
                 "kept rows carry what `leak_rate` (must be 0) needs",
                 said,
             )
-            self.assertIn(
-                "; then `.venv/bin/python experiments/01-x/scripts/01_measure.py` "
-                "and `labkit-audit experiments/01-x --mode analysis`",
-                said,
-            )
+            # what the repair owes is said once, by what it changed (the line below)
+            self.assertIn("what the repair owes in this area is the line below", said)
+            self.assertNotIn("after a new measurement", said)
             self.assertIn(
                 f"hint: nothing relevant changed since the audit {record.name} "
                 "(code, promise block and registration stamp as it saw them): a "
@@ -1393,7 +1391,7 @@ class FixVerdicts(unittest.TestCase):
         rc, out, err, sent = self.audit(area, answer)
         self.assertEqual(rc, 1, err)  # the unresolved finding is carried: a BLOCKER
         self.assertIn(
-            f"===== EARLIER DECIDED BLOCKERS =====\n{ref}\n  finding: {self.LEAK}\n"
+            f"===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n{ref}\n  finding: {self.LEAK}\n"
             f"  decided: fixed — dropped poisson_ratio\n",
             sent[0],
         )
@@ -1604,7 +1602,10 @@ class FixVerdicts(unittest.TestCase):
                     self.assertIn(f"{rec.name}#1", err)
                     self.assertIn("--decide 1 STATUS", err)
                     continue
-                self.assertIn("===== EARLIER DECIDED BLOCKERS =====\nnone:", sent[0])
+                self.assertIn(
+                    "===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\nnone:",
+                    sent[0],
+                )
 
     def test_the_record_holds_its_fix_verdicts_to_their_form(self):
         area, _ = self.area()
@@ -1733,9 +1734,9 @@ class RequiredCheck(unittest.TestCase):
     def test_no_check_required_is_not_a_missing_check(self):
         area, earlier = self.fv.area()
         v, prompt, _ = self.verdict(area, earlier)
-        piece = prompt.split("===== EARLIER DECIDED BLOCKERS =====\n")[1].split(
-            "====="
-        )[0]
+        piece = prompt.split("===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n")[
+            1
+        ].split("=====")[0]
         self.assertNotIn("required check", piece)
         self.assertEqual((v.check, v.check_present), ("", None))
         (record,) = self.fv.new_records(area, earlier)
@@ -2860,7 +2861,7 @@ class Carried(unittest.TestCase):
         self.assertEqual(rc, 1, err)
         piece = (
             sent[0]
-            .split("===== EARLIER DECIDED BLOCKERS =====\n")[1]
+            .split("===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n")[1]
             .split("\n=====")[0]
         )
         self.assertIn(f"{r2.path.name}#{n2}\n", piece)
@@ -2907,7 +2908,7 @@ class Carried(unittest.TestCase):
         _, _, _, sent = self.fv.audit(area, CLEAN)
         piece = (
             sent[0]
-            .split("===== EARLIER DECIDED BLOCKERS =====\n")[1]
+            .split("===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n")[1]
             .split("\n=====")[0]
         )
         self.assertIn(f"{r1.name}#1", piece)

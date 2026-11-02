@@ -651,6 +651,65 @@ class ScopeAsFirstMeasured(_Repository):
         self._run(self._register(ALL_ROADS), RUN)
         self.assertEqual(self._changes(), [])
 
+    def _rewrite(self, old: str, new: str) -> None:
+        """The protocol in the tree with OLD replaced by NEW — no run after."""
+        text = self.proto.read_text(encoding="utf-8")
+        self.assertIn(old, text)
+        self.proto.write_text(text.replace(old, new), encoding="utf-8")
+
+    def test_a_field_rewritten_after_the_last_measurement_is_held_before_any_run(
+        self,
+    ):
+        """Probe 2026-11-02 (area 17, c17-t34-labkit-demand-r1): the Unit
+        rewritten after the one measurement, then an audit of that run on the
+        new text — no run saw the change, and the adoption passed. The
+        protocol as it stands is held to the first measurement too."""
+        self._run(self._register(ALL_ROADS), RUN)
+        self._rewrite("a fraction of the buffer's area", "a share of the buffer")
+        (line,) = self._changes()
+        self.assertIn(
+            f"what the number is about changed after the first measurement {RUN}: "
+            'Unit "a fraction of the buffer\'s area" → "a share of the buffer" '
+            "(as the protocol stands now; no run measured under it yet)",
+            line,
+        )
+        self.assertIn(f"Next: restore Unit as {RUN} registered them", line)
+        self.assertIn("the runs measured under them stay", line)
+        self.assertIn("register anew", line)
+
+    def test_the_twin_the_field_restored_passes(self):
+        self._run(self._register(ALL_ROADS), RUN)
+        self._rewrite("a fraction of the buffer's area", "a share of the buffer")
+        self._rewrite("a share of the buffer", "a fraction of the buffer's area")
+        self.assertEqual(self._changes(), [])
+
+    def test_the_twin_a_conclusion_rewritten_after_the_run_passes(self):
+        """What the Summary says after the run is not what the number is about."""
+        self._run(
+            self._register(
+                ALL_ROADS + "- **Conclusion:** about a third is deforested\n"
+            ),
+            RUN,
+        )
+        self._rewrite("about a third is deforested", "0.47 of the buffer is deforested")
+        self.assertEqual(self._changes(), [])
+
+    def test_the_twin_a_reflowed_field_in_the_tree_passes(self):
+        self._run(self._register(ALL_ROADS), RUN)
+        self._rewrite(
+            "a fraction of the buffer's area", "a fraction of\n  the buffer's area"
+        )
+        self.assertEqual(self._changes(), [])
+
+    def test_a_change_measured_then_restored_in_the_tree_stays_held_by_the_run(self):
+        """The run snapshot is still compared: a run measured under the change
+        answers no registered question, whatever the tree says now."""
+        self._run(self._register(ALL_ROADS), self.FIRST)
+        self._run(self._register(ALL_ROADS.replace("5.5 km", "2.75 km")), RUN)
+        self._rewrite("2.75 km", "5.5 km")
+        (line,) = self._changes()
+        self.assertIn(f"(as the answering run {RUN} saw the protocol)", line)
+
     def test_finalize_holds_it(self):
         self._run(self._register(ALL_ROADS), self.FIRST)
         self._run(self._register(ALL_ROADS.replace("5.5 km", "2.75 km")), RUN)
