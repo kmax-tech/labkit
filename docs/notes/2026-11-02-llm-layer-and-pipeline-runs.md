@@ -119,6 +119,33 @@ at the boundary):
    run id.
 5. **One experiment end to end first**, then the rest.
 
+### Datasets and artifacts of a topic
+
+Three roles, none of them labkit's alone:
+
+| Who | Does what with a dataset or artifact |
+|---|---|
+| Topic repo (`fallacy-detection`) | provides it: its loaders, stages and prompts register at the framework's extension points |
+| Framework (middle layer) | runs it: defines the interfaces (`BaseDataLoader`, stage base classes, prompt and parser registries), stores artifacts in `output/` keyed by `repro_hash`, reloads pinned ones (`preload_artifacts`) |
+| labkit | records and checks it: `runlog.run(data=…)` describes the inputs by hash and refuses a leak between splits; `run.output(...)` registers what the run wrote. It stores references, never the data |
+
+The framework never names a topic module; the topic registers itself
+(inversion of the dependency). In Python that is either registration on
+import of the topic package, or entry points declared in the topic's
+`pyproject.toml` (`[project.entry-points."<framework>.datasets"]`) that the
+framework discovers. Large data stays outside every repo, addressed in the
+config by path and content hash.
+
+Two places in `fallacy-detection` stop this today:
+
+- `src/data_loader/registry.py` lists loader modules in the framework's own
+  source (`LOADER_MODULE_MAP = {"argument": "src.data_loader.argument"}`); a
+  topic cannot add a loader without editing the framework.
+- `src/data_loader/base.py` types the base loader's result as
+  `ArgumentDataset`, a domain type in the general layer.
+
+Both have to open before the middle layer can become a package.
+
 ## Open decisions
 
 1. **Where the cache lives**: one cache per lab repo, or one shared across
@@ -138,6 +165,9 @@ at the boundary):
 7. **The copies** in `arg-images`, `aspect-based-image-generation` and
    `fallacy-detection-github`: leave, archive, or move onto the shared
    framework once it is a package.
+8. **How a topic registers** its loaders, stages and prompts: on import of
+   its package (simple, explicit) or via entry points (discovered, works
+   across installed packages).
 
 ## Not in scope
 
