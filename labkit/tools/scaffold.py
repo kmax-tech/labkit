@@ -71,6 +71,7 @@ from dataclasses import dataclass
 import importlib.metadata
 import os
 import re
+import shlex
 
 from labkit.formats import console
 from pathlib import Path, PurePosixPath
@@ -752,8 +753,8 @@ def stamp_area(
             raise console.Refused(
                 "labkit-init",
                 f"--report-file names the report at the area's stamp; {found} "
-                f"is stamped — set `report = {protocol_block.toml_string(report_file)}` "
-                f"in its protocol's head",
+                f"is stamped — before its first measurement `protocol-fill "
+                f"<PROTOCOL> report={shlex.quote(report_file)}` registers it",
             )
         _, blocks = pilot_and_report(CUT_MARK.sub("", template(PROTOCOL_TEMPLATE.name)))
         return found, "\n".join(promote(found, blocks))

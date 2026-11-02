@@ -370,7 +370,10 @@ an exploration's run is looked at.
 
 **The registered report owes its result.** A protocol whose head names
 its report file (`report = "REPORT.md"`, a path relative to the
-repository root, stamped by `labkit-init exp --report-file REPORT.md`;
+repository root, stamped by `labkit-init exp --report-file REPORT.md`, or
+on a protocol stamped without it registered by `protocol-fill <PROTOCOL>
+report=REPORT.md` — before the first measurement only, another file with
+`--force`; once the area measured, no fill moves or drops it;
 `usability stage` registers it for the SAB tasks, whose sheet asks for
 the file) is owed that result by that file, run id or not: once the
 file exists — in the tree at the stop, in the index at the commit — it

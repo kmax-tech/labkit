@@ -248,6 +248,65 @@ def fill_head(text: str, key: str, value: str) -> str:
     return "\n".join(lines)
 
 
+#: the label a fill names the head's `[protocol] report` by (with or without
+#: its table, `TABLE_PREFIX`)
+REPORT_KEY = "report"
+#: a `report = …` line of the head, whatever its value's spelling
+_REPORT_LINE = re.compile(r"^\s*report\s*=")
+#: a `key = …` line of a TOML table body (not a comment, not blank)
+_KEY_LINE = re.compile(r"^\s*[\w.\"'-]+\s*=")
+
+
+def is_report_label(label: str) -> bool:
+    """Does LABEL name the head's `[protocol] report` (`report`,
+    `[protocol] report`)?"""
+    return TABLE_PREFIX.sub("", label.strip()).lower() == REPORT_KEY
+
+
+def set_report(text: str, value: str, *, force: bool) -> str:
+    """TEXT with the head's `[protocol] report` registering VALUE, a path
+    relative to the repository root as `protocol_block.report_field` reads
+    it (normalized there): a `report = "…"` line added after the last key of
+    the `[protocol]` table when the head registers none; TEXT unchanged when
+    it registers the same file; the line replaced, with FORCE only, when it
+    registers another. Raises ValueError on a value `report_field` refuses,
+    a head without a `[protocol]` table, and another file without FORCE.
+    Whether the protocol has measured — after which the registered report
+    is bound and no FORCE changes it — is the caller's question
+    (`protocol_fill`)."""
+    try:
+        wanted = protocol_block.report_field(value)
+        now = protocol_block.head(text).report
+    except protocol_block.BlockError as exc:
+        raise ValueError(str(exc)) from exc
+    assert wanted is not None, "report_field returns None only for None"
+    if now == wanted:
+        return text
+    if now is not None and not force:
+        raise ValueError(
+            f"the head registers {now} as its report already — `--force` registers "
+            f"{wanted} instead (before the first measurement only)"
+        )
+    lines = text.split("\n")
+    span = protocol_block.toml_block_span(text)
+    table = _table_span(lines, *span, "protocol") if span is not None else None
+    if table is None:
+        raise ValueError("the head has no [protocol] table to register a report in")
+    start, end = table
+    written = f"report = {protocol_block.toml_string(wanted)}"
+    for i in range(start, end):
+        if _REPORT_LINE.match(lines[i]):
+            lines[i] = written
+            return "\n".join(lines)
+    last = max(
+        (i for i in range(start, end) if _KEY_LINE.match(lines[i])), default=None
+    )
+    if last is None:
+        raise ValueError("the head's [protocol] table holds no key to register after")
+    lines.insert(last + 1, written)
+    return "\n".join(lines)
+
+
 #: a promise's sentence as `--list` names it and a fill addresses it:
 #: `criterion-1 sentence` — the word before "sentence" is a promise id
 #: (`promises.is_block_id`), else the label is a prose field's
@@ -401,7 +460,7 @@ def fill_many(
 ) -> str:
     """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`,
     `model alias`, `number_describes`, `kept.key` and `kept.unit`
-    (`HEAD_KEYS`), `fill_sentence` for
+    (`HEAD_KEYS`), `set_report` for `report` (FORCE passed on), `fill_sentence` for
     `<id> sentence`; the freeze keys (`FREEZE_KEYS`) are refused with how to
     set them by hand;
     the first ValueError leaves the caller's file untouched — all or
@@ -421,7 +480,9 @@ def fill_many(
                 "`frozen = true` — the protocol is the author's to edit; audit and "
                 "run records are not"
             )
-        if label.strip().lower() in HEAD_KEYS:
+        if is_report_label(label):
+            text = set_report(text, value, force=force)
+        elif label.strip().lower() in HEAD_KEYS:
             text = fill_head(text, HEAD_KEYS[label.strip().lower()][0], value)
         elif sentence:
             if line_no is not None:

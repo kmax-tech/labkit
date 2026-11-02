@@ -1113,3 +1113,105 @@ class PromiseSentencesReview(unittest.TestCase):
             protocol_edit.fill_many(
                 self.text(), [("criterion-1 sentence", "s")], line_no=3
             )
+
+
+class ReportSetter(unittest.TestCase):
+    """`protocol-fill P report=REPORT.md`: the head's `[protocol] report`
+    registered on a stamped protocol before its first measurement — the
+    route for an area stamped without `--report-file` (labkit-paper area
+    17, 2026-11-02: none of 18 protocols registered the report their task
+    asked for). After the first measurement the registered report is bound:
+    no fill, `--force` included, registers, moves or drops it."""
+
+    def _area(self) -> tuple[Path, Path]:
+        from protocol_fixture import head as fixture_head
+
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        area.mkdir(parents=True)
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            fixture_head(repeat_cost="low", kind="compute")
+            + "- **Question / hypothesis:** does it hold?\n",
+            encoding="utf-8",
+        )
+        return area, proto
+
+    def _fill(self, proto: Path, *args: str) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = protocol_fill.main([str(proto), *args])
+        return code, out.getvalue()
+
+    def test_before_the_first_measurement_one_head_line_is_added(self):
+        _, proto = self._area()
+        before = proto.read_text(encoding="utf-8")
+        self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
+        after = proto.read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.head(after).report, "REPORT.md")
+        added = [line for line in after.splitlines() if line not in before.splitlines()]
+        self.assertEqual(added, ['report = "REPORT.md"'])
+        self.assertEqual(len(after.splitlines()), len(before.splitlines()) + 1)
+        # the label with its table is the same key; the same file is unchanged
+        self.assertEqual(self._fill(proto, "[protocol] report=./REPORT.md")[0], 0)
+        self.assertEqual(proto.read_text(encoding="utf-8"), after)
+
+    def test_another_file_needs_force_before_the_first_measurement(self):
+        _, proto = self._area()
+        self._fill(proto, "report=REPORT.md")
+        code, out = self._fill(proto, "report=docs/REPORT.md")
+        self.assertEqual(code, 2)
+        self.assertIn("--force", out)
+        self.assertEqual(
+            protocol_block.head(proto.read_text("utf-8")).report, "REPORT.md"
+        )
+        self.assertEqual(self._fill(proto, "report=docs/REPORT.md", "--force")[0], 0)
+        text = proto.read_text(encoding="utf-8")
+        self.assertEqual(protocol_block.head(text).report, "docs/REPORT.md")
+        self.assertEqual(text.count("report = "), 1)
+
+    def test_a_path_the_head_cannot_hold_is_refused_and_nothing_written(self):
+        _, proto = self._area()
+        before = proto.read_text(encoding="utf-8")
+        for bad in ("/abs/REPORT.md", "../REPORT.md", "REPORT.txt"):
+            with self.subTest(bad=bad):
+                self.assertEqual(self._fill(proto, f"report={bad}")[0], 2)
+                self.assertEqual(proto.read_text(encoding="utf-8"), before)
+
+    def test_after_the_first_measurement_no_fill_moves_the_bound_report(self):
+        from protocol_fixture import completed_run
+
+        area, proto = self._area()
+        self._fill(proto, "report=REPORT.md")
+        completed_run(area, "2026-01-01T00-00-00_0001")
+        before = proto.read_text(encoding="utf-8")
+        for args in (("report=OTHER.md",), ("report=OTHER.md", "--force")):
+            with self.subTest(args=args):
+                code, out = self._fill(proto, *args)
+                self.assertEqual(code, 2)
+                self.assertIn("has measured", out)
+                self.assertIn("--handover", out)
+                self.assertEqual(proto.read_text(encoding="utf-8"), before)
+        # the twin: the same file is no change and passes
+        self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
+
+    def test_after_the_first_measurement_none_is_registered_late(self):
+        """Registration after the first measurement is not supported yet:
+        refused, also when the run's directory is gone and runs.tsv lists it."""
+        import shutil
+
+        from labkit.run import runlog
+        from protocol_fixture import completed_run
+
+        area, proto = self._area()
+        completed_run(area, "2026-01-01T00-00-00_0001", metrics={"n": 1})
+        runlog.reindex(area)
+        shutil.rmtree(area / "runs")
+        before = proto.read_text(encoding="utf-8")
+        code, out = self._fill(proto, "report=REPORT.md")
+        self.assertEqual(code, 2)
+        self.assertIn("not supported", out)
+        self.assertEqual(proto.read_text(encoding="utf-8"), before)
+        # the twin: a probe is no measurement; nothing binds yet
+        (area / runlog.RUN_INDEX).unlink()
+        completed_run(area, "2026-01-01T00-00-00_0002", run_kind="probe")
+        self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)

@@ -17,6 +17,9 @@ command line.
     protocol-fill PROTOCOL-x.md "criterion-1 sentence=<the promise>"   a [[promise]]'s sentence, as a TOML string
     protocol-fill PROTOCOL-x.md type=exploratory repeat_cost=low kind=fit "model alias=haiku"   the TOML head's stamped placeholders
     protocol-fill PROTOCOL-x.md kept.key=HRV_MeanNN kept.unit=ms   a computation's [kept]: its kept number's key and unit
+    protocol-fill PROTOCOL-x.md report=REPORT.md   the head's [protocol] report, before the first measurement
+                                               only (another file: --force); after it the
+                                               registered report is bound
     protocol-fill PROTOCOL-x.md --prompts      the Prompt block from the scripts' PROMPT constants
     protocol-fill PROTOCOL-x.md --render       the result section written again from its sources:
                                                Recorded results, Limitation lines (stray ones dropped), Prompt block
@@ -103,6 +106,7 @@ from labkit.formats.repo import (
     adopt_command,
     audit_command,
     git_root,
+    handover_command,
     shown,
     state_text,
 )
@@ -124,6 +128,7 @@ from labkit.tools.protocol_edit import (
     fill,
     fill_many,
     head_open,
+    is_report_label,
     open_sentences,
 )
 from labkit.tools.protocol_result import (
@@ -905,13 +910,52 @@ def main(argv: list[str]) -> int:
     if args.line is not None and len(assignments) > 1:
         ap.error("--line goes with one FIELD, not with LABEL=VALUE")
     try:
+        bound = report_bound(args.protocol, text, assignments)
+        if bound is not None:
+            console.refuse("protocol-fill", bound)
+            return 2
         new = fill_many(text, assignments, line_no=args.line, force=args.force)
-    except ValueError as exc:  # all or nothing: the file is untouched
+    except (ValueError, protocol_block.BlockError) as exc:
+        # all or nothing: the file is untouched
         console.refuse("protocol-fill", str(exc))
         return 2
     files.write_atomic(args.protocol, new)
     print("filled: " + ", ".join(as_filled(text, label) for label, _ in assignments))
     return 0
+
+
+def report_bound(
+    protocol: Path, text: str, assignments: list[tuple[str, str]]
+) -> str | None:
+    """Why ASSIGNMENTS may not change the `report` the head of PROTOCOL (its
+    TEXT) registers — the sentence — or None: once its area holds a
+    measurement of it (`report_hold.has_measured`), the report registered
+    before that measurement is bound, and neither a fill nor `--force`
+    registers, moves or drops it — registering one after the first
+    measurement is not supported. Asked before the fill, so the bound
+    report is the reason given, not the missing `--force`. Raises
+    `protocol_block.BlockError` on a head or a value that does not read."""
+    wanted = [
+        protocol_block.report_field(value)
+        for label, value in assignments
+        if is_report_label(label)
+    ]
+    if not wanted:
+        return None  # no report assigned: the head is not read (a fill needs none)
+    head = protocol_block.head(text)
+    if not head.id or all(w == head.report for w in wanted):
+        return None
+    if not report_hold.has_measured(protocol.resolve().parent, head.id):
+        return None
+    return (
+        f"{protocol.name} has measured: the report its head registers "
+        f"({head.report or 'none'}) is what its measurements stood under, and no "
+        f"fill — `--force` included — changes it now; registering a report after "
+        f"the first measurement is not supported. A different report means a new "
+        f"protocol: end this one with "
+        f"`{handover_command(protocol, head.report or 'REPORT.md')}` "
+        f"and register anew"
+    )
 
 
 def cli() -> None:
