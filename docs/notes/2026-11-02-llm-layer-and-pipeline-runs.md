@@ -169,6 +169,35 @@ Rules particular to agents:
    directory's path and the manifest's hash; transcripts and proxy logs stay
    where agentsandbox put them.
 
+### A configurable runner for agentic tasks
+
+The callers repeat the layer above one attempt. `docs/usability/` holds nine
+runner scripts written between 2026-10-27 and 2026-10-31, each with its own
+loop and its own `score()`, growing copy by copy from 101 lines
+(`2026-10-27-sab-cases-haiku/run_sab_probes.py`) to 636
+(`2026-10-31-registered-pilot/run_pilot.py`); 41 files in labkit and
+labkit-paper call `run_attempt`. That is the copy pattern the framework
+showed, and the trigger for a shared runner.
+
+What it would be — the same contract idea as the framework's, for agents:
+
+- **A task contract** the caller implements: stage the repository, build the
+  prompt, score a stored attempt directory into a row. Registered from
+  outside; the runner never names a task.
+- **Conditions as config axes**: agent adapter, model, limits, prompt
+  variant, arm, repeats per task. A new study is a config, not a copied
+  script.
+- **The loop once**: tasks × conditions × repeats, resume through
+  `batch.Store`, infrastructure failures as their own outcome, scoring as a
+  separate pass over stored attempts (rules 1–5 above).
+- **A conformance check** for tasks: staging is reproducible (same input
+  hashes), `score` reads only the attempt directory, every outcome class is
+  handled.
+
+agentsandbox keeps its boundary — task and scoring remain the caller's,
+supplied through the contract. Before building: diff the nine scripts and
+extract only what they share; what differs stays in the task.
+
 ### Datasets and artifacts of a topic
 
 Three roles, none of them labkit's alone:
@@ -258,6 +287,11 @@ The numbers stay as first written; 1 is decided above.
 9. **The second case** the contract is tested against before the framework
    becomes a package: a text topic (lower risk) or one of the image
    projects (forces `text` to become optional or an `input` field).
+10. **Home of the agentic runner**: an optional module in agentsandbox
+    (`agentsandbox.series`, standard library, both callers already import
+    the package; the labkit record stays with the caller), or a module in
+    labkit-paper's `lib/` (closer to the experiments, but labkit's usability
+    probes would then import the paper repo).
 
 ## Not in scope
 
