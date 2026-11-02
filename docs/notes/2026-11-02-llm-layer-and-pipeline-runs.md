@@ -291,10 +291,19 @@ against one real second case, not in advance.
    without the machine's state. A repeat run (`--repeat-of`, a new seed)
    bypasses the cache or carries the seed in the key — otherwise every
    repeat is answered from the cache and the measured spread is zero.
+10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
+    (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
+    labkit-paper — not in labkit, whose evaluation must not live inside it.
+    Its general part, `batch` (`run_batch`), moves into agentsandbox as
+    `agentsandbox.batch` when the first agentic study outside the labkit
+    evaluation starts; the caller passes the resume store (labkit's
+    `batch.Store`) in, so agentsandbox stays labkit-free. Recorded in
+    agentsandbox's `TODO.md`. Reasoning: the recommendation under open
+    decision 10 below.
 
 ## Open decisions
 
-The numbers stay as first written; 1 is decided above.
+The numbers stay as first written; 1 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
