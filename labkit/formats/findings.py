@@ -97,9 +97,15 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
-from labkit.formats.protocol_check import named_field, registration_stamp
+from labkit.formats.protocol_check import (
+    CONCLUSION_LABEL,
+    field_name,
+    named_field,
+    registration_stamp,
+)
 from labkit.formats.repo import (
     INDEX_REV,
+    PROTOCOL_NAME,
     audit_command,
     decide_command,
     files_at,
@@ -764,6 +770,28 @@ def false_positive_blocker(f: Finding) -> bool:
     (`report_decisions.review_findings`) and the review
     (`decision_review.reviewable`) both read."""
     return f.grade == "BLOCKER" and f.status == "false-positive"
+
+
+def fixed_claim(f: Finding) -> bool:
+    """Is F a BLOCKER decided `fixed` whose place is a protocol's Conclusion
+    (`<PROTOCOL-…>.md:Conclusion`, `Finding.place`)? The claim is written
+    after the audit and is not in the state an analysis record binds, so no
+    follow-up audit is shown such a repair (`followup.earlier_blockers`); a
+    decision review judges the Conclusion as it stands and binds it
+    (`reviews.claim_digest`). The one rule the gate
+    (`report_decisions.review_findings`), the review
+    (`decision_review.reviewable`), the follow-up (`followup.release_holds`)
+    and the decision's line (`audit_decisions.repair_hint`) read. Why: a
+    Conclusion BLOCKER decided `fixed` had no release (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md)."""
+    at = f.place
+    return (
+        f.grade == "BLOCKER"
+        and f.status == "fixed"
+        and at is not None
+        and PROTOCOL_NAME.match(at[0]) is not None
+        and field_name(at[1]) == field_name(CONCLUSION_LABEL)
+    )
 
 
 def carried_and_closed(f: Finding) -> bool:

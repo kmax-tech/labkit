@@ -271,7 +271,10 @@ Selection and enforcement: [run and hook enforcement](architecture.md#run-and-ho
      experiment is the auditor's judgement; see the [correction contract](notes/2026-11-02-registered-field-repair.md).
    - **Conclusion alone:** update the claim; this alone needs no new
      measurement or analysis audit. Required decision and report reviews
-     still apply.
+     still apply. A BLOCKER on the Conclusion decided `fixed` is released
+     by the decision review of the claim as it stands (`labkit-audit AREA
+     --review --record FILE`), not by a follow-up audit, which is not
+     shown a rewritten claim.
 4. A changed registered scientific choice needs an explicit new registration
    with the departure and earlier results retained. An accidental edit needs
    restoration from the named source, not a changed scientific explanation.

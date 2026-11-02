@@ -110,7 +110,9 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     uphold (`reviews.once_not_upheld`) and that is now `false-positive`, `fixed`
     (`findings.CLOSING`) is held the same way until a review
     upholds the new decision: closing it is not settling it (sixth haiku
-    round, 2026-10-23, t5). Empty when no record covers the run
+    round, 2026-10-23, t5). A BLOCKER dismissed (`first_dismissals`) and
+    one on the Conclusion decided `fixed` (`repaired_claims`) are held as
+    well. Empty when no record covers the run
     (`report_check.analysis_audit_gap` names that), and silent on whether the verdict is
     right: that is the reviewer's judgement."""
     if ctx.run is None:
@@ -169,6 +171,40 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
                 )
             )
         out += first_dismissals(ctx, r, found)
+        out += repaired_claims(ctx, r, found)
+    return out
+
+
+def repaired_claims(
+    ctx: Checked, r: findings.Record, found: list[reviews.Review]
+) -> list[GateFinding]:
+    """A BLOCKER of record R on the Conclusion decided `fixed`
+    (`findings.fixed_claim`) that no review among FOUND upholds for the
+    claim as it stands — held as a BLOCKER: no follow-up audit is shown a
+    repaired claim, so the decision review judges it (probe 2026-11-02,
+    docs/notes/2026-11-02-repair-path-probe.md). One a review once did not
+    uphold is the closing rule's (`review_findings`); each is held once."""
+    out: list[GateFinding] = []
+    for n, f in enumerate(r.findings, 1):
+        if (
+            not findings.fixed_claim(f)
+            or reviews.once_not_upheld(r, n, found) is not None
+            or reviews.upholding(r, n, found, ctx.text)
+        ):
+            continue
+        out.append(
+            GateFinding(
+                BLOCKER,
+                f"audit {r.path.stem} #{n}: `fixed` on a BLOCKER on the Conclusion "
+                f"{reviews.state(r, n, found, ctx.text)} — no follow-up audit is "
+                f"shown a repaired claim; a second auditor judges the Conclusion as "
+                f"it stands (LAB-015 Preflight audit before freezing)",
+                fix=f"{_review_step(ctx, r)} asks a second auditor whether the "
+                f"Conclusion as it stands no longer makes the claim the finding "
+                f"names; no new measurement and no analysis audit",
+                evidence_kind=GUARANTEED,
+            )
+        )
     return out
 
 

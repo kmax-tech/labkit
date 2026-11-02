@@ -834,10 +834,12 @@ def repair_hint(
       stands; no new measurement.
     - `hint:` nothing the record binds changed. A repair written after the
       audit — the Conclusion, the other Summary fields — owes no new
-      measurement and no new analysis audit by itself; a BLOCKER decided
-      `fixed` in the audited state still waits for its follow-up audit
-      (`followup.holds`); the decision and report reviews the protocol owes
-      stand. A repair of code, inputs or configuration is not in the area
+      measurement and no new analysis audit by itself; a BLOCKER on the
+      Conclusion decided `fixed` (`findings.fixed_claim`) owes the decision
+      review, which judges the claim as it stands — `next:` names it; any
+      other BLOCKER decided `fixed` with nothing changed is not repaired yet
+      (no follow-up is shown an unchanged state, `followup.release_holds`);
+      the decision and report reviews the protocol owes stand. A repair of code, inputs or configuration is not in the area
       yet (agents decided `fixed` on the audited state itself, SAB round 1,
       2026-10-29).
 
@@ -918,10 +920,21 @@ def repair_hint(
             f"again as it stands (`{analysis}`) and decide its findings; the repair owes "
             f"no new measurement"
         )
+    if decided is not None and findings.fixed_claim(decided):
+        review = audit_command(
+            area, "--review", "--record", record.name, protocol=protocol
+        )
+        return (
+            f"next: a repaired Conclusion — no follow-up audit is shown it: the "
+            f"decision review judges the Conclusion as it stands (`{review}`), and "
+            f"only its `upheld` releases the BLOCKER, for exactly this claim; no "
+            f"new measurement and no analysis audit"
+        )
     followup = (
-        f" A BLOCKER decided `fixed` in the audited state waits for the follow-up "
-        f"audit that sees the repair: `{analysis}` on the run as it stands, no new "
-        f"measurement."
+        f" A BLOCKER decided `fixed` with nothing it binds changed is not repaired "
+        f"yet: change what it names — the code, then a new run; a field of the "
+        f"setup corrected in place — and the follow-up audit (`{analysis}`) sees "
+        f"the repair."
         if decided is not None and decided.grade == "BLOCKER"
         else ""
     )

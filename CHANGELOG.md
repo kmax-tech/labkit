@@ -58,6 +58,18 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   not carry — a hint under the decision, no hold, no measurement owed
   otherwise (`audit_decisions.stands_check_hint`).
 
+- **A BLOCKER on the Conclusion decided `fixed` is released by the
+  decision review.** Probe 2026-11-02: the decision named a follow-up
+  audit, which is never shown a rewritten claim (the Conclusion is not in
+  the audited state); a FIX verdict on it was refused and `--review`
+  refused a `fixed` decision — no truthful repair had a release. Now
+  `findings.fixed_claim` marks such a finding; `labkit-audit --review`
+  takes it, `report-check` holds it until a review upholds it for the
+  claim as it stands (`report_decisions.repaired_claims`), and `--decide`
+  names that review. Any other BLOCKER decided `fixed` with nothing
+  changed is told it is not repaired yet, instead of being sent to a
+  follow-up audit that would not see it.
+
 - **A handover stays a handover through the report review it owes.**
   Probe 2026-11-02: the handover's record bound every file under
   `audits/`, and the review a registered report owes once its handover

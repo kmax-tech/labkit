@@ -463,7 +463,6 @@ class RegisteredReportRepairs(RepairPaths):
         self.commit("the Conclusion rewritten; finding 1 decided")
         return record, said
 
-    @unittest.expectedFailure  # F3 of the probe note, repaired next
     def test_a_conclusion_blocker_fixed_is_released_by_the_decision_review(self):
         """The follow-up audit the decision named was never shown the
         finding (the Conclusion is not in the audited state), a FIX verdict
@@ -485,14 +484,12 @@ class RegisteredReportRepairs(RepairPaths):
         )
         self.adopt(ok=False)
 
-    @unittest.expectedFailure  # F3 of the probe note, repaired next
     def test_the_twin_a_claim_changed_after_the_review_holds(self):
         record, _ = self.conclusion_blocker()
         self.answered(review_answer("upheld"), "--review", "--record", record, ok=True)
         self.fill(f"Conclusion={OVERCLAIM}")
         self.adopt(ok=False)
 
-    @unittest.expectedFailure  # F3 of the probe note, repaired next
     def test_a_code_blocker_decided_fixed_with_nothing_changed_is_not_sent_to_a_followup(
         self,
     ):

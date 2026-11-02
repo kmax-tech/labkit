@@ -17,12 +17,13 @@ and you do not soften a finding the auditor made.
 1. `===== DECISIONS =====` — each decision: the finding's number, its grade
    and text (`<file>:<line> · what is wrong · which number goes wrong, with
    what input · rule · smallest repair`), the status, the person's reason,
-   the effect `stands` (findings decided `limitation`). Three more kinds
+   the effect `stands` (findings decided `limitation`). Four more kinds
    appear: every BLOCKER decided `false-positive`, a `false-positive` on a
-   carried finding (a follow-up audit did not find its fault gone), and a
-   `false-positive` or `fixed` decided again after an earlier review did not
-   uphold it — the line `decided again after a review said …` carries that
-   verdict.
+   carried finding (a follow-up audit did not find its fault gone), a
+   BLOCKER on the Conclusion decided `fixed` (no follow-up audit is shown
+   a rewritten claim), and a `false-positive` or `fixed` decided again
+   after an earlier review did not uphold it — the line `decided again
+   after a review said …` carries that verdict.
 2. `===== FILE: <AREA>/PROTOCOL-*.md =====` — the registration (question,
    criterion, quality check, the `[[promise]]` tables) and the
    reported claim: the Summary's Conclusion. Then `===== RESULT … =====`:
@@ -61,8 +62,9 @@ Per decision, one of three verdicts:
   reason points to evidence that is not inlined, or the claim is not
   written. Name what is missing. This is not a pass.
 
-For a BLOCKER decided `false-positive`, and for a finding closed after a
-review did not uphold it, the question changes with the status, and the
+For a BLOCKER decided `false-positive`, a BLOCKER on the Conclusion
+decided `fixed`, and a finding closed after a review did not uphold it,
+the question changes with the status, and the
 files inlined are the ones the auditor read — the code and the run have
 not changed since:
 

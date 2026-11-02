@@ -43,6 +43,7 @@ from labkit.formats.findings import (
     Record,
     check_order,
     decision_digest,
+    fixed_claim,
 )
 
 #: the statuses under which a BLOCKER is earlier evidence to follow up:
@@ -265,8 +266,9 @@ def release_holds(
     up: the follow-up happened, the state moved since. A head in a
     covering record is decided there and held by that record's gates; of
     those, one rule is this module's: a BLOCKER `fixed` in a covering
-    record is held, since no follow-up has seen the repair. Raises what
-    `chain` raises."""
+    record is held, since no follow-up has seen the repair — but for a
+    repaired Conclusion (`findings.fixed_claim`), which no follow-up is
+    shown and the decision review holds. Raises what `chain` raises."""
     c = chain(records)
     in_cover = {r.path.name for r in covering}
     verdicts = [v for r in covering for v in r.fix_verdicts]
@@ -277,7 +279,9 @@ def release_holds(
         if f.grade != "BLOCKER":
             continue
         if m.record.path.name in in_cover:
-            if f.status == "fixed":
+            # a repaired Conclusion is no follow-up's to see: the decision
+            # review judges the claim (`report_decisions.review_findings`)
+            if f.status == "fixed" and not fixed_claim(f):
                 out.append(
                     Hold(
                         m.ref,

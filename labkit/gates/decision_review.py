@@ -130,8 +130,10 @@ def reviewable(
     a carried finding (`carries`: a follow-up did not find it resolved) now
     `false-positive` —
     report-check holds it until a review upholds that
-    (`report_decisions.followup_findings`) —, and a BLOCKER `dismissed`, its
-    first dismissal too (`findings.false_positive_blocker`). `not assessable`
+    (`report_decisions.followup_findings`) —, a BLOCKER `dismissed`, its
+    first dismissal too (`findings.false_positive_blocker`), and a BLOCKER
+    on the Conclusion decided `fixed` (`findings.fixed_claim`: no follow-up
+    audit is shown a repaired claim). `not assessable`
     leaves the promise unjudged and claims nothing to review."""
     stands = {n for n, f in record.limits() if f.effect == EFFECT_STANDS}
     return [
@@ -140,6 +142,7 @@ def reviewable(
         if n in stands
         or findings.carried_and_closed(f)
         or findings.false_positive_blocker(f)
+        or findings.fixed_claim(f)
         or (
             f.status in findings.CLOSING
             and reviews.once_not_upheld(record, n, found) is not None
@@ -265,8 +268,9 @@ def gather_review(area: Path, protocol: Path, record: findings.Record) -> Eviden
     if not decided:
         raise AuditError(
             f"{record.path.name}: no finding decided `limitation` with effect `stands`, no "
-            f"finding closed after a review did not uphold it and no carried finding "
-            f"closed false-positive — nothing to review",
+            f"finding closed after a review did not uphold it, no carried finding "
+            f"closed false-positive, no BLOCKER decided false-positive and no "
+            f"BLOCKER on the Conclusion decided fixed — nothing to review",
             fix=f"`{audit_command(area, '--findings', protocol=protocol)}` "
             f"shows what the area's records still owe",
         )
