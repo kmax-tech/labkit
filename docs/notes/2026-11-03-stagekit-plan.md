@@ -320,6 +320,10 @@ Three steps, in this order, each with the full test suite green.
   stagekit unchanged.
 - **Done when:** the closing run is green without a change to stagekit,
   and fallacy-detection is green on the same stagekit commit.
+- **Also in this step (decided 2026-11-03, Max):** a repeat run keeps its
+  raw answers in its own run directory, so a replay of the repeat reads
+  them — step 2's repeat mode neither reads nor writes the cache, which
+  leaves a repeat itself unreplayable.
 - **Depends on:** 3; best after 4.
 
 ### 7 — publish stagekit (trigger: 6 done)

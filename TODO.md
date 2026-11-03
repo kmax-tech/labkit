@@ -2250,23 +2250,21 @@ eigenen Worktree; 3 bis 5 laufen in fallacy-detection, 6 in
 counterfactual-worlds, 7 ist das eigene Repo für stagekit.
 
 **Stand 2026-11-03 (Branch `stagekit-api`, Worktree
-`~/projects/labkit-wt-stagekit`, nicht gemergt):** Schritt 1
-(`3b6cbb9e`), 2b (`c9898cfe`) und 2 (`d08ae5f0`) umgesetzt; was jeweils
-gilt, steht im Plan unter „Done“. Offen, nummeriert:
+`~/projects/labkit-wt-stagekit`, auf `9bd14865` rebased, nicht gemergt):**
+Schritt 1, 2b und 2 umgesetzt; was jeweils gilt, steht im Plan unter
+„Done“. Entschieden (Max, 2026-11-03) und umgesetzt: `retries`,
+`provenance`, `find_models_toml` (alter Name `_find_models_toml` eine
+Release mit Warnung), `write_dataset`, `Run.metrics`, `run_id`, `draw`
+in der öffentlichen Liste; `last_endpoint` nach claude-cli als Fix.
+Offen, nummeriert:
 
-1. **Öffentliche Liste gegen die echte Nutzung.** Labore rufen
-   `llm.retries` (589×), `llm.provenance` (381×) und `batch.write_dataset`
-   (101×) auf; labkits eigene Vorlagen erzeugen `batch.write_dataset`,
-   `Run.metrics`, `run_id`, `draw`, `draw_output`, `config` und rufen das
-   private `llm._find_models_toml`. Keiner dieser Namen steht in der Liste
-   (Entscheidung 3: klein anfangen). Entscheiden: aufnehmen oder bewusst
-   draußen lassen.
-2. **`llm.last_endpoint` nach einem claude-cli-Aufruf veraltet.** Im
-   selben Thread nach einem ollama-Aufruf nennt es weiter dessen URL;
-   `llm.provenance` stempelt so eine CLI-Zeile mit fremdem Endpunkt.
-   `complete_response` setzt den Endpunkt richtig. Die Korrektur ändert
-   ein öffentliches Verhalten — als Fehlerbehebung sofort oder über eine
-   warnende Übergangsversion?
+1. **repeat-Antworten im Laufordner ablegen (für Schritt 6).** Ein
+   repeat-Lauf liest und schreibt den Cache nicht; damit ist er selbst
+   nicht wiedergebbar. Seine rohen Antworten gehören in seinen Laufordner,
+   so dass ein replay des repeat-Laufs sie liest. Entschieden 2026-11-03,
+   gebaut wird es mit Schritt 6, nicht vorher.
+2. **`_find_models_toml` entfernen** in der Release nach der, die den
+   neuen Namen einführt („Breaking“).
 3. **Zwei Wege für unversionierten Lab-Code:** `source-untracked/`
    (Geschwister eines unversionierten Startskripts) und `code/` (was
    importiert wurde). Zusammenlegen ist ein Breaking-Schritt (Feld
