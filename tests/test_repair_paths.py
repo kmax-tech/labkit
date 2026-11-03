@@ -46,6 +46,8 @@ ENV = {
 SCOPE_CORRECTED = (
     "data/raw/cases.jsonl (12 cases, one per line) and data/raw/inputs/<case_id>/"
 )
+#: why the tests withdraw an adoption
+WITHDRAWN = "the adopted mean dropped cases with more than 5 documents"
 #: what the scope hold says about a field rewritten after the last run
 HELD_NOW = "(as the protocol stands now; no run measured under it yet)"
 
@@ -687,17 +689,65 @@ class RegisteredReportRepairs(RepairPaths):
         self.decide(record.name, "fixed", "evaluate_rows averages over every case")
         return record.name
 
+    def run_named(self, said: str, flag: str, why: str) -> str:
+        """The first `protocol-fill … FLAG …` command SAID names, its
+        `<placeholder>` replaced by WHY, run; its output."""
+        named = re.search(rf"`(protocol-fill [^`]*{flag}[^`]*)`", said)
+        assert named is not None, said
+        args = [
+            why if a.startswith("<") and a.endswith(">") else a
+            for a in shlex.split(named.group(1))
+        ]
+        return self.run_(f".venv/bin/{args[0]}", *args[1:])
+
     def withdraw_as_named(self) -> str:
         """`labkit-next` names the withdrawal alone, into the registered
         report; the command it names, run with a reason; its output."""
         nxt = self.run_(".venv/bin/labkit-next", AREA)
-        named = re.search(r"`(protocol-fill [^`]*--withdraw[^`]*)`", nxt)
-        assert named is not None, nxt
-        self.assertIn("--into REPORT.md", named.group(1))
+        self.assertIn("--into REPORT.md", nxt)
         self.assertIn("then `labkit-next` again", nxt)
-        why = "the adopted mean dropped cases with more than 5 documents"
-        args = [why if a == "<why>" else a for a in shlex.split(named.group(1))]
-        return self.run_(f".venv/bin/{args[0]}", *args[1:])
+        return self.run_named(nxt, "--withdraw", WITHDRAWN)
+
+    def test_the_gates_name_the_withdrawal_into_the_registered_report(self):
+        """The withdrawal report-check names first left the withdrawn run's
+        result block in the registered report, and the commit refused it.
+        Named with `--into`, the gate's command, then the account
+        `labkit-next` asks for, commit; the next step is the measurement
+        the repair owes. The gate is not loosened: before the withdrawal,
+        and after one without `--into`, the commit refuses."""
+        self.code_repaired_after_the_adoption()
+        self.assertIn("changed since", self.commit("repair", ok=False))
+        held = self.run_(".venv/bin/report-check", AREA, ok=False)
+        self.assertIn(
+            f'withdraw the adoption first (`protocol-fill {P} --withdraw --why "<why>" '
+            "--into REPORT.md`)",
+            held,
+        )
+        bare = Path(tempfile.mkdtemp()) / "lab"
+        shutil.copytree(self.lab, bare, symlinks=True)
+        self.run_named(held, "--withdraw", WITHDRAWN)
+        self.run_named(self.run_(".venv/bin/labkit-next", AREA), "--discuss", WITHDRAWN)
+        self.commit("withdrawn")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("01_measure.py", nxt)
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        self.assertEqual(self.runs(), 2)
+        # the twin: the bare withdrawal leaves the result block, and the
+        # commit holds it
+        self.lab = bare
+        self.run_(".venv/bin/protocol-fill", P, "--withdraw", "--why", WITHDRAWN)
+        run1 = sorted(p.name for p in (bare / AREA / "runs").iterdir())[-1]
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run1,
+            "--why",
+            WITHDRAWN,
+            "--into",
+            "REPORT.md",
+        )
+        self.assertIn("the result block", self.commit("withdrawn", ok=False))
 
     def test_a_code_repair_measured_before_the_withdrawal_is_withdrawn_not_measured_again(
         self,

@@ -133,12 +133,25 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return line
 
 
-def withdraw_command(protocol: Path, report: Path | None = None) -> str:
+def withdraw_command(protocol: Path) -> str:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —
-    the way to replace a declaration: withdraw, audit, adopt. With REPORT,
-    `--into` it: the protocol's result blocks there are withdrawn too."""
-    into = f" --into {shlex.quote(shown(report, Path.cwd()))}" if report else ""
+    the way to replace a declaration: withdraw, audit, adopt. Where the
+    head registers a report, `--into` it: without, the report kept the
+    withdrawn run's result block and the commit refused it. A protocol or
+    head that does not read names no report here — the gate reading it
+    holds that."""
+    from labkit.formats import protocol_block
+
+    try:
+        rel = protocol_block.head(protocol.read_text(encoding="utf-8")).report
+    except (OSError, protocol_block.BlockError):
+        rel = None
+    into = (
+        f" --into {shlex.quote(shown(own_path(layout_root(protocol) / rel), Path.cwd()))}"
+        if rel is not None
+        else ""
+    )
     return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"{into}'
 
 

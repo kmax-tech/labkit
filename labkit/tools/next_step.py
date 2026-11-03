@@ -222,8 +222,7 @@ def _held_step(
             f"{held_by.name} has adopted {ctx.declared}, and the code or a declared "
             f"scope changed since that run — the holds read the area against that "
             f"adoption until it is withdrawn; the first: {first.text}",
-            f"`{withdraw_command(held_by, _registered_report(ctx))}` withdraws "
-            "the adoption; then "
+            f"`{withdraw_command(held_by)}` withdraws the adoption; then "
             "`labkit-next` again: the holds are read anew against the run that "
             f"answers then. Only when the change was not meant: restore it as "
             f"{ctx.declared} ran it",
