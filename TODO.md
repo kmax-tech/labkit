@@ -2225,8 +2225,9 @@ mit eigenen Backends. Drei Teile, in dieser Reihenfolge:
 Alle zehn Entscheidungen getroffen (2026-11-03); das Gerüst heißt
 **stagekit**. Entscheidungen: [LLM-Schicht und Pipeline-Läufe](docs/notes/2026-11-02-llm-layer-and-pipeline-runs.md);
 Schritte mit „fertig, wenn“ und Reihenfolge: [stagekit-Plan](docs/notes/2026-11-03-stagekit-plan.md).
-Hier in labkit laufen Schritt 1 (öffentliche Schnittstelle mit Test) und
-Schritt 2 (Antwort-Cache, Schlüssel auf `llm.identity`), am besten in einem
+Hier in labkit laufen Schritt 1 (öffentliche Schnittstelle mit Test),
+Schritt 2 (Cache roher Antworten, Schlüssel auf `llm.identity`) und
+Schritt 2b (Herkunft über alle beteiligten Repos), am besten in einem
 eigenen Worktree; 3 bis 5 laufen in fallacy-detection, 6 in
 counterfactual-worlds, 7 ist das eigene Repo für stagekit.
 
