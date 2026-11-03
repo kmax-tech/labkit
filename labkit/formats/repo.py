@@ -136,8 +136,23 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
 def withdraw_command(protocol: Path) -> str:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —
-    the way to replace a declaration: withdraw, audit, adopt."""
-    return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"'
+    the way to replace a declaration: withdraw, audit, adopt. Where the
+    head registers a report, `--into` it: without, the report kept the
+    withdrawn run's result block and the commit refused it. A protocol or
+    head that does not read names no report here — the gate reading it
+    holds that."""
+    from labkit.formats import protocol_block
+
+    try:
+        rel = protocol_block.head(protocol.read_text(encoding="utf-8")).report
+    except (OSError, protocol_block.BlockError):
+        rel = None
+    into = (
+        f" --into {shlex.quote(shown(own_path(layout_root(protocol) / rel), Path.cwd()))}"
+        if rel is not None
+        else ""
+    )
+    return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"{into}'
 
 
 def measure_command(area: Path) -> str:
@@ -704,6 +719,17 @@ def blobs_now(repo: Path, paths: list[Path]) -> dict[Path, str]:
     if r.returncode != 0:
         raise GitError(f"git hash-object in {repo}: {r.stderr.strip()}")
     return dict(zip(paths, r.stdout.split(), strict=True))
+
+
+def text_blob(repo: Path, path: Path, text: str) -> str:
+    """The blob id git gives TEXT as the content of PATH under REPO
+    (`git hash-object --stdin --path`, the filters applied as for PATH) —
+    what `blobs_now` gives a file at PATH holding TEXT. Raises GitError
+    when git fails."""
+    r = git_run(["hash-object", "--stdin", f"--path={path}"], repo, stdin=text)
+    if r.returncode != 0:
+        raise GitError(f"git hash-object --stdin in {repo}: {r.stderr.strip()}")
+    return r.stdout.strip()
 
 
 def find_area(

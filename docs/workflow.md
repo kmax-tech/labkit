@@ -148,8 +148,11 @@ A hold awaiting that follow-up is resolved through this step.
 **Allowed changes:** record decisions on findings through the decision tool.
 Keep the original findings. A corrected setup description needs the exact
 field named in the finding, a `fixed` decision and the follow-up audit's
-`resolved` for this state. A fresh audit alone does not release it. Follow
-the repair path for changed code or scientific choices.
+`resolved` for this state. A fresh audit alone does not release it. A run
+measured again under the corrected field, after a code repair, is released
+only by a follow-up on that run whose `resolved` judges the correction
+again; the verdict on the earlier run does not carry over. Follow the
+repair path for changed code or scientific choices.
 
 **Command and output:** `labkit-audit AREA --mode analysis` calls the auditor
 and writes its bound record under `audits/`. Use `labkit-audit AREA --findings`

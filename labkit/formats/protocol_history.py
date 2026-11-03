@@ -21,6 +21,7 @@ from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
 from labkit.formats.protocol_block import COUNTS
 from labkit.formats.protocol_check import (
     REGISTERED_FIELDS,
+    field_name,
     fields,
     low_registration_missing,
 )
@@ -365,6 +366,22 @@ SCOPE_FIELDS = (
 #: and what the number is about (SCOPE_FIELDS) — a reading hint that rewrites
 #: one is a departure, not a hint (`audit_decisions.read_hints`)
 HELD_FIELDS = tuple(dict.fromkeys(REGISTERED_FIELDS + SCOPE_FIELDS))
+
+
+#: the fields no correction in place releases (`correctable`): the question
+#: states the requirement itself, so it stands as registered, a typo
+#: included, and a different question is a protocol of its own
+#: (docs/notes/2026-11-02-registered-field-repair.md, 2026-11-03)
+UNCORRECTABLE_FIELDS = ("Question / hypothesis",)
+
+
+def correctable(label: str) -> bool:
+    """Can a correction in place — a finding placed on the field, decided
+    `fixed`, judged `resolved` — release a change of the field LABEL? Not
+    for UNCORRECTABLE_FIELDS, compared by `field_name`. The one rule the
+    correction (`findings.corrected_field`), the hold and the decision's
+    line (`finalize.correction_way`) read. Pure."""
+    return field_name(label) not in {field_name(f) for f in UNCORRECTABLE_FIELDS}
 
 
 def scope_value(value: str) -> str:

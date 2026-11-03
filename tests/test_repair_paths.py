@@ -15,12 +15,16 @@ after the audit was told to measure and audit again, which it never owed.
 
 from __future__ import annotations
 
+import json
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +44,12 @@ ENV = {
         f"GIT_{role}_{k}": v for role in ("AUTHOR", "COMMITTER") for k, v in WHO.items()
     },
 }
+#: Data / scope corrected in place: the same files, the count named
+SCOPE_CORRECTED = (
+    "data/raw/cases.jsonl (12 cases, one per line) and data/raw/inputs/<case_id>/"
+)
+#: why the tests withdraw an adoption
+WITHDRAWN = "the adopted mean dropped cases with more than 5 documents"
 #: what the scope hold says about a field rewritten after the last run
 HELD_NOW = "(as the protocol stands now; no run measured under it yet)"
 
@@ -443,6 +453,77 @@ class RegisteredReportRepairs(RepairPaths):
         self.answered(CLEAN_ANALYSIS, "--mode", "analysis")
         self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
 
+    def session_starts(self) -> None:
+        """The session's transcript, its first record dated now: the stop
+        dates the session's commits by it."""
+        when = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+        (self.lab.parent / "transcript.jsonl").write_text(
+            json.dumps({"type": "user", "timestamp": when}) + "\n", encoding="utf-8"
+        )
+
+    def stop(self) -> tuple[int, str]:
+        """`claude-hook stop` in the lab over what git sees as changed and
+        what the session committed (`session_starts`): exit code and what
+        it said."""
+        transcript = self.lab.parent / "transcript.jsonl"
+        return sh(
+            self.lab,
+            ".venv/bin/python",
+            "-c",
+            "import os, sys; from labkit.gates import agent_hooks; "
+            f"os.environ['CLAUDE_PROJECT_DIR'] = {str(self.lab)!r}; "
+            "sys.exit(agent_hooks.stop({'cwd': "
+            f"{str(self.lab)!r}, 'session_id': 'repair-paths', 'transcript_path': "
+            f"{str(transcript)!r}}}))",
+        )
+
+    def test_a_handover_after_an_analysis_audit_stays_through_its_review(self):
+        """The journal `audits/attempts.jsonl` already held the analysis
+        audit's lines when the handover was written; the report review it
+        owes appended its own, and the handover was void: bound by the
+        file's blob id, checked by a digest of another kind (probe
+        2026-11-03, docs/notes/2026-11-03-handover-journal-binding.md). Its
+        open BLOCKER then held the stop and the commit, and `labkit-next`
+        offered the adoption. Now `labkit-next`, the stop and the commit
+        agree: handed over, before and after the commit. The twin: a new
+        analysis audit after it voids it in all three."""
+        self.session_starts()
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "mean is over 11 cases · LAB-050 Analysis audit before reporting · remove "
+            f"the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 notes\n"
+            f"scope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        journal = self.lab / AREA / "audits" / "attempts.jsonl"
+        self.assertTrue(journal.read_text(encoding="utf-8").strip())
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--handover",
+            "--why",
+            "the filter cannot be repaired in this protocol; a successor measures",
+            "--tried",
+            "measured once",
+            "--into",
+            "REPORT.md",
+        )
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        rc, out = self.stop()
+        self.assertEqual(rc, 0, out)
+        self.commit("handed over after an audit, the report reviewed")
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        rc, out = self.stop()
+        self.assertEqual(rc, 0, out)
+        # new audit activity is new evidence: the handover no longer holds
+        self.answered(CLEAN_ANALYSIS, "--mode", "analysis")
+        self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        rc, out = self.stop()
+        self.assertNotEqual(rc, 0, out)
+        self.commit("an analysis audit after the handover", ok=False)
+
     def handed_over_and_reviewed(self) -> None:
         """The handover written, its report reviewed clean, committed."""
         self.run_(
@@ -465,8 +546,8 @@ class RegisteredReportRepairs(RepairPaths):
         report it read, edited, owes a new review; the review record gone
         is lost evidence the journal names, restored it counts again. The
         handover stands through both — its block and the evidence it binds
-        are unchanged. (A record edited in place passes: no check reads a
-        record's content against its kept copy — the limit
+        are unchanged. (A record edited before its first commit passes: no
+        check reads a record's content against its kept copy — the limit
         docs/notes/2026-11-02-review-record-forgery.md describes.)"""
         self.handed_over_and_reviewed()
         report = self.lab / "REPORT.md"
@@ -571,6 +652,173 @@ class RegisteredReportRepairs(RepairPaths):
         self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
         self.assertIn("finalized, audited, checked", self.adopt(ok=True))
 
+    # -- a committed record edited in the tree is held where the commit holds
+    # it (docs/notes/2026-11-02-review-record-forgery.md, "committed first")
+
+    def held_in_the_tree(self, record: str, *, adoption: bool = True) -> None:
+        """RECORD (a path under the area's `audits/`), committed and edited
+        in the tree beyond its decision lines: report-check, the stop's
+        `--if-reported` on the report, labkit-next, the adoption (where
+        ADOPTION, a run not yet adopted) and the commit name it with the
+        restore from HEAD; the restore they name clears that line."""
+        rel = f"{AREA}/audits/{record}"
+        restore = f"git checkout HEAD -- {rel}"
+        changed = f"audits/{record}: changed"
+        checked = self.run_(".venv/bin/report-check", AREA, ok=False)
+        self.assertIn(changed, checked)
+        self.assertIn(restore, checked)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(f"where: {changed}", nxt)
+        self.assertIn(f"next:  restore it (`{restore}`", nxt)
+        self.assertNotIn("may be reported", nxt)
+        self.assertNotIn("is handed over", nxt)
+        self.assertIn(
+            changed,
+            self.run_(".venv/bin/report-check", "--if-reported", "REPORT.md", ok=False),
+        )
+        if adoption:
+            self.assertIn(changed, self.adopt(ok=False))
+        self.assertIn(changed, self.commit("the edit", ok=False))
+        self.run_(*restore.split())  # the index too: the refused commit staged it
+        self.assertNotIn(changed, self.run_(".venv/bin/report-check", AREA, ok=None))
+        self.assertNotIn(changed, self.run_(".venv/bin/labkit-next", AREA))
+
+    def edit(self, record: str, *pairs: tuple[str, str]) -> None:
+        """RECORD (under the area's `audits/`) with each (old, new) of PAIRS
+        replaced once."""
+        path = self.lab / AREA / "audits" / record
+        text = path.read_text(encoding="utf-8")
+        for old, new in pairs:
+            self.assertIn(old, text)
+            text = text.replace(old, new, 1)
+        path.write_text(text, encoding="utf-8")
+
+    def test_a_committed_record_unchanged_or_decided_again_passes(self):
+        """The twin of every hold below: the committed record as written,
+        and its decision lines changed by `--decide`, name no change."""
+        record, _ = self.conclusion_blocker()
+        for _ in range(2):
+            self.assertNotIn(
+                f"audits/{record}: changed",
+                self.run_(".venv/bin/report-check", AREA, ok=None)
+                + self.run_(".venv/bin/labkit-next", AREA),
+            )
+            self.decide(
+                record, "false-positive", "the Conclusion claims the mean alone"
+            )
+
+    def test_a_committed_decision_review_turned_upheld_is_held_in_the_tree(self):
+        """`rejected` → `upheld` in three lines released the decision it
+        judged in every tree check; only the commit refused it."""
+        record, _ = self.conclusion_blocker()
+        self.answered(
+            review_answer("rejected"), "--review", "--record", record, ok=False
+        )
+        (review,) = (self.lab / AREA / "audits").glob("*-review.toml")
+        self.commit("the decision review")
+        self.edit(
+            review.name,
+            ('verdict = "rejected"', 'verdict = "upheld"'),
+            ("upheld = 0", "upheld = 1"),
+            ("rejected = 1", "rejected = 0"),
+        )
+        self.held_in_the_tree(review.name)
+
+    def test_a_committed_analysis_blocker_removed_is_held_in_the_tree(self):
+        """The BLOCKER's table deleted and `blockers = 1` → `0`: no review
+        was owed any more, and the adoption passed."""
+        record, _ = self.conclusion_blocker()
+        path = self.lab / AREA / "audits" / record
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text[: text.index("[[finding]]")], encoding="utf-8")
+        self.edit(record, ("blockers = 1", "blockers = 0"))
+        self.held_in_the_tree(record)
+
+    def test_a_committed_report_review_with_its_claim_removed_is_held_in_the_tree(
+        self,
+    ):
+        """A report review naming a claim, committed past the hook, then
+        `claims = 1` → `0` and its table deleted: the report counted as
+        reviewed clean."""
+        self.adopted()
+        report = self.lab / "REPORT.md"
+        report.write_text(
+            report.read_text(encoding="utf-8") + "\nThe inputs are complete.\n", "utf-8"
+        )
+        self.answered(
+            "CLAIM #1 · line 3 · result · completeness is not measured\n"
+            "verdict: 1 claim(s)",
+            "--report-review",
+            "REPORT.md",
+            ok=False,
+        )
+        self.run_("git", "add", AREA, "REPORT.md")
+        self.run_(
+            "git",
+            "commit",
+            "-q",
+            "--no-verify",
+            "-m",
+            "claimed",
+            "--",
+            AREA,
+            "REPORT.md",
+        )
+        # the minute's second review is `…-review-2.toml`: found by its claim
+        (claimed,) = [
+            p
+            for p in (self.lab / AREA / "audits" / "report-reviews").glob("*.toml")
+            if "[[claim]]" in p.read_text(encoding="utf-8")
+        ]
+        text = claimed.read_text(encoding="utf-8")
+        claimed.write_text(text[: text.index("[[claim]]")], encoding="utf-8")
+        self.edit(f"report-reviews/{claimed.name}", ("claims = 1", "claims = 0"))
+        self.held_in_the_tree(f"report-reviews/{claimed.name}", adoption=False)
+
+    def test_a_committed_report_review_of_a_handover_with_its_claim_removed_is_held(
+        self,
+    ):
+        """After a handover its report is released by the report review
+        alone, and labkit-next and the stop's report-check on an
+        exploration never reached report-check's first station: a claim
+        removed from a committed review read "handed over … nothing"."""
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--handover",
+            "--why",
+            "the report must live elsewhere; a successor registers it",
+            "--tried",
+            "measured once",
+            "--into",
+            "REPORT.md",
+        )
+        self.answered(
+            "CLAIM #1 · line 3 · result · the mean is no result here\n"
+            "verdict: 1 claim(s)",
+            "--report-review",
+            "REPORT.md",
+            ok=False,
+        )
+        self.run_("git", "add", AREA, "REPORT.md")
+        self.run_(
+            "git",
+            "commit",
+            "-q",
+            "--no-verify",
+            "-m",
+            "claimed",
+            "--",
+            AREA,
+            "REPORT.md",
+        )
+        (review,) = (self.lab / AREA / "audits" / "report-reviews").glob("*.toml")
+        text = review.read_text(encoding="utf-8")
+        review.write_text(text[: text.index("[[claim]]")], encoding="utf-8")
+        self.edit(f"report-reviews/{review.name}", ("claims = 1", "claims = 0"))
+        self.held_in_the_tree(f"report-reviews/{review.name}", adoption=False)
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+
     def test_a_code_blocker_decided_fixed_with_nothing_changed_is_not_sent_to_a_followup(
         self,
     ):
@@ -588,3 +836,401 @@ class RegisteredReportRepairs(RepairPaths):
         said = self.decide(record, "fixed", "fixed")
         self.assertNotIn("waits for the follow-up audit", said)
         self.assertIn("not repaired", said)
+
+    def scope_corrected(self, decided: bool) -> str:
+        """An audit BLOCKER placed at Data / scope, the field corrected in
+        place and — DECIDED — the finding decided `fixed` and committed (an
+        undecided BLOCKER holds the commit); the record's name."""
+        self.answered(
+            "BLOCKER · PROTOCOL-docs-per-case.md:Data / scope · Data / scope names "
+            "no file count · the reader cannot tell what was read · LAB-050 "
+            "Analysis audit before reporting · name the count\nverdict: 1 "
+            f"blockers, 0 warnings, 0 notes\nscope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        record = sorted((self.lab / AREA / "audits").glob("*-analysis*.toml"))[-1].name
+        self.fill(f"Data / scope={SCOPE_CORRECTED}")
+        if decided:
+            self.decide(record, "fixed", "Data / scope now names the twelve lines")
+            self.commit("Data / scope corrected; finding 1 decided")
+        return record
+
+    def test_a_decided_correction_names_its_follow_up_first(self):
+        """`labkit-next` offered three ways at a decided correction, the
+        way back first, and no follow-up command (probe 2026-11-02, smaller
+        points). The step is the follow-up the decision named; taken, the
+        unchanged run is adopted, nothing measured again."""
+        record = self.scope_corrected(decided=True)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            f"next:  the follow-up analysis audit on the run as it stands "
+            f"(`labkit-audit {AREA} --mode analysis`) judges {record}#1",
+            nxt,
+        )
+        self.adopt(ok=False)
+        self.answered(
+            f"FIX · {record}#1 · resolved · the field names the count\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.assertIn("labkit-adopt", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertIn("finalized, audited, checked", self.adopt(ok=True))
+        self.assertEqual(self.runs(), 1)
+
+    def test_the_twin_an_undecided_rewrite_is_not_sent_to_a_follow_up(self):
+        """No finding decided `fixed` names the field: no follow-up judges
+        it, and the way back stays first."""
+        self.scope_corrected(decided=False)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("next:  restore Data / scope", nxt)
+        self.assertNotIn("the follow-up analysis audit on the run", nxt)
+
+    def test_the_twin_an_unresolved_follow_up_releases_nothing_and_is_not_named_again(
+        self,
+    ):
+        """The follow-up judges the correction `unresolved`: the adoption
+        stays refused, and the step no longer names a follow-up — the open
+        BLOCKER it carried is the step."""
+        record = self.scope_corrected(decided=True)
+        self.answered(
+            f"FIX · {record}#1 · unresolved · the count is still missing\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+        )
+        self.adopt(ok=False)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("the follow-up analysis audit on the run", nxt)
+
+    def code_repaired_after_the_adoption(self) -> str:
+        """The run adopted, a later audit's BLOCKER on the code, the code
+        repaired and the finding decided `fixed` — no withdrawal yet, so the
+        commit would hold the repair; the record's name (taken as the new file: two records of one
+        minute do not sort by time)."""
+        self.adopted()
+        audits = self.lab / AREA / "audits"
+        before = set(audits.glob("*-analysis*.toml"))
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "adopted mean is over 11 cases · LAB-050 Analysis audit before reporting "
+            "· remove the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 "
+            f"notes\nscope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        (record,) = set(audits.glob("*-analysis*.toml")) - before
+        script = self.lab / AREA / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "# repaired\n", encoding="utf-8"
+        )
+        self.decide(record.name, "fixed", "evaluate_rows averages over every case")
+        return record.name
+
+    def run_named(self, said: str, flag: str, why: str) -> str:
+        """The first `protocol-fill … FLAG …` command SAID names, its
+        `<placeholder>` replaced by WHY, run; its output."""
+        named = re.search(rf"`(protocol-fill [^`]*{flag}[^`]*)`", said)
+        assert named is not None, said
+        args = [
+            why if a.startswith("<") and a.endswith(">") else a
+            for a in shlex.split(named.group(1))
+        ]
+        return self.run_(f".venv/bin/{args[0]}", *args[1:])
+
+    def withdraw_as_named(self) -> str:
+        """`labkit-next` names the withdrawal alone, into the registered
+        report; the command it names, run with a reason; its output."""
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("--into REPORT.md", nxt)
+        self.assertIn("then `labkit-next` again", nxt)
+        return self.run_named(nxt, "--withdraw", WITHDRAWN)
+
+    def test_the_gates_name_the_withdrawal_into_the_registered_report(self):
+        """The withdrawal report-check names first left the withdrawn run's
+        result block in the registered report, and the commit refused it.
+        Named with `--into`, the gate's command, then the account
+        `labkit-next` asks for, commit; the next step is the measurement
+        the repair owes. The gate is not loosened: before the withdrawal,
+        and after one without `--into`, the commit refuses."""
+        self.code_repaired_after_the_adoption()
+        self.assertIn("changed since", self.commit("repair", ok=False))
+        held = self.run_(".venv/bin/report-check", AREA, ok=False)
+        self.assertIn(
+            f'withdraw the adoption first (`protocol-fill {P} --withdraw --why "<why>" '
+            "--into REPORT.md`)",
+            held,
+        )
+        bare = Path(tempfile.mkdtemp()) / "lab"
+        shutil.copytree(self.lab, bare, symlinks=True)
+        self.run_named(held, "--withdraw", WITHDRAWN)
+        self.run_named(self.run_(".venv/bin/labkit-next", AREA), "--discuss", WITHDRAWN)
+        self.commit("withdrawn")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("01_measure.py", nxt)
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        self.assertEqual(self.runs(), 2)
+        # the twin: the bare withdrawal leaves the result block, and the
+        # commit holds it
+        self.lab = bare
+        self.run_(".venv/bin/protocol-fill", P, "--withdraw", "--why", WITHDRAWN)
+        run1 = sorted(p.name for p in (bare / AREA / "runs").iterdir())[-1]
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run1,
+            "--why",
+            WITHDRAWN,
+            "--into",
+            "REPORT.md",
+        )
+        self.assertIn("the result block", self.commit("withdrawn", ok=False))
+
+    def test_a_code_repair_measured_before_the_withdrawal_is_withdrawn_not_measured_again(
+        self,
+    ):
+        """The repaired code measured while the faulty run stood adopted:
+        `labkit-next` advised a renamed output and a third measurement
+        (probe 2026-11-02, case 5). The step is the withdrawal; after it,
+        the steps it names adopt the run already measured. Nothing is let
+        through: the new run is not adopted over the standing adoption."""
+        record = self.code_repaired_after_the_adoption()
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        run2 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("01_measure.py", nxt)
+        self.assertNotIn("_v2", nxt)
+        self.run_(".venv/bin/labkit-adopt", AREA, run2, ok=False)
+        self.withdraw_as_named()
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(f"--discuss {run2}", nxt)
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run2,
+            "--why",
+            "measured after the repair; the follow-up audit is open",
+            "--into",
+            "REPORT.md",
+        )
+        self.commit("withdrawn; run 2 discussed")
+        self.assertIn("--mode analysis", self.run_(".venv/bin/labkit-next", AREA))
+        self.answered(
+            f"FIX · {record}#1 · resolved · the filter is gone\n\n{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.assertIn(
+            f"labkit-adopt {AREA} {run2}", self.run_(".venv/bin/labkit-next", AREA)
+        )
+        self.run_(".venv/bin/labkit-adopt", AREA, run2)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("run 2 adopted")
+        self.assertIn("nothing", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertEqual(self.runs(), 2)
+
+    def test_the_twin_a_code_repair_not_measured_yet_is_withdrawn_then_measured(
+        self,
+    ):
+        """Without a run of the repaired code the same withdrawal comes
+        first; after it, and the account of the withdrawn run it asks for,
+        the step is the measurement the repair owes."""
+        self.code_repaired_after_the_adoption()
+        self.withdraw_as_named()
+        run1 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.assertIn(f"--discuss {run1}", self.run_(".venv/bin/labkit-next", AREA))
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run1,
+            "--why",
+            "withdrawn: the mean dropped cases; the code is repaired",
+            "--into",
+            "REPORT.md",
+        )
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("--withdraw", nxt)
+        self.assertIn("01_measure.py", nxt)
+        self.assertEqual(self.runs(), 1)
+
+    def test_a_correction_then_a_code_repair_is_measured_judged_and_reported(self):
+        """Data / scope corrected in place, released and adopted for run 1;
+        later a code fault repaired. Each step is the one the step before
+        named: the decision's line, `--withdraw`, `labkit-next` — withdraw,
+        measure again, the follow-up on run 2 that judges the correction
+        again, the adoption and the report review. The verdict on run 1
+        releases nothing for run 2 (probe 2026-11-03, the correction then a
+        code fault: run 2 was held whatever its follow-up said, and the
+        decision's line said restore and decide `limitation`)."""
+        correction = self.scope_corrected(decided=True)
+        self.answered(
+            f"FIX · {correction}#1 · resolved · twelve cases, as run 1 read\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
+        run1 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.run_(".venv/bin/labkit-adopt", AREA, run1)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("run 1 adopted with the correction")
+        audits = self.lab / AREA / "audits"
+        before = set(audits.glob("*-analysis*.toml"))
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "adopted mean is over 11 cases · LAB-050 Analysis audit before reporting "
+            "· remove the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 "
+            f"notes\nscope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        ((code_record),) = set(audits.glob("*-analysis*.toml")) - before
+        code = code_record.name
+        script = self.lab / AREA / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "# repaired\n", encoding="utf-8"
+        )
+        said = self.decide(code, "fixed", "evaluate_rows averages over every case")
+        self.assertIn("withdraw the adoption first", said)
+        self.assertIn("then measure again", said)
+        self.assertIn(f"{correction}#1", said)
+        self.assertNotIn("held:", said)
+        self.assertNotIn("limitation", said)
+        out = self.withdraw_as_named()
+        self.assertIn(
+            f"2. the measuring code changed since {run1} ran: measure again", out
+        )
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run1,
+            "--why",
+            "withdrawn: the mean dropped cases; the code is repaired",
+            "--into",
+            "REPORT.md",
+        )
+        self.commit("withdrawn; run 1 discussed")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            f"the measuring code changed since {run1} ran: measure again", nxt
+        )
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        run2 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run2,
+            "--why",
+            "measured after the repair; the follow-up audit is open",
+            "--into",
+            "REPORT.md",
+        )
+        self.commit("run 2 discussed")
+        follow_up = f"the follow-up analysis audit on {run2}"
+        self.assertIn(follow_up, self.run_(".venv/bin/labkit-next", AREA))
+        # the follow-up judges the repair alone: the verdict on run 1 is not run 2's
+        self.answered(
+            f"FIX · {code}#1 · resolved · the filter is gone\n\n{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(follow_up, nxt)
+        self.assertIn(f"{correction}#1", nxt)
+        self.run_(".venv/bin/labkit-adopt", AREA, run2, ok=False)
+        self.answered(
+            f"FIX · {code}#1 · resolved · the filter is gone\n"
+            f"FIX · {correction}#1 · resolved · twelve cases, as run 2 read\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.assertIn(
+            f"labkit-adopt {AREA} {run2}", self.run_(".venv/bin/labkit-next", AREA)
+        )
+        self.run_(".venv/bin/labkit-adopt", AREA, run2)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("run 2 adopted")
+        self.assertIn("nothing", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertIn("corrected in place", self.run_(".venv/bin/finalize", AREA))
+        self.assertEqual(self.runs(), 2)
+
+
+@unittest.skipUnless(
+    (VENV / "bin" / "usability").is_file() and shutil.which("git"),
+    "needs the suite's venv with labkit's commands, and git",
+)
+class BeforeTheFirstMeasurement(unittest.TestCase):
+    """The registration written and not committed: `labkit-next` named
+    "measure", and runlog refused the measurement — its start gate holds
+    the first measurement to the registration as committed (probe
+    2026-11-02, docs/notes/2026-11-02-repair-path-probe.md, "Smaller")."""
+
+    def setUp(self) -> None:
+        self.lab = Path(tempfile.mkdtemp()) / "lab"
+        rc, out = sh(
+            self.lab.parent,
+            str(VENV / "bin" / "usability"),
+            "stage",
+            str(self.lab),
+            "--task",
+            "count",
+            "--venv",
+            str(VENV),
+        )
+        assert rc == 0, out
+        for step in (
+            [".venv/bin/python", str(EXAMPLES / "count-fill.py")],
+            [
+                ".venv/bin/protocol-fill",
+                P,
+                "type=exploratory",
+                "kept.key=mean_docs_per_case",
+                "kept.unit=documents",
+                f"Terms of this protocol={TERMS}",
+                "Question / hypothesis=What is the mean number of input documents per case?",
+                "Data / scope=data/raw/cases.jsonl (12 cases) and data/raw/inputs/<case_id>/",
+                "Exclusions / filters=hidden files and nested directories are not counted",
+                f"Unit={UNIT}",
+            ],
+        ):
+            rc, out = sh(self.lab, *step)
+            assert rc == 0, (step, out)
+
+    def run_(self, *args: str, ok: bool = True) -> str:
+        rc, out = sh(self.lab, *args)
+        (self.assertEqual if ok else self.assertNotEqual)(rc, 0, out)
+        return out
+
+    def test_the_step_commits_the_registration_before_it_measures(self):
+        """The step names the refusal and its way out, not the measurement;
+        the measurement stays refused until the commit (nothing is let
+        through); committed, the step is the measurement, and it runs."""
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("a measurement would be refused now", nxt)
+        self.assertIn("the registration as committed (HEAD) lacks", nxt)
+        self.assertIn("commit the registration", nxt)
+        self.assertNotIn("opens a run bound to", nxt)
+        refused = self.run_(
+            ".venv/bin/python", f"{AREA}/scripts/01_measure.py", ok=False
+        )
+        self.assertIn("the registration as committed (HEAD) lacks", refused)
+        self.assertFalse((self.lab / AREA / "runs").is_dir())
+        self.run_("git", "add", AREA, "tests")
+        self.run_("git", "commit", "-q", "-m", "register", "--", AREA, "tests")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("would be refused", nxt)
+        self.assertIn("opens a run bound to", nxt)
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        self.assertEqual(len(list((self.lab / AREA / "runs").iterdir())), 1)

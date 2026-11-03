@@ -13,6 +13,9 @@ first that applies is the step:
     no protocol in the area      → `labkit-init exp …` registers the question
     a MUST field still unfilled  → `protocol-fill …` fills it
                                    (`protocol_check.check_fields`)
+    committed evidence changed   → its restore, the first of report-check's
+      against HEAD                 first station (`evidence.change_blockers`),
+                                   before a handover can say "nothing"
     a current handover of it     → nothing: the protocol ended without a
                                    result (`handovers.protocol_handed_over`)
     a measured run, nothing adopted, → the progress account: `protocol-fill
@@ -20,7 +23,12 @@ first that applies is the step:
       its account of that run           (`report_hold.progress_account`), before
                                         any gap — saved first, released by nothing
     a gap report-check holds     → its way out, the first in the chain's
-                                   order (`report_check.report_gaps`)
+                                   order (`report_check.chain_gaps`) — but
+                                   the withdrawal alone where the holds name
+                                   it first (`report_check.held_declaration`),
+                                   and for a measurement runlog's start gate
+                                   would refuse: that refusal's first step
+                                   (`start_check.measurement_refusal`)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
                                    that answers
     adopted, nothing held        → nothing: the number may be reported
@@ -39,20 +47,22 @@ from __future__ import annotations
 
 import argparse
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console, handovers, protocol_block, protocol_check
-from labkit.formats.gate import BLOCKER, Findings
+from labkit.formats import console, evidence, handovers, protocol_block, protocol_check
+from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
     area_path,
     audit_command,
     area_protocols,
     choose_protocol,
     layout_root,
+    measure_command,
     no_such_area,
+    withdraw_command,
     shown,
     stamped_areas,
 )
@@ -108,8 +118,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "the first measurement: fill and commit the registration first, "
             "because it cannot change after that run",
         )
-    if handovers.protocol_handed_over(area, protocol):
-        return _handed_over(area, protocol, text)
+    ended = _restore_step(area) or _handed_over(area, protocol, text)
+    if ended is not None:
+        return ended
     # a run still open comes first: read as nothing, it sent agents to
     # measure again beside it (reference pilot 2026-11-01, task 15)
     from labkit.run.runlog import open_runs
@@ -129,7 +140,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     if account is not None:
         return account
     pending = ctx.declared is None and ctx.run is not None
-    gaps = report_check.report_gaps(ctx, adoption_pending=pending)
+    gaps, held_by = report_check.chain_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
     filled = Findings(
         None,
@@ -139,14 +150,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     filled.take_all(g for g in gaps if g.grade == BLOCKER)
     held = filled.found
     if held:
-        first = held[0]
-        return Step(
-            first.text,
-            (first.fix or "the line above names what holds")
-            + (hint if ctx.run is None else ""),
-            f"the adoption and any report of the number: {len(held)} "
-            "blocker(s) stand, and this is the first",
-        )
+        return _held_step(ctx, held, held_by, hint if ctx.run is None else "")
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
         return Step(
@@ -178,13 +182,34 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     )
 
 
-def _handed_over(area: Path, protocol: Path, text: str) -> Step:
-    """The step of a PROTOCOL (its TEXT) a current handover ended: the
-    review its registered report owes once the handover block stands
+def _restore_step(area: Path) -> Step | None:
+    """The restore of AREA's committed evidence changed against HEAD as the
+    step (`evidence.change_blockers`, report-check's first station), or
+    None. It comes before the handover: a handover's report is released by
+    the report reviews here, and a handover acknowledges no change git can
+    undo."""
+    changed = evidence.change_blockers(area)
+    if not changed:
+        return None
+    return Step(
+        changed[0].text,
+        changed[0].fix or "the line above names what holds",
+        f"every release from this area: {len(changed)} change(s) of its "
+        "committed evidence stand, and this is the first",
+    )
+
+
+def _handed_over(area: Path, protocol: Path, text: str) -> Step | None:
+    """The step of a PROTOCOL (its TEXT) a current handover ended
+    (`handovers.protocol_handed_over`), else None: the review its
+    registered report owes once the handover block stands
     (`report_hold.report_owed`), else nothing — a new attempt is a new
     registration. It said "nothing" while the commit held the report for
     its review (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
     from labkit.gates.report_hold import report_owed
+
+    if not handovers.protocol_handed_over(area, protocol):
+        return None
 
     owed = report_owed(protocol, text, None, layout_root(area), staged=False)
     if owed is not None:
@@ -198,6 +223,75 @@ def _handed_over(area: Path, protocol: Path, text: str) -> Step:
         "findings recorded in the handover",
         "nothing — a new attempt at the question is a new registration",
         "",
+    )
+
+
+def _held_step(
+    ctx: "Checked", held: list[GateFinding], held_by: Path | None, hint: str
+) -> Step:
+    """The step while report-check holds CTX with HELD, its blockers in the
+    chain's order: the first one's way out, HINT added. Two exceptions:
+
+    - HELD_BY, the protocol whose adopted run's code or declared scope
+      changed since it ran (`report_check.held_declaration`; the later
+      holds name its withdrawal first): the withdrawal alone, then
+      `labkit-next` again — the holds are read anew against the run that
+      answers after it. The first hold's own way out told an agent who had
+      already measured the repaired code to measure a third time into a
+      renamed output (probe 2026-11-02, case 5).
+    - a measurement runlog would refuse: the refusal's first step
+      (`_refused_measurement`)."""
+    first = held[0]
+    if held_by is not None:
+        return Step(
+            f"{held_by.name} has adopted {ctx.declared}, and the code or a declared "
+            f"scope changed since that run — the holds read the area against that "
+            f"adoption until it is withdrawn; the first: {first.text}",
+            f"`{withdraw_command(held_by)}` withdraws the adoption; then "
+            "`labkit-next` again: the holds are read anew against the run that "
+            f"answers then. Only when the change was not meant: restore it as "
+            f"{ctx.declared} ran it",
+            f"the adoption and any report of the number: {len(held)} blocker(s) stand",
+        )
+    refused = _refused_measurement(ctx, first.fix)
+    if refused is not None:
+        return replace(refused, next=refused.next + hint)
+    return Step(
+        first.text,
+        (first.fix or "the line above names what holds") + hint,
+        f"the adoption and any report of the number: {len(held)} "
+        "blocker(s) stand, and this is the first",
+    )
+
+
+def _registered_report(ctx: "Checked") -> Path | None:
+    """The report CTX's head registers, as a path; None without one."""
+    from labkit.formats.repo import own_path
+
+    rel = ctx.head.report
+    return own_path(ctx.repo.resolve() / rel) if rel is not None else None
+
+
+def _refused_measurement(ctx: "Checked", fix: str | None) -> Step | None:
+    """The step when FIX, the way out of CTX's first hold, names a
+    measurement before any run answers and runlog's start gate would refuse
+    it now (`start_check.measurement_refusal`): the refusal's own first
+    step. None otherwise — with a stamped id only, the one a run binds to.
+    It named "measure" over an uncommitted registration, and runlog refused
+    (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+    from labkit.run import start_check
+
+    if ctx.run is not None or ctx.head.id is None:
+        return None
+    if measure_command(ctx.area) not in (fix or ""):
+        return None
+    gaps, first_step = start_check.measurement_refusal(ctx.area, ctx.protocol)
+    if not gaps:
+        return None
+    return Step(
+        f"a measurement would be refused now: {gaps[0]}",
+        first_step,
+        "the first measurement: runlog refuses it until then",
     )
 
 
@@ -226,13 +320,11 @@ def _progress_step(ctx: "Checked") -> Step | None:
     is saved first and releases nothing, so a gap that holds — a change
     since the run, the audit still owed — is named on the next call."""
     from labkit.checks import report_blocks
-    from labkit.formats.repo import own_path
     from labkit.gates.report_hold import progress_account
 
-    report_rel = ctx.head.report
-    if report_rel is None or ctx.declared is not None or ctx.run is None:
+    report = _registered_report(ctx)
+    if report is None or ctx.declared is not None or ctx.run is None:
         return None
-    report = own_path(ctx.repo.resolve() / report_rel)
     written = report.read_text(encoding="utf-8") if report.is_file() else ""
     owner = report_blocks.path_from_report(ctx.protocol, report)
     if progress_account(written, owner, ctx.run.name):

@@ -37,6 +37,7 @@ from labkit.formats.repo import (
     measure_command,
     shown,
     the_protocol,
+    withdraw_command,
 )
 from labkit.formats.protocol_check import field_name, fields
 from labkit.formats.protocol_history import HELD_FIELDS
@@ -49,7 +50,14 @@ from labkit.formats.runs import (
 )
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
-from labkit.gates.finalize import CORRECTION_ROUTE, quoted_changes, shown_then
+from labkit.checks.run_record_check import code_since_run
+from labkit.gates.finalize import (
+    awaiting_followup,
+    correction_way,
+    declaring_protocol,
+    quoted_changes,
+    shown_then,
+)
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
@@ -821,7 +829,9 @@ def repair_hint(
       follow-up audit's `resolved` on it releases that field
       (`finalize.resolved_corrections`). Else `held:` — finalize refuses
       the edit, a new measurement would carry it — with the way back, the
-      correction route and the new registration, never "measure again".
+      correction route where a changed field has one
+      (`finalize.correction_way`) and the new registration, never "measure
+      again".
       Agents rewrote the Unit on the audit's word, measured again on this
       line's word, and finalize refused the rewrite (area 17, 2026-11-02).
     - `next:` the code, the promise block or the registration changed
@@ -887,16 +897,33 @@ def repair_hint(
                 + "."
                 + still
             )
+        waiting = _awaiting_after_code(area, path, text, rec)
+        if waiting is not None and all(field_name(d[0]) in waiting for d in diffs):
+            refs = ", ".join(waiting[field_name(d[0])] for d in diffs)
+            run = run_path(area, rec.run_id or "")
+            withdraw = (
+                f"withdraw the adoption first (`{withdraw_command(path)}`), then "
+                if declaring_protocol(path, text, run)
+                else ""
+            )
+            return (
+                f"next: the repair is in the area — {withdraw}measure again "
+                f"(`{measure_command(area)}`), then `{analysis}` on that run: it "
+                f"judges this repair and {refs}, decided `fixed` as a correction of "
+                f"{', '.join(what for what, _, _ in diffs)} in place, on the new run — "
+                f"only its `resolved` on that correction, judged on that run and this "
+                f"text, releases the field for it; the verdict on an earlier run "
+                f"releases nothing for the new one"
+            )
         labels = ", ".join(what for what, _, _ in diffs)
         return (
             f"held: this repair changes what the first measurement {first.dir.name} "
             f"registered — {quoted_changes(diffs)} — and finalize refuses it; a new "
             f"measurement would carry the change, not repair it. Restore {labels}"
             f"{shown_then(path, first, root)}, then decide the finding again "
-            f"(`limitation` with its effect on the claim, or `false-positive`); or, a "
-            f"field that misdescribed the unchanged run: {CORRECTION_ROUTE}; or, when "
-            f"the registration cannot be answered as written, "
-            + ways_out.register_anew(pid)
+            f"(`limitation` with its effect on the claim, or `false-positive`)"
+            f"{correction_way(diffs)}; or, when the registration cannot be answered "
+            f"as written, " + ways_out.register_anew(pid)
         )
     if not unchanged:
         return (
@@ -947,6 +974,23 @@ def repair_hint(
         f"the next step). A repair of code, inputs or configuration is not in the "
         f"area yet: {repair}"
     )
+
+
+def _awaiting_after_code(
+    area: Path, protocol: Path, text: str, rec: findings.Record
+) -> dict[str, str] | None:
+    """The fields of PROTOCOL (TEXT) whose correction, decided `fixed`, a
+    follow-up has still to judge (`finalize.awaiting_followup`), when the
+    measuring code changed since RECORD's run ran — a code repair beside a
+    correction, which owes a new run whose follow-up judges both (probe
+    2026-11-03, the correction then a code fault). None without a run, or
+    when the code did not change. Raises RuntimeError when git fails."""
+    if rec.run_id in (None, findings.NO_RUN):
+        return None
+    run = run_path(area, rec.run_id)
+    if not run.is_dir() or not code_since_run(area, run)[0]:
+        return None
+    return awaiting_followup(area, protocol, text, run)
 
 
 def _departure(

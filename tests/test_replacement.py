@@ -346,6 +346,47 @@ class Gate(_Areas):
         self.assertEqual(self.gaps(), [])
         self.assertEqual(findings.read(record).findings[0].status, "open")
 
+    def test_the_predecessors_record_changed_after_its_commit_is_held(self):
+        """The predecessor's records are read from its own area, which
+        report-check's first station does not compare: its BLOCKER removed
+        from a record a commit holds released the replacement. The twins:
+        the record as committed names no change, and restored and decided
+        `--decide`'s way the replacement passes."""
+        record = findings.write(
+            self.a,
+            "analysis",
+            "opus",
+            "0" * 12,
+            "1" * 12,
+            (1, 0, 0),
+            [
+                (
+                    "BLOCKER",
+                    "BLOCKER · scripts/01_measure.py:1 · the target leaks · x · LAB-019 r · z",
+                )
+            ],
+            run_id=A_RUN,
+            shown_sha="2" * 12,
+            registration=registration_of(self.a),
+        )
+        self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
+        changed = f"the predecessor's area 01-a: audits/{record.name}: changed"
+        self.assertFalse(any(changed in g for g in self.gaps()), self.gaps())
+        kept = record.read_text(encoding="utf-8")
+        forged = kept[: kept.index("[[finding]]")].replace(
+            "blockers = 1", "blockers = 0"
+        )
+        self.assertNotEqual(forged, kept[: kept.index("[[finding]]")])
+        record.write_text(forged, encoding="utf-8")
+        (gap,) = self.gaps()
+        self.assertIn(changed, gap)
+        self.assertIn(
+            f"git checkout HEAD -- experiments/01-a/audits/{record.name}", gap
+        )
+        record.write_text(kept, encoding="utf-8")
+        findings.write_decision(record, 1, "false-positive", "the leak is not measured")
+        self.assertEqual(self.gaps(), [])
+
     def test_the_predecessors_verdict_is_rendered_first(self):
         proto = self._b(replaces(A_ID, ("criterion-1 margin", "0.25", "0.15")))
         text = proto.read_text(encoding="utf-8")

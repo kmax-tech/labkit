@@ -31,7 +31,8 @@ counts as complete.
 
 - *The record committed first, then edited:* the commit refuses it
   ("changed in the index since HEAD — labkit writes it once"); the tree
-  checks (`labkit-next`, `report-check AREA`) still say nothing holds.
+  checks (`labkit-next`, `report-check AREA`) said nothing holds until
+  2026-11-03 — see "Committed records, 2026-11-03" below.
 - *A decision review* (`audits/<minute>-review.toml`): `rejected` → `upheld`
   in three lines (`verdict`, `upheld`, `rejected`) releases the decision
   it judged — here a BLOCKER on the Conclusion decided `fixed`
@@ -70,6 +71,40 @@ standard name no check of a record's content and no such limit.
 `docs/notes/2026-11-02-workflow-simplification.md` says in general that
 local files are no immutable history against an agent that can rewrite
 every copy.
+
+**Committed records, 2026-11-03.** report-check's first station is now
+the pre-commit's own comparison against HEAD
+(`evidence.change_blockers`), so report-check, `labkit-next` and the
+adoption's check hold a committed record edited in the tree as the
+commit does: the record named, its restore from HEAD the way out; a
+`--decide` change passes, a restore clears it. Every release that reads
+an area's records past that station holds the same comparison for that
+area: `labkit-next` before it says a handover ended the protocol,
+report-check on a protocol that declares no result (`hold_registered`,
+the stop's and the commit's form), a replacement for its predecessor's
+area when that is another area (`report_replacement`). Several
+protocols of one area share the area's station: a changed record of one
+holds them all, as the commit holds the area. Shown on the count lab in
+`tests/test_repair_paths.py` (`RegisteredReportRepairs`, the `committed`
+tests: a decision review turned `upheld`, an analysis BLOCKER removed, a
+report review's claim deleted after a commit past the hook, the same
+after a handover) and in `tests/test_replacement.py` (the predecessor's
+BLOCKER removed in its own area). The repair-path probe and the
+forgery scripts, run on main and on this change, differ only where
+intended: forgery B is held in the tree, and the run edited by hand in
+case 1 (B3) is named for its restore first; the handover and repair
+paths are unchanged (labkit-evidence `978d8a4d`, `logs-747b09d8` against
+`logs-01498270`). What stays outside:
+
+- every variant before the record's first commit (the smallest case and
+  the analysis record above);
+- an edit committed past the hook (`--no-verify`) in an earlier session:
+  HEAD holds the edited text, so nothing differs from it, and
+  `commit_changes` reads only the current session's commits;
+- an edit that also rewrites git's history or the attempt journal's copy;
+- the decision lines themselves: `status`, `reason` and `effect` written
+  by hand pass the comparison like a `--decide`; what a decision owes (a
+  decision review, a follow-up audit) still holds it.
 
 **Out of scope here.** By decision of 2026-11-02 no provenance protection
 is added in this work; the limit is recorded. Reproduction: labkit-evidence

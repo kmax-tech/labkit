@@ -11,6 +11,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **Protocol standard 0.26: the question stands as registered (LAB-003 No
+  run without an intent paragraph).** After the first measurement a typo
+  in Question / hypothesis is no longer corrected in place; a different
+  question is a protocol of its own. The rule's typo sentence now names the
+  hold that applies to the other prose fields: a field read before the run
+  owes the audit again, a field that says what the number is about is
+  released only by the follow-up's `resolved` on its correction
+  (`docs/notes/2026-11-02-registered-field-repair.md`). The head format is
+  otherwise unchanged: a protocol not yet run sets `standard = "0.26"`. A
+  protocol with runs keeps its version and is reproduced with its pinned
+  labkit — 0.107.0, the last release reading 0.24; 0.25 was never
+  released, so a protocol stamped 0.25 from an unreleased commit is
+  reproduced with that commit.
+
 - **Protocol standard 0.25: a bar the task states may be absolute (LAB-035
   Thresholds belong to the run, not to the measure).** labkit-paper area
   17 (2026-11-02): two tasks stated an absolute bar, the agents wrote it
@@ -24,6 +38,55 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   is reproduced with 0.107.0, the last release reading 0.24.
 
 ### Changed
+
+- **Question / hypothesis has no correction in place (standard 0.26).** A finding placed
+  on the question, decided `fixed` and judged `resolved`, no longer
+  releases a changed question: it stands as registered, a typo included,
+  and a different question is a protocol of its own (probe 2026-11-02, F6:
+  "mean" → "median" was adopted on a `resolved`). One rule,
+  `protocol_history.correctable`, read by `findings.corrected_field`, the
+  scope hold and the decision's line; both now offer the correction route
+  only for a changed field it can release and name none for the question,
+  the head's parts or a promise
+  (`docs/notes/2026-11-02-registered-field-repair.md`).
+
+- **A run measured again under a corrected field is released by a
+  follow-up on that run.** A description corrected in place and released
+  for run A, then a code fault repaired and run B measured: B was held
+  even when its follow-up judged the correction `resolved` again, and the
+  only way left in the protocol was writing the known-false text back
+  (probe 2026-11-03, `docs/notes/2026-11-02-registered-field-repair.md`).
+  Both comparisons of `finalize.scope_changes` now release a field the
+  same way (`finalize.released_fields`): a `resolved` on its correction
+  in a follow-up that covers the answering run, with the field as the
+  run saw it, as it stands and as judged one text. The verdict on A
+  releases nothing for B; another field changed without its own release
+  still holds. No format change. Each step names the next: the decision
+  on the code repair says withdraw (when adopted), measure again, then the
+  follow-up on the new run — no longer restore and decide `limitation`;
+  `--withdraw` names the measurement when the repaired code has no run
+  yet; the scope hold names the measurement before the follow-up when the
+  code changed since the answering run, and the follow-up on the new run
+  once it is measured.
+
+- **`report-check AREA` and `labkit-next` hold a committed record edited
+  in the tree, as the commit does.** A review's outcome turned (a decision
+  review `rejected` → `upheld`, a report review's claim deleted) or an
+  analysis BLOCKER removed from a record a commit holds was refused by the
+  pre-commit alone; report-check, `labkit-next` ("the number may be
+  reported") and the adoption's own check passed it
+  (`docs/notes/2026-11-02-review-record-forgery.md`). report-check's first
+  station is now the pre-commit's comparison against HEAD
+  (`evidence.change_blockers`): each change is a blocker naming the record
+  and its `git checkout HEAD -- …`. The same comparison holds where a
+  release reads records past that station: `labkit-next` before it says a
+  handover ended the protocol (the handover's report is released by the
+  area's report reviews), report-check on a protocol that declares no
+  result (the stop's and the commit's `--if-reported`), and a replacement
+  for its predecessor's area when that is another area (the predecessor's
+  open BLOCKERs). A `--decide` change of the decision lines still passes;
+  a restore clears the line. A record no commit holds yet is still not
+  compared with anything.
 
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of
@@ -91,8 +154,13 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   "nothing" while the commit held the review. Now the record binds
   `audits/` without what a report review writes (its record, its kept
   answer, its journal lines: `handovers.review_trace`, `journal_digest`),
-  and `labkit-next` names the review owed after a handover. Any other
-  audit added after a handover still voids it. **Breaking:** a handover
+  and `labkit-next` names the review owed after a handover. The journal
+  is bound by one computation when the handover is written and when it is
+  checked: the blob id of its text without the review's lines, the file's
+  own id while it holds none (a first version checked it by a digest of
+  another kind, so a handover written after an analysis audit was voided
+  by its own review; `docs/notes/2026-11-03-handover-journal-binding.md`).
+  Any other audit added after a handover still voids it. **Breaking:** a handover
   record written by labkit 0.107.0 or earlier whose `audits/` held a report
   review no longer matches; write the handover again.
 
