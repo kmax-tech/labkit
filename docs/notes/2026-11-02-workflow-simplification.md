@@ -2,7 +2,10 @@
 
 2026-11-02. Requested by Max. This is the work plan; current rules belong
 in the standard and [workflow](../workflow.md). Proposals below do not
-change those rules. B and repair A1 are implemented; C is undecided.
+change those rules. Status checked on 2026-11-03: B, A1, the repair-path
+fixes, both threshold templates and committed-record integrity are integrated
+in `e754b0c3`. The second-review duty stays; the proposed verdict grounds
+were not adopted. The bounded interface check below is complete; next is maintainability.
 
 ## Goal and evidence
 
@@ -28,12 +31,22 @@ Sources and limits are in the appendix.
 |---|---|---|
 | **B — report before adoption** | Save a readable intermediate report before the audit loop. Replace its discussion block on adoption. | Implemented. Joint verification with A1 passes; see acceptance cases below. An agent comparison is needed before claiming time saved. |
 | **A — consistent repair guidance** | Make the decision hint, next action and release gate agree about changed evidence. | A1 implemented in `200c6ebb`, with example helpers in `4dbf203c`. The correction route is described below. No general relaxation of code binding. |
-| **C — review the second-review duty** | Remove or narrow the general second-auditor duty for a BLOCKER accepted as a limitation with `stands`. | A concrete removal hypothesis, requiring a separate policy decision and protection comparison. B keeps today's rule. |
+| **C — review the second-review duty** | Assess whether the second auditor can be removed or required more narrowly. | Retained for now: the investigated cases show useful protection. Improved review inputs are integrated. The separate proposal for verdict grounds failed its replay acceptance and was not adopted. |
 
 B's prerequisites are implemented: shared measurement check (`7c70615f`),
 report setter (`410507cc`), historical reader (`82a372a5`) and report binding
 (`c413182d`). Block replacement is in `c68e0b0b`, next-step and commit handling
 in `4a664163`, workflow additions in `82dfa297`.
+
+The same integration includes the handover journal repair, consistent
+predecessor/successor comparison, the Conclusion-BLOCKER repair and deleted
+report protection. Committed evidence uses the same integrity comparison at
+commit and working-tree gates, including handovers and predecessor areas.
+New records still have no trusted origin; this is an explicit boundary, not
+completed provenance protection. Contracts and limits live in the
+[repair-path note](2026-11-02-repair-path-probe.md),
+[record-integrity note](2026-11-02-review-record-forgery.md) and
+[handover note](2026-11-03-handover-journal-binding.md).
 
 Field-address guidance is implemented in `e0837d48`: malformed addresses name the
 existing command syntax; no new input format was added. Its evidence is in
@@ -74,9 +87,11 @@ committed first measurement. `high` and late registration remain outside
 this change. Moving a protocol to `high` leaves this binding and requires
 freeze and preflight audit; no broader protection is claimed here.
 
-Known count-skeleton and absolute/relative-threshold defects follow the
-existing template repair order. Test B on a valid baseline; do not attribute
-a template failure to B or require a general template redesign first.
+Absolute and relative thresholds are now implemented in both the estimator
+and prompt templates through `criterion_bar`. The threshold decision is in
+the [absolute-bar note](2026-11-02-absolute-task-bar.md). The unrelated
+count-skeleton suitability and task-60 boundary are not resolved by this
+repair. Test B on a valid baseline; do not attribute template failures to B.
 
 ### Save progress, then continue the checks
 
@@ -119,8 +134,8 @@ A valid negative result follows the same path.
 
 Use existing writers, report checks and next-step logic. Each command checks
 its conditions again; earlier advice is not permission or execution evidence.
-A1 adds its correction route to steps 4–5 and recovery; C would change step 6
-only after a separate decision.
+A1 and its new-run repair update steps 4–5 and recovery. Step 6 retains
+the second-review duty; the separate verdict-ground proposal is not adopted.
 
 ## Acceptance and verification
 
@@ -152,8 +167,9 @@ finding about the intended fault, not just a nonzero exit.
 - [x] Implement B's prerequisites, progress path and block replacement.
 - [x] Map the four acceptance cases and exercise B together with A1.
 - [x] Required repository checks passed on the combined code, including
-  ruff, format, pyright and the full suite (`e0837d48`). The documentation
-  commit repeats these checks through the hook.
+  ruff, format, pyright and the full suite on integrated main `e754b0c3`:
+  2835 tests and 6914 subtests passed, one test skipped. This is command-path
+  and regression evidence, not a new agent comparison or injection replay.
 - [ ] Before claiming work saved, compare agent behaviour under a controlled
   setup that distinguishes infrastructure failures from labkit costs.
 
@@ -168,9 +184,11 @@ with the first registration and shares the comparison with repair guidance.
 A setup description can be corrected in place only through a finding that
 names the full field label, a `fixed` decision and the follow-up audit's
 explicit `resolved` for this state. A fresh audit alone releases nothing,
-including for WARNINGs. The binding is mechanical; whether it still describes
-the same experiment is auditor judgement. No special exception by field name
-is needed. The [A1 note](2026-11-02-registered-field-repair.md) owns the detailed
+including for WARNINGs. The question is excluded from correction, even for
+a typo; standard 0.26, the guide and the implementation agree. The binding
+is mechanical; whether another field still describes the same experiment
+is auditor judgement, supported by evidence outside the changed field.
+The [A1 note](2026-11-02-registered-field-repair.md) owns the detailed
 contract, limits and tests.
 
 Keep the repair paths distinct:
@@ -178,7 +196,9 @@ Keep the repair paths distinct:
 - Faulty implementation: repair, repeat the affected measurement and checks,
   obtain the required follow-up evidence.
 - Description of the same run: the field-bound correction route can release
-  the unchanged run; measuring again under changed registration remains held.
+  it. If a later code repair needs a new run, that run requires its own
+  resolved verdict; its recorded, current and judged field values must agree.
+  The old verdict alone releases nothing. Each field needs its own release.
 - Conclusion alone: no new measurement or analysis audit solely for that edit;
   required decision and report reviews remain.
 - Changed scientific choice: restore it or explicitly register a successor.
@@ -191,17 +211,48 @@ or delete runs. A commit is a checkpoint, not proof of repair. Do not decide
 The six-timeout evidence supports no general relaxation of code comparison
 or new derived-run feature; expensive remeasurement was not the cost there.
 
-## C: a concrete removal hypothesis
+## C: retained, no additional verdict categories
 
-An accepted BLOCKER limitation with `stands` need not always require a
-second auditor. Compare removing that general duty with a narrower duty;
-retain findings, reasons and declared limitations. The risk is accepting a
-limitation that no longer supports the claim.
+The investigated BLOCKER limitations show useful error detection, so the
+general second-review duty remains. Some held decisions lacked evidence
+in the prompt; required-check values and the measuring script as run are
+now included through shared helpers. Correct numbers alone do not establish
+that a limitation or conclusion is justified.
 
-The replay's 13 of 15 stable judgements establish repeatability, not added
-error detection. Test known faulty and correct decisions, including rejected
-choices closed or redrawn until they pass, before deciding what protection
-can be removed. C remains separate from B and A1.
+The separate proposal for fixed verdict grounds was not adopted. Its replay
+stopped after 37 proved answers (41 calls including four unproved outcomes):
+a predeclared limit failed. Grounds overlapped, and D21 exposed a dispute
+between the task's method and an unqualified conclusion. The partial result
+does not establish general equivalence of instructions or settle the case
+labels. No further model round is authorized here. The
+[verdict-ground note](2026-11-02-review-verdict-grounds.md) owns that proposal
+and its limits; this plan adds no new categories or review duty.
+
+## Interface closeout on 2026-11-03
+
+The four remaining reports were reproduced on main `a2202e36` with real
+commands in fresh count labs and supplied model answers. They do not
+establish the quality of an auditor's judgement.
+
+| Case | Finding and disposition |
+|---|---|
+| Older progress discussion remains in a final report | Reproduced. `with_block` deliberately preserves other runs' discussions. A result for the newer run and historical discussion coexist. No automatic deletion is added; refresh an obsolete reason through `protocol-fill --discuss OLD_RUN --why ... --into REPORT`, then review the changed final report. |
+| Progress requested for the previous run after withdrawal | Reproduced. The current run is saved as unapproved progress; the following step correctly asks for the changed code to be measured. This follows B's agreed progress-before-gaps order, not a dead end. Reordering it would be a separate product decision. |
+| Finished registered report called unregistered | Confirmed defect, repaired. The final step now names the actual registered path; unregistered-report guidance remains available when no path is registered. |
+| Prose-only report held before any measurement | Confirmed defect, repaired. A valid draft can be committed with registration; after measurement, the same file owes progress, result or handover. Malformed blocks still hold. |
+
+Both regression tests failed on the original behaviour. The report-label
+test uses `SUMMARY.md`, completes adoption and report review, then checks
+the final guidance. The draft test commits the initial report, rejects a
+malformed block, measures, verifies that the unchanged draft is now held,
+and commits successfully after the progress command. See
+`tests/test_next_step.py::ProgressAccount` and
+`tests/test_repair_paths.py::BeforeTheFirstMeasurement`.
+
+The bounded interface check is complete. Its deliberate limits above do
+not become new general blockers or a command-history service. Next comes
+the maintainability review; work saved still needs a separately planned
+agent comparison.
 
 ## Follow-up work, not prerequisites
 
@@ -234,25 +285,18 @@ Mark mechanical coverage, semantic review, gaps and scope limits explicitly.
 Questions such as which tasks need a null comparison are proposals for the
 standard, not answers established by this note. This review adds no blocker.
 
-### Keep technical choices in one place
+### Technical choices: implemented threshold forms
 
-Use the protocol's existing TOML block for machine-readable declarations
-and prose for reasons and interpretation. Render readable statements from
-the authoritative declaration; code and checks should read it too. No new
-file format or workflow engine is required. For the observed threshold
-mismatch, consider an explicit absolute-versus-relative choice, for example:
+The existing promise constants now support exactly one of `at_least`
+(absolute) and `margin` (relative). Both templates use
+`labkit/formats/criterion_bar.py`; no second criterion syntax or separate
+configuration file was added. The source of an external bar stays with the
+criterion sentence. Null and quality checks remain. Standard 0.25 allowed
+the absolute form; 0.26 also defines the question-correction boundary.
 
-```toml
-# Proposal only, not current syntax.
-[criterion]
-metric = "accuracy"
-comparison = "absolute"
-operator = "at_least"
-threshold = 0.95
-```
-
-Fit any eventual schema to the existing promise contract, with the normal
-format-break policy. This does not fix an unsuitable skeleton by itself.
+The [absolute-bar note](2026-11-02-absolute-task-bar.md) owns the decision
+and tests. Technical declarations remain authoritative; their scientific
+suitability still needs review. No general declaration redesign is scheduled.
 
 ### Defer a broader history and test reorganization
 
@@ -270,6 +314,30 @@ Do not create a coded stage table without identifying actual duplicate logic:
 next-step and hooks already share `report_gaps`. Test coverage overlap alone
 does not make function, gate and hook tests redundant. Test reorganization
 comes after the behaviour is stable, not before B.
+
+### Review maintainability after the simplification
+
+Max requested this follow-up after the current simplification is complete.
+The four confirmed repair-path defects and the bounded interface check
+are complete. This review is the next planned step; it starts no broad
+refactor or new feature ahead of concrete findings.
+
+Then review the resulting code for shared rules and removable special cases.
+Split large modules only along clear responsibilities. Keep tests that
+protect distinct failures; their size or overlapping coverage alone does
+not justify removal.
+
+For each proposed change, answer: does it remove duplicated logic or a
+special case, or add another exception? Assess simplification by that
+answer and the preserved behaviour, not by line count alone. Keep justified
+differences explicit rather than forcing different checks into one rule.
+
+The initial inspection was a targeted structure review, not a full audit:
+roughly 50,000 tracked package Python lines and 55,000 test lines, including
+comments and docstrings, with eight architecture tests passing. These
+figures describe that working state; they do not establish maintainability.
+The follow-up should deliver concrete findings and small changes supported
+by faulty, correct and repair-path tests, not a general framework rewrite.
 
 ## Evidence appendix
 
@@ -299,4 +367,8 @@ comes after the behaviour is stable, not before B.
   refused input leaves files unchanged. File input remains deferred; these
   small errors are not an established timeout driver.
 - **Second review:** [replay](../usability/2026-10-22-decision-review-replay-v5.md),
-  13/15 stable judgements across two runs; added error detection unmeasured.
+  13/15 stable judgements across two runs. The later case assessment and
+  verdict-ground replay are recorded in labkit-evidence
+  `usability/2026-11-02-second-review/` and
+  `usability/2026-11-02-review-grounds-replay/`; stability and added error
+  detection are distinct questions.

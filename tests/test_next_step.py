@@ -428,3 +428,41 @@ class ProgressAccount(unittest.TestCase):
         self.assertEqual(block.run_id, run_id)
         self.assertLess(text.index("Intro."), text.index(block.body))
         self.assertLess(text.index(block.body), text.index("Closing words."))
+
+    def test_the_finished_step_names_the_registered_report(self):
+        from unittest import mock
+
+        from labkit.gates import audit
+        from labkit.tools import adopt
+
+        self.lab.fill(self.protocol, "--force", "report=SUMMARY.md")
+        self.lab.commit("register the required summary")
+        self.report = self.lab.root / "SUMMARY.md"
+        run_id = self.measure()
+        self.account(run_id)
+        self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
+        old = Path.cwd()
+        os.chdir(self.lab.root)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    adopt.adopt_in_one_step(self.area, self.protocol, run_id), 0
+                )
+            with (
+                mock.patch.object(
+                    audit.llm, "complete", return_value="verdict: 0 claim(s)\n"
+                ),
+                mock.patch.object(audit.llm, "takes_max_tokens", return_value=True),
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(
+                    audit.main([str(self.area), "--report-review", str(self.report)]),
+                    0,
+                )
+        finally:
+            os.chdir(old)
+        step = self.step()
+        self.assertTrue(step.next.startswith("nothing"), step)
+        self.assertIn("SUMMARY.md", step.next)
+        self.assertNotIn("the head does not register", step.next)

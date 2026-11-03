@@ -92,7 +92,9 @@ in `git add` and `git commit -- <paths>` so other staged work stays out.
 of the first measurement. A required report can be added to an existing
 unmeasured protocol with `protocol-fill PROTOCOL report=REPORT.md`; a
 pre-measurement replacement needs `--force`. The registered path must be
-committed before the first measurement. Removing or moving that bound path
+committed before the first measurement. A valid report draft can be
+committed with the registration before any measurement; it owes no result
+block yet. After measurement, save its progress account. Removing or moving that bound path
 later holds release: restore it, or explicitly hand over and register anew.
 `--force` does not bypass the post-measurement restriction. At `high`, pass
 preflight, decide its audit, set the matching freeze evidence and freeze

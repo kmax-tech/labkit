@@ -140,7 +140,8 @@ repo root.
    all but `fixed` owe a reason (`--why`); a `limitation` that leaves a promise unjudged names it with `--not-assessable`.
    The record is never edited by hand. labkit binds an audit or review
    record to the inputs it read (a changed input owes it again) and, once
-   HEAD holds it, refuses at the commit a change — to an audit record
+   HEAD holds it, refuses at the commit and working-tree release checks a
+   change — to an audit record
    beyond the decision lines `--decide` writes, to a review record at all —
    but it does not check that a record says what the model answered: one
    edited before its first commit passes every check

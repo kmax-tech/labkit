@@ -11,7 +11,7 @@ Messungen sind Belege für ihren damaligen Stand, keine aktuellen Aufgabenlisten
 
 [Vereinfachung planen (2026-11-02)](docs/notes/2026-11-02-workflow-simplification.md).
 Ziel: fachlich korrekte Arbeit mit weniger Prüfpflichten abschließen.
-Nächster Schritt: C anhand von Fehlerfang und Kosten gesondert entscheiden; B und A1 sind gemeinsam geprüft. Auswertungsfolge 17 → 18 bleibt bestehen.
+Nächster Schritt: Wartbarkeit gezielt prüfen; die vier Bedienreste sind eingeordnet, zwei Fehler repariert. Zweitprüfung bleibt, neue Review-Kategorien werden nicht übernommen. Auswertungsfolge 17 → 18 bleibt bestehen.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
@@ -19,7 +19,7 @@ Linie für 1.0. Die fünf Umbauphasen sind umgesetzt; Verträge stehen in
 [Architektur](docs/architecture.md), [README](README.md) und
 [Laborstandard](labkit/docs/standard.md), die Formatbrüche im CHANGELOG.
 `protocol-fill` behält seinen Namen; Setzen, Rendern und Freigeben sind
-getrennte Funktionen. Aktuell: Standard `0.22`, `kind` im Kopf
+getrennte Funktionen. Aktuell: Standard `0.26`, `kind` im Kopf
 (`compute | fit | apply`), `Conclusion` für die fachliche Antwort und
 `Recorded results` für die erzeugten Werte.
 
@@ -1815,6 +1815,30 @@ Forschung und Benchmark-Fallliste liegen in
 
 ## Offene Verträge und Korrektheitslücken
 
+### Reparaturwege nach der Probe vom 2026-11-02 — Abschluss
+
+Die vier Reparaturen, die kombinierte Beschreibungs-/Codereparatur, die
+Frage-Ausnahme samt Standard 0.26, die Hinweise und der Schutz committeter
+Records sind auf main integriert (`e754b0c3`). Verträge und Belege:
+[Reparaturprobe](docs/notes/2026-11-02-repair-path-probe.md),
+[Feldkorrekturen](docs/notes/2026-11-02-registered-field-repair.md) und
+[Record-Integrität](docs/notes/2026-11-02-review-record-forgery.md).
+
+- **Bedienreste geprüft:** Der Abschluss nennt den tatsächlichen
+  registrierten Bericht; ein Entwurf vor der ersten Messung darf committet
+  werden. Ältere Diskussionen bleiben absichtlich erhalten; ein
+  Zwischenstand nach Zurückziehen führt anschließend zur Neumessung.
+  Nachweise und verbleibende Grenzen im [Abschluss](docs/notes/2026-11-02-workflow-simplification.md#interface-closeout-on-2026-11-03).
+- **Herkunftsschutz bleibt eine eigene Entscheidung:** Neue Records können
+  vor ihrem ersten Commit verändert werden; Vergleich mit gespeicherter
+  Antwort wäre zusätzlicher Schutz mit begrenztem Anspruch. Kein Bauauftrag
+  für manipulationssichere Speicherung.
+- **Keine pauschale Startsperre** nach Beschreibungskorrekturen. Der neue
+  Lauf hat jetzt seinen eigenen Korrekturweg mit erneutem Urteil.
+- **Wartbarkeit danach:** gemeinsame Regeln und entfernbare Sonderfälle
+  prüfen; keine Tests allein wegen ihres Umfangs streichen. Reihenfolge
+  und Leitfragen stehen im [Vereinfachungsplan](docs/notes/2026-11-02-workflow-simplification.md).
+
 - **Erledigt (review-fixes, 2026-10-31): Standard-Check an einem nicht
   parsebaren Messskript** — `readme_route` liest über `scope_sha.parse_source`,
   `finalize` fängt den `SourceError` als BLOCKER „cannot be read as Python
@@ -2492,7 +2516,8 @@ erst, wenn Kern-Evaluation oder zweites Labor den Kern ohne Doktrin braucht.
 | LAB-092 Term layering neu fassen | Ansage (eigener Auftrag). Anlass: SimpleEnglish-Vergleich 2026-10-28 an labkit-paper-Notes (`~/work/resources/knowledge-management/slip-box/simpleenglish-und-unsere-notes.md`); der Satz „English coinages live in code and config keys, not in German explanatory prose“ (`docs/standard.md:1227`) entscheidet die Wortwahl gegen den Maßstab Verständlichkeit. | Vorgeschlagene Fassung (deutsch, beim Umsetzen ins Englische des Standards übertragen): „Begriffe in deutscher erklärender Prosa nach Verständlichkeit wählen und konsistent verwenden. Fachbegriffe beim ersten Vorkommen kurz erklären; Bezeichner aus Code und Konfiguration unverändert wiedergeben.“ Leser der Regel greppen (Haus-`CLAUDE.md`, `gute-notes-schreiben.md`, `checklists/note-terms.md`). |
 | `protocol-check`: Wortbudget für Summary und Antwort | Ansage, nachdem die Einstiegswarnung von `note-check` und der Hook nach Write/Edit in `~/work` eine Weile gelaufen sind (dotfiles `e4299ec`, `5d15bef`). Anlass: Längen-Messung 2026-10-28 über uniagent, labkit-paper und counterfactual-worlds (`~/work/resources/knowledge-management/slip-box/kuerzere-und-einheitlichere-notes-und.md`). | Warnung, nie Block. Gemessen: Summary n=165, Median 124, p90 193 Wörter (über 200: 5 %); „Answer to the question“ n=184, Median 77, p90 172 (über 120: 18 %). Lockerer Start am 90. Perzentil wie bei `note-check` (etwa 200 und 170 Wörter), später enger; eingefrorene Protokolle nicht nachträglich anmahnen. |
 | Absolute Schwelle gegen die relative Kriteriumsform | Erledigt: Standard 0.25 mit der Ausnahme in LAB-035 Thresholds belong to the run, not to the measure (`36b63356`); `at_least` oder `margin` in den Konstanten von [criterion-1], im Schätzer-Gerüst (`9707e8a2`) und im Prompt-Gerüst (`0790437d`), eine Heimat `labkit/formats/criterion_bar.py`; Befund aus Bereich 17 und Entscheidung in der [Notiz](docs/notes/2026-11-02-absolute-task-bar.md). | Nichts offen. Bereiche, die vor diesen Commits gestempelt wurden, behalten ihre Skripte. |
-| Bericht vor der Übernahme / Abschlussschleife unter Zeitgrenze | labkit-paper Bereich 17, gezählte Runde 2026-11-02 (`experiments/17-supported-answers-when-agents-plan-themselves/output/scores_attempts_c17.jsonl`, Commit 48c8a2d): 6 von 18 labkit-Versuchen an der Zeitgrenze von 2400 s gestoppt, 0 von 18 in der Kontrolle; 5 der 6 ohne `REPORT.md`. Gestoppt jeweils in der Abschlussschleife (Analyse-Audit, `--decide`, `labkit-adopt`, `[replaces]` eintragen und wieder entfernen), die den Bericht zuletzt schreibt; ein Sonnet-Audit kostet Minuten, 68–111 Werkzeugaufrufe in 40 min. Übernommen nur 7 von 18, bei assay 0 von 6. | Erst auswerten (die Gutachten der Runde stehen aus), dann entscheiden: ein Zwischenbericht vor der Übernahme, den die Schleife später ersetzt, oder `labkit-next`, das unter Zeitdruck den Bericht vor weitere Audit-Runden stellt. Keine Erhöhung der Zeitgrenze als Ersatz für die Reihenfolge (Max, 2026-11-02). Verwandt: die Zeile „Absolute Schwelle gegen die relative Kriteriumsform“ (dieselben Registrierungsrunden). |
+| `protocol-fill`: Rückfrage bei unbekanntem Feld nennt die richtige Form | Erledigt (`e0837d48`): Fehladressierte Kopfschlüssel und Zusagen nennen die vorhandene Schreibsyntax; erzeugte Runs verweisen auf Übernahme und Laufliste. Beleg und Grenzen im [Vereinfachungsplan](docs/notes/2026-11-02-workflow-simplification.md#evidence-appendix). | Keine neue Eingabeart; Überarbeitungs- und Schreibschutz bleiben erhalten. |
+| Bericht vor der Übernahme / Abschlussschleife unter Zeitgrenze | Erledigt: Zwischenbericht per Diskussionsblock vor der Prüfschleife, registrierter Bericht und die Reparaturwege sind integriert (`e754b0c3`). Quellen, Ausfallverzerrung des Zeitvergleichs und Grenzen im [Vereinfachungsplan](docs/notes/2026-11-02-workflow-simplification.md). | Arbeitseinsparung erst mit einer kontrollierten Agentenprobe bewerten; derzeit kein neuer Laufauftrag. |
 
 ### Klarheit des Ablaufs
 

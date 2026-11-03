@@ -1234,3 +1234,69 @@ class BeforeTheFirstMeasurement(unittest.TestCase):
         self.assertIn("opens a run bound to", nxt)
         self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
         self.assertEqual(len(list((self.lab / AREA / "runs").iterdir())), 1)
+
+    def test_a_report_draft_commits_before_measurement_then_owes_progress(self):
+        self.run_(".venv/bin/protocol-fill", P, "report=REPORT.md")
+        (self.lab / "REPORT.md").write_text(
+            "# Report\n\nThe question and method; no measurement yet.\n", "utf-8"
+        )
+        self.run_("git", "add", AREA, "tests", "REPORT.md")
+        self.run_(
+            "git",
+            "commit",
+            "-q",
+            "-m",
+            "register with a report draft",
+            "--",
+            AREA,
+            "tests",
+            "REPORT.md",
+        )
+        step = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("opens a run bound to", step)
+        report = self.lab / "REPORT.md"
+        draft = report.read_text(encoding="utf-8")
+        report.write_text(draft + "\n<!-- /labkit result -->\n", encoding="utf-8")
+        malformed = self.run_(
+            ".venv/bin/report-check", "--if-reported", "REPORT.md", ok=False
+        )
+        self.assertIn("its blocks do not read", malformed)
+        report.write_text(draft, encoding="utf-8")
+        measured = self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        run_id = re.search(r"run: (\S+)", measured)
+        self.assertIsNotNone(run_id, measured)
+        assert run_id is not None
+        self.run_("git", "add", AREA, "REPORT.md")
+        held = self.run_(
+            "git",
+            "commit",
+            "-q",
+            "-m",
+            "measurement without progress",
+            "--",
+            AREA,
+            "REPORT.md",
+            ok=False,
+        )
+        self.assertIn("carries neither", held)
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run_id.group(1),
+            "--why",
+            "measured; audit and adoption remain open",
+            "--into",
+            "REPORT.md",
+        )
+        self.run_("git", "add", AREA, "REPORT.md")
+        self.run_(
+            "git",
+            "commit",
+            "-q",
+            "-m",
+            "measurement and progress",
+            "--",
+            AREA,
+            "REPORT.md",
+        )

@@ -39,6 +39,14 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **Report drafts can be saved before the first measurement.** A valid
+  registered report without an answering run or adoption owes no result
+  block before measurement. Malformed blocks still hold; after measurement
+  the progress, result or handover requirements apply. The final
+  `labkit-next` step names the registered path instead of calling it an
+  unregistered `REPORT.md` (workflow closeout,
+  `docs/notes/2026-11-02-workflow-simplification.md`).
+
 - **Question / hypothesis has no correction in place (standard 0.26).** A finding placed
   on the question, decided `fixed` and judged `resolved`, no longer
   releases a changed question: it stands as registered, a typo included,

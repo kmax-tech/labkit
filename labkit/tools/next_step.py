@@ -173,11 +173,18 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "the commit and the stop: they hold a report that cites an adopted "
             "run without its block",
         )
+    report = _registered_report(ctx)
+    finished = (
+        f"nothing — the number may be reported in {shown(report, Path.cwd())}, "
+        "the report registered in the head"
+        if report is not None
+        else "nothing — the number may be reported (`protocol-fill "
+        f"{shown(protocol, Path.cwd())} --into REPORT.md` writes its result "
+        "block into a report the head does not register)"
+    )
     return Step(
         f"{protocol.name} has adopted {ctx.declared}; nothing holds it",
-        "nothing — the number may be reported (`protocol-fill "
-        f"{shown(protocol, Path.cwd())} --into REPORT.md` writes its result "
-        "block into a report the head does not register)",
+        finished,
         "",
     )
 

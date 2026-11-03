@@ -336,7 +336,10 @@ def report_owed(
     without (the stop, a check by hand) it is one blocker naming the next
     step: the adoption or the handover (labkit-paper area 17, 2026-11-02:
     five of six timed-out attempts left no report, the report being written
-    last)."""
+    last). Before any measurement and without an answering run or adoption,
+    a report draft owes no result block; it can be saved with registration.
+    Malformed blocks still hold. Once a measurement exists, the progress,
+    result or handover requirements apply."""
     head = protocol_block.head(text)
     if head.report is None:
         return None
@@ -368,9 +371,8 @@ def report_owed(
             if review
             else None
         )
-    for h in handed:
-        if h.protocol != block_owner:
-            continue
+    own_handovers = (h for h in handed if h.protocol == block_owner)
+    for h in own_handovers:
         gap = handovers.block_mismatch(h, report, root, staged=staged)
         if gap is None:
             return (
@@ -380,6 +382,14 @@ def report_owed(
             )
         why.append(f"its handover block at line {h.first} {gap}")
     run, _ = audited_run(protocol.parent.resolve(), protocol, text)
+    if (
+        declared is None
+        and run is None
+        and not why
+        and head.id is not None
+        and not has_measured(protocol.parent, head.id)
+    ):
+        return None
     pending = None if declared is not None or run is None or why else run.name
     if pending is not None and progress_account(written, block_owner, pending):
         return progress_hold(protocol, name_r, pending, progress=progress)
