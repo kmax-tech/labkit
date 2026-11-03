@@ -2198,23 +2198,13 @@ mit eigenen Backends. Drei Teile, in dieser Reihenfolge:
    nichts wird kopiert. Erst ein Experiment durchgängig als Pilot, dann die
    übrigen.
 
-Alle zehn Entscheidungen getroffen (2026-11-03); Plan, Bestand und
-Entscheidungen: [LLM-Schicht und Pipeline-Läufe](docs/notes/2026-11-02-llm-layer-and-pipeline-runs.md).
-Reihenfolge, jeder Schritt ein eigener Auftrag:
-
-1. Öffentliche Schnittstelle festlegen und mit einem Test halten (Teil 1,
-   Entscheidung 3) — labkit.
-2. Antwort-Cache aus fallacy-detection übernehmen, Schlüssel auf
-   `llm.identity` (Teil 2, Entscheidungen 1 und 2) — labkit.
-3. Die drei Andockstellen öffnen: Config-Suchpfad, Prompt-Ordner,
-   Datenlader von außen, allgemeiner `Dataset`-Typ (Entscheidung 8) —
-   fallacy-detection.
-4. Pilot: Big-Bench-Zero-Shot mit llama3.2 unter einem labkit-Lauf,
-   Vorhersagen Zeile für Zeile gegen den Pin (Teil 3, Entscheidung 6).
-5. Tracker-Tags und Abbruch bei eingeschaltetem, fehlendem Tracker
-   (Entscheidung 5) — fallacy-detection.
-6. counterfactual-worlds auf den aktuellen labkit-Stand und als zweiter
-   Fall durch den Vertrag (Entscheidung 9).
+Alle zehn Entscheidungen getroffen (2026-11-03); das Gerüst heißt
+**stagekit**. Entscheidungen: [LLM-Schicht und Pipeline-Läufe](docs/notes/2026-11-02-llm-layer-and-pipeline-runs.md);
+Schritte mit „fertig, wenn“ und Reihenfolge: [stagekit-Plan](docs/notes/2026-11-03-stagekit-plan.md).
+Hier in labkit laufen Schritt 1 (öffentliche Schnittstelle mit Test) und
+Schritt 2 (Antwort-Cache, Schlüssel auf `llm.identity`), am besten in einem
+eigenen Worktree; 3 bis 5 laufen in fallacy-detection, 6 in
+counterfactual-worlds, 7 ist das eigene Repo für stagekit.
 
 ### Lange Dateien (2026-10-31)
 

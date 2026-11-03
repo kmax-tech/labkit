@@ -5,11 +5,11 @@ Date: 2026-11-03. Requested by Max. Works out the ten decisions of
 into steps; nothing is implemented yet. Each step is its own task with its
 own done-when; a step starts when the one it depends on is done.
 
-## The name: stagekit (proposed)
+## The name: stagekit (decided 2026-11-03, Max)
 
 Fallacy detection was the first use case; the framework needs a name of its
-own. Proposed: **stagekit** — a kit for running experiments as configured
-stages, reproducible by hash.
+own: **stagekit** — a kit for running experiments as configured stages,
+reproducible by hash.
 
 - **Says what it is:** the framework's core unit is the stage (stage base
   classes, a DAG of stages, stage registries); "kit" puts it beside labkit.
@@ -144,7 +144,7 @@ Three commits, in this order, each with the full test suite green.
 - **Done when:** 4a identical; 4b's item-wise diff written into the
   area's report with its count of differing items.
 - **Depends on:** 3 for 4a; 2 and 3 for 4b.
-- **Open:** where the area lives. Recommendation: in fallacy-detection
+- **Where the area lives (decided 2026-11-03, Max):** in fallacy-detection
   itself — the pilot reproduces one of its pins, so the proof stays where
   the pin is; outside use is step 6's test.
 

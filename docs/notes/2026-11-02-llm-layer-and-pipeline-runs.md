@@ -3,7 +3,8 @@
 Date: 2026-11-02. Requested by Max, for discussion. Nothing here is
 implemented; the current standard and release rules remain in force. All
 ten decisions were taken on 2026-11-02 and 2026-11-03 (section
-"Decisions"); each part below becomes its own task. TODO entry: "LLM-Schicht: öffentliche Schnittstelle,
+"Decisions"). The framework is named **stagekit**; the steps that carry
+the decisions out are in [the stagekit plan](2026-11-03-stagekit-plan.md). TODO entry: "LLM-Schicht: öffentliche Schnittstelle,
 Cache, Anschluss großer Pipelines".
 
 ## Goal
