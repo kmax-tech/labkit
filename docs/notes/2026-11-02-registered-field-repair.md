@@ -162,7 +162,7 @@ split" a case falls on is the auditor's judgement: it needs probes of the
 auditor's instruction with a real model.
 
 **Today against this contract** (F5 reproduction on `4ab018bf`, labkit-
-evidence `usability/2026-11-03-correction-then-code-fault/`): an earlier
+evidence `921eab7e`, `usability/2026-11-03-correction-then-code-fault/`): an earlier
 `resolved` already does not release a new run. But a follow-up on the new
 run that judges the correction `resolved` does not release it either:
 the first branch of `finalize.scope_changes` (the text the answering run
