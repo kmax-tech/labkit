@@ -315,6 +315,12 @@ def check_protocol_fields(
             f"MISSING (must): {label}",
             fix=f"write the field in {protocol.name}; {contract_hint(protocol)}",
         )
+    for twice in report.repeated:
+        findings.block(
+            f"REPEATED (must): {twice}",
+            fix=f"{protocol_check.REPEATED_WAY_OUT}; then "
+            f"`protocol-check {shlex.quote(shown(protocol, Path.cwd()))}`",
+        )
     for n, label in report.must_holes:
         findings.block(
             f"{protocol.name}:{n}: PLACEHOLDER (must): {label}",
@@ -334,6 +340,7 @@ def check_protocol_fields(
         )
     if not (
         report.missing_must
+        or report.repeated
         or report.must_holes
         or id_findings
         or lowered

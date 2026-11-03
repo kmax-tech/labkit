@@ -11,6 +11,33 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **A registration field is read the same way by every stamp and
+  comparison.** `protocol_check.field_values` reads each field by its
+  name — case, a parenthesised gloss and † aside — with whitespace
+  folded. `scope_differences` looked labels up as written, so a changed
+  value under `**Unit (per judged item):**` or `**Question / Hypothesis:**`
+  passed finalize and the successor check; it is now held. Data profile
+  is compared whitespace-folded in `registration_differences`, as the
+  audit stamp already read it; Data / scope alone drops its generated
+  counts, copy by copy. A field an audit record binds (`BOUND_FIELDS`:
+  the registration and the audited prose) written more than once is
+  refused as such — protocol-check, preflight, report-check, the start of
+  a full run, `labkit-next` and the run hook, and at low repeat cost in
+  the registration the first measurement's commit holds, and finalize
+  reads Data / scope only where it is written once. Until now the stamps
+  read the first copy and the comparisons the last. A gloss makes no
+  other field: versioned sections (`Question / hypothesis (v2)` beside
+  the first) are refused too. The way out is one wording everywhere
+  (`protocol_check.REPEATED_WAY_OUT`): keep one copy and delete the
+  others; copies that are versions of the registration are a new protocol
+  whose `[replaces]` names this one. At low repeat cost a first
+  measurement already made on a commit that wrote a bound field twice —
+  identical copies included — no longer stood on a registration:
+  report-check holds its number as exploratory, and the way out is the
+  new registration or the handover it names. Records bound to such a
+  protocol no longer match it. The last release with the old reading is
+  **0.107.0**.
+
 - **A Prompt block that starts with a tag is held like any prompt.**
   `code-check` and the measurement's start check (`Lanes`) skipped every
   Prompt fence whose text began with `<`, so a registered

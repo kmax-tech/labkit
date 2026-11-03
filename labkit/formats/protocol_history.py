@@ -22,8 +22,10 @@ from labkit.formats.protocol_block import COUNTS
 from labkit.formats.protocol_check import (
     REGISTERED_FIELDS,
     field_name,
-    fields,
+    field_values,
+    line_list,
     low_registration_missing,
+    repeated_fields,
 )
 
 if TYPE_CHECKING:
@@ -133,7 +135,9 @@ def registration_in_commit(
 def registration_missing(shown: str, kind_now: str | None = None) -> list[str]:
     """What the low registration lacks in SHOWN, a protocol as a commit held
     it (`registration_in_commit`): the fields KIND_NOW owes, the repeat_cost,
-    or a head this labkit cannot read — [] when it stood whole. Pure."""
+    one copy of each bound field (`repeated_fields`: `one copy of <label>
+    (written N times, lines a and b)`), or a head this labkit cannot read —
+    [] when it stood whole. Pure."""
     try:
         protocol_block.head(shown)
     except protocol_block.BlockError as exc:
@@ -141,7 +145,10 @@ def registration_missing(shown: str, kind_now: str | None = None) -> list[str]:
         # repeat_cost"; here the committed text is older than the reader, and the
         # sentence says so instead of naming a field
         return [f"a head this labkit reads ({exc})"]
-    return low_registration_missing(shown, kind_now)
+    return low_registration_missing(shown, kind_now) + [
+        f"one copy of {label} (written {len(at)} times, lines {line_list(at)})"
+        for label, at in repeated_fields(shown)
+    ]
 
 
 #: why the protocol a first measurement's commit holds cannot be read
@@ -411,11 +418,13 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
         ta, tb = _head_part(old, table), _head_part(new, table)
         if ta != tb:
             out.append((f"[{table}]", ta, tb))
-    fa = {f.label: f.value for f in fields(old)}
-    fb = {f.label: f.value for f in fields(new)}
+    # the raw values say which field is written; each copy is compared as
+    # `scope_value` reads it, so the counts of one copy cut no other
+    fa, fb = field_values(old), field_values(new)
+    sa, sb = field_values(old, scope_value), field_values(new, scope_value)
     for label in SCOPE_FIELDS:
-        x = scope_value(fa[label]) if fa.get(label) else ABSENT
-        y = scope_value(fb[label]) if fb.get(label) else ABSENT
+        x = sa[name] if fa.get(name := field_name(label)) else ABSENT
+        y = sb[name] if fb.get(name) else ABSENT
         if x != y:
             out.append((label, x, y))
     return out
@@ -453,7 +462,8 @@ def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     and SCOPE_FIELDS — the one comparison finalize holds a protocol's first
     measurement to, so the hold that points to a new registration and the
     declaration it asks for name the same changes), and COMPARED_FIELDS.
-    Values as the registrations write them; `(none)` where one has nothing.
+    Values as `protocol_check.field_values` reads them (by `field_name`,
+    whitespace folded); `(none)` where one has nothing.
     Pure; raises BlockError or PromiseError on a head or a block that does
     not read. Why: a successor declaring the changed Exclusions / filters
     its predecessor was held for was refused (probe 2026-11-02,
@@ -462,10 +472,10 @@ def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     out = [d for d in scope if d[0] == "kind"]
     out += promise_differences(old, new)
     out += [d for d in scope if d[0] != "kind"]
-    fa = {f.label: f.value for f in fields(old)}
-    fb = {f.label: f.value for f in fields(new)}
+    fa, fb = field_values(old), field_values(new)
     for label in COMPARED_FIELDS:
-        x, y = fa.get(label) or ABSENT, fb.get(label) or ABSENT
+        x = fa.get(field_name(label)) or ABSENT
+        y = fb.get(field_name(label)) or ABSENT
         if x != y:
             out.append((label, x, y))
     return out

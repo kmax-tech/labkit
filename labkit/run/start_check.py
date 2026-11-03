@@ -181,6 +181,17 @@ def _first_step(base_dir: Path, bound: _Bound) -> str:
     writes nothing.
     """
     head = bound.head
+    if bound.text is not None and protocol_check.repeated_fields(bound.text):
+        # at high cost the deletion changes what the preflight audit bound
+        after = (
+            "commit the protocol, then start the run again."
+            if head is None or lane(head.repeat_cost).registration
+            else "then `preflight <AREA>` clean, the preflight audit run anew on "
+            "the changed registration, and `frozen = true` again."
+        )
+        return (
+            f"For each field named above: {protocol_check.REPEATED_WAY_OUT}; " + after
+        )
     if head is not None and lane(head.repeat_cost).registration:
         return (
             f'At repeat_cost = "{head.repeat_cost}" nothing freezes: write and commit '
@@ -210,12 +221,17 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"{path.name}: the [protocol] id is not stamped — a full run "
             f"needs a bound protocol (`labkit-init exp` stamps it)"
         ]
+    # a field written twice is no registration on either lane: which copy
+    # binds cannot be told (`protocol_check.repeated_fields`)
+    twice = [f"{path.name}: {r}" for r in protocol_check.repeated_findings(text)]
     # the freeze or the registration: the lane's answer (`standard_contract`)
     if lane(head.repeat_cost).registration:
         missing = low_registration_missing(text)
         if not missing:
-            return _committed_registration(base_dir, bound)
-        return [
+            # the committed registration names the same copies again; the
+            # tree's repair comes first, its commit is the next step
+            return twice or _committed_registration(base_dir, bound)
+        return twice + [
             f'{path.name}: `repeat_cost = "{head.repeat_cost}"`, but the registration is not '
             f"written: {', '.join(missing)} (the commit also owes the other fields "
             f"`protocol-check --contract` names) — at low repeat cost the gate is the "
@@ -224,7 +240,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"model the data profile), not the freeze (LAB-003 No run without an "
             f"intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
-    out = _committed_registration(base_dir, bound)
+    out = twice + _committed_registration(base_dir, bound)
     if head.kind is None:
         # what the number asserts is decided before it exists (standard 0.22)
         out.append(

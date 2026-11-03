@@ -110,7 +110,7 @@ class ReportCheck(unittest.TestCase):
         """FINALIZE and CHECK stand in for their stations; the fixture's
         protocol is a bare head, so its field gaps count only with FIELDS."""
         out = io.StringIO()
-        no_gaps = SimpleNamespace(missing_must=[], must_holes=[])
+        no_gaps = SimpleNamespace(missing_must=[], must_holes=[], repeated=[])
 
         def fake_finalize(area_: Path, protocol: Path | None, collected) -> int:
             if finalize:  # finalize keeps every reason it has as a blocker
@@ -253,6 +253,22 @@ class ReportCheck(unittest.TestCase):
         code, out = self._run(area, fields=True)
         self.assertEqual(code, 1, out)
         self.assertIn("Unit still a placeholder", out)
+
+    def test_a_bound_field_written_twice_blocks_with_its_own_way_out(self):
+        """Which copy is registered cannot be told: refused as such, not as
+        a field to fill (`protocol_check.repeated_fields`)."""
+        area = self._area()
+        self._audited(area)
+        proto = area / "PROTOCOL-x.md"
+        proto.write_text(
+            "- **Unit:** one case\n- **Unit (v2):** one document\n\n"
+            + proto.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        code, out = self._run(area, fields=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("Unit written 2 times (lines 1 and 2)", out)
+        self.assertIn("keep one copy and delete the others", out)
 
     def test_low_owes_no_freeze_and_everything_after_it(self):
         """The twin at low repeat cost: unfrozen, no preflight audit, and clean — a

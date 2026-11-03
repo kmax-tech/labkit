@@ -152,11 +152,13 @@ from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.gates.report_context import pending_adoption
 from labkit.formats.protocol_check import (
+    REPEATED_WAY_OUT,
     field_name,
-    fields,
     kept_gaps,
+    named_field,
     open_holes,
     reference_gap,
+    repeated_findings,
 )
 from labkit.checks import data_counts
 from labkit.checks.result_render import kept_phrase
@@ -1056,6 +1058,12 @@ def check_open_fields(
     holes = open_holes(text, head)
     for lineno, label in holes:
         findings.warn(f"{protocol.name}:{lineno}: {label}", evidence_kind=GUARANTEED)
+    repeated = repeated_findings(text)
+    for twice in repeated:
+        findings.block(
+            f"{protocol.name}: {twice}",
+            fix=f"{REPEATED_WAY_OUT}; then `finalize {shown(protocol.parent, Path.cwd())}`",
+        )
     stale = readme_placeholders(protocol.parent)
     for line in stale:
         findings.warn(
@@ -1071,7 +1079,7 @@ def check_open_fields(
         for line in route:
             findings.warn(line, evidence_kind=GUARANTEED)
     counted = check_data_counts(findings, protocol, text)
-    if not holes and not stale and not route and counted:
+    if not holes and not repeated and not stale and not route and counted:
         findings.note("  all fields filled")
 
 
@@ -1081,11 +1089,9 @@ def check_data_counts(findings: Findings, protocol: Path, text: str) -> bool:
     recorded (`data_counts.counts_gap`) — a part typed by hand or left
     stale blocks, with the command that writes it again. True when they
     hold or there are none."""
-    value = next(
-        (f.value for f in fields(text) if f.name == field_name(data_counts.FIELD)),
-        "",
-    )
-    gap = data_counts.counts_gap(protocol.parent, value)
+    # one copy or none: a Data / scope written twice is refused at station 4
+    hit = named_field(text, data_counts.FIELD)
+    gap = data_counts.counts_gap(protocol.parent, hit.value if hit else "")
     if gap is None:
         return True
     why, run_id = gap
@@ -1103,10 +1109,9 @@ def check_provenance(
     """Station 5: the run's source frozen in the run, source and output
     tracked in git — or a source outside git pinned by the checksum the run
     recorded, which the protocol TEXT's Data / scope names."""
-    scope = next(
-        (f.value for f in fields(text) if f.name == field_name(data_counts.FIELD)), ""
-    )
-    b, w, pinned = provenance_findings(area, answering_run, scope)
+    # one copy or none: a Data / scope written twice is refused at station 4
+    hit = named_field(text, data_counts.FIELD)
+    b, w, pinned = provenance_findings(area, answering_run, hit.value if hit else "")
     findings.take_all(b)
     for line in w:
         findings.warn(line, evidence_kind=GUARANTEED)

@@ -340,6 +340,13 @@ def _low_registration_line(head: str, texts: list[str]) -> str:
     missing = sorted(
         {m for t in texts for m in protocol_check.low_registration_missing(t)}
     )
+    repeated = sorted({r for t in texts for r in protocol_check.repeated_findings(t)})
+    if repeated:
+        return (
+            f"{head}: repeat cost low, but {'; '.join(repeated)} — runlog "
+            f"refuses a full run until one copy is left: "
+            f"{protocol_check.REPEATED_WAY_OUT}."
+        )
     if not missing:
         return (
             f"{head}: repeat cost low — gate not run, the rerun is "

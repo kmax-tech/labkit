@@ -191,7 +191,7 @@ from labkit.gates.report_hold import (
     report_owed,
     tree_differs,
 )
-from labkit.formats.protocol_check import check_fields
+from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
     ADOPT_TOOL,
     adopt_command,
@@ -287,6 +287,14 @@ def freeze_gaps(ctx: Checked) -> list[GateFinding]:
     gaps += [
         blocker(f"{name}: {label}", fix=f"write the field; {fields}")
         for label in report.missing_must
+    ]
+    gaps += [
+        blocker(
+            f"{name}: {twice}",
+            fix=f"{REPEATED_WAY_OUT}; then "
+            f"`protocol-check {shlex.quote(shown(ctx.protocol, Path.cwd()))}`",
+        )
+        for twice in report.repeated
     ]
     # a must field still holding its `<…>` placeholder passed here while
     # protocol-check and preflight refused it (audit 2026-10-15)

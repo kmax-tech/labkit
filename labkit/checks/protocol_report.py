@@ -47,6 +47,7 @@ from labkit.formats.protocol_check import (
     BARE_REFERENCE,
     PROTOCOL_TEMPLATE,
     FIELDS,
+    REPEATED_WAY_OUT,
     RUNS_PLACEHOLDER,
     DASHES_ONLY,
     HTML_COMMENT,
@@ -517,6 +518,8 @@ class FileReport:
     answer_unbound: str | None = None  # a WARNING: an Recorded results without a run_id
     pilot_note: str = ""
     missing_must: list[str] = field(default_factory=list)
+    #: bound fields written more than once (`protocol_check.repeated_fields`)
+    repeated: list[str] = field(default_factory=list)
     #: owed should-fields; unfrozen they fold into the pilot note, frozen
     #: or at low repeat cost `owed()` has made them must — kept as data, never printed
     missing_should: list[str] = field(default_factory=list)
@@ -557,6 +560,7 @@ class FileReport:
             or self.answer_unbound
             or self.bare_refs
             or self.missing_must
+            or self.repeated
             or self.missing_should
             or self.must_holes
             or self.soft_holes
@@ -596,6 +600,7 @@ class FileReport:
         return bool(
             self.head_error
             or self.musts
+            or self.repeated
             or any(f.grade == BLOCKER for f in self.id_findings)
         )
 
@@ -690,6 +695,7 @@ def check_protocol(
         answer_unbound=recorded_results_without_run(text),
         pilot_note=pilot_note,
         missing_must=report.missing_must,
+        repeated=report.repeated,
         missing_should=missing_should,
         must_holes=report.must_holes,
         soft_holes=report.soft_holes,
@@ -748,6 +754,8 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
         print(f"{f}: {r.pilot_note}")
     for label in r.missing_must:
         print(f"{f}: MISSING (must): {label}")
+    for twice in r.repeated:
+        print(f"{f}: REPEATED (must): {twice}")
     # no `missing (should)` lines: unfrozen they are named in the pilot
     # note above, frozen or at low repeat cost `owed()` makes them MUST (2026-10-09)
     for n, label in r.must_holes:
@@ -826,6 +834,11 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"{f}: must fields missing or empty — fill them in, or "
             f"justify as 'n/a — <why>' (the reason must be there, not "
             f"just the angle brackets): {'; '.join(r.musts)}"
+        )
+    if r.repeated:
+        print(
+            f"{f}: fields written more than once — {REPEATED_WAY_OUT}: "
+            f"{'; '.join(r.repeated)}"
         )
 
 

@@ -36,8 +36,8 @@ the id against the repo — and the `protocol-check` command are
 
 import functools
 import re
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from labkit import PACKAGE_DIR
@@ -170,17 +170,91 @@ AUDITED_FIELDS = tuple(
 )
 
 
+#: the fields an audit record binds (`registration_stamp`, `audited_texts`)
+#: — every field a comparison of registrations reads is among them
+#: (`protocol_history.SCOPE_FIELDS`, `COMPARED_FIELDS`): each is written
+#: once (`repeated_fields`)
+BOUND_FIELDS = REGISTERED_FIELDS + AUDITED_FIELDS
+
+
+def fold(value: str) -> str:
+    """VALUE with every run of whitespace one space, ends stripped."""
+    return " ".join(value.split())
+
+
+def field_values(text: str, normalise: Callable[[str], str] = fold) -> dict[str, str]:
+    """Each field of TEXT by `field_name` — so case, a parenthesised gloss
+    and † aside — to its value as NORMALISE reads it (default: whitespace
+    folded): the one reading the stamps (`registration_stamp`,
+    `audited_texts`) and the comparisons
+    (`protocol_history.scope_differences`, `registration_differences`)
+    share. A name written more than once maps to every copy in order, each
+    normalised on its own, `(written N times) <first> | <second>`, so no
+    reader picks one copy and a change in any copy is seen by all; the
+    gates refuse it for BOUND_FIELDS (`repeated_fields`). Pure."""
+    copies: dict[str, list[str]] = {}
+    for f in fields(text):
+        copies.setdefault(f.name, []).append(normalise(f.value))
+    return {
+        name: vs[0] if len(vs) == 1 else f"(written {len(vs)} times) " + " | ".join(vs)
+        for name, vs in copies.items()
+    }
+
+
+#: the way out of a field written more than once (`repeated_fields`), the
+#: one wording every gate and `labkit-next` give
+REPEATED_WAY_OUT = (
+    "keep one copy and delete the others; copies that are versions of the "
+    "registration (`(v2)`) are a new protocol whose `[replaces]` names this one"
+)
+
+
+def repeated_fields(text: str) -> list[tuple[str, tuple[int, ...]]]:
+    """(label, 1-based lines) for each of BOUND_FIELDS that TEXT writes more
+    than once — a gloss such as `(v2)` makes no other field: which copy the
+    registration means cannot be told, so the gates refuse it with
+    REPEATED_WAY_OUT (`repeated_findings`; at low repeat cost also in the
+    committed registration, `protocol_history.registration_missing`).
+    Other fields may repeat (one Prompt label per variant). Empty when each
+    is written at most once. Pure."""
+    lines: dict[str, list[int]] = {}
+    for f in fields(text):
+        lines.setdefault(f.name, []).append(f.line)
+    return [
+        (label, tuple(at))
+        for label in BOUND_FIELDS
+        if len(at := lines.get(field_name(label), [])) > 1
+    ]
+
+
+def line_list(lines: Sequence[int]) -> str:
+    """`1 and 2`, `1, 2 and 3`: line numbers that stay one item inside a
+    comma-separated list."""
+    *rest, last = map(str, lines)
+    return f"{', '.join(rest)} and {last}" if rest else last
+
+
+def repeated_findings(text: str) -> list[str]:
+    """Per `repeated_fields` of TEXT the sentence every gate tells:
+    `<label> written N times (lines a and b), so which copy is registered
+    cannot be told` (`FieldReport.repeated`, the start check, the run
+    hook)."""
+    return [
+        f"{label} written {len(at)} times (lines {line_list(at)}), so which copy "
+        f"is registered cannot be told"
+        for label, at in repeated_fields(text)
+    ]
+
+
 def audited_texts(text: str) -> str:
     """The values of TEXT's AUDITED_FIELDS as one canonical string — `label:
-    value` per field in AUDITED_FIELDS' order, whitespace collapsed so a
-    reflowed line moves nothing, REGISTRATION_ABSENT for a field the text
-    lacks — what an analysis record binds of the protocol's prose
-    (`audit_binding.run_shown`)."""
-    values: dict[str, str] = {}
-    for f in fields(text):
-        values.setdefault(f.name, f.value)
+    value` per field in AUDITED_FIELDS' order, as `field_values` reads them
+    (whitespace folded, so a reflowed line moves nothing), REGISTRATION_ABSENT
+    for a field the text lacks — what an analysis record binds of the
+    protocol's prose (`audit_binding.run_shown`)."""
+    values = field_values(text)
     return "\n".join(
-        f"{label}: {' '.join(values[field_name(label)].split()) if field_name(label) in values else REGISTRATION_ABSENT}"
+        f"{label}: {values.get(field_name(label), REGISTRATION_ABSENT)}"
         for label in AUDITED_FIELDS
     )
 
@@ -477,6 +551,10 @@ class FieldReport:
     missing_should: list[str]
     must_holes: list[tuple[int, str]]
     soft_holes: list[tuple[int, str]]
+    #: bound fields written more than once (`repeated_findings`): no field is
+    #: missing, the copies disagree on which is registered — a must finding
+    #: of its own, whose way out is keeping one copy
+    repeated: list[str] = field(default_factory=list)
 
     @property
     def frozen(self) -> bool:
@@ -808,7 +886,15 @@ def check_fields(text: str) -> FieldReport:
         (must_holes if field_name(label) in must_names else soft_holes).append(
             (line, label)
         )
-    return FieldReport(head, None, missing_must, missing_should, must_holes, soft_holes)
+    return FieldReport(
+        head,
+        None,
+        missing_must,
+        missing_should,
+        must_holes,
+        soft_holes,
+        repeated_findings(text),
+    )
 
 
 def low_registration_missing(text: str, kind_now: str | None = None) -> list[str]:
@@ -869,8 +955,9 @@ def registration_stamp(text: str) -> dict[str, str]:
     """The scientific basis an audit judged, as its record binds it: the
     head's `kind` (REGISTRATION_KIND), and per registration field the kind
     owes (`standard_contract.registration_fields`, the most while the kind
-    is unset) the digest of its value, whitespace collapsed so a reflowed
-    line moves nothing; a field the text lacks is REGISTRATION_ABSENT. The
+    is unset) the digest of its value as `field_values` reads it (whitespace
+    folded, so a reflowed line moves nothing; a field written more than once
+    is every copy); a field the text lacks is REGISTRATION_ABSENT. The
     report fields written after a run (Conclusion, Recorded results, the
     run list) are not in it: writing them leaves an audit standing. A
     computation's `[reference]` is in it (REGISTRATION_REFERENCE, the
@@ -896,9 +983,7 @@ def registration_stamp(text: str) -> dict[str, str]:
     labels = standard_contract.registration_fields(
         kind or standard_contract.APPLY_KIND, model_named(text)
     )
-    values: dict[str, str] = {}
-    for f in fields(text):
-        values.setdefault(f.name, f.value)
+    values = field_values(text)
     out = {REGISTRATION_KIND: kind or REGISTRATION_ABSENT}
     if kept is not None:
         out[REGISTRATION_KEPT] = scope_sha.digest(
@@ -913,7 +998,7 @@ def registration_stamp(text: str) -> dict[str, str]:
         out[label] = (
             REGISTRATION_ABSENT
             if value is None
-            else scope_sha.digest(" ".join(value.split()).encode("utf-8"))
+            else scope_sha.digest(value.encode("utf-8"))
         )
     return out
 

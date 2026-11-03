@@ -106,18 +106,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
     hint = _report_hint(area, protocol, text)
-    if report.missing_must:
-        named = shown(protocol, Path.cwd())
-        fill = _fill_line(named, report.missing_must[0])
-        return Step(
-            f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
-            + ", ".join(report.missing_must),
-            (f"`{fill}` fills the first; " if fill else "")
-            + f"`protocol-fill {named} --list` names every open field with its "
-            f"values, `protocol-check {named} --contract` what each one owes" + hint,
-            "the first measurement: fill and commit the registration first, "
-            "because it cannot change after that run",
-        )
+    unwritten = _field_step(protocol, report, hint)
+    if unwritten is not None:
+        return unwritten
     ended = _restore_step(area) or _handed_over(area, protocol, text)
     if ended is not None:
         return ended
@@ -300,6 +291,35 @@ def _refused_measurement(ctx: "Checked", fix: str | None) -> Step | None:
         first_step,
         "the first measurement: runlog refuses it until then",
     )
+
+
+def _field_step(
+    protocol: Path, report: protocol_check.FieldReport, hint: str
+) -> Step | None:
+    """The step the field report of PROTOCOL asks for first: a bound field
+    written more than once (`FieldReport.repeated`), then the missing MUST
+    fields; None when neither. HINT closes the way (`_report_hint`)."""
+    named = shown(protocol, Path.cwd())
+    if report.repeated:
+        return Step(
+            f"{protocol.name} writes a field more than once: "
+            + "; ".join(report.repeated),
+            f"{protocol_check.REPEATED_WAY_OUT}; then `protocol-check {named}`" + hint,
+            "every comparison and audit binding of the registration: which "
+            "copy is registered cannot be told",
+        )
+    if report.missing_must:
+        fill = _fill_line(named, report.missing_must[0])
+        return Step(
+            f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
+            + ", ".join(report.missing_must),
+            (f"`{fill}` fills the first; " if fill else "")
+            + f"`protocol-fill {named} --list` names every open field with its "
+            f"values, `protocol-check {named} --contract` what each one owes" + hint,
+            "the first measurement: fill and commit the registration first, "
+            "because it cannot change after that run",
+        )
+    return None
 
 
 def _report_hint(area: Path, protocol: Path, text: str) -> str:
