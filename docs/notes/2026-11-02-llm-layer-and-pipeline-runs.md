@@ -256,6 +256,40 @@ Two places in `fallacy-detection` stop this today:
 
 Both have to open before the middle layer can become a package.
 
+### The experiment holds its config and prompts (Max, 2026-11-03)
+
+The labkit experiment area keeps what makes this measurement this one — its
+protocol, the framework config (models axis, stages, data references with
+hashes) and its prompts — and hands them to the framework, which runs them.
+One area then shows the run's technicalities next to its question, and
+labkit's code audit covers exactly that area instead of the framework's
+20,000 lines.
+
+    experiments/NN-<name>/
+      protocol.md
+      config/experiment.yaml      the framework config of this experiment
+      prompts/<id>.txt            id = file name = registry id
+      scripts/01_measure.py       thin: opens runlog.run, calls the framework
+                                  with this config dir and prompt dir
+      runs/                       labkit records; the framework's output is
+                                  referenced by repro_hash, not copied
+
+The framework cannot take either from outside today:
+
+- configs: `src/config/paths.py:6` fixes `CONFIG_DIR = PROJECT_ROOT / "config"`,
+  and Hydra is initialised with that directory only (`src/run/utils.py:22`).
+  Hydra's own way out is a search path (`hydra.searchpath`): the experiment's
+  config directory is searched first, the framework's defaults behind it.
+- prompts: `src/prompts/catalog.py` registers 27 prompts in code and loads
+  them from the package's own directory. Needed: register a prompt
+  directory from outside, each file under its name.
+
+Neither changes the cache or `repro_hash`: both key on the prompt text and
+the resolved config, not on where the file lies. One home per prompt: an
+experiment's prompt lives in the experiment; the framework keeps only
+defaults. The area pins the framework's commit, as a lab pins labkit, so a
+later framework change does not silently change a finished experiment.
+
 ### The extension contract
 
 Half of it exists. The record contract between data and stages is
@@ -335,6 +369,29 @@ The numbers stay as first written; 1, 2, 3 and 10 are decided above.
    whether `lanes` belongs to it.
 4. **Division of the run indexes**: confirm the split in part 3 rule 1, or
    let labkit's index also serve run comparisons.
+   Recommendation (2026-11-03), one owner per concern:
+
+   | Who | Owns | Checked by |
+   |---|---|---|
+   | labkit | question and protocol → run → reported number; the gate before the run; provenance (commit, data hashes, model) | its standard and checks |
+   | the framework's `RunIndex` | finding, grepping and comparing runs and outputs (`repro_hash`); pins | the framework's code |
+   | the framework's code | computing correctly | the framework's own tests; labkit records only which commit ran |
+   | the experiment's code (config, topic stages, prompts) | what this question measures | labkit's code audit, this part only |
+
+   Measured on `fallacy-detection` (2026-11-03): labkit records HEAD
+   (`+dirty`), a copy of the started script and a patch of uncommitted
+   tracked changes only — never a diff of the whole repo; on 22,322 tracked
+   files with a clean tree the check took 0.09 s. The limit is the agent
+   audit (`code-check`), whose bundle takes the imported modules: on a
+   20,000-line framework it would audit the framework, not the experiment —
+   hence the last row.
+
+   Found alongside: `published/pins.yaml` points into `output/`, which
+   `.gitignore` excludes (`output/*`, 474 MB, local only). A clone has the
+   pins but none of the pinned runs, so the paper's tables cannot be rebuilt
+   from it. The reference with sha256 is the right shape; its target needs
+   a durable store outside git (an archive or a DVC remote) that the sha256
+   lets anyone verify. There are no symlinks in the repo.
 5. **MLflow / W&B**: remove from the framework, or keep as an optional view
    that receives a copy of the metrics and leads nothing.
 6. **Pilot**: which `fallacy-detection` experiment runs first under a
