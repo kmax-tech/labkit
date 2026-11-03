@@ -380,6 +380,16 @@ against one real second case, not in advance.
    predictions exactly — labkit records, it does not compute. Part 2 (the
    switch to `labkit.run.llm`) changes the cache key, so the model is asked
    anew; any difference shows per item.
+7. **The copies stay where they are; nothing moves now** (2026-11-03, Max).
+   Moving one onto the shared framework is possible later, when it is
+   worked on again — an image project would then be the image case for the
+   contract (open decision 9). Found when deciding: `arg-images` and
+   `aspect-based-image-generation` (last commits 2026-03) each carry about
+   100 uncommitted changes, `arg-images` with staged renames — unfinished
+   work with remotes (GitHub, the Webis GitLab), not dead repos, so no
+   archive banner was written into them. `fallacy-detection-github`
+   (clean, remote `kmax-tech/bayesian-fallacy-detection`, last commit
+   2026-08-19) is published paper code and stays frozen as such.
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -392,7 +402,7 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1 to 6 and 10 are decided above.
+The numbers stay as first written; 1 to 7 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
