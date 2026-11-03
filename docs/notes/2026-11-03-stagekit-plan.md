@@ -288,6 +288,22 @@ Three steps, in this order, each with the full test suite green.
   predictions file in `pins.yaml`). This proves the embedding under labkit
   and the preserved results; it does not test the raw-response split,
   because that cache holds parsed results.
+  - **stagekit gets a replay mode first** (decided 2026-11-03, Max; found
+    after 3c: a miss in stagekit's cache calls the model). A switch named
+    as labkit's, `normal | replay` (`repeat` once it is needed). In replay
+    no backend is called; a miss stops the run, naming item and key,
+    except for a list the area passes explicitly — the baseline's
+    `failed_items` — whose items count as failed, as in the pin. The list
+    is never in stagekit's code. The mode goes into
+    `pipeline_summary.json` and the labkit record. Tests: a miss stops; a
+    listed item is missing as in the pin; replay calls no backend.
+  - **labkit is installed editable** for 4a (decided 2026-11-03, Max): 2b
+    records labkit's commit and local changes, so provenance holds without
+    a release. fallacy-detection's `requirements.txt` keeps its pin; a
+    labkit release comes before step 5.
+  - **`01_measure.py` sets `STAGEKIT_PROJECT_ROOT`** to the repo: the
+    area has its own `config/config.yaml`, and stagekit refuses two of
+    them on the way up when the variable is unset.
 - **4b, raw responses → parser:** stagekit calls `labkit.run.llm`. A normal
   run fills the cache of raw responses with real calls; then a **replay**
   from that cache, with the stage processing running again in full and no
