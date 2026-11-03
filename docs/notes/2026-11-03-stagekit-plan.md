@@ -224,6 +224,14 @@ Three steps, in this order, each with the full test suite green.
     instead; the push stays a fast-forward on the existing remote.
   - Documents in both repos refer to commits by date and subject, never by
     hash — stagekit's history gets new hashes.
+  - **`repro_hash` carries a formula version** (decided 2026-11-03, Max).
+    Step 0 found 39 of 44 pins hashing differently today: the formula
+    changed on purpose eight times since 2026-05-20 (e.g. "repro_hash: the
+    instrument is part of the run identity", 2026-09-24), and
+    `src/analysis/run_index.py:145` finds a run only when its stored hash
+    equals today's. The pins keep their stored hashes, the identity of
+    their time; with a version in the hash, a mismatch across formula
+    changes is explained instead of silent.
   - fallacy-detection installs stagekit editable during development; a
     counted run records stagekit's state through 2b. The interface stays
     provisional (0.x) until step 6 passes.
@@ -248,6 +256,10 @@ Three steps, in this order, each with the full test suite green.
 - **4a, embedding:** stagekit's own backends and its existing cache of
   parsed results, as a replay — every call a hit, only the cache entries
   named in step 0's baseline read; a miss stops the run and is a finding.
+  One exception, named in the baseline: an item the pinned run itself
+  lists as failed (`failed_items`, so far `bigbench:692`, all retries
+  failed in May) has no cache entry; the replay leaves it out as the pin
+  does. Any other miss stops the run (decided 2026-11-03, Max).
   The predictions must equal the pinned ones item by item (sha256 of the
   predictions file in `pins.yaml`). This proves the embedding under labkit
   and the preserved results; it does not test the raw-response split,
