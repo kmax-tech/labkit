@@ -24,7 +24,8 @@ showed three faults:
    unjudged route of 2 stood open.
 
 **Solution.** One correction route, for every prose field the hold
-compares, with no list of field names:
+compares, with no list of field names (Question / hypothesis excepted by
+the decision of 2026-11-03 below, not built yet):
 
 - the scope hold compares the protocol as it stands with the first
   measurements too (`finalize.scope_changes`; the comparison is
@@ -78,3 +79,117 @@ action, the gate; Conclusion and code repair as twins, the restore),
 `tests/test_registration_committed.py` `ScopeAsFirstMeasured` (the tree
 compared; restore, reflow and a Conclusion pass), `tests/test_findings.py`
 `CorrectedField`.
+
+## Decided 2026-11-03: where a correction ends (contract change, not built)
+
+**Problem.** F6 of the repair-path probe
+([note](2026-11-02-repair-path-probe.md)): Question / hypothesis "mean" →
+"median", decided `fixed`, a stand-in `resolved` — adopted. The agent guide
+says "in place, never change … the question"; the route above releases
+every field the hold compares. A `resolved` shows only that labkit accepts
+the stored verdict, not that it is right — and before the record's first
+commit not even where it came from
+([note](2026-11-02-review-record-forgery.md)). LAB-003's "in a prose field
+nothing holds it" predates the scope hold.
+
+**Contract.**
+
+- A correction in place repairs a false description of the unchanged run.
+  It never changes a requirement fixed before the run: the question, which
+  items count, the rule that drops items, the statistic, what the unit
+  means.
+- The deciding question for every disagreement between a held field and
+  the run: did the old text misdescribe what the run, as required, did — or
+  did it state a requirement the run failed? The first is a correction.
+  The second is a data or implementation error: repair the run and measure
+  again, or, if the requirement itself is to change, register anew. The
+  same words can be either: "14 cases" is a miscount when the registered
+  set has 12, and a requirement when the task or the registration asks for
+  14; "test split" is a wrong label when the registration otherwise names
+  the set the run read and nothing asks for the test split, and a
+  requirement when the task does. The answer rests on evidence outside the
+  changed field — the task, the other registered fields, the data's
+  producer — not on whether the new text fits the run.
+- Question / hypothesis has no correction route, like the head's kind,
+  `[kept]` and `[reference]`: it states the requirement itself, so it
+  stands as registered, a typo included. A different question is a new
+  protocol; `[replaces]` only when the registration cannot be answered as
+  written or was incomplete at its first measurement. This makes the
+  guide's existing rule mechanical; it adds no class of fields.
+- A release belongs to the run it judged. A new run measured under a
+  corrected field is released only by a follow-up that judges the
+  correction against that run's inputs and rows; the earlier `resolved`
+  alone releases nothing for it (shared with the repair that corrects a
+  description and then the code, F5).
+
+Who decides what:
+
+1. labkit (guaranteed): which held field changed, from what to what; code,
+   data and run unchanged since the audit; the correction bound to finding,
+   decision, text and run; promises, kind, `[kept]`, `[reference]` and now
+   Question / hypothesis never released.
+2. The follow-up auditor (agent audit): whether the old text misdescribed
+   the run or stated a requirement it failed, on evidence it cites outside
+   the changed field; whether the new text matches the run's inputs and
+   rows.
+3. A new registration (existing rule): a changed question, statistic,
+   population or exclusion rule.
+
+| Change | Way |
+|---|---|
+| Typo in Terms, Data / scope, Exclusions / filters, Unit | correction, or leave the typo |
+| Typo in Question / hypothesis | restore; it stands as registered |
+| Data / scope "14 cases" → "12", the run read 12 | the registered set has 12: correction; 14 were required: data or implementation error — repair, measure again |
+| Data / scope "test split" → "dev split", the run read dev | "test" a demonstrably wrong label for the set the registration names: correction; the task asks for the test split: repair the run onto it — or a new protocol |
+| mean → median in a promise or the question | held; code computes the median: implementation error; code computes the mean: new protocol |
+| mean → median in Terms or Unit | the auditor's `unresolved`; a wrong `resolved` releases it, and finalize's note names old, new and why — the limit of this tier |
+| exclusion rule changed in the text only | restore |
+| exclusion rule changed in text and code, measured again | held by the snapshot comparison: new registration |
+| the same exclusion rule rephrased to match the code | correction |
+
+**Acceptance cases** (beside the twins above): a Question typo `fixed` and
+`resolved` is held, and hold and decision line name the way back or a new
+protocol, not the correction route; its restore passes; Question "mean" →
+"median" with a `resolved` is held; a Unit typo with a `resolved` is still
+released; Terms "mean" → "median" with a stand-in `resolved` is released
+and the note names the change (the limit, kept visible); a correction
+`resolved` for one run, then code repaired and measured again — the old
+verdict does not release the new run, a follow-up on the new run that
+judges the correction again does; after a released correction, a code
+repair is told to measure again. These are the mechanical consequences and
+go into labkit's tests. Which side of the pairs "14 cases" and "test
+split" a case falls on is the auditor's judgement: it needs probes of the
+auditor's instruction with a real model.
+
+**Today against this contract** (F5 reproduction on `4ab018bf`, labkit-
+evidence `usability/2026-11-03-correction-then-code-fault/`): an earlier
+`resolved` already does not release a new run. But a follow-up on the new
+run that judges the correction `resolved` does not release it either:
+the first branch of `finalize.scope_changes` (the text the answering run
+saw against the first measurement) reads no correction; only `scope_now`
+(the text as it stands) does. The release belongs in that branch too,
+bound to: the field's text the new run saw, the text now and the text the
+`resolved` judged are one; the record covers the new run; the field is
+correctable. The guidance is wrong there as well: after a released
+correction, `--decide` on a code repair answers "restore … decide the
+finding again" and `labkit-next` "restore"; both owe "measure again; the
+follow-up on the new run judges the correction again". The only way
+through in the same protocol today restores the known-false text (three
+runs, eight analysis records); a successor with `[replaces]` passes.
+
+**Places.** `findings.corrected_field` (the one home of the exception;
+`followup.earlier_corrections`, `finalize.resolved_corrections`,
+`audit_decisions.repair_hint` and `labkit-next` read it); the first branch
+of `finalize.scope_changes` (the new run's release); the hold in
+`finalize.registration_changes`, the decision line and `labkit-next` offer
+the correction route only for a correctable field and name "measure again"
+after a code repair; `finalize.scope_now`'s docstring;
+`labkit/docs/agent-guide.md` (the correction route as its own way out,
+apart from the incomplete registration); LAB-003's typo sentence; later,
+the follow-up auditor's instruction (`experiment-preflight.agent.md`: the
+deciding question above, and the evidence outside the field its `resolved`
+cites); CHANGELOG (behaviour, no format break).
+
+**Not in this contract.** Showing a released correction in the report —
+today only finalize's note names it; noted separately, no new report
+format here.
