@@ -24,6 +24,7 @@ from pathlib import Path
 from unittest import mock
 
 import models_fixture
+from labkit.formats import protocol_check
 from labkit.gates import audit_prompt
 from labkit.run import batch, lanes, llm
 from protocol_fixture import head
@@ -405,6 +406,58 @@ class PromptIsTheRegisteredOne(Case):
             with contextlib.redirect_stdout(out):
                 run.require_registered_prompts()
             self.assertIn("no registered Prompt block", out.getvalue())
+
+    def with_block(self, d: Path, body: str, registered: str) -> lanes.Lanes:
+        run, _ = lanes_in(d)
+        protocol = d / "PROTOCOL-x.md"
+        protocol.write_text(
+            protocol.read_text(encoding="utf-8")
+            + "\n- **Prompt (verbatim, per variant):**\n\n  ```text\n"
+            + "".join(f"  {ln}\n" for ln in body.splitlines())
+            + "  ```\n",
+            encoding="utf-8",
+        )
+        return dataclasses.replace(
+            run, prompts={"registered": registered, "null": "N: {text}"}
+        )
+
+    TAGGED = "<instructions>\nAnswer yes or no.\n</instructions>\n{text}\n\nN: {text}"
+
+    def test_a_drifted_tagged_prompt_is_refused_before_any_call(self):
+        """A block that opens and closes with a tag is a prompt, not the
+        stamp's placeholder (review 2026-11-03, R1: it was dropped, and
+        the drifted prompt went out unchecked)."""
+        with tempfile.TemporaryDirectory() as d:
+            run = self.with_block(
+                Path(d),
+                self.TAGGED,
+                "<instructions>\nAnswer yes, no or maybe.\n</instructions>\n{text}",
+            )
+            self.assertFalse(run.unregistered_prompt())
+            with mock.patch.object(llm, "complete_many") as asked:
+                with self.assertRaises(SystemExit) as cm:
+                    run.main(Cfg(), [])
+            asked.assert_not_called()
+            self.assertIn("registered: Answer yes, no or maybe.", str(cm.exception))
+
+    def test_the_matching_tagged_prompt_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = self.with_block(
+                Path(d),
+                self.TAGGED,
+                "<instructions>\nAnswer yes or no.\n</instructions>\n{text}",
+            )
+            self.assertEqual(run.prompt_drift(), [])
+            with mock.patch.object(lanes.Lanes, "_run") as measured:
+                run.main(Cfg(), [])
+            measured.assert_called_once()
+
+    def test_the_stamp_placeholder_is_no_registration(self):
+        (stamped,) = protocol_check.stamp_block_placeholders()
+        with tempfile.TemporaryDirectory() as d:
+            run = self.with_block(Path(d), stamped, "Q: {text}\nAnswer:")
+            self.assertTrue(run.unregistered_prompt())
+            self.assertEqual(run.prompt_drift(), [])
 
 
 class EvaluateKeptRows(Case):

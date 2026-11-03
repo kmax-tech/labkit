@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from labkit.checks import prompt_check, result_render  # noqa: E402
+from labkit.checks import result_render  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
 from labkit.tools import protocol_result
@@ -49,7 +49,10 @@ class ProseValueReaders(unittest.TestCase):
             protocol_check,
             "recorded_results_without_run",
         ),  # an Answer without a declaration
-        (prompt_check, "prompt_blocks"),  # the Prompt block held to the constants
+        (
+            protocol_check,
+            "registered_prompt_blocks",
+        ),  # the Prompt block held to the constants and the sent prompts
     )
     #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
     #: head — `answering_run_field`, `answering_run_open`, `finalize.cited_runs`,

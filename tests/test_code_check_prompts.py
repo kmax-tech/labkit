@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from labkit.checks import prompt_check
+from labkit.formats import protocol_check
 
 SCRIPT = (
     'ANSWERS = {"Yes": "causal", "No": "not_causal"}\n'
@@ -81,19 +82,19 @@ class Blocks(unittest.TestCase):
             "- **Null condition / anchors (in the same run):** placebo\n\n"
             "  ```text\n  Unrelated\n  ```\n",
         )
-        self.assertEqual(len(prompt_check.prompt_blocks(_write(moved))), 2)
+        self.assertEqual(len(protocol_check.prompt_blocks(_write(moved))), 2)
 
     def test_a_tilde_fence_and_a_wrapped_label_are_read(self):
         """`~~~` fences and a label wrapped onto the next line were invisible
         to the prompt check's own parsers (audit 2026-10-15); the protocol
         parser's fences and labels are read here."""
         tilde = TWO_BLOCKS.replace("```text", "~~~text").replace("  ```", "  ~~~")
-        self.assertEqual(len(prompt_check.prompt_blocks(_write(tilde))), 2)
+        self.assertEqual(len(protocol_check.prompt_blocks(_write(tilde))), 2)
         wrapped = TWO_BLOCKS.replace(
             "- **Prompt (verbatim, per variant):**",
             "- **Prompt (verbatim,\n  per variant):**",
         )
-        self.assertEqual(len(prompt_check.prompt_blocks(_write(wrapped))), 2)
+        self.assertEqual(len(protocol_check.prompt_blocks(_write(wrapped))), 2)
 
     def test_an_empty_fence_is_reported_not_a_crash(self):
         # a stamped protocol whose prompt fence was left empty raised
@@ -103,6 +104,55 @@ class Blocks(unittest.TestCase):
         self.assertEqual(len(findings), 2, findings)  # PROMPT and PROMPT_NULL
         for f in findings:
             self.assertTrue(f.startswith("BLOCKER"), f)
+
+
+TAGGED_SCRIPT = (
+    'PROMPT = "<instructions>\\nAnswer Yes or No.\\n</instructions>\\n{text}"\n'
+)
+TAGGED_BLOCK = """- **Prompt (verbatim, per variant):**
+
+  ```text
+  <instructions>
+  Answer Yes or No.
+  </instructions>
+  {text}
+  ```
+
+- **Unit:** one item
+"""
+
+
+class TaggedPrompts(unittest.TestCase):
+    """A prompt that opens and closes with a tag is a prompt: only the
+    stamp's own placeholder fence is no registration (review 2026-11-03,
+    R1: every block starting with `<` was dropped, so drift went unseen)."""
+
+    def test_a_drifted_tagged_prompt_blocks(self):
+        (f,) = check(
+            TAGGED_SCRIPT.replace("Yes or No", "yes, no or maybe"), TAGGED_BLOCK
+        )
+        self.assertTrue(f.startswith("BLOCKER"), f)
+        self.assertIn("PROMPT", f)
+
+    def test_the_matching_tagged_prompt_passes(self):
+        self.assertEqual(check(TAGGED_SCRIPT, TAGGED_BLOCK), [])
+
+    def test_the_stamp_placeholder_is_no_registration(self):
+        (stamped,) = protocol_check.stamp_block_placeholders()
+        protocol = TAGGED_BLOCK.replace(
+            "<instructions>\n  Answer Yes or No.\n  </instructions>\n  {text}",
+            stamped,
+        )
+        self.assertEqual(check(TAGGED_SCRIPT, protocol), [])
+
+    def test_the_stamp_placeholder_beside_a_drifted_prompt_still_blocks(self):
+        (stamped,) = protocol_check.stamp_block_placeholders()
+        protocol = TAGGED_BLOCK.replace(
+            "  ```text\n", f"  ```text\n  {stamped}\n  ```\n\n  ```text\n", 1
+        )
+        self.assertEqual(len(protocol_check.prompt_blocks(_write(protocol))), 2)
+        (f,) = check(TAGGED_SCRIPT.replace("Yes or No", "yes, no or maybe"), protocol)
+        self.assertTrue(f.startswith("BLOCKER"), f)
 
 
 def _write(text: str) -> Path:

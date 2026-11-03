@@ -36,7 +36,7 @@ the id against the repo — and the `protocol-check` command are
 
 import functools
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -1115,3 +1115,27 @@ def prompt_blocks(protocol: Path) -> list[str]:
             "\n".join(region[s:e]) for _, s, e in protocol_block.fence_spans(region)
         ]
     return blocks
+
+
+def registered_prompt_blocks(protocol: Path) -> list[str]:
+    """`prompt_blocks` without the fence the stamp left unfilled
+    (`is_stamp_placeholder_block`): the prompts the protocol registers.
+    A block that opens and closes with a tag (`<instructions>…`) is one of
+    them; empty when the protocol registers no prompt."""
+    return [b for b in prompt_blocks(protocol) if not is_stamp_placeholder_block(b)]
+
+
+def unheld_prompt_lines(prompt: str, blocks: Sequence[str]) -> list[str]:
+    """Each fixed line of PROMPT (non-empty, without a `{placeholder}`),
+    stripped and in order, that no line of BLOCKS holds stripped — the
+    one comparison of a sent prompt with its registration, for the static
+    check (`prompt_check.check_prompt_drift`) and the run
+    (`lanes.Lanes.prompt_drift`). Every fixed line, when BLOCKS is empty."""
+    have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
+    return [
+        ln.strip()
+        for ln in prompt.splitlines()
+        if ln.strip()
+        and not PLACEHOLDER_IN_PROMPT.search(ln)
+        and ln.strip() not in have
+    ]

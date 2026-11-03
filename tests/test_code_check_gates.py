@@ -11,6 +11,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import prompt_check  # noqa: E402
+from labkit.formats import protocol_check  # noqa: E402
+from labkit.formats.gate import BLOCKER  # noqa: E402
 
 SCRIPT = """
 PROMPT = ("Judge the claim: {claim}\\n\\n"
@@ -99,15 +101,26 @@ class Gates(unittest.TestCase):
         self.assertEqual(len(f), 1)
         self.assertIn("drifted from PROMPT", f[0])
 
-    def test_placeholder_block_is_not_judged(self):
+    def with_block(self, body: str) -> None:
         self.protocol.write_text(
             PROTOCOL.replace(
                 "Judge the claim: The sky is green.\n\n  Answer with a single word, Yes or No.\n\n  Answer:",
-                "<the real prompt — it belongs here>",
+                body,
             ),
             encoding="utf-8",
         )
+
+    def test_placeholder_block_is_not_judged(self):
+        (stamped,) = protocol_check.stamp_block_placeholders()
+        self.with_block(stamped)
         self.assertEqual(prompt_check.check_prompt_drift(self.area, self.protocol), [])
+
+    def test_a_placeholder_of_ones_own_is_judged(self):
+        """Only the stamp's fence is no registration; a `<…>` the author
+        writes is held like any prompt, so it blocks, never passes."""
+        self.with_block("<the real prompt — it belongs here>")
+        (f,) = prompt_check.check_prompt_drift(self.area, self.protocol)
+        self.assertEqual(f.grade, BLOCKER)
 
     def test_no_prompt_constant_means_nothing_to_hold(self):
         (self.area / "scripts" / "01_measure.py").write_text(

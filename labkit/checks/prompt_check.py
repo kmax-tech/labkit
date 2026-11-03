@@ -6,7 +6,7 @@ a call in the syntax tree, not a mention in a comment or string; whether
 the test asserts on its result is not checked;
 every line of a `PROMPT` constant without a `{placeholder}` appears in
 the protocol's prompt block (`check_prompt_drift`), read through
-`prompt_constants` and `prompt_blocks`.
+`prompt_constants` and `protocol_check.registered_prompt_blocks`.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from labkit.formats.repo import gate_command, shown
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
 from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded
-from labkit.formats.protocol_check import PLACEHOLDER_IN_PROMPT, prompt_blocks
+from labkit.formats.protocol_check import registered_prompt_blocks, unheld_prompt_lines
 
 
 PARSE_DEF = re.compile(r"^\s*def (parse_\w+)\s*\(", re.M)
@@ -196,9 +196,13 @@ def _prompts(area: Path) -> tuple[dict[str, str], list[str]]:
 def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
     """The protocol's prompt block against the PROMPT constant(s).
 
-    Compared line by line: every non-empty line of the constant that carries
-    no `{placeholder}` must appear, stripped, in some prompt block. A block
-    rendered with real data passes; a transcript that drifted does not."""
+    Compared line by line (`protocol_check.unheld_prompt_lines`): every
+    non-empty line of the constant that carries no `{placeholder}` must
+    appear, stripped, in some registered prompt block
+    (`protocol_check.registered_prompt_blocks` — every fence under Prompt but
+    the stamp's unfilled one). A block rendered with real data passes; a
+    transcript that drifted does not. No registered block, or no readable
+    constant: nothing to hold, only the unreadable-constant warnings."""
     consts, unreadable = _prompts(area)
     # A prompt this reader cannot compute is unchecked — said aloud, never a
     # silent pass (re-measure 2026-10-07: the stamped skeleton's were).
@@ -212,20 +216,14 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
         )
         for name in unreadable
     ]
-    # a block that only holds a `<placeholder>` is the template's, not a prompt
-    blocks = [b for b in prompt_blocks(protocol) if not b.strip().startswith("<")]
+    blocks = registered_prompt_blocks(protocol)
     if not consts or not blocks:
         return warnings
-    have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
     findings: list[GateFinding] = []
     for name, text in sorted(consts.items()):
-        fixed = [
-            ln.strip()
-            for ln in text.splitlines()
-            if ln.strip() and not PLACEHOLDER_IN_PROMPT.search(ln)
-        ]
-        missing = [ln for ln in fixed if ln not in have]
-        if fixed and missing:
+        fixed = unheld_prompt_lines(text, [])
+        missing = unheld_prompt_lines(text, blocks)
+        if missing:
             findings.append(
                 coded(
                     BLOCKER,

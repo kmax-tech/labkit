@@ -342,29 +342,19 @@ class Lanes:
         source reads, so a prompt built by a call is held too. Empty when
         every line is registered, and when the protocol registers no prompt
         block (`unregistered_prompt` says so)."""
-        blocks = self._prompt_blocks()
-        have = {ln.strip() for b in blocks for ln in b.splitlines() if ln.strip()}
+        blocks = protocol_check.registered_prompt_blocks(self.protocol)
+        if not blocks:
+            return []
         return [
-            f"{lane}: {ln.strip()}"
+            f"{lane}: {ln}"
             for lane, template in self.prompts.items()
-            for ln in template.splitlines()
-            if ln.strip()
-            and not protocol_check.PLACEHOLDER_IN_PROMPT.search(ln)
-            and blocks
-            and ln.strip() not in have
+            for ln in protocol_check.unheld_prompt_lines(template, blocks)
         ]
 
     def unregistered_prompt(self) -> bool:
-        """Does the protocol hold no Prompt block (or only the template's
-        `<placeholder>`)? Then no prompt line can be held to it."""
-        return not self._prompt_blocks()
-
-    def _prompt_blocks(self) -> list[str]:
-        return [
-            b
-            for b in protocol_check.prompt_blocks(self.protocol)
-            if not b.strip().startswith("<")
-        ]
+        """Does the protocol hold no Prompt block (or only the stamp's
+        unfilled placeholder fence)? Then no prompt line can be held to it."""
+        return not protocol_check.registered_prompt_blocks(self.protocol)
 
     def require_registered_prompts(self) -> None:
         """Refuse, before any paid call, a prompt whose fixed lines the

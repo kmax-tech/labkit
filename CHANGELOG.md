@@ -11,6 +11,21 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **A Prompt block that starts with a tag is held like any prompt.**
+  `code-check` and the measurement's start check (`Lanes`) skipped every
+  Prompt fence whose text began with `<`, so a registered
+  `<instructions>…` prompt was never compared and its drift went out
+  unchecked. Now only the current template's unfilled placeholder fence
+  counts as no registration; both readers share one comparison
+  (`protocol_check.registered_prompt_blocks`,
+  `protocol_check.unheld_prompt_lines`). Any other `<…>` block is compared
+  and blocks: a placeholder an author wrote, and the placeholder stamped
+  before 0.53.0 (`<the real prompt — it belongs here, not only in the
+  script>`, or 0.1.0's German one), where `--probe` and the measurement
+  are now refused instead of said to have no registered prompt. The last
+  release that skips them is **0.107.0**. Fill the block with the
+  rendered prompt (`protocol-fill PROTOCOL --prompts`, or `--show 1`).
+
 - **Report registration is bound on both low and high repeat costs.** The
   first measurement's commit fixes the registered report path, including
   its absence. Removing, redirecting or adding it later holds at the gate
