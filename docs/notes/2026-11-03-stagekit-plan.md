@@ -42,7 +42,7 @@ reproducible by hash.
 |---|---|---|
 | labkit | public API, LLM calls with a cache of raw responses, run records, checks | labkit |
 | stagekit | stages, DAG executor, registries open to the outside, parsing, `repro_hash`, `RunIndex`, pins, tracker hooks | its own repo from step 3c on; interface provisional (0.x) until step 6 passes; published after 6 |
-| fallacy topic | fallacy stages, dataset converters, parsers, prompts, data loaders | fallacy-detection |
+| fallacy topic | fallacy stages, dataset converters, parsers, prompts, data loaders, configs, pins, data manifest | the fallacy repo, split from fallacy-detection with its own history (3c) |
 | experiment areas | protocol, config, prompts of one measurement | the lab repos |
 | LLM cache, pinned outputs, dataset archives | the artifacts a result rests on | on disk beside the experiment, stored by hash on Ceph, named in git by a sha256 manifest (step 0) |
 
@@ -104,7 +104,9 @@ state.
   in git only by a manifest of sha256 values. Publishing data is a task of
   its own, not a side effect of pushing code.
 - **Change:**
-  - Done 2026-11-03 (fallacy-detection `0e3864d9`, `0272aa91`): the LLM
+  - Done 2026-11-03 (fallacy-detection, commits "data: LLM cache and
+    dataset archives leave git; sha256 manifest instead" and "data: untrack
+    the LLM cache and dataset archives"): the LLM
     cache (`data/cache/llm/`, 21,733 files) and the dataset archives
     (`data/archive/`, 9 zips) left the tree; the files stay on disk,
     ignored; `data/MANIFEST.sha256` lists all 21,742 and verifies against
@@ -187,13 +189,28 @@ Three commits, in this order, each with the full test suite green.
   `component_label2id` move into the record or the topic. A conformance
   check per extension kind (data loader, stage, prompt and parser pair),
   shipped with the framework.
-- **3c — the core moves into the repo `stagekit`** (decided 2026-11-03,
-  Max: the framework already runs, as copies, in several repos, and
-  counterfactual-worlds is planned). Extracted with its history
-  (`git filter-repo --path …` on a clone, after step 0, so no data follows),
-  behaviour unchanged; fallacy-detection installs it editable during
-  development and pins a commit for any documented measurement. The
-  interface stays provisional (0.x) until step 6 passes.
+- **3c — the repo splits in two, each with its own history** (decided
+  2026-11-03, Max: the framework already runs, as copies, in several repos,
+  and counterfactual-worlds is planned). After step 0, from two clones:
+  - **stagekit:** `git filter-repo --path <core paths>` keeps the core
+    (the `CORE` list of 3a) and its history; the framework's documents go
+    with it — the architecture reference (`.claude/commands/experiment.md`),
+    the coding style, the `NOTES.md` entries about the engine.
+  - **fallacy repo:** `git filter-repo --invert-paths --path <core paths>`
+    keeps the fallacy-specific code, prompts, configs, pins, the data
+    manifest and the topic's notes; its data stay on Ceph.
+  - A commit that touched both sides appears in both, each with its part
+    and the same message.
+  - Documents in both repos refer to commits by date and subject, never by
+    hash (done for fallacy-detection on 2026-11-03): both histories get new
+    hashes.
+  - The fallacy repo installs stagekit editable during development and pins
+    a commit for any documented measurement. The interface stays
+    provisional (0.x) until step 6 passes.
+  - **Open:** which of the two keeps the name `fallacy-detection` and the
+    remote on git.webis.de. Recommendation: the fallacy repo — the server's
+    history and whoever works with it are the topic's; stagekit starts as a
+    new repo.
   Proof, two parts: `repro_hash` recomputed for every entry in
   `published/pins.yaml` is identical before and after (the identity
   computation survived); the full test suite and a rerun of the pilot's
