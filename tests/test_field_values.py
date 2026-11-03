@@ -112,14 +112,16 @@ class WrittenTwice(unittest.TestCase):
 
     def test_a_versioned_copy_is_the_same_field(self):
         """`Question / hypothesis (v2)` beside the first: a gloss makes no
-        other field, and the way out names the new protocol."""
+        other field. The way out keeps the measured version and promises no
+        successor protocol: that way has conditions of its own."""
         text = protocol(
             "**Question / hypothesis:** Does A beat B?",
             "**Question / hypothesis (v2):** Does B beat A?",
         )
         ((label, _),) = protocol_check.repeated_fields(text)
         self.assertEqual(label, "Question / hypothesis")
-        self.assertIn("[replaces]", WAY_OUT)
+        self.assertIn("the first measurement stood on", WAY_OUT)
+        self.assertNotIn("[replaces]", WAY_OUT)
 
     def test_the_low_registration_lacks_a_single_copy(self):
         missing = protocol_history.registration_missing(self.OLD)

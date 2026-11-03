@@ -29,8 +29,9 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   other field: versioned sections (`Question / hypothesis (v2)` beside
   the first) are refused too. The way out is one wording everywhere
   (`protocol_check.REPEATED_WAY_OUT`): keep one copy and delete the
-  others; copies that are versions of the registration are a new protocol
-  whose `[replaces]` names this one. At low repeat cost a first
+  others; of versions, the one the first measurement stood on — keeping
+  another changes the registration, with that change's own ways out. At
+  low repeat cost a first
   measurement already made on a commit that wrote a bound field twice —
   identical copies included — no longer stood on a registration:
   report-check holds its number as exploratory, and the way out is the
