@@ -1,9 +1,9 @@
 # Plan: one LLM layer, and large pipelines under a labkit run
 
 Date: 2026-11-02. Requested by Max, for discussion. Nothing here is
-implemented; the current standard and release rules remain in force. The
-open decisions at the end come first; each part below becomes its own task
-once they are settled. TODO entry: "LLM-Schicht: öffentliche Schnittstelle,
+implemented; the current standard and release rules remain in force. All
+ten decisions were taken on 2026-11-02 and 2026-11-03 (section
+"Decisions"); each part below becomes its own task. TODO entry: "LLM-Schicht: öffentliche Schnittstelle,
 Cache, Anschluss großer Pipelines".
 
 ## Goal
@@ -398,6 +398,15 @@ against one real second case, not in advance.
    they load whatever is installed, invisible from the experiment — the
    area that holds the config should also show what is loaded. Entry points
    only if several installed topic packages ever run side by side.
+9. **The second case is `counterfactual-worlds`** (2026-11-03, Max). It is
+   due for an update anyway: it pins labkit `v0.85.0` (`requirements.txt`)
+   against `v0.107.0` today, and has to follow the current standards. It
+   meets the criteria: text, LLM calls per item (80 Python files call
+   `llm.complete`/`complete_many`), clean tree. The update and the contract
+   test become one job. Limit to keep in view: it is the counterfactuals
+   and fallacy-detection thread, close to the first topic, so it tests
+   portability less hard than a distant domain would; the image case stays
+   the harder test, when an image project is worked on again (decision 7).
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -410,7 +419,8 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1 to 8 and 10 are decided above.
+All ten are decided above (2026-11-03); the questions below are kept as
+first written, with the recommendations that led there.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
