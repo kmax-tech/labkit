@@ -47,7 +47,13 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   in a follow-up that covers the answering run, with the field as the
   run saw it, as it stands and as judged one text. The verdict on A
   releases nothing for B; another field changed without its own release
-  still holds. No format change.
+  still holds. No format change. Each step names the next: the decision
+  on the code repair says withdraw (when adopted), measure again, then the
+  follow-up on the new run — no longer restore and decide `limitation`;
+  `--withdraw` names the measurement when the repaired code has no run
+  yet; the scope hold names the measurement before the follow-up when the
+  code changed since the answering run, and the follow-up on the new run
+  once it is measured.
 
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of

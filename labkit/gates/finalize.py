@@ -448,18 +448,40 @@ def scope_changes(
             text = protocol.read_text(encoding="utf-8")
             diffs, _ = released_fields(all_diffs, area, protocol, text, run, seen)
             if diffs:
+                labels = _labels(diffs)
+                restore = (
+                    f"restore {labels} as {first.dir.name} registered them"
+                    f"{shown_then(protocol, first, root)}, and measure again, then "
+                    f"audit that run (the earlier runs stay)"
+                )
+                waiting = awaiting_followup(area, protocol, text, run)
+                moved = moved_fields(seen, text)
+                refs = [
+                    None if what in moved else waiting.get(field_name(what))
+                    for what, _, _ in diffs
+                ]
+                if all(refs):
+                    # run B measured under a correction released for an earlier
+                    # run: the follow-up on B judges it again (probe 2026-11-03)
+                    fix = (
+                        f"the follow-up analysis audit on {run.name} "
+                        f"(`{audit_command(area, '--mode', 'analysis', protocol=protocol)}`) "
+                        f"judges {', '.join(r for r in refs if r)}, decided `fixed` "
+                        f"as a correction of {labels} in place — only its `resolved` "
+                        f"on that finding, judged on this run and this text, releases "
+                        f"the change; a verdict on an earlier run releases nothing "
+                        f"for this one; or, a changed definition, population or "
+                        f"question is no correction: {restore}; or, {anew_way(pid)}"
+                    )
+                else:
+                    fix = f"{restore}{correction_way(diffs)}; or, {anew_way(pid)}"
                 return [
                     blocker(
                         f"what the number is about changed after the first measurement "
                         f"{first.dir.name}: {quoted_changes(diffs)} (as the answering "
                         f"run {run.name} saw the protocol) — a scope set after a "
                         f"result was seen does not answer the registered question",
-                        fix=f"restore {_labels(diffs)} as {first.dir.name} registered "
-                        f"them{shown_then(protocol, first, root)}, and measure again, "
-                        f"then audit that run (the earlier runs stay); or, when the "
-                        f"registration cannot be answered as written, "
-                        + register_anew(pid)
-                        + " — the earlier protocol, its runs and their verdict stay",
+                        fix=fix,
                     )
                 ]
     now = scope_now(area, protocol, pid, run, root)
@@ -475,36 +497,74 @@ def scope_changes(
         f"stay; an audit that read the rewritten fields is owed again "
         f"(`labkit-next` names it)"
     )
-    anew = (
-        "when the registration cannot be answered as written, "
-        + register_anew(pid)
-        + " — the earlier protocol, its runs and their verdict stay"
-    )
-    if all(refs):
+    analysis = audit_command(area, "--mode", "analysis", protocol=protocol)
+    declaring: Path | None = None
+    if all(refs) and code_since_run(area, run)[0]:
+        # a code repair after the correction: the run that answers was measured
+        # by other code, so a new run comes first and its follow-up judges the
+        # correction on it — a follow-up of the old run would be held by the
+        # changed code (probe 2026-11-03, the correction then a code fault)
+        declaring = declaring_protocol(protocol, text, run)
+        fix = (
+            f"the measuring code changed since {run.name} ran: measure again "
+            f"(`{measure_command(area)}`), then the follow-up analysis audit on that "
+            f"run (`{analysis}`) judges {', '.join(r for r in refs if r)}, decided "
+            f"`fixed` as a correction of {labels} in place, beside the repair — only "
+            f"its `resolved` on that finding, judged on the new run and this text, "
+            f"releases the change; or, a changed definition, population or question "
+            f"is no correction: {restore}; or, {anew_way(pid)}"
+        )
+    elif all(refs):
         # each held field's correction is decided: the follow-up that judges
         # it comes first, the way back after it (probe 2026-11-02, smaller
         # points: three ways, restore first, and no follow-up command)
         fix = (
             f"the follow-up analysis audit on the run as it stands "
-            f"(`{audit_command(area, '--mode', 'analysis', protocol=protocol)}`) "
+            f"(`{analysis}`) "
             f"judges {', '.join(r for r in refs if r)}, decided `fixed` as a "
             f"correction of {labels} in place — only its `resolved` on that "
             f"finding, for exactly this text, releases the change, and no new "
             f"measurement is owed; or, a changed definition, population or question "
-            f"is no correction: {restore}; or, {anew}"
+            f"is no correction: {restore}; or, {anew_way(pid)}"
         )
     else:
-        fix = f"{restore}{correction_way(now.held)}; or, {anew}"
-    return [
-        blocker(
-            f"what the number is about changed after the first measurement "
-            f"{now.first.dir.name}: {quoted_changes(now.held)} (as the protocol stands "
-            f"now; no run measured under it yet) — a scope set after a result was seen "
-            f"does not answer the registered question, and a new measurement would "
-            f"carry the change",
-            fix=fix,
-        )
-    ]
+        fix = f"{restore}{correction_way(now.held)}; or, {anew_way(pid)}"
+    held = blocker(
+        f"what the number is about changed after the first measurement "
+        f"{now.first.dir.name}: {quoted_changes(now.held)} (as the protocol stands "
+        f"now; no run measured under it yet) — a scope set after a result was seen "
+        f"does not answer the registered question, and a new measurement would "
+        f"carry the change",
+        fix=fix,
+    )
+    return [declared_first(held, declaring) if declaring else held]
+
+
+def anew_way(pid: str) -> str:
+    """The last way out of a scope hold on protocol PID: a new registration."""
+    return (
+        "when the registration cannot be answered as written, "
+        + register_anew(pid)
+        + " — the earlier protocol, its runs and their verdict stay"
+    )
+
+
+def moved_fields(seen: str, text: str) -> set[str]:
+    """What the number is about in which SEEN, the protocol as a run saw
+    it, and TEXT, the protocol as it stands, differ — by the labels
+    `protocol_history.scope_differences` names. Pure."""
+    return {what for what, _, _ in protocol_history.scope_differences(seen, text)}
+
+
+def declaring_protocol(protocol: Path, text: str, run: Path) -> Path | None:
+    """PROTOCOL (TEXT its text) when it declares RUN as its result, so a
+    hold on RUN withdraws first (`ways_out.declared_first`); None otherwise,
+    and while the declaration is an adoption's proposal under its own
+    check (`report_context.pending_adoption`): no adoption stands to
+    withdraw (reference pilot 2026-11-01, task 60)."""
+    if protocol_block.declared_run_shown(text) != run.name:
+        return None
+    return None if pending_adoption(protocol).is_file() else protocol
 
 
 #: the way a field corrected in place is released (`scope_now`)
@@ -609,7 +669,7 @@ def released_fields(
     field stands on its own: one released field releases no other. Raises
     RuntimeError when git fails."""
     resolved = resolved_corrections(area, protocol, text, run)
-    moved = {what for what, _, _ in protocol_history.scope_differences(seen, text)}
+    moved = moved_fields(seen, text)
     held: list[tuple[str, str, str]] = []
     corrected: list[tuple[tuple[str, str, str], Correction]] = []
     for d in diffs:
@@ -1355,16 +1415,8 @@ def finalize_area(
     if answering_run is None:
         findings.note(NO_RUN)
     else:
-        # the protocol that declares this very run: its holds withdraw first —
-        # unless the declaration is an adoption's proposal under its own check
-        # (`report_context.pending_adoption`): no adoption stands to withdraw
-        # (reference pilot 2026-11-01, task 60)
-        held_by = (
-            chosen
-            if protocol_block.declared_run_shown(text) == answering_run.name
-            and not pending_adoption(chosen).is_file()
-            else None
-        )
+        # the protocol that declares this very run: its holds withdraw first
+        held_by = declaring_protocol(chosen, text, answering_run)
         check_run_code(findings, area, answering_run, held_by)
         check_declared_scopes(findings, area, answering_run, text, held_by)
 

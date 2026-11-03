@@ -1234,7 +1234,20 @@ class CorrectionThenNewRun(CorrectionCommands):
         assert self.record is not None
         code = self.record
         self.change_code()
-        self.decide(code, 1, "fixed", "rows() keeps the count alone again")
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            rc = audit.main(
+                [
+                    str(self.area),
+                    "--decide",
+                    "1",
+                    *decide_words("fixed", "rows() keeps the count alone again"),
+                    "--record",
+                    str(code),
+                ]
+            )
+        self.assertEqual(rc, 0, said.getvalue())
+        self.said = said.getvalue()
         return code
 
     def judged(self, *verdicts: tuple[Path, str]) -> tuple[int, str, str]:
@@ -1280,9 +1293,28 @@ class CorrectionThenNewRun(CorrectionCommands):
         run_b = self.measure()
         rc, out, prompt = self.judged((code, "resolved"))
         self.assertIn(f"{correction.name}#1", prompt)  # shown, not judged
-        self.held_as_b_saw(run_b, "Data / scope")
+        held = self.held_as_b_saw(run_b, "Data / scope")
+        # the way out is the follow-up on B that judges the correction again
+        self.assertIn(f"the follow-up analysis audit on {run_b}", held)
+        self.assertIn(f"{correction.name}#1", held)
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 1, out)
+
+    def test_t10_the_code_repair_beside_a_correction_is_measured_again(self):
+        """The decision's line and the hold before the new run name the
+        measurement, then the follow-up on it — not restore and decide the
+        repair `limitation` (probe 2026-11-03, s2 2b)."""
+        correction = self.corrected_for_a()
+        self.code_repaired()
+        self.assertIn("next: the repair is in the area — measure again", self.said)
+        self.assertIn(f"{correction.name}#1", self.said)
+        self.assertNotIn("held:", self.said)
+        self.assertNotIn("withdraw", self.said)  # nothing adopted
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"the measuring code changed since {self.run_a} ran: measure again", out
+        )
 
     def test_t3_the_correction_judged_unresolved_on_the_new_run_holds(self):
         correction = self.corrected_for_a()

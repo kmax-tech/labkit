@@ -819,6 +819,113 @@ class RegisteredReportRepairs(RepairPaths):
         self.assertIn("01_measure.py", nxt)
         self.assertEqual(self.runs(), 1)
 
+    def test_a_correction_then_a_code_repair_is_measured_judged_and_reported(self):
+        """Data / scope corrected in place, released and adopted for run 1;
+        later a code fault repaired. Each step is the one the step before
+        named: the decision's line, `--withdraw`, `labkit-next` — withdraw,
+        measure again, the follow-up on run 2 that judges the correction
+        again, the adoption and the report review. The verdict on run 1
+        releases nothing for run 2 (probe 2026-11-03, the correction then a
+        code fault: run 2 was held whatever its follow-up said, and the
+        decision's line said restore and decide `limitation`)."""
+        correction = self.scope_corrected(decided=True)
+        self.answered(
+            f"FIX · {correction}#1 · resolved · twelve cases, as run 1 read\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
+        run1 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.run_(".venv/bin/labkit-adopt", AREA, run1)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("run 1 adopted with the correction")
+        audits = self.lab / AREA / "audits"
+        before = set(audits.glob("*-analysis*.toml"))
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "adopted mean is over 11 cases · LAB-050 Analysis audit before reporting "
+            "· remove the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 "
+            f"notes\nscope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        ((code_record),) = set(audits.glob("*-analysis*.toml")) - before
+        code = code_record.name
+        script = self.lab / AREA / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "# repaired\n", encoding="utf-8"
+        )
+        said = self.decide(code, "fixed", "evaluate_rows averages over every case")
+        self.assertIn("withdraw the adoption first", said)
+        self.assertIn("then measure again", said)
+        self.assertIn(f"{correction}#1", said)
+        self.assertNotIn("held:", said)
+        self.assertNotIn("limitation", said)
+        out = self.withdraw_as_named()
+        self.assertIn(
+            f"2. the measuring code changed since {run1} ran: measure again", out
+        )
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run1,
+            "--why",
+            "withdrawn: the mean dropped cases; the code is repaired",
+            "--into",
+            "REPORT.md",
+        )
+        self.commit("withdrawn; run 1 discussed")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            f"the measuring code changed since {run1} ran: measure again", nxt
+        )
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        run2 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run2,
+            "--why",
+            "measured after the repair; the follow-up audit is open",
+            "--into",
+            "REPORT.md",
+        )
+        self.commit("run 2 discussed")
+        follow_up = f"the follow-up analysis audit on {run2}"
+        self.assertIn(follow_up, self.run_(".venv/bin/labkit-next", AREA))
+        # the follow-up judges the repair alone: the verdict on run 1 is not run 2's
+        self.answered(
+            f"FIX · {code}#1 · resolved · the filter is gone\n\n{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(follow_up, nxt)
+        self.assertIn(f"{correction}#1", nxt)
+        self.run_(".venv/bin/labkit-adopt", AREA, run2, ok=False)
+        self.answered(
+            f"FIX · {code}#1 · resolved · the filter is gone\n"
+            f"FIX · {correction}#1 · resolved · twelve cases, as run 2 read\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.assertIn(
+            f"labkit-adopt {AREA} {run2}", self.run_(".venv/bin/labkit-next", AREA)
+        )
+        self.run_(".venv/bin/labkit-adopt", AREA, run2)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("run 2 adopted")
+        self.assertIn("nothing", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertIn("corrected in place", self.run_(".venv/bin/finalize", AREA))
+        self.assertEqual(self.runs(), 2)
+
 
 @unittest.skipUnless(
     (VENV / "bin" / "usability").is_file() and shutil.which("git"),

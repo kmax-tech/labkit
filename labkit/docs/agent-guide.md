@@ -353,7 +353,8 @@ prints these ways out with each decision list:
   and 12 read, the run is wrong: repair it and measure again. Decide a
   correction `fixed`, naming it, and run the analysis audit again; only its
   `resolved` releases the change. If the data or code changes, measure
-  anew. In place, never change a promise, the question (a typo included),
+  anew; the follow-up on the new run judges the correction again, and only
+  its `resolved` releases the field for that run. In place, never change a promise, the question (a typo included),
   the criterion, the quality checks or the null condition.
 - **a wrong adoption** — The measurement stands, but the head adopted a
   run that does not answer; the finding names the one that does. Withdraw
