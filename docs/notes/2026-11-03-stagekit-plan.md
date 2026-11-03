@@ -44,7 +44,7 @@ reproducible by hash.
 | stagekit | stages, DAG executor, registries open to the outside, parsing, `repro_hash`, `RunIndex`, pins, tracker hooks | its own repo from step 3c on; interface provisional (0.x) until step 6 passes; published after 6 |
 | fallacy topic | fallacy stages, dataset converters, parsers, prompts, data loaders | fallacy-detection |
 | experiment areas | protocol, config, prompts of one measurement | the lab repos |
-| LLM cache, pinned outputs, dataset archives | the artifacts a result rests on | a durable store outside git history, referenced by sha256 (step 0) |
+| LLM cache, pinned outputs, dataset archives | the artifacts a result rests on | on disk beside the experiment, stored by hash on Ceph, named in git by a sha256 manifest (step 0) |
 
 ## What each identity denotes
 
@@ -91,33 +91,46 @@ state.
 - **The history cannot be pushed as it is.** `main` is 290 commits ahead of
   `origin/main` (git.webis.de); those commits add 867 MB of blobs — 726 MB
   in `data/cache` (the LLM cache, tracked on purpose since 2026-05-23,
-  rule 8 of the repo's `CLAUDE.md`, 21,733 files today) and 116 MB in
-  `data/archive` (dataset zips). The server holds 98 MB.
+  rule 8 of the repo's `CLAUDE.md`, 21,733 files) and 116 MB in
+  `data/archive` (dataset zips). The server holds 98 MB. Step 0 handles
+  it.
 
 ## Steps
 
 ### 0 — baseline and durable storage (new, before 3a)
 
-- **Change:** the artifacts results rest on leave git history for a store
-  that a clone can reach and verify:
-  - LLM cache (`data/cache/llm/`) and dataset archives (`data/archive/`)
-    become Git LFS objects. Only the 290 unpushed commits are rewritten
-    (`git lfs migrate import`, `origin/main` excluded), so the server's
-    history stays and the push needs no force. Rule 8's intent — the warm
-    cache travels with the checkout — holds; git stores pointers.
-  - The pinned run directories of `published/pins.yaml`, at least the
-    pilot's, go to the same store or an archive, each checked against the
-    sha256 in `pins.yaml`.
-  - Before rewriting: a bundle of the whole repo as a backup. Commit
-    hashes named in `NOTES.md` and `docs/` point to old commits afterwards;
-    the bundle keeps them resolvable, or the commit map rewrites them.
-- **Done when:** a fresh clone fetches the pilot's pinned artifacts and
-  its cache entries and verifies their sha256; the test suite passes on
-  the rewritten history; `origin/main` is a fast-forward of the push.
+- **Principle (decided 2026-11-03, Max):** data live apart from code. On
+  disk beside the experiment for local work, stored by hash on Ceph, named
+  in git only by a manifest of sha256 values. Publishing data is a task of
+  its own, not a side effect of pushing code.
+- **Change:**
+  - Done 2026-11-03 (fallacy-detection `0e3864d9`, `0272aa91`): the LLM
+    cache (`data/cache/llm/`, 21,733 files) and the dataset archives
+    (`data/archive/`, 9 zips) left the tree; the files stay on disk,
+    ignored; `data/MANIFEST.sha256` lists all 21,742 and verifies against
+    them; rule 8 of the repo's `CLAUDE.md` says so.
+  - The unpushed commits still carry the data. `git filter-repo
+    --invert-paths --path data/cache/ --path data/archive/ --refs main
+    ^origin/main` removes it from them only; the server's history stays,
+    the push is a fast-forward. Dry run on 2026-11-03: 52,429 data changes
+    gone, 293 commits become 283 (ten held cache data only). A bundle of the
+    whole repo comes first; it keeps the old commit hashes named in
+    `NOTES.md` and `docs/` resolvable, and filter-repo's commit map can
+    rewrite them.
+  - The data and the pinned run directories of `published/pins.yaml` (at
+    least the pilot's) go to Ceph, addressed by sha256.
+- **Done when:** a fresh clone, given the manifest and Ceph access, fetches
+  the pilot's pinned artifacts and cache entries and verifies their sha256;
+  the test suite passes on the rewritten history; the push is a
+  fast-forward of `origin/main`.
 - **Who:** the history rewrite and the push are Max's (irreversible,
-  remote); the commands are prepared.
-- **Open:** dataset archives may carry licences that forbid
-  redistribution; checked per archive before they go to any shared store.
+  remote); the script is prepared.
+- **Open:** how Ceph is reached from here (a CephFS mount, its S3 gateway,
+  or rsync over ssh to a cluster node), and with which tool — DVC with a
+  Ceph remote if several repos store data this way, otherwise the manifest
+  plus rsync into a directory named by hash. Dataset archives may carry
+  licences that forbid redistribution; that matters for publishing, not for
+  storing.
 
 ### 1 — labkit: public API, held by tests (decision 3)
 
@@ -265,7 +278,8 @@ Three commits, in this order, each with the full test suite green.
   framework is reused, not that one contract fits them all; they may have
   drifted. Hence 0.x until step 6, and step 6's second round.
 - **The history rewrite (0).** Irreversible for the rewritten commits;
-  backup bundle first, server history untouched, no force push.
+  backup bundle first, server history untouched, no force push. Until the
+  data are on Ceph, the only copies are on this disk and in the bundle.
 - **4b may differ from the pin.** New calls at temperature 0 can still
   differ (batch composition on the server). The item-wise diff is the
   result, not a failure of the plan.
