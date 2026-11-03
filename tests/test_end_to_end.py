@@ -1423,6 +1423,51 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.assertIn("register anew", held)
         self.assertNotIn("names the field as its place", held)
 
+    def question_beside_a_waiting_correction(self) -> Path:
+        """Data / scope corrected and decided `fixed`, not yet judged, and
+        Question / hypothesis rewritten beside it without a finding; the
+        correction's record."""
+        blocking = self.audited("BLOCKER", "Data / scope")
+        self.describe(self.RIGHT)
+        self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
+        self.lab.fill(
+            self.protocol,
+            "--force",
+            "Question / hypothesis=What is the median number of lines of a "
+            "document of data/raw/docs?",
+        )
+        return blocking
+
+    def test_a_question_beside_a_waiting_correction_names_no_follow_up_first(self):
+        """The question has no correction (`findings.corrected_field` gives
+        none), so not every held field waits for a follow-up: the hold leads
+        with the way back and says the question stands as registered, not
+        with the follow-up that would release nothing for it."""
+        self.question_beside_a_waiting_correction()
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        held = next(
+            ln for ln in out.splitlines() if self.HELD in ln and "BLOCKER" in ln
+        )
+        self.assertIn("Question / hypothesis has no correction in place", held)
+        self.assertNotIn("the follow-up analysis audit on", held)
+
+    def test_the_twin_on_a_new_run_a_question_beside_a_correction_holds_the_same(
+        self,
+    ):
+        """The same after a code repair and run B: the hold on the text B
+        saw names no follow-up first either, and a `resolved` on the
+        correction releases Data / scope while the question stays held."""
+        correction = self.question_beside_a_waiting_correction()
+        code = self.code_repaired()
+        run_b = self.measure()
+        held = self.held_as_b_saw(run_b, "Question / hypothesis")
+        self.assertIn("Question / hypothesis has no correction in place", held)
+        self.assertNotIn("the follow-up analysis audit on", held)
+        self.judged((code, "resolved"), (correction, "resolved"))
+        held = self.held_as_b_saw(run_b, "Question / hypothesis")
+        self.assertNotIn("Data / scope", held)
+
     def test_an_adopted_corrected_run_is_withdrawn_measured_again_and_replaced(self):
         correction = self.corrected_for_a()
         rc, out = self.lab.adopt(self.protocol, self.run_a)
