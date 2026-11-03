@@ -415,12 +415,18 @@ def scope_changes(
     run saw it, and the protocol as it stands — a field rewritten after the
     last measurement is a change before any run carries it, and an audit of
     the first run on the rewritten text would release it otherwise (probe
-    2026-11-02, docs/notes/2026-11-02-registered-field-repair.md). A change
-    is a BLOCKER naming each field with its old and new value and the way
-    out: restore them — and, when a run measured under the change, measure
-    again — or register anew. A code change measured again under the same
-    fields passes: what the run computes is the analysis audit's question,
-    not this one. The first measurements are every run at each first
+    2026-11-02, docs/notes/2026-11-02-registered-field-repair.md). Both
+    comparisons release a field the same way (`released_fields`): a
+    correction in place judged `resolved` by a follow-up that covers RUN as
+    it stands, the field as RUN saw it and as it stands one text — so a run
+    measured again under a corrected field, after a code repair, is
+    released by a follow-up on that run, never by the verdict on an earlier
+    one (probe 2026-11-03, the correction then a code fault). A change
+    no correction releases is a BLOCKER naming each field with its old and
+    new value and the way out: restore them — and, when a run measured
+    under the change, measure again — or register anew. A code change
+    measured again under the same fields passes: what the run computes is
+    the analysis audit's question, not this one. The first measurements are every run at each first
     position (`first_measurement_groups`); the answering run, when it is
     one of them, has no run text to compare, the text as it stands still
     is. A text that cannot be read back is passed over: the registration
@@ -434,25 +440,28 @@ def scope_changes(
         else (None, "")
     )
     if seen is not None:
-        held = protocol_history.first_measured_differences(
+        found = protocol_history.first_measured_differences(
             protocol, others, seen, root, protocol_history.scope_differences
         )
-        if held is not None:
-            first, diffs = held
-            return [
-                blocker(
-                    f"what the number is about changed after the first measurement "
-                    f"{first.dir.name}: {quoted_changes(diffs)} (as the answering run "
-                    f"{run.name} saw the protocol) — a scope set after a result was "
-                    f"seen does not answer the registered question",
-                    fix=f"restore {_labels(diffs)} as {first.dir.name} registered them"
-                    f"{shown_then(protocol, first, root)}, and measure again, then "
-                    f"audit that run (the earlier runs stay); or, when the registration "
-                    f"cannot be answered as written, "
-                    + register_anew(pid)
-                    + " — the earlier protocol, its runs and their verdict stay",
-                )
-            ]
+        if found is not None:
+            first, all_diffs = found
+            text = protocol.read_text(encoding="utf-8")
+            diffs, _ = released_fields(all_diffs, area, protocol, text, run, seen)
+            if diffs:
+                return [
+                    blocker(
+                        f"what the number is about changed after the first measurement "
+                        f"{first.dir.name}: {quoted_changes(diffs)} (as the answering "
+                        f"run {run.name} saw the protocol) — a scope set after a "
+                        f"result was seen does not answer the registered question",
+                        fix=f"restore {_labels(diffs)} as {first.dir.name} registered "
+                        f"them{shown_then(protocol, first, root)}, and measure again, "
+                        f"then audit that run (the earlier runs stay); or, when the "
+                        f"registration cannot be answered as written, "
+                        + register_anew(pid)
+                        + " — the earlier protocol, its runs and their verdict stay",
+                    )
+                ]
     now = scope_now(area, protocol, pid, run, root)
     if now is None or not now.held:
         return []
@@ -578,12 +587,38 @@ def scope_now(
     if found is None:
         return None
     first, diffs = found
-    resolved = resolved_corrections(area, protocol, text, run)
-    held = [d for d in diffs if field_name(d[0]) not in resolved]
-    corrected = [
-        (d, resolved[field_name(d[0])]) for d in diffs if field_name(d[0]) in resolved
-    ]
+    held, corrected = released_fields(diffs, area, protocol, text, run, text)
     return ScopeNow(first, held, corrected)
+
+
+def released_fields(
+    diffs: list[tuple[str, str, str]],
+    area: Path,
+    protocol: Path,
+    text: str,
+    run: Path,
+    seen: str,
+) -> tuple[list[tuple[str, str, str]], list[tuple[tuple[str, str, str], Correction]]]:
+    """DIFFS — (what, from, to) against a first measurement — sorted into
+    (held, released): a difference is released when its field's correction
+    is judged `resolved` by a follow-up that covers RUN and PROTOCOL as it
+    stands (TEXT; `resolved_corrections`), and the field reads the same in
+    SEEN, the protocol as RUN saw it — the run measured, the verdict judged
+    and the text now one value. The one release of both comparisons in
+    `scope_changes`; SEEN is TEXT where no run carries the text yet. Each
+    field stands on its own: one released field releases no other. Raises
+    RuntimeError when git fails."""
+    resolved = resolved_corrections(area, protocol, text, run)
+    moved = {what for what, _, _ in protocol_history.scope_differences(seen, text)}
+    held: list[tuple[str, str, str]] = []
+    corrected: list[tuple[tuple[str, str, str], Correction]] = []
+    for d in diffs:
+        c = resolved.get(field_name(d[0]))
+        if c is None or d[0] in moved:
+            held.append(d)
+        else:
+            corrected.append((d, c))
+    return held, corrected
 
 
 def resolved_corrections(

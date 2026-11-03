@@ -36,6 +36,19 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   the head's parts or a promise
   (`docs/notes/2026-11-02-registered-field-repair.md`).
 
+- **A run measured again under a corrected field is released by a
+  follow-up on that run.** A description corrected in place and released
+  for run A, then a code fault repaired and run B measured: B was held
+  even when its follow-up judged the correction `resolved` again, and the
+  only way left in the protocol was writing the known-false text back
+  (probe 2026-11-03, `docs/notes/2026-11-02-registered-field-repair.md`).
+  Both comparisons of `finalize.scope_changes` now release a field the
+  same way (`finalize.released_fields`): a `resolved` on its correction
+  in a follow-up that covers the answering run, with the field as the
+  run saw it, as it stands and as judged one text. The verdict on A
+  releases nothing for B; another field changed without its own release
+  still holds. No format change.
+
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of
   `at_least` (the bar as written, whatever the null lane scores) and
