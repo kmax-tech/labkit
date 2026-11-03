@@ -78,13 +78,11 @@ Both are runs under labkit; the run record names the mode.
   `LOADER_MODULE_MAP`, `STRATEGY_MODULE_MAP`, `MODEL_MODULE_MAP`). All five
   go through one class, `LazyRegistry` (`src/utils/registry.py`) — one
   place opens all of them.
-- **Three imports run from the general part into the topic part:**
-  `src/run/manager.py:11` imports `src.analysis.repro_hash`,
-  `src/run/pins.py:342` imports `src.analysis.run_index`,
-  `src/config/validation.py:329` imports
-  `src.stages.classify.feature_utils`. `repro_hash` and `run_index` are
-  general and move into the core; the third is a check the topic should
-  register.
+- **Four imports and three data couplings run from the core into the
+  topic** — counted module by module in the appendix ("The core, file by
+  file"). An earlier count named three imports; two of them
+  (`src/run/manager.py` → `repro_hash`, `src/run/pins.py` → `run_index`)
+  stay inside the core, since `src/analysis/` belongs to it.
 - **Topic and general sit side by side in the same folders:**
   `stages/canonical/` holds `base.py` and `schema.py` (general) beside seven
   dataset converters (`big_bench.py`, `hong.py`, …); `parsers/` holds
@@ -123,8 +121,10 @@ Both are runs under labkit; the run record names the mode.
   900 MB). Dry run on 2026-11-03: 52,429 data changes gone, 293 commits
   become 283 (ten held cache data only). A bundle of the whole repo comes
   first. The rewrite and the push are Max's; the script is prepared.
-- **Baseline for the pilot**, recorded before 3a touches any code, in one
-  file committed to fallacy-detection:
+- **Baseline for the pilot**, recorded before 3a touches any code, in
+  `published/baseline-2026-11-03.json` (decided 2026-11-03, Max; it sits
+  beside the pins it belongs to, so `.gitignore` gets
+  `!published/baseline-*.json` next to `!published/pins.yaml`):
   - the pilot's pinned predictions (`published/pins.yaml:56`) verified
     against the sha256 in `pins.yaml`, and the sha256 of every file in the
     pilot's run directory under `output/`;
@@ -194,12 +194,10 @@ Both are runs under labkit; the run record names the mode.
 
 Three steps, in this order, each with the full test suite green.
 
-- **3a — the boundary as a test.** A module list `CORE` (pipeline, run,
-  models, config, utils, splits, registries and bases, `stages/base.py`,
-  `stages/canonical/{base,schema}.py`, `repro_hash`, `run_index`) and a
-  test, after labkit's `tests/test_architecture.py`: no core module
-  imports a non-core module. It starts red on the three imports above;
-  fixing them is part of 3a.
+- **3a — the boundary as a test.** The module list `CORE` of the appendix
+  and a test, after labkit's `tests/test_architecture.py`: no core module
+  imports a non-core module. It starts red on the four imports the
+  appendix names; cutting them is part of 3a.
 - **3b — registration from outside.** `LazyRegistry` takes modules named
   by the experiment's config (`topics: [...]`), imported on load; the five
   `*_MODULE_MAP` keep only the framework's defaults. Hydra gets the
@@ -207,9 +205,11 @@ Three steps, in this order, each with the full test suite green.
   front of the framework's. Prompts: a directory registered from outside,
   each file under its name. `ArgumentDataset` becomes a general `Dataset`
   (ids, records, splits, `cache_id`); `components` and
-  `component_label2id` move into the record or the topic. A conformance
-  check per extension kind (data loader, stage, prompt and parser pair),
-  shipped with the framework.
+  `component_label2id` move into the record or the topic. The topic also
+  registers its artifact schemas and its derived-artifact derivations
+  (appendix, couplings by data). A conformance check per extension kind
+  (data loader, stage, prompt and parser pair, artifact schema), shipped
+  with the framework.
 - **3c — stagekit leaves fallacy-detection** (decided 2026-11-03, Max: the
   framework already runs, as copies, in several repos, and
   counterfactual-worlds is planned; the fallacy repo keeps its name and
@@ -325,3 +325,75 @@ Three steps, in this order, each with the full test suite green.
 - **4b may differ from the pin.** New calls at temperature 0 can still
   differ (batch composition on the server). The item-wise diff is the
   result, not a failure of the plan.
+
+## Appendix: the core, file by file (2026-11-03)
+
+Built from an import map of all 136 modules under `src/` (each module's
+`src.*` imports, read with `ast`), a first-match rule per module path, a
+search for topic module names written as strings, and a search for topic
+words in core data definitions. Probe: the data-loader registry's one
+known topic entry (`argument`) is found. The boundary test of 3a is the
+lasting home of this list.
+
+### Core — moves to stagekit (68 modules, about 11,200 lines)
+
+| Package | Modules |
+|---|---|
+| entry | `main_pipeline` |
+| `analysis/` | `repro_hash`, `run_index`, `run_record`, `scanner`, `table_aggregator` |
+| `config/` | `classes`, `io`, `paths`, `resolution`, `schema`, `validation` |
+| `data_loader/` | `base`, `registry` |
+| `models/` | `base`, `llm_cache`, `llm_model`, `registry`, `bert_text`; `backends/`: `backends_base`, `cli_backend`, `factory`, `ollama_backend`, `ollama_completion_backend`, `openai_backend`, `vllm_backend` |
+| `parsers/` | `base`, `registry` |
+| `pipeline/` | `data_store`, `executor`, `preflight`, `registry` |
+| `prompts/` | `base`, `registry`, `debug_utils` |
+| `run/` | `artifact_manager`, `combinator`, `context`, `manager`, `pins`, `tracker`, `utils` |
+| `splits/` | `base`, `config`, `manager`, `registry`, `strategies` |
+| `stages/` | `base`, `artifact_readers`, `artifact_schemas` (mechanism only), `derived_artifacts` (mechanism only); `canonical/`: `base`, `schema` |
+| `utils/` | `registry`, `serialization`, `reproducibility`, `parse_diagnostics`, `text` |
+
+(plus the packages' `__init__` files)
+
+### Topic — stays in fallacy-detection (68 modules, about 11,700 lines)
+
+`analysis/tournament_stats`; `data_loader/argument`; nine parsers
+(`argument`, `bayes`, `casa`, `classification`, `counterfactual`, `cq`,
+`explanation`, `sentence`, `tournament`); `prompts/catalog` and the prompt
+text files; seven dataset builders in `stages/canonical/`
+(`arg_microtexts`, `big_bench`, `casa`, `fallacies`, `hong`, `sahai`,
+`touchefallacy`); `stages/classify/` (12), `stages/derive/` (22),
+`stages/llm/` (8), `stages/preprocessing/`; `stages/variant_mapping`
+(the counterfactual story variants); `utils/argument_text`,
+`utils/likelihood`, `utils/nli_features`, `utils/nli_pairs`.
+
+### What 3a cuts — imports from core into topic (4, in 3 modules)
+
+1. `config/validation` → `stages/classify/feature_utils` — a check the
+   topic registers.
+2. `config/validation` → `stages/variant_mapping`.
+3. `run/combinator` → `stages/variant_mapping` — the counterfactual
+   variants as an axis of run combination; the topic registers the axis.
+4. `stages/derived_artifacts` → `stages/llm/counterfactual`
+   (`_derive_cf_likelihoods`) — a derivation the topic registers.
+
+### What 3b opens — couplings by name or data (not seen by imports)
+
+- Module maps naming topic modules as strings: `pipeline/registry` (52
+  stage entries), `prompts/registry` (48), `parsers/registry` (23),
+  `data_loader/registry` (1). They keep only framework defaults; the topic
+  registers the rest. The split and model maps carry no topic entries.
+- `stages/artifact_schemas`: the enforcement is general; the schemas for
+  counterfactual, tournament and CASA artifacts are the topic's.
+- `stages/derived_artifacts`: the mechanism is general; each derivation is
+  registered by the topic that owns the stage.
+
+### Borderline, decided for 3c: stay with the topic for now
+
+Moved into stagekit only when a second topic needs them (step 6):
+
+- `stages/classify/` (k-fold, SVM, BERT, stacked, `eval_predictions`;
+  2,471 lines) — general machine learning, but `feature_utils` builds its
+  features from topic artifacts.
+- the generic derive stages `drop_empty`, `export_jsonl`,
+  `validate_derived_integrity`.
+- `utils/likelihood` (log-likelihood ratio, 34 lines).
