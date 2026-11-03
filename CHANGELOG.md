@@ -286,6 +286,21 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   `labkit-next` adds this line to every step before the first measurement
   of a protocol that registers none; `AGENTS.md` says it in one line.
 
+### Added
+
+- **A public API, held by tests.** `docs/architecture.md`, section
+  "Public API", lists what a lab repo may rely on: `llm.complete`,
+  `complete_many`, `resolve`, `spec`, `identity`, `last_usage`,
+  `last_endpoint`; `batch.Store` with `pending`, `append`, `records`;
+  `runlog.run` and `Run.output`; the keys of `models.toml`. A listed name,
+  signature or behaviour changes only after one release in which the old
+  form still works and warns (`DeprecationWarning`, under "Deprecated"
+  here); everything else stays internal. `tests/test_public_api.py` reads
+  the tables and fails on a removed name, a changed signature or default,
+  or a dropped `models.toml` key, and holds each contract with a
+  behaviour test (stagekit plan, step 1:
+  `docs/notes/2026-11-03-stagekit-plan.md`).
+
 ### New blockers (low repeat cost; high is unchanged)
 
 - **The report a protocol registered before its first measurement is

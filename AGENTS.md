@@ -104,6 +104,9 @@ until that tag is pushed, that `pip install` fails.
   are reproduced with the repo's commit and its pinned labkit version.
   Existing legacy paths go in one Breaking release, not piecemeal (0.48.0
   the id letters, 0.89.0 the `legacy` run state and the `endpoint` string).
+  The exception is the public API (`docs/architecture.md`, "Public
+  API"): a listed name, signature or behaviour breaks only after one
+  release in which the old form still works and warns.
 - **Order before features.** Build what `TODO.md` puts next, nothing ahead
   of it: static-evidence checks wait for the benchmark pilot to show they
   are needed. Rollout to other repos, templates and the house doctrine is a

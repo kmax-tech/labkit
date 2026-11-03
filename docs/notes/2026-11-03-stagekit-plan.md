@@ -150,6 +150,12 @@ Both are runs under labkit; the run record names the mode.
 - **Done when:** the tests are in the pre-commit run; a removed name and a
   changed signature each turn them red (two probes).
 - **Depends on:** nothing.
+- **Done (2026-11-03):** `docs/architecture.md`, "Public API" (two
+  tables: names with signature and contract; `models.toml` keys per
+  backend); `tests/test_public_api.py`; the release rule there and in
+  `AGENTS.md`. Probes: `llm.last_endpoint` renamed, `complete`'s
+  `timeout` default changed, `num_ctx` dropped from the ollama keys —
+  each turned the test red.
 
 ### 2 — labkit: the cache of raw responses (decisions 1, 2)
 

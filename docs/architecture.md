@@ -30,6 +30,51 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 The third column names the doctrine modules of each row; every other
 module in the second column is core.
 
+## Public API
+
+The layer table holds the imports inside labkit; this section is the
+contract outward — the names a lab repo may import and rely on, through
+`from labkit.run import llm, runlog, batch`. Everything else is internal
+and may change in any release with a "Breaking" entry in `CHANGELOG.md`.
+
+**The release rule.** A name, signature or behaviour listed here changes
+only after one release in which the old form still works and warns
+(`DeprecationWarning`, named in `CHANGELOG.md` under "Deprecated"); the
+release after that removes it under "Breaking". The list starts short and
+grows when a lab needs a name — taking one back would break labs.
+`tests/test_public_api.py` reads both tables: a listed name that is gone,
+a signature or default that changed, or a `models.toml` key that a backend
+no longer reads fails the suite; the contracts in the third column have a
+behaviour test each.
+
+| Name | Signature | Contract |
+|---|---|---|
+| `llm.complete` | `complete(alias, prompt, *, system=None, temperature=None, timeout=300, attempts=6, raw=False, stop=None, max_tokens=None)` | the answer text (`str`); transport failures are retried, and exhausted retries raise `BackendError` (a `RuntimeError`) whatever the backend threw; an HTTP 4xx raises `BackendError` at once; an alias `models.toml` lacks raises `KeyError`; a setting the backend cannot honour (a temperature or a token cap for `claude-cli`) raises `ValueError` |
+| `llm.complete_many` | `complete_many(alias, prompts, *, workers=4, **kw)` | `complete` over independent prompts, answers in input order |
+| `llm.resolve` | `resolve(alias)` | the spec as a run records it (`backend`, `model`, `endpoint`, …), a new dict each call — what goes into `runlog.run`'s config |
+| `llm.spec` | `spec(alias)` | the typed spec every call is made with (`ClaudeCliSpec`, `OllamaSpec`, `OpenAISpec`), frozen per process at first use: an edit of `models.toml` reaches a new process only |
+| `llm.identity` | `identity(alias)` | which model answers: `backend` and `model` (`name@digest` for ollama); no endpoint, since a host can change while serving the same weights |
+| `llm.last_usage` | `last_usage()` | the token counts of this thread's latest completion (`Usage`); `NO_USAGE` before the first call |
+| `llm.last_endpoint` | `last_endpoint()` | the URL this thread's latest attempt at a served backend (ollama, openai) went to; `""` before the first such attempt |
+| `batch.Store` | `Store(path, id_key='id', prov=None, mode='resume', instrument=None)` | append-only JSONL output under a lock, a context manager; `resume` continues by id, `produce` replaces the file on a clean exit |
+| `batch.Store.pending` | `pending(records)` | the records whose id the file does not hold yet; raises `InstrumentError` when the file holds rows of another instrument |
+| `batch.Store.append` | `append(record)` | one record as one line, stamped with `_prov` and `_instrument` when given |
+| `batch.Store.records` | `records()` | the rows the file holds |
+| `runlog.run` | `run(experiment, config, base_dir=None, data=None, run_kind='probe', protocol=None, derived_from=None, repeat_of=None, reseed=False)` | a context manager yielding the `Run`; `config.json` records the config and, per `data` key, path, `sha256` and `rows`; a refusal (split leakage: `RuntimeError`) leaves no run directory; a clean exit writes `metrics.json`, `completion.json` and the `runs.tsv` row; an exception is recorded in the run and re-raised, with no index row |
+| `runlog.Run.output` | `output(*paths)` | registers files the run writes; at a clean exit `outputs.json` holds each with `sha256` and `lines`, or a note when it is absent |
+
+`models.toml`, the keys each table may carry; any other key is refused
+when the alias is first resolved (`ValueError` naming the key), and so is
+a served backend without `endpoints`:
+
+| Table | Keys |
+|---|---|
+| `[models.<alias>]` with `backend = "claude-cli"` | `backend`, `input`, `model` |
+| `[models.<alias>]` with `backend = "ollama"` | `api_key`, `api_key_env`, `backend`, `endpoints`, `model`, `num_ctx` |
+| `[models.<alias>]` with `backend = "openai"` | `api_key`, `api_key_env`, `backend`, `endpoints`, `model`, `reasoning` |
+| `[endpoints]` | one name per URL; `endpoints` lists names or literal URLs, and a name the table lacks raises `KeyError` |
+| `[audit]` | `model`, the alias `labkit-audit` uses without `--model` |
+
 ## Core and doctrine
 
 Two kinds of module ship in labkit, and the difference decides what another

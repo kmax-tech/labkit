@@ -1,0 +1,377 @@
+"""The public API in docs/architecture.md, held to the code.
+
+The section "Public API" is the one home of the list: this test reads its
+two tables. A listed name that is gone, a changed signature or default,
+or a `models.toml` key a backend no longer reads fails here; each contract
+in the third column has a behaviour test below. A deliberate change goes
+through the release rule stated beside the tables.
+
+The model calls go to a local stand-in for an ollama server, so the
+contract is tested through the real wire path, not a patched backend.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import importlib
+import inspect
+import io
+import json
+import re
+import tempfile
+import threading
+import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from unittest import mock
+
+from models_fixture import serve, toml
+
+from labkit.run import batch, llm, llm_specs, runlog
+from labkit.formats import runs
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _section() -> str:
+    """The text of the doc's "Public API" section."""
+    doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    m = re.search(r"^## Public API\n(.*?)(?=^## )", doc, re.M | re.S)
+    if m is None:
+        raise AssertionError("docs/architecture.md has no '## Public API' section")
+    return m.group(1)
+
+
+def listed() -> dict[str, str]:
+    """Listed name (`llm.complete`) → the signature its row states."""
+    rows = re.findall(r"^\| `([\w.]+)` \| `([^`]+)` \|", _section(), re.M)
+    out: dict[str, str] = {}
+    for name, signature in rows:
+        if name in out:
+            raise AssertionError(f"{name} stands twice in the public API table")
+        out[name] = signature
+    return out
+
+
+def listed_keys() -> dict[str, frozenset[str]]:
+    """Backend → the `[models.<alias>]` keys the doc's schema table states."""
+    rows = re.findall(
+        r'^\| `\[models\.<alias>\]` with `backend = "([\w-]+)"` \| ([^|]+)\|',
+        _section(),
+        re.M,
+    )
+    return {b: frozenset(re.findall(r"`(\w+)`", keys)) for b, keys in rows}
+
+
+def resolve_name(name: str) -> object:
+    """`llm.complete` → the object; the first part is a module of `labkit.run`."""
+    module, *attrs = name.split(".")
+    obj: object = importlib.import_module(f"labkit.run.{module}")
+    for attr in attrs:
+        obj = getattr(obj, attr)
+    return obj
+
+
+def rendered(name: str, obj: object) -> str:
+    """The call form of OBJ as the table writes it: parameter names, the
+    keyword-only star and defaults; no annotations, no `self`."""
+    params = []
+    star = False
+    for p in inspect.signature(obj).parameters.values():  # type: ignore[arg-type]
+        if p.name == "self":
+            continue
+        if p.kind is p.KEYWORD_ONLY and not star:
+            params.append("*")
+            star = True
+        if p.kind is p.VAR_POSITIONAL:
+            params.append(f"*{p.name}")
+            star = True
+        elif p.kind is p.VAR_KEYWORD:
+            params.append(f"**{p.name}")
+        elif p.default is p.empty:
+            params.append(p.name)
+        else:
+            params.append(f"{p.name}={p.default!r}")
+    return f"{name.rsplit('.', 1)[-1]}({', '.join(params)})"
+
+
+class Listed(unittest.TestCase):
+    def test_the_table_is_read(self) -> None:
+        """The parse finds what is known to stand there (a parse that
+        found nothing would pass every check below)."""
+        names = listed()
+        self.assertIn("llm.complete", names)
+        self.assertIn("runlog.Run.output", names)
+        self.assertEqual(listed_keys().keys(), {"claude-cli", "ollama", "openai"})
+
+    def test_every_listed_name_exists_with_its_signature(self) -> None:
+        for name, signature in listed().items():
+            with self.subTest(name=name):
+                try:
+                    obj = resolve_name(name)
+                except (ImportError, AttributeError) as exc:
+                    self.fail(f"{name} is listed public but does not import: {exc}")
+                self.assertEqual(rendered(name, obj), signature)
+
+    def test_the_models_toml_keys_are_what_the_backends_read(self) -> None:
+        self.assertEqual(listed_keys(), dict(llm_specs.OPTIONS))
+
+
+class _Ollama(BaseHTTPRequestHandler):
+    """A stand-in ollama server: `/api/tags` names one model and its digest,
+    `/api/chat` answers with `status` (200: an answer with token counts)."""
+
+    status = 200
+    chats = 0
+
+    def do_GET(self) -> None:
+        self._send(
+            200,
+            {"models": [{"name": "m:latest", "digest": "sha256:0123456789abcdef"}]},
+        )
+
+    def do_POST(self) -> None:
+        self.rfile.read(int(self.headers["Content-Length"]))
+        type(self).chats += 1
+        body = {
+            "message": {"content": " the answer "},
+            "prompt_eval_count": 7,
+            "eval_count": 3,
+            "done_reason": "stop",
+        }
+        self._send(self.status, body if self.status == 200 else {"error": "no"})
+
+    def _send(self, status: int, body: dict) -> None:
+        data = json.dumps(body).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+        """Silent: the test output stays the test's."""
+
+
+class Calls(unittest.TestCase):
+    """`llm.complete`, `complete_many`, `resolve`, `spec`, `identity`,
+    `last_usage`, `last_endpoint` against one stand-in server."""
+
+    def setUp(self) -> None:
+        handler = type("Handler", (_Ollama,), {"status": 200, "chats": 0})
+        self.handler = handler
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        self.url = f"http://127.0.0.1:{server.server_address[1]}"
+        serve(
+            self,
+            f'[endpoints]\nlocal = "{self.url}"\n'
+            f'[models.o]\nbackend = "ollama"\nmodel = "m"\nendpoints = ["local"]\n'
+            + toml("cli", "claude-x"),
+        )
+        self.enterContext(mock.patch.object(llm.time, "sleep", lambda _s: None))
+        self.enterContext(contextlib.redirect_stderr(io.StringIO()))
+
+    def test_complete_returns_the_answer_text_and_records_the_call(self) -> None:
+        self.assertEqual(llm.complete("o", "q", temperature=0), "the answer")
+        self.assertEqual(llm.last_endpoint(), self.url)
+        usage = llm.last_usage()
+        self.assertEqual((usage.prompt_tokens, usage.output_tokens), (7, 3))
+
+    def test_complete_many_keeps_the_input_order(self) -> None:
+        self.assertEqual(
+            llm.complete_many("o", ["a", "b", "c"], workers=3), ["the answer"] * 3
+        )
+        self.assertEqual(self.handler.chats, 3)
+
+    def test_an_http_4xx_raises_backend_error_without_a_retry(self) -> None:
+        self.handler.status = 404
+        with self.assertRaises(llm.BackendError) as cm:
+            llm.complete("o", "q", attempts=3)
+        self.assertIn("HTTP 404", str(cm.exception))
+        self.assertEqual(self.handler.chats, 1)
+
+    def test_exhausted_retries_raise_backend_error_a_runtime_error(self) -> None:
+        self.handler.status = 503
+        with self.assertRaises(RuntimeError) as cm:
+            llm.complete("o", "q", attempts=2)
+        self.assertIsInstance(cm.exception, llm.BackendError)
+        self.assertEqual(self.handler.chats, 2)
+
+    def test_an_unknown_alias_raises_key_error(self) -> None:
+        with self.assertRaises(KeyError):
+            llm.complete("nope", "q")
+
+    def test_an_unhonoured_setting_raises_value_error_before_any_call(self) -> None:
+        with mock.patch("subprocess.run") as cli:
+            with self.assertRaisesRegex(ValueError, "temperature"):
+                llm.complete("cli", "q", temperature=0.0)
+            with self.assertRaisesRegex(ValueError, "token cap"):
+                llm.complete("cli", "q", max_tokens=10)
+        cli.assert_not_called()
+
+    def test_resolve_records_the_spec_as_a_new_dict(self) -> None:
+        first = llm.resolve("o")
+        self.assertEqual(
+            (first["backend"], first["model"], first["endpoint"]),
+            ("ollama", "m", self.url),
+        )
+        first["model"] = "edited"
+        self.assertEqual(llm.resolve("o")["model"], "m")
+
+    def test_spec_is_typed_and_frozen_for_the_process(self) -> None:
+        typed = llm.spec("o")
+        assert isinstance(typed, llm_specs.OllamaSpec)
+        self.assertEqual(typed.endpoints, (self.url,))
+        self.assertIs(llm.spec("o"), typed)
+
+    def test_identity_names_the_weights_and_no_endpoint(self) -> None:
+        self.assertEqual(
+            llm.identity("o"), {"backend": "ollama", "model": "m@0123456789ab"}
+        )
+        self.assertEqual(
+            llm.identity("cli"), {"backend": "claude-cli", "model": "claude-x"}
+        )
+
+    def test_usage_before_any_call_is_no_usage(self) -> None:
+        result: list[object] = []
+        thread = threading.Thread(
+            target=lambda: result.extend([llm.last_usage(), llm.last_endpoint()])
+        )
+        thread.start()
+        thread.join()
+        self.assertEqual(result, [llm.NO_USAGE, ""])
+
+
+class ModelsToml(unittest.TestCase):
+    """The schema: each backend's full key set resolves, anything else is
+    refused with the field named."""
+
+    FULL = {
+        "claude-cli": 'backend = "claude-cli"\nmodel = "c"\ninput = "prompt"\n',
+        "ollama": (
+            'backend = "ollama"\nmodel = "m"\nendpoints = ["local"]\nnum_ctx = 8192\n'
+            'api_key_env = "K"\napi_key = "k"\n'
+        ),
+        "openai": (
+            'backend = "openai"\nmodel = "m"\nendpoints = ["http://h:1"]\n'
+            'api_key_env = "K"\napi_key = "k"\nreasoning = true\n'
+        ),
+    }
+
+    def setUp(self) -> None:
+        self.enterContext(mock.patch.object(llm, "_ollama_digest", lambda *a: "d"))
+        self.enterContext(mock.patch.dict("os.environ", {"K": "key"}))
+
+    def _spec(self, table: str) -> llm_specs.BackendSpec:
+        serve(self, f'[endpoints]\nlocal = "http://h:1"\n[models.a]\n{table}')
+        return llm.spec("a")
+
+    def test_every_listed_key_is_accepted(self) -> None:
+        for backend, table in self.FULL.items():
+            with self.subTest(backend=backend):
+                self.assertEqual(self._spec(table).backend, backend)
+
+    def test_a_key_the_backend_does_not_read_is_refused(self) -> None:
+        for backend, table in self.FULL.items():
+            with self.subTest(backend=backend):
+                with self.assertRaisesRegex(ValueError, "temperature"):
+                    self._spec(table + "temperature = 0\n")
+
+    def test_a_served_backend_without_endpoints_is_refused(self) -> None:
+        with self.assertRaisesRegex(ValueError, "endpoints"):
+            self._spec('backend = "ollama"\nmodel = "m"\n')
+
+    def test_an_endpoint_name_the_file_lacks_raises_key_error(self) -> None:
+        with self.assertRaisesRegex(KeyError, "elsewhere"):
+            self._spec('backend = "ollama"\nmodel = "m"\nendpoints = ["elsewhere"]\n')
+
+    def test_an_unknown_backend_is_refused(self) -> None:
+        with self.assertRaisesRegex(ValueError, "backend"):
+            self._spec('backend = "vllm"\nmodel = "m"\n')
+
+
+class Runs(unittest.TestCase):
+    """`runlog.run(data=…)` as a context manager, `Run.output`, and
+    `batch.Store` inside a run."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.area = Path(tmp.name)
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))
+
+    def _jsonl(self, name: str, ids: list[str]) -> Path:
+        path = self.area / name
+        path.write_text("".join(json.dumps({"id": i}) + "\n" for i in ids))
+        return path
+
+    def test_a_clean_run_records_inputs_outputs_metrics_and_its_index_row(self) -> None:
+        train, test = (
+            self._jsonl("train.jsonl", ["a", "b"]),
+            self._jsonl("test.jsonl", ["c"]),
+        )
+        out = self.area / "output" / "answers.jsonl"
+        with runlog.run(
+            "e", {"seed": 1}, self.area, data={"train": train, "test": test}
+        ) as run:
+            run.output(out, self.area / "never-written.txt")
+            with batch.Store(out, prov={"run": run.run_id}) as store:
+                for record in store.pending([{"id": "c"}, {"id": "d"}]):
+                    store.append({**record, "answer": 1})
+            run.metrics(n=2)
+        config = json.loads((run.dir / "config.json").read_text())
+        self.assertEqual(config["config"], {"seed": 1})
+        self.assertEqual(config["data"]["train"]["rows"], 2)
+        self.assertEqual(len(config["data"]["test"]["sha256"]), runs.RECORD_SHA_CHARS)
+        outputs = json.loads((run.dir / "outputs.json").read_text())
+        self.assertEqual(outputs[0]["lines"], 2)
+        self.assertIsNotNone(outputs[0]["sha256"])
+        self.assertIn("absent", outputs[1]["note"])
+        self.assertEqual(json.loads((run.dir / "metrics.json").read_text())["n"], 2)
+        self.assertTrue((run.dir / "completion.json").exists())
+        self.assertIn(run.run_id, (self.area / "runs.tsv").read_text())
+
+    def test_store_resumes_by_id_and_holds_its_rows(self) -> None:
+        out = self.area / "answers.jsonl"
+        with batch.Store(out) as store:
+            store.append({"id": "a"})
+        with batch.Store(out) as store:
+            self.assertEqual(
+                [r["id"] for r in store.pending([{"id": "a"}, {"id": "b"}])], ["b"]
+            )
+            self.assertEqual(store.records(), [{"id": "a"}])
+
+    def test_store_refuses_to_resume_rows_of_another_instrument(self) -> None:
+        out = self.area / "answers.jsonl"
+        with batch.Store(out, instrument={"prompt": "v1"}) as store:
+            store.append({"id": "a"})
+        with batch.Store(out, instrument={"prompt": "v2"}) as store:
+            with self.assertRaises(batch.InstrumentError):
+                list(store.pending([{"id": "b"}]))
+
+    def test_split_leakage_is_refused_before_a_run_directory_exists(self) -> None:
+        train, test = (
+            self._jsonl("train.jsonl", ["a"]),
+            self._jsonl("test.jsonl", ["a"]),
+        )
+        with self.assertRaisesRegex(RuntimeError, "leakage"):
+            with runlog.run("e", {}, self.area, data={"train": train, "test": test}):
+                self.fail("the body ran")
+        self.assertFalse((self.area / "runs").exists())
+
+    def test_an_exception_is_recorded_and_re_raised_without_an_index_row(self) -> None:
+        context = runlog.run("e", {}, self.area)
+        run = context.__enter__()
+        with self.assertRaisesRegex(ZeroDivisionError, "boom"):
+            with context:
+                raise ZeroDivisionError("boom")
+        self.assertIn("boom", json.dumps(runs.read_failure(run.dir)))
+        self.assertFalse((run.dir / "completion.json").exists())
+        self.assertFalse((self.area / "runs.tsv").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
