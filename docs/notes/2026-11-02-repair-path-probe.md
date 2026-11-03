@@ -152,9 +152,9 @@ probe's refusals are the same before and after).
 | the gates' withdrawal (`withdraw the adoption first`) without `--into`: the withdrawn run's result block stayed in the registered report, and the commit refused it | `e6297f1d` | `repo.withdraw_command`, the one builder every gate's withdrawal hint uses, reads the head and adds `--into` its registered report |
 
 Not repaired here: the progress account of a superseded run in the final
-report; a withdrawal's "next" without "measure again" after a code repair
-(after the withdrawal `labkit-next` names the measurement); the withdrawn
+report; the withdrawn
 run's progress account that `labkit-next` asks for before the measurement
 (case 5 twin); a registered REPORT.md with prose only refused before any
-run. The F5 contract (a new run under a corrected description) is
-separate work.
+run. A withdrawal's "next" without "measure again" after a code repair,
+and the F5 contract (a new run under a corrected description), were
+repaired on `f5-correction-new-run` (`e3c0d2fa`, `74040782`).

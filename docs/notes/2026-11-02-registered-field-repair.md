@@ -177,6 +177,26 @@ follow-up on the new run judges the correction again". The only way
 through in the same protocol today restores the known-false text (three
 runs, eight analysis records); a successor with `[replaces]` passes.
 
+**Built for F5** (branch `f5-correction-new-run`, `74040782`, `e3c0d2fa`).
+Both comparisons of `finalize.scope_changes` release a field through one
+function, `finalize.released_fields`: a `resolved` on its correction in a
+follow-up that covers the answering run, the field as that run saw it, as
+it stands and as judged one text; each field on its own. The guidance
+names the next step on the whole path: the decision on the code repair
+(`repair_hint`) says withdraw when adopted, measure again, then the
+follow-up on the new run; `--withdraw` names the measurement while the
+repaired code has no run; the scope hold names the measurement first when
+the code changed since the answering run, and the follow-up on the new
+run once it is measured (`finalize.awaiting_followup`). Twins:
+`tests/test_end_to_end.py` `CorrectionThenNewRun` — released by a
+follow-up on the new run; held for the verdict on the earlier run alone,
+an `unresolved`, a field edited after the new run or after its verdict,
+another field without its own release, a changed question (with or
+without a waiting correction beside it); two fields each released pass;
+the adopted run withdrawn and replaced — and `tests/test_repair_paths.py`
+`test_a_correction_then_a_code_repair_is_measured_judged_and_reported`
+(every step the one named before, through the registered report).
+
 **Places.** `findings.corrected_field` (the one home of the exception;
 `followup.earlier_corrections`, `finalize.resolved_corrections`,
 `audit_decisions.repair_hint` and `labkit-next` read it); the first branch
