@@ -8,6 +8,10 @@ of the same day; both follow the
 "Review maintainability after the simplification". No production code was
 changed. Overlap: V3 here is that review's M1, V5 its M2.
 
+> The work order and the verdict on each finding are owned by the
+> [consolidated repair plan](2026-11-03-maintainability-repair-plan.md),
+> which re-ran R1, V1, V2 and S2 and narrows V1, V2 and N4 (below).
+
 ## Consolidated review and work order
 
 The [combined repair plan](2026-11-03-maintainability-repair-plan.md) owns
@@ -24,9 +28,12 @@ reproduced by running the functions (`.venv`, synthetic protocol texts):
 
 - A prompt that starts with `<` counts as the template placeholder at run
   start and runs without the drift check (R1).
-- A field label with a gloss, e.g. `Unit (per judged item)`, escapes the
-  hold after the first measurement (V1).
-- A Data profile that was only re-wrapped counts as a changed registration (V2).
+- A field label with a gloss, e.g. `Unit (per judged item)`, hides a
+  changed value from `scope_differences` (V1; shown at the helper, not as
+  a full adoption bypass).
+- A Data profile whose inner spacing changed counts as a changed
+  registration while the audit stamp sees none (V2; a plain line wrap
+  already compares equal).
 
 Six findings (N1–N6) are places where `labkit-next` or another tool advises
 differently from what the gate then decides. Removable special cases are
@@ -58,7 +65,7 @@ says how far.
 | No. | Fact | Locations | Divergence | Status | Smallest change |
 |---|---|---|---|---|---|
 | V1 | value of a registration field | `labkit/formats/protocol_history.py:414`, `:465` look up the label as written; `labkit/formats/protocol_check.py:179`, `:899` by `field_name` | With `**Unit (per judged item):**` `scope_differences` returns `[]` for a changed value, `audited_texts` sees it. A field written twice: stamp takes the first, hold the last. | run | One `field_values(text)` in `protocol_check` for all four. |
-| V2 | Data profile changed? | `labkit/formats/protocol_history.py:468` raw; `:391` and `labkit/formats/protocol_check.py:916` whitespace-folded | A re-wrapped paragraph is a changed registration a successor must declare, though the audit stamp sees none. | run | `scope_value` for `COMPARED_FIELDS` too. |
+| V2 | Data profile changed? | `labkit/formats/protocol_history.py:468` raw; `:391` and `labkit/formats/protocol_check.py:916` whitespace-folded | Changed inner spacing (`alpha beta` → `alpha  beta`) is a changed registration a successor must declare, though the audit stamp sees none; a plain line wrap compares equal. | run | `scope_value` for `COMPARED_FIELDS` too. |
 | V3 | declared run's code changed? (= M1) | `labkit/gates/report_check.py:888` searches "changed since <run>" in finalize's texts; finalize decides at `labkit/gates/finalize.py:999` | Messages about predecessor runs or a deleted script name another id; report-check's stages then lack "withdraw the adoption first". | read | finalize returns `held_by`. |
 | V4 | does a report block belong to this protocol? | as written: `labkit/gates/report_hold.py:367`, `:374`, `:457`; resolved: `:914` (comment on the pilot bug), `labkit/gates/report_review.py:147` | `./PROTOCOL-x.md` or another spelling: missing in one place, present in the other. The 2026-11-01 pilot bug is fixed in one place only. | read | Compare `block_protocol(report, b)` everywhere. |
 | V5 | what changed since the first measurement? (≈ M2) | `labkit/gates/audit_decisions.py:1013` (`_departure`) without release step; `labkit/gates/finalize.py:644` (`scope_now`) with `released_fields` | After a released in-place correction, `--decide fixed` can say "finalize refuses it" for a field finalize already released. | in the code, flow not reproduced | `_departure` reads `scope_now(…).held`. |
