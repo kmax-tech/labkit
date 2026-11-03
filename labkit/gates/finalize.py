@@ -1039,9 +1039,12 @@ def check_declared_scopes(
         return
     drift = promises.scope_drift(recorded, area)
     for d in drift:
-        drifted = blocker(
-            f"declared scope changed since {answering_run.name}: {d}",
-            fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
+        drifted = replace(
+            blocker(
+                f"declared scope changed since {answering_run.name}: {d}",
+                fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
+            ),
+            changed_since=answering_run.name,
         )
         findings.take(declared_first(drifted, held_by) if held_by else drifted)
     if not drift:

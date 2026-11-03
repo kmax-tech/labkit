@@ -118,6 +118,19 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **The withdrawal of a declared result comes first by data, not by
+  wording.** `report_check.held_declaration` found "the declared run's
+  code changed" by searching finalize's blockers for `changed since
+  <run>`. A reworded blocker lost the withdrawal-first order, and
+  `labkit-next` advised a third measurement; a changed script or helper
+  of a run the answer derives from never had it; an unrelated blocker
+  quoting the phrase gained it. The comparison that finds a difference
+  now names the changed run as data (`GateFinding.changed_since`:
+  `run_record_check.code_since_run`, `finalize.check_declared_scopes`),
+  and the order follows it. Code that could not be compared (a commit the
+  clone lacks, no script recorded, a script gone or ambiguous) sets
+  nothing and, as before, does not put the withdrawal first.
+
 - **Report drafts can be saved before the first measurement.** A valid
   registered report without an answering run or adoption owes no result
   block before measurement. Malformed blocks still hold; after measurement

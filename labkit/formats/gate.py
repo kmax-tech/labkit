@@ -111,6 +111,13 @@ class GateFinding:
             exists. Required for a BLOCKER (refused without one), optional
             for a WARNING; told in every form (`line`).
         evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
+        changed_since: The run whose code or declared scope this blocker
+            found changed since it ran — set where the comparison found the
+            difference (`run_record_check.code_since_run`,
+            `finalize.check_declared_scopes`); None for every other finding,
+            also for code that could not be compared. Callers order their
+            advice by it, never by the words
+            (`report_check.held_declaration`).
     """
 
     grade: str
@@ -120,6 +127,7 @@ class GateFinding:
     rule: str | None = None
     fix: str | None = None
     evidence_kind: str = field(kw_only=True)
+    changed_since: str | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.grade not in (BLOCKER, WARNING):

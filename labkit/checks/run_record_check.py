@@ -16,7 +16,7 @@ their grade. Read-only.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import shlex
 from pathlib import Path
 
@@ -106,7 +106,11 @@ def code_since_run(
     names its way out, the fix first: measure anew with the code as it is
     and audit that run — restoring the old code removes the difference,
     not a fault the change corrected —, and only for a change not meant,
-    the command that restores the code as it ran. Read-only."""
+    the command that restores the code as it ran. A blocker that found a
+    difference names its run as data (`GateFinding.changed_since`); one
+    that could not compare (no script or commit recorded, a commit this
+    clone lacks, a helper uncommitted then, a script gone or ambiguous)
+    names none. Read-only."""
     try:
         chain = lineage(answering_run)
     except ValueError as exc:
@@ -152,11 +156,14 @@ def _run_code(area: Path, run: Path) -> tuple[list[GateFinding], list[str]]:
     out: list[GateFinding] = []
     if file_digest(script)[:DIGEST_CHARS] != cfg.script_sha:
         out.append(
-            blocker(
-                f"{shown(script, here)} changed since {rid} ran it — its number "
-                f"came from other code",
-                fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(kept, here))} "
-                f"{shlex.quote(shown(script, here))}`)",
+            replace(
+                blocker(
+                    f"{shown(script, here)} changed since {rid} ran it — its number "
+                    f"came from other code",
+                    fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(kept, here))} "
+                    f"{shlex.quote(shown(script, here))}`)",
+                ),
+                changed_since=rid,
             )
         )
     repo = git_root(area)
@@ -256,11 +263,14 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
             copy = untracked_copy_path(run_dir, rel)
             if not copy.is_file() or copy.read_bytes() != f.read_bytes():
                 out.append(
-                    blocker(
-                        f"{shown(f, here)} changed since {rid} ran it (it was "
-                        f"untracked; the run kept it as {shown(copy, here)})",
-                        fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(copy, here))} "
-                        f"{shlex.quote(shown(f, here))}`)",
+                    replace(
+                        blocker(
+                            f"{shown(f, here)} changed since {rid} ran it (it was "
+                            f"untracked; the run kept it as {shown(copy, here)})",
+                            fix=f"{FIX_FIRST} (`cp {shlex.quote(shown(copy, here))} "
+                            f"{shlex.quote(shown(f, here))}`)",
+                        ),
+                        changed_since=rid,
                     )
                 )
         elif repo is not None and not _in_repo(f, repo):
@@ -321,10 +331,13 @@ def _helpers_since_run(  # noqa: C901 — one sentence per way a helper can diff
         elif then[f] != now[f]:
             blob = then[f]
             out.append(
-                blocker(
-                    f"{shown(f, here)} changed since {rid} ran",
-                    fix=f"{FIX_FIRST} (`git -C {shlex.quote(shown(repo, here))} "
-                    f"cat-file blob {blob} > {shlex.quote(shown(f, here))}`)",
+                replace(
+                    blocker(
+                        f"{shown(f, here)} changed since {rid} ran",
+                        fix=f"{FIX_FIRST} (`git -C {shlex.quote(shown(repo, here))} "
+                        f"cat-file blob {blob} > {shlex.quote(shown(f, here))}`)",
+                    ),
+                    changed_since=rid,
                 )
             )
     return out, warnings

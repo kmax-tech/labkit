@@ -285,6 +285,33 @@ class CodeSinceRun(unittest.TestCase):
         (line,) = self.held(derived)
         self.assertIn(f"changed since {parent.name} ran it", line)
 
+    def test_only_a_found_difference_names_its_run(self) -> None:
+        """`GateFinding.changed_since` is the comparison's datum: the run
+        whose code differs — the parent's for a derived run (V3, review
+        2026-11-03) — and nothing where the code could not be compared."""
+        parent = self.run_now(name="2026-10-27T10-00-00_ab12")
+        again = self.area / "scripts" / "03_reevaluate.py"
+        again.write_text("print('re-evaluate')\n", encoding="utf-8")
+        _git(self.repo, "add", "-A")
+        _git(self.repo, "commit", "-qm", "re-evaluation")
+        derived = self.run_now(
+            script=again, name="2026-10-27T11-00-00_cd34", derived_from=parent.name
+        )
+        self.script.write_text(SCRIPT.replace(" + 1", ""), encoding="utf-8")
+        (changed,) = code_since_run(self.area, derived)[0]
+        self.assertEqual(changed.changed_since, parent.name)
+        # not compared: no script recorded, the script gone
+        cfg = json.loads((parent / "config.json").read_text(encoding="utf-8"))
+        (parent / "config.json").write_text(
+            json.dumps({**cfg, "script_sha": "no-script"})
+        )
+        (unrecorded,) = code_since_run(self.area, parent)[0]
+        self.assertIsNone(unrecorded.changed_since)
+        (parent / "config.json").write_text(json.dumps(cfg))
+        self.script.unlink()
+        (gone,) = code_since_run(self.area, parent)[0]
+        self.assertIsNone(gone.changed_since)
+
     def test_a_helper_in_another_repository_is_named_not_compared(self) -> None:
         """`lib/` as a link out of the repository crashed finalize, as a
         submodule it read as never committed — every finalize there held,

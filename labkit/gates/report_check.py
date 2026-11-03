@@ -883,9 +883,12 @@ def adoption_order_note(blocked: list[str]) -> str | None:
 
 
 def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
-    """The protocol of CTX when it declares the run that answers and
-    finalize's blockers (FINALIZED) found that run's code changed since it
-    ran (`changed since <run>`); None otherwise. While so, every later hold
+    """The protocol of CTX when it declares the run that answers and one of
+    finalize's blockers (FINALIZED) found the code of that run, or of a run
+    it derives from, or a declared scope changed since it ran
+    (`GateFinding.changed_since`, the comparison's own datum, never its
+    words; code that could not be compared sets none); None otherwise.
+    While so, every later hold
     names the withdrawal first (`ways_out.declared_first`): the declared
     number no longer holds for the code, the commit hook holds the code to
     it, and an audit made while it stands declared does not cover the next
@@ -894,8 +897,8 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     adoption that did not stand (reference pilot 2026-11-01, task 60)."""
     if ctx.state == PROPOSED or ctx.run is None or ctx.declared != ctx.run.name:
         return None
-    mark = f"changed since {ctx.declared}"
-    return ctx.protocol if any(mark in f.text for f in finalized) else None
+    held = any(f.changed_since is not None for f in finalized)
+    return ctx.protocol if held else None
 
 
 def withdrawn_first(
