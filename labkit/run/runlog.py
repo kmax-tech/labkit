@@ -17,6 +17,9 @@ run-index row; PROTOCOL-<task>.md cites run_ids instead of pasting numbers.
                                    code is in no commit and in no diff)
     runs/<run_id>/uncommitted.patch  the diff, IF the repo was dirty (tracked files only)
     runs/<run_id>/source-untracked/  untracked files next to the script, verbatim
+    runs/<run_id>/code.json        the code the run imported, per git repository:
+                                   commit, patch, untracked files copied to
+                                   code/ (`code_repos`)
     runs/<run_id>/<raw files>      verbatim model output etc. (save_raw)
     runs.tsv                       run index, one row per completed run
                                    (columns: RUN_INDEX_COLS) — derived, never a source
@@ -89,7 +92,7 @@ from types import TracebackType
 from collections.abc import Iterator
 
 from labkit.formats.runs import metrics_path, patch_path, run_path
-from labkit.run import batch
+from labkit.run import batch, code_repos
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
 from labkit.formats.gate import with_way_out
@@ -453,10 +456,12 @@ class Run:
          (tables owed, constants unchanged), the detach gate only for a
          declared long run whose lane forbids the foreground, whose
          harness sets a limit and which is not already detached; the run
-         index header; data leakage when data is supplied; and for a full
+         index header; data leakage when data is supplied; for a full
          run the freeze gate
          (undecided blockers, the freeze or the registration, the
-         acknowledgement over a failed audit)
+         acknowledgement over a failed audit); the imported code read per
+         repository (`code_repos.read_code`), and for a full run refused when
+         part of it cannot be recorded
       3. creation: git, environment and models read (`record_provenance` — a
          derived run resolves no model anew), then under one lock for a
          repeat: the draw counted and, with RESEED, its seed derived
@@ -502,6 +507,9 @@ class Run:
         unfrozen_ack, audit_failed = False, None
         if prepared.run_kind == "measurement":
             unfrozen_ack, audit_failed = freeze_gate(base_dir, prepared)
+        code = code_repos.read_code(tuple(sys.modules.values()))
+        if prepared.run_kind == "measurement":
+            code_repos.require_recordable(code)
         # 3. creation — the record, whole or not at all; the id and the
         # directory are drawn together under the guard below
         self.experiment = experiment
@@ -515,6 +523,7 @@ class Run:
         self._data = described
         self._unfrozen_ack = unfrozen_ack
         self._audit_failed = audit_failed
+        self._code = code
         self._outputs: list[Path] = []
         # per .jsonl output: the runs its rows named at registration, None
         # when they could not be read
@@ -562,7 +571,8 @@ class Run:
 
     def _write_record(self, provenance: Provenance) -> None:
         """config.json — what this run was, written once at start — plus the
-        script snapshot and the dirty-tree patch. Not the protocol's settings
+        script snapshot, the dirty-tree patch and the imported code
+        (`code_repos.write_code`). Not the protocol's settings
         head (protocol_block.PROTOCOL_HEAD_KEYS). Every field but the two
         snapshots is set on the run before this is called."""
         frozen = {
@@ -599,6 +609,7 @@ class Run:
         # A dirty tree makes the commit hash a lie: save what it doesn't cover.
         if repo.head_sha(self.base) and repo.tree_dirty(self.base):
             write_atomic(patch_path(self.dir), repo.tree_patch(self.base))
+        code_repos.write_code(self.dir, self._code)
 
     def output(self, *paths: str | Path) -> None:
         """Register the files this run WRITES (2026-08-18).
@@ -661,7 +672,8 @@ class Run:
         self._note = text
 
     def _finalize(self) -> None:
-        """outputs.json, metrics.json, completion.json, the index row — in that
+        """outputs.json, metrics.json, code.json completed with the modules
+        imported during the run, completion.json, the index row — in that
         order (a break after metrics leaves `unfinalized`). An output problem
         (file absent at the end, a damaged row) is a NOTE in outputs.json and
         does not stop completion: `completed` vouches for the run's record,
@@ -725,6 +737,9 @@ class Run:
         # leaves `unfinalized` (numbers on disk, run not finished); a break
         # after completion.json leaves a run the index missed but `reindex`
         # can rebuild in full. Before this file the two looked the same.
+        code_repos.write_code(
+            self.dir, self._code, code_repos.read_code(tuple(sys.modules.values()))
+        )
         # tracked files only: the run's own untracked products are not drift
         git_end = git_state(self.base, untracked=False)
         write_atomic(

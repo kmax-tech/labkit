@@ -21,7 +21,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
 | 1 · formats and places · `labkit/formats/` | `protocol_block`, `comment_blocks`, `prompts`, `promises`, `protocol_check`, `protocol_history`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `console`, `gate`, `shell`, `files`, `jsonl`, `deliverable`, `reference`, `criterion_bar`, `timebox` | `protocol_check`, `protocol_history`, `standard_contract`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `timebox` |
-| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
+| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `code_repos`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `data_counts`, `report_blocks`, `report_review_inputs`, `protocol_report` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out` |
 | tools · `labkit/tools/` | `protocol_fill`, `protocol_edit`, `protocol_result`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree`, `next_step`, `adopt` | `protocol_fill`, `protocol_edit`, `protocol_result`, `scaffold`, `protocol_cuts`, `calltree`, `next_step`, `adopt` |
@@ -194,6 +194,13 @@ and conditions visible in `Run.__init__`:
    under the index lock before its record is written.
 
 `provenance` gathers git state, environment, models, data and snapshots.
+`code_repos` records the code the run imported beyond the lab repo's
+commit: every git repository that holds an imported module — labkit, a
+framework installed editable, a topic package — with its commit, its
+tracked changes as a patch and its untracked imported files copied
+(`code.json`, `code/`). It reads at the start and again at a clean finish,
+for modules imported during the run; a measurement refuses to start on
+untracked code it cannot copy (above 2 MB).
 `provenance.BinaryInput(path)` explicitly marks a binary dependency in a
 run's `data` mapping: its bytes are hashed, `rows` is null, and dataset
 decoding and row-id leakage checks do not apply to that input. Ordinary
@@ -470,6 +477,7 @@ experiments/NN-name/
     outputs.json                registered output paths and their digests
     completion.json             confirmed completion and end state
     script-source.py            snapshot of the script as it ran
+    code.json                   the code it imported, per git repository; code/ holds patches and copies
   runs.tsv                      derived index of completed runs — git-ignored, `runlog reindex` rebuilds it
 ```
 

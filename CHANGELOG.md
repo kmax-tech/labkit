@@ -301,6 +301,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   behaviour test (stagekit plan, step 1:
   `docs/notes/2026-11-03-stagekit-plan.md`).
 
+- **A run records the code it imported in every repository, not only the
+  lab repo's.** `runs/<id>/code.json` lists each git checkout that holds
+  an imported module — labkit, a framework installed editable, a topic
+  package — with its commit, `origin`, its tracked changes as
+  `code/<name>.patch` and its untracked imported files copied to
+  `code/<name>/`. An editable install so names its commit and its local
+  edits, where its metadata gave a path. Read at the start and again at a
+  clean finish, for modules imported during the run (`read_at`); code
+  under an install prefix or ignored by git is the environment's, a
+  source file outside any checkout is listed with its digest. A
+  measurement refuses to start on untracked imported code above 2 MB,
+  which it would not copy. `config.json` is unchanged (`code_repos`;
+  stagekit plan, step 2b).
+
 ### New blockers (low repeat cost; high is unchanged)
 
 - **The report a protocol registered before its first measurement is

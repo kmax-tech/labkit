@@ -196,6 +196,10 @@ METRICS_FILE = "metrics.json"
 CONFIG_FILE = "config.json"
 COMPLETION_FILE = "completion.json"
 OUTPUTS_FILE = "outputs.json"
+#: the code a run imported, per git repository, and the folder of its
+#: patches and copies (`code_repos.write_code`)
+CODE_FILE = "code.json"
+CODE_DIR = "code"
 
 
 def runs_path(area: Path) -> Path:

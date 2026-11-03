@@ -195,6 +195,13 @@ Both are runs under labkit; the run record names the mode.
   appears in the run record (probe); an untracked module in the topic repo
   is either copied into the record or refuses a counted run (probe).
 - **Depends on:** 1.
+- **Done (2026-11-03):** `labkit/run/code_repos.py`, written by
+  `runlog` as `code.json` beside `config.json` (whose schema stays 4);
+  `tests/test_code_repos.py`. Probe with a real `pip install -e` of a
+  stand-in framework: its uncommitted edit stood in the record as commit
+  plus patch; an untracked topic module imported during the run was
+  copied (`read_at: "end"`). An untracked module is copied, never
+  refused; a measurement refuses only one above 2 MB, which is not copied.
 
 ### 3 — open the framework, then split the repo (decisions 4, 8)
 
