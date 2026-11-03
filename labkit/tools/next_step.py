@@ -13,6 +13,9 @@ first that applies is the step:
     no protocol in the area      → `labkit-init exp …` registers the question
     a MUST field still unfilled  → `protocol-fill …` fills it
                                    (`protocol_check.check_fields`)
+    committed evidence changed   → its restore, the first of report-check's
+      against HEAD                 first station (`evidence.change_blockers`),
+                                   before a handover can say "nothing"
     a current handover of it     → nothing: the protocol ended without a
                                    result (`handovers.protocol_handed_over`)
     a measured run, nothing adopted, → the progress account: `protocol-fill
@@ -49,7 +52,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from labkit import PACKAGE_DIR
-from labkit.formats import console, handovers, protocol_block, protocol_check
+from labkit.formats import console, evidence, handovers, protocol_block, protocol_check
 from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
     area_path,
@@ -115,8 +118,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "the first measurement: fill and commit the registration first, "
             "because it cannot change after that run",
         )
-    if handovers.protocol_handed_over(area, protocol):
-        return _handed_over(area, protocol, text)
+    ended = _restore_step(area) or _handed_over(area, protocol, text)
+    if ended is not None:
+        return ended
     # a run still open comes first: read as nothing, it sent agents to
     # measure again beside it (reference pilot 2026-11-01, task 15)
     from labkit.run.runlog import open_runs
@@ -178,13 +182,34 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     )
 
 
-def _handed_over(area: Path, protocol: Path, text: str) -> Step:
-    """The step of a PROTOCOL (its TEXT) a current handover ended: the
-    review its registered report owes once the handover block stands
+def _restore_step(area: Path) -> Step | None:
+    """The restore of AREA's committed evidence changed against HEAD as the
+    step (`evidence.change_blockers`, report-check's first station), or
+    None. It comes before the handover: a handover's report is released by
+    the report reviews here, and a handover acknowledges no change git can
+    undo."""
+    changed = evidence.change_blockers(area)
+    if not changed:
+        return None
+    return Step(
+        changed[0].text,
+        changed[0].fix or "the line above names what holds",
+        f"every release from this area: {len(changed)} change(s) of its "
+        "committed evidence stand, and this is the first",
+    )
+
+
+def _handed_over(area: Path, protocol: Path, text: str) -> Step | None:
+    """The step of a PROTOCOL (its TEXT) a current handover ended
+    (`handovers.protocol_handed_over`), else None: the review its
+    registered report owes once the handover block stands
     (`report_hold.report_owed`), else nothing — a new attempt is a new
     registration. It said "nothing" while the commit held the report for
     its review (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
     from labkit.gates.report_hold import report_owed
+
+    if not handovers.protocol_handed_over(area, protocol):
+        return None
 
     owed = report_owed(protocol, text, None, layout_root(area), staged=False)
     if owed is not None:

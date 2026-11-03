@@ -2226,6 +2226,17 @@ Offen:
    Eine Funktion aufteilen ist eine Entwurfsentscheidung, kein Verschieben —
    einzeln und mit Begründung.
 
+### Verdacht: Zeittest der Stop-Hülle unter Last (2026-11-03)
+
+`tests/test_agent_hooks.py::Stop::test_the_stop_holds_when_its_checks_outrun_its_budget`
+schlug einmal in der vollen Suite fehl (`-n auto`, Branch
+`committed-record-integrity`, vor `8a39eb40`); einzeln und dreimal mit
+`tests/test_agent_hooks.py -n auto` grün, im Pre-Commit danach grün.
+Verdacht: lastabhängig (der Test misst Wandzeit, Grenze 20 s, Budget 1 s).
+Nicht belegt — die Ausgabe des Fehlschlags wurde nicht gesichert. Nächster
+Schritt erst bei Wiederholung: Ausgabe sichern, dann entscheiden; keine
+Zeitgrenze nebenbei erhöhen.
+
 ### Phase-2-Reste (2026-10-27)
 
 Entschieden 2026-10-27 (Autor), umgesetzt:

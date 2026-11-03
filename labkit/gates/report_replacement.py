@@ -19,6 +19,7 @@ from labkit.formats.protocol_history import (
     registrations_as_first_measured,
 )
 from labkit.formats import (
+    evidence,
     findings,
     handovers,
     protocol_block,
@@ -44,7 +45,11 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
     the way out of K3's registration that cannot be told) — is a
     `[[replaces.change]]`, and every
     declared change is one (`registration_differences`); the predecessor's
-    open BLOCKERs are decided first. Blockers, each with the line or command
+    open BLOCKERs are decided first, read from its area's records, so a
+    change of that area's committed evidence against HEAD holds too
+    (`evidence.change_blockers`, in the tree the records are read from;
+    the replacement's own area is report-check's first station). Blockers,
+    each with the line or command
     that clears it. Nothing without `[replaces]`: an undeclared successor is
     indicated at the report (`replacement_hints`), never held here."""
     name = ctx.protocol.name
@@ -76,6 +81,12 @@ def replacement_gaps(ctx: Checked) -> list[GateFinding]:
         replace(f, text=f"{name}: {f.text}")
         for f in _undeclared_changes(ctx, rep, pred)
     ]
+    if pred.parent.resolve() != ctx.area.resolve():
+        theirs = f"{name}: the predecessor's area {pred.parent.name}"
+        out += [
+            replace(f, text=f"{theirs}: {f.text}")
+            for f in evidence.change_blockers(pred.parent)
+        ]
     out += [replace(f, text=f"{name}: {f.text}") for f in _predecessor_open(ctx, pred)]
     return out
 
