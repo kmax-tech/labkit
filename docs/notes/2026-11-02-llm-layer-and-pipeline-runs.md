@@ -291,6 +291,29 @@ against one real second case, not in advance.
    without the machine's state. A repeat run (`--repeat-of`, a new seed)
    bypasses the cache or carries the seed in the key — otherwise every
    repeat is answered from the cache and the measured spread is zero.
+2. **The cache key names the answering model, not the alias** (2026-11-02,
+   Max). The alias can be re-pointed in `models.toml`; a key on it would
+   serve an old answer from another model. The key is built from:
+   - `llm.identity(alias)` — backend and model, for ollama with the weights'
+     digest; endpoints excluded, as a host can change while serving the same
+     weights. One home: the resume check (`lanes.Lanes.instrument`) and the
+     row stamp use the same function.
+   - the spec fields that change the answer and `identity` leaves out:
+     claude-cli `input` (`harness` adds the agent's system prompt),
+     openai `reasoning`, ollama `num_ctx`;
+   - the prompt text, the parser id and the sampling values (temperature,
+     `max_tokens`, seed).
+
+   Not in the key: alias, endpoints, `api_key`/`api_key_env`. An ollama
+   model whose digest reads `unavailable` is not cached — the weights it
+   would stand for are unknown; the call says so instead of caching.
+3. **The public API starts small** (2026-11-03, Max): `llm.complete`,
+   `complete_many`, `resolve`, `spec`, `identity`, `last_usage`,
+   `last_endpoint`; the `models.toml` schema; `batch.Store`; `runlog.run`
+   with `data=` and `run.output()`. `identity` joins because the cache key
+   builds on it (decision 2). `lanes` stays internal: it is the stamped
+   areas' mechanics and changes with the standard. The list grows when a lab
+   needs a name; taking one back would break labs, so it starts short.
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -303,7 +326,7 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1 and 10 are decided above.
+The numbers stay as first written; 1, 2, 3 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
