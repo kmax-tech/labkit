@@ -2325,8 +2325,16 @@ Zeitgrenze nebenbei erhöhen.
 schlug einmal im Pre-Commit fehl (finalize ohne den erwarteten Halt);
 einzeln, unter Parallel-Last und im zweiten Hook-Lauf seither grün. Beleg, Log-Auszug und die zwei unbewiesenen
 Vermutungen: [Notiz](docs/notes/2026-11-03-finalize-hold-missing-once.md).
-Nächster Schritt als eigener Auftrag: Reihenfolge und Zeitstempel der
-beiden Messungen kontrolliert variieren — kein sleep, kein Retry.
+Kontrolliert variiert (2026-11-03 abends): Laufen A und B in derselben
+Sekunde, zeigen beide Tests genau die beobachteten Fehlbilder
+(`same_second_rival` blockiert die Wahl des Antwortlaufs); gemessen lagen
+A und B aber nie unter 1,6 s auseinander, unter Last länger, und die
+Systemuhr sprang nicht — Ursache weiter offen. Nächster Schritt: den
+nächsten Fehlschlag mit voller finalize-Ausgabe sichern (`held_as_b_saw`
+mit Ausgabe als Meldung; Hook schreibt die volle pytest-Ausgabe in eine
+Datei unter `.git/`). Zwei Nebenbefunde (git-Fehler in `as_measured` lässt
+finalize bestehen; `resolved_corrections`/`awaiting_followup` schlucken
+`RuntimeError`) stehen in der Notiz, je ein eigener Auftrag.
 
 ### Ungeklärt: Hook-Ablehnung ohne Log (2026-11-03)
 

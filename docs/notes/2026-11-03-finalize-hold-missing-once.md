@@ -1,7 +1,10 @@
 # A finalize hold missing once in the correction end-to-end test
 
-2026-11-03. Seen once, not reproduced, cause unknown. This note keeps the
-evidence until a targeted investigation settles it; it changes no code.
+2026-11-03. Seen three times, cause still unknown. This note keeps the
+evidence; it changes no code. The controlled variation (section
+"Controlled variation, 2026-11-03 evening" below) found one input that
+reproduces both failure signatures exactly — two measurements whose run
+ids share the start second — but no evidence that this input occurred.
 
 **What failed.** The pre-commit hook (full suite, `-n auto`) of a
 notes-only commit on branch `v1v2-field-values`, whose code was
@@ -68,3 +71,100 @@ second (fixed `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE`, a fixed clock for the
 run id), then swap their order, and read which run `first_measurements`
 names and what finalize holds. No added sleep and no retry in the test:
 either would hide the cause.
+
+## Controlled variation, 2026-11-03 evening
+
+Code `f1ff7723` (main). A probe subclassed `CorrectionThenNewRun`, kept
+t6 and the t5 twin, and printed for each test: the run ids, the commit
+each run recorded (`git`, `git_full`), the run directory's creation time,
+the lab's `git log` with committer dates, what
+`first_measurement_groups` returned at every call, and finalize's full
+output. A `sitecustomize.py` on the measuring subprocess's `PYTHONPATH`
+replaced `runlog._make_run_dir` to mint a given run id; in-process patches
+set the record minute (`findings.name_minute`/`date_minute`), injected
+`GitError`s, or moved the working directory. Each variation ran both
+tests once (the minute steps twice, the same result both times).
+
+**Baseline (no control).** Both runs record the same commit (the
+fixture commits before run A and never after it; B is `+dirty` on that
+commit), so `first_measurement_groups` returns one group `[A, B]` at
+that commit and the run ids alone order them. A and B start 1.7 s
+apart: `2026-11-03T19-28-36_3229` → `…19-28-37_4305` (t5 twin),
+`…19-28-40_7e41` → `…19-28-41_59ff` (t6). Both pass; t6's last finalize
+holds `Question / hypothesis` "as the answering run … saw the protocol".
+
+| Variation | t5 twin | t6 | Signature as observed? |
+|---|---|---|---|
+| A and B minted in one second, A's suffix first (`…12-00-00_aaaa`, `…_ffff`) | fails, rc 1 | fails, `StopIteration` | **both** |
+| the same, B's suffix first (`…_ffff`, `…_aaaa`) | fails, rc 1 | fails, `StopIteration` | **both** |
+| B's id a second-earlier time than A's (`12-00-05`, `12-00-03`) | fails, rc 1 | fails, held line names the wrong run (`assertIn`) | t5 only |
+| record minute steps at record 1, 2, 3 or 4 (of 3 per test) | pass | pass | — |
+| fixed `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` (all commits one second), alone and with a minute step | pass | pass | — |
+| `GitError` in `covering_analysis` after B | fails, rc 1 (Data / scope and Unit held) | pass | t5 only |
+| `GitError` in `blobs_then` (`as_measured`) after B | fails, rc 0 (no correction line) | fails, rc 0 | neither |
+| working directory deleted before setUp | error in setUp | error in setUp | neither |
+| working directory a plain directory / another repo; `CLAUDE_PROJECT_DIR` elsewhere / unset | pass | pass | — |
+
+With A and B in one second, t6's last finalize prints:
+
+```
+── answering run: PROTOCOL-lines.md ──
+  BLOCKER: 2026-11-03T12-00-00_ffff and 2026-11-03T12-00-00_aaaa started in the same second — the run ids cannot say which is newest. Next: move the one that does not answer out of runs/
+── registration since the first measurement ──
+  no completed run to check
+```
+
+`answering_run.same_second_rival` refuses the choice
+(`bound_answering_run` returns no run), so the registration station has
+nothing to hold: exit 1 without the "changed after the first
+measurement" line — t6's `StopIteration` — and exit 1 where the twin
+must pass — t5's `rc != 0`. That refusal is the rule as documented, not
+a defect: two runs at one commit in one second cannot be ordered.
+
+**Why this is not shown to be the cause.** Run ids carry the second at
+which the run directory is made, after run A has finished and the test's
+steps between the two measurements have run, so the ids share a second
+only when the whole gap is under 1 s. Measured gap, A to B creation
+time, `CorrectionThenNewRun` in the full suite with `-n auto`:
+
+| Run | Load (1 min, start → end) | Smallest gaps (s) | Same second |
+|---|---|---|---|
+| suite 1 | 2.8 → 8.4 | t6 1.68, twin-on-new-run 1.81, t5 twin 1.89 | 0 of 10 pairs |
+| suite 2 | 8.4 → 10.8 | t6 2.02, twin-on-new-run 2.28, t5 twin 2.77 | 0 of 10 |
+| suite 3 | 10.8 → 7.4 | twin-on-new-run 1.87, t6 1.96, t5 twin 2.27 | 0 of 10 |
+| two suites at once (a, b) | 6.8 → 6.7 (5 min: 16.6) | t6 1.62 / 1.63, twin 1.64 / 1.67, t5 twin 2.44 / 2.25 | 0 of 20 |
+| probe class ×40 under `-n 16` | → 20.8 | 3.76 (median 6.17) | 0 of 80 |
+
+All five full suites passed (2975 passed). Load lengthens the gap; it
+does not shorten it. The macOS clock log (`log show --predicate
+'process == "timed"'`, 17:50–18:55, the window of all three failures)
+shows two slewed adjustments, −4 ms at 18:11 and +31 ms at 18:44, and no
+step that could move a run id back by a second.
+
+What the measurements do show: in every suite the three tests with the
+smallest A–B gap are t6, the twin on a new run, and the t5 twin — the
+two tests that failed and one that has not. That fits a cause that
+needs a short gap; it is not evidence of one.
+
+**Side findings (not the flake; each its own task).**
+
+1. A git failure inside `protocol_history.as_measured` (`blobs_then`)
+   makes finalize pass a changed question: exit 0, and the station says
+   "what the number is about and the promise block are the ones the first
+   measurement registered". `scope_changes` passes over a text that cannot
+   be read back; its docstring says another station names that state, and
+   in this case none did. A check that could not run passed.
+2. `finalize.resolved_corrections` and `awaiting_followup` catch
+   `RuntimeError` (a `GitError` included) and return no release; a failing
+   git there turns a released field into a hold whose sentence names the
+   field, not the failed check.
+
+**Open.** The cause of the three failures is not shown. The output of
+each was lost because the pre-commit hook prints only the last 25 lines
+(`.githooks/pre-commit`, `tail -25`), and t6 fails in `next()` without
+finalize's output. The next failure settles it only if its full finalize
+output is kept: (a) let `held_as_b_saw` fail with finalize's output as its
+message, and (b) let the hook keep pytest's full output in a file under
+`.git/`. Neither is done here. If that output shows the same-second
+blocker, the fixture is the place to repair (its two measurements on one
+commit, ordered by run id alone); labkit's refusal stays.
