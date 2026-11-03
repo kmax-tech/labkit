@@ -390,6 +390,14 @@ against one real second case, not in advance.
    archive banner was written into them. `fallacy-detection-github`
    (clean, remote `kmax-tech/bayesian-fallacy-detection`, last commit
    2026-08-19) is published paper code and stays frozen as such.
+8. **A topic registers on import, named by the experiment** (2026-11-03,
+   Max). The experiment's config names the topic packages to import and its
+   own config and prompt directories; the framework loads exactly those and
+   never names a topic itself. This covers all three extension points —
+   data loaders, configs (Hydra search path), prompts. Not entry points:
+   they load whatever is installed, invisible from the experiment — the
+   area that holds the config should also show what is loaded. Entry points
+   only if several installed topic packages ever run side by side.
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -402,7 +410,7 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1 to 7 and 10 are decided above.
+The numbers stay as first written; 1 to 8 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
