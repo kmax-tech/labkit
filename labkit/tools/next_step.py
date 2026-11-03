@@ -20,7 +20,9 @@ first that applies is the step:
       its account of that run           (`report_hold.progress_account`), before
                                         any gap — saved first, released by nothing
     a gap report-check holds     → its way out, the first in the chain's
-                                   order (`report_check.report_gaps`)
+                                   order (`report_check.report_gaps`) — a
+                                   committed record changed against HEAD
+                                   first, with its restore
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
                                    that answers
     adopted, nothing held        → nothing: the number may be reported

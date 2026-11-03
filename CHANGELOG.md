@@ -25,6 +25,19 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **`report-check AREA` and `labkit-next` hold a committed record edited
+  in the tree, as the commit does.** A review's outcome turned (a decision
+  review `rejected` → `upheld`, a report review's claim deleted) or an
+  analysis BLOCKER removed from a record a commit holds was refused by the
+  pre-commit alone; report-check, `labkit-next` ("the number may be
+  reported") and the adoption's own check passed it
+  (`docs/notes/2026-11-02-review-record-forgery.md`). report-check's first
+  station is now the pre-commit's comparison against HEAD
+  (`report_check.evidence_findings` over `evidence.change_findings`): each
+  change is a blocker naming the record and its `git checkout HEAD -- …`,
+  and `labkit-next` names that restore as the step. A `--decide` change of
+  the decision lines still passes; a restore clears the line. A record no
+  commit holds yet is still not compared with anything.
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of
   `at_least` (the bar as written, whatever the null lane scores) and

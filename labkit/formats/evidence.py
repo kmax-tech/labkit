@@ -18,8 +18,9 @@ commit holds it, it stays as written:
 
 Three witnesses, each git's own and exact for what it saw:
 
-    `changes`         the tree (the stop, the post-change hook, `--findings`)
-                      or the index (the commit) against HEAD — and a file
+    `changes`         the tree (the stop, the post-change hook, `--findings`,
+                      report-check and so labkit-next) or the index (the
+                      commit) against HEAD — and a file
                       git ignores (`ignored`), evidence no commit can carry
     `commit_changes`  each commit since the session began against its first
                       parent: a commit past the pre-commit (`--no-verify`)
@@ -176,20 +177,20 @@ def told(
     runs: dict[str, list[tuple[str, str]]],
     where: str,
     restore: str,
-) -> list[str]:
-    """The sentences of `broken`'s findings in AREA (under ROOT), each with
-    its way out: WHERE says between which states ("in the tree since HEAD",
-    "by commit …"), RESTORE the commit the way out restores from."""
+) -> list[tuple[str, str]]:
+    """`broken`'s findings in AREA (under ROOT) as (sentence, way out): WHERE
+    says between which states ("in the tree since HEAD", "by commit …"),
+    RESTORE the commit the way out restores from."""
     base = _base(area, root)
 
     def checkout(rel: str) -> str:
         return f"`git checkout {restore} -- {shlex.quote(f'{base}/{rel}')}`"
 
-    out: list[str] = []
+    out: list[tuple[str, str]] = []
     for rel, what in audits:
         if what == "record":
             out.append(
-                with_way_out(
+                (
                     f"{rel}: changed beyond its findings' decision lines {where} — "
                     "an audit record keeps what the auditor wrote; only a "
                     "decision changes it",
@@ -199,7 +200,7 @@ def told(
             )
         else:
             out.append(
-                with_way_out(
+                (
                     f"{rel}: {what} {where} — labkit writes it once, and a record "
                     "of an audit is evidence",
                     f"restore it ({checkout(rel)})",
@@ -208,7 +209,7 @@ def told(
     for run, files in runs.items():
         named = ", ".join(f"{name} ({how})" for name, how in files)
         out.append(
-            with_way_out(
+            (
                 f"{RUNS_DIR}/{run}: the closed run's {named} {where} — "
                 "a run's record stays as it ran; a new measurement is a new run",
                 f"restore it ({checkout(f'{RUNS_DIR}/{run}')})",
@@ -356,14 +357,19 @@ def _undone_in(
 
 
 def changes(area: Path, *, staged: bool = False) -> list[str]:
-    """Every change of AREA's evidence against HEAD that breaks its rule —
-    in the working tree, or STAGED in the index (what a commit now would
-    carry): a record changed beyond its decision lines, another audit file
-    changed, a run HEAD holds closed whose files changed or went. A version
-    back as labkit first committed it is no change (`original`): restoring
-    a record a commit past the pre-commit rewrote passes. [] outside git
-    and before the first commit; a deleted audit file is `attempts.gaps`'s
-    to name. Raises GitError when git fails."""
+    """`change_findings` as sentences, each with its way out."""
+    return [with_way_out(why, fix) for why, fix in change_findings(area, staged=staged)]
+
+
+def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]]:
+    """Every change of AREA's evidence against HEAD that breaks its rule, as
+    (sentence, way out) — in the working tree, or STAGED in the index (what
+    a commit now would carry): a record changed beyond its decision lines,
+    another audit file changed, a run HEAD holds closed whose files changed
+    or went. A version back as labkit first committed it is no change
+    (`original`): restoring a record a commit past the pre-commit rewrote
+    passes. [] outside git and before the first commit; a deleted audit
+    file is `attempts.gaps`'s to name. Raises GitError when git fails."""
     root = _repo_of(area)
     if root is None or not head_sha(root):
         return []
@@ -446,7 +452,10 @@ def commit_changes(area: Path, since: str) -> list[str]:
 
         audits, runs = broken(left, closed, texts_now, undone_now, deletions=True)
         where = f"by commit {commit[:12]} and not undone in the tree"
-        out += told(area, root, audits, runs, where, parent[:12])
+        out += [
+            with_way_out(why, fix)
+            for why, fix in told(area, root, audits, runs, where, parent[:12])
+        ]
     return out
 
 

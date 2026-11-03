@@ -30,6 +30,13 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
   0. protocol       choose the protocol; read its head, declaration and
                     answering run into Checked. No protocol or unreadable
                     context ends with exit 2.
+     evidence       the area's committed evidence as the commit holds it
+                    (`evidence.change_findings`): a record changed beyond
+                    its decision lines, a review or another audit file
+                    changed, a closed run's files changed — each a blocker
+                    whose way out is the restore from HEAD. The comparison
+                    is the pre-commit's own, so the tree check holds what
+                    the commit will refuse.
   1. declaration    report an unreadable `[result]` as a blocker.
   2. registration   where the lane freezes: the flag, required fields and
                     promise tables must hold. Otherwise, where the lane
@@ -156,6 +163,7 @@ from labkit.formats import (
     attempts,
     audit_gaps,
     console,
+    evidence,
     handovers,
     protocol_block,
     runs,
@@ -563,6 +571,7 @@ def report_check(
     """Check AREA before reporting; 0 clean or warnings, 1 blocked, 2 no context.
 
     0. Choose the protocol and read Checked; missing or unreadable ends with 2.
+       Committed evidence changed against HEAD blocks (`evidence_findings`).
     1. Declaration: an unreadable `[result]` blocks, later stages continue.
     2. Registration: check the freeze where the lane owes it; otherwise check
        the first measurement's committed registration where owed.
@@ -622,6 +631,20 @@ def report_check(
     return findings.report("report-check", "reporting")
 
 
+def evidence_findings(ctx: Checked) -> list[GateFinding]:
+    """Every change of CTX's area's committed evidence against HEAD that
+    breaks its rule (`evidence.change_findings`) — in the index for the
+    pre-commit (INDEX), else in the tree —, each a blocker whose way out
+    restores it from HEAD. The comparison is the commit's own: a record
+    edited after its commit is held here as the commit holds it, a
+    `--decide` change of its decision lines passes, and a restore clears it.
+    Raises GitError when git fails."""
+    return [
+        blocker(why, fix=fix)
+        for why, fix in evidence.change_findings(ctx.area, staged=ctx.state == INDEX)
+    ]
+
+
 def registration_stage(ctx: Checked) -> list[GateFinding]:
     """Stage 2 of `report_gaps`: the freeze where CTX's lane owes it, else
     the first measurement's committed registration where owed
@@ -648,6 +671,9 @@ def report_gaps(
     """Every gap report-check holds CTX to, in the order of the chain — the
     one list `report_check` prints and `next_step` reads:
 
+    0. Evidence: a change of the area's committed evidence that breaks its
+       rule (`evidence_findings`), first — its restore comes before any
+       other step.
     1. Declaration: an unreadable `[result]` blocks; later stages continue.
     2. Registration: the freeze where the lane owes it, else the first
        measurement's committed registration where owed; a declared
@@ -681,6 +707,7 @@ def report_gaps(
                 f"adopts again",
             )
         )
+    out += evidence_findings(ctx)
     # 1. declaration
     if ctx.declaration_gap:
         out.append(
