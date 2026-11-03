@@ -32,6 +32,23 @@ commit's hook on the second attempt;
 the full suite on the rebased branch (2945 passed). Repetition shows the
 failure is rare, not what causes it.
 
+**Seen twice more, the same evening.** The hook of branch `public-4b`
+(code `d4be6216` plus a public-API change that touches no finalize, run
+or protocol code) failed two runs in a row, each on another test of
+this class, while other sessions ran suites (load average 13–18):
+
+```
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t5_the_twin_two_fields_each_released_pass
+tests/test_end_to_end.py:1379: AssertionError   # finalize after run B: rc != 0
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds
+```
+
+t5 failed the other way: finalize held where the twin must pass. The
+output beyond these lines was not kept. The third hook run and two full
+suites by hand passed, as did the class alone and the file with `-n 8`
+twice. Load raises the rate; it does not say which order of runs or
+commits finalize saw.
+
 **Two conjectures, neither shown.**
 
 1. A timing race in which measurement counts as first: the test makes two
