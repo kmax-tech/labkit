@@ -200,6 +200,10 @@ OUTPUTS_FILE = "outputs.json"
 #: patches and copies (`code_repos.write_code`)
 CODE_FILE = "code.json"
 CODE_DIR = "code"
+#: the cache a run read its model answers from — version, mode, directory —
+#: and one line per model call through it (`llm_cache.Cache`)
+LLM_CACHE_FILE = "llm-cache.json"
+LLM_CALLS_FILE = "llm-calls.jsonl"
 
 
 def runs_path(area: Path) -> Path:

@@ -21,10 +21,10 @@ import re
 import tempfile
 import threading
 import unittest
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
+import ollama_fixture
 from models_fixture import serve, toml
 
 from labkit.run import batch, llm, llm_specs, runlog
@@ -117,54 +117,12 @@ class Listed(unittest.TestCase):
         self.assertEqual(listed_keys(), dict(llm_specs.OPTIONS))
 
 
-class _Ollama(BaseHTTPRequestHandler):
-    """A stand-in ollama server: `/api/tags` names one model and its digest,
-    `/api/chat` answers with `status` (200: an answer with token counts)."""
-
-    status = 200
-    chats = 0
-
-    def do_GET(self) -> None:
-        self._send(
-            200,
-            {"models": [{"name": "m:latest", "digest": "sha256:0123456789abcdef"}]},
-        )
-
-    def do_POST(self) -> None:
-        self.rfile.read(int(self.headers["Content-Length"]))
-        type(self).chats += 1
-        body = {
-            "message": {"content": " the answer "},
-            "prompt_eval_count": 7,
-            "eval_count": 3,
-            "done_reason": "stop",
-        }
-        self._send(self.status, body if self.status == 200 else {"error": "no"})
-
-    def _send(self, status: int, body: dict) -> None:
-        data = json.dumps(body).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
-        """Silent: the test output stays the test's."""
-
-
 class Calls(unittest.TestCase):
     """`llm.complete`, `complete_many`, `resolve`, `spec`, `identity`,
     `last_usage`, `last_endpoint` against one stand-in server."""
 
     def setUp(self) -> None:
-        handler = type("Handler", (_Ollama,), {"status": 200, "chats": 0})
-        self.handler = handler
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-        threading.Thread(target=server.serve_forever, daemon=True).start()
-        self.addCleanup(server.server_close)
-        self.addCleanup(server.shutdown)
-        self.url = f"http://127.0.0.1:{server.server_address[1]}"
+        self.handler, self.url = ollama_fixture.start(self)
         serve(
             self,
             f'[endpoints]\nlocal = "{self.url}"\n'

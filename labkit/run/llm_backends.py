@@ -5,9 +5,9 @@ Ollama (raw generate and chat, its options, usage and the prompt-fit
 check that refuses a prompt the context would cut), and an
 OpenAI-compatible endpoint; the endpoint chosen round-robin across the
 configured ones, the auth headers, the per-thread call state
-(`CALL_STATE`: endpoint, usage, thinking of the last call) and the
-types a call raises or returns (`BackendError`, `PromptTruncated`,
-`Usage`). The specs a call is made with are `llm_specs`'. `llm`
+(`CALL_STATE`: endpoint, usage, thinking, finish reason and the decoded
+reply of the last call) and the types a call raises or returns
+(`BackendError`, `PromptTruncated`, `Usage`, `Response`). The specs a call is made with are `llm_specs`'. `llm`
 resolves the alias, retries and records; it calls these.
 """
 
@@ -21,6 +21,7 @@ import sys
 import threading
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from typing import Any, NamedTuple, cast
 
 from labkit.formats.runs import JsonObject
@@ -188,6 +189,24 @@ class Usage(NamedTuple):
 
 
 NO_USAGE = Usage(None, None, None, None)
+
+
+@dataclass(frozen=True)
+class Response:
+    """Everything one completion returned that a caller may need: the
+    answer `text` as `complete` returns it, the reasoning `thinking` ("" when
+    none), the `finish_reason` the backend reported (ollama `done_reason`,
+    OpenAI-style `finish_reason`, claude-cli `stop_reason`; None when it
+    reported none), the `usage`, the `endpoint` that answered ("" for
+    claude-cli) and the decoded reply `body` as the backend sent it (None
+    when the backend handed back no reply object)."""
+
+    text: str
+    thinking: str
+    finish_reason: str | None
+    usage: Usage
+    endpoint: str
+    body: JsonObject | None
 
 
 # `claude -p` is an agent harness, not an inference API: by default every
@@ -376,6 +395,8 @@ def _cli_result(stdout: str, model: str) -> str:
     (`_cli_evidence`)."""
     where = "claude-cli --output-format json"
     body = json_reply(stdout, where)
+    CALL_STATE.body = body
+    CALL_STATE.finish_reason = reply_field(body, "stop_reason", str, where)
     seen = _cli_evidence(body)
     try:
         # the provenance before `is_error`: a stopped answer may come
@@ -563,6 +584,8 @@ def complete_ollama_raw(
     }
     body = _post_json(spec, "/api/generate", payload, timeout)
     where = f"{spec.alias} /api/generate"
+    CALL_STATE.body = body
+    CALL_STATE.finish_reason = reply_field(body, "done_reason", str, where)
     CALL_STATE.usage = _ollama_usage(body, where)
     _check_prompt_fit(spec, len(prompt), CALL_STATE.usage)
     return reply_field(body, "response", str, where, required=True).strip()
@@ -652,6 +675,8 @@ def complete_ollama_chat(
     }
     body = _post_json(spec, "/api/chat", payload, timeout)
     where = f"{alias} /api/chat"
+    CALL_STATE.body = body
+    CALL_STATE.finish_reason = reply_field(body, "done_reason", str, where)
     CALL_STATE.usage = _ollama_usage(body, where)
     _check_prompt_fit(spec, len(system or "") + len(prompt), CALL_STATE.usage)
     message = reply_field(body, "message", dict, where, required=True)
@@ -704,6 +729,7 @@ def complete_openai(
         payload["stop"] = stop
     body = _post_json(spec, "/v1/chat/completions", payload, timeout)
     where = f"{alias} /v1/chat/completions"
+    CALL_STATE.body = body
     usage = reply_field(body, "usage", dict, where) or {}
     details = reply_field(usage, "prompt_tokens_details", dict, f"{where} usage") or {}
     CALL_STATE.usage = Usage(
@@ -716,6 +742,9 @@ def complete_openai(
     if not choices or not isinstance(choices[0], dict):
         raise ReplyError(f"{where}: `choices` = {choices!r:.80}, not a list of objects")
     first = cast(JsonObject, choices[0])
+    CALL_STATE.finish_reason = reply_field(
+        first, "finish_reason", str, f"{where} choices[0]"
+    )
     message = reply_field(first, "message", dict, f"{where} choices[0]", required=True)
     at = f"{where} message"
     content = (reply_field(message, "content", str, at) or "").strip()

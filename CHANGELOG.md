@@ -315,6 +315,21 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   which it would not copy. `config.json` is unchanged (`code_repos`;
   stagekit plan, step 2b).
 
+- **A lab's cache of raw model answers, across runs (`llm_cache`).**
+  `llm_cache.Cache(run)` keeps each answer as the model gave it — text,
+  reasoning trace, finish reason, usage, endpoint, decoded reply
+  (`llm.complete_response`, `llm_backends.Response`) — so a corrected
+  parser applies to cached answers at once. The key is the answering
+  model (`llm.identity`, not the alias), the answer-changing spec fields,
+  the prompts and the sampling values as sent; one file per key under
+  `cache/llm/` in the lab repo, the first answer stays. A run opens it as
+  `normal`, `replay` (no model asked, a miss raises `CacheMiss`) or
+  `repeat` (a run with `repeat_of`: never read, never written); the mode
+  stands in `llm-cache.json`, every call with hit and origin in
+  `llm-calls.jsonl`, and `fresh_usage` counts only calls that asked the
+  model. An ollama model without a single weights digest is not cached,
+  and the call says why (stagekit plan, step 2).
+
 ### New blockers (low repeat cost; high is unchanged)
 
 - **The report a protocol registered before its first measurement is

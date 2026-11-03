@@ -114,6 +114,7 @@ from labkit.run.llm_backends import (
     BackendError,
     UnprovenAnswer,
     NO_USAGE,
+    Response,
     Usage,
     CLI_ISOLATION,
     CLI_PROMPT_ONLY,
@@ -456,11 +457,42 @@ def complete(
     honour, a claude-cli reply another model wrote (`UnprovenAnswer`) — are
     raised immediately. Pass attempts=1 to disable.
     """
+    return complete_response(
+        alias,
+        prompt,
+        system=system,
+        temperature=temperature,
+        timeout=timeout,
+        attempts=attempts,
+        raw=raw,
+        stop=stop,
+        max_tokens=max_tokens,
+    ).text
+
+
+def complete_response(
+    alias: str,
+    prompt: str,
+    *,
+    system: str | None = None,
+    temperature: float | None = None,
+    timeout: int = 300,
+    attempts: int = 6,
+    raw: bool = False,
+    stop: list[str] | None = None,
+    max_tokens: int | None = None,
+) -> Response:
+    """`complete` with everything the call returned (`Response`): the
+    text, the reasoning trace, the finish reason, the usage, the endpoint
+    and the decoded reply — what a cache of raw answers keeps
+    (`llm_cache`). Arguments, retries and errors as `complete`'s."""
     for attempt in range(1, attempts + 1):
         CALL_STATE.thinking = ""  # never a previous call's trace
         CALL_STATE.usage = NO_USAGE  # nor its token counts
+        CALL_STATE.finish_reason = None  # nor its finish reason
+        CALL_STATE.body = None  # nor its reply
         try:
-            return _complete_once(
+            text = _complete_once(
                 alias,
                 prompt,
                 system=system,
@@ -469,6 +501,16 @@ def complete(
                 raw=raw,
                 stop=stop,
                 max_tokens=max_tokens,
+            )
+            return Response(
+                text=text,
+                thinking=CALL_STATE.thinking,
+                finish_reason=CALL_STATE.finish_reason,
+                usage=CALL_STATE.usage,
+                endpoint=""
+                if isinstance(spec(alias), ClaudeCliSpec)
+                else last_endpoint(),
+                body=CALL_STATE.body,
             )
         except UnprovenAnswer:
             raise  # the request carries it: a retry repeats the cost, not the cure

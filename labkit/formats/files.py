@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import stat
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -86,3 +87,22 @@ def _stage(path: Path, write: Callable[[Path], object]) -> Path:
         tmp.unlink(missing_ok=True)
         raise
     return tmp
+
+
+def write_once(path: Path, text: str) -> bool:
+    """Write TEXT to PATH whole, unless PATH exists: True when this call
+    wrote it, False when another writer was first — that file stays as it
+    is. A temp file beside PATH, named for this process and thread, is
+    hard-linked to PATH (the link fails when PATH exists) and removed
+    again; a reader sees no file or the whole one. The record a cache
+    keeps per key goes through it (`llm_cache`): the first answer under a
+    key is the one every later read gets."""
+    tmp = path.with_name(f".{path.name}.tmp{os.getpid()}-{threading.get_ident()}")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.link(tmp, path)
+    except FileExistsError:
+        return False
+    finally:
+        tmp.unlink(missing_ok=True)
+    return True

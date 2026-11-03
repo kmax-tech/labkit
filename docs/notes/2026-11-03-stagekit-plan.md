@@ -182,6 +182,14 @@ Both are runs under labkit; the run record names the mode.
 - **Done when:** one test per rule; the module stands in the layer table
   (`run` layer).
 - **Depends on:** 1 (`identity` must be public first).
+- **Done (2026-11-03):** `labkit/run/llm_cache.py`; the raw response
+  from `llm.complete_response` (`complete` returns its text); one file per
+  key, written once (`files.write_once`) — the port keeps the atomic write
+  and drops the shard lock, since no entry is read, changed and written
+  back. `tests/test_llm_cache.py`: one test per rule, each turned red by
+  a mutant of its rule. Repeat mode also never writes, so a replay of the
+  original run keeps its answers. No seed in the key: `complete` sends
+  none.
 
 ### 2b — labkit: provenance across repos (new)
 

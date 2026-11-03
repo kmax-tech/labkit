@@ -21,7 +21,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
 | 1 · formats and places · `labkit/formats/` | `protocol_block`, `comment_blocks`, `prompts`, `promises`, `protocol_check`, `protocol_history`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `console`, `gate`, `shell`, `files`, `jsonl`, `deliverable`, `reference`, `criterion_bar`, `timebox` | `protocol_check`, `protocol_history`, `standard_contract`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `timebox` |
-| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `code_repos`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
+| 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `code_repos`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `llm_cache`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `data_counts`, `report_blocks`, `report_review_inputs`, `protocol_report` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out` |
 | tools · `labkit/tools/` | `protocol_fill`, `protocol_edit`, `protocol_result`, `scaffold`, `protocol_cuts`, `repo_check`, `params`, `calltree`, `next_step`, `adopt` | `protocol_fill`, `protocol_edit`, `protocol_result`, `scaffold`, `protocol_cuts`, `calltree`, `next_step`, `adopt` |
@@ -227,7 +227,13 @@ evidence only: an aid for the judgement the Data profile field owes and
 for the audit, never proof that the data fit the question. Model calls are split between
 `llm` (aliases, retries and call records), `llm_specs` (one configuration
 type per backend, validated when loading `models.toml`) and `llm_backends`
-(the wire calls). `endpoint_lease` manages the model-slot lease.
+(the wire calls). `llm_cache` keeps a lab's raw model answers across
+runs (`cache/llm/` in the lab repo), keyed on the answering model, the
+answer-changing spec fields, the prompts and the sampling values; a run
+opens it in one of three modes — normal, replay (no model asked, a miss
+stops the run), repeat (never read) — and records the mode and every
+call, hits with their origin (`llm-cache.json`, `llm-calls.jsonl`).
+`endpoint_lease` manages the model-slot lease.
 
 `runlog` calls `llm` to record resolved models. `endpoint_lease` checks
 liveness through `runs.is_alive`, without calling the run writer.
