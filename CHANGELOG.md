@@ -11,6 +11,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **Protocol standard 0.26: the question stands as registered (LAB-003 No
+  run without an intent paragraph).** After the first measurement a typo
+  in Question / hypothesis is no longer corrected in place; a different
+  question is a protocol of its own. The rule's typo sentence now names the
+  hold that applies to the other prose fields: a field read before the run
+  owes the audit again, a field that says what the number is about is
+  released only by the follow-up's `resolved` on its correction
+  (`docs/notes/2026-11-02-registered-field-repair.md`). The head format is
+  otherwise unchanged: a protocol not yet run sets `standard = "0.26"`. A
+  protocol with runs keeps its version and is reproduced with its pinned
+  labkit — 0.107.0, the last release reading 0.24; 0.25 was never
+  released, so a protocol stamped 0.25 from an unreleased commit is
+  reproduced with that commit.
+
 - **Protocol standard 0.25: a bar the task states may be absolute (LAB-035
   Thresholds belong to the run, not to the measure).** labkit-paper area
   17 (2026-11-02): two tasks stated an absolute bar, the agents wrote it
@@ -25,7 +39,7 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
-- **Question / hypothesis has no correction in place.** A finding placed
+- **Question / hypothesis has no correction in place (standard 0.26).** A finding placed
   on the question, decided `fixed` and judged `resolved`, no longer
   releases a changed question: it stands as registered, a typo included,
   and a different question is a protocol of its own (probe 2026-11-02, F6:

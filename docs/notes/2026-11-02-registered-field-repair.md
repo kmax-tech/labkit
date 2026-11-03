@@ -80,7 +80,7 @@ action, the gate; Conclusion and code repair as twins, the restore),
 compared; restore, reflow and a Conclusion pass), `tests/test_findings.py`
 `CorrectedField`.
 
-## Decided 2026-11-03: where a correction ends (contract change, in part built)
+## Decided 2026-11-03: where a correction ends (contract change, built)
 
 **Problem.** F6 of the repair-path probe
 ([note](2026-11-02-repair-path-probe.md)): Question / hypothesis "mean" →
@@ -161,7 +161,7 @@ go into labkit's tests. Which side of the pairs "14 cases" and "test
 split" a case falls on is the auditor's judgement: it needs probes of the
 auditor's instruction with a real model.
 
-**Today against this contract** (F5 reproduction on `4ab018bf`, labkit-
+**Before the repair** (F5 reproduction on `4ab018bf`, labkit-
 evidence `921eab7e`, `usability/2026-11-03-correction-then-code-fault/`): an earlier
 `resolved` already does not release a new run. But a follow-up on the new
 run that judges the correction `resolved` does not release it either:
@@ -204,11 +204,11 @@ of `finalize.scope_changes` (the new run's release); the hold in
 `finalize.registration_changes`, the decision line and `labkit-next` offer
 the correction route only for a correctable field and name "measure again"
 after a code repair; `finalize.scope_now`'s docstring;
-`labkit/docs/agent-guide.md` (the correction route as its own way out,
-apart from the incomplete registration); LAB-003's typo sentence; later,
-the follow-up auditor's instruction (`experiment-preflight.agent.md`: the
-deciding question above, and the evidence outside the field its `resolved`
-cites); CHANGELOG (behaviour, no format break).
+`labkit/docs/agent-guide.md` (its correction, under "an incomplete
+registration"); LAB-003's typo sentence; the follow-up auditor's
+instruction (`experiment-preflight.agent.md`: the deciding question above,
+and the evidence outside the field its `resolved` cites); CHANGELOG
+(Breaking: standard 0.26).
 
 **Built.** The question's exception: `protocol_history.correctable`
 (`UNCORRECTABLE_FIELDS`), read by `findings.corrected_field` and by
@@ -223,8 +223,10 @@ description still offered the route), `tests/test_finalize.py`
 guide's correction (under "an incomplete registration") and the follow-up
 auditor's instruction say the same: a misdescription is corrected, a
 requirement the run failed is repaired, the question stands, the verdict
-cites evidence outside the changed field. Open: the new run's release and
-the "measure again" guidance (F5), LAB-003's typo sentence.
+cites evidence outside the changed field. LAB-003's typo sentence says the
+same since standard 0.26: the question stays as registered, a held field's
+typo is released by the follow-up's `resolved` (a changed rule, so the next
+version); the new run's release is under "Built for F5" above.
 
 **Not in this contract.** Showing a released correction in the report —
 today only finalize's note names it; noted separately, no new report

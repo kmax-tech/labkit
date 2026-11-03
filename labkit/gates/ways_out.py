@@ -129,7 +129,9 @@ WAYS_OUT = (
         "restore what stood before the number. When the missing choice can be "
         f"made on grounds the new registration states, {register_anew()}; else "
         f"{HANDOVER}. A pure typo in a prose field is corrected in the protocol "
-        "itself",
+        "itself — in a field that says what the number is about, released by the "
+        "follow-up audit's `resolved` on it; the question stays as registered, a "
+        "typo included",
     ),
     (
         "a wrong adoption",

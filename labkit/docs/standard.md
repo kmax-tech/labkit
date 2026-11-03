@@ -1,9 +1,12 @@
 # The labkit lab standard
 
-*Version 0.25 — the version a protocol names in its head (`standard =
-"0.25"`, read by `protocol_block`). A change to a rule or a field is the
+*Version 0.26 — the version a protocol names in its head (`standard =
+"0.26"`, read by `protocol_block`). A change to a rule or a field is the
 next version; a dated change that alters no rule is listed under "Changes"
-at the end. 0.25 (2026-11-02): a success bar the task states is
+at the end. 0.26 (2026-11-03): after the first measurement the question
+stands as registered, a typo included — a different question is a protocol
+of its own; the typo rule for the other prose fields names the hold that
+applies to them (LAB-003 No run without an intent paragraph). 0.25 (2026-11-02): a success bar the task states is
 registered as an absolute value, before the first measurement and with its
 source (LAB-035 Thresholds belong to the run, not to the measure); the null
 condition still runs beside it. 0.24 (2026-11-01): a computation names its kept number in the
@@ -170,12 +173,15 @@ evidence file under the same ID (top of this document).*
   before the number. When the missing choice can be made on grounds the new
   registration states, the way on is a successor that names this protocol
   in `[replaces]`; when it cannot, a handover without a result. A pure
-  typo is corrected in the protocol itself: in a prose field nothing holds
-  it, though an audit that judged that field is owed again; in a promise's
-  sentence, key or constant it stays as registered, since the registration
-  check holds every change to the promises and cannot tell a typo from a
-  new choice. Whether a completion is a typo or a choice is the author's
-  judgement; no gate tells.
+  typo is corrected in the protocol itself where the field allows it: in a
+  prose field read before the run, an audit that judged that field is owed
+  again; in a field that says what the number is about — Terms, Data /
+  scope, Exclusions / filters, Unit — finalize holds the change until a
+  follow-up analysis audit judges the correction `resolved`. The question
+  stays as registered, a typo included, and so does a promise's sentence,
+  key or constant: the registration check holds every change to them and
+  cannot tell a typo from a new choice. Whether a completion is a typo or a
+  choice is the author's judgement; no gate tells.
 
 - **LAB-004 · Identifiers make the intent addressable.** *(was §2.A1a)* Every promise to
   the code carries an identifier in the protocol text, depending on its kind:
