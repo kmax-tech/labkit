@@ -97,6 +97,7 @@ from pathlib import Path
 
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
+from labkit.formats.protocol_history import correctable
 from labkit.formats.protocol_check import (
     CONCLUSION_LABEL,
     field_name,
@@ -445,8 +446,10 @@ def state_unchanged(record: Record, area: Path, text: str) -> bool:
 def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
     """The field F corrects in PROTOCOL, TEXT its text, as `field_name`
     gives it: F decided `fixed`, its place (`Finding.place`) PROTOCOL's
-    file name and a field label TEXT holds once (`named_field`). None
-    otherwise — a line number, a section or another file names no field.
+    file name and a field label TEXT holds once (`named_field`) that a
+    correction can release (`protocol_history.correctable`). None
+    otherwise — a line number, a section or another file names no field,
+    and the question has no correction in place.
     What a correction in place is bound to: a follow-up audit judges it on
     the field's change (`followup.earlier_corrections`), and finalize
     releases that change only on its `resolved` (`finalize.scope_changes`)."""
@@ -454,7 +457,7 @@ def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
     if f.status != "fixed" or at is None or at[0] != protocol.name:
         return None
     hit = named_field(text, at[1])
-    return hit.name if hit is not None else None
+    return hit.name if hit is not None and correctable(hit.label) else None
 
 
 def decision_digest(f: Finding) -> str:

@@ -25,6 +25,17 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **Question / hypothesis has no correction in place.** A finding placed
+  on the question, decided `fixed` and judged `resolved`, no longer
+  releases a changed question: it stands as registered, a typo included,
+  and a different question is a protocol of its own (probe 2026-11-02, F6:
+  "mean" → "median" was adopted on a `resolved`). One rule,
+  `protocol_history.correctable`, read by `findings.corrected_field`, the
+  scope hold and the decision's line; both now offer the correction route
+  only for a changed field it can release and name none for the question,
+  the head's parts or a promise
+  (`docs/notes/2026-11-02-registered-field-repair.md`).
+
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of
   `at_least` (the bar as written, whatever the null lane scores) and

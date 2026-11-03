@@ -25,7 +25,7 @@ showed three faults:
 
 **Solution.** One correction route, for every prose field the hold
 compares, with no list of field names (Question / hypothesis excepted by
-the decision of 2026-11-03 below, not built yet):
+the decision of 2026-11-03 below):
 
 - the scope hold compares the protocol as it stands with the first
   measurements too (`finalize.scope_changes`; the comparison is
@@ -80,7 +80,7 @@ action, the gate; Conclusion and code repair as twins, the restore),
 compared; restore, reflow and a Conclusion pass), `tests/test_findings.py`
 `CorrectedField`.
 
-## Decided 2026-11-03: where a correction ends (contract change, not built)
+## Decided 2026-11-03: where a correction ends (contract change, in part built)
 
 **Problem.** F6 of the repair-path probe
 ([note](2026-11-02-repair-path-probe.md)): Question / hypothesis "mean" →
@@ -189,6 +189,19 @@ apart from the incomplete registration); LAB-003's typo sentence; later,
 the follow-up auditor's instruction (`experiment-preflight.agent.md`: the
 deciding question above, and the evidence outside the field its `resolved`
 cites); CHANGELOG (behaviour, no format break).
+
+**Built.** The question's exception: `protocol_history.correctable`
+(`UNCORRECTABLE_FIELDS`), read by `findings.corrected_field` and by
+`finalize.correction_way`, the clause the scope hold and the decision's
+line give — the correction route only for a changed field it can release,
+the question standing as registered, nothing for the head's parts or a
+promise (the decision's line had offered the route for a changed promise
+too). Twins: `tests/test_end_to_end.py` `CorrectedDescription` (a changed
+question held with its `resolved`, its restore, a reflowed question, a
+description still offered the route), `tests/test_finalize.py`
+`CorrectionWay`, `tests/test_findings.py` `CorrectedField`. Open: the new
+run's release and the "measure again" guidance (F5), the agent guide's
+correction bullet, LAB-003's typo sentence, the auditor's instruction.
 
 **Not in this contract.** Showing a released correction in the report —
 today only finalize's note names it; noted separately, no new report

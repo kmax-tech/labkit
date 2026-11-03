@@ -611,7 +611,8 @@ class CountCommands(unittest.TestCase):
         self.record = written.pop() if len(written) == 1 else None
         return rc, out.getvalue(), sent[0] if sent else ""
 
-    def decide(self, record: Path, n: int, status: str, reason: str) -> None:
+    def decide(self, record: Path, n: int, status: str, reason: str) -> str:
+        """`labkit-audit AREA --decide N`: its output, the decision's line."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             rc = audit.main(
@@ -625,6 +626,7 @@ class CountCommands(unittest.TestCase):
                 ]
             )
         self.assertEqual(rc, 0, out.getvalue())
+        return out.getvalue()
 
     def withdraw(self, why: str, *more: str) -> tuple[int, str]:
         out, err = io.StringIO(), io.StringIO()
@@ -1035,6 +1037,59 @@ class CorrectedDescription(CountCommands):
         rc, out, _ = self.follow_up(warning, "resolved", "now 3 documents, as read")
         rc, out = self.lab.adopt(self.protocol, self.run_a)
         self.assertEqual(rc, 0, out)
+
+    QUESTION = "How many lines does a document of data/raw/docs hold on average?"
+    MEDIAN = "What is the median number of lines of a document of data/raw/docs?"
+
+    def asked(self, value: str) -> None:
+        self.lab.fill(self.protocol, "--force", f"Question / hypothesis={value}")
+
+    def audited_question(self) -> Path:
+        """The analysis audit of run A with one WARNING on the question."""
+        rc, out, _ = self.analysis(
+            "WARNING · PROTOCOL-lines.md:Question / hypothesis · the question asks "
+            "for the mean, the documents' lengths are skewed · the mean as asked · "
+            "LAB-050 Analysis audit before reporting · ask for the median\n"
+            "verdict: 0 blockers, 1 warnings, 0 notes"
+        )
+        self.assertEqual(rc, 1, out)
+        assert self.record is not None
+        return self.record
+
+    def test_a_changed_question_is_held_even_with_its_resolved(self):
+        warning = self.audited_question()
+        self.asked(self.MEDIAN)
+        line = self.decide(warning, 1, "fixed", "the question now asks for the median")
+        # the decision's line names only ways the gate takes
+        self.assertIn("held:", line)
+        self.assertIn("Question / hypothesis has no correction in place", line)
+        self.assertNotIn("misdescribing the unchanged run", line)
+        rc, out, _ = self.follow_up(warning, "resolved", "the question reads well")
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(self.HELD, out)
+        self.assertIn("Question / hypothesis has no correction in place", out)
+        self.assertNotIn("misdescribing the unchanged run", out)
+        # the way back: the question as registered passes
+        self.asked(self.QUESTION)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 0, out)
+
+    def test_the_twin_a_reflowed_question_is_no_change(self):
+        self.asked(self.QUESTION.replace(" a document ", "  a   document "))
+        self.assertIn("  a   document ", self.protocol.read_text(encoding="utf-8"))
+        rc, out, _ = self.analysis(self.clean)
+        self.assertEqual(rc, 0, out)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn(self.HELD, out)
+
+    def test_the_twin_a_changed_description_is_offered_the_correction_route(self):
+        self.describe(self.RIGHT)
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("Data / scope misdescribing the unchanged run", out)
+        self.assertNotIn("has no correction in place", out)
 
     def test_a_resolved_on_another_field_releases_this_one_not(self):
         warning = self.audited("WARNING", "Unit")

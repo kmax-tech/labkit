@@ -485,10 +485,7 @@ def scope_changes(
             f"is no correction: {restore}; or, {anew}"
         )
     else:
-        fix = (
-            f"{restore}; or, a field that misdescribed the unchanged run: "
-            f"{CORRECTION_ROUTE}; or, {anew}"
-        )
+        fix = f"{restore}{correction_way(now.held)}; or, {anew}"
     return [
         blocker(
             f"what the number is about changed after the first measurement "
@@ -508,6 +505,33 @@ CORRECTION_ROUTE = (
     "on that finding judged exactly this text — a fresh audit without that "
     "verdict releases nothing"
 )
+
+
+def correction_way(diffs: list[tuple[str, str, str]]) -> str:
+    """The clause of a hold on DIFFS (what, from, to) about correcting the
+    fields: the correction route for the SCOPE_FIELDS among them a
+    correction can release (`protocol_history.correctable`), named, and for
+    the others that they stand as registered; "" without a scope field —
+    the head's kind, `[kept]`, `[reference]` and a promise have no
+    correction. The hold here and the decision's line
+    (`audit_decisions.repair_hint`) offer it, so neither names a way the
+    gate refuses. Pure."""
+    scope = [what for what, _, _ in diffs if what in protocol_history.SCOPE_FIELDS]
+    fixable = [what for what in scope if protocol_history.correctable(what)]
+    fixed_as_registered = [what for what in scope if what not in fixable]
+    out = ""
+    if fixable:
+        out += (
+            f"; or, {', '.join(fixable)} misdescribing the unchanged run: "
+            f"{CORRECTION_ROUTE}"
+        )
+    if fixed_as_registered:
+        out += (
+            f"; {', '.join(fixed_as_registered)} has no correction in place — it "
+            "stands as registered, a typo included; a different question is a "
+            "protocol of its own"
+        )
+    return out
 
 
 @dataclass(frozen=True)
@@ -540,10 +564,11 @@ def scope_now(
     number is about (`protocol_history.first_measured_differences`,
     `scope_differences`), each difference sorted by whether a correction
     releases it (`resolved_corrections`): a difference in a field whose
-    correction RUN's covering follow-up judged `resolved`. Generic: any
-    prose field the hold compares is released that way, the head's kind,
-    `[kept]` and `[reference]` never — they name no field a finding can
-    place itself in. None without a difference. Raises RuntimeError when
+    correction RUN's covering follow-up judged `resolved`. Every prose field
+    the hold compares is released that way but for
+    `protocol_history.UNCORRECTABLE_FIELDS`; the head's kind, `[kept]` and
+    `[reference]` never — they name no field a finding can place itself in
+    (`protocol_history.correctable`). None without a difference. Raises RuntimeError when
     git fails."""
     firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
     text = protocol.read_text(encoding="utf-8")

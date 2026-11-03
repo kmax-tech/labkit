@@ -49,7 +49,7 @@ from labkit.formats.runs import (
 )
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
-from labkit.gates.finalize import CORRECTION_ROUTE, quoted_changes, shown_then
+from labkit.gates.finalize import correction_way, quoted_changes, shown_then
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
@@ -821,7 +821,9 @@ def repair_hint(
       follow-up audit's `resolved` on it releases that field
       (`finalize.resolved_corrections`). Else `held:` — finalize refuses
       the edit, a new measurement would carry it — with the way back, the
-      correction route and the new registration, never "measure again".
+      correction route where a changed field has one
+      (`finalize.correction_way`) and the new registration, never "measure
+      again".
       Agents rewrote the Unit on the audit's word, measured again on this
       line's word, and finalize refused the rewrite (area 17, 2026-11-02).
     - `next:` the code, the promise block or the registration changed
@@ -893,10 +895,9 @@ def repair_hint(
             f"registered — {quoted_changes(diffs)} — and finalize refuses it; a new "
             f"measurement would carry the change, not repair it. Restore {labels}"
             f"{shown_then(path, first, root)}, then decide the finding again "
-            f"(`limitation` with its effect on the claim, or `false-positive`); or, a "
-            f"field that misdescribed the unchanged run: {CORRECTION_ROUTE}; or, when "
-            f"the registration cannot be answered as written, "
-            + ways_out.register_anew(pid)
+            f"(`limitation` with its effect on the claim, or `false-positive`)"
+            f"{correction_way(diffs)}; or, when the registration cannot be answered "
+            f"as written, " + ways_out.register_anew(pid)
         )
     if not unchanged:
         return (
