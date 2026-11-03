@@ -6,6 +6,14 @@ changes only Stagekit documentation. This is the bounded follow-up to the
 whole-repository audit or a new scientific rule. No production code was
 changed by this review.
 
+## Consolidated review and work order
+
+The [combined repair plan](2026-11-03-maintainability-repair-plan.md) owns
+the current priorities and dispositions of these findings. It distinguishes
+reproduced defects from inspection candidates and records overlaps and
+contract decisions; the original observations below remain evidence for
+the inspected state.
+
 ## Findings
 
 ### M1 — medium: presentation text controls withdrawal order

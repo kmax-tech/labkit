@@ -5,7 +5,8 @@ in the standard and [workflow](../workflow.md). Proposals below do not
 change those rules. Status checked on 2026-11-03: B, A1, the repair-path
 fixes, both threshold templates and committed-record integrity are integrated
 in `e754b0c3`. The second-review duty stays; the proposed verdict grounds
-were not adopted. The bounded interface check below is complete; next is maintainability.
+were not adopted. The bounded interface check and both maintainability reviews are complete;
+next are the prioritized repairs in the [combined plan](2026-11-03-maintainability-repair-plan.md).
 
 ## Goal and evidence
 
@@ -319,12 +320,14 @@ comes after the behaviour is stable, not before B.
 
 Max requested this follow-up after the current simplification is complete.
 The four confirmed repair-path defects and the bounded interface check
-are complete. The [bounded review](2026-11-03-maintainability-review.md)
-found two concrete sources of drift: withdrawal order inferred from display
-text, and decision guidance diverging from the current measurement. Repair
-those in small steps before considering a broad module split.
+are complete. The [repair-guidance review](2026-11-03-maintainability-review.md)
+and [shared-rules review](2026-11-03-shared-rules-review.md) are also complete.
+Their [combined repair plan](2026-11-03-maintainability-repair-plan.md) owns
+the work order: omitted prompt/scope checks and malformed index handling
+first, withdrawal and decision guidance next, remaining candidates after
+reproduction. Shared findings are handled once; report-binding scope and
+legacy journal removal remain explicit decisions, not cleanup assumptions.
 
-Then review the resulting code for shared rules and removable special cases.
 Split large modules only along clear responsibilities. Keep tests that
 protect distinct failures; their size or overlapping coverage alone does
 not justify removal.

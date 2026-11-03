@@ -8,6 +8,14 @@ of the same day; both follow the
 "Review maintainability after the simplification". No production code was
 changed. Overlap: V3 here is that review's M1, V5 its M2.
 
+## Consolidated review and work order
+
+The [combined repair plan](2026-11-03-maintainability-repair-plan.md) owns
+the current priorities and dispositions of these findings. It distinguishes
+reproduced defects from inspection candidates and records overlaps and
+contract decisions; the original observations below remain evidence for
+the inspected state.
+
 ## Result
 
 21 findings, no case for a rebuild. The main pattern: one fact is checked
