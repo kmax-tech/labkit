@@ -11,6 +11,19 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **A run index that does not read is refused, not read around.**
+  `runs.tsv` is now checked as written wherever it is read
+  (`runlog.indexed_runs`: the late report registration, the handover's
+  account, `labkit-next`, the evidence hook) and written (the run's start,
+  `runlog reindex`): the current columns and every row whole. A row cut
+  short was skipped, so a measured run whose folder is gone counted as
+  not measured and a report could still be registered; an index with old
+  columns was read though no writer accepts it. Both now end in runlog's
+  refusal (`RunIndexError`, exit 2) naming the line; repair it by hand,
+  never delete it — it may be the only trace of a deleted run. Old
+  indexes are migrated with labkit 0.47, as before; no reader for them
+  is added. The last release that read around them is **0.107.0**.
+
 - **A registration field is read the same way by every stamp and
   comparison.** `protocol_check.field_values` reads each field by its
   name — case, a parenthesised gloss and † aside — with whitespace

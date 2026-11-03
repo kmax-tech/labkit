@@ -152,6 +152,23 @@ class Undecided(unittest.TestCase):
         rc, _, _ = self._stop(active=True)
         self.assertEqual(rc, 0)
 
+    def test_a_run_index_that_does_not_read_is_told_and_keeps_the_loop_guard(self):
+        """report-check raising on a damaged runs.tsv left the stop with
+        exit 2 on every turn, past `stop_hook_active` (review 2026-11-03,
+        S2): it is a finding of the stop, told once per turn."""
+        from unittest import mock
+
+        from labkit.gates import report_check
+        from labkit.run.runlog import RunIndexError
+
+        self._touch(self.area)
+        damaged = RunIndexError("runs.tsv:2: 1 of 8 tab-separated columns")
+        with mock.patch.object(report_check, "if_reported", side_effect=damaged):
+            rc, _, err = self._stop()
+            self.assertEqual(rc, 2)
+            self.assertIn("runs.tsv:2: 1 of 8 tab-separated columns", err)
+            self.assertEqual(self._stop(active=True)[0], 0)
+
     def test_an_unreadable_record_is_loud(self):
         (self.area / findings.DIR).mkdir()
         (self.area / findings.DIR / "2026-10-20T14-03-preflight.toml").write_text(

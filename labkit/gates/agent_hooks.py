@@ -171,7 +171,7 @@ from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.report_review import review_hint
 from labkit.formats.runs import run_path
-from labkit.run.runlog import indexed_runs
+from labkit.run.runlog import RunIndexError, indexed_runs
 from labkit.formats.repo import (
     EXPERIMENTS,
     PROTOCOL_NAME,
@@ -533,13 +533,30 @@ def gone_run_areas(repo: Path) -> list[Path]:
     return [
         area
         for area in sorted(p for p in base.iterdir() if p.is_dir())
-        if gone_runs(area)
+        if index_problems(area)
     ]
 
 
 def gone_runs(area: Path) -> list[str]:
-    """The runs AREA's run index lists whose directories are gone."""
+    """The runs AREA's run index lists whose directories are gone. Raises
+    RunIndexError on an index that does not read."""
     return [r for r in indexed_runs(area) if not run_path(area, r).is_dir()]
+
+
+def index_problems(area: Path) -> list[str]:
+    """What AREA's run index tells the evidence check: each run it lists
+    whose directory is gone, or why the index does not read — a damaged
+    index hides those runs, so it is told, never skipped."""
+    try:
+        gone = gone_runs(area)
+    except RunIndexError as exc:
+        return [exc.why]
+    return [
+        f"run {r}: its directory is gone — runs.tsv lists it as measured; never delete a "
+        f"run: an audit that read it holds the adoption, and only git, where "
+        f"it holds the run, restores its rows"
+        for r in gone
+    ]
 
 
 #: the post-change cache's key of an area's evidence state, before the area
@@ -559,12 +576,7 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
             *attempts.area_integrity(area).problems,
             *evidence.changes(area),
             *evidence.ignored(area),
-            *(
-                f"run {r}: its directory is gone — runs.tsv lists it as measured; never delete a "
-                f"run: an audit that read it holds the adoption, and only git, where "
-                f"it holds the run, restores its rows"
-                for r in gone_runs(area)
-            ),
+            *index_problems(area),
         ]
         key = f"{EVIDENCE_KEY}{area}"
         if not lines:
@@ -1139,9 +1151,13 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     if changed:
         # every changed path, not only a protocol: a script edited after the
         # answer was written back reopens the area's reported numbers
-        rc, out = _capture(
-            lambda: report_check.if_reported(changed, repo, staged=False)
-        )
+        try:
+            rc, out = _capture(
+                lambda: report_check.if_reported(changed, repo, staged=False)
+            )
+        except RunIndexError as exc:
+            # a run index that does not read: what is reported cannot be told
+            rc, out = 1, f"  {exc.why}"
         if rc != 0:
             print(
                 "report-check reports blockers for a number written back or "
@@ -1166,7 +1182,9 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
     area), whose registered report is not written though the area measured
     (`report_hold.missing_report`): the sentence with its way out. A head
     that does not read is left to the checks that hold it where it is
-    touched."""
+    touched; a run index that does not read is told, once per index
+    (`runlog.RunIndexError`): whether a measurement owes the report cannot
+    be told."""
     out: list[str] = []
     registering = report_hold.registering_protocols(paths, repo, staged=False)
     touched = list(areas_touched(paths, repo))
@@ -1183,6 +1201,12 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
                 )
             except (OSError, UnicodeError, protocol_block.BlockError):
                 continue  # held as a protocol where it is touched
+            except RunIndexError as exc:
+                # whether a measurement owes the report cannot be told; one
+                # line per index, not per protocol reading it
+                if exc.why not in out:
+                    out.append(exc.why)
+                continue
             if gap is not None:
                 out.append(f"{gap.text}. Next: {gap.fix}")
     return out

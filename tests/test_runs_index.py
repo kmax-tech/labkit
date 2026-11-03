@@ -60,13 +60,127 @@ class IndexRefusal(unittest.TestCase):
     def test_a_run_listed_twice_is_refused_old_columns_too(self):
         row = ["2026-10-27T10-00-00_ab12"] + [""] * (len(runlog.RUN_INDEX_COLS) - 1)
         index = Path("runs.tsv")
-        why = runlog.index_refusal(index, runlog.RUN_INDEX_COLS, [row, row])
+        why = runlog.index_refusal(index, [row, row])
         self.assertIn("more than once", why or "")
-        # one sentence for the run's start and reindex (audit 2026-10-28, H4)
-        self.assertIn(
-            "don't match this runlog", runlog.index_refusal(index, ["run_id"], []) or ""
+        self.assertIsNone(runlog.index_refusal(index, [row]))
+        # old columns: one sentence for every reader and writer, raised where
+        # the index is read (audit 2026-10-28, H4; review 2026-11-03, S2)
+        with tempfile.TemporaryDirectory() as d:
+            old = Path(d) / "runs.tsv"
+            old.write_text("run_id\n", encoding="utf-8")
+            with self.assertRaises(runlog.RunIndexError) as cm:
+                runlog._read_index(old)
+            self.assertIn("don't match this runlog", cm.exception.why)
+
+
+class IndexRead(unittest.TestCase):
+    """The index is read as it is written (`runlog._read_index`): the current
+    columns, every row whole. A short row is refused with its line, never
+    read as no measurement (review 2026-11-03, S2: a row holding only its
+    run id dropped a measured run from `has_measured`)."""
+
+    PID = "p-0123456789abcdef"
+
+    def area_with(self, d: str, *lines: str) -> Path:
+        area = Path(d)
+        (area / runlog.RUN_INDEX).write_text(
+            "".join(f"{ln}\n" for ln in lines), encoding="utf-8"
         )
-        self.assertIsNone(runlog.index_refusal(index, runlog.RUN_INDEX_COLS, [row]))
+        return area
+
+    def row(self, run_id: str) -> str:
+        return "\t".join(
+            [run_id, "abc1234", "01_measure.py", "{}", "{}", "{}", "", self.PID]
+        )
+
+    def test_a_valid_index_lists_a_run_whose_folder_is_gone(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self.area_with(
+                d,
+                "\t".join(runlog.RUN_INDEX_COLS),
+                self.row("2026-01-01T00-00-00_0001"),
+            )
+            self.assertEqual(
+                runlog.indexed_runs(area, self.PID), ["2026-01-01T00-00-00_0001"]
+            )
+            self.assertEqual(runlog.indexed_runs(area, "p-other"), [])
+
+    def test_a_short_row_is_refused_with_its_line(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self.area_with(
+                d,
+                "\t".join(runlog.RUN_INDEX_COLS),
+                self.row("2026-01-01T00-00-00_0001"),
+                "2026-01-01T00-00-00_0002",
+            )
+            for pid in (self.PID, None):
+                with self.subTest(pid=pid):
+                    with self.assertRaises(runlog.RunIndexError) as cm:
+                        runlog.indexed_runs(area, pid)
+                    self.assertIn("runs.tsv:3", str(cm.exception))
+                    self.assertIn("1 of 8 tab-separated columns", str(cm.exception))
+
+    def test_an_old_header_is_refused_as_the_writer_refuses_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self.area_with(d, "run_id\tprotocol_id", f"r1\t{self.PID}")
+            with self.assertRaises(runlog.RunIndexError) as cm:
+                runlog.indexed_runs(area, self.PID)
+            self.assertEqual(
+                cm.exception.why, runlog.header_refusal(["run_id", "protocol_id"])
+            )
+
+    def test_the_evidence_hook_tells_a_damaged_index_instead_of_failing(self):
+        from labkit.gates import agent_hooks
+
+        with tempfile.TemporaryDirectory() as d:
+            header = "\t".join(runlog.RUN_INDEX_COLS)
+            area = self.area_with(d, header, "2026-01-01T00-00-00_0002")
+            (line,) = agent_hooks.index_problems(area)
+            self.assertIn("runs.tsv:2", line)
+            # the twin: a whole row of a run whose folder is gone is told as gone
+            self.area_with(d, header, self.row("2026-01-01T00-00-00_0001"))
+            (line,) = agent_hooks.index_problems(area)
+            self.assertIn("2026-01-01T00-00-00_0001: its directory is gone", line)
+
+    def test_a_run_does_not_start_on_a_short_row(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self.area_with(
+                d, "\t".join(runlog.RUN_INDEX_COLS), "2026-01-01T00-00-00_0002"
+            )
+            (area / "PROTOCOL-x.md").write_text(
+                head(repeat_cost="low", promises=None)
+                + "\n- **Question / hypothesis:** how many?\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, r"runs\.tsv:2"):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with runlog.run("x", {}, area, run_kind="measurement"):
+                        pass
+            self.assertFalse((area / "runs").exists())
+
+    def test_an_empty_index_gets_its_header_before_the_first_row(self):
+        with tempfile.TemporaryDirectory() as d:
+            index = Path(d) / runlog.RUN_INDEX
+            index.write_text("", encoding="utf-8")
+            runlog._append_row(
+                index, [self.row("2026-01-01T00-00-00_0001")][0].split("\t")
+            )
+            header, rows = runlog._read_index(index)
+            self.assertEqual(header, runlog.RUN_INDEX_COLS)
+            self.assertEqual(len(rows), 1)
+
+    def test_reindex_refuses_a_short_row_too(self):
+        with tempfile.TemporaryDirectory() as d:
+            area = self.area_with(
+                d, "\t".join(runlog.RUN_INDEX_COLS), "2026-01-01T00-00-00_0002"
+            )
+            err = io.StringIO()
+            with (
+                contextlib.redirect_stderr(err),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(runlog.reindex(area), 2)
+            self.assertIn("runs.tsv:2", err.getvalue())
 
 
 class IgnoredByTheStamp(unittest.TestCase):

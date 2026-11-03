@@ -1306,3 +1306,24 @@ class ReportSetter(unittest.TestCase):
         (area / runlog.RUN_INDEX).unlink()
         completed_run(area, "2026-01-01T00-00-00_0002", run_kind="probe")
         self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
+
+    def test_a_short_index_row_refuses_the_registration_instead_of_hiding_a_run(self):
+        """runs.tsv truncated to the run id of a deleted measurement read as
+        no measurement, and the late registration passed (review 2026-11-03,
+        S2): refused, naming the line, the protocol unchanged."""
+        import shutil
+
+        from labkit.run import runlog
+
+        area, proto = self._area()
+        self._measurement(area, "2026-01-01T00-00-00_0001", metrics={"n": 1})
+        runlog.reindex(area)
+        shutil.rmtree(area / "runs")
+        index = area / runlog.RUN_INDEX
+        header, row = index.read_text(encoding="utf-8").splitlines()
+        index.write_text(f"{header}\n{row.split(chr(9))[0]}\n", encoding="utf-8")
+        before = proto.read_text(encoding="utf-8")
+        code, out = self._fill(proto, "report=REPORT.md")
+        self.assertEqual(code, 2, out)
+        self.assertIn("runs.tsv:2", out)
+        self.assertEqual(proto.read_text(encoding="utf-8"), before)

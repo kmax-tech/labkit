@@ -768,7 +768,8 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     - ADOPTABLE: the answering run, and nothing holds it.
 
     Prints nothing. Raises `protocol_block.BlockError` on a head that does
-    not read, `runs.RunConfigError` from a run's config.json."""
+    not read, `runs.RunConfigError` from a run's config.json,
+    `runlog.RunIndexError` from a run index that does not read."""
     pid = protocol_block.head(text).id
     if not pid:
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())

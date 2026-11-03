@@ -195,8 +195,9 @@ _INDEX_LOCK_TIMEOUT_S = 30.0
 
 
 @contextlib.contextmanager
-def _index_lock(base_dir: Path) -> Iterator[None]:
-    """Exclusive lock for every change to runs.tsv — append, reindex.
+def _index_lock(base_dir: Path, shared: bool = False) -> Iterator[None]:
+    """Exclusive lock for every change to runs.tsv — append, reindex; SHARED
+    for a reading (`_read_index_now`), so no reader sees a row half appended.
 
     Without it a reindex and a finishing run race: one appends while the
     other reads, and a row lands twice or not at all. flock, not a lock
@@ -210,7 +211,9 @@ def _index_lock(base_dir: Path) -> Iterator[None]:
     try:
         while True:
             try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(
+                    fd, (fcntl.LOCK_SH if shared else fcntl.LOCK_EX) | fcntl.LOCK_NB
+                )
                 break
             except OSError:
                 if time.monotonic() - t0 >= _INDEX_LOCK_TIMEOUT_S:
@@ -255,7 +258,7 @@ def index_row(
 def _append_row(index: Path, row: list[str]) -> None:
     """One row onto the run index, header created if absent. Callers hold
     the index lock — header creation reads the file too."""
-    if not index.exists():
+    if not index.exists() or index.stat().st_size == 0:
         index.write_text("\t".join(RUN_INDEX_COLS) + "\n", encoding="utf-8")
     with index.open("a", encoding="utf-8") as f:
         f.write("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row) + "\n")
@@ -265,16 +268,31 @@ def _append_row(index: Path, row: list[str]) -> None:
 RUN_INDEX = "runs.tsv"
 
 
+class RunIndexError(console.Refused, ValueError):
+    """A run index that does not read as written (`_read_index`): old
+    columns or a row without all of them. WHY names the file, the line
+    where there is one, and the way out; a command ends on it as runlog's
+    refusal (`console.exit_with`), exit 2."""
+
+    def __init__(self, why: str) -> None:
+        super().__init__("runlog", why)
+
+    def __str__(self) -> str:
+        return self.why
+
+
 def header_refusal(header: list[str]) -> str | None:
-    """Why a run index with HEADER may not be appended to, or None: columns
-    other than RUN_INDEX_COLS — appended to, an old-format index would not
-    error, its columns would shift silently. One sentence for the run's
-    start (`_check_run_index`) and `reindex` (`index_refusal`)."""
+    """Why a run index with HEADER may not be read or appended to, or None:
+    columns other than RUN_INDEX_COLS — appended to, an old-format index
+    would not error, its columns would shift silently; read, its runs would
+    be taken from the wrong column. The sentence `_read_index` raises for
+    every reader and writer."""
     if not header or header == RUN_INDEX_COLS:
         return None
     return (
         f"{RUN_INDEX} columns {header} don't match this runlog "
-        f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21. "
+        f"({RUN_INDEX_COLS}) — an index written by labkit before 0.21, or a "
+        f"damaged first line. "
         "Migrate it with labkit 0.47 (`runlog migrate-index <area>`, which "
         "keeps every row verbatim), then come back; appending without it "
         "would shift columns silently."
@@ -282,16 +300,13 @@ def header_refusal(header: list[str]) -> str | None:
 
 
 def _check_run_index(base_dir: Path) -> None:
-    """Refuse to run against a run index of other columns (`header_refusal`),
-    before the run, with the migration spelled out. Reads the header line
-    only. Raises RuntimeError."""
-    index = base_dir / RUN_INDEX
-    if not index.exists():
-        return
-    with index.open(encoding="utf-8") as f:
-        why = header_refusal(f.readline().rstrip("\n").split("\t"))
-    if why is not None:
-        raise RuntimeError(why)
+    """Refuse to run against a run index that does not read (`_read_index`:
+    other columns, a row cut short), before the run, with its way out.
+    Raises RuntimeError."""
+    try:
+        _read_index_now(base_dir / RUN_INDEX)
+    except RunIndexError as exc:
+        raise RuntimeError(exc.why) from exc
 
 
 def _runs_held(path: Path) -> set[str] | None:
@@ -940,32 +955,62 @@ def _require_no_open_twin(base_dir: str | Path) -> None:
 def indexed_runs(base_dir: str | Path, protocol_id: str | None = None) -> list[str]:
     """The run ids the area's run index lists for PROTOCOL_ID (every one when
     None), in index order — the runs measured to the end, whether or not
-    their directories still stand. Reads without the lock (a row is
-    appended whole); [] without an index."""
-    header, rows = _read_index(Path(base_dir) / RUN_INDEX)
-    if not header:
-        return []
-    at = {name: i for i, name in enumerate(header)}
-    if "run_id" not in at or "protocol_id" not in at:
-        raise ValueError(
-            f"{Path(base_dir) / RUN_INDEX}: no run_id or protocol_id column"
-        )
-    return [
-        r[at["run_id"]]
-        for r in rows
-        if protocol_id is None
-        or (len(r) > at["protocol_id"] and r[at["protocol_id"]] == protocol_id)
-    ]
+    their directories still stand. Reads under the shared lock
+    (`_read_index_now`); [] without an index. Raises RunIndexError on an
+    index that does not read (`_read_index`): a short row is no evidence of
+    no measurement."""
+    _, rows = _read_index_now(Path(base_dir) / RUN_INDEX)
+    run_at, pid_at = RUN_INDEX_COLS.index("run_id"), RUN_INDEX_COLS.index("protocol_id")
+    return [r[run_at] for r in rows if protocol_id is None or r[pid_at] == protocol_id]
 
 
 def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
-    """(header, rows) of the run index. Callers hold the lock."""
+    """(header, rows) of the run index INDEX, checked as written: the
+    header RUN_INDEX_COLS (`header_refusal`), every row all of its columns;
+    blank lines are skipped. The one check its readers (`indexed_runs`) and
+    writers (the run's start, `reindex`) share. ([], []) without a file or
+    with an empty one. Raises RunIndexError naming the line. A writer holds
+    the lock."""
     if not index.exists():
         return [], []
     lines = index.read_text(encoding="utf-8").splitlines()
     if not lines:
         return [], []
-    return lines[0].split("\t"), [ln.split("\t") for ln in lines[1:] if ln]
+    header = lines[0].split("\t")
+    why = header_refusal(header)
+    if why is not None:
+        raise RunIndexError(why)
+    rows: list[list[str]] = []
+    for n, line in enumerate(lines[1:], start=2):
+        if not line:
+            continue
+        row = line.split("\t")
+        if len(row) != len(RUN_INDEX_COLS):
+            # the index may be the only trace of a run whose folder is gone
+            # (`indexed_runs`): read short, it hid a measurement (review
+            # 2026-11-03, S2); dropped, the trace is lost
+            raise RunIndexError(
+                f"{index}:{n}: {len(row)} of {len(RUN_INDEX_COLS)} tab-separated "
+                f"columns ({', '.join(RUN_INDEX_COLS)}) — a row cut short or run "
+                f"together. Repair the line by hand: run_id and protocol_id say "
+                f"which protocol was measured; the other columns may be `{{}}` "
+                f"(data, config, metrics) or empty, or copied from runs/<run_id>/ "
+                f"where that folder still stands. Never delete a row that names a "
+                f"run: it may be the only trace of a run whose folder is gone "
+                f"(`runlog reindex` rebuilds rows only for folders that stand)"
+            )
+        rows.append(row)
+    return header, rows
+
+
+def _read_index_now(index: Path) -> tuple[list[str], list[list[str]]]:
+    """`_read_index` of INDEX under the shared lock, for a reader that holds
+    no lock: a row a finishing run appends is read whole or not at all.
+    ([], []) without a file, and then no lock file is made."""
+    if not index.exists():
+        return [], []
+    with _index_lock(index.parent, shared=True):
+        return _read_index(index)
 
 
 @dataclass(frozen=True)
@@ -981,13 +1026,9 @@ class Unindexed:
     no_record: list[str]  # folders under runs/ without config.json: no run
 
 
-def index_refusal(index: Path, header: list[str], rows: list[list[str]]) -> str | None:
-    """Why the run index INDEX (its HEADER and ROWS) may not be appended to,
-    or None: old columns (`header_refusal`), or a run id listed more than
-    once."""
-    why = header_refusal(header)
-    if why is not None:
-        return why
+def index_refusal(index: Path, rows: list[list[str]]) -> str | None:
+    """Why the run index INDEX (its ROWS, as `_read_index` checked them)
+    may not be appended to, or None: a run id listed more than once."""
     seen: dict[str, int] = {}
     for row in rows:
         if row:
@@ -1045,13 +1086,17 @@ def reindex(base_dir: Path) -> int:
     A row that exists stays untouched. Only runs with both completion
     markers are indexed; a run whose metadata cannot be read (damaged, or
     written before schema 4) is reported, never indexed — exit 2. An index
-    with old columns or a run listed twice is refused (`index_refusal`),
-    exit 2.
+    that does not read (`_read_index`: old columns, a row cut short) or
+    lists a run twice (`index_refusal`) is refused, exit 2.
     """
     index = base_dir / RUN_INDEX
     with _index_lock(base_dir):
-        header, rows = _read_index(index)
-        why = index_refusal(index, header, rows)
+        try:
+            _, rows = _read_index(index)
+        except RunIndexError as exc:
+            console.refuse(exc.tool, exc.why)
+            return 2
+        why = index_refusal(index, rows)
         if why is not None:
             console.refuse("runlog", why)
             return 2

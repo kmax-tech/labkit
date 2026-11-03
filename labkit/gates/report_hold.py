@@ -464,7 +464,8 @@ def has_measured(area: Path, pid: str) -> bool:
     whose config cannot be read counts, as `report_check.adoption_state`
     counts it: it may be one. What a registered report owes from
     (`missing_report`) and what binds the report registered before it
-    (`protocol_fill`)."""
+    (`protocol_fill`). Raises `runlog.RunIndexError` on a run index that
+    does not read: whether a deleted run was measured cannot be told."""
     taken, rest = bound_runs(area, pid)
     ours = [f for f in rest if f.binding.id == pid or f.state == UNREADABLE]
     if any(is_measurement(f) for f in [*taken, *ours]):
@@ -658,7 +659,8 @@ def missing_report(
     (reference pilot 2026-11-01); a report deleted after the adoption passed
     the commit, report-check and labkit-next (probe 2026-11-02,
     docs/notes/2026-11-02-repair-path-probe.md). Raises
-    `protocol_block.BlockError` on a head that does not read."""
+    `protocol_block.BlockError` on a head that does not read,
+    `runlog.RunIndexError` on a run index that does not read (`has_measured`)."""
     head = protocol_block.head(text)
     if head.report is None or not head.id:
         return None
