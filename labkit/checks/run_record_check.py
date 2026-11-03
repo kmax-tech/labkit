@@ -36,6 +36,7 @@ from labkit.formats.scope_sha import (
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block
+from labkit.formats.data_manifest import MANIFEST_NAME, ManifestError, parse_manifest
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.runs import (
     OutputEntry,
@@ -63,6 +64,7 @@ from labkit.formats.repo import (
     git_run,
     own_path,
     shown,
+    text_at,
 )
 
 
@@ -457,8 +459,11 @@ def provenance_findings(
     for it, and the bytes there now give that checksum (`pinned_source`,
     the standard's Fixed inputs: large or protected data stay out of the
     repository, which holds their source or access route, version and
-    checksum). PINNED says so per source; the bytes changed since the run
-    are a blocker. Raises GitError when git cannot list a directory
+    checksum); or named, each untracked file with its sha256, in a tracked
+    `MANIFEST.sha256` at or above the source (`_manifest_finding`), every
+    file matching its line and the source the bytes the run read. PINNED
+    says so per source; bytes changed since the run, or unlike their
+    manifest line, are a blocker. Raises GitError when git cannot list a directory
     source's tracked files or say whether an untracked source is ignored
     (`_ignore_rules`): finalize then ends in that error, not in a blocker
     with a way out that may not lead out."""
@@ -525,6 +530,9 @@ def _source_finding(
         return None, None
     held = pinned_source(source, sha, data_scope)
     if held is None:
+        named = _manifest_finding(repo, area, source, untracked, sha)
+        if named is not None:
+            return named
         return _untracked_source(repo, source, untracked, sha), None
     if held == PINNED:
         return None, (
@@ -558,6 +566,92 @@ def pinned_source(source: Path, sha: object, data_scope: str) -> str | None:
     if now == sha:
         return PINNED
     return f"its sha256 is now {now}"
+
+
+def _source_manifests(repo: Path, source: Path) -> list[Path]:
+    """The `MANIFEST.sha256` files git tracks (the index holds them) in
+    SOURCE's directory — SOURCE itself for a directory — and each one above
+    it up to REPO, nearest first. Raises GitError as `git_run` does."""
+    start = source.resolve() if source.is_dir() else own_path(source).parent
+    dirs = [d for d in (start, *start.parents) if d == repo or repo in d.parents]
+    return [
+        d / MANIFEST_NAME for d in dirs if text_at(repo, d / MANIFEST_NAME) is not None
+    ]
+
+
+def _manifest_finding(
+    repo: Path, area: Path, source: Path, untracked: list[Path], sha: object
+) -> tuple[GateFinding | None, str | None] | None:
+    """(blocker, note) for a SOURCE whose UNTRACKED files the tracked
+    manifests at or above it name (`_source_manifests`, read as the index
+    holds them; `data_manifest`), None when they name none of them — the
+    source then falls to `_untracked_source`. A blocker when one is
+    unnamed, when a named file's sha256 now differs from its line (every
+    one is read again), when the source's bytes are not the ones the run
+    recorded (SHA), and when a manifest does not read; else the note that
+    the source is named and unchanged."""
+    manifests = _source_manifests(repo, source)
+    named: dict[Path, str] = {}
+    for m in manifests:
+        try:
+            entries = parse_manifest(text_at(repo, m) or "", shown(m, repo))
+        except ManifestError as exc:
+            return (
+                blocker(
+                    f"{exc} — finalize cannot tell which files it names",
+                    fix=f"correct the line, check it from the repository root "
+                    f"(`shasum -a 256 -c {shown(m, repo)}`) and commit it "
+                    f"(`git add {shlex.quote(str(m))}`); finalize reads it as git "
+                    f"holds it",
+                ),
+                None,
+            )
+        for rel, digest in entries.items():
+            named.setdefault(own_path(repo / rel), digest)
+    files = [own_path(f) for f in untracked]
+    if not any(f in named for f in files):
+        return None
+    where = ", ".join(shown(m, repo) for m in manifests)
+    unnamed = [f for f in files if f not in named]
+    if unnamed:
+        names = ", ".join(shown(f, repo) for f in unnamed[:NAMED_UNTRACKED])
+        more = ", …" if len(unnamed) > NAMED_UNTRACKED else ""
+        return (
+            blocker(
+                f"source {source}: {len(unnamed)} file(s) are neither tracked nor "
+                f"named in {where} ({names}{more}) — the number cannot be "
+                f"re-derived from the repository",
+                fix=f"add their sha256 to {where} (`shasum -a 256` from the "
+                f"repository root) and commit it",
+            ),
+            None,
+        )
+    changed = [f for f in files if file_digest(f) != named[f]]
+    if changed:
+        names = ", ".join(shown(f, repo) for f in changed[:NAMED_UNTRACKED])
+        more = ", …" if len(changed) > NAMED_UNTRACKED else ""
+        return (
+            blocker(
+                f"source {source}: {len(changed)} file(s) are not the bytes {where} "
+                f"names ({names}{more})",
+                fix=f"restore them from the copy the manifest describes, or "
+                f"{measure_anew(area)} and refresh the manifest with the data",
+            ),
+            None,
+        )
+    if not isinstance(sha, str) or source_digest(source)[: len(sha)] != sha:
+        return (
+            blocker(
+                f"source {source} matches {where}, but not the bytes the run read "
+                f"(the run recorded sha256 {sha})",
+                fix=f"restore the data the run read, or {measure_anew(area)}",
+            ),
+            None,
+        )
+    return None, (
+        f"source {source} lies outside git, named file by file in {where}: "
+        f"each sha256 holds, and the bytes are the ones the run read"
+    )
 
 
 #: the command that ends an area without a number while finalize stays
@@ -632,7 +726,9 @@ def _untracked_source(
     pin = (
         f"large or protected data stay out of git: name the source or access "
         f"route and version in the protocol's Data / scope beside the checksum "
-        f"this run recorded, `sha256 {sha}` — finalize then holds the file to it"
+        f"this run recorded, `sha256 {sha}` — finalize then holds the file to it; "
+        f"or list each file with its sha256 in a tracked `{MANIFEST_NAME}` at or "
+        f"above it, paths from the repository root"
         if isinstance(sha, str)
         else "large or protected data stay out of git, pinned by the checksum a run "
         "records: this run recorded none, so pass the source in `data=` and measure "

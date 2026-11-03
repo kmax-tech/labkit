@@ -327,7 +327,9 @@ result is only a plan.
   field. `finalize` holds that part to the run. Commit small inputs that can legally be shared. For large or
   protected data, name the source, the access route and the version beside
   the `sha256` the run recorded for it (finalize names it): `finalize` then
-  holds the file outside git to that checksum. Look
+  holds the file outside git to that checksum. Many files kept on disk
+  (a model-answer cache, archives) may instead be listed with their sha256
+  in a committed `MANIFEST.sha256` above them; finalize checks each one. Look
   at the prepared file before the run. Otherwise a format bug and a model
   failure look the same.
 - **Data profile:** owed whenever a model is named. The prompt skeleton's

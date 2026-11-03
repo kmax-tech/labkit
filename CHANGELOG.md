@@ -329,6 +329,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Added
 
+- **finalize accepts data named in a tracked sha256 manifest.** A source
+  outside git passes station 5 when every file of it the run read is
+  listed with its sha256 in a `MANIFEST.sha256` that git tracks, in the
+  source's directory or above it (`<sha256>  <path>` as `shasum -a 256`
+  writes it, paths from the repository root; `formats/data_manifest`).
+  finalize reads the manifest as the index holds it, hashes each listed
+  file again and blocks on a file the manifest lacks, a file unlike its
+  line, a source whose bytes are not the ones the run recorded, and a
+  manifest line that does not read. The two routes before stay: commit
+  the file, or name the run's checksum in Data / scope. A lab that keeps
+  its LLM cache and dataset archives on disk (fallacy-detection, rule 8)
+  needs neither a `git add -f` of thousands of files nor one checksum per
+  source in the protocol.
+
 - **A public API, held by tests.** `docs/architecture.md`, section
   "Public API", lists what a lab repo may rely on: `llm.complete`,
   `complete_many`, `complete_response`, `resolve`, `spec`, `identity`,

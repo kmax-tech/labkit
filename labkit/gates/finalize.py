@@ -1108,7 +1108,8 @@ def check_provenance(
 ) -> None:
     """Station 5: the run's source frozen in the run, source and output
     tracked in git — or a source outside git pinned by the checksum the run
-    recorded, which the protocol TEXT's Data / scope names."""
+    recorded, which the protocol TEXT's Data / scope names, or named file
+    by file in a tracked `MANIFEST.sha256` (`provenance_findings`)."""
     # one copy or none: a Data / scope written twice is refused at station 4
     hit = named_field(text, data_counts.FIELD)
     b, w, pinned = provenance_findings(area, answering_run, hit.value if hit else "")

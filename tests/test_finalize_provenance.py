@@ -292,6 +292,110 @@ class Provenance(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("is not the bytes the run read", out)
 
+    def _manifested(self, *, track: bool = True, digest: str | None = None) -> None:
+        """An untracked source the run recorded with its real checksum, a
+        Data / scope that names no checksum, and data/MANIFEST.sha256
+        naming the source with DIGEST (its real sha256 by default) —
+        committed when TRACK, the paths from the repository root as
+        `shasum -a 256` writes them."""
+        sha = provenance.source_digest(self.src)[:RECORD_SHA_CHARS]
+        protocol = SHORT + "- **Data / scope:** cases.jsonl, kept outside git\n"
+        self._run(
+            protocol,
+            {"cases": {"path": str(self.src), "rows": 1, "sha256": sha}},
+            commit=False,
+        )
+        manifest = self.repo / "data" / "MANIFEST.sha256"
+        manifest.write_text(
+            f"{digest or scope_sha.file_digest(self.src)}  data/raw/cases.jsonl\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "experiments", *([str(manifest)] if track else []))
+        _git(self.repo, "commit", "-qm", "x")
+
+    def test_a_source_named_in_a_tracked_manifest_passes(self):
+        """A lab keeps its LLM cache and archives outside git, named in git
+        by a sha256 manifest (fallacy-detection, rule 8)."""
+        self._manifested()
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("named file by file in data/MANIFEST.sha256", out)
+
+    def test_the_twin_a_manifest_git_does_not_track_names_nothing(self):
+        self._manifested(track=False)
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("not tracked in git", out)
+        self.assertIn("MANIFEST.sha256", out, "the way out names the manifest route")
+
+    def test_the_manifest_is_read_as_git_holds_it(self):
+        self._manifested(digest="0" * 64)
+        right = scope_sha.file_digest(self.src)
+        (self.repo / "data" / "MANIFEST.sha256").write_text(
+            f"{right}  data/raw/cases.jsonl\n", encoding="utf-8"
+        )  # right in the tree, not staged
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("not the bytes data/MANIFEST.sha256 names", out)
+
+    def test_a_file_unlike_its_manifest_line_blocks(self):
+        self._manifested()
+        self.src.write_text('{"id": 2}\n', encoding="utf-8")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("1 file(s) are not the bytes data/MANIFEST.sha256 names", out)
+
+    def test_a_manifest_refreshed_after_the_run_does_not_cover_other_bytes(self):
+        self._manifested()
+        self.src.write_text('{"id": 2}\n', encoding="utf-8")
+        manifest = self.repo / "data" / "MANIFEST.sha256"
+        manifest.write_text(
+            f"{scope_sha.file_digest(self.src)}  data/raw/cases.jsonl\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", str(manifest))
+        _git(self.repo, "commit", "-qm", "refresh")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("but not the bytes the run read", out)
+
+    def test_a_directory_with_a_file_the_manifest_lacks_blocks(self):
+        geo, data = self._directory_source()
+        data["geo"]["sha256"] = provenance.source_digest(geo)[:RECORD_SHA_CHARS]
+        self._run(SHORT, data, commit=False)
+        manifest = self.repo / "data" / "MANIFEST.sha256"
+        listed = ("SOURCE.md", "roads.geojson")
+        manifest.write_text(
+            "".join(
+                f"{scope_sha.file_digest(geo / n)} *data/raw/geo/{n}\n" for n in listed
+            ),
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "experiments", str(manifest))
+        _git(self.repo, "commit", "-qm", "x")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("1 file(s) are neither tracked nor named", out)
+        self.assertIn("data/raw/geo/area.geojson", out)
+        with manifest.open("a", encoding="utf-8") as fh:
+            fh.write(f"\n{scope_sha.file_digest(geo / 'area.geojson')}  ")
+            fh.write("data/raw/geo/area.geojson\n")
+        _git(self.repo, "add", str(manifest))
+        _git(self.repo, "commit", "-qm", "the third file")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
+
+    def test_a_manifest_line_that_does_not_read_blocks(self):
+        self._manifested()
+        manifest = self.repo / "data" / "MANIFEST.sha256"
+        with manifest.open("a", encoding="utf-8") as fh:
+            fh.write("deadbeef data/raw/other.jsonl\n")
+        _git(self.repo, "add", str(manifest))
+        _git(self.repo, "commit", "-qm", "a bad line")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("data/MANIFEST.sha256:2: not `<sha256 hex>  <path>`", out)
+
     def test_the_printed_handover_is_the_one_agents_md_gives(self):
         agents = (PACKAGE_DIR / "templates" / "AGENTS.md.template").read_text(
             encoding="utf-8"

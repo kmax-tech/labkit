@@ -201,7 +201,10 @@ Prepare inputs with a script, `scripts/00_prepare.py`, into
 `data/prepared/`. Put small inputs into git if you can legally
 share them. For large or protected data, commit the source or access route
 and the version, with the `sha256` the run recorded, into Data / scope:
-finalize holds the file outside git to that checksum. To resume a run, use
+finalize holds the file outside git to that checksum. A lab that keeps many
+such files on disk instead lists each with its sha256 in a committed
+`MANIFEST.sha256` above them (paths from the repository root, as
+`shasum -a 256` writes them); finalize checks every file against it. To resume a run, use
 the same measurement command.
 
 ### 4. Finalize, audit and decide
