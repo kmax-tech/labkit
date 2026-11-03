@@ -2328,6 +2328,15 @@ Vermutungen: [Notiz](docs/notes/2026-11-03-finalize-hold-missing-once.md).
 Nächster Schritt als eigener Auftrag: Reihenfolge und Zeitstempel der
 beiden Messungen kontrolliert variieren — kein sleep, kein Retry.
 
+### Ungeklärt: Hook-Ablehnung ohne Log (2026-11-03)
+
+Der Pre-Commit-Hook lehnte das Amend der S2-Plannotiz (Branch
+`s2-run-index`, Code `7c40d0a2`) einmal ab; mitgeschnitten war nur die
+letzte Zeile („commit refused“), welcher Prüfschritt scheiterte, ist
+unbekannt. Volle Suite direkt danach und der zweite Hook-Lauf grün, Last
+um 12. Keinem bekannten Fehler zugeordnet — ohne Log nicht zuordenbar.
+Seither behält jeder Prüflauf vollständige Ausgabe und Exitcode.
+
 ### Phase-2-Reste (2026-10-27)
 
 Entschieden 2026-10-27 (Autor), umgesetzt:
