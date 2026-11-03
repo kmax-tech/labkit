@@ -146,9 +146,10 @@ probe's refusals are the same before and after).
 
 | Point | Commit | What changed |
 |---|---|---|
-| `labkit-next` names "measure" over an uncommitted registration | `e8e2fd19` | where the first hold's way out is a measurement before any run, `labkit-next` asks runlog's start gate (`start_check.measurement_refusal`) and names its refusal and first step |
-| case 5 without withdrawing: a renamed output and a third measurement | `89bf3c42` | `report_check.chain_gaps` returns the declaration the later holds withdraw first (`held_declaration`); `labkit-next` names that withdrawal alone, `--into` the registered report, then itself again — the run already measured is adopted |
-| a decided correction: three ways, the way back first, no follow-up command | `d042efb6` | `finalize.awaiting_followup` reads which corrections a follow-up of the state now is shown (as `audit_prompt.earlier_of`); where every held field has one, the scope hold names that follow-up first |
+| `labkit-next` names "measure" over an uncommitted registration | `ca971576` | where the first hold's way out is a measurement before any run, `labkit-next` asks runlog's start gate (`start_check.measurement_refusal`) and names its refusal and first step |
+| case 5 without withdrawing: a renamed output and a third measurement | `43f043c5` | `report_check.chain_gaps` returns the declaration the later holds withdraw first (`held_declaration`); `labkit-next` names that withdrawal alone, `--into` the registered report, then itself again — the run already measured is adopted |
+| a decided correction: three ways, the way back first, no follow-up command | `58d6de14` | `finalize.awaiting_followup` reads which corrections a follow-up of the state now is shown (as `audit_prompt.earlier_of`); where every held field has one, the scope hold names that follow-up first |
+| the gates' withdrawal (`withdraw the adoption first`) without `--into`: the withdrawn run's result block stayed in the registered report, and the commit refused it | `e6297f1d` | `repo.withdraw_command`, the one builder every gate's withdrawal hint uses, reads the head and adds `--into` its registered report |
 
 Not repaired here: the progress account of a superseded run in the final
 report; a withdrawal's "next" without "measure again" after a code repair
