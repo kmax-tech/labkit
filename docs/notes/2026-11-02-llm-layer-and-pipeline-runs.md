@@ -348,6 +348,14 @@ against one real second case, not in advance.
    builds on it (decision 2). `lanes` stays internal: it is the stamped
    areas' mechanics and changes with the standard. The list grows when a lab
    needs a name; taking one back would break labs, so it starts short.
+4. **One owner per concern** (2026-11-03, Max). labkit owns question and
+   protocol → run → reported number, the gate before the run, and
+   provenance. The framework's `RunIndex` owns finding, grepping and
+   comparing runs and outputs, and the pins. The framework's own tests own
+   its code; labkit records which commit ran. labkit's code audit covers the
+   experiment area only — config, topic stages, prompts — which the
+   experiment holds itself (section "The experiment holds its config and
+   prompts"). The table and the measurement: open decision 4 below.
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -360,7 +368,7 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1, 2, 3 and 10 are decided above.
+The numbers stay as first written; 1, 2, 3, 4 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
