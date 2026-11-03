@@ -336,10 +336,18 @@ against one real second case, not in advance.
    - the spec fields that change the answer and `identity` leaves out:
      claude-cli `input` (`harness` adds the agent's system prompt),
      openai `reasoning`, ollama `num_ctx`;
-   - the prompt text, the parser id and the sampling values (temperature,
-     `max_tokens`, seed).
+   - the prompt text and the sampling values (temperature, `max_tokens`,
+     seed).
 
-   Not in the key: alias, endpoints, `api_key`/`api_key_env`. An ollama
+   Revised 2026-11-03 (Max, after review): the cache stores the model's
+   **raw response** — text, structured content, reasoning trace, finish
+   reason, usage, endpoint — and the caller parses it. The parser id
+   therefore left the key: the old cache stored parsed results and could not
+   see a changed parser (`fallacy-detection/src/parsers/base.py:81`); a
+   corrected parser now applies at once. A hit carries its origin and the
+   original usage and adds no new usage.
+
+   Not in the key: alias, endpoints, `api_key`/`api_key_env`, parser. An ollama
    model whose digest reads `unavailable` is not cached — the weights it
    would stand for are unknown; the call says so instead of caching.
 3. **The public API starts small** (2026-11-03, Max): `llm.complete`,
