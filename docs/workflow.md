@@ -96,9 +96,13 @@ committed before the first measurement. A valid report draft can be
 committed with the registration before any measurement; it owes no result
 block yet. After measurement, save its progress account. Removing or moving that bound path
 later holds release: restore it, or explicitly hand over and register anew.
-`--force` does not bypass the post-measurement restriction. At `high`, pass
-preflight, decide its audit, set the matching freeze evidence and freeze
-and commit the protocol. The new report-path binding applies only at `low`.
+`--force` does not bypass the binding. At both `low` and `high`, the first
+measurement's commit fixes the report path, including the absence of one:
+a report cannot be registered later in the same protocol. The setter and
+gates use the same comparison; `--force` can restore the original path but
+cannot redirect it. At `high`, additionally pass preflight, decide its
+audit, set the matching freeze evidence and freeze the protocol. Freeze
+is not a substitute for report-path commitment.
 
 See [the promise format](promise-block.md#the-block) for technical fields
 and [the chain](architecture.md#the-chain) for registration binding. A missed

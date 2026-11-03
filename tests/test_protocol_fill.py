@@ -11,6 +11,7 @@ from labkit.formats.runs import RunKind
 import contextlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -1206,6 +1207,28 @@ class ReportSetter(unittest.TestCase):
         )
         return area, proto
 
+    def _measurement(
+        self, area: Path, name: str, *, metrics: dict[str, int] | None = None
+    ) -> None:
+        """Record a measurement against a real committed registration."""
+        from protocol_fixture import completed_run, head_commit, scope_file
+
+        scope_file(area)
+        root = area.parents[1]
+        for args in (
+            ("init", "-q"),
+            ("config", "user.email", "t@t"),
+            ("config", "user.name", "t"),
+            ("add", "-A"),
+            ("commit", "-qm", "registration"),
+        ):
+            subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+        run = completed_run(area, name, metrics=metrics)
+        config = run / "config.json"
+        value = json.loads(config.read_text(encoding="utf-8"))
+        value.update(head_commit(root))
+        config.write_text(json.dumps(value), encoding="utf-8")
+
     def _fill(self, proto: Path, *args: str) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
@@ -1248,17 +1271,15 @@ class ReportSetter(unittest.TestCase):
                 self.assertEqual(proto.read_text(encoding="utf-8"), before)
 
     def test_after_the_first_measurement_no_fill_moves_the_bound_report(self):
-        from protocol_fixture import completed_run
-
         area, proto = self._area()
         self._fill(proto, "report=REPORT.md")
-        completed_run(area, "2026-01-01T00-00-00_0001")
+        self._measurement(area, "2026-01-01T00-00-00_0001")
         before = proto.read_text(encoding="utf-8")
         for args in (("report=OTHER.md",), ("report=OTHER.md", "--force")):
             with self.subTest(args=args):
                 code, out = self._fill(proto, *args)
                 self.assertEqual(code, 2)
-                self.assertIn("has measured", out)
+                self.assertIn("before its first measurement", out)
                 self.assertIn("--handover", out)
                 self.assertEqual(proto.read_text(encoding="utf-8"), before)
         # the twin: the same file is no change and passes
@@ -1273,13 +1294,13 @@ class ReportSetter(unittest.TestCase):
         from protocol_fixture import completed_run
 
         area, proto = self._area()
-        completed_run(area, "2026-01-01T00-00-00_0001", metrics={"n": 1})
+        self._measurement(area, "2026-01-01T00-00-00_0001", metrics={"n": 1})
         runlog.reindex(area)
         shutil.rmtree(area / "runs")
         before = proto.read_text(encoding="utf-8")
         code, out = self._fill(proto, "report=REPORT.md")
         self.assertEqual(code, 2)
-        self.assertIn("not supported", out)
+        self.assertIn("first measurement is missing", out)
         self.assertEqual(proto.read_text(encoding="utf-8"), before)
         # the twin: a probe is no measurement; nothing binds yet
         (area / runlog.RUN_INDEX).unlink()

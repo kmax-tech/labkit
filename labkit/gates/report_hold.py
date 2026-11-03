@@ -27,7 +27,6 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.answering_run import bound_runs, first_measurements, is_measurement
-from labkit.formats.standard_contract import lane
 from labkit.formats.runs import UNREADABLE
 from labkit.run.runlog import indexed_runs
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
@@ -476,7 +475,7 @@ def has_measured(area: Path, pid: str) -> bool:
 @dataclass(frozen=True)
 class BoundReports:
     """What the commits of a protocol's first measurements registered as its
-    report (`committed_at`), low lane only: REGISTERED run id → report path
+    report (`committed_at`), on both lanes: REGISTERED run id → report path
     (None: none registered); UNREAD (run id, why) for a first measurement
     whose commit cannot be read."""
 
@@ -496,10 +495,9 @@ _UNREAD = {
 def bound_reports(protocol: Path, pid: str, root: Path) -> BoundReports:
     """The reports PROTOCOL (stamped id PID) registered before its first
     measurements (`answering_run.first_measurements`), as each one's commit
-    in the repository ROOT holds it (`protocol_history.committed_at`). Only
-    a commit whose head is at the low repeat cost binds: the high lane is
-    held by its freeze, and this binding claims nothing there. A committed
-    head that does not read is unread. Raises RuntimeError when git fails."""
+    in the repository ROOT holds it (`protocol_history.committed_at`), at
+    both repeat costs. A committed head that does not read is unread.
+    Raises RuntimeError when git fails."""
     registered: dict[str, str | None] = {}
     unread: list[tuple[str, str]] = []
     for rd in first_measurements(protocol.parent, pid, root):
@@ -512,8 +510,7 @@ def bound_reports(protocol: Path, pid: str, root: Path) -> BoundReports:
         except protocol_block.BlockError as exc:
             unread.append((then.run, f"its committed head does not read ({exc})"))
             continue
-        if lane(head.repeat_cost).registration:
-            registered[then.run] = head.report
+        registered[then.run] = head.report
     return BoundReports(registered, unread)
 
 
@@ -523,8 +520,8 @@ def report_binding_gap(
     """Why the report PROTOCOL's head (its TEXT, as the state holds it)
     registers now is not the one its first measurements stood under — one
     BLOCKER — or None. The report registered before the first measurement
-    is bound to what that measurement's commit holds (`bound_reports`, low
-    lane only): dropped or moved since, held, with the way back (restore
+    is bound to what that measurement's commit holds (`bound_reports`) at
+    both repeat costs: added, dropped or moved since, held, with the way back (restore
     it) or the explicit end (the handover, then a new registration; the
     earlier results and findings stay); first measurements that registered
     different reports, held. UNREAD: a first measurement whose commit
@@ -533,14 +530,15 @@ def report_binding_gap(
     cannot be told; the low lane's registration station names the same
     commits (`report_check.registration_gaps`), so the caller that runs it
     passes False. Nothing outside a repository, without a stamped id or a
-    measurement, or for a head at the high repeat cost (its freeze holds
-    it; this binding claims nothing there). Guaranteed: paths compared as `report_field` normalizes
+    measurement. A lost first measurement cannot establish a report binding;
+    a currently registered report is held until its evidence is restored.
+    Guaranteed: paths compared as `report_field` normalizes
     them. Raises `protocol_block.BlockError` on a head that does not read,
     RuntimeError when git fails."""
     head = protocol_block.head(text)
     root = git_root(protocol)
-    if root is None or not head.id or not lane(head.repeat_cost).registration:
-        return None  # the high lane is its freeze's: unchanged here
+    if root is None or not head.id:
+        return None
     bound = bound_reports(protocol, head.id, root)
     here = Path.cwd()
     name_p = shown(protocol, here)
@@ -566,18 +564,33 @@ def report_binding_gap(
             f"— which one stood before the number cannot be told",
             fix=anew,
         )
-    if not values or values == {None}:
+    if not values:
+        if (
+            head.report is not None
+            and not bound.unread
+            and has_measured(protocol.parent, head.id)
+        ):
+            return blocker(
+                f"{name_p}: its first measurement is missing — the report binding cannot be read",
+                fix=f"restore the missing run evidence, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
+            )
         return None
     (registered,) = values
     if head.report == registered:
         return None
     run = next(iter(bound.registered))
+    before = f"{registered} as its report" if registered is not None else "no report"
+    restore = (
+        f'restore `report = "{registered}"` in the head of {name_p}'
+        if registered is not None
+        else f"remove the late `report` entry from the head of {name_p}"
+    )
     return blocker(
-        f"{name_p} registered {registered} as its report before its first "
+        f"{name_p} registered {before} before its first "
         f"measurement {run}, and its head now registers "
         f"{head.report or 'none'} — the report a measurement stood under is bound, "
-        f"a registered report dropped or moved leaves the delivery unheld",
-        fix=f'restore `report = "{registered}"` in the head of {name_p}; or {anew}',
+        f"a report cannot be registered, dropped or moved after measurement",
+        fix=f"{restore}, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
     )
 
 

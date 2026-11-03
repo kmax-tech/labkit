@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -52,7 +53,8 @@ class FirstStepBeforeARun(unittest.TestCase):
             text,
             protocol_block.head(text),
         )
-        return start_check._first_step(bound)  # noqa: SLF001
+        with mock.patch.object(start_check, "_committed_registration", return_value=[]):
+            return start_check._first_step(Path.cwd(), bound)  # noqa: SLF001
 
     def test_low_names_the_registration_not_the_freeze(self):
         step = self.first_step("low")

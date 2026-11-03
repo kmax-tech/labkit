@@ -106,7 +106,6 @@ from labkit.formats.repo import (
     adopt_command,
     audit_command,
     git_root,
-    handover_command,
     measure_command,
     shown,
     state_text,
@@ -944,35 +943,20 @@ def main(argv: list[str]) -> int:
 def report_bound(
     protocol: Path, text: str, assignments: list[tuple[str, str]]
 ) -> str | None:
-    """Why ASSIGNMENTS may not change the `report` the head of PROTOCOL (its
-    TEXT) registers — the sentence — or None: once its area holds a
-    measurement of it (`report_hold.has_measured`), the report registered
-    before that measurement is bound, and neither a fill nor `--force`
-    registers, moves or drops it — registering one after the first
-    measurement is not supported. Asked before the fill, so the bound
-    report is the reason given, not the missing `--force`. Raises
-    `protocol_block.BlockError` on a head or a value that does not read."""
-    wanted = [
-        protocol_block.report_field(value)
-        for label, value in assignments
-        if is_report_label(label)
-    ]
+    """The shared report-binding refusal for the proposed ASSIGNMENTS.
+
+    Only report assignments are previewed, using the normal editor with
+    force so a binding refusal precedes the ordinary overwrite refusal.
+    No files are written. Returns the gate's exact sentence and way out,
+    or None; the actual fill still enforces --force. Raises ValueError
+    on an invalid report value and BlockError on an unreadable head.
+    """
+    wanted = [(label, value) for label, value in assignments if is_report_label(label)]
     if not wanted:
-        return None  # no report assigned: the head is not read (a fill needs none)
-    head = protocol_block.head(text)
-    if not head.id or all(w == head.report for w in wanted):
         return None
-    if not report_hold.has_measured(protocol.resolve().parent, head.id):
-        return None
-    return (
-        f"{protocol.name} has measured: the report its head registers "
-        f"({head.report or 'none'}) is what its measurements stood under, and no "
-        f"fill — `--force` included — changes it now; registering a report after "
-        f"the first measurement is not supported. A different report means a new "
-        f"protocol: end this one with "
-        f"`{handover_command(protocol, head.report or 'REPORT.md')}` "
-        f"and register anew"
-    )
+    proposed = fill_many(text, wanted, force=True)
+    gap = report_hold.report_binding_gap(protocol, proposed, unread=True)
+    return with_way_out(gap.text, gap.fix) if gap is not None else None
 
 
 def cli() -> None:

@@ -11,6 +11,18 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **Report registration is bound on both low and high repeat costs.** The
+  first measurement's commit fixes the registered report path, including
+  its absence. Removing, redirecting or adding it later holds at the gate
+  and through `protocol-fill`, which now uses the same comparison. High
+  measurements require the report path committed before their first run;
+  freeze/preflight remain additional obligations. Existing high areas with
+  a changed report and low areas with a late registration are now held:
+  restore the original path (or remove the late entry), or hand over and
+  register a new protocol. The last release with the previous behaviour
+  is **0.107.0**. Restoring the original path through the setter is allowed,
+  with `--force` when replacing the current path. No run schema changes.
+
 - **Audit journals require bound audit starts.** Every `analysis` or
   `preflight` start must name non-empty `block_sha` and `protocol` fields.
   Starts written by labkit 0.103.0 or earlier without these bindings are

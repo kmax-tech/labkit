@@ -1038,13 +1038,20 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
     blocker told under its own heading. The area's committed evidence
     changed against HEAD holds first (`evidence.change_blockers`): the
     report of a handover is released by the report reviews of that area.
-    Raises `protocol_block.BlockError` on a head that does not read — the
+    A current handover ends the report-path obligation without releasing
+    a result; the report it delivers still owes its review. Raises `protocol_block.BlockError` on a head that does not read — the
     caller read the declaration off the same text first."""
     changed = evidence.change_blockers(protocol.parent, staged=staged)
     gaps = changed + [
         g
         for g in (
-            report_binding_gap(protocol, text, unread=True),
+            (
+                report_binding_gap(protocol, text, unread=True)
+                if not handovers.protocol_handed_over(
+                    protocol.parent, protocol, staged=staged
+                )
+                else None
+            ),
             (missing_report(protocol, text, repo, staged=True) if staged else None)
             or report_owed(protocol, text, None, repo, staged=staged, progress=staged),
         )

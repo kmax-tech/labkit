@@ -863,33 +863,46 @@ if __name__ == "__main__":
 
 
 class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
-    """The report a low protocol registered before its first measurement is
+    """The report a protocol registered before its first measurement is
     bound to what that measurement's commit holds
     (`report_hold.report_binding_gap`): dropped or moved since, held; the
-    high lane is unchanged (its freeze holds it). Both selections reach the
+    same on both lanes. Both selections reach the
     protocol: by its area where the head no longer names the report, and by
     the former report path where only that file changes
     (`report_hold.formerly_registering`). Each with its correct twin."""
+
+    REPEAT_COST = "low"
 
     def _register(
         self,
         report: str | None,
         *,
         result: str | None = None,
-        repeat_cost: str = "low",
+        repeat_cost: str | None = None,
     ) -> str:
         """The protocol registering REPORT, committed; HEAD's full sha."""
+        repeat_cost = repeat_cost or self.REPEAT_COST
         self.proto.write_text(
-            head(repeat_cost=repeat_cost, result=result, report=report) + REGISTRATION,
+            head(
+                repeat_cost=repeat_cost,
+                frozen=repeat_cost == "high",
+                result=result,
+                report=report,
+            )
+            + REGISTRATION,
             encoding="utf-8",
         )
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "protocol")
         return _git(self.root, "rev-parse", "HEAD")
 
-    def _head_now(self, report: str | None, repeat_cost: str = "low") -> str:
+    def _head_now(self, report: str | None, repeat_cost: str | None = None) -> str:
         """The protocol's text with its head registering REPORT now (tree)."""
-        text = head(repeat_cost=repeat_cost, report=report) + REGISTRATION
+        repeat_cost = repeat_cost or self.REPEAT_COST
+        text = (
+            head(repeat_cost=repeat_cost, frozen=repeat_cost == "high", report=report)
+            + REGISTRATION
+        )
         self.proto.write_text(text, encoding="utf-8")
         return text
 
@@ -926,15 +939,16 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self.assertIn("now registers docs/OTHER.md", gap)
 
     def test_the_twin_no_report_registered_before_holds_nothing(self):
-        """An area without a report obligation stays admissible; a report
-        added after the first measurement is not bound by this check."""
+        """No report stays valid; adding one after measurement is held."""
         self._run(self._register(None))
         self.assertIsNone(self._gap(self._head_now(None)))
-        self.assertIsNone(self._gap(self._head_now("REPORT.md")))
+        gap = self._gap(self._head_now("REPORT.md"))
+        self.assertIsNotNone(gap)
+        self.assertIn("registered no report", gap or "")
 
-    def test_the_high_lane_is_unchanged(self):
-        self._run(self._register("REPORT.md", repeat_cost="high"))
-        self.assertIsNone(self._gap(self._head_now(None, repeat_cost="high")))
+    def test_switching_to_high_does_not_remove_the_binding(self):
+        self._run(self._register("REPORT.md", repeat_cost="low"))
+        self.assertIsNotNone(self._gap(self._head_now(None, repeat_cost="high")))
 
     def test_an_unreadable_first_measurement_holds_where_a_report_is_registered(self):
         self._register("REPORT.md")
@@ -1007,14 +1021,144 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         bound = start_check.protocol_binding(self.area, "PROTOCOL-x.md")
         problems = start_check._freeze_findings(self.area, bound)
         self.assertTrue(any("HEAD registers none" in p for p in problems), problems)
+        _, way = start_check.measurement_refusal(self.area, self.proto)
+        self.assertIn("commit", way.casefold())
+        self.assertNotIn("Freeze first", way)
         # committed: the run may start
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "report registered")
         bound = start_check.protocol_binding(self.area, "PROTOCOL-x.md")
-        self.assertEqual(start_check._freeze_findings(self.area, bound), [])
+        with mock.patch.object(start_check, "_audit_line_findings", return_value=[]):
+            self.assertEqual(start_check._freeze_findings(self.area, bound), [])
+
+    def test_the_setter_and_gate_share_the_refusal_and_allow_restoration(self):
+        from labkit.gates import report_hold
+        from labkit.tools import protocol_edit, protocol_fill
+
+        self._run(self._register("REPORT.md"))
+        before = self.proto.read_text(encoding="utf-8")
+        proposed = protocol_edit.fill_many(before, [("report", "OTHER.md")], force=True)
+        gap = report_hold.report_binding_gap(self.proto, proposed, unread=True)
+        assert gap is not None
+        assert gap.fix is not None
+        for force in ([], ["--force"]):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                code = protocol_fill.main([str(self.proto), "report=OTHER.md", *force])
+            self.assertEqual(code, 2, out.getvalue())
+            self.assertIn(gap.text, out.getvalue())
+            self.assertIn(gap.fix, out.getvalue())
+            self.assertEqual(self.proto.read_text(encoding="utf-8"), before)
+        self._head_now("OTHER.md")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(
+                protocol_fill.main([str(self.proto), "report=REPORT.md", "--force"]), 0
+            )
+        self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
+
+    def test_late_registration_gets_the_same_gate_and_setter_refusal(self):
+        from labkit.tools import protocol_edit, protocol_fill
+        from labkit.gates import report_hold
+
+        self._run(self._register(None))
+        before = self.proto.read_text(encoding="utf-8")
+        proposed = protocol_edit.fill_many(before, [("report", "REPORT.md")])
+        gap = report_hold.report_binding_gap(self.proto, proposed, unread=True)
+        assert gap is not None
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = protocol_fill.main([str(self.proto), "report=REPORT.md"])
+        self.assertEqual(code, 2, out.getvalue())
+        self.assertIn(gap.text, out.getvalue())
+        self.assertEqual(self.proto.read_text(encoding="utf-8"), before)
+
+    def test_handover_and_new_protocol_allow_a_new_report(self):
+        from labkit.formats import handovers
+        from labkit.gates import report_hold
+        from labkit.tools import protocol_fill
+
+        self._run(self._register("REPORT.md"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = protocol_fill.main(
+                [
+                    str(self.proto),
+                    "--handover",
+                    "--why",
+                    "the report moves to a new protocol",
+                    "--tried",
+                    "measured the original question",
+                    "--into",
+                    str(self.root / "REPORT.md"),
+                ]
+            )
+        self.assertEqual(code, 0, out.getvalue())
+        self.assertTrue(handovers.protocol_handed_over(self.area, self.proto))
+        self.assertIsNone(self._gap(self.proto.read_text(encoding="utf-8")))
+        new_area = self.area.parent / "02-new"
+        new_area.mkdir()
+        successor = new_area / "PROTOCOL-new.md"
+        text = (
+            head(id="p-1111111111111111", repeat_cost=self.REPEAT_COST, report="NEW.md")
+            + REGISTRATION
+        )
+        successor.write_text(text, encoding="utf-8")
+        self.assertIsNone(report_hold.report_binding_gap(successor, text, unread=True))
+        self.assertTrue(handovers.protocol_handed_over(self.area, self.proto))
+
+    def test_a_handover_ends_a_changed_binding_without_releasing_a_result(self):
+        from labkit.tools import protocol_fill
+
+        self._run(self._register("REPORT.md"))
+        self._head_now("OTHER.md")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = protocol_fill.main(
+                [
+                    str(self.proto),
+                    "--handover",
+                    "--why",
+                    "register another report in a new area",
+                    "--tried",
+                    "measured the registered question",
+                    "--into",
+                    str(self.root / "OTHER.md"),
+                ]
+            )
+        self.assertEqual(code, 0, out.getvalue())
+        _git(self.root, "add", "-A")
+        # Isolate binding: the separate report review remains an obligation.
+        with mock.patch.object(report_check, "report_owed", return_value=None):
+            code, out = self._if_reported([self.proto])
+        self.assertEqual(code, 0, out)
+        self._head_now("THIRD.md")
+        _git(self.root, "add", str(self.proto))
+        with mock.patch.object(report_check, "report_owed", return_value=None):
+            code, out = self._if_reported([self.proto])
+        self.assertEqual(code, 1, out)
+        self.assertIn("now registers THIRD.md", out)
+
+    def test_unreadable_history_is_held_by_the_lane_that_names_it(self):
+        self._register("REPORT.md")
+        self._run("0" * 40)
+        with mock.patch.object(report_check, "freeze_gaps", return_value=[]):
+            ctx = report_context.checked(self.area, self.proto)
+            gaps = report_check.registration_stage(ctx)
+        unread = [
+            g for g in gaps if "cannot be read" in g.text or "does not hold" in g.text
+        ]
+        self.assertEqual(len(unread), 1, [g.text for g in gaps])
 
     def _if_reported(self, paths: list[Path]) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             code = report_check.if_reported(paths, self.root, staged=True)
         return code, out.getvalue()
+
+
+class HighReportRegisteredBeforeTheFirstMeasurement(
+    ReportRegisteredBeforeTheFirstMeasurement
+):
+    """The same report-binding contract at high repeat cost."""
+
+    REPEAT_COST = "high"

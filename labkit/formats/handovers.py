@@ -803,9 +803,9 @@ def acknowledgement(area: Path, *, staged: bool = False) -> Acknowledgement:
     return Acknowledgement(False, refused)
 
 
-def protocol_handed_over(area: Path, protocol: Path) -> bool:
-    """Whether a current handover of AREA in the tree (`mismatch` None)
-    ends PROTOCOL — the record names that protocol, not only one beside it
+def protocol_handed_over(area: Path, protocol: Path, *, staged: bool = False) -> bool:
+    """Whether a current handover of AREA (`mismatch` None) in the tree
+    or index (STAGED) ends PROTOCOL — the record names that protocol, not only one beside it
     in the same area. False outside a git repository. Raises HandoverError
     when the area's handover records cannot be listed."""
     area = area.resolve()
@@ -813,10 +813,10 @@ def protocol_handed_over(area: Path, protocol: Path) -> bool:
     if root is None:
         return False
     rel = protocol.resolve().relative_to(root).as_posix()
-    for path in record_paths(area):
-        if mismatch(area, root, path, staged=False) is not None:
+    for path in record_paths(area, staged=staged):
+        if mismatch(area, root, path, staged=staged) is not None:
             continue
-        if read_record(root, path).protocol == rel:
+        if read_record(root, path, staged=staged).protocol == rel:
             return True
     return False
 

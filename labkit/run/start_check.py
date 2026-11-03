@@ -128,14 +128,12 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 
 
 def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
-    """Where the lane holds the registration instead of the freeze, the
-    FIRST measurement of the protocol needs it committed: report-check
-    holds it to the commit the run records (`report_check.registration_gaps`,
-    `protocol_history.registration_in_commit` on HEAD here), and a run on
-    an uncommitted one could never be adopted — finalize clean, adoption
-    refused for good (audit 2026-10-27, third, I1). A later measurement is
-    not held here: the first decides. Nothing outside a repository (the
-    release gate warns there) or for an unbound protocol (refused above)."""
+    """Refuse a first measurement whose report differs from HEAD, on both
+    lanes. Low also requires the scientific registration committed; high
+    retains its separate freeze checks. Later measurements use the first
+    one's binding. No commitment check outside Git or for an unbound
+    protocol. Reads HEAD and the first measurements; writes nothing.
+    """
     from labkit.formats.answering_run import first_measurements
     from labkit.formats.protocol_history import registration_in_commit
 
@@ -146,21 +144,22 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     if first_measurements(base_dir, head.id, root):
         return []
     protocol = (base_dir / rel).resolve()
-    missing = registration_in_commit(protocol, "HEAD", head.kind)
-    if missing is None:
-        return [
-            f"{protocol.name} is not committed — the first measurement is held to "
-            f"the registration its commit holds; commit the protocol (`git add` + "
-            f"`git commit`), then start the run (LAB-003 No run without an intent "
-            f"paragraph)"
-        ]
-    if missing:
-        return [
-            f"{protocol.name}: the registration as committed (HEAD) lacks "
-            f"{', '.join(missing)} — the first measurement is held to what its "
-            f"commit holds; commit the written registration, then start the run "
-            f"(LAB-003 No run without an intent paragraph)"
-        ]
+    if lane(head.repeat_cost).registration:
+        missing = registration_in_commit(protocol, "HEAD", head.kind)
+        if missing is None:
+            return [
+                f"{protocol.name} is not committed — the first measurement is held to "
+                f"the registration its commit holds; commit the protocol (`git add` + "
+                f"`git commit`), then start the run (LAB-003 No run without an intent "
+                f"paragraph)"
+            ]
+        if missing:
+            return [
+                f"{protocol.name}: the registration as committed (HEAD) lacks "
+                f"{', '.join(missing)} — the first measurement is held to what its "
+                f"commit holds; commit the written registration, then start the run "
+                f"(LAB-003 No run without an intent paragraph)"
+            ]
     # the report registered before the first measurement is bound to what its
     # commit holds (`report_hold.report_binding_gap`): uncommitted, it binds nothing
     committed = repo.text_at(root, protocol, "HEAD")
@@ -175,11 +174,12 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     return []
 
 
-def _first_step(bound: _Bound) -> str:
-    """What comes before a full run, by the bound protocol's repeat cost: the
-    registration at a lane that owes no freeze, else the freeze. One line
-    named the freeze at every cost and corrected itself in parentheses; two
-    of three Haiku readers called that a contradiction (2026-10-28)."""
+def _first_step(base_dir: Path, bound: _Bound) -> str:
+    """The next action before a full run: low's registration, or high's
+    report commitment when missing, otherwise its freeze. Reads the first
+    measurement and HEAD at high cost through the shared commitment check;
+    writes nothing.
+    """
     head = bound.head
     if head is not None and lane(head.repeat_cost).registration:
         return (
@@ -187,6 +187,8 @@ def _first_step(bound: _Bound) -> str:
             "the registration the kind owes (`protocol-check --contract` names it), "
             "then start the run again."
         )
+    if _committed_registration(base_dir, bound):
+        return "Commit the registered report path as named above, then start the run again."
     return "Freeze first: `preflight <AREA>` clean, audit stamped, `frozen = true`."
 
 
@@ -222,7 +224,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
             f"model the data profile), not the freeze (LAB-003 No run without an "
             f"intent paragraph, LAB-017 The number of audits follows the cost tier)"
         ]
-    out = []
+    out = _committed_registration(base_dir, bound)
     if head.kind is None:
         # what the number asserts is decided before it exists (standard 0.22)
         out.append(
@@ -243,7 +245,7 @@ def measurement_refusal(base_dir: Path, protocol: Path) -> tuple[list[str], str]
     the gaps, are not read here. Raises SystemExit as `protocol_binding`
     does; prints its warning for a protocol without a stamped id."""
     bound = protocol_binding(base_dir, protocol.resolve())
-    return _freeze_findings(base_dir, bound), _first_step(bound)
+    return _freeze_findings(base_dir, bound), _first_step(base_dir, bound)
 
 
 def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
@@ -729,7 +731,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
             with_way_out(
                 f"runlog: {declares}, but its "
                 "protocol is not ready for one:\n  " + "\n  ".join(gaps),
-                f"{_first_step(prepared.bound)} "
+                f"{_first_step(base_dir, prepared.bound)} "
                 "No other run yields a reported number: a probe (run_kind='probe') "
                 "and a run acknowledged with LABKIT_UNFROZEN=1 (at "
                 "high repeat cost only over an audit the backend refused, "

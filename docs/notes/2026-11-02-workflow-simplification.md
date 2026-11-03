@@ -77,16 +77,19 @@ The option already existed; agent guidance now points to it. None of the
 18 area-17 protocols registered a report, so B would not apply to those
 historical states without this setup change.
 
-Before measurement, replacing the path requires `--force` (E2). At `low`,
-the first measurement requires it to be committed. Removing or redirecting
+Before measurement, replacing the path requires `--force` (E2). At both
+`low` and `high`, the first measurement requires it to be committed. Removing or redirecting
 the bound path then blocks: restore it, or hand over and explicitly register
 a successor protocol (E1). Earlier evidence remains. New registration is
 not the normal repair for faulty code.
 
-Scope: report registered before measurement, `low`, bound through the
-committed first measurement. `high` and late registration remain outside
-this change. Moving a protocol to `high` leaves this binding and requires
-freeze and preflight audit; no broader protection is claimed here.
+Scope: both repeat costs use the committed first measurement as the report
+binding. Moving to `high` does not remove it. A first measurement without a
+registered report binds that absence too: late registration is held, whether
+edited by hand or proposed through `protocol-fill`. Restoring the original
+path is allowed; changing the obligation requires handover and a new
+protocol. High retains its additional freeze and preflight requirements.
+Decision and tests: [report binding at both costs](2026-11-03-report-binding-both-lanes.md).
 
 Absolute and relative thresholds are now implemented in both the estimator
 and prompt templates through `criterion_bar`. The threshold decision is in

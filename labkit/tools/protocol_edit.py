@@ -321,9 +321,9 @@ def set_report(text: str, value: str, *, force: bool) -> str:
     it registers the same file; the line replaced, with FORCE only, when it
     registers another. Raises ValueError on a value `report_field` refuses,
     a head without a `[protocol]` table, and another file without FORCE.
-    Whether the protocol has measured — after which the registered report
-    is bound and no FORCE changes it — is the caller's question
-    (`protocol_fill`)."""
+    The caller (`protocol_fill`) checks the proposed report against the
+    historical binding; restoration may pass after measurement, redirection
+    may not. This pure editor enforces only the overwrite requirement."""
     try:
         wanted = protocol_block.report_field(value)
         now = protocol_block.head(text).report
@@ -335,7 +335,7 @@ def set_report(text: str, value: str, *, force: bool) -> str:
     if now is not None and not force:
         raise ValueError(
             f"the head registers {now} as its report already — `--force` registers "
-            f"{wanted} instead (before the first measurement only)"
+            f"{wanted} instead; protocol-fill still checks the measured binding"
         )
     lines = text.split("\n")
     span = protocol_block.toml_block_span(text)
