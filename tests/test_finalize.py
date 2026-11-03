@@ -365,3 +365,34 @@ class AreaTestsBeforeReporting(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CorrectionWay(unittest.TestCase):
+    """The clause a scope hold and the decision's line give about correcting
+    the changed fields (`finalize.correction_way`): the correction route only
+    for a field a correction can release (`protocol_history.correctable`),
+    the question standing as registered, nothing for the head's parts or a
+    promise — so neither names a way the gate refuses (2026-11-03,
+    docs/notes/2026-11-02-registered-field-repair.md)."""
+
+    def test_a_description_is_offered_the_correction_route(self):
+        way = finalize.correction_way([("Unit", "ms", "milliseconds")])
+        self.assertIn("Unit misdescribing the unchanged run", way)
+        self.assertIn(finalize.CORRECTION_ROUTE, way)
+
+    def test_the_question_is_offered_no_correction(self):
+        way = finalize.correction_way([("Question / hypothesis", "mean", "median")])
+        self.assertNotIn(finalize.CORRECTION_ROUTE, way)
+        self.assertIn("Question / hypothesis has no correction in place", way)
+
+    def test_both_changed_each_gets_its_own_way(self):
+        way = finalize.correction_way(
+            [("Question / hypothesis", "mean", "median"), ("Unit", "ms", "s")]
+        )
+        self.assertIn("Unit misdescribing the unchanged run", way)
+        self.assertNotIn("Question / hypothesis misdescribing", way)
+        self.assertIn("Question / hypothesis has no correction in place", way)
+
+    def test_the_head_and_a_promise_have_no_correction_clause(self):
+        for what in ("kind", "[kept]", "[reference]", "criterion-1 sentence"):
+            self.assertEqual(finalize.correction_way([(what, "a", "b")]), "", what)

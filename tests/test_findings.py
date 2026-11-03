@@ -1147,3 +1147,14 @@ class CorrectedField(unittest.TestCase):
             self.assertIsNone(
                 findings.corrected_field(f, self.PROTOCOL, self.TEXT), line
             )
+
+    def test_the_question_is_no_corrected_field(self):
+        text = "- **Question / hypothesis:** how many lines on average?\n" + self.TEXT
+        for place in ("Question / hypothesis", "question / hypothesis"):
+            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · x · y")
+            self.assertIsNone(findings.corrected_field(f, self.PROTOCOL, text), place)
+        # the twin: the other fields of the same text still are
+        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · x · y")
+        self.assertEqual(
+            findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
+        )

@@ -25,7 +25,7 @@ showed three faults:
 
 **Solution.** One correction route, for every prose field the hold
 compares, with no list of field names (Question / hypothesis excepted by
-the decision of 2026-11-03 below, not built yet):
+the decision of 2026-11-03 below):
 
 - the scope hold compares the protocol as it stands with the first
   measurements too (`finalize.scope_changes`; the comparison is
@@ -80,7 +80,7 @@ action, the gate; Conclusion and code repair as twins, the restore),
 compared; restore, reflow and a Conclusion pass), `tests/test_findings.py`
 `CorrectedField`.
 
-## Decided 2026-11-03: where a correction ends (contract change, not built)
+## Decided 2026-11-03: where a correction ends (contract change, built)
 
 **Problem.** F6 of the repair-path probe
 ([note](2026-11-02-repair-path-probe.md)): Question / hypothesis "mean" →
@@ -161,7 +161,7 @@ go into labkit's tests. Which side of the pairs "14 cases" and "test
 split" a case falls on is the auditor's judgement: it needs probes of the
 auditor's instruction with a real model.
 
-**Today against this contract** (F5 reproduction on `4ab018bf`, labkit-
+**Before the repair** (F5 reproduction on `4ab018bf`, labkit-
 evidence `921eab7e`, `usability/2026-11-03-correction-then-code-fault/`): an earlier
 `resolved` already does not release a new run. But a follow-up on the new
 run that judges the correction `resolved` does not release it either:
@@ -177,6 +177,26 @@ follow-up on the new run judges the correction again". The only way
 through in the same protocol today restores the known-false text (three
 runs, eight analysis records); a successor with `[replaces]` passes.
 
+**Built for F5** (branch `f5-correction-new-run`, `74040782`, `e3c0d2fa`).
+Both comparisons of `finalize.scope_changes` release a field through one
+function, `finalize.released_fields`: a `resolved` on its correction in a
+follow-up that covers the answering run, the field as that run saw it, as
+it stands and as judged one text; each field on its own. The guidance
+names the next step on the whole path: the decision on the code repair
+(`repair_hint`) says withdraw when adopted, measure again, then the
+follow-up on the new run; `--withdraw` names the measurement while the
+repaired code has no run; the scope hold names the measurement first when
+the code changed since the answering run, and the follow-up on the new
+run once it is measured (`finalize.awaiting_followup`). Twins:
+`tests/test_end_to_end.py` `CorrectionThenNewRun` — released by a
+follow-up on the new run; held for the verdict on the earlier run alone,
+an `unresolved`, a field edited after the new run or after its verdict,
+another field without its own release, a changed question (with or
+without a waiting correction beside it); two fields each released pass;
+the adopted run withdrawn and replaced — and `tests/test_repair_paths.py`
+`test_a_correction_then_a_code_repair_is_measured_judged_and_reported`
+(every step the one named before, through the registered report).
+
 **Places.** `findings.corrected_field` (the one home of the exception;
 `followup.earlier_corrections`, `finalize.resolved_corrections`,
 `audit_decisions.repair_hint` and `labkit-next` read it); the first branch
@@ -184,11 +204,29 @@ of `finalize.scope_changes` (the new run's release); the hold in
 `finalize.registration_changes`, the decision line and `labkit-next` offer
 the correction route only for a correctable field and name "measure again"
 after a code repair; `finalize.scope_now`'s docstring;
-`labkit/docs/agent-guide.md` (the correction route as its own way out,
-apart from the incomplete registration); LAB-003's typo sentence; later,
-the follow-up auditor's instruction (`experiment-preflight.agent.md`: the
-deciding question above, and the evidence outside the field its `resolved`
-cites); CHANGELOG (behaviour, no format break).
+`labkit/docs/agent-guide.md` (its correction, under "an incomplete
+registration"); LAB-003's typo sentence; the follow-up auditor's
+instruction (`experiment-preflight.agent.md`: the deciding question above,
+and the evidence outside the field its `resolved` cites); CHANGELOG
+(Breaking: standard 0.26).
+
+**Built.** The question's exception: `protocol_history.correctable`
+(`UNCORRECTABLE_FIELDS`), read by `findings.corrected_field` and by
+`finalize.correction_way`, the clause the scope hold and the decision's
+line give — the correction route only for a changed field it can release,
+the question standing as registered, nothing for the head's parts or a
+promise (the decision's line had offered the route for a changed promise
+too). Twins: `tests/test_end_to_end.py` `CorrectedDescription` (a changed
+question held with its `resolved`, its restore, a reflowed question, a
+description still offered the route), `tests/test_finalize.py`
+`CorrectionWay`, `tests/test_findings.py` `CorrectedField`. The agent
+guide's correction (under "an incomplete registration") and the follow-up
+auditor's instruction say the same: a misdescription is corrected, a
+requirement the run failed is repaired, the question stands, the verdict
+cites evidence outside the changed field. LAB-003's typo sentence says the
+same since standard 0.26: the question stays as registered, a held field's
+typo is released by the follow-up's `resolved` (a changed rule, so the next
+version); the new run's release is under "Built for F5" above.
 
 **Not in this contract.** Showing a released correction in the report —
 today only finalize's note names it; noted separately, no new report

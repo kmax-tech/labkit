@@ -103,7 +103,7 @@ TOML block under `## Head`. `protocol-check` reads them with a TOML
 parser. A typo is an error that names the field. The same block holds the
 `[[promise]]` tables (labkit `docs/promise-block.md`).
 
-- **standard:** `"0.25"`, stamped. Never edit it. labkit refuses a protocol
+- **standard:** `"0.26"`, stamped. Never edit it. labkit refuses a protocol
   of another version. Reproduce a protocol with runs with its own labkit
   release. Use a checkout of its commit, with a venv from its
   `requirements.lock`. Never convert it. A frozen protocol and every full

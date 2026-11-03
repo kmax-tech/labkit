@@ -107,10 +107,12 @@ from labkit.formats.repo import (
     audit_command,
     git_root,
     handover_command,
+    measure_command,
     shown,
     state_text,
 )
 from labkit.checks import data_counts, recheck, report_blocks
+from labkit.checks.run_record_check import code_since_run
 from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
@@ -579,11 +581,26 @@ def _withdraw_file(args: argparse.Namespace, text: str) -> int:
         f"withdrawal — `{audit_command(area, '--findings', protocol=protocol)}` "
         f"prints its --decide command"
     )
-    print(
-        f"  2. `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` — the "
-        f"state moved, so it audits the run that answers and follows earlier decided "
-        f"BLOCKERs up; decide its findings"
+    withdrawn = runs.run_path(area, run_id)
+    measured_now = any(
+        not code_since_run(area, rd.dir)[0] for rd in runs.run_dirs(area)
     )
+    if withdrawn.is_dir() and code_since_run(area, withdrawn)[0] and not measured_now:
+        # a code repair not measured yet: the withdrawn run's number came from
+        # other code, so the run that answers is a new one (probe 2026-11-03)
+        print(
+            f"  2. the measuring code changed since {run_id} ran: measure again "
+            f"(`{measure_command(area)}`), then "
+            f"`{audit_command(area, '--mode', 'analysis', protocol=protocol)}` on that "
+            f"run — it follows earlier decided BLOCKERs and corrections up; decide "
+            f"its findings"
+        )
+    else:
+        print(
+            f"  2. `{audit_command(area, '--mode', 'analysis', protocol=protocol)}` — the "
+            f"state moved, so it audits the run that answers and follows earlier decided "
+            f"BLOCKERs up; decide its findings"
+        )
     print(f"  3. `{adopt_command(protocol)}` adopts the run that answers")
     root = git_root(area)
     if root is not None:

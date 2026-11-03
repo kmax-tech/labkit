@@ -11,6 +11,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **Protocol standard 0.26: the question stands as registered (LAB-003 No
+  run without an intent paragraph).** After the first measurement a typo
+  in Question / hypothesis is no longer corrected in place; a different
+  question is a protocol of its own. The rule's typo sentence now names the
+  hold that applies to the other prose fields: a field read before the run
+  owes the audit again, a field that says what the number is about is
+  released only by the follow-up's `resolved` on its correction
+  (`docs/notes/2026-11-02-registered-field-repair.md`). The head format is
+  otherwise unchanged: a protocol not yet run sets `standard = "0.26"`. A
+  protocol with runs keeps its version and is reproduced with its pinned
+  labkit — 0.107.0, the last release reading 0.24; 0.25 was never
+  released, so a protocol stamped 0.25 from an unreleased commit is
+  reproduced with that commit.
+
 - **Protocol standard 0.25: a bar the task states may be absolute (LAB-035
   Thresholds belong to the run, not to the measure).** labkit-paper area
   17 (2026-11-02): two tasks stated an absolute bar, the agents wrote it
@@ -24,6 +38,36 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   is reproduced with 0.107.0, the last release reading 0.24.
 
 ### Changed
+
+- **Question / hypothesis has no correction in place (standard 0.26).** A finding placed
+  on the question, decided `fixed` and judged `resolved`, no longer
+  releases a changed question: it stands as registered, a typo included,
+  and a different question is a protocol of its own (probe 2026-11-02, F6:
+  "mean" → "median" was adopted on a `resolved`). One rule,
+  `protocol_history.correctable`, read by `findings.corrected_field`, the
+  scope hold and the decision's line; both now offer the correction route
+  only for a changed field it can release and name none for the question,
+  the head's parts or a promise
+  (`docs/notes/2026-11-02-registered-field-repair.md`).
+
+- **A run measured again under a corrected field is released by a
+  follow-up on that run.** A description corrected in place and released
+  for run A, then a code fault repaired and run B measured: B was held
+  even when its follow-up judged the correction `resolved` again, and the
+  only way left in the protocol was writing the known-false text back
+  (probe 2026-11-03, `docs/notes/2026-11-02-registered-field-repair.md`).
+  Both comparisons of `finalize.scope_changes` now release a field the
+  same way (`finalize.released_fields`): a `resolved` on its correction
+  in a follow-up that covers the answering run, with the field as the
+  run saw it, as it stands and as judged one text. The verdict on A
+  releases nothing for B; another field changed without its own release
+  still holds. No format change. Each step names the next: the decision
+  on the code repair says withdraw (when adopted), measure again, then the
+  follow-up on the new run — no longer restore and decide `limitation`;
+  `--withdraw` names the measurement when the repaired code has no run
+  yet; the scope hold names the measurement before the follow-up when the
+  code changed since the answering run, and the follow-up on the new run
+  once it is measured.
 
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of
