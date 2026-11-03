@@ -268,10 +268,13 @@ Three steps, in this order, each with the full test suite green.
 
 - **Change:** a labkit experiment area in fallacy-detection (decided
   2026-11-03, Max: the pilot reproduces one of its pins, so the proof stays
-  where the pin is), holding protocol, `config/experiment.yaml` and the
-  prompts of `baselines/big-bench/llama3.2/zs`; its `01_measure.py` opens
-  `runlog.run` and calls stagekit with the area's config and prompt
-  directories. The labkit record holds `repro_hash`, the output path, the
+  where the pin is), holding protocol and `config/experiment.yaml` of
+  `baselines/big-bench/llama3.2/zs`; its `01_measure.py` opens
+  `runlog.run` and calls stagekit with the area's config directory. The
+  prompt is the topic's `binary_zs`, named, not copied (decided
+  2026-11-03, Max): a same-named prompt in the area is refused, not
+  shadowed, and a copy could shift names the existing cache was keyed
+  under. Prompts from an area are first tested in step 6. The labkit record holds `repro_hash`, the output path, the
   mode, and the states of all repos (2b); `pipeline_summary.json` holds the
   labkit run id.
 - **4a, embedding:** stagekit's own backends and its existing cache of
