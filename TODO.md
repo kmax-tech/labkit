@@ -2309,6 +2309,15 @@ Nicht belegt — die Ausgabe des Fehlschlags wurde nicht gesichert. Nächster
 Schritt erst bei Wiederholung: Ausgabe sichern, dann entscheiden; keine
 Zeitgrenze nebenbei erhöhen.
 
+### Verdacht: fehlender finalize-Halt im Korrektur-End-to-End-Test (2026-11-03)
+
+`tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds`
+schlug einmal im Pre-Commit fehl (finalize ohne den erwarteten Halt);
+einzeln, unter Parallel-Last und im zweiten Hook-Lauf seither grün. Beleg, Log-Auszug und die zwei unbewiesenen
+Vermutungen: [Notiz](docs/notes/2026-11-03-finalize-hold-missing-once.md).
+Nächster Schritt als eigener Auftrag: Reihenfolge und Zeitstempel der
+beiden Messungen kontrolliert variieren — kein sleep, kein Retry.
+
 ### Phase-2-Reste (2026-10-27)
 
 Entschieden 2026-10-27 (Autor), umgesetzt:
