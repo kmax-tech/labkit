@@ -136,3 +136,24 @@ a given `resolved` shows only that labkit trusts the auditor, so the
 contradiction between the agent guide and the correction contract is to
 be settled explicitly. The smaller points follow where the repaired paths
 have not removed them.
+
+## The smaller points (2026-11-03)
+
+Re-run of the probe scripts on main `4ab018bf` first: three of the smaller
+points still occurred. Each repair reads the condition of the gate that
+holds the state; no gate holds or releases anything it did not before (the
+probe's refusals are the same before and after).
+
+| Point | Commit | What changed |
+|---|---|---|
+| `labkit-next` names "measure" over an uncommitted registration | `e8e2fd19` | where the first hold's way out is a measurement before any run, `labkit-next` asks runlog's start gate (`start_check.measurement_refusal`) and names its refusal and first step |
+| case 5 without withdrawing: a renamed output and a third measurement | `89bf3c42` | `report_check.chain_gaps` returns the declaration the later holds withdraw first (`held_declaration`); `labkit-next` names that withdrawal alone, `--into` the registered report, then itself again — the run already measured is adopted |
+| a decided correction: three ways, the way back first, no follow-up command | `d042efb6` | `finalize.awaiting_followup` reads which corrections a follow-up of the state now is shown (as `audit_prompt.earlier_of`); where every held field has one, the scope hold names that follow-up first |
+
+Not repaired here: the progress account of a superseded run in the final
+report; a withdrawal's "next" without "measure again" after a code repair
+(after the withdrawal `labkit-next` names the measurement); the withdrawn
+run's progress account that `labkit-next` asks for before the measurement
+(case 5 twin); a registered REPORT.md with prose only refused before any
+run. The F5 contract (a new run under a corrected description) is
+separate work.
