@@ -400,7 +400,9 @@ against one real second case, not in advance.
    only if several installed topic packages ever run side by side.
 9. **The second case is `counterfactual-worlds`** (2026-11-03, Max). It is
    due for an update anyway: it pins labkit `v0.85.0` (`requirements.txt`)
-   against `v0.107.0` today, and has to follow the current standards. It
+   against `v0.107.0` today, and has to follow the current standards — in
+   new areas only: areas 01–73 stay registered under the old standard and
+   are never migrated, which would be a new registration (its `TODO.md`). It
    meets the criteria: text, LLM calls per item (80 Python files call
    `llm.complete`/`complete_many`), clean tree. The update and the contract
    test become one job. Limit to keep in view: it is the counterfactuals
