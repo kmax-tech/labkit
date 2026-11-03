@@ -20,8 +20,10 @@ first that applies is the step:
       its account of that run           (`report_hold.progress_account`), before
                                         any gap — saved first, released by nothing
     a gap report-check holds     → its way out, the first in the chain's
-                                   order (`report_check.report_gaps`) —
-                                   but a measurement runlog's start gate
+                                   order (`report_check.chain_gaps`) — but
+                                   the withdrawal alone where the holds name
+                                   it first (`report_check.held_declaration`),
+                                   and for a measurement runlog's start gate
                                    would refuse: that refusal's first step
                                    (`start_check.measurement_refusal`)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
@@ -57,6 +59,7 @@ from labkit.formats.repo import (
     layout_root,
     measure_command,
     no_such_area,
+    withdraw_command,
     shown,
     stamped_areas,
 )
@@ -133,7 +136,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     if account is not None:
         return account
     pending = ctx.declared is None and ctx.run is not None
-    gaps = report_check.report_gaps(ctx, adoption_pending=pending)
+    gaps, held_by = report_check.chain_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
     filled = Findings(
         None,
@@ -143,7 +146,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     filled.take_all(g for g in gaps if g.grade == BLOCKER)
     held = filled.found
     if held:
-        return _held_step(ctx, held, hint if ctx.run is None else "")
+        return _held_step(ctx, held, held_by, hint if ctx.run is None else "")
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
         return Step(
@@ -198,12 +201,34 @@ def _handed_over(area: Path, protocol: Path, text: str) -> Step:
     )
 
 
-def _held_step(ctx: "Checked", held: list[GateFinding], hint: str) -> Step:
+def _held_step(
+    ctx: "Checked", held: list[GateFinding], held_by: Path | None, hint: str
+) -> Step:
     """The step while report-check holds CTX with HELD, its blockers in the
-    chain's order: the first one's way out, HINT added — or, where that way
-    out is a measurement runlog would refuse, the refusal's first step
-    (`_refused_measurement`)."""
+    chain's order: the first one's way out, HINT added. Two exceptions:
+
+    - HELD_BY, the protocol whose adopted run's code or declared scope
+      changed since it ran (`report_check.held_declaration`; the later
+      holds name its withdrawal first): the withdrawal alone, then
+      `labkit-next` again — the holds are read anew against the run that
+      answers after it. The first hold's own way out told an agent who had
+      already measured the repaired code to measure a third time into a
+      renamed output (probe 2026-11-02, case 5).
+    - a measurement runlog would refuse: the refusal's first step
+      (`_refused_measurement`)."""
     first = held[0]
+    if held_by is not None:
+        return Step(
+            f"{held_by.name} has adopted {ctx.declared}, and the code or a declared "
+            f"scope changed since that run — the holds read the area against that "
+            f"adoption until it is withdrawn; the first: {first.text}",
+            f"`{withdraw_command(held_by, _registered_report(ctx))}` withdraws "
+            "the adoption; then "
+            "`labkit-next` again: the holds are read anew against the run that "
+            f"answers then. Only when the change was not meant: restore it as "
+            f"{ctx.declared} ran it",
+            f"the adoption and any report of the number: {len(held)} blocker(s) stand",
+        )
     refused = _refused_measurement(ctx, first.fix)
     if refused is not None:
         return replace(refused, next=refused.next + hint)
@@ -213,6 +238,14 @@ def _held_step(ctx: "Checked", held: list[GateFinding], hint: str) -> Step:
         f"the adoption and any report of the number: {len(held)} "
         "blocker(s) stand, and this is the first",
     )
+
+
+def _registered_report(ctx: "Checked") -> Path | None:
+    """The report CTX's head registers, as a path; None without one."""
+    from labkit.formats.repo import own_path
+
+    rel = ctx.head.report
+    return own_path(ctx.repo.resolve() / rel) if rel is not None else None
 
 
 def _refused_measurement(ctx: "Checked", fix: str | None) -> Step | None:
@@ -263,13 +296,11 @@ def _progress_step(ctx: "Checked") -> Step | None:
     is saved first and releases nothing, so a gap that holds — a change
     since the run, the audit still owed — is named on the next call."""
     from labkit.checks import report_blocks
-    from labkit.formats.repo import own_path
     from labkit.gates.report_hold import progress_account
 
-    report_rel = ctx.head.report
-    if report_rel is None or ctx.declared is not None or ctx.run is None:
+    report = _registered_report(ctx)
+    if report is None or ctx.declared is not None or ctx.run is None:
         return None
-    report = own_path(ctx.repo.resolve() / report_rel)
     written = report.read_text(encoding="utf-8") if report.is_file() else ""
     owner = report_blocks.path_from_report(ctx.protocol, report)
     if progress_account(written, owner, ctx.run.name):

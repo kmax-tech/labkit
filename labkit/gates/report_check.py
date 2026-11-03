@@ -645,8 +645,18 @@ def registration_stage(ctx: Checked) -> list[GateFinding]:
 def report_gaps(
     ctx: Checked, *, adoption_pending: bool = False, review: bool = True
 ) -> list[GateFinding]:
-    """Every gap report-check holds CTX to, in the order of the chain — the
-    one list `report_check` prints and `next_step` reads:
+    """Every gap report-check holds CTX to, in the order of the chain
+    (`chain_gaps`, without the declaration it holds)."""
+    return chain_gaps(ctx, adoption_pending=adoption_pending, review=review)[0]
+
+
+def chain_gaps(
+    ctx: Checked, *, adoption_pending: bool = False, review: bool = True
+) -> tuple[list[GateFinding], Path | None]:
+    """(gaps, held_by): every gap report-check holds CTX to, in the order of
+    the chain — the one list `report_check` prints and `next_step` reads —,
+    and the protocol whose declaration every later hold withdraws first
+    (`held_declaration`; None when none does):
 
     1. Declaration: an unreadable `[result]` blocks; later stages continue.
     2. Registration: the freeze where the lane owes it, else the first
@@ -716,7 +726,7 @@ def report_gaps(
     # 8. report
     if not adoption_pending:
         out += report_findings(ctx, review=review)
-    return out
+    return out, held_by
 
 
 def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccount:

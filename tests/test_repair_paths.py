@@ -16,6 +16,8 @@ after the audit was told to measure and audit again, which it never owed.
 from __future__ import annotations
 
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -588,6 +590,112 @@ class RegisteredReportRepairs(RepairPaths):
         said = self.decide(record, "fixed", "fixed")
         self.assertNotIn("waits for the follow-up audit", said)
         self.assertIn("not repaired", said)
+
+    def code_repaired_after_the_adoption(self) -> str:
+        """The run adopted, a later audit's BLOCKER on the code, the code
+        repaired and the finding decided `fixed` — no withdrawal yet, so the
+        commit would hold the repair; the record's name (taken as the new file: two records of one
+        minute do not sort by time)."""
+        self.adopted()
+        audits = self.lab / AREA / "audits"
+        before = set(audits.glob("*-analysis*.toml"))
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "adopted mean is over 11 cases · LAB-050 Analysis audit before reporting "
+            "· remove the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 "
+            f"notes\nscope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        (record,) = set(audits.glob("*-analysis*.toml")) - before
+        script = self.lab / AREA / "scripts" / "01_measure.py"
+        script.write_text(
+            script.read_text(encoding="utf-8") + "# repaired\n", encoding="utf-8"
+        )
+        self.decide(record.name, "fixed", "evaluate_rows averages over every case")
+        return record.name
+
+    def withdraw_as_named(self) -> str:
+        """`labkit-next` names the withdrawal alone, into the registered
+        report; the command it names, run with a reason; its output."""
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        named = re.search(r"`(protocol-fill [^`]*--withdraw[^`]*)`", nxt)
+        assert named is not None, nxt
+        self.assertIn("--into REPORT.md", named.group(1))
+        self.assertIn("then `labkit-next` again", nxt)
+        why = "the adopted mean dropped cases with more than 5 documents"
+        args = [why if a == "<why>" else a for a in shlex.split(named.group(1))]
+        return self.run_(f".venv/bin/{args[0]}", *args[1:])
+
+    def test_a_code_repair_measured_before_the_withdrawal_is_withdrawn_not_measured_again(
+        self,
+    ):
+        """The repaired code measured while the faulty run stood adopted:
+        `labkit-next` advised a renamed output and a third measurement
+        (probe 2026-11-02, case 5). The step is the withdrawal; after it,
+        the steps it names adopt the run already measured. Nothing is let
+        through: the new run is not adopted over the standing adoption."""
+        record = self.code_repaired_after_the_adoption()
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        run2 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("01_measure.py", nxt)
+        self.assertNotIn("_v2", nxt)
+        self.run_(".venv/bin/labkit-adopt", AREA, run2, ok=False)
+        self.withdraw_as_named()
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(f"--discuss {run2}", nxt)
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run2,
+            "--why",
+            "measured after the repair; the follow-up audit is open",
+            "--into",
+            "REPORT.md",
+        )
+        self.commit("withdrawn; run 2 discussed")
+        self.assertIn("--mode analysis", self.run_(".venv/bin/labkit-next", AREA))
+        self.answered(
+            f"FIX · {record}#1 · resolved · the filter is gone\n\n{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.assertIn(
+            f"labkit-adopt {AREA} {run2}", self.run_(".venv/bin/labkit-next", AREA)
+        )
+        self.run_(".venv/bin/labkit-adopt", AREA, run2)
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.commit("run 2 adopted")
+        self.assertIn("nothing", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertEqual(self.runs(), 2)
+
+    def test_the_twin_a_code_repair_not_measured_yet_is_withdrawn_then_measured(
+        self,
+    ):
+        """Without a run of the repaired code the same withdrawal comes
+        first; after it, and the account of the withdrawn run it asks for,
+        the step is the measurement the repair owes."""
+        self.code_repaired_after_the_adoption()
+        self.withdraw_as_named()
+        run1 = sorted(p.name for p in (self.lab / AREA / "runs").iterdir())[-1]
+        self.assertIn(f"--discuss {run1}", self.run_(".venv/bin/labkit-next", AREA))
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--discuss",
+            run1,
+            "--why",
+            "withdrawn: the mean dropped cases; the code is repaired",
+            "--into",
+            "REPORT.md",
+        )
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("--withdraw", nxt)
+        self.assertIn("01_measure.py", nxt)
+        self.assertEqual(self.runs(), 1)
 
 
 @unittest.skipUnless(

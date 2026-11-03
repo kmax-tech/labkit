@@ -133,11 +133,13 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     return line
 
 
-def withdraw_command(protocol: Path) -> str:
+def withdraw_command(protocol: Path, report: Path | None = None) -> str:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —
-    the way to replace a declaration: withdraw, audit, adopt."""
-    return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"'
+    the way to replace a declaration: withdraw, audit, adopt. With REPORT,
+    `--into` it: the protocol's result blocks there are withdrawn too."""
+    into = f" --into {shlex.quote(shown(report, Path.cwd()))}" if report else ""
+    return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"{into}'
 
 
 def measure_command(area: Path) -> str:
