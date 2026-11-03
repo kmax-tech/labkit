@@ -1350,11 +1350,11 @@ class CorrectionThenNewRun(CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
 
-    @unittest.expectedFailure
     def test_t6_a_question_corrected_then_measured_again_holds(self):
-        """Question / hypothesis has no correction route (decided 2026-11-03);
-        the rule lives in `findings.corrected_field` and is built apart —
-        until then a given `resolved` releases it, here and on run A."""
+        """Question / hypothesis has no correction in place
+        (`protocol_history.correctable`): a new run under a rewritten
+        question is held even with a `resolved` on it, and the hold and the
+        decision's line name only the way back or a protocol of its own."""
         rc, out, _ = self.analysis(
             "BLOCKER · PROTOCOL-lines.md:Question / hypothesis · the question "
             "says on average, the run computes the mean · the question · LAB-050 "
@@ -1369,11 +1369,27 @@ class CorrectionThenNewRun(CorrectionCommands):
             "Question / hypothesis=What is the median number of lines of a "
             "document of data/raw/docs?",
         )
-        self.decide(question, 1, "fixed", "the question names the statistic")
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            rc = audit.main(
+                [
+                    str(self.area),
+                    "--decide",
+                    "1",
+                    *decide_words("fixed", "the question names the statistic"),
+                    "--record",
+                    str(question),
+                ]
+            )
+        self.assertEqual(rc, 0, said.getvalue())
+        self.assertNotIn("a correction in place", said.getvalue())
         code = self.code_repaired()
         run_b = self.measure()
         self.judged((code, "resolved"), (question, "resolved"))
-        self.held_as_b_saw(run_b, "Question / hypothesis")
+        held = self.held_as_b_saw(run_b, "Question / hypothesis")
+        self.assertIn("restore Question / hypothesis", held)
+        self.assertIn("register anew", held)
+        self.assertNotIn("names the field as its place", held)
 
     def test_an_adopted_corrected_run_is_withdrawn_measured_again_and_replaced(self):
         correction = self.corrected_for_a()
