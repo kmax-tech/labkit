@@ -73,6 +73,7 @@ from labkit.formats.repo import (
     protocol_links,
     state_text,
     text_at,
+    text_blob,
     under_root,
 )
 
@@ -209,26 +210,35 @@ def review_trace(rel: str) -> bool:
 
 
 def journal_digest(root: Path, path: Path, sha: str, *, staged: bool) -> str | None:
-    """The journal at PATH as the handover binds it: SHA, its blob id, when
-    no line is a report review's attempt (an id naming
-    `report_reviews.ATTEMPT_MODE`); else the digest of its other lines
-    (`jsonl.record_lines`, each ended by "\\n"; `scope_sha.digest`) — None
-    when no other line is left: a journal the review began counts as none.
-    A line that is no JSON object stays — raw evidence. The index's journal
-    is read from git (`text_at`), the tree's from disk; one that is not
-    UTF-8 is bound as it is."""
+    """The journal at PATH as the handover binds it — one computation when
+    the handover is written and when it is checked: the blob id of its text
+    without the lines of a report review's attempts (an id naming
+    `report_reviews.ATTEMPT_MODE`; `repo.text_blob`), which is SHA, git's
+    id of the file, while no line is one. None when no other text is left:
+    a journal the review began counts as none. A line that is no JSON
+    object stays — raw evidence. The index's journal is read from git
+    (`text_at`), the tree's from disk as its bytes; one that is not UTF-8
+    names no line, so nothing is left out and its id is SHA. Why one
+    computation: the journal was bound by its blob id and, once the review
+    wrote to it, checked by a digest of another kind, so every handover
+    after an analysis audit was voided by the review it owed (2026-11-03,
+    docs/notes/2026-11-03-handover-journal-binding.md). Raises GitError
+    when git fails."""
     try:
-        text = (text_at(root, path) or "") if staged else path.read_text("utf-8")
+        text = (
+            (text_at(root, path) or "") if staged else path.read_bytes().decode("utf-8")
+        )
     except UnicodeDecodeError:
         return sha
-    lines = jsonl.record_lines(text)
     mark = f"-{report_reviews.ATTEMPT_MODE}-"
-    kept = [line for line in lines if mark not in _attempt_id(line, path)]
-    if len(kept) == len(lines):
-        return sha
-    if not kept:
+    kept = "".join(
+        line
+        for line in text.splitlines(keepends=True)
+        if mark not in _attempt_id(line.strip(), path)
+    )
+    if not kept.strip():
         return None
-    return scope_sha.digest("".join(f"{ln}\n" for ln in kept).encode(), chars=None)
+    return text_blob(root, path, kept)
 
 
 def _attempt_id(line: str, path: Path) -> str:

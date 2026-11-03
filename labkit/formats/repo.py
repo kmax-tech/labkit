@@ -721,6 +721,17 @@ def blobs_now(repo: Path, paths: list[Path]) -> dict[Path, str]:
     return dict(zip(paths, r.stdout.split(), strict=True))
 
 
+def text_blob(repo: Path, path: Path, text: str) -> str:
+    """The blob id git gives TEXT as the content of PATH under REPO
+    (`git hash-object --stdin --path`, the filters applied as for PATH) —
+    what `blobs_now` gives a file at PATH holding TEXT. Raises GitError
+    when git fails."""
+    r = git_run(["hash-object", "--stdin", f"--path={path}"], repo, stdin=text)
+    if r.returncode != 0:
+        raise GitError(f"git hash-object --stdin in {repo}: {r.stderr.strip()}")
+    return r.stdout.strip()
+
+
 def find_area(
     path: Path, stop: Path | None = None, protocols: list[Path] | None = None
 ) -> Path | None:
