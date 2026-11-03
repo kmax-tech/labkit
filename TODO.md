@@ -2260,6 +2260,11 @@ Danach öffentlich für 4b:
 `llm.complete_response`, `llm_backends.Response` — mit Verhaltenstests in
 `tests/test_public_api.py`; `Cache.complete` nimmt seine Schlüsselwörter
 jetzt in der Reihenfolge von `llm.complete`.
+`finalize` erkennt Daten, die ein getracktes `MANIFEST.sha256` Datei für
+Datei nennt (fallacy-detection, Regel 8), prüft jede Prüfsumme neu und
+blockt bei Abweichung; der Bereich `01-pilot-bigbench-zs` ist damit „all
+clear“, wenn `finalize` im Interpreter des Labors läuft (mit labkits
+eigener `.venv` scheitern dort die Bereichstests am fehlenden `stagekit`).
 Offen, nummeriert:
 
 1. **repeat-Antworten im Laufordner ablegen (für Schritt 6).** Ein
