@@ -2249,13 +2249,17 @@ Schritt 2b (Herkunft über alle beteiligten Repos), am besten in einem
 eigenen Worktree; 3 bis 5 laufen in fallacy-detection, 6 in
 counterfactual-worlds, 7 ist das eigene Repo für stagekit.
 
-**Stand 2026-11-03 (Branch `stagekit-api`, Worktree
-`~/projects/labkit-wt-stagekit`, auf `9bd14865` rebased, nicht gemergt):**
+**Stand 2026-11-03 (gemergt in `main`):**
 Schritt 1, 2b und 2 umgesetzt; was jeweils gilt, steht im Plan unter
 „Done“. Entschieden (Max, 2026-11-03) und umgesetzt: `retries`,
 `provenance`, `find_models_toml` (alter Name `_find_models_toml` eine
 Release mit Warnung), `write_dataset`, `Run.metrics`, `run_id`, `draw`
 in der öffentlichen Liste; `last_endpoint` nach claude-cli als Fix.
+Danach öffentlich für 4b:
+`llm_cache.Cache` mit `complete`, `Answer`, `Origin`,
+`llm.complete_response`, `llm_backends.Response` — mit Verhaltenstests in
+`tests/test_public_api.py`; `Cache.complete` nimmt seine Schlüsselwörter
+jetzt in der Reihenfolge von `llm.complete`.
 Offen, nummeriert:
 
 1. **repeat-Antworten im Laufordner ablegen (für Schritt 6).** Ein
@@ -2269,8 +2273,9 @@ Offen, nummeriert:
    (Geschwister eines unversionierten Startskripts) und `code/` (was
    importiert wurde). Zusammenlegen ist ein Breaking-Schritt (Feld
    `untracked_sources` in `config.json`).
-4. **`llm_cache.Cache` und `llm.complete_response` sind noch intern.**
-   stagekit braucht sie in 4b; dann in die öffentliche Liste.
+4. **`llm_cache.fresh_usage` und `CACHE_VERSION` sind intern.** Braucht
+   stagekit in 4b die Kosten nur der echten Aufrufe oder die Version,
+   kommen sie in die öffentliche Liste.
 5. **`run_record_check` vergleicht Helfer in anderen Repos nicht** („not
    compared“); `code.json` hält jetzt deren Commit und Patch.
 6. **Kosten des Code-Scans:** etwa 60 ms je Lesen, zweimal pro Lauf;

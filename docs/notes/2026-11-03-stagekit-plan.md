@@ -317,6 +317,13 @@ Three steps, in this order, each with the full test suite green.
   item-wise diff against the pin in the area's report; the run records
   show all repos' states (2b) and the mode.
 - **Depends on:** 3 and 2b for 4a; 2, 2b and 3 for 4b.
+- **Done ahead (2026-11-03):** the names 4b calls are public —
+  `llm_cache.Cache`, `Cache.complete`, `Answer`, `Origin`,
+  `llm.complete_response`, `llm_backends.Response` — each contract held by
+  a behaviour test in `tests/test_public_api.py`. Probes: a changed
+  default of `Cache.complete`, a repeat that reads the cache, the alias in
+  the key, a renamed `Response` field, a replay that asks the model — each
+  turned a test red.
 
 ### 5 — tracker hooks (decision 5)
 
