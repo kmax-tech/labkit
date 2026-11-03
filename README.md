@@ -192,12 +192,13 @@ the same protocol with the same promise block supersedes the call, also
 after a code change (the journal's order; an earlier audit, another
 protocol or promise block supersede nothing; a protocol is named by its
 file name, so one renamed since counts as another): it is then shown as
-superseded by that record, informational, never as open. The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. A historical call —
-its start written by labkit 0.103.0 or earlier without a promise block
-and protocol, or a `-failed.toml` no journal attempt names — is named as
-such with the command that supersedes it: the audit of its mode run
-again now (`labkit-audit <area> --mode <mode>`), of any protocol of the
-area, since the old start names none. Decide unresolved readable BLOCKERs explicitly before using
+superseded by that record, informational, never as open. The old call and its kept answer stay as they are; superseding confirms neither the call's content nor the repair of any finding, and a recorded BLOCKER stays under the follow-up rule. A `-failed.toml` no journal attempt names has no known order or protocol;
+it is named with the command that supersedes it: an audit of its mode run
+again now (`labkit-audit <area> --mode <mode>`), of any protocol of the area.
+Audit starts in the journal must name their promise block and protocol;
+starts without those bindings are refused, with the pinned-version way
+back (last supporting release: 0.107.0). Reviews still bind their own
+inputs and do not need those two audit fields. Decide unresolved readable BLOCKERs explicitly before using
 the printed `protocol-fill ... --handover --why ... --tried ... --into
 REPORT.md` command. It withdraws the protocol's result, keeps an
 immutable handover record of the remaining evidence, losses, the

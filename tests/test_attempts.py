@@ -30,7 +30,7 @@ from labkit.formats.attempts import Attempt  # noqa: E402
 A = Attempt("a1", "analysis", "opus", "s", "2026-10-26T09:16:02", "here")
 START = json.dumps(
     {"event": "started", "id": "a1", "mode": "analysis", "model": "opus",
-     "scope_sha": "s", "started": "t", "host": "h"}
+     "scope_sha": "s", "started": "t", "host": "h", "block_sha": "b", "protocol": "PROTOCOL-x.md"}
 )  # fmt: skip
 START2 = START.replace('"a1"', '"a2"')
 END_R = json.dumps(
@@ -62,9 +62,9 @@ class Journal(unittest.TestCase):
     def test_parse_follows_each_attempt_through_its_events(self):
         lines = [
             {"event": "started", "id": "a1", "mode": "analysis", "model": "opus",
-             "scope_sha": "s", "started": "t", "host": "h"},
+             "scope_sha": "s", "started": "t", "host": "h", "block_sha": "b", "protocol": "PROTOCOL-x.md"},
             {"event": "started", "id": "a2", "mode": "analysis", "model": "opus",
-             "scope_sha": "s", "started": "t", "host": "h"},
+             "scope_sha": "s", "started": "t", "host": "h", "block_sha": "b", "protocol": "PROTOCOL-x.md"},
             {"event": "ended", "id": "a1", "outcome": "failed", "file": "x-failed.toml"},
             {"event": "interrupted", "id": "a2", "found_by": "a3"},
         ]  # fmt: skip
@@ -77,7 +77,7 @@ class Journal(unittest.TestCase):
     def test_a_line_that_does_not_read_is_named(self):
         start = json.dumps(
             {"event": "started", "id": "a1", "mode": "m", "model": "o",
-             "scope_sha": "s", "started": "t", "host": "h"}
+             "scope_sha": "s", "started": "t", "host": "h", "block_sha": "b", "protocol": "PROTOCOL-x.md"}
         )  # fmt: skip
         for text, said in (
             ("{nope\n", "j:1: not JSON"),
@@ -92,6 +92,45 @@ class Journal(unittest.TestCase):
         ):
             with self.assertRaisesRegex(attempts.AttemptError, said):
                 attempts.parse_journal(text, "j")
+
+    def test_audit_starts_require_both_bindings_reviews_do_not(self):
+        for mode in ("preflight", "analysis"):
+            row = json.loads(START)
+            row["mode"] = mode
+            self.assertEqual(
+                attempts.parse_journal(json.dumps(row), "j")[0].protocol,
+                "PROTOCOL-x.md",
+            )
+            for key in ("block_sha", "protocol"):
+                for value in (None, "", 42):
+                    broken = dict(row)
+                    if value is None:
+                        del broken[key]
+                    else:
+                        broken[key] = value
+                    with self.subTest(mode=mode, key=key, value=value):
+                        with self.assertRaises(attempts.AttemptError) as caught:
+                            attempts.parse_journal(json.dumps(broken), "j")
+                        self.assertIn(
+                            f"j:1: audit start requires non-empty text for {key}",
+                            str(caught.exception),
+                        )
+                        self.assertIn("0.107.0", str(caught.exception))
+        for mode in ("review", "report-review"):
+            row = json.loads(START)
+            row["mode"] = mode
+            del row["block_sha"], row["protocol"]
+            read = attempts.parse_journal(json.dumps(row), "j")[0]
+            self.assertEqual((read.mode, read.block_sha, read.protocol), (mode, "", ""))
+
+    def test_invalid_audit_binding_is_refused_before_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            area = Path(directory)
+            with self.assertRaisesRegex(attempts.AttemptError, "block_sha, protocol"):
+                attempts.begin(
+                    area, "analysis", "opus", "s", block_sha=None, protocol=None
+                )
+            self.assertEqual(list(area.iterdir()), [])
 
 
 class Gaps(unittest.TestCase):

@@ -583,7 +583,7 @@ class Audit(unittest.TestCase):
         stamp = scope_sha.area_stamp(area)[0]
         block = promises.NO_BLOCK
         running = attempts.begin(
-            area, "preflight", "opus", stamp, block_sha=block, protocol=None
+            area, "preflight", "opus", stamp, block_sha=block, protocol="PROTOCOL-x0.md"
         )
         try:
             out, err = io.StringIO(), io.StringIO()
@@ -2336,62 +2336,27 @@ class UnrecordedCall(unittest.TestCase):
             copy.write_text(old, encoding="utf-8")
         return old
 
-    def test_a_historical_call_names_the_audit_that_settles_it(self):
-        """A start of labkit 0.103.0 or earlier names no promise block: the
-        call is named as historical with the command that settles it, the
-        audit run again now in the current format — not the handover alone —
-        and that audit settles it, on whatever code it reads; the old
-        evidence stays byte for byte."""
+    def test_an_old_audit_start_is_refused_without_rewriting_evidence(self):
         area, attempt = self.unrecorded()
         old = self.as_historical(area, attempt)
         answer = area / "audits" / attempt.answer
         kept = answer.read_bytes()
-        (read,) = attempts.read_journal(area)
-        self.assertEqual(read.block_sha, "")
+        with self.assertRaisesRegex(attempts.AttemptError, "0.107.0"):
+            attempts.read_journal(area)
         rc, out = findings_listing(area)
         self.assertEqual(rc, 2, out)
         self.assertIn(
-            f"audit did not complete, historical: attempt {attempt.id} (preflight, "
-            "opus) ended without a record",
-            out,
+            "audit start requires non-empty text for block_sha, protocol", out
         )
-        self.assertIn("its start, written by labkit 0.103.0 or earlier, names no", out)
-        self.assertIn(
-            "Run the audit again in the current format, which settles it: "
-            f"`{audit.audit_command(area, '--mode', 'preflight')}`",
-            out,
-        )
-        # the code moved on since: the audit run again now settles it all the same
-        script = area / "scripts" / "01_measure.py"
-        script.write_text(SCRIPT + "# changed\n", encoding="utf-8")
-        rc, _, err, _ = run(area, WARN)
-        self.assertEqual(rc, 1, err)
-        self.assertNotEqual(findings.area_records(area)[0].scope_sha, attempt.scope_sha)
-        rc, out = findings_listing(area)
-        self.assertEqual(rc, 0, out)
-        (record,) = findings.area_records(area)
-        self.assertIn(
-            f"audit call superseded: attempt {attempt.id} (preflight) by the later "
-            f"audit {record.path.name} of its mode in the current format",
-            out,
-        )
-        self.assertNotIn("audit did not complete", out)
-        # the old evidence as it was: the journal only grew, the answer kept
-        journal = attempts.journal_path(area).read_text(encoding="utf-8")
-        self.assertTrue(journal.startswith(old))
+        self.assertNotIn("audit call superseded:", out)
+        self.assertNotIn("Run the audit again in the current format", out)
+        self.assertEqual(attempts.journal_path(area).read_text(encoding="utf-8"), old)
         self.assertEqual(answer.read_bytes(), kept)
-
-    def test_an_earlier_audit_settles_no_historical_call(self):
-        area = repo_with()
-        rc, _, err, _ = run(area, WARN)
-        self.assertEqual(rc, 1, err)
-        rc, _, err, _ = run(area, self.UNREADABLE)
+        with mock.patch.object(audit.llm, "complete") as complete:
+            rc, _, err, _ = run(area, WARN)
         self.assertEqual(rc, 2, err)
-        late = attempts.read_journal(area)[-1]
-        self.as_historical(area, late)
-        rc, out = findings_listing(area)
-        self.assertEqual(rc, 2, out)
-        self.assertIn(f"audit did not complete, historical: attempt {late.id}", out)
+        complete.assert_not_called()
+        self.assertEqual(attempts.journal_path(area).read_text(encoding="utf-8"), old)
 
     def test_a_failed_file_no_attempt_names_is_historical(self):
         """A `-failed.toml` from before the journal: its order is not known,

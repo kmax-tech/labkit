@@ -324,8 +324,8 @@ class _Listing:
     hidden: int
     failed: tuple[failed_attempts.Failed, ...] = ()
     unrecorded: tuple[attempts.Attempt, ...] = ()
-    # of those, the historical calls (`attempts.historical_call`): failed file
-    # name or attempt id → why its binding or order is not known; superseded
+    # of those, the unjournaled failed calls: failed file
+    # name → why its binding or order is not known; superseded
     # by the audit of its mode run again now
     historical_why: Mapping[str, str] = field(default_factory=dict)
     # the failed calls a later audit superseded: shown as such, never as open
@@ -348,8 +348,7 @@ def _recovery_records(area: Path, record: Path | None) -> _Listing:
     names. A superseded call is shown as such, never as open; that
     confirms neither its content nor the repair of any finding — a
     recorded BLOCKER stays under the follow-up rule. A historical call —
-    a start without its promise block and protocol (labkit 0.103.0 or
-    earlier), a failed file no attempt names — is superseded by a later
+    a failed file no attempt names — is superseded by a later
     audit of its mode in the current format, and named as such until
     then. An attempt
     without an end (running, or interrupted: killed, timed out in the
@@ -406,32 +405,21 @@ def _open_calls(
     except (findings.FindingsError, OSError) as exc:
         errors.append(str(exc))
     unrecorded: tuple[attempts.Attempt, ...] = ()
-    why: dict[str, str] = {}
     superseded: list[_Superseded] = []
     for i, a in enumerate(journal):
         if a.outcome != "none" or a.mode not in findings.MODES:
             continue
-        by, is_historical = _classify(
+        by, _ = _classify(
             journal, i, by_file, a.mode, a.protocol, a.block_sha, f"attempt {a.id}"
         )
         if by is not None:
             superseded.append(by)
             continue
         unrecorded += (a,)
-        if is_historical:
-            missing = [
-                n
-                for n, v in (("promise block", a.block_sha), ("protocol", a.protocol))
-                if not v
-            ]
-            why[a.id] = (
-                "its start, written by labkit 0.103.0 or earlier, names no "
-                + " and no ".join(missing)
-            )
     return _Calls(
         of_files.failed,
         unrecorded,
-        {**of_files.historical_why, **why},
+        of_files.historical_why,
         (*of_files.superseded, *superseded),
     )
 
@@ -448,10 +436,10 @@ def _classify(
     """(the supersession of the failed call LABEL — at AT in JOURNAL, of
     MODE, PROTOCOL and BLOCK_SHA — by a later record of RECORDS, None while
     it is open; whether the call is historical): the one test both kinds of
-    failed call go through (`attempts.superseding_record`,
-    `attempts.historical_call`)."""
+    failed call go through (`attempts.superseding_record`). A historical
+    call here is a failed file no journal attempt names (AT None)."""
     by = attempts.superseding_record(journal, at, records, mode, protocol, block_sha)
-    is_historical = attempts.historical_call(at, block_sha, protocol)
+    is_historical = at is None
     if by is None:
         return None, is_historical
     return _Superseded(label, mode, by.path.name, is_historical), is_historical
@@ -489,13 +477,6 @@ def _open_failed(
         if at is None:
             why[f.path.name] = (
                 "no attempt of the journal names it, so its order is not known"
-            )
-        elif not f.block_sha:
-            why[f.path.name] = "its file names no promise block"
-        else:
-            why[f.path.name] = (
-                "the start of the attempt that wrote it, of labkit 0.103.0 or "
-                "earlier, names no protocol"
             )
     return _Calls(failed, (), why, tuple(superseded))
 
@@ -667,7 +648,7 @@ def other_alias_way(
 def _historical_line(
     area: Path, call: str, why: str, mode: str, protocol: Path | None
 ) -> str:
-    """The `--findings` line of a historical failed CALL (`attempts.historical_call`):
+    """The `--findings` line of an unjournaled failed CALL:
     WHY its binding or order is not known, and the step that settles it —
     the audit of its MODE run again now, in the current format, whose
     record binds today's code and promises (no block is supplied for the

@@ -100,7 +100,14 @@ the check whether a record still acknowledges its area
 (`handovers.acknowledgement`). Only stop/commit may acknowledge the bound
 evidence loss, with no result declared and no readable BLOCKER left
 open. Normal audit and result release keep the integrity refusal.
-`attempts` retains expected lost paths from those records across commits. Contract and limits:
+`attempts` retains expected lost paths from those records across commits.
+Its journal reader and writer require every analysis/preflight start to
+name its promise block and protocol. Old starts lacking either binding are
+refused, not migrated; reviews bind their own inputs separately. A failed
+file no journal attempt names remains visible without an invented start.
+Contract and format boundary:
+[audit journal bindings](notes/2026-11-03-audit-journal-format.md).
+Contract and limits:
 [handover recovery](notes/2026-10-27-handover-recovery.md).
 
 `evidence` holds what committed evidence may become: a record changes in

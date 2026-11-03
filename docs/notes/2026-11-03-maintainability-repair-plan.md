@@ -60,7 +60,7 @@ Do not add model calls to test exact bindings and command routing.
 | 6 | N1 + N2 — medium, liveness and wait advice | Compare what `next`, `--wait`, twin-run refusal and output locks each protect before sharing readers. Include detached starts and the existing true/false/unknown process result. | Detached start before config creation, real writer, dead writer, reused PID and unavailable process inspection. PID existence alone must not claim a writer; uncertain identity must not authorize lock deletion. Do not replace output-lock ownership with area-wide liveness. |
 | 7 | V4 + N3 + N5 + N6 — medium candidates, reproduce first | Use resolved protocol ownership for report blocks. Have advice consume the same applicable report obligations as the corresponding gate. | Alternate equivalent protocol paths; touched versus untouched reports; handed-over protocol with report-binding gap; valid discussion beside a malformed other block. Preserve progress-first saving: it grants no release and may intentionally precede blockers. If a proposed discrepancy is only that ordering, close it without new logic. |
 | 8 | R2–R5 + V6–V8 — cleanup/candidates, bounded commits | Merge genuinely identical rules after stating their inputs and error policy. Prefer existing owners over a new omnibus state object. | Preserve unreadable-record treatment, first/deleted measurements, duplicate fields, preflight fields and release-vs-preview boundaries. For V8 align the readiness hint with start requirements. See the per-ID register below. |
-| 9 | N4 + S1 — decisions, not immediate repairs | Resolve supported setter versus binding scope, and schedule legacy journal removal at an announced break. | No incidental extension to high-cost report binding or deletion of old journal support in steps 1–8. |
+| 9 | N4 — open decision; S1 — removal authorized | Resolve supported setter versus binding scope separately. Max authorized removing the old journal reader now; see the format note below. | No incidental extension to high-cost report binding. S1 is an announced break, with refusal rather than migration. |
 
 Steps 1, 2 and 3 protect distinct inputs and can be prepared independently.
 Integrate them one at a time and verify on the resulting main. Steps 4 and
@@ -80,7 +80,7 @@ contract; this table is not permission for a broad cleanup sweep.
 | V7 | Step 8 candidate: determine whether rendering is a preview or a release at each call site. Sharing registration comparison must not make an intermediate renderer perform finalization, or let an unregistered number be released. |
 | V8 | Step 8: the registration-written hook must distinguish written from ready-to-run. Reuse start requirements where applicable; preserve contexts that intentionally precede committing. |
 | N4 | Step 9 decision. The setter's supported operation is narrower than what gates guarantee. The existing plan explicitly limits historical report binding to low cost and excludes late registration; this difference alone is not a new demonstrated bypass. |
-| S1 | Step 9 decision. Old journal support is a known legacy reader; remove it only with an announced Breaking entry naming the last compatible release, keeping evidence-loss detection. |
+| S1 | Removal authorized on 2026-11-03 and implemented in the [journal-format change](2026-11-03-audit-journal-format.md), with a Breaking entry naming 0.107.0 as the last compatible release. Evidence-loss detection remains. |
 
 Every original ID is accounted for: R1 in step 1; V1/V2 in step 2; S2 in
 step 3; V3/M1 in step 4; V5/M2 in step 5; N1/N2 in step 6;
@@ -94,11 +94,12 @@ uses freeze/preflight and needs its own contract and tests. First document
 whether the setter deliberately refuses unsupported late changes across
 all lanes. Making a hand-edited late registration bind is separate work.
 
-**S1:** plan removal with the next deliberate compatibility break, not a
-standalone version jump for this review. No replacement compatibility path.
+**S1 — decided after this review:** Max authorized removing old journal
+starts now. The [format change](2026-11-03-audit-journal-format.md) refuses
+starts without audit bindings; no migration reader remains. This replaces
+the earlier recommendation to wait. No release or tag is made here.
 
-Neither recommendation is recorded as a decision by Max. The already
-chosen Question exception, per-run resolved binding, second-review duty,
+N4 remains an open decision. The already chosen Question exception, per-run resolved binding, second-review duty,
 report progress-first behaviour and unchecked origin of new audit records
 remain unchanged. No source-authentication system follows from this plan.
 

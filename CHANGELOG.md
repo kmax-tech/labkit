@@ -11,6 +11,17 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **Audit journals require bound audit starts.** Every `analysis` or
+  `preflight` start must name non-empty `block_sha` and `protocol` fields.
+  Starts written by labkit 0.103.0 or earlier without these bindings are
+  refused instead of being superseded by an audit of any protocol. The
+  last release that reads them is **0.107.0**; reproduce such areas with
+  their pinned version and leave their journals as written. No migration
+  reader or inferred binding is provided. Decision/report reviews still
+  need neither field, and a failed file no journal attempt names remains
+  visible as unjournaled evidence. Details:
+  `docs/notes/2026-11-03-audit-journal-format.md`.
+
 - **Protocol standard 0.26: the question stands as registered (LAB-003 No
   run without an intent paragraph).** After the first measurement a typo
   in Question / hypothesis is no longer corrected in place; a different

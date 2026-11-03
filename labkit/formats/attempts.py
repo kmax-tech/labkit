@@ -178,9 +178,8 @@ class Attempt:
     # the promise block an audit was started on (`promises.NO_BLOCK` for a
     # protocol that declares none, compared like any block) and the protocol
     # it audited, by file name in the area; "" where the start names none —
-    # a review's (`begin(block_sha=None, protocol=None)`), or an audit's
-    # written by labkit 0.103.0 or earlier: a historical call
-    # (`historical_call`), never compared on them
+    # a review's (`begin(block_sha=None, protocol=None)`). An audit always
+    # names both; starts without that binding are refused on reading
     block_sha: str = ""
     protocol: str = ""
 
@@ -200,7 +199,8 @@ def under_audits(area: Path, path: Path) -> str:
 def parse_journal(text: str, where: str) -> list[Attempt]:
     """The attempts of a journal TEXT, in the order they started. Raises
     AttemptError naming WHERE and the line on a line that is no event, an
-    end or interruption of an attempt never started, or a second end."""
+    end or interruption of an attempt never started, a second end, or an
+    audit start without its promise-block and protocol binding."""
     started: dict[str, Attempt] = {}
     try:
         rows = jsonl.objects(text, where)
@@ -232,20 +232,45 @@ def parse_journal(text: str, where: str) -> list[Attempt]:
     return list(started.values())
 
 
+def validate_audit_binding(
+    mode: str, block_sha: object, protocol: object, where: str
+) -> None:
+    """Refuse an audit start without its promise-block and protocol binding.
+
+    Review modes bind their inputs separately and need neither field.
+    Pure; raises AttemptError naming WHERE and each missing or malformed
+    field. Starts written before audit bindings existed are not migrated.
+    """
+    if mode not in findings.MODES:
+        return
+    missing = [
+        name
+        for name, value in (("block_sha", block_sha), ("protocol", protocol))
+        if not isinstance(value, str) or not value.strip()
+    ]
+    if missing:
+        raise AttemptError(
+            f"{where}: audit start requires non-empty text for {', '.join(missing)}; "
+            "journal starts without audit bindings are no longer supported",
+            fix="reproduce this area with its pinned labkit version; 0.107.0 is "
+            "the last release that reads audit starts written by 0.103.0 or earlier "
+            "— keep the journal as written, do not add bindings after the fact",
+        )
+
+
 def _started(aid: str, row: dict, at: str) -> Attempt:
     """The attempt a start ROW (at AT) opens. Raises AttemptError on a key
-    it lacks."""
+    it lacks or an audit binding that does not read."""
     try:
+        mode = str(row["mode"])
+        validate_audit_binding(mode, row.get("block_sha"), row.get("protocol"), at)
         return Attempt(
             aid,
-            str(row["mode"]),
+            mode,
             str(row["model"]),
             str(row["scope_sha"]),
             str(row["started"]),
             str(row["host"]),
-            # a review's start names no block and no protocol, nor an audit's
-            # written by 0.103.0 or earlier: such a start reads as it stands, a
-            # historical call (`historical_call`), and neither is supplied
             block_sha=str(row.get("block_sha") or ""),
             protocol=str(row.get("protocol") or ""),
         )
@@ -280,15 +305,6 @@ def _after(was: Attempt, event: str, row: dict, at: str) -> Attempt:
     )
 
 
-def historical_call(at: int | None, block_sha: str, protocol: str) -> bool:
-    """Is a failed audit call historical — one whose binding or order the
-    journal cannot give: an attempt whose start names no promise block or
-    no protocol (BLOCK_SHA or PROTOCOL "", a start written by labkit
-    0.103.0 or earlier), or a `-failed.toml` no attempt of the journal
-    names (AT None)?"""
-    return at is None or not block_sha or not protocol
-
-
 def superseding_record(
     journal: list[Attempt],
     at: int | None,
@@ -306,11 +322,9 @@ def superseding_record(
     neither the call's content nor the repair of any finding (a recorded
     BLOCKER stays under the follow-up rule, `followup`). Two cases:
 
-    - a historical call (`historical_call`): a later audit of its MODE
-      alone, started in the current format (its start names a block and a
-      protocol) — the old call cannot be held to a binding or an order the
-      journal never named, and none is supplied after the fact; that is
-      the documented way from the old format to the new;
+    - a failed file no journal attempt names: an audit
+      of its MODE alone — the file has no known order or protocol, and no
+      start is invented for it;
     - any other call: a record of the same mode and promise block that a
       later attempt of JOURNAL, started on the same protocol, ended with.
 
@@ -327,15 +341,11 @@ def superseding_record(
     # a file no attempt names (a historical call) has no place in the
     # journal: every attempt of it counts as later
     later = journal if at is None else journal[at + 1 :]
-    historical = historical_call(at, block_sha, protocol)
     for a in later:
         r = records.get(a.file) if a.outcome == "record" else None
         if r is None or r.mode != mode:
             continue
-        if historical:
-            if a.block_sha != "" and a.protocol != "":  # the current format
-                return r
-        elif a.protocol == protocol and r.block_sha == block_sha:
+        if at is None or (a.protocol == protocol and r.block_sha == block_sha):
             return r
     return None
 
@@ -1093,9 +1103,10 @@ def begin(
     write its start — with BLOCK_SHA, the promise block an audit reads, and
     PROTOCOL, the file name of the protocol it audits (None for a review,
     which binds neither of its own; the start then names none and reads
-    back as "", as a start of labkit 0.103.0 or earlier does:
-    `historical_call`). Raises AttemptError on a refusal or a journal that
-    does not read, RuntimeError when git fails."""
+    back as ""). Raises AttemptError on an audit without either binding,
+    a refusal or a journal that does not read, RuntimeError when git fails.
+    Invalid bindings are refused before any journal or lock is written."""
+    validate_audit_binding(mode, block_sha, protocol, str(journal_path(area)))
     with _area_lock(area):
         found = area_gaps(area)
         attempts = read_journal(area)
