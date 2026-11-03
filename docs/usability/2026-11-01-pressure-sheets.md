@@ -151,7 +151,9 @@ of 2026-10-29 had no supplied plan, the registered pilot no pressure. Together t
 idea; they do not show that labkit helps under pressure in particular. That needs the same tasks and
 the same plans with and without the demand, each with and without labkit — four cells per task. For
 a small evaluation it stays at a few tasks, and the claim stays as narrow as the tasks are few.
-Which tasks, how many attempts per cell and the budget are not decided.
+The [short plan](2026-11-01-evaluation-design.md#short-plan-for-the-next-round)
+selects 34, 15 and sts512 for the next comparison. Repetitions per cell, budget
+and the final pressure sentences remain to be fixed before counted attempts.
 
 ## Before a counted round
 

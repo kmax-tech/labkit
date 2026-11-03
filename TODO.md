@@ -2180,6 +2180,24 @@ Records sind auf main integriert (`e754b0c3`). Verträge und Belege:
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+### Typgrenze bei fester Vorhersagebewertung (2026-11-01)
+
+Aufgabe 60 bewertet feste Modell- und Regelvorhersagen, während `compute`
+laut Definition keine Vorhersage beurteilt. Das `apply`-Gerüst bildet den
+Vergleich vieler fester Vorhersager ohne gefordertes Leistungskriterium nicht
+unmittelbar ab. Definition und Gerüstpflichten gemeinsam klären; dabei
+`[model] number_describes = "model_outputs"` mitprüfen. Kein Bauauftrag vor
+der nächsten Runde: 60 bleibt historisches Korrekturbeispiel mit dem
+unveränderten `compute`-Protokoll des registrierten Piloten und zählt als
+ausdrücklich benannter Grenzfall; kein neuer Vergleichslauf mit 60.
+Historische Einordnungen bleiben bei ihrer Runde (Druckrunde: `apply`,
+registrierter Pilot: `compute`). Verkürzter Plan für die nächste Runde:
+34 `compute`, 15 `fit`, sts512 `apply`, je mit/ohne labkit und mit/ohne
+Ergebnisdruck. 21 entfällt; pubmedqa50 und 71 weiter ausgeschlossen.
+Wiederholungszahl und Budget noch festzulegen; drei Wiederholungen wären
+36 Versuche, kein freigegebener Laufauftrag.
+Siehe [Kurzplan](docs/usability/2026-11-01-evaluation-design.md#short-plan-for-the-next-round).
+
 ### LLM-Schicht: öffentliche Schnittstelle, Cache, Anschluss großer Pipelines (2026-11-02)
 
 Anlass: Vergleich mit `~/projects/fallacy-detection`, einem Pipeline-Gerüst
