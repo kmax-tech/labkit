@@ -371,6 +371,15 @@ against one real second case, not in advance.
       empty dashboard must not pass for a recorded one;
    4. off stays the default (`config/tracking/default.yaml`).
    Points 2 and 3 are a small change in `src/run/tracker.py`.
+6. **The pilot is the Big-Bench zero-shot baseline with llama3.2**
+   (2026-11-03, Max): `published/pins.yaml:56`
+   (`baselines/big-bench/llama3.2/zs`, `repro_hash c8f5bb69…`), run
+   directory present locally. Local through ollama, so free to repeat;
+   pinned with the predictions' sha256, so the proof is the item-wise diff,
+   not a tolerance. Part 3 (the run under labkit) must reproduce the pinned
+   predictions exactly — labkit records, it does not compute. Part 2 (the
+   switch to `labkit.run.llm`) changes the cache key, so the model is asked
+   anew; any difference shows per item.
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -383,7 +392,7 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1 to 5 and 10 are decided above.
+The numbers stay as first written; 1 to 6 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
