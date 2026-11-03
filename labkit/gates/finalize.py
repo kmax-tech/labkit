@@ -176,7 +176,7 @@ from labkit.checks.readme_check import readme_placeholders, readme_route
 from labkit.checks.code_scan import unreadable_source
 from labkit.formats.scope_sha import SourceError
 from labkit.formats.findings import area_records, corrected_field, decision_digest
-from labkit.formats.followup import chain
+from labkit.formats.followup import chain, earlier_blockers, earlier_corrections
 
 
 def choose_answering_run(
@@ -456,6 +456,39 @@ def scope_changes(
     now = scope_now(area, protocol, pid, run, root)
     if now is None or not now.held:
         return []
+    text = protocol.read_text(encoding="utf-8")
+    waiting = awaiting_followup(area, protocol, text, run)
+    refs = [waiting.get(field_name(what)) for what, _, _ in now.held]
+    labels = _labels(now.held)
+    restore = (
+        f"restore {labels} as {now.first.dir.name} registered them"
+        f"{shown_then(protocol, now.first, root)} — the runs measured under them "
+        f"stay; an audit that read the rewritten fields is owed again "
+        f"(`labkit-next` names it)"
+    )
+    anew = (
+        "when the registration cannot be answered as written, "
+        + register_anew(pid)
+        + " — the earlier protocol, its runs and their verdict stay"
+    )
+    if all(refs):
+        # each held field's correction is decided: the follow-up that judges
+        # it comes first, the way back after it (probe 2026-11-02, smaller
+        # points: three ways, restore first, and no follow-up command)
+        fix = (
+            f"the follow-up analysis audit on the run as it stands "
+            f"(`{audit_command(area, '--mode', 'analysis', protocol=protocol)}`) "
+            f"judges {', '.join(r for r in refs if r)}, decided `fixed` as a "
+            f"correction of {labels} in place — only its `resolved` on that "
+            f"finding, for exactly this text, releases the change, and no new "
+            f"measurement is owed; or, a changed definition, population or question "
+            f"is no correction: {restore}; or, {anew}"
+        )
+    else:
+        fix = (
+            f"{restore}; or, a field that misdescribed the unchanged run: "
+            f"{CORRECTION_ROUTE}; or, {anew}"
+        )
     return [
         blocker(
             f"what the number is about changed after the first measurement "
@@ -463,14 +496,7 @@ def scope_changes(
             f"now; no run measured under it yet) — a scope set after a result was seen "
             f"does not answer the registered question, and a new measurement would "
             f"carry the change",
-            fix=f"restore {_labels(now.held)} as {now.first.dir.name} registered them"
-            f"{shown_then(protocol, now.first, root)} — the runs measured under them "
-            f"stay; an audit that read the rewritten fields is owed again "
-            f"(`labkit-next` names it); or, a field that misdescribed the unchanged "
-            f"run: {CORRECTION_ROUTE}; or, when the registration cannot be answered "
-            f"as written, "
-            + register_anew(pid)
-            + " — the earlier protocol, its runs and their verdict stay",
+            fix=fix,
         )
     ]
 
@@ -566,6 +592,46 @@ def resolved_corrections(
             name = corrected_field(m.finding, protocol, text)
             if name is not None:
                 out.setdefault(name, Correction(v.ref, record.path.name, v.why))
+    return out
+
+
+def awaiting_followup(
+    area: Path, protocol: Path, text: str, run: Path
+) -> dict[str, str]:
+    """The fields of PROTOCOL (TEXT as it stands) whose correction a
+    follow-up analysis audit of the state now would be shown and judge, by
+    `field_name`, each with the correction's ref (`<record>#<n>`): a
+    finding decided `fixed` that names the field as its place
+    (`findings.corrected_field`), a head of its chain in a record that does
+    not cover the area now — what `audit_prompt.earlier_of` shows, through
+    the same `followup.earlier_blockers` and `earlier_corrections`. Empty
+    when the area holds more than one protocol (no correction is shown
+    then) or its records or the covering state cannot be read."""
+    if len(area_protocols(area)) != 1:
+        return {}
+    try:
+        records = area_records(area)
+        covering = {r.path.name for r in covering_analysis(area, text, run)}
+    except (ValueError, FileNotFoundError, RuntimeError):
+        return {}
+
+    def current(r: audit_findings.Record) -> bool:
+        return r.path.name in covering
+
+    def field_of(f: audit_findings.Finding) -> str | None:
+        return corrected_field(f, protocol, text)
+
+    try:
+        shown_ = earlier_blockers(records, current) + earlier_corrections(
+            records, current, field_of
+        )
+    except audit_findings.FindingsError:
+        return {}
+    out: dict[str, str] = {}
+    for m in shown_:
+        name = field_of(m.finding)
+        if name is not None:
+            out.setdefault(name, m.ref)
     return out
 
 

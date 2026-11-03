@@ -42,6 +42,10 @@ ENV = {
         f"GIT_{role}_{k}": v for role in ("AUTHOR", "COMMITTER") for k, v in WHO.items()
     },
 }
+#: Data / scope corrected in place: the same files, the count named
+SCOPE_CORRECTED = (
+    "data/raw/cases.jsonl (12 cases, one per line) and data/raw/inputs/<case_id>/"
+)
 #: what the scope hold says about a field rewritten after the last run
 HELD_NOW = "(as the protocol stands now; no run measured under it yet)"
 
@@ -590,6 +594,74 @@ class RegisteredReportRepairs(RepairPaths):
         said = self.decide(record, "fixed", "fixed")
         self.assertNotIn("waits for the follow-up audit", said)
         self.assertIn("not repaired", said)
+
+    def scope_corrected(self, decided: bool) -> str:
+        """An audit BLOCKER placed at Data / scope, the field corrected in
+        place and — DECIDED — the finding decided `fixed` and committed (an
+        undecided BLOCKER holds the commit); the record's name."""
+        self.answered(
+            "BLOCKER · PROTOCOL-docs-per-case.md:Data / scope · Data / scope names "
+            "no file count · the reader cannot tell what was read · LAB-050 "
+            "Analysis audit before reporting · name the count\nverdict: 1 "
+            f"blockers, 0 warnings, 0 notes\nscope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        record = sorted((self.lab / AREA / "audits").glob("*-analysis*.toml"))[-1].name
+        self.fill(f"Data / scope={SCOPE_CORRECTED}")
+        if decided:
+            self.decide(record, "fixed", "Data / scope now names the twelve lines")
+            self.commit("Data / scope corrected; finding 1 decided")
+        return record
+
+    def test_a_decided_correction_names_its_follow_up_first(self):
+        """`labkit-next` offered three ways at a decided correction, the
+        way back first, and no follow-up command (probe 2026-11-02, smaller
+        points). The step is the follow-up the decision named; taken, the
+        unchanged run is adopted, nothing measured again."""
+        record = self.scope_corrected(decided=True)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            f"next:  the follow-up analysis audit on the run as it stands "
+            f"(`labkit-audit {AREA} --mode analysis`) judges {record}#1",
+            nxt,
+        )
+        self.adopt(ok=False)
+        self.answered(
+            f"FIX · {record}#1 · resolved · the field names the count\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+            ok=True,
+        )
+        self.assertIn("labkit-adopt", self.run_(".venv/bin/labkit-next", AREA))
+        self.assertIn("finalized, audited, checked", self.adopt(ok=True))
+        self.assertEqual(self.runs(), 1)
+
+    def test_the_twin_an_undecided_rewrite_is_not_sent_to_a_follow_up(self):
+        """No finding decided `fixed` names the field: no follow-up judges
+        it, and the way back stays first."""
+        self.scope_corrected(decided=False)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("next:  restore Data / scope", nxt)
+        self.assertNotIn("the follow-up analysis audit on the run", nxt)
+
+    def test_the_twin_an_unresolved_follow_up_releases_nothing_and_is_not_named_again(
+        self,
+    ):
+        """The follow-up judges the correction `unresolved`: the adoption
+        stays refused, and the step no longer names a follow-up — the open
+        BLOCKER it carried is the step."""
+        record = self.scope_corrected(decided=True)
+        self.answered(
+            f"FIX · {record}#1 · unresolved · the count is still missing\n\n"
+            f"{CLEAN_ANALYSIS}",
+            "--mode",
+            "analysis",
+        )
+        self.adopt(ok=False)
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("the follow-up analysis audit on the run", nxt)
 
     def code_repaired_after_the_adoption(self) -> str:
         """The run adopted, a later audit's BLOCKER on the code, the code
