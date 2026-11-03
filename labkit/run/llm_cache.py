@@ -229,11 +229,11 @@ class Cache:
         *,
         system: str | None = None,
         temperature: float | None = None,
-        max_tokens: int | None = None,
-        raw: bool = False,
-        stop: list[str] | None = None,
         timeout: int = 300,
         attempts: int = 6,
+        raw: bool = False,
+        stop: list[str] | None = None,
+        max_tokens: int | None = None,
     ) -> Answer:
         """One completion through the cache, as the mode says; arguments,
         retries and errors as `llm.complete`'s. Raises CacheMiss in a replay

@@ -13,6 +13,7 @@ contract is tested through the real wire path, not a patched backend.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import importlib
 import inspect
 import io
@@ -27,7 +28,7 @@ from unittest import mock
 import ollama_fixture
 from models_fixture import serve, toml
 
-from labkit.run import batch, llm, llm_specs, runlog
+from labkit.run import batch, llm, llm_backends, llm_cache, llm_specs, runlog
 from labkit.formats import runs
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,8 +125,9 @@ class Listed(unittest.TestCase):
 
 
 class Calls(unittest.TestCase):
-    """`llm.complete`, `complete_many`, `resolve`, `spec`, `identity`,
-    `last_usage`, `last_endpoint` against one stand-in server."""
+    """`llm.complete`, `complete_many`, `complete_response`, `resolve`,
+    `spec`, `identity`, `last_usage`, `last_endpoint` and
+    `llm_backends.Response` against one stand-in server."""
 
     def setUp(self) -> None:
         self.handler, self.url = ollama_fixture.start(self)
@@ -232,6 +234,44 @@ class Calls(unittest.TestCase):
         thread.start()
         thread.join()
         self.assertEqual(result, [llm.NO_USAGE, ""])
+
+    def test_complete_response_carries_everything_the_call_returned(self) -> None:
+        response = llm.complete_response("o", "q", temperature=0)
+        self.assertIsInstance(response, llm_backends.Response)
+        self.assertEqual(response.text, llm.complete("o", "q", temperature=0))
+        self.assertEqual(
+            (response.thinking, response.finish_reason, response.endpoint),
+            ("because", "stop", self.url),
+        )
+        usage = response.usage
+        self.assertEqual((usage.prompt_tokens, usage.output_tokens), (7, 3))
+        assert response.body is not None
+        self.assertEqual(response.body["eval_count"], 3)
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            response.text = "edited"  # type: ignore[misc]
+
+    def test_a_response_without_trace_reason_or_reply_says_so(self) -> None:
+        with mock.patch.object(
+            llm, "complete_claude_cli", lambda *a, **k: "cli answer"
+        ):
+            response = llm.complete_response("cli", "q")
+        self.assertEqual(
+            (response.text, response.thinking, response.endpoint),
+            ("cli answer", "", ""),
+        )
+        self.assertEqual((response.finish_reason, response.body), (None, None))
+
+    def test_complete_response_fails_as_complete_does(self) -> None:
+        self.handler.status = 404
+        with self.assertRaisesRegex(llm.BackendError, "HTTP 404"):
+            llm.complete_response("o", "q", attempts=3)
+        self.assertEqual(self.handler.chats, 1)
+        self.handler.status = 503
+        with self.assertRaises(llm.BackendError):
+            llm.complete_response("o", "q", attempts=2)
+        self.assertEqual(self.handler.chats, 3)
+        with self.assertRaises(KeyError):
+            llm.complete_response("nope", "q")
 
 
 class FindModelsToml(unittest.TestCase):
@@ -414,6 +454,145 @@ class Runs(unittest.TestCase):
         self.assertIn("boom", json.dumps(runs.read_failure(run.dir)))
         self.assertFalse((run.dir / "completion.json").exists())
         self.assertFalse((self.area / "runs.tsv").exists())
+
+
+class CachedCalls(unittest.TestCase):
+    """`llm_cache.Cache`, `Cache.complete`, `Answer` and `Origin`: runs in
+    an area of a lab whose `models.toml` the cache finds, asking one
+    stand-in server through the cache."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.lab = Path(tmp.name).resolve()
+        self.area = self.lab / "exp"
+        self.area.mkdir()
+        self.handler, self.url = ollama_fixture.start(self)
+        self.other, other_url = ollama_fixture.start(self)
+        text = (
+            f'[models.o]\nbackend = "ollama"\nmodel = "m"\nendpoints = ["{self.url}"]\n'
+            f'[models.o2]\nbackend = "ollama"\nmodel = "m"\n'
+            f'endpoints = ["{other_url}"]\n'
+        )
+        serve(self, text)
+        (self.lab / "models.toml").write_text(text, encoding="utf-8")
+        self.root = self.lab / "cache" / "llm"
+        self.stderr = io.StringIO()
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))
+        self.enterContext(contextlib.redirect_stderr(self.stderr))
+
+    def ask(
+        self,
+        prompt: str = "q",
+        *,
+        alias: str = "o",
+        replay: bool = False,
+        repeat_of: str | None = None,
+    ) -> tuple[runlog.Run, llm_cache.Answer]:
+        """One run asking ALIAS once through the cache at its default root."""
+        answers: list[llm_cache.Answer] = []
+        with runlog.run("e", {}, self.area, repeat_of=repeat_of) as run:
+            cache = llm_cache.Cache(run, replay=replay)
+            answers.append(cache.complete(alias, prompt, temperature=0))
+        return run, answers[0]
+
+    def record(self, run: runlog.Run) -> tuple[dict, list[dict]]:
+        """The run's `llm-cache.json` and the lines of its `llm-calls.jsonl`."""
+        opened = json.loads((run.dir / runs.LLM_CACHE_FILE).read_text())
+        calls = (run.dir / runs.LLM_CALLS_FILE).read_text().splitlines()
+        return opened, [json.loads(line) for line in calls]
+
+    def test_normal_stores_an_answer_a_later_run_reads(self) -> None:
+        first, asked = self.ask()
+        second, hit = self.ask()
+        self.assertEqual(self.handler.chats, 1)
+        self.assertIsNone(asked.origin)
+        assert hit.origin is not None
+        self.assertIsInstance(hit.origin, llm_cache.Origin)
+        self.assertEqual(hit.origin.run, first.run_id)
+        self.assertIsInstance(hit.origin.written, str)
+        self.assertEqual(hit.response, asked.response)
+        opened, [line] = self.record(second)
+        self.assertEqual(
+            opened,
+            {
+                "cache_version": llm_cache.CACHE_VERSION,
+                "mode": "normal",
+                "root": str(self.root),
+            },
+        )
+        self.assertEqual((line["alias"], line["hit"]), ("o", True))
+        self.assertEqual(line["origin"]["run"], first.run_id)
+        self.assertEqual((line["usage"]["prompt_tokens"], line["uncached"]), (7, None))
+        self.assertEqual((self.root / ".gitignore").read_text(), "*\n")
+
+    def test_the_key_is_the_model_and_the_call_not_alias_or_endpoint(self) -> None:
+        self.ask(alias="o")
+        _, hit = self.ask(alias="o2")
+        self.assertIsNotNone(hit.origin)
+        self.assertEqual(self.other.chats, 0)
+        _, asked = self.ask("another prompt")
+        self.assertIsNone(asked.origin)
+        self.assertEqual(self.handler.chats, 2)
+
+    def test_replay_asks_no_model(self) -> None:
+        self.ask()
+        replayed, hit = self.ask(replay=True)
+        self.assertIsNotNone(hit.origin)
+        self.assertEqual(self.record(replayed)[0]["mode"], "replay")
+        with self.assertRaises(LookupError) as cm:
+            self.ask("a prompt nobody asked", replay=True)
+        self.assertIsInstance(cm.exception, llm_cache.CacheMiss)
+        self.assertEqual(self.handler.chats, 1)
+
+    def test_repeat_asks_anew_and_neither_reads_nor_stores(self) -> None:
+        first, _ = self.ask()
+        self.handler.answer = "another answer"
+        repeat, asked = self.ask(repeat_of=first.run_id)
+        self.assertEqual((asked.response.text, asked.origin), ("another answer", None))
+        self.assertEqual(self.record(repeat)[0]["mode"], "repeat")
+        _, hit = self.ask()
+        self.assertEqual(hit.response.text, "the answer")
+        self.assertEqual(self.handler.chats, 2)
+        with runlog.run("e", {}, self.area, repeat_of=first.run_id) as run:
+            with self.assertRaisesRegex(ValueError, "repeats another run"):
+                llm_cache.Cache(run, replay=True)
+
+    def test_without_models_toml_above_the_run_the_root_must_be_given(self) -> None:
+        (self.lab / "models.toml").unlink()
+        with runlog.run("e", {}, self.area) as run:
+            with self.assertRaises(FileNotFoundError):
+                llm_cache.Cache(run)
+            given = llm_cache.Cache(run, root=self.lab / "elsewhere")
+            self.assertIsNone(given.complete("o", "q").origin)
+        self.assertTrue((self.lab / "elsewhere" / ".gitignore").exists())
+
+    def test_ollama_without_a_weights_digest_is_not_cached(self) -> None:
+        self.handler.digest = None
+        llm._FROZEN.clear()
+        run, _ = self.ask()
+        self.assertIn("not cached", self.stderr.getvalue())
+        self.assertIn("unavailable", self.record(run)[1][0]["uncached"])
+        self.assertIsNone(self.ask()[1].origin)
+        with self.assertRaises(llm_cache.CacheMiss):
+            self.ask(replay=True)
+        self.assertEqual(self.handler.chats, 2)
+
+    def test_a_damaged_entry_raises_cache_corruption_error(self) -> None:
+        self.ask()
+        [entry] = self.root.rglob("??/*.json")
+        entry.write_text("{", encoding="utf-8")
+        with self.assertRaises(ValueError) as cm:
+            self.ask()
+        self.assertIsInstance(cm.exception, llm_cache.CacheCorruptionError)
+        self.assertEqual(self.handler.chats, 1)
+
+    def test_complete_fails_as_llm_complete_does(self) -> None:
+        self.handler.status = 404
+        with self.assertRaisesRegex(llm.BackendError, "HTTP 404"):
+            self.ask()
+        with self.assertRaises(KeyError):
+            self.ask(alias="nope")
 
 
 if __name__ == "__main__":

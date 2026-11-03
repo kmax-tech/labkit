@@ -34,7 +34,7 @@ module in the second column is core.
 
 The layer table holds the imports inside labkit; this section is the
 contract outward — the names a lab repo may import and rely on, through
-`from labkit.run import llm, runlog, batch`. Everything else is internal
+`from labkit.run import llm, llm_backends, llm_cache, runlog, batch`. Everything else is internal
 and may change in any release with a "Breaking" entry in `CHANGELOG.md`.
 
 **The release rule.** A name, signature or behaviour listed here changes
@@ -52,6 +52,8 @@ behaviour test each.
 |---|---|---|
 | `llm.complete` | `complete(alias, prompt, *, system=None, temperature=None, timeout=300, attempts=6, raw=False, stop=None, max_tokens=None)` | the answer text (`str`); transport failures are retried, and exhausted retries raise `BackendError` (a `RuntimeError`) whatever the backend threw; an HTTP 4xx raises `BackendError` at once; an alias `models.toml` lacks raises `KeyError`; a setting the backend cannot honour (a temperature or a token cap for `claude-cli`) raises `ValueError` |
 | `llm.complete_many` | `complete_many(alias, prompts, *, workers=4, **kw)` | `complete` over independent prompts, answers in input order |
+| `llm.complete_response` | `complete_response(alias, prompt, *, system=None, temperature=None, timeout=300, attempts=6, raw=False, stop=None, max_tokens=None)` | `complete` with everything the call returned, a `Response` whose `text` is what `complete` returns; arguments, retries and errors as `complete`'s |
+| `llm_backends.Response` | `Response(text, thinking, finish_reason, usage, endpoint, body)` | a frozen record of one completion: the answer `text`, the reasoning `thinking` (`""` when none), the `finish_reason` the backend reported (`None` when none), the `usage` (`Usage`), the `endpoint` that answered (`""` for `claude-cli`), the decoded reply `body` (`None` when the backend handed back none) |
 | `llm.resolve` | `resolve(alias)` | the spec as a run records it (`backend`, `model`, `endpoint`, …), a new dict each call — what goes into `runlog.run`'s config |
 | `llm.spec` | `spec(alias)` | the typed spec every call is made with (`ClaudeCliSpec`, `OllamaSpec`, `OpenAISpec`), frozen per process at first use: an edit of `models.toml` reaches a new process only |
 | `llm.identity` | `identity(alias)` | which model answers: `backend` and `model` (`name@digest` for ollama); no endpoint, since a host can change while serving the same weights |
@@ -70,6 +72,10 @@ behaviour test each.
 | `runlog.Run.metrics` | `metrics(**kv)` | adds numbers to the run's `metrics.json`, written at a clean exit; a value JSON cannot hold raises `TypeError` naming its key |
 | `runlog.Run.run_id` | `run_id: str` | the run's id: the name of its directory and its row in `runs.tsv` |
 | `runlog.Run.draw` | `draw: int \| None` | a repeat's draw number (2, 3, …); `None` for a run that repeats none |
+| `llm_cache.Cache` | `Cache(run, *, replay=False, root=None)` | the cache of raw answers as one run uses it; its mode is `repeat` when the run repeats another (`Run.draw` set), `replay` with `replay=True`, else `normal`; opening writes the run's `llm-cache.json` (cache version, mode, directory); `root` defaults to `cache/llm/` beside the lab's `models.toml`, created with a `.gitignore` of `*` (`FileNotFoundError` when no `models.toml` is above the run); a replay asked of a repeat raises `ValueError` |
+| `llm_cache.Cache.complete` | `complete(alias, prompt, *, system=None, temperature=None, timeout=300, attempts=6, raw=False, stop=None, max_tokens=None)` | one completion through the cache, an `Answer`; arguments, retries and errors as `llm.complete`'s. The key is the answering model (`llm.identity`), the spec field that changes the answer, the prompts and the sampling values as sent — not the alias, not the endpoint. `normal` reads a hit and stores a miss's answer, the first under a key staying; `replay` asks no model, a miss raises `CacheMiss` (a `LookupError`); `repeat` asks the model and neither reads nor stores. An ollama model without one weights digest is not cached, said on stderr, and refused by a replay; an entry that is not one raises `CacheCorruptionError` (a `ValueError`). Each call adds a line to the run's `llm-calls.jsonl`: key, alias, `hit`, origin, usage, why not cached |
+| `llm_cache.Answer` | `Answer(response, origin)` | the `Response` (for a hit the stored one, with the original call's usage) and its `origin`: `None` when the model was asked |
+| `llm_cache.Origin` | `Origin(run, written)` | where a hit came from: the id of the run that stored it (`None` when stored outside a run) and when |
 
 `models.toml`, the keys each table may carry; any other key is refused
 when the alias is first resolved (`ValueError` naming the key), and so is

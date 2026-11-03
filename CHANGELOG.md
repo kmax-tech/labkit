@@ -318,9 +318,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 - **A public API, held by tests.** `docs/architecture.md`, section
   "Public API", lists what a lab repo may rely on: `llm.complete`,
-  `complete_many`, `resolve`, `spec`, `identity`, `last_usage`,
-  `last_endpoint`, `retries`, `provenance`, `find_models_toml`;
-  `batch.Store` with `pending`, `append`, `records`, and
+  `complete_many`, `complete_response`, `resolve`, `spec`, `identity`,
+  `last_usage`, `last_endpoint`, `retries`, `provenance`,
+  `find_models_toml`; `llm_backends.Response`; `llm_cache.Cache` with
+  `complete`, `llm_cache.Answer` and `Origin`; `batch.Store` with `pending`, `append`, `records`, and
   `batch.write_dataset`; `runlog.run` and `Run.output`, `Run.metrics`,
   `Run.run_id`, `Run.draw`; the keys of `models.toml`. A listed name,
   signature or behaviour changes only after one release in which the old
@@ -358,7 +359,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   stands in `llm-cache.json`, every call with hit and origin in
   `llm-calls.jsonl`, and `fresh_usage` counts only calls that asked the
   model. An ollama model without a single weights digest is not cached,
-  and the call says why (stagekit plan, step 2).
+  and the call says why (stagekit plan, step 2). `Cache`, `Cache.complete`
+  (its keywords in `llm.complete`'s order), `Answer`, `Origin`,
+  `llm.complete_response` and `llm_backends.Response` are public (step
+  4b).
 
 ### Deprecated
 
