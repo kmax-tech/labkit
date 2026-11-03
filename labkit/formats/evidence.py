@@ -19,8 +19,8 @@ commit holds it, it stays as written:
 Three witnesses, each git's own and exact for what it saw:
 
     `changes`         the tree (the stop, the post-change hook, `--findings`,
-                      report-check and so labkit-next) or the index (the
-                      commit) against HEAD — and a file
+                      report-check, labkit-next) or the index (the commit)
+                      against HEAD — and a file
                       git ignores (`ignored`), evidence no commit can carry
     `commit_changes`  each commit since the session began against its first
                       parent: a commit past the pre-commit (`--no-verify`)
@@ -50,7 +50,7 @@ from pathlib import Path
 
 from labkit.formats import findings
 from labkit.formats.attempts import JOURNAL
-from labkit.formats.gate import with_way_out
+from labkit.formats.gate import GateFinding, blocker, with_way_out
 from labkit.formats.repo import (
     GitError,
     audit_command,
@@ -359,6 +359,14 @@ def _undone_in(
 def changes(area: Path, *, staged: bool = False) -> list[str]:
     """`change_findings` as sentences, each with its way out."""
     return [with_way_out(why, fix) for why, fix in change_findings(area, staged=staged)]
+
+
+def change_blockers(area: Path, *, staged: bool = False) -> list[GateFinding]:
+    """`change_findings` as blockers, each with its restore as the way out —
+    what a gate that releases on AREA's records holds first: report-check
+    (its first station, and so `labkit-next`), a replacement for its
+    predecessor's area, an exploration's registered report."""
+    return [blocker(why, fix=fix) for why, fix in change_findings(area, staged=staged)]
 
 
 def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]]:

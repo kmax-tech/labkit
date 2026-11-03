@@ -33,11 +33,16 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   reported") and the adoption's own check passed it
   (`docs/notes/2026-11-02-review-record-forgery.md`). report-check's first
   station is now the pre-commit's comparison against HEAD
-  (`report_check.evidence_findings` over `evidence.change_findings`): each
-  change is a blocker naming the record and its `git checkout HEAD -- …`,
-  and `labkit-next` names that restore as the step. A `--decide` change of
-  the decision lines still passes; a restore clears the line. A record no
-  commit holds yet is still not compared with anything.
+  (`evidence.change_blockers`): each change is a blocker naming the record
+  and its `git checkout HEAD -- …`. The same comparison holds where a
+  release reads records past that station: `labkit-next` before it says a
+  handover ended the protocol (the handover's report is released by the
+  area's report reviews), report-check on a protocol that declares no
+  result (the stop's and the commit's `--if-reported`), and a replacement
+  for its predecessor's area when that is another area (the predecessor's
+  open BLOCKERs). A `--decide` change of the decision lines still passes;
+  a restore clears the line. A record no commit holds yet is still not
+  compared with anything.
 - **The estimator and the prompt skeleton register a bar the task states
   as `at_least`.** [criterion-1]'s constants hold exactly one of
   `at_least` (the bar as written, whatever the null lane scores) and

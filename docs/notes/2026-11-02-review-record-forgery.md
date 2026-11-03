@@ -74,14 +74,22 @@ every copy.
 
 **Committed records, 2026-11-03.** report-check's first station is now
 the pre-commit's own comparison against HEAD
-(`report_check.evidence_findings` over `evidence.change_findings`), so
-report-check, `labkit-next` and the adoption's check hold a committed
-record edited in the tree as the commit does: the record named, its
-restore from HEAD the way out; a `--decide` change passes, a restore
-clears it. Shown on the count lab in `tests/test_repair_paths.py`
-(`RegisteredReportRepairs`, the `committed` tests): a decision review
-turned `upheld`, an analysis BLOCKER removed, a report review's claim
-deleted after a commit past the hook. What stays outside:
+(`evidence.change_blockers`), so report-check, `labkit-next` and the
+adoption's check hold a committed record edited in the tree as the
+commit does: the record named, its restore from HEAD the way out; a
+`--decide` change passes, a restore clears it. Every release that reads
+an area's records past that station holds the same comparison for that
+area: `labkit-next` before it says a handover ended the protocol,
+report-check on a protocol that declares no result (`hold_registered`,
+the stop's and the commit's form), a replacement for its predecessor's
+area when that is another area (`report_replacement`). Several
+protocols of one area share the area's station: a changed record of one
+holds them all, as the commit holds the area. Shown on the count lab in
+`tests/test_repair_paths.py` (`RegisteredReportRepairs`, the `committed`
+tests: a decision review turned `upheld`, an analysis BLOCKER removed, a
+report review's claim deleted after a commit past the hook, the same
+after a handover) and in `tests/test_replacement.py` (the predecessor's
+BLOCKER removed in its own area). What stays outside:
 
 - every variant before the record's first commit (the smallest case and
   the analysis record above);

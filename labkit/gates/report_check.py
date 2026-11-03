@@ -31,7 +31,7 @@ docs/notes/2026-10-19-hooks-and-report-check.md):
                     answering run into Checked. No protocol or unreadable
                     context ends with exit 2.
      evidence       the area's committed evidence as the commit holds it
-                    (`evidence.change_findings`): a record changed beyond
+                    (`evidence.change_blockers`): a record changed beyond
                     its decision lines, a review or another audit file
                     changed, a closed run's files changed — each a blocker
                     whose way out is the restore from HEAD. The comparison
@@ -571,7 +571,8 @@ def report_check(
     """Check AREA before reporting; 0 clean or warnings, 1 blocked, 2 no context.
 
     0. Choose the protocol and read Checked; missing or unreadable ends with 2.
-       Committed evidence changed against HEAD blocks (`evidence_findings`).
+       Committed evidence changed against HEAD blocks
+       (`evidence.change_blockers`).
     1. Declaration: an unreadable `[result]` blocks, later stages continue.
     2. Registration: check the freeze where the lane owes it; otherwise check
        the first measurement's committed registration where owed.
@@ -631,20 +632,6 @@ def report_check(
     return findings.report("report-check", "reporting")
 
 
-def evidence_findings(ctx: Checked) -> list[GateFinding]:
-    """Every change of CTX's area's committed evidence against HEAD that
-    breaks its rule (`evidence.change_findings`) — in the index for the
-    pre-commit (INDEX), else in the tree —, each a blocker whose way out
-    restores it from HEAD. The comparison is the commit's own: a record
-    edited after its commit is held here as the commit holds it, a
-    `--decide` change of its decision lines passes, and a restore clears it.
-    Raises GitError when git fails."""
-    return [
-        blocker(why, fix=fix)
-        for why, fix in evidence.change_findings(ctx.area, staged=ctx.state == INDEX)
-    ]
-
-
 def registration_stage(ctx: Checked) -> list[GateFinding]:
     """Stage 2 of `report_gaps`: the freeze where CTX's lane owes it, else
     the first measurement's committed registration where owed
@@ -672,8 +659,8 @@ def report_gaps(
     one list `report_check` prints and `next_step` reads:
 
     0. Evidence: a change of the area's committed evidence that breaks its
-       rule (`evidence_findings`), first — its restore comes before any
-       other step.
+       rule (`evidence.change_blockers`; in the index for INDEX, else in the
+       tree), first — its restore comes before any other step.
     1. Declaration: an unreadable `[result]` blocks; later stages continue.
     2. Registration: the freeze where the lane owes it, else the first
        measurement's committed registration where owed; a declared
@@ -707,7 +694,7 @@ def report_gaps(
                 f"adopts again",
             )
         )
-    out += evidence_findings(ctx)
+    out += evidence.change_blockers(ctx.area, staged=ctx.state == INDEX)
     # 1. declaration
     if ctx.declaration_gap:
         out.append(
@@ -1038,10 +1025,13 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
     0 when the head registers no report, the file is not delivered in the
     state (but for a commit that removes one HEAD holds,
     `report_hold.missing_report`), or it carries the protocol's handover block; 1 held, the
-    blocker told under its own heading. Raises `protocol_block.BlockError`
-    on a head that does not read — the caller read the declaration off
-    the same text first."""
-    gaps = [
+    blocker told under its own heading. The area's committed evidence
+    changed against HEAD holds first (`evidence.change_blockers`): the
+    report of a handover is released by the report reviews of that area.
+    Raises `protocol_block.BlockError` on a head that does not read — the
+    caller read the declaration off the same text first."""
+    changed = evidence.change_blockers(protocol.parent, staged=staged)
+    gaps = changed + [
         g
         for g in (
             report_binding_gap(protocol, text, unread=True),
@@ -1052,10 +1042,12 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
     ]
     if not gaps:
         return 0
-    print(
-        f"═══ report-check {protocol} (its head has adopted no result; its "
-        f"registered report is delivered) ═══"
+    why = (
+        "its area's committed evidence changed"
+        if changed
+        else "its registered report is delivered"
     )
+    print(f"═══ report-check {protocol} (its head has adopted no result; {why}) ═══")
     out = Findings()
     out.take_all(gaps)
     return out.report("report-check", "reporting")

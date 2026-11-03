@@ -783,7 +783,10 @@ class ReportFiles(unittest.TestCase):
 
     def test_a_source_change_reaches_the_untouched_discussing_report(self):
         """Review 2026-10-26: only a source of the review changed — the
-        report untouched — and the commit passed with a stale review."""
+        report untouched — and the commit passed with a stale review. The
+        source is the protocol: a closed run's metrics.json, the source
+        first used here, may not change once committed, and report-check
+        holds that edit itself (`evidence.change_blockers`)."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=None,
@@ -795,21 +798,31 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area)
         self._git(root, "add", "-A")
         self._git(root, "commit", "-qm", "report and its review")
-        metrics = area / "runs" / self.RUN / "metrics.json"
-        metrics.write_text('{"criterion_1_pass": false}', encoding="utf-8")
-        self._git(root, "add", str(metrics))
-        code, out = self._gate(root, metrics, staged=True)
+        protocol = root / P
+        protocol.write_text(
+            protocol.read_text(encoding="utf-8") + "\nA later remark.\n",
+            encoding="utf-8",
+        )
+        self._git(root, "add", str(protocol))
+        code, out = self._gate(root, protocol, staged=True)
         self.assertEqual(code, 1, out)
         self.assertIn(
             f"═══ report-check REPORT.md ({report_hold.DISCUSSES_TOUCHED}) ═══", out
         )
         self.assertIn("has no clean report review of this state", out)
-        self.assertRegex(out, r"changed since: FILE: \S*metrics\.json")
+        self.assertRegex(out, r"changed since: FILE: \S*PROTOCOL-x\.md")
         # the twin: a review of the new state, staged with it, passes
         self._reviewed(report, area)
         self._git(root, "add", str(area / "audits"))
-        code, out = self._gate(root, metrics, staged=True)
+        code, out = self._gate(root, protocol, staged=True)
         self.assertEqual(code, 0, out)
+        # the first source: a closed run's metrics edited after its commit
+        metrics = area / "runs" / self.RUN / "metrics.json"
+        metrics.write_text('{"criterion_1_pass": false}', encoding="utf-8")
+        self._git(root, "add", str(metrics))
+        code, out = self._gate(root, metrics, staged=True)
+        self.assertEqual(code, 1, out)
+        self.assertIn("the closed run's metrics.json (changed)", out)
 
     def test_a_discussion_without_its_why_or_edited_by_hand_blocks(self):
         area = self._area(

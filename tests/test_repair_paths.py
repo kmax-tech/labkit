@@ -574,11 +574,12 @@ class RegisteredReportRepairs(RepairPaths):
     # -- a committed record edited in the tree is held where the commit holds
     # it (docs/notes/2026-11-02-review-record-forgery.md, "committed first")
 
-    def held_in_the_tree(self, record: str, *, adopted: bool = False) -> None:
+    def held_in_the_tree(self, record: str, *, adoption: bool = True) -> None:
         """RECORD (a path under the area's `audits/`), committed and edited
-        in the tree beyond its decision lines: report-check, labkit-next,
-        the adoption (unless ADOPTED already) and the commit name it with
-        the restore from HEAD; the restore they name clears that line."""
+        in the tree beyond its decision lines: report-check, the stop's
+        `--if-reported` on the report, labkit-next, the adoption (where
+        ADOPTION, a run not yet adopted) and the commit name it with the
+        restore from HEAD; the restore they name clears that line."""
         rel = f"{AREA}/audits/{record}"
         restore = f"git checkout HEAD -- {rel}"
         changed = f"audits/{record}: changed"
@@ -589,7 +590,12 @@ class RegisteredReportRepairs(RepairPaths):
         self.assertIn(f"where: {changed}", nxt)
         self.assertIn(f"next:  restore it (`{restore}`", nxt)
         self.assertNotIn("may be reported", nxt)
-        if not adopted:
+        self.assertNotIn("is handed over", nxt)
+        self.assertIn(
+            changed,
+            self.run_(".venv/bin/report-check", "--if-reported", "REPORT.md", ok=False),
+        )
+        if adoption:
             self.assertIn(changed, self.adopt(ok=False))
         self.assertIn(changed, self.commit("the edit", ok=False))
         self.run_(*restore.split())  # the index too: the refused commit staged it
@@ -686,7 +692,51 @@ class RegisteredReportRepairs(RepairPaths):
         text = claimed.read_text(encoding="utf-8")
         claimed.write_text(text[: text.index("[[claim]]")], encoding="utf-8")
         self.edit(f"report-reviews/{claimed.name}", ("claims = 1", "claims = 0"))
-        self.held_in_the_tree(f"report-reviews/{claimed.name}", adopted=True)
+        self.held_in_the_tree(f"report-reviews/{claimed.name}", adoption=False)
+
+    def test_a_committed_report_review_of_a_handover_with_its_claim_removed_is_held(
+        self,
+    ):
+        """After a handover its report is released by the report review
+        alone, and labkit-next and the stop's report-check on an
+        exploration never reached report-check's first station: a claim
+        removed from a committed review read "handed over … nothing"."""
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--handover",
+            "--why",
+            "the report must live elsewhere; a successor registers it",
+            "--tried",
+            "measured once",
+            "--into",
+            "REPORT.md",
+        )
+        self.answered(
+            "CLAIM #1 · line 3 · result · the mean is no result here\n"
+            "verdict: 1 claim(s)",
+            "--report-review",
+            "REPORT.md",
+            ok=False,
+        )
+        self.run_("git", "add", AREA, "REPORT.md")
+        self.run_(
+            "git",
+            "commit",
+            "-q",
+            "--no-verify",
+            "-m",
+            "claimed",
+            "--",
+            AREA,
+            "REPORT.md",
+        )
+        (review,) = (self.lab / AREA / "audits" / "report-reviews").glob("*.toml")
+        text = review.read_text(encoding="utf-8")
+        review.write_text(text[: text.index("[[claim]]")], encoding="utf-8")
+        self.edit(f"report-reviews/{review.name}", ("claims = 1", "claims = 0"))
+        self.held_in_the_tree(f"report-reviews/{review.name}", adoption=False)
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
 
     def test_a_code_blocker_decided_fixed_with_nothing_changed_is_not_sent_to_a_followup(
         self,
