@@ -199,9 +199,12 @@ promise (the decision's line had offered the route for a changed promise
 too). Twins: `tests/test_end_to_end.py` `CorrectedDescription` (a changed
 question held with its `resolved`, its restore, a reflowed question, a
 description still offered the route), `tests/test_finalize.py`
-`CorrectionWay`, `tests/test_findings.py` `CorrectedField`. Open: the new
-run's release and the "measure again" guidance (F5), the agent guide's
-correction bullet, LAB-003's typo sentence, the auditor's instruction.
+`CorrectionWay`, `tests/test_findings.py` `CorrectedField`. The agent
+guide's correction (under "an incomplete registration") and the follow-up
+auditor's instruction say the same: a misdescription is corrected, a
+requirement the run failed is repaired, the question stands, the verdict
+cites evidence outside the changed field. Open: the new run's release and
+the "measure again" guidance (F5), LAB-003's typo sentence.
 
 **Not in this contract.** Showing a released correction in the report —
 today only finalize's note names it; noted separately, no new report

@@ -346,12 +346,15 @@ prints these ways out with each decision list:
   registration lacked a field at the first measurement. That measurement
   is exploratory. If you can make the missing choice on stated grounds,
   register a successor with `[replaces]` as above. If not, hand over. If a
-  setup description disagrees with the unchanged data or code, correct the
+  setup description misdescribes what the unchanged run did, correct the
   text in the protocol. Examples are a count, a path or a name in Terms,
-  Data / scope, Model / tool, Model I/O, Exclusions / filters or Unit. Decide the finding `fixed`, naming the correction, and run
-  the analysis audit again. If the data or code changes, measure anew.
-  In place, never change a promise, the question, the criterion, the
-  quality checks or the null condition.
+  Data / scope, Model / tool, Model I/O, Exclusions / filters or Unit. If
+  the text stated a requirement the run failed, such as 14 cases required
+  and 12 read, the run is wrong: repair it and measure again. Decide a
+  correction `fixed`, naming it, and run the analysis audit again; only its
+  `resolved` releases the change. If the data or code changes, measure
+  anew. In place, never change a promise, the question (a typo included),
+  the criterion, the quality checks or the null condition.
 - **a wrong adoption** — The measurement stands, but the head adopted a
   run that does not answer; the finding names the one that does. Withdraw
   the adoption with `protocol-fill <PROTOCOL> --withdraw --why "<why>"`.

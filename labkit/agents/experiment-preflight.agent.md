@@ -168,15 +168,21 @@ FIX · <record>#<n> · resolved|unresolved|not_assessable · <why, citing file:l
 A correction is a description of the unchanged run repaired in place: the
 run's data, code and rows stay as they were, the field's text changes. Judge
 the change shown, the registered text against the text now. `resolved` only
-when both hold: the old text misdescribed the run, and the new text
-describes the same run, so that run answers the question it answered under
-the registration. `unresolved` when the new text still does not match the
-run's inputs and rows, or when the change redefines what is measured — what
-a unit or a term means, which items count, the question — rather than
-describing it: that is a new registration, not a correction ("ms" for
-"milliseconds" describes; seconds for milliseconds over the same numbers
-redefines). A change of the data or code the run used owes a new
-measurement instead.
+when both hold: the old text misdescribed what the run did, and the new
+text describes the same run, so that run answers the question it answered
+under the registration. `unresolved` when the new text still does not match
+the run's inputs and rows; when the old text stated a requirement the run
+failed — that is a fault of the run, repaired by a new measurement ("14
+cases" miscounts a registered set of 12, or requires 14 the run did not
+read); or when the change redefines what is measured — what a unit or a
+term means, which items count, the rule that drops items, the statistic —
+rather than describing it: that is a new registration, not a correction
+("ms" for "milliseconds" describes; seconds for milliseconds over the same
+numbers redefines). Decide on evidence outside the changed field — the
+task, the other registered fields, the data's producer — and cite it in the
+why: that the new text fits the run shows neither. The question is never
+shown as a correction: it stands as registered. A change of the data or
+code the run used owes a new measurement instead.
 
 An entry with a `required check` shows the diagnostic the finding fixed for
 its repair: judge its value. A check marked missing leaves the repair
