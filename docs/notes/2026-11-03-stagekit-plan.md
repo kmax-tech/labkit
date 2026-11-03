@@ -119,20 +119,14 @@ state.
     whole repo comes first; it keeps the old commit hashes named in
     `NOTES.md` and `docs/` resolvable, and filter-repo's commit map can
     rewrite them.
-  - The data and the pinned run directories of `published/pins.yaml` (at
-    least the pilot's) go to Ceph, addressed by sha256.
-- **Done when:** a fresh clone, given the manifest and Ceph access, fetches
-  the pilot's pinned artifacts and cache entries and verifies their sha256;
-  the test suite passes on the rewritten history; the push is a
-  fast-forward of `origin/main`.
+  - For now the data stay local (decided 2026-11-03, Max); storing them on
+    Ceph is a task of its own, outside this plan (fallacy-detection
+    `TODO.md`).
+- **Done when:** the data on disk verify against the manifest; the test
+  suite passes on the rewritten history; the push is a fast-forward of
+  `origin/main`.
 - **Who:** the history rewrite and the push are Max's (irreversible,
   remote); the script is prepared.
-- **Open:** how Ceph is reached from here (a CephFS mount, its S3 gateway,
-  or rsync over ssh to a cluster node), and with which tool — DVC with a
-  Ceph remote if several repos store data this way, otherwise the manifest
-  plus rsync into a directory named by hash. Dataset archives may carry
-  licences that forbid redistribution; that matters for publishing, not for
-  storing.
 
 ### 1 — labkit: public API, held by tests (decision 3)
 
@@ -297,7 +291,8 @@ Three commits, in this order, each with the full test suite green.
   drifted. Hence 0.x until step 6, and step 6's second round.
 - **The history rewrite (0).** Irreversible for the rewritten commits;
   backup bundle first, server history untouched, no force push. Until the
-  data are on Ceph, the only copies are on this disk and in the bundle.
+  data are on Ceph, the only copies are on this disk and in the bundle — a
+  lost disk loses the warm cache.
 - **4b may differ from the pin.** New calls at temperature 0 can still
   differ (batch composition on the server). The item-wise diff is the
   result, not a failure of the plan.
