@@ -20,7 +20,10 @@ first that applies is the step:
       its account of that run           (`report_hold.progress_account`), before
                                         any gap — saved first, released by nothing
     a gap report-check holds     → its way out, the first in the chain's
-                                   order (`report_check.report_gaps`)
+                                   order (`report_check.report_gaps`) —
+                                   but a measurement runlog's start gate
+                                   would refuse: that refusal's first step
+                                   (`start_check.measurement_refusal`)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
                                    that answers
     adopted, nothing held        → nothing: the number may be reported
@@ -39,19 +42,20 @@ from __future__ import annotations
 
 import argparse
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from labkit import PACKAGE_DIR
 from labkit.formats import console, handovers, protocol_block, protocol_check
-from labkit.formats.gate import BLOCKER, Findings
+from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
     area_path,
     audit_command,
     area_protocols,
     choose_protocol,
     layout_root,
+    measure_command,
     no_such_area,
     shown,
     stamped_areas,
@@ -139,14 +143,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     filled.take_all(g for g in gaps if g.grade == BLOCKER)
     held = filled.found
     if held:
-        first = held[0]
-        return Step(
-            first.text,
-            (first.fix or "the line above names what holds")
-            + (hint if ctx.run is None else ""),
-            f"the adoption and any report of the number: {len(held)} "
-            "blocker(s) stand, and this is the first",
-        )
+        return _held_step(ctx, held, hint if ctx.run is None else "")
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
         return Step(
@@ -198,6 +195,46 @@ def _handed_over(area: Path, protocol: Path, text: str) -> Step:
         "findings recorded in the handover",
         "nothing — a new attempt at the question is a new registration",
         "",
+    )
+
+
+def _held_step(ctx: "Checked", held: list[GateFinding], hint: str) -> Step:
+    """The step while report-check holds CTX with HELD, its blockers in the
+    chain's order: the first one's way out, HINT added — or, where that way
+    out is a measurement runlog would refuse, the refusal's first step
+    (`_refused_measurement`)."""
+    first = held[0]
+    refused = _refused_measurement(ctx, first.fix)
+    if refused is not None:
+        return replace(refused, next=refused.next + hint)
+    return Step(
+        first.text,
+        (first.fix or "the line above names what holds") + hint,
+        f"the adoption and any report of the number: {len(held)} "
+        "blocker(s) stand, and this is the first",
+    )
+
+
+def _refused_measurement(ctx: "Checked", fix: str | None) -> Step | None:
+    """The step when FIX, the way out of CTX's first hold, names a
+    measurement before any run answers and runlog's start gate would refuse
+    it now (`start_check.measurement_refusal`): the refusal's own first
+    step. None otherwise — with a stamped id only, the one a run binds to.
+    It named "measure" over an uncommitted registration, and runlog refused
+    (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+    from labkit.run import start_check
+
+    if ctx.run is not None or ctx.head.id is None:
+        return None
+    if measure_command(ctx.area) not in (fix or ""):
+        return None
+    gaps, first_step = start_check.measurement_refusal(ctx.area, ctx.protocol)
+    if not gaps:
+        return None
+    return Step(
+        f"a measurement would be refused now: {gaps[0]}",
+        first_step,
+        "the first measurement: runlog refuses it until then",
     )
 
 

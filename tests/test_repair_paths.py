@@ -588,3 +588,72 @@ class RegisteredReportRepairs(RepairPaths):
         said = self.decide(record, "fixed", "fixed")
         self.assertNotIn("waits for the follow-up audit", said)
         self.assertIn("not repaired", said)
+
+
+@unittest.skipUnless(
+    (VENV / "bin" / "usability").is_file() and shutil.which("git"),
+    "needs the suite's venv with labkit's commands, and git",
+)
+class BeforeTheFirstMeasurement(unittest.TestCase):
+    """The registration written and not committed: `labkit-next` named
+    "measure", and runlog refused the measurement — its start gate holds
+    the first measurement to the registration as committed (probe
+    2026-11-02, docs/notes/2026-11-02-repair-path-probe.md, "Smaller")."""
+
+    def setUp(self) -> None:
+        self.lab = Path(tempfile.mkdtemp()) / "lab"
+        rc, out = sh(
+            self.lab.parent,
+            str(VENV / "bin" / "usability"),
+            "stage",
+            str(self.lab),
+            "--task",
+            "count",
+            "--venv",
+            str(VENV),
+        )
+        assert rc == 0, out
+        for step in (
+            [".venv/bin/python", str(EXAMPLES / "count-fill.py")],
+            [
+                ".venv/bin/protocol-fill",
+                P,
+                "type=exploratory",
+                "kept.key=mean_docs_per_case",
+                "kept.unit=documents",
+                f"Terms of this protocol={TERMS}",
+                "Question / hypothesis=What is the mean number of input documents per case?",
+                "Data / scope=data/raw/cases.jsonl (12 cases) and data/raw/inputs/<case_id>/",
+                "Exclusions / filters=hidden files and nested directories are not counted",
+                f"Unit={UNIT}",
+            ],
+        ):
+            rc, out = sh(self.lab, *step)
+            assert rc == 0, (step, out)
+
+    def run_(self, *args: str, ok: bool = True) -> str:
+        rc, out = sh(self.lab, *args)
+        (self.assertEqual if ok else self.assertNotEqual)(rc, 0, out)
+        return out
+
+    def test_the_step_commits_the_registration_before_it_measures(self):
+        """The step names the refusal and its way out, not the measurement;
+        the measurement stays refused until the commit (nothing is let
+        through); committed, the step is the measurement, and it runs."""
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn("a measurement would be refused now", nxt)
+        self.assertIn("the registration as committed (HEAD) lacks", nxt)
+        self.assertIn("commit the registration", nxt)
+        self.assertNotIn("opens a run bound to", nxt)
+        refused = self.run_(
+            ".venv/bin/python", f"{AREA}/scripts/01_measure.py", ok=False
+        )
+        self.assertIn("the registration as committed (HEAD) lacks", refused)
+        self.assertFalse((self.lab / AREA / "runs").is_dir())
+        self.run_("git", "add", AREA, "tests")
+        self.run_("git", "commit", "-q", "-m", "register", "--", AREA, "tests")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("would be refused", nxt)
+        self.assertIn("opens a run bound to", nxt)
+        self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
+        self.assertEqual(len(list((self.lab / AREA / "runs").iterdir())), 1)

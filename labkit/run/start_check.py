@@ -235,6 +235,17 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     return out
 
 
+def measurement_refusal(base_dir: Path, protocol: Path) -> tuple[list[str], str]:
+    """What `freeze_gate` refuses a measurement bound to PROTOCOL in BASE_DIR
+    with, as the area stands now: the gaps (`_freeze_findings`; empty when
+    the run would start) and the first step its refusal names
+    (`_first_step`). The undecided preflight BLOCKERs, which refuse before
+    the gaps, are not read here. Raises SystemExit as `protocol_binding`
+    does; prints its warning for a protocol without a stamped id."""
+    bound = protocol_binding(base_dir, protocol.resolve())
+    return _freeze_findings(base_dir, bound), _first_step(bound)
+
+
 def _undecided_findings(base_dir: Path) -> tuple[list[str], list[str]]:
     """(blockers, lesser): every finding still `open` in a preflight audit
     record of the area, each as `<file>: <text>`, BLOCKERs apart from the
