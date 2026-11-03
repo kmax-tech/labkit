@@ -71,13 +71,13 @@ class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
         # happens to sit above the current working directory.
         cfg = Path(tempfile.mkdtemp()) / "models.toml"
         cfg.write_text('[models.gpt-oss]\nbackend = "ollama"\n', encoding="utf-8")
-        find = self.llm._find_models_toml
-        self.llm._find_models_toml = lambda: cfg
+        find = self.llm.find_models_toml
+        self.llm.find_models_toml = lambda: cfg
         try:
             with self.assertRaises(KeyError):
                 self.llm.complete("no-such-alias", "anything", attempts=2)
         finally:
-            self.llm._find_models_toml = find
+            self.llm.find_models_toml = find
 
     def test_retries_are_counted(self):
         before = self.llm.retries()

@@ -3439,7 +3439,7 @@ class LabAuditAlias(unittest.TestCase):
 
         err = io.StringIO()
         with (
-            mock.patch.object(audit.llm, "_find_models_toml", lambda: path),
+            mock.patch.object(audit.llm, "find_models_toml", lambda: path),
             mock.patch.object(audit.llm, "complete", answer),
             mock.patch.object(audit.llm, "takes_max_tokens", lambda alias: True),
             contextlib.redirect_stdout(io.StringIO()),

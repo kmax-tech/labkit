@@ -134,7 +134,7 @@ class CutPromptRaises(unittest.TestCase):
 class NumCtxIsValidated(unittest.TestCase):
     def _resolve(self, body: str) -> dict:
         with (
-            mock.patch.object(llm, "_find_models_toml") as find,
+            mock.patch.object(llm, "find_models_toml") as find,
             mock.patch.object(llm, "_ollama_digest", lambda *a: "abc"),
             mock.patch.dict(llm._FROZEN, clear=True),
         ):

@@ -49,7 +49,7 @@ def listed() -> dict[str, str]:
     for name, signature in rows:
         if name in out:
             raise AssertionError(f"{name} stands twice in the public API table")
-        out[name] = signature
+        out[name] = signature.replace("\\|", "|")  # a table cell escapes its pipes
     return out
 
 
@@ -101,12 +101,18 @@ class Listed(unittest.TestCase):
         found nothing would pass every check below)."""
         names = listed()
         self.assertIn("llm.complete", names)
+        self.assertEqual(names["runlog.Run.draw"], "draw: int | None")
         self.assertIn("runlog.Run.output", names)
         self.assertEqual(listed_keys().keys(), {"claude-cli", "ollama", "openai"})
 
     def test_every_listed_name_exists_with_its_signature(self) -> None:
         for name, signature in listed().items():
             with self.subTest(name=name):
+                if "(" not in signature:  # an attribute, held by its annotation
+                    owner, attr = name.rsplit(".", 1)
+                    hints = getattr(resolve_name(owner), "__annotations__", {})
+                    self.assertEqual(f"{attr}: {hints.get(attr)}", signature)
+                    continue
                 try:
                     obj = resolve_name(name)
                 except (ImportError, AttributeError) as exc:
@@ -193,6 +199,31 @@ class Calls(unittest.TestCase):
             llm.identity("cli"), {"backend": "claude-cli", "model": "claude-x"}
         )
 
+    def test_last_endpoint_is_empty_after_a_cli_call(self) -> None:
+        llm.complete("o", "q")
+        self.assertEqual(llm.last_endpoint(), self.url)
+        with mock.patch.object(
+            llm, "complete_claude_cli", lambda *a, **k: "cli answer"
+        ):
+            llm.complete("cli", "q")
+        self.assertEqual(llm.last_endpoint(), "")
+
+    def test_retries_counts_the_transport_retries(self) -> None:
+        before = llm.retries()
+        self.handler.status = 503
+        with self.assertRaises(llm.BackendError):
+            llm.complete("o", "q", attempts=3)
+        self.assertEqual(llm.retries() - before, 2)
+
+    def test_provenance_stamps_model_and_the_answering_endpoint(self) -> None:
+        stamp = llm.provenance("o")
+        self.assertEqual(stamp["model"], "m@0123456789ab")
+        llm.complete("o", "q")
+        self.assertEqual(stamp["endpoint"](), self.url)
+        cli = llm.provenance("cli")
+        self.assertEqual(cli["model"], "claude-x")
+        self.assertEqual(cli["cli_input"], "harness")
+
     def test_usage_before_any_call_is_no_usage(self) -> None:
         result: list[object] = []
         thread = threading.Thread(
@@ -201,6 +232,29 @@ class Calls(unittest.TestCase):
         thread.start()
         thread.join()
         self.assertEqual(result, [llm.NO_USAGE, ""])
+
+
+class FindModelsToml(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.lab = Path(tmp.name).resolve()
+        (self.lab / "models.toml").write_text(toml("a", "m"))
+        (self.lab / "exp").mkdir()
+        self.enterContext(mock.patch("sys.argv", [""]))
+        self.enterContext(contextlib.chdir(self.lab / "exp"))
+
+    def test_it_finds_the_lab_s_file_above_the_working_directory(self) -> None:
+        self.assertEqual(llm.find_models_toml(), self.lab / "models.toml")
+
+    def test_without_one_it_raises_file_not_found(self) -> None:
+        (self.lab / "models.toml").unlink()
+        with self.assertRaises(FileNotFoundError):
+            llm.find_models_toml()
+
+    def test_the_former_name_still_answers_and_warns(self) -> None:
+        with self.assertWarnsRegex(DeprecationWarning, "find_models_toml"):
+            self.assertEqual(llm._find_models_toml(), self.lab / "models.toml")
 
 
 class ModelsToml(unittest.TestCase):
@@ -319,6 +373,37 @@ class Runs(unittest.TestCase):
             with runlog.run("e", {}, self.area, data={"train": train, "test": test}):
                 self.fail("the body ran")
         self.assertFalse((self.area / "runs").exists())
+
+    def test_write_dataset_writes_its_legend_first_and_refuses_drift(self) -> None:
+        out = self.area / "prepared" / "items.jsonl"
+        fields = {"id": "item id", "text": "the argument"}
+        batch.write_dataset(
+            out, [{"id": "a", "text": "t"}], about="items", fields=fields, producer="p"
+        )
+        lines = [json.loads(line) for line in out.read_text().splitlines()]
+        self.assertEqual(lines[0]["_meta"]["fields"], fields)
+        self.assertEqual(lines[1:], [{"id": "a", "text": "t"}])
+        with self.assertRaisesRegex(ValueError, "missing"):
+            batch.write_dataset(
+                out, [{"id": "b"}], about="items", fields=fields, producer="p"
+            )
+        self.assertEqual(len(out.read_text().splitlines()), 2, "nothing written")
+
+    def test_metrics_refuses_a_value_json_cannot_hold(self) -> None:
+        with runlog.run("e", {}, self.area) as run:
+            with self.assertRaisesRegex(TypeError, "flag"):
+                run.metrics(flag=object())
+            run.metrics(n=1)
+        self.assertEqual(json.loads((run.dir / "metrics.json").read_text())["n"], 1)
+
+    def test_run_id_names_the_directory_and_draw_numbers_a_repeat(self) -> None:
+        with runlog.run("e", {}, self.area) as first:
+            pass
+        with runlog.run("e", {}, self.area, repeat_of=first.run_id) as repeat:
+            pass
+        self.assertEqual(first.dir.name, first.run_id)
+        self.assertIn(first.run_id, (self.area / "runs.tsv").read_text())
+        self.assertEqual((first.draw, repeat.draw), (None, 2))
 
     def test_an_exception_is_recorded_and_re_raised_without_an_index_row(self) -> None:
         context = runlog.run("e", {}, self.area)

@@ -71,7 +71,7 @@ class _Base(unittest.TestCase):
 
         self.llm = llm
         self._saved = (
-            llm._find_models_toml,
+            llm.find_models_toml,
             llm._ollama_digest,
             llm.urllib.request.urlopen,
             llm.time.sleep,
@@ -82,7 +82,7 @@ class _Base(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         toml_path = Path(self.tmp.name) / "models.toml"
         toml_path.write_text(TOML, encoding="utf-8")
-        llm._find_models_toml = lambda: toml_path
+        llm.find_models_toml = lambda: toml_path
         llm._ollama_digest = lambda ep, model, headers=None: "d34db33f4242"
         llm._FROZEN.clear()
         llm_backends._RR.clear()
@@ -93,7 +93,7 @@ class _Base(unittest.TestCase):
 
         llm = self.llm
         (
-            llm._find_models_toml,
+            llm.find_models_toml,
             llm._ollama_digest,
             llm.urllib.request.urlopen,
             llm.time.sleep,
@@ -139,7 +139,7 @@ class TestResolveEndpoints(_Base):
         spec the first resolution froze."""
         import threading
 
-        toml_path = self.llm._find_models_toml()
+        toml_path = self.llm.find_models_toml()
         reads = []
         started = threading.Barrier(2)
 
@@ -152,7 +152,7 @@ class TestResolveEndpoints(_Base):
                 )
             return toml_path
 
-        self.llm._find_models_toml = find
+        self.llm.find_models_toml = find
         got = []
 
         def worker():

@@ -176,7 +176,7 @@ class ModelsFile(unittest.TestCase):
         path = Path(tempfile.mkdtemp()) / "models.toml"
         path.write_text(body, encoding="utf-8")
         with (
-            mock.patch.object(llm, "_find_models_toml", lambda: path),
+            mock.patch.object(llm, "find_models_toml", lambda: path),
             mock.patch.object(llm, "_ollama_digest", lambda *a: "abc"),
             mock.patch.dict(llm._FROZEN, clear=True),
         ):

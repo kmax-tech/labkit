@@ -29,7 +29,7 @@ def serve(case: type[unittest.TestCase] | unittest.TestCase, text: str) -> Path:
     path = Path(tempfile.mkdtemp()) / "models.toml"
     path.write_text(text, encoding="utf-8")
     patches = (
-        mock.patch.object(llm, "_find_models_toml", lambda: path),
+        mock.patch.object(llm, "find_models_toml", lambda: path),
         mock.patch.dict(llm._FROZEN, clear=True),
     )
     for p in patches:

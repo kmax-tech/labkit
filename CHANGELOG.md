@@ -291,8 +291,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 - **A public API, held by tests.** `docs/architecture.md`, section
   "Public API", lists what a lab repo may rely on: `llm.complete`,
   `complete_many`, `resolve`, `spec`, `identity`, `last_usage`,
-  `last_endpoint`; `batch.Store` with `pending`, `append`, `records`;
-  `runlog.run` and `Run.output`; the keys of `models.toml`. A listed name,
+  `last_endpoint`, `retries`, `provenance`, `find_models_toml`;
+  `batch.Store` with `pending`, `append`, `records`, and
+  `batch.write_dataset`; `runlog.run` and `Run.output`, `Run.metrics`,
+  `Run.run_id`, `Run.draw`; the keys of `models.toml`. A listed name,
   signature or behaviour changes only after one release in which the old
   form still works and warns (`DeprecationWarning`, under "Deprecated"
   here); everything else stays internal. `tests/test_public_api.py` reads
@@ -329,6 +331,22 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   `llm-calls.jsonl`, and `fresh_usage` counts only calls that asked the
   model. An ollama model without a single weights digest is not cached,
   and the call says why (stagekit plan, step 2).
+
+### Deprecated
+
+- **`llm._find_models_toml` is now `llm.find_models_toml`.** The old name
+  still answers in this release and raises a `DeprecationWarning`; the
+  next release removes it. labkit calls the new name itself, so patching
+  the old one in a test no longer redirects labkit's lookups — patch
+  `llm.find_models_toml`. The stamped `test-shared-helpers` test checks
+  the new name; a lab's stamped copy warns until it is restamped.
+
+### Fixed
+
+- **`llm.last_endpoint()` is `""` after a claude-cli call.** In a thread
+  that had called a served backend before, it kept that server's URL, and
+  `llm.provenance`'s per-row stamp gave a claude-cli row a server that
+  never answered it.
 
 ### New blockers (low repeat cost; high is unchanged)
 

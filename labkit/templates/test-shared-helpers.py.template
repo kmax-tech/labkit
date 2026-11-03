@@ -36,7 +36,7 @@ class TestHelpersResolveToPackage(unittest.TestCase):
         from labkit.run import llm
         from labkit.formats import runs
         self.assertTrue(callable(runs._command_of))
-        self.assertTrue(callable(llm._find_models_toml))
+        self.assertTrue(callable(llm.find_models_toml))
 
 
 class TestNothingShadowsThePackage(unittest.TestCase):

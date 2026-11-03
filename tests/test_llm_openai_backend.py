@@ -147,7 +147,7 @@ class TestOpenAIBackend(_Base):
 
         llm = self.llm
         llm.spec = self._resolve  # the real spec for this one
-        saved_find, saved_frozen = llm._find_models_toml, dict(llm._FROZEN)
+        saved_find, saved_frozen = llm.find_models_toml, dict(llm._FROZEN)
         try:
             with tempfile.TemporaryDirectory() as d:
                 p = Path(d) / "models.toml"
@@ -156,11 +156,11 @@ class TestOpenAIBackend(_Base):
                     'model = "m"\nendpoints = ["http://x.invalid:1"]\n',
                     encoding="utf-8",
                 )
-                llm._find_models_toml = lambda: p
+                llm.find_models_toml = lambda: p
                 llm._FROZEN.clear()
                 self.assertTrue(llm.resolve("v")["controls_temperature"])
         finally:
-            llm._find_models_toml = saved_find
+            llm.find_models_toml = saved_find
             llm._FROZEN.clear()
             llm._FROZEN.update(saved_frozen)
 

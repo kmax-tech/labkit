@@ -40,10 +40,11 @@ and may change in any release with a "Breaking" entry in `CHANGELOG.md`.
 **The release rule.** A name, signature or behaviour listed here changes
 only after one release in which the old form still works and warns
 (`DeprecationWarning`, named in `CHANGELOG.md` under "Deprecated"); the
-release after that removes it under "Breaking". The list starts short and
+release after that removes it under "Breaking". A fix that makes a name
+do what this table says is no such change. The list starts short and
 grows when a lab needs a name — taking one back would break labs.
 `tests/test_public_api.py` reads both tables: a listed name that is gone,
-a signature or default that changed, or a `models.toml` key that a backend
+a signature or default that changed (for an attribute, its annotation), or a `models.toml` key that a backend
 no longer reads fails the suite; the contracts in the third column have a
 behaviour test each.
 
@@ -55,13 +56,20 @@ behaviour test each.
 | `llm.spec` | `spec(alias)` | the typed spec every call is made with (`ClaudeCliSpec`, `OllamaSpec`, `OpenAISpec`), frozen per process at first use: an edit of `models.toml` reaches a new process only |
 | `llm.identity` | `identity(alias)` | which model answers: `backend` and `model` (`name@digest` for ollama); no endpoint, since a host can change while serving the same weights |
 | `llm.last_usage` | `last_usage()` | the token counts of this thread's latest completion (`Usage`); `NO_USAGE` before the first call |
-| `llm.last_endpoint` | `last_endpoint()` | the URL this thread's latest attempt at a served backend (ollama, openai) went to; `""` before the first such attempt |
+| `llm.last_endpoint` | `last_endpoint()` | the URL this thread's latest attempt went to; `""` when it went to `claude-cli`, and before the first call |
+| `llm.retries` | `retries()` | how many transport retries this process has made, for the run's metrics |
+| `llm.provenance` | `provenance(alias)` | the per-row stamp for `batch.Store(prov=…)`: `model` (`name@digest` for ollama) and `endpoint` as a callable, evaluated per row; for `claude-cli` also `cli_version`, `cli_flags`, `cli_input` |
+| `llm.find_models_toml` | `find_models_toml()` | the lab's `models.toml`, searched upward from the script's directory, then from the working directory; `FileNotFoundError` when neither has one |
 | `batch.Store` | `Store(path, id_key='id', prov=None, mode='resume', instrument=None)` | append-only JSONL output under a lock, a context manager; `resume` continues by id, `produce` replaces the file on a clean exit |
 | `batch.Store.pending` | `pending(records)` | the records whose id the file does not hold yet; raises `InstrumentError` when the file holds rows of another instrument |
 | `batch.Store.append` | `append(record)` | one record as one line, stamped with `_prov` and `_instrument` when given |
 | `batch.Store.records` | `records()` | the rows the file holds |
+| `batch.write_dataset` | `write_dataset(path, rows, *, about, fields, producer)` | replaces PATH with a `_meta` header line (about, field legend, producer) and one row per line; a row whose keys differ from the legend, or a `TODO` left in ABOUT or the legend, raises `ValueError` before anything is written |
 | `runlog.run` | `run(experiment, config, base_dir=None, data=None, run_kind='probe', protocol=None, derived_from=None, repeat_of=None, reseed=False)` | a context manager yielding the `Run`; `config.json` records the config and, per `data` key, path, `sha256` and `rows`; a refusal (split leakage: `RuntimeError`) leaves no run directory; a clean exit writes `metrics.json`, `completion.json` and the `runs.tsv` row; an exception is recorded in the run and re-raised, with no index row |
 | `runlog.Run.output` | `output(*paths)` | registers files the run writes; at a clean exit `outputs.json` holds each with `sha256` and `lines`, or a note when it is absent |
+| `runlog.Run.metrics` | `metrics(**kv)` | adds numbers to the run's `metrics.json`, written at a clean exit; a value JSON cannot hold raises `TypeError` naming its key |
+| `runlog.Run.run_id` | `run_id: str` | the run's id: the name of its directory and its row in `runs.tsv` |
+| `runlog.Run.draw` | `draw: int \| None` | a repeat's draw number (2, 3, …); `None` for a run that repeats none |
 
 `models.toml`, the keys each table may carry; any other key is refused
 when the alias is first resolved (`ValueError` naming the key), and so is

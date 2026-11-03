@@ -472,6 +472,11 @@ class Run:
     header and a leak), and leaves no run directory behind. `class run` is
     the context manager around this."""
 
+    #: the run's id: its directory's name and its row in the run index
+    run_id: str
+    #: a repeat's draw number (2, 3, …); None for a run that repeats none
+    draw: int | None
+
     def __init__(
         self,
         experiment: str,

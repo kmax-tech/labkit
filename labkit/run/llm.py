@@ -96,6 +96,7 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -130,9 +131,10 @@ from labkit.run.llm_backends import (
 )
 
 
-def _find_models_toml() -> Path:
+def find_models_toml() -> Path:
     """The lab's `models.toml`: `repo.lab_root` from the script's directory,
-    else from the working directory."""
+    else from the working directory. Raises FileNotFoundError when neither
+    has one above it."""
     seeds = [
         Path(sys.argv[0]).resolve().parent if sys.argv[0] else Path.cwd(),
         Path.cwd(),
@@ -144,6 +146,19 @@ def _find_models_toml() -> Path:
     raise FileNotFoundError(
         "models.toml not found (searched upward from script dir and cwd)"
     )
+
+
+def _find_models_toml() -> Path:
+    """The former name of `find_models_toml`, kept one release with a
+    DeprecationWarning (CHANGELOG, "Deprecated"). labkit itself calls the
+    new name: patching this one no longer redirects its lookups."""
+    warnings.warn(
+        "llm._find_models_toml is deprecated and goes in the next release — "
+        "call llm.find_models_toml",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return find_models_toml()
 
 
 _FROZEN: dict[str, BackendSpec] = {}  # alias -> spec, fixed at first use per process
@@ -236,7 +251,7 @@ def aliases() -> list[str]:
     """The aliases the lab's `models.toml` defines, in file order — what a
     way out names when one alias cannot serve (`audit_decisions.other_alias_way`).
     FileNotFoundError without the file, ValueError when it is not TOML."""
-    path = _find_models_toml()
+    path = find_models_toml()
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
@@ -253,7 +268,7 @@ def audit_alias(fallback: str) -> str:
     (reference pilot, 2026-11-01). Raises ValueError for an `[audit]` that
     is no table, a model that is no string, or an alias `[models]` lacks;
     FileNotFoundError without the file."""
-    path = _find_models_toml()
+    path = find_models_toml()
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
@@ -275,7 +290,7 @@ def audit_alias(fallback: str) -> str:
 def _load_spec(alias: str) -> BackendSpec:
     """The spec of ALIAS as `models.toml` states it now — what `spec`
     freezes. For ollama the weights' digest is probed on every endpoint."""
-    path = _find_models_toml()
+    path = find_models_toml()
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
@@ -365,7 +380,8 @@ def retries() -> int:
 
 
 def last_endpoint() -> str:
-    """URL that served (or was tried by) this thread's most recent attempt."""
+    """URL that served (or was tried by) this thread's most recent attempt;
+    "" when that attempt went to claude-cli, and before the first."""
     return getattr(CALL_STATE, "endpoint", "")
 
 
@@ -491,6 +507,7 @@ def complete_response(
         CALL_STATE.usage = NO_USAGE  # nor its token counts
         CALL_STATE.finish_reason = None  # nor its finish reason
         CALL_STATE.body = None  # nor its reply
+        CALL_STATE.endpoint = ""  # nor its server: claude-cli has none
         try:
             text = _complete_once(
                 alias,
@@ -507,9 +524,7 @@ def complete_response(
                 thinking=CALL_STATE.thinking,
                 finish_reason=CALL_STATE.finish_reason,
                 usage=CALL_STATE.usage,
-                endpoint=""
-                if isinstance(spec(alias), ClaudeCliSpec)
-                else last_endpoint(),
+                endpoint=last_endpoint(),
                 body=CALL_STATE.body,
             )
         except UnprovenAnswer:
