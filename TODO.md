@@ -11,7 +11,7 @@ Messungen sind Belege für ihren damaligen Stand, keine aktuellen Aufgabenlisten
 
 [Vereinfachung planen (2026-11-02)](docs/notes/2026-11-02-workflow-simplification.md).
 Ziel: fachlich korrekte Arbeit mit weniger Prüfpflichten abschließen.
-Nächster Schritt: Wartbarkeit gezielt prüfen; die vier Bedienreste sind eingeordnet, zwei Fehler repariert. Zweitprüfung bleibt, neue Review-Kategorien werden nicht übernommen. Auswertungsfolge 17 → 18 bleibt bestehen.
+Nächster Schritt: die zwei belegten [Wartbarkeitsbefunde](docs/notes/2026-11-03-maintainability-review.md) einzeln schließen: Rückzugsreihenfolge unabhängig vom Meldungstext, Entscheidungshinweis passend zum aktuellen Lauf. Zweitprüfung bleibt; Auswertungsfolge 17 → 18 bleibt bestehen.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die

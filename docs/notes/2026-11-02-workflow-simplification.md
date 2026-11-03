@@ -319,8 +319,10 @@ comes after the behaviour is stable, not before B.
 
 Max requested this follow-up after the current simplification is complete.
 The four confirmed repair-path defects and the bounded interface check
-are complete. This review is the next planned step; it starts no broad
-refactor or new feature ahead of concrete findings.
+are complete. The [bounded review](2026-11-03-maintainability-review.md)
+found two concrete sources of drift: withdrawal order inferred from display
+text, and decision guidance diverging from the current measurement. Repair
+those in small steps before considering a broad module split.
 
 Then review the resulting code for shared rules and removable special cases.
 Split large modules only along clear responsibilities. Keep tests that
