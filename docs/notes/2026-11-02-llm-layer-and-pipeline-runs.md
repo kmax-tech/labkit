@@ -356,6 +356,21 @@ against one real second case, not in advance.
    experiment area only — config, topic stages, prompts — which the
    experiment holds itself (section "The experiment holds its config and
    prompts"). The table and the measurement: open decision 4 below.
+5. **MLflow and W&B stay as an optional view** (2026-11-03, Max). They
+   are hooks in the framework: `RunManager` hands `RunTracker` the stage
+   metrics, the repro manifest, model usage, LLM stats and parse diagnostics
+   (`src/run/manager.py:187`–`:428`). A tracker answers *what* happened
+   across many runs and is the right tool for exploring; labkit answers
+   *why* a run was made, what was fixed before it, and which number was
+   reported. So:
+   1. they lead nothing — provenance is labkit's, finding and pins the
+      `RunIndex`'s (decision 4);
+   2. every tracker run is tagged with the labkit run id and `repro_hash`,
+      so a curve in the dashboard leads to the note that says why;
+   3. enabled but not installed stops the run instead of warning — an
+      empty dashboard must not pass for a recorded one;
+   4. off stays the default (`config/tracking/default.yaml`).
+   Points 2 and 3 are a small change in `src/run/tracker.py`.
 10. **sandboxlab stays in labkit-paper; only `batch` moves, on a trigger**
     (2026-11-02, Max). sandboxlab is the evaluation of labkit and stays in
     labkit-paper — not in labkit, whose evaluation must not live inside it.
@@ -368,7 +383,7 @@ against one real second case, not in advance.
 
 ## Open decisions
 
-The numbers stay as first written; 1, 2, 3, 4 and 10 are decided above.
+The numbers stay as first written; 1 to 5 and 10 are decided above.
 
 2. **Cache key**: the `models.toml` alias or the resolved model id and
    backend? The alias can be re-pointed; the resolved id is what answered.
