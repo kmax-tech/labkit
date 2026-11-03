@@ -89,7 +89,12 @@ holds them all, as the commit holds the area. Shown on the count lab in
 tests: a decision review turned `upheld`, an analysis BLOCKER removed, a
 report review's claim deleted after a commit past the hook, the same
 after a handover) and in `tests/test_replacement.py` (the predecessor's
-BLOCKER removed in its own area). What stays outside:
+BLOCKER removed in its own area). The repair-path probe and the
+forgery scripts, run on main and on this change, differ only where
+intended: forgery B is held in the tree, and the run edited by hand in
+case 1 (B3) is named for its restore first; the handover and repair
+paths are unchanged (labkit-evidence `978d8a4d`, `logs-747b09d8` against
+`logs-01498270`). What stays outside:
 
 - every variant before the record's first commit (the smallest case and
   the analysis record above);
