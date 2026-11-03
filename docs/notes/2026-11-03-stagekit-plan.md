@@ -207,10 +207,11 @@ Three commits, in this order, each with the full test suite green.
   - The fallacy repo installs stagekit editable during development and pins
     a commit for any documented measurement. The interface stays
     provisional (0.x) until step 6 passes.
-  - **Open:** which of the two keeps the name `fallacy-detection` and the
-    remote on git.webis.de. Recommendation: the fallacy repo — the server's
-    history and whoever works with it are the topic's; stagekit starts as a
-    new repo.
+  - **Name and remote (decided 2026-11-03, Max):** the fallacy repo keeps
+    the name `fallacy-detection` and the remote on git.webis.de — the
+    server's history and whoever works with it are the topic's; stagekit
+    starts as a new repo. The server still holds the state of 2026-01-14;
+    after step 0 the push carries about 29 MB instead of about 900 MB.
   Proof, two parts: `repro_hash` recomputed for every entry in
   `published/pins.yaml` is identical before and after (the identity
   computation survived); the full test suite and a rerun of the pilot's
