@@ -15,12 +15,14 @@ after the audit was told to measure and audit again, which it never owed.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -442,6 +444,77 @@ class RegisteredReportRepairs(RepairPaths):
         self.assertIn("nothing", self.run_(".venv/bin/labkit-next", AREA))
         self.answered(CLEAN_ANALYSIS, "--mode", "analysis")
         self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+
+    def session_starts(self) -> None:
+        """The session's transcript, its first record dated now: the stop
+        dates the session's commits by it."""
+        when = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+        (self.lab.parent / "transcript.jsonl").write_text(
+            json.dumps({"type": "user", "timestamp": when}) + "\n", encoding="utf-8"
+        )
+
+    def stop(self) -> tuple[int, str]:
+        """`claude-hook stop` in the lab over what git sees as changed and
+        what the session committed (`session_starts`): exit code and what
+        it said."""
+        transcript = self.lab.parent / "transcript.jsonl"
+        return sh(
+            self.lab,
+            ".venv/bin/python",
+            "-c",
+            "import os, sys; from labkit.gates import agent_hooks; "
+            f"os.environ['CLAUDE_PROJECT_DIR'] = {str(self.lab)!r}; "
+            "sys.exit(agent_hooks.stop({'cwd': "
+            f"{str(self.lab)!r}, 'session_id': 'repair-paths', 'transcript_path': "
+            f"{str(transcript)!r}}}))",
+        )
+
+    def test_a_handover_after_an_analysis_audit_stays_through_its_review(self):
+        """The journal `audits/attempts.jsonl` already held the analysis
+        audit's lines when the handover was written; the report review it
+        owes appended its own, and the handover was void: bound by the
+        file's blob id, checked by a digest of another kind (probe
+        2026-11-03, docs/notes/2026-11-03-handover-journal-binding.md). Its
+        open BLOCKER then held the stop and the commit, and `labkit-next`
+        offered the adoption. Now `labkit-next`, the stop and the commit
+        agree: handed over, before and after the commit. The twin: a new
+        analysis audit after it voids it in all three."""
+        self.session_starts()
+        self.answered(
+            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "mean is over 11 cases · LAB-050 Analysis audit before reporting · remove "
+            f"the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 notes\n"
+            f"scope:\n{AREA}/scripts/01_measure.py",
+            "--mode",
+            "analysis",
+        )
+        journal = self.lab / AREA / "audits" / "attempts.jsonl"
+        self.assertTrue(journal.read_text(encoding="utf-8").strip())
+        self.run_(
+            ".venv/bin/protocol-fill",
+            P,
+            "--handover",
+            "--why",
+            "the filter cannot be repaired in this protocol; a successor measures",
+            "--tried",
+            "measured once",
+            "--into",
+            "REPORT.md",
+        )
+        self.answered(CLEAN_REPORT_REVIEW, "--report-review", "REPORT.md", ok=True)
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        rc, out = self.stop()
+        self.assertEqual(rc, 0, out)
+        self.commit("handed over after an audit, the report reviewed")
+        self.assertIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        rc, out = self.stop()
+        self.assertEqual(rc, 0, out)
+        # new audit activity is new evidence: the handover no longer holds
+        self.answered(CLEAN_ANALYSIS, "--mode", "analysis")
+        self.assertNotIn("is handed over", self.run_(".venv/bin/labkit-next", AREA))
+        rc, out = self.stop()
+        self.assertNotEqual(rc, 0, out)
+        self.commit("an analysis audit after the handover", ok=False)
 
     def handed_over_and_reviewed(self) -> None:
         """The handover written, its report reviewed clean, committed."""

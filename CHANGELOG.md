@@ -91,8 +91,13 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   "nothing" while the commit held the review. Now the record binds
   `audits/` without what a report review writes (its record, its kept
   answer, its journal lines: `handovers.review_trace`, `journal_digest`),
-  and `labkit-next` names the review owed after a handover. Any other
-  audit added after a handover still voids it. **Breaking:** a handover
+  and `labkit-next` names the review owed after a handover. The journal
+  is bound by one computation when the handover is written and when it is
+  checked: the blob id of its text without the review's lines, the file's
+  own id while it holds none (a first version checked it by a digest of
+  another kind, so a handover written after an analysis audit was voided
+  by its own review; `docs/notes/2026-11-03-handover-journal-binding.md`).
+  Any other audit added after a handover still voids it. **Breaking:** a handover
   record written by labkit 0.107.0 or earlier whose `audits/` held a report
   review no longer matches; write the handover again.
 
