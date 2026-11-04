@@ -237,7 +237,8 @@ def block_gaps(
     for b in found:
         s = sources[b.protocol]
         at = f"line {b.first}: the result block of {b.protocol} (run {b.run_id})"
-        into = f"`{into_command(report.parent / b.protocol, report)}`"
+        into_cmd = into_command(report.parent / b.protocol, report)
+        into = f"`{into_cmd}`"
         if s.run_id is None:
             gaps.append(
                 blocker(
@@ -253,6 +254,7 @@ def block_gaps(
                 blocker(
                     f"{at}: the protocol has adopted run {s.run_id} now",
                     fix=f"{into} replaces the block",
+                    step=into_cmd,
                 )
             )
         elif s.body is None:
@@ -261,6 +263,7 @@ def block_gaps(
                     f"{at}: {s.why}",
                     fix=f"repair what the sentence names in the protocol, then "
                     f"{into} writes the block again",
+                    step=into_cmd,
                 )
             )
         elif b.body != s.body:
@@ -268,6 +271,7 @@ def block_gaps(
                 blocker(
                     f"{at} differs from the protocol's rendering",
                     fix=f"{into} writes it again",
+                    step=into_cmd,
                 )
             )
     return gaps
@@ -529,11 +533,13 @@ def discussion_gaps(found: list[Discussion]) -> list[GateFinding]:
         else:
             seen[key] = d.first
         if not d.why.strip():
+            discuss = discuss_command("<PROTOCOL>", d.run_id, "<FILE>")
             gaps.append(
                 blocker(
                     f"{at} has no why",
                     fix=f"say what refused the adoption and what was found: "
-                    f"`{discuss_command('<PROTOCOL>', d.run_id, '<FILE>')}`",
+                    f"`{discuss}`",
+                    step=discuss,
                 )
             )
         elif d.body != discussion_body(d.run_id, d.why.strip()):

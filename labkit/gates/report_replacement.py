@@ -194,27 +194,22 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
                 fix=findings.record_way(pred.parent, pred),
             )
         ]
-    return [
-        blocker(
-            f"its predecessor's BLOCKER is still open — {u.line}",
-            fix="decide it (`"
-            + str(
-                decide_command(
-                    pred.parent,
-                    u.number,
-                    "STATUS",
-                    "<why>",
-                    u.record.path.name,
-                    protocol=pred,
-                )
-            )
-            + f"`), or hand the predecessor over, replaced by {ctx.head.id}: `"
-            + str(handover_command(pred))
-            + "`",
+    out: list[GateFinding] = []
+    for u in held:
+        if handovers.entry(u.record, u.number) in recorded:
+            continue
+        decide = decide_command(
+            pred.parent, u.number, "STATUS", "<why>", u.record.path.name, protocol=pred
         )
-        for u in held
-        if handovers.entry(u.record, u.number) not in recorded
-    ]
+        out.append(
+            blocker(
+                f"its predecessor's BLOCKER is still open — {u.line}",
+                fix=f"decide it (`{decide}`), or hand the predecessor over, "
+                f"replaced by {ctx.head.id}: `{handover_command(pred)}`",
+                step=decide,
+            )
+        )
+    return out
 
 
 def _replacement_circle(start: str, pred: Path) -> str:

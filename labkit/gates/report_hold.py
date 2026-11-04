@@ -399,10 +399,15 @@ def report_owed(
         else "a result block (the head has adopted no result)"
     )
     # the adoption writes the registered report's block itself (tools.adopt)
-    write = (
-        f"`{into_command(protocol, report)}` writes the result block"
+    write_cmd = (
+        into_command(protocol, report)
         if declared is not None
-        else f"`{adopt_command(protocol, newest)}` adopts the run"
+        else adopt_command(protocol, newest)
+    )
+    write = (
+        f"`{write_cmd}` writes the result block"
+        if declared is not None
+        else f"`{write_cmd}` adopts the run"
         + (" (the newest kept one)" if run is not None else "")
         + " and writes its result block"
     )
@@ -418,6 +423,7 @@ def report_owed(
         f"progress account of the run the gates hold it to — the commit takes it, "
         f"it releases nothing and the result or the handover stays owed; "
         f"`{handover_command(protocol, name_r)}` ends the protocol without a result",
+        step=write_cmd,
     )
 
 
@@ -546,8 +552,9 @@ def report_binding_gap(
     bound = bound_reports(protocol, head.id, root)
     here = Path.cwd()
     name_p = shown(protocol, here)
+    handover = handover_command(protocol, head.report or "REPORT.md")
     anew = (
-        f"end the protocol with `{handover_command(protocol, head.report or 'REPORT.md')}` "
+        f"end the protocol with `{handover}` "
         f"and register anew — its earlier runs, results and findings stay"
     )
     values = set(bound.registered.values())
@@ -559,6 +566,7 @@ def report_binding_gap(
             fix="fetch that commit from a clone that has it (`git fetch "
             "--unshallow` in a shallow clone), or restore the repository's missing "
             f"objects (`git fsck` names them); else {anew}",
+            step=handover,
         )
     if len(values) > 1:
         named = ", ".join(
@@ -568,6 +576,7 @@ def report_binding_gap(
             f"{name_p}: its first measurements registered different reports ({named}) "
             f"— which one stood before the number cannot be told",
             fix=anew,
+            step=handover,
         )
     if not values:
         if (
@@ -578,6 +587,7 @@ def report_binding_gap(
             return blocker(
                 f"{name_p}: its first measurement is missing — the report binding cannot be read",
                 fix=f"restore the missing run evidence, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
+                step=handover,
             )
         return None
     (registered,) = values
@@ -596,6 +606,7 @@ def report_binding_gap(
         f"{head.report or 'none'} — the report a measurement stood under is bound, "
         f"a report cannot be registered, dropped or moved after measurement",
         fix=f"{restore}, then `labkit-next {shown(protocol.parent, here)}`; or {anew}",
+        step=handover,
     )
 
 
@@ -683,20 +694,26 @@ def missing_report(
         f"the delivery is incomplete"
     )
     if declared is not None:
+        into = into_command(protocol, report)
         return blocker(
             what,
             fix=f"restore it (`git checkout HEAD -- {name_r}` where the last commit "
-            f"holds it), or `{into_command(protocol, report)}` writes its result "
+            f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
+            step=into,
         )
+    discuss = report_blocks.discuss_command(
+        name_p, "<run_id>", name_r, report_blocks.WHY_PROGRESS
+    )
     return blocker(
         what,
-        fix=f"`{report_blocks.discuss_command(name_p, '<run_id>', name_r, report_blocks.WHY_PROGRESS)}` writes "
+        fix=f"`{discuss}` writes "
         f"the progress account (the commit takes it, it releases nothing); "
         f"`{adopt_command(protocol)}` adopts a run and writes its result "
         f"block into {name_r}; `{handover_command(protocol, name_r)}` ends the "
         f"protocol without a result and writes that into it; then the report "
         f"review it owes",
+        step=discuss,
     )
 
 
@@ -916,25 +933,30 @@ def owed_blocks(
             name = report_blocks.path_from_report(p, report)
             named[name] = p
             declaring.setdefault(run_id, []).append(name)
-    return [
-        blocker(
-            f"line {n}: cites run {run_id}, the adopted result of {protocol}, "
-            f"without its generated block — the number a report shows of a "
-            f"adopted result is the generated one",
-            fix=f"`{into_command(named[protocol], report)}` writes it",
+    owed = report_blocks.blocks_owed(
+        cited,
+        declaring,
+        # each block's protocol resolved and named as the owed ones are:
+        # compared as written, `../work/experiments/…` was a block
+        # missing and present at once (reference pilot 2026-11-01, 34)
+        {
+            report_blocks.path_from_report(block_protocol(report, b), report)
+            for b in found
+        },
+    )
+    out: list[GateFinding] = []
+    for n, run_id, protocol in owed:
+        into = into_command(named[protocol], report)
+        out.append(
+            blocker(
+                f"line {n}: cites run {run_id}, the adopted result of {protocol}, "
+                f"without its generated block — the number a report shows of a "
+                f"adopted result is the generated one",
+                fix=f"`{into}` writes it",
+                step=into,
+            )
         )
-        for n, run_id, protocol in report_blocks.blocks_owed(
-            cited,
-            declaring,
-            # each block's protocol resolved and named as the owed ones are:
-            # compared as written, `../work/experiments/…` was a block
-            # missing and present at once (reference pilot 2026-11-01, 34)
-            {
-                report_blocks.path_from_report(block_protocol(report, b), report)
-                for b in found
-            },
-        )
-    ]
+    return out
 
 
 #: why a report is held, printed in its heading: it is among the paths, or
