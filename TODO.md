@@ -181,6 +181,35 @@ Assay-Muster (Modellsuche verschwiegen, verfehltes Ziel „nicht
 beurteilbar") zum zweiten Mal durch; (3) die drei handgeschriebenen
 Discuss-Zeilen. Merge von `usage-round-2` in labkit-papers Hauptzweige
 beim Autor.
+**Aus den Agentenspuren der Runden 19 und 20 (2026-11-04, Lesung in
+labkit-evidence `usability/2026-11-04-usage-rounds/agent-paths-19-vs-20.md`):**
+Besser in 20: jeder Versuch schrieb einen Bericht und lief mindestens ein
+Analyse-Audit (61 saubere Audit-Aufrufe gegen 32), keine gelöschte Evidenz
+mehr (19: zweimal `rm -rf runs audits`), eine Variantenjagd statt drei,
+Berichtsprüfungen schlossen nach ein bis zwei Runden. Teuerstes Problem
+in 20: ein nach der ersten Messung editiertes Feld (Unit, Data / scope);
+t34-r3 schrieb Unit fünfmal um, neun Minuten, nie wiederhergestellt.
+**Befunde für labkit, Reihenfolge nach Gewicht:** (1) Invariantenbruch
+am Commit: `report-check --if-reported --staged` hält auf „Arbeitsbaum
+≠ Index", `labkit-next --staged` im selben Output sagt „nothing holds it"
+(t34-r2 E48) — die Sonde staged vor jeder Prüfung alles und sieht das
+nie; der Halt braucht eine Zeile in `next --staged` oder der Hook druckt
+ihn als Schritt. (2) `labkit-adopt` verweigert wegen fehlender
+Berichtsfelder, der Stop druckt `next`: „labkit-adopt" (tassay-r2
+E103–109) — die Felder kommen nur mit `labkit-init exp --report`,
+`protocol-fill` kennt sie nicht, der Vertrag nennt das in einer
+†-Note; Schritt 3 hat genau diesen Hinweis aus finalize entfernt. (3)
+Der Stop hält einmal pro Turn; ein Sandbox-Versuch ist ein Turn: drei
+von vier gehaltenen Agenten beendeten beim zweiten Stop trotzdem, zwei
+mit `--no-verify`. (4) MANIFEST „at or above" im Quellverzeichnis
+ändert dessen Hash (tsts512-r1). (5) `protocol-fill` nimmt
+`"[protocol]type="` und lehnt `"[kept]key="` ab. (6) Ein abgestürzter
+erster Lauf (failure.json) verankert die Registrierung (t34-r3 E31).
+(7) Auditor-Antworten außer Form werden dem Agenten als Verweigerung
+gezeigt, ein Wiederholen heilt (vier Fälle über beide Runden). (8)
+labkit-paper-Sandbox ohne Git-Identität: ein fehlgeschlagener Commit je
+Versuch. Vor (1) und (2) ist keine Vorher/Nachher-Lesung sauber: beide
+sind Zustände, die `next` nicht trägt.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
