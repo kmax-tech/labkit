@@ -380,6 +380,13 @@ HELD_FIELDS = tuple(dict.fromkeys(REGISTERED_FIELDS + SCOPE_FIELDS))
 #: included, and a different question is a protocol of its own
 #: (docs/notes/2026-11-02-registered-field-repair.md, 2026-11-03)
 UNCORRECTABLE_FIELDS = ("Question / hypothesis",)
+#: what one of UNCORRECTABLE_FIELDS is after the first measurement: the
+#: hold of its change (`finalize.correction_way`) and the decision's line
+#: (`audit_decisions.repair_hint`, which states the condition) say it so
+STANDS_AS_REGISTERED = (
+    "has no correction in place — it stands as registered, a typo included; "
+    "a different question is a protocol of its own"
+)
 
 
 def correctable(label: str) -> bool:

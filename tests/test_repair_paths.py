@@ -193,11 +193,13 @@ class RepairPaths(unittest.TestCase):
         record, said = self.rewritten(
             "Unit", "Unit", UNIT + ", hidden files not counted"
         )
-        self.assertIn("next: a correction in place — Unit", said)
-        self.assertIn("owes no new measurement", said)
+        self.assertIn("a correction of Unit in place", said)
         self.assertIn(
-            "only its `resolved` on this finding, for exactly this text", said
+            "only a follow-up analysis audit's `resolved` on this finding, judged "
+            "on the run that answers and exactly this text",
+            said,
         )
+        self.assertIn("names the step this repair owes now", said)
         self.fill(f"Unit={UNIT}")
         self.decide(
             record,
@@ -212,13 +214,14 @@ class RepairPaths(unittest.TestCase):
 
     def test_a_field_not_named_by_its_label_is_held(self):
         """`:Terms` is not the label "Terms of this protocol": no correction
-        is bound to it, the line names the way back and the route."""
+        is bound to it; the line says a changed registration is held and
+        points to labkit-next, which names the hold and its ways back."""
         _, said = self.rewritten(
             "Terms of this protocol", "Terms", "case: one line of cases.jsonl"
         )
-        self.assertIn("held: this repair changes what the first measurement", said)
-        self.assertIn("a new measurement would carry the change, not repair it", said)
-        self.assertIn("names the field as its place", said)
+        self.assertIn("any other repair", said)
+        self.assertIn("a new measurement carries it rather than repairs it", said)
+        self.assertIn("names the step this repair owes now", said)
 
     def test_the_twin_a_conclusion_rewritten_owes_no_measurement_and_no_audit(self):
         record = self.audit(
@@ -227,12 +230,12 @@ class RepairPaths(unittest.TestCase):
         self.fill("Conclusion=The twelve cases hold 3.5 documents each on average.")
         said = self.decide(record, "fixed", "dropped the completeness claim")
         self.assertIn(
-            "A repair written after the audit — the Conclusion, the other Summary "
-            "fields — owes no new measurement and no new analysis audit by itself.",
+            "a Summary field rewritten after the audit owes no new measurement "
+            "by itself",
             said,
         )
-        self.assertIn("The decision and report reviews the protocol owes stand", said)
-        self.assertNotIn("held:", said)
+        self.assertIn("names the step this repair owes now", said)
+        self.assertNotIn("measure again", said)
         self.commit("Conclusion rewritten; finding 1 decided")
         nxt = self.run_(".venv/bin/labkit-next", AREA)
         self.assertIn("adopts it", nxt)
@@ -250,8 +253,10 @@ class RepairPaths(unittest.TestCase):
             script.read_text(encoding="utf-8") + "# repaired\n", encoding="utf-8"
         )
         said = self.decide(record, "fixed", "rows() reads the directory itself")
-        self.assertIn("next: the repair is in the area — measure again", said)
+        self.assertIn("a change of code, inputs or configuration is confirmed", said)
+        self.assertNotIn("measure again", said)  # labkit-next names it
         self.commit("rows() repaired; finding 1 decided")
+        self.assertIn("01_measure.py", self.run_(".venv/bin/labkit-next", AREA))
         self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
         self.commit("run 2")
         self.audit()
@@ -611,7 +616,7 @@ class RegisteredReportRepairs(RepairPaths):
         on it was refused, and nothing else released it. The decision
         review judges the claim as it stands and binds it."""
         record, said = self.conclusion_blocker()
-        self.assertIn("--review", said)
+        self.assertIn("the decision review judges the Conclusion as it stands", said)
         self.assertNotIn("waits for the follow-up audit", said)
         self.assertIn("--review", self.run_(".venv/bin/labkit-next", AREA))
         self.adopt(ok=False)
@@ -1098,10 +1103,11 @@ class RegisteredReportRepairs(RepairPaths):
             script.read_text(encoding="utf-8") + "# repaired\n", encoding="utf-8"
         )
         said = self.decide(code, "fixed", "evaluate_rows averages over every case")
-        self.assertIn("withdraw the adoption first", said)
-        self.assertIn("then measure again", said)
-        self.assertIn(f"{correction}#1", said)
-        self.assertNotIn("held:", said)
+        # the decision's line points to labkit-next, which withdraws first
+        # (`withdraw_as_named`); it names no action of its own (review
+        # 2026-11-03, M2)
+        self.assertIn("names the step this repair owes now", said)
+        self.assertNotIn("measure again", said)
         self.assertNotIn("limitation", said)
         out = self.withdraw_as_named()
         self.assertIn(

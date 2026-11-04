@@ -102,7 +102,6 @@ from labkit.formats.protocol_check import (
     CONCLUSION_LABEL,
     field_name,
     named_field,
-    registration_stamp,
 )
 from labkit.formats.repo import (
     INDEX_REV,
@@ -115,7 +114,7 @@ from labkit.formats.repo import (
     text_at,
 )
 from labkit.formats.runs import as_stored, date_minute, name_minute
-from labkit.formats.scope_sha import area_stamp, digest
+from labkit.formats.scope_sha import digest
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
 DIR = "audits"
@@ -357,9 +356,9 @@ def decision_entails(
     AREA, and the one home of the five texts. `fixed`: a repair is
     claimed, confirmation pending; the next analysis audit judges it, a
     BLOCKER's number does not leave before, the check owed named when F
-    carries one (`check_order`); what the repair owes — a new measurement,
-    an audit, nothing, or a way back — depends on what it changed, and
-    `audit_decisions.repair_hint` says it in the line below.
+    carries one (`check_order`); what `fixed` means for this kind of
+    repair, and that `labkit-next` names the step it owes, the line below
+    says (`audit_decisions.repair_hint`).
     `limitation` with effect `stands`: the claim stands within the finding;
     a second auditor's review is owed at every repeat cost (`--review
     --record`) — a BLOCKER's number does not leave without it, a WARNING's
@@ -385,7 +384,7 @@ def decision_entails(
         return (
             "fixed: a repair is claimed, confirmation pending — the next analysis "
             "audit judges it, and a BLOCKER's number does not leave before"
-            f"{owed}; what the repair owes in this area is the line below"
+            f"{owed}; what `fixed` means for this repair, and where its next step is named, is the line below"
         )
     if f.status == "limitation" and f.effect == EFFECT_STANDS:
         # the review is owed at every repeat cost; agents read a low one as
@@ -425,22 +424,6 @@ def decision_entails(
             f"name the counter-evidence (file, line, value){held}"
         )
     raise ValueError(f"status {f.status!r} is not decided — one of {DECIDED_LIST}")
-
-
-def state_unchanged(record: Record, area: Path, text: str) -> bool:
-    """Whether AREA's code, the promise block and the registration of TEXT
-    stamp now as RECORD saw them — the run aside (`AuditedState`). Under a
-    `fixed` decision this says the claimed repair changed nothing the audit
-    binds (`audit_decisions.repair_hint`). Raises FileNotFoundError or ValueError
-    (nothing to stamp) and `promises.PromiseError` (the block does not
-    read)."""
-    now = AuditedState(
-        area_stamp(area)[0], promises.block_stamp(text), registration_stamp(text)
-    )
-    return (
-        AuditedState(record.scope_sha, record.block_sha, dict(record.registration))
-        == now
-    )
 
 
 def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:

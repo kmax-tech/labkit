@@ -1066,9 +1066,14 @@ class CorrectedDescription(CorrectionCommands):
         warning = self.audited_question()
         self.asked(self.MEDIAN)
         line = self.decide(warning, 1, "fixed", "the question now asks for the median")
-        # the decision's line names only ways the gate takes
-        self.assertIn("held:", line)
-        self.assertIn("Question / hypothesis has no correction in place", line)
+        # the decision's line explains the condition the gate holds; it names
+        # no way of its own (review 2026-11-03, M2)
+        self.assertIn(
+            "Question / hypothesis: after the first measurement it has no "
+            "correction in place",
+            line,
+        )
+        self.assertIn("names the step this repair owes now", line)
         self.assertNotIn("misdescribing the unchanged run", line)
         rc, out, _ = self.follow_up(warning, "resolved", "the question reads well")
         rc, out = self.lab.adopt(self.protocol, self.run_a)
@@ -1306,14 +1311,15 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.assertEqual(rc, 1, out)
 
     def test_t10_the_code_repair_beside_a_correction_is_measured_again(self):
-        """The decision's line and the hold before the new run name the
-        measurement, then the follow-up on it — not restore and decide the
+        """The hold before the new run names the measurement, then the
+        follow-up on it (the decision's line points to labkit-next) — not
+        restore and decide the
         repair `limitation` (probe 2026-11-03, s2 2b)."""
-        correction = self.corrected_for_a()
+        self.corrected_for_a()
         self.code_repaired()
-        self.assertIn("next: the repair is in the area — measure again", self.said)
-        self.assertIn(f"{correction.name}#1", self.said)
-        self.assertNotIn("held:", self.said)
+        # the decision's line points to labkit-next; the hold names the step
+        self.assertIn("names the step this repair owes now", self.said)
+        self.assertNotIn("measure again", self.said)
         self.assertNotIn("withdraw", self.said)  # nothing adopted
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)

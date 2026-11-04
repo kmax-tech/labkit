@@ -12,7 +12,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from labkit.checks import audit_binding
 from labkit.formats import (
     attempts,
     console,
@@ -20,44 +19,30 @@ from labkit.formats import (
     failed_attempts,
     findings,
     promises,
-    protocol_block,
     protocol_check,
     protocol_history,
 )
-from labkit.formats.answering_run import first_measurement_groups
-from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.repo import (
     ProtocolChoiceError,
     area_protocols,
     audit_command,
     decide_command,
-    git_root,
+    gate_command,
     given_or_in,
     handover_command,
-    measure_command,
     shown,
     the_protocol,
-    withdraw_command,
 )
-from labkit.formats.protocol_check import field_name, fields
+from labkit.formats.protocol_check import field_name, fields, named_field
 from labkit.formats.protocol_history import HELD_FIELDS
 from labkit.formats.runs import (
     MetricsError,
-    RunDir,
     metrics_path,
     read_metrics,
     run_path,
 )
 from labkit.gates import ways_out
 from labkit.gates.audit_reply import READ_HINT
-from labkit.checks.run_record_check import code_since_run
-from labkit.gates.finalize import (
-    awaiting_followup,
-    correction_way,
-    declaring_protocol,
-    quoted_changes,
-    shown_then,
-)
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
@@ -745,8 +730,8 @@ def decision_lines_after(
 ) -> list[str]:
     """What `--decide` prints under the decision it recorded on finding N
     of REC (RECORD's file): what the status entails
-    (`findings.decision_entails`), under `fixed` what the repair owes
-    (`repair_hint`), under `limitation` the hint on a required check the
+    (`findings.decision_entails`), under `fixed` what it means for this
+    repair and that `labkit-next` names its step (`repair_hint`), under `limitation` the hint on a required check the
     run does not carry (`stands_check_hint`)."""
     decided = rec.findings[n - 1]
     out = [findings.decision_entails(decided, area, record, protocol)]
@@ -799,207 +784,93 @@ def repair_hint(
     protocol: Path | None,
     decided: findings.Finding | None = None,
 ) -> str:
-    """The line under a `fixed` decision on RECORD — what the repair in the
-    area owes, checked in this order:
+    """The line under a `fixed` decision on RECORD: what `fixed` means for
+    the kind of repair DECIDED names, and that `labkit-next` names the step
+    it owes now — no action of its own. The kind is read from the finding
+    and the standard's field sets, never from the area's state, so each
+    condition that holds only after the first measurement says so:
 
-    - the protocol as it stands differs from what its first measurement
-      registered — what the number is about or a promise
-      (`protocol_history.first_measured_differences`, the comparison
-      finalize holds the run to). `next:` when DECIDED is a correction of a
-      changed field (`findings.corrected_field`): no new measurement, the
-      follow-up audit's `resolved` on it releases that field
-      (`finalize.resolved_corrections`). Else `held:` — finalize refuses
-      the edit, a new measurement would carry it — with the way back, the
-      correction route where a changed field has one
-      (`finalize.correction_way`) and the new registration, never "measure
-      again".
-      Agents rewrote the Unit on the audit's word, measured again on this
-      line's word, and finalize refused the rewrite (area 17, 2026-11-02).
-    - `next:` the code, the promise block or the registration changed
-      (`findings.state_unchanged`): measure again, then audit that run — a
-      review of RECORD's decisions holds them to the code RECORD read
-      (round 2: seven of eight `--review` calls came after a repair and
-      were refused).
-    - `next:` only the fields the analysis audit read before the run
-      changed (`audit_binding.analysis_now`): audit the run again as it
-      stands; no new measurement.
-    - `hint:` nothing the record binds changed. A repair written after the
-      audit — the Conclusion, the other Summary fields — owes no new
-      measurement and no new analysis audit by itself; a BLOCKER on the
-      Conclusion decided `fixed` (`findings.fixed_claim`) owes the decision
-      review, which judges the claim as it stands — `next:` names it; any
-      other BLOCKER decided `fixed` with nothing changed is not repaired yet
-      (no follow-up is shown an unchanged state, `followup.release_holds`);
-      the decision and report reviews the protocol owes stand. A repair of code, inputs or configuration is not in the area
-      yet (agents decided `fixed` on the audited state itself, SAB round 1,
-      2026-10-29).
+    - a field of what the number is about (`protocol_history.SCOPE_FIELDS`)
+      corrected in place (`findings.corrected_field`): after the first
+      measurement only a follow-up analysis audit's `resolved` on this
+      finding, judged on the run that answers and exactly this text,
+      releases the change;
+    - the question (`protocol_history.UNCORRECTABLE_FIELDS`): after the
+      first measurement it stands as registered
+      (`protocol_history.STANDS_AS_REGISTERED`);
+    - a repaired Conclusion (`findings.fixed_claim`): the decision review
+      judges it, and only its `upheld` releases the BLOCKER;
+    - any other repair: a change of code, inputs or configuration is
+      confirmed only by an analysis audit of a run the repaired code
+      measured, and RECORD's decision review no longer applies once it is
+      in the area; a Summary field rewritten after the audit owes no new
+      measurement by itself; nothing changed is no repair yet.
 
-    Also `hint:` when the state could not be compared, naming why. A line,
-    never a refusal: the decision stands as given."""
-    repair = (
-        "a repair changes code, inputs or configuration — repair first, then "
-        "measure and audit again"
+    Choosing the action here as well contradicted labkit-next in state
+    after state (review 2026-11-03, M2;
+    docs/notes/2026-11-03-maintainability-repair-plan.md). When the
+    protocol cannot be read, the field is not named and the line says why,
+    on the one line."""
+    nxt = (
+        f"Next: `{gate_command('labkit-next', area)}` names the step this repair "
+        f"owes now."
     )
-    try:
-        path = the_protocol(area, protocol)
-        text = path.read_text(encoding="utf-8")
-        rec = findings.read(record)
-        unchanged = findings.state_unchanged(rec, area, text)
-        departed = _departure(area, path, text)
-    except (ValueError, FileNotFoundError, RuntimeError) as exc:
-        return f"hint: the audited state could not be compared ({exc}); {repair}"
-    analysis = audit_command(area, "--mode", "analysis", protocol=protocol)
-    if departed is not None:
-        first, diffs = departed
-        root = git_root(path)
-        pid = protocol_block.head(text).id or "<id>"
-        named = (
-            findings.corrected_field(decided, path, text)
-            if decided is not None
-            else None
-        )
-        own = [d for d in diffs if named is not None and field_name(d[0]) == named]
-        others = [d for d in diffs if d not in own]
-        if own:
-            still = (
-                f" Still held, no correction names them: {quoted_changes(others)}."
-                if others
-                else ""
-            )
-            return (
-                f"next: a correction in place — {quoted_changes(own)} since the first "
-                f"measurement {first.dir.name} — owes no new measurement: a follow-up "
-                f"analysis audit on the run as it stands (`{analysis}`) judges it, and "
-                f"only its `resolved` on this finding, for exactly this text, releases "
-                f"the change; a text edited after that verdict is held again. A changed "
-                f"definition, population or question is no correction: restore it"
-                f"{shown_then(path, first, root)}, or "
-                + ways_out.register_anew(pid)
-                + "."
-                + still
-            )
-        waiting = _awaiting_after_code(area, path, text, rec)
-        if waiting is not None and all(field_name(d[0]) in waiting for d in diffs):
-            refs = ", ".join(waiting[field_name(d[0])] for d in diffs)
-            run = run_path(area, rec.run_id or "")
-            withdraw = (
-                f"withdraw the adoption first (`{withdraw_command(path)}`), then "
-                if declaring_protocol(path, text, run)
-                else ""
-            )
-            return (
-                f"next: the repair is in the area — {withdraw}measure again "
-                f"(`{measure_command(area)}`), then `{analysis}` on that run: it "
-                f"judges this repair and {refs}, decided `fixed` as a correction of "
-                f"{', '.join(what for what, _, _ in diffs)} in place, on the new run — "
-                f"only its `resolved` on that correction, judged on that run and this "
-                f"text, releases the field for it; the verdict on an earlier run "
-                f"releases nothing for the new one"
-            )
-        labels = ", ".join(what for what, _, _ in diffs)
-        return (
-            f"held: this repair changes what the first measurement {first.dir.name} "
-            f"registered — {quoted_changes(diffs)} — and finalize refuses it; a new "
-            f"measurement would carry the change, not repair it. Restore {labels}"
-            f"{shown_then(path, first, root)}, then decide the finding again "
-            f"(`limitation` with its effect on the claim, or `false-positive`)"
-            f"{correction_way(diffs)}; or, when the registration cannot be answered "
-            f"as written, " + ways_out.register_anew(pid)
-        )
-    if not unchanged:
-        return (
-            f"next: the repair is in the area — measure again (`{measure_command(area)}`), "
-            f"then `{analysis}` on that "
-            f"run, and decide its findings; {record.name} judged the code before the repair, "
-            f"so a decision review of it no longer applies"
-        )
-    if rec.mode != ANALYSIS_AUDIT or rec.run_id in (None, findings.NO_RUN):
-        return (
-            f"hint: nothing relevant changed since the audit {record.name} (code, "
-            f"promise block and registration stamp as it saw them): {repair}"
-        )
-    try:
-        now = audit_binding.analysis_now(area, text, run_path(area, rec.run_id))
-    except (ValueError, FileNotFoundError, RuntimeError) as exc:
-        return f"hint: the audited state could not be compared ({exc}); {repair}"
-    if rec.state != now:
-        return (
-            f"next: the fields {record.name} read before the run changed — audit the run "
-            f"again as it stands (`{analysis}`) and decide its findings; the repair owes "
-            f"no new measurement"
-        )
+    changed_registration = (
+        "a change of what the first measurement registered — what the number "
+        "is about, a promise — is no repair: finalize holds it, and a new "
+        "measurement carries it rather than repairs it"
+    )
     if decided is not None and findings.fixed_claim(decided):
-        review = audit_command(
-            area, "--review", "--record", record.name, protocol=protocol
-        )
         return (
-            f"next: a repaired Conclusion — no follow-up audit is shown it: the "
-            f"decision review judges the Conclusion as it stands (`{review}`), and "
-            f"only its `upheld` releases the BLOCKER, for exactly this claim; no "
-            f"new measurement and no analysis audit"
+            f"a repaired Conclusion: the decision review judges the Conclusion as it "
+            f"stands, and only its `upheld` releases the BLOCKER, for exactly this "
+            f"claim; it owes no new measurement and no analysis audit by itself. {nxt}"
         )
-    followup = (
-        f" A BLOCKER decided `fixed` with nothing it binds changed is not repaired "
-        f"yet: change what it names — the code, then a new run; a field of the "
-        f"setup corrected in place — and the follow-up audit (`{analysis}`) sees "
-        f"the repair."
-        if decided is not None and decided.grade == "BLOCKER"
-        else ""
-    )
+    scope = {field_name(label) for label in protocol_history.SCOPE_FIELDS}
+    named, fixed_as_registered, unread = None, None, ""
+    if decided is not None:
+        try:
+            path = the_protocol(area, protocol)
+            text = path.read_text(encoding="utf-8")
+            at = decided.place
+            hit = (
+                named_field(text, at[1])
+                if at is not None and at[0] == path.name
+                else None
+            )
+            if hit is not None and hit.name in scope:
+                if findings.corrected_field(decided, path, text):
+                    named = hit.label
+                elif not protocol_history.correctable(hit.label):
+                    fixed_as_registered = hit.label
+        except (ValueError, OSError) as exc:
+            unread = (
+                f" (whether the finding names a field could not be read: "
+                f"{' '.join(str(exc).split())})"
+            )
+    if fixed_as_registered is not None:
+        return (
+            f"{fixed_as_registered}: after the first measurement it "
+            f"{protocol_history.STANDS_AS_REGISTERED}; {changed_registration}. {nxt}"
+        )
+    if named is not None:
+        return (
+            f"a correction of {named} in place: it corrects the description, not "
+            f"the run — after the first measurement only a follow-up analysis "
+            f"audit's `resolved` on this finding, judged on the run that answers "
+            f"and exactly this text, releases the change; a text edited after that "
+            f"verdict is held again, and a verdict on an earlier run releases "
+            f"nothing for a later one. A changed definition, population or question "
+            f"is no correction: {changed_registration}. {nxt}"
+        )
     return (
-        f"hint: nothing {record.name} binds changed since the audit (code, promise "
-        f"block, registration, the fields read before the run, the run). A repair "
-        f"written after the audit — the Conclusion, the other Summary fields — owes "
-        f"no new measurement and no new analysis audit by itself.{followup} The "
-        f"decision and report reviews the protocol owes stand (`labkit-next` names "
-        f"the next step). A repair of code, inputs or configuration is not in the "
-        f"area yet: {repair}"
-    )
-
-
-def _awaiting_after_code(
-    area: Path, protocol: Path, text: str, rec: findings.Record
-) -> dict[str, str] | None:
-    """The fields of PROTOCOL (TEXT) whose correction, decided `fixed`, a
-    follow-up has still to judge (`finalize.awaiting_followup`), when the
-    measuring code changed since RECORD's run ran — a code repair beside a
-    correction, which owes a new run whose follow-up judges both (probe
-    2026-11-03, the correction then a code fault). None without a run, or
-    when the code did not change. Raises RuntimeError when git fails."""
-    if rec.run_id in (None, findings.NO_RUN):
-        return None
-    run = run_path(area, rec.run_id)
-    if not run.is_dir() or not code_since_run(area, run)[0]:
-        return None
-    return awaiting_followup(area, protocol, text, run)
-
-
-def _departure(
-    area: Path, protocol: Path, text: str
-) -> tuple[RunDir, list[tuple[str, str, str]]] | None:
-    """The first measurement TEXT, PROTOCOL as it stands, departs from in
-    what the number is about or in a promise, with the differences; None
-    without a head that reads, a stamped id, a measurement or a difference
-    (a head that does not read is protocol-check's to name). Raises
-    RuntimeError when git fails, PromiseError (a ValueError) on a block
-    that does not read."""
-    try:
-        pid = protocol_block.head(text).id
-    except protocol_block.BlockError:
-        return None
-    if pid is None:
-        return None
-    root = git_root(protocol)
-    firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
-    return protocol_history.first_measured_differences(
-        protocol,
-        firsts,
-        text,
-        root,
-        lambda then, now: (
-            protocol_history.scope_differences(then, now)
-            + protocol_history.promise_differences(then, now)
-        ),
+        f"any other repair{unread}: a change of code, inputs or configuration is "
+        f"confirmed only by an analysis audit of a run the repaired code measured, "
+        f"and {record.name} judged the state before it, so a decision review of it "
+        f"no longer applies once the change is in the area; a Summary field "
+        f"rewritten after the audit owes no new measurement by itself; a BLOCKER "
+        f"decided `fixed` with nothing it binds changed is not repaired yet; "
+        f"{changed_registration}. {nxt}"
     )
 
 

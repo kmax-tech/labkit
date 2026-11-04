@@ -1173,14 +1173,23 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 "kept rows carry what `leak_rate` (must be 0) needs",
                 said,
             )
-            # what the repair owes is said once, by what it changed (the line below)
-            self.assertIn("what the repair owes in this area is the line below", said)
+            # what `fixed` means is said once, in the line below, which points to
+            # labkit-next for the step
+            self.assertIn(
+                "what `fixed` means for this repair, and where its next step is "
+                "named, is the line below",
+                said,
+            )
             self.assertNotIn("after a new measurement", said)
             self.assertIn(
-                f"hint: nothing relevant changed since the audit {record.name} "
-                "(code, promise block and registration stamp as it saw them): a "
-                "repair changes code, inputs or configuration — repair first, "
-                "then measure and audit again",
+                "any other repair: a change of code, inputs or configuration is "
+                "confirmed only by an analysis audit of a run the repaired code "
+                f"measured, and {record.name} judged the state before it",
+                said,
+            )
+            self.assertIn(
+                "Next: `labkit-next experiments/01-x` names the step this repair "
+                "owes now.",
                 said,
             )
             f = findings.read(record).findings[0]
@@ -1191,15 +1200,15 @@ class DecisionListReachesThePerson(unittest.TestCase):
             repaired = decide("fixed", "dropped the feature")
             self.assertNotIn("hint:", repaired)
             # round 2: seven of eight reviews came after a repair and were refused —
-            # the next step is said at the decision, not first at the review
+            # the decision says the review no longer applies, labkit-next names
+            # the step (review 2026-11-03, M2: no action of its own)
             self.assertIn(
-                "next: the repair is in the area — measure again "
-                "(`.venv/bin/python experiments/01-x/scripts/01_measure.py`), then "
-                "`labkit-audit experiments/01-x --mode analysis` on that run, and decide "
-                f"its findings; {record.name} judged the code before the repair, so a "
-                "decision review of it no longer applies",
+                f"{record.name} judged the state before it, so a decision review "
+                "of it no longer applies once the change is in the area",
                 repaired,
             )
+            self.assertIn("`labkit-next experiments/01-x`", repaired)
+            self.assertNotIn("measure again", repaired)
 
             said = decide("limitation", "the limit")
             self.assertIn(

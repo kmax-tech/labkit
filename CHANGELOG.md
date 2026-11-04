@@ -118,6 +118,22 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **The line under a `fixed` decision explains and points to
+  `labkit-next`; it names no action of its own.** `audit_decisions.repair_hint`
+  chose its own next step and contradicted labkit-next in state after
+  state: "owes no new measurement" beside a code change, "measure again"
+  with the repair already measured, no withdrawal while the run stood
+  adopted, a third run while the second existed, "measure again" while
+  the answering run's choice was blocked, a released field called
+  refused. The line now explains what `fixed` means for the kind of
+  repair the finding names — a correction in place and that only a
+  bound follow-up's `resolved` releases it, the question that stands as
+  registered, a repaired Conclusion and its decision review, a repair of
+  code, inputs or configuration — each condition that holds only after
+  the first measurement saying so, and ends "`labkit-next <area>` names
+  the step this repair owes now". It reads no area state; a correction in
+  place is named only for a field of what the number is about.
+
 - **The withdrawal of a declared result comes first by data, not by
   wording.** `report_check.held_declaration` found "the declared run's
   code changed" by searching finalize's blockers for `changed since
@@ -145,9 +161,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   and a different question is a protocol of its own (probe 2026-11-02, F6:
   "mean" → "median" was adopted on a `resolved`). One rule,
   `protocol_history.correctable`, read by `findings.corrected_field`, the
-  scope hold and the decision's line; both now offer the correction route
-  only for a changed field it can release and name none for the question,
-  the head's parts or a promise
+  scope hold and the decision's line; the hold offers the correction route
+  only for a changed field it can release and names none for the question,
+  the head's parts or a promise, and the decision's line explains the
+  condition
   (`docs/notes/2026-11-02-registered-field-repair.md`).
 
 - **A run measured again under a corrected field is released by a
@@ -241,8 +258,8 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   refused a `fixed` decision — no truthful repair had a release. Now
   `findings.fixed_claim` marks such a finding; `labkit-audit --review`
   takes it, `report-check` holds it until a review upholds it for the
-  claim as it stands (`report_decisions.repaired_claims`), and `--decide`
-  names that review. Any other BLOCKER decided `fixed` with nothing
+  claim as it stands (`report_decisions.repaired_claims`), `--decide`
+  explains it and labkit-next names that review. Any other BLOCKER decided `fixed` with nothing
   changed is told it is not repaired yet, instead of being sent to a
   follow-up audit that would not see it.
 
@@ -298,12 +315,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
     record of exactly this state, releases the change; finalize names each
     released correction. A finding placed by line number names no field;
     the auditor's instructions ask for the label;
-  - `labkit-audit --decide N fixed` says what the repair owes by what it
-    changed — a correction: no new measurement; another change of the
-    registration: the way back or a new registration; changed code:
-    measure again; a Conclusion: no measurement and no analysis audit by
-    itself (the reviews owed stand). The status line no longer says "after
-    a new measurement".
+  - `labkit-audit --decide N fixed` explains what `fixed` means for the
+    kind of repair and points to labkit-next for its step (see "The line
+    under a `fixed` decision explains" above). The status line no longer
+    says "after a new measurement".
   The follow-up piece is labelled `EARLIER DECIDED BLOCKERS AND
   CORRECTIONS`.
 - **A registered report can be saved before the adoption (the progress

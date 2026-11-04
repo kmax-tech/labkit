@@ -584,9 +584,9 @@ def correction_way(diffs: list[tuple[str, str, str]]) -> str:
     correction can release (`protocol_history.correctable`), named, and for
     the others that they stand as registered; "" without a scope field —
     the head's kind, `[kept]`, `[reference]` and a promise have no
-    correction. The hold here and the decision's line
-    (`audit_decisions.repair_hint`) offer it, so neither names a way the
-    gate refuses. Pure."""
+    correction. The hold here offers it; the decision's line
+    (`audit_decisions.repair_hint`) explains the condition and names no
+    way of its own. Pure."""
     scope = [what for what, _, _ in diffs if what in protocol_history.SCOPE_FIELDS]
     fixable = [what for what in scope if protocol_history.correctable(what)]
     fixed_as_registered = [what for what in scope if what not in fixable]
@@ -598,9 +598,8 @@ def correction_way(diffs: list[tuple[str, str, str]]) -> str:
         )
     if fixed_as_registered:
         out += (
-            f"; {', '.join(fixed_as_registered)} has no correction in place — it "
-            "stands as registered, a typo included; a different question is a "
-            "protocol of its own"
+            f"; {', '.join(fixed_as_registered)} "
+            f"{protocol_history.STANDS_AS_REGISTERED}"
         )
     return out
 
