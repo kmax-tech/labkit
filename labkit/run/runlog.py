@@ -906,15 +906,18 @@ class run:
 OPEN_STATES = ("running", "unknown")
 
 
-def open_runs(base_dir: str | Path) -> list[ActiveRun]:
-    """The runs of BASE_DIR still open: in OPEN_STATES and without a
+def still_open(r: ActiveRun) -> bool:
+    """Is R, a run `active` lists, still open: in OPEN_STATES and without a
     failure.json — a run that broke off recorded why, even while the
-    process that ran it lives on (a test, a notebook)."""
-    return [
-        r
-        for r in active(base_dir)
-        if r.state in OPEN_STATES and read_failure(r.dir) is None
-    ]
+    process that ran it lives on (a test, a notebook). The one rule
+    `labkit-next`, the twin refusal and `runlog --wait` share. Raises
+    RunConfigError on a failure.json that does not read."""
+    return r.state in OPEN_STATES and read_failure(r.dir) is None
+
+
+def open_runs(base_dir: str | Path) -> list[ActiveRun]:
+    """The runs of BASE_DIR still open (`still_open`)."""
+    return [r for r in active(base_dir) if still_open(r)]
 
 
 def open_twins(base_dir: str | Path, script: str) -> list[ActiveRun]:

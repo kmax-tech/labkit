@@ -155,6 +155,59 @@ class TestWait(unittest.TestCase):
             (dead,) = (area / "runs").iterdir()
             self.assertIn("run.metrics(passed=…)", runs.read_failure(dead) or "")
 
+    def test_a_run_that_broke_off_while_its_process_lives_ends_the_wait(self):
+        """A run that recorded why it broke off (failure.json) is not open,
+        though the process that ran it lives on (a notebook, a test):
+        labkit-next and the twin refusal read it as ended, and `--wait`
+        waited for it until its process ended (2026-11-04, case F of the
+        liveness comparison). Real process; its twin is the live run
+        without failure.json above, which still waits (exit 3)."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                head(repeat_cost="low", promises=None)
+                + "\n- **Question / hypothesis:** how many?\n",
+                encoding="utf-8",
+            )
+            script = area / "01_measure.py"
+            script.write_text(
+                "import sys, time\n"
+                f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
+                "from labkit.run import runlog\n"
+                "try:\n"
+                f"    with runlog.run('x', {{'n': 1}}, {d!r}, run_kind='measurement'):\n"
+                "        raise RuntimeError('broke off')\n"
+                "except RuntimeError:\n"
+                "    pass\n"
+                "print('BROKE', flush=True)\n"
+                "time.sleep(60)\n",
+                encoding="utf-8",
+            )
+            env = {**os.environ, "LABKIT_DETACHED": "1"}
+            proc = subprocess.Popen(
+                [sys.executable, str(script)], env=env, cwd=d,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            )  # fmt: skip
+            try:
+                line = proc.stdout.readline() if proc.stdout else ""
+                self.assertEqual(line.strip(), "BROKE", proc.stderr)
+                self.assertEqual(runlog.open_runs(area), [])
+                t0 = time.monotonic()
+                code, out = _run_main(
+                    [d, "--wait", "--max-seconds", "5", "--interval", "0.1"]
+                )
+                self.assertEqual(code, 2, out)
+                self.assertLess(time.monotonic() - t0, 4, out)
+                self.assertIn("broke off with RuntimeError: broke off", out)
+                self.assertIn("BROKE OFF", out)
+                self.assertNotIn("RUNNING", out)
+                code, out = _run_main([d])
+                self.assertEqual(code, 0, out)
+                self.assertIn("broke off", out)
+            finally:
+                proc.kill()
+                proc.wait()
+
     def test_running_run_exits_3_at_max_seconds(self):
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "2026-09-09T10-00-00_live"

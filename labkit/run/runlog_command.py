@@ -34,7 +34,13 @@ from labkit.formats.runs import (
 from labkit.formats.answering_run import newest_completed
 from labkit.run import detached
 from labkit.run.detached import DetachedStart
-from labkit.run.runlog import ActiveRun, active, notify_desktop, reindex
+from labkit.run.runlog import (
+    ActiveRun,
+    active,
+    notify_desktop,
+    reindex,
+    still_open,
+)
 
 
 def _newest_output(area: Path) -> str:
@@ -112,7 +118,9 @@ def _print_status(
         print(f"{area}: no open runs")
     for r in live:
         pid, script = (r.config.pid, r.config.script) if r.config else (None, None)
-        print(f"{r.run_id}  {r.state:12s} pid={pid}  {script}")
+        print(f"{r.run_id}  {_state_word(r):12s} pid={pid}  {script}")
+        if _state_word(r) == BROKE_OFF:
+            print(f"    {read_failure(r.dir)} — its process lives on; the run ended")
         if r.state == "unknown":
             # a live run in a sandbox without `ps` read as a bare "unknown",
             # and its lock as stale (registered pilot part 1, pubmedqa50-r2)
@@ -198,6 +206,14 @@ _FAILED_WHY = {
     "corrupt": "completion.json without metrics.json — the results are gone",
     "unreadable": "config.json cannot be read — the run's record is damaged",
 }
+#: a run in an open state that wrote failure.json (`runlog.still_open`)
+BROKE_OFF = "broke off"
+
+
+def _state_word(r: ActiveRun) -> str:
+    """R's state as `runlog` shows it: `broke off` for a run whose process
+    lives on after it wrote failure.json, else its state."""
+    return r.state if r.state in FAILED_STATES or still_open(r) else BROKE_OFF
 
 
 def _print_failures(
@@ -209,12 +225,12 @@ def _print_failures(
     for s in failed_starts:
         print(_failed_start_line(s))
     for r in failed:
-        why = r.error or f"{r.dir}: {_FAILED_WHY.get(r.state, '')}"
+        why = r.error or f"{r.dir}: {_FAILED_WHY.get(r.state, 'its process lives on')}"
         failure = read_failure(r.dir)
         if failure:
             why += f" — broke off with {failure}"
         print(
-            f"{r.run_id}  {r.state.upper()}  pid={r.config.pid if r.config else None}  "
+            f"{r.run_id}  {_state_word(r).upper()}  pid={r.config.pid if r.config else None}  "
             f"{r.config.script if r.config else None}  ({why})"
         )
 
@@ -222,9 +238,12 @@ def _print_failures(
 def _wait(
     area: str, max_seconds: float | None, interval: float, follow: bool, notify: bool
 ) -> int:
-    """Block until the area is idle: no open runs and no command `runlog
-    start` detached that still runs without one (`_unopened`). Exit codes
-    are the contract: 0 = idle (finished) · 2 = a run crashed, or a started
+    """Block until the area is idle: no open runs (`runlog.still_open`, the
+    rule `labkit-next` and the twin refusal read: a run that wrote
+    failure.json is ended, even while its process lives on) and no command
+    `runlog start` detached that still runs without one (`_unopened`). Exit
+    codes are the contract: 0 = idle (finished) · 2 = a run crashed or broke
+    off, or a started
     command ended without a run record and not with exit 0
     (`_failed_starts`) · 3 = still running at --max-seconds.
 
@@ -244,8 +263,8 @@ def _wait(
         starts = detached.starts(apath)
         pending = _unopened(starts, live)
         failed_starts = _failed_starts(apath, starts)
-        failed = [r for r in live if r.state in FAILED_STATES]
-        running = [r for r in live if r.state not in FAILED_STATES]
+        failed = [r for r in live if not still_open(r)]
+        running = [r for r in live if still_open(r)]
         if earlier is None:
             earlier = (
                 {r.run_id for r in failed} | {_start_key(s) for s in failed_starts}

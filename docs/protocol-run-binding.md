@@ -120,12 +120,14 @@ step it hit:
 
 - **`runlog [AREA]`** lists every run that is not complete by its own
   marker, each with its `state`: `running` · `unknown` · `crashed` ·
-  `unfinalized` · `corrupt` · `unreadable`. The recorded pid decides between
-  `running` and the dead states. Then the `completed` runs, oldest first,
+  `unfinalized` · `corrupt` · `unreadable`, and `broke off` for a run that
+  wrote failure.json while its process lives on. The recorded pid decides
+  between `running` and the dead states. Then the `completed` runs, oldest first,
   each with what it is (a fresh run, or derived from which), whether its
   code was committed and the command that started it.
 - **`runlog <area> --wait`** exits 0 when nothing is open, 2 when a run failed
-  (`unfinalized` and `corrupt` count as failed, each with its own message),
+  (`unfinalized`, `corrupt` and `broke off` count as failed, each with its
+  own message),
   3 when a run is still running at `--max-seconds`.
 - **`runlog reindex`** appends the rows that are missing, and only those. It
   never rewrites an existing row, refuses an index with other columns, never

@@ -216,6 +216,13 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   and the order follows it. Code that could not be compared (a commit the
   clone lacks, no script recorded, a script gone or ambiguous) sets
   nothing and, as before, does not put the withdrawal first.
+- **`runlog --wait` ends on a run that broke off while its process lives
+  on.** A run that wrote failure.json is ended for `labkit-next` and the
+  twin refusal (`runlog.still_open`, now the one rule of all three);
+  `--wait` read only the state the pid gave, so it waited for such a run
+  until its process ended — a notebook or a test, for hours. It now exits
+  2 naming the failure, and `runlog AREA` shows the run as `broke off`
+  (`docs/notes/2026-11-04-liveness-and-wait.md`, case F).
 
 - **Report drafts can be saved before the first measurement.** A valid
   registered report without an answering run or adoption owes no result
