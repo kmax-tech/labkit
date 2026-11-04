@@ -107,6 +107,22 @@ durch (sts512 r3); (3) `protocol-fill` hält die Template-Vorbelegung
 (4) Hook-Halte stehen nicht in der Sandbox-Spur, nur im Agenten-Transkript.
 Der Merge von `usage-round` nach labkit-papers Hauptzweig bleibt beim
 Autor.
+**Phase 1, Schritt 3 (2026-11-04, Commits `36a110ef`, `3af7c599`,
+ungereleased unter 0.109.0 im CHANGELOG):** finalize nennt vor der
+Übernahme nur noch `labkit-next AREA` statt einer eigenen Schrittliste;
+die neun Kurzrouten verlassen die Entscheidungsliste (eine Zeile: Ursache
+zuerst, Guide-Abschnitt, `labkit-next`), der Analyse-Auditor behält die
+vollen Routen. Paket netto −43 Zeilen, Tests −23, Suite grün — das
+Kriterium „netto negativ" zum ersten Mal erfüllt. Gelernt: finalize ist
+Station in der Kette von `next` (`chain_gaps` → `finalize_gaps`), darf
+den Schritt also nicht selbst rendern (Rekursion, vom Subagenten
+gefunden); Stationen zeigen auf `next`, nur Pfade außerhalb der Kette
+(Hooks) drucken seinen Schritt. Offen in Phase 1: die eigenen Absätze
+des Stop-Hooks (unentschiedene Blocker, report-check-Ausgabe) und
+`scaffold.next_steps` (die Lane nach `labkit-init exp`, ~250 Zeilen) —
+letzteres der größte Kandidat, braucht eigene Prognose und einen
+Probefall, weil es ändert, was ein kalter Agent zuerst sieht. Release
+0.109.0 (`just release 0.109.0`) beim Autor.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die

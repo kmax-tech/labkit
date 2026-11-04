@@ -207,6 +207,63 @@ lists the tree by a walk and the index by git) stays: a tree-walk helper
 for all files would cross `.venv` and `.git`, so the two sources are
 inherent until a bounded walk exists.
 
+**Step 3 (2026-11-04, after the usage round): finalize's note and the
+decision list's routes.** Two removal-first candidates of the table under
+"What stands in the way", built as one step under the same terms.
+(a) `finalize.undeclared_hint` — 17 lines composing the audit, its
+decisions, the report fields and the adopt command for a protocol that
+declares no result yet — becomes one line naming `labkit-next AREA`
+(`finalize.undeclared_note`), as Phase 1 states it; the orientation
+test's premise that every line to the adoption names the report fields
+first goes with it (`next`'s order decides; the adoption's refusal names
+that step). Tried first and dropped the same hour: finalize rendering
+`next`'s step itself — finalize is a station of `next`'s chain
+(`report_check.chain_gaps` → `finalize_gaps` → `finalize_area`), so the
+render called finalize again without end (eight tests of
+`test_repair_guidance` in a RecursionError, found by the subagent that
+built (b)). The rule this leaves: a console path that is itself a station
+of the chain points to `next`; only paths outside the chain (the hooks)
+print its step. (b) `ways_out.blocker_routes(full=False)`
+— the nine routes in one line each, printed with every decision list —
+leaves the list: one line names the cause question, where the routes
+stand (`labkit-next --guide`, "When you are stuck"; the stamped
+AGENTS.md) and `labkit-next AREA`; `WAYS_OUT_SHORT`, `NO_PROMISE_SHORT`,
+`WAYS_OUT_IN_FULL` and the `full` parameter go; the auditor's prompt
+keeps the full routes. Predicted: package net about −30 (finalize −7,
+ways_out −30, audit_decisions +3, imports +2), tests about −25. Stop
+criteria: net negative package lines for the step; the invariant held by
+a test — on an area with a completed, unadopted run finalize's note
+equals `next`'s rendered step; the suite green without an exception
+list; one session. A budget exceeded is explained and re-decided, never
+met by cutting a check.
+
+Result (commits `36a110ef`, `3af7c599`; measured against `461e37d6` with
+`git diff --numstat`, lines with docstrings):
+
+| Measured, step 3 | Package | Tests |
+|---|---:|---:|
+| lines added | 52 | 46 |
+| lines removed | 95 | 69 |
+| net | **−43** | −23 |
+
+Per file: `ways_out` −45 (the short routes and the `full` branch),
+`finalize` −6, `audit_decisions` +8 (the constant and its comment),
+`audit_prompt` ±0, agent guide and `AGENTS.md` template ±0 in count,
+reworded. The suite green without an exception list, one session. **The
+success criterion is met for the first time**: this step removed
+composition and added none — the pilot and Option A each added a reader
+or a move. The invariant held is the weaker one that the cycle allows:
+finalize names no step (test: no command but `labkit-next` in the
+note); the decision list names none (test: the route text absent, the
+one line present). What stands in the way after this step, of the
+table's five homes: `agent_hooks.stop`'s own paragraphs (the undecided
+blockers and the report-check output, composed around `_capture`) and
+`scaffold.next_steps` (the lane after `labkit-init exp`, about 250
+lines with its three helpers) — the second is the removal-first
+candidate with the most lines, and the one that changes what a cold
+agent sees first; it needs its own prediction and a probe case before
+building.
+
 **Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1
 does not continue as written. The reason is structural, not accidental:
 closing a gap *adds* a path, and the gain of Phase 1 comes only where a
