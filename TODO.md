@@ -2379,10 +2379,14 @@ Notiert, nicht geplant:
    Behoben für `committed_at` (`6fbd9ae5`) und den Laufstart (`0c336b26`,
    `protocol_history.unreadable_at`). Übrige Leser nach Risiko, je erst
    reproduzieren:
-   - stilles Bestehen möglich: `evidence.change_findings`,
-     `commit_changes`, `_undone_in` (eine Änderung committeter Belege
-     liest sich als „damals nicht da“); `attempts._git_paths`,
-     `expected_evidence` (ein unlesbares Journal liest sich als leer);
+   - geprüft 2026-11-04 mit echten Lesefehlern: `attempts._git_paths`,
+     `expected_evidence` ließen ein gekürztes Journal still bestehen
+     (ohne die Kopie im Git-Verzeichnis) — behoben `f1ed461d`;
+     `evidence.change_findings`, `commit_changes` bestanden nicht, endeten
+     aber im Traceback ohne Ausweg — behoben `f19d036a`. `_undone_in` und
+     `_blob_at` halten bei einem Lesefehler (die Datei gilt als geändert,
+     nicht als wiederhergestellt), nennen aber die Änderung statt des
+     Lesefehlers; `orphaned_runs` (Reflog) nicht geprobt;
    - hält, aber mit falscher Ursache: `report_hold.missing_report`,
      `newly_declared`, `run_record_check._source_manifests`,
      `handovers.journal_digest`;
