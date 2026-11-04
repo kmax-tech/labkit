@@ -44,6 +44,16 @@ pins (`requirements.txt` / `requirements.lock`).
   `--findings` prints, never by editing the record; an outdated record
   stays and is decided too; restore from git; or hand over.
   `UNDECIDED_WAY` is gone. Last version with the hooks' own way: 0.108.0.
+- **`labkit-init exp … --change-kind` ends with `labkit-next`'s step,
+  not a lane of its own.** The kind change printed the numbered lane of
+  the area's steps (`scaffold.next_steps` with `_first_steps`,
+  `_low_steps`, `_run_steps`, `_closing_steps`, `step_fields`,
+  `estimator_fill`, `CONSTANTS` — about 290 lines, the last composed step
+  list outside `labkit-next`; a fresh `labkit-init exp` has ended with
+  one line naming `labkit-next` since 0.104.0). It now prints
+  `labkit-next`'s rendered step for the area after its log lines; the
+  whole route stays in `labkit-next --guide`. Last version with the lane:
+  0.108.0.
 
 ## 0.108.0 — 2026-11-04
 

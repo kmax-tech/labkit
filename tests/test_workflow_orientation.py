@@ -51,14 +51,14 @@ class WorkflowOrientation(unittest.TestCase):
                 self.assertIn("next_after_run(PROTOCOL, run.run_id)", text)
                 self.assertNotIn("adopt_command(PROTOCOL, run.run_id)", text)
 
-    def test_every_line_to_the_adoption_names_the_report_fields_first(self):
+    def test_the_line_to_the_adoption_names_the_report_fields_first(self):
         """The adoption runs protocol-check, which refuses a frozen protocol
         without the report fields owed once a result is declared: the step
         stands before the adoption, from one home (`repo.report_fields_step`),
-        in the run's next line and labkit-init's closing steps (finalize's
-        note is `labkit-next`'s step, whose order decides — the adoption's
-        refusal names the fields). The twin: the step names the contract
-        line that lists them."""
+        in the run's next line (labkit-init prints no closing steps since the
+        one explainer; finalize's note is `labkit-next`'s step, whose order
+        decides — the adoption's refusal names the fields). The twin: the
+        step names the contract line that lists them."""
         protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
         run = "2026-10-27T10-00-00_ab12"
         step = repo.report_fields_step(protocol)
@@ -66,16 +66,9 @@ class WorkflowOrientation(unittest.TestCase):
         self.assertIn(f"`{repo.contract_command(protocol)}`", step)
         self.assertIn("--contract", repo.contract_command(protocol))
         self.assertIn("once frozen and adopted", step)
-        closing = scaffold.next_steps(
-            Path("experiments/01-x"), "x", "01", "high", "compute", False
-        )
-        for name, line in (
-            ("next_after_run", repo.next_after_run(protocol, run)),
-            ("next_steps", closing),
-        ):
-            with self.subTest(line=name):
-                self.assertIn(step, line)
-                self.assertLess(line.index(step), line.index("labkit-adopt"))
+        line = repo.next_after_run(protocol, run)
+        self.assertIn(step, line)
+        self.assertLess(line.index(step), line.index("labkit-adopt"))
 
     def test_the_area_route_names_the_area_from_the_root(self):
         # `runlog .` from the root, as AGENTS.md asks, read the repo as an

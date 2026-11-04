@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 from labkit.checks import readme_check
+from labkit.gates import next_step
 from labkit.tools import protocol_cuts, protocol_edit, scaffold
 from labkit.formats import (
     console,
@@ -646,104 +647,11 @@ class Exp(unittest.TestCase):
             (2, 10 / 12),
         )
 
-    def test_the_next_steps_are_the_lane_with_its_gates(self) -> None:
-        """The printed steps at high repeat cost skipped the preflight, both
-        audits and the adoption while the stamped AGENTS.md named them; an
-        agent following the console met the refusal at the run's start
-        (review 2026-10-19). The steps read the contract: every gate the
-        lane owes stands in order, numbered without a gap."""
-        rel = Path("experiments/01-foo")
-        for cost, kind, model in (("high", "fit", False), ("high", "apply", True)):
-            text = scaffold.next_steps(rel, "foo", "01", cost, kind, model)
-            order = [
-                "code-check experiments/01-foo",
-                "preflight experiments/01-foo",
-                "labkit-audit experiments/01-foo --mode preflight",
-                "`frozen = true`",
-                "git add + commit, THEN",
-                "runlog start experiments/01-foo",
-                "finalize experiments/01-foo",
-                "labkit-audit experiments/01-foo --mode analysis",
-                "labkit-adopt experiments/01-foo",
-            ]
-            positions = [text.index(step) for step in order]
-            self.assertEqual(positions, sorted(positions), text)
-            numbers = [int(m) for m in re.findall(r"^  (\d+)\. ", text, re.M)]
-            self.assertEqual(numbers, list(range(1, len(numbers) + 1)), text)
-        low = scaffold.next_steps(rel, "foo", "01", "low", "compute", False)
-        for not_owed in ("preflight", "frozen = true", "runlog start", "--probe"):
-            self.assertNotIn(not_owed, low, low)
-        # an undeclared tier: the decision comes first, both lanes named, the
-        # kind check before it at compute (route probe 2026-10-29: the printed
-        # high-lane steps were taken for the route)
-        for kind in ("compute", "fit"):
-            undeclared = scaffold.next_steps(rel, "foo", "01", None, kind, False)
-            self.assertIn("the repeat cost is not set yet", undeclared)
-            self.assertIn('"repeat_cost=low"', undeclared)
-            self.assertIn('"repeat_cost=high"', undeclared)
-            self.assertIn("read an unfilled repeat cost as high", undeclared)
-            decide = undeclared.index("Set the repeat cost")
-            self.assertLess(decide, undeclared.index("preflight experiments/01-foo"))
-            if kind == "compute":
-                self.assertLess(undeclared.index("Check the kind"), decide)
-        self.assertNotIn("Set the repeat cost", low)
-        self.assertNotIn("Set the repeat cost", text)
-        for owed in ("code-check", "finalize", "--mode analysis", "labkit-adopt"):
-            self.assertIn(owed, low, low)
-
-    def test_the_next_steps_name_only_what_the_skeleton_has(self) -> None:
-        """A high computation was told to fill `00_prepare.py` and run
-        `--show 3` and `--probe 4`, which its skeleton lacks, and no area
-        with a model but without the prompt skeleton heard of the data
-        profile it owes (audit 2026-10-27, C2 and C4). The steps name a
-        script only when the skeleton stamps it, a probe only when the lane
-        allows one, the data profile whenever a model is named; the detached
-        command names its script from the repo root, where `runlog start`
-        runs it (criterion-3)."""
-        rel = Path("experiments/01-foo")
-        for kind in ("compute", "fit", "apply"):
-            for cost in ("low", "high"):
-                for model in (False, True):
-                    text = scaffold.next_steps(rel, "foo", "01", cost, kind, model)
-                    sk = standard_contract.skeleton(cost, kind, model)
-                    stamped = {dest for _, dest in sk.scripts}
-                    for name in re.findall(r"scripts/(\d\d_\w+\.py)", text):
-                        self.assertIn(name, stamped, text)
-                    owes_probe = sk.probe and standard_contract.lane(cost).probe_allowed
-                    self.assertEqual("--probe" in text, owes_probe, text)
-                    if sk is standard_contract.COMPUTE:
-                        self.assertNotIn("--show", text)
-                    self.assertEqual("data profile" in text, model, text)
-                    if not standard_contract.lane(cost).foreground:
-                        self.assertIn(
-                            "runlog start experiments/01-foo -- .venv/bin/python "
-                            "experiments/01-foo/scripts/01_measure.py",
-                            text,
-                        )
-
-    def test_a_computation_is_told_to_check_its_kind_first(self) -> None:
-        """An agent told to train a random forest stamped `--kind compute` and
-        read "no criterion" (docs/notes/2026-10-26-kind-choice.md). A
-        computation's steps open with the kind questions and the restamp as
-        a fit; a counting area keeps its cut without a criterion. A fit's
-        steps carry no such detour and name its bar."""
-        rel = Path("experiments/01-foo")
-        for cost in ("low", "high"):
-            compute = scaffold.next_steps(rel, "foo", "01", cost, "compute", False)
-            first = re.search(r"^  1\. (.*)$", compute, re.M)
-            assert first is not None, compute
-            self.assertIn("Check the kind", first.group(1))
-            self.assertIn("labkit-init exp foo --kind fit --change-kind", compute)
-            self.assertNotIn("rm -r", compute)
-            self.assertIn("also when the deliverable is predictions", compute)
-            fit = scaffold.next_steps(rel, "foo", "01", cost, "fit", False)
-            self.assertNotIn("Check the kind", fit)
-            self.assertNotIn("--kind fit", fit)
-        low = scaffold.next_steps(rel, "foo", "01", "low", "compute", False)
-        self.assertIn("no criterion", low)
-        self.assertIn(
-            "criterion", scaffold.next_steps(rel, "foo", "01", "low", "fit", False)
-        )
+    def test_a_counting_area_keeps_its_kind(self) -> None:
+        """An agent told to train a random forest stamped `--kind compute`
+        (docs/notes/2026-10-26-kind-choice.md); the kind questions decide
+        (`KIND_QUESTIONS`, the `--kind` help and the refusal). A counting
+        area stamped as a computation keeps that kind in its head."""
         quiet(scaffold.stamp_area, self.root, "count-docs", "low", kind="compute")
         proto = next(self.root.glob("experiments/*-count-docs/PROTOCOL-*.md"))
         self.assertEqual(protocol_block.head(proto.read_text()).kind, "compute")
@@ -822,6 +730,24 @@ class Exp(unittest.TestCase):
         )
         for gone in set(compute) - set(fit):
             self.assertFalse(gone.exists(), gone)
+
+    def test_a_kind_change_closes_with_labkit_nexts_step_and_no_lane(self) -> None:
+        """After the log lines `--change-kind` prints `labkit-next`'s step
+        for the restamped area, byte for byte, and no numbered lane of its
+        own: the one explainer (docs/notes/2026-11-04-one-explainer-plan.md).
+        The area is named as `stamp_area`'s closing line names it, from the
+        repo root."""
+        area, proto, _ = self._compute_area_with_work()
+        _, report = quiet(scaffold.change_kind, self.root, "foo-bar", "fit")
+        expected = next_step.next_step(area, proto).render(
+            str(area.relative_to(self.root))
+        )
+        head_line, _, rest = report.partition("\n")
+        self.assertEqual(head_line, f"Kind compute -> fit in {area}")
+        self.assertEqual(rest.count("labkit-next: "), 1, report)
+        self.assertEqual(rest[rest.index("labkit-next: ") :], expected)
+        self.assertNotRegex(report, re.compile(r"^\s*\d+\. ", re.M), msg=report)
+        self.assertNotIn("Next (", report)
 
     def test_a_kind_change_refuses_to_lose_work_and_changes_nothing(self) -> None:
         """An edited stamp, or a run, holds the change; the area stays
@@ -2293,61 +2219,6 @@ class Report(unittest.TestCase):
 
     def test_a_model_leaves_them_open(self) -> None:
         self.assertNotIn("auto-filled", self.stamped("haiku"))
-
-
-class NextStepFields(unittest.TestCase):
-    """The first next step names what every kind fills (terms, question,
-    unit, data, exclusions — AGENTS.md's "every kind"), at both costs, and
-    the title says repeat_cost, not "lane" (audit 2026-10-27, third, I12).
-    A kind with a bar names its [[promise]] constants as the agent's to set,
-    the low cut names 00_prepare.py where the skeleton has one, and the
-    adoption step puts the Conclusion first and the task's output file
-    after it (Haiku start reading, 2026-10-28)."""
-
-    def steps(self, cost: str, kind: str, model: bool) -> str:
-        return scaffold.next_steps(
-            Path("experiments/01-x"), "x", "01", cost, kind, model
-        )
-
-    def test_every_kind_names_terms_question_unit_data_exclusions(self):
-        for cost in ("low", "high"):
-            for kind in ("compute", "fit", "apply"):
-                for model in (False, True):
-                    with self.subTest(cost=cost, kind=kind, model=model):
-                        out = self.steps(cost, kind, model)
-                        self.assertIn("terms, question, unit, data, exclusions", out)
-                        self.assertNotIn("lane high", out)
-                        self.assertNotIn("into the protocol's raw output", out)
-                        self.assertIn(
-                            "the Conclusion and the report fields (`protocol-check", out
-                        )
-                        self.assertIn(
-                            "once frozen and adopted), then `labkit-adopt", out
-                        )
-                        self.assertIn(
-                            "output file is written from that run only after", out
-                        )
-
-    def test_a_bar_names_its_constants_a_computation_none(self):
-        for cost in ("low", "high"):
-            for model in (False, True):
-                with self.subTest(cost=cost, model=model):
-                    self.assertNotIn(
-                        "[[promise]] constants", self.steps(cost, "compute", model)
-                    )
-                    for kind in ("fit", "apply"):
-                        self.assertIn(
-                            "[[promise]] constants", self.steps(cost, kind, model)
-                        )
-
-    def test_the_low_cut_names_the_prepare_script_where_the_skeleton_has_one(self):
-        self.assertNotIn("00_prepare.py", self.steps("low", "compute", False))
-        for kind in ("fit", "apply"):
-            for model in (False, True):
-                with self.subTest(kind=kind, model=model):
-                    self.assertIn(
-                        "scripts/00_prepare.py", self.steps("low", kind, model)
-                    )
 
 
 class OwedCut(unittest.TestCase):
