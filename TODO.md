@@ -36,7 +36,8 @@ verlässlicher und mit weniger Aufwand zum Abschluss?
 Zielschnitt, den die Tabelle vorbereitet (Diskussion 2026-11-04, kein
 Bauauftrag): Gates liefern nur Daten („gehalten wegen X"), kein Gate
 formuliert mehr einen Ausweg; `labkit-next` wird der einzige Erklärer
-(heute 14 Hinweisfunktionen in 9 Modulen) und führt mechanische Übergänge
+(heute komponieren 245 `fix=`-Stellen in 31 Modulen den Ausweg als Prosa,
+fünf weitere Heimaten benennen Schritte neben `next`) und führt mechanische Übergänge
 mit `--do` selbst aus (Beleg wiederherstellen, einzigen antwortenden Lauf
 übernehmen, abgeleitete Felder füllen); Forschungsentscheidungen —
 welcher Lauf antwortet, die Conclusion, ob ein Befund steht — bleiben
@@ -44,6 +45,11 @@ beim Agenten, dort nennt `next` nur die Erwartung. Zustand weiter aus den
 Dateien ableiten, nicht speichern (ein gespeicherter Zustand lügt nach
 jeder freien Dateiänderung), aber aus wenigen Dateien mit einem Leser und
 an einer Stelle geordnet. Angekündigter Bruch, nicht nebenbei.
+Plan mit Bestand, Inventar (Formate × Leser, Gates × Formate), fünf
+Phasen mit Abnahme je Phase und dem leitenden Prinzip Erlaubnisliste
+statt Sperrliste (maschinengeführte Dateien schreibt nur labkit und
+prüft sie byteweise; freie Dateien nur in ihren Folgen):
+[One explainer](docs/notes/2026-11-04-one-explainer-plan.md).
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
