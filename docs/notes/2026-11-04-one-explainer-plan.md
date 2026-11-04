@@ -364,6 +364,43 @@ protocol, which `next` has no row for) and `repair_hint`'s pointer to
 cases (the six-case repair probe as oracle) is not run in the suite and
 stays owed before Phase 1 is called done.
 
+**The probe-case invariant (2026-11-04, after step 5).** The six-case
+repair probe (labkit-evidence, `usability/2026-11-02-repair-paths/`)
+gained a helper `inv` in its shared library, run at every `labkit-next`
+of every case: it runs the stop hook on the tree (a session transcript
+dated at the case's start) and the two commit gates on everything staged
+(`report-check --if-reported --staged`, `claude-hook undecided`), and
+checks the two observable halves of Phase 1's invariant — a hook that
+holds prints `labkit-next`'s rendered step for the state it judges, byte
+for byte; no hook holds while `next` says "nothing". The other half
+(`next` names a chain gap ⇒ a hook holds) is not an invariant by design:
+the stop holds reported numbers, undecided BLOCKERs and missing reports,
+not every gap. Run on a non-editable install of `0020447d`
+(`logs-0020447d` beside the earlier logs). First finding, from the clean
+path before the full run ended: the commit's report-check gate holds the
+report review owed after the adoption and prints the gate's own finding
+with its `Next:` line, not `next --staged`'s step — the stop at the same
+state prints it (step 4), the pre-commit path does not. **Step 6
+(prediction):** `agent_hooks.next_steps_for` moves to
+`next_step.steps_for` (one home for the stop, the commit's undecided
+gate and report-check's hook entry); `report-check --if-reported` prints
+the steps after a hold; the stamped pre-commit's two echo lines say only
+what holds. Predicted: package about +10 (the move ±0, report-check +8,
+the template ±0), tests about +20; criterion: the clean path's breach
+gone on a rerun of the probe, no new breach, the suite green, one
+session, package at most +20.
+
+**Step 6 result** (commit `c3a4a404`): package +9, tests +24; the probe
+rerun on it (`logs-c3a4a404`): 20 breaches → 3, all in cases 6 (the
+registered report removed): the staged path is the report at the root,
+which lies in no area, so `steps_for` found no protocol while
+report-check's hook entry reached it through the head that registers
+the report. `steps_for` now follows `report_hold.registering_protocols`
+too (in `a80865d8`); the third run (`logs-a80865d8`) is the check. The
+stop printed `next`'s step in all 38 of its holds in every run, and no
+hook held while `next` said "nothing" (108 checks per run).
+
+
 **Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1
 does not continue as written. The reason is structural, not accidental:
 closing a gap *adds* a path, and the gain of Phase 1 comes only where a
@@ -671,6 +708,97 @@ Forecast: package +100 to +150 (`Command`, its builders) and −100
 (`declared_first`, the text matching, the second withdraw-first home):
 about even, honestly; it pays in Phase 4 and in the `--do` proposal,
 not by itself. Measured afterwards.
+
+### Phase 2 refined by the inventory (2026-11-04, before building)
+
+The inventory (a read-only subagent over the tree at `c3a4a404`): 242
+real `fix=` sites — 99 compose their command through a builder (62
+directly, 37 through a helper such as `measure_anew`, `record_way`,
+`_review_step`), 82 hand-write shell text (11 of them duplicating a
+builder's line: `labkit-adopt`, `protocol-fill --discuss`, the measure
+line, `protocol-check --contract`), 51 are prose, 10 pass a fix through.
+Code that reads a fix as text: `next_step._refused_measurement`
+(`measure_command(...) in fix`), `ways_out.declared_first` (prepends
+the withdrawal to the text) and, not in the plan,
+`report_check.adoption_order_note` (`ADOPT_TOOL`, `--from-run`,
+`--render` searched in the blocker messages). The withdraw-first rule
+has two deciders (`report_check.held_declaration` by `changed_since`
+for stages 4–7, `finalize.declaring_protocol` for stage 3) and one
+prefixer (`declared_first`).
+
+Built in this order, rendering byte-equal at every step (the suite's
+containment assertions on fix text are the twin):
+
+1. `repo.Command` (frozen: `name`, `kind`, `line`; `__str__` is the
+   line, so every f-string site keeps working) and the kinds as the
+   table above fixes them; every builder returns one — `adopt`, `into`,
+   `withdraw`, `wait` MECHANICAL; `discuss`, `handover` CONTENT;
+   `measure`, `audit`, `decide`, `review` RESEARCH; `check`
+   (`gate_command`, `contract_command`) MECHANICAL. A builder built on
+   another reads `.line`. `result_render`'s hand-written
+   `protocol-fill --render` / `--from-run` lines become a builder
+   (`render_command`, MECHANICAL), the one hand-written duplicate the
+   text reads depend on; the other hand-written duplicates are left for
+   Phase 3's verdicts.
+2. `GateFinding.step: Command | None` and
+   `GateFinding.withdraw_first: Command | None`, keyword, default None;
+   `line` and `message` render the prefix from `withdraw_first` exactly
+   as `WITHDRAW_FIRST` did. `declared_first` goes; `withdrawn_first`
+   sets the field. The two deciders stay where they are (Phase 4's
+   state model is where they merge); what moves here is the text.
+3. The three text reads read data: `_refused_measurement` by
+   `step.name == MEASURE`, `adoption_order_note` by the steps' names
+   (`adopt` against the rest, `render` projections aside), the prefix
+   by the field.
+4. `step=` set at every site whose fix embeds a builder's command for
+   `measure`, `adopt`, `withdraw`, `into`, `discuss`, `render` — the
+   names `next` and the hooks reason about (about 45 sites); the other
+   builder sites may follow in Phase 3 with their verdicts.
+
+Predicted: package about +70 (`Command`, kinds and the builders' wrap
++45, the two fields and their rendering +25, `render_command` +15,
+`step=` at 45 sites +45; against `declared_first` and the three text
+reads −60), tests about +40 (the twin per builder, the refusal by
+name, the prefix by field). Criterion, as the plan's "Done when":
+`grep -rn '\.fix' labkit --include='*.py'` shows rendering and
+fallbacks only, no comparison; every builder's line byte-equal before
+and after (a test per builder); the suite green without a changed
+containment assertion; two sessions at most; package at most +120.
+Above that, stop and re-decide; never met by dropping a builder.
+
+**Phase 2 core result** (commit `a80865d8`, steps 1–3 of the list above
+and `step=` at the measure, adopt and render sites; measured against
+`c3a4a404`):
+
+| Measured, Phase 2 core | Package | Tests |
+|---|---:|---:|
+| lines added | 331 | 131 |
+| lines removed | 147 | 20 |
+| net | **+184** | +111 |
+
+Over the budget (+120) and far over the forecast (+70). Where: `repo`
++89 (the kinds and names table with its comment 40, `Command` 25, the
+builders' wrap 24), `gate` +48 (two fields and their docstrings 14,
+`way` 8, `withdrawn_first` 16, the docstrings of `line` and `block`
+10), `finalize` +23 (the three `withdrawn_first` calls formatted over
+lines, `step=` at six sites), `answering_run` +14 (the `step` field
+through the run choice), `next_step` +10, `result_render` +8, the
+rest +12; against `ways_out` −23 (`declared_first`). The Done-when
+holds: `grep -rn '\.fix' labkit` shows rendering and fallbacks only;
+every builder's line is byte-equal (`tests/test_repo.py`,
+`EveryBuilderIsACommand`; `tests/test_gate.py`, `TheWayAsData`); the
+suite green with no containment assertion changed (only equality on
+the builders' return type, `.line`). Reading: the forecast counted the
+data model as a few lines and it is not — the names and kinds table
+alone is 40 lines of a contract that did not exist, and every field
+owes its docstring. The original plan's forecast ("about even,
+honestly; it pays in Phase 4 and in `--do`, not by itself") was the
+right one; the refinement undercut it. **Re-decision owed:** (a) keep
+the core and stop Phase 2 here — the datum exists where `next` and the
+hooks reason (measure, adopt, render), the remaining `step=` sites
+(withdraw, into, discuss, about 25) follow when their modules are open
+or when `--do` is triggered; (b) keep and finish the sites now (+25,
+no reader yet); (c) revert `a80865d8`. Recommended: (a); Max decides.
 
 ## Proposal — `labkit-next --do` (trigger: the usage round counts the typed commands as a cost)
 

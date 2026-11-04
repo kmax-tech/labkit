@@ -138,6 +138,24 @@ Tabelle komponiert mehr eine Schrittliste; offen: der Invariantentest
 über die sechs Probefälle (labkit-evidence) vor „Phase 1 fertig". Die
 beiden Subagenten-Berichte (Analyse der Lane, Entfernung) sind im Plan
 unter Schritt 5 verarbeitet.
+**Probefall-Invariante, Schritt 6, Phase-2-Kern (2026-11-04,
+`c3a4a404`, `a80865d8`):** Die Reparaturpfad-Sonde (labkit-evidence)
+prüft bei jedem `labkit-next` jetzt Stop und Commit-Gates (`inv` in
+`lib.sh`): hält ein Hook, muss `next`s Schritt byteweise in seiner
+Ausgabe stehen; sagt `next` „nothing", darf keiner halten. Lauf auf
+`0020447d`: 108 Prüfungen, 20 Brüche, alle das Commit-Gate
+`report-check --if-reported` ohne `next`s Schritt → Schritt 6 (Drucker
+nach `next_step.steps_for`, `--if-reported` druckt ihn, +9); Lauf auf
+`c3a4a404`: 3 Brüche (Report an der Wurzel entfernt, kein Areal berührt)
+→ `steps_for` folgt den registrierenden Protokollen (in `a80865d8`);
+dritter Lauf `logs-a80865d8` offen. Phase-2-Kern: `repo.Command`
+(Name, Art, Zeile), alle Builder geben ihn zurück, `GateFinding.step`
+und `withdraw_first`, drei Textlesungen durch Namen ersetzt,
+`declared_first` weg, Rendering byteweise gleich — Paket **+184** gegen
+Prognose +70 und Budget +120; Neuentscheidung bei Max (behalten und hier
+stoppen / Stellen fertig / zurück), Empfehlung: behalten und stoppen.
+Danach die zweite Nutzungsrunde (Areal 20: wie 19, Vorher = 19 auf
+0.108.0, Nachher = dieser Stand; Blick auf die Berichtsprüfung).
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
