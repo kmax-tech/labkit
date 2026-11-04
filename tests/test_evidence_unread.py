@@ -22,7 +22,7 @@ from pathlib import Path
 import test_end_to_end as e2e
 from labkit.formats import evidence
 from labkit.gates import report_check
-from labkit.tools import next_step
+from labkit.gates import next_step
 
 UNREAD = "cannot be compared with"
 

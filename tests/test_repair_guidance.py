@@ -24,7 +24,7 @@ import test_end_to_end as e2e
 from labkit import PACKAGE_DIR
 from labkit.formats import findings
 from labkit.gates import audit_decisions
-from labkit.tools import next_step
+from labkit.gates import next_step
 
 #: actions the decision's line must not prescribe — labkit-next names them
 ACTIONS = (

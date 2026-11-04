@@ -29,7 +29,8 @@ from labkit.formats.repo import state_text  # noqa: E402
 from labkit.gates import report_check, report_context, report_hold  # noqa: E402
 from labkit.gates.report_review import discussed_under  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
-from labkit.tools import next_step, protocol_fill  # noqa: E402
+from labkit.gates import next_step  # noqa: E402
+from labkit.tools import next_command, protocol_fill  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
 
 
@@ -40,7 +41,7 @@ def run_next(area: Path, cwd: Path) -> tuple[int, str, str]:
     os.chdir(cwd)
     try:
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            rc = next_step.main([str(area)])
+            rc = next_command.main([str(area)])
     finally:
         os.chdir(old)
     return rc, out.getvalue(), err.getvalue()
@@ -228,7 +229,7 @@ class BeforeTheChain(unittest.TestCase):
         os.chdir(cwd)
         try:
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                rc = next_step.main([])
+                rc = next_command.main([])
         finally:
             os.chdir(old)
         return rc, out.getvalue(), err.getvalue()
@@ -683,3 +684,52 @@ class DiscussingReport(unittest.TestCase):
         with contextlib.chdir(self.lab.root):
             rc, err = self.lab.stop_hook()
         self.assertNotIn("--report-review", err)
+
+
+class MissingRegisteredReport(unittest.TestCase):
+    """Option A of the one-explainer pilot: the stop held a protocol whose
+    registered report is not written after a measurement with a line of
+    its own (the finding's three ways), while `labkit-next` named the
+    progress account. Now the hold stays the gate's finding
+    (`report_hold.missing_report`) and the stop prints the step `next`
+    names for that state — one spelling, one action."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab, report_file="REPORT.md")
+        self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.report = self.lab.root / "REPORT.md"
+
+    def test_the_stop_prints_the_step_next_reads_from_the_same_finding(self):
+        from labkit.gates import agent_hooks, report_hold
+
+        with contextlib.chdir(self.lab.root):
+            gap = report_hold.missing_report(
+                self.protocol, self.protocol.read_text(encoding="utf-8"), self.lab.root
+            )
+            assert gap is not None
+            step = next_step.next_step(self.area, self.protocol.resolve())
+            # the hold is the finding; the action is the concrete command
+            # `next` prefers for this state, not the finding's three ways
+            self.assertIn("REPORT.md carries no account of it yet", step.where)
+            self.assertIn("--discuss", step.next)
+            self.assertIn("REPORT.md", gap.text)
+            (line,) = agent_hooks.missing_reports(self.lab.root, [self.protocol])
+            self.assertEqual(line, step.render("experiments/01-lines"))
+            rc, err = self.lab.stop_hook()
+        self.assertEqual(rc, 2, err)
+        self.assertIn(step.where, err)
+        self.assertIn(step.next, err)
+
+    def test_the_twin_a_written_report_owes_its_account_and_holds_nothing(self):
+        from labkit.gates import agent_hooks
+
+        self.report.write_text("# Report\n", encoding="utf-8")
+        with contextlib.chdir(self.lab.root):
+            step = next_step.next_step(self.area, self.protocol.resolve())
+            self.assertEqual(
+                agent_hooks.missing_reports(self.lab.root, [self.protocol]), []
+            )
+        self.assertIn("carries no account of it yet", step.where)
+        self.assertIn("--discuss", step.next)

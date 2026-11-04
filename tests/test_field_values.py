@@ -20,7 +20,7 @@ from labkit.formats import protocol_block, protocol_check, protocol_history
 from labkit.formats.gate import Findings
 from labkit.gates import agent_hooks, finalize, preflight
 from labkit.run import start_check
-from labkit.tools import next_step
+from labkit.gates import next_step
 from protocol_fixture import head
 from test_end_to_end import Lab, stamp_count
 

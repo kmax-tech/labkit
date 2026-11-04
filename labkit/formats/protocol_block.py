@@ -346,6 +346,26 @@ class Model:
     claim_keys: frozenset[str]  # the CLAIM_KEYS the table carries, stamped or filled
 
 
+#: the head's stamped placeholders `protocol-fill` sets, by the label a fill
+#: names: (the TOML key, its allowed values — None for a free string). The
+#: catalogue is the format's; `protocol_edit` fills by it, `next_step` names
+#: the fill line by it
+FILLABLE_HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
+    "type": ("type", TYPES),
+    "repeat_cost": ("repeat_cost", REPEAT_COSTS),
+    "kind": ("kind", KINDS),
+    "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
+    # [model] number_describes, a MUST of a computation with a model that no
+    # tool could set and `--list` never named (audit 2026-10-27, third, I5)
+    "number_describes": ("number_describes", NUMBER_DESCRIBES),
+    # a computation's [kept] (standard 0.24): the key of its kept number and
+    # its unit, stamped as placeholders unless `labkit-init exp --kept/--unit`
+    # named them; `table.key` reads the key inside that table only
+    "kept.key": ("kept.key", None),
+    "kept.unit": ("kept.unit", None),
+}
+
+
 def _table(data: dict, name: str) -> dict | None:
     """DATA's top-level table NAME, None when absent; BlockError when it is no table."""
     if name not in data:

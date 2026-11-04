@@ -1,14 +1,7 @@
-"""labkit-next — the one next step of an area, and what is held until it is taken.
+"""next_step — the one next step of an area, read from the gates, and what is
+held until it is taken.
 
-    labkit-next <AREA> [--protocol FILE] [--staged]
-    labkit-next --guide
-
-`--guide` prints the agent guide (`labkit/docs/agent-guide.md`): the
-workflow the stamped `AGENTS.md` keeps short, in full, with the reason
-for each rule.
-
-Reads what the gates already compute and adds no check of its own; the
-first that applies is the step:
+The order, the first that applies is the step (`next_step`):
 
     no protocol in the area      → `labkit-init exp …` registers the question
     a MUST field still unfilled  → `protocol-fill …` fills it
@@ -18,17 +11,20 @@ first that applies is the step:
                                    before a handover can say "nothing"
     a current handover of it     → nothing: the protocol ended without a
                                    result (`handovers.protocol_handed_over`)
+    a run still open             → `runlog … --wait`
     a measured run, nothing adopted, → the progress account: `protocol-fill
       the registered report without     … --discuss RUN --why … --into REPORT`
       its account of that run           (`report_hold.progress_account`), before
-                                        any gap — saved first, released by nothing
+                                        any gap — saved first, released by nothing;
+                                        a registered report not written at all
+                                        is this state too: the stop holds it
+                                        (`report_hold.missing_report`) and
+                                        prints this step
     a gap report-check holds     → its way out, the first in the chain's
                                    order (`report_check.chain_gaps`; the
                                    review a report owes for discussing a
-                                   run of it is among them, the hold the
-                                   stop and the commit hold that report
-                                   with) — but
-                                   the withdrawal alone where the holds name
+                                   run of it is among them) — but the
+                                   withdrawal alone where the holds name
                                    it first (`report_check.held_declaration`),
                                    and for a measurement runlog's start gate
                                    would refuse: that refusal's first step
@@ -42,47 +38,33 @@ the step adds how to register one (`protocol-fill … report=REPORT.md`):
 labkit cannot tell whether the task asks for a report file, and after the
 first measurement the registration is refused.
 
-Prints where the area stands, the next step, and what is held until it is
-taken. `--staged` reads the index, the state the commit carries and the
-pre-commit judges (`report_context.INDEX`): the protocol, the evidence
-comparison, the chain's gaps and the report's account come from the
-index; the working tree otherwise. Exit 0 when a step is named or nothing
-is owed; 2 on no such area, no protocol to choose, a protocol whose head
-does not read, or `--staged` on a protocol the index does not hold.
+The step is read from a file state (`report_context.TREE` or `INDEX`), the
+one the caller judges: the console and the stop the tree, the pre-commit
+the index. `Step.render` is the one spelling of a step, for `labkit-next`
+(`tools.next_command`) and for the hooks that print it. This module adds
+no check of its own: every hold it names is a gate's finding.
 """
 
 from __future__ import annotations
 
-import argparse
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from labkit import PACKAGE_DIR
-from labkit.formats import console, evidence, handovers, protocol_block, protocol_check
+from labkit.formats import evidence, handovers, protocol_block, protocol_check
 from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
-    area_path,
     audit_command,
-    area_protocols,
-    state_text,
-    choose_protocol,
     layout_root,
     measure_command,
-    no_such_area,
-    withdraw_command,
     shown,
-    stamped_areas,
+    state_text,
+    withdraw_command,
 )
-
-
 from labkit.gates.report_context import INDEX, TREE
 
 if TYPE_CHECKING:
     from labkit.gates.report_context import Checked
-
-#: the workflow in full, which `AGENTS.md` keeps short
-GUIDE = PACKAGE_DIR / "docs" / "agent-guide.md"
 
 
 @dataclass(frozen=True)
@@ -94,6 +76,19 @@ class Step:
     where: str
     next: str
     held: str
+
+    def render(self, area: str) -> str:
+        """The step as `labkit-next` prints it for AREA (as the reader names
+        it): the heading line, where, next, and held when something is —
+        the one spelling, for the console and for a hook that prints it."""
+        lines = [
+            f"labkit-next: {area}",
+            f"  where: {self.where}",
+            f"  next:  {self.next}",
+        ]
+        if self.held:
+            lines.append(f"  held:  {self.held}")
+        return "\n".join(lines)
 
 
 def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
@@ -382,7 +377,11 @@ def _progress_step(ctx: "Checked") -> Step | None:
     adopted, and the report does not yet carry its discussion of that run
     (`report_hold.progress_account`). It comes before every gap: the account
     is saved first and releases nothing, so a gap that holds — a change
-    since the run, the audit still owed — is named on the next call."""
+    since the run, the audit still owed — is named on the next call. A
+    registered report not written at all is the same state: the stop holds
+    the protocol with the gate's finding (`report_hold.missing_report`,
+    `agent_hooks.missing_reports`) and prints this step — the hold is the
+    finding, the action is this one concrete command."""
     from labkit.checks import report_blocks
     from labkit.gates.report_hold import progress_account
 
@@ -410,13 +409,11 @@ def _progress_step(ctx: "Checked") -> Step | None:
 def _fill_line(protocol: str, missing: str) -> str | None:
     """The `protocol-fill` line that fills MISSING, a MUST gap as
     `protocol_check.check_fields` names it — a field label, or a head key as
-    `[protocol] <key>` with its allowed values (`protocol_edit.HEAD_KEYS`) —
+    `[protocol] <key>` with its allowed values (`protocol_block.FILLABLE_HEAD_KEYS`) —
     or None for a gap no single fill closes (a contradiction, a freeze key)."""
-    from labkit.tools.protocol_edit import HEAD_KEYS
-
     if missing.startswith("[protocol] "):
         key = missing.removeprefix("[protocol] ")
-        for label, (head_key, choices) in HEAD_KEYS.items():
+        for label, (head_key, choices) in protocol_block.FILLABLE_HEAD_KEYS.items():
             if head_key == key:
                 value = "|".join(choices) if choices else "value"
                 return f'protocol-fill {protocol} "{label}=<{value}>"'
@@ -424,82 +421,3 @@ def _fill_line(protocol: str, missing: str) -> str | None:
     if missing.startswith("[") or "(" in missing:
         return None
     return f'protocol-fill {protocol} "{missing}=<value>"'
-
-
-#: the step before any area: the command that creates one, as AGENTS.md's
-#: "Choose the experiment" gives it
-CREATE_AREA = (
-    "`labkit-init exp <name> --kind <compute|fit|apply> --repeat-cost <low|high>` "
-    'creates the area and its protocol (AGENTS.md, "Choose the experiment")'
-)
-
-
-def only_area(cwd: Path) -> Path | None:
-    """The area `labkit-next` without an argument speaks of: the one area of
-    CWD's repository. None when there is none — the step printed is the one
-    that creates an area — or several, refused naming each. Prints what it
-    says (round 2: fourteen bare `labkit-next` calls met the usage line, the
-    loop's first step before an area exists)."""
-    areas = stamped_areas(layout_root(cwd))
-    if len(areas) == 1:
-        return areas[0]
-    if not areas:
-        print("labkit-next: no experiment area yet")
-        print(f"  next:  {CREATE_AREA}")
-        return None
-    named = ", ".join(shown(a, cwd) for a in areas)
-    console.refuse(
-        "labkit-next",
-        f"{len(areas)} areas — name one: `labkit-next <area>` with one of {named}",
-    )
-    return None
-
-
-def main(argv: list[str]) -> int:
-    """Command line of `labkit-next`: print the next step of an area."""
-    ap = argparse.ArgumentParser(
-        prog="labkit-next",
-        description=(__doc__ or "").splitlines()[0],
-    )
-    ap.add_argument("area", type=area_path, nargs="?", default=None)
-    ap.add_argument("--protocol", type=Path, default=None)
-    ap.add_argument(
-        "--guide", action="store_true", help="print the workflow in full and exit"
-    )
-    ap.add_argument(
-        "--staged",
-        action="store_true",
-        help="read the index, the state the commit carries, not the working tree",
-    )
-    args = ap.parse_args(argv)
-    if args.guide:
-        print(GUIDE.read_text(encoding="utf-8"), end="")
-        return 0
-    area = args.area if args.area is not None else only_area(Path.cwd())
-    if area is None:
-        return 0 if not stamped_areas(layout_root(Path.cwd())) else 2
-    if not area.is_dir():
-        console.refuse("labkit-next", no_such_area(area))
-        return 2
-    protocol = None
-    if args.protocol is not None or area_protocols(area):
-        protocol = choose_protocol(area, args.protocol, "labkit-next")
-        if protocol is None:
-            return 2
-    try:
-        step = next_step(area, protocol, state=INDEX if args.staged else TREE)
-    except (protocol_block.BlockError, ValueError) as exc:
-        console.refuse("labkit-next", f"{protocol.name if protocol else area}: {exc}")
-        return 2
-    print(f"labkit-next: {shown(area, Path.cwd())}")
-    print(f"  where: {step.where}")
-    print(f"  next:  {step.next}")
-    if step.held:
-        print(f"  held:  {step.held}")
-    return 0
-
-
-def cli() -> None:
-    """Console-script entry point; a refusal raised on the way (a detached
-    start's record that does not read) exits 2 (`console.exit_with`)."""
-    console.exit_with(main)

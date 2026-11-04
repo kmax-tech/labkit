@@ -1093,14 +1093,29 @@ class RegisteredReport(unittest.TestCase):
         area = self._area(git=True)
         root = area.parent.parent
         proto = area / "PROTOCOL-x.md"
+        # the bare fixture lacks MUST fields; filled, so that the step the
+        # stop prints is the report's, not the registration's
+        proto.write_text(
+            proto.read_text(encoding="utf-8")
+            + "- **Terms of this protocol:** none\n- **Data / scope:** all\n"
+            "- **Exclusions / filters:** none\n- **Unit:** 1\n",
+            encoding="utf-8",
+        )
         text = proto.read_text(encoding="utf-8")
         gap = report_hold.missing_report(proto, text, root)
         assert gap is not None
         self.assertIn("REPORT.md as its report, which is not written", gap.text)
         self.assertIn("labkit-adopt", gap.fix or "")
         self.assertIn("--handover", gap.fix or "")
-        (line,) = agent_hooks.missing_reports(root, [proto])
-        self.assertIn("the delivery is incomplete", line)
+        # the stop holds on that finding and prints `labkit-next`'s step for
+        # the state: the progress account into the registered report
+        from labkit.gates import next_step
+
+        with contextlib.chdir(root):
+            (line,) = agent_hooks.missing_reports(root, [proto])
+            step = next_step.next_step(area, proto)
+        self.assertEqual(line, step.render("experiments/01-x"))
+        self.assertIn("REPORT.md carries no account of it yet", line)
         # the twin: the report written, nothing missing
         (root / "REPORT.md").write_text("# Report\n", encoding="utf-8")
         self.assertIsNone(report_hold.missing_report(proto, text, root))

@@ -522,7 +522,7 @@ class HandoverRecovery(cases._Chain):
     def test_a_handover_ends_its_own_protocol_not_one_beside_it(self):
         """labkit-next says `nothing` only for the protocol the handover
         names; a second protocol of the same area is not ended by it."""
-        from labkit.tools import next_step
+        from labkit.gates import next_step
 
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)

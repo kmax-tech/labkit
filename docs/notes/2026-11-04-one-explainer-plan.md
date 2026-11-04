@@ -156,6 +156,46 @@ directory, the repo in a session (the test sets it). Usability: from the
 hold to the release the agent types the same one command as before; what
 changed is that `labkit-next` names it instead of only the stop's refusal.
 
+**Option A, built the same day (second commit), under the terms fixed
+for it: success is net negative package lines with the invariant test
+green and no exception list, at most one session.** The stop held a
+protocol whose registered report is not written with a line it composed
+from `report_hold.missing_report`; `labkit-next` named the progress
+account for the same state. Now the hold stays that finding and the stop
+prints `next`'s step (`Step.render`, the one spelling), tested as equal.
+For a gate to print `next`'s step, the step's logic moved from `tools`
+into `gates` (`labkit.gates.next_step`; the command is
+`tools.next_command`), which the layer rule required — the policy layer
+the plan wants, made real; `FILLABLE_HEAD_KEYS` moved from `protocol_edit`
+to `protocol_block` on the way (a format fact under a tool). One design
+point held against the first draft: `next` keeps naming the one concrete
+command (the discussion with the run id), not the finding's three
+generic ways — the hold is the finding, the action is `next`'s choice,
+as the corrected invariant says; the existing tests of that choice
+(`ProgressAccount`) stood and were right. Predicted before building: +20
+to +40, because the holding logic (which protocols, whether the report
+is missing) stays in the hook and only its text line goes.
+
+| Measured, Option A | Package |
+|---|---:|
+| lines added | 189 |
+| lines removed | 150 |
+| net | **+39** |
+
+Of it: the move (two module docstrings, `render`) about +25, the hook
+and the row about +14; the removed composition was one line. The
+invariant test is green without an exception list, one session (about
+two hours), but the lines are positive: **the success criterion is not
+met, and "Phase 1 saves code" is refuted on both candidates.** Per the
+terms: the work goes to the usage round with this state, and Phase 1's
+line forecast is withdrawn below. What stands from the two pilots is not
+size but structure: one finding for gate, hooks and `next` in two
+states; `next` in the gates layer, printable by any hook; a state
+parameter; one report scan. Criterion 1's remaining branch (the scan
+lists the tree by a walk and the index by git) stays: a tree-walk helper
+for all files would cross `.venv` and `.git`, so the two sources are
+inherent until a bounded walk exists.
+
 **Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1
 does not continue as written. The reason is structural, not accidental:
 closing a gap *adds* a path, and the gain of Phase 1 comes only where a
@@ -409,9 +449,11 @@ pre-commit over the probe cases; `grep -rn "Next: " labkit
 --include='*.py'` outside `formats/gate.py` and `tools/next_step.py` is
 empty (a necessary sign, not the proof — it is met by rewording); and
 every hint named in the table above either is gone or names no action.
-Forecast: package −300 to −500 lines (the hooks' own composition,
-`undeclared_hint`, `scaffold.next_steps`, the routes' printing), tests
-±0 (assertions move from lines to steps); measured afterwards.
+Forecast withdrawn 2026-11-04: two removal candidates measured +78 and
++39 package lines (the pilot result above). Phase 1's case is now
+structure — one finding, one spelling, `next` printable by every hook —
+not size; it continues only if the usage round shows the contradictions
+it removes cost agents work.
 
 ## Phase 2 — The way out as data
 

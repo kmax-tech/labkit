@@ -171,6 +171,7 @@ from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
+from labkit.gates.next_step import next_step
 from labkit.formats.runs import run_path
 from labkit.run.runlog import RunIndexError, indexed_runs
 from labkit.formats.repo import (
@@ -1199,7 +1200,9 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
     protocol whose head registers a file among PATHS as its report
     (`report_hold.registering_protocols`: a REPORT.md at the root touches no
     area), whose registered report is not written though the area measured
-    (`report_hold.missing_report`): the sentence with its way out. A head
+    (`report_hold.missing_report`): the hold, printed as `labkit-next`
+    prints the step it names from that finding (`next_step.Step.render`).
+    A head
     that does not read is left to the checks that hold it where it is
     touched; a run index that does not read is told, once per index
     (`runlog.RunIndexError`): whether a measurement owes the report cannot
@@ -1227,7 +1230,9 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
                     out.append(exc.why)
                 continue
             if gap is not None:
-                out.append(f"{gap.text}. Next: {gap.fix}")
+                # the hold is the gate's finding; what to do is `next`'s step,
+                # read from the same finding — one spelling, never two
+                out.append(next_step(area, protocol).render(shown(area, Path.cwd())))
     return out
 
 

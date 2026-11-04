@@ -63,8 +63,15 @@ Dateistand, `review_hint` ist entfernt, vier Tests (Baum, Index, Gegenfall,
 Hook schweigt nach Review). Netto +78 Paketzeilen, Abbruchkriterium 2
 getroffen; Grund und der nächste entfernungsorientierte Kandidat
 (`missing_reports` im Stop durch den Schritt von `next`) stehen im Plan
-unter „Pilot result". Entscheidung offen: diesen Kandidaten nehmen oder
-mit dem Stand in die Nutzungsrunde.
+unter „Pilot result". **Option A gebaut (2026-11-04):** der Stop druckt
+den Schritt von `next` für den nicht geschriebenen Bericht, der Halt
+bleibt der Gate-Befund; dafür ist die Schrittlogik nach `gates/next_step`
+gezogen, das Kommando heißt `tools/next_command`. Netto +39 Paketzeilen,
+Erfolgskriterium „netto negativ" verfehlt: „Phase 1 spart Code" ist an
+beiden Kandidaten widerlegt. Nach dem vereinbarten Protokoll: mit diesem
+Stand in die Nutzungsrunde, die Prognose von Phase 1 ist im Plan
+gestrichen; was bleibt, ist Struktur (ein Befund, eine Schreibweise,
+`next` von jedem Hook druckbar).
 Geschichte in Notes, erstes Modul `runs.py` (2026-11-04): 19 Vorfälle in
 eine Tabellen-Note, Modul −11 Zeilen; die Prognose „ein Viertel der
 Docstrings" war falsch, es sind eher 300–400 Zeilen im ganzen Paket.

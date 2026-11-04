@@ -123,7 +123,6 @@ from labkit.formats.protocol_check import (
 )
 from labkit.tools.protocol_edit import (
     HEAD_HINTS,
-    HEAD_KEYS,
     as_filled,
     assignments_of,
     fill,
@@ -270,7 +269,7 @@ def _name_yours(text: str, area: Path, run: Path) -> None:
 
 
 def _list_open(text: str) -> int:
-    """`--list`: every open field, the TOML head's placeholders (`HEAD_KEYS`)
+    """`--list`: every open field, the TOML head's placeholders (`protocol_block.FILLABLE_HEAD_KEYS`)
     and open promise sentences first; then, each under its own line, the fields `--from-run`
     writes and the after-run fields the author writes. Listed among the rest
     they read as owed before the run: cold agents filled them with "pending
@@ -286,7 +285,7 @@ def _list_open(text: str) -> int:
             f"{label}  (TOML head: "
             f"{' | '.join(choices) if choices else HEAD_HINTS[label]})",
         )
-        for label, (key, choices) in HEAD_KEYS.items()
+        for label, (key, choices) in protocol_block.FILLABLE_HEAD_KEYS.items()
         if (n := head_open(text, key)) is not None
     ]
     spared = not_owed(text)

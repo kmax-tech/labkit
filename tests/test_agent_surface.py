@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from labkit.gates import audit_decisions  # noqa: E402
-from labkit.tools import next_step  # noqa: E402
+from labkit.tools import next_command  # noqa: E402
 
 AGENTS = ROOT / "labkit" / "templates" / "AGENTS.md.template"
 GUIDE = ROOT / "labkit" / "docs" / "agent-guide.md"
@@ -152,7 +152,7 @@ class Guide(unittest.TestCase):
     def test_the_flag_prints_the_guide(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            rc = next_step.main(["--guide"])
+            rc = next_command.main(["--guide"])
         self.assertEqual(rc, 0)
         self.assertEqual(out.getvalue(), GUIDE.read_text(encoding="utf-8"))
 

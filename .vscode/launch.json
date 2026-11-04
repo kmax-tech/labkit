@@ -71,7 +71,7 @@
         "labkit.gates.finalize",
         "labkit.gates.install_hooks",
         "labkit.checks.intent_check",
-        "labkit.tools.next_step",
+        "labkit.tools.next_command",
         "labkit.checks.notes_check",
         "labkit.tools.params",
         "labkit.gates.preflight",

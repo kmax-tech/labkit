@@ -113,7 +113,7 @@ def head_address_suggestion(label: str) -> str | None:
         target = label.removeprefix("protocol.")
     else:
         return None
-    return target if target in HEAD_KEYS else None
+    return target if target in protocol_block.FILLABLE_HEAD_KEYS else None
 
 
 def fill(
@@ -160,30 +160,14 @@ def fill(
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 
 
-#: the head's stamped placeholders `protocol-fill` sets, by the label a fill
-#: names: (the TOML key, its allowed values — None for a free string)
-HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
-    "type": ("type", protocol_block.TYPES),
-    "repeat_cost": ("repeat_cost", protocol_block.REPEAT_COSTS),
-    "kind": ("kind", protocol_block.KINDS),
-    "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
-    # [model] number_describes, a MUST of a computation with a model that no
-    # tool could set and `--list` never named (audit 2026-10-27, third, I5)
-    "number_describes": ("number_describes", protocol_block.NUMBER_DESCRIBES),
-    # a computation's [kept] (standard 0.24): the key of its kept number and
-    # its unit, stamped as placeholders unless `labkit-init exp --kept/--unit`
-    # named them; `table.key` reads the key inside that table only
-    "kept.key": ("kept.key", None),
-    "kept.unit": ("kept.unit", None),
-}
-#: what `--list` says a free head value takes, by its label in HEAD_KEYS
+#: what `--list` says a free head value takes, by its label in protocol_block.FILLABLE_HEAD_KEYS
 HEAD_HINTS: dict[str, str] = {
     "model alias": "the alias from models.toml",
     "kept.key": "the metrics.json key of the kept number",
     "kept.unit": 'its unit, "1" for a dimensionless number',
 }
 #: a `[kept]` value named the way agents write a table's key (`[kept] key`,
-#: `kept key`, `[kept].unit`): read as its HEAD_KEYS label `kept.<value>`
+#: `kept key`, `[kept].unit`): read as its protocol_block.FILLABLE_HEAD_KEYS label `kept.<value>`
 KEPT_LABEL = re.compile(r"^\[?kept\]?\s*[.\s]\s*(key|unit)$", re.I)
 #: the head's freeze keys: a deliberate edit by the author once preflight is
 #: clean and the preflight audit decided, not a fill — named so a fill of
@@ -205,7 +189,7 @@ NOT_FILLED: dict[str, str] = {
 }
 #: TOML key → its allowed values (None: free), for `head_open` and `fill_head`
 HEAD_CHOICES: dict[str, tuple[str, ...] | None] = {
-    key: choices for key, choices in HEAD_KEYS.values()
+    key: choices for key, choices in protocol_block.FILLABLE_HEAD_KEYS.values()
 }
 
 
@@ -497,7 +481,7 @@ def head_label(label: str) -> str:
         raise ValueError(
             f"{label.strip()!r} is not a field: {NOT_FILLED[table.group(1).lower()]}"
         )
-    if bare != label.strip() and bare.lower() in HEAD_KEYS:
+    if bare != label.strip() and bare.lower() in protocol_block.FILLABLE_HEAD_KEYS:
         return bare
     return label
 
@@ -510,7 +494,7 @@ def fill_many(
 ) -> str:
     """`fill` applied in order — `fill_head` for the head's `type`, `repeat_cost`,
     `model alias`, `number_describes`, `kept.key` and `kept.unit`
-    (`HEAD_KEYS`), `set_report` for `report` (FORCE passed on), `fill_sentence` for
+    (`protocol_block.FILLABLE_HEAD_KEYS`), `set_report` for `report` (FORCE passed on), `fill_sentence` for
     `<id> sentence`; the freeze keys (`FREEZE_KEYS`) are refused with how to
     set them by hand;
     the first ValueError leaves the caller's file untouched — all or
@@ -532,8 +516,10 @@ def fill_many(
             )
         if is_report_label(label):
             text = set_report(text, value, force=force)
-        elif label.strip().lower() in HEAD_KEYS:
-            text = fill_head(text, HEAD_KEYS[label.strip().lower()][0], value)
+        elif label.strip().lower() in protocol_block.FILLABLE_HEAD_KEYS:
+            text = fill_head(
+                text, protocol_block.FILLABLE_HEAD_KEYS[label.strip().lower()][0], value
+            )
         elif sentence:
             if line_no is not None:
                 raise ValueError(

@@ -11,6 +11,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **The stop prints `labkit-next`'s step for a registered report that is
+  not written, and the step is the gate's own finding.** The stop held
+  such a protocol with a line of its own (`report_hold.missing_report`'s
+  text and way out, composed in the hook) while `labkit-next` named the
+  progress account for the same state. Now the hold stays the gate's
+  finding and the stop prints the step `labkit-next` names for that state
+  — the progress account into the registered report, one concrete command
+  — as `labkit-next` prints it (`Step.render`, the one spelling). For that
+  the step's logic moved into
+  the gates layer: **`labkit.tools.next_step` is `labkit.gates.next_step`**
+  (`next_step`, `Step`), and the command line is `labkit.tools.next_command`
+  (`labkit-next` unchanged). The last release with the module under
+  `tools` is **0.107.0**.
+
 - **The review a report owes for discussing a run is one finding for the
   gate, the hooks and `labkit-next`.** The stop and the commit held such
   a report (`report_hold.hold_report`), `labkit-next` and `report-check
