@@ -2332,14 +2332,24 @@ Freigabe hält als solche).
 
 Notiert, nicht geplant:
 
-1. Soll labkit selbst einen Lauf ablehnen oder verschieben, der in der
-   Sekunde eines anderen startet? Ein Skript, das Draws in einer Schleife
-   startet, könnte das; die Fixture ist nur der Testfall.
+1. Mehrere Starts in einer Sekunde brauchen einen eigenen Vertrag, bevor
+   etwas gebaut wird: produktive Läufe weder automatisch verzögern noch
+   umsortieren. Dass eine Draw-Schleife den Fall erreichen könnte, ist
+   noch kein Beleg für eine bestimmte Lösung. Die Verweigerung selbst
+   hält seit `3d43b770` ein eigener deterministischer Test über finalize.
 2. `repo.text_at` sagt `None` für „fehlt“ und „Git scheitert“ zugleich.
-   `committed_at` unterscheidet das jetzt selbst; die übrigen Leser
-   (u. a. `start_check._committed_registration` über
-   `registration_in_commit` an HEAD) nicht — je Leser prüfen, ob dort
-   eine Entscheidung daran hängt.
+   Behoben für `committed_at` (`6fbd9ae5`) und den Laufstart (`0c336b26`,
+   `protocol_history.unreadable_at`). Übrige Leser nach Risiko, je erst
+   reproduzieren:
+   - stilles Bestehen möglich: `evidence.change_findings`,
+     `commit_changes`, `_undone_in` (eine Änderung committeter Belege
+     liest sich als „damals nicht da“); `attempts._git_paths`,
+     `expected_evidence` (ein unlesbares Journal liest sich als leer);
+   - hält, aber mit falscher Ursache: `report_hold.missing_report`,
+     `newly_declared`, `run_record_check._source_manifests`,
+     `handovers.journal_digest`;
+   - schon laut oder nur Hinweis: `findings.record_status`,
+     `report_hold.replacement_hints`, `scaffold`, `repo_check`.
 3. `resolved_corrections`/`awaiting_followup` fangen weiter
    `ValueError`/`FileNotFoundError` (Datensätze unlesbar) und lesen sie als
    „keine Freigabe“; der Ausweg kann dann ebenfalls zum Zurückdrehen raten.
