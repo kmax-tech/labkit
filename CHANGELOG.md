@@ -11,6 +11,18 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **An attempt journal git cannot read is held, not read as absent.** The
+  journal is appended to, never cut; its text at HEAD and in the index is
+  read through `repo.text_at`, whose None is both "not there" and "git
+  failed". With the journal's blob missing, a cut journal raised no
+  blocker once its copy in the git directory was gone (a fresh clone),
+  in the tree and in the commit alike, and `expected_evidence` reported
+  no error. Now both name "git cannot read the journal" with the state,
+  git's words and the way back (`git fsck`, the missing objects fetched
+  or restored). `unreadable_at` moved to `repo`, the one home of reading
+  a file at a git state. The last release that passed such a journal is
+  **0.107.0**.
+
 - **A run does not start on a HEAD git cannot read.** The run's start
   check reads the protocol as HEAD holds it; `repo.text_at` says None for
   a file HEAD lacks and for git failing alike. At low repeat cost a HEAD

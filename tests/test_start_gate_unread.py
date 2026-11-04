@@ -84,12 +84,10 @@ class NoCommitYet(e2e.CountCommands):
     def test_a_branch_without_a_commit_is_not_committed_not_unreadable(self):
         """HEAD that does not resolve holds nothing: the protocol is not
         committed, which `text_at`'s None and the start check say."""
-        from labkit.formats import protocol_history
+        from labkit.formats import repo
 
         empty = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, empty)
         subprocess.run(["git", "init", "-q", str(empty)], check=True)
         (empty / "PROTOCOL-x.md").write_text("x\n", encoding="utf-8")
-        self.assertEqual(
-            protocol_history.unreadable_at(empty, empty / "PROTOCOL-x.md", "HEAD"), ""
-        )
+        self.assertEqual(repo.unreadable_at(empty, empty / "PROTOCOL-x.md", "HEAD"), "")

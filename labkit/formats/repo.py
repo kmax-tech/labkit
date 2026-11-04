@@ -505,6 +505,31 @@ def text_at(repo: Path, path: Path, rev: str = INDEX_REV) -> str | None:
     return r.stdout if r.returncode == 0 else None
 
 
+def unreadable_at(repo: Path, path: Path, rev: str) -> str:
+    """Git's words when it cannot read PATH at REV (a revision: a sha,
+    HEAD; or INDEX_REV) in REPO — its tree, or the file it lists there; ""
+    when the state reads and does not hold PATH. Exit codes decide, not
+    words. A revision that does not resolve (HEAD of a branch with no
+    commit yet) holds nothing: "". For a reader of `text_at`, whose None is
+    both "absent" and "git failed" (`protocol_history.committed_at`, the
+    run's start check, the attempt journal)."""
+    rel = own_path(path).relative_to(repo.resolve()).as_posix()
+    if rev == INDEX_REV:
+        listed = git_run(["ls-files", "-s", "--", rel], repo)
+    elif git_run(["rev-parse", "--verify", "--quiet", rev], repo).returncode != 0:
+        return ""
+    else:
+        listed = git_run(["ls-tree", rev, "--", rel], repo)
+    if listed.returncode != 0:
+        return (
+            " ".join(listed.stderr.split()) or f"git ls-tree exits {listed.returncode}"
+        )
+    if not listed.stdout.strip():
+        return ""
+    shown = git_run(["show", f"{rev}:{rel}"], repo)
+    return " ".join(shown.stderr.split()) or f"git show exits {shown.returncode}"
+
+
 def state_text(repo: Path, path: Path, *, staged: bool) -> str | None:
     """PATH's own entry as a gate's state holds it: the index when STAGED
     (`text_at`), else the working tree — in both a file's content, and for

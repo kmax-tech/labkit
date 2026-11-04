@@ -24,7 +24,6 @@ from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, protocol_check, repo
-from labkit.formats import protocol_history
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
@@ -147,11 +146,7 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")
-    unread = (
-        protocol_history.unreadable_at(root, protocol, "HEAD")
-        if committed is None
-        else ""
-    )
+    unread = repo.unreadable_at(root, protocol, "HEAD") if committed is None else ""
     if unread:
         # None from `text_at` is "not committed" and "git failed" alike; a
         # HEAD git cannot read is neither uncommitted nor without a report

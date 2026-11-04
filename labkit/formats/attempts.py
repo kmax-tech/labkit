@@ -110,6 +110,7 @@ from labkit.formats.repo import (
     git_run,
     local_dir,
     text_at,
+    unreadable_at,
 )
 from labkit.formats.runs import name_minute, now_stamp
 from labkit.formats.scope_sha import digest
@@ -593,9 +594,11 @@ def _paths_under(folder: Path) -> set[str]:
 
 def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
     """(paths under AREA/audits/ that REV holds — "HEAD", or INDEX_REV for
-    the index —, relative to it; the journal's text there or None) —
-    ({}, None) outside git or before the first commit. Raises RuntimeError
-    when git fails."""
+    the index —, relative to it; the journal's text there or None when REV
+    holds none) — ({}, None) outside git or before the first commit.
+    Raises AttemptError when git cannot read the journal there
+    (`unreadable_journal`): read as "no journal", a cut went unheld.
+    RuntimeError when git fails otherwise."""
     root = git_root(area)
     held = None if root is None else files_at(root, area / DIR, rev)
     if root is None or held is None:
@@ -608,7 +611,34 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
         raise AttemptError(
             f"{rev}:{DIR}/{JOURNAL}: journal is not UTF-8: {exc}", fix=JOURNAL_WAY
         ) from exc
+    if text is None:
+        unread = unreadable_journal(root, area, rev)
+        if unread is not None:
+            raise unread
     return held, text
+
+
+#: the way back from a journal git cannot read: the objects, not the journal
+UNREAD_JOURNAL_WAY = (
+    "restore the repository's missing objects (`git fsck` names them; a clone "
+    "that holds them `git fetch`es them), then run the check again"
+)
+
+
+def unreadable_journal(root: Path, area: Path, rev: str) -> AttemptError | None:
+    """The AttemptError when git cannot read AREA's journal at REV ("HEAD",
+    or INDEX_REV for the index) in ROOT (`repo.unreadable_at`), naming the
+    state, git's words and the way back; None when it reads or REV holds
+    none. `text_at`'s None is both: the journal checks hold on this one."""
+    why = unreadable_at(root, journal_path(area), rev)
+    if not why:
+        return None
+    where = "the index" if rev == INDEX_REV else rev
+    return AttemptError(
+        f"{where}:{DIR}/{JOURNAL}: git cannot read the journal ({why}) — whether "
+        f"it was cut or lost lines cannot be told",
+        fix=UNREAD_JOURNAL_WAY,
+    )
 
 
 def _tree_journal(area: Path) -> str:
@@ -631,11 +661,28 @@ def read_journal(area: Path) -> list[Attempt]:
     return parse_journal(_tree_journal(area), f"{DIR}/{JOURNAL}")
 
 
+def _journal_at(area: Path, root: Path | None, rev: str) -> list[Attempt]:
+    """The attempts AREA's journal holds at REV in ROOT; [] outside git or
+    where REV holds no journal. Raises AttemptError when it does not parse
+    or git cannot read it there (`unreadable_journal`)."""
+    text = text_at(root, journal_path(area), rev) if root is not None else None
+    unread = (
+        unreadable_journal(root, area, rev)
+        if root is not None and text is None
+        else None
+    )
+    if unread is not None:
+        raise unread
+    return parse_journal(text or "", f"{rev}:{DIR}/{JOURNAL}")
+
+
 def expected_evidence(area: Path) -> tuple[set[str], list[str]]:
     """Known audit paths and explicit unreadable-journal errors for a handover.
 
     Take the available tree, HEAD and parseable journals; retain errors
-    instead of pretending an unreadable journal names no evidence.
+    instead of pretending an unreadable journal names no evidence — one
+    that does not parse, and one git cannot read at HEAD
+    (`unreadable_journal`).
     """
     root = git_root(area)
     expected = _paths_under(area / DIR)
@@ -644,11 +691,11 @@ def expected_evidence(area: Path) -> tuple[set[str], list[str]]:
     errors: list[str] = []
     for revision in (None, "HEAD"):
         try:
-            if revision is None:
-                known = read_journal(area)
-            else:
-                text = text_at(root, journal_path(area), revision) if root else None
-                known = parse_journal(text or "", f"{revision}:{DIR}/{JOURNAL}")
+            known = (
+                read_journal(area)
+                if revision is None
+                else _journal_at(area, root, revision)
+            )
             for attempt in known:
                 if attempt.file:
                     expected.add(attempt.file)

@@ -38,8 +38,8 @@ from labkit.formats.repo import (
     commit_known,
     git_root,
     git_run,
-    own_path,
     text_at,
+    unreadable_at,
 )
 
 
@@ -199,28 +199,6 @@ def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
             return CommittedAt(rd.dir.name, commit, None, UNREADABLE_COMMIT, unread)
         return CommittedAt(rd.dir.name, commit, None, NOT_COMMITTED)
     return CommittedAt(rd.dir.name, commit, text, None)
-
-
-def unreadable_at(root: Path, path: Path, commit: str) -> str:
-    """Git's words when it cannot read PATH at COMMIT (a revision: a sha,
-    HEAD) in ROOT — its tree, or the file it lists there; "" when the tree
-    reads and does not list PATH (the file was not committed). Exit codes
-    decide, not words. A revision that does not resolve (HEAD of a branch
-    with no commit yet) holds nothing: "", not committed. For a reader of
-    `repo.text_at`, whose None is both (`committed_at`, the run's start
-    check)."""
-    rel = own_path(path).relative_to(root.resolve()).as_posix()
-    if git_run(["rev-parse", "--verify", "--quiet", commit], root).returncode != 0:
-        return ""
-    listed = git_run(["ls-tree", commit, "--", rel], root)
-    if listed.returncode != 0:
-        return (
-            " ".join(listed.stderr.split()) or f"git ls-tree exits {listed.returncode}"
-        )
-    if not listed.stdout.strip():
-        return ""
-    shown = git_run(["show", f"{commit}:{rel}"], root)
-    return " ".join(shown.stderr.split()) or f"git show exits {shown.returncode}"
 
 
 def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
