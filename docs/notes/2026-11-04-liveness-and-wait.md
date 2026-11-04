@@ -50,8 +50,6 @@ Claims, to be shown with real processes before any change:
 5. Not a claim of the plan, found on the way: a writer started as
    `python -m pkg.mod` records `mod.py` as its script, which its command
    line does not name; `is_alive` would call it dead while it writes.
-</content>
-</invoke>
 
 ## What the probes showed
 
@@ -163,6 +161,9 @@ them reconstructible.
    ignores the advice still measures twice. Refusing it would need the
    start's script compared with the starting one (`runs_script` on its
    command); not a contradiction between consumers, so not changed.
-3. **A flock on a network file system** may hold only on one host; two
-   hosts writing one output through a shared mount would each see the
-   lock free. Nothing in the lab writes that way today (ferry copies).
+3. **A flock on a network file system** may hold only on one host. The
+   lock line names its host (review of step 6): another host's lock that
+   reads free here gets no deletion advice, as `attempts.alive_of` answers
+   None for another host; creating the lock with `O_EXCL` still keeps a
+   second writer out. Nothing in the lab writes from two hosts today
+   (ferry copies).

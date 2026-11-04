@@ -4,6 +4,8 @@ so a silent break here changes a reported number without changing any metric.
 
 import json
 import os
+import socket
+import fcntl
 import signal
 import subprocess
 import sys
@@ -77,7 +79,8 @@ class TestTheLockHolderIsToldByItsFlock(unittest.TestCase):
         script.write_text(WRITER, encoding="utf-8")
         p = self._writer(str(script))
         why = self._refusal()
-        self.assertIn(f"Its writer (pid {p.pid}) still holds it", why)
+        self.assertIn(f"its writer (pid {p.pid} when it took the lock)", why)
+        self.assertIn("still holds it", why)
         self.assertIn("never delete its lock", why)
         with unittest.mock.patch.object(runs, "_command_of", lambda pid: None):
             self.assertIn("still holds it", self._refusal())
@@ -105,6 +108,31 @@ class TestTheLockHolderIsToldByItsFlock(unittest.TestCase):
             self.assertEqual(
                 [r["id"] for r in s.pending(RECORDS)], [r["id"] for r in RECORDS[1:]]
             )
+
+    def test_a_free_lock_from_another_host_advises_no_deletion(self):
+        """A shared file system may not carry a flock across hosts: free
+        here says nothing of a writer on the host the line names (review of
+        step 6; `attempts.alive_of` answers None for another host too)."""
+        self._killed_writer()
+        line = self.lock.read_text(encoding="utf-8")
+        here = f"host {socket.gethostname()}"
+        self.assertIn(here, line)
+        self.lock.write_text(line.replace(here, "host elsewhere"), encoding="utf-8")
+        why = self._refusal()
+        self.assertIn("took it on host elsewhere", why)
+        self.assertNotIn("stale", why)
+        self.assertTrue(self.lock.exists())
+
+    def test_an_empty_lock_a_process_holds_is_waited_for(self):
+        """A writer cut between creating the lock and writing its line, or a
+        reader in that instant: the kernel still tells while it is held."""
+        self.lock.parent.mkdir(parents=True, exist_ok=True)
+        with self.lock.open("wb") as held:
+            fcntl.flock(held, fcntl.LOCK_EX)
+            self.assertIn("still holds it", self._refusal())
+        why = self._refusal()  # released, still empty: no deletion advised
+        self.assertIn("cannot be told from it", why)
+        self.assertNotIn("stale", why)
 
     def test_a_dead_writers_pid_reused_by_another_process_is_stale(self):
         self._killed_writer()
@@ -182,6 +210,7 @@ class TestStore(unittest.TestCase):
         fields = line.split(" · ")
         self.assertRegex(fields[0], r"^pid \d+$")
         self.assertEqual(fields[2], batch.LOCK_HELD_BY)
+        self.assertEqual(fields[3], f"host {socket.gethostname()}")
 
     def test_lock_is_released_after_the_block(self):
         with batch.Store(self.out):

@@ -49,11 +49,14 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   that passed over it is **0.107.0**.
 - **An output lock tells by its flock whether its writer still writes,
   never by its pid.** `batch.Store` holds its `<out>.lock` file's
-  `fcntl.flock` while it writes, and the line names it (`pid N · <time> ·
-  flock · <argv>`, `batch.LOCK_HELD_BY`). The refusal of a second writer
-  asks the kernel (`files.lock_held`, also the detached start's probe):
-  held — "still writing, wait, never delete"; free — "stale, delete it,
-  then start again". Until now any existing pid read as a writer: a pid
+  `fcntl.flock` while it writes, and the line names it and its host
+  (`pid N · <time> · flock · host H · <argv>`, `batch.LOCK_HELD_BY`). The
+  refusal of a second writer asks the kernel first (`files.lock_held`,
+  also the detached start's probe): held, whatever the line says — "still
+  writing, wait, never delete"; free and written on this host — "stale,
+  delete it, then start again"; free and written on another host — no
+  deletion advised, since a shared file system may not carry a flock
+  across hosts. Until now any existing pid read as a writer: a pid
   reused by another process kept a dead run's lock "alive, never delete"
   while `runlog --wait` ended at once (`docs/notes/2026-11-04-liveness-and-wait.md`,
   case D); a sandbox without `ps` and a `python -m` writer change nothing

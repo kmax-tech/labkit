@@ -32,6 +32,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import socket
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -232,16 +233,17 @@ class InstrumentError(ValueError):
     measuring code)."""
 
 
-#: the third field of an output lock's line (`pid N · <time> · flock ·
-#: <argv>`): its writer holds the lock file's `fcntl.flock` while it writes
+#: the third field of an output lock's line (`pid N · <time> · flock · host
+#: H · <argv>`): its writer holds the lock file's `fcntl.flock` while it writes
 LOCK_HELD_BY = "flock"
 
 
 def lock_line(argv: list[str]) -> str:
     """The line a Store writes into its output lock: this process's pid,
-    the local time, LOCK_HELD_BY and ARGV (`sys.argv`)."""
+    the local time, LOCK_HELD_BY, this host's name and ARGV (`sys.argv`)."""
     return (
-        f"pid {os.getpid()} · {runs.now_stamp()} · {LOCK_HELD_BY} · {' '.join(argv)}\n"
+        f"pid {os.getpid()} · {runs.now_stamp()} · {LOCK_HELD_BY} · "
+        f"host {socket.gethostname()} · {' '.join(argv)}\n"
     )
 
 
@@ -250,29 +252,48 @@ def lock_holder_words(lock: Path, holder: str) -> str:
     The kernel tells, never the pid: the Store that wrote the line holds
     the file's flock until it ends (`files.lock_held`), so a reused pid, a
     `python -m` command line and a sandbox without `ps` (pubmedqa50,
-    2026-11-01: a live run's lock deleted twice) change no answer. Held:
-    the writer is still writing — wait, never delete. Free: its writer
-    ended — the lock is stale. A line without LOCK_HELD_BY (labkit 0.107.0
-    or earlier, or by hand) holds nothing to test: no answer, and no
-    deletion advised. Why: docs/notes/2026-11-04-liveness-and-wait.md."""
+    2026-11-01: a live run's lock deleted twice) change no answer. Held,
+    whatever the line says — empty, without LOCK_HELD_BY: a process is
+    still writing (the writer, or a process it started that inherited the
+    lock) — wait, never delete. Free and written on this host with
+    LOCK_HELD_BY: the writer ended — the lock is stale. Free otherwise — a
+    line without LOCK_HELD_BY (labkit 0.107.0 or earlier, by hand, or cut
+    short) or another host's, whose flock a shared file system may not
+    carry across hosts — no answer, and no deletion advised. Why:
+    docs/notes/2026-11-04-liveness-and-wait.md."""
     fields = holder.split(" · ")
     who = fields[0] if fields[0].startswith("pid ") else "its writer"
-    if len(fields) < 4 or fields[2] != LOCK_HELD_BY:
-        return (
-            f"The lock does not say that its writer holds it ({LOCK_HELD_BY}): "
-            f"labkit 0.107.0 or earlier, or a hand, wrote it, and whether a run "
-            f"still writes this output cannot be told from it — delete it only "
-            f"when `.venv/bin/runlog <area>` lists no run writing this output."
-        )
     try:
         held = files.lock_held(lock)
     except FileNotFoundError:
         return "The lock was released meanwhile: start again (the output resumes)."
     if held:
         return (
-            f"Its writer ({who}) still holds it: that run is still writing — "
-            f"wait for it (`.venv/bin/runlog <area> --wait`), never delete its "
-            f"lock; a second writer would append the same rows again."
+            f"A process still holds it — its writer ({who} when it took the lock) "
+            f"or a process that writer started: that run is still writing — wait "
+            f"for it (`.venv/bin/runlog <area> --wait`), never delete its lock; a "
+            f"second writer would append the same rows again."
+        )
+    marked = len(fields) >= 5 and fields[2] == LOCK_HELD_BY
+    host = (
+        fields[3].removeprefix("host ")
+        if marked and fields[3].startswith("host ")
+        else None
+    )
+    if not marked or host is None:
+        return (
+            f"The lock does not say that its writer holds it ({LOCK_HELD_BY}, "
+            f"host): labkit 0.107.0 or earlier, a hand, or a writer cut short "
+            f"wrote it, and whether a run still writes this output cannot be "
+            f"told from it — delete it only when `.venv/bin/runlog <area>` lists "
+            f"no run writing this output."
+        )
+    if host != socket.gethostname():
+        return (
+            f"Its writer ({who}) took it on host {host}: a shared file system may "
+            f"not carry its flock to this host, so whether it still writes cannot "
+            f"be told here — delete it only when `.venv/bin/runlog <area>` on "
+            f"{host} lists no run writing this output."
         )
     return (
         f"No process holds it any more: its writer ({who} when it took the "
