@@ -45,9 +45,9 @@ beim Agenten, dort nennt `next` nur die Erwartung. Zustand weiter aus den
 Dateien ableiten, nicht speichern (ein gespeicherter Zustand lügt nach
 jeder freien Dateiänderung), aber aus wenigen Dateien mit einem Leser und
 an einer Stelle geordnet. Angekündigter Bruch, nicht nebenbei.
-Plan mit Bestand, Inventar (Formate × Leser, Gates × Formate), fünf
-Phasen mit Abnahme je Phase und dem leitenden Prinzip Erlaubnisliste
-statt Sperrliste (maschinengeführte Dateien schreibt nur labkit und
+Plan mit Bestand, Inventar (Formate × Leser, Gates × Formate), vier
+Phasen mit Abnahme, Zeilenprognose und Abbruchkriterium, Richtung
+Erlaubnisliste (maschinengeführte Dateien schreibt nur labkit und
 prüft sie byteweise; freie Dateien nur in ihren Folgen):
 [One explainer](docs/notes/2026-11-04-one-explainer-plan.md).
 Review desselben Tags eingearbeitet: kein Bauauftrag im Ganzen. Erster

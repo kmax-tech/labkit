@@ -80,6 +80,24 @@ Acceptance of the pilot, fixed before it starts:
 5. Measured afterwards: effort, the special cases that remain, and
    usability (the commands an agent needs from the hold to the release).
 
+The pilot needs no `Command`: `next` takes the hold as one row in its
+order, reads it from `Checked.state`, and the finding's identity is the
+`GateFinding` itself. Phase 2 starts after it, not inside it.
+
+Stop or replan — fixed now, so the decision is falsifiable — when any
+of these holds after the pilot:
+
+- the hold needs more than one new row in `next`'s order, or a branch
+  on the file state inside that row (the state parameter did not carry);
+- the package has net more lines than before the pilot after the
+  competing logic is removed (tests apart);
+- the invariant test needs an exception list (a hold the hooks keep
+  that `next` cannot name);
+- the pilot takes more than two sessions.
+
+Then Phase 1 does not continue as written; the note gets the reason and
+the next proposal.
+
 ## Target
 
 1. **One ordering, one explainer.** `labkit-next` is the only code that
@@ -97,7 +115,7 @@ Acceptance of the pilot, fixed before it starts:
 4. **State is derived, from few files, by one reader each.** No format
    gains a second reader; a format no gate reads is a candidate to go.
 
-## The principle: an allow-list, not a deny-list
+## The direction: toward an allow-list — step 1 is the writer that refuses
 
 Today labkit is a deny-list: the agent may change any file, and the gates
 recognise known violations afterwards. A deny-list grows with every
@@ -105,7 +123,12 @@ error observed, and so do its tests (the registration comparison that
 broke on whitespace and on a glossed field name, V1 and V2 of the
 maintainability review, are errors of recognising a hand-edited head).
 The alternative is an allow-list: one way, and what lies beside it is not
-forbidden case by case but not provided for.
+forbidden case by case but not provided for. This plan takes its first
+step only: the writer refuses what a gate would later hold. The ledger
+is deferred and the historical bindings stay, so hand edits before the
+first commit stay unrecognised and the test class "semantically
+equivalent hand edits" does not fall away yet — it shrinks where a
+writer's precondition replaces a gate's recognition, and no earlier.
 
 | Class | Files | Who writes | What labkit checks |
 |---|---|---|---|
@@ -177,6 +200,8 @@ above is the corrected inventory.)
 
 ## Phase 0 — Inventory and verdicts (no code)
 
+Status: tables done 2026-11-04; the verdicts are proposals and open.
+
 Deliverable: the two tables below, one row per format and per gate, each
 with the chain link it secures (intent → promise → code → run → number),
 its readers, and a verdict: *stays*, *merges into X*, *goes*. A format no
@@ -196,19 +221,19 @@ N reported number. Class as the principle above names it; *derived*
 means no file of its own. Verdicts are proposals; each *goes*, *moves*
 or *merges* needs a before/after proposal of its own (what the files,
 readers and tests look like on both sides) before it is a Breaking
-entry (Phase 4). A reader does not justify a format: it may be part of
+entry (Phase 3). A reader does not justify a format: it may be part of
 the same unnecessary construction.
 
 | Format | File | Link | Class | Readers (g gates · c checks · r run · t tools · p probes · tpl templates) | Proposed verdict |
 |---|---|---|---|---|---|
-| `protocol_block` | PROTOCOL-*.md, the toml block | I P | machine-led | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3 | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer after Phase 5 |
+| `protocol_block` | PROTOCOL-*.md, the toml block | I P | machine-led | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3 | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer after Phase 4 |
 | `protocol_check` | PROTOCOL-*.md prose fields, prompt blocks | I P | machine-led (content free, structure labkit's) | g 8 · c 4 · r 2 · t 5 · p 1 | stays; `repeated_fields` and the MUST checks become the writer's preconditions once the fields are written only through it |
 | `promises` | `[[promise]]` tables | P | machine-led | parse: g 4 · c 6 · r 1 · t 4; `load`, `write_constant`: tpl only | stays; `load`/`write_constant` are the scripts' API and move to the script-helper home (below) |
 | `protocol_history` | the protocol as git holds it | P→R | derived (git) | g 6 · c 1 · r 1 | stays: the binding to the first measurement's commit compares a present with a historical text and is not replaced by "as last written"; with one writer that refuses a registered field after the first measurement it fires rarely, but it stays |
 | `runs` | `runs/<id>/*.json` | R | machine-led | g 7 · c 6 · r 3 · t 2 · p 1 · tpl 1 | stays |
 | runs index | `runs.tsv` (`run/runlog.indexed_runs`) | R | machine-led | g 3 · r 1 | moves into `formats/` (a format read by gates lives outside the formats layer) |
-| `answering_run` | none | R→N | derived | g 4 · c 5 · r 2 · t 1 · p 1 | merges into the state reader (Phase 5) |
-| `attempts` | `audits/attempts.jsonl` | R→N | machine-led | g 4 · t 1 | stays; merge candidate with `failed_attempts` (two journals of audit attempts) — decide in Phase 4 |
+| `answering_run` | none | R→N | derived | g 4 · c 5 · r 2 · t 1 · p 1 | merges into the state reader (Phase 4) |
+| `attempts` | `audits/attempts.jsonl` | R→N | machine-led | g 4 · t 1 | stays; merge candidate with `failed_attempts` (two journals of audit attempts) — decide in Phase 3 |
 | `failed_attempts` | `audits/<min>-<mode>-failed.toml` | R→N | machine-led | g 2 · c 1 · r 1 · p 1 | merge candidate into `attempts` |
 | `findings` | `audits/<min>-{preflight,analysis}.toml` with decisions | P→N | machine-led | g 8 · c 2 · r 1 | stays |
 | `audit_gaps` | none | P→N | derived | g 2 · c 1 · r 1 | merges into the state reader |
@@ -248,7 +273,7 @@ it reads on its own.
 | `hold_report` | a report may stand as it is | comment_blocks, handovers, runs, answering_run, protocol_block, promises, attempts, report_reviews, findings | merges into `report_check`'s chain: called from its command path and the hooks today, outside `chain_gaps`, so `next` does not see its holds |
 | `measurement_refusal` / `freeze_gate` | a measurement may start | the protocol four, runs, answering_run, one preflight record; `freeze_gate` also area_records, failed_attempts | stays as the start gate; its registration reads (`registration_missing`, `registration_in_commit`) duplicate preflight's and get one home |
 | hook `pre_run` | — | head; low lane one check, else preflight_area | surface: keeps calling preflight, prints `next` |
-| hook `post_change` | — | attempts, evidence, runs.tsv, protocol_report on a changed protocol, comment_blocks on a changed report | surface: `protocol_report` here is a sixth reader of the protocol state; after Phase 5 it reads the state once |
+| hook `post_change` | — | attempts, evidence, runs.tsv, protocol_report on a changed protocol, comment_blocks on a changed report | surface: `protocol_report` here is a sixth reader of the protocol state; after Phase 4 it reads the state once |
 | hook `stop` | — | handovers, attempts, evidence, report_hold, report_check with all it reads, runs.tsv | surface: prints `next` per touched area (Phase 1) |
 | hook `undecided` | — | handovers, attempts, evidence, protocol_block, promises, comment_blocks | surface: the pre-commit's gate call; prints `next` |
 
@@ -258,13 +283,18 @@ script-helper group misfiled under formats. The size sits in the
 *readers*: the protocol state has six independent reader paths
 (preflight, finalize, start check, report_check, `protocol_report` in
 the hook, `next`), and three derived views (answering_run, audit_gaps,
-followup) are recomputed by each. That is Phase 5's case.
+followup) are recomputed by each. That is Phase 4's case.
 
 ## Phase 1 — One mouth: every console path prints `labkit-next`'s step
 
-Change: the stop hook and the pre-commit path keep their own holds (they
-decide exit 2 on their own facts) but print, per touched area, the step
-`next_step.next_step` returns instead of lines they compose.
+Change: the stop hook and the pre-commit path hold on the findings
+`next_step` derives for the same state and print its step; they compose
+no line and judge no fact of their own. The invariant, held by a test
+over every hold the hooks know: the hook holds an area exactly when
+`next_step(area, state)` returns a blocking step, and that step rests on
+the same finding (same `where`, same rule) — a hook that holds for A
+while `next` names B is the contradiction this plan exists to remove,
+and a hook with holds of its own keeps it possible.
 `finalize.undeclared_hint` becomes one line naming `labkit-next AREA`.
 `scaffold.next_steps` prints `next_step` for the stamped area instead of
 its own lane. `blocker_routes` leaves the decision list (one line names
@@ -295,9 +325,14 @@ becomes an assertion on the step; the six-case repair probe
 case the sequence of steps `next` names, as the regression oracle.
 CHANGELOG: Breaking (hook output changes; `blocker_routes` no longer
 printed with decisions).
-Done when: `grep -rn "Next: " labkit --include='*.py'` outside
-`formats/gate.py` and `tools/next_step.py` is empty, and every hint named
-in the table above either is gone or names no action.
+Done when: the invariant test above passes for the stop and the
+pre-commit over the probe cases; `grep -rn "Next: " labkit
+--include='*.py'` outside `formats/gate.py` and `tools/next_step.py` is
+empty (a necessary sign, not the proof — it is met by rewording); and
+every hint named in the table above either is gone or names no action.
+Forecast: package −300 to −500 lines (the hooks' own composition,
+`undeclared_hint`, `scaffold.next_steps`, the routes' printing), tests
+±0 (assertions move from lines to steps); measured afterwards.
 
 ## Phase 2 — The way out as data
 
@@ -320,7 +355,7 @@ Kinds, fixed here so the next phase has nothing to decide:
 
 | Kind | Commands | Why |
 |---|---|---|
-| MECHANICAL | `adopt` (the run `next` already names), `into`, `withdraw`, `wait` | labkit's own checked writers; each refuses on its own and leaves the files as they were |
+| MECHANICAL | `adopt` (only when `next` names one run; several candidates make the choice RESEARCH, and `next` must then hand out that kind, never `adopt`), `into`, `withdraw`, `wait` | labkit's own checked writers; each refuses on its own and leaves the files as they were |
 | CONTENT | `fill` (a MUST field's value), `discuss` (the `--why`), the Conclusion | the agent writes words labkit cannot know |
 | RESEARCH | `audit`, `review`, a decision, choosing among several runs | a model call or a judgement |
 | DESTRUCTIVE | `restore` (`git checkout -- <evidence>`), `init` on a tree that has files | discards or overwrites work; printed, never run |
@@ -337,11 +372,16 @@ CHANGELOG: internal change; `GateFinding` is not in the public API
 (`docs/architecture.md`, "Public API"), so one Breaking entry suffices.
 Done when: `grep -rn '\.fix' labkit --include='*.py'` shows only
 rendering (`with_way_out`, `line`) and no comparison.
+Forecast: package +100 to +150 (`Command`, its builders) and −100
+(`declared_first`, the text matching, the second withdraw-first home):
+about even, honestly; it pays in Phase 4 and in the `--do` proposal,
+not by itself. Measured afterwards.
 
 ## Proposal — `labkit-next --do` (trigger: the usage round counts the typed commands as a cost)
 
-Not part of the work order; kept here because Phase 2's `Command` is
-its precondition. Change: `labkit-next AREA --do` prints the step as today, then: a
+Not a phase (the former Phase 3; the phases are renumbered). Not part
+of the work order; kept here because Phase 2's `Command` is its
+precondition. Change: `labkit-next AREA --do` prints the step as today, then: a
 MECHANICAL step is run in-process through the writer's function (not a
 subprocess), its refusal line printed as the writer prints it; then the
 next step is printed again. One step per call — no loop, so a wrong
@@ -364,7 +404,7 @@ CHANGELOG: feature, with the kinds table.
 Done when: in the six probe cases the number of commands an agent must
 type is counted before and after, and recorded in this note.
 
-## Phase 4 — The verdicts of Phase 0, executed
+## Phase 3 — The verdicts of Phase 0, executed
 
 Each *goes* or *merges* row of the inventory is first a before/after
 proposal (one section in this note or a note of its own), then one
@@ -375,7 +415,7 @@ proposals: a merge that adds a kind field and branches on it has bred
 variants, not removed a format. The rule "existing legacy paths go in
 one Breaking release" holds — collect the rows, release once.
 
-## Phase 5 — The state model
+## Phase 4 — The state model
 
 Change: one reader builds `AreaState` from the files (the seed is
 `report_context.Checked`, built today by `next` alone): area, repo,
@@ -389,7 +429,7 @@ derived views (`answering_run`, `audit_gaps`, `followup`) become fields
 of the state, computed once. Tests build a state with a builder instead
 of writing twenty files (`tests/protocol_fixture.py` is the start).
 
-Why after Phase 1 (and the slice of Phase 2 the pilot needs): only
+Why after Phase 1: only
 when `next` is the single explainer is it visible which state fields
 the gates need; before, every hook's own path would claim fields of its
 own. `--do` is no precondition.
@@ -399,6 +439,10 @@ CHANGELOG: Breaking (gate signatures).
 Done when: `grep -c "read_text\|open(" labkit/gates/*.py labkit/checks/*.py`
 is zero outside the state reader, and the architecture test
 (`tests/test_architecture.py`) holds the new layer.
+Forecast: package +400 (the reader and the state) and −600 to −900
+(file access and the recomputed views in twelve modules); tests −10 %
+by lines where a builder replaces file setups. The most uncertain
+forecast here; it is the one to check hardest.
 
 ## Two tasks apart from the phases
 
@@ -416,7 +460,9 @@ Both are mechanical, both can run per module beside other work.
   (the current rule in the docstring, the history in a note). Per module
   touched: the sentence that names a present limit stays with a short
   why; the incident moves to the topic's note under `docs/notes/` and
-  the docstring links it.
+  the docstring links it. This is the cheapest real reduction in this
+  note and runs module by module beside the pilot; its delta is
+  reported apart, so it does not mask the pilot's.
 
 ## Then: the usage round
 
@@ -429,16 +475,19 @@ the proposals get their trigger.
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
-before the first commit. The gap is demonstrated, not hypothetical: the
+before the first commit. The gap is demonstrated: the
 [review-record forgery note](2026-11-02-review-record-forgery.md) shows
 `rejected` rewritten to `upheld` before the first commit releasing the
-decision. So the trigger is met; what is open is which additional
-protection to build and whether its cost is justified against the
-stated limit (labkit guards against error, not adversaries). A ledger of what labkit last wrote (per area,
+decision. That case is a deliberate rewrite, and labkit guards against
+error, not adversaries — so it shows the gap but is not this proposal's
+trigger. The trigger is an *accidental* edit of a machine-led file
+before its first commit that releases a wrong number, seen in a probe
+or a lab. Until then the open question stays open: which protection,
+at what cost. A ledger of what labkit last wrote (per area,
 content hashes) would close it, and is a system of its own: where it
 lives (the git dir, like the attempt journal's copy), what a fresh clone
 does without it (falls back to HEAD), two sessions writing the same area
-(the lock the journal already uses), and restore. Not before the trigger.
+(the lock the journal already uses), and restore.
 
 ## Out of reach here
 
