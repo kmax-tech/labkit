@@ -198,16 +198,18 @@ def _predecessor_open(ctx: Checked, pred: Path) -> list[GateFinding]:
         blocker(
             f"its predecessor's BLOCKER is still open — {u.line}",
             fix="decide it (`"
-            + decide_command(
-                pred.parent,
-                u.number,
-                "STATUS",
-                "<why>",
-                u.record.path.name,
-                protocol=pred,
+            + str(
+                decide_command(
+                    pred.parent,
+                    u.number,
+                    "STATUS",
+                    "<why>",
+                    u.record.path.name,
+                    protocol=pred,
+                )
             )
             + f"`), or hand the predecessor over, replaced by {ctx.head.id}: `"
-            + handover_command(pred)
+            + str(handover_command(pred))
             + "`",
         )
         for u in held

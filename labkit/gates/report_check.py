@@ -145,6 +145,7 @@ from labkit.formats.gate import (
     Findings,
     GateFinding,
     blocker,
+    withdrawn_first,
 )
 from labkit.formats.answering_run import (
     adopted_run,
@@ -195,7 +196,9 @@ from labkit.gates.report_hold import (
 )
 from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
+    ADOPT,
     ADOPT_TOOL,
+    RENDER,
     adopt_command,
     area_path,
     area_protocols,
@@ -448,6 +451,7 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
         return blocker(
             f"no answering run to hold it to — {ctx.why}",
             fix=f"measure: `{measure_command(ctx.area)}`, then audit that run",
+            step=measure_command(ctx.area),
         )
     try:
         gap = audit_gaps.audit_coverage(
@@ -492,13 +496,15 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
     sentence (high repeat cost); at low repeat cost a full run is owed, no freeze."""
     if ctx.run is None:
         return []
-    measure = f"`{measure_command(ctx.area)}`"
+    run = measure_command(ctx.area)
+    measure = f"`{run}`"
     cfg = read_run_config(ctx.run)
     if cfg is None:
         return [
             blocker(
                 f"{ctx.run.name}: no config.json — not a run",
                 fix=f"measure through runlog: {measure}",
+                step=run,
             )
         ]
     owed = "a full run (run_kind='measurement')" + (
@@ -634,7 +640,7 @@ def report_check(
     ln = lane(ctx.head.repeat_cost)
     findings = Findings(
         area=shown(ctx.area, Path.cwd()),
-        audit=audit_command(ctx.area, protocol=ctx.protocol),
+        audit=audit_command(ctx.area, protocol=ctx.protocol).line,
     )
     if not ln.freeze:
         print(
@@ -729,6 +735,7 @@ def chain_gaps(
                 f"({pending_adoption(ctx.protocol).name} keeps it as it was before)",
                 fix=f"`{adopt_command(ctx.protocol)}` puts it back first and "
                 f"adopts again",
+                step=adopt_command(ctx.protocol),
             )
         )
     out += evidence.change_blockers(ctx.area, staged=ctx.state == INDEX)
@@ -740,6 +747,7 @@ def chain_gaps(
                 fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
                 f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
                 f"`[result]` table for it",
+                step=withdraw_command(ctx.protocol),
             )
         )
     # 2. registration
@@ -748,22 +756,25 @@ def chain_gaps(
     finalized = finalize_gaps(ctx.area, ctx.protocol)
     out += finalized
     held_by = held_declaration(ctx, finalized)
+    # while the declared run's code changed, every later hold names the
+    # withdrawal first (`gate.withdrawn_first`, the datum `withdraw_first`)
+    withdrawal = withdraw_command(held_by) if held_by is not None else None
     # 4. full run
     if ctx.run is not None:
-        out += withdrawn_first(unreportable_gaps(ctx, ln.freeze), held_by)
+        out += withdrawn_first(unreportable_gaps(ctx, ln.freeze), withdrawal)
     # 5. analysis
     if ANALYSIS_AUDIT in ln.audits:
         analysis = analysis_findings(
             ctx, ln.analysis_rule, result_section=not adoption_pending
         )
-        out += withdrawn_first(analysis, held_by)
+        out += withdrawn_first(analysis, withdrawal)
     # 6. recomputation
     if not adoption_pending:
-        out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), held_by)
+        out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), withdrawal)
     # 7. decisions
     if ANALYSIS_AUDIT in ln.audits:
-        out += withdrawn_first(review_findings(ctx), held_by)
-        out += withdrawn_first(followup_findings(ctx), held_by)
+        out += withdrawn_first(review_findings(ctx), withdrawal)
+        out += withdrawn_first(followup_findings(ctx), withdrawal)
     # 8. report
     if not adoption_pending:
         out += report_findings(ctx, review=review)
@@ -885,18 +896,20 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     return [] if gap is None else [gap]
 
 
-def adoption_order_note(blocked: list[str]) -> str | None:
-    """The order to tell when BLOCKED (the blocker messages) names an adoption
-    (a `labkit-adopt` line, `repo.ADOPT_TOOL`) beside blockers that are not
-    themselves projections of one (an adoption, a `--from-run` or `--render`
-    rewrite): adoption runs this check and is refused while any of them
-    stands, so they come first. None otherwise — then the adoption line is
-    the way out as printed. Why: printed bare, the adoption line beside an
-    open BLOCKER on that run read as the fix to three of three Haiku readers
-    (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
-    projections = (ADOPT_TOOL, "--from-run", "--render")
-    adoption = [m for m in blocked if ADOPT_TOOL in m]
-    other = [m for m in blocked if not any(p in m for p in projections)]
+def adoption_order_note(blockers: list[GateFinding]) -> str | None:
+    """The order to tell when BLOCKERS name an adoption (a finding whose
+    step is `repo.ADOPT`) beside blockers that are not themselves
+    projections of one (an adoption, or a rewrite of the result section,
+    step `repo.RENDER`): adoption runs this check and is refused while any
+    of them stands, so they come first. None otherwise — then the adoption
+    line is the way out as printed. Why: printed bare, the adoption line
+    beside an open BLOCKER on that run read as the fix to three of three
+    Haiku readers (docs/usability/2026-10-28-haiku-stuck-reading.md). Read
+    from the steps, never from the words (the one-explainer plan, Phase 2)."""
+    adoption = [f for f in blockers if f.step is not None and f.step.name == ADOPT]
+    other = [
+        f for f in blockers if f.step is None or f.step.name not in (ADOPT, RENDER)
+    ]
     if not adoption or not other:
         return None
     return (
@@ -914,7 +927,7 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     (`GateFinding.changed_since`, the comparison's own datum, never its
     words; code that could not be compared sets none); None otherwise.
     While so, every later hold
-    names the withdrawal first (`ways_out.declared_first`): the declared
+    names the withdrawal first (`gate.withdrawn_first`): the declared
     number no longer holds for the code, the commit hook holds the code to
     it, and an audit made while it stands declared does not cover the next
     run. Not on the PROPOSED state: the adoption's own check sees its
@@ -926,19 +939,9 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     return ctx.protocol if held else None
 
 
-def withdrawn_first(
-    found: list[GateFinding], held_by: Path | None
-) -> list[GateFinding]:
-    """FOUND, each blocker's way out after the withdrawal of HELD_BY's
-    declaration when there is one (`held_declaration`)."""
-    if held_by is None:
-        return found
-    return [ways_out.declared_first(f, held_by) for f in found]
-
-
 def tell_adoption_order(findings: Findings) -> None:
     """Tell `adoption_order_note` through FINDINGS when it applies."""
-    order = adoption_order_note(findings.blocked)
+    order = adoption_order_note([f for f in findings.found if f.grade == BLOCKER])
     if order:
         findings.note(order)
 

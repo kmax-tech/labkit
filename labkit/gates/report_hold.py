@@ -439,6 +439,7 @@ def progress_hold(
         f"names — the analysis audit and its decisions, then "
         f"`{adopt_command(protocol, run_id)}`; or end without a result: "
         f"`{handover_command(protocol, name_r)}`",
+        step=adopt_command(protocol, run_id),
     )
 
 
@@ -1304,7 +1305,9 @@ def lost_evidence(protocol: Path) -> LostEvidence | None:
         return None
     return LostEvidence(
         attempts.gone_line(gaps),
-        report_way_while_lost(audit_command(area, "--findings", protocol=protocol)),
+        report_way_while_lost(
+            audit_command(area, "--findings", protocol=protocol).line
+        ),
     )
 
 
@@ -1434,6 +1437,7 @@ def undeclared_findings(
             blocker(
                 f"{rel}: cites {run_id}, the answering run of {named}, which has adopted "
                 f"no result",
+                step=adopt_command(protocol, run_id),
                 fix=f"a full run's number leaves the area through "
                 f"`{adopt_command(protocol, run_id)}` (it names what the "
                 f"adoption still owes), then `--into {rel}` writes its block; a run "

@@ -80,7 +80,7 @@ from labkit.formats.comment_blocks import (
 )
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
-from labkit.formats.repo import into_command
+from labkit.formats.repo import DISCUSS, Command, adopt_command, into_command
 
 #: the block's opening and closing lines, each a line of its own
 OPEN = re.compile(
@@ -245,6 +245,7 @@ def block_gaps(
                     fix="remove it, or adopt a run in the protocol "
                     "(`labkit-adopt <area> <run_id>`) "
                     "and write it again",
+                    step=adopt_command(report.parent / b.protocol),
                 )
             )
         elif s.run_id != b.run_id:
@@ -368,11 +369,14 @@ WHY_PROGRESS = "<what was measured, what is still open>"
 
 def discuss_command(
     protocol: str, run_id: str, report: str, why: str = WHY_LOOKED_AT
-) -> str:
+) -> Command:
     """The `protocol-fill … --discuss` line that writes the block
     discussing RUN_ID of PROTOCOL into REPORT, each path as the caller
     names it, WHY the placeholder of its reason."""
-    return f'protocol-fill {protocol} --discuss {run_id} --why "{why}" --into {report}'
+    return Command(
+        DISCUSS,
+        f'protocol-fill {protocol} --discuss {run_id} --why "{why}" --into {report}',
+    )
 
 
 @dataclass(frozen=True)

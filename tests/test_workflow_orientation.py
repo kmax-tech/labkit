@@ -64,7 +64,7 @@ class WorkflowOrientation(unittest.TestCase):
         step = repo.report_fields_step(protocol)
         self.assertIn("write the Conclusion and the report fields", step)
         self.assertIn(f"`{repo.contract_command(protocol)}`", step)
-        self.assertIn("--contract", repo.contract_command(protocol))
+        self.assertIn("--contract", repo.contract_command(protocol).line)
         self.assertIn("once frozen and adopted", step)
         line = repo.next_after_run(protocol, run)
         self.assertIn(step, line)

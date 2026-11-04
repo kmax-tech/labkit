@@ -42,6 +42,10 @@ from __future__ import annotations
 import shlex
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from labkit.formats.repo import Command
 
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
@@ -68,6 +72,11 @@ EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 #: Next: <fix>`, the fix a command where one exists; a dotted line gives it
 #: its own ` · Next: ` part (agent-surface plan, step 6)
 WAY_OUT = ". Next: "
+#: what a hold names first while a declared run's code has changed
+#: (`GateFinding.withdraw_first`): why in each hold, not in one note — six
+#: holds that said "measure anew" led past a note below them
+#: (decision-reading probe and file-check case, 2026-10-28)
+WITHDRAW_FIRST = "withdraw the adoption first (`{command}`), then "
 
 
 def with_way_out(why: str, fix: str | None) -> str:
@@ -110,6 +119,14 @@ class GateFinding:
         fix: The way out — what closes the finding, a command where one
             exists. Required for a BLOCKER (refused without one), optional
             for a WARNING; told in every form (`line`).
+        step: The command the way out names, as data (`repo.Command`),
+            where it names one of labkit's own; code that decides on a
+            finding's way — `next_step`, `report_check.adoption_order_note`
+            — reads its `name`, never the words of `fix`.
+        withdraw_first: The withdrawal (`repo.withdraw_command`) a hold
+            names before its own way out while the declared run's code
+            changed since it ran (`report_check.withdrawn_first`); told
+            as `WITHDRAW_FIRST` before `fix` in every form (`way`).
         evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
         changed_since: The run whose code or declared scope this blocker
             found changed since it ran — set where the comparison found the
@@ -128,6 +145,8 @@ class GateFinding:
     fix: str | None = None
     evidence_kind: str = field(kw_only=True)
     changed_since: str | None = field(default=None, kw_only=True)
+    step: Command | None = field(default=None, kw_only=True)
+    withdraw_first: Command | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         if self.grade not in (BLOCKER, WARNING):
@@ -152,35 +171,61 @@ class GateFinding:
             )
 
     @property
+    def way(self) -> str | None:
+        """The way out as told: `fix`, after the withdrawal first where
+        `withdraw_first` is set (`WITHDRAW_FIRST`); None without a fix."""
+        if self.fix is None or self.withdraw_first is None:
+            return self.fix
+        return WITHDRAW_FIRST.format(command=self.withdraw_first) + self.fix
+
+    @property
     def line(self) -> str:
         """The finding as a gate tells it, without the indent. The dotted
         form names static evidence (`WARNING · static evidence · …`) so a
         reader of a code check's line sees it is an indication; a prefixed
-        line stays `WARNING: …`, and the summary counts the kind. The fix
-        ends the line in every form: its own dotted part (`Next: …`), else
-        after `WAY_OUT`."""
+        line stays `WARNING: …`, and the summary counts the kind. The way
+        out (`way`) ends the line in every form: its own dotted part
+        (`Next: …`), else after `WAY_OUT`."""
         if self.form == DOTTED:
             kind = STATIC_EVIDENCE if self.evidence_kind == STATIC_EVIDENCE else None
-            fix = f"Next: {self.fix}" if self.fix else None
+            fix = f"Next: {self.way}" if self.way else None
             parts = (self.grade, kind, self.where, self.text, self.rule, fix)
             return " · ".join(p for p in parts if p)
         told = self.text if self.form == AS_WRITTEN else f"{self.grade}: {self.text}"
-        return with_way_out(told, self.fix)
+        return with_way_out(told, self.way)
 
     @property
     def message(self) -> str:
-        """What the summary repeats: the text with its fix, and for a DOTTED
-        finding the whole line — its text alone would lose where it points
-        and the fix."""
+        """What the summary repeats: the text with its way out, and for a
+        DOTTED finding the whole line — its text alone would lose where it
+        points and the fix."""
         if self.form == DOTTED:
             return self.line
-        return with_way_out(self.text, self.fix)
+        return with_way_out(self.text, self.way)
 
 
-def blocker(text: str, *, fix: str) -> GateFinding:
+def withdrawn_first(
+    found: list[GateFinding], withdrawal: Command | None
+) -> list[GateFinding]:
+    """FOUND, each BLOCKER with a way out naming WITHDRAWAL first
+    (`GateFinding.withdraw_first`) when one is given; a warning, a blocker
+    without a way out, or None come back as they are. The one place the
+    rule becomes a datum; who decides it is `report_check.held_declaration`
+    and `finalize.declaring_protocol`."""
+    if withdrawal is None:
+        return found
+    return [
+        replace(f, withdraw_first=withdrawal)
+        if f.grade == BLOCKER and f.fix is not None
+        else f
+        for f in found
+    ]
+
+
+def blocker(text: str, *, fix: str, step: Command | None = None) -> GateFinding:
     """A GUARANTEED BLOCKER with its way out FIX, told prefixed — what a pure
     check returns as data for the gate that takes it (`Findings.take`)."""
-    return GateFinding(BLOCKER, text, fix=fix, evidence_kind=GUARANTEED)
+    return GateFinding(BLOCKER, text, fix=fix, evidence_kind=GUARANTEED, step=step)
 
 
 def coded(
@@ -305,11 +350,14 @@ class Findings:
         for finding in findings:
             self.take(finding)
 
-    def block(self, msg: str, *, fix: str) -> None:
-        """A blocker: told as `BLOCKER: msg — way out: fix`, repeated in the
+    def block(self, msg: str, *, fix: str, step: Command | None = None) -> None:
+        """A blocker: told as `BLOCKER: msg. Next: fix`, repeated in the
         summary, exit 1. Always GUARANTEED — static evidence never blocks.
-        FIX is the way out (`GateFinding.fix`), required."""
-        self.take(GateFinding(BLOCKER, msg, fix=fix, evidence_kind=GUARANTEED))
+        FIX is the way out (`GateFinding.fix`), required; STEP the command
+        it names, as data (`GateFinding.step`)."""
+        self.take(
+            GateFinding(BLOCKER, msg, fix=fix, evidence_kind=GUARANTEED, step=step)
+        )
 
     def warn(self, msg: str, *, evidence_kind: str, fix: str | None = None) -> None:
         """A warning: told as `WARNING: msg`, counted, exit 0 on its own.

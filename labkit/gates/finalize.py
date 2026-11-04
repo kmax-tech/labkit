@@ -92,7 +92,13 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.repo import gate_command
-from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE, GateFinding, blocker
+from labkit.formats.gate import (
+    GUARANTEED,
+    STATIC_EVIDENCE,
+    GateFinding,
+    blocker,
+    withdrawn_first,
+)
 from labkit.formats.runs import metrics_path, read_metrics
 from labkit.formats import (
     audit_gaps,
@@ -143,7 +149,6 @@ from labkit.formats.repo import (
 from labkit.gates.ways_out import (
     HANDOVER,
     PROTOCOL_NAMED,
-    declared_first,
     register_anew,
 )
 from labkit.checks.audit_binding import AuditError, covering_analysis
@@ -215,7 +220,14 @@ def choose_answering_run(
             if choice.adopted
             else blocker.fix
         )
-        findings.take(replace(blocker, text=blocker.text + looked_at, fix=fix))
+        findings.take(
+            replace(
+                blocker,
+                text=blocker.text + looked_at,
+                fix=fix,
+                step=withdraw_command(protocol) if choice.adopted else blocker.step,
+            )
+        )
         return None
 
     if blocker:
@@ -570,7 +582,7 @@ def _scope_held(
         f"carry the change",
         fix=fix,
     )
-    return [declared_first(held, declaring) if declaring else held]
+    return withdrawn_first([held], withdraw_command(declaring) if declaring else None)
 
 
 def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
@@ -1054,7 +1066,9 @@ def check_run_code(
     the protocol that declares the answering run (None: none does), puts
     the withdrawal first in each blocker's way out (`declared_first`)."""
     changed, apart = code_since_run(area, answering_run)
-    findings.take_all(declared_first(f, held_by) if held_by else f for f in changed)
+    findings.take_all(
+        withdrawn_first(changed, withdraw_command(held_by) if held_by else None)
+    )
     for line in apart:
         findings.warn(line, evidence_kind=GUARANTEED)
     if not changed and not apart:
@@ -1099,10 +1113,15 @@ def check_declared_scopes(
             blocker(
                 f"declared scope changed since {answering_run.name}: {d}",
                 fix=f"rerun before reporting: `{measure_command(area)}`, then audit that run",
+                step=measure_command(area),
             ),
             changed_since=answering_run.name,
         )
-        findings.take(declared_first(drifted, held_by) if held_by else drifted)
+        findings.take(
+            withdrawn_first([drifted], withdraw_command(held_by) if held_by else None)[
+                0
+            ]
+        )
     if not drift:
         findings.note(
             f"  {len(recorded['ids'])} declared scope(s) unchanged since {answering_run.name}"
@@ -1213,6 +1232,7 @@ def check_null_lane(findings: Findings, answering_run: Path) -> None:
             f"the outputs of {answering_run.name} do not read: {exc}",
             fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
             f"and audit that run; the run's own files stay as they are",
+            step=measure_command(answering_run.parent.parent),
         )
         return
     findings.take_all(held.unmoved)
@@ -1234,6 +1254,7 @@ def check_registered_outputs(findings: Findings, answering_run: Path) -> None:
             f"the outputs of {answering_run.name} do not read: {exc}",
             fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
             f"and audit that run; the run's own files stay as they are",
+            step=measure_command(answering_run.parent.parent),
         )
         return
     findings.take_all(drifted)
@@ -1290,6 +1311,7 @@ def check_reference(
             f"the metrics of {answering_run.name} do not read: {exc}",
             fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
             f"and audit that run; the run's own files stay as they are",
+            step=measure_command(answering_run.parent.parent),
         )
         return
     held = reference.comparison_gaps(ref, key, metrics)
@@ -1354,6 +1376,7 @@ def check_kept_number(
             f"the metrics of {answering_run.name} do not read: {exc}",
             fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
             f"and audit that run; the run's own files stay as they are",
+            step=measure_command(answering_run.parent.parent),
         )
         return
     held = kept_number_gaps(
@@ -1540,7 +1563,7 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
     try:
         protocol_block.declared_run(text)
     except protocol_block.BlockError as exc:
-        return [blocker(str(exc), fix=written)]
+        return [blocker(str(exc), fix=written, step=withdraw_command(protocol))]
     return []
 
 

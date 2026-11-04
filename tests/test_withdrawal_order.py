@@ -20,8 +20,9 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest import mock
 
-from labkit.formats.gate import blocker
-from labkit.gates import report_check, report_context, ways_out
+from labkit.formats.gate import blocker, withdrawn_first
+from labkit.formats.repo import withdraw_command
+from labkit.gates import report_check, report_context
 from test_end_to_end import CountCommands
 
 RUN = "2026-01-02T00-00-00_b000"
@@ -64,12 +65,16 @@ class HeldDeclaration(unittest.TestCase):
 
     def test_code_that_could_not_be_compared_does_not(self):
         """A commit the clone lacks: its way out may name the withdrawal
-        (`ways_out.declared_first`), but nothing changed — fetching it may
-        be all that is owed."""
-        unread = ways_out.declared_first(
-            blocker(f"finalize: {RUN} started at a commit this clone lacks", fix="`x`"),
-            self.PROTOCOL,
-        )
+        (`gate.withdrawn_first`), but nothing changed — fetching it may be
+        all that is owed."""
+        unread = withdrawn_first(
+            [
+                blocker(
+                    f"finalize: {RUN} started at a commit this clone lacks", fix="`x`"
+                )
+            ],
+            withdraw_command(self.PROTOCOL),
+        )[0]
         self.assertIsNone(self.held(unread))
 
     def test_the_adoptions_own_proposal_withdraws_nothing(self):

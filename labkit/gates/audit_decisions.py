@@ -112,7 +112,7 @@ def decision_lines(
                 "      "
                 + decide_command(
                     area, n, "STATUS", "<why>", where, protocol=protocol, base=here
-                )
+                ).line
             )
             if f.check and f.grade != "BLOCKER":
                 # a follow-up is shown decided BLOCKERs only: "the follow-up

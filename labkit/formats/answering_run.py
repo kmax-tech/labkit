@@ -22,7 +22,7 @@ from typing import cast
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises, protocol_block
 from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
-from labkit.formats.repo import commit_known, earliest_commits, measure_command
+from labkit.formats.repo import Command, commit_known, earliest_commits, measure_command
 from labkit.formats.scope_sha import digest
 from labkit.formats.runs import (
     as_stored,
@@ -585,6 +585,8 @@ class AnsweringRun:
             run whose binding cannot be read, or an adopted run that cannot
             answer — or None.
         way_out: What closes `blocker` (`GateFinding.fix`); set with it.
+        step: The command the way out names, as data (`GateFinding.step`):
+            the measurement where no run stands yet.
         adopted: The run is the protocol's `[result] run`, not the newest
             by name.
         newer_by_name: Bound runs of the adopted run's standing whose ids
@@ -598,6 +600,7 @@ class AnsweringRun:
     blocker: str | None
     reports_intent_keys: bool = True
     way_out: str | None = None
+    step: Command | None = None
     adopted: bool = False
     newer_by_name: tuple[str, ...] = ()
 
@@ -614,7 +617,11 @@ class AnsweringRun:
                 "bound_answering_run sets a blocker and its way out whenever no run stands"
             )
             return GateFinding(
-                BLOCKER, self.blocker, fix=self.way_out, evidence_kind=GUARANTEED
+                BLOCKER,
+                self.blocker,
+                fix=self.way_out,
+                evidence_kind=GUARANTEED,
+                step=self.step,
             ), [f"{x.run_dir.name}: {x.why}" for x in self.exclusions]
         if ids_registered and not self.reports_intent_keys:
             area = self.run_dir.parent.parent
@@ -678,7 +685,8 @@ def bound_answering_run(area: Path, pid: str, adopted: str | None) -> AnsweringR
     measured on a machine in another zone sorts by its own clock. That is
     why the adoption, not the name, decides once it is made.
     """
-    measure = f"measure: `{measure_command(area)}` opens a run bound to {pid}"
+    run = measure_command(area)
+    measure = f"measure: `{run}` opens a run bound to {pid}"
     if not runs_path(area).is_dir():
         return AnsweringRun(
             None,
@@ -686,6 +694,7 @@ def bound_answering_run(area: Path, pid: str, adopted: str | None) -> AnsweringR
             (),
             f"no completed run bound to {pid} — no runs/ directory in {area}",
             way_out=measure,
+            step=run,
         )
     taken, rest = bound_runs(area, pid)
     exclusions = tuple(RunExclusion(f.dir, f.why or f.state) for f in rest)
@@ -693,7 +702,12 @@ def bound_answering_run(area: Path, pid: str, adopted: str | None) -> AnsweringR
         return _adopted_choice(area, pid, adopted, taken, exclusions)
     if not taken:
         return AnsweringRun(
-            None, 0, exclusions, f"no completed run bound to {pid}", way_out=measure
+            None,
+            0,
+            exclusions,
+            f"no completed run bound to {pid}",
+            way_out=measure,
+            step=run,
         )
     mpath, skipped, has_keys = newest_with_intent_keys(taken)
     assert mpath is not None, "taken is non-empty, so a metrics file exists"

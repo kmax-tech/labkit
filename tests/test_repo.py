@@ -566,23 +566,23 @@ class AuditCommand(unittest.TestCase):
             base=root,
         )
         self.assertEqual(
-            one, "labkit-audit experiments/01-x --review --record 'r 1.toml'"
+            one.line, "labkit-audit experiments/01-x --review --record 'r 1.toml'"
         )
         (area / "PROTOCOL-b.md").write_text("# b\n")
         two = repo.audit_command(
             area, "--mode", "analysis", protocol=area / "PROTOCOL-b.md", base=root
         )
         self.assertEqual(
-            two,
+            two.line,
             "labkit-audit experiments/01-x --mode analysis "
             "--protocol experiments/01-x/PROTOCOL-b.md",
         )
         self.assertEqual(
-            repo.audit_command(area, base=root.parent),
+            repo.audit_command(area, base=root.parent).line,
             "labkit-audit 'my lab/experiments/01-x'",
         )
         # runs as printed: the words read back to the area and the protocol from there
-        words = shlex.split(two)
+        words = shlex.split(two.line)
         self.assertTrue((root / words[1]).is_dir() and (root / words[-1]).is_file())
 
 
@@ -665,10 +665,63 @@ class AdoptCommand(unittest.TestCase):
                 above = repo.adopt_command(proto)
             finally:
                 os.chdir(old)
-        self.assertEqual(at_root, "labkit-adopt experiments/01-x R1")
-        self.assertEqual(in_area, "labkit-adopt . <run_id>")
-        self.assertEqual(above, f"labkit-adopt {root.name}/experiments/01-x <run_id>")
+        self.assertEqual(at_root.line, "labkit-adopt experiments/01-x R1")
+        self.assertEqual(in_area.line, "labkit-adopt . <run_id>")
+        self.assertEqual(
+            above.line, f"labkit-adopt {root.name}/experiments/01-x <run_id>"
+        )
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EveryBuilderIsACommand(unittest.TestCase):
+    """The one-explainer plan, Phase 2: every builder returns a
+    `repo.Command` whose `str()` is its line — so a finding's text embeds
+    it as before — and whose name and kind are the table's."""
+
+    def test_names_kinds_and_lines(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            area = root / "experiments" / "01-x"
+            area.mkdir(parents=True)
+            proto = area / "PROTOCOL-x.md"
+            proto.write_text("# x\n")
+            old = Path.cwd()
+            os.chdir(root)
+            try:
+                built = {
+                    repo.ADOPT: repo.adopt_command(proto, "R1"),
+                    repo.WITHDRAW: repo.withdraw_command(proto),
+                    repo.MEASURE: repo.measure_command(area),
+                    repo.CHECK: repo.gate_command("finalize", area),
+                    repo.INTO: repo.into_command(proto, root / "REPORT.md"),
+                    repo.HANDOVER: repo.handover_command(proto),
+                    repo.AUDIT: repo.audit_command(area, "--mode", "analysis"),
+                    repo.DECIDE: repo.decide_command(
+                        area, 1, "fixed", "<why>", "r.toml"
+                    ),
+                    repo.REVIEW: repo.report_review_command(
+                        area, root / "REPORT.md", proto
+                    ),
+                    repo.RENDER: repo.render_command(),
+                }
+            finally:
+                os.chdir(old)
+        for name, command in built.items():
+            with self.subTest(name=name):
+                self.assertIsInstance(command, repo.Command)
+                self.assertEqual(command.name, name)
+                self.assertEqual(str(command), command.line)
+                self.assertEqual(command.kind, repo.COMMAND_KIND[name])
+        self.assertEqual(repo.contract_command(proto).name, repo.CHECK)
+        self.assertEqual(
+            built[repo.MEASURE].line,
+            ".venv/bin/python experiments/01-x/scripts/01_measure.py",
+        )
+        self.assertEqual(built[repo.RENDER].line, "protocol-fill <PROTOCOL> --render")
+        self.assertEqual(
+            repo.render_command(from_run=True).line,
+            "protocol-fill <PROTOCOL> --from-run",
+        )

@@ -330,3 +330,43 @@ class AreaSlot(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheWayAsData(unittest.TestCase):
+    """The one-explainer plan, Phase 2: a finding carries the command its
+    way out names as data (`GateFinding.step`, a `repo.Command`) and the
+    withdrawal a hold names first as data (`withdraw_first`); what is told
+    does not change — the twin of every site that passes a step."""
+
+    def test_a_step_changes_no_line(self):
+        from labkit.formats import repo
+
+        step = repo.Command(repo.ADOPT, "labkit-adopt experiments/01-x R1")
+        plain = gate.blocker("x", fix=f"`{step}` adopts it")
+        with_step = gate.blocker("x", fix=f"`{step}` adopts it", step=step)
+        self.assertEqual(with_step.line, plain.line)
+        self.assertEqual(with_step.message, plain.message)
+        self.assertEqual(str(step), step.line)
+        self.assertEqual(step.kind, repo.MECHANICAL)
+        with self.assertRaisesRegex(ValueError, "a command's name"):
+            repo.Command("dance", "x")
+
+    def test_withdraw_first_is_told_before_the_way_and_only_on_a_blocker(self):
+        from labkit.formats import repo
+
+        withdrawal = repo.Command(
+            repo.WITHDRAW, 'protocol-fill P --withdraw --why "<why>"'
+        )
+        held = gate.blocker("the code changed", fix="measure anew")
+        warned = gate.GateFinding(
+            gate.WARNING, "a note", fix="read it", evidence_kind=gate.GUARANTEED
+        )
+        first, same = gate.withdrawn_first([held, warned], withdrawal)
+        self.assertEqual(
+            first.line,
+            "BLOCKER: the code changed. Next: withdraw the adoption first "
+            '(`protocol-fill P --withdraw --why "<why>"`), then measure anew',
+        )
+        self.assertEqual(first.fix, "measure anew")  # the datum, not the words
+        self.assertIs(same, warned)
+        self.assertEqual(gate.withdrawn_first([held], None), [held])

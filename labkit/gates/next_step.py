@@ -63,10 +63,10 @@ from typing import TYPE_CHECKING
 from labkit.formats import evidence, handovers, protocol_block, protocol_check
 from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
+    MEASURE,
     area_protocols,
     audit_command,
     layout_root,
-    measure_command,
     shown,
     state_text,
     withdraw_command,
@@ -161,7 +161,7 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     filled = Findings(
         None,
         area=shown(area, Path.cwd()),
-        audit=audit_command(area, protocol=protocol),
+        audit=audit_command(area, protocol=protocol).line,
     )
     filled.take_all(g for g in gaps if g.grade == BLOCKER)
     held = filled.found
@@ -210,7 +210,8 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
 
 
 def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
-    """Per protocol of every area PATHS touch (`scope_sha.areas_touched`),
+    """Per protocol of every area PATHS touch (`scope_sha.areas_touched`,
+    and the area of a protocol registering one of PATHS as its report),
     `labkit-next`'s step for the state the caller judges — the index when
     STAGED (the commit's gates), else the tree (the stop) — as the console
     prints it (`Step.render`): the one action the stop, the commit's
@@ -219,10 +220,18 @@ def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
     protocol the index does not hold, is told in one line in the step's
     place; a run index that does not read once per index."""
     from labkit.formats.scope_sha import areas_touched
+    from labkit.gates.report_hold import registering_protocols
     from labkit.run.runlog import RunIndexError
 
+    # the areas the paths lie in, and the area of every protocol whose head
+    # registers a path among them as its report (a REPORT.md at the root
+    # lies in no area; report-check's hook entry reaches it the same way)
+    areas = [a.resolve() for a in areas_touched(paths, repo)]
+    for p in registering_protocols(paths, repo, staged=staged):
+        if p.parent.resolve() not in areas:
+            areas.append(p.parent.resolve())
     out: list[str] = []
-    for area in [a.resolve() for a in areas_touched(paths, repo)]:
+    for area in areas:
         named = shown(area, Path.cwd())
         for protocol in area_protocols(area):
             try:
@@ -378,7 +387,7 @@ def _held_step(
             f"{ctx.declared} ran it",
             f"the adoption and any report of the number: {len(held)} blocker(s) stand",
         )
-    refused = _refused_measurement(ctx, first.fix)
+    refused = _refused_measurement(ctx, first)
     if refused is not None:
         return replace(refused, next=refused.next + hint)
     return Step(
@@ -397,18 +406,19 @@ def _registered_report(ctx: "Checked") -> Path | None:
     return own_path(ctx.repo.resolve() / rel) if rel is not None else None
 
 
-def _refused_measurement(ctx: "Checked", fix: str | None) -> Step | None:
-    """The step when FIX, the way out of CTX's first hold, names a
-    measurement before any run answers and runlog's start gate would refuse
-    it now (`start_check.measurement_refusal`): the refusal's own first
-    step. None otherwise — with a stamped id only, the one a run binds to.
-    It named "measure" over an uncommitted registration, and runlog refused
+def _refused_measurement(ctx: "Checked", first: GateFinding) -> Step | None:
+    """The step when FIRST, CTX's first hold, names a measurement as its
+    step (`GateFinding.step`, `repo.MEASURE`) before any run answers and
+    runlog's start gate would refuse it now
+    (`start_check.measurement_refusal`): the refusal's own first step.
+    None otherwise — with a stamped id only, the one a run binds to. It
+    named "measure" over an uncommitted registration, and runlog refused
     (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
     from labkit.run import start_check
 
     if ctx.run is not None or ctx.head.id is None:
         return None
-    if measure_command(ctx.area) not in (fix or ""):
+    if first.step is None or first.step.name != MEASURE:
         return None
     gaps, first_step = start_check.measurement_refusal(ctx.area, ctx.protocol)
     if not gaps:

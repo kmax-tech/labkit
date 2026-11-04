@@ -9,6 +9,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The way out of a finding is data: every command builder returns a
+  `repo.Command`.** `adopt_command`, `withdraw_command`, `measure_command`,
+  `gate_command`, `contract_command`, `into_command`, `handover_command`,
+  `audit_command`, `decide_command`, `report_review_command`,
+  `report_blocks.discuss_command` and the new `render_command` return a
+  `Command` (`name`, `kind`, `line`; `str()` is the line, so a text that
+  embeds one reads as before — a caller that concatenated the string
+  reads `.line`). `GateFinding` gains `step` (the command its way out
+  names) and `withdraw_first` (the withdrawal a hold names first, told
+  by `way`); `ways_out.declared_first` is gone (`gate.withdrawn_first`
+  sets the datum). `next_step` finds a refused measurement and
+  `report_check.adoption_order_note` an adoption by the step's name,
+  never by the words of `fix`. Rendering is byte-equal. Last version
+  with string builders: 0.108.0.
 - **`finalize`'s note for a protocol that declares no result names
   `labkit-next AREA` and no step of its own.** finalize composed a list
   there — the analysis audit, its decisions, the report fields, then the

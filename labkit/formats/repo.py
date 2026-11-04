@@ -17,6 +17,7 @@ Two git calls, by what a non-zero exit means:
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import os
 import re
 import shlex
@@ -111,12 +112,81 @@ def area_path(arg: str) -> Path:
     return hits.pop() if hits else given
 
 
-#: the command that adopts a run — what every printed adoption line starts
-#: with, and what `report_check.adoption_order_note` recognises one by
+#: the command that adopts a run — what every printed adoption line starts with
 ADOPT_TOOL = "labkit-adopt"
 
+#: the kinds of a `Command`, fixed here so a reader of a finding's step —
+#: and the `--do` proposal, if it is ever triggered — has nothing to decide:
+#: MECHANICAL runs one of labkit's own checked writers (each refuses on its
+#: own and leaves the files as they were), CONTENT writes words labkit
+#: cannot know, RESEARCH is a model call or a judgement, DESTRUCTIVE
+#: discards or overwrites work (printed, never run)
+MECHANICAL, CONTENT, RESEARCH, DESTRUCTIVE = (
+    "mechanical",
+    "content",
+    "research",
+    "destructive",
+)
+#: the names of labkit's steps as commands (`Command.name`) and the kind of each
+ADOPT, INTO, WITHDRAW, WAIT, RENDER, CHECK = (
+    "adopt",
+    "into",
+    "withdraw",
+    "wait",
+    "render",
+    "check",
+)
+DISCUSS, HANDOVER = "discuss", "handover"
+MEASURE, AUDIT, DECIDE, REVIEW = "measure", "audit", "decide", "review"
+RESTORE, INIT = "restore", "init"
+COMMAND_KIND = {
+    ADOPT: MECHANICAL,
+    INTO: MECHANICAL,
+    WITHDRAW: MECHANICAL,
+    WAIT: MECHANICAL,
+    RENDER: MECHANICAL,
+    CHECK: MECHANICAL,
+    DISCUSS: CONTENT,
+    HANDOVER: CONTENT,
+    MEASURE: RESEARCH,
+    AUDIT: RESEARCH,
+    DECIDE: RESEARCH,
+    REVIEW: RESEARCH,
+    RESTORE: DESTRUCTIVE,
+    INIT: DESTRUCTIVE,
+}
 
-def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
+
+@dataclass(frozen=True)
+class Command:
+    """One of labkit's steps as a command: NAME (a key of `COMMAND_KIND`),
+    its `kind` from that table, and LINE, the shell line as its builder
+    renders it — the one spelling every gate prints. `str()` is the line,
+    so a finding's text embeds a command as before; code that decides
+    (`next_step`, `report_check.adoption_order_note`) reads `name` and
+    `kind`, never the line (the one-explainer plan, Phase 2)."""
+
+    name: str
+    line: str
+
+    def __post_init__(self) -> None:
+        if self.name not in COMMAND_KIND:
+            raise ValueError(
+                f"a command's name is one of {sorted(COMMAND_KIND)}, not {self.name!r}"
+            )
+        if not self.line.strip():
+            raise ValueError(f"a {self.name} command without its line")
+
+    @property
+    def kind(self) -> str:
+        """MECHANICAL, CONTENT, RESEARCH or DESTRUCTIVE (`COMMAND_KIND`)."""
+        return COMMAND_KIND[self.name]
+
+    def __str__(self) -> str:
+        return self.line
+
+
+def adopt_command(protocol: Path, run_id: str = "<run_id>") -> Command:
     """The `labkit-adopt` line that adopts RUN_ID as PROTOCOL's result — the
     adoption, the registered report's block and report-check in one step
     (`tools.adopt`) — the area named as the working directory reaches it,
@@ -130,10 +200,10 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> str:
     line = f"{ADOPT_TOOL} {shlex.quote(shown(area, here))} {run_id}"
     if len(area_protocols(area)) > 1:
         line += f" --protocol {shlex.quote(shown(protocol, here))}"
-    return line
+    return Command(ADOPT, line)
 
 
-def withdraw_command(protocol: Path) -> str:
+def withdraw_command(protocol: Path) -> Command:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —
     the way to replace a declaration: withdraw, audit, adopt. Where the
@@ -152,15 +222,18 @@ def withdraw_command(protocol: Path) -> str:
         if rel is not None
         else ""
     )
-    return f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"{into}'
+    return Command(
+        WITHDRAW,
+        f'protocol-fill {shown(protocol, Path.cwd())} --withdraw --why "<why>"{into}',
+    )
 
 
-def measure_command(area: Path) -> str:
+def measure_command(area: Path) -> Command:
     """The line that measures AREA: its stamped `scripts/01_measure.py` (every
     skeleton has one) with the repo's interpreter, the script as the working
     directory reaches it; the script opens its run through runlog."""
     script = shown(area / "scripts" / "01_measure.py", Path.cwd())
-    return f".venv/bin/python {shlex.quote(script)}"
+    return Command(MEASURE, f".venv/bin/python {shlex.quote(script)}")
 
 
 def measure_anew(area: Path) -> str:
@@ -169,19 +242,29 @@ def measure_anew(area: Path) -> str:
     return f"measure anew (`{measure_command(area)}`) and audit that run"
 
 
-def gate_command(tool: str, target: Path) -> str:
+def gate_command(tool: str, target: Path) -> Command:
     """The line that runs the check TOOL (`code-check`, `finalize`,
     `report-check`, `preflight`, `notes-check`) on TARGET, named as the
     working directory reaches it — the last step of a way out whose repair
     is by hand."""
-    return f"{tool} {shlex.quote(shown(target, Path.cwd()))}"
+    return Command(CHECK, f"{tool} {shlex.quote(shown(target, Path.cwd()))}")
 
 
-def contract_command(protocol: Path) -> str:
+def contract_command(protocol: Path) -> Command:
     """The `protocol-check … --contract` line that prints the fields PROTOCOL
     owes by occasion, the protocol named as the working directory reaches
     it (`shown`)."""
-    return f"protocol-check {shown(protocol, Path.cwd())} --contract"
+    return Command(CHECK, f"protocol-check {shown(protocol, Path.cwd())} --contract")
+
+
+def render_command(*, from_run: bool = False) -> Command:
+    """The `protocol-fill <PROTOCOL> --render` line that writes the result
+    section's generated lines again (FROM_RUN: `--from-run`, the Recorded
+    results line from the run) — the projection of an adoption, named
+    with the protocol as a placeholder: the result section's checks know
+    no path (`result_render`)."""
+    flag = "--from-run" if from_run else "--render"
+    return Command(RENDER, f"protocol-fill <PROTOCOL> {flag}")
 
 
 def report_fields_step(protocol: Path) -> str:
@@ -214,37 +297,42 @@ def next_after_run(protocol: Path, run_id: str) -> str:
     )
 
 
-def report_review_command(area: Path, report: Path, protocol: Path) -> str:
+def report_review_command(area: Path, report: Path, protocol: Path) -> Command:
     """The command that reviews REPORT on AREA, paths as seen from the
     working directory; `--protocol` only when the area has more than one."""
-    return audit_command(
+    line = audit_command(
         area, "--report-review", shown(report, Path.cwd()), protocol=protocol
-    )
+    ).line
+    return Command(REVIEW, line)
 
 
-def into_command(protocol: Path, report: Path) -> str:
+def into_command(protocol: Path, report: Path) -> Command:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them
     (`shown`), shell-quoted: a protocol named relative to the report and a
     report relative to the repo ran from neither (audit 2026-10-27, S2)."""
     here = Path.cwd()
-    return shlex.join(
-        ["protocol-fill", shown(protocol, here), "--into", shown(report, here)]
+    return Command(
+        INTO,
+        shlex.join(
+            ["protocol-fill", shown(protocol, here), "--into", shown(report, here)]
+        ),
     )
 
 
-def handover_command(protocol: Path, report: str = "REPORT.md") -> str:
+def handover_command(protocol: Path, report: str = "REPORT.md") -> Command:
     """The `protocol-fill … --handover` line for PROTOCOL into REPORT, its
     why and tried as placeholders; it runs no model."""
-    return (
+    return Command(
+        HANDOVER,
         f"protocol-fill {shlex.quote(shown(protocol, Path.cwd()))} --handover "
-        f'--why "<what blocks>" --tried "<what you tried>" --into {shlex.quote(report)}'
+        f'--why "<what blocks>" --tried "<what you tried>" --into {shlex.quote(report)}',
     )
 
 
 def audit_command(
     area: Path, *step: str, protocol: Path | None = None, base: Path | None = None
-) -> str:
+) -> Command:
     """The `labkit-audit` line for STEP on AREA, paths as BASE (the working
     directory by default) reaches them, every word shell-quoted, and
     `--protocol PROTOCOL` when the area holds more than one protocol — the
@@ -256,7 +344,7 @@ def audit_command(
     words = ["labkit-audit", shown(area, here), *step]
     if protocol is not None and len(area_protocols(area)) > 1:
         words += ["--protocol", shown(protocol, here)]
-    return shlex.join(words)
+    return Command(AUDIT, shlex.join(words))
 
 
 def decide_command(
@@ -269,16 +357,17 @@ def decide_command(
     not_assessable: str | None = None,
     protocol: Path | None = None,
     base: Path | None = None,
-) -> str:
+) -> Command:
     """The `labkit-audit … --decide N STATUS --why "REASON"
     [--not-assessable IDS] --record RECORD` line (`audit_command`): REASON
     in double quotes as given — a placeholder the reader replaces
     (`<why>`), never a ready-made reason —, IDS as given, RECORD as the
     caller shows it. The one builder of a printed decision."""
     ids = f" --not-assessable {not_assessable}" if not_assessable is not None else ""
-    return (
+    return Command(
+        DECIDE,
         f"{audit_command(area, protocol=protocol, base=base)} --decide {n} "
-        f'{status} --why "{reason}"{ids} --record {shlex.quote(record)}'
+        f'{status} --why "{reason}"{ids} --record {shlex.quote(record)}',
     )
 
 

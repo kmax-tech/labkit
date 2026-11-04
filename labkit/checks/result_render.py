@@ -37,7 +37,7 @@ from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.gate import GateFinding, blocker
-from labkit.formats.repo import git_root
+from labkit.formats.repo import git_root, render_command
 from labkit.formats.protocol_check import (
     RECORDED_RESULTS_LABEL,
     fields,
@@ -306,7 +306,9 @@ def _unregistered(protocol: Path, pid: str, run_dir: Path) -> str | None:
 
 
 #: the step that writes a protocol's result section from its run and records
-RENDER = "`protocol-fill <PROTOCOL> --render`"
+#: the two projections of an adoption the result section's holds name
+RENDER = render_command()
+FROM_RUN = render_command(from_run=True)
 
 
 def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
@@ -323,7 +325,8 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
         gaps.append(
             blocker(
                 "the Recorded results line is not written",
-                fix="`protocol-fill <PROTOCOL> --from-run` writes it from the run",
+                fix=f"`{FROM_RUN}` writes it from the run",
+                step=FROM_RUN,
             )
         )
     elif recorded_results != expected.recorded_results:
@@ -331,7 +334,8 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
             blocker(
                 "the Recorded results line differs from its rendering (the run's "
                 "metrics.json and the records' limits)",
-                fix=f"{RENDER} writes it again",
+                fix=f"`{RENDER}` writes it again",
+                step=RENDER,
             )
         )
     labels = [f.label.replace("†", "").strip() for f in fields(text)]
@@ -351,6 +355,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     f'"{label}" is written {n} times — one generated line per label',
                     fix="remove the extra line(s) by hand (`--render` rewrites one "
                     "and leaves the others)",
+                    step=RENDER,
                 )
             )
     have = {f.label.replace("†", "").strip(): f.value for f in fields(text)}
@@ -360,14 +365,16 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
             gaps.append(
                 blocker(
                     f'no "{label}" line — the limit\'s line belongs in the protocol',
-                    fix=f"{RENDER} writes it from the record",
+                    fix=f"`{RENDER}` writes it from the record",
+                    step=RENDER,
                 )
             )
         elif got != value:
             gaps.append(
                 blocker(
                     f'"{label}" differs from the record',
-                    fix=f"{RENDER} writes the record's line",
+                    fix=f"`{RENDER}` writes the record's line",
+                    step=RENDER,
                 )
             )
     expected_labels = {label for label, _ in expected.limits}
@@ -377,7 +384,8 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                 blocker(
                     f'"{label}" names a limit no covering record decides — written '
                     f"by hand or from an older record",
-                    fix=f"{RENDER} drops it",
+                    fix=f"`{RENDER}` drops it",
+                    step=RENDER,
                 )
             )
     return gaps

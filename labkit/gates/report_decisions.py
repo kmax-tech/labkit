@@ -67,13 +67,15 @@ def limit_gaps(ctx: Checked) -> list[GateFinding]:
                         f"{findings.limit_label(r, n)}: a BLOCKER decided limitation "
                         "owes its effect on the verdicts",
                         fix="decide it again: `"
-                        + decide_command(
-                            ctx.area,
-                            n,
-                            "limitation",
-                            "<why>",
-                            r.path.name,
-                            protocol=ctx.protocol,
+                        + str(
+                            decide_command(
+                                ctx.area,
+                                n,
+                                "limitation",
+                                "<why>",
+                                r.path.name,
+                                protocol=ctx.protocol,
+                            )
                         )
                         + "`",
                     )
