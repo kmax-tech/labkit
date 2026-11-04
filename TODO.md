@@ -13,6 +13,27 @@ Messungen sind Belege für ihren damaligen Stand, keine aktuellen Aufgabenlisten
 Ziel: fachlich korrekte Arbeit mit weniger Prüfpflichten abschließen.
 Nächster Schritt: den [gemeinsamen Wartbarkeitsplan](docs/notes/2026-11-03-maintainability-repair-plan.md) abarbeiten: zuerst ausgelassene Prompt-/Feldprüfungen und beschädigte Laufindizes, danach Rückzugsreihenfolge und Entscheidungshinweise. Beide Reviews sind zusammengeführt; unbestätigte Kandidaten erst reproduzieren. Zweitprüfung und Auswertungsfolge 17 → 18 bleiben bestehen.
 
+**Danach, vor der nächsten Nutzungsrunde (entschieden 2026-11-04): die
+Umfangsfrage als Format-und-Gate-Tabelle, nicht als Funktionsdurchgang.**
+Anlass: Seit Beginn der Vereinfachung (`76d81f78`) ist das Paket um 6 %
+und die Suite um 12 % gewachsen; die Reparaturen haben das Wachstum durch
+neue Verträge nicht ausgeglichen, und die einzige Streichung über
+Funktionsgröße war `repair_hint` (204 → 94 Zeilen). Der Umfang entsteht
+multiplikativ: Jedes Format ist Leser, Schreiber, Validierung und Tests,
+jedes Gate liest mehrere Formate — die Widersprüche der letzten Wochen
+saßen genau dort. Stand 2026-11-04 (Zeilen mit Docstrings; der Code allein
+sind 33.067 von 51.761, Docstrings 11.782): `formats` 15.745, `gates`
+11.676, `run` 7.336, `checks` 6.621. Peripherie getrennt bewerten, sie
+zählt nicht zur Frage nach den Schutzmechanismen: `tools` 6.389 (davon
+`scaffold.py` 2.166), `probes` 3.963. Lieferung: eine Seite unter
+`docs/notes/`, pro Format und pro Gate das gesicherte Glied der Kette
+(Absicht → Zusage → Code → Lauf → Zahl), die Leser und das Verdikt
+„bleibt / verschmilzt mit X / entfällt". Ein Format, das kein Gate liest,
+und ein Gate, das nur wiederholt, was ein anderes prüft, sind die
+Kandidaten; ihre Tests gehen mit ihnen. Erst danach die Nutzungsrunde, an
+der sich der Umfang misst: Kommen Agenten mit korrekten Ergebnissen
+verlässlicher und mit weniger Aufwand zum Abschluss?
+
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
 Linie für 1.0. Die fünf Umbauphasen sind umgesetzt; Verträge stehen in
