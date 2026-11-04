@@ -216,6 +216,16 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   and the order follows it. Code that could not be compared (a commit the
   clone lacks, no script recorded, a script gone or ambiguous) sets
   nothing and, as before, does not put the withdrawal first.
+- **`labkit-next` waits for a detached start before its run opens.** A
+  command `runlog start` detached that has not yet opened its run record
+  kept `runlog --wait` waiting, while `labkit-next` read the area as idle
+  and named the next step — "measure" before the first run, and the area
+  measured twice (`docs/notes/2026-11-04-liveness-and-wait.md`, case A).
+  Both now read one answer, `runlog.busy`: the open runs and the started
+  commands that no open run names by its pid. The twin refusal keeps its
+  own, narrower rule (the open runs of the same script): a start writes no
+  rows before its run opens.
+
 - **`runlog --wait` ends on a run that broke off while its process lives
   on.** A run that wrote failure.json is ended for `labkit-next` and the
   twin refusal (`runlog.still_open`, now the one rule of all three);

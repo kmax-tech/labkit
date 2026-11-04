@@ -46,7 +46,6 @@ no protocol to choose, or a protocol whose head does not read.
 from __future__ import annotations
 
 import argparse
-import sys
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -112,15 +111,21 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     ended = _restore_step(area) or _handed_over(area, protocol, text)
     if ended is not None:
         return ended
-    # a run still open comes first: read as nothing, it sent agents to
-    # measure again beside it (reference pilot 2026-11-01, task 15)
-    from labkit.run.runlog import open_runs
+    # a run still going comes first, as `runlog --wait` sees it: read as
+    # nothing, an open run sent agents to measure again beside it (reference
+    # pilot 2026-11-01, task 15), a detached start before its record a
+    # second time after it (2026-11-04, case A of the liveness note)
+    from labkit.run.runlog import busy
 
-    still = open_runs(area)
+    still = busy(area)
     if still:
-        names = ", ".join(r.run_id for r in still)
+        names = ", ".join(
+            [r.run_id for r in still.runs]
+            + [f"pid {s.pid} (started by runlog start)" for s in still.unopened]
+        )
+        many = len(still.runs) + len(still.unopened) > 1
         return Step(
-            f"{names} {'is' if len(still) == 1 else 'are'} still running in "
+            f"{names} {'are' if many else 'is'} still running in "
             f"{shown(area, Path.cwd())}",
             f"`runlog {shown(area, Path.cwd())} --wait` waits for it; then "
             f"`labkit-next` again",
@@ -455,5 +460,6 @@ def main(argv: list[str]) -> int:
 
 
 def cli() -> None:
-    """Console-script entry point."""
-    sys.exit(main(sys.argv[1:]))
+    """Console-script entry point; a refusal raised on the way (a detached
+    start's record that does not read) exits 2 (`console.exit_with`)."""
+    console.exit_with(main)

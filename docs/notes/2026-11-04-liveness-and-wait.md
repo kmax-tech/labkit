@@ -111,3 +111,18 @@ them reconstructible.
   `test_a_run_that_broke_off_while_its_process_lives_ends_the_wait`; its
   twin, a live run without failure.json, still waits:
   `test_running_run_exits_3_at_max_seconds`).
+- **A (N1) — one answer for "is the area busy".** `runlog.busy` (pure
+  core `busy_of`): the open runs and the detached starts still running
+  that no open run names by its pid. `labkit-next` and `runlog --wait` /
+  `runlog AREA` read it; `_unopened` in the command is gone. After the
+  repair the probe's `labkit-next` says "pid … (started by runlog start)
+  is still running … `runlog <area> --wait` waits for it", beside
+  `--wait` exit 3. Test: `tests/test_next_step.py`,
+  `ADetachedStartBeforeItsRecord` (fails on `f1ff7723`'s `next_step`;
+  twin and recovery in the same test: once the command ended, the step is
+  to measure again). The twin refusal keeps its own rule: it refuses a
+  second writer of the same rows at the moment a run opens, and a start
+  writes none before that. It therefore still lets a foreground run of
+  the script pass beside a pending start; whichever opens second while the
+  other is open is refused, and two runs one after the other remain
+  possible for an agent that ignores `labkit-next` (open below).

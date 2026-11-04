@@ -92,7 +92,8 @@ from types import TracebackType
 from collections.abc import Iterator
 
 from labkit.formats.runs import metrics_path, patch_path, run_path
-from labkit.run import batch, code_repos
+from labkit.run import batch, code_repos, detached
+from labkit.run.detached import DetachedStart
 from labkit.formats import console, repo
 from labkit.formats.files import write_atomic
 from labkit.formats.gate import with_way_out
@@ -918,6 +919,39 @@ def still_open(r: ActiveRun) -> bool:
 def open_runs(base_dir: str | Path) -> list[ActiveRun]:
     """The runs of BASE_DIR still open (`still_open`)."""
     return [r for r in active(base_dir) if still_open(r)]
+
+
+@dataclass(frozen=True)
+class Busy:
+    """What keeps an area busy: its open runs (`still_open`) and the
+    commands `runlog start` detached that still run and that no open run
+    names by its pid (`unopened`) — a stamped script prepares its rows
+    before `runlog.run` opens the record, a wrapper's run records another
+    pid. Empty: the area is idle."""
+
+    runs: list[ActiveRun]
+    unopened: list[DetachedStart]
+
+    def __bool__(self) -> bool:
+        return bool(self.runs or self.unopened)
+
+
+def busy_of(live: list[ActiveRun], starts: list[DetachedStart]) -> Busy:
+    """The Busy of an area whose runs `active` lists as LIVE and whose
+    detached starts are STARTS (`detached.starts`). Pure: `runlog --wait`
+    reads both once per poll and tells the failures apart from them."""
+    open_now = [r for r in live if still_open(r)]
+    pids = {r.config.pid for r in open_now if r.config is not None}
+    return Busy(open_now, [s for s in starts if s.running and s.pid not in pids])
+
+
+def busy(base_dir: str | Path) -> Busy:
+    """Is BASE_DIR busy (`Busy`)? The one answer `labkit-next` and `runlog
+    --wait` give to "is a run still going here". The twin refusal reads
+    only `open_runs`: it refuses a second writer of the same rows, and a
+    start writes none before its run opens. Raises console.Refused on a
+    start record that does not read (`detached.starts`)."""
+    return busy_of(active(base_dir), detached.starts(Path(base_dir)))
 
 
 def open_twins(base_dir: str | Path, script: str) -> list[ActiveRun]:

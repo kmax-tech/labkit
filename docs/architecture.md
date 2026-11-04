@@ -421,6 +421,7 @@ evidence** (warns), **agent audit** (semantic).
 | Does an output file account for its input, item by item? | `batch.Store.ledger` (missing, duplicate, stray, stale per expected field); `require_complete()` inside the run keeps it from completing |
 | Which runs wrote a JSONL file's rows? | `batch.row_runs` (per-row `_prov.run`); runlog names the runs a resumed file continues, finalize holds every row to the run |
 | Is the recording process alive? | `runs.is_alive` |
+| Is a run still open? Is the area busy? | `runlog.still_open` (`open_runs`; the twin refusal reads the open runs of the same script), `runlog.busy` (the open runs and the detached starts no open run names: `labkit-next`, `runlog --wait`, `runlog AREA`) |
 | Which protocol does a new run bind to? | `start_check.protocol_binding` |
 | What refuses a run before its directory exists, in which order? | `runlog.Run.__init__` (the registration, the detach gate where required and not already detached, the index header, data leakage, then for a full run `start_check.freeze_gate`: undecided blockers, the freeze or the registration, the acknowledgement over a failed audit); `start_check.prepare` refuses what cannot be read before any check |
 | Which run answers for a protocol? | `answering_run.bound_answering_run` (the choice; `intent_check.choose_explicit` takes a named run; `recheck.chosen_run` is the same choice behind `--check` and `--from-run`) |

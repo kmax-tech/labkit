@@ -37,6 +37,7 @@ from labkit.run.detached import DetachedStart
 from labkit.run.runlog import (
     ActiveRun,
     active,
+    busy_of,
     notify_desktop,
     reindex,
     still_open,
@@ -59,17 +60,6 @@ def _newest_output(area: Path) -> str:
         return ""
     age = int(time.time() - newest.stat().st_mtime)
     return f"output: {newest.name} {lines} line(s), last write {age}s ago"
-
-
-def _unopened(
-    starts: list[DetachedStart], live: list[ActiveRun]
-) -> list[DetachedStart]:
-    """The STARTS still running that no open run of LIVE names by its pid:
-    a stamped script prepares its rows before `runlog.run` opens the
-    record; a wrapper process's run records another pid (`_unopened_words`
-    tells the two apart)."""
-    pids = {r.config.pid for r in live if r.config is not None}
-    return [s for s in starts if s.running and s.pid not in pids]
 
 
 def _unopened_words(live: list[ActiveRun]) -> tuple[str, str]:
@@ -238,13 +228,12 @@ def _print_failures(
 def _wait(
     area: str, max_seconds: float | None, interval: float, follow: bool, notify: bool
 ) -> int:
-    """Block until the area is idle: no open runs (`runlog.still_open`, the
-    rule `labkit-next` and the twin refusal read: a run that wrote
-    failure.json is ended, even while its process lives on) and no command
-    `runlog start` detached that still runs without one (`_unopened`). Exit
-    codes are the contract: 0 = idle (finished) · 2 = a run crashed or broke
-    off, or a started
-    command ended without a run record and not with exit 0
+    """Block until the area is idle (`runlog.busy_of`, the answer
+    `labkit-next` gives too): no open run (`runlog.still_open`: a run that
+    wrote failure.json is ended, even while its process lives on) and no
+    command `runlog start` detached that still runs without one. Exit codes
+    are the contract: 0 = idle (finished) · 2 = a run crashed or broke off,
+    or a started command ended without a run record and not with exit 0
     (`_failed_starts`) · 3 = still running at --max-seconds.
 
     What it waits for is what is open when it begins and what opens while
@@ -261,10 +250,10 @@ def _wait(
     while True:
         live = active(area)
         starts = detached.starts(apath)
-        pending = _unopened(starts, live)
+        now = busy_of(live, starts)
+        running, pending = now.runs, now.unopened
         failed_starts = _failed_starts(apath, starts)
         failed = [r for r in live if not still_open(r)]
-        running = [r for r in live if still_open(r)]
         if earlier is None:
             earlier = (
                 {r.run_id for r in failed} | {_start_key(s) for s in failed_starts}
@@ -634,7 +623,8 @@ def main(argv: list[str]) -> int:
         return _wait(shown, args.max_seconds, args.interval or 2.0, False, args.notify)
     live = active(area)
     starts = detached.starts(area)
-    _print_status(shown, live, _unopened(starts, live), _failed_starts(area, starts))
+    unopened = busy_of(live, starts).unopened
+    _print_status(shown, live, unopened, _failed_starts(area, starts))
     _print_finished(area)
     return 0
 

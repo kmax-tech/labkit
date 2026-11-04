@@ -147,6 +147,74 @@ class TheChain(unittest.TestCase):
         self.assertIn("  next:  ", out)
 
 
+class ADetachedStartBeforeItsRecord(unittest.TestCase):
+    """`labkit-next` said "measure" while `runlog --wait` waited for a
+    command `runlog start` detached that had not opened its run yet;
+    following it, the area measured twice (2026-11-04, case A of
+    docs/notes/2026-11-04-liveness-and-wait.md). Real processes: a start
+    whose command holds until a flag file exists."""
+
+    def test_the_start_comes_first_and_the_step_returns_once_it_ended(self):
+        import time
+
+        from labkit.run import detached, runlog_command
+
+        lab = Lab()
+        self.addCleanup(lab.close)
+        area, protocol = stamp_count(lab)
+        flag = Path(lab.tmp.name) / "go"
+        self.addCleanup(flag.touch)  # never leave the command behind
+        hold = (
+            "import pathlib, time\n"
+            f"while not pathlib.Path({str(flag)!r}).exists():\n"
+            "    time.sleep(0.05)\n"
+        )
+        rel = str(area.relative_to(lab.root))
+
+        def runlog(*argv: str) -> tuple[int, str]:
+            out = io.StringIO()
+            old = Path.cwd()
+            os.chdir(lab.root)
+            try:
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                    rc = runlog_command.main(list(argv))
+            finally:
+                os.chdir(old)
+            return rc, out.getvalue()
+
+        def step() -> next_step.Step:
+            old = Path.cwd()
+            os.chdir(lab.root)
+            try:
+                return next_step.next_step(area, protocol.resolve())
+            finally:
+                os.chdir(old)
+
+        rc, out = runlog(
+            "start", rel, "--max-seconds", "0.3", "--", sys.executable, "-c", hold
+        )
+        self.assertEqual(rc, 3, out)  # still starting: no run record yet
+        pid = out.split("pid=")[1].split()[0]
+        self.assertFalse((area / "runs").exists())
+        now = step()
+        self.assertIn(
+            f"pid {pid} (started by runlog start) is still running", now.where
+        )
+        self.assertIn("--wait", now.next)
+        self.assertNotIn("01_measure.py", now.next)
+        rc, out = runlog(rel, "--wait", "--max-seconds", "0.3", "--interval", "0.1")
+        self.assertEqual(rc, 3, out)  # the same answer: still running
+        # the twin: once the command ended, the step is to measure again
+        flag.touch()
+        deadline = time.monotonic() + 30
+        while any(s.running for s in detached.starts(area)):
+            self.assertLess(time.monotonic(), deadline, "the start never ended")
+            time.sleep(0.05)
+        now = step()
+        self.assertNotIn("still running", now.where)
+        self.assertIn("01_measure.py", now.next)
+
+
 class BeforeTheChain(unittest.TestCase):
     def _bare(self, cwd: Path) -> tuple[int, str, str]:
         """`labkit-next` without an area, from CWD."""
