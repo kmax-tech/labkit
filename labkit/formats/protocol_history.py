@@ -38,6 +38,7 @@ from labkit.formats.repo import (
     commit_known,
     git_root,
     git_run,
+    own_path,
     text_at,
 )
 
@@ -157,18 +158,21 @@ def registration_missing(shown: str, kind_now: str | None = None) -> list[str]:
 NO_COMMIT = "no commit"
 UNKNOWN_COMMIT = "unknown commit"
 NOT_COMMITTED = "not committed"
+UNREADABLE_COMMIT = "unreadable"
 
 
 @dataclass(frozen=True)
 class CommittedAt:
     """A protocol as the commit one run recorded holds it: TEXT, or None
-    with CAUSE (`NO_COMMIT`, `UNKNOWN_COMMIT`, `NOT_COMMITTED`); COMMIT the
-    full sha the run recorded, None without one."""
+    with CAUSE (`NO_COMMIT`, `UNKNOWN_COMMIT`, `NOT_COMMITTED`,
+    `UNREADABLE_COMMIT` with git's own words in DETAIL); COMMIT the full
+    sha the run recorded, None without one."""
 
     run: str
     commit: str | None
     text: str | None
     cause: str | None
+    detail: str = ""
 
 
 def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
@@ -188,8 +192,29 @@ def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
         return CommittedAt(rd.dir.name, commit, None, UNKNOWN_COMMIT)
     text = text_at(root, path, commit)
     if text is None:
+        # `text_at` says None for an absent file and for git failing alike:
+        # a commit git cannot read is no "nothing stood before the number"
+        unread = _unreadable_at(root, path, commit)
+        if unread:
+            return CommittedAt(rd.dir.name, commit, None, UNREADABLE_COMMIT, unread)
         return CommittedAt(rd.dir.name, commit, None, NOT_COMMITTED)
     return CommittedAt(rd.dir.name, commit, text, None)
+
+
+def _unreadable_at(root: Path, path: Path, commit: str) -> str:
+    """Git's words when it cannot read PATH at COMMIT in ROOT — its tree, or
+    the file it lists there; "" when the commit's tree reads and does not
+    list PATH (the file was not committed). Exit codes decide, not words."""
+    rel = own_path(path).relative_to(root.resolve()).as_posix()
+    listed = git_run(["ls-tree", commit, "--", rel], root)
+    if listed.returncode != 0:
+        return (
+            " ".join(listed.stderr.split()) or f"git ls-tree exits {listed.returncode}"
+        )
+    if not listed.stdout.strip():
+        return ""
+    shown = git_run(["show", f"{commit}:{rel}"], root)
+    return " ".join(shown.stderr.split()) or f"git show exits {shown.returncode}"
 
 
 def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:

@@ -156,6 +156,7 @@ from labkit.formats.answering_run import (
 from labkit.formats.protocol_history import (
     NO_COMMIT,
     UNKNOWN_COMMIT,
+    UNREADABLE_COMMIT,
     committed_at,
     registration_missing,
 )
@@ -199,6 +200,7 @@ from labkit.formats.repo import (
     area_protocols,
     audit_command,
     choose_protocol,
+    gate_command,
     git_root,
     indexed_protocols,
     measure_command,
@@ -388,6 +390,18 @@ def _registration_at(
             )
         ]
     assert commit is not None, "a recorded commit the repository holds"
+    if then.cause == UNREADABLE_COMMIT:
+        return [
+            blocker(
+                f"{ctx.protocol.name} at {at} ({commit[:12]}{among}) cannot be read: "
+                f"{then.detail} — the registration that stood before the number "
+                f"cannot be told (LAB-003 No run without an intent paragraph)",
+                fix=f"make it readable: restore the repository's missing objects "
+                f"(`git fsck` names them) or fetch them from a clone that has them "
+                f"(`git fetch`), then `{gate_command('report-check', ctx.area)}`; "
+                f"where they are lost, {anew}",
+            )
+        ]
     if then.text is None:
         return [
             blocker(

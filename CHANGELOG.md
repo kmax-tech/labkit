@@ -132,6 +132,18 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **A first measurement's commit git cannot read is named as such.** The
+  registration station of report-check and the binding of the registered
+  report read the protocol as the first measurement's commit holds it
+  (`protocol_history.committed_at`). `repo.text_at` says None for a file
+  the commit lacks and for git failing alike, so a missing tree or blob
+  was told "was not committed — nothing stood before the number", whose
+  way out did not apply. Exit codes now tell the two apart
+  (`UNREADABLE_COMMIT` with git's own words); the hold names the run,
+  git's reason and the way back (`git fsck`, `git fetch`, then
+  report-check; else a new registration). A protocol the commit truly
+  lacks keeps its sentence.
+
 - **The line under a `fixed` decision explains and points to
   `labkit-next`; it names no action of its own.** `audit_decisions.repair_hint`
   chose its own next step and contradicted labkit-next in state after

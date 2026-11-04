@@ -33,9 +33,10 @@ def git(root: Path, *args: str) -> str:
     ).stdout.strip()
 
 
-class UnreadFirstMeasurement(e2e.CorrectionCommands):
+class ChangedQuestion(e2e.CorrectionCommands):
     """Run A measured (the fixture), then the question changed and
-    committed: finalize owes the hold of the changed question."""
+    committed: finalize owes the hold of the changed question. A base
+    without tests of its own."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -77,6 +78,8 @@ class UnreadFirstMeasurement(e2e.CorrectionCommands):
         self.assertIn("register anew", line)
         self.assertNotIn("are the ones the first measurement registered", out)
 
+
+class UnreadFirstMeasurement(ChangedQuestion):
     def test_the_twin_a_readable_first_measurement_holds_the_changed_question(self):
         out = self.finalized()
         self.assertIn(self.HELD, out)
@@ -106,3 +109,29 @@ class UnreadFirstMeasurement(e2e.CorrectionCommands):
         )
         self.lab.commit("the patch run A recorded, as an older labkit wrote it")
         self.assert_unread_blocks(self.finalized(), "apply")
+
+
+class UnreadCommitAtTheRegistrationStation(ChangedQuestion):
+    """report-check's registration station reads the protocol as the first
+    measurement's commit holds it (`protocol_history.committed_at`). A
+    commit git cannot read was told "was not committed — nothing stood
+    before the number", a cause that did not hold and a way out that did
+    not apply. It names git's failure and the way back; the twin, a
+    protocol the commit truly lacks, keeps its sentence."""
+
+    def station(self) -> list[str]:
+        from labkit.gates import report_check, report_context
+
+        ctx = report_context.checked(self.area, self.protocol)
+        return [f.line for f in report_check.registration_gaps(ctx)]
+
+    def test_an_unreadable_commit_is_named_as_unreadable(self):
+        tree = git(self.lab.root, "rev-parse", f"{self.commit_of_a()}^{{tree}}")
+        where = self.remove_object(tree)
+        (line,) = self.station()
+        self.assertIn("cannot be read", line)
+        self.assertIn(self.run_a, line)
+        self.assertNotIn("was not committed", line)
+        self.assertIn("git fsck", line)
+        shutil.move(str(self.kept / tree), str(where))
+        self.assertEqual(self.station(), [])

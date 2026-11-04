@@ -490,6 +490,7 @@ _UNREAD = {
     protocol_history.UNKNOWN_COMMIT: "it recorded a commit this repository does "
     "not hold (a rewritten history, a shallow clone)",
     protocol_history.NOT_COMMITTED: "its commit does not hold the protocol",
+    protocol_history.UNREADABLE_COMMIT: "git cannot read the protocol at its commit",
 }
 
 
@@ -504,7 +505,8 @@ def bound_reports(protocol: Path, pid: str, root: Path) -> BoundReports:
     for rd in first_measurements(protocol.parent, pid, root):
         then = protocol_history.committed_at(protocol, rd, root)
         if then.text is None:
-            unread.append((then.run, _UNREAD[then.cause or ""]))
+            why = _UNREAD[then.cause or ""]
+            unread.append((then.run, f"{why} ({then.detail})" if then.detail else why))
             continue
         try:
             head = protocol_block.head(then.text)
@@ -554,7 +556,8 @@ def report_binding_gap(
             f"{name_p}: which report its first measurement {run} stood under cannot "
             f"be read — {why}; a report dropped or moved since cannot be told",
             fix="fetch that commit from a clone that has it (`git fetch "
-            f"--unshallow` in a shallow clone); else {anew}",
+            "--unshallow` in a shallow clone), or restore the repository's missing "
+            f"objects (`git fsck` names them); else {anew}",
         )
     if len(values) > 1:
         named = ", ".join(
