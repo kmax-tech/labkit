@@ -22,6 +22,7 @@ import json
 from datetime import datetime, timezone
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -689,6 +690,26 @@ class MeasuredRunsKeepTheirSecond(CountCommands):
         (2026-11-04: `…10-10-50_4f01` beside `…10-10-50_4c7a`)."""
         a, b = self.measure(), self.measure()
         self.assertNotEqual(a[: len(_SECOND)], b[: len(_SECOND)])
+
+
+class TwoRunsInOneSecondAreRefused(CountCommands):
+    """The refusal the fixture now steers clear of (`measure`), held on its
+    own and deterministically: a second completed run whose id carries the
+    first one's second leaves the answering run's choice blocked, and
+    finalize says so with its way out instead of holding or passing on a
+    run chosen by chance (`answering_run.same_second_rival`)."""
+
+    def test_a_second_run_in_the_same_second_blocks_finalize(self):
+        first = self.measure()
+        twin = (
+            first[: len(_SECOND)] + "_" + ("0000" if first[-4:] != "0000" else "ffff")
+        )
+        shutil.copytree(self.area / "runs" / first, self.area / "runs" / twin)
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("started in the same second", out)
+        self.assertIn("move the one that does not answer out of runs/", out)
+        self.assertNotIn("finalize: all clear", out)
 
 
 class Withdraw(CountCommands):
