@@ -8,6 +8,7 @@ from pathlib import Path
 
 from labkit.gates import audit_decisions, audit_reply
 from labkit.formats import findings
+from labkit.formats.repo import shown
 from labkit.formats import audit_gaps
 from protocol_fixture import registration_of  # noqa: E402
 
@@ -712,16 +713,14 @@ class DecisionList(unittest.TestCase):
         self.assertNotRegex(text, r"\n  3 · ")
         self.assertIn("reading hints — not recorded, nothing to decide", text)
         self.assertIn("READ · PROTOCOL-x.md:5", text)
-        # a BLOCKER is named by its cause (`ways_out.WAYS_OUT`), each with what closes it
-        # (ninth haiku round, t5: the bar moved to the score after the audit)
-        self.assertIn("before deciding a BLOCKER, name which of these it is", text)
-        self.assertIn("an implementation error", text)
-        self.assertIn("the criterion is missed: that is the result", text)
-        self.assertIn("LAB-042 Log the outcome — failures too", text)
-        self.assertIn("an invalid registration", text)
-        self.assertIn("it is not repaired in place", text)
-        self.assertIn('naming the earlier one in `[replaces] protocol = "<id>"`', text)
-        self.assertIn("a new approach never turns an earlier miss into a pass", text)
+        # an open BLOCKER is decided by its cause (ninth haiku round, t5: the
+        # bar moved to the score after the audit): the list prints the one
+        # line that says so and where the ways out stand (the guide), with
+        # the area as shown — not the routes themselves
+        self.assertIn(
+            audit_decisions.CAUSE_FIRST.format(area=shown(area, Path.cwd())), text
+        )
+        self.assertNotIn("an implementation error", text)
         commands = [ln.strip() for ln in lines if "--decide" in ln and "--record" in ln]
         self.assertEqual(len(commands), 2, text)
         for cmd, status in zip(commands, ("fixed", "false-positive")):

@@ -1,10 +1,11 @@
 """ways_out — what a BLOCKER is, the ways out of one by its cause, and the
-handover sentence: the texts `labkit-audit` prints with every decision
-list and report-check prints in its holds. Model-free, so the release gate
-reads them without loading a model backend (audit 2026-10-27, third, M1);
-the stamped AGENTS.md states the same ways ("When you are stuck") and
-`tests/test_ways_out.py` holds both to the same names and every command to
-a real one.
+handover sentence: the texts the analysis auditor's prompt shows and
+report-check prints in its holds. Model-free, so the release gate reads
+them without loading a model backend (audit 2026-10-27, third, M1); the
+agent guide states the same ways ("When you are stuck", `labkit-next
+--guide`) and `tests/test_ways_out.py` holds both to the same names and
+every command to a real one. The decision list prints none of them: it
+names the cause rule and where the ways stand (`audit_decisions.CAUSE_FIRST`).
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from pathlib import Path
 from labkit.formats.gate import BLOCKER, GateFinding
 from labkit.formats.repo import withdraw_command
 
-#: what a BLOCKER is and what closes it, printed above the decisions: an
+#: what a BLOCKER is and what closes it, shown to the analysis auditor: an
 #: agent whose code missed the registered bar moved the bar to the score
 #: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit).
 #: A route promises only what a gate checks: report-check holds the fields
@@ -24,10 +25,12 @@ from labkit.formats.repo import withdraw_command
 #: registration the first measurements recorded
 #: (`finalize.registration_changes`) — a bar lowered after it and
 #: measured again is held
-#: the ways out of a BLOCKER, by its cause: (name, what to do). Printed with
-#: every decision list (`blocker_routes`) and stated in the stamped AGENTS.md
-#: ("When you are stuck"); tests/test_ways_out.py holds both to the same
-#: names and every command to a real one. The repair case (2026-10-27)
+#: the ways out of a BLOCKER, by its cause: (name, what to do). Shown to the
+#: analysis auditor (`blocker_routes`, in `audit_prompt`) and stated in the
+#: agent guide ("When you are stuck", `labkit-next --guide`); the decision
+#: list names the guide, not the ways (`audit_decisions.CAUSE_FIRST`).
+#: tests/test_ways_out.py holds guide and list to the same names and every
+#: command to a real one. The repair case (2026-10-27)
 #: took the invalid-registration route for a missed criterion and moved
 #: its bars inside it: the miss comes first, a new registration declares
 #: what it changes (K1–K3, docs/notes/2026-10-27-new-registration-contracts.md).
@@ -153,52 +156,6 @@ WAYS_OUT = (
         "protocol-fill; never --no-verify",
     ),
 )
-#: each way out in one line, as the decision list prints it: when it is
-#: the cause, and the next step — the whole text stands in WAYS_OUT and
-#: AGENTS.md ("When you are stuck"); the cold agent of the declared-run case
-#: found the full list hard to filter
-WAYS_OUT_SHORT = {
-    "an implementation error": (
-        "the code does not do what the registration says → fix it (an adopted "
-        "result: `--withdraw` first), decide `fixed`, measure again, audit"
-    ),
-    "a missed criterion": (
-        "the code is right and the criterion is missed: that is the result → "
-        "report the miss first (LAB-042 Log the outcome — failures too); never "
-        "move the bar"
-    ),
-    UNJUDGED_PROMISE: (
-        "a fault you cannot fix → `limitation` with `--not-assessable <ID>`; the "
-        "numbers stay description"
-    ),
-    "an invalid registration": (
-        "the question cannot be answered as written: it is not repaired in place "
-        '→ register anew, naming the earlier one in `[replaces] protocol = "<id>"`, '
-        "exploratory; a new approach never turns an earlier miss into a pass"
-    ),
-    "an incomplete registration": (
-        "report-check names a field missing at the first measurement → "
-        "register anew with `[replaces]`, or hand over"
-    ),
-    "a wrong adoption": (
-        "the measurement stands, the head adopted a run that does not answer → "
-        "`--withdraw`, decide `fixed`, audit again, then `labkit-adopt`; no new "
-        "measurement"
-    ),
-    "none of these": (
-        "a way out cannot be taken for a missing prerequisite you can name → "
-        "`--handover`, which records the open BLOCKERs; never `--no-verify`"
-    ),
-}
-#: the one-line form of NO_PROMISE_ROUTE
-NO_PROMISE_SHORT = (
-    "a fault you cannot fix, no promise registered → `limitation` with the limit "
-    "named, or hand over"
-)
-#: where every way out stands in full
-WAYS_OUT_IN_FULL = 'each in full: AGENTS.md, "When you are stuck"'
-
-
 #: the unjudged-promise cause's way out where the protocol registers no
 #: promise — a computation has no [[promise]] table, and `--decide` refuses
 #: every id an effect names there (`audit_decisions._registered`); the routes left
@@ -211,22 +168,20 @@ NO_PROMISE_ROUTE = (
 )
 
 
-def blocker_routes(promised: bool, *, full: bool) -> tuple[str, ...]:
-    """The ways out of a BLOCKER by its cause — FULL as WAYS_OUT states them
-    (shown to the analysis auditor), else one line each (WAYS_OUT_SHORT,
-    printed with a decision list) and where they stand in full; for a
-    protocol that registers no promise (not PROMISED) the unjudged-promise
-    route as NO_PROMISE_ROUTE or NO_PROMISE_SHORT."""
+def blocker_routes(promised: bool) -> tuple[str, ...]:
+    """The ways out of a BLOCKER by its cause, as WAYS_OUT states them —
+    the lines the analysis auditor's prompt shows; for a protocol that
+    registers no promise (not PROMISED) the unjudged-promise route as
+    NO_PROMISE_ROUTE."""
 
     def what(name: str, text: str) -> str:
         if name == UNJUDGED_PROMISE and not promised:
-            return NO_PROMISE_ROUTE if full else NO_PROMISE_SHORT
-        return text if full else WAYS_OUT_SHORT[name]
+            return NO_PROMISE_ROUTE
+        return text
 
     return (
         "  before deciding a BLOCKER, name which of these it is:",
         *(f"    {name}: {what(name, text)}" for name, text in WAYS_OUT),
-        *(() if full else (f"    ({WAYS_OUT_IN_FULL})",)),
     )
 
 

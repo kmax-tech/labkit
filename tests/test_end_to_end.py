@@ -750,8 +750,11 @@ class Withdraw(CountCommands):
         self.assertEqual(rc, 1, out)
         # the audit reads the adopted run, so no other run is declared
         self.assertNotIn("the protocol's [result] names", prompt)
-        self.assertIn("a wrong adoption", out)  # the way out, where it is decided
-        self.assertIn("--withdraw", out)
+        # the ways out by cause are the auditor's (the prompt) and the guide's;
+        # the decision list names where they stand and `labkit-next`
+        self.assertIn("a wrong adoption", prompt)
+        self.assertIn("--withdraw", prompt)
+        self.assertIn("stand in `labkit-next --guide`", out)
         record = self.record
         assert record is not None
         self.decide(record, 1, "fixed", "the wrong declaration withdrawn")

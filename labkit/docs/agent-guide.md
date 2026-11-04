@@ -315,8 +315,8 @@ rebuilds the ignored run index `runs.tsv`.
 Name the cause before you change anything. An honest handover without a
 result is an admissible end. A refusal alone is no reason to hand over: it
 names its next step. Hand over only if a way out needs a prerequisite that
-is missing, and name it. `--no-verify` is never a way out. `labkit-audit`
-prints these ways out with each decision list:
+is missing, and name it. `--no-verify` is never a way out. The decision list
+names this section; the ways out, one per cause:
 
 - **an implementation error** — The code does not do what the
   registration says. If the protocol has adopted a result, withdraw it

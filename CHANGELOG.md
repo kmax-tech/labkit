@@ -5,6 +5,32 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## 0.109.0 — 2026-11-04
+
+### Breaking
+
+- **`finalize`'s note for a protocol that declares no result names
+  `labkit-next AREA` and no step of its own.** finalize composed a list
+  there — the analysis audit, its decisions, the report fields, then the
+  adopt command (`finalize.undeclared_hint`); the one line
+  (`finalize.undeclared_note`) now points to the one explainer, so the
+  console and finalize never name two different next steps (finalize is
+  a station of `next`'s chain, so it cannot print the step itself). The
+  orientation rule "every line to the adoption names the report fields
+  first" no longer covers finalize's note: `next`'s order decides, and
+  the adoption's refusal names the fields it lacks. Last version with the
+  composed note: 0.108.0.
+- **The decision list prints no ways out of a BLOCKER.** `labkit-audit`
+  printed the nine routes in a one-line form with every decision list
+  that held an open BLOCKER (`ways_out.blocker_routes(full=False)`,
+  `WAYS_OUT_SHORT`); the list now prints one line
+  (`audit_decisions.CAUSE_FIRST`): name the cause first, the ways out
+  stand in `labkit-next --guide` ("When you are stuck"), `labkit-next
+  AREA` names the step. The analysis auditor's prompt keeps the full
+  routes (`blocker_routes(promised)`, no `full`); the agent guide and the
+  stamped `AGENTS.md` say where they stand. Last version printing the
+  short routes: 0.108.0.
+
 ## 0.108.0 — 2026-11-04
 
 ### Breaking

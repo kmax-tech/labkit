@@ -131,10 +131,10 @@ yourself: a green gate proves only what it checks.
 
 ## When you are stuck
 
-Name the cause before you change anything. With each decision list,
-`labkit-audit` prints the recovery routes. A refusal alone is no reason to
-stop: it names its next step. If a route needs a prerequisite that is
-missing, hand over without a result. Name the missing prerequisite:
+Name the cause before you change anything. The ways out stand in
+`labkit-next --guide`, "When you are stuck". A refusal alone is no reason
+to stop: it names its next step. If a route needs a missing prerequisite,
+hand over without a result. Name the missing prerequisite:
 
 `protocol-fill <PROTOCOL> --handover --why "<what blocks>" --tried "<what you tried>" --into REPORT.md`
 

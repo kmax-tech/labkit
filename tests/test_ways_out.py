@@ -1,7 +1,7 @@
 """The ways out of a BLOCKER are one set of decisions in two places: the
-list `labkit-audit` prints with every decision list (`ways_out.WAYS_OUT`) and
-the agent guide ("When you are stuck", `labkit-next --guide`; the stamped
-AGENTS.md keeps the stop rule short). Held by meaning and command,
+list the analysis auditor is shown (`ways_out.WAYS_OUT`) and the agent
+guide ("When you are stuck", `labkit-next --guide`; the stamped AGENTS.md
+and the decision list name the guide). Held by meaning and command,
 not by copied strings: the same causes in both, every command they name a
 real one, every flag a flag of it, and the `[replaces]` table they describe
 one the head parser reads (K1, docs/notes/2026-10-27-new-registration-contracts.md)."""
@@ -36,18 +36,17 @@ class WaysOut(unittest.TestCase):
         named = re.findall(r"^- \*\*([^*]+)\*\* — ", stuck_section(), re.M)
         self.assertEqual(named, [name for name, _ in ways_out.WAYS_OUT])
         for promised in (True, False):
-            for full in (True, False):
-                printed = "\n".join(ways_out.blocker_routes(promised, full=full))
-                for name, _ in ways_out.WAYS_OUT:
-                    self.assertIn(f"    {name}: ", printed)
+            printed = "\n".join(ways_out.blocker_routes(promised))
+            for name, _ in ways_out.WAYS_OUT:
+                self.assertIn(f"    {name}: ", printed)
 
     def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
         """A computation registers no promise and `--decide` refuses every
         id an effect names (t34, t21 of the pilot, 2026-10-28): its routes
         name what works — limit the claim, fix, defer and hand over."""
-        promised = "\n".join(ways_out.blocker_routes(True, full=True))
+        promised = "\n".join(ways_out.blocker_routes(True))
         self.assertIn("--not-assessable <ID>", promised)
-        bare = "\n".join(ways_out.blocker_routes(False, full=True))
+        bare = "\n".join(ways_out.blocker_routes(False))
         self.assertNotIn("--not-assessable", bare)
         unjudged = next(
             ln for ln in bare.splitlines() if ways_out.UNJUDGED_PROMISE in ln
@@ -60,31 +59,10 @@ class WaysOut(unittest.TestCase):
             [ln for ln in promised.splitlines() if ways_out.UNJUDGED_PROMISE not in ln],
         )
 
-    def test_the_short_form_keeps_cause_next_step_and_where_in_full(self):
-        """The decision list prints one line a way out (the cold agent of
-        the declared-run case found the full list hard to filter): each
-        keeps when it is the cause, the next step, and the list names where
-        each stands in full. The auditor's prompt keeps the full text."""
-        for promised in (True, False):
-            short = ways_out.blocker_routes(promised, full=False)
-            self.assertIn(f"    ({ways_out.WAYS_OUT_IN_FULL})", short)
-            for line in short[1:-1]:
-                self.assertIn(" → ", line)  # the cause, then the next step
-                self.assertLess(len(line), 260, line)
-            full = "\n".join(ways_out.blocker_routes(promised, full=True))
-            self.assertNotIn(ways_out.WAYS_OUT_IN_FULL, full)
-        self.assertEqual(
-            set(ways_out.WAYS_OUT_SHORT), {n for n, _ in ways_out.WAYS_OUT}
-        )
-
     def test_a_handover_needs_a_named_missing_prerequisite(self):
         """The file-check agent committed past the hook rather than hand
         over; a refusal alone is no reason either — it names its next step."""
-        for text in (
-            dict(ways_out.WAYS_OUT)["none of these"],
-            ways_out.WAYS_OUT_SHORT["none of these"],
-            stuck_section(),
-        ):
+        for text in (dict(ways_out.WAYS_OUT)["none of these"], stuck_section()):
             text = " ".join(text.split())
             self.assertIn("prerequisite", text)
             self.assertIn("--no-verify", text)
@@ -115,12 +93,7 @@ class WaysOut(unittest.TestCase):
             )
 
     def test_every_command_named_is_a_real_command_and_flag(self):
-        routes = [
-            *ways_out.blocker_routes(True, full=True),
-            *ways_out.blocker_routes(False, full=True),
-            *ways_out.blocker_routes(True, full=False),
-            *ways_out.blocker_routes(False, full=False),
-        ]
+        routes = [*ways_out.blocker_routes(True), *ways_out.blocker_routes(False)]
         both = " ".join(("\n".join(routes) + stuck_section()).split())
         self.assertIn("labkit-init exp <new-name> --kind", both)
         init = flags_of(scaffold.main, ["exp", "--help"])

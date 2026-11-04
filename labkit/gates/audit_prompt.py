@@ -388,7 +388,7 @@ def render(
         if mode == ANALYSIS:
             pieces += source.run
             pieces += source.fixes
-            # the ways the gates print, so a finding's repair names one of
+            # the ways out by cause, so a finding's repair names one of
             # them: an auditor that proposed a new constant after the first
             # measurement sent two agents into report-check's refusal
             # (fourth SAB-like draw, 2026-10-28)
@@ -396,7 +396,7 @@ def render(
             # it (`promises.block_stamp` raises first), so no PromiseError
             # here; the audit holds one protocol, as `--decide` does
             routes = ways_out.blocker_routes(
-                bool(promises.table_ids(source.protocol_text)), full=True
+                bool(promises.table_ids(source.protocol_text))
             )
             pieces.append((WAYS_OUT_LABEL, "\n".join(routes)))
     body = prompt_body(pieces)

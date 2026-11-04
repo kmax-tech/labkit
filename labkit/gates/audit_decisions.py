@@ -46,6 +46,12 @@ from labkit.gates.audit_reply import READ_HINT
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
+#: the one line a decision list with an open BLOCKER prints in place of the ways out: the cause first, where the ways stand, and that `labkit-next` owes the step ({area} as shown)
+CAUSE_FIRST = (
+    "  before deciding a BLOCKER, name its cause — the ways out, one per cause, "
+    'stand in `labkit-next --guide` ("When you are stuck"); `labkit-next {area}` '
+    "names the step this area owes"
+)
 
 
 def decision_lines(
@@ -90,8 +96,10 @@ def decision_lines(
             "leaves every criterion without a verdict by itself, so name the "
             "condition, not the criteria"
         )
+        # one line, not the routes: the ways out stand in the guide, and
+        # `labkit-next` is the one explainer of the next step
         if findings.open_blockers([record]):
-            out.extend(ways_out.blocker_routes(promised, full=False))
+            out.append(CAUSE_FIRST.format(area=shown(area, here)))
         for n, f in enumerate(record.findings, 1):
             text = (
                 f.one_line
