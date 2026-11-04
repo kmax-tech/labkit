@@ -12,11 +12,19 @@ if [ ! -x "$venv/python" ]; then
     exit 1
 fi
 fail=0
+# Every check's whole output and exit code, kept until the next commit: a
+# failure shown as its last 25 lines could not be told apart from a known
+# flaky test afterwards (2026-11-03). In this worktree's own git dir.
+log="$(git rev-parse --absolute-git-dir)/labkit-pre-commit.log"
+: > "$log"
 run() {
     name=$1
     shift
-    if ! out=$("$@" 2>&1); then
-        echo "pre-commit: $name failed:" >&2
+    out=$("$@" 2>&1)
+    code=$?
+    { printf '== %s\n' "$name"; printf '%s\n' "$out"; printf 'exit %s\n\n' "$code"; } >> "$log"
+    if [ "$code" -ne 0 ]; then
+        echo "pre-commit: $name failed (exit $code; the whole output: $log):" >&2
         printf '%s\n' "$out" | tail -25 >&2
         fail=1
     fi

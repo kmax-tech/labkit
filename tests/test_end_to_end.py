@@ -1261,9 +1261,14 @@ class CorrectionThenNewRun(CorrectionCommands):
     def held_as_b_saw(self, run_b: str, field: str) -> str:
         rc, out = self.lab.finalize(self.area)
         self.assertEqual(rc, 1, out)
-        held = next(
-            ln for ln in out.splitlines() if self.HELD in ln and "BLOCKER" in ln
-        )
+        holds = [ln for ln in out.splitlines() if self.HELD in ln and "BLOCKER" in ln]
+        if not holds:
+            # the whole finalize output and the runs it chose among: a missing
+            # hold failed as a bare StopIteration under load, and what finalize
+            # saw was lost (docs/notes/2026-11-03-finalize-hold-missing-once.md)
+            runs = sorted(p.name for p in (self.area / "runs").iterdir())
+            self.fail(f"no hold naming {field}; runs {runs}, B {run_b}:\n{out}")
+        held = holds[0]
         self.assertIn(f"as the answering run {run_b} saw the protocol", held)
         self.assertIn(f"{field} ", held)
         return held
