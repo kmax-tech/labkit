@@ -67,11 +67,11 @@ unter „Pilot result". **Option A gebaut (2026-11-04):** der Stop druckt
 den Schritt von `next` für den nicht geschriebenen Bericht, der Halt
 bleibt der Gate-Befund; dafür ist die Schrittlogik nach `gates/next_step`
 gezogen, das Kommando heißt `tools/next_command`. Netto +39 Paketzeilen,
-Erfolgskriterium „netto negativ" verfehlt: „Phase 1 spart Code" ist an
-beiden Kandidaten widerlegt. Nach dem vereinbarten Protokoll: mit diesem
-Stand in die Nutzungsrunde, die Prognose von Phase 1 ist im Plan
-gestrichen; was bleibt, ist Struktur (ein Befund, eine Schreibweise,
-`next` von jedem Hook druckbar).
+Erfolgskriterium „netto negativ" verfehlt: dass Phase 1 Code spart, ist
+an beiden Kandidaten nicht gezeigt (Einmalkosten etwa +40 und +34). Nach
+dem vereinbarten Protokoll: mit diesem Stand in die Nutzungsrunde, die
+Prognose von Phase 1 ist im Plan gestrichen; was bleibt, ist Struktur
+(ein Befund, eine Schreibweise, `next` von jedem Hook druckbar).
 Geschichte in Notes, erstes Modul `runs.py` (2026-11-04): 19 Vorfälle in
 eine Tabellen-Note, Modul −11 Zeilen; die Prognose „ein Viertel der
 Docstrings" war falsch, es sind eher 300–400 Zeilen im ganzen Paket.
@@ -87,6 +87,26 @@ C3 steigt nicht entscheidet über Phase 1 des Plans. Davor der lokale
 Rauchtest: drei kalte Haiku-Subagenten auf `usability stage`-Labs
 (compute-hrv, fit-assay, apply-screen) mit 0.108.0, Scoring per
 `usability score … --transcript`.
+**Nutzungsrunde gelaufen (2026-11-04, Branch `usage-round`, Commits
+e3ddea3–b7c4ad8; Lesung im Plan unter „Then: the usage round"):**
+vollständige Lieferungen 3 nachher gegen 2 vorher, Zeitüberläufe 1 gegen
+5, übernommene Läufe 7 gegen 2, Berichte 8 gegen 5 — B1 hält, **Phase 1
+läuft weiter** mit dem nächsten entfernungsorientierten Kandidaten aus dem
+Plan. Gestützte Antworten 4 gegen 5, nicht gestützte zentrale Aussagen 3
+gegen 2: jedes Mal eine richtige Zahl mit falscher Stütze oder falscher
+Verdiktformulierung im Bericht — das Feld der Berichtsprüfung, nicht der
+Abschlussschleife; dorthin schaut die nächste Runde. `--do` nicht
+ausgelöst (Kommandos 40 → 28, die Kosten saßen bei den Audits am Ende und
+im Text). Rauchtest davor: `docs/usability/2026-11-04-smoke-0.108.0.md`.
+Befunde für labkit aus der Runde: (1) eine Übergabe beendet die Lieferung
+ohne Zahl im Bericht (34 r2) — der Stop hält den fehlenden Bericht, nicht
+den Bericht ohne Verdikt; (2) ein Bericht überstimmt den BLOCKER des
+Audits in Prosa („correct and sufficient"), die Berichtsprüfung ließ es
+durch (sts512 r3); (3) `protocol-fill` hält die Template-Vorbelegung
+„none yet — …" von `Answering run` für gefüllt und verlangt `--force`;
+(4) Hook-Halte stehen nicht in der Sandbox-Spur, nur im Agenten-Transkript.
+Der Merge von `usage-round` nach labkit-papers Hauptzweig bleibt beim
+Autor.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die

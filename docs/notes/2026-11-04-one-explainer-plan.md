@@ -216,7 +216,9 @@ removal-first: the stop hook's own lines for a report not written
 (`agent_hooks.missing_reports`, `report_hold.missing_report` composed
 there) replaced by `next`'s step for the touched area, with the same
 measurement. Whether to take it, or to go to the usage round with the
-pilot as it stands, is the decision now open.
+pilot as it stands, was the decision then open; taken the same day:
+Option A built (its table above), then the usage round — its reading
+under "Then: the usage round".
 
 ## Target
 
@@ -466,7 +468,9 @@ pilot result above); not shown that Phase 1 cannot save code, shown that
 these two candidates did not. Phase 1's case is now
 structure — one finding, one spelling, `next` printable by every hook —
 not size; it continues only if the usage round shows the contradictions
-it removes cost agents work.
+it removes cost agents work — shown 2026-11-04 in the registered reading
+of labkit-paper's area 19 ("Then: the usage round" below): Phase 1
+continues with the next removal-first candidate.
 
 ## Phase 2 — The way out as data
 
@@ -627,6 +631,48 @@ step above, not `--do`; it decides whether Phase 1 continues and whether
 the proposals get their trigger and whether the work continues from
 Phase 2. Whether Phase 1 continues is the pilot's decision alone, by
 its stop criteria above.
+
+### Reading of the first round (2026-11-04, labkit-paper area 19)
+
+The round: area 17's labkit arm under the result demand, the same three
+tasks, prompts byte for byte, solver, judges, brief and sheets; nine
+attempts on v0.108.0 (da46ce1b) against area 17's nine on 76bcd331, two
+fresh `opus` judges per attempt, three split questions decided by area 17's
+precedents (`experiments/19-one-explainer-completes-delivery-under-time-limit`,
+analysis run `2026-11-04T18-19-34_34d2`).
+
+| | before (76bcd331) | after (v0.108.0) |
+|---|---:|---:|
+| complete deliveries (every central question supported, nothing missing) | 2 | 3 |
+| supported answers | 5 | 4 |
+| stopped at the 2400 s limit | 5 | 1 |
+| missing deliverables | 6 | 3 |
+| no REPORT.md | 4 | 1 |
+| attempts with an adopted run | 2 | 7 |
+| unsupported central claims | 2 | 3 |
+| `labkit-next` calls over the nine | 40 | 28 |
+| median minutes | 40.0 | 30.4 |
+
+The registered reading (B1: complete deliveries up, time-limit stops not
+up) holds, so **Phase 1 continues** with the next removal-first candidate
+(the pilot result names it). What the round does not show: that the
+closing loop alone did it — one labkit version per side, nine attempts
+each, two days apart. What it shows beside the reading: the agents now
+reach the end of the loop (eight reports, seven adopted runs), and the
+failures moved to the report's text — the three unsupported claims are a
+right number with a wrong support or a wrong verdict wording (a fixed bar
+"not assessable" because two null draws differ; a one-draw check called
+"correct and sufficient" over the registered 200-permutation test, in
+prose against the audit's BLOCKER; selection among five estimators called
+"unbiased"). That is the report review's question, not the closing
+loop's, and it is where the next round should look. The `--do` proposal
+is not triggered: typed commands fell, and the cost sat on the audits
+at the end (the one time-limit attempt spent its last calls on
+`labkit-audit` after the number existed) and on the text. The second
+count the plan asked for, hook holds per attempt, is not in the sandbox
+trace (it records commands; the hooks answer inside Claude Code) — it
+needs the agent transcript, which `usability trace` reads and the sandbox
+does not keep.
 
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
