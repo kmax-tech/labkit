@@ -2319,22 +2319,31 @@ Nicht belegt — die Ausgabe des Fehlschlags wurde nicht gesichert. Nächster
 Schritt erst bei Wiederholung: Ausgabe sichern, dann entscheiden; keine
 Zeitgrenze nebenbei erhöhen.
 
-### Verdacht: fehlender finalize-Halt im Korrektur-End-to-End-Test (2026-11-03)
+### Erledigt: fehlender finalize-Halt im Korrektur-End-to-End-Test (2026-11-03/04)
 
-`tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds`
-schlug einmal im Pre-Commit fehl (finalize ohne den erwarteten Halt);
-einzeln, unter Parallel-Last und im zweiten Hook-Lauf seither grün. Beleg, Log-Auszug und die zwei unbewiesenen
-Vermutungen: [Notiz](docs/notes/2026-11-03-finalize-hold-missing-once.md).
-Kontrolliert variiert (2026-11-03 abends): Laufen A und B in derselben
-Sekunde, zeigen beide Tests genau die beobachteten Fehlbilder
-(`same_second_rival` blockiert die Wahl des Antwortlaufs); gemessen lagen
-A und B aber nie unter 1,6 s auseinander, unter Last länger, und die
-Systemuhr sprang nicht — Ursache weiter offen. Nächster Schritt: den
-nächsten Fehlschlag mit voller finalize-Ausgabe sichern (`held_as_b_saw`
-mit Ausgabe als Meldung; Hook schreibt die volle pytest-Ausgabe in eine
-Datei unter `.git/`). Zwei Nebenbefunde (git-Fehler in `as_measured` lässt
-finalize bestehen; `resolved_corrections`/`awaiting_followup` schlucken
-`RuntimeError`) stehen in der Notiz, je ein eigener Auftrag.
+Ursache belegt und behoben: Die Fixture startete A und B in derselben
+Sekunde, labkit verweigert dann die Wahl des Antwortlaufs
+(`same_second_rival`). Zwei Hook-Ablehnungen mit voller Ausgabe zeigen es
+(seit `d217ec4a` behält der Hook sie); `CountCommands.measure` wartet
+seit `4270bf4f` auf die nächste Sekunde. [Notiz](docs/notes/2026-11-03-finalize-hold-missing-once.md).
+Beide Nebenbefunde sind behoben: `9d40a273`, `6fbd9ae5` (Git-Lesefehler
+blockieren mit Quelle, Grund und Ausweg), `fb93c216` (nicht prüfbare
+Freigabe hält als solche).
+
+Notiert, nicht geplant:
+
+1. Soll labkit selbst einen Lauf ablehnen oder verschieben, der in der
+   Sekunde eines anderen startet? Ein Skript, das Draws in einer Schleife
+   startet, könnte das; die Fixture ist nur der Testfall.
+2. `repo.text_at` sagt `None` für „fehlt“ und „Git scheitert“ zugleich.
+   `committed_at` unterscheidet das jetzt selbst; die übrigen Leser
+   (u. a. `start_check._committed_registration` über
+   `registration_in_commit` an HEAD) nicht — je Leser prüfen, ob dort
+   eine Entscheidung daran hängt.
+3. `resolved_corrections`/`awaiting_followup` fangen weiter
+   `ValueError`/`FileNotFoundError` (Datensätze unlesbar) und lesen sie als
+   „keine Freigabe“; der Ausweg kann dann ebenfalls zum Zurückdrehen raten.
+   Erst reproduzieren.
 
 ### Ungeklärt: Hook-Ablehnung ohne Log (2026-11-03)
 
@@ -2343,7 +2352,8 @@ Der Pre-Commit-Hook lehnte das Amend der S2-Plannotiz (Branch
 letzte Zeile („commit refused“), welcher Prüfschritt scheiterte, ist
 unbekannt. Volle Suite direkt danach und der zweite Hook-Lauf grün, Last
 um 12. Keinem bekannten Fehler zugeordnet — ohne Log nicht zuordenbar.
-Seither behält jeder Prüflauf vollständige Ausgabe und Exitcode.
+Seither behält jeder Prüflauf vollständige Ausgabe und Exitcode. Spätere Hook-Ablehnungen mit voller Ausgabe zeigten die
+Sekunden-Ursache oben; diese eine bleibt ohne Log trotzdem ungeklärt.
 
 ### Phase-2-Reste (2026-10-27)
 
