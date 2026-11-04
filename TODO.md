@@ -2364,6 +2364,25 @@ Nicht belegt — die Ausgabe des Fehlschlags wurde nicht gesichert. Nächster
 Schritt erst bei Wiederholung: Ausgabe sichern, dann entscheiden; keine
 Zeitgrenze nebenbei erhöhen.
 
+### Schritt 6 erledigt, offen geblieben (2026-11-04)
+
+Prozesszustand und Wartehinweise: [Notiz](docs/notes/2026-11-04-liveness-and-wait.md).
+
+1. Laborstandard `labkit/docs/standard.md` (Abschnitt zu Ausgabe-Sperren)
+   lehrt weiter „PID prüfen (`ps -p`), dann löschen“ — seit `4cfc7d80`
+   entscheidet die Kernel-Sperre. Regeltext, Änderung nur als
+   Standardentscheidung (Max).
+2. Laufdatensätze entscheiden weiter über PID plus Skript
+   (`runs.is_alive`): ohne `ps` und bei wiederverwendeter PID wartet
+   `--wait` bis zum Limit, ein `python -m`-Lauf gilt als abgebrochen.
+   Lösung wäre eine Kernel-Sperre im Laufordner — Formatänderung des
+   Laufdatensatzes, eigener Vertrag.
+3. Die Sperre gegen einen zweiten Lauf sieht einen abgekoppelten Start
+   ohne Datensatz nicht; erreichbar nur an `labkit-next` vorbei.
+4. Kein nur lesender Weg zur Antwort der Ausgabe-Sperre
+   (`Store.status()` liefert nur die Zeile); `runlog AREA` verweist bei
+   `unknown` auf die Ablehnung eines zweiten Schreibers.
+
 ### Erledigt: fehlender finalize-Halt im Korrektur-End-to-End-Test (2026-11-03/04)
 
 Ursache belegt und behoben: Die Fixture startete A und B in derselben
