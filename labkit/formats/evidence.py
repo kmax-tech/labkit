@@ -377,10 +377,42 @@ def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]
     or went. A version back as labkit first committed it is no change
     (`original`): restoring a record a commit past the pre-commit rewrote
     passes. [] outside git and before the first commit; a deleted audit
-    file is `attempts.gaps`'s to name. Raises GitError when git fails."""
+    file is `attempts.gaps`'s to name. Git unable to read what the
+    comparison needs is one finding of its own (`unread_finding`): nothing
+    says the evidence stands."""
     root = _repo_of(area)
     if root is None or not head_sha(root):
         return []
+    where = f"in the {'index' if staged else 'tree'} since HEAD"
+    try:
+        return _change_findings(area, root, where, staged=staged)
+    except GitError as exc:
+        return [unread_finding(f"the {'index' if staged else 'tree'}", "HEAD", exc)]
+
+
+#: the way back from evidence git cannot compare: the objects, then the check
+UNREAD_WAY = (
+    "restore the repository's missing objects (`git fsck` names them; a clone "
+    "that holds them `git fetch`es them), then run the check again"
+)
+
+
+def unread_finding(state: str, against: str, exc: GitError) -> tuple[str, str]:
+    """(sentence, way out) when git cannot read what comparing STATE with
+    AGAINST needs: the comparison did not run, so the evidence is not
+    known to stand."""
+    return (
+        f"the area's evidence in {state} cannot be compared with {against}: "
+        f"{' '.join(str(exc).split())} — whether it was changed cannot be told",
+        UNREAD_WAY,
+    )
+
+
+def _change_findings(
+    area: Path, root: Path, where: str, *, staged: bool
+) -> list[tuple[str, str]]:
+    """`change_findings` in the repository ROOT. Raises GitError when git
+    fails."""
     entries = _in_area(
         _state_diff(root, "HEAD", _specs(area, root), staged=staged), _base(area, root)
     )
@@ -398,7 +430,6 @@ def change_findings(area: Path, *, staged: bool = False) -> list[tuple[str, str]
         _undone_in(root, area, rev=None, staged=staged),
         deletions=False,
     )
-    where = f"in the {'index' if staged else 'tree'} since HEAD"
     return told(area, root, audits, runs, where, "HEAD")
 
 
@@ -410,12 +441,14 @@ def commit_changes(area: Path, since: str) -> list[str]:
     holds the path as the parent did, as labkit first committed it
     (`original`), or a record differing from either in decisions alone; a
     commit stays in the history, and its repair is the restored file,
-    committed or not. SINCE "" counts from the first commit. Raises
-    GitError when git fails."""
+    committed or not. SINCE "" counts from the first commit. A commit git
+    cannot compare with its parent is one line of its own
+    (`unread_finding`). Raises GitError when the history itself cannot be
+    listed."""
     root = _repo_of(area)
     if root is None or not head_sha(root):
         return []
-    base, specs = _base(area, root), _specs(area, root)
+    specs = _specs(area, root)
     span = f"{since}..HEAD" if since else "HEAD"
     # every commit with its real parents, oldest first; the path limit goes
     # on the diff, where it narrows nothing git compares against
@@ -429,42 +462,64 @@ def commit_changes(area: Path, since: str) -> list[str]:
         if not parents:
             # the first commit: it can only add
             continue
-        parent = parents[0]
-        closed = _closed_at(root, area, parent)
-        tree_args = ["diff-tree", "-r", "-z", "--no-renames", "--name-status"]
-        made = _in_area(_diff(root, [*tree_args, parent, commit, "--", *specs]), base)
-        if not made:
-            continue
-
-        def texts_then(
-            rel: str, parent: str = parent, commit: str = commit
-        ) -> tuple[str | None, str | None]:
-            return text_at(root, area / rel, parent), text_at(root, area / rel, commit)
-
-        undone_then = _undone_in(root, area, rev=commit, staged=False)
-        audits, runs = broken(made, closed, texts_then, undone_then, deletions=True)
-        suspects = [f"{base}/{rel}" for rel, _ in audits]
-        suspects += [
-            f"{base}/{RUNS_DIR}/{run}/{name}"
-            for run, files in runs.items()
-            for name, _ in files
-        ]
-        if not suspects:
-            continue
-        # the same paths, the parent against the tree now: what is undone drops
-        left = _in_area(_state_diff(root, parent, suspects, staged=False), base)
-
-        def texts_now(rel: str, parent: str = parent) -> tuple[str | None, str | None]:
-            path = area / rel
-            return text_at(root, path, parent), state_text(root, path, staged=False)
-
-        audits, runs = broken(left, closed, texts_now, undone_now, deletions=True)
-        where = f"by commit {commit[:12]} and not undone in the tree"
-        out += [
-            with_way_out(why, fix)
-            for why, fix in told(area, root, audits, runs, where, parent[:12])
-        ]
+        try:
+            out += _commit_broke(area, root, commit, parents[0], specs, undone_now)
+        except GitError as exc:
+            out.append(
+                with_way_out(
+                    *unread_finding(
+                        f"commit {commit[:12]}", f"its parent {parents[0][:12]}", exc
+                    )
+                )
+            )
     return out
+
+
+def _commit_broke(
+    area: Path,
+    root: Path,
+    commit: str,
+    parent: str,
+    specs: list[str],
+    undone_now: Callable[[str], bool],
+) -> list[str]:
+    """`commit_changes` for one COMMIT against its PARENT. Raises GitError
+    when git fails."""
+    base = _base(area, root)
+    closed = _closed_at(root, area, parent)
+    tree_args = ["diff-tree", "-r", "-z", "--no-renames", "--name-status"]
+    made = _in_area(_diff(root, [*tree_args, parent, commit, "--", *specs]), base)
+    if not made:
+        return []
+
+    def texts_then(
+        rel: str, parent: str = parent, commit: str = commit
+    ) -> tuple[str | None, str | None]:
+        return text_at(root, area / rel, parent), text_at(root, area / rel, commit)
+
+    undone_then = _undone_in(root, area, rev=commit, staged=False)
+    audits, runs = broken(made, closed, texts_then, undone_then, deletions=True)
+    suspects = [f"{base}/{rel}" for rel, _ in audits]
+    suspects += [
+        f"{base}/{RUNS_DIR}/{run}/{name}"
+        for run, files in runs.items()
+        for name, _ in files
+    ]
+    if not suspects:
+        return []
+    # the same paths, the parent against the tree now: what is undone drops
+    left = _in_area(_state_diff(root, parent, suspects, staged=False), base)
+
+    def texts_now(rel: str, parent: str = parent) -> tuple[str | None, str | None]:
+        path = area / rel
+        return text_at(root, path, parent), state_text(root, path, staged=False)
+
+    audits, runs = broken(left, closed, texts_now, undone_now, deletions=True)
+    where = f"by commit {commit[:12]} and not undone in the tree"
+    return [
+        with_way_out(why, fix)
+        for why, fix in told(area, root, audits, runs, where, parent[:12])
+    ]
 
 
 def _reflog_since(root: Path, since: datetime) -> list[str]:

@@ -155,6 +155,16 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **Evidence git cannot compare is held with its way back, not raised.**
+  `evidence.change_findings` (tree or index against HEAD) and
+  `commit_changes` (each commit against its parent) raised GitError when
+  git could not read an object they compare; report-check and
+  labkit-next ended in a traceback naming no way out. Each is now one
+  finding: "the area's evidence in … cannot be compared with …", git's
+  words, and the way back (`git fsck`, the missing objects fetched or
+  restored). `repo.files_at` raises GitError (a RuntimeError, as before)
+  for git failing. A readable change is held as before.
+
 - **A release that cannot be checked is held as such.** When the state a
   corrected field's follow-up was judged in cannot be computed — a file
   the run registered is gone — `finalize.resolved_corrections` and

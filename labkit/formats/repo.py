@@ -911,7 +911,8 @@ def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
     what a commit now would carry), else that revision's tree (`ls-tree
     -r`). None when there is no such state: REPO is no repository git takes
     (a bare `.git` directory), or REV names no revision (an unborn HEAD) —
-    told by git's exit codes, not its words. Raises RuntimeError when git
+    told by git's exit codes, not its words. Raises GitError (a
+    RuntimeError) when git
     fails otherwise."""
     if git_run(["rev-parse", "--git-dir"], repo).returncode != 0:
         return None
@@ -929,9 +930,7 @@ def files_at(repo: Path, folder: Path, rev: str = INDEX_REV) -> set[str] | None:
     )
     r = git_run(args, repo)
     if r.returncode != 0:
-        raise RuntimeError(
-            f"git {' '.join(args[:2])} failed in {repo}: {r.stderr.strip()}"
-        )
+        raise GitError(f"git {' '.join(args[:2])} failed in {repo}: {r.stderr.strip()}")
     return {p[len(rel) + 1 :] for p in r.stdout.split("\0") if p.startswith(rel + "/")}
 
 
