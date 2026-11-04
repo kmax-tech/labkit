@@ -5,9 +5,7 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
-## Unreleased
-
-Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
+## 0.108.0 — 2026-11-04
 
 ### Breaking
 
