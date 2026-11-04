@@ -147,7 +147,7 @@ from labkit.gates.ways_out import (
     declared_first,
     register_anew,
 )
-from labkit.checks.audit_binding import covering_analysis
+from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.gates.report_context import pending_adoption
@@ -444,6 +444,35 @@ def scope_changes(
         unread = protocol_history.unread_measurements(protocol, needed, root)
         if unread:
             return [unread_hold(area, pid, unread)]
+    try:
+        return _scope_held(area, protocol, pid, run, root, others)
+    except AuditError as exc:
+        # whether a follow-up's release still covers the run cannot be told:
+        # held as that, never as an unreleased change whose way back would
+        # undo a correction (side finding 2 of the flake note)
+        return [
+            blocker(
+                f"whether a correction in place releases what the number is about "
+                f"cannot be checked: {exc.why}",
+                fix=exc.fix
+                or f"repair what the sentence names, then "
+                f"`{gate_command('finalize', area)}`",
+            )
+        ]
+
+
+def _scope_held(
+    area: Path,
+    protocol: Path,
+    pid: str,
+    run: Path,
+    root: Path | None,
+    others: list[RunDir],
+) -> list[GateFinding]:
+    """`scope_changes` once every text it compares reads: the hold of the
+    answering run's text, then of the protocol as it stands. Raises
+    AuditError when a release cannot be checked (`resolved_corrections`),
+    RuntimeError when git fails."""
     seen, _ = (
         protocol_history.as_measured(protocol, read_run_dir(run), root)
         if others
@@ -722,13 +751,16 @@ def resolved_corrections(
     (`audit_binding.covering_analysis`). A text edited after that verdict
     leaves the record covering nothing, a fresh audit carries no verdict,
     and a verdict on a finding of another field releases this one not:
-    each is no correction. Empty when the area's records or the covering
-    state cannot be read — finalize's audit station names that."""
+    each is no correction. Empty when the area's records cannot be read —
+    finalize's audit station names that. Raises AuditError when the state
+    RUN was audited in cannot be computed (a registered output gone): then
+    whether a release covers RUN cannot be told, and the caller holds that
+    (`scope_changes`), never reads it as no correction."""
     try:
         records = area_records(area)
         covering = covering_analysis(area, text, run)
         members = chain(records).members
-    except (ValueError, FileNotFoundError, RuntimeError):
+    except (ValueError, FileNotFoundError):
         return {}
     out: dict[str, Correction] = {}
     for record in covering:
@@ -755,13 +787,16 @@ def awaiting_followup(
     not cover the area now — what `audit_prompt.earlier_of` shows, through
     the same `followup.earlier_blockers` and `earlier_corrections`. Empty
     when the area holds more than one protocol (no correction is shown
-    then) or its records or the covering state cannot be read."""
+    then) or its records cannot be read. Raises AuditError when the state
+    RUN was audited in cannot be computed, as `resolved_corrections` does:
+    the two read the same state, so neither answers where the other
+    cannot."""
     if len(area_protocols(area)) != 1:
         return {}
     try:
         records = area_records(area)
         covering = {r.path.name for r in covering_analysis(area, text, run)}
-    except (ValueError, FileNotFoundError, RuntimeError):
+    except (ValueError, FileNotFoundError):
         return {}
 
     def current(r: audit_findings.Record) -> bool:

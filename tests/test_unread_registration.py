@@ -135,3 +135,54 @@ class UnreadCommitAtTheRegistrationStation(ChangedQuestion):
         self.assertIn("git fsck", line)
         shutil.move(str(self.kept / tree), str(where))
         self.assertEqual(self.station(), [])
+
+
+class ReleaseThatCannotBeChecked(e2e.CorrectionCommands):
+    """A correction in place released for run A by its follow-up; then a
+    file the run registered is gone, so the state A was audited in cannot
+    be computed (`audit_binding.covering_analysis` raises AuditError).
+    `resolved_corrections` read that as "no release" and the hold told to
+    restore Data / scope as A registered it — the known-false value — while
+    only the registered-outputs station named the real cause (side finding
+    2). Held as a release that cannot be checked, naming the file; the
+    twin: the file there, finalize passes; the recovery: put back, passes."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        blocking = self.audited("BLOCKER", "Data / scope")
+        self.describe(self.RIGHT)
+        self.decide(blocking, 1, "fixed", "Data / scope now says 3 documents")
+        rc, out, _ = self.follow_up(blocking, "resolved", "3 documents, as A read")
+        self.assertEqual(rc, 0, out)
+        rows = json.loads(
+            (self.area / "runs" / self.run_a / "outputs.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        (recorded,) = [Path(r["path"]) for r in rows]
+        self.output = recorded if recorded.is_absolute() else self.lab.root / recorded
+        self.kept = Path(tempfile.mkdtemp()) / self.output.name
+        self.addCleanup(shutil.rmtree, self.kept.parent)
+
+    def test_the_twin_the_release_checked_passes(self):
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("corrected in place after the first measurement", out)
+
+    def test_a_release_that_cannot_be_checked_holds_as_such_and_restored_passes(
+        self,
+    ):
+        shutil.move(str(self.output), str(self.kept))
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 1, out)
+        (line,) = [
+            ln
+            for ln in out.splitlines()
+            if "cannot be checked" in ln and "BLOCKER" in ln
+        ]
+        self.assertIn(self.output.name, line)
+        self.assertNotIn(self.HELD, out)  # no unreleased change is claimed
+        self.assertNotIn("restore Data / scope", out)
+        shutil.move(str(self.kept), str(self.output))
+        rc, out = self.lab.finalize(self.area)
+        self.assertEqual(rc, 0, out)

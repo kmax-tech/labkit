@@ -132,6 +132,17 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **A release that cannot be checked is held as such.** When the state a
+  corrected field's follow-up was judged in cannot be computed — a file
+  the run registered is gone — `finalize.resolved_corrections` and
+  `awaiting_followup` swallowed the AuditError and read it as "no
+  release": finalize held the corrected field as an unreleased change and
+  told to restore it as the first measurement registered it, the
+  known-false value. Both now let the AuditError through, and finalize
+  holds "whether a correction in place releases what the number is about
+  cannot be checked", naming the file and its way back. Records that do
+  not read are unchanged (the audit station names them).
+
 - **A first measurement's commit git cannot read is named as such.** The
   registration station of report-check and the binding of the registered
   report read the protocol as the first measurement's commit holds it
