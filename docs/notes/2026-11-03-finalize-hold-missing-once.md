@@ -165,6 +165,23 @@ each was lost because the pre-commit hook prints only the last 25 lines
 finalize's output. The next failure settles it only if its full finalize
 output is kept: (a) let `held_as_b_saw` fail with finalize's output as its
 message, and (b) let the hook keep pytest's full output in a file under
-`.git/`. Neither is done here. If that output shows the same-second
+`.git/`. Both are done since `d217ec4a` (`labkit-pre-commit.log` in the
+worktree's git dir). If that output shows the same-second
 blocker, the fixture is the place to repair (its two measurements on one
 commit, ordered by run id alone); labkit's refusal stays.
+
+## Seen twice more in hooks, 2026-11-03 night
+
+The hook of the M2 commit (branch `m2-repair-guidance`, code later
+`51456690`, the old hook still printing 25 lines) refused twice in a row:
+first t6 (`StopIteration` at `held_as_b_saw`, as before), then t5 (finalize
+`rc != 0` where the twin must pass). Load average 8–12. The same code had
+passed two full suites by hand just before, and the hook passed on the
+next attempt once (b) above was in place. Kept: only the 25-line tails
+(session scratchpad, not in the repository); finalize's output is lost
+again. Every failure seen so far ran inside a pre-commit hook; no run by
+hand has failed. That is an observation, not a cause: the git variables a
+hook exports (`GIT_INDEX_FILE`, a temporary one for a path commit,
+`GIT_AUTHOR_DATE`) were checked and are dropped by `tests/conftest.py`
+before any test runs, so they are ruled out as the carrier.
+
