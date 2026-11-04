@@ -154,8 +154,17 @@ und `withdraw_first`, drei Textlesungen durch Namen ersetzt,
 `declared_first` weg, Rendering byteweise gleich — Paket **+184** gegen
 Prognose +70 und Budget +120; Neuentscheidung bei Max (behalten und hier
 stoppen / Stellen fertig / zurück), Empfehlung: behalten und stoppen.
-Danach die zweite Nutzungsrunde (Areal 20: wie 19, Vorher = 19 auf
-0.108.0, Nachher = dieser Stand; Blick auf die Berichtsprüfung).
+Entschieden (Max): Stellen fertig — Teil 4 in `747aae1d` (+28, 15
+Stellen, drei handgeschriebene Discuss-Zeilen bleiben für Phase 3);
+Phase 2 gesamt +212. Dritter Sondenlauf auf `a80865d8`: 108 Prüfungen,
+0 Brüche — Phase 1 ist fertig. **Zweite Nutzungsrunde vorbereitet
+(Areal 20 in labkit-paper, Branch `usage-round-2` im Worktree
+`labkit-paper-usage`):** wie Areal 19, Vorher = Areal 19 auf 0.108.0
+(Baseline aus dessen Urteilen durch 17s `evaluate`), Nachher = Pin
+`747aae1d`; Lesung B1 ist „kein Verlust" (`>=` bei C1). Offen vor dem
+Start: `747aae1d` auf GitHub (der Image-Build holt den Pin von dort),
+dann Image, `--check`, Runde, Richter (Abo-Welle), Entscheidungen,
+Auswertung; Release 0.109.0 beim Autor.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die

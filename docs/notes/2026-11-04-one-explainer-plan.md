@@ -799,6 +799,21 @@ hooks reason (measure, adopt, render), the remaining `step=` sites
 (withdraw, into, discuss, about 25) follow when their modules are open
 or when `--do` is triggered; (b) keep and finish the sites now (+25,
 no reader yet); (c) revert `a80865d8`. Recommended: (a); Max decides.
+Decided: (b) (Max, 2026-11-04). **Part 4 result** (commit `747aae1d`):
+15 sites carry their step (into, discuss, handover, decide), the command
+bound once for text and datum; three hand-written discuss lines stay
+(`report_hold` ×2, `report_review_inputs`): the builder renders the
+`--why` in double quotes and the text does not, so the text is not the
+builder's byte for byte — a Phase 3 verdict. Package +28, tests ±0.
+**Phase 2 in all: package +212, tests +111.** Done when met: no code
+reads a fix as text; every builder's line byte-equal; the suite green.
+
+**The probe-case invariant, third run** (`logs-a80865d8`, after the
+Phase 2 core): 108 checks, 0 breaches. Phase 1's "Done when" is met on
+the six repair paths: every hold of the stop and the commit prints
+`labkit-next`'s step for its state, byte for byte, and no hook holds
+while `next` says "nothing". Phase 1 is done; what remains of it is
+the two deciders of the withdraw-first rule, Phase 4's.
 
 ## Proposal — `labkit-next --do` (trigger: the usage round counts the typed commands as a cost)
 
