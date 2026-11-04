@@ -2381,9 +2381,9 @@ Notiert, nicht geplant:
    reproduzieren:
    - geprüft 2026-11-04 mit echten Lesefehlern: `attempts._git_paths`,
      `expected_evidence` ließen ein gekürztes Journal still bestehen
-     (ohne die Kopie im Git-Verzeichnis) — behoben `f1ed461d`;
+     (ohne die Kopie im Git-Verzeichnis) — behoben `b582ccba`;
      `evidence.change_findings`, `commit_changes` bestanden nicht, endeten
-     aber im Traceback ohne Ausweg — behoben `f19d036a`. `_undone_in` und
+     aber im Traceback ohne Ausweg — behoben `cc751f5d`. `_undone_in` und
      `_blob_at` halten bei einem Lesefehler (die Datei gilt als geändert,
      nicht als wiederhergestellt), nennen aber die Änderung statt des
      Lesefehlers; `orphaned_runs` (Reflog) nicht geprobt;
