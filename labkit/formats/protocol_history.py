@@ -575,6 +575,24 @@ def registrations_as_first_measured(
     return list(texts.items()), ""
 
 
+def unread_measurements(
+    protocol: Path, runs: "Sequence[RunDir]", root: Path
+) -> list[str]:
+    """Why PROTOCOL as each of RUNS saw it cannot be read back
+    (`as_measured`), one sentence per run that cannot — what a comparison
+    with those texts (`first_measured_differences`) passes over, and so the
+    hold that names it: a comparison that could not run is no "nothing
+    changed". Empty when every text reads. ROOT is the repository; outside
+    one no text is read back at all and nothing is said here. Pure but for
+    git's reads."""
+    return [
+        why
+        for rd in runs
+        for text, why in [as_measured(protocol, rd, root)]
+        if text is None
+    ]
+
+
 def first_measured_differences(
     protocol: Path,
     firsts: "Sequence[RunDir]",
@@ -610,9 +628,11 @@ def as_measured(
     applied (`repo.blobs_then`), held to the promise block the run recorded.
     TEXT None, WHERE then saying why and what brings it back, when that
     cannot be read: no recorded commit, a commit this clone does not hold
-    (`git fetch` brings it), a patch that does not apply, a tree without the
-    protocol (untracked when the run started), a text whose block is not
-    the one the run recorded. Raises RuntimeError when git fails."""
+    (`git fetch` brings it), git unable to read that commit's tree or the
+    blob, or a patch that does not apply (git's own error), a tree without
+    the protocol (untracked when the run started), a text whose block is
+    not the one the run recorded. A comparison that needs the text holds
+    on None (`unread_measurements`), never reads it as no change."""
     from labkit.formats.runs import patch_path, recorded_commit
 
     commit = recorded_commit(rd.config) if rd.config is not None else None
@@ -634,7 +654,10 @@ def as_measured(
             f"its first measurement {rd.dir.name} ran with the protocol untracked: "
             f"no commit holds what it registered"
         )
-    text = blob_text(root, blob)
+    try:
+        text = blob_text(root, blob)
+    except RuntimeError as exc:  # `git cat-file` could not read the blob
+        return None, f"its first measurement {rd.dir.name}: {exc}"
     patched = " with its uncommitted.patch" if patch.strip() else ""
     recorded = (rd.config.promises or {}).get("block_sha") if rd.config else None
     if recorded is not None and _block_sha(text) != recorded:

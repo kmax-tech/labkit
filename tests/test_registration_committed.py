@@ -465,10 +465,17 @@ class RegistrationAsFirstMeasured(_Repository):
         )
         self._run(first, self.FIRST, dirty=True)
         self._run(self._register(_block(0.15)), RUN)
-        (line,) = self._changes()
+        lines = self._changes()
+        (line,) = [ln for ln in lines if "null_band" in ln]
         self.assertIn("[quality-check-2] null_band 0.1 → 0.15", line)
         self.assertIn("the sentences unread (its first measurement", line)
         self.assertIn("cannot be read back", line)
+        # what the number is about could not be compared either: held on its
+        # own, never read as unchanged (tests/test_unread_registration.py)
+        self.assertTrue(
+            any("cannot be compared with its first measurement" in ln for ln in lines),
+            lines,
+        )
 
     def test_finalize_holds_it_after_the_run_not_first_at_the_adoption(self):
         first = self._register(_block(0.1))
@@ -498,7 +505,16 @@ class RegistrationAsFirstMeasured(_Repository):
         )  # not committed: the second run at the same commit saw another block
         later = self._run(sha, "2026-10-07T09-00-00_bbbb")
         self._run(sha, RUN)
-        (finding,) = _registration_changes(self.area, self.proto)
+        found = _registration_changes(self.area, self.proto)
+        (finding,) = [f for f in found if "different registrations" in f.line]
+        # the later run's text is not its commit's: what the number is about
+        # cannot be compared with it, held on its own
+        self.assertTrue(
+            any(
+                "cannot be compared with its first measurement" in f.line for f in found
+            ),
+            [f.line for f in found],
+        )
         self.assertEqual(finding.grade, report_check.BLOCKER)
         self.assertIn(
             "the first measurements recorded different registrations", finding.line

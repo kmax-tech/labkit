@@ -11,6 +11,20 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **finalize holds what the number is about when the first measurement's
+  text cannot be read.** In a repository, finalize compares the protocol,
+  as the answering run saw it and as it stands, with what the first
+  measurement registered, read back through git. When git could not read
+  that text — the commit's tree or a blob missing from the object store,
+  a recorded patch that does not apply, a commit this clone lacks, the
+  protocol untracked when the run started — the comparison was passed
+  over and finalize said the registration was unchanged: a changed
+  question passed. Now it is a BLOCKER naming the run, the reason and the
+  way back (`git fetch`, the missing objects restored; else a new
+  registration or the handover). A blob git cannot read is that hold, not
+  a traceback. Outside a repository nothing changes. The last release
+  that passed over it is **0.107.0**.
+
 - **A run index that does not read is refused, not read around.**
   `runs.tsv` is now checked as written wherever it is read
   (`runlog.indexed_runs`: the late report registration, the handover's

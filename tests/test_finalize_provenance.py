@@ -80,6 +80,17 @@ class Provenance(unittest.TestCase):
 
     def _run(self, protocol: str, data: dict | None, commit: bool) -> Path:
         (self.area / "PROTOCOL-x.md").write_text(protocol, encoding="utf-8")
+        # the run starts at a commit that holds its protocol, as a run in a
+        # repository does: finalize reads the registration back from it
+        _git(self.repo, "add", str(self.area / "PROTOCOL-x.md"))
+        _git(self.repo, "commit", "-qm", "registration")
+        started = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=self.repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
         d = self.area / "runs" / "2026-10-05T19-00-00_ab12"
         d.mkdir(parents=True)
         cfg = {
@@ -88,6 +99,8 @@ class Provenance(unittest.TestCase):
             "pid": 1,
             "schema_version": 4,
             "run_kind": "measurement",
+            "git": started[:7],
+            "git_full": started,
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
             "data": data or {},
             # a frozen protocol's run recorded its block (0.71)
@@ -101,8 +114,8 @@ class Provenance(unittest.TestCase):
                     "schema_version": 4,
                     "run_kind": "measurement",
                     "finished": "x",
-                    "git": "g",
-                    "git_full": "g",
+                    "git": started[:7],
+                    "git_full": started,
                     "note": "",
                 }
             ),

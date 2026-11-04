@@ -431,11 +431,19 @@ def scope_changes(
     the analysis audit's question, not this one. The first measurements are every run at each first
     position (`first_measurement_groups`); the answering run, when it is
     one of them, has no run text to compare, the text as it stands still
-    is. A text that cannot be read back is passed over: the registration
-    station and the promise-block hold name that state.
+    is. In a repository, a text either comparison needs that cannot be read
+    back — a first measurement's, the answering run's — is a BLOCKER of its
+    own naming the run, git's or the record's reason and the way back
+    (`unread_hold`): the comparison could not run, which is no "nothing
+    changed" (side finding 1, docs/notes/2026-11-03-finalize-hold-missing-once.md).
     Raises RuntimeError when git fails."""
     firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
     others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
+    if root is not None:
+        needed = [*firsts, *([read_run_dir(run)] if others else [])]
+        unread = protocol_history.unread_measurements(protocol, needed, root)
+        if unread:
+            return [unread_hold(area, pid, unread)]
     seen, _ = (
         protocol_history.as_measured(protocol, read_run_dir(run), root)
         if others
@@ -540,6 +548,26 @@ def scope_changes(
         fix=fix,
     )
     return [declared_first(held, declaring) if declaring else held]
+
+
+def unread_hold(area: Path, pid: str, unread: list[str]) -> GateFinding:
+    """The BLOCKER when the protocol as a first measurement or the answering
+    run saw it cannot be read back (UNREAD, `unread_measurements`): what
+    the number is about cannot be compared, so finalize does not say it is
+    unchanged. The way back: make the text readable — the commit from a
+    clone that holds it, the repository's missing objects restored — then
+    finalize again; where it cannot be read back at all, the registration
+    cannot be held and is made anew or handed over."""
+    return blocker(
+        f"what the number is about cannot be compared with its first measurement: "
+        f"{'; '.join(' '.join(why.split()) for why in unread)} — the comparison "
+        f"did not run, so nothing says the "
+        f"registration is unchanged",
+        fix=f"make it readable: the commit from a clone that holds it (`git fetch`), "
+        f"the repository's missing objects restored (`git fsck` names them), then "
+        f"`{gate_command('finalize', area)}`; where it cannot be read back at all, "
+        f"{anew_way(pid)}; or {HANDOVER}",
+    )
 
 
 def anew_way(pid: str) -> str:
