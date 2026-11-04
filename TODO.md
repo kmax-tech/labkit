@@ -76,6 +76,17 @@ Geschichte in Notes, erstes Modul `runs.py` (2026-11-04): 19 Vorfälle in
 eine Tabellen-Note, Modul −11 Zeilen; die Prognose „ein Viertel der
 Docstrings" war falsch, es sind eher 300–400 Zeilen im ganzen Paket.
 Weiter nur modulweise, wenn ein Modul ohnehin offen ist.
+**Nutzungsrunde gegen 0.108.0 vorbereitet (2026-11-04):** labkit-paper,
+Worktree `~/projects/labkit-paper-usage` (Branch `usage-round`, weil
+`labkit-paper-main` eine andere Sitzung mit Areal 18 hält), Areal
+`19-one-explainer-completes-delivery-under-time-limit`: 17s labkit-Arm
+unter der Ergebnisforderung, drei Aufgaben × 3, Image
+`labkit-sandbox:9ab7562d8bb3` mit Pin v0.108.0, Vorher = 17s gezählte
+Runde als eingefrorene Baseline, zwei Richter wie in 17, B1 = C1 steigt und
+C3 steigt nicht entscheidet über Phase 1 des Plans. Davor der lokale
+Rauchtest: drei kalte Haiku-Subagenten auf `usability stage`-Labs
+(compute-hrv, fit-assay, apply-screen) mit 0.108.0, Scoring per
+`usability score … --transcript`.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
