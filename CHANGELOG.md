@@ -22,8 +22,10 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   the step's logic moved into
   the gates layer: **`labkit.tools.next_step` is `labkit.gates.next_step`**
   (`next_step`, `Step`), and the command line is `labkit.tools.next_command`
-  (`labkit-next` unchanged). The last release with the module under
-  `tools` is **0.107.0**.
+  (`labkit-next` unchanged). An editable install's console script still
+  imports the old module: run `pip install -e '.[dev]'` once in a
+  developer checkout (a lab pinning a release is rebuilt by its pin). The
+  last release with the module under `tools` is **0.107.0**.
 
 - **The review a report owes for discussing a run is one finding for the
   gate, the hooks and `labkit-next`.** The stop and the commit held such

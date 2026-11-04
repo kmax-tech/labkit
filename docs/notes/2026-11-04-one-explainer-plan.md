@@ -182,13 +182,24 @@ is missing) stays in the hook and only its text line goes.
 | lines removed | 150 |
 | net | **+39** |
 
-Of it: the move (two module docstrings, `render`) about +25, the hook
-and the row about +14; the removed composition was one line. The
-invariant test is green without an exception list, one session (about
-two hours), but the lines are positive: **the success criterion is not
-met, and "Phase 1 saves code" is refuted on both candidates.** Per the
-terms: the work goes to the usage round with this state, and Phase 1's
-line forecast is withdrawn below. What stands from the two pilots is not
+Split by origin, from the commit's per-file counts:
+
+| Part of Option A | Net | Paid again by the next surface? |
+|---|---:|---|
+| the move `tools/next_step` → `gates/next_step` + `tools/next_command` (+39 −121 +111; of it `render` +6, two module docstrings and imports +23) | +29 | no, one-time |
+| the head-key catalogue from `protocol_edit` to `protocol_block` (housekeeping the move exposed) | +5 | no, one-time |
+| the hook's line replaced by the render call (`agent_hooks`, +7 −2) | +5 | yes, per surface — and the removed composition was one line |
+
+The invariant test is green without an exception list, one session
+(about two hours), but the lines are positive: **the success criterion
+is not met.** What is shown: on the first two candidates Phase 1 saved
+no code, with one-time costs of +34 here and about +40 in the pilot (the
+state parameter). Not shown: that it cannot — the recurring part of
+Option A is +5 for one line removed, and a surface whose own composition
+is a paragraph, not a line (`_stop_checks`' four prose blocks), would
+weigh differently. Per the terms: the work goes to the usage round with
+this state, and Phase 1's line forecast is withdrawn below; if the round
+speaks for Phase 1, this table says where to resume. What stands from the two pilots is not
 size but structure: one finding for gate, hooks and `next` in two
 states; `next` in the gates layer, printable by any hook; a state
 parameter; one report scan. Criterion 1's remaining branch (the scan
@@ -450,7 +461,9 @@ pre-commit over the probe cases; `grep -rn "Next: " labkit
 empty (a necessary sign, not the proof — it is met by rewording); and
 every hint named in the table above either is gone or names no action.
 Forecast withdrawn 2026-11-04: two removal candidates measured +78 and
-+39 package lines (the pilot result above). Phase 1's case is now
++39 package lines, of which about +40 and +34 are one-time costs (the
+pilot result above); not shown that Phase 1 cannot save code, shown that
+these two candidates did not. Phase 1's case is now
 structure — one finding, one spelling, `next` printable by every hook —
 not size; it continues only if the usage round shows the contradictions
 it removes cost agents work.
