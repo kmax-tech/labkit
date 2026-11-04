@@ -264,6 +264,106 @@ candidate with the most lines, and the one that changes what a cold
 agent sees first; it needs its own prediction and a probe case before
 building.
 
+**Step 4 (2026-11-04): the stop's and the commit's own paragraphs.**
+Decided to take (a) first (Max, 2026-11-04). Found before building: in
+the stop's own fixture (a head that reads, MUST fields unfilled, one open
+preflight BLOCKER) `next` names the field step and the stop holds on the
+BLOCKER — a hold on a finding `next`'s set does not carry, the
+contradiction Phase 1 exists to remove. So, by the plan's rule, the state
+becomes a row in `next`'s order first: "an audit BLOCKER nobody decided,
+a record or the journal lost or unreadable" (`agent_hooks.undecided_state`,
+the stop's and the commit's own reading, acknowledged losses excluded).
+Placed first ahead of the MUST fields, it broke the repair-path rule
+(`tests/test_repair_paths.py`: a rewritten registration with an
+undecided BLOCKER owes the way back first, probe 2026-11-02) — so the
+row stands after report-check's chain and catches what the chain
+carries no gap for; the invariant asks that `next`'s order carries the
+finding, not that it names it first (the hook holds by policy, `next`
+chooses by its order). The undecided way (`UNDECIDED_WAY`,
+the decide / restore / hand-over sentence the stop and the commit
+printed) moves into that step's `next`, one home. Then the stop's three
+paragraphs and the commit's one say only what holds (the fact and the
+policy) and print `next`'s rendered step per touched protocol
+(`agent_hooks.next_steps_for`, the tree at the stop, the index at the
+commit), de-duplicated against the missing-report lines Option A already
+renders. Predicted: package about +30 (`next_step` +30 for the row,
+`agent_hooks` about ±0: −26 prose and constant, +26 the helper and its
+calls), tests about +20. This step closes a gap, so its criterion is not
+size: the invariant test — the stop's stderr and the commit's stdout
+carry `next`'s rendered step for the held area, byte-equal to
+`next_step(...).render`, in the state each judges, and the way's text
+has one home (grep) —, the suite green without an exception list, one
+session, package lines at most +40; above that, stop and re-decide.
+
+Result (commit `50e83954`, measured against `3c8da70e`):
+
+| Measured, step 4 | Package | Tests |
+|---|---:|---:|
+| lines added | 120 | 63 |
+| lines removed | 35 | 18 |
+| net | **+85** | +45 |
+
+Over the budget (+40) and the forecast (+30). Where it went: `next_step`
++65 — the row itself 35 (13 of them its docstring, which carries the two
+incidents the way protects against), 12 for the order's docstring, 20
+for `_before_the_chain`, a helper that exists only because the linter's
+complexity bound (C901) was reached — and `agent_hooks` +20 (the printer
+`next_steps_for` 25 and its two calls 8 against the constant and the
+prose, 26). The invariant holds (the stop's stderr and the commit's
+stdout carry `next`'s rendered step, byte-equal, each from its state;
+the way's text stands in one place, `next_step._undecided_step`; the
+suite green, one session). Reading: the same shape as the pilot and
+Option A — closing a gap *adds* a row, a printer and a helper; the
+removed prose was smaller than the path that replaces it. Of the +85,
+about 45 are one-time (the printer, the helper, the order's docstring)
+and 35 the row, which is the state's one home from now on. **Re-decision
+owed (the terms say stop, not cut):** keep, since Phase 1's case is the
+invariant and the one home, not size — or revert `50e83954` and leave
+the stop's own way in place. Recommended: keep; Max decides. Decided:
+keep (Max, 2026-11-04).
+
+Correction to step 3's closing line, from the analysis before step 5:
+the lane after a fresh `labkit-init exp` has been gone since 0.104.0
+(`stamp_area` ends with one line naming `labkit-next`); `next_steps`
+and its seven helpers (about 275 lines) print only after
+`--change-kind`. So step 5 is a plain removal with one invariant test
+(the kind change's report ends with `next`'s rendered step) and changes
+nothing a cold agent sees at the start — every `usability stage` probe
+since 0.104.0, the 2026-11-04 smoke included, already ran on `next`'s
+step alone. Predicted: package about −290, tests about −140.
+
+**Step 5 result** (commit `142afa6a`, built by a subagent on that analysis):
+
+| Measured, step 5 | Package | Tests |
+|---|---:|---:|
+| lines added | 11 | 32 |
+| lines removed | 305 | 168 |
+| net | **−294** | −136 |
+
+`change_kind` ends with `next_step(area, protocol).render(...)` after
+its log lines; the invariant test (`tests/test_scaffold.py`,
+`test_a_kind_change_closes_with_labkit_nexts_step_and_no_lane`) holds
+the report's tail byte-equal to the render and free of a numbered lane.
+The suite green, one session.
+
+**Phase 1 after steps 3–5 (2026-11-04).** Of the table's five step-naming
+homes outside `next` ("What stands in the way"), none composes a step
+list any more: `review_hint` and `_report_hint` (pilot), `missing_reports`
+(Option A), `undeclared_hint` and the decision list's routes (step 3),
+the stop's and the commit's paragraphs (step 4), `scaffold.next_steps`
+(step 5). Measured over steps 3–5 against `461e37d6`: package net −252
+(−43, +85, −294), tests net −114. With the pilot's +78 and Option A's
++39, Phase 1 stands at about −135 package lines in all; the forecast
+withdrawn on 2026-11-04 is not reinstated — the sign comes from one
+removal (the lane) that had been dead for a fresh stamp since 0.104.0.
+What remains of the "Done when": the `grep -rn "Next: "` sign shows five
+sites, all refusals' ways out (`agent_hooks` pre-run's cd, `timebox`,
+`lanes`, `scaffold.explore_next` for an exploration file without a
+protocol, which `next` has no row for) and `repair_hint`'s pointer to
+`labkit-next` — none a step list; the invariant test over the probe
+cases (the six-case repair probe as oracle) is not run in the suite and
+stays owed before Phase 1 is called done.
+
 **Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1
 does not continue as written. The reason is structural, not accidental:
 closing a gap *adds* a path, and the gain of Phase 1 comes only where a

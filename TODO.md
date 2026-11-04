@@ -123,6 +123,21 @@ des Stop-Hooks (unentschiedene Blocker, report-check-Ausgabe) und
 letzteres der größte Kandidat, braucht eigene Prognose und einen
 Probefall, weil es ändert, was ein kalter Agent zuerst sieht. Release
 0.109.0 (`just release 0.109.0`) beim Autor.
+**Schritte 4 und 5 (2026-11-04, `50e83954`, `142afa6a`):** Stop und
+Pre-Commit sagen nur noch, was hält, und drucken `next`s Schritt je
+berührtem Protokoll; `next` hat dafür die Zeile „offener Audit-BLOCKER,
+Record verloren" hinter der Kette (die Reparaturpfad-Regel „Weg zurück
+vor Entscheidung" bleibt); `UNDECIDED_WAY` weg. Paket +85 (Budget +40
+überschritten: Zeile 35, Ordnungs-Doku 12, Linter-Helfer 20, Drucker 25),
+behalten nach Entscheidung (Max): Invariante und eine Heimat sind der
+Fall, nicht Größe. Schritt 5: die Lane nach `--change-kind`
+(`scaffold.next_steps` + sieben Helfer) entfernt, −294; sie war für den
+frischen Stamp seit 0.104.0 schon weg, kein kalter Agent sieht anderes.
+Phase 1 über Schritte 3–5: Paket −252, keine der fünf Heimaten der
+Tabelle komponiert mehr eine Schrittliste; offen: der Invariantentest
+über die sechs Probefälle (labkit-evidence) vor „Phase 1 fertig". Die
+beiden Subagenten-Berichte (Analyse der Lane, Entfernung) sind im Plan
+unter Schritt 5 verarbeitet.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
