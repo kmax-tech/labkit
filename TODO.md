@@ -165,6 +165,22 @@ Phase 2 gesamt +212. Dritter Sondenlauf auf `a80865d8`: 108 Prüfungen,
 Start: `747aae1d` auf GitHub (der Image-Build holt den Pin von dort),
 dann Image, `--check`, Runde, Richter (Abo-Welle), Entscheidungen,
 Auswertung; Release 0.109.0 beim Autor.
+**Zweite Nutzungsrunde gelaufen (2026-11-04, Areal 20, Commits
+`0d1f6bb`, `d896192` auf `usage-round-2`; Release 0.109.0 ist
+`87e03ac7`, getaggt und gepusht):** vollständige Lieferungen 8 von 9
+gegen 3 (Areal 19) und 2 (Areal 17), Zeitüberläufe 1 gegen 1, fehlende
+Lieferteile 0 gegen 3, nicht gestützte zentrale Aussagen 1 gegen 3,
+Median-Minuten 36,9 gegen 30,4 — B1 („kein Verlust") hält, **Phase 3
+startet auf diesem Stand.** Vorbehalt im Plan: Der Sprung 3 → 8 ist
+größer, als die Änderungen zwischen 0.108.0 und 747aae1d allein erklären;
+die Streuung von neun Haiku-Versuchen ist nie gemessen. **Nächste
+Schritte:** (1) eine Runde auf demselben Stand zweimal, um die Streuung
+zu beziffern, bevor eine weitere Vorher/Nachher-Lesung zählt; (2) Phase
+3 (Inventur-Verdikte), erstes Gewicht: die Berichtsprüfung lässt das
+Assay-Muster (Modellsuche verschwiegen, verfehltes Ziel „nicht
+beurteilbar") zum zweiten Mal durch; (3) die drei handgeschriebenen
+Discuss-Zeilen. Merge von `usage-round-2` in labkit-papers Hauptzweige
+beim Autor.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die

@@ -974,6 +974,41 @@ trace (it records commands; the hooks answer inside Claude Code) — it
 needs the agent transcript, which `usability trace` reads and the sandbox
 does not keep.
 
+### Reading of the second round (2026-11-04, labkit-paper area 20)
+
+The same design on the state after Phase 1 steps 3–6 and Phase 2
+(`747aae1d`), the before now area 19's round on v0.108.0; the registered
+reading was no loss (B1 with `>=` on the complete deliveries).
+
+| | area 17 (76bcd331) | area 19 (v0.108.0) | area 20 (747aae1d) |
+|---|---:|---:|---:|
+| complete deliveries | 2 | 3 | 8 |
+| supported answers | 5 | 4 | 8 |
+| stopped at the limit | 5 | 1 | 1 |
+| missing deliverables | 6 | 3 | 0 |
+| no REPORT.md | 4 | 1 | 0 |
+| attempts with an adopted run | 2 | 7 | 6 |
+| unsupported central claims | 2 | 3 | 1 |
+| `labkit-next` calls over the nine | 40 | 28 | 35 |
+| median minutes | 40.0 | 30.4 | 36.9 |
+
+B1 holds, so **Phase 3 starts on this state**. What the round does not
+show: that the steps between 0.108.0 and 747aae1d made the difference of
+five — the changes are small from an agent's seat (the hooks' wording,
+the decision list's line, finalize's note, a row `next` names rarely),
+and the run-to-run spread of nine Haiku attempts on these tasks has
+never been measured. The sign is the finding; the size is not. Before
+the next before/after reading, one state should be run twice, judged
+the same way, to put a number on the spread — that round costs what the
+others cost and reads nothing new about labkit, which is why it was not
+run first and why it is owed now. The one failure left (assay r1) is
+area 19's assay pattern again: seven estimators tried on the same folds
+and the search unmentioned, the missed 0.90 called "not assessable"; the
+report review let it through twice. That is Phase 3's first verdict to
+weigh, not the closing loop's. The `--do` proposal stays untriggered:
+typed commands rose (28 → 35) with the completions, and the cost sat at
+the loop's end (an audit the last command five times).
+
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
