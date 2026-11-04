@@ -51,11 +51,14 @@ sections below:
 5. A reader does not justify a format, and a merge can breed variants.
    Every *merges* or *goes* needs a before/after proposal of its own.
 
-And: tests do not reduce to transitions wholesale. The class that
-recognises semantically equivalent hand edits shrinks where a writer's
-precondition replaces a gate's recognition, no further; corrupted
-files, missing git objects and concurrent writes stay real inputs with
-their tests.
+And: tests do not reduce to transitions wholesale. A shared writer
+removes no check at the read: files can be edited by hand, restored or
+copied from another clone, so the reader validates what it reads as
+long as provenance (the ledger) is deferred. What a shared writer gives
+is one validation function for writer and reader — one implementation
+to test instead of two that can disagree (V1 and V2 were two comparisons
+disagreeing, not one check too many). Corrupted files, missing git
+objects and concurrent writes stay real inputs with their tests.
 
 **The first step, limited and measured:** close the known gap — the
 review a report owes that only *discusses* a run — by letting the gate
@@ -80,9 +83,10 @@ Acceptance of the pilot, fixed before it starts:
    survive as dead code.
 5. Measured afterwards: effort, the special cases that remain, and
    usability (the commands an agent needs from the hold to the release).
-6. The hold-step invariant of Phase 1, as a test for this one hold: the
-   stop and the pre-commit hold the area exactly when `next_step(area,
-   state)` returns this blocking step, resting on the same finding.
+6. The shared-findings invariant of Phase 1, as a test for this one
+   hold: the stop, the pre-commit and `next_step(area, state)` read the
+   owed review from the same findings of the same state; with no other
+   blocker standing, the hooks hold and `next` names this step.
 
 The pilot needs no `Command`: `next` takes the hold as one row in its
 order, reads it from `Checked.state`, and the finding's identity is the
@@ -95,9 +99,13 @@ of these holds after the pilot:
   on the file state inside that row (the state parameter did not carry);
 - the package has net more lines than before the pilot after the
   competing logic is removed (tests apart);
-- the invariant test needs an exception list (a hold the hooks keep
-  that `next` cannot name);
+- the invariant test needs an exception list (a finding the hooks hold
+  on that `next`'s set does not carry, or the reverse);
 - the pilot takes more than two sessions.
+
+The forecasts and the two sessions are a budget for a new decision:
+exceeding them triggers an explanation and a re-decision, never the
+removal of clear code or of a check to meet the number.
 
 Then Phase 1 does not continue as written; the note gets the reason and
 the next proposal.
@@ -148,9 +156,10 @@ is not a case with its own cure but a refusal with one way out, and the
 writer refuses what the gates would later hold (a registered field after
 the first measurement). The gap between a write and its first commit
 (what HEAD cannot compare yet) is a proposal below, not part of this
-plan. The class of tests that recognise semantically equivalent hand
-edits shrinks where a writer's precondition replaces a gate's
-recognition; what does not change are the
+plan. A writer's refusal removes no check at the read; writer and
+reader share one validation, so the rule has one home and one test
+instead of two implementations that can disagree. What does not change
+are the
 bindings across time — the registration to the first measurement's
 commit, the record to the run it audited — which compare a present text
 with a historical one and stay as they are. What it does not solve
@@ -295,12 +304,19 @@ followup) are recomputed by each. That is Phase 4's case.
 
 Change: the stop hook and the pre-commit path hold on the findings
 `next_step` derives for the same state and print its step; they compose
-no line and judge no fact of their own. The invariant, held by a test
-over every hold the hooks know: the hook holds an area exactly when
-`next_step(area, state)` returns a blocking step, and that step rests on
-the same finding (same `where`, same rule) — a hook that holds for A
-while `next` names B is the contradiction this plan exists to remove,
-and a hook with holds of its own keeps it possible.
+no line and judge no fact of their own. The shared findings are the
+truth; `next` chooses one action from them. So the invariant is not
+"the hook holds exactly when `next` names a blocking step" — several
+blockers can stand at once and `next` names the first, and `next`
+places the progress account before some blocks on purpose. The
+invariant, held by a test over every hold the hooks know: gate, hook and
+`next` read the same applicable findings of the same file state; the
+hook holds by its fixed policy (a BLOCKER among them, grade decides, the
+words never); `next` names its step from that same set, by its order. A
+hook that holds on a finding `next`'s set does not contain, or `next`
+naming a step from a finding the hook's set does not contain, is the
+contradiction this plan exists to remove. For the isolated report case
+the test may then demand the same hold and the same action.
 `finalize.undeclared_hint` becomes one line naming `labkit-next AREA`.
 `scaffold.next_steps` prints `next_step` for the stamped area instead of
 its own lane. `blocker_routes` leaves the decision list (one line names
@@ -416,9 +432,10 @@ First item, and step 1 of the allow-list direction: one writer of the
 protocol head. `protocol_fill`, `protocol_edit` and `scaffold` write it
 today; one home writes it, and that writer refuses what a gate would
 later hold (a registered field after the first measurement, a bound
-field twice). Only then does a gate's recognition of a hand edit become
-replaceable by the writer's precondition. Before/after proposal like
-every other row.
+field twice), through the same validation function the readers use.
+The reader's checks stay — a file may be edited by hand, restored or
+copied from another clone — but they call one implementation, not a
+second one. Before/after proposal like every other row.
 
 Each *goes* or *merges* row of the inventory is first a before/after
 proposal (one section in this note or a note of its own), then one
