@@ -258,7 +258,7 @@ class TestWait(unittest.TestCase):
                 code, out = _run_main([d])
             self.assertEqual(code, 0, out)
             self.assertIn("unknown", out)
-            self.assertIn("treat it as running, never delete its lock", out)
+            self.assertIn("treat it as running; an output lock it holds tells", out)
 
     def test_an_earlier_crash_beside_a_running_run_does_not_end_the_wait(self):
         """A start refused by the open run's output lock leaves a crashed

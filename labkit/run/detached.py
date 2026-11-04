@@ -47,7 +47,7 @@ from pathlib import Path
 
 from labkit.formats import console
 from labkit.formats.gate import with_way_out
-from labkit.formats.files import write_atomic
+from labkit.formats.files import lock_held, write_atomic
 from labkit.formats.repo import local_dir
 from labkit.formats.runs import now_stamp
 from labkit.formats.scope_sha import digest
@@ -106,18 +106,6 @@ def _record_path(area: Path, pid: int) -> Path:
     return _folder(area) / f"{_key(area)}-{pid}.json"
 
 
-def _held(path: Path) -> bool:
-    """Is the lock on PATH held? A shared probe, so two readers never see
-    each other as the holder. Raises FileNotFoundError when PATH is gone."""
-    with path.open("rb") as fh:
-        try:
-            fcntl.flock(fh, fcntl.LOCK_SH | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return True
-        fcntl.flock(fh, fcntl.LOCK_UN)
-        return False
-
-
 def _records(area: Path) -> list[Path]:
     folder = _folder(area)
     if not folder.is_dir():
@@ -132,7 +120,7 @@ def starts(area: Path) -> list[DetachedStart]:
     out: list[DetachedStart] = []
     for path in _records(area):
         try:
-            held = _held(path)
+            held = lock_held(path)
             text = path.read_text(encoding="utf-8")
         except FileNotFoundError:
             continue  # removed since the listing, which only ended starts are

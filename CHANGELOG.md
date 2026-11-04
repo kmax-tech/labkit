@@ -47,6 +47,24 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
   registration or the handover). A blob git cannot read is that hold, not
   a traceback. Outside a repository nothing changes. The last release
   that passed over it is **0.107.0**.
+- **An output lock tells by its flock whether its writer still writes,
+  never by its pid.** `batch.Store` holds its `<out>.lock` file's
+  `fcntl.flock` while it writes, and the line names it (`pid N · <time> ·
+  flock · <argv>`, `batch.LOCK_HELD_BY`). The refusal of a second writer
+  asks the kernel (`files.lock_held`, also the detached start's probe):
+  held — "still writing, wait, never delete"; free — "stale, delete it,
+  then start again". Until now any existing pid read as a writer: a pid
+  reused by another process kept a dead run's lock "alive, never delete"
+  while `runlog --wait` ended at once (`docs/notes/2026-11-04-liveness-and-wait.md`,
+  case D); a sandbox without `ps` and a `python -m` writer change nothing
+  now either. A lock line without the marker — written by labkit
+  0.107.0 or earlier, or by hand — is not judged by its pid any more: the
+  refusal advises deleting it only when `runlog AREA` lists no run
+  writing the output, where 0.107.0 said "stale" for a pid that did not
+  exist. Finish runs started under an older labkit before upgrading the
+  environment they write from. `runlog AREA` no longer says "never delete
+  its lock" beside a run it cannot check; it points to the lock's own
+  answer. The last release that judged a lock by its pid is **0.107.0**.
 
 - **A run index that does not read is refused, not read around.**
   `runs.tsv` is now checked as written wherever it is read

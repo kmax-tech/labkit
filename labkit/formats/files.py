@@ -2,11 +2,14 @@
 
 The formats know their own records (`runs`, `findings`, `promises`); how a
 file is put on disk so that no reader sees half of it is one technique
-they share, and it lives here rather than with one of them.
+they share, and it lives here rather than with one of them — as does
+asking whether a file's `flock` is held (`lock_held`: a detached start,
+an output lock).
 """
 
 from __future__ import annotations
 
+import fcntl
 import os
 import stat
 import threading
@@ -106,3 +109,18 @@ def write_once(path: Path, text: str) -> bool:
     finally:
         tmp.unlink(missing_ok=True)
     return True
+
+
+def lock_held(path: Path) -> bool:
+    """Is the `fcntl.flock` lock on PATH held, by any process? A shared,
+    non-blocking probe, so two readers never see each other as the holder;
+    the kernel releases a holder's lock when its last descriptor closes,
+    a killed process included — never a pid, which the system reuses.
+    Raises FileNotFoundError when PATH is gone."""
+    with path.open("rb") as fh:
+        try:
+            fcntl.flock(fh, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(fh, fcntl.LOCK_UN)
+        return False

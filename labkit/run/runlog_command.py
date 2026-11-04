@@ -113,10 +113,13 @@ def _print_status(
             print(f"    {read_failure(r.dir)} — its process lives on; the run ended")
         if r.state == "unknown":
             # a live run in a sandbox without `ps` read as a bare "unknown",
-            # and its lock as stale (registered pilot part 1, pubmedqa50-r2)
+            # and its lock as stale (registered pilot part 1, pubmedqa50-r2);
+            # an output lock answers for itself, by its flock (`batch.Store`)
             print(
                 f"    pid {pid} exists; whether it still runs {script} cannot be "
-                f"checked here (no `ps`) — treat it as running, never delete its lock"
+                f"checked here (no `ps`) — treat it as running; an output lock "
+                f"it holds tells by itself whether it is still held (the refusal "
+                f"of a second writer says so)"
             )
         if r.config is None:
             print(f"    {r.error}")

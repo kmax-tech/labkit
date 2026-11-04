@@ -29,15 +29,15 @@ count it in the experiment and report it, LAB-023 No silent loss).
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping
 
-from labkit.formats import jsonl, runs, scope_sha
+from labkit.formats import files, jsonl, runs, scope_sha
 
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
@@ -232,33 +232,53 @@ class InstrumentError(ValueError):
     measuring code)."""
 
 
-def lock_holder_words(holder: str) -> str:
-    """What to do about an output lock whose first line is HOLDER (`pid N ·
-    <time> · <argv>`): its pid checked here, so the advice does not hang
-    on `ps`, which a sandbox may lack (pubmedqa50, 2026-11-01: a live
-    run's lock deleted twice, two writers in one output). A pid the OS
-    knows is held alive — it may be another process that reuses it, which
-    only costs a wait; a pid it does not know is gone."""
-    m = re.match(r"pid (\d+)\b", holder)
-    if m is None:
-        return (
-            "The lock names no pid — read it, and delete it only when no run "
-            "writes this output (`.venv/bin/runlog <area>`)."
-        )
-    pid = int(m.group(1))
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return (
-            f"pid {pid} is gone: that run is dead and the lock is stale — "
-            f"delete it, then start again (the output resumes)."
-        )
-    except PermissionError:
-        pass  # exists, belongs to someone else
+#: the third field of an output lock's line (`pid N · <time> · flock ·
+#: <argv>`): its writer holds the lock file's `fcntl.flock` while it writes
+LOCK_HELD_BY = "flock"
+
+
+def lock_line(argv: list[str]) -> str:
+    """The line a Store writes into its output lock: this process's pid,
+    the local time, LOCK_HELD_BY and ARGV (`sys.argv`)."""
     return (
-        f"pid {pid} is alive: that run is still writing — wait for it "
-        f"(`.venv/bin/runlog <area> --wait`), never delete its lock; a "
-        f"second writer would append the same rows again."
+        f"pid {os.getpid()} · {runs.now_stamp()} · {LOCK_HELD_BY} · {' '.join(argv)}\n"
+    )
+
+
+def lock_holder_words(lock: Path, holder: str) -> str:
+    """What to do about the output lock LOCK whose first line is HOLDER.
+    The kernel tells, never the pid: the Store that wrote the line holds
+    the file's flock until it ends (`files.lock_held`), so a reused pid, a
+    `python -m` command line and a sandbox without `ps` (pubmedqa50,
+    2026-11-01: a live run's lock deleted twice) change no answer. Held:
+    the writer is still writing — wait, never delete. Free: its writer
+    ended — the lock is stale. A line without LOCK_HELD_BY (labkit 0.107.0
+    or earlier, or by hand) holds nothing to test: no answer, and no
+    deletion advised. Why: docs/notes/2026-11-04-liveness-and-wait.md."""
+    fields = holder.split(" · ")
+    who = fields[0] if fields[0].startswith("pid ") else "its writer"
+    if len(fields) < 4 or fields[2] != LOCK_HELD_BY:
+        return (
+            f"The lock does not say that its writer holds it ({LOCK_HELD_BY}): "
+            f"labkit 0.107.0 or earlier, or a hand, wrote it, and whether a run "
+            f"still writes this output cannot be told from it — delete it only "
+            f"when `.venv/bin/runlog <area>` lists no run writing this output."
+        )
+    try:
+        held = files.lock_held(lock)
+    except FileNotFoundError:
+        return "The lock was released meanwhile: start again (the output resumes)."
+    if held:
+        return (
+            f"Its writer ({who}) still holds it: that run is still writing — "
+            f"wait for it (`.venv/bin/runlog <area> --wait`), never delete its "
+            f"lock; a second writer would append the same rows again."
+        )
+    return (
+        f"No process holds it any more: its writer ({who} when it took the "
+        f"lock) ended and the system released it, whatever process has that "
+        f"pid now — the lock is stale: delete it, then start again (the "
+        f"output resumes)."
     )
 
 
@@ -333,22 +353,29 @@ class Store:
         self._tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         self._fh = None
         self._producing = False
+        self._lock_fd: int | None = None  # holds the lock file's flock while open
 
     # -- lock -------------------------------------------------------------
     def __enter__(self) -> "Store":
         self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with self.lock.open("x", encoding="utf-8") as f:
-                f.write(
-                    f"pid {os.getpid()} · {runs.now_stamp()} · {' '.join(sys.argv)}\n"
-                )
+            fd = os.open(self.lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
         except FileExistsError:
-            holder = self.lock.read_text(encoding="utf-8").strip()
+            try:
+                holder = self.lock.read_text(encoding="utf-8").strip()
+            except FileNotFoundError:
+                holder = "(released meanwhile)"
             raise SystemExit(
                 f"{self.lock} exists — another run is writing this output:\n"
-                f"  {holder}\n{lock_holder_words(holder)}"
+                f"  {holder}\n{lock_holder_words(self.lock, holder)}"
             )
+        self._lock_fd = fd
         try:
+            # held before the line names it: a reader that finds the
+            # marker finds the lock held (`lock_holder_words`); blocking,
+            # since a reader's probe holds it shared for an instant
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            os.write(fd, lock_line(sys.argv).encode("utf-8"))
             self._open()
         except BaseException:
             # __exit__ does not run when __enter__ raises: the lock is ours
@@ -357,9 +384,17 @@ class Store:
                 self._fh.close()
                 self._fh = None
             self._producing = False
-            self.lock.unlink(missing_ok=True)
+            self._release_lock()
             raise
         return self
+
+    def _release_lock(self) -> None:
+        """Remove the lock file, then close the descriptor holding its flock
+        — in this order, so no reader finds the file free while it stands."""
+        self.lock.unlink(missing_ok=True)
+        if self._lock_fd is not None:
+            os.close(self._lock_fd)
+            self._lock_fd = None
 
     def _open(self) -> None:
         """The output handle, under the lock `__enter__` holds."""
@@ -414,7 +449,7 @@ class Store:
                     f"partial output in {self._tmp}",
                     file=sys.stderr,
                 )
-        self.lock.unlink(missing_ok=True)
+        self._release_lock()
 
     # -- reading ----------------------------------------------------------
     def records(self) -> list[dict]:

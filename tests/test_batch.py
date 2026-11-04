@@ -3,15 +3,124 @@ so a silent break here changes a reported number without changing any metric.
 """
 
 import json
+import os
+import signal
+import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package under test
+from labkit.formats import runs  # noqa: E402
 from labkit.run import batch  # noqa: E402
 
 RECORDS = [{"id": f"item-{i}", "text": f"t{i}"} for i in range(5)]
+
+
+#: a writer that appends one row, says LOCKED and holds its Store open
+WRITER = (
+    "import sys, time\n"
+    f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
+    "from labkit.run import batch\n"
+    "with batch.Store(sys.argv[1]) as store:\n"
+    "    store.append({'id': 'item-0'})\n"
+    "    print('LOCKED', flush=True)\n"
+    "    time.sleep(60)\n"
+)
+
+
+class TestTheLockHolderIsToldByItsFlock(unittest.TestCase):
+    """Is the lock's writer still writing? The refusal said "pid N is
+    alive: still writing — wait, never delete" whenever the pid existed: a
+    pid reused by another process kept a dead run's lock "alive" while
+    `runlog --wait` ended at once (2026-11-04, case D of
+    docs/notes/2026-11-04-liveness-and-wait.md). The Store holds its lock
+    file's flock; the kernel tells. Real processes; only `ps` being
+    unavailable is mocked."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.out = self.tmp / "out.jsonl"
+        self.lock = self.out.with_suffix(".jsonl.lock")
+
+    def _writer(self, *argv: str) -> subprocess.Popen:
+        p = subprocess.Popen(
+            [sys.executable, *argv, str(self.out)], cwd=self.tmp,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )  # fmt: skip
+        self.addCleanup(p.wait)
+        self.addCleanup(p.kill)
+        line = p.stdout.readline() if p.stdout else ""
+        if line.strip() != "LOCKED":  # stderr read only then: it ends with the writer
+            p.kill()
+            self.fail(f"the writer did not lock: {p.communicate()[1]}")
+        return p
+
+    def _refusal(self) -> str:
+        with self.assertRaises(SystemExit) as ctx:
+            batch.Store(self.out).__enter__()
+        return str(ctx.exception)
+
+    def _killed_writer(self) -> int:
+        script = self.tmp / "01_measure.py"
+        script.write_text(WRITER, encoding="utf-8")
+        p = self._writer(str(script))
+        p.send_signal(signal.SIGKILL)
+        p.wait()
+        self.assertTrue(self.lock.exists())  # a killed writer leaves its lock
+        return p.pid
+
+    def test_a_live_writer_holds_its_lock_with_or_without_ps(self):
+        script = self.tmp / "01_measure.py"
+        script.write_text(WRITER, encoding="utf-8")
+        p = self._writer(str(script))
+        why = self._refusal()
+        self.assertIn(f"Its writer (pid {p.pid}) still holds it", why)
+        self.assertIn("never delete its lock", why)
+        with unittest.mock.patch.object(runs, "_command_of", lambda pid: None):
+            self.assertIn("still holds it", self._refusal())
+
+    def test_a_live_writer_started_with_dash_m_holds_its_lock(self):
+        """`python -m pkg.mod` records `mod.py`, which its command line does
+        not name: a check of pid and script would call it dead."""
+        pkg = self.tmp / "probe_pkg"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "measure.py").write_text(WRITER, encoding="utf-8")
+        self._writer("-m", "probe_pkg.measure")
+        self.assertIn("still holds it", self._refusal())
+
+    def test_a_killed_writers_lock_is_stale_and_the_output_resumes(self):
+        pid = self._killed_writer()
+        why = self._refusal()
+        self.assertIn(f"its writer (pid {pid} when it took the lock) ended", why)
+        self.assertIn("the lock is stale", why)
+        with unittest.mock.patch.object(runs, "_command_of", lambda pid: None):
+            self.assertIn("the lock is stale", self._refusal())
+        # the way out it names: delete it, start again — the output resumes
+        self.lock.unlink()
+        with batch.Store(self.out) as s:
+            self.assertEqual(
+                [r["id"] for r in s.pending(RECORDS)], [r["id"] for r in RECORDS[1:]]
+            )
+
+    def test_a_dead_writers_pid_reused_by_another_process_is_stale(self):
+        self._killed_writer()
+        other = subprocess.Popen(["sleep", "60"])
+        self.addCleanup(other.wait)
+        self.addCleanup(other.kill)
+        line = self.lock.read_text(encoding="utf-8")
+        self.lock.write_text(
+            f"pid {other.pid} " + line.split(" ", 2)[2], encoding="utf-8"
+        )
+        os.kill(other.pid, 0)  # the pid the lock names exists
+        why = self._refusal()
+        self.assertIn("the lock is stale", why)
+        self.assertNotIn("still holds it", why)
+        with unittest.mock.patch.object(runs, "_command_of", lambda pid: None):
+            self.assertIn("the lock is stale", self._refusal())
 
 
 class TestStore(unittest.TestCase):
@@ -51,18 +160,28 @@ class TestStore(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 batch.Store(self.out).__enter__()
         # the holder (this process) is alive: the refusal says so itself
-        self.assertIn("is alive", str(ctx.exception))
+        self.assertIn("still holds it", str(ctx.exception))
         self.assertIn("never delete its lock", str(ctx.exception))
 
-    def test_a_dead_holders_lock_is_named_stale(self):
-        """The refusal checks the holder's pid itself — a sandbox without
-        `ps` left the agent guessing (pubmedqa50, 2026-11-01)."""
+    def test_a_lock_that_names_no_held_flock_advises_no_deletion(self):
+        """A lock line without the flock marker (labkit 0.107.0 or earlier,
+        or by hand) holds nothing to test: its pid decides nothing, and no
+        deletion is advised (docs/notes/2026-11-04-liveness-and-wait.md)."""
         lock = self.out.with_suffix(".jsonl.lock")
         lock.write_text("pid 99999999 · 2026-11-01T01:00:00 · x.py\n", encoding="utf-8")
         with self.assertRaises(SystemExit) as ctx:
             batch.Store(self.out).__enter__()
-        self.assertIn("pid 99999999 is gone", str(ctx.exception))
-        self.assertIn("the lock is stale", str(ctx.exception))
+        self.assertIn("cannot be told from it", str(ctx.exception))
+        self.assertIn("delete it only when", str(ctx.exception))
+        self.assertNotIn("stale", str(ctx.exception))
+        self.assertTrue(lock.exists())  # never removed by the refusal
+
+    def test_the_lock_line_names_its_flock(self):
+        with batch.Store(self.out):
+            line = self.out.with_suffix(".jsonl.lock").read_text(encoding="utf-8")
+        fields = line.split(" · ")
+        self.assertRegex(fields[0], r"^pid \d+$")
+        self.assertEqual(fields[2], batch.LOCK_HELD_BY)
 
     def test_lock_is_released_after_the_block(self):
         with batch.Store(self.out):

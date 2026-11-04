@@ -126,3 +126,43 @@ them reconstructible.
   the script pass beside a pending start; whichever opens second while the
   other is open is refused, and two runs one after the other remain
   possible for an agent that ignores `labkit-next` (open below).
+- **D (N2) — the output lock answers by its flock.** The review's
+  smallest change, `runs.is_alive(pid, script)` on the lock line, would
+  have fixed D and broken G (a live `-m` writer's lock "stale") and given
+  no answer in E′. Instead the Store keeps its lock file's `flock` while
+  it writes and its line names it (`pid N · <time> · flock · <argv>`);
+  the refusal asks the kernel (`files.lock_held`, the probe
+  `detached.starts` already used, moved there). Held: "still writing,
+  wait, never delete"; free: "stale, delete it, then start again". After
+  the repair the probe's lock answers: B, E, G held; C, C′, D, E′ stale.
+  Ownership stays with the lock: `O_EXCL` creation still decides who
+  writes; liveness of the area's runs plays no part. A line without the
+  marker (0.107.0 or earlier, or by hand) gets no answer and no deletion
+  advice. Tests: `tests/test_batch.py`,
+  `TestTheLockHolderIsToldByItsFlock` (the reused pid fails on
+  `f1ff7723`'s `batch.py`, saying "is alive"; twins: a live writer with
+  and without `ps`, a `-m` writer; recovery: the killed writer's lock
+  deleted, the output resumes after its one row) and
+  `test_a_lock_that_names_no_held_flock_advises_no_deletion`. `runlog
+  AREA` beside an unknown run no longer says "never delete its lock"; it
+  points to the lock's own answer.
+
+## Open
+
+1. **Run records still decide by pid and script (`runs.is_alive`).** D,
+   E′ and G remain for runs: after pid reuse with `ps` missing (E′) every
+   consumer says "wait" and `--wait` reaches its limit each time; a `-m`
+   writer (G) reads as crashed, so `--wait` ends and the twin refusal
+   lets a second start pass — its output lock then refuses it. A run
+   could hold a flock on a file in its directory as the detached start
+   and the output lock do; that is a run-record format change, not made
+   here.
+2. **Two measurements one after the other beside a pending start (A).**
+   `labkit-next` now says wait, but the twin refusal does not see a
+   detached start of the same script before its run opens; an agent that
+   ignores the advice still measures twice. Refusing it would need the
+   start's script compared with the starting one (`runs_script` on its
+   command); not a contradiction between consumers, so not changed.
+3. **A flock on a network file system** may hold only on one host; two
+   hosts writing one output through a shared mount would each see the
+   lock free. Nothing in the lab writes that way today (ferry copies).
