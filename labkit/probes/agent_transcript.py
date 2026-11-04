@@ -191,16 +191,19 @@ def tokens(path: Path) -> Tokens:
 
 
 def read_calls(path: Path) -> tuple[list[Call], float, float]:
-    """(calls in order, first stamp, last stamp) of one transcript. A record
-    without a timestamp and without a message is session bookkeeping
-    (`atis-latch`, `last-prompt`, `cost-state` in Claude Code 2.1.285) and is
-    skipped; a message without one is refused (`_stamp`)."""
+    """(calls in order, first stamp, last stamp) of one transcript. Only the
+    `user` and `assistant` records are read (the module docstring: the two
+    kinds that carry calls, results and stamps); every other type is session
+    bookkeeping and skipped — `atis-latch`, `last-prompt`, `cost-state`
+    (Claude Code 2.1.285), and `api-request-blob`, which carries a `message`
+    hash and no timestamp (a subagent's transcript, 2026-11-04). A `user` or
+    `assistant` record without a timestamp is refused (`_stamp`)."""
     uses: dict[str, tuple[float, str, str]] = {}
     order: list[str] = []
     results: dict[str, tuple[float, str]] = {}
     stamps: list[float] = []
     for n, record in records(path):
-        if "timestamp" not in record and "message" not in record:
+        if record.get("type") not in ("user", "assistant"):
             continue
         at = _stamp(record, n)
         stamps.append(at)

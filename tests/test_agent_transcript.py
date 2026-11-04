@@ -275,9 +275,20 @@ class RecordsWithoutTimestamp(unittest.TestCase):
         return path
 
     def test_bookkeeping_without_a_timestamp_is_skipped(self):
-        for kind in ("atis-latch", "last-prompt", "cost-state"):
+        """`api-request-blob` (a subagent's transcript, 2026-11-04) carries a
+        `message` key — a hash, not a message — and no timestamp: skipped by
+        its type, not refused for its key."""
+        for kind, extra in (
+            ("atis-latch", {}),
+            ("last-prompt", {}),
+            ("cost-state", {}),
+            (
+                "api-request-blob",
+                {"message": "sha256:abc", "hash": "abc", "agentId": "a"},
+            ),
+        ):
             with self.subTest(kind=kind):
-                path = self.with_record({"type": kind, "sessionId": "s"})
+                path = self.with_record({"type": kind, "sessionId": "s", **extra})
                 self.assertEqual(
                     at.trace(path, ROOT, SOURCE).calls,
                     at.trace(transcript(CALLS), ROOT, SOURCE).calls,
