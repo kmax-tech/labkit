@@ -1,5 +1,8 @@
 # A finalize hold missing once in the correction end-to-end test
 
+> Cause shown on 2026-11-04 and repaired in the test fixture: see the last
+> section. The sections before it are the search, kept as evidence.
+
 2026-11-03. Seen three times, cause still unknown. This note keeps the
 evidence; it changes no code. The controlled variation (section
 "Controlled variation, 2026-11-03 evening" below) found one input that
@@ -184,4 +187,32 @@ hand has failed. That is an observation, not a cause: the git variables a
 hook exports (`GIT_INDEX_FILE`, a temporary one for a path commit,
 `GIT_AUTHOR_DATE`) were checked and are dropped by `tests/conftest.py`
 before any test runs, so they are ruled out as the carrier.
+
+## Cause shown, 2026-11-04
+
+With the hook keeping its whole output (`d217ec4a`), two refusals were
+caught in full, on branch `unread-checks-block` (load average 7–13):
+
+```
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds
+E   AssertionError: no hold naming Question / hypothesis; runs ['2026-11-04T10-10-50_4c7a', '2026-11-04T10-10-50_4f01'], B 2026-11-04T10-10-50_4c7a:
+E     BLOCKER: 2026-11-04T10-10-50_4f01 and 2026-11-04T10-10-50_4c7a started in the same second — the run ids cannot say which is newest.
+
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_the_twin_on_a_new_run_a_question_beside_a_correction_holds_the_same
+E   AssertionError: no hold naming Question / hypothesis; runs ['2026-11-04T10-25-54_3bb5', '2026-11-04T10-25-54_f8f7'], …
+E     BLOCKER: 2026-11-04T10-25-54_f8f7 and 2026-11-04T10-25-54_3bb5 started in the same second …
+```
+
+Runs A and B of the fixture started in one second, so the answering
+run's choice was refused (`answering_run.same_second_rival`, documented)
+and the expected hold could not be made — the failure the controlled
+variation above produced on purpose. The directory times measured there
+did not show it; the run ids, which carry the second the choice reads, do.
+The refusal is labkit's rule, not the defect: the fixture wrote a history
+no lab writes by hand. Repair: `CountCommands.measure` waits until the
+clock's second is later than every run the area holds, then measures — a
+condition, not a guessed sleep; a test holds that two measurements back to
+back carry different seconds. Whether labkit itself should refuse or
+avoid a run started in the second of another (a script starting draws in
+a loop could) is a question of its own, not decided here.
 

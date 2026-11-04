@@ -25,6 +25,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -40,6 +41,10 @@ from labkit.formats import (
     standard_contract as sc,
 )
 from protocol_fixture import decide_words, fill_known_case, registration_of, shown_sha  # noqa: E402
+from labkit.formats.runs import RUN_ID_TIME  # noqa: E402
+
+#: the second of a run id, as `time.strftime(RUN_ID_TIME)` writes it
+_SECOND = time.strftime(RUN_ID_TIME, time.gmtime(0))
 
 
 def _replace(path: Path, pairs: list[tuple[str, str]]) -> None:
@@ -582,6 +587,17 @@ class CountCommands(unittest.TestCase):
 
     # -- the commands, as an agent runs them
     def measure(self) -> str:
+        """Run the measuring script, in a later second than every run the
+        area holds: run ids carry the second, and two in one second leave
+        the answering run's choice blocked (`answering_run.same_second_rival`)
+        — a history no lab writes by hand, which made the correction tests
+        fail under load (docs/notes/2026-11-03-finalize-hold-missing-once.md).
+        Waits for the clock, not for a guessed time."""
+        runs = self.area / "runs"
+        held = runs.iterdir() if runs.is_dir() else ()
+        newest = max((d.name[: len(_SECOND)] for d in held), default="")
+        while time.strftime(RUN_ID_TIME) <= newest:
+            time.sleep(0.02)
         return self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
 
     def records(self) -> set[Path]:
@@ -664,6 +680,15 @@ class CountCommands(unittest.TestCase):
                 )
             ],
         )
+
+
+class MeasuredRunsKeepTheirSecond(CountCommands):
+    def test_two_measurements_back_to_back_carry_different_seconds(self):
+        """The fixture's `measure` never writes two runs of one second: the
+        correction tests failed in hooks with both runs in one second
+        (2026-11-04: `…10-10-50_4f01` beside `…10-10-50_4c7a`)."""
+        a, b = self.measure(), self.measure()
+        self.assertNotEqual(a[: len(_SECOND)], b[: len(_SECOND)])
 
 
 class Withdraw(CountCommands):
