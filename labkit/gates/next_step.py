@@ -63,6 +63,7 @@ from typing import TYPE_CHECKING
 from labkit.formats import evidence, handovers, protocol_block, protocol_check
 from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
+    area_protocols,
     audit_command,
     layout_root,
     measure_command,
@@ -206,6 +207,35 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
         finished,
         "",
     )
+
+
+def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
+    """Per protocol of every area PATHS touch (`scope_sha.areas_touched`),
+    `labkit-next`'s step for the state the caller judges — the index when
+    STAGED (the commit's gates), else the tree (the stop) — as the console
+    prints it (`Step.render`): the one action the stop, the commit's
+    undecided gate and report-check's hook entry name beside what they
+    hold; none composes a step of its own. A head that does not read, or a
+    protocol the index does not hold, is told in one line in the step's
+    place; a run index that does not read once per index."""
+    from labkit.formats.scope_sha import areas_touched
+    from labkit.run.runlog import RunIndexError
+
+    out: list[str] = []
+    for area in [a.resolve() for a in areas_touched(paths, repo)]:
+        named = shown(area, Path.cwd())
+        for protocol in area_protocols(area):
+            try:
+                step = next_step(area, protocol, state=INDEX if staged else TREE)
+            except RunIndexError as exc:  # a ValueError too: before it
+                if exc.why not in out:
+                    out.append(exc.why)
+                continue
+            except (protocol_block.BlockError, ValueError) as exc:
+                out.append(f"{named}: {protocol.name}: {exc}")
+                continue
+            out.append(step.render(named))
+    return out
 
 
 def _before_the_chain(

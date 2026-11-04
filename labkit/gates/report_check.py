@@ -1114,7 +1114,15 @@ def main(argv: list[str]) -> int:
         rest = argv[1:]
         staged = bool(rest) and rest[0] == "--staged"
         paths = [Path(a) for a in (rest[1:] if staged else rest)]
-        return if_reported(paths, git_root(cwd) or cwd, staged=staged)
+        repo = git_root(cwd) or cwd
+        rc = if_reported(paths, repo, staged=staged)
+        if rc != 0:
+            # what to do is `next`'s step, from the state this gate judged
+            from labkit.gates.next_step import steps_for
+
+            for step in steps_for(repo, paths, staged=staged):
+                print(step)
+        return rc
     ap = argparse.ArgumentParser(
         prog="report-check",
         description=(__doc__ or "").split("\n\n")[0],

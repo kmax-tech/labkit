@@ -37,8 +37,11 @@ pins (`requirements.txt` / `requirements.lock`).
   (`claude-hook undecided`) said the way out themselves
   (`agent_hooks.UNDECIDED_WAY`, "fix them before you stop"); they now say
   what holds and print `labkit-next`'s rendered step per protocol of
-  every area touched (`agent_hooks.next_steps_for`: the tree at the stop,
-  the index at the commit). `labkit-next` gains the row that way lived
+  every area touched (`next_step.steps_for`: the tree at the stop, the
+  index at the commit — `claude-hook undecided` and `report-check
+  --if-reported --staged` alike; the stamped pre-commit's two echo lines
+  say only what holds, `labkit-hooks install` restamps them). `labkit-next`
+  gains the row that way lived
   in (`next_step._undecided_step`, after report-check's chain: a gap
   there names its own step first): decide by the `--decide` command
   `--findings` prints, never by editing the record; an outdated record

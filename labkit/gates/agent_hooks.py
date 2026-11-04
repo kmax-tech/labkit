@@ -171,8 +171,7 @@ from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
-from labkit.gates.next_step import next_step
-from labkit.gates.report_context import INDEX, TREE
+from labkit.gates.next_step import next_step, steps_for
 from labkit.formats.runs import run_path
 from labkit.run.runlog import RunIndexError, indexed_runs
 from labkit.formats.repo import (
@@ -1188,9 +1187,7 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     if undecided or rc != 0:
         # what to do is `next`'s step per protocol touched, read from the tree
         # the stop judges; the missing-report lines above are that step already
-        steps = [
-            s for s in next_steps_for(repo, changed, staged=False) if s not in missing
-        ]
+        steps = [s for s in steps_for(repo, changed, staged=False) if s not in missing]
         if steps:
             print("\n".join(steps), file=sys.stderr)
     # commits it could not read keep the base where it is: past them, no
@@ -1240,32 +1237,6 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
                 # the hold is the gate's finding; what to do is `next`'s step,
                 # read from the same finding — one spelling, never two
                 out.append(next_step(area, protocol).render(shown(area, Path.cwd())))
-    return out
-
-
-def next_steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
-    """Per protocol of every area PATHS touch (`areas_touched`),
-    `labkit-next`'s step for the state the caller judges — the index when
-    STAGED (the commit), else the tree (the stop) — as the console prints
-    it (`next_step.Step.render`): the one action the stop and the commit
-    name beside what they hold; neither composes a step of its own. A head
-    that does not read, or a protocol the index does not hold, is told in
-    one line in the step's place; a run index that does not read once per
-    index."""
-    out: list[str] = []
-    for area in [a.resolve() for a in areas_touched(paths, repo)]:
-        named = shown(area, Path.cwd())
-        for protocol in area_protocols(area):
-            try:
-                step = next_step(area, protocol, state=INDEX if staged else TREE)
-            except RunIndexError as exc:  # a ValueError too: before it
-                if exc.why not in out:
-                    out.append(exc.why)
-                continue
-            except (protocol_block.BlockError, ValueError) as exc:
-                out.append(f"{named}: {protocol.name}: {exc}")
-                continue
-            out.append(step.render(named))
     return out
 
 
@@ -1421,6 +1392,6 @@ def undecided(argv: list[str]) -> int:
         "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(lines)
     )
     # what to do is `next`'s step, read from the index the commit judges
-    for step in next_steps_for(repo, [repo / p for p in argv], staged=True):
+    for step in steps_for(repo, [repo / p for p in argv], staged=True):
         print(step)
     return 1

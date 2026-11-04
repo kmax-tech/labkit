@@ -1011,6 +1011,30 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         code, out = self._if_reported([self.proto])
         self.assertNotIn("now registers", out)
 
+    def test_the_hook_entry_prints_next_steps_step_after_a_hold(self):
+        """The one-explainer plan, step 6: `report-check --if-reported
+        --staged` (the pre-commit) holds and then prints `labkit-next
+        --staged`'s step for the area, byte for byte; its findings keep
+        their own lines."""
+        from labkit.gates.next_step import next_step
+        from labkit.gates.report_context import INDEX
+
+        self._run(self._register("REPORT.md"))
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-qm", "the run")
+        self._head_now(None)
+        _git(self.root, "add", str(self.proto))
+        rel = self.proto.relative_to(self.root).as_posix()
+        out = io.StringIO()
+        with contextlib.chdir(self.root), contextlib.redirect_stdout(out):
+            code = report_check.main(["--if-reported", "--staged", rel])
+            step = next_step(self.area, self.proto, state=INDEX).render(
+                self.area.relative_to(self.root).as_posix()
+            )
+        self.assertEqual(code, 1, out.getvalue())
+        self.assertIn("now registers none", out.getvalue())
+        self.assertIn(step, out.getvalue())
+
     def test_the_gate_reaches_the_protocol_through_its_former_report(self):
         """Selection by the former path: the head moved the report in an
         earlier state, and only the old file changes now."""

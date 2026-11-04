@@ -126,7 +126,7 @@ if [ -n "$staged" ] && [ -x .venv/bin/report-check ]; then
     # shellcheck disable=SC2086
     if ! .venv/bin/report-check --if-reported --staged $staged; then
         echo ""
-        echo "pre-commit: report-check reports blockers for a written-back number (see above)."
+        echo "pre-commit: report-check holds a written-back number (see above; labkit-next's step follows it)."
         fail=1
     fi
 fi
@@ -138,7 +138,7 @@ if [ -n "$staged" ] && [ -x .venv/bin/claude-hook ]; then
     # shellcheck disable=SC2086
     if ! .venv/bin/claude-hook undecided $staged; then
         echo ""
-        echo "pre-commit: an audit BLOCKER nobody decided, or audit evidence gone or unreadable (see above) — labkit-audit <AREA> --findings prints the --decide and handover commands."
+        echo "pre-commit: an audit BLOCKER nobody decided, or audit evidence gone or unreadable (see above; labkit-next's step follows it)."
         fail=1
     fi
 fi

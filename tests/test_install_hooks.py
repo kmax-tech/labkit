@@ -455,7 +455,7 @@ class MergeChecks(unittest.TestCase):
         r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
         self.assertNotEqual(r.returncode, 0)
         out = r.stdout + r.stderr
-        self.assertIn("pre-commit: report-check reports blockers", out)
+        self.assertIn("pre-commit: report-check holds a written-back number", out)
         self.assertIn(
             "pre-merge-commit: the commit's checks above hold this merge", out
         )
