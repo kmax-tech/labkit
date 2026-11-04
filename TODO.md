@@ -33,6 +33,17 @@ und ein Gate, das nur wiederholt, was ein anderes prüft, sind die
 Kandidaten; ihre Tests gehen mit ihnen. Erst danach die Nutzungsrunde, an
 der sich der Umfang misst: Kommen Agenten mit korrekten Ergebnissen
 verlässlicher und mit weniger Aufwand zum Abschluss?
+Zielschnitt, den die Tabelle vorbereitet (Diskussion 2026-11-04, kein
+Bauauftrag): Gates liefern nur Daten („gehalten wegen X"), kein Gate
+formuliert mehr einen Ausweg; `labkit-next` wird der einzige Erklärer
+(heute 14 Hinweisfunktionen in 9 Modulen) und führt mechanische Übergänge
+mit `--do` selbst aus (Beleg wiederherstellen, einzigen antwortenden Lauf
+übernehmen, abgeleitete Felder füllen); Forschungsentscheidungen —
+welcher Lauf antwortet, die Conclusion, ob ein Befund steht — bleiben
+beim Agenten, dort nennt `next` nur die Erwartung. Zustand weiter aus den
+Dateien ableiten, nicht speichern (ein gespeicherter Zustand lügt nach
+jeder freien Dateiänderung), aber aus wenigen Dateien mit einem Leser und
+an einer Stelle geordnet. Angekündigter Bruch, nicht nebenbei.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
