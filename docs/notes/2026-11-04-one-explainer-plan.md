@@ -51,8 +51,9 @@ sections below:
 5. A reader does not justify a format, and a merge can breed variants.
    Every *merges* or *goes* needs a before/after proposal of its own.
 
-And: tests do not reduce to transitions wholesale. The allow-list removes
-the class that recognises semantically equivalent hand edits; corrupted
+And: tests do not reduce to transitions wholesale. The class that
+recognises semantically equivalent hand edits shrinks where a writer's
+precondition replaces a gate's recognition, no further; corrupted
 files, missing git objects and concurrent writes stay real inputs with
 their tests.
 
@@ -79,6 +80,9 @@ Acceptance of the pilot, fixed before it starts:
    survive as dead code.
 5. Measured afterwards: effort, the special cases that remain, and
    usability (the commands an agent needs from the hold to the release).
+6. The hold-step invariant of Phase 1, as a test for this one hold: the
+   stop and the pre-commit hold the area exactly when `next_step(area,
+   state)` returns this blocking step, resting on the same finding.
 
 The pilot needs no `Command`: `next` takes the hold as one row in its
 order, reads it from `Checked.state`, and the finding's identity is the
@@ -105,7 +109,8 @@ the next proposal.
    what holds, where, which rule, and the way out as a *command object*,
    not a sentence. No gate, hook or console path composes a "Next:"
    sentence of its own.
-2. **Mechanical steps run themselves.** `labkit-next --do` executes a
+2. **Mechanical steps run themselves, if the `--do` proposal is
+   triggered.** `labkit-next --do` executes a
    step whose command is one of labkit's own checked writers (adopt,
    block into the report, withdrawal, wait for an open run). It never
    runs git, never a model, never writes content it would have to invent.
@@ -132,7 +137,7 @@ writer's precondition replaces a gate's recognition, and no earlier.
 
 | Class | Files | Who writes | What labkit checks |
 |---|---|---|---|
-| machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands only | today: against HEAD once committed (`evidence.change_blockers`); the writer refuses what a gate would later hold. A comparison against what labkit last wrote, before the first commit, is the deferred write-ledger proposal below |
+| machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands only | today: against HEAD once committed (`evidence.change_blockers`). Step 1 (Phase 3, first item): the writer refuses what a gate would later hold. A comparison against what labkit last wrote, before the first commit, is the deferred write-ledger proposal below |
 | free | measuring code, report prose, notes, data, `MANIFEST.sha256` | the agent | consequences only: code changed since the run, a report citing a run nothing adopted |
 
 The second row exists and stays: research content must be free. The
@@ -143,8 +148,9 @@ is not a case with its own cure but a refusal with one way out, and the
 writer refuses what the gates would later hold (a registered field after
 the first measurement). The gap between a write and its first commit
 (what HEAD cannot compare yet) is a proposal below, not part of this
-plan. What the allow-list changes is the class of tests that recognise
-semantically equivalent hand edits; what it does not change are the
+plan. The class of tests that recognise semantically equivalent hand
+edits shrinks where a writer's precondition replaces a gate's
+recognition; what does not change are the
 bindings across time — the registration to the first measurement's
 commit, the record to the run it audited — which compare a present text
 with a historical one and stay as they are. What it does not solve
@@ -226,7 +232,7 @@ the same unnecessary construction.
 
 | Format | File | Link | Class | Readers (g gates · c checks · r run · t tools · p probes · tpl templates) | Proposed verdict |
 |---|---|---|---|---|---|
-| `protocol_block` | PROTOCOL-*.md, the toml block | I P | machine-led | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3 | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer after Phase 4 |
+| `protocol_block` | PROTOCOL-*.md, the toml block | I P | machine-led | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3 | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer, Phase 3's first item |
 | `protocol_check` | PROTOCOL-*.md prose fields, prompt blocks | I P | machine-led (content free, structure labkit's) | g 8 · c 4 · r 2 · t 5 · p 1 | stays; `repeated_fields` and the MUST checks become the writer's preconditions once the fields are written only through it |
 | `promises` | `[[promise]]` tables | P | machine-led | parse: g 4 · c 6 · r 1 · t 4; `load`, `write_constant`: tpl only | stays; `load`/`write_constant` are the scripts' API and move to the script-helper home (below) |
 | `protocol_history` | the protocol as git holds it | P→R | derived (git) | g 6 · c 1 · r 1 | stays: the binding to the first measurement's commit compares a present with a historical text and is not replaced by "as last written"; with one writer that refuses a registered field after the first measurement it fires rarely, but it stays |
@@ -351,7 +357,7 @@ Then `next_step._refused_measurement` tests `step.name == measure`,
 (it moves into `next`; `ways_out.declared_first` goes), and no code
 reads `fix` as text.
 
-Kinds, fixed here so the next phase has nothing to decide:
+Kinds, fixed here so the `--do` proposal has nothing to decide:
 
 | Kind | Commands | Why |
 |---|---|---|
@@ -405,6 +411,14 @@ Done when: in the six probe cases the number of commands an agent must
 type is counted before and after, and recorded in this note.
 
 ## Phase 3 — The verdicts of Phase 0, executed
+
+First item, and step 1 of the allow-list direction: one writer of the
+protocol head. `protocol_fill`, `protocol_edit` and `scaffold` write it
+today; one home writes it, and that writer refuses what a gate would
+later hold (a registered field after the first measurement, a bound
+field twice). Only then does a gate's recognition of a hand edit become
+replaceable by the writer's precondition. Before/after proposal like
+every other row.
 
 Each *goes* or *merges* row of the inventory is first a before/after
 proposal (one section in this note or a note of its own), then one
@@ -470,7 +484,9 @@ The size is measured by use, not by lines: the next round of agents on
 real tasks counts, per task, the commands typed, the refusals met and
 whether the correct number was reported. The round needs the first
 step above, not `--do`; it decides whether Phase 1 continues and whether
-the proposals get their trigger.
+the proposals get their trigger and whether the work continues from
+Phase 2. Whether Phase 1 continues is the pilot's decision alone, by
+its stop criteria above.
 
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
