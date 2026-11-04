@@ -136,7 +136,6 @@ from labkit.formats.repo import (
     measure_command,
     no_such_area,
     ProtocolChoiceError,
-    report_fields_step,
     shown,
     the_protocol,
     withdraw_command,
@@ -235,22 +234,18 @@ def choose_answering_run(
     return choice.run_dir
 
 
-def undeclared_hint(text: str, answering_run: Path, protocol: Path) -> str | None:
+def undeclared_note(text: str, protocol: Path) -> str | None:
     """A note while the protocol declares no result yet — the normal state
-    before adoption, so no warning: the steps still owed (the audit, its
-    decisions, the Conclusion and the report fields,
-    `repo.report_fields_step`) and the command that declares
-    MEASUREMENT_RUN and writes its number (`repo.adopt_command`, naming
-    PROTOCOL — `--from-run <run>` alone exits 2, review 2026-10-20). None
-    once a run is declared."""
+    before adoption, so no warning: it names `labkit-next AREA` and no step
+    of its own. finalize is a station of `next`'s chain
+    (`report_check.chain_gaps` → `finalize_gaps`), so it cannot print
+    `next`'s step without calling itself; the one explainer stays `next`.
+    None once a run is declared."""
     if protocol_block.declared_run(text) is not None:
         return None
     return (
-        f"no result adopted yet ([result]) — after the analysis audit "
-        f"(`{audit_command(protocol.parent, '--mode', 'analysis', protocol=protocol)}`) "
-        f"and its decisions, {report_fields_step(protocol)}; then "
-        f"`{adopt_command(protocol, answering_run.name)}` adopts the run and "
-        f"writes the number"
+        "no result adopted yet ([result]): "
+        f"`labkit-next {shown(protocol.parent, Path.cwd())}` names the step"
     )
 
 
@@ -258,18 +253,17 @@ def _hold_declaration(
     findings: Findings, protocol: Path, text: str, run: Path | None
 ) -> None:
     """The head's `[result]`: a table that does not read blocks
-    (`declared_run_gaps`); none yet is a note with the command
-    (`undeclared_hint`). An adopted run is the run the checks hold
+    (`declared_run_gaps`); none yet is a note naming `labkit-next`
+    (`undeclared_note`). An adopted run is the run the checks hold
     (`answering_run.bound_answering_run`), so it cannot name another."""
     gaps = declared_run_gaps(text, protocol)
     findings.take_all(gaps)
     if run is None or gaps:
         return
-    hint = undeclared_hint(text, run, protocol)
-    if hint:
-        findings.note(
-            f"  {hint}"
-        )  # the normal state before adoption: a note, finalize stays clear
+    note = undeclared_note(text, protocol)
+    if note:
+        # the normal state before adoption: a note, finalize stays clear
+        findings.note(f"  {note}")
 
 
 def check_answering_run(

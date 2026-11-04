@@ -7,12 +7,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from protocol_fixture import head  # noqa: E402
-
 from labkit.formats import attempts, findings, protocol_check, repo, standard_contract
 from labkit.formats import failed_attempts
 from labkit.checks import protocol_report
-from labkit.gates import audit, finalize
+from labkit.gates import audit
 from labkit.tools import scaffold
 
 
@@ -57,8 +55,10 @@ class WorkflowOrientation(unittest.TestCase):
         """The adoption runs protocol-check, which refuses a frozen protocol
         without the report fields owed once a result is declared: the step
         stands before the adoption, from one home (`repo.report_fields_step`),
-        in the run's next line, finalize's hint and labkit-init's closing
-        steps. The twin: the step names the contract line that lists them."""
+        in the run's next line and labkit-init's closing steps (finalize's
+        note is `labkit-next`'s step, whose order decides — the adoption's
+        refusal names the fields). The twin: the step names the contract
+        line that lists them."""
         protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
         run = "2026-10-27T10-00-00_ab12"
         step = repo.report_fields_step(protocol)
@@ -66,16 +66,11 @@ class WorkflowOrientation(unittest.TestCase):
         self.assertIn(f"`{repo.contract_command(protocol)}`", step)
         self.assertIn("--contract", repo.contract_command(protocol))
         self.assertIn("once frozen and adopted", step)
-        hint = finalize.undeclared_hint(
-            head(repeat_cost="low"), protocol.parent / "runs" / run, protocol
-        )
-        assert hint is not None
         closing = scaffold.next_steps(
             Path("experiments/01-x"), "x", "01", "high", "compute", False
         )
         for name, line in (
             ("next_after_run", repo.next_after_run(protocol, run)),
-            ("undeclared_hint", hint),
             ("next_steps", closing),
         ):
             with self.subTest(line=name):

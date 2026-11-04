@@ -95,17 +95,21 @@ class DeclaredRunHint(unittest.TestCase):
     RUN = Path("/x/runs/2026-10-07T10-00-00_aa11")
     PROTOCOL = Path("/x/PROTOCOL-a.md")
 
-    def test_no_declaration_is_a_hint_with_the_command(self):
-        hint = finalize.undeclared_hint(
-            head(repeat_cost="low"), self.RUN, self.PROTOCOL
-        )
-        assert hint is not None
-        self.assertIn("no result adopted yet ([result])", hint)
-        self.assertIn("labkit-adopt /x 2026-10-07T10-00-00_aa11", hint)
+    def test_no_declaration_names_labkit_next_and_no_step(self):
+        """finalize names no step of its own (the one-explainer plan, step
+        3): the note points to `labkit-next AREA`, the one explainer —
+        finalize is a station of `next`'s chain, so it cannot print the
+        step without calling itself."""
+        note = finalize.undeclared_note(head(repeat_cost="low"), self.PROTOCOL)
+        assert note is not None
+        self.assertIn("no result adopted yet ([result])", note)
+        self.assertIn(f"`labkit-next {repo.shown(Path('/x'), Path.cwd())}`", note)
+        for command in ("labkit-adopt", "labkit-audit", "protocol-fill"):
+            self.assertNotIn(command, note)
 
     def test_a_declared_run_is_quiet(self):
         text = head(repeat_cost="low", result="2026-10-07T10-00-00_aa11")
-        self.assertIsNone(finalize.undeclared_hint(text, self.RUN, self.PROTOCOL))
+        self.assertIsNone(finalize.undeclared_note(text, self.PROTOCOL))
 
     def test_a_typed_id_is_a_blocker(self):
         protocol = Path("/x/PROTOCOL-x.md")
