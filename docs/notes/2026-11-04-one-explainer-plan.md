@@ -65,6 +65,21 @@ step. Remove the competing logic on the way and record the effort
 result, whether Phase 1 continues as written. This is the pilot of the
 architecture before its build-out.
 
+Acceptance of the pilot, fixed before it starts:
+
+1. Gate (`report_hold.hold_report`), the stop and pre-commit hooks and
+   `labkit-next` name the same owed report review for the same area,
+   from the same findings.
+2. Working tree and index are tested apart: the pre-commit judges the
+   index, the stop and the console the tree, each with its own test.
+3. A valid counter-case passes: a report whose discussed run's review
+   stands is held by none of the three (no false blocker).
+4. The competing logic is gone, not bypassed: the hook's own
+   composition of that hold and `next`'s separate path to it do not
+   survive as dead code.
+5. Measured afterwards: effort, the special cases that remain, and
+   usability (the commands an agent needs from the hold to the release).
+
 ## Target
 
 1. **One ordering, one explainer.** `labkit-next` is the only code that
@@ -94,7 +109,7 @@ forbidden case by case but not provided for.
 
 | Class | Files | Who writes | What labkit checks |
 |---|---|---|---|
-| machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands only | the bytes against what labkit last wrote; any difference is "changed by hand: restore it, or write it through the command" |
+| machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands only | today: against HEAD once committed (`evidence.change_blockers`); the writer refuses what a gate would later hold. A comparison against what labkit last wrote, before the first commit, is the deferred write-ledger proposal below |
 | free | measuring code, report prose, notes, data, `MANIFEST.sha256` | the agent | consequences only: code changed since the run, a report citing a run nothing adopted |
 
 The second row exists and stays: research content must be free. The
@@ -201,7 +216,7 @@ the same unnecessary construction.
 | `handovers` | `audits/handovers/*.json` + report block | N | machine-led | g 5 · t 1 · c 1 (block) | stays |
 | `reviews` | `audits/<min>-review.toml` | N | machine-led | g 2 | merge candidate with `report_reviews`: one review record with a kind |
 | `report_reviews` | `audits/report-reviews/*.toml` | N | machine-led | g 2 | merge candidate with `reviews` |
-| `evidence` | audits/ and runs/ against HEAD | all | derived (git) | g 4 · t 1 | stays and grows into the allow-list ledger (the write-to-commit gap) |
+| `evidence` | audits/ and runs/ against HEAD | all | derived (git) | g 4 · t 1 | stays; the write-to-commit gap is the deferred write-ledger proposal, not a change to this module |
 | `comment_blocks` | `<!-- labkit … -->` in reports | N | machine-led inside free files | c 1 (gates through `report_blocks`) | stays |
 | `data_manifest` | `MANIFEST.sha256` | C→R | free | c 1 | stays |
 | `deliverable` | `pred_results/*.csv` | R | free | nobody; tpl writes it | goes from `formats/`: a write-only helper is the scripts', not a format |
@@ -374,9 +389,10 @@ derived views (`answering_run`, `audit_gaps`, `followup`) become fields
 of the state, computed once. Tests build a state with a builder instead
 of writing twenty files (`tests/protocol_fixture.py` is the start).
 
-Why after Phases 1–3: only when `next` is the single explainer is it
-visible which state fields the gates need; before, every hook's own
-path would claim fields of its own.
+Why after Phase 1 (and the slice of Phase 2 the pilot needs): only
+when `next` is the single explainer is it visible which state fields
+the gates need; before, every hook's own path would claim fields of its
+own. `--do` is no precondition.
 Files: new `labkit/gates/area_state.py` (or `report_context` grown),
 every gate module, `tests/conftest.py`.
 CHANGELOG: Breaking (gate signatures).
@@ -410,10 +426,15 @@ whether the correct number was reported. The round needs the first
 step above, not `--do`; it decides whether Phase 1 continues and whether
 the proposals get their trigger.
 
-## Proposal — the write ledger (trigger: a probe shows a hand edit of a machine-led file between its write and its first commit)
+## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
-before the first commit. A ledger of what labkit last wrote (per area,
+before the first commit. The gap is demonstrated, not hypothetical: the
+[review-record forgery note](2026-11-02-review-record-forgery.md) shows
+`rejected` rewritten to `upheld` before the first commit releasing the
+decision. So the trigger is met; what is open is which additional
+protection to build and whether its cost is justified against the
+stated limit (labkit guards against error, not adversaries). A ledger of what labkit last wrote (per area,
 content hashes) would close it, and is a system of its own: where it
 lives (the git dir, like the attempt journal's copy), what a fresh clone
 does without it (falls back to HEAD), two sessions writing the same area
