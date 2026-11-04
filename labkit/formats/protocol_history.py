@@ -194,18 +194,24 @@ def committed_at(path: Path, rd: "RunDir", root: Path) -> CommittedAt:
     if text is None:
         # `text_at` says None for an absent file and for git failing alike:
         # a commit git cannot read is no "nothing stood before the number"
-        unread = _unreadable_at(root, path, commit)
+        unread = unreadable_at(root, path, commit)
         if unread:
             return CommittedAt(rd.dir.name, commit, None, UNREADABLE_COMMIT, unread)
         return CommittedAt(rd.dir.name, commit, None, NOT_COMMITTED)
     return CommittedAt(rd.dir.name, commit, text, None)
 
 
-def _unreadable_at(root: Path, path: Path, commit: str) -> str:
-    """Git's words when it cannot read PATH at COMMIT in ROOT — its tree, or
-    the file it lists there; "" when the commit's tree reads and does not
-    list PATH (the file was not committed). Exit codes decide, not words."""
+def unreadable_at(root: Path, path: Path, commit: str) -> str:
+    """Git's words when it cannot read PATH at COMMIT (a revision: a sha,
+    HEAD) in ROOT — its tree, or the file it lists there; "" when the tree
+    reads and does not list PATH (the file was not committed). Exit codes
+    decide, not words. A revision that does not resolve (HEAD of a branch
+    with no commit yet) holds nothing: "", not committed. For a reader of
+    `repo.text_at`, whose None is both (`committed_at`, the run's start
+    check)."""
     rel = own_path(path).relative_to(root.resolve()).as_posix()
+    if git_run(["rev-parse", "--verify", "--quiet", commit], root).returncode != 0:
+        return ""
     listed = git_run(["ls-tree", commit, "--", rel], root)
     if listed.returncode != 0:
         return (

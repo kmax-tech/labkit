@@ -11,6 +11,17 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **A run does not start on a HEAD git cannot read.** The run's start
+  check reads the protocol as HEAD holds it; `repo.text_at` says None for
+  a file HEAD lacks and for git failing alike. At low repeat cost a HEAD
+  git could not read was refused as "not committed — commit the
+  protocol", a cause and way out that did not apply; at high repeat cost
+  the report binding read it as "HEAD registers no report", and a
+  protocol that registers none started its run. Now both refuse "cannot
+  be read at HEAD" with git's words and the way back (`git fsck`, the
+  missing objects fetched or restored). The last release that started
+  such a run is **0.107.0**.
+
 - **finalize holds what the number is about when the first measurement's
   text cannot be read.** In a repository, finalize compares the protocol,
   as the answering run saw it and as it stands, with what the first

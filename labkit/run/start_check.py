@@ -24,6 +24,7 @@ from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
 from labkit.formats import findings, promises, protocol_block, protocol_check, repo
+from labkit.formats import protocol_history
 from labkit.formats import audit_gaps
 from labkit.formats import failed_attempts
 from labkit.formats.answering_run import REPEAT_SEED_KEY
@@ -131,8 +132,9 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     """Refuse a first measurement whose report differs from HEAD, on both
     lanes. Low also requires the scientific registration committed; high
     retains its separate freeze checks. Later measurements use the first
-    one's binding. No commitment check outside Git or for an unbound
-    protocol. Reads HEAD and the first measurements; writes nothing.
+    one's binding. A HEAD git cannot read is refused as such, before
+    either. No commitment check outside Git or for an unbound protocol.
+    Reads HEAD and the first measurements; writes nothing.
     """
     from labkit.formats.answering_run import first_measurements
     from labkit.formats.protocol_history import registration_in_commit
@@ -144,6 +146,22 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     if first_measurements(base_dir, head.id, root):
         return []
     protocol = (base_dir / rel).resolve()
+    committed = repo.text_at(root, protocol, "HEAD")
+    unread = (
+        protocol_history.unreadable_at(root, protocol, "HEAD")
+        if committed is None
+        else ""
+    )
+    if unread:
+        # None from `text_at` is "not committed" and "git failed" alike; a
+        # HEAD git cannot read is neither uncommitted nor without a report
+        return [
+            f"{protocol.name} cannot be read at HEAD: {unread} — what the first "
+            f"measurement would be held to cannot be told; restore the repository's "
+            f"missing objects (`git fsck` names them, a clone that holds them "
+            f"`git fetch`es them), then start the run (LAB-003 No run without an "
+            f"intent paragraph)"
+        ]
     if lane(head.repeat_cost).registration:
         missing = registration_in_commit(protocol, "HEAD", head.kind)
         if missing is None:
@@ -162,7 +180,6 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
             ]
     # the report registered before the first measurement is bound to what its
     # commit holds (`report_hold.report_binding_gap`): uncommitted, it binds nothing
-    committed = repo.text_at(root, protocol, "HEAD")
     then = protocol_block.head(committed).report if committed is not None else None
     if head.report != then:
         return [
