@@ -293,9 +293,8 @@ class EveryRefusal(unittest.TestCase):
 
 class TheHooks(unittest.TestCase):
     """The pre-run hook's notes name their step too; its block and the stop's
-    tell the findings above, each with its fix, and the undecided way
-    (`agent_hooks.UNDECIDED_WAY`) names `--findings`, `--decide` and the
-    handover."""
+    tell the findings above, each with its fix (the undecided way is
+    `labkit-next`'s step since 0.109.0, tests/test_agent_hooks_undecided.py)."""
 
     def test_a_run_outside_an_area_is_told_its_way_out(self):
         import tempfile
@@ -309,12 +308,6 @@ class TheHooks(unittest.TestCase):
         self.assertFalse(blocks)
         self.assertIn("no PROTOCOL-*.md above it", line)
         self.assertIn(f"{gate.WAY_OUT}stamp an area for it with `labkit-init exp", line)
-
-    def test_the_undecided_way_names_the_commands(self):
-        from labkit.gates import agent_hooks
-
-        for step in ("--findings", "--decide", "--handover"):
-            self.assertIn(step, agent_hooks.UNDECIDED_WAY)
 
 
 class TheFinding(unittest.TestCase):

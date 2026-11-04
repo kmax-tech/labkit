@@ -856,7 +856,7 @@ class Stop(unittest.TestCase):
         self._answer("2026-10-01T09-00-00_ffff")
         rc, _, err = self._stop()
         self.assertEqual(rc, 2)
-        self.assertIn("report-check reports blockers", err)
+        self.assertIn("report-check holds a number written back", err)
         self.assertIn("which cannot answer for", err)
 
     def test_a_correct_answer_lets_it_stop(self):

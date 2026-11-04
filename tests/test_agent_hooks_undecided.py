@@ -85,19 +85,71 @@ class Undecided(unittest.TestCase):
 
     def test_an_open_blocker_in_a_touched_area_sends_the_agent_back(self):
         path = self._record(self.area, [BLOCKER])  # audits/ is itself a change
-        rc, _, err = self._stop()
+        with contextlib.chdir(self.root):  # the hook runs in the project dir
+            rc, _, err = self._stop()
         self.assertEqual(rc, 2)
         self.assertIn("BLOCKER(s) nobody decided", err)
         self.assertIn(
             f"experiments/01-x: {path.name}: BLOCKER · scripts/01_measure.py:3", err
         )
-        self.assertIn("cannot be reported", err)
-        # the way to decide is the command, not an edit of the record
-        # (ninth haiku round, t5 rewrote records field by field)
-        self.assertIn("`labkit-audit <AREA> --findings`", err)
-        self.assertIn("never by rewriting or deleting the record", err)
-        # an outdated record stays (fourth SAB-like draw: "stale, let me remove")
-        self.assertIn("one a later change made outdated stays and is decided", err)
+        self.assertIn("the stop holds", err)
+        self.assertIn("labkit-next: experiments/01-x", err)  # the step is `next`'s
+
+    def test_the_undecided_row_of_next_names_the_command_never_an_edit(self):
+        """`next`'s row for the hold (the way the stop printed itself until
+        0.108.0): the way to decide is the command, not an edit of the
+        record (ninth haiku round, t5 rewrote records field by field); an
+        outdated record stays (fourth SAB-like draw: "stale, let me remove");
+        the twin: nothing open, no row."""
+        from labkit.gates import next_step
+
+        protocol = self.area / "PROTOCOL-x.md"
+        with contextlib.chdir(self.root):
+            self.assertIsNone(
+                next_step._undecided_step(self.area, protocol, staged=False)
+            )
+            path = self._record(self.area, [BLOCKER])
+            step = next_step._undecided_step(self.area, protocol, staged=False)
+        assert step is not None
+        self.assertIn(f"{path.name}: BLOCKER", step.where)
+        self.assertIn("`labkit-audit experiments/01-x --findings`", step.next)
+        self.assertIn("never by rewriting or deleting the record", step.next)
+        self.assertIn(
+            "one a later change made outdated stays and is decided", step.next
+        )
+        self.assertIn("--handover", step.next)
+        self.assertIn("cannot be reported", step.held)
+
+    def test_the_stop_and_the_commit_print_next_steps_step_for_the_hold(self):
+        """The one-explainer plan, step 4: the stop and the commit hold on
+        the undecided BLOCKER and print `labkit-next`'s step for it, byte
+        for byte, each from the state it judges (the tree, the index) — no
+        sentence of their own names a way; the way's text has one home."""
+        from labkit.gates.next_step import next_step
+        from labkit.gates.report_context import INDEX
+
+        path = self._record(self.area, [BLOCKER])
+        protocol = self.area / "PROTOCOL-x.md"
+        with contextlib.chdir(self.root):
+            rc, _, err = self._stop()
+            self.assertEqual(rc, 2)
+            step = next_step(self.area, protocol).render("experiments/01-x")
+            self.assertIn(step, err)
+            self.assertIn(f"experiments/01-x: {path.name}: BLOCKER", err)  # the hold
+            _git(self.root, "add", "-A")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = claude_hooks.main(
+                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
+                )
+            self.assertEqual(rc, 1)
+            staged = next_step(self.area, protocol, state=INDEX).render(
+                "experiments/01-x"
+            )
+            self.assertIn(staged, out.getvalue())
+            self.assertIn(f"experiments/01-x: {path.name}: BLOCKER", out.getvalue())
+        for text in (err, out.getvalue()):
+            self.assertNotIn("decide each BLOCKER", text)  # the old way's text
 
     def test_the_committed_record_blocks_once_the_area_is_touched_again(self):
         self._record(self.area, [BLOCKER])

@@ -172,6 +172,7 @@ from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.next_step import next_step
+from labkit.gates.report_context import INDEX, TREE
 from labkit.formats.runs import run_path
 from labkit.run.runlog import RunIndexError, indexed_runs
 from labkit.formats.repo import (
@@ -1151,11 +1152,11 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
         )
     undecided = state.blockers + session_evidence(repo, changed, session)
     if undecided:
+        # the hold and what holds; the step is `next`'s, printed below
         print(
             "an audit of an area this session worked in found BLOCKER(s) nobody "
-            "decided, or evidence is gone, changed or does not read — "
-            f"{UNDECIDED_WAY}; a number measured past them cannot be reported, "
-            "and a commit would be refused the same way "
+            "decided, or evidence is gone, changed or does not read — the stop "
+            "holds, and a commit would be refused the same way "
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
@@ -1163,8 +1164,7 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     if missing:
         print(
             "a protocol of an area this session worked in registers a report "
-            "that is not written — an end without it is an incomplete "
-            "delivery, not a withheld result:\n  " + "\n  ".join(missing),
+            "that is not written — the stop holds:\n  " + "\n  ".join(missing),
             file=sys.stderr,
         )
     rc = 0
@@ -1180,12 +1180,19 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
             rc, out = 1, f"  {exc.why}"
         if rc != 0:
             print(
-                "report-check reports blockers for a number written back or "
-                "committed in this session — fix them before you stop (a commit "
-                "would be refused the same way); a result not meant to be "
-                "reported leaves the answer open:\n" + out,
+                "report-check holds a number written back or committed in this "
+                "session — the stop holds, and a commit would be refused the same "
+                "way:\n" + out,
                 file=sys.stderr,
             )
+    if undecided or rc != 0:
+        # what to do is `next`'s step per protocol touched, read from the tree
+        # the stop judges; the missing-report lines above are that step already
+        steps = [
+            s for s in next_steps_for(repo, changed, staged=False) if s not in missing
+        ]
+        if steps:
+            print("\n".join(steps), file=sys.stderr)
     # commits it could not read keep the base where it is: past them, no
     # later stop would check them
     return (
@@ -1236,6 +1243,32 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
     return out
 
 
+def next_steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
+    """Per protocol of every area PATHS touch (`areas_touched`),
+    `labkit-next`'s step for the state the caller judges — the index when
+    STAGED (the commit), else the tree (the stop) — as the console prints
+    it (`next_step.Step.render`): the one action the stop and the commit
+    name beside what they hold; neither composes a step of its own. A head
+    that does not read, or a protocol the index does not hold, is told in
+    one line in the step's place; a run index that does not read once per
+    index."""
+    out: list[str] = []
+    for area in [a.resolve() for a in areas_touched(paths, repo)]:
+        named = shown(area, Path.cwd())
+        for protocol in area_protocols(area):
+            try:
+                step = next_step(area, protocol, state=INDEX if staged else TREE)
+            except RunIndexError as exc:  # a ValueError too: before it
+                if exc.why not in out:
+                    out.append(exc.why)
+                continue
+            except (protocol_block.BlockError, ValueError) as exc:
+                out.append(f"{named}: {protocol.name}: {exc}")
+                continue
+            out.append(step.render(named))
+    return out
+
+
 def session_evidence(
     repo: Path, paths: list[Path], session: SessionCommits
 ) -> list[str]:
@@ -1261,21 +1294,6 @@ def session_evidence(
 
 
 #: the way out the stop and the pre-commit print for `undecided_blockers`
-UNDECIDED_WAY = (
-    f"decide each BLOCKER ({findings.DECIDED_LIST}; limitation and "
-    "false-positive owe a reason) with the `--decide` command `labkit-audit <AREA> "
-    "--findings` prints for it (AREA: the path each line starts with), never by "
-    "rewriting or deleting the record — one a later change made outdated "
-    "stays and is decided too, `fixed` naming the change where it repaired "
-    "the fault; restore evidence that is gone or changed (a line "
-    "that names its `git checkout` restores from git); when the area cannot "
-    "be finished, hand it over with the `protocol-fill <PROTOCOL> --handover` "
-    "command `--findings` prints: the BLOCKERs stay open and the handover "
-    "records them, and while it matches the area the stop and the commit read "
-    "it instead of holding them (never a change git can undo)"
-)
-
-
 @dataclass(frozen=True)
 class Undecided:
     """What the stop and the commit hold (BLOCKERS) and what a current
@@ -1398,9 +1416,11 @@ def undecided(argv: list[str]) -> int:
         return 0
     print(
         "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided "
-        "in the index, or evidence is gone, changed or does not read — "
-        f"{UNDECIDED_WAY}; stage the decided record (the commit carries the "
-        "decision the index holds) "
+        "in the index, or evidence is gone, changed or does not read — the "
+        "commit is refused; it carries the decision the index holds "
         "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(lines)
     )
+    # what to do is `next`'s step, read from the index the commit judges
+    for step in next_steps_for(repo, [repo / p for p in argv], staged=True):
+        print(step)
     return 1

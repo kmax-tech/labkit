@@ -29,6 +29,15 @@ The order, the first that applies is the step (`next_step`):
                                    and for a measurement runlog's start gate
                                    would refuse: that refusal's first step
                                    (`start_check.measurement_refusal`)
+    an audit BLOCKER nobody      → decide it by the `--decide` command
+      decided, a record or the     `--findings` prints, restore, or hand over
+      journal lost or unreadable,  (`agent_hooks.undecided_state`: the hold of
+      and the chain carries no     the stop and the commit, which print this
+      gap for it                   step; a loss a current handover
+                                   acknowledges is not held). After the
+                                   chain's gaps: the chain's order stands
+                                   (the way back of a rewritten registration
+                                   before a decision on it, probe 2026-11-02)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
                                    that answers
     adopted, nothing held        → nothing: the number may be reported
@@ -116,14 +125,9 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
     hint = _report_hint(area, protocol, text)
-    unwritten = _field_step(protocol, report, hint)
-    if unwritten is not None:
-        return unwritten
-    ended = _restore_step(area, staged=staged) or _handed_over(
-        area, protocol, text, staged=staged
-    )
-    if ended is not None:
-        return ended
+    before = _before_the_chain(area, protocol, text, report, hint, staged=staged)
+    if before is not None:
+        return before
     # a run still going comes first, as `runlog --wait` sees it: read as
     # nothing, an open run sent agents to measure again beside it (reference
     # pilot 2026-11-01, task 15), a detached start before its record a
@@ -162,6 +166,10 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     held = filled.found
     if held:
         return _held_step(ctx, held, held_by, hint if ctx.run is None else "")
+    # the stop's and the commit's own hold the chain carries no gap for
+    undecided = _undecided_step(area, protocol, staged=staged)
+    if undecided is not None:
+        return undecided
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
         return Step(
@@ -200,6 +208,26 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     )
 
 
+def _before_the_chain(
+    area: Path,
+    protocol: Path,
+    text: str,
+    report: protocol_check.FieldReport,
+    hint: str,
+    *,
+    staged: bool,
+) -> Step | None:
+    """The steps before report-check's chain, the first that applies: a
+    MUST field unfilled (`_field_step`), committed evidence changed against
+    HEAD (`_restore_step`), a current handover (`_handed_over`). None when
+    none applies."""
+    return (
+        _field_step(protocol, report, hint)
+        or _restore_step(area, staged=staged)
+        or _handed_over(area, protocol, text, staged=staged)
+    )
+
+
 def _protocol_text(area: Path, protocol: Path, *, staged: bool) -> str:
     """PROTOCOL of AREA as the state holds it: the index's text when STAGED
     (`repo.state_text`), else the working tree's. Raises ValueError when
@@ -226,6 +254,43 @@ def _restore_step(area: Path, *, staged: bool) -> Step | None:
         changed[0].fix or "the line above names what holds",
         f"every release from this area: {len(changed)} change(s) of its "
         "committed evidence stand, and this is the first",
+    )
+
+
+def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
+    """The step while AREA holds an audit BLOCKER nobody decided, a record
+    or the attempt journal lost or unreadable, or evidence changed against
+    HEAD, in the state judged (`agent_hooks.undecided_state`, read for
+    PROTOCOL's area: the stop's and the commit's own hold, a loss a current
+    handover acknowledges not among them); None when nothing holds. Read
+    after report-check's chain: a gap there names its own step first (the
+    way back of a rewritten registration before a decision on it), this
+    row catches the holds the chain carries no gap for. The way is the one
+    the stop and the commit printed themselves until 0.108.0: decide by the
+    command, never by editing the record (ninth haiku round, t5, rewrote
+    records field by field); an outdated record stays and is decided too
+    (fourth SAB-like draw: "stale, let me remove"); restore from git; or
+    hand over."""
+    from labkit.formats import findings
+    from labkit.gates.agent_hooks import undecided_state
+
+    held = undecided_state(layout_root(area), [protocol], staged=staged).blockers
+    if not held:
+        return None
+    named = shown(area, Path.cwd())
+    return Step(
+        f"{named} holds {len(held)} audit BLOCKER(s) nobody decided, or evidence "
+        f"gone, changed or unreadable; the first: {held[0]}",
+        f"`labkit-audit {named} --findings` prints the `--decide` command for "
+        f"each open BLOCKER ({findings.DECIDED_LIST}; limitation and "
+        "false-positive owe a reason): decide by it, never by rewriting or "
+        "deleting the record — one a later change made outdated stays and is "
+        "decided too, `fixed` naming the change where it repaired the fault; a "
+        "line that names its `git checkout` restores evidence from git; when "
+        "the area cannot be finished, hand it over with the `protocol-fill "
+        "<PROTOCOL> --handover` command `--findings` prints: the BLOCKERs stay "
+        "open and the handover records them",
+        "the stop and the commit: a number measured past them cannot be reported",
     )
 
 
