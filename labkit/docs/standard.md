@@ -1029,9 +1029,16 @@ LAB-065 No worktree per experiment govern how a growing area stays readable.
     `pending()` skips what is already in the output file, `append()` writes
     one flushed line per item, `status()` says what is missing without
     model load time. Resumption is thus *the same command again*.
-  - **Orphaned lock after a crash:** The lock file names the PID that held
-    it — first check `ps -p <pid>`, then remove it. Deleting blindly risks
-    two writers on the same file, waiting blindly blocks on a dead process.
+  - **Orphaned lock after a crash:** The writer holds its lock file's kernel
+    lock (`flock`) while it writes, and the refusal of a second writer asks
+    the kernel — never the PID the lock names, which the system may give
+    to another process. Follow the refusal: held, a run is still writing —
+    wait (`runlog <area> --wait`), never delete; free and written on this
+    host, its writer ended — delete the lock and start again, the output
+    resumes; a lock without that mark (labkit 0.107.0 or earlier, by hand)
+    or from another host tells nothing — delete it only when `runlog
+    <area>` lists no run writing the output. Deleting blindly risks two
+    writers on the same file, waiting blindly blocks on a dead process.
 
   Custom code in the area is only worth it for what these helpers cannot do:
   checkpointing during training, sharding, special rate limits.
@@ -1390,6 +1397,15 @@ pitfalls, *Patterns* 5:101046 (pages).
 
 Dated changes that alter no rule; a change to a rule or a field is the next
 version of the standard.
+
+- 2026-11-04 — LAB-064 The pilot is resumable too: an orphaned output lock
+  is judged by its writer's kernel lock (`flock`), as the refusal of a
+  second writer now reports it, no longer by `ps -p <pid>`. A PID the
+  system had given to another process kept a dead run's lock "alive",
+  and a writer started as `python -m …` looked dead while it wrote
+  (docs/notes/2026-11-04-liveness-and-wait.md). What the rule asks —
+  resumption after an interruption, never two writers on one file — is
+  unchanged; the version stays.
 
 - 2026-11-01 — Protocol standard 0.24: a computation's head carries
   `[kept]` — `key`, the metrics key of the number it reports, and `unit`.

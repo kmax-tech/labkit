@@ -176,6 +176,15 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Changed
 
+- **Standard: an orphaned output lock follows its kernel lock (LAB-064 The
+  pilot is resumable too).** The standard told to check `ps -p <pid>`,
+  then remove the lock; since the output lock is judged by its writer's
+  `flock` and host, it tells to follow the refusal of a second writer —
+  wait while held, delete when free on this host, and delete an unmarked
+  or another host's lock only when `runlog <area>` lists no run writing
+  it. A dated change under the standard's "Changes": what the rule asks is
+  unchanged, and the version stays 0.26.
+
 - **Evidence git cannot compare is held with its way back, not raised.**
   `evidence.change_findings` (tree or index against HEAD) and
   `commit_changes` (each commit against its parent) raised GitError when
