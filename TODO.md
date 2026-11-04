@@ -50,6 +50,13 @@ Phasen mit Abnahme je Phase und dem leitenden Prinzip Erlaubnisliste
 statt Sperrliste (maschinengeführte Dateien schreibt nur labkit und
 prüft sie byteweise; freie Dateien nur in ihren Folgen):
 [One explainer](docs/notes/2026-11-04-one-explainer-plan.md).
+Review desselben Tags eingearbeitet: kein Bauauftrag im Ganzen. Erster
+begrenzter Schritt: die Lücke des nur diskutierenden Berichts schließen,
+indem Gate (`hold_report`), Hooks und `labkit-next` dieselben Befunde im
+selben Dateistand lesen (Index beim Commit, Arbeitsbaum sonst), die
+konkurrierende Logik dabei entfernen, Aufwand messen; danach über die
+weitere Vereinheitlichung entscheiden. `--do`, Schreibverzeichnis und
+Formatverschmelzungen sind separate Vorschläge mit Auslöser.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die

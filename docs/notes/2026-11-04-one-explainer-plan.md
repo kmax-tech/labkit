@@ -24,6 +24,47 @@ files. That stays — a stored state lies after the next free edit
 ([derived views copy no truth](../architecture.md)). What changes is who
 orders the states and who explains them.
 
+## Review of 2026-11-04 and the first step
+
+A second reading of this note (another session, same day) held: the
+direction — one decision, one understandable output — is right; the
+note as a whole is not a build order, because it bundles simplification
+with new guards (a write ledger) and new functions (`--do`) and could
+grow the code first. Accepted, with these consequences, worked into the
+sections below:
+
+1. The write ledger is a system of its own (storage, restore, parallel
+   sessions, fresh clones). It leaves the plan and becomes a proposal
+   with a trigger.
+2. Byte equality is not the registration binding. "Equal to what the
+   tool last wrote" does not prove "equal to the first measurement" or
+   "audited as such"; an allowed write can still change the registered
+   question. The historical bindings stay; the allow-list changes who
+   writes and what the writer refuses, not what the gates compare.
+3. Hooks and `next` must judge the same file state: the index at the
+   commit, the working tree otherwise. `next_step` takes the state
+   (`Checked.state` exists: TREE, INDEX, PROPOSED); a hook never holds on
+   one state and prints a step from another.
+4. `--do` is a function of its own, needs structured arguments (paths and
+   ids, not a shell line to parse) and is no precondition of the usage
+   round. It becomes a proposal with a trigger.
+5. A reader does not justify a format, and a merge can breed variants.
+   Every *merges* or *goes* needs a before/after proposal of its own.
+
+And: tests do not reduce to transitions wholesale. The allow-list removes
+the class that recognises semantically equivalent hand edits; corrupted
+files, missing git objects and concurrent writes stay real inputs with
+their tests.
+
+**The first step, limited and measured:** close the known gap — the
+review a report owes that only *discusses* a run — by letting the gate
+(`report_hold.hold_report`), the hooks and `labkit-next` read the same
+findings in the same file state: same state, same hold, the fitting next
+step. Remove the competing logic on the way and record the effort
+(sessions, lines added and removed, tests changed). Then decide, on that
+result, whether Phase 1 continues as written. This is the pilot of the
+architecture before its build-out.
+
 ## Target
 
 1. **One ordering, one explainer.** `labkit-next` is the only code that
@@ -59,13 +100,17 @@ forbidden case by case but not provided for.
 The second row exists and stays: research content must be free. The
 first row exists by half — `runlog` writes the runs, `protocol-fill` the
 head, `evidence.change_blockers` compares committed evidence against
-HEAD. What is missing is the gap between the write and the commit (a
-ledger of what labkit wrote, compared like HEAD is) and the consequence:
-a hand edit of a machine-led file is not a case with its own cure but a
-refusal with one way out. Tests then come per transition (precondition,
-effect, refusal), not per imaginable corruption. What the allow-list
-does not solve stays with the agent audit: a number that is formally
-clean and wrong. Deliberate circumvention stays possible (a forged
+HEAD. What is missing is the consequence: a hand edit of a machine-led file
+is not a case with its own cure but a refusal with one way out, and the
+writer refuses what the gates would later hold (a registered field after
+the first measurement). The gap between a write and its first commit
+(what HEAD cannot compare yet) is a proposal below, not part of this
+plan. What the allow-list changes is the class of tests that recognise
+semantically equivalent hand edits; what it does not change are the
+bindings across time — the registration to the first measurement's
+commit, the record to the run it audited — which compare a present text
+with a historical one and stay as they are. What it does not solve
+stays with the agent audit: a number that is formally clean and wrong. Deliberate circumvention stays possible (a forged
 ledger line); labkit guards against error, not adversaries, as the
 [review-record limit](2026-11-02-review-record-forgery.md) already says.
 
@@ -134,14 +179,17 @@ and outside tests (2026-11-04; spot-checked: `deliverable`,
 their own tests only). Chain link: I intent, P promise, C code, R run,
 N reported number. Class as the principle above names it; *derived*
 means no file of its own. Verdicts are proposals; each *goes*, *moves*
-or *merges* is a Breaking entry when executed (Phase 4).
+or *merges* needs a before/after proposal of its own (what the files,
+readers and tests look like on both sides) before it is a Breaking
+entry (Phase 4). A reader does not justify a format: it may be part of
+the same unnecessary construction.
 
 | Format | File | Link | Class | Readers (g gates · c checks · r run · t tools · p probes · tpl templates) | Proposed verdict |
 |---|---|---|---|---|---|
 | `protocol_block` | PROTOCOL-*.md, the toml block | I P | machine-led | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3 | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer after Phase 5 |
 | `protocol_check` | PROTOCOL-*.md prose fields, prompt blocks | I P | machine-led (content free, structure labkit's) | g 8 · c 4 · r 2 · t 5 · p 1 | stays; `repeated_fields` and the MUST checks become the writer's preconditions once the fields are written only through it |
 | `promises` | `[[promise]]` tables | P | machine-led | parse: g 4 · c 6 · r 1 · t 4; `load`, `write_constant`: tpl only | stays; `load`/`write_constant` are the scripts' API and move to the script-helper home (below) |
-| `protocol_history` | the protocol as git holds it | P→R | derived (git) | g 6 · c 1 · r 1 | stays, shrinks: with a byte-stamped head, `registration_differences` and `scope_differences` become byte comparisons like `evidence` |
+| `protocol_history` | the protocol as git holds it | P→R | derived (git) | g 6 · c 1 · r 1 | stays: the binding to the first measurement's commit compares a present with a historical text and is not replaced by "as last written"; with one writer that refuses a registered field after the first measurement it fires rarely, but it stays |
 | `runs` | `runs/<id>/*.json` | R | machine-led | g 7 · c 6 · r 3 · t 2 · p 1 · tpl 1 | stays |
 | runs index | `runs.tsv` (`run/runlog.indexed_runs`) | R | machine-led | g 3 · r 1 | moves into `formats/` (a format read by gates lives outside the formats layer) |
 | `answering_run` | none | R→N | derived | g 4 · c 5 · r 2 · t 1 · p 1 | merges into the state reader (Phase 5) |
@@ -217,6 +265,11 @@ that merely *discusses* a run owes: that hold lives in
 first known state `next` does not name; it becomes a row in `next`'s
 order, with a test, before the hook's own line goes.
 
+Requirement: `next_step` takes the file state the caller judges
+(`Checked.state`: TREE for the stop and the console, INDEX for the
+pre-commit) and reads every finding from it; a hook holds and names the
+step from one state.
+
 Files: `labkit/gates/agent_hooks.py`, `labkit/gates/finalize.py`,
 `labkit/tools/scaffold.py`, `labkit/gates/audit_decisions.py`,
 `labkit/gates/audit_prompt.py`, `labkit/tools/next_step.py`.
@@ -234,10 +287,12 @@ in the table above either is gone or names no action.
 ## Phase 2 — The way out as data
 
 Change: a `Command` (frozen dataclass in `labkit/formats/repo.py`, the
-builders' home): `line` (the shell line as today), `name` (one of a
-small enum: `adopt`, `into`, `withdraw`, `discuss`, `measure`, `audit`,
-`review`, `wait`, `restore`, `fill`, `init`), `kind` (`MECHANICAL`,
-`CONTENT`, `RESEARCH`, `DESTRUCTIVE`). Every builder returns one;
+builders' home): `name` (one of a small enum: `adopt`, `into`,
+`withdraw`, `discuss`, `measure`, `audit`, `review`, `wait`, `restore`,
+`fill`, `init`), `kind` (`MECHANICAL`, `CONTENT`, `RESEARCH`,
+`DESTRUCTIVE`), its arguments as fields (protocol, run id, report,
+record — paths resolved, not shell text), and `line` rendered from them
+(the shell line as today). Every builder returns one;
 `GateFinding` gains `step: Command | None`; `fix` keeps its type and is
 rendered from `step` by `with_way_out` where a step is given, so the 180
 prose-only sites do not change and the 64 command sites pass the object.
@@ -268,9 +323,10 @@ CHANGELOG: internal change; `GateFinding` is not in the public API
 Done when: `grep -rn '\.fix' labkit --include='*.py'` shows only
 rendering (`with_way_out`, `line`) and no comparison.
 
-## Phase 3 — `labkit-next --do`
+## Proposal — `labkit-next --do` (trigger: the usage round counts the typed commands as a cost)
 
-Change: `labkit-next AREA --do` prints the step as today, then: a
+Not part of the work order; kept here because Phase 2's `Command` is
+its precondition. Change: `labkit-next AREA --do` prints the step as today, then: a
 MECHANICAL step is run in-process through the writer's function (not a
 subprocess), its refusal line printed as the writer prints it; then the
 next step is printed again. One step per call — no loop, so a wrong
@@ -284,6 +340,7 @@ withdraw), `labkit/run/runlog.py` (wait).
 Tests: one per kind (ran, refused by the writer, exit 3, nothing), and
 the repair probe's six cases driven by `--do` until the first CONTENT or
 RESEARCH step: the recorded step sequence of Phase 1 must be reproduced.
+The dispatch reads `Command`'s fields, never its `line`.
 Docs: `labkit/templates/AGENTS.md.template` ("Run `labkit-next <area>`"
 becomes "Run `labkit-next <area> --do`; it runs the mechanical steps and
 stops where you have to write or decide"), `labkit/docs/agent-guide.md`,
@@ -294,11 +351,14 @@ type is counted before and after, and recorded in this note.
 
 ## Phase 4 — The verdicts of Phase 0, executed
 
-Each *goes* or *merges* row of the inventory is one commit with one
-Breaking entry naming the last version that read the format; tests go
-with the format. Not planned in detail here: the table decides the list,
-and the rule "existing legacy paths go in one Breaking release" holds —
-collect the rows, release once.
+Each *goes* or *merges* row of the inventory is first a before/after
+proposal (one section in this note or a note of its own), then one
+commit with one Breaking entry naming the last version that read the
+format; tests go with the format. The two merge candidates (`attempts`
+with `failed_attempts`, `reviews` with `report_reviews`) are separate
+proposals: a merge that adds a kind field and branches on it has bred
+variants, not removed a format. The rule "existing legacy paths go in
+one Breaking release" holds — collect the rows, release once.
 
 ## Phase 5 — The state model
 
@@ -346,8 +406,18 @@ Both are mechanical, both can run per module beside other work.
 
 The size is measured by use, not by lines: the next round of agents on
 real tasks counts, per task, the commands typed, the refusals met and
-whether the correct number was reported. Before the round, Phase 3 is
-in; the round decides whether Phase 4's cuts went far enough.
+whether the correct number was reported. The round needs the first
+step above, not `--do`; it decides whether Phase 1 continues and whether
+the proposals get their trigger.
+
+## Proposal — the write ledger (trigger: a probe shows a hand edit of a machine-led file between its write and its first commit)
+
+What HEAD cannot compare: a file labkit wrote and the agent edited
+before the first commit. A ledger of what labkit last wrote (per area,
+content hashes) would close it, and is a system of its own: where it
+lives (the git dir, like the attempt journal's copy), what a fresh clone
+does without it (falls back to HEAD), two sessions writing the same area
+(the lock the journal already uses), and restore. Not before the trigger.
 
 ## Out of reach here
 
