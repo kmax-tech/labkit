@@ -1,6 +1,6 @@
 """labkit-next — the one next step of an area, and what is held until it is taken.
 
-    labkit-next <AREA> [--protocol FILE]
+    labkit-next <AREA> [--protocol FILE] [--staged]
     labkit-next --guide
 
 `--guide` prints the agent guide (`labkit/docs/agent-guide.md`): the
@@ -23,7 +23,11 @@ first that applies is the step:
       its account of that run           (`report_hold.progress_account`), before
                                         any gap — saved first, released by nothing
     a gap report-check holds     → its way out, the first in the chain's
-                                   order (`report_check.chain_gaps`) — but
+                                   order (`report_check.chain_gaps`; the
+                                   review a report owes for discussing a
+                                   run of it is among them, the hold the
+                                   stop and the commit hold that report
+                                   with) — but
                                    the withdrawal alone where the holds name
                                    it first (`report_check.held_declaration`),
                                    and for a measurement runlog's start gate
@@ -39,8 +43,12 @@ labkit cannot tell whether the task asks for a report file, and after the
 first measurement the registration is refused.
 
 Prints where the area stands, the next step, and what is held until it is
-taken. Exit 0 when a step is named or nothing is owed; 2 on no such area,
-no protocol to choose, or a protocol whose head does not read.
+taken. `--staged` reads the index, the state the commit carries and the
+pre-commit judges (`report_context.INDEX`): the protocol, the evidence
+comparison, the chain's gaps and the report's account come from the
+index; the working tree otherwise. Exit 0 when a step is named or nothing
+is owed; 2 on no such area, no protocol to choose, a protocol whose head
+does not read, or `--staged` on a protocol the index does not hold.
 """
 
 from __future__ import annotations
@@ -57,6 +65,7 @@ from labkit.formats.repo import (
     area_path,
     audit_command,
     area_protocols,
+    state_text,
     choose_protocol,
     layout_root,
     measure_command,
@@ -66,6 +75,8 @@ from labkit.formats.repo import (
     stamped_areas,
 )
 
+
+from labkit.gates.report_context import INDEX, TREE
 
 if TYPE_CHECKING:
     from labkit.gates.report_context import Checked
@@ -85,12 +96,16 @@ class Step:
     held: str
 
 
-def next_step(area: Path, protocol: Path | None) -> Step:
-    """The next step of AREA under PROTOCOL (`Step`), in the module's order.
-    PROTOCOL None and no protocol in AREA is the first step; PROTOCOL must
-    otherwise be the one the caller chose (`repo.choose_protocol`). Raises
-    `protocol_block.BlockError` on a head that does not read and whatever
-    `report_context.checked` raises on a run choice that cannot be made."""
+def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
+    """The next step of AREA under PROTOCOL (`Step`), in the module's order,
+    read from STATE — the working tree (TREE) or the index (INDEX), the
+    state the caller judges: a hook that holds the index names a step from
+    the index. PROTOCOL None and no protocol in AREA is the first step;
+    PROTOCOL must otherwise be the one the caller chose
+    (`repo.choose_protocol`). Raises `protocol_block.BlockError` on a head
+    that does not read, ValueError for INDEX on a protocol the index does
+    not hold, and whatever `report_context.checked` raises on a run choice
+    that cannot be made."""
     from labkit.gates import report_check, report_context
 
     if protocol is None:
@@ -100,7 +115,8 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "and its protocol; `labkit-init exp --help` names the options",
             "every run: a run needs a registered question",
         )
-    text = protocol.read_text(encoding="utf-8")
+    staged = state == INDEX
+    text = _protocol_text(area, protocol, staged=staged)
     report = protocol_check.check_fields(text)
     if report.head_error:
         raise protocol_block.BlockError(report.head_error)
@@ -108,7 +124,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     unwritten = _field_step(protocol, report, hint)
     if unwritten is not None:
         return unwritten
-    ended = _restore_step(area) or _handed_over(area, protocol, text)
+    ended = _restore_step(area, staged=staged) or _handed_over(
+        area, protocol, text, staged=staged
+    )
     if ended is not None:
         return ended
     # a run still going comes first, as `runlog --wait` sees it: read as
@@ -133,7 +151,7 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             "runlog refuses one beside an open run, not yet beside a start whose "
             "run has not opened",
         )
-    ctx = report_context.checked(area, protocol)
+    ctx = report_context.checked(area, protocol, state=state, text=text)
     account = _progress_step(ctx)
     if account is not None:
         return account
@@ -187,13 +205,25 @@ def next_step(area: Path, protocol: Path | None) -> Step:
     )
 
 
-def _restore_step(area: Path) -> Step | None:
+def _protocol_text(area: Path, protocol: Path, *, staged: bool) -> str:
+    """PROTOCOL of AREA as the state holds it: the index's text when STAGED
+    (`repo.state_text`), else the working tree's. Raises ValueError when
+    the index does not hold the protocol."""
+    if not staged:
+        return protocol.read_text(encoding="utf-8")
+    held = state_text(layout_root(area), protocol, staged=True)
+    if held is None:
+        raise ValueError(f"{protocol.name}: the index does not hold it")
+    return held
+
+
+def _restore_step(area: Path, *, staged: bool) -> Step | None:
     """The restore of AREA's committed evidence changed against HEAD as the
-    step (`evidence.change_blockers`, report-check's first station), or
-    None. It comes before the handover: a handover's report is released by
+    step (`evidence.change_blockers`, report-check's first station; the
+    index's change when STAGED), or None. It comes before the handover: a handover's report is released by
     the report reviews here, and a handover acknowledges no change git can
     undo."""
-    changed = evidence.change_blockers(area)
+    changed = evidence.change_blockers(area, staged=staged)
     if not changed:
         return None
     return Step(
@@ -204,11 +234,11 @@ def _restore_step(area: Path) -> Step | None:
     )
 
 
-def _handed_over(area: Path, protocol: Path, text: str) -> Step | None:
+def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step | None:
     """The step of a PROTOCOL (its TEXT) a current handover ended
     (`handovers.protocol_handed_over`), else None: the review its
     registered report owes once the handover block stands
-    (`report_hold.report_owed`), else nothing — a new attempt is a new
+    (`report_hold.report_owed`, read from the index when STAGED), else nothing — a new attempt is a new
     registration. It said "nothing" while the commit held the report for
     its review (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
     from labkit.gates.report_hold import report_owed
@@ -216,7 +246,7 @@ def _handed_over(area: Path, protocol: Path, text: str) -> Step | None:
     if not handovers.protocol_handed_over(area, protocol):
         return None
 
-    owed = report_owed(protocol, text, None, layout_root(area), staged=False)
+    owed = report_owed(protocol, text, None, layout_root(area), staged=staged)
     if owed is not None:
         return Step(
             f"{protocol.name} is handed over, and {owed.text}",
@@ -359,7 +389,10 @@ def _progress_step(ctx: "Checked") -> Step | None:
     report = _registered_report(ctx)
     if report is None or ctx.declared is not None or ctx.run is None:
         return None
-    written = report.read_text(encoding="utf-8") if report.is_file() else ""
+    if ctx.state == INDEX:
+        written = state_text(ctx.repo, report, staged=True) or ""
+    else:
+        written = report.read_text(encoding="utf-8") if report.is_file() else ""
     owner = report_blocks.path_from_report(ctx.protocol, report)
     if progress_account(written, owner, ctx.run.name):
         return None
@@ -433,6 +466,11 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--guide", action="store_true", help="print the workflow in full and exit"
     )
+    ap.add_argument(
+        "--staged",
+        action="store_true",
+        help="read the index, the state the commit carries, not the working tree",
+    )
     args = ap.parse_args(argv)
     if args.guide:
         print(GUIDE.read_text(encoding="utf-8"), end="")
@@ -449,7 +487,7 @@ def main(argv: list[str]) -> int:
         if protocol is None:
             return 2
     try:
-        step = next_step(area, protocol)
+        step = next_step(area, protocol, state=INDEX if args.staged else TREE)
     except (protocol_block.BlockError, ValueError) as exc:
         console.refuse("labkit-next", f"{protocol.name if protocol else area}: {exc}")
         return 2

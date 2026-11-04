@@ -110,6 +110,63 @@ removal of clear code or of a check to meet the number.
 Then Phase 1 does not continue as written; the note gets the reason and
 the next proposal.
 
+## Pilot result (2026-11-04, one session, about two hours)
+
+Built on `32b51e32`: `report_hold.discussion_review_findings` reads the
+review a report owes for discussing a run of a protocol, per protocol
+and from the state given; `report_check.chain_gaps` carries it (stage
+8), so `report-check AREA` holds it and `labkit-next` names it;
+`next_step` takes the state (`--staged` reads the index); the post-change
+hook prints that finding instead of its own `review_hint`, which is gone;
+the report scan `discussing_reports` and the new reader share one home
+(`discussing_candidates`: the tree walked as `reports_without_block`
+walks it, no git; the index listed by git). Tests: the tree (gate, stop and `next` hold and
+name one finding, text and way out equal), the index (the commit and
+`next --staged` read the staged state; a review of it releases both while
+the tree, edited after, owes its own), the counter-case (a review of the
+state releases all three, the chain moves on to the adoption), the hook's
+silence once a review stands.
+
+| Measured | Package | Tests |
+|---|---:|---:|
+| lines added | 181 | 212 |
+| lines removed | 103 | 50 |
+| net | +78 | +162 |
+| test functions | | ±0 (4 added, 4 of `review_hint` removed) |
+
+Lines include docstrings. Of the package's net, the new reader and scan
+are about 60, the state threading in `next` about 40, the hook's gate
+call about 20, against `review_hint`'s 40 removed.
+
+Against the stop criteria:
+
+1. One new row (through `chain_gaps`, none in `next_step` itself); the
+   state arrived as a parameter, but three places branch on it
+   (`_protocol_text`, `_progress_step`, the scan's tree paths). Partly hit.
+2. Net package lines: +78. **Hit.** The gap was closed by adding a reader
+   path and a parameter; the competing logic removed was 40 lines.
+3. No exception list in the invariant test. Not hit.
+4. One session. Not hit.
+
+Special cases that remain: a report whose discussion blocks do not read
+is held by `hold_report` and not named by `next` (left to the block's own
+hold, deliberately); `reports_without_block` reads the tree in both
+states; the hook's command renders paths from the hook's working
+directory, the repo in a session (the test sets it). Usability: from the
+hold to the release the agent types the same one command as before; what
+changed is that `labkit-next` names it instead of only the stop's refusal.
+
+**Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1
+does not continue as written. The reason is structural, not accidental:
+closing a gap *adds* a path, and the gain of Phase 1 comes only where a
+surface's own composition is *removed* and `next` takes its place. The
+state parameter is a one-time cost now paid. The next candidate that is
+removal-first: the stop hook's own lines for a report not written
+(`agent_hooks.missing_reports`, `report_hold.missing_report` composed
+there) replaced by `next`'s step for the touched area, with the same
+measurement. Whether to take it, or to go to the usage round with the
+pilot as it stands, is the decision now open.
+
 ## Target
 
 1. **One ordering, one explainer.** `labkit-next` is the only code that

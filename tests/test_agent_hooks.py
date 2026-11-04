@@ -636,20 +636,71 @@ class PostChange(unittest.TestCase):
 
     def test_a_report_marking_a_run_gets_the_review_command_once_per_text(self):
         """Seventh haiku round: the mark was taken and the numbers stayed;
-        the review that reads them is named where the report is written."""
+        the review that reads them is named where the report is written —
+        as the gate's own finding (`report_hold.report_review_owed`), its
+        command as the stop and the commit print it, paths from the hook's
+        working directory, the repo."""
         ev = self._marked_report()
-        rc, out1, _ = _run(agent_hooks.post_change, ev)
-        self.assertEqual(rc, 0)
-        ctx = json.loads(out1)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("`labkit-audit experiments/01-x --report-review REPORT.md`", ctx)
-        self.assertEqual(_run(agent_hooks.post_change, ev)[1], "")  # same text
-        block = "\n".join(
-            report_blocks.discussion_lines(
-                "experiments/01-x/PROTOCOL-x.md", "2026-10-25T20-57-42_9ae7", "other"
+        with contextlib.chdir(self.root):
+            rc, out1, _ = _run(agent_hooks.post_change, ev)
+            self.assertEqual(rc, 0)
+            ctx = json.loads(out1)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn(
+                "`labkit-audit experiments/01-x --report-review REPORT.md`", ctx
             )
+            self.assertIn("has no clean report review of this state", ctx)
+            self.assertEqual(_run(agent_hooks.post_change, ev)[1], "")  # same text
+            block = "\n".join(
+                report_blocks.discussion_lines(
+                    "experiments/01-x/PROTOCOL-x.md",
+                    "2026-10-25T20-57-42_9ae7",
+                    "other",
+                )
+            )
+            (self.root / "REPORT.md").write_text(
+                f"# Report\n\n{block}\n", encoding="utf-8"
+            )
+            self.assertIn("--report-review", _run(agent_hooks.post_change, ev)[1])
+
+    def test_a_report_whose_review_stands_gets_no_review_command(self):
+        """The counter-case, and the competing logic removed: the hook named
+        the review whenever a run was discussed, reviewed or not
+        (`report_review.review_hint`, until 0.107.0), while the gate held
+        only without a review of the state. The hook reads the gate's
+        finding now: a review of this state naming no claim silences it."""
+        from labkit.checks.report_review_inputs import review_keys, review_pieces
+        from labkit.formats import report_reviews
+        from labkit.gates.report_review import discussed_under
+
+        ev = self._marked_report()
+        area = self.root / "experiments/01-x"
+        report = self.root / "REPORT.md"
+        proto = area / "PROTOCOL-x.md"
+        text = report.read_text(encoding="utf-8")
+        pieces = review_pieces(
+            area,
+            report,
+            text,
+            proto,
+            proto.read_text(encoding="utf-8"),
+            discussed_under(report, text, proto),
         )
-        (self.root / "REPORT.md").write_text(f"# Report\n\n{block}\n", encoding="utf-8")
-        self.assertIn("--report-review", _run(agent_hooks.post_change, ev)[1])
+        whole, parts = report_reviews.fingerprint(pieces)
+        rkey, pkey = review_keys(area, report, proto)
+        report_reviews.write_report_review(
+            area,
+            model="m",
+            report=rkey,
+            protocol=pkey,
+            whole=whole,
+            parts=parts,
+            claims=[],
+            again=False,
+        )
+        with contextlib.chdir(self.root):
+            rc, out, _ = _run(agent_hooks.post_change, ev)
+        self.assertEqual(rc, 0)
+        self.assertNotIn("--report-review", out)
 
     def test_a_report_that_is_a_link_is_told_its_refusal_where_it_is_written(self):
         """post-change resolved every path, so a REPORT.md linking to a file

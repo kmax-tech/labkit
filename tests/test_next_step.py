@@ -22,7 +22,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from labkit.formats import protocol_block  # noqa: E402
+from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
+from labkit.formats import protocol_block, report_reviews  # noqa: E402
+from labkit.formats.gate import GateFinding  # noqa: E402
+from labkit.formats.repo import state_text  # noqa: E402
+from labkit.gates import report_check, report_context, report_hold  # noqa: E402
+from labkit.gates.report_review import discussed_under  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.tools import next_step, protocol_fill  # noqa: E402
 from test_end_to_end import Lab, stamp_count  # noqa: E402
@@ -534,3 +539,147 @@ class ProgressAccount(unittest.TestCase):
         self.assertTrue(step.next.startswith("nothing"), step)
         self.assertIn("SUMMARY.md", step.next)
         self.assertNotIn("the head does not register", step.next)
+
+
+class DiscussingReport(unittest.TestCase):
+    """The pilot of one explainer (docs/notes/2026-11-04-one-explainer-plan.md):
+    a report that discusses a run owes a report review of its state. The
+    stop and the commit held it (`report_hold.hold_report`), `labkit-next`
+    never named it. Now gate, hooks and `next` read the one finding
+    (`report_hold.discussion_review_findings`) of the one state — the tree
+    at the stop, the index at the commit — and a review of the state
+    releases all three."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        # the analysis audit done: the chain names it before the report, and
+        # `next` names the first hold — with it done, the review is the one left
+        self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, self.run_id)
+        self.report = self.lab.root / "REPORT.md"
+        self.report.write_text("# Report\n\nlooked at, nothing reported\n")
+        rc = protocol_fill.main(
+            [
+                str(self.protocol),
+                "--discuss",
+                self.run_id,
+                "--why",
+                "the analysis is not done",
+                "--into",
+                str(self.report),
+            ]
+        )
+        self.assertEqual(rc, 0)
+
+    def step(self, state: str = report_context.TREE) -> next_step.Step:
+        with contextlib.chdir(self.lab.root):
+            return next_step.next_step(self.area, self.protocol.resolve(), state=state)
+
+    def gate(self, *, staged: bool) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.chdir(self.lab.root), contextlib.redirect_stdout(out):
+            rc = report_check.if_reported([self.report], self.lab.root, staged=staged)
+        return rc, out.getvalue()
+
+    def finding(self, *, staged: bool) -> GateFinding:
+        text = (
+            state_text(self.lab.root, self.protocol, staged=True)
+            if staged
+            else self.protocol.read_text(encoding="utf-8")
+        )
+        assert text is not None
+        with contextlib.chdir(self.lab.root):
+            found = report_hold.discussion_review_findings(
+                self.protocol, text, self.lab.root, staged=staged
+            )
+        self.assertEqual(len(found), 1, found)
+        return found[0]
+
+    def reviewed(self) -> None:
+        """A report review of the state now, naming no claim — what
+        `--report-review` writes."""
+        text = self.report.read_text(encoding="utf-8")
+        proto_text = self.protocol.read_text(encoding="utf-8")
+        pieces = review_pieces(
+            self.area,
+            self.report,
+            text,
+            self.protocol,
+            proto_text,
+            discussed_under(self.report, text, self.protocol),
+        )
+        whole, parts = report_reviews.fingerprint(pieces)
+        rkey, pkey = review_keys(self.area, self.report, self.protocol)
+        report_reviews.write_report_review(
+            self.area,
+            model="m",
+            report=rkey,
+            protocol=pkey,
+            whole=whole,
+            parts=parts,
+            claims=[],
+            again=False,
+        )
+
+    def test_in_the_tree_gate_stop_and_next_hold_and_name_the_one_finding(self):
+        owed = self.finding(staged=False)
+        self.assertIn("has no clean report review of this state", owed.text)
+        step = self.step()
+        self.assertEqual(step.where, owed.text)
+        self.assertEqual(step.next, owed.fix)
+        self.assertIn("--report-review REPORT.md", step.next)
+        rc, out = self.gate(staged=False)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(owed.text, out)
+        with contextlib.chdir(self.lab.root):
+            rc, err = self.lab.stop_hook()
+        self.assertEqual(rc, 2, err)
+        self.assertIn(owed.text, err)
+
+    def test_in_the_index_the_commit_and_next_read_the_staged_state(self):
+        """The commit judges the index. A review of the staged state
+        releases the commit and `next --staged`, while the tree, edited
+        after it, owes a review still: the two states apart."""
+        self.lab.git("add", "-A")
+        owed = self.finding(staged=True)
+        step = self.step(report_context.INDEX)
+        self.assertEqual(step.where, owed.text)
+        self.assertEqual(step.next, owed.fix)
+        with contextlib.chdir(self.lab.root):
+            rc, out = self.lab.pre_commit(self.report)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(owed.text, out)
+        # the review of the staged state, staged with it
+        self.reviewed()
+        self.lab.git("add", "-A")
+        with contextlib.chdir(self.lab.root):
+            rc, out = self.lab.pre_commit(self.report)
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn("--report-review", self.step(report_context.INDEX).next)
+        # the tree moves on: it owes a review of its own state, the index not
+        with self.report.open("a", encoding="utf-8") as f:
+            f.write("\nmore prose\n")
+        self.assertIn("--report-review", self.step().next)
+        self.assertEqual(self.gate(staged=False)[0], 1)
+        self.assertNotIn("--report-review", self.step(report_context.INDEX).next)
+        self.assertEqual(self.gate(staged=True)[0], 0)
+
+    def test_the_counter_case_a_review_of_the_state_releases_all_three(self):
+        self.reviewed()
+        self.assertEqual(self.gate(staged=False)[0], 0)
+        with contextlib.chdir(self.lab.root):
+            found = report_hold.discussion_review_findings(
+                self.protocol,
+                self.protocol.read_text(encoding="utf-8"),
+                self.lab.root,
+                staged=False,
+            )
+        self.assertEqual(found, [])
+        step = self.step()
+        self.assertNotIn("--report-review", step.where + step.next)
+        self.assertIn("labkit-adopt", step.next)  # the chain moves on: the adoption
+        with contextlib.chdir(self.lab.root):
+            rc, err = self.lab.stop_hook()
+        self.assertNotIn("--report-review", err)

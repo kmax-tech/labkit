@@ -52,9 +52,10 @@ post-change
     included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
     notes/messung/*.md (not 00-*), is checked with protocol-check or
     notes-check. A changed Markdown report that discusses a run (a
-    discussion block, `report_blocks.discussions`) gets the report review's command
-    (`report_review.review_hint`) — a hint; the review is one model call
-    and the agent's to start. A report is read at its own path
+    discussion block, `report_blocks.discussions`) gets the report review it owes
+    while no review of this state names no claim
+    (`report_hold.report_review_owed`, the gate's own finding) — a hint;
+    the review is one model call and the agent's to start. A report is read at its own path
     (`repo.own_path`), as the stop and the commit read it: one that is a
     symbolic link is told their refusal and its way out
     (`report_hold.link_gap`). An area whose `audits/` or `runs/` git status
@@ -166,10 +167,10 @@ from labkit.formats.gate import Findings, with_way_out
 from labkit.formats.shell import segments
 from labkit.formats import handovers
 from labkit.checks import notes_check, protocol_report
+from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import preflight, report_check, report_hold
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
-from labkit.gates.report_review import review_hint
 from labkit.formats.runs import run_path
 from labkit.run.runlog import RunIndexError, indexed_runs
 from labkit.formats.repo import (
@@ -626,27 +627,45 @@ def _load_cache(p: Path | None) -> dict:
 
 
 def _report_hint(text: str, path: Path, repo: Path) -> str | None:
-    """The review's hint for the report at PATH, its own path
-    (`repo.own_path`) — `review_hint` —, or what report-check refuses at
-    the stop and the commit, said now: a report that is a symbolic link
-    (`report_hold.link_gap`, with its way out), a block in it that does
-    not read."""
+    """What the stop and the commit will hold the report at PATH (its own
+    path, `repo.own_path`; its TEXT) with, said where it is written: a
+    report that is a symbolic link (`report_hold.link_gap`, with its way
+    out), a block in it that does not read, or the report review it owes
+    for discussing a run while no review of this state names no claim
+    (`report_hold.report_review_owed` — the gate's own finding, so the
+    hook names the review exactly when the gate holds it and falls silent
+    once a review stands; until 0.107.0 a hint of its own named the review
+    whenever a run was discussed, reviewed or not). None when nothing
+    holds it."""
+    root = repo.resolve()
     link_target = report_hold.refused_link(repo, path, staged=False)
     if link_target is not None:
         # named where it lies: `shown` resolves, which follows the link
-        rel = path.relative_to(repo.resolve()).as_posix()
+        rel = path.relative_to(root).as_posix()
         return report_hold.link_gap(rel, path, link_target, repo, staged=False).message
     try:
-        return review_hint(text, path, repo)
+        discussed = report_blocks.discussions(text)
     except ReportBlockError as exc:
         return f"{shown(path, repo)}: {exc}"
+    if not discussed:
+        return None
+    protocols = {(path.parent / d.protocol).resolve() for d in discussed}
+    texts = {
+        p: p.read_text(encoding="utf-8")
+        for p in protocols
+        if p.is_file() and not p.is_symlink()
+    }
+    sources = report_hold.Sources(root, set(), texts, {}, {})
+    rel = path.relative_to(root).as_posix()
+    gaps = report_hold.report_review_owed(path, rel, text, discussed, sources)
+    return "; ".join(g.message for g in gaps) or None
 
 
 def post_change(event: dict) -> int:
     """PostToolUse hook: the tool's file and every file git shows changed
     (`_changed`) — a protocol or a measurement note gets its checker, a
-    report that discusses a run the report review's command
-    (`report_review.review_hint`) —, each told once per content (`_untold`);
+    report that discusses a run the review it owes, as the gate holds it
+    (`_report_hint`) —, each told once per content (`_untold`);
     evidence gone or changed in an area whose `audits/` or `runs/` git
     status names gets what the stop and the commit will hold, with its way
     out, once per state (`_untold_evidence`); the findings go back as

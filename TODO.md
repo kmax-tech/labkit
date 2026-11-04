@@ -57,6 +57,14 @@ selben Dateistand lesen (Index beim Commit, Arbeitsbaum sonst), die
 konkurrierende Logik dabei entfernen, Aufwand messen; danach über die
 weitere Vereinheitlichung entscheiden. `--do`, Schreibverzeichnis und
 Formatverschmelzungen sind separate Vorschläge mit Auslöser.
+**Pilot gebaut und gemessen (2026-11-04, eine Sitzung):** Gate, Hooks und
+`next` lesen die geschuldete Berichtsprüfung aus einer Funktion im selben
+Dateistand, `review_hint` ist entfernt, vier Tests (Baum, Index, Gegenfall,
+Hook schweigt nach Review). Netto +78 Paketzeilen, Abbruchkriterium 2
+getroffen; Grund und der nächste entfernungsorientierte Kandidat
+(`missing_reports` im Stop durch den Schritt von `next`) stehen im Plan
+unter „Pilot result". Entscheidung offen: diesen Kandidaten nehmen oder
+mit dem Stand in die Nutzungsrunde.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
@@ -2368,10 +2376,9 @@ Zeitgrenze nebenbei erhöhen.
 
 Prozesszustand und Wartehinweise: [Notiz](docs/notes/2026-11-04-liveness-and-wait.md).
 
-1. Laborstandard `labkit/docs/standard.md` (Abschnitt zu Ausgabe-Sperren)
-   lehrt weiter „PID prüfen (`ps -p`), dann löschen“ — seit `4cfc7d80`
-   entscheidet die Kernel-Sperre. Regeltext, Änderung nur als
-   Standardentscheidung (Max).
+1. Erledigt `32b51e32` (Max, 2026-11-04): LAB-064 lehrt jetzt, einer
+   verwaisten Ausgabe-Sperre nach der Kernel-Sperre zu folgen, nicht nach
+   `ps -p`; datierte Änderung unter „Changes“, Version bleibt 0.26.
 2. Laufdatensätze entscheiden weiter über PID plus Skript
    (`runs.is_alive`): ohne `ps` und bei wiederverwendeter PID wartet
    `--wait` bis zum Limit, ein `python -m`-Lauf gilt als abgebrochen.

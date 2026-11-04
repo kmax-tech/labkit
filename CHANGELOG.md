@@ -11,6 +11,22 @@ Rename to `## X.Y.Z — YYYY-MM-DD` when releasing (`just release X.Y.Z`).
 
 ### Breaking
 
+- **The review a report owes for discussing a run is one finding for the
+  gate, the hooks and `labkit-next`.** The stop and the commit held such
+  a report (`report_hold.hold_report`), `labkit-next` and `report-check
+  AREA` never named it, and the post-change hook named the review on its
+  own whenever a run was discussed, reviewed or not. Now
+  `report_hold.discussion_review_findings` reads the finding per protocol
+  from the state the caller judges — the tree at the stop, the index at
+  the commit (`labkit-next --staged`, `next_step(state=INDEX)`) — and
+  `report_check.chain_gaps` carries it, so `report-check AREA` holds and
+  `labkit-next` names exactly what the hooks hold, and a review of the
+  state releases all of them; the post-change hook prints the gate's
+  finding and falls silent once a review stands
+  (`report_review.review_hint` is gone). The pilot of
+  [one explainer](docs/notes/2026-11-04-one-explainer-plan.md). The last
+  release with the hook's own hint is **0.107.0**.
+
 - **An attempt journal git cannot read is held, not read as absent.** The
   journal is appended to, never cut; its text at HEAD and in the index is
   read through `repo.text_at`, whose None is both "not there" and "git

@@ -1480,40 +1480,90 @@ def adoption_unstaged(protocol: Path, run_id: str, sources: Sources) -> bool:
 DISCUSSES_TOUCHED = "a report discussing a run of an area this change touches"
 
 
-def discussing_reports(
-    paths: list[Path], held: set[Path], repo: Path, *, staged: bool
-) -> list[tuple[Path, str, str]]:
-    """(path, text, why held) of every report git's index holds, not in
-    HELD, with a discussion block whose protocol lies in an area PATHS
-    touch (`areas_touched`): the review of such a report read that area's
-    protocol, runs and audits, so a change there makes it stale though the
-    report is untouched. Text as the state holds it (the index when
-    STAGED; `report_entry`, through a symbolic link — `hold_report` refuses
-    the link). A report whose blocks do not read is held too — the gate
-    names the block. Empty outside a repository."""
-    if git_root(repo) is None:
-        return []
-    areas = {a.resolve() for a in areas_touched(paths, repo)}
-    if not areas:
-        return []
-    links = indexed_links(repo) if staged else None
-    out: list[tuple[Path, str, str]] = []
-    for full in indexed_files(repo):
-        if (
-            full in held
-            or full.suffix != REPORT_SUFFIX
-            or PROTOCOL_NAME.match(full.name)
-        ):
+def discussing_candidates(
+    repo: Path, *, staged: bool
+) -> list[tuple[Path, str, list[report_blocks.Discussion] | None]]:
+    """(path, text, its discussion blocks — None when they do not read) of
+    every report of REPO that discusses a run, as the state holds it: in
+    the tree every Markdown file at a held place (`held_place`: no
+    protocol, not under SKIP_DIRS — the walk `reports_without_block`
+    makes, no git needed), in the index every file it holds (STAGED; []
+    outside a repository), each read through `report_entry`. The one scan
+    behind `discussing_reports` and `discussion_review_findings`. Raises
+    RuntimeError when git fails on the index."""
+    root = repo.resolve()
+    if staged:
+        if git_root(repo) is None:
+            return []
+        candidates = [own_path(c) for c in indexed_files(repo)]
+        links = indexed_links(repo)
+    else:
+        candidates = sorted(root.rglob(f"*{REPORT_SUFFIX}"))
+        links = None
+    out: list[tuple[Path, str, list[report_blocks.Discussion] | None]] = []
+    for full in dict.fromkeys(candidates):
+        if not held_place(repo, full):
             continue
         _, text = report_entry(repo, full, staged=staged, index_links=links)
         if text is None or report_blocks.DISCUSS_OPEN not in text:
             continue
         try:
-            found = report_blocks.discussions(text)
+            out.append((full, text, report_blocks.discussions(text)))
         except report_blocks.ReportBlockError:
-            out.append((full, text, DISCUSSES_TOUCHED))
+            out.append((full, text, None))
+    return out
+
+
+def discussion_review_findings(
+    protocol: Path, text: str, repo: Path, *, staged: bool
+) -> list[GateFinding]:
+    """The report reviews the reports of REPO owe for discussing a run of
+    PROTOCOL (its TEXT as the state holds it): the findings `hold_report`
+    holds each such report with (`report_review_owed`), read here per
+    protocol so that `report_check.chain_gaps` — and through it
+    `report-check AREA` and `labkit-next` — holds and names exactly what
+    the stop and the commit hold (`report_check.if_reported`), one
+    function for both. Only the discussion blocks naming PROTOCOL count; a
+    report whose blocks do not read is left to its own hold (`hold_report`
+    names the block). STAGED: the index's files and texts, [] outside a
+    repository. Raises RuntimeError when git fails on the index."""
+    root = repo.resolve()
+    target = protocol.resolve()
+    out: list[GateFinding] = []
+    for full, report_text, found in discussing_candidates(repo, staged=staged):
+        if found is None:
             continue
-        if any((full.parent / d.protocol).resolve().parent in areas for d in found):
+        mine = [d for d in found if (full.parent / d.protocol).resolve() == target]
+        if not mine:
+            continue
+        sources = Sources(root, set(), {target: text}, {}, {})
+        rel = full.relative_to(root).as_posix()
+        out += report_review_owed(full, rel, report_text, mine, sources, staged=staged)
+    return out
+
+
+def discussing_reports(
+    paths: list[Path], held: set[Path], repo: Path, *, staged: bool
+) -> list[tuple[Path, str, str]]:
+    """(path, text, why held) of every report the state holds
+    (`discussing_candidates`), not in HELD, with a discussion block whose
+    protocol lies in an area PATHS touch (`areas_touched`): the review of
+    such a report read that area's protocol, runs and audits, so a change
+    there makes it stale though the report is untouched. A report whose
+    blocks do not read is held too — the gate names the block. Empty
+    outside a repository."""
+    areas = (
+        {a.resolve() for a in areas_touched(paths, repo)} if git_root(repo) else set()
+    )
+    if not areas:
+        return []
+    out: list[tuple[Path, str, str]] = []
+    for full, text, found in discussing_candidates(repo, staged=staged):
+        if full in held:
+            continue
+        if found is None or any(
+            (full.parent / d.protocol).resolve().parent in areas for d in found
+        ):
             out.append((full, text, DISCUSSES_TOUCHED))
     return out
 

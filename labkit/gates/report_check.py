@@ -180,6 +180,7 @@ from labkit.gates import ways_out
 from labkit.gates.report_hold import (
     Sources,
     discussing_reports,
+    discussion_review_findings,
     held_by_reports,
     hold_report,
     reached_reports,
@@ -702,7 +703,11 @@ def chain_gaps(
     5. Analysis: coverage and rendered results where the lane owes it.
     6. Recomputation: the analysis script's `--check`, always.
     7. Decisions: reviews and follow-ups where the lane owes the analysis.
-    8. Report: the registered report, once delivered in CTX's state.
+    8. Report: the registered report, once delivered in CTX's state, and
+       the review every report discussing a run of the protocol owes
+       (`report_hold.discussion_review_findings` — the hold the stop and
+       the commit hold such a report with, named here so that `next`
+       names the same step; REVIEW False leaves it out).
 
     Every applicable stage runs despite earlier blockers; a declared run
     whose code changed puts the withdrawal before every later hold
@@ -762,6 +767,12 @@ def chain_gaps(
     # 8. report
     if not adoption_pending:
         out += report_findings(ctx, review=review)
+    if review and ctx.state != PROPOSED:
+        # not on the proposal: its text is in every review's fingerprint,
+        # so the adoption would hold itself (`report_findings` says why)
+        out += discussion_review_findings(
+            ctx.protocol, ctx.text, ctx.repo, staged=ctx.state == INDEX
+        )
     return out, held_by
 
 
