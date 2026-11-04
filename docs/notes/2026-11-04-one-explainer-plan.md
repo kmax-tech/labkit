@@ -548,9 +548,20 @@ Both are mechanical, both can run per module beside other work.
   (the current rule in the docstring, the history in a note). Per module
   touched: the sentence that names a present limit stays with a short
   why; the incident moves to the topic's note under `docs/notes/` and
-  the docstring links it. This is the cheapest real reduction in this
-  note and runs module by module beside the pilot; its delta is
-  reported apart, so it does not mask the pilot's.
+  the docstring links it. It runs module by module beside the pilot;
+  its delta is reported apart, so it does not mask the pilot's.
+  **First module, 2026-11-04: `labkit/formats/runs.py`**, 19 incidents
+  moved to [run record history](2026-11-04-run-record-history.md) (a
+  37-line table), the module 997 → 986 lines, the rules and their short
+  why kept, five dates left as example run ids. Measured delta: −11
+  package lines, one commit, about forty minutes. The forecast above was
+  wrong in kind: a dated incident is mostly a parenthesis inside a
+  sentence whose rule stays, so the 585 dates are worth about 300 to
+  400 lines over the package, not a quarter of the docstrings. The gain
+  is legibility (the docstring states the rule, the note the story), and
+  a reader who wants the why finds it in one table per module; the size
+  gain is small. Continue per module when a module is open for another
+  reason, not as a pass of its own.
 
 ## Then: the usage round
 

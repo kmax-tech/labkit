@@ -65,6 +65,10 @@ getroffen; Grund und der nächste entfernungsorientierte Kandidat
 (`missing_reports` im Stop durch den Schritt von `next`) stehen im Plan
 unter „Pilot result". Entscheidung offen: diesen Kandidaten nehmen oder
 mit dem Stand in die Nutzungsrunde.
+Geschichte in Notes, erstes Modul `runs.py` (2026-11-04): 19 Vorfälle in
+eine Tabellen-Note, Modul −11 Zeilen; die Prognose „ein Viertel der
+Docstrings" war falsch, es sind eher 300–400 Zeilen im ganzen Paket.
+Weiter nur modulweise, wenn ein Modul ohnehin offen ist.
 
 **Beschlossene Richtung:** Maschinelle Verträge strukturiert, fachliche
 Erklärung als Prosa, Ergebnisdarstellung aus gebundenen Quellen — die
