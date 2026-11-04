@@ -12,6 +12,7 @@ written by `runlog.Run`; this module only reads it and starts processes.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shlex
@@ -619,6 +620,21 @@ def main(argv: list[str]) -> int:
             f"runlog experiments/<NN-name>",
         )
         return 2
+    try:
+        return _watch(area, args)
+    except RunConfigError as exc:
+        # a failure.json or record that does not read says nothing of
+        # whether its run broke off: refused, never a traceback
+        raise console.Refused(
+            "runlog",
+            f"{exc} — whether that run is still open cannot be told; repair the "
+            f"file or move the run aside, then `runlog {area}` again",
+        ) from exc
+
+
+def _watch(area: Path, args: argparse.Namespace) -> int:
+    """`main`'s status, `--wait` and `--follow` on AREA. Raises
+    RunConfigError when a run's file does not read (`still_open`)."""
     shown = str(area)
     if args.follow:
         return _wait(shown, None, args.interval or 5.0, True, args.notify)

@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the package unde
 
 from labkit.formats import findings, promises, protocol_check, runs, scope_sha  # noqa: E402
 from labkit.run import runlog, runlog_command  # noqa: E402
+from labkit.formats import console  # noqa: E402
 from protocol_fixture import run_record, head, scope_file  # noqa: E402
 
 
@@ -154,6 +155,61 @@ class TestWait(unittest.TestCase):
                         run.metrics(passed=NotJson())
             (dead,) = (area / "runs").iterdir()
             self.assertIn("run.metrics(passed=…)", runs.read_failure(dead) or "")
+
+    def test_an_unreadable_failure_json_is_refused_and_restored_ends_the_wait(self):
+        """A failure.json that does not read says nothing of whether the run
+        broke off: `runlog AREA` and `--wait` ended in a traceback (review
+        of step 6). Refused naming the file; restored, the wait ends."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                head(repeat_cost="low", promises=None)
+                + "\n- **Question / hypothesis:** how many?\n",
+                encoding="utf-8",
+            )
+            script = area / "01_measure.py"
+            script.write_text(
+                "import sys, time\n"
+                f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
+                "from labkit.run import runlog\n"
+                "try:\n"
+                f"    with runlog.run('x', {{'n': 1}}, {d!r}, run_kind='measurement'):\n"
+                "        raise RuntimeError('broke off')\n"
+                "except RuntimeError:\n"
+                "    pass\n"
+                "print('BROKE', flush=True)\n"
+                "time.sleep(60)\n",
+                encoding="utf-8",
+            )
+            env = {**os.environ, "LABKIT_DETACHED": "1"}
+            proc = subprocess.Popen(
+                [sys.executable, str(script)], env=env, cwd=d,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            )  # fmt: skip
+            try:
+                line = proc.stdout.readline() if proc.stdout else ""
+                self.assertEqual(line.strip(), "BROKE", proc.stderr)
+                (run_dir,) = (area / "runs").iterdir()
+                failure = run_dir / "failure.json"
+                kept = failure.read_text(encoding="utf-8")
+                failure.write_text("{not json", encoding="utf-8")
+                for argv in (
+                    [d],
+                    [d, "--wait", "--max-seconds", "2", "--interval", "0.1"],
+                ):
+                    with self.subTest(argv=argv):
+                        with self.assertRaises(console.Refused) as cm:
+                            _run_main(argv)
+                        self.assertIn("failure.json", cm.exception.why)
+                        self.assertIn("cannot be told", cm.exception.why)
+                failure.write_text(kept, encoding="utf-8")
+                code, out = _run_main(
+                    [d, "--wait", "--max-seconds", "5", "--interval", "0.1"]
+                )
+                self.assertEqual(code, 2, out)
+            finally:
+                proc.kill()
+                proc.wait()
 
     def test_a_run_that_broke_off_while_its_process_lives_ends_the_wait(self):
         """A run that recorded why it broke off (failure.json) is not open,

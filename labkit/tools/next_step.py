@@ -129,7 +129,9 @@ def next_step(area: Path, protocol: Path | None) -> Step:
             f"{shown(area, Path.cwd())}",
             f"`runlog {shown(area, Path.cwd())} --wait` waits for it; then "
             f"`labkit-next` again",
-            "every step on its rows: a second measurement beside it is refused",
+            "every step on its rows: a second measurement beside it must wait — "
+            "runlog refuses one beside an open run, not yet beside a start whose "
+            "run has not opened",
         )
     ctx = report_context.checked(area, protocol)
     account = _progress_step(ctx)
