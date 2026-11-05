@@ -1037,6 +1037,21 @@ The rule for building every one of them: the old speaker goes out before the row
 
 Each step is one commit per fix, each with its predicted and measured delta; a step over budget stops for a re-decision, as before. The spread round and the third reading come after D.
 
+**Steps A and B built (2026-11-05).** Measured, package lines by `git diff --numstat -- labkit`:
+
+| Step | Commits | Measured | Budget | Probe |
+|---|---|---|---:|---|
+| A, fix 1 | `12ee8eb6` | +52 (`report_hold` +22 for the one builder and its docstring, `next_step` +26, `repo` +9, `report_check` −5) | | c7 clean |
+| A, fix 3 | `3a9cea47` | +10 (`agent_hooks` +28 for the entry, `install_hooks` −39 of shell, `repo` +16 for `indexed_changes`; report-check refuses a head that does not read instead of a traceback, which the entry surfaced) | | the whole probe on its archive (`logs-3a9cea47/`): 148 checks, the two breaches left are c8's `inv/step` (step B's) |
+| A, fix 5 | not built | re-estimated +80 to +120: the undecided blockers are strings from four sources (`attempts.area_gaps`, `findings.record_status`, `findings.open_blockers`, `evidence.changes`), and a step as data means each source returns a finding with its way — a format refactor, not a row. Moved to Phase 4 (the state model makes every gate return findings) or a proposal of its own; the row's generic text stays until then | | |
+| A | | **+62 against +60** | +60 | done but for fix 5 |
+| B, fixes 2 and 4 | `101c6898` | +104 (`next_step` +83: `_adoption_owes`, the placeholder row, `_fill_line`'s three ways and the closing rows split out for the complexity lint; `protocol_check` +9, `repo` +10, `scaffold` +2) | +90 | c8 clean on the working tree (`logs-stepB-wt/`); the archive run is owed |
+| B | | **+104 against +90**, the forecast +55 was too low by the rows' docstrings and the split | +90 | the archive run, then done |
+
+Over budget twice, by 2 and by 14; the excess is documentation of the rows, not a second mouth — none of the four fixes left the old speaker standing (the probe's byte-equal check holds). A side finding of B: `scaffold.promote` (`--report`) appends every † item of the template regardless of kind, so a computation gets the two bar fields (`Answer form + resolution †`, `Noise ceiling → threshold †`) the stamp's `owed_cut` drops; small, noted for Phase 3's inventory.
+
+Next: step C (the freeze in `protocol-fill`) and D, as planned; before C, the author decides on fix 5's move and on keeping B's excess.
+
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
