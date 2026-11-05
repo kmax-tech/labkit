@@ -5,6 +5,24 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **The commit's hold on an area whose working tree differs from the
+  index is one finding, and `labkit-next --staged` names its step.**
+  `report_hold.staged_area_gap` builds it for report-check's declared
+  branch (which printed a line of its own until 0.109.0 and returned 1 with
+  `labkit-next --staged` saying "nothing" under it — t34-r2 of
+  labkit-paper's area 20) and for the report review's hold alike; its text
+  is `AREA: the working tree differs from the index (FILES) — the stations
+  read the tree, the commit holds the index. Next: \`git add -- AREA\`
+  stages the whole area (N file(s), listed above); stash what the commit
+  must not hold`, and `next --staged` has the row before the restore
+  (`next_step._staged_area_step`). The step is a command: `repo.STAGE`,
+  `repo.stage_command`. The report review's former text ("…, whose working
+  tree differs from the index … stage these too") is gone.
+
 ## 0.109.0 — 2026-11-04
 
 ### Breaking

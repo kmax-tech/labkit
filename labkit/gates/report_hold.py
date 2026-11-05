@@ -64,6 +64,7 @@ from labkit.formats.repo import (
     own_path,
     protocol_links,
     report_review_command,
+    stage_command,
     PROTOCOL_NAME,
     repo_protocols,
     SKIP_DIRS,
@@ -202,6 +203,32 @@ def tree_differs(repo: Path, area: Path) -> list[str]:
     would hold."""
     rel = area.resolve().relative_to(repo.resolve()).as_posix()
     return [path for xy, path in status_entries(repo, (rel,)) if xy[1] != " "]
+
+
+def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
+    """The pre-commit's BLOCKER while AREA's working tree differs from the
+    index (`tree_differs`): the commit holds the index, and READS (who
+    reads the tree: "the stations read", "the report review of REPORT.md
+    reads") would judge bytes the commit does not hold. None when the tree
+    is what the commit would hold. The one home of this hold for
+    report-check's declared branch (`report_check.hold_declared`), the
+    report review (`review_gap`) and `next --staged`'s row
+    (`next_step._staged_area_step`), so the hold and the step agree; its
+    step stages the whole area (`repo.stage_command`) — a partial staging
+    takes more than the one file a reader has in mind (t34-r2 of
+    labkit-paper's area 20, 2026-11-04: fifteen files, the run among
+    them)."""
+    differs = tree_differs(repo, area)
+    if not differs:
+        return None
+    step = stage_command(area)
+    return blocker(
+        f"{shown(area, repo)}: the working tree differs from the index "
+        f"({', '.join(differs)}) — {reads} the tree, the commit holds the index",
+        fix=f"`{step}` stages the whole area ({len(differs)} file(s), listed "
+        "above); stash what the commit must not hold",
+        step=step,
+    )
 
 
 def reports_without_block(repo: Path, protocol: Path, run_id: str) -> list[Path]:
@@ -1269,14 +1296,9 @@ def review_gap(
         # the review reads the area's files (runs' metrics, audit records,
         # its own records) from the tree; the commit carries the index —
         # a release on bytes the commit does not hold is none
-        differs = tree_differs(repo, area)
-        if differs:
-            return blocker(
-                f"{rel}: its report review reads {shown(area, repo)}, whose "
-                f"working tree differs from the index ({', '.join(differs)}) — "
-                f"the commit would not hold what the review saw",
-                fix=f"stage these too: `git add -- {shlex.quote(shown(area, repo))}`",
-            )
+        gap = staged_area_gap(repo, area, f"the report review of {rel} reads")
+        if gap is not None:
+            return gap
     try:
         pieces = review_pieces(area, path, text, protocol, protocol_text, discussed)
         whole, parts = report_reviews.fingerprint(pieces)

@@ -673,6 +673,52 @@ class IfReported(unittest.TestCase):
         )
         self.assertNotIn("analysis audit", out)  # no station ran
 
+    def test_the_commits_tree_vs_index_hold_is_nexts_step(self):
+        """One mouth (docs/notes/2026-11-04-one-explainer-plan.md, the
+        traces' reading): t34-r2 committed its adoption with the run
+        untracked, report-check held "the working tree differs from the
+        index" and `labkit-next --staged` under it said "nothing" — a hold
+        on a finding `next` did not carry. Now the gate prints the one
+        finding (`report_hold.staged_area_gap`) and `next --staged` names
+        its step, the whole area staged; in the tree `next` says nothing
+        of it, and once staged neither does."""
+        from labkit.gates import next_step, report_context
+
+        area = self._area(
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=True,
+        )
+        root = area.parent.parent
+        proto = area / "PROTOCOL-x.md"
+        # the fixture's prose lacks four MUST fields, which `next` names
+        # first, as the hook's protocol-check would: fill and commit them
+        with proto.open("a", encoding="utf-8") as f:
+            for label in (
+                "Terms of this protocol",
+                "Data / scope",
+                "Exclusions / filters",
+                "Unit",
+            ):
+                f.write(f"- **{label}:** n/a — test\n")
+        self._git(root, "commit", "-qam", "fields")
+        (area / "scripts" / "new.py").write_text("x = 1\n", encoding="utf-8")
+        with contextlib.chdir(root):
+            staged = next_step.next_step(area, proto, state=report_context.INDEX)
+            tree = next_step.next_step(area, proto, state=report_context.TREE)
+            code, out = self._staged_gate(root, proto)
+        self.assertEqual(code, 1, out)
+        self.assertEqual(
+            staged.next.split(" stages")[0], "`git add -- experiments/01-x`"
+        )
+        self.assertIn(staged.where, out)  # the gate's hold is next's finding
+        self.assertIn(staged.next, out)
+        self.assertNotIn("git add", tree.next)  # the tree is not the commit
+        self._git(root, "add", "-A")
+        with contextlib.chdir(root):
+            after = next_step.next_step(area, proto, state=report_context.INDEX)
+        self.assertNotIn("git add", after.next)
+
     def test_staged_finds_a_protocol_deleted_only_in_the_tree(self):
         """The script staged, the reported protocol deleted in the tree and
         not in the index: the commit keeps the protocol, so the gate holds

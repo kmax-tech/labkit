@@ -746,7 +746,7 @@ class ReportFiles(unittest.TestCase):
         self._reviewed(report, area)  # reviewed the tree, not what is staged
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)  # its record not staged: the area differs
-        self.assertIn("whose working tree differs from the index", out)
+        self.assertIn("the working tree differs from the index", out)
         self._git(root, "add", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)  # the record staged, the report not
@@ -778,7 +778,7 @@ class ReportFiles(unittest.TestCase):
         self._git(root, "add", str(area / "audits"))
         code, out = self._gate(root, report, staged=True)
         self.assertEqual(code, 1, out)
-        self.assertIn("whose working tree differs from the index", out)
+        self.assertIn("the working tree differs from the index", out)
         self.assertIn("metrics.json", out)
 
     def test_a_source_change_reaches_the_untouched_discussing_report(self):

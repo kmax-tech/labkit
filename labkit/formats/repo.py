@@ -139,6 +139,7 @@ ADOPT, INTO, WITHDRAW, WAIT, RENDER, CHECK = (
 DISCUSS, HANDOVER = "discuss", "handover"
 MEASURE, AUDIT, DECIDE, REVIEW = "measure", "audit", "decide", "review"
 RESTORE, INIT = "restore", "init"
+STAGE = "stage"
 COMMAND_KIND = {
     ADOPT: MECHANICAL,
     INTO: MECHANICAL,
@@ -154,6 +155,7 @@ COMMAND_KIND = {
     REVIEW: RESEARCH,
     RESTORE: DESTRUCTIVE,
     INIT: DESTRUCTIVE,
+    STAGE: MECHANICAL,
 }
 
 
@@ -318,6 +320,13 @@ def into_command(protocol: Path, report: Path) -> Command:
             ["protocol-fill", shown(protocol, here), "--into", shown(report, here)]
         ),
     )
+
+
+def stage_command(area: Path) -> Command:
+    """The `git add -- AREA` line that stages the whole area, as the working
+    directory reaches it (`shown`): the pre-commit's way out while the
+    area's tree differs from the index (`report_hold.staged_area_gap`)."""
+    return Command(STAGE, f"git add -- {shlex.quote(shown(area, Path.cwd()))}")
 
 
 def handover_command(protocol: Path, report: str = "REPORT.md") -> Command:

@@ -6,6 +6,10 @@ The order, the first that applies is the step (`next_step`):
     no protocol in the area      → `labkit-init exp …` registers the question
     a MUST field still unfilled  → `protocol-fill …` fills it
                                    (`protocol_check.check_fields`)
+    the index's head declares a   → `git add -- AREA` stages the whole area
+      result and the area's tree    (`report_hold.staged_area_gap`, the
+      differs from the index        commit's hold before any station reads;
+      (the pre-commit's state)      the index alone)
     committed evidence changed   → its restore, the first of report-check's
       against HEAD                 first station (`evidence.change_blockers`),
                                    before a handover can say "nothing"
@@ -262,8 +266,30 @@ def _before_the_chain(
     none applies."""
     return (
         _field_step(protocol, report, hint)
+        or _staged_area_step(area, text, staged=staged)
         or _restore_step(area, staged=staged)
         or _handed_over(area, protocol, text, staged=staged)
+    )
+
+
+def _staged_area_step(area: Path, text: str, *, staged: bool) -> Step | None:
+    """The commit's hold while the index's head declares a result and the
+    area's tree differs from the index (`report_hold.staged_area_gap`, the
+    hold of report-check's declared branch): the step stages the whole
+    area. None in the tree, for an undeclared head, or when the tree is
+    what the commit would hold. Before the restore: report-check holds it
+    before any station reads."""
+    from labkit.gates.report_hold import staged_area_gap
+
+    if not staged or protocol_block.declared_run(text) is None:
+        return None
+    gap = staged_area_gap(layout_root(area), area, "the stations read")
+    if gap is None:
+        return None
+    return Step(
+        gap.text,
+        gap.fix or "the line above names what holds",
+        "the commit: it holds the index, and the stations read the tree",
     )
 
 

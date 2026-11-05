@@ -123,7 +123,7 @@ reopens nothing.
 `--staged` is the pre-commit's form. The commit holds the index, the
 stations read the working tree: so the declaration is read from the index
 (`repo.state_text` — an answer only the tree carries is not in the commit), and
-an area whose tree differs from the index (`tree_differs`: a file modified
+an area whose tree differs from the index (`report_hold.staged_area_gap`: a file modified
 and not staged, or untracked) is a blocker before any station runs, since
 the check would judge a state the commit does not hold.
 """
@@ -192,7 +192,7 @@ from labkit.gates.report_hold import (
     repo_sources,
     report_files,
     report_owed,
-    tree_differs,
+    staged_area_gap,
 )
 from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
@@ -1056,15 +1056,10 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
     )
     area = protocol.parent.resolve()
     if staged:
-        differs = tree_differs(repo, area)
-        if differs:
-            print(
-                f"  {area.relative_to(repo.resolve()).as_posix()}: the working "
-                f"tree differs from the index ({', '.join(differs)}) — the "
-                f"stations read the tree, the commit holds the index; stage "
-                f"these too, or stash them, so the commit holds what the "
-                f"check sees"
-            )
+        # the one hold of this state, `next --staged`'s row too
+        gap = staged_area_gap(repo, area, "the stations read")
+        if gap is not None:
+            print(f"  {gap.line}")
             return 1
     return report_check(area, protocol, state=INDEX if staged else TREE, text=text)
 
