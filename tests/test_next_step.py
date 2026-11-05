@@ -299,17 +299,70 @@ class BeforeTheChain(unittest.TestCase):
         self.assertNotEqual(before, after)
 
     def test_a_fill_line_is_named_only_where_one_fill_closes_the_gap(self):
+        """A placeholder is filled by protocol-fill; a field absent from the
+        text is not (protocol-fill knows no field it cannot see): a † field
+        comes with `labkit-init exp … --report`, another absent field is a
+        line to write; a freeze key or a contradiction has no single step.
+        The repair probe's base8 (2026-11-05): `next` named a fill of an
+        absent field, protocol-fill answered "no field labelled"."""
+        area = Path("experiments/01-x")
         line = next_step._fill_line
-        self.assertEqual(line("P.md", "Unit"), 'protocol-fill P.md "Unit=<value>"')
         self.assertEqual(
-            line("P.md", "[protocol] kind"),
-            'protocol-fill P.md "kind=<compute|fit|apply>"',
+            line("P.md", "Unit", absent=False, area=area),
+            '`protocol-fill P.md "Unit=<value>"` fills the first',
         )
+        self.assertEqual(
+            line("P.md", "[protocol] kind", absent=True, area=area),
+            '`protocol-fill P.md "kind=<compute|fit|apply>"` fills the first',
+        )
+        absent = line("P.md", "Why this design", absent=True, area=area)
+        assert absent is not None
+        self.assertTrue(
+            absent.startswith("`labkit-init exp experiments/01-x --report` appends"),
+            absent,
+        )
+        absent = line("P.md", "Unit", absent=True, area=area)
+        assert absent is not None
+        self.assertIn("write the line `- **Unit:** …`", absent)
         for gap in (
             "[protocol] preflight_audit (frozen = true without the record named)",
             "[protocol] frozen",
         ):
-            self.assertIsNone(line("P.md", gap), gap)
+            self.assertIsNone(line("P.md", gap, absent=True, area=area), gap)
+
+    def test_the_adoption_names_the_fields_it_would_owe_before_adopt(self):
+        """One mouth: `next` asks `check_fields` what the adoption's state
+        owes (`adopting`) — a frozen protocol's † result fields — and names
+        the fill before `labkit-adopt`, which would refuse the written
+        result for them (labkit-paper's tassay-r2, the repair probe's c8).
+        The twins: filled, or unfrozen, the adoption owes nothing more."""
+        from protocol_fixture import head
+
+        protocol = Path("experiments/01-x/PROTOCOL-x.md")
+        daggered = (
+            "- **Question †:** <…>\n- **Did †:** <…>\n- **Expected or surprising †:** <…>\n"
+            "- **Rival check †:** <…>\n- **Caps/drops †:** <…>\n- **Analysis audit †:** <…>\n"
+        )
+        frozen = head(repeat_cost="high", frozen=True, preflight_audit="n/a — test")
+        step = next_step._adoption_owes(protocol, frozen + daggered, "r1")
+        assert step is not None
+        self.assertIn("adopting r1 would owe 6 field(s) still open", step.where)
+        self.assertIn(
+            '`protocol-fill experiments/01-x/PROTOCOL-x.md "Question †=<value>"`',
+            step.next,
+        )
+        self.assertIn("labkit-adopt refuses", step.held)
+        # absent altogether: the † fields come with --report
+        step = next_step._adoption_owes(protocol, frozen, "r1")
+        assert step is not None
+        self.assertIn("`labkit-init exp experiments/01-x --report` appends", step.next)
+        filled = frozen + daggered.replace("<…>", "written")
+        self.assertIsNone(next_step._adoption_owes(protocol, filled, "r1"))
+        self.assertIsNone(
+            next_step._adoption_owes(
+                protocol, head(repeat_cost="high") + daggered, "r1"
+            )
+        )
 
     def test_no_such_area_is_refused(self):
         with tempfile.TemporaryDirectory() as d:

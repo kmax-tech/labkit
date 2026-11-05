@@ -749,7 +749,9 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     return [(f.line, f.label) for f in lines if f.placeholder]
 
 
-def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]]:
+def owed(
+    text: str, head: protocol_block.Head, *, adopting: bool = False
+) -> tuple[list[Field], list[Field]]:
     """(must, should) fields this protocol owes, by its cut, freeze and runs.
 
     Which fields, by its repeat cost, kind and model, is `owed_fields`'s
@@ -757,7 +759,11 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     graduates — nothing freezes (LAB-017 The number of audits follows the
     cost tier). The full form owes its musts; `frozen = true` turns every
     should into a must (the graduation gate, in ONE place), and once a
-    result is declared a frozen protocol owes its report fields too."""
+    result is declared a frozen protocol owes its report fields too —
+    ADOPTING asks that question of the state an adoption makes, before it
+    is made: what `labkit-next` names before `labkit-adopt`, so the two
+    agree by construction (labkit-paper's tassay-r2, 2026-11-04: next said
+    adopt, adopt refused for these fields)."""
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.low_cut`) are this module's
     owed_here = owed_fields(head.repeat_cost, head.kind, model_named(text))
@@ -767,7 +773,8 @@ def owed(text: str, head: protocol_block.Head) -> tuple[list[Field], list[Field]
     should = [f for f in owed_here if f.level == "should"]
     if not head.frozen:
         return must, should
-    report = [f for f in owed_here if f.level == "report"] if result_due(text) else []
+    due = adopting or result_due(text) is not None
+    report = [f for f in owed_here if f.level == "report"] if due else []
     return must + should + report, []
 
 
@@ -839,13 +846,15 @@ def kept_gaps(text: str, head: protocol_block.Head) -> list[str]:
     return k.placeholders
 
 
-def check_fields(text: str) -> FieldReport:
-    """The field findings of one protocol: head, missing fields, placeholders."""
+def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
+    """The field findings of one protocol: head, missing fields (absent from
+    the text, `missing_must`), placeholders (`must_holes`); ADOPTING judges
+    the state an adoption makes (`owed`)."""
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
         return FieldReport(None, str(exc), [], [], [], [])
-    must, should = owed(text, head)
+    must, should = owed(text, head, adopting=adopting)
     present = {f.name for f in fields(text)}
     missing_must = [f.label for f in must if f.label.casefold() not in present]
     missing_should = [f.label for f in should if f.label.casefold() not in present]

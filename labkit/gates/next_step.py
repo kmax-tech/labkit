@@ -4,7 +4,9 @@ held until it is taken.
 The order, the first that applies is the step (`next_step`):
 
     no protocol in the area      → `labkit-init exp …` registers the question
-    a MUST field still unfilled  → `protocol-fill …` fills it
+    a MUST field absent or still → `protocol-fill …` fills a placeholder;
+      a placeholder                an absent † field comes with
+                                   `labkit-init exp … --report`
                                    (`protocol_check.check_fields`)
     the index's head declares a   → `git add -- AREA` stages the whole area
       result and the area's tree    (`report_hold.staged_area_gap`, the
@@ -42,6 +44,10 @@ The order, the first that applies is the step (`next_step`):
                                    chain's gaps: the chain's order stands
                                    (the way back of a rewritten registration
                                    before a decision on it, probe 2026-11-02)
+    the adoption would leave a   → fill it first (`check_fields` with
+      MUST field open                `adopting`: the frozen protocol's †
+                                   result fields; `labkit-adopt` would
+                                   refuse the written result)
     no adopted run               → `labkit-adopt AREA <run>` adopts the run
                                    that answers
     adopted, nothing held        → nothing: the number may be reported
@@ -71,6 +77,7 @@ from labkit.formats.repo import (
     area_protocols,
     audit_command,
     layout_root,
+    report_fields_command,
     shown,
     state_text,
     withdraw_command,
@@ -175,11 +182,21 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     undecided = _undecided_step(area, protocol, staged=staged)
     if undecided is not None:
         return undecided
+    return _closing_step(ctx, protocol, text)
+
+
+def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
+    """The steps past the chain and the undecided row: what the adoption
+    would still owe (`_adoption_owes`), the adoption, a report citing the
+    adopted run without its block, and nothing."""
     if ctx.declared is None:
         run = ctx.run.name if ctx.run is not None else "<run_id>"
+        owed_then = _adoption_owes(protocol, text, run)
+        if owed_then is not None:
+            return owed_then
         return Step(
             f"nothing holds the answering run {run}; no run is adopted yet",
-            f"`labkit-adopt {shown(area, Path.cwd())} {run}` adopts it: it writes "
+            f"`labkit-adopt {shown(ctx.area, Path.cwd())} {run}` adopts it: it writes "
             "the result and the report's block and checks them — a refusal "
             "names its step",
             "the number in any report: report only an adopted number",
@@ -472,15 +489,32 @@ def _field_step(
             "copy is registered cannot be told",
         )
     if report.missing_must:
-        fill = _fill_line(named, report.missing_must[0])
+        fill = _fill_line(
+            named, report.missing_must[0], absent=True, area=protocol.parent
+        )
         return Step(
             f"{protocol.name} lacks {len(report.missing_must)} MUST field(s): "
             + ", ".join(report.missing_must),
-            (f"`{fill}` fills the first; " if fill else "")
+            (f"{fill}; " if fill else "")
             + f"`protocol-fill {named} --list` names every open field with its "
             f"values, `protocol-check {named} --contract` what each one owes" + hint,
             "the first measurement: fill and commit the registration first, "
             "because it cannot change after that run",
+        )
+    if report.must_holes:
+        # a MUST field stamped and never written: protocol-check holds it
+        # (PLACEHOLDER ONLY), so the row names it — a should field is one
+        # once frozen (the repair probe's base8, 2026-11-05)
+        labels = [label for _, label in report.must_holes]
+        fill = _fill_line(named, labels[0], absent=False, area=protocol.parent)
+        return Step(
+            f"{protocol.name}: {len(labels)} MUST field(s) still a placeholder: "
+            + ", ".join(labels),
+            (f"{fill}; " if fill else "")
+            + f"`protocol-fill {named} --list` names every open field with its "
+            f"values" + hint,
+            "the commit and every gate that reads the fields: a placeholder is "
+            "not a registration",
         )
     return None
 
@@ -537,18 +571,67 @@ def _progress_step(ctx: "Checked") -> Step | None:
     )
 
 
-def _fill_line(protocol: str, missing: str) -> str | None:
-    """The `protocol-fill` line that fills MISSING, a MUST gap as
-    `protocol_check.check_fields` names it — a field label, or a head key as
-    `[protocol] <key>` with its allowed values (`protocol_block.FILLABLE_HEAD_KEYS`) —
-    or None for a gap no single fill closes (a contradiction, a freeze key)."""
+def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
+    """The step while adopting RUN would leave a MUST field open: the fields
+    the adoption's state owes (`protocol_check.check_fields` with
+    `adopting`, the same question report-check's field station asks of the
+    written result, so `labkit-adopt` would refuse) that the state as it
+    stands does not — a frozen protocol's † result fields. None when the
+    adoption owes nothing more. The one state `labkit-next` named a step its
+    command refused (labkit-paper's tassay-r2, 2026-11-04; the repair
+    probe's c8)."""
+    now = protocol_check.check_fields(text)
+    then = protocol_check.check_fields(text, adopting=True)
+    absent = [f for f in then.missing_must if f not in now.missing_must]
+    holes = [label for _, label in then.must_holes if (_, label) not in now.must_holes]
+    if not absent and not holes:
+        return None
+    named = shown(protocol, Path.cwd())
+    first = absent[0] if absent else holes[0]
+    fill = _fill_line(named, first, absent=bool(absent), area=protocol.parent)
+    return Step(
+        f"adopting {run} would owe {len(absent) + len(holes)} field(s) still open: "
+        + ", ".join(absent + holes),
+        (f"{fill}; " if fill else "")
+        + f"`protocol-check {named} --contract` names what the adoption owes; then "
+        "`labkit-next` again",
+        "the adoption: labkit-adopt refuses the written result while a field it "
+        "owes is open",
+    )
+
+
+def _fill_line(protocol: str, missing: str, *, absent: bool, area: Path) -> str | None:
+    """The sentence with the command that closes MISSING, a MUST gap as
+    `protocol_check.check_fields` names it: a head key as `[protocol] <key>`
+    with its allowed values (`protocol_block.FILLABLE_HEAD_KEYS`), or a
+    field label — a placeholder (ABSENT False) is filled by `protocol-fill`;
+    a field ABSENT from the text is not (protocol-fill knows no field it
+    cannot see): a † field, one `--report` stamps (`Field.level` should or
+    report), comes with `labkit-init exp AREA --report`, written as a
+    Command; any other absent field is a line to write by hand. None for a
+    gap no single step closes (a contradiction, a freeze key)."""
     if missing.startswith("[protocol] "):
         key = missing.removeprefix("[protocol] ")
         for label, (head_key, choices) in protocol_block.FILLABLE_HEAD_KEYS.items():
             if head_key == key:
                 value = "|".join(choices) if choices else "value"
-                return f'protocol-fill {protocol} "{label}=<{value}>"'
+                return f'`protocol-fill {protocol} "{label}=<{value}>"` fills the first'
         return None
     if missing.startswith("[") or "(" in missing:
         return None
-    return f'protocol-fill {protocol} "{missing}=<value>"'
+    if not absent:
+        return f'`protocol-fill {protocol} "{missing}=<value>"` fills the first'
+    field = next(
+        (f for f in protocol_check.FIELDS if f.label.casefold() == missing.casefold()),
+        None,
+    )
+    if field is not None and field.level in ("should", "report"):
+        return (
+            f"`{report_fields_command(area)}` appends the † fields "
+            f"({missing} among them) to the protocol, each in its section; "
+            "then `protocol-fill` fills them"
+        )
+    return (
+        f"write the line `- **{missing}:** …` into the protocol — protocol-fill "
+        "fills a field it sees, not one that is absent"
+    )

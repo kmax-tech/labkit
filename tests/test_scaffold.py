@@ -329,8 +329,13 @@ class Exp(unittest.TestCase):
         ast.parse(test)
         self.assertIn('"experiments/01-foo-bar"', test)
 
-    def test_the_pilot_part_has_no_report_fields_and_report_adds_them(self) -> None:
-        quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
+    def test_the_low_cut_has_no_report_fields_the_full_form_carries_them(self) -> None:
+        """The † fields: never in the low cut (nothing freezes there), in the
+        full form from the stamp — the freeze owes the should ones and the
+        adoption the result ones, and a frozen protocol without them held
+        its agent for 19 minutes (labkit-paper's tassay-r2, 2026-11-04);
+        `--report` appends them to an area stamped before (`promote`)."""
+        quiet(scaffold.stamp_area, self.root, "foo-bar", "low", kind="fit")
         proto = self.area() / "PROTOCOL-foo-bar.md"
 
         def fields() -> list[str]:
@@ -339,7 +344,16 @@ class Exp(unittest.TestCase):
             )
 
         self.assertEqual(fields(), [])
-        quiet(scaffold.stamp_area, self.root, "foo-bar", report=True, kind="fit")
+        quiet(scaffold.stamp_area, self.root, "other", "high", kind="fit")
+        (high,) = (self.root / "experiments").glob("*-other")
+        proto = high / "PROTOCOL-other.md"
+        self.assertGreater(len(fields()), 3)
+        stripped = re.sub(
+            r"(?m)^- \*\*[^*\n]*†:\*\*.*\n", "", proto.read_text(encoding="utf-8")
+        )
+        proto.write_text(stripped, encoding="utf-8")
+        self.assertEqual(fields(), [])
+        quiet(scaffold.stamp_area, self.root, "other", report=True, kind="fit")
         self.assertGreater(len(fields()), 3)
         # the cut marks are the template's, never a written protocol's (the
         # --report path kept 12-16 of them after the l-rename, review 2026-10-25)
@@ -1290,6 +1304,17 @@ class Exp(unittest.TestCase):
         _, proto, _ = self._compute_area_with_work()
         quiet(scaffold.stamp_area, self.root, "other", "high", kind="fit")
         (high,) = (self.root / "experiments").glob("*-other")
+        # the full form carries the † fields from the stamp (one-explainer plan,
+        # step B); `--report` serves an area stamped before that: drop them
+        stripped = high / "PROTOCOL-other.md"
+        stripped.write_text(
+            re.sub(
+                r"(?m)^- \*\*[^*\n]*†:\*\*.*\n",
+                "",
+                stripped.read_text(encoding="utf-8"),
+            ),
+            encoding="utf-8",
+        )
         return {
             "--report": (
                 high / "PROTOCOL-other.md",

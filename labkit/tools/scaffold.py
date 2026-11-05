@@ -857,8 +857,18 @@ def protocol_stamp(
     clean = CUT_MARK.sub(
         "", bar_cut(tmpl, kind)
     )  # every written protocol is free of the cut markers
-    pilot, _ = pilot_and_report(clean)
-    if quick:
+    # the full form carries the † fields from the stamp: the freeze owes the
+    # should ones and the adoption the result ones, and a frozen protocol
+    # without them held its agent for 19 minutes (labkit-paper's tassay-r2,
+    # 2026-11-04); the low cut never owes them (REPORT appends them to an
+    # existing area, `promote`). Until 0.109.0 the full form was the pilot
+    # part, the whole only with REPORT.
+    whole = report or not quick
+    if whole:
+        if skeleton is standard_contract.ESTIMATOR:
+            clean = estimator_placeholders(clean, kind=kind, model=bool(model))
+        pilot = clean
+    else:
         pilot = low_cut(quick_block(tmpl, kind), kind, model=bool(model))
         if skeleton is standard_contract.COMPUTE:
             pilot = count_placeholders(pilot)
@@ -866,15 +876,7 @@ def protocol_stamp(
             pilot = estimator_placeholders(
                 pilot, cut=True, kind=kind, model=bool(model)
             )
-    elif skeleton is standard_contract.ESTIMATOR:
-        pilot = estimator_placeholders(pilot, kind=kind, model=bool(model))
-    if (
-        report
-        and skeleton is standard_contract.ESTIMATOR
-        and kind == standard_contract.APPLY_KIND
-    ):
-        clean = estimator_placeholders(clean, kind=kind, model=bool(model))
-    stamped = blank_before_headings(short_placeholders(clean if report else pilot))
+    stamped = blank_before_headings(short_placeholders(pilot))
     if not quick:
         stamped = owed_cut(stamped)  # the full form owes by kind and model too
     stamped = name_promise_ids(stamped, kind)

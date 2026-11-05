@@ -322,6 +322,16 @@ def into_command(protocol: Path, report: Path) -> Command:
     )
 
 
+def report_fields_command(area: Path) -> Command:
+    """The `labkit-init exp AREA --report` line that appends the † fields to
+    AREA's protocol, as the working directory reaches the area (`shown`):
+    the step for a † field absent from the text, which `protocol-fill`
+    cannot fill (`next_step._fill_line`)."""
+    return Command(
+        INIT, f"labkit-init exp {shlex.quote(shown(area, Path.cwd()))} --report"
+    )
+
+
 def stage_command(area: Path) -> Command:
     """The `git add -- AREA` line that stages the whole area, as the working
     directory reaches it (`shown`): the pre-commit's way out while the

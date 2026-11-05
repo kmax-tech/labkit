@@ -9,6 +9,30 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The full form carries the † fields from the stamp.** `labkit-init exp`
+  at medium or high repeat cost (or with the tier unset) stamps the ten
+  design fields (`Why this design` …, MUST once frozen) and the six result
+  fields (`Question †` …, MUST once a result is declared) as placeholders;
+  until 0.109.0 only `--report` appended them, and a frozen protocol
+  without them held its agent for 19 minutes (labkit-paper's tassay-r2,
+  2026-11-04). The low cut stays as it was; `--report` still appends them
+  to an area stamped before.
+
+### Changed
+
+- **`labkit-next` names what the adoption would owe before it names
+  `labkit-adopt`** (`next_step._adoption_owes`, through
+  `protocol_check.check_fields(text, adopting=True)`, the question
+  report-check's field station asks of the written result — so `next` and
+  `labkit-adopt` agree by construction; tassay-r2: next said adopt, adopt
+  refused for the † fields). Its MUST row names a field still a
+  placeholder (`FieldReport.must_holes`, what protocol-check holds as
+  PLACEHOLDER ONLY) and, for a field absent from the text, the command that
+  writes it — `labkit-init exp AREA --report` for a † field
+  (`repo.report_fields_command`), a line to write for any other — instead
+  of a `protocol-fill` that answers "no field labelled" (the repair
+  probe's base8, 2026-11-05).
+
 - **The pre-commit is one entry, `claude-hook pre-commit`.** It reads the
   index itself and runs the commit's three gates in-process — the MUST
   fields of every protocol the commit adds or changes
