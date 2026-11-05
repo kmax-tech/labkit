@@ -1223,10 +1223,38 @@ class PromiseSentencesReview(unittest.TestCase):
 class FieldAddressGuidance(unittest.TestCase):
     """Misaddressed fields name the existing write path without changing input."""
 
+    def test_a_table_prefix_without_a_space_is_read_for_every_table(self):
+        """`[protocol]type=` was read and `[kept]key=` refused (t34-r3 of
+        labkit-paper's area 20, 2026-11-04): one rule for the table prefix."""
+        with tempfile.TemporaryDirectory() as tmp:
+            protocol = Path(tmp) / "PROTOCOL-x.md"
+            protocol.write_text(
+                head(
+                    type="<exploratory | confirmatory>",
+                    kind="compute",
+                    kept=("<metrics key>", "<unit>"),
+                    promises=None,
+                ),
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    protocol_fill.main(
+                        [
+                            str(protocol),
+                            "[kept]key=mean_score",
+                            "[protocol]type=exploratory",
+                        ]
+                    ),
+                    0,
+                )
+            text = protocol.read_text(encoding="utf-8")
+        self.assertIn('key = "mean_score"', text)
+        self.assertIn('type = "exploratory"', text)
+
     def test_head_misses_show_a_valid_address_and_leave_the_file_untouched(self):
         for wrong, correct, value in (
             ("key", "kept.key", "mean_score"),
-            ("[kept]key", "kept.key", "mean_score"),
             ("protocol.type", "type", "exploratory"),
         ):
             with self.subTest(wrong=wrong), tempfile.TemporaryDirectory() as tmp:

@@ -212,6 +212,28 @@ class RepairPaths(unittest.TestCase):
         self.assertIn("finalized, audited, checked", self.adopt(ok=True))
         self.assertEqual(self.runs(), 1)
 
+    def test_the_restore_step_names_the_decision_while_the_finding_is_open(self):
+        """Step D of the one-explainer plan: with the audit's finding on the
+        field still open, `next`'s restore step says in one line what goes
+        with the restore — decide it `limitation`, or `fixed` for a
+        correction a follow-up releases (t34-r3 of labkit-paper's area 20
+        rewrote Unit five times between the two). The twin: the way taken,
+        nothing held."""
+        record = self.audit("Unit", "the Unit field is too vague · rewrite it")
+        self.fill(f"Unit={UNIT}, hidden files not counted")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            "what the number is about changed after the first measurement", nxt
+        )
+        self.assertIn(f"finding 1 of {record} names this protocol", nxt)
+        self.assertIn("--decide 1 limitation", nxt)
+        self.fill(f"Unit={UNIT}")
+        self.decide(record, "limitation", "the Unit stands as registered")
+        self.commit("Unit restored; finding 1 decided")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertNotIn("what the number is about changed", nxt)
+        self.assertNotIn("names this protocol", nxt)
+
     def test_a_field_not_named_by_its_label_is_held(self):
         """`:Terms` is not the label "Terms of this protocol": no correction
         is bound to it; the line says a changed registration is held and

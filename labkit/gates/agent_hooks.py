@@ -886,6 +886,29 @@ def stop_base_file(repo: Path, session: str) -> Path | None:
     return None if base is None else base / session
 
 
+def stop_held_file(repo: Path, session: str) -> Path | None:
+    """`<git dir>/labkit-stop-held/<SESSION>`: the fingerprint of the state
+    the session's stop last held (`state_fingerprint`); None outside git
+    or for a session id that is no file name."""
+    if not _SESSION_FILE.match(session):
+        return None
+    base = git_dir_path(repo, "labkit-stop-held")
+    return None if base is None else base / session
+
+
+def state_fingerprint(repo: Path) -> str:
+    """One digest of the state the stop judges: HEAD and, for every path
+    `git status` names under REPO (`touched_paths`), its content digest
+    or `gone` — the content, not git's status lines, which say that a
+    file changed and not what it holds. Raises RuntimeError when git
+    fails."""
+    lines = [head_sha(repo)]
+    for p in sorted(set(touched_paths(repo))):
+        digest = file_digest(p) if p.is_file() else "gone"
+        lines.append(f"{p.resolve().relative_to(repo.resolve()).as_posix()} {digest}")
+    return scope_digest("\n".join(lines).encode("utf-8"), None)
+
+
 def _write_stop_base(path: Path, sha: str) -> None:
     """Write SHA as the stop base at PATH (`stop_base_file`), its directory
     made when missing."""
@@ -1116,15 +1139,36 @@ def stop(event: dict) -> int:
         if clean_tree and path is not None:
             _write_stop_base(path, checked_head)
         return 0
+    # the same checked state holds once per turn: the fingerprint of the
+    # state held is kept per session, and a second stop in the turn lets
+    # go only on that very state — a tree changed since (content, files
+    # added or gone, HEAD) is a new state and holds again. Not "no loop":
+    # an agent that changes something after every hold is held again
+    # (three of four held agents ended at the second stop, labkit-paper's
+    # area 20, 2026-11-04)
+    session = event.get("session_id")
+    held_file = stop_held_file(repo, session) if session else None
+    now = state_fingerprint(repo)
     if event.get("stop_hook_active"):
-        # sent back once in this turn already: no loop — the findings stand
-        # on stderr, the base stays, the next turn's stop holds again
+        was = (
+            held_file.read_text(encoding="utf-8").strip()
+            if held_file and held_file.is_file()
+            else None
+        )
+        if was is None or was == now:
+            print(
+                f"{event.get('hook_command', 'claude-hook')} stop: sent back once in this turn on this very "
+                "state — stopping; the blockers above stand and the next stop holds them again",
+                file=sys.stderr,
+            )
+            return 0
         print(
-            f"{event.get('hook_command', 'claude-hook')} stop: sent back once in this turn — stopping; the "
-            "blockers above stand and the next stop holds them again",
+            f"{event.get('hook_command', 'claude-hook')} stop: sent back once in this turn already, and the "
+            "state changed since — the blockers above stand on the new state",
             file=sys.stderr,
         )
-        return 0
+    if held_file is not None:
+        _write_stop_base(held_file, now)
     return 2
 
 

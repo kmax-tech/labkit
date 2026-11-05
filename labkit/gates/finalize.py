@@ -134,6 +134,7 @@ from labkit.formats.repo import (
     adopt_command,
     AmbiguousArea,
     Command,
+    RESTORE,
     area_path,
     area_protocols,
     audit_command,
@@ -393,6 +394,18 @@ def registration_changes(
     ]
 
 
+def restore_step(protocol: Path, first: RunDir, root: Path | None) -> Command | None:
+    """The restore of a scope hold as a step (`repo.RESTORE`): the `git
+    show` of PROTOCOL as the first measurement FIRST's commit holds it —
+    what `shown_then` names in words; None without a recorded commit or a
+    repository. Read by `next_step` to tell a restore from another hold."""
+    commit = recorded_commit(first.config) if first.config is not None else None
+    if not commit or root is None:
+        return None
+    rel = protocol.resolve().relative_to(root.resolve()).as_posix()
+    return Command(RESTORE, f"git show {commit[:12]}:{rel}")
+
+
 def shown_then(protocol: Path, first: RunDir, root: Path | None) -> str:
     """The clause that shows PROTOCOL as the first measurement FIRST saw it:
     the `git show` of its recorded commit, and its uncommitted.patch where
@@ -528,6 +541,7 @@ def _scope_held(
                         f"run {run.name} saw the protocol) — a scope set after a "
                         f"result was seen does not answer the registered question",
                         fix=fix,
+                        step=restore_step(protocol, first, root),
                     )
                 ]
     now = scope_now(area, protocol, pid, run, root)
@@ -582,6 +596,7 @@ def _scope_held(
         f"does not answer the registered question, and a new measurement would "
         f"carry the change",
         fix=fix,
+        step=restore_step(protocol, now.first, root),
     )
     return withdrawn_first([held], withdraw_command(declaring) if declaring else None)
 

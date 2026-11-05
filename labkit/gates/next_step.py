@@ -70,12 +70,21 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from labkit.formats import evidence, handovers, protocol_block, protocol_check
+from labkit.formats import (
+    evidence,
+    findings,
+    handovers,
+    protocol_block,
+    protocol_check,
+)
+from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
     MEASURE,
+    RESTORE,
     area_protocols,
     audit_command,
+    decide_command,
     layout_root,
     report_fields_command,
     shown,
@@ -435,10 +444,47 @@ def _held_step(
         return replace(refused, next=refused.next + hint)
     return Step(
         first.text,
-        (first.fix or "the line above names what holds") + hint,
+        (first.fix or "the line above names what holds")
+        + _finding_on_the_field(ctx, first)
+        + hint,
         f"the adoption and any report of the number: {len(held)} "
         "blocker(s) stand, and this is the first",
     )
+
+
+def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
+    """One sentence more on a restore step (`repo.RESTORE`, a registered
+    field changed after the first measurement) while an analysis finding
+    still open names the protocol as its place: the decision that goes with
+    the restore — `limitation`, the registered text stands and what the
+    finding names is reported — or `fixed` for a correction a follow-up
+    audit's `resolved` releases. "" otherwise, or when the records do not
+    read (the undecided row says so). An agent between the auditor's
+    "misdescribed" and the gate's "restore" rewrote the field five times
+    (labkit-paper's t34-r3, 2026-11-04)."""
+    if first.step is None or first.step.name != RESTORE:
+        return ""
+    try:
+        records = findings.area_records(ctx.area)
+    except findings.FindingsError:
+        return ""
+    for u in findings.open_findings(records, mode=ANALYSIS_AUDIT):
+        place = u.finding.place
+        if place is not None and place[0] == ctx.protocol.name:
+            decide = decide_command(
+                ctx.area,
+                u.number,
+                "limitation",
+                "<the registered text stands; what the finding names is a limit>",
+                shown(u.record.path, Path.cwd()),
+                protocol=ctx.protocol,
+            )
+            return (
+                f"; finding {u.number} of {u.record.path.name} names this protocol — "
+                f"after the restore decide it (`{decide}`), or `fixed` for a "
+                "correction a follow-up audit's `resolved` releases"
+            )
+    return ""
 
 
 def _registered_report(ctx: "Checked") -> Path | None:

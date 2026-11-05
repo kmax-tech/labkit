@@ -167,8 +167,9 @@ HEAD_HINTS: dict[str, str] = {
     "kept.unit": 'its unit, "1" for a dimensionless number',
 }
 #: a `[kept]` value named the way agents write a table's key (`[kept] key`,
-#: `kept key`, `[kept].unit`): read as its protocol_block.FILLABLE_HEAD_KEYS label `kept.<value>`
-KEPT_LABEL = re.compile(r"^\[?kept\]?\s*[.\s]\s*(key|unit)$", re.I)
+#: `[kept]key` as `[protocol]type` is read, `kept key`, `[kept].unit`): read as
+#: its protocol_block.FILLABLE_HEAD_KEYS label `kept.<value>` (t34-r3, 2026-11-04)
+KEPT_LABEL = re.compile(r"^\[?kept\]?\s*[.\s]?\s*(key|unit)$", re.I)
 #: the head's freeze keys, written together by `set_freeze` (`protocol-fill
 #: --freeze`), never by a fill — named so a fill of them says so instead of
 #: "no field labelled" (audit 2026-10-27, third, I6)

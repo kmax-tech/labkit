@@ -198,9 +198,31 @@ class Undecided(unittest.TestCase):
         self.assertEqual(rc, 0, err)
 
     def test_sent_back_once_already_may_stop(self):
+        """Without a hold of this session on record, a second stop lets go
+        as before."""
         self._record(self.area, [BLOCKER])
         rc, _, _ = self._stop(active=True)
         self.assertEqual(rc, 0)
+
+    def test_the_same_checked_state_holds_once_per_turn_a_changed_one_again(self):
+        """Step D of the one-explainer plan: the guarantee is "the same
+        checked state holds once per turn", not "no loop" — a tree changed
+        since the hold (content, a file added or gone, HEAD) is a new state
+        and holds again; the unchanged one lets go. Three of four held
+        agents ended at the second stop (labkit-paper's area 20)."""
+        self._record(self.area, [BLOCKER])
+        with contextlib.chdir(self.root):
+            self.assertEqual(self._stop()[0], 2)  # the hold, its state kept
+            rc, _, err = self._stop(active=True)
+            self.assertEqual(rc, 0, err)
+            self.assertIn("on this very state", err)
+            self._touch(self.area)  # the agent did something: a new state
+            rc, _, err = self._stop(active=True)
+            self.assertEqual(rc, 2, err)
+            self.assertIn("the state changed since", err)
+            self.assertEqual(self._stop(active=True)[0], 0)  # unchanged again
+            (self.area / "scripts" / "01_measure.py").unlink()  # a file gone
+            self.assertEqual(self._stop(active=True)[0], 2)
 
     def test_a_run_index_that_does_not_read_is_told_and_keeps_the_loop_guard(self):
         """report-check raising on a damaged runs.tsv left the stop with

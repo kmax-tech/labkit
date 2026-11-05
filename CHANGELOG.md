@@ -38,6 +38,28 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Changed
 
+- **The stop holds the same checked state once per turn, a changed one
+  again.** Until 0.109.0 a second stop in the turn (`stop_hook_active`)
+  let go whatever the tree held, so an agent sent back once ended at the
+  next stop anyway (three of four held agents, labkit-paper's area 20).
+  Now the stop keeps a fingerprint of the state it held
+  (`agent_hooks.state_fingerprint`: HEAD and the content of every path
+  `git status` names, under `<git dir>/labkit-stop-held/<session>`), lets
+  go only on that very state, and holds again on a tree changed since — a
+  file's content, a file added or gone, HEAD. The guarantee is "one hold
+  per checked state", not "no loop".
+- **A restore step says what goes with the restore.** While an analysis
+  finding still open names the protocol as its place, `labkit-next`'s
+  step for a registered field changed after the first measurement adds
+  one sentence: after the restore decide that finding `limitation` (the
+  `--decide` line), or `fixed` for a correction a follow-up audit's
+  `resolved` releases (t34-r3 rewrote Unit five times between the
+  auditor's "misdescribed" and the gate's "restore"). The restore holds of
+  `finalize` carry their step as data (`finalize.restore_step`,
+  `repo.RESTORE`).
+- **`[kept]key=` is read as `[protocol]type=` is**: one rule for a table
+  prefix without a space (`protocol_edit.KEPT_LABEL`).
+
 - **`labkit-next` names what the adoption would owe before it names
   `labkit-adopt`** (`next_step._adoption_owes`, through
   `protocol_check.check_fields(text, adopting=True)`, the question
