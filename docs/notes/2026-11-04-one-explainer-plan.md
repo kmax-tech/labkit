@@ -1073,6 +1073,29 @@ Two rounds of nine labkit/demand attempts on one state, labkit 0.110.0 (`924df48
 
 What follows (decided 2026-11-05, one change per measurement; the failed attempts' reading and the order are in `TODO.md`, "Lesung der Fehlversuche"): first the run history in the existing review bundle — `review_pieces` (`checks/report_review_inputs.py`) hands the reviewer the metrics of the adopted, discussed and cited runs only, never the sibling runs of the same registration that `runs.tsv` holds, which is why the undisclosed search passed three rounds; then the usage round against 0.110.0 with that one change (completion, failed attempts, time, and new: audit calls, decision kinds, repeated checks, their before and spread read from area 21's process readings first), read as more than noise only beyond 2 complete deliveries and 4 minutes, predicted C1 5–7 → 7–9 (the history reaches the undisclosed search, not the unanswered task question: the review brief excludes missing sections), stop when C1 stays within the spread; after it (decided 2026-11-05: a repair before the round would change observable behaviour and void area 21 as the before; none of 21's failed attempts lay at these edges; an edge failure in the round is documented as its cause and the attempt still counts), the chain's edges that still read their own state (`reports_without_block` on the tree, `steps_for` over the tree's protocols, `next`'s own `labkit-adopt` line without `--protocol`, `chain_gaps` run twice in one `report-check`) go onto the one reader, with two probe cases the invariant lacks (a partial index, two protocols) and a counter that the step display runs no second full check, accepted by the probe and not by a round — what that shows is correct behaviour and less double execution, not a better completion rate — in `TODO.md`, "Weitere Befunde"; then, each its own step and measurement, the finding's kind as data (`limitation` refused on an implementation deviation) and an answer block bound to `Question †`. The inventory (Phase 3) keeps its place. Evidence: labkit-paper `experiments/21-spread-of-nine-attempts-on-one-state` (protocol, `output/analysis_attempts_c21.json`, run `2026-11-05T17-24-41_7222`), branch `usage-round-3`.
 
+### Reading of the usage round (2026-11-05, labkit-paper area 22): not shown, and not comparable in time
+
+One round of nine labkit/demand attempts on 0.111.0 (`58aa7ae1`, the run history in the review bundle and nothing else against 0.110.0), judged as areas 17–21, against area 21's two rounds as the before (its counts, spreads and four burden counters frozen in the anchors). Evidence: labkit-paper `experiments/22-run-history-in-the-review-lifts-complete-deliveries`, branch `usage-round-4`, run `2026-11-05T22-53-46_97c3`.
+
+| | area 21 a | area 21 b | area 22 |
+|---|---:|---:|---:|
+| complete deliveries | 7 | 5 | 5 |
+| failed attempts | 2 | 4 | 4 |
+| stopped at the time limit | 0 | 0 | 4 |
+| median minutes | 7.1 | 11.1 | 40.0 |
+| unsupported central claims | 2 | 3 | 1 |
+| missing deliverables | 0 | 2 | 2 |
+| audit calls | 75 | 85 | 77 |
+| `limitation` decisions | 19 | 20 | 17 |
+| report reviews | 18 | 18 | 10 |
+| reviews after a new run | 0 | 0 | 0 |
+| seconds per turn (median) | 4.8 | 5.3 | 20.8 |
+| turns (median) | 109 | 111 | 101 |
+| labkit commands over nine | 279 | 240 | 265 |
+| machine minutes of the round | 28 | 30 | 92 |
+
+[B1] false: C1 5 lies inside the band 5–7, the registered reading is "not shown". The instrument was not the same: the solver took four times as long per turn at the same number of turns and commands, the round 92 machine minutes against 28 and 30, and three of the four failed attempts are time-limit stops that ended inside the closing loop (task 34 r1: the demand never compared, `labkit-adopt` refused twice — a source outside git, a script changed since the run; 34 r2: no report; assay r2: the round's one undisclosed search, five estimators on the same folds, one audit and no review). What the round shows of the change: every report review's bundle carried `RUNS` (the record's fingerprint part) and no review claimed anything from it; the target case reached no review; `reviews_after_run` stayed 0; the burden counters sit inside the before's band or below (fewer reviews, because fewer attempts reached one). Decided (the author, 2026-11-05): repeat the round when the solver is back near area 21's speed, with seconds per turn as a registered admissibility condition (within twice area 21's 5.0, the first wave checked before the rest is counted) — until then the run history is neither shown nor refuted. By-catch for the plan's edges: 6 of 9 attempts ended without an adopted run (2 and 5 before), two sts512 reports were written from a discussed, unadopted run and drew 13 and 14 `result` claims each — the review does its job, and the agent has no step the review names to turn the discussed run into the adopted one.
+
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
