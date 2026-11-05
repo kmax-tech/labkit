@@ -1056,6 +1056,23 @@ Decided (the author, 2026-11-05): fix 5 moves to Phase 4; B's excess stays.
 
 **Step D built** (`e039bf38`): the stop keeps a fingerprint of the state it held (`agent_hooks.state_fingerprint`: HEAD and the content of every path git status names, per session under the git dir) and a second stop in the turn lets go on that very state only — the guarantee restated as "one hold per checked state"; `finalize`'s restore holds carry their step as data (`restore_step`, `repo.RESTORE`) and `next` adds one sentence while an analysis finding still open names the protocol — the `--decide … limitation` line, or `fixed` for a correction a follow-up releases (`next_step._finding_on_the_field`); `[kept]key=` is read as `[protocol]type=` is. Tests: the stop twice in one turn on an unchanged, a changed and a reduced tree; the repair path with the finding open; the two table prefixes. **Measured +107 against +40** (`agent_hooks` +45: the fingerprint, its file and the stop's branch; `next_step` +46: the sentence, its lookup and docstring; `finalize` +15; `protocol_edit` +1). The forecast +15 was a guess at three one-liners; two of the three are small functions with a lookup each. The series: A +62, B +104, C +155, D +107 — **+428 against +270**. Re-decision owed on D; the cheapest cut is the restore sentence (+61 in `next_step` and `finalize`, the narrowest trigger of the three), the rest is the stop's rule and one regex. D's archive run (`logs-e039bf38/`): 150 checks, no breach. Decided (the author, 2026-11-05): D stays whole, the excess accepted; nothing more is built — the spread round on one fixed state comes first, then the usage round, which measures completion, failed attempts and time.
 
+### Reading of the spread round (2026-11-05, labkit-paper area 21)
+
+Two rounds of nine labkit/demand attempts on one state, labkit 0.110.0 (`924df483`, steps A–D), the same prompts, judges, brief and sheets as areas 17, 19 and 20 (A3 and A2 by sha), judged by 36 fresh opus judges, one split question decided.
+
+| | round a | round b | spread |
+|---|---:|---:|---:|
+| complete deliveries | 7 | 5 | 2 |
+| failed attempts (not complete) | 2 | 4 | |
+| stopped at the time limit | 0 | 0 | 0 |
+| median minutes | 7.1 | 11.1 | 4.0 |
+| unsupported central claims | 2 | 3 | |
+| missing deliverables | 0 | 2 | |
+
+[B1] holds: area 20's gain of 5 (3 → 8) lies beyond a spread of 2; area 19's 2 → 3 does not. Two draws give a sample of the spread, not its bound. What varies is one task: every failed attempt but one is the assay report — a model selected on the scored folds and not disclosed (three of round b's), a pooled score called validation, a missed bar called "not assessable" — the pattern areas 19 and 20 already named for the report review (Phase 3's first verdict). The minutes fell from area 20's 36.9 to 7 and 11 with no time-limit stop in eighteen attempts; this design has no before, so it cannot credit 0.110.0 with that. Every attempt of both rounds wrote an audit record and ran an analysis audit; no open BLOCKER at any stop.
+
+What follows: the usage round (completion, failed attempts, time; before against 0.110.0), read as more than noise only beyond 2 complete deliveries and 4 minutes; and the report review's assay question. Evidence: labkit-paper `experiments/21-spread-of-nine-attempts-on-one-state` (protocol, `output/analysis_attempts_c21.json`, run `2026-11-05T17-24-41_7222`), branch `usage-round-3`.
+
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
