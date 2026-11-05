@@ -199,7 +199,7 @@ def _first_step(base_dir: Path, bound: _Bound) -> str:
             "commit the protocol, then start the run again."
             if head is None or lane(head.repeat_cost).registration
             else "then `preflight <AREA>` clean, the preflight audit run anew on "
-            "the changed registration, and `frozen = true` again."
+            "the changed registration, and `protocol-fill <PROTOCOL> --freeze` again."
         )
         return (
             f"For each field named above: {protocol_check.REPEATED_WAY_OUT}; " + after
@@ -212,7 +212,10 @@ def _first_step(base_dir: Path, bound: _Bound) -> str:
         )
     if _committed_registration(base_dir, bound):
         return "Commit the registered report path as named above, then start the run again."
-    return "Freeze first: `preflight <AREA>` clean, audit stamped, `frozen = true`."
+    return (
+        "Freeze first: `preflight <AREA>` clean, the preflight audit decided, then "
+        "`protocol-fill <PROTOCOL> --freeze`."
+    )
 
 
 def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:

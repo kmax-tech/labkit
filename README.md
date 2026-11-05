@@ -221,9 +221,11 @@ in the repo's `AGENTS.md`:
 where the skeleton has them, render real prompts and run the instrument
 probe (a computation has neither), complete the area tests, run
 `preflight`, then `labkit-audit --mode preflight`.
-Decide the findings and fill the protocol's audit field with the matching
-stamp. Add report fields with `labkit-init exp <name> --report`, complete
-them, set `frozen = true`, and commit before the full run.
+Decide the findings, complete the report fields (stamped with the full
+form; `labkit-init exp <name> --report` appends them to an older area), then
+`protocol-fill PROTOCOL --freeze` names the decided record and sets
+`frozen = true` — it refuses what the freeze gate would hold — and commit
+before the full run.
 
 When your agent's shell has a foreground time limit, start the run detached
 and wait for its recorded state:
@@ -281,6 +283,7 @@ protocol-check PROTOCOL             # check required fields and promise tables
 protocol-check [PROTOCOL] --contract | --guide # field contract (with PROTOCOL: the fields it owes and its row) or field-guide path
 protocol-fill PROTOCOL "LABEL=VALUE" ... # fill fields
 protocol-fill PROTOCOL --list | --prompts | --render | --from-run [RUN]
+protocol-fill PROTOCOL --freeze [RECORD] # the freeze: frozen = true, preflight_audit naming the decided record (the area's newest without one); refused while a MUST field is open, the record covers other code or a preflight BLOCKER is undecided
 protocol-fill PROTOCOL --into REPORT.md # the adopted result as a generated block in a report
 protocol-fill PROTOCOL --handover --why "…" --tried "…" --into REPORT.md # end without a result: [result] withdrawn, a handover record, its block in the report
 protocol-fill PROTOCOL --discuss RUN_ID --why "…" --into REPORT.md # a run the report looks at without reporting it, as a discussion block

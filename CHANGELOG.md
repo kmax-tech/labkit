@@ -18,6 +18,24 @@ pins (`requirements.txt` / `requirements.lock`).
   2026-11-04). The low cut stays as it was; `--report` still appends them
   to an area stamped before.
 
+### Added
+
+- **`protocol-fill PROTOCOL --freeze [RECORD]`, the one writer of the
+  freeze.** It sets `frozen = true` and `preflight_audit` naming the
+  decided preflight record (the area's newest without one) once the
+  proposed head passes the freeze gate's checks
+  (`audit_gaps.freeze_refusals`: no MUST field absent, still a placeholder or
+  written twice — frozen, every should is a must —, the record covering
+  this code, block and registration with every finding decided, no
+  preflight BLOCKER open in the area); refused, it names the holds and
+  leaves the file as it was. Until 0.109.0 the keys were set by hand
+  (`protocol_edit.FREEZE_KEYS` said so), and a protocol frozen with its
+  fields open or its audit undecided met the gates one by one
+  (labkit-paper's tassay-r2, 2026-11-04: 19 minutes). The command is
+  `repo.FREEZE` / `repo.freeze_command`; report-check's freeze station,
+  runlog's start refusal and `labkit-audit --mode preflight` name it.
+  Hand edits of the two keys still pass the readers' checks as before.
+
 ### Changed
 
 - **`labkit-next` names what the adoption would owe before it names

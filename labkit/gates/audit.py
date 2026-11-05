@@ -653,9 +653,9 @@ def _stamp_report(
     print(f"\nstamp: {stamp_facts(stamp, grades, verdict[2])}", file=sys.stderr)
     if mode == PREFLIGHT_AUDIT:
         print(
-            f'head: preflight_audit = "{recorded.name}" — once every finding is '
-            f"decided, name this record in [protocol] and freeze "
-            f"(LAB-015 Preflight audit before freezing)",
+            f"freeze: once every finding is decided, `protocol-fill <PROTOCOL> "
+            f"--freeze {recorded.name}` names this record in the head and sets "
+            f"frozen = true (LAB-015 Preflight audit before freezing)",
             file=sys.stderr,
         )
     now = area_stamp(area)[0]

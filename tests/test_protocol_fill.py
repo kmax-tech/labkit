@@ -301,7 +301,9 @@ class HeadType(unittest.TestCase):
             protocol_edit.fill_many(text, [("number_describes", "outputs")])
         for key in ("frozen", "preflight_audit"):
             with self.subTest(key=key):
-                with self.assertRaisesRegex(ValueError, "set by hand in the TOML head"):
+                with self.assertRaisesRegex(
+                    ValueError, "protocol-fill <PROTOCOL> --freeze"
+                ):
                     protocol_edit.fill_many(text, [(key, "true")])
 
     def test_list_sets_apart_the_fields_this_protocol_does_not_owe(self):
@@ -333,6 +335,108 @@ class HeadType(unittest.TestCase):
                 "type",
                 "confirmatory",
             )
+
+
+class Freeze(unittest.TestCase):
+    """`protocol-fill --freeze`, the one writer of the freeze (the
+    one-explainer plan, step C): it writes both keys once the proposed head
+    passes the freeze gate's checks and refuses them otherwise, the file as
+    it was. Until 0.109.0 the keys were set by hand and a frozen protocol
+    with open fields or an undecided audit met the gates one by one
+    (labkit-paper's tassay-r2, 2026-11-04)."""
+
+    def _area(self) -> tuple[Path, Path]:
+        from protocol_fixture import scope_file
+
+        area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
+        (area / "scripts").mkdir(parents=True)
+        scope_file(area)
+        protocol = area / "PROTOCOL-x.md"
+        protocol.write_text(
+            head(repeat_cost="high") + "- **Unit:** <what one thing is>\n",
+            encoding="utf-8",
+        )
+        return area, protocol
+
+    def _record(self, area: Path, rows: list[tuple[str, str]]) -> Path:
+        from labkit.formats import findings, promises, scope_sha
+
+        text = (area / "PROTOCOL-x.md").read_text(encoding="utf-8")
+        return findings.write(
+            area,
+            "preflight",
+            "opus",
+            scope_sha.area_stamp(area)[0],
+            promises.block_stamp(text),
+            (sum(g == "BLOCKER" for g, _ in rows), 0, 0),
+            rows,
+            registration=registration_of(area),
+        )
+
+    def test_set_freeze_rewrites_both_keys_and_nothing_else(self):
+        text = head(repeat_cost="high")
+        frozen = protocol_edit.set_freeze(text, "2026-01-01T00-00-preflight.toml")
+        self.assertIn("\nfrozen = true\n", frozen)
+        self.assertIn('\npreflight_audit = "2026-01-01T00-00-preflight.toml"\n', frozen)
+        self.assertEqual(
+            [
+                ln
+                for ln in text.splitlines()
+                if not ln.startswith(("frozen", "preflight_audit"))
+            ],
+            [
+                ln
+                for ln in frozen.splitlines()
+                if not ln.startswith(("frozen", "preflight_audit"))
+            ],
+        )
+        with self.assertRaisesRegex(
+            ValueError, "no frozen and no preflight_audit line"
+        ):
+            protocol_edit.set_freeze(
+                text.replace("frozen = false", "").replace('preflight_audit = ""', ""),
+                "x",
+            )
+
+    def test_without_a_preflight_record_the_freeze_is_refused_and_the_file_kept(self):
+        area, protocol = self._area()
+        before = protocol.read_text(encoding="utf-8")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rc = protocol_fill.main([str(protocol), "--freeze"])
+        self.assertEqual(rc, 2)
+        self.assertIn("holds no preflight audit record", err.getvalue())
+        self.assertIn("--mode preflight", err.getvalue())
+        self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+
+    def test_an_open_field_or_an_undecided_blocker_refuses_the_freeze(self):
+        """The writer's half of the gates' rule: what protocol-check would
+        hold frozen (a should field, a must at the freeze) and what
+        runlog's freeze gate would refuse (an open preflight BLOCKER) refuse
+        the write, named together; nothing is written."""
+        area, protocol = self._area()
+        record = self._record(
+            area, [("BLOCKER", "scripts/01_measure.py:1 · x · y · z · fix")]
+        )
+        before = protocol.read_text(encoding="utf-8")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rc = protocol_fill.main([str(protocol), "--freeze"])
+        self.assertEqual(rc, 1)
+        out = err.getvalue()
+        self.assertIn("not frozen", out)
+        self.assertIn("PROTOCOL-x.md is as it was", out)
+        self.assertIn("MUST field absent", out)
+        self.assertIn("MUST field still a placeholder: Unit", out)
+        self.assertIn(f"finding(s) of {record.name} still `open`", out)
+        self.assertEqual(protocol.read_text(encoding="utf-8"), before)
+        # a record named that is not the area's
+        with contextlib.redirect_stderr(io.StringIO()):
+            rc = protocol_fill.main(
+                [str(protocol), "--freeze", "2020-01-01T00-00-preflight.toml"]
+            )
+        self.assertEqual(rc, 1)
+        self.assertEqual(protocol.read_text(encoding="utf-8"), before)
 
 
 class Prompts(unittest.TestCase):

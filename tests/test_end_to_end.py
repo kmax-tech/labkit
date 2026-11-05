@@ -2112,19 +2112,21 @@ class Estimator(unittest.TestCase):
         with contextlib.redirect_stdout(buf):
             rc = preflight.main([str(self.area)])
         self.assertEqual(rc, 0, buf.getvalue())
-        # the preflight audit, decided; its record named in the head; the freeze
+        # the preflight audit, decided; the † fields (stamped with the full
+        # form) filled; the freeze through its one writer, which names the
+        # record and sets the flag once the proposed head passes the gate
         lab.record(self.area, self.protocol, sc.PREFLIGHT_AUDIT)
         (record,) = (self.area / "audits").glob("*-preflight.toml")
-        _replace(
-            self.protocol,
-            [
-                ('preflight_audit = ""', f'preflight_audit = "{record.name}"'),
-                ("frozen = false", "frozen = true"),
-            ],
-        )
-        # `labkit-init exp threshold --report`: the † fields, filled now
-        lab.exp("threshold", repeat_cost="high", report=True)
+        lab.exp("threshold", repeat_cost="high", report=True)  # nothing to add
         lab.fill_open(self.protocol)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            rc = protocol_fill.main([str(self.protocol), "--freeze"])
+        self.assertEqual(rc, 0, buf.getvalue())
+        self.assertIn(f'preflight_audit = "{record.name}"', buf.getvalue())
+        text = self.protocol.read_text(encoding="utf-8")
+        self.assertIn("frozen = true", text)
+        self.assertIn(f'preflight_audit = "{record.name}"', text)
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = preflight.main([str(self.area)])

@@ -204,6 +204,7 @@ from labkit.formats.repo import (
     area_protocols,
     audit_command,
     choose_protocol,
+    freeze_command,
     gate_command,
     git_root,
     indexed_protocols,
@@ -285,7 +286,8 @@ def freeze_gaps(ctx: Checked) -> list[GateFinding]:
                 fix=f"freeze it: `preflight {shlex.quote(shown(ctx.area, Path.cwd()))}` "
                 f"clean, the preflight audit run and decided "
                 f"(`{audit_command(ctx.area, '--mode', 'preflight', protocol=ctx.protocol)}`), "
-                f"then `frozen = true`",
+                f"then `{freeze_command(ctx.protocol)}`",
+                step=freeze_command(ctx.protocol),
             )
         ]
     )

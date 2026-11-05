@@ -169,10 +169,43 @@ HEAD_HINTS: dict[str, str] = {
 #: a `[kept]` value named the way agents write a table's key (`[kept] key`,
 #: `kept key`, `[kept].unit`): read as its protocol_block.FILLABLE_HEAD_KEYS label `kept.<value>`
 KEPT_LABEL = re.compile(r"^\[?kept\]?\s*[.\s]\s*(key|unit)$", re.I)
-#: the head's freeze keys: a deliberate edit by the author once preflight is
-#: clean and the preflight audit decided, not a fill — named so a fill of
-#: them says so instead of "no field labelled" (audit 2026-10-27, third, I6)
+#: the head's freeze keys, written together by `set_freeze` (`protocol-fill
+#: --freeze`), never by a fill — named so a fill of them says so instead of
+#: "no field labelled" (audit 2026-10-27, third, I6)
 FREEZE_KEYS = ("frozen", "preflight_audit")
+#: a freeze key's line in the TOML head, whatever it holds
+_FREEZE_LINE = {key: re.compile(rf"^\s*{key}\s*=") for key in FREEZE_KEYS}
+
+
+def set_freeze(text: str, record: str) -> str:
+    """TEXT with its head frozen: `frozen = true` and `preflight_audit =
+    "RECORD"` in the TOML block (`FREEZE_KEYS`), whatever the lines held —
+    a freeze after a change names the new record the same way. Pure: the
+    caller checks the proposal (`audit_gaps.freeze_refusals`) and writes.
+    Raises ValueError without the block or either line: the stamp writes
+    both, a head without them is not labkit's."""
+    span = protocol_block.toml_block_span(text)
+    if span is None:
+        raise ValueError("the head has no TOML block to freeze")
+    lines = text.split("\n")
+    written = {
+        "frozen": "frozen = true",
+        "preflight_audit": f"preflight_audit = {protocol_block.toml_string(record)}",
+    }
+    done: set[str] = set()
+    for i in range(*span):
+        for key, pattern in _FREEZE_LINE.items():
+            if pattern.match(lines[i]):
+                lines[i] = written[key]
+                done.add(key)
+    missing = [key for key in FREEZE_KEYS if key not in done]
+    if missing:
+        raise ValueError(
+            f"the head has no {' and no '.join(missing)} line — the stamp writes both"
+        )
+    return "\n".join(lines)
+
+
 #: a label that names a head key with its table, as agents write it
 #: (`[protocol] type`, `[model] alias`): the table prefix `head_label` drops
 TABLE_PREFIX = re.compile(r"^\[(protocol|model)\]\s*")
@@ -508,11 +541,11 @@ def fill_many(
             sentence = None  # a prose label such as "Key sentence"
         if label.strip().lower() in FREEZE_KEYS:
             raise ValueError(
-                f"{label.strip()} is the freeze, set by hand in the TOML head once "
-                "`preflight` is clean and the preflight audit decided: "
-                '`preflight_audit = "<the record file labkit-audit wrote>"`, '
-                "`frozen = true` — the protocol is the author's to edit; audit and "
-                "run records are not"
+                f"{label.strip()} is the freeze — `protocol-fill <PROTOCOL> --freeze "
+                "[RECORD]` sets both keys once `preflight` is clean and the "
+                "preflight audit decided, and refuses what the freeze gate would "
+                "hold; the protocol is the author's to edit, audit and run records "
+                "are not"
             )
         if is_report_label(label):
             text = set_report(text, value, force=force)

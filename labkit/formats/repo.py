@@ -140,6 +140,7 @@ DISCUSS, HANDOVER = "discuss", "handover"
 MEASURE, AUDIT, DECIDE, REVIEW = "measure", "audit", "decide", "review"
 RESTORE, INIT = "restore", "init"
 STAGE = "stage"
+FREEZE = "freeze"
 COMMAND_KIND = {
     ADOPT: MECHANICAL,
     INTO: MECHANICAL,
@@ -156,6 +157,7 @@ COMMAND_KIND = {
     RESTORE: DESTRUCTIVE,
     INIT: DESTRUCTIVE,
     STAGE: MECHANICAL,
+    FREEZE: MECHANICAL,
 }
 
 
@@ -330,6 +332,19 @@ def report_fields_command(area: Path) -> Command:
     return Command(
         INIT, f"labkit-init exp {shlex.quote(shown(area, Path.cwd()))} --report"
     )
+
+
+def freeze_command(protocol: Path, record: str | None = None) -> Command:
+    """The `protocol-fill PROTOCOL --freeze [RECORD]` line that freezes
+    PROTOCOL — `frozen = true`, `preflight_audit` naming the decided
+    preflight RECORD (without one, the area's newest) — as the working
+    directory reaches it (`shown`): the one writer of the freeze, which
+    refuses what the freeze gate would hold and leaves the file as it was
+    (`protocol_fill._freeze_file`)."""
+    words = ["protocol-fill", shown(protocol, Path.cwd()), "--freeze"]
+    if record:
+        words.append(record)
+    return Command(FREEZE, shlex.join(words))
 
 
 def stage_command(area: Path) -> Command:

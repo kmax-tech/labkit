@@ -326,7 +326,7 @@ class HighCostWayOut(unittest.TestCase):
         _, way = start_check.measurement_refusal(area, proto)
         self.assertIn(WAY_OUT, way)
         self.assertIn("preflight", way)
-        self.assertIn("frozen = true", way)
+        self.assertIn("protocol-fill <PROTOCOL> --freeze", way)
 
 
 if __name__ == "__main__":

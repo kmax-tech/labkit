@@ -16,7 +16,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from labkit.formats import promises
-from labkit.formats.protocol_check import registration_drift, registration_stamp
+from labkit.formats.gate import with_way_out
+from labkit.formats.protocol_check import (
+    check_fields,
+    registration_drift,
+    registration_stamp,
+)
 from labkit.formats.repo import (
     audit_command,
 )
@@ -254,6 +259,37 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
             decide_ways(area, record),
         )
     return None
+
+
+def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
+    """Why TEXT — AREA's protocol as the freeze would write it, `frozen =
+    true` and `preflight_audit = RECORD` — may not be frozen; empty when
+    it may. A MUST field absent, still a placeholder or written twice
+    (`protocol_check.check_fields`: frozen, every should is a must), the
+    record not covering this code, block and registration or a finding of
+    it open (`audit_record_gap`), and a BLOCKER open in another preflight
+    record of the area (what runlog's freeze gate refuses the run on). The
+    writer's half of one rule — the gates' readers keep theirs for a head
+    edited by hand (the one-explainer plan, Phase 3's first item: the
+    writer refuses what a gate would later hold). Raises FindingsError
+    when a record of the area does not read."""
+    report = check_fields(text)
+    out = [f"{report.head_error}"] if report.head_error else []
+    out += [f"MUST field absent: {label}" for label in report.missing_must]
+    out += [
+        f"MUST field still a placeholder: {label} (line {n})"
+        for n, label in report.must_holes
+    ]
+    out += [f"written twice: {twice}" for twice in report.repeated]
+    gap = audit_record_gap(area, record, text)
+    if gap is not None:
+        out.append(with_way_out(f"preflight_audit: {gap.why}", gap.fix))
+    out += [
+        f"open BLOCKER: {u.line}"
+        for u in open_findings(area_records(area), mode=PREFLIGHT_AUDIT)
+        if u.grade == "BLOCKER" and u.record.path.name != record
+    ]
+    return out
 
 
 def _protocol_gap(record: Record, name: str, text: str) -> str | None:

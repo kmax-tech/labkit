@@ -190,9 +190,12 @@ The full measurement checks the instrument.
 
 1. Run `preflight <area>`, then `labkit-audit <area> --mode preflight`.
 2. Decide its findings as in step 4.
-3. Put the record filename into the head's `preflight_audit`.
-4. Add the report fields with `labkit-init exp <name> --report`.
-5. Fill what the contract requires, then set `frozen = true`.
+3. Fill what the contract requires (`protocol-check PROTOCOL --contract`);
+   the report fields come with the full form (`labkit-init exp <name>
+   --report` appends them to an older area).
+4. `protocol-fill PROTOCOL --freeze` names the decided record in the head
+   and sets `frozen = true`; it refuses while a field is open, the record
+   covers other code or a preflight BLOCKER is undecided.
 
 If you fix code, audit the fixed code before the freeze.
 

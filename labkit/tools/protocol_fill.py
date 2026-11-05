@@ -92,13 +92,16 @@ from pathlib import Path
 
 from labkit.formats import (
     attempts,
+    audit_gaps,
     console,
     files,
+    findings,
     handovers,
     promises,
     protocol_block,
     runs,
 )
+from labkit.formats.standard_contract import PREFLIGHT_AUDIT
 from labkit.checks.result_render import rendering
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
@@ -130,6 +133,7 @@ from labkit.tools.protocol_edit import (
     head_open,
     is_report_label,
     open_sentences,
+    set_freeze,
 )
 from labkit.tools.protocol_result import (
     WRITTEN_AFTER_RUN,
@@ -465,16 +469,69 @@ def _list_file(text: str) -> int:
         return 2
 
 
-def _run_mode(args: argparse.Namespace, text: str) -> int | None:
-    """The exit code of the mode ARGS name (--withdraw, --data-counts,
-    --handover, --list, --prompts, --render, --discuss, --into, --from-run),
-    or None when they name none: a field fill."""
+def _freeze_file(protocol: Path, text: str, named: str) -> int:
+    """`--freeze [RECORD]`: write the freeze — `frozen = true`,
+    `preflight_audit` naming RECORD (""; the area's newest preflight
+    record) — when the proposed head passes the freeze gate's checks
+    (`audit_gaps.freeze_refusals`); else refuse with them, exit 1, the file as
+    it was. Exit 2 without a record to name or a head to freeze. The one
+    writer of the freeze: until 0.109.0 the keys were set by hand, and a
+    protocol frozen with its fields open or its audit undecided met the
+    gates one by one (labkit-paper's tassay-r2, 2026-11-04: 19 minutes)."""
+    area = protocol.resolve().parent
+    record = named
+    try:
+        if not record:
+            records = [
+                r for r in findings.area_records(area) if r.mode == PREFLIGHT_AUDIT
+            ]
+            if not records:
+                console.refuse(
+                    "protocol-fill",
+                    f"{shown(area, Path.cwd())} holds no preflight audit record — "
+                    f"`{audit_command(area, '--mode', 'preflight', protocol=protocol)}` "
+                    "writes one; decide its findings, then --freeze",
+                )
+                return 2
+            record = records[-1].path.name
+        proposed = set_freeze(text, record)
+        gaps = audit_gaps.freeze_refusals(area, proposed, record)
+    except (ValueError, findings.FindingsError) as exc:
+        console.refuse("protocol-fill", str(exc))
+        return 2
+    if gaps:
+        console.refuse(
+            "protocol-fill",
+            f"not frozen — {len(gaps)} hold(s); {protocol.name} is as it was:\n  "
+            + "\n  ".join(gaps),
+        )
+        return 1
+    files.write_atomic(protocol, proposed)
+    print(f'frozen: {protocol.name} — frozen = true, preflight_audit = "{record}"')
+    return 0
+
+
+def _evidence_mode(args: argparse.Namespace, text: str) -> int | None:
+    """The exit code of the mode ARGS name among those that bind evidence
+    (--freeze, --withdraw, --data-counts, --handover), or None."""
+    if args.freeze is not None:
+        return _freeze_file(args.protocol, text, args.freeze)
     if args.withdraw:
         return _withdraw_file(args, text)
     if args.data_counts is not None:
         return _data_counts_file(args, text)
     if args.handover:
         return _handover_file(args, text)
+    return None
+
+
+def _run_mode(args: argparse.Namespace, text: str) -> int | None:
+    """The exit code of the mode ARGS name (--withdraw, --data-counts,
+    --handover, --list, --prompts, --render, --discuss, --into, --from-run),
+    or None when they name none: a field fill."""
+    evidence = _evidence_mode(args, text)
+    if evidence is not None:
+        return evidence
     if args.list:
         return _list_file(text)
     if args.prompts:
@@ -856,6 +913,17 @@ def main(argv: list[str]) -> int:
         help="one line: with --discuss what refused the adoption and what you "
         "found; with --handover what blocks, naming the protocol, no run ids; "
         "with --withdraw why the run is no longer the result",
+    )
+    ap.add_argument(
+        "--freeze",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="RECORD",
+        help="freeze the protocol: frozen = true and preflight_audit naming RECORD "
+        "(default: the area's newest preflight record); refused, the file untouched, "
+        "while a MUST field is open, the record covers other code or has a finding "
+        "open, or a preflight BLOCKER is undecided",
     )
     ap.add_argument(
         "--handover",
