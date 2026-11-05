@@ -29,12 +29,18 @@ propose repairs.
    Conclusion and Recorded results, or none.
 5. `===== FILE: …/metrics.json (adopted | discussed | cited, not adopted) =====`
    — per run the review concerns, what it computed.
-6. `===== AUDITS =====` — every audit record of the area: each finding's
+6. `===== RUNS =====` — every run of the area, oldest first, one line
+   each: state, kind, the protocol it was bound to, what the report makes
+   of it (adopted, discussed, cited, not in the report), its commit and
+   script, for a measurement the settings that vary across the protocol's
+   measurements, its scalar metrics. A choice the report keeps silent about stands here: the same
+   protocol measured under other settings before the adopted run.
+7. `===== AUDITS =====` — every audit record of the area: each finding's
    grade and text, the person's decision (status, reason, effect), and
    every audit attempt that failed, with the backend's words. An effect
    `<ID> not assessable` means this run does not judge that promise. A
    failed analysis audit means no audit saw the run's numbers.
-7. The rules inlined from the standard: LAB-011 Required-field check and
+8. The rules inlined from the standard: LAB-011 Required-field check and
    LAB-050 Analysis audit before reporting.
 
 ## What to report
@@ -53,7 +59,11 @@ A **claim** is a line that does one of these:
   (its `criterion_1_pass` is false, the report says "met"), a verdict on a
   promise a decision calls `not assessable`, a check called passed that a
   failed or undecided audit was to make, a number the audit findings say
-  is wrong, a "no deviations" against a finding decided `limitation`.
+  is wrong, a "no deviations" against a finding decided `limitation`;
+  a result presented as the measurement of the question when RUNS shows
+  the same protocol measured under other settings before it and the
+  report does not say that the setting was chosen on those runs; a value
+  given as the adopted run's that RUNS shows as another run's.
 
 Not a claim:
 

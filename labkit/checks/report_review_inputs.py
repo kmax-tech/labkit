@@ -16,7 +16,16 @@ from labkit.formats import protocol_block
 from labkit.formats import findings
 from labkit.formats import failed_attempts
 from labkit.formats.repo import layout_root, shown
-from labkit.formats.runs import metrics_path, run_path
+from labkit.formats.runs import (
+    MetricsError,
+    RunConfig,
+    as_stored,
+    metrics_path,
+    read_metrics,
+    run_dirs,
+    run_path,
+    run_state,
+)
 
 
 def review_keys(area: Path, report: Path, protocol: Path) -> tuple[str, str]:
@@ -71,7 +80,8 @@ def review_pieces(
     the run the protocol has adopted (or none), its DISCUSSED blocks (or
     none), the protocol, the `metrics.json` of every run of AREA the
     review concerns — the adopted one, each discussed one, each one the
-    report cites — labelled with what it is, the audits (`audits_text`).
+    report cites — labelled with what it is, every run of AREA in one line
+    each (`runs_text`), the audits (`audits_text`).
     The one home of what a review saw: the prompt is rendered from it,
     the record's fingerprint is taken over it, and the gate takes it again
     to tell whether a review saw the state it holds. Raises AuditError
@@ -129,5 +139,111 @@ def review_pieces(
                 else f"no {run_dir.relative_to(area)}/ — the run's directory is gone",
             )
         )
+    cited = {r for _, r in cited_run_ids(text)}
+    pieces.append(
+        (
+            "RUNS",
+            runs_text(area, protocol_block.id_of(protocol_text), adopted, said, cited),
+        )
+    )
     pieces.append(("AUDITS", audits_text(area)))
     return pieces
+
+
+def runs_text(
+    area: Path,
+    pid: str | None,
+    adopted: str | None,
+    discussed: set[str],
+    cited: set[str],
+) -> str:
+    """Every run under AREA's `runs/`, oldest first, one line each: its
+    state, kind, the protocol it was bound to (PID: this one), what the
+    report makes of it (ADOPTED, DISCUSSED, CITED, or nothing), its commit
+    and script, a repeat's or a derived run's parent, for a measurement the
+    settings that vary across the measurements bound to PID, and its
+    scalar metrics. The history
+    a statement about "the" measurement is held against: a search the
+    report does not name shows as runs of one protocol under varying
+    settings, which three rounds of reviews that saw the adopted run alone
+    let pass (docs/notes/2026-11-04-one-explainer-plan.md, "Reading of the
+    spread round"). An unreadable run is a line saying so, never left out."""
+    dirs = run_dirs(area)
+    bound = [
+        rd.config.config
+        for rd in dirs
+        if rd.config
+        and rd.config.protocol.id == pid
+        and rd.config.run_kind == "measurement"
+    ]
+    varying = sorted(
+        k
+        for k in {k for c in bound for k in c}
+        if len({as_stored(c.get(k)) for c in bound}) > 1
+    )
+    lines: list[str] = []
+    for rd in dirs:
+        if rd.error is not None:
+            lines.append(f"{rd.dir.name} · unreadable · {rd.error}")
+        elif rd.config is not None:
+            role = (
+                "adopted"
+                if rd.dir.name == adopted
+                else "discussed"
+                if rd.dir.name in discussed
+                else "cited"
+                if rd.dir.name in cited
+                else "not in the report"
+            )
+            lines.append(_run_line(rd.dir, rd.config, pid, role, varying))
+    return "\n".join(lines) or "no runs"
+
+
+def _run_line(
+    run_dir: Path, cfg: RunConfig, pid: str | None, role: str, varying: list[str]
+) -> str:
+    bound = cfg.protocol.id
+    parts = [
+        run_dir.name,
+        run_state(run_dir, alive=False),
+        cfg.run_kind,
+        "this protocol"
+        if bound == pid
+        else f"bound to {bound}"
+        if bound
+        else "unbound",
+        role,
+        f"git {cfg.git}",
+        cfg.script,
+    ]
+    if cfg.repeat_of is not None:
+        parts.append(f"repeat of {cfg.repeat_of}")
+    if cfg.derived_from is not None:
+        parts.append(f"derived from {cfg.derived_from}")
+    if cfg.run_kind == "measurement":
+        settings = ", ".join(
+            f"{k}={as_stored(cfg.config[k]) if k in cfg.config else 'absent'}"
+            for k in varying
+        )
+        parts.append(
+            f"settings varying across this protocol's measurements: {settings or 'none'}"
+        )
+    parts.append(_scalars(metrics_path(run_dir)))
+    return " · ".join(parts)
+
+
+def _scalars(metrics: Path) -> str:
+    """The scalar entries of METRICS as `k=v` (`as_stored`), or why there
+    are none."""
+    if not metrics.is_file():
+        return "no metrics.json"
+    try:
+        values = read_metrics(metrics)
+    except MetricsError as exc:
+        return f"metrics unreadable ({exc})"
+    shown_values = ", ".join(
+        f"{k}={as_stored(v)}"
+        for k, v in values.items()
+        if isinstance(v, (int, float, str))
+    )
+    return f"metrics: {shown_values or 'no scalar'}"

@@ -5,6 +5,33 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **A report review written before this version no longer stands.** The
+  bundle the reviewer reads (`report_review_inputs.review_pieces`) gains
+  a `RUNS` piece, and the review's fingerprint is taken over the whole
+  bundle: every earlier review lacks the part, report-check names it as
+  changed, and `labkit-audit AREA --report-review REPORT` writes a new one.
+  From now on a run added, finished or removed after a review makes that
+  review stale too — the reviewer judged the report against the history
+  as it stood.
+
+### Added
+
+- **The run history in the report review.** `RUNS` lists every run of the
+  area, oldest first, one line each: state, kind, the protocol it was
+  bound to, what the report makes of it, commit and script, the settings
+  that vary across the protocol's measurements, its scalar metrics. Until 0.110.0
+  the reviewer saw the adopted, discussed and cited runs' metrics alone,
+  and a model selected on the scored folds and left unmentioned passed
+  three rounds of reviews (labkit-paper areas 19–21, 2026-11-05). The
+  brief names the case: a result presented as the measurement while RUNS
+  shows the same protocol measured under other settings before it,
+  unsaid in the report, and a value given as the adopted run's that is
+  another run's. The judgement stays the reviewer's; no gate reads RUNS.
+
 ## 0.110.0 — 2026-11-05
 
 ### Breaking
