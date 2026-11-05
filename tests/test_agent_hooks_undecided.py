@@ -139,9 +139,7 @@ class Undecided(unittest.TestCase):
             _git(self.root, "add", "-A")
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                rc = claude_hooks.main(
-                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
-                )
+                rc = claude_hooks.main(["pre-commit"])
             self.assertEqual(rc, 1)
             staged = next_step(self.area, protocol, state=INDEX).render(
                 "experiments/01-x"
@@ -231,26 +229,76 @@ class Undecided(unittest.TestCase):
         self.assertIn("not TOML", err)
 
     def test_the_pre_commit_command_holds_the_staged_paths(self):
+        """`claude-hook pre-commit` reads the index itself: the record staged
+        holds; an untouched area or a file outside every area staged alone
+        passes; an argument is refused."""
         path = self._record(self.area, [BLOCKER])
         _git(self.root, "add", "-A")  # the commit carries the record
         with contextlib.chdir(self.root):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                rc = claude_hooks.main(
-                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
-                )
+                rc = claude_hooks.main(["pre-commit"])
             self.assertEqual(rc, 1)
             self.assertIn(path.name, out.getvalue())
+            _git(self.root, "reset", "-q")
+            _git(self.root, "add", str(self._touch(self.other)))
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(
-                    claude_hooks.main(
-                        ["undecided", "experiments/02-y/scripts/01_measure.py"]
-                    ),
-                    0,
-                )
-                self.assertEqual(claude_hooks.main(["undecided", "README.md"]), 0)
+                self.assertEqual(claude_hooks.main(["pre-commit"]), 0)
+                _git(self.root, "reset", "-q")
+                (self.root / "README.md").write_text("# r\n", encoding="utf-8")
+                _git(self.root, "add", "README.md")
+                self.assertEqual(claude_hooks.main(["pre-commit"]), 0)
             with contextlib.redirect_stderr(io.StringIO()):
-                self.assertEqual(claude_hooks.main(["undecided"]), 2)
+                self.assertEqual(claude_hooks.main(["pre-commit", "README.md"]), 2)
+
+    def test_the_pre_commit_entry_runs_every_gate_on_the_index_and_prints_next_once(
+        self,
+    ):
+        """Step A of the one-explainer plan: one entry, the same gates as
+        the three commands it replaces (the protocol's fields,
+        report-check, the undecided state), each telling its findings, and
+        `next`'s step per protocol once; the twin, a clean index, passes
+        in silence. Until 0.109.0 `protocol-check --staged` told its own
+        lines and no step (the repair probe's base8, 2026-11-05)."""
+        from labkit.checks import protocol_report
+
+        path = self._record(self.area, [BLOCKER])
+        protocol = self.area / "PROTOCOL-x.md"
+        protocol.write_text(
+            head(frozen=True), encoding="utf-8"
+        )  # frozen: should → MUST
+        _git(self.root, "add", "-A")
+        with contextlib.chdir(self.root):
+            fields = io.StringIO()
+            with contextlib.redirect_stdout(fields):
+                held = protocol_report.check_files(
+                    [Path("experiments/01-x/PROTOCOL-x.md")],
+                    protocol_report.template_lines(protocol_report.find_template(None)),
+                    staged=True,
+                )
+            self.assertTrue(held)
+            undecided = agent_hooks.undecided_blockers(
+                self.root, [self.area / "PROTOCOL-x.md"], staged=True
+            )
+            self.assertTrue(undecided)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = claude_hooks.main(["pre-commit"])
+        self.assertEqual(rc, 1)
+        text = out.getvalue()
+        self.assertIn(fields.getvalue(), text)  # the fields gate's own lines
+        for line in undecided:
+            self.assertIn(line, text)  # the undecided gate's own lines
+        self.assertIn(f"experiments/01-x: {path.name}: BLOCKER", text)
+        self.assertEqual(text.count("labkit-next: experiments/01-x"), 1)
+        self.assertIn("MUST field", text)  # next's step names the fields first
+        _git(self.root, "reset", "-q")
+        _git(self.root, "add", str(self._touch(self.other)))
+        with contextlib.chdir(self.root):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = claude_hooks.main(["pre-commit"])
+        self.assertEqual((rc, out.getvalue()), (0, ""))
 
     def test_the_commit_reads_the_decisions_the_index_holds(self):
         """The pre-commit read the journal from the index and the decisions
@@ -269,9 +317,7 @@ class Undecided(unittest.TestCase):
         def commit_gate() -> tuple[int, str]:
             out = io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
-                rc = claude_hooks.main(
-                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
-                )
+                rc = claude_hooks.main(["pre-commit"])
             return rc, out.getvalue()
 
         rc, out = commit_gate()
@@ -297,9 +343,7 @@ class Undecided(unittest.TestCase):
         def commit_gate() -> tuple[int, str]:
             out = io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.chdir(self.root):
-                rc = claude_hooks.main(
-                    ["undecided", "experiments/01-x/scripts/01_measure.py"]
-                )
+                rc = claude_hooks.main(["pre-commit"])
             return rc, out.getvalue()
 
         rc, out = commit_gate()
@@ -376,16 +420,9 @@ class Undecided(unittest.TestCase):
             with contextlib.chdir(self.root):
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
-                    rc = claude_hooks.main(
-                        ["undecided", "experiments/01-x/scripts/01_measure.py"]
-                    )
+                    rc = claude_hooks.main(["pre-commit"])
                 self.assertEqual(rc, 1)
                 self.assertIn(path.name, out.getvalue())
-                with contextlib.redirect_stdout(io.StringIO()):
-                    rc = claude_hooks.main(
-                        ["undecided", "experiments/02-y/scripts/01_measure.py"]
-                    )
-                self.assertEqual(rc, 0)
             with _dated(3600):  # the audit committed before the session
                 _git(self.root, "add", "-A")
                 _git(self.root, "commit", "-qm", "audit")
@@ -417,7 +454,7 @@ class Undecided(unittest.TestCase):
     def test_the_stamped_pre_commit_runs_it(self):
         from labkit.gates import install_hooks
 
-        self.assertIn("claude-hook undecided $staged", install_hooks.pre_commit())
+        self.assertIn("claude-hook pre-commit", install_hooks.pre_commit())
 
 
 if __name__ == "__main__":

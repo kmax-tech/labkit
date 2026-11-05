@@ -108,7 +108,7 @@ class Install(unittest.TestCase):
         self.assertEqual(again, ["git core.hooksPath = .githooks"])  # nothing rewritten
         hook = repo / ".githooks" / "pre-commit"
         self.assertTrue(hook.stat().st_mode & 0o100)
-        self.assertIn("report-check --if-reported", hook.read_text())
+        self.assertIn("claude-hook pre-commit", hook.read_text())
         merge_hook = repo / ".githooks" / "pre-merge-commit"
         self.assertTrue(merge_hook.stat().st_mode & 0o100)
         self.assertIn(".githooks/pre-commit && exit 0", merge_hook.read_text())
@@ -285,9 +285,11 @@ class RepoOwnSteps(unittest.TestCase):
         with self.assertRaises(SystemExit):
             install_hooks.install(repo)
 
-    def test_the_pre_commit_hands_report_check_every_staged_path(self):
-        """Not only the staged protocols: a script staged under a reported
-        number reopens it (audit 2026-10-19). A shim records the call."""
+    def test_the_pre_commit_runs_labkits_one_entry(self):
+        """The commit's gates are one call, `claude-hook pre-commit`, which
+        reads the index itself (the one-explainer plan, step A: until
+        0.109.0 three calls, the first telling lines of its own). A shim
+        records the call; what the entry checks is `test_agent_hooks_undecided`'s."""
         repo = git_repo()
         install_hooks.install(repo)
         gate_shims(repo)
@@ -297,29 +299,12 @@ class RepoOwnSteps(unittest.TestCase):
         r = commit(repo)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(
-            (repo / "report-check.argv").read_text().split(),
-            ["--if-reported", "--staged", "scripts/02_analyze.py"],
+            (repo / "claude-hook.argv").read_text().split(), ["pre-commit"]
         )
 
-    def test_the_pre_commit_hands_protocol_check_the_index(self):
-        """Step 1 said it checked the staged state and ran protocol-check
-        on the tree: a protocol frozen in the index and unfrozen in the
-        tree passed the hook. The hook passes --staged."""
-        repo = git_repo()
-        install_hooks.install(repo)
-        gate_shims(repo)
-        (repo / "PROTOCOL-x.md").write_text("# x\n")
-        subprocess.run(["git", "-C", str(repo), "add", "PROTOCOL-x.md"], check=True)
-        r = commit(repo)
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertEqual(
-            (repo / "protocol-check.argv").read_text().split(),
-            ["--staged", "PROTOCOL-x.md"],
-        )
-
-    def test_a_staged_deletion_reaches_both_gates(self):
+    def test_a_staged_deletion_reaches_the_entry(self):
         """Deleting the measure script under a reported number reopens it as
-        an edit does; until now --diff-filter=ACMR dropped it."""
+        an edit does; the entry runs for a deletion too."""
         repo = git_repo()
         (repo / "scripts").mkdir()
         (repo / "scripts" / "01_measure.py").write_text("print('x')\n")
@@ -332,10 +317,9 @@ class RepoOwnSteps(unittest.TestCase):
         )
         r = commit(repo)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        for tool in ("report-check", "claude-hook"):
-            self.assertIn(
-                "scripts/01_measure.py", (repo / f"{tool}.argv").read_text(), tool
-            )
+        self.assertEqual(
+            (repo / "claude-hook.argv").read_text().split(), ["pre-commit"]
+        )
 
     def test_a_missing_gate_tool_refuses_the_commit_by_name(self):
         repo = git_repo()
@@ -446,24 +430,23 @@ class MergeChecks(unittest.TestCase):
         run_git(self.repo, "add", "REPORT.md")
         self.assertEqual(commit(self.repo).returncode, 0)
 
-    def test_a_clean_merge_report_check_holds_stays_uncommitted(self):
-        holding = self.repo / ".venv" / "bin" / "report-check"
+    def test_a_clean_merge_the_entry_holds_stays_uncommitted(self):
+        holding = self.repo / ".venv" / "bin" / "claude-hook"
         holding.write_text(
-            '#!/bin/sh\necho "$@" > report-check.argv\n'
+            '#!/bin/sh\necho "$@" > claude-hook.argv\n'
             'echo "report-check: 1 blocker(s)"\nexit 1\n'
         )
         r = run_git(self.repo, "merge", "--no-edit", "side", check=False)
         self.assertNotEqual(r.returncode, 0)
         out = r.stdout + r.stderr
-        self.assertIn("pre-commit: report-check holds a written-back number", out)
+        self.assertIn("pre-commit: labkit holds the commit", out)
         self.assertIn(
             "pre-merge-commit: the commit's checks above hold this merge", out
         )
         self.assertIn("git merge --abort", out)
-        # the merged path, as the merge stages it against the first parent
+        # the entry ran on the merge's index, staged against the first parent
         self.assertEqual(
-            (self.repo / "report-check.argv").read_text().split(),
-            ["--if-reported", "--staged", "scripts/02_analyze.py"],
+            (self.repo / "claude-hook.argv").read_text().split(), ["pre-commit"]
         )
         self.assertEqual(
             run_git(self.repo, "rev-list", "--count", "HEAD").stdout.strip(), "2"
@@ -476,8 +459,8 @@ class MergeChecks(unittest.TestCase):
         self.assertEqual(
             run_git(self.repo, "rev-list", "--count", "HEAD").stdout.strip(), "4"
         )
-        self.assertIn(
-            "scripts/02_analyze.py", (self.repo / "report-check.argv").read_text()
+        self.assertEqual(
+            (self.repo / "claude-hook.argv").read_text().split(), ["pre-commit"]
         )
 
 
@@ -501,13 +484,14 @@ def numbers_shim(repo: Path) -> None:
 
 
 def gate_shims(repo: Path) -> None:
-    """`.venv/bin/protocol-check`, `report-check` and `claude-hook` stand-ins
-    that record their arguments in `<tool>.argv` and pass."""
+    """A `.venv/bin/claude-hook` stand-in that records its arguments in
+    `claude-hook.argv` and passes — the one gate command the hook runs."""
     shim = repo / ".venv" / "bin"
     shim.mkdir(parents=True)
-    for tool in ("protocol-check", "report-check", "claude-hook"):
-        (shim / tool).write_text(f'#!/bin/sh\necho "$@" > {tool}.argv\nexit 0\n')
-        (shim / tool).chmod(0o755)
+    (shim / "claude-hook").write_text(
+        '#!/bin/sh\necho "$@" > claude-hook.argv\nexit 0\n'
+    )
+    (shim / "claude-hook").chmod(0o755)
 
 
 def commit(repo: Path) -> subprocess.CompletedProcess:

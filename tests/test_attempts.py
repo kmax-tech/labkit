@@ -570,7 +570,7 @@ class Hook(unittest.TestCase):
         out = io.StringIO()
         # the pre-commit's paths are read at the repo git runs it in
         with contextlib.redirect_stdout(out), contextlib.chdir(root):
-            rc = agent_hooks.undecided([str(failed.relative_to(root))])
+            rc = agent_hooks.commit_gates([])  # the index: the record removed
         self.assertEqual(rc, 1)
         self.assertIn("evidence is gone, changed or does not read", out.getvalue())
         # the deletion committed past the pre-commit: HEAD's journal names a

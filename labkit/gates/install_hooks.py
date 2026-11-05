@@ -66,20 +66,21 @@ def pre_commit() -> str:
 # Escape hatch for a deliberate exception: git commit --no-verify
 
 fail=0
-staged_protocols=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)PROTOCOL-[^/]*\\.md$')
 
-# 1. Mandatory fields on every staged protocol, as the index holds it: the
-#    commit carries the index, not the tree (--staged).
-if [ -n "$staged_protocols" ]; then
-    if [ ! -x .venv/bin/protocol-check ]; then
-        echo "pre-commit: .venv/bin/protocol-check missing — install labkit into .venv"
-        echo "(.venv/bin/pip install -r requirements.txt)."
+# 1. labkit's gates on the index, one entry (claude-hook pre-commit): the
+#    MUST fields of every protocol the commit adds or changes, report-check
+#    on every staged path whose area has adopted a result, the undecided
+#    audit state — each gate tells its findings, then labkit-next's step
+#    per protocol touched, read from the index the commit carries.
+staged=$(git diff --cached --name-only --no-renames)
+if [ -n "$staged" ]; then
+    if [ ! -x .venv/bin/claude-hook ]; then
+        echo "pre-commit: .venv/bin/claude-hook missing — labkit's gates on the staged files"
+        echo "cannot run; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
         fail=1
-    # shellcheck disable=SC2086 # word-splitting over the file list is intended
-    elif ! .venv/bin/protocol-check --staged $staged_protocols; then
+    elif ! .venv/bin/claude-hook pre-commit; then
         echo ""
-        echo "pre-commit: must fields missing (see above) — fill them, or justify as"
-        echo "'<field>: n/a — <why>'."
+        echo "pre-commit: labkit holds the commit (see above; labkit-next's step closes it)."
         fail=1
     fi
 fi
@@ -100,46 +101,6 @@ if [ -n "$staged_areas" ]; then
             echo "pre-commit: two areas carry one number (see above)."
             fail=1
         }}
-    fi
-fi
-
-# 2. A number written back: every protocol of an area a staged file touches
-#    whose head has adopted a result ([result] run) goes through report-check —
-#    the whole release check at every repeat cost (finalize clean, a full run,
-#    a decided analysis audit, the numbers recomputed); a protocol declaring
-#    none owes nothing here. Every staged path, not only a protocol: a script changed
-#    under a reported number reopens it. --staged: the answer as the index
-#    holds it, and the area's tree must equal the index — the commit holds
-#    the index, the check reads the tree (audit 2026-10-19).
-#    A deletion counts: a script or result removed under a reported number
-#    reopens it as an edit does (--no-renames: a move is its old path
-#    deleted and its new one added).
-staged=$(git diff --cached --name-only --no-renames)
-for tool in report-check claude-hook; do
-    if [ -n "$staged" ] && [ ! -x .venv/bin/$tool ]; then
-        echo "pre-commit: .venv/bin/$tool missing — the gates on the staged files"
-        echo "cannot run; install labkit into .venv (.venv/bin/pip install -r requirements.txt)."
-        fail=1
-    fi
-done
-if [ -n "$staged" ] && [ -x .venv/bin/report-check ]; then
-    # shellcheck disable=SC2086
-    if ! .venv/bin/report-check --if-reported --staged $staged; then
-        echo ""
-        echo "pre-commit: report-check holds a written-back number (see above; labkit-next's step follows it)."
-        fail=1
-    fi
-fi
-
-# 2b. An undecided audit BLOCKER in an area a staged file touches: the
-#     stop hook's rule at the commit (third haiku round on 0.99.0: audited,
-#     read, left open, measured with run_kind='probe', reported).
-if [ -n "$staged" ] && [ -x .venv/bin/claude-hook ]; then
-    # shellcheck disable=SC2086
-    if ! .venv/bin/claude-hook undecided $staged; then
-        echo ""
-        echo "pre-commit: an audit BLOCKER nobody decided, or audit evidence gone or unreadable (see above; labkit-next's step follows it)."
-        fail=1
     fi
 fi
 

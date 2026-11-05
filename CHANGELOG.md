@@ -9,6 +9,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The pre-commit is one entry, `claude-hook pre-commit`.** It reads the
+  index itself and runs the commit's three gates in-process — the MUST
+  fields of every protocol the commit adds or changes
+  (`protocol_report.check_files`), `report-check --if-reported --staged`
+  over every staged path, the undecided state —, each telling its own
+  findings, and prints `labkit-next`'s step per protocol touched once.
+  `claude-hook undecided <paths…>` is gone (it was the hook's third
+  command); the stamped `.githooks/pre-commit` runs the entry in place of
+  its steps 1, 2 and 2b (steps 1b, 3 and 4 — area numbers, the guard test,
+  the repo's own hook — stay as shell). Until 0.109.0 the hook's
+  `protocol-check --staged` step told its own lines and never `next`'s
+  step (the repair probe's base8, 2026-11-05). `labkit-hooks install`
+  rewrites the hook; `repo.indexed_changes` lists the index's changes.
+
 - **The commit's hold on an area whose working tree differs from the
   index is one finding, and `labkit-next --staged` names its step.**
   `report_hold.staged_area_gap` builds it for report-check's declared

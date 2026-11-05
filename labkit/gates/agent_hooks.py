@@ -137,6 +137,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass
+from fnmatch import fnmatch
 import io
 import json
 import os
@@ -176,6 +177,7 @@ from labkit.formats.runs import run_path
 from labkit.run.runlog import RunIndexError, indexed_runs
 from labkit.formats.repo import (
     EXPERIMENTS,
+    PROTOCOL_GLOB,
     PROTOCOL_NAME,
     area_protocols,
     repo_protocols,
@@ -184,6 +186,7 @@ from labkit.formats.repo import (
     git_dir_path,
     git_root,
     head_before,
+    indexed_changes,
     head_sha,
     own_path,
     paths_committed_since,
@@ -1362,36 +1365,61 @@ def undecided_state(
     return Undecided(out, acknowledged)
 
 
-def undecided(argv: list[str]) -> int:
-    """`claude-hook undecided <paths…>`: the pre-commit's gate — exit 1 and the
-    findings on stdout when an area a path touches holds an undecided BLOCKER.
-    PATHS are git's, relative to the root of the repository the current
-    directory lies in — where git runs the pre-commit —, never to the
-    session's project directory, which may lie below that root."""
-    if not argv:
-        console.refuse("claude-hook undecided", "name the paths (the staged files)")
+def commit_gates(argv: list[str]) -> int:
+    """`claude-hook pre-commit`: the commit's gates on the index in one
+    entry, run by the stamped `.githooks/pre-commit` from the repository's
+    root — the MUST fields of every protocol the commit adds or changes
+    (`protocol_report.check_files`, the index's text), `report-check
+    --if-reported --staged` over every staged path, and the undecided
+    state (`undecided_state`). Each gate tells its own findings; what to do
+    is `next`'s step per protocol touched, printed once (`steps_for`), from
+    the index the commit carries. Exit 0 when nothing holds, 1 held, 2
+    outside a repository or with arguments (it reads the index itself).
+    Until 0.109.0 the hook ran three commands, and the first,
+    `protocol-check --staged`, told lines of its own and never `next`'s
+    step (the repair probe's base8, 2026-11-05)."""
+    if argv:
+        console.refuse(
+            "claude-hook pre-commit", "takes no arguments: it reads the index"
+        )
         return 2
     repo = git_root(Path.cwd())
     if repo is None:
         console.refuse(
-            "claude-hook undecided",
+            "claude-hook pre-commit",
             f"{Path.cwd()} lies in no git repository — run it in the repo whose "
             "index is committed, as the pre-commit does",
         )
         return 2
-    state = undecided_state(repo, [repo / p for p in argv], staged=True)
-    for line in state.acknowledged:
-        print(f"claude-hook undecided: {line}")
-    lines = state.blockers
-    if not lines:
+    staged = indexed_changes(repo)
+    if not staged:
         return 0
-    print(
-        "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided "
-        "in the index, or evidence is gone, changed or does not read — the "
-        "commit is refused; it carries the decision the index holds "
-        "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(lines)
-    )
+    paths = [repo / p for p in staged]
+    held = False
+    protocols = [
+        Path(p)
+        for p in indexed_changes(repo, diff_filter="ACMR")
+        if fnmatch(Path(p).name, PROTOCOL_GLOB)
+    ]
+    if protocols:
+        template = protocol_report.template_lines(protocol_report.find_template(None))
+        held = protocol_report.check_files(protocols, template, staged=True)
+    held = report_check.if_reported(paths, repo, staged=True) != 0 or held
+    state = undecided_state(repo, paths, staged=True)
+    for line in state.acknowledged:
+        print(f"claude-hook pre-commit: {line}")
+    if state.blockers:
+        print(
+            "claude-hook: an audit of a staged area found BLOCKER(s) nobody decided "
+            "in the index, or evidence is gone, changed or does not read — the "
+            "commit is refused; it carries the decision the index holds "
+            "(LAB-015 Preflight audit before freezing):\n  "
+            + "\n  ".join(state.blockers)
+        )
+        held = True
+    if not held:
+        return 0
     # what to do is `next`'s step, read from the index the commit judges
-    for step in steps_for(repo, [repo / p for p in argv], staged=True):
+    for step in steps_for(repo, paths, staged=True):
         print(step)
     return 1

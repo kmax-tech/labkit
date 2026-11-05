@@ -304,7 +304,7 @@ labkit-params AREA [--run ID]       # values and provenance of a run
 labkit-hooks install|check [REPO]   # install or check hooks
 claude-hook pre-run|post-change|stop # live Claude Code hook adapter
 codex-hook pre-run|post-change|stop  # live Codex hook adapter
-claude-hook undecided PATH...      # unresolved audit blockers in touched areas
+claude-hook pre-commit             # the commit's gates on the index, run by .githooks/pre-commit
 claude-hook sessions [--run RUN_ID] # session records
 labkit-check [REPO] [--offline]     # report pin, installation and hook drift
 notes-check PATH                   # check measurement-note declarations

@@ -1049,7 +1049,11 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
     if declared is None and gap is None:
         # an exploration: nothing declared; its registered report, once
         # delivered, is owed the handover or the result all the same
-        return hold_registered(protocol, text, repo, staged=staged)
+        try:
+            return hold_registered(protocol, text, repo, staged=staged)
+        except protocol_block.BlockError as exc:  # a refusal, never a traceback
+            console.refuse("report-check", f"{protocol}: {exc}")
+            return 2
     print(
         f"═══ report-check {protocol} (its head has adopted "
         f"{declared or 'a result that does not read'}) ═══"

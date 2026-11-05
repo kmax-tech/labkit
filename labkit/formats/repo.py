@@ -958,6 +958,22 @@ def touched_paths(repo: Path) -> list[Path]:
     return out
 
 
+def indexed_changes(repo: Path, *, diff_filter: str | None = None) -> list[str]:
+    """Every path the index changes against HEAD under REPO, relative to it
+    and `/`-separated (`git diff --cached --name-only --no-renames`: a move
+    is its old path deleted and its new one added) — what a commit would
+    carry, the pre-commit's set. DIFF_FILTER narrows it as git's
+    `--diff-filter` does (`"ACMR"`: added, copied, modified, renamed — the
+    paths the commit keeps). Raises RuntimeError when git fails."""
+    args = ["diff", "--cached", "--name-only", "--no-renames", "-z"]
+    if diff_filter:
+        args.append(f"--diff-filter={diff_filter}")
+    r = git_run(args, repo)
+    if r.returncode != 0:
+        raise RuntimeError(f"git diff --cached failed under {repo}: {r.stderr.strip()}")
+    return [p for p in r.stdout.split("\0") if p]
+
+
 def head_sha(repo: Path, *, short: bool = False) -> str:
     """HEAD's commit under REPO — git's short form with SHORT —, "" outside
     a repository and before the first commit (an unborn HEAD is a state,

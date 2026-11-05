@@ -18,17 +18,17 @@ def main(argv: list[str]) -> int:
         text = (
             (__doc__ or "").strip().splitlines()[0] + "\n"
             "usage: claude-hook pre-run | post-change | stop   (hook event JSON on stdin)\n"
-            "       claude-hook undecided <paths…>\n"
+            "       claude-hook pre-commit   (the commit's gates on the index, run by .githooks/pre-commit)\n"
             "       claude-hook sessions [--run RUN_ID]\n"
             "exit codes: pre-run 0 or 2 (block); stop 0 or 2 (keep working); "
-            "post-change 0; undecided 0 or 1 (findings); sessions 0 or 1 (none "
+            "post-change 0; pre-commit 0 or 1 (held); sessions 0 or 1 (none "
             "made the run); usage error 2"
         )
         return console.usage("claude-hook", text, asked=bool(argv))
     if argv[0] == "sessions":
         return agent_hooks.sessions(argv[1:])
-    if argv[0] == "undecided":
-        return agent_hooks.undecided(argv[1:])
+    if argv[0] == "pre-commit":
+        return agent_hooks.commit_gates(argv[1:])
     event = json.loads(sys.stdin.read() or "{}")
     if argv[0] == "pre-run":
         return agent_hooks.pre_run(event)
