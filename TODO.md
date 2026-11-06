@@ -44,11 +44,11 @@ Problem: `labkit-next` bietet heute bei einem Befund im Protokoll selbst `--deci
 
 Problem: Sechs der sieben Fehlversuche in Nutzungsrunde 23 lieferten einen Bericht ohne Zahl oder Verdikt.
 
-**Nächster Schritt:** Einen eigenen Entwurf mit Bewertung vorlegen. Der Antwortblock wird an die registrierte Frage (`Question †`) gebunden. Die mechanische Prüfung kontrolliert ausschließlich Anwesenheit und Bindung; die fachliche Richtigkeit bleibt Gegenstand des Audits. Diese Aufgabe ist im bisherigen Plan „Schritt (5) Antwortblock“.
+**Entwurf liegt vor (2026-11-06):** [Antwortblock](docs/notes/2026-11-06-answer-block.md). Kein neuer Block: der Ergebnisblock zeigt schon Zahl und Verdikt je Zusage; er bekommt zwei erzeugte Zeilen darüber, die Frage und die `Conclusion` des Protokolls wörtlich, und erbt Schreiber, exakte Prüfung, Pflicht und Veralten. `--into` verweigert eine leere `Conclusion`. Ob die Antwort stimmt und zum Verdikt passt, bleibt beim Berichts-Review. Breaking: jeder bisherige Ergebnisblock veraltet einmal. Offen beim Autor: (1) welche Frage — die registrierte `Question / hypothesis` (empfohlen; nach der ersten Messung unveränderlich) oder die Klartext-Frage `Question †` aus der Summary (nach dem Lauf geschrieben); die frühere Formulierung hier verwechselte beide; (2) zwei Zeilen im Ergebnisblock (empfohlen) oder ein eigener Block. Diese Aufgabe ist im bisherigen Plan „Schritt (5) Antwortblock“.
 
 ### 5. Die nächste Nutzungsrunde durchführen — nach den Aufgaben 2–4
 
-Die Runde prüft, ob Agenten fachlich korrekte Arbeit verlässlicher und mit weniger Aufwand abschließen. `limitation`-Entscheidungen weiter zählen: In Runde 23 waren es 36, zuvor 19 beziehungsweise 20. Dass ein Teil davon dem fertig angebotenen Entscheidungsbefehl folgte, ist bisher eine Vermutung.
+Die Runde prüft, ob Agenten fachlich korrekte Arbeit verlässlicher und mit weniger Aufwand abschließen. Sie bewertet die Aufgaben 2–4 als ein Paket, ohne Vorhersage je Änderung (entschieden 2026-11-06: Maßstab ist ein klares, wartbares Repo, nicht welche Einzeländerung wie viele Versuche umdreht). `limitation`-Entscheidungen weiter zählen: In Runde 23 waren es 36, zuvor 19 beziehungsweise 20. Dass ein Teil davon dem fertig angebotenen Entscheidungsbefehl folgte, ist bisher eine Vermutung.
 
 Versuchsdesign, Bewertung und Start bleiben ein eigener Forschungsauftrag. Die bestehende Zweitprüfung und die Auswertungsfolge 17 → 18 bleiben erhalten. Herleitung und bisherige Ergebnisse: [One-explainer-Plan](docs/notes/2026-11-04-one-explainer-plan.md) und [Vereinfachungsplan](docs/notes/2026-11-02-workflow-simplification.md).
 

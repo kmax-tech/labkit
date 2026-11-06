@@ -1,0 +1,68 @@
+# Answer block: the report states the question and the protocol's answer
+
+2026-11-06. Draft for task 4 of `TODO.md` ("Einen ausdrücklichen Antwortblock im Bericht entwerfen"); no code changed. Built after the pin route and the finding's kind; the next usage round judges the three as one package.
+
+## Problem
+
+Six of the seven failed attempts of labkit-paper area 23 delivered a report without the number or without the verdict ([One explainer](2026-11-04-one-explainer-plan.md), "Reading of the repeated usage round"): three sts512 handovers ("no result is reported"), task 34 r1 (two columns and the RMSSD statement missing) and r3 (the demand never answered), assay r2 (0.8665 < 0.90 called "cannot be assessed").
+
+What a report carries today, for a protocol that declares a result (`report_blocks`):
+
+- the **result block**, written by `protocol-fill <PROTOCOL> --into <FILE>`: the protocol's Recorded results line — the reportable verdict of every registered promise, the kept number, the run id — and one line per Limitation (`block_body`), held exactly to the protocol (`block_gaps`, guaranteed);
+- prose of the author's around it, which no gate reads for an answer.
+
+So the number and the verdict on each promise are already in the report whenever a result is declared. What no gate requires is the **answer to the question**: the protocol's Conclusion ("the answer in at most two plain sentences: whether the bar set before the run was met, or why no verdict was possible", template Summary) stays in the protocol, and the report may never say it.
+
+## Proposal
+
+The result block's body gains two lines above its Recorded results line, rendered from the protocol like the rest of the body:
+
+```
+<!-- labkit result: experiments/01-x/PROTOCOL-x.md run 2026-10-22T09-13-08_0dc3 (protocol-fill --into; edit the protocol, not this block) -->
+Question: <the protocol's registered question, verbatim>
+Answer: <the protocol's Conclusion, verbatim>
+auc = 0.69, n = 12 (run 2026-10-22T09-13-08_0dc3)
+<!-- /labkit result -->
+```
+
+- **No new block.** The result block already has a writer (`--into`), an exact check (`block_gaps`), a duty (`blocks_owed`: a report citing a declared run carries its block) and a stale rule (a protocol change makes the block stale, `--into` rewrites it). Two more rendered lines inherit all four. A separate answer block would be a second opener, parser, writer and check for the same protocol and run.
+- **Guaranteed tier:** a report showing a declared result shows, verbatim, the question it answers and the protocol's answer; a changed Conclusion makes the block stale. `--into` refuses while the Conclusion is empty or a placeholder.
+- **Not guaranteed:** that the answer is right, or that it agrees with the verdict line below it. That stays with the report review, which reads the Answer line as the author's claim (a `contradiction` when the recorded verdict says otherwise — assay r2's pattern), and with the decision review, which already binds the Conclusion (`protocol_check.reported_claim`).
+- **A handover owes no answer.** Its block states why no result is reported (`handovers`); that is the honest end without an answer, unchanged.
+
+What it does not reach: task 34 r1's missing columns are a demand of the task, not of the protocol; the answer block shows what the protocol answers, not what a task sheet asked for.
+
+## Readers and writers
+
+| Place | Change |
+|---|---|
+| `labkit/checks/report_blocks.py` `block_body` | renders the two lines from the protocol text; module docstring's block example |
+| `labkit/checks/result_render.py` | the Rendering carries the question and the Conclusion, or `block_body` reads them from the protocol text — one reader, `protocol_check.field_values` |
+| `labkit/tools/protocol_fill.py` (`--into`) | refuses an empty or placeholder Conclusion, naming the field |
+| `labkit/agents/report-review.agent.md` | the Answer line in a result block is the author's claim, not a recorded verdict ("Not a claim" names the recorded numbers and verdicts only); changing the brief stales every review once (the fingerprint), so it goes in the same release |
+| `labkit/docs/agent-guide.md`, `labkit/docs/protocol-field-guide.md` | the Conclusion is what the report's block shows |
+| `docs/workflow.md`, `docs/examples/count-walkthrough.sh` | step 8 shows the two lines; the walkthrough (`tests/test_workflow_example.py`) writes a Conclusion before `--into` |
+| `tests/test_report_blocks.py`, `tests/test_protocol_fill.py` | twins below |
+| `CHANGELOG.md` | Breaking: every result block written before is stale once (`--into` rewrites it), and every report review with it |
+
+Budget: package about +40 lines (two rendered lines, one refusal, docs strings), tests about +60. More than +80 package lines stops the build for a look.
+
+## Tests
+
+Twins, each seen red on the old code where it changes behaviour:
+
+- a block with the question and the Conclusion passes; the same block with the Answer line retyped blocks (exact, as today for the Recorded results line);
+- a Conclusion changed in the protocol after `--into` makes the block stale; `--into` again passes;
+- `--into` with the Conclusion a placeholder is refused naming the field; filled, it writes;
+- a handover owes no answer line;
+- the walkthrough ends as `docs/workflow.md` says, with the two lines in REPORT.md.
+
+## Check before building
+
+1. **Which question.** `TODO.md` says "bound to the registered question (`Question †`)", but the two are different fields: `Question / hypothesis` is registered before the run and anchored at the first measurement (`protocol_history.UNCORRECTABLE_FIELDS`); `Question †` is the Summary's plain rewording, written after the run. See open decision 1.
+2. **When the Conclusion is owed.** `protocol_check.owed` with `adopting=True` decides what an adoption owes; confirm that the Conclusion is owed there at every repeat cost, so `--into` never meets a protocol that adopted without one. If it is not, the refusal at `--into` is the first place it is asked, and the walkthrough shows that order.
+
+## Open decisions
+
+1. **Which question the block shows.** (a) The registered `Question / hypothesis`, verbatim — what the number was measured to answer, unchangeable after the first measurement; it may be technical and carry the expectation. (b) The Summary's `Question †` — plain words for a reader, but written after the run and free to drift from the registered one. Recommended: (a); the block's point is that the report answers the question that was registered, and a reader-friendly wording stays in the report's prose.
+2. **Separate block or two lines in the result block.** Recommended: the two lines, for the reasons above; a separate block only if a report should show an answer without a declared result, which the handover already covers.
