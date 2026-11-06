@@ -247,9 +247,9 @@ One finding per entry, most severe first, nothing else. A finding starts on
 its own line with its grade and its fields in this order:
 
 ```
-BLOCKER|WARNING|NOTE · <file>:<line> · implementation|statement · <what is wrong> ·
-<which reported number goes wrong, with what input> · <LAB-nnn rule name, or "new
-class"> · <smallest change that would remove the failure>
+BLOCKER|WARNING|NOTE · <file>:<line> · implementation|statement|undetermined ·
+<what is wrong> · <which reported number goes wrong, with what input> · <LAB-nnn
+rule name, or "new class"> · <smallest change that would remove the failure>
 ```
 
 **The third field names the finding's subject**, your judgement of where the
