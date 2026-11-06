@@ -49,7 +49,8 @@ timeline): `justfile` (`just` lists them); in VS Code `.vscode/launch.json`.
 Before a commit: `.venv/bin/ruff check . && .venv/bin/ruff format --check . &&
 .venv/bin/pyright` — all three clean (docs/coding-style.md CODE-008 Run the linter and the type checker),
 and the suite green. The versioned hook `.githooks/pre-commit` runs all four
-and refuses the commit otherwise; turn it on once per clone with
+and refuses the commit otherwise — except for a commit that stages only
+`docs/notes/` and `TODO.md`, which no test reads; turn it on once per clone with
 `git config core.hooksPath .githooks`.
 A release is one step: write the `CHANGELOG.md` entry, then `just release
 X.Y.Z` sets the version, commits through the hook and tags that commit — in

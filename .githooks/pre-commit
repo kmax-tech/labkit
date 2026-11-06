@@ -17,6 +17,17 @@ fail=0
 # flaky test afterwards (2026-11-03). In this worktree's own git dir.
 log="$(git rev-parse --absolute-git-dir)/labkit-pre-commit.log"
 : > "$log"
+# Notes and the TODO hold no code and no test reads them: a commit that
+# stages nothing else skips the four checks. Any other path, one .py among
+# them, runs all four. --no-renames: a file moved into docs/notes/ counts
+# by its old path too. The index is the commit's (`git commit -- PATH`
+# hands the hook its own).
+staged=$(git diff --cached --name-only --no-renames)
+if [ -n "$staged" ] && ! printf '%s\n' "$staged" | grep -qv -e '^docs/notes/' -e '^TODO\.md$'; then
+    printf 'only docs/notes/ and TODO.md staged — checks skipped\n%s\n' "$staged" > "$log"
+    echo "pre-commit: only docs/notes/ and TODO.md staged — checks skipped"
+    exit 0
+fi
 run() {
     name=$1
     shift
