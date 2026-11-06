@@ -20,7 +20,7 @@ beside the packages: `templates/`, `agents/`, `docs/`, read relative to
 
 | Layer | Modules | Doctrine (the rest is core) |
 |---|---|---|
-| 1 · formats and places · `labkit/formats/` | `protocol_block`, `comment_blocks`, `prompts`, `promises`, `protocol_check`, `protocol_history`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `data_manifest`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `console`, `gate`, `shell`, `files`, `jsonl`, `deliverable`, `reference`, `criterion_bar`, `timebox` | `protocol_check`, `protocol_history`, `standard_contract`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `timebox` |
+| 1 · formats and places · `labkit/formats/` | `protocol_block`, `comment_blocks`, `prompts`, `promises`, `protocol_check`, `protocol_history`, `standard_contract`, `runs`, `answering_run`, `repo`, `scope_sha`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `console`, `gate`, `shell`, `files`, `jsonl`, `deliverable`, `reference`, `criterion_bar`, `timebox` | `protocol_check`, `protocol_history`, `standard_contract`, `rules`, `findings`, `failed_attempts`, `audit_gaps`, `followup`, `reviews`, `report_reviews`, `attempts`, `handovers`, `evidence`, `timebox` |
 | 2 · a run and its effects · `labkit/run/` | `runlog`, `provenance`, `code_repos`, `start_check`, `runlog_command`, `detached`, `batch`, `llm`, `llm_specs`, `llm_backends`, `llm_cache`, `endpoint_lease`, `lanes`, `profile` | `lanes`, `profile` |
 | 3 · checks · `labkit/checks/` | `intent_check`, `code_check`, `code_scan`, `gate_label_scan`, `import_check`, `prompt_check`, `run_record_check`, `readme_check`, `recheck`, `notes_check`, `audit_binding`, `result_render`, `data_counts`, `report_blocks`, `report_review_inputs`, `protocol_report` | `readme_check`, `notes_check`, `audit_binding`, `result_render`, `report_blocks`, `report_review_inputs`, `protocol_report` |
 | 4 · gates · `labkit/gates/` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out`, `next_step` | `preflight`, `finalize`, `report_check`, `report_context`, `report_replacement`, `report_decisions`, `report_hold`, `agent_hooks`, `claude_hooks`, `codex_hooks`, `audit`, `audit_prompt`, `audit_reply`, `audit_decisions`, `decision_review`, `report_review`, `install_hooks`, `ways_out`, `next_step` |
@@ -263,7 +263,8 @@ code the stamp cannot follow, and `prompt_check` checks parser fixtures
 and prompt drift.
 
 `run_record_check` checks what a finished record must show: denominators,
-frozen and tracked source, model identity, draws, row provenance and arms.
+every source frozen, the bytes the run recorded and tracked or ignored by a
+rule, model identity, draws, row provenance and arms.
 `readme_check` checks whether an area's README can lead a reader;
 `notes_check` checks measurement-note declarations. `audit_binding` answers what an analysis
 audit is held to: the answering run it reads (`audited_run`), what it was
@@ -570,7 +571,7 @@ Who writes which file:
 | Class | Files | Meant to be written by | What labkit checks today | Planned |
 |---|---|---|---|---|
 | machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands | committed evidence against HEAD (`evidence.change_blockers`, `tests/test_report_blocks.py`). **Gap:** a hand edit before the first commit is not caught; the agent can edit these files by hand | the writer refuses what a gate would later hold ([One explainer](notes/2026-11-04-one-explainer-plan.md), Phase 3, first item) |
-| free | measuring code, report prose, notes, data, `MANIFEST.sha256` | the agent | consequences only: code changed since the run, a report citing a run nothing adopted | `MANIFEST.sha256` goes with the pin route (`TODO.md`, task 2) |
+| free | measuring code, report prose, notes, data | the agent | consequences only: code changed since the run, a source unlike the bytes the run recorded, a report citing a run nothing adopted | — |
 
 ## Where verdicts are recorded
 

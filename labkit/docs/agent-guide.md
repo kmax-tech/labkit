@@ -202,13 +202,12 @@ If you fix code, audit the fixed code before the freeze.
 Commit the code and the registration. Keep raw data under `data/raw/`.
 Prepare inputs with a script, `scripts/00_prepare.py`, into
 `data/prepared/`. Put small inputs into git if you can legally
-share them. For large or protected data, commit the source or access route
-and the version, with the `sha256` the run recorded, into Data / scope:
-finalize holds the file outside git to that checksum. A lab that keeps many
-such files on disk instead lists each with its sha256 in a committed
-`MANIFEST.sha256` above them (paths from the repository root, as
-`shasum -a 256` writes them); finalize checks every file against it. To resume a run, use
-the same measurement command.
+share them. Keep large or protected data outside git on purpose, by an
+ignore rule (a `.gitignore` or `.git/info/exclude`), and write their source
+or access route and version into Data / scope. Pass every input in
+`data=`: the run records its sha256, and finalize holds each source, in git
+or outside it, to the bytes the run read. A file neither tracked nor
+ignored blocks. To resume a run, use the same measurement command.
 
 ### 4. Finalize, audit and decide
 

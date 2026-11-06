@@ -107,6 +107,21 @@ def script_sha_of(script: Path) -> str:
     return scope_sha.file_digest(script)[: scope_sha.DIGEST_CHARS]
 
 
+def source_entry(source: Path, recorded: str | None = None) -> dict:
+    """A run record's `data=` entry for SOURCE as runlog writes it
+    (`provenance.describe_data`): its path (RECORDED when the record names
+    it relative to the repository), the sha256 of its bytes now, cut to
+    the record's length, and its rows. finalize holds the source to that
+    sha256 at low repeat cost, so a fixture never invents one."""
+    from labkit.run import provenance
+
+    return {
+        "path": recorded or str(source),
+        "sha256": provenance.source_digest(source)[: runs.RECORD_SHA_CHARS],
+        "rows": 1,
+    }
+
+
 def run_record(
     fields: dict | None = None, /, *, drop: tuple[str, ...] = (), **more: object
 ) -> dict:

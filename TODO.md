@@ -10,23 +10,9 @@ Die bisherige Fassung mit den ausführlichen Herleitungen liegt im [historischen
 
 Veröffentlicht als `v0.112.0` (`c8dbfe89`) und auf GitHub gepusht. Sie ist die letzte Version mit den alten Nachweiswegen für Daten außerhalb von Git (siehe Aufgabe 2).
 
-### 2. Daten anhand des Laufdatensatzes prüfen — in Arbeit
+### 2. Daten anhand des Laufdatensatzes prüfen — gebaut 2026-11-06
 
-Problem: Für Daten außerhalb von Git gibt es mehrere Nachweiswege. In Nutzungsrunde 23 fanden die Agenten keinen passenden Weg für die ignorierte Modellquelle und übergaben ohne Ergebnis.
-
-**Beschlossen am 2026-11-05 und ergänzt am 2026-11-06:** Der Laufdatensatz (Record) ist der einzige Integritätsnachweis. Er hält die Prüfsummen der gelesenen Daten. `MANIFEST.sha256` und die Prüfsumme im Protokollfeld `Data / scope` entfallen; Herkunft, Zugangsweg und Version bleiben dort als Prosa.
-
-| Zustand der Quelle                                  | Künftige Prüfung                                                      |
-|-----------------------------------------------------|-----------------------------------------------------------------------|
-| In Git getrackt oder durch eine Git-Regel ignoriert | Besteht, wenn die Bytes zur Prüfsumme im Laufdatensatz passen.        |
-| Ungetrackt und nicht ignoriert                      | Hält auch bei passender Prüfsumme: bewusst committen oder ignorieren. |
-| Fehlend oder gegenüber dem Lauf verändert           | Hält mit einem passenden Wiederherstellungs- oder Neumessungsweg.     |
-
-Keine neue Pin-Datei und kein neuer Schalter. Die Änderung bricht das bisherige Format; 0.112.0 ist die letzte Version mit den alten Nachweiswegen.
-
-**Vorprüfung erledigt (2026-11-06):** Ein Commit des Berichts ohne `runs/<id>/` wird verweigert, auch wenn `runs/` per `.gitignore` ausgeblendet ist; ein am Hook vorbei gemachter Commit scheitert im frischen Klon laut an `finalize` und `report-check`. Ein Regressionstest hält das fest; keine weitere Architektur nötig. Einzelheiten im [Entwurf](docs/notes/2026-11-06-pin-route.md#check-before-building-the-records-lifetime).
-
-**Fertig, wenn:** Die Fälle aus dem [Entwurf zur Pin-Route](docs/notes/2026-11-06-pin-route.md) samt korrekten Gegenfällen geprüft sind und die Reparaturprobe mit ignorierter Modellquelle bis zu Übernahme und Commit durchläuft. Prognose: etwa 130 Paketzeilen weniger; bei weniger als 100 eingesparten Zeilen oder einem neuen Modul den Entwurf erneut bewerten.
+Der Laufdatensatz ist der einzige Integritätsnachweis: `finalize` hält jede Quelle an die Prüfsumme im Record, getrackt oder per Ignore-Regel außerhalb von Git; eine Quelle, die weder getrackt noch ignoriert ist, blockiert auch bei passender Prüfsumme. `MANIFEST.sha256` und die Prüfsumme in `Data / scope` sind entfallen (CHANGELOG „Unreleased“, Breaking). Paket −122 Zeilen, kein neues Modul. Am gestempelten Zähl-Labor durchgespielt: ein per `.git/info/exclude` ausgeblendetes Eingabeverzeichnis läuft bis Übernahme und Commit durch, eine danach hinzugefügte Datei blockiert. Neu und vom Entwurf übersehen: der Standardsatz zur Provenienz (`labkit/docs/standard.md`, „At `low`, the machine checks the provenance“) ist an die Entscheidung angepasst. Offen: die Reparaturprobe in `labkit-evidence` mit Agenten (eigener Lauf, beim Autor) und das Nachziehen der Labor-Repos (Rollout).
 
 ### 3. Umsetzungsfehler von Deutungsfragen unterscheiden
 

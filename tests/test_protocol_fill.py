@@ -27,7 +27,14 @@ from labkit.tools import protocol_result
 from labkit.checks import audit_binding  # noqa: E402
 from labkit.checks import prompt_check  # noqa: E402
 from labkit.formats import protocol_block, protocol_check  # noqa: E402
-from protocol_fixture import registration_of, run_record, PID, head, shown_sha  # noqa: E402
+from protocol_fixture import (  # noqa: E402
+    registration_of,
+    run_record,
+    PID,
+    head,
+    shown_sha,
+    source_entry,
+)
 
 SAMPLE = """# Experiment protocol: x
 
@@ -849,7 +856,7 @@ class Adopt(unittest.TestCase):
         started_at(run, root)
         cfg = run / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
-        data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}
+        data["data"] = {"cases": source_entry(src)}
         cfg.write_text(json.dumps(data), encoding="utf-8")
         if audited:
             findings.write(

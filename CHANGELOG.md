@@ -5,6 +5,27 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Breaking
+
+- **The run's record is the one integrity evidence for its data.** At
+  repeat cost low, `finalize` holds every source the run read (`data=`)
+  to the sha256 the record names, and asks git one thing beside it: is
+  the source tracked, or kept outside on purpose by an ignore rule (a
+  `.gitignore`, `.git/info/exclude`)? A source an ignore rule keeps out
+  passes when its bytes are the recorded ones — a model directory the
+  sandbox excluded found no way out before, and every sts512 attempt
+  handed over without a number (labkit-paper area 23, 2026-11-06). Gone:
+  the checksum in Data / scope and a tracked `MANIFEST.sha256` no longer
+  pin a source (`data_manifest` and `run_record_check.pinned_source` are
+  removed); Data / scope keeps the source or access route and version as
+  prose. New blockers: a tracked source whose bytes changed since the run
+  (it was compared with nothing), a source neither tracked nor ignored even
+  when its bytes match, and a source the record holds no sha256 of. 0.112.0
+  is the last version that reads the old routes. Decision and cases:
+  `docs/notes/2026-11-06-pin-route.md`.
+
 ## 0.112.0 — 2026-11-06
 
 ### Breaking

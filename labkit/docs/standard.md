@@ -542,8 +542,9 @@ evidence file under the same ID (top of this document).*
   weakness that an agent has to find anew every time is a missing
   invariant; therefore the following applies there:
 
-  - `finalize` refuses a run without a frozen source (`data=`) and
-    one with source or output outside git;
+  - `finalize` refuses a run without a frozen source (`data=`), one
+    whose source is not the bytes the run recorded, and one with an
+    output, or a source no ignore rule keeps out on purpose, outside git;
   - the skeleton reads directories only via `visible()` (no hidden
     entries, no subfolders), takes the denominator from the source instead of from
     the generated rows, and refuses on a missing entry;

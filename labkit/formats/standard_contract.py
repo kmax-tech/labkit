@@ -376,7 +376,10 @@ def describe(repeat_cost: str | None, kind: str, model: bool) -> list[str]:
         "after the run: `finalize` clean — the answering run bound and cited, the "
         "promises answered, the scopes unchanged"
         + (
-            ", the source frozen in the run and tracked in git" if ln.provenance else ""
+            ", every source frozen in the run, its bytes as the run recorded them, "
+            "tracked in git or kept outside by an ignore rule"
+            if ln.provenance
+            else ""
         ),
         "at the release (`protocol-fill --from-run`, the stop, the commit): "
         + (

@@ -21,7 +21,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from protocol_fixture import registration_of, completed_run, head, scope_file, shown_sha
+from protocol_fixture import (
+    registration_of,
+    completed_run,
+    head,
+    scope_file,
+    shown_sha,
+    source_entry,
+)
 
 from labkit.formats import attempts, findings, promises, reviews, scope_sha
 from labkit.gates import audit, decision_review, report_check
@@ -94,7 +101,7 @@ def area_with(
     src.write_text('{"id": 1}\n', encoding="utf-8")
     cfg = run / "config.json"
     data = json.loads(cfg.read_text(encoding="utf-8"))
-    data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}
+    data["data"] = {"cases": source_entry(src)}
     cfg.write_text(json.dumps(data), encoding="utf-8")
     if before_audit is not None:
         before_audit(area)

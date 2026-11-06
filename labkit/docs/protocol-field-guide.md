@@ -324,12 +324,13 @@ result is only a plan.
 - **Data / scope:** keep raw data under `data/raw/` and script-made inputs
   under `data/prepared/`. Never type the counts. After the preparation run,
   `protocol-fill <PROTOCOL> --data-counts` writes them at the end of the
-  field. `finalize` holds that part to the run. Commit small inputs that can legally be shared. For large or
-  protected data, name the source, the access route and the version beside
-  the `sha256` the run recorded for it (finalize names it): `finalize` then
-  holds the file outside git to that checksum. Many files kept on disk
-  (a model-answer cache, archives) may instead be listed with their sha256
-  in a committed `MANIFEST.sha256` above them; finalize checks each one. Look
+  field. `finalize` holds that part to the run. Commit small inputs that can legally be shared. Keep large or
+  protected data (a model directory, a model-answer cache, archives)
+  outside git on purpose, by an ignore rule, and name here the source, the
+  access route and the version — prose, no checksum: the run records the
+  sha256 of every `data=` input, and `finalize` holds each source to it. A
+  directory's checksum covers every visible file under it: a file added
+  after the run (a README, a cache) blocks as a change, unnamed. Look
   at the prepared file before the run. Otherwise a format bug and a model
   failure look the same.
 - **Data profile:** owed whenever a model is named. The prompt skeleton's

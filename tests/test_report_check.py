@@ -33,6 +33,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from protocol_fixture import (
+    source_entry,
     registration_of,
     C1_BLOCK,
     C1_PROSE,
@@ -592,7 +593,7 @@ class IfReported(unittest.TestCase):
         src.write_text('{"id": 1}\n', encoding="utf-8")
         cfg = run / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
-        data["data"] = {"cases": {"path": str(src), "sha": "x", "rows": 1}}
+        data["data"] = {"cases": source_entry(src)}
         cfg.write_text(json.dumps(data), encoding="utf-8")
         if audited:
             findings.write(

@@ -1,6 +1,7 @@
-"""finalize station 4 (2026-10-05): at repeat_cost = "low" the run must have frozen
-its source and every source/output file must be tracked in git; elsewhere
-the station is n/a."""
+"""finalize's provenance station: at repeat_cost = "low" the run must have
+frozen its sources, each source's bytes must be the ones the record names,
+and each must be tracked in git or ignored by a rule; the outputs tracked.
+Elsewhere the station is n/a."""
 
 from __future__ import annotations
 
@@ -137,13 +138,37 @@ class Provenance(unittest.TestCase):
         return rc, buf.getvalue()
 
     def _frozen(self) -> dict:
-        return {"cases": {"path": str(self.src), "rows": 1, "sha256": "ab"}}
+        """The run's `data=` record of the source as it is now, as runlog
+        writes it."""
+        return {"cases": self._entry(self.src)}
+
+    @staticmethod
+    def _entry(source: Path) -> dict:
+        return {
+            "path": str(source),
+            "rows": 1,
+            "sha256": provenance.source_digest(source)[:RECORD_SHA_CHARS],
+        }
 
     def test_frozen_and_tracked_is_clean(self):
         self._run(SHORT, self._frozen(), commit=True)
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
         self.assertIn("source frozen in the run; source and output tracked", out)
+        self.assertIn("each source's bytes as the run recorded them", out)
+
+    def test_a_tracked_source_changed_since_the_run_blocks(self):
+        """The record is the one integrity evidence for every source: a
+        tracked file regenerated after the run is not what the number came
+        from (pin route, 2026-11-06; until 0.112.0 a tracked source was
+        compared with nothing)."""
+        self._run(SHORT, self._frozen(), commit=True)
+        self.src.write_text('{"id": 2}\n', encoding="utf-8")
+        _git(self.repo, "commit", "-qam", "regenerated")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"source {self.src} is not the bytes the run read", out)
+        self.assertIn("restore the bytes the run read (from git where it tracks", out)
 
     def test_no_data_is_a_blocker(self):
         self._run(SHORT, None, commit=True)
@@ -151,56 +176,131 @@ class Provenance(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("source not frozen", out)
 
+    def test_a_source_the_record_holds_no_checksum_of_blocks(self):
+        data = self._frozen()
+        del data["cases"]["sha256"]
+        self._run(SHORT, data, commit=True)
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("the run recorded no sha256 for it", out)
+        self.assertIn("pass the source in `data=`", out)
+
+    def test_a_data_entry_naming_no_path_blocks(self):
+        data = self._frozen()
+        data["broken"] = {"rows": 1, "sha256": "ab"}
+        self._run(SHORT, data, commit=True)
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("data['broken'] in the run's record names no path", out)
+
+    def test_outside_a_repository_the_bytes_are_still_held(self):
+        """git's half needs a repository, the record's does not."""
+        with tempfile.TemporaryDirectory() as tmp:
+            area = Path(tmp) / "experiments" / "01-x"
+            run = area / "runs" / "2026-10-05T19-00-00_ab12"
+            run.mkdir(parents=True)
+            src = Path(tmp) / "cases.jsonl"
+            src.write_text('{"id": 1}\n', encoding="utf-8")
+            record = run_record({"data": {"cases": self._entry(src)}})
+            (run / "config.json").write_text(json.dumps(record), encoding="utf-8")
+            (run / "outputs.json").write_text("[]", encoding="utf-8")
+            b, w, _ = run_record_check.provenance_findings(area, run)
+            self.assertEqual(b, [])  # the twin: the bytes as recorded
+            self.assertIn("not a git repository", w[0])
+            src.write_text('{"id": 2}\n', encoding="utf-8")
+            b, _, _ = run_record_check.provenance_findings(area, run)
+            self.assertEqual(len(b), 1)
+            self.assertIn("is not the bytes the run read", b[0].text)
+
     def test_untracked_source_is_a_blocker(self):
         self._run(SHORT, self._frozen(), commit=False)
         rc, out = self._finalize()
         self.assertEqual(rc, 1)
-        self.assertIn("source", out)
-        self.assertIn("not tracked in git", out)
+        self.assertIn("neither tracked in git nor ignored by a rule", out)
 
     def test_untracked_source_way_out_names_both_documented_routes(self):
         # the standard's Fixed inputs: small shareable inputs are committed,
-        # large or protected data are named by source or access route and
-        # version beside the run's checksum (pilot t34: the blocker named
-        # `git add` alone, and a committed DATA_SOURCE.md did not lift it)
+        # large or protected data are kept outside git on purpose, with
+        # source or access route and version in Data / scope (pilot t34: the
+        # blocker named `git add` alone)
         self._run(SHORT, self._frozen(), commit=False)
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1)
-        line = next(x for x in out.splitlines() if "not tracked in git" in x)
+        line = self._blocker_line()
         self.assertIn("Next: if it is small and may legally be shared", line)
         self.assertIn(f"`git add {self.src}`", line)
-        self.assertIn("large or protected data stay out of git", line)
-        self.assertIn("source or access route and version in the protocol's Data", line)
-        self.assertIn("the checksum this run recorded, `sha256 ab`", line)
-        self.assertIn("finalize then holds the file to it", line)
+        self.assertIn("large or protected data stay out of git on purpose", line)
+        self.assertIn("an ignore rule for it", line)
+        self.assertIn("route and version in the protocol's Data / scope", line)
+        sha = self._frozen()["cases"]["sha256"]
+        self.assertIn(f"the checksum this run recorded, `sha256 {sha}`", line)
 
-    def test_an_ignored_source_names_the_rule_and_its_git_add_leads_out(self):
-        # pilot t60: the sandbox's .git/info/exclude held `benchmark/`, and the
-        # printed `git add` was refused for an ignored path
+    def test_an_untracked_source_blocks_though_data_scope_names_its_checksum(self):
+        """git status is the hygiene rule beside the record: matching bytes
+        do not settle whether the data belong to the project, and a
+        checksum in Data / scope pins nothing any more (until 0.112.0 it
+        did)."""
+        sha = self._frozen()["cases"]["sha256"]
+        protocol = SHORT + f"- **Data / scope:** cases.jsonl, release 3, sha256 {sha}\n"
+        self._run(protocol, self._frozen(), commit=False)
+        _git(self.repo, "add", "experiments")
+        _git(self.repo, "commit", "-qm", "x")
+        line = self._blocker_line()
+        self.assertIn("neither tracked in git nor ignored by a rule", line)
+
+    def test_an_ignored_source_with_the_recorded_bytes_passes(self):
+        """sts512 (labkit-paper area 23, 2026-11-06): a model directory the
+        sandbox excludes from git found no route and every attempt handed
+        over without a number. Ignored on purpose and the bytes the record
+        names, it passes, the rule named."""
         (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
         self._run(SHORT, self._frozen(), commit=True)  # `git add -A` skips it
         rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        line = next(x for x in out.splitlines() if "not tracked in git" in x)
-        self.assertIn("git ignores it (.git/info/exclude:1:data/raw/)", line)
-        command = line.split("past the rule (`", 1)[1].split("`", 1)[0]
-        self.assertEqual(command, f"git add -f {self.src}")
-        subprocess.run(command.split(), cwd=self.repo, check=True)
-        _git(self.repo, "commit", "-qm", "the source")
-        rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-        self.assertIn("source frozen in the run; source and output tracked", out)
+        self.assertIn(
+            f"source {self.src} is kept outside git by an ignore rule "
+            "(.git/info/exclude:1:data/raw/), pinned by the checksum the run "
+            "recorded",
+            out,
+        )
+        self.assertIn("tracked in git or ignored by a rule", out)
+
+    def test_the_twin_an_ignored_source_with_one_byte_changed_blocks(self):
+        (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
+        self._run(SHORT, self._frozen(), commit=True)
+        self.src.write_text('{"id": 2}\n', encoding="utf-8")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"source {self.src} is not the bytes the run read", out)
+        self.assertIn("else from the source or access route Data / scope names", out)
+
+    def test_an_ignored_source_that_is_gone_names_the_route(self):
+        (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
+        self._run(SHORT, self._frozen(), commit=True)
+        self.src.unlink()
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"{self.src} is gone", out)
+        self.assertIn("get it again from the source or access route Data / scope", out)
 
     def test_a_source_a_negated_rule_keeps_in_is_named_without_a_rule(self):
         # `check-ignore -v` prints the `!` pattern that un-ignores a path too;
-        # git adds such a path without -f
+        # that path is not ignored, so it must be committed or ignored
         (self.repo / ".gitignore").write_text("data/raw/*\n!data/raw/cases.jsonl\n")
         self._run(SHORT, self._frozen(), commit=False)
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        line = next(x for x in out.splitlines() if "not tracked in git" in x)
-        self.assertNotIn("git ignores", line)
+        line = self._blocker_line()
         self.assertIn(f"commit it (`git add {self.src}`)", line)
+
+    def test_a_manifest_beside_an_untracked_source_pins_nothing(self):
+        """`MANIFEST.sha256` was a route until 0.112.0; it is not read."""
+        self._run(SHORT, self._frozen(), commit=False)
+        manifest = self.repo / "data" / "MANIFEST.sha256"
+        manifest.write_text(
+            f"{scope_sha.file_digest(self.src)}  data/raw/cases.jsonl\n",
+            encoding="utf-8",
+        )
+        _git(self.repo, "add", "experiments", str(manifest))
+        _git(self.repo, "commit", "-qm", "x")
+        line = self._blocker_line()
+        self.assertIn("neither tracked in git nor ignored by a rule", line)
 
     def _directory_source(self) -> tuple[Path, dict]:
         """A source directory the run read: a note and two data files."""
@@ -209,37 +309,32 @@ class Provenance(unittest.TestCase):
         (geo / "SOURCE.md").write_text("where the files come from\n")
         (geo / "roads.geojson").write_text("{}\n")
         (geo / "area.geojson").write_text("{}\n")
-        return geo, {"geo": {"path": str(geo), "rows": 3, "sha256": "cd"}}
+        entry = self._entry(geo)
+        entry["rows"] = 3
+        return geo, {"geo": entry}
 
     def _blocker_line(self) -> str:
         rc, out = self._finalize()
         self.assertEqual(rc, 1, out)
-        return next(x for x in out.splitlines() if "not tracked in git" in x)
+        return next(
+            x for x in out.splitlines() if "neither tracked in git nor ignored" in x
+        )
 
-    def test_a_directory_with_one_file_tracked_is_not_tracked(self):
-        # pilot t21: benchmark/ excluded, only SOURCE.md committed (with -f),
-        # and finalize said "source and output tracked in git … all clear"
+    def test_an_ignored_directory_with_one_file_tracked_passes(self):
+        # pilot t21: benchmark/ excluded, only SOURCE.md committed (with -f);
+        # the other files are ignored on purpose and the digest holds them
         (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
         geo, data = self._directory_source()
         self._run(SHORT, data, commit=True)  # `git add -A` skips data/raw/
         _git(self.repo, "add", "-f", str(geo / "SOURCE.md"))
         _git(self.repo, "commit", "-qm", "the note")
-        line = self._blocker_line()
-        self.assertIn("2 file(s) under it are not (area.geojson, roads.geojson)", line)
-        self.assertIn(
-            "git ignores files under it (.git/info/exclude:1:data/raw/)", line
-        )
-        command = line.split("past the rule (`", 1)[1].split("`", 1)[0]
-        self.assertEqual(
-            command,
-            f"git add -f -- {(geo / 'area.geojson').resolve()} "
-            f"{(geo / 'roads.geojson').resolve()}",
-        )
-        subprocess.run(command.split(), cwd=self.repo, check=True)
-        _git(self.repo, "commit", "-qm", "the data")
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-        self.assertIn("source frozen in the run; source and output tracked", out)
+        self.assertIn(f"source {geo} is kept outside git by an ignore rule", out)
+        (geo / "README.md").write_text("added after the run\n")  # the twin
+        rc, out = self._finalize()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"source {geo} is not the bytes the run read", out)
 
     def test_an_untracked_directory_is_committed_file_by_file(self):
         geo, data = self._directory_source()
@@ -247,11 +342,15 @@ class Provenance(unittest.TestCase):
         _git(self.repo, "rm", "-q", "--cached", str(geo / "roads.geojson"))
         _git(self.repo, "commit", "-qm", "one file out")
         line = self._blocker_line()
-        self.assertIn("1 file(s) under it are not (roads.geojson)", line)
-        self.assertNotIn("git ignores", line)
+        self.assertIn("1 file(s) under it (roads.geojson)", line)
         self.assertIn(
             f"commit it (`git add -- {(geo / 'roads.geojson').resolve()}`)", line
         )
+        command = line.split("commit it (`", 1)[1].split("`", 1)[0]
+        subprocess.run(command.split(), cwd=self.repo, check=True)
+        _git(self.repo, "commit", "-qm", "the file")
+        rc, out = self._finalize()
+        self.assertEqual(rc, 0, out)
 
     def test_a_hidden_file_under_a_directory_source_is_none_it_read(self):
         geo, data = self._directory_source()
@@ -259,155 +358,6 @@ class Provenance(unittest.TestCase):
         (geo / ".DS_Store").write_text("x")  # outside the run's digest
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-
-    def _pinned(self, scope_line: str) -> tuple[int, str]:
-        """An untracked source the run recorded with its real checksum, and a
-        protocol whose Data / scope says SCOPE_LINE."""
-        sha = provenance.source_digest(self.src)[:RECORD_SHA_CHARS]
-        protocol = SHORT + f"- **Data / scope:** {scope_line.format(sha=sha)}\n"
-        self._run(
-            protocol,
-            {"cases": {"path": str(self.src), "rows": 1, "sha256": sha}},
-            commit=False,
-        )
-        _git(self.repo, "add", "experiments")
-        _git(self.repo, "commit", "-qm", "x")
-        return self._finalize()
-
-    def test_a_source_outside_git_pinned_by_data_scope_passes(self):
-        """The standard's Fixed inputs: large or protected data stay out of the
-        repository, which holds their source, version and checksum (round 2:
-        every lab agent force-added the benchmark's data past .git/info/exclude,
-        the only way out finalize gave)."""
-        rc, out = self._pinned(
-            "cases.jsonl from the court archive, release 3, sha256 {sha}"
-        )
-        self.assertEqual(rc, 0, out)
-        self.assertIn("lies outside git, pinned by the checksum the run recorded", out)
-
-    def test_the_twin_a_source_outside_git_without_its_checksum_named_blocks(self):
-        rc, out = self._pinned("cases.jsonl from the court archive, release 3")
-        self.assertEqual(rc, 1)
-        self.assertIn("not tracked in git", out)
-
-    def test_a_pinned_source_whose_bytes_changed_since_the_run_blocks(self):
-        sha = provenance.source_digest(self.src)[:RECORD_SHA_CHARS]
-        protocol = SHORT + f"- **Data / scope:** cases.jsonl, sha256 {sha}\n"
-        self._run(
-            protocol,
-            {"cases": {"path": str(self.src), "rows": 1, "sha256": sha}},
-            commit=False,
-        )
-        _git(self.repo, "add", "experiments")
-        _git(self.repo, "commit", "-qm", "x")
-        self.src.write_text('{"id": 2}\n', encoding="utf-8")
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1)
-        self.assertIn("is not the bytes the run read", out)
-
-    def _manifested(self, *, track: bool = True, digest: str | None = None) -> None:
-        """An untracked source the run recorded with its real checksum, a
-        Data / scope that names no checksum, and data/MANIFEST.sha256
-        naming the source with DIGEST (its real sha256 by default) —
-        committed when TRACK, the paths from the repository root as
-        `shasum -a 256` writes them."""
-        sha = provenance.source_digest(self.src)[:RECORD_SHA_CHARS]
-        protocol = SHORT + "- **Data / scope:** cases.jsonl, kept outside git\n"
-        self._run(
-            protocol,
-            {"cases": {"path": str(self.src), "rows": 1, "sha256": sha}},
-            commit=False,
-        )
-        manifest = self.repo / "data" / "MANIFEST.sha256"
-        manifest.write_text(
-            f"{digest or scope_sha.file_digest(self.src)}  data/raw/cases.jsonl\n",
-            encoding="utf-8",
-        )
-        _git(self.repo, "add", "experiments", *([str(manifest)] if track else []))
-        _git(self.repo, "commit", "-qm", "x")
-
-    def test_a_source_named_in_a_tracked_manifest_passes(self):
-        """A lab keeps its LLM cache and archives outside git, named in git
-        by a sha256 manifest (fallacy-detection, rule 8)."""
-        self._manifested()
-        rc, out = self._finalize()
-        self.assertEqual(rc, 0, out)
-        self.assertIn("named file by file in data/MANIFEST.sha256", out)
-
-    def test_the_twin_a_manifest_git_does_not_track_names_nothing(self):
-        self._manifested(track=False)
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("not tracked in git", out)
-        self.assertIn("MANIFEST.sha256", out, "the way out names the manifest route")
-
-    def test_the_manifest_is_read_as_git_holds_it(self):
-        self._manifested(digest="0" * 64)
-        right = scope_sha.file_digest(self.src)
-        (self.repo / "data" / "MANIFEST.sha256").write_text(
-            f"{right}  data/raw/cases.jsonl\n", encoding="utf-8"
-        )  # right in the tree, not staged
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("not the bytes data/MANIFEST.sha256 names", out)
-
-    def test_a_file_unlike_its_manifest_line_blocks(self):
-        self._manifested()
-        self.src.write_text('{"id": 2}\n', encoding="utf-8")
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("1 file(s) are not the bytes data/MANIFEST.sha256 names", out)
-
-    def test_a_manifest_refreshed_after_the_run_does_not_cover_other_bytes(self):
-        self._manifested()
-        self.src.write_text('{"id": 2}\n', encoding="utf-8")
-        manifest = self.repo / "data" / "MANIFEST.sha256"
-        manifest.write_text(
-            f"{scope_sha.file_digest(self.src)}  data/raw/cases.jsonl\n",
-            encoding="utf-8",
-        )
-        _git(self.repo, "add", str(manifest))
-        _git(self.repo, "commit", "-qm", "refresh")
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("but not the bytes the run read", out)
-
-    def test_a_directory_with_a_file_the_manifest_lacks_blocks(self):
-        geo, data = self._directory_source()
-        data["geo"]["sha256"] = provenance.source_digest(geo)[:RECORD_SHA_CHARS]
-        self._run(SHORT, data, commit=False)
-        manifest = self.repo / "data" / "MANIFEST.sha256"
-        listed = ("SOURCE.md", "roads.geojson")
-        manifest.write_text(
-            "".join(
-                f"{scope_sha.file_digest(geo / n)} *data/raw/geo/{n}\n" for n in listed
-            ),
-            encoding="utf-8",
-        )
-        _git(self.repo, "add", "experiments", str(manifest))
-        _git(self.repo, "commit", "-qm", "x")
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("1 file(s) are neither tracked nor named", out)
-        self.assertIn("data/raw/geo/area.geojson", out)
-        with manifest.open("a", encoding="utf-8") as fh:
-            fh.write(f"\n{scope_sha.file_digest(geo / 'area.geojson')}  ")
-            fh.write("data/raw/geo/area.geojson\n")
-        _git(self.repo, "add", str(manifest))
-        _git(self.repo, "commit", "-qm", "the third file")
-        rc, out = self._finalize()
-        self.assertEqual(rc, 0, out)
-
-    def test_a_manifest_line_that_does_not_read_blocks(self):
-        self._manifested()
-        manifest = self.repo / "data" / "MANIFEST.sha256"
-        with manifest.open("a", encoding="utf-8") as fh:
-            fh.write("deadbeef data/raw/other.jsonl\n")
-        _git(self.repo, "add", str(manifest))
-        _git(self.repo, "commit", "-qm", "a bad line")
-        rc, out = self._finalize()
-        self.assertEqual(rc, 1, out)
-        self.assertIn("data/MANIFEST.sha256:2: not `<sha256 hex>  <path>`", out)
 
     def test_the_printed_handover_is_the_one_agents_md_gives(self):
         agents = (PACKAGE_DIR / "templates" / "AGENTS.md.template").read_text(

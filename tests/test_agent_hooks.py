@@ -34,6 +34,7 @@ from labkit.gates import agent_hooks, report_hold  # noqa: E402
 from labkit.tools import protocol_result
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
+    source_entry,
     registration_of,
     run_record,
     DEFAULT_BLOCK,
@@ -792,7 +793,9 @@ class Stop(unittest.TestCase):
                         "script_sha": script_sha_of(scope_file(self.area)),
                         **head_commit(self.root),
                         "data": {
-                            "cases": {"path": "data/cases.jsonl", "sha": "x", "rows": 1}
+                            "cases": source_entry(
+                                self.root / "data" / "cases.jsonl", "data/cases.jsonl"
+                            )
                         },
                     }
                 )
