@@ -69,6 +69,21 @@ class RunsText(unittest.TestCase):
             lines[2],
         )
 
+    def test_an_absent_setting_is_not_one_set_to_null(self):
+        """`{}` and `{"random_state": null}` read as different settings on
+        the lines: compared as `c.get(k)`, both were `null`, and the
+        difference vanished (review 2026-11-06, finding 4)."""
+        area = self._area()
+        a = completed_run(area, "2026-01-01T00-00-01_a")
+        b = completed_run(area, "2026-01-01T00-00-02_b")
+        _settings_of(a)
+        _settings_of(b, random_state=None)
+        lines = report_review_inputs.runs_text(area, PID, b.name, set(), set()).split(
+            "\n"
+        )
+        self.assertIn("random_state=absent", lines[0])
+        self.assertIn("random_state=null", lines[1])
+
     def test_an_unreadable_run_and_a_missing_metrics_file_stay_in_the_list(self):
         area = self._area()
         bad = completed_run(area, "2026-01-01T00-00-01_bad", metrics=None)

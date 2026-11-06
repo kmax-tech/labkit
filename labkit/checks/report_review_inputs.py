@@ -150,6 +150,12 @@ def review_pieces(
     return pieces
 
 
+#: how a setting a measurement's config lacks is shown and compared — not
+#: `null`: a key left out and one set to null can mean different things
+#: (review 2026-11-06, finding 4)
+ABSENT = "absent"
+
+
 def runs_text(
     area: Path,
     pid: str | None,
@@ -179,7 +185,7 @@ def runs_text(
     varying = sorted(
         k
         for k in {k for c in bound for k in c}
-        if len({as_stored(c.get(k)) for c in bound}) > 1
+        if len({as_stored(c[k]) if k in c else ABSENT for c in bound}) > 1
     )
     lines: list[str] = []
     for rd in dirs:
@@ -222,7 +228,7 @@ def _run_line(
         parts.append(f"derived from {cfg.derived_from}")
     if cfg.run_kind == "measurement":
         settings = ", ".join(
-            f"{k}={as_stored(cfg.config[k]) if k in cfg.config else 'absent'}"
+            f"{k}={as_stored(cfg.config[k]) if k in cfg.config else ABSENT}"
             for k in varying
         )
         parts.append(
