@@ -970,6 +970,26 @@ def affected_protocols(
     return [p for area in sorted(areas) for p in indexed if p.parent == area]
 
 
+def touched_protocols(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
+    """Every protocol the state PATHS change reaches, each once: those of
+    the areas PATHS touch (`affected_protocols`), those whose head
+    registers a path among them as their report
+    (`report_hold.registering_protocols`), and those whose first
+    measurements did (`formerly_registering`) — the index's when STAGED,
+    the tree's otherwise. The one reader for the gate (`if_reported`) and
+    for the step printed beside its hold (`next_step.steps_for`): read
+    apart, a protocol the index held and the tree had deleted was held
+    with no step beside it (workflow check 2026-11-05, finding iv)."""
+    protocols = affected_protocols(paths, repo, staged=staged)
+    for p in [
+        *registering_protocols(paths, repo, staged=staged),
+        *formerly_registering(paths, repo, staged=staged),
+    ]:
+        if p not in protocols:
+            protocols.append(p)
+    return protocols
+
+
 def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     """`report-check` for every protocol of an area one of PATHS touches
     whose head declares a result, and for every report among PATHS
@@ -995,13 +1015,7 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     of it reaches the protocol that owes it its result
     (`report_hold.report_owed`, through `hold_declared`). Returns the worst
     exit code."""
-    protocols = affected_protocols(paths, repo, staged=staged)
-    for p in [
-        *registering_protocols(paths, repo, staged=staged),
-        *formerly_registering(paths, repo, staged=staged),
-    ]:
-        if p not in protocols:
-            protocols.append(p)
+    protocols = touched_protocols(paths, repo, staged=staged)
     reports = report_files(paths, repo, staged=staged)
     reached = reached_reports(protocols, reports, repo, staged=staged)
     held = {p for p, _ in reports} | {p for p, _, _ in reached}

@@ -824,3 +824,43 @@ class TwoProtocols(unittest.TestCase):
                 rc = adopt.main(shlex.split(line.group(1))[1:])
         self.assertNotIn("name one with --protocol", out.getvalue())
         self.assertEqual(rc, 0, out.getvalue())
+
+
+class ProtocolInTheIndexOnly(unittest.TestCase):
+    """The commit holds the index: a protocol the index holds and the tree
+    has deleted is held by the commit's gate, and the step printed beside
+    the hold is read from the same protocols (`report_check.touched_protocols`).
+    `steps_for` counted the tree's protocols and printed no step for the
+    hold (workflow check 2026-11-05, finding iv)."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, "analysis", run_id)
+        rc, out = self.lab.adopt(self.protocol, run_id)
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("adopted")
+        self.script = self.area / "scripts" / "01_measure.py"
+        with self.script.open("a", encoding="utf-8") as f:
+            f.write("\n# a staged change of the area's code\n")
+        self.lab.git("add", "--", str(self.script))
+        self.protocol.unlink()
+
+    def test_the_commit_gate_holds_and_prints_the_step_of_the_indexed_protocol(self):
+        from labkit.gates import agent_hooks
+
+        with contextlib.chdir(self.lab.root):
+            staged = next_step.steps_for(self.lab.root, [self.script], staged=True)
+            self.assertEqual(len(staged), 1, staged)
+            self.assertIn("the working tree differs from the index", staged[0])
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = agent_hooks.commit_gates([])
+            self.assertEqual(rc, 1, out.getvalue())
+            self.assertIn(staged[0], out.getvalue())
+            # the twin: the tree holds no protocol, so the tree names no step
+            self.assertEqual(
+                next_step.steps_for(self.lab.root, [self.script], staged=False), []
+            )

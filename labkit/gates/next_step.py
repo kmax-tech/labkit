@@ -83,7 +83,6 @@ from labkit.formats.repo import (
     MEASURE,
     RESTORE,
     adopt_command,
-    area_protocols,
     audit_command,
     decide_command,
     layout_root,
@@ -241,40 +240,34 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
 
 
 def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
-    """Per protocol of every area PATHS touch (`scope_sha.areas_touched`,
-    and the area of a protocol registering one of PATHS as its report),
-    `labkit-next`'s step for the state the caller judges — the index when
-    STAGED (the commit's gates), else the tree (the stop) — as the console
-    prints it (`Step.render`): the one action the stop, the commit's
-    undecided gate and report-check's hook entry name beside what they
-    hold; none composes a step of its own. A head that does not read, or a
-    protocol the index does not hold, is told in one line in the step's
-    place; a run index that does not read once per index."""
-    from labkit.formats.scope_sha import areas_touched
-    from labkit.gates.report_hold import registering_protocols
+    """Per protocol the state PATHS change reaches
+    (`report_check.touched_protocols`: the protocols of the areas touched
+    and those registering one of PATHS as their report, as the index holds
+    them when STAGED, else the tree), `labkit-next`'s step for the state
+    the caller judges — the index when STAGED (the commit's gates), else
+    the tree (the stop) — as the console prints it (`Step.render`): the
+    one action the stop, the commit's undecided gate and report-check's
+    hook entry name beside what they hold; none composes a step of its
+    own. A head that does not read, or a protocol the index does not hold,
+    is told in one line in the step's place; a run index that does not
+    read once per index."""
+    from labkit.gates.report_check import touched_protocols
     from labkit.run.runlog import RunIndexError
 
-    # the areas the paths lie in, and the area of every protocol whose head
-    # registers a path among them as its report (a REPORT.md at the root
-    # lies in no area; report-check's hook entry reaches it the same way)
-    areas = [a.resolve() for a in areas_touched(paths, repo)]
-    for p in registering_protocols(paths, repo, staged=staged):
-        if p.parent.resolve() not in areas:
-            areas.append(p.parent.resolve())
     out: list[str] = []
-    for area in areas:
+    for protocol in touched_protocols(paths, repo, staged=staged):
+        area = protocol.parent.resolve()
         named = shown(area, Path.cwd())
-        for protocol in area_protocols(area):
-            try:
-                step = next_step(area, protocol, state=INDEX if staged else TREE)
-            except RunIndexError as exc:  # a ValueError too: before it
-                if exc.why not in out:
-                    out.append(exc.why)
-                continue
-            except (protocol_block.BlockError, ValueError) as exc:
-                out.append(f"{named}: {protocol.name}: {exc}")
-                continue
-            out.append(step.render(named))
+        try:
+            step = next_step(area, protocol, state=INDEX if staged else TREE)
+        except RunIndexError as exc:  # a ValueError too: before it
+            if exc.why not in out:
+                out.append(exc.why)
+            continue
+        except (protocol_block.BlockError, ValueError) as exc:
+            out.append(f"{named}: {protocol.name}: {exc}")
+            continue
+        out.append(step.render(named))
     return out
 
 
