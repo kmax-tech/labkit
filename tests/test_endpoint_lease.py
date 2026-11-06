@@ -74,11 +74,22 @@ class TestEndpointLease(unittest.TestCase):
         The lease deliberately never blocks its OWN process: a script that
         runs the generator stage and then the judge stage is exactly the
         staggering the rule wants, and it holds two aliases in one pid.
+
+        The process runs a script file and is recorded by that name, as a
+        run is (`runs.is_alive` matches the script on the command line). The
+        interpreter's own name does not serve: a macOS framework Python
+        re-executes itself as `.../Python.app/Contents/MacOS/Python` within
+        some 50 ms, after which `python` no longer matches and the lease
+        reads as dead.
         """
-        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        scripts = tempfile.TemporaryDirectory()
+        self.addCleanup(scripts.cleanup)
+        holder = Path(scripts.name) / "lease_holder_probe.py"
+        holder.write_text("import time\ntime.sleep(30)\n", encoding="utf-8")
+        proc = subprocess.Popen([sys.executable, str(holder)])
         self.addCleanup(proc.wait)
         self.addCleanup(proc.kill)
-        return proc.pid, Path(sys.executable).name
+        return proc.pid, holder.name
 
     # -- the rule ---------------------------------------------------------
     def test_free_endpoint_is_leased(self):
