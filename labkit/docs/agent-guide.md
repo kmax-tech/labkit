@@ -329,8 +329,12 @@ names this section; the ways out, one per cause:
   registration says (the auditor's `implementation`; never a limitation). If the protocol has adopted a result, withdraw it
   first: `protocol-fill <PROTOCOL> --withdraw --why "<why>"`. Fix the code
   and decide `fixed`, naming the change. Measure again under the unchanged
-  registration, and audit the new run. Example: if the code uses an
+  registration, and audit the new run; repeat what the repair owes until
+  the follow-up finds it resolved. Example: if the code uses an
   excluded feature, remove it from the code, not from the exclusion rule.
+  If the repair is not possible, hand the protocol over with the reason
+  (**none of these**, below). The values measured so far may stay visible
+  in a discussion block (`--discuss`), never as a result.
 - **an unsettled suspicion** — The auditor suspects a fault but could
   not tell from what it was shown (its `undetermined`; never a
   limitation). The finding names the missing information and ends in
