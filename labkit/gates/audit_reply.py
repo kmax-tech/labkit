@@ -49,7 +49,8 @@ CLARITY_VERDICT = re.compile(
 )
 #: a line that opens as a fix verdict — read whole or refused, never skipped
 FIX_OPEN = re.compile(LEAD + r"\**FIX\**\s*" + SEP, re.M)
-#: a fix verdict line: `FIX · <record>#<n> · <verdict> · <why>`
+#: a fix verdict line: `FIX · <record>#<n> · <verdict> · <why>`, on an
+#: undetermined finding found unresolved `… · unresolved · <subject> · <why>`
 FIX = re.compile(
     LEAD
     + r"\**FIX\**\s*"
@@ -58,6 +59,11 @@ FIX = re.compile(
     + SEP
     + r"\s*`?(?P<verdict>[a-z_]+)`?\s*"
     + SEP
+    + r"(?:\s*`?(?P<subject>"
+    + "|".join(findings.SETTLED_SUBJECTS)
+    + r")`?\s*"
+    + SEP
+    + r")?"
     + r"\s*(?P<why>\S.*)$"
 )
 
@@ -72,12 +78,15 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
     five lines, the record held the first). Raises AuditError on a FIX line
     that does not read whole, a block that also names another shown
     finding, a finding the prompt did not show, a verdict outside
-    `findings.FIX_VERDICTS`, and a second verdict on one finding: none of
-    them may release a repair, and a guess at what was meant would. A
-    shown finding without a line gets no verdict — unchecked, never
-    resolved. Each verdict carries the finding's required check and
-    whether its key stood in the metrics shown (`Followup.check_present`);
-    a `resolved` on a missing key is kept as the auditor wrote it."""
+    `findings.FIX_VERDICTS`, a second verdict on one finding, and a verdict
+    an undetermined finding does not allow (`findings.
+    undetermined_fix_problem`): none of them may release a repair, and
+    a guess at what was meant would. A shown finding without a line gets no
+    verdict — unchecked, never resolved. Each verdict carries the finding's
+    required check and whether its key stood in the metrics shown
+    (`Followup.check_present`), and the subject an `unresolved` line names;
+    on a finding not undetermined, a `resolved` on a missing key is kept as
+    the auditor wrote it."""
     m = list(VERDICT.finditer(text or ""))
     lines = ((text or "")[: m[-1].start()] if m else (text or "")).splitlines()
     shown = {e.ref: e for e in earlier_repairs.entries}
@@ -89,7 +98,9 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
         if f is None:
             raise AuditError(
                 f"a FIX line that does not read: {line.strip()[:160]!r} — the form "
-                f"is `FIX · <record>#<n> · resolved|unresolved|not_assessable · <why>`",
+                f"is `FIX · <record>#<n> · resolved|unresolved|not_assessable · <why>`, "
+                f"on an undetermined finding found unresolved `FIX · <record>#<n> · "
+                f"unresolved · implementation|statement · <why>`",
                 fix=ANSWER_AGAIN,
             )
         ref = f"{f['record']}#{f['n']}"
@@ -109,17 +120,20 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
                 f"per finding, separated by a blank line",
                 fix=ANSWER_AGAIN,
             )
-        out.append(
-            findings.FixVerdict(
-                e.record.path.name,
-                e.n,
-                findings.decision_digest(e.finding),
-                f["verdict"],
-                "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
-                e.finding.check,
-                earlier_repairs.check_present(e),
-            )
+        verdict = findings.FixVerdict(
+            e.record.path.name,
+            e.n,
+            findings.decision_digest(e.finding),
+            f["verdict"],
+            "\n".join([f["why"].strip(), *(x.strip() for x in more)]),
+            e.finding.check,
+            earlier_repairs.check_present(e),
+            f["subject"] or "",
         )
+        problem = findings.undetermined_fix_problem(e.finding, verdict)
+        if problem:
+            raise AuditError(problem, fix=ANSWER_AGAIN)
+        out.append(verdict)
     problem = findings.fix_verdict_problem(out)
     if problem:
         raise AuditError(problem, fix=ANSWER_AGAIN)

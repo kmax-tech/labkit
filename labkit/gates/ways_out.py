@@ -99,6 +99,15 @@ WAYS_OUT = (
         "measure again under the unchanged registration, audit the new run",
     ),
     (
+        "an unsettled suspicion",
+        "the auditor suspects a fault but could not tell from what it was shown "
+        "(its `undetermined`; never a limitation): make the measuring code write "
+        "the check the finding names, decide `fixed` naming the check, measure "
+        "again under the unchanged registration, audit the new run — the "
+        "follow-up judges the check's value: `resolved` clears the suspicion, "
+        "`unresolved` carries the fault as what it turned out to be",
+    ),
+    (
         "a missed criterion",
         "the code does what it says and the criterion is missed: that is the "
         "result — report the miss first (LAB-042 Log the outcome — failures "

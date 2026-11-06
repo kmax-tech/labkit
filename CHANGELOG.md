@@ -43,6 +43,21 @@ pins (`requirements.txt` / `requirements.lock`).
   or earlier reads, its findings without a subject, and decides as before.
   `findings.LEAD` and `findings.SEP`, the answer-line grammar, moved from
   `audit_reply`.
+- **A suspicion the auditor cannot settle is its own subject,
+  `undetermined`.** Until now the auditor was told to write
+  `implementation` when it could not tell, so the uncertainty was
+  invisible in the record. An `undetermined` finding is a BLOCKER that
+  names the missing information and closes with the check that settles it
+  and what its value must show (`· check: <key> — <confirms if …, clears
+  if …>`); `labkit-audit` refuses one without both, or of another grade.
+  `limitation` is refused for it; `fixed` means the check is written and
+  measured. The follow-up judges the value: `resolved` only with the check
+  shown, `not_assessable` only while it is missing, and `unresolved` —
+  with the check shown, or missing when the fault is plain from other
+  evidence — names what the fault turned out to be — `FIX · <record>#<n> · unresolved ·
+  implementation|statement · <why>`, stored as `subject` in the
+  `[[fix_verdict]]` table — which the carried finding takes. A subject on
+  any other FIX line is refused. New way out: "an unsettled suspicion".
 
 ## 0.112.0 — 2026-11-06
 

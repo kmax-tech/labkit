@@ -456,8 +456,8 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
     of that finding leaves after the restore. A `statement` finding takes the
     decision `findings.decision_after_restore` gives — or `fixed` for a
     correction a follow-up audit's `resolved` releases; an `implementation`
-    finding is repaired in code or data, and `--findings` prints its ways
-    out. One sentence, for the first such finding in record order that has
+    finding is repaired in code or data, an `undetermined` one waits for
+    the check it names, and `--findings` prints the ways out of either. One sentence, for the first such finding in record order that has
     one; a finding of a record that names no subject gets none and is
     passed over: no decision follows from the place alone. "" otherwise, or when the
     records do not read (the undecided row says so). An agent between the
@@ -480,6 +480,13 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
                 f"{named} as an implementation finding — the restore leaves the "
                 f"code or data to repair and measure anew: `{ways}` prints its "
                 "ways out"
+            )
+        if u.finding.subject == findings.UNDETERMINED:
+            ways = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
+            return (
+                f"{named} as an undetermined finding — the restore leaves the "
+                f"check it names to write and measure, the follow-up judges its "
+                f"value: `{ways}` prints its ways out"
             )
         decision = findings.decision_after_restore(u.finding)
         if decision is None:

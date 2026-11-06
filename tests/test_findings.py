@@ -728,6 +728,130 @@ class Subject(unittest.TestCase):
             findings.read(path)
 
 
+class Undetermined(unittest.TestCase):
+    """A suspicion the auditor cannot settle from what it was shown is its
+    own subject, `undetermined`: a BLOCKER that names the check settling it
+    and what its value must show, never decided `limitation`, and judged by
+    the follow-up on the check's value (decided 2026-11-06)."""
+
+    LINE = (
+        "BLOCKER · a.py:1 · undetermined · the denominator may count generated "
+        "rows; the rows are not inlined · y · new class · z · check: "
+        "denominator_source — confirms if it names the generated rows, clears "
+        "if it names the gold file"
+    )
+
+    def record(self) -> Path:
+        area = area_with([("analysis", [("BLOCKER", self.LINE)])])
+        return next((area / "audits").glob("*.toml"))
+
+    def test_it_is_written_with_its_check_and_note(self):
+        (f,) = findings.read(self.record()).findings
+        self.assertEqual(
+            (f.subject, f.check, f.check_note),
+            (
+                "undetermined",
+                "denominator_source",
+                "confirms if it names the generated rows, clears if it names the gold file",
+            ),
+        )
+
+    def test_without_its_check_its_note_or_as_a_warning_it_is_no_record(self):
+        bare = self.LINE.split(" · check:")[0]
+        for grade, line, says in (
+            ("BLOCKER", bare, "closes with the check"),
+            ("BLOCKER", bare + " · check: denominator_source", "closes with the check"),
+            ("WARNING", self.LINE.replace("BLOCKER", "WARNING", 1), "is a BLOCKER"),
+        ):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(ValueError, says):
+                    area_with([("analysis", [(grade, line)])])
+
+    def test_a_record_that_lost_the_note_does_not_read(self):
+        path = self.record()
+        text = path.read_text(encoding="utf-8")
+        start = text.index("check_note = ")
+        path.write_text(
+            text[:start] + text[text.index("\n", start) + 1 :], encoding="utf-8"
+        )
+        with self.assertRaisesRegex(findings.FindingsError, "closes with the check"):
+            findings.read(path)
+
+    def test_limitation_is_refused_and_fixed_means_the_check_is_built(self):
+        path = self.record()
+        with self.assertRaisesRegex(
+            findings.FindingsError, "an undetermined finding is no limitation"
+        ):
+            findings.write_decision(path, 1, "limitation", "may count rows", "stands")
+        (f,) = findings.read(path).findings
+        self.assertEqual(findings.allowed_decisions(f), ("fixed", "false-positive"))
+        self.assertIsNone(findings.decision_after_restore(f))
+        after = findings.write_decision(path, 1, "fixed", "writes denominator_source")
+        self.assertEqual(after.findings[0].subject, "undetermined")
+
+
+class UndeterminedVerdict(unittest.TestCase):
+    """What a follow-up may say about an undetermined finding, by whether
+    its check was shown (`findings.undetermined_fix_problem`): the value
+    decides once shown, and nothing else is reclassified."""
+
+    def judged(self, subject: str) -> findings.Finding:
+        return findings.Finding(
+            "BLOCKER", "x", "fixed", "", "", "k", "confirms if …", "", subject
+        )
+
+    def verdict(self, word: str, shown: bool, subject: str = "") -> findings.FixVerdict:
+        return findings.FixVerdict("r.toml", 1, "s", word, "why", "k", shown, subject)
+
+    def test_the_value_shown_decides(self):
+        u = self.judged(findings.UNDETERMINED)
+        for word, is_shown, subject, says in (
+            ("resolved", True, "", None),
+            ("unresolved", True, "implementation", None),
+            ("unresolved", True, "statement", None),
+            ("unresolved", False, "implementation", None),
+            ("not_assessable", False, "", None),
+            ("resolved", False, "", "needs its check `k` shown"),
+            ("not_assessable", True, "", "its check `k` is shown"),
+            ("unresolved", True, "", "names what the fault turned out to be"),
+        ):
+            with self.subTest(word=word, shown=is_shown, subject=subject):
+                problem = findings.undetermined_fix_problem(
+                    u, self.verdict(word, is_shown, subject)
+                )
+                if says is None:
+                    self.assertIsNone(problem)
+                else:
+                    self.assertIn(says, problem or "")
+
+    def test_the_twin_other_findings_keep_their_verdicts_and_subject(self):
+        for subject in (findings.IMPLEMENTATION, findings.STATEMENT, ""):
+            f = self.judged(subject)
+            self.assertIsNone(
+                findings.undetermined_fix_problem(f, self.verdict("resolved", False))
+            )
+            self.assertIn(
+                "only on an `unresolved` verdict on an undetermined finding",
+                findings.undetermined_fix_problem(
+                    f, self.verdict("unresolved", True, "implementation")
+                )
+                or "",
+            )
+
+    def test_the_record_holds_the_subject_only_on_unresolved(self):
+        self.assertIsNone(
+            findings.fix_verdict_problem(
+                [self.verdict("unresolved", True, "statement")]
+            )
+        )
+        for v in (
+            self.verdict("resolved", True, "statement"),
+            self.verdict("unresolved", True, "undetermined"),
+        ):
+            with self.subTest(v=v):
+                self.assertIn("subject", findings.fix_verdict_problem([v]) or "")
+
+
 class DecideCommand(unittest.TestCase):
     """`labkit-audit AREA --decide N STATUS REASON` writes the newest record
     of the area, or the one `--record` names."""

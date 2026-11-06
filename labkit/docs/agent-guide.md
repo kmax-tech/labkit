@@ -219,13 +219,14 @@ Before you report any result, run `finalize <area>`, then `labkit-audit
 
 READ lines are hints, not findings to decide. The third field of each
 finding is what it is about, the auditor's subject: `implementation` (code, data handling or
-run depart from the registration) or `statement` (the run is right; the
-finding is about what the text says). `--decide` refuses `limitation` for
-an `implementation` finding.
+run depart from the registration), `statement` (the run is right; the
+finding is about what the text says) or `undetermined` (a suspicion the
+auditor could not settle; its check settles it). `--decide` refuses
+`limitation` for an `implementation` and an `undetermined` finding.
 
 | status | what follows |
 |---|---|
-| `fixed` | The next analysis audit judges the repair. Until it finds the fault resolved, the number is held. |
+| `fixed` | The next analysis audit judges the repair. Until it finds the fault resolved, the number is held. For an `undetermined` finding: its check is written and measured. |
 | `limitation` | `statement` findings only. The number carries a Limitation line. The verdict holds within the limit. A second auditor must uphold a BLOCKER. |
 | `false-positive` | A BLOCKER needs a second auditor (`labkit-audit <area> --review --record <record>`) before the number leaves. A WARNING does not. |
 
@@ -330,6 +331,15 @@ names this section; the ways out, one per cause:
   and decide `fixed`, naming the change. Measure again under the unchanged
   registration, and audit the new run. Example: if the code uses an
   excluded feature, remove it from the code, not from the exclusion rule.
+- **an unsettled suspicion** — The auditor suspects a fault but could
+  not tell from what it was shown (its `undetermined`; never a
+  limitation). The finding names the missing information and ends in
+  `check: <key> — <what its value must show>`. Make the measuring code
+  write that check, decide `fixed` naming the check, measure again under
+  the unchanged registration, and audit the new run. The follow-up judges
+  the value: `resolved` clears the suspicion; `unresolved` carries the
+  finding on as an `implementation` or `statement` fault, decided like any
+  other.
 - **a missed criterion** — That is the result. Report the miss first.
   Example: held-out performance is below the registered margin. Lowering
   the margin is not a repair.

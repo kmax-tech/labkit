@@ -169,14 +169,25 @@ _FIELD_SEP = re.compile(r"\s+[·—–]\s+")
 #: `statement`: the run does what it should, and the finding is about what
 #: the registered text, the result or the report says — a limit of the
 #: claim (`limitation`) or a description corrected in place (`fixed`).
+#: `undetermined`: a concrete suspicion of a fault the auditor cannot settle
+#: from what it was shown — the finding requires the check that settles it
+#: and says what its value must show (`undetermined_finding_problem`); `limitation`
+#: is refused, and the follow-up settles it on the check's value
+#: (`undetermined_fix_problem`).
 IMPLEMENTATION = "implementation"
 STATEMENT = "statement"
-SUBJECTS = (IMPLEMENTATION, STATEMENT)
+UNDETERMINED = "undetermined"
+SUBJECTS = (IMPLEMENTATION, STATEMENT, UNDETERMINED)
+#: what a follow-up names for the fault it found in an undetermined finding
+SETTLED_SUBJECTS = (IMPLEMENTATION, STATEMENT)
 SUBJECT_FORM = (
     f"the third field of the finding line names its subject: `{IMPLEMENTATION}` "
     f"(the code, the data handling or the run departs from the registration "
-    f"or a correct measurement) or `{STATEMENT}` (the run is right; the finding "
-    f"is about what the registered text, the result or the report says)"
+    f"or a correct measurement), `{STATEMENT}` (the run is right; the finding "
+    f"is about what the registered text, the result or the report says) or "
+    f"`{UNDETERMINED}` (a concrete suspicion what is shown cannot settle; the "
+    f"finding names the missing information and closes with the check that "
+    f"settles it and what its value must show)"
 )
 MODES = (PREFLIGHT_AUDIT, ANALYSIS_AUDIT)
 #: what an analysis record names as its run when no completed run was
@@ -285,6 +296,10 @@ class FixVerdict:
     # is the measure, the missing key the gap.
     check: str = ""
     check_present: bool | None = None
+    # for an undetermined finding found `unresolved`: what the fault turned
+    # out to be (SETTLED_SUBJECTS), the subject its carried finding takes;
+    # "" on every other verdict
+    subject: str = ""
 
     @property
     def ref(self) -> str:
@@ -379,9 +394,20 @@ def subject_refusal(f: Finding, status: str) -> str | None:
     a limit line does not change that (a registered 200-permutation check
     run as one null draw, docs/notes/2026-11-04-one-explainer-plan.md). A
     finding of a record written before subjects were read ("") is held to
-    nothing here."""
-    if status != "limitation" or f.subject != IMPLEMENTATION:
+    nothing here. Nor is an `undetermined` one: a limit line does not settle
+    a suspicion — its check runs, the person decides `fixed` (the check
+    built and run), and the follow-up judges the value."""
+    if status != "limitation" or f.subject not in (IMPLEMENTATION, UNDETERMINED):
         return None
+    if f.subject == UNDETERMINED:
+        return (
+            "an undetermined finding is no limitation: a limit line does not "
+            "settle the suspicion — make the measuring code write the check the "
+            "finding names, measure anew, then decide `fixed` naming the check; "
+            "the follow-up audit judges its value. `false-positive` when the "
+            "auditor misread; or end the protocol without a result by a handover "
+            "(`protocol-fill <PROTOCOL> --handover`), where the finding stays open"
+        )
     return (
         "an implementation finding is no limitation: the code, the data "
         "handling or the run departs from the registration — repair it and "
@@ -397,15 +423,79 @@ def allowed_decisions(f: Finding) -> tuple[str, ...]:
     return tuple(s for s in DECIDED if subject_refusal(f, s) is None)
 
 
+def undetermined_finding_problem(
+    grade: str, subject: str, check: str, note: str
+) -> str | None:
+    """Why a finding of GRADE and SUBJECT with the required CHECK and its
+    NOTE cannot stand, or None: an `undetermined` finding is a BLOCKER — the
+    follow-up judges earlier BLOCKERs only, and a suspicion no one judges is
+    never settled — and names the check that settles it and, after the key,
+    what its value must show. One rule for the writer and the reader."""
+    if subject != UNDETERMINED:
+        return None
+    if grade != "BLOCKER":
+        return (
+            f"an {UNDETERMINED} finding is a BLOCKER, not a {grade}: only a "
+            f"BLOCKER's check is judged by the follow-up"
+        )
+    if check and note:
+        return None
+    return (
+        f"an {UNDETERMINED} finding closes with the check that settles it and "
+        f"what its value must show — {CHECK_FORM}, the note required"
+    )
+
+
+def undetermined_fix_problem(judged: Finding, v: FixVerdict) -> str | None:
+    """Why the follow-up verdict V cannot stand on the earlier finding
+    JUDGED, by JUDGED's subject, or None. On an `undetermined` finding the
+    check's value decides: `resolved` only with the check shown (the
+    suspicion is cleared by its value, not by the auditor's word);
+    `not_assessable` only while it is missing (shown, it settles the
+    suspicion one way or the other, so an unclear finding cannot be carried
+    unclear for ever); `unresolved` names what the fault turned out to be
+    (SETTLED_SUBJECTS), which its carried finding takes — with the check
+    shown or missing, when the fault is plain from other evidence. A
+    subject on a verdict on another finding is refused: nothing else is
+    reclassified by a follow-up; a subject on a verdict other than
+    `unresolved` is `fix_verdict_problem`'s."""
+    if judged.subject != UNDETERMINED:
+        if v.subject:
+            return (
+                f"fix verdict on {v.ref}: a subject ({v.subject!r}) only on an "
+                f"`unresolved` verdict on an {UNDETERMINED} finding"
+            )
+        return None
+    if v.verdict == "resolved" and not v.check_present:
+        return (
+            f"fix verdict on {v.ref}: `resolved` on an {UNDETERMINED} finding "
+            f"needs its check `{judged.check}` shown — without its value the "
+            f"suspicion is not cleared; `not_assessable` while it is missing"
+        )
+    if v.verdict == "not_assessable" and v.check_present:
+        return (
+            f"fix verdict on {v.ref}: its check `{judged.check}` is shown — on an "
+            f"{UNDETERMINED} finding its value settles the suspicion: `resolved`, "
+            f"or `unresolved` naming what the fault is"
+        )
+    if v.verdict == "unresolved" and v.subject not in SETTLED_SUBJECTS:
+        return (
+            f"fix verdict on {v.ref}: `unresolved` on an {UNDETERMINED} finding "
+            f"names what the fault turned out to be — `FIX · {v.ref} · unresolved "
+            f"· {IMPLEMENTATION}|{STATEMENT} · <why>`"
+        )
+    return None
+
+
 def decision_after_restore(f: Finding) -> tuple[str, str] | None:
     """(status, the reason left for the person) F takes when its place is a
     registered protocol field and the field is restored as registered:
     `limitation` for a `statement` finding — the registered text stands,
     and what the finding names is a limit of the claim; None for an
-    implementation finding, which is
-    repaired in code or data and measured anew (`subject_refusal`), and for
-    one of a record that names no subject — no decision follows from the place
-    alone."""
+    implementation finding, which is repaired in code or data and measured
+    anew, for an undetermined one, whose check runs first
+    (`subject_refusal`), and for one of a record that names no subject — no
+    decision follows from the place alone."""
     if f.subject != STATEMENT:
         return None
     return (
@@ -997,6 +1087,9 @@ def write(
         if grade not in GRADES:
             raise ValueError(f"grade {grade!r} — one of {', '.join(GRADES)}")
         subject = subject_of(text)
+        problem = undetermined_finding_problem(grade, subject, check, note)
+        if problem:
+            raise ValueError(f"{problem}: {text.splitlines()[0][:160]!r}")
         lines += [
             "",
             "[[finding]]",
@@ -1072,15 +1165,18 @@ def _fix_verdict_lines(mode: str, verdicts: Iterable[FixVerdict]) -> list[str]:
                 if v.check
                 else []
             ),
+            *([f"subject = {_s(v.subject)}"] if v.subject else []),
         ]
     return lines
 
 
 def fix_verdict_problem(verdicts: Iterable[FixVerdict]) -> str | None:
     """Why VERDICTS cannot stand in one record, or None: a verdict outside
-    FIX_VERDICTS, an empty why, a number below 1, or two verdicts on one
-    finding — which of two would count is no question a gate should answer.
-    One rule for the writer and the reader."""
+    FIX_VERDICTS, an empty why, a number below 1, two verdicts on one
+    finding — which of two would count is no question a gate should answer
+    —, or a subject outside SETTLED_SUBJECTS or on a verdict other than
+    `unresolved`. One rule for the writer and the reader; what the subject
+    may be for the finding judged is `undetermined_fix_problem`'s."""
     seen: set[str] = set()
     for v in verdicts:
         if v.verdict not in FIX_VERDICTS:
@@ -1095,6 +1191,13 @@ def fix_verdict_problem(verdicts: Iterable[FixVerdict]) -> str | None:
             return (
                 f"fix verdict on {v.ref}: check {v.check!r} with check_present "
                 f"{v.check_present!r} — a required check names whether its key was shown"
+            )
+        if v.subject and (
+            v.verdict != "unresolved" or v.subject not in SETTLED_SUBJECTS
+        ):
+            return (
+                f"fix verdict on {v.ref}: subject {v.subject!r} — one of "
+                f"{', '.join(SETTLED_SUBJECTS)}, and only on an `unresolved` verdict"
             )
         seen.add(v.ref)
     return None
@@ -1246,6 +1349,9 @@ def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str]:
         raise FindingsError(
             f"{path}: finding {i}: subject {subject!r} — one of {', '.join(SUBJECTS)}, or absent"
         )
+    problem = undetermined_finding_problem(row["grade"], subject, check, note)
+    if problem:
+        raise FindingsError(f"{path}: finding {i}: {problem}")
     return check, note, subject
 
 
@@ -1313,6 +1419,7 @@ def _record_of(path: Path, text: str) -> Record:
 
 _FIX_VERDICT_KEYS = {"record", "n", "decision_sha", "verdict", "why"}
 _FIX_CHECK_KEYS = {"check", "check_present"}
+_FIX_SUBJECT_KEY = {"subject"}
 
 
 def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
@@ -1322,14 +1429,15 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
         raise FindingsError(f"{path}: `fix_verdict` must be [[fix_verdict]] tables")
     out: list[FixVerdict] = []
     for i, row in enumerate(rows, start=1):
-        if not isinstance(row, dict) or set(row) not in (
+        if not isinstance(row, dict) or set(row) - _FIX_SUBJECT_KEY not in (
             _FIX_VERDICT_KEYS,
             _FIX_VERDICT_KEYS | _FIX_CHECK_KEYS,
         ):
             raise FindingsError(
                 f"{path}: fix_verdict {i}: the fields are exactly "
-                f"{', '.join(sorted(_FIX_VERDICT_KEYS))}, and with a required "
-                f"check also {', '.join(sorted(_FIX_CHECK_KEYS))}"
+                f"{', '.join(sorted(_FIX_VERDICT_KEYS))}, with a required "
+                f"check also {', '.join(sorted(_FIX_CHECK_KEYS))}, and on a "
+                f"settled undetermined finding also subject"
             )
         check, present = row.get("check", ""), row.get("check_present")
         if not isinstance(check, str) or not (
@@ -1344,6 +1452,9 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
         for key in ("record", "decision_sha", "verdict", "why"):
             if not isinstance(row[key], str):
                 raise FindingsError(f"{path}: fix_verdict {i}: {key} is not a string")
+        subject = row.get("subject", "")
+        if not isinstance(subject, str):
+            raise FindingsError(f"{path}: fix_verdict {i}: subject is not a string")
         out.append(
             FixVerdict(
                 row["record"],
@@ -1353,6 +1464,7 @@ def _fix_verdicts(path: Path, rows: object) -> tuple[FixVerdict, ...]:
                 row["why"],
                 check,
                 present,
+                subject,
             )
         )
     problem = fix_verdict_problem(out)

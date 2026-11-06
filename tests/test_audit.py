@@ -1755,6 +1755,58 @@ class RequiredCheck(unittest.TestCase):
         (record,) = self.fv.new_records(area, earlier)
         self.assertNotIn("check_present", record.path.read_text(encoding="utf-8"))
 
+    def test_an_undetermined_finding_is_settled_by_its_checks_value(self):
+        """The follow-up on an undetermined finding: with the check shown,
+        `unresolved` names what the fault turned out to be and the carried
+        finding takes that subject, `resolved` clears it; with the check
+        missing, `not_assessable` carries it undetermined. Every other
+        combination records nothing (decided 2026-11-06)."""
+        line = (
+            FixVerdicts.LEAK.replace("· statement ·", "· undetermined ·")
+            + " · check: feature_sources — confirms if poisson_ratio is listed"
+        )
+        shown = {
+            "criterion_1_pass": True,
+            "feature_sources": {"poisson_ratio": "column"},
+        }
+        for metrics, answer, carried in (
+            (
+                shown,
+                "unresolved · implementation · poisson_ratio still read",
+                "implementation",
+            ),
+            (shown, "resolved · only G_VRH listed", None),
+            (
+                {"criterion_1_pass": True},
+                "not_assessable · the check is missing",
+                "undetermined",
+            ),
+        ):
+            with self.subTest(answer=answer):
+                area, earlier = self.fv.area(line)
+                self.with_metrics(area, metrics)
+                text = f"FIX · {earlier.name}#1 · {answer}\n\n{CLEAN}"
+                rc, _, err, _ = self.fv.audit(area, text)
+                self.assertEqual(rc, 0 if carried is None else 1, err)
+                (record,) = self.fv.new_records(area, earlier)
+                self.assertEqual(
+                    [f.subject for f in record.findings],
+                    [] if carried is None else [carried],
+                )
+        for metrics, answer, says in (
+            (shown, "not_assessable · cannot tell", "is shown"),
+            (shown, "unresolved · poisson_ratio still read", "names what the fault"),
+            ({"criterion_1_pass": True}, "resolved · fine now", "needs its check"),
+        ):
+            with self.subTest(answer=answer):
+                area, earlier = self.fv.area(line)
+                self.with_metrics(area, metrics)
+                text = f"FIX · {earlier.name}#1 · {answer}\n\n{CLEAN}"
+                rc, _, err, _ = self.fv.audit(area, text)
+                self.assertEqual(rc, 2, err)
+                self.assertIn(says, err)
+                self.assertEqual(self.fv.new_records(area, earlier), [])
+
     def test_the_check_is_part_of_the_decision_digest(self):
         """A changed or removed check is another decision; a finding without
         one keeps the digest it had before checks existed."""

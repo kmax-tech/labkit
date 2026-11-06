@@ -188,6 +188,15 @@ An entry with a `required check` shows the diagnostic the finding fixed for
 its repair: judge its value. A check marked missing leaves the repair
 `not_assessable`.
 
+An entry whose finding is `undetermined` is settled by its check's value.
+Shown, the value decides: `resolved` when it clears the suspicion, or
+`unresolved` naming what the fault turned out to be in a field of its own
+— `FIX · <record>#<n> · unresolved · implementation|statement · <why>`;
+labkit carries the finding on as that. While the check is missing, write
+`not_assessable` — or `unresolved` with its subject when the fault is plain
+from other evidence you cite; `resolved` without the check's value is
+refused.
+
 The why can go on below the line, as a few lines of evidence. A blank line
 ends the entry, and an entry names no other finding. Judge only from what
 is inlined, and leave no shown finding without its line. A fault still
@@ -256,9 +265,18 @@ fault lies. It decides which decisions the person may take:
   the registered text, the result or the report says: a claim wider than
   what was measured, a field that misdescribes the unchanged run. It may be
   decided `limitation` or corrected in place.
+- `undetermined` — a BLOCKER only: you have a concrete suspicion of a
+  fault, and what you were shown does not settle it: the rows that would show it are not
+  inlined, a value the code computes is written nowhere. Name the
+  information that is missing, and close the finding with the check that
+  supplies it and what its value must show to confirm or clear the
+  suspicion: ` · check: <metrics key> — <confirms if …, clears if …>`
+  (below). labkit refuses an `undetermined` finding without both, and
+  refuses `limitation` for it: a limit line does not settle a suspicion.
 
-A finding with both sides is two findings. When you cannot tell, write
-`implementation`: a limit line does not repair a number.
+A finding with both sides is two findings. Choose `undetermined` only for
+a suspicion a check can settle; a fault you can see is `implementation` or
+`statement`.
 
 A finding on a protocol field names the field by its label as the place —
 `PROTOCOL-<name>.md:Unit`, `PROTOCOL-<name>.md:Data / scope` — not a line

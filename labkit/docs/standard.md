@@ -380,7 +380,13 @@ evidence file under the same ID (top of this document).*
   `implementation` — code, data handling or run depart from the
   registration or a correct measurement — is never decided limitation, it
   is repaired and measured anew; `statement` — the run is right, the
-  finding is about what the text or the result claims — may be. A BLOCKER
+  finding is about what the text or the result claims — may be;
+  `undetermined` — a concrete suspicion that what was shown cannot settle
+  — is never decided limitation either: the finding names the missing
+  information and the check that settles it, with what its value must
+  show; the check is written and measured, and the follow-up judges its
+  value — the suspicion cleared, or the fault carried on as
+  `implementation` or `statement`. A BLOCKER
   or WARNING decided limitation also
   carries its effect on the verdicts — they stand, read within it, or the run
   leaves the named promises not assessable (a number may be reported
