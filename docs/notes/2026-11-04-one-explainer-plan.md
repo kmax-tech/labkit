@@ -1096,6 +1096,28 @@ One round of nine labkit/demand attempts on 0.111.0 (`58aa7ae1`, the run history
 
 [B1] false: C1 5 lies inside the band 5–7, the registered reading is "not shown". The instrument was not the same: the solver took four times as long per turn at the same number of turns and commands, the round 92 machine minutes against 28 and 30, and three of the four failed attempts are time-limit stops that ended inside the closing loop (task 34 r1: the demand never compared, `labkit-adopt` refused twice — a source outside git, a script changed since the run; 34 r2: no report; assay r2: the round's one undisclosed search, five estimators on the same folds, one audit and no review). What the round shows of the change: every report review's bundle carried `RUNS` (the record's fingerprint part) and no review claimed anything from it; the target case reached no review; `reviews_after_run` stayed 0; the burden counters sit inside the before's band or below (fewer reviews, because fewer attempts reached one). Decided (the author, 2026-11-05): repeat the round when the solver is back near area 21's speed, with seconds per turn as a registered admissibility condition (within twice area 21's 5.0, the first wave checked before the rest is counted) — until then the run history is neither shown nor refuted. By-catch for the plan's edges: 6 of 9 attempts ended without an adopted run (2 and 5 before), two sts512 reports were written from a discussed, unadopted run and drew 13 and 14 `result` claims each — the review does its job, and the agent has no step the review names to turn the discussed run into the adopted one.
 
+### Reading of the repeated usage round (2026-11-06, labkit-paper area 23): not shown — below the band, and the failures are the closing loop's
+
+Area 22's design run again at the solver's normal speed, the speed registered as an admissibility condition ([A4]: median seconds per tool call at most 10.0; the first wave read before the rest ran). Evidence: labkit-paper `experiments/23-run-history-in-the-review-lifts-complete-deliveries-rerun`, branch `usage-round-4`, run `2026-11-06T12-45-42_fbe4`.
+
+| | area 21 a | area 21 b | area 22 | area 23 |
+|---|---:|---:|---:|---:|
+| complete deliveries | 7 | 5 | 5 | 2 |
+| failed attempts | 2 | 4 | 4 | 7 |
+| stopped at the time limit | 0 | 0 | 4 | 0 |
+| median minutes | 7.1 | 11.1 | 40.0 | 9.8 |
+| unsupported central claims | 2 | 3 | 1 | 2 |
+| missing deliverables | 0 | 2 | 2 | 6 |
+| adopted runs | 7 | 4 | 3 | 5 |
+| handover-only reports ("no result is reported") | 1 | 1 | 1 | 3 |
+| audit calls | 75 | 85 | 77 | 122 |
+| `limitation` decisions | 19 | 20 | 17 | 36 |
+| report reviews / claims | 18 / 33 | 18 / 102 | 10 / 46 | 20 / 116 |
+| reviews after a new run | 0 | 0 | 0 | 0 |
+| seconds per tool call (median) | 4.8 | 5.3 | 20.8 | 5.5 |
+
+[B1] false, and this time the round is admissible (A1–A4): C1 2 lies below the band 5–7. Where the deliveries failed: all three sts512 attempts ended in a handover whose REPORT.md says "no result is reported" — the adoption was refused (the registration or the promises changed after the first measurement, fix A's hold), the report review named every number of the unadopted run a `result` claim, and the agents rewrote the report until the review named 0 claims, instead of restoring the registration as `next` named (sts512 r2: 6 reviews, 40 claims; r3: 3 reviews, 38 claims; area 21 b's sts512 r1 and r2 met the same claims and kept their numbers); task 34's three reports lack two columns and the RMSSD statement (r1), rest on an uncorrected missed beat (r2, disclosed), or never answer the demand (r3); assay r2 calls 0.8665 < 0.90 "cannot be assessed" (area 21 a r3's pattern). The change itself: `RUNS` stood in all 20 review bundles and no review claimed anything from it — rightly, by the brief, on the round's one search (assay r3: six estimators on the same folds, the registered one kept and reported; decided supported, the author, 2026-11-06); the case the history is for — the best of several models reported undisclosed — did not occur. The burden rose: audit calls 122, `limitation` 36, reviews 20 with 116 claims. One round cannot tell whether the handover pattern (3 of 3 against 1 of 6 in area 21) is 0.111.0's or a draw; the claims per review (5.8) equal area 21 b's (5.7). What follows, by the plan's stop criterion: the run history is not shown; the next candidate is the answer block bound to the registered question — six of the seven failed attempts are reports without the number or the verdict. Before it, the closing loop's pattern is the heavier finding for the chain's edges: a refused adoption plus the review's `result` rule leaves the agent a handover whose numbers the review then strips; `next` names the restore, no agent took it (area 22's sts512 r2 the same).
+
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
 What HEAD cannot compare: a file labkit wrote and the agent edited
