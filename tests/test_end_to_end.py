@@ -740,7 +740,7 @@ class Withdraw(CountCommands):
             f"WARNING: {run_b}: bound to this protocol and newer by name", out
         )
         wrong = (
-            f"BLOCKER · PROTOCOL-lines.md:1 · the head has adopted run {run_a}, "
+            f"BLOCKER · PROTOCOL-lines.md:1 · statement · the head has adopted run {run_a}, "
             f"which the current code no longer measures; run {run_b} answers · "
             f"the reported mean · LAB-050 Analysis audit before reporting · "
             f"declare the run the current code measured\n"
@@ -919,7 +919,7 @@ class Withdraw(CountCommands):
         upholds it releases the adoption."""
         run_a = self.measure()
         rc, out, _ = self.analysis(
-            "BLOCKER · scripts/01_measure.py:1 · hidden files are counted · the mean "
+            "BLOCKER · scripts/01_measure.py:1 · statement · hidden files are counted · the mean "
             "· LAB-050 Analysis audit before reporting · skip them\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
@@ -942,7 +942,7 @@ class Withdraw(CountCommands):
     def test_a_dismissed_warning_owes_no_review(self):
         run_a = self.measure()
         rc, out, _ = self.analysis(
-            "WARNING · scripts/01_measure.py:1 · hidden files might be counted · the "
+            "WARNING · scripts/01_measure.py:1 · statement · hidden files might be counted · the "
             "mean · LAB-050 Analysis audit before reporting · check visible()\n"
             "verdict: 0 blockers, 1 warnings, 0 notes"
         )
@@ -963,7 +963,7 @@ class Withdraw(CountCommands):
         self.assertEqual(rc, 0, out)
         # a later audit finds a fault; its BLOCKER stays open
         rc, out, _ = self.analysis(
-            "BLOCKER · scripts/01_measure.py:1 · hidden files are counted · the mean "
+            "BLOCKER · scripts/01_measure.py:1 · statement · hidden files are counted · the mean "
             "· LAB-050 Analysis audit before reporting · skip them\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
@@ -1021,7 +1021,8 @@ class CorrectionCommands(CountCommands):
         """The analysis audit of run A with one GRADE finding at PLACE."""
         n = (1, 0) if grade == "BLOCKER" else (0, 1)
         rc, out, _ = self.analysis(
-            f"{grade} · PROTOCOL-lines.md:{place} · Data / scope says 4 documents, "
+            f"{grade} · PROTOCOL-lines.md:{place} · statement · Data / scope says 4 "
+            f"documents, "
             f"the run read 3 · the mean's denominator as described · LAB-050 "
             f"Analysis audit before reporting · correct the description\n"
             f"verdict: {n[0]} blockers, {n[1]} warnings, 0 notes"
@@ -1102,7 +1103,7 @@ class CorrectedDescription(CorrectionCommands):
     def audited_question(self) -> Path:
         """The analysis audit of run A with one WARNING on the question."""
         rc, out, _ = self.analysis(
-            "WARNING · PROTOCOL-lines.md:Question / hypothesis · the question asks "
+            "WARNING · PROTOCOL-lines.md:Question / hypothesis · statement · the question asks "
             "for the mean, the documents' lengths are skewed · the mean as asked · "
             "LAB-050 Analysis audit before reporting · ask for the median\n"
             "verdict: 0 blockers, 1 warnings, 0 notes"
@@ -1278,7 +1279,7 @@ class CorrectionThenNewRun(CorrectionCommands):
     RIGHT_TOO = "data/raw/docs, the 3 documents, read directly"
     UNIT_RIGHT = "one text document of data/raw/docs"
     CODE_FINDING = (
-        "BLOCKER · scripts/01_measure.py:1 · rows() keeps a size the protocol "
+        "BLOCKER · scripts/01_measure.py:1 · statement · rows() keeps a size the protocol "
         "does not name · the rows as measured · LAB-050 Analysis audit before "
         "reporting · repair the code, measure again\n"
         "verdict: 1 blockers, 0 warnings, 0 notes"
@@ -1429,10 +1430,10 @@ class CorrectionThenNewRun(CorrectionCommands):
 
     def test_t5_the_twin_two_fields_each_released_pass(self):
         rc, out, _ = self.analysis(
-            "BLOCKER · PROTOCOL-lines.md:Data / scope · Data / scope says 4 "
+            "BLOCKER · PROTOCOL-lines.md:Data / scope · statement · Data / scope says 4 "
             "documents, the run read 3 · the denominator · LAB-050 Analysis audit "
             "before reporting · correct the description\n"
-            "WARNING · PROTOCOL-lines.md:Unit · the Unit does not say the "
+            "WARNING · PROTOCOL-lines.md:Unit · statement · the Unit does not say the "
             "documents are text files · the unit · LAB-050 Analysis audit before "
             "reporting · correct the description\n"
             "verdict: 1 blockers, 1 warnings, 0 notes"
@@ -1464,7 +1465,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         question is held even with a `resolved` on it, and the hold and the
         decision's line name only the way back or a protocol of its own."""
         rc, out, _ = self.analysis(
-            "BLOCKER · PROTOCOL-lines.md:Question / hypothesis · the question "
+            "BLOCKER · PROTOCOL-lines.md:Question / hypothesis · statement · the question "
             "says on average, the run computes the mean · the question · LAB-050 "
             "Analysis audit before reporting · correct the description\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
@@ -1779,7 +1780,7 @@ class Judge(unittest.TestCase):
             scope_sha.area_stamp(self.area)[0],
             promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
             (1, 0, 0),
-            [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · the prompt asks more than the gold scores")],
+            [("BLOCKER", "BLOCKER · scripts/01_measure.py:1 · statement · the prompt asks more than the gold scores")],
             run_id=self.run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
 
@@ -1937,7 +1938,7 @@ class Judge(unittest.TestCase):
             scope_sha.area_stamp(self.area)[0],
             promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
             (0, 1, 0),
-            [("WARNING", "WARNING · data/raw:1 · six connectives separate the classes")],
+            [("WARNING", "WARNING · data/raw:1 · statement · six connectives separate the classes")],
             run_id=self.run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / self.run_id), registration=registration_of(self.area),)  # fmt: skip
         label = f"Limitation (audit {record.stem} #1)"

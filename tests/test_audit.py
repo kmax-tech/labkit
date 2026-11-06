@@ -122,9 +122,9 @@ def run(area: Path, answer: str, *extra: str) -> tuple[int, str, str, list[str]]
 
 
 CLEAN = "verdict: 0 blockers, 0 warnings, 2 notes\nscope:\nscripts/01_measure.py"
-WARN = "WARNING · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 1 warnings, 0 notes"
-BLOCK = "BLOCKER · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 1 blockers, 0 warnings, 0 notes"
-NOTE = "NOTE · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 0 warnings, 1 notes"
+WARN = "WARNING · a.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 1 warnings, 0 notes"
+BLOCK = "BLOCKER · a.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 1 blockers, 0 warnings, 0 notes"
+NOTE = "NOTE · a.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z\nverdict: 0 blockers, 0 warnings, 1 notes"
 
 
 def no_model_call(alias, prompt, **kw):
@@ -613,7 +613,8 @@ class Audit(unittest.TestCase):
         verdict counted two; the record then read as covered (audit
         2026-10-15)."""
         report = (
-            "BLOCKER — a.py:1 — wrong denominator\n**BLOCKER:** b.py:2 · x\n"
+            "BLOCKER — a.py:1 — implementation — wrong denominator\n"
+            "**BLOCKER:** b.py:2 · statement · x\n"
             "verdict: 2 blockers, 0 warnings"
         )
         self.assertEqual(len(audit_reply.parse(report)["findings"]), 2)
@@ -657,8 +658,8 @@ class Audit(unittest.TestCase):
         )
         self.assertIn("— 1 to decide", out)  # the decision list agrees
         listed = (
-            "WARNING · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\n"
-            "NOTE · a.py:2 · x · y · LAB-015 Preflight audit before freezing · z\n"
+            "WARNING · a.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z\n"
+            "NOTE · a.py:2 · statement · x · y · LAB-015 Preflight audit before freezing · z\n"
             "verdict: 0 blockers, 1 warnings, 1 notes"
         )
         _, out, err, _ = run(repo_with(), listed)
@@ -1121,7 +1122,7 @@ class DecisionListReachesThePerson(unittest.TestCase):
         cost; the twin (the BLOCKER's line) is in the test below."""
         f = findings.Finding(
             grade="WARNING",
-            text="WARNING · a.py:1 · x",
+            text="WARNING · a.py:1 · statement · x",
             status="limitation",
             reason="the limit",
             effect=findings.EFFECT_STANDS,
@@ -1349,7 +1350,7 @@ class FixVerdicts(unittest.TestCase):
     bound to the decision shown; what does not read refuses the record,
     what is left out stays unchecked — never resolved."""
 
-    LEAK = "BLOCKER · scripts/01_measure.py:9 · G_VRH and poisson_ratio give K · c1 · new class · drop both"
+    LEAK = "BLOCKER · scripts/01_measure.py:9 · statement · G_VRH and poisson_ratio give K · c1 · new class · drop both"
 
     def area(self, line: str | None = None) -> tuple[Path, Path]:
         """An area with an answering run and an earlier analysis record
@@ -1832,6 +1833,15 @@ PILOT2 = (
 )
 
 
+def with_subject(text: str, subject: str = "statement") -> str:
+    """TEXT, a finding answered before the subject field (0.112.0 and
+    earlier), with SUBJECT as the third field of its grade line: the
+    archived pilot answers stay as they were answered."""
+    first, newline, rest = text.partition("\n")
+    grade, place, *more = first.split(" · ")
+    return " · ".join([grade, place, subject, *more]) + newline + rest
+
+
 class CheckNote(unittest.TestCase):
     """The check field may carry what its value must show, after the key,
     in one of two forms to the end of the line; only the key is
@@ -1851,7 +1861,7 @@ class CheckNote(unittest.TestCase):
                     "0" * 12,
                     "1" * 12,
                     result["verdict"],
-                    result["findings"],
+                    [(g, with_subject(t)) for g, t in result["findings"]],
                     registration={"kind": "fit"},
                     run_id="r",
                     shown_sha="s" * 12,
@@ -1914,7 +1924,7 @@ class CheckNote(unittest.TestCase):
         a note in parentheses with a semicolon, closed by a period; its twin,
         the same line without the period, reads as before."""
         line = (
-            "BLOCKER · a.py:1 · a count misses some values · one passes · LAB-015 "
+            "BLOCKER · a.py:1 · statement · a count misses some values · one passes · LAB-015 "
             "Preflight audit before freezing · count them in every group · check: "
             "interpretation_1_count (the values counted per group; it must be zero when interpretation_1_pass "
             "is true)"
@@ -2456,23 +2466,23 @@ LAB015 = "LAB-015 Preflight audit before freezing"
 #: its check and check note)
 #: — bullets right below the line, effect, rule and repair after a blank
 BULLETS = (
-    f"WARNING · a.py:10 · one finding on one line · a value drifts · {LAB015} · fix it\n"
+    f"WARNING · a.py:10 · statement · one finding on one line · a value drifts · {LAB015} · fix it\n"
     "\n"
-    "WARNING · a.py:20 · the head of a finding that lists its parts below:\n"
+    "WARNING · a.py:20 · statement · the head of a finding that lists its parts below:\n"
     "- part one\n"
     "- part two\n"
     "- part three\n"
     "\n"
     f"· the effect, after a blank line · {LAB015} · the smallest change\n"
     "\n"
-    "NOTE · a.py:30 · a note · no number changes · new class · none\n"
+    "NOTE · a.py:30 · statement · a note · no number changes · new class · none\n"
     "\n"
     "verdict: 0 blockers, 2 warnings, 1 notes\n"
     "scope:\n"
     "scripts/01_measure.py"
 )
 BULLETS_LINES = [
-    "WARNING · a.py:20 · the head of a finding that lists its parts below:",
+    "WARNING · a.py:20 · statement · the head of a finding that lists its parts below:",
     "- part one",
     "- part two",
     "- part three",
@@ -2481,12 +2491,12 @@ BULLETS_LINES = [
 #: — several findings, one whose check closes it nine lines below its grade
 #: line, and check notes closed by a period
 CHECK_BELOW = (
-    f"BLOCKER · p.md:13 · a first blocker · a value is wrong · {LAB015} · align them\n"
+    f"BLOCKER · p.md:13 · statement · a first blocker · a value is wrong · {LAB015} · align them\n"
     "\n"
-    f"BLOCKER · a.py:5 · a second blocker · a value is wrong · {LAB015} · count them · "
+    f"BLOCKER · a.py:5 · statement · a second blocker · a value is wrong · {LAB015} · count them · "
     "check: interpretation_2_count (per group; it must be zero).\n"
     "\n"
-    "BLOCKER · a.py:40 · the head of a finding with two causes:\n"
+    "BLOCKER · a.py:40 · statement · the head of a finding with two causes:\n"
     "- cause one\n"
     "- cause two\n"
     "\n"
@@ -2498,14 +2508,14 @@ CHECK_BELOW = (
     f"· {LAB015} · the smallest change · check: quality_check_2_value (what the value must show; "
     "it holds for every group).\n"
     "\n"
-    f"WARNING · a.py:50 · a warning · a value moves · {LAB015} · fix it\n"
+    f"WARNING · a.py:50 · statement · a warning · a value moves · {LAB015} · fix it\n"
     "\n"
-    "NOTE · a.py:60 · a note · nothing moves · new class · none\n"
+    "NOTE · a.py:60 · statement · a note · nothing moves · new class · none\n"
     "\n"
     "verdict: 3 blockers, 1 warnings, 1 notes"
 )
 CHECK_BELOW_LINES = [
-    "BLOCKER · a.py:40 · the head of a finding with two causes:",
+    "BLOCKER · a.py:40 · statement · the head of a finding with two causes:",
     "- cause one",
     "- cause two",
     "A paragraph of evidence. · the effect, with an assignment:",
@@ -2518,16 +2528,16 @@ CHECK_BELOW_LINES = [
 #: — indented bullets, a line of spaces, an indented paragraph, then more
 #: findings, the notes tally and READ lines
 INDENTED = (
-    f"BLOCKER · a.py:1 · a blocker · a value is wrong · {LAB015} · fix it\n"
+    f"BLOCKER · a.py:1 · statement · a blocker · a value is wrong · {LAB015} · fix it\n"
     "\n"
-    "WARNING · a.py:2 · the head of a finding with indented evidence:\n"
+    "WARNING · a.py:2 · statement · the head of a finding with indented evidence:\n"
     "  - evidence one\n"
     "  - evidence two\n"
     "  - evidence three\n"
     "  \n"
     "  An indented paragraph. Assignment: the number to compute.\n"
     "\n"
-    f"WARNING · a.py:3 · a warning · a value moves · {LAB015} · fix it\n"
+    f"WARNING · a.py:3 · statement · a warning · a value moves · {LAB015} · fix it\n"
     "\n"
     "notes: 2 (not listed — repeat cost low)\n"
     "\n"
@@ -2536,7 +2546,7 @@ INDENTED = (
     "verdict: 1 blockers, 2 warnings, 2 notes"
 )
 INDENTED_LINES = [
-    "WARNING · a.py:2 · the head of a finding with indented evidence:",
+    "WARNING · a.py:2 · statement · the head of a finding with indented evidence:",
     "- evidence one",
     "- evidence two",
     "- evidence three",
@@ -2613,7 +2623,7 @@ class WholeFinding(unittest.TestCase):
                 )
 
     def test_text_after_the_last_finding_below_a_blank_line_is_refused(self):
-        line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
+        line = f"BLOCKER · a.py:1 · statement · x · y · {self.LAB015} · z"
         verdict = "verdict: 1 blockers, 0 warnings, 0 notes"
         area = repo_with()
         answer = f"{line}\n\nOverall, fix the blocker first.\n{verdict}"
@@ -2627,7 +2637,7 @@ class WholeFinding(unittest.TestCase):
         for answer, text in (
             (f"{line}\n- the rows show it\n{verdict}", f"{line}\n- the rows show it"),
             (
-                f"{line}\n\n- the rows show it\n\nNOTE · b.py:2 · n\n"
+                f"{line}\n\n- the rows show it\n\nNOTE · b.py:2 · statement · n\n"
                 "verdict: 1 blockers, 0 warnings, 1 notes",
                 f"{line}\n- the rows show it",
             ),
@@ -2650,7 +2660,7 @@ class WholeFinding(unittest.TestCase):
             "**FIX lines:** none (no earlier decided BLOCKER)",
         ):
             answer = (
-                f"WARNING · a.py:1 · x · y · {self.LAB015} · z\n  - evidence\n\n"
+                f"WARNING · a.py:1 · statement · x · y · {self.LAB015} · z\n  - evidence\n\n"
                 f"{closing}\n\nverdict: 0 blockers, 1 warnings, 0 notes"
             )
             with self.subTest(closing=closing):
@@ -2661,7 +2671,7 @@ class WholeFinding(unittest.TestCase):
                     [
                         (
                             "WARNING",
-                            f"WARNING · a.py:1 · x · y · {self.LAB015} · z\n- evidence",
+                            f"WARNING · a.py:1 · statement · x · y · {self.LAB015} · z\n- evidence",
                         )
                     ],
                 )
@@ -2678,7 +2688,7 @@ class WholeFinding(unittest.TestCase):
             f"  · {self.LAB015} · fix it",
         ):
             answer = (
-                "BLOCKER · a.py:1 · x · y:\n  - evidence one\n  - evidence two\n"
+                "BLOCKER · a.py:1 · statement · x · y:\n  - evidence one\n  - evidence two\n"
                 f"  \n{tail}\n\n{verdict}"
             )
             with self.subTest(tail=tail):
@@ -2688,12 +2698,12 @@ class WholeFinding(unittest.TestCase):
                 (f,) = findings.area_records(area)[0].findings
                 self.assertEqual(
                     f.text,
-                    "BLOCKER · a.py:1 · x · y:\n- evidence one\n- evidence two\n"
+                    "BLOCKER · a.py:1 · statement · x · y:\n- evidence one\n- evidence two\n"
                     + tail.strip(),
                 )
 
     def test_a_verdict_quoted_in_a_bullet_does_not_end_the_finding(self):
-        line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
+        line = f"BLOCKER · a.py:1 · statement · x · y · {self.LAB015} · z"
         bullet = "- the report says verdict: 1 blockers, 0 warnings — wrong"
         area = repo_with()
         answer = f"{line}\n{bullet}\n· more\nverdict: 1 blockers, 0 warnings, 0 notes"
@@ -2706,7 +2716,7 @@ class WholeFinding(unittest.TestCase):
         """One check per finding, closing its line: the last, or the first
         with the finding's bullets below — refused whole before, two audits
         lost (registered pilot part 1, 34-r3 and 60-r2)."""
-        line = f"BLOCKER · a.py:1 · x · y · {self.LAB015} · z"
+        line = f"BLOCKER · a.py:1 · statement · x · y · {self.LAB015} · z"
         area = repo_with()
         answer = (
             f"{line} · check: quality_check_2_spread (each seed)\n- per seed\n"
@@ -2743,7 +2753,7 @@ class WholeFinding(unittest.TestCase):
         give the finding one line (`Finding.one_line`)."""
         area = repo_with()
         answer = (
-            "BLOCKER · a.py:1 · two causes:\n- one\n- two\n· y · z\n"
+            "BLOCKER · a.py:1 · statement · two causes:\n- one\n- two\n· y · z\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         rc, _, err, _ = run(area, answer)
@@ -2751,11 +2761,12 @@ class WholeFinding(unittest.TestCase):
         (record,) = findings.area_records(area)
         (u,) = findings.open_blockers([record])
         self.assertEqual(
-            u.finding.text, "BLOCKER · a.py:1 · two causes:\n- one\n- two\n· y · z"
+            u.finding.text,
+            "BLOCKER · a.py:1 · statement · two causes:\n- one\n- two\n· y · z",
         )
         self.assertEqual(
             u.line,
-            f"{record.path.name}: BLOCKER · a.py:1 · two causes: - one - two · y · z",
+            f"{record.path.name}: BLOCKER · a.py:1 · statement · two causes: - one - two · y · z",
         )
 
 

@@ -45,8 +45,14 @@ METRICS = {
     "quality_check_1_pass": True,
     "quality_check_2_pass": True,
 }
-BLOCKER = ("BLOCKER", "BLOCKER · scripts/01_measure.py:3 · the target leaks")
-WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
+BLOCKER = (
+    "BLOCKER",
+    "BLOCKER · scripts/01_measure.py:3 · statement · the target leaks",
+)
+WARNING = (
+    "WARNING",
+    "WARNING · scripts/01_measure.py:9 · statement · the seed is not recorded",
+)
 
 
 def _finalize(area: Path) -> tuple[int, str]:

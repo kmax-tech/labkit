@@ -158,7 +158,7 @@ class RepairUnderUnchangedPromises(_Chain):
         first = self.run_measure(e2e.Judge._model)
         rc, out = self.audit(
             SIMULATED
-            + "BLOCKER · scripts/01_measure.py:82 · ANSWERS reads Yes as not_causal · "
+            + "BLOCKER · scripts/01_measure.py:82 · statement · ANSWERS reads Yes as not_causal · "
             "criterion_1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
             "demands · map Yes to causal\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
@@ -198,7 +198,7 @@ class SupersededCallReleasesNothing(_Chain):
         first = self.run_measure(e2e.Judge._model)
         rc, out = self.audit(
             SIMULATED
-            + "BLOCKER · scripts/01_measure.py:82 · ANSWERS reads Yes as not_causal · "
+            + "BLOCKER · scripts/01_measure.py:82 · statement · ANSWERS reads Yes as not_causal · "
             "criterion_1_accuracy counts every causal sentence wrong · LAB-038 What the prompt "
             "demands · map Yes to causal · check: criterion_1_accuracy\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
@@ -212,7 +212,7 @@ class SupersededCallReleasesNothing(_Chain):
         # a failed call on the new code, then an audit that supersedes it and
         # judges nothing of the earlier BLOCKER
         rc, out = self.audit(
-            SIMULATED + "BLOCKER · x · check: Not A Key\n"
+            SIMULATED + "BLOCKER · x · statement · check: Not A Key\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
         )
         self.assertEqual(rc, 2, out)

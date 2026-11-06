@@ -25,7 +25,7 @@ from labkit.tools import protocol_result
 #: a simulated analysis answer holding one BLOCKER
 BLOCKED = (
     cases.SIMULATED
-    + "BLOCKER · scripts/01_measure.py:82 · unresolved source · cannot judge criterion-1 · "
+    + "BLOCKER · scripts/01_measure.py:82 · statement · unresolved source · cannot judge criterion-1 · "
     "LAB-038 What the prompt demands · inspect source\n"
     "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\nscripts/01_measure.py"
 )

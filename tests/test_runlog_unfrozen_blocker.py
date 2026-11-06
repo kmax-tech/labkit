@@ -38,10 +38,13 @@ UNFROZEN = head(
 )
 BLOCKER = (
     "BLOCKER",
-    "BLOCKER · scripts/01_measure.py:3 · G_VRH and poisson_ratio determine K in "
+    "BLOCKER · scripts/01_measure.py:3 · statement · G_VRH and poisson_ratio determine K in "
     "closed form · LAB-038 What the prompt demands · the target leaks",
 )
-WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
+WARNING = (
+    "WARNING",
+    "WARNING · scripts/01_measure.py:9 · statement · the seed is not recorded",
+)
 
 
 class UnfrozenBlocker(unittest.TestCase):

@@ -423,7 +423,13 @@ class Freeze(unittest.TestCase):
         the write, named together; nothing is written."""
         area, protocol = self._area()
         record = self._record(
-            area, [("BLOCKER", "scripts/01_measure.py:1 · x · y · z · fix")]
+            area,
+            [
+                (
+                    "BLOCKER",
+                    "BLOCKER · scripts/01_measure.py:1 · statement · x · y · z · fix",
+                )
+            ],
         )
         before = protocol.read_text(encoding="utf-8")
         err = io.StringIO()

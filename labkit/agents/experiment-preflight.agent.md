@@ -130,7 +130,7 @@ output the answering run registered (`<line>: <row>`), with its
 `metrics.json`. For every field the analysis compares, look at what is
 there: spellings and cases of one label, empty or truncated answers, values
 the parser maps to a default, a label that never occurs, rows the gate
-drops. Quote the row (file:line) as the trigger in the fourth field. A
+drops. Quote the row (file:line) as the trigger in the fifth field. A
 count you cannot take from the sample becomes an assignment (below). When
 the `ROWS` line says there are none, say so in one line and audit the code
 alone. Under `===== DEPENDENCY <path> … =====` stand the files the run
@@ -238,10 +238,27 @@ One finding per entry, most severe first, nothing else. A finding starts on
 its own line with its grade and its fields in this order:
 
 ```
-BLOCKER|WARNING|NOTE · <file>:<line> · <what is wrong> · <which reported number
-goes wrong, with what input> · <LAB-nnn rule name, or "new class"> · <smallest change that
-would remove the failure>
+BLOCKER|WARNING|NOTE · <file>:<line> · implementation|statement · <what is wrong> ·
+<which reported number goes wrong, with what input> · <LAB-nnn rule name, or "new
+class"> · <smallest change that would remove the failure>
 ```
+
+**The third field names the finding's subject**, your judgement of where the
+fault lies. It decides which decisions the person may take:
+
+- `implementation` — the code, the data handling or the run does not do
+  what the registration says or what a correct measurement needs: a
+  registered 200-permutation check run as one null draw, a leak, a
+  denominator taken from the generated rows, a registered key never
+  computed. The repair changes code or data and measures anew; labkit
+  refuses `limitation` for it.
+- `statement` — the run does what it should, and the finding is about what
+  the registered text, the result or the report says: a claim wider than
+  what was measured, a field that misdescribes the unchanged run. It may be
+  decided `limitation` or corrected in place.
+
+A finding with both sides is two findings. When you cannot tell, write
+`implementation`: a limit line does not repair a number.
 
 A finding on a protocol field names the field by its label as the place —
 `PROTOCOL-<name>.md:Unit`, `PROTOCOL-<name>.md:Data / scope` — not a line
@@ -289,7 +306,7 @@ closes the finding, on its last line when it goes on below. One check per
 finding.
 
 **No finding without a failure scenario** (LAB-015 Preflight audit before
-freezing). The fourth field names
+freezing). The fifth field names
 the number that goes wrong and the input that triggers it. Without that
 half-sentence you have a hunch, not a finding: drop it.
 
@@ -298,7 +315,7 @@ to leave-one-anchor-out", not code or a diff.
 
 **A number you cannot read becomes an assignment, not a guess.** You have no
 shell. Where a finding hinges on a count, a rate or a difference between
-outputs, state it in the fourth field as an assignment: which number, from
+outputs, state it in the fifth field as an assignment: which number, from
 which file, compared against what. The caller runs it. Never present an
 estimate as measured.
 

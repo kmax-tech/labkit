@@ -202,7 +202,7 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
     """The open BLOCKER a new record carries for MEMBER after VERDICT did not
     find it resolved: the ORIGIN's text under one prefix naming what it
     continues and why (so the text does not grow over a chain), the
-    member's check and note, `carries` = its ref."""
+    member's check, note and subject, `carries` = its ref."""
     return Finding(
         "BLOCKER",
         f"carried from {member.ref} ({verdict.verdict}): {origin.text}",
@@ -212,6 +212,7 @@ def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Fin
         member.finding.check,
         member.finding.check_note,
         member.ref,
+        member.finding.subject,
     )
 
 

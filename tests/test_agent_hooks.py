@@ -275,7 +275,7 @@ class PreRun(unittest.TestCase):
             [
                 (
                     "WARNING",
-                    "WARNING · scripts/01_measure.py:9 · the seed is not recorded",
+                    "WARNING · scripts/01_measure.py:9 · statement · the seed is not recorded",
                 )
             ],
             registration=registration_of(area),

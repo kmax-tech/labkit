@@ -80,8 +80,8 @@ from labkit.gates.ways_out import ANSWER_AGAIN
 REVIEW = "review"
 #: a decision line of the reviewer's report
 DECISION = re.compile(
-    audit_reply.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + audit_reply.SEP + r"\s*\**"
-    r"(upheld|rejected|insufficient)\**\s*" + audit_reply.SEP + r"\s*(.*?)\s*$",
+    findings.LEAD + r"\**DECISION\s*#(\d+)\**\s*" + findings.SEP + r"\s*\**"
+    r"(upheld|rejected|insufficient)\**\s*" + findings.SEP + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(

@@ -25,6 +25,24 @@ pins (`requirements.txt` / `requirements.lock`).
   when its bytes match, and a source the record holds no sha256 of. 0.112.0
   is the last version that reads the old routes. Decision and cases:
   `docs/notes/2026-11-06-pin-route.md`.
+- **The auditor names what each finding is about, and `limitation` is
+  refused for an implementation finding.** The third field of a finding
+  line is its subject: `implementation` (the code, the data handling or
+  the run departs from the registration or a correct measurement) or
+  `statement` (the run is right; the finding is about what the text or the
+  result says). `labkit-audit` refuses an answer whose finding line lacks
+  it ("run the same command again"), stores it as `subject` in the record,
+  and carries it with a carried finding; `--decide … limitation` on an
+  implementation finding is refused with its ways out — repair and measure
+  anew, `false-positive`, or a handover. `labkit-next`'s restore step no
+  longer offers `limitation` for any open finding placed on the protocol:
+  it takes the decision from the subject, and for an implementation
+  finding names the `--findings` ways out (until 0.112.0 it composed
+  `--decide … limitation` without knowing the cause; area 23 recorded 36
+  `limitation` decisions against 19 and 20 before). A record from 0.112.0
+  or earlier reads, its findings without a subject, and decides as before.
+  `findings.LEAD` and `findings.SEP`, the answer-line grammar, moved from
+  `audit_reply`.
 
 ## 0.112.0 — 2026-11-06
 

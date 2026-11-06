@@ -2,10 +2,11 @@
 `labkit-audit AREA --mode analysis` writes, with labkit's own writer, on the
 area's newest run and its protocol as it now reads — no model call.
 
-    python standin-audit.py AREA [PLACE WHAT]
+    python standin-audit.py AREA [PLACE WHAT [SUBJECT]]
 
 Without PLACE, a clean record; with it, one WARNING at
-`<the protocol's file name>:PLACE` saying WHAT. Prints the record's path."""
+`<the protocol's file name>:PLACE` saying WHAT, about SUBJECT
+(`implementation` or `statement`, the default). Prints the record's path."""
 
 import sys
 from pathlib import Path
@@ -18,11 +19,12 @@ run = sorted((area / "runs").iterdir())[-1]
 (protocol,) = area.glob("PROTOCOL-*.md")
 text = protocol.read_text(encoding="utf-8")
 found = []
+subject = sys.argv[4] if len(sys.argv) > 4 else findings.STATEMENT
 if len(sys.argv) > 2:
     found = [
         (
             "WARNING",
-            f"WARNING · {protocol.name}:{sys.argv[2]} · {sys.argv[3]} · "
+            f"WARNING · {protocol.name}:{sys.argv[2]} · {subject} · {sys.argv[3]} · "
             "LAB-015 Preflight audit before freezing",
         )
     ]

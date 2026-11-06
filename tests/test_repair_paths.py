@@ -234,6 +234,39 @@ class RepairPaths(unittest.TestCase):
         self.assertNotIn("what the number is about changed", nxt)
         self.assertNotIn("names this protocol", nxt)
 
+    def test_an_implementation_finding_on_the_field_is_repaired_not_limited(self):
+        """The paired case of the finding's subject: the auditor names a
+        departure of the code from the registration (a registered
+        200-permutation check run as one null draw), placed on the field.
+        `next`'s restore step offers no decision for it, only the ways out
+        `--findings` prints, and `--decide … limitation` is refused; the
+        statement twin above takes `limitation`."""
+        record = self.audit(
+            "Unit",
+            "the registered 200 permutations ran as one null draw",
+            "implementation",
+        )
+        self.fill(f"Unit={UNIT}, hidden files not counted")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            f"finding 1 of {record} names this protocol as an implementation finding",
+            nxt,
+        )
+        self.assertNotIn("--decide 1 limitation", nxt)
+        refused = self.run_(
+            ".venv/bin/labkit-audit",
+            AREA,
+            "--decide",
+            "1",
+            "limitation",
+            "--why",
+            "one draw is enough",
+            "--record",
+            f"{AREA}/audits/{record}",
+            ok=False,
+        )
+        self.assertIn("an implementation finding is no limitation", refused)
+
     def test_a_field_not_named_by_its_label_is_held(self):
         """`:Terms` is not the label "Terms of this protocol": no correction
         is bound to it; the line says a changed registration is held and
@@ -516,7 +549,7 @@ class RegisteredReportRepairs(RepairPaths):
         analysis audit after it voids it in all three."""
         self.session_starts()
         self.answered(
-            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "BLOCKER · scripts/01_measure.py:130 · statement · evaluate_rows() drops cases · the "
             "mean is over 11 cases · LAB-050 Analysis audit before reporting · remove "
             f"the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 notes\n"
             f"scope:\n{AREA}/scripts/01_measure.py",
@@ -618,7 +651,7 @@ class RegisteredReportRepairs(RepairPaths):
         self.fill(f"Conclusion={OVERCLAIM}")
         self.commit("the Conclusion")
         self.answered(
-            "BLOCKER · PROTOCOL-docs-per-case.md:Conclusion · the Conclusion claims "
+            "BLOCKER · PROTOCOL-docs-per-case.md:Conclusion · statement · the Conclusion claims "
             "completeness nothing measured · the claim outruns the number · LAB-050 "
             "Analysis audit before reporting · drop the claim\n"
             "verdict: 1 blockers, 0 warnings, 0 notes\nscope:\n"
@@ -852,7 +885,7 @@ class RegisteredReportRepairs(RepairPaths):
         """Nothing the record binds changed: no follow-up will be shown it,
         so the line names the repair still owed, not the follow-up."""
         self.answered(
-            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "BLOCKER · scripts/01_measure.py:130 · statement · evaluate_rows() drops cases · the "
             "mean is over 11 cases · LAB-050 Analysis audit before reporting · remove "
             "the filter\nverdict: 1 blockers, 0 warnings, 0 notes\nscope:\n"
             f"{AREA}/scripts/01_measure.py",
@@ -869,7 +902,7 @@ class RegisteredReportRepairs(RepairPaths):
         place and — DECIDED — the finding decided `fixed` and committed (an
         undecided BLOCKER holds the commit); the record's name."""
         self.answered(
-            "BLOCKER · PROTOCOL-docs-per-case.md:Data / scope · Data / scope names "
+            "BLOCKER · PROTOCOL-docs-per-case.md:Data / scope · statement · Data / scope names "
             "no file count · the reader cannot tell what was read · LAB-050 "
             "Analysis audit before reporting · name the count\nverdict: 1 "
             f"blockers, 0 warnings, 0 notes\nscope:\n{AREA}/scripts/01_measure.py",
@@ -941,7 +974,7 @@ class RegisteredReportRepairs(RepairPaths):
         audits = self.lab / AREA / "audits"
         before = set(audits.glob("*-analysis*.toml"))
         self.answered(
-            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "BLOCKER · scripts/01_measure.py:130 · statement · evaluate_rows() drops cases · the "
             "adopted mean is over 11 cases · LAB-050 Analysis audit before reporting "
             "· remove the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 "
             f"notes\nscope:\n{AREA}/scripts/01_measure.py",
@@ -1111,7 +1144,7 @@ class RegisteredReportRepairs(RepairPaths):
         audits = self.lab / AREA / "audits"
         before = set(audits.glob("*-analysis*.toml"))
         self.answered(
-            "BLOCKER · scripts/01_measure.py:130 · evaluate_rows() drops cases · the "
+            "BLOCKER · scripts/01_measure.py:130 · statement · evaluate_rows() drops cases · the "
             "adopted mean is over 11 cases · LAB-050 Analysis audit before reporting "
             "· remove the filter, measure again\nverdict: 1 blockers, 0 warnings, 0 "
             f"notes\nscope:\n{AREA}/scripts/01_measure.py",

@@ -30,7 +30,10 @@ from labkit.gates import audit, agent_hooks  # noqa: E402
 from protocol_fixture import head, registration_of  # noqa: E402
 from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
 
-WARNING = ("WARNING", "WARNING · scripts/01_measure.py:9 · the seed is not recorded")
+WARNING = (
+    "WARNING",
+    "WARNING · scripts/01_measure.py:9 · statement · the seed is not recorded",
+)
 CLOSED = "2026-10-28T10-00-00_ab12"
 OPEN = "2026-10-28T11-00-00_cd34"
 

@@ -261,6 +261,46 @@ class EveryNamedHomeExists(unittest.TestCase):
         self.assertNotIn("chain_gapz", top_level_names("report_check"))
 
 
+def literal_decisions(source: str) -> list[int]:
+    """The lines of SOURCE where a `decide_command` call is given its STATUS
+    (the third argument, or `status=`) as a string literal — a decision the
+    caller chose itself rather than one taken from a recorded finding."""
+    out: list[int] = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+        if name != "decide_command":
+            continue
+        status = node.args[2] if len(node.args) > 2 else None
+        for kw in node.keywords:
+            if kw.arg == "status":
+                status = kw.value
+        if isinstance(status, ast.Constant) and isinstance(status.value, str):
+            out.append(node.lineno)
+    return out
+
+
+class NextComposesNoDecision(unittest.TestCase):
+    """`labkit-next` names steps and chooses no scientific decision: a status
+    in a `--decide` line it prints comes from the recorded finding — its
+    subject, through `findings.decision_after_restore` — never from the place
+    or file name of a finding (docs/architecture.md, "Who does what";
+    until 2026-11-06 `_finding_on_the_field` offered `limitation` for any
+    open finding on the protocol)."""
+
+    def test_next_step_passes_no_literal_status(self):
+        source = (PACKAGE / "gates" / "next_step.py").read_text(encoding="utf-8")
+        self.assertEqual(literal_decisions(source), [])
+
+    def test_the_check_bites(self):
+        chosen = 'decide_command(a, 1, "limitation", "why", "r.toml")\n'
+        named = 'decide_command(a, 1, status="fixed", reason="", record="r")\n'
+        taken = "decide_command(a, 1, findings.decision_after_restore(f), '', 'r')\n"
+        self.assertEqual(literal_decisions(chosen + named + taken), [1, 2])
+
+
 class OneNameOneThing(unittest.TestCase):
     def test_no_public_name_in_two_modules(self):
         where: dict[str, list[str]] = defaultdict(list)

@@ -233,7 +233,7 @@ class FreezeGate(unittest.TestCase):
             sha,
             promises.block_stamp(text),
             (0, 1, 0),
-            [("WARNING", "WARNING · x")],
+            [("WARNING", "WARNING · x.py:1 · statement · x")],
             registration=protocol_check.registration_stamp(text),
         )
         area = self._area(

@@ -452,13 +452,17 @@ def _held_step(
 def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
     """One sentence more on a restore step (`repo.RESTORE`, a registered
     field changed after the first measurement) while an analysis finding
-    still open names the protocol as its place: the decision that goes with
-    the restore — `limitation`, the registered text stands and what the
-    finding names is reported — or `fixed` for a correction a follow-up
-    audit's `resolved` releases. "" otherwise, or when the records do not
-    read (the undecided row says so). An agent between the auditor's
-    "misdescribed" and the gate's "restore" rewrote the field five times
-    (labkit-paper's t34-r3, 2026-11-04)."""
+    still open names the protocol as its place: what the auditor's subject
+    of that finding leaves after the restore. A `statement` finding takes the
+    decision `findings.decision_after_restore` gives — or `fixed` for a
+    correction a follow-up audit's `resolved` releases; an `implementation`
+    finding is repaired in code or data, and `--findings` prints its ways
+    out. One sentence, for the first such finding in record order that has
+    one; a finding of a record that names no subject gets none and is
+    passed over: no decision follows from the place alone. "" otherwise, or when the
+    records do not read (the undecided row says so). An agent between the
+    auditor's "misdescribed" and the gate's "restore" rewrote the field
+    five times (labkit-paper's t34-r3, 2026-11-04)."""
     if first.step is None or first.step.name != RESTORE:
         return ""
     try:
@@ -467,20 +471,32 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
         return ""
     for u in findings.open_findings(records, mode=ANALYSIS_AUDIT):
         place = u.finding.place
-        if place is not None and place[0] == ctx.protocol.name:
-            decide = decide_command(
-                ctx.area,
-                u.number,
-                "limitation",
-                "<the registered text stands; what the finding names is a limit>",
-                shown(u.record.path, Path.cwd()),
-                protocol=ctx.protocol,
-            )
+        if place is None or place[0] != ctx.protocol.name:
+            continue
+        named = f"; finding {u.number} of {u.record.path.name} names this protocol"
+        if u.finding.subject == findings.IMPLEMENTATION:
+            ways = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
             return (
-                f"; finding {u.number} of {u.record.path.name} names this protocol — "
-                f"after the restore decide it (`{decide}`), or `fixed` for a "
-                "correction a follow-up audit's `resolved` releases"
+                f"{named} as an implementation finding — the restore leaves the "
+                f"code or data to repair and measure anew: `{ways}` prints its "
+                "ways out"
             )
+        decision = findings.decision_after_restore(u.finding)
+        if decision is None:
+            continue  # a record without subjects: no decision from the place
+        status, reason = decision
+        decide = decide_command(
+            ctx.area,
+            u.number,
+            status,
+            reason,
+            shown(u.record.path, Path.cwd()),
+            protocol=ctx.protocol,
+        )
+        return (
+            f"{named} — after the restore decide it (`{decide}`), or `fixed` "
+            "for a correction a follow-up audit's `resolved` releases"
+        )
     return ""
 
 

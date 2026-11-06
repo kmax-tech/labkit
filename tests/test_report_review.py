@@ -66,7 +66,7 @@ class Area:
             [
                 (
                     "BLOCKER",
-                    "scripts/m.py:3 · test rows in the fit · criterion-1 · LAB-050 · split",
+                    "BLOCKER · scripts/m.py:3 · statement · test rows in the fit · criterion-1 · LAB-050 · split",
                 )
             ],
             registration={"question": "does criterion-1 hold?"},

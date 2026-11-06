@@ -435,7 +435,7 @@ class TestAuditFindings(unittest.TestCase):
     ROW = [
         (
             "WARNING",
-            "WARNING · scripts/01_measure.py:1 · x · y · LAB-019 The stamp covers everything · z",
+            "WARNING · scripts/01_measure.py:1 · statement · x · y · LAB-019 The stamp covers everything · z",
         )
     ]
 

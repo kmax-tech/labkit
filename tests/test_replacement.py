@@ -309,7 +309,7 @@ class Gate(_Areas):
             [
                 (
                     "BLOCKER",
-                    "BLOCKER · scripts/01_measure.py:1 · the target leaks · x · LAB-019 r · z",
+                    "BLOCKER · scripts/01_measure.py:1 · statement · the target leaks · x · LAB-019 r · z",
                 )
             ],
             run_id=A_RUN,
@@ -362,7 +362,7 @@ class Gate(_Areas):
             [
                 (
                     "BLOCKER",
-                    "BLOCKER · scripts/01_measure.py:1 · the target leaks · x · LAB-019 r · z",
+                    "BLOCKER · scripts/01_measure.py:1 · statement · the target leaks · x · LAB-019 r · z",
                 )
             ],
             run_id=A_RUN,

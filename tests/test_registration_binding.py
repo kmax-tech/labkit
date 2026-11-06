@@ -142,7 +142,7 @@ class PreflightRecord(unittest.TestCase):
             [
                 (
                     "WARNING",
-                    "WARNING · scripts/01_measure.py:1 · x · y · LAB-015 Preflight audit before freezing · z",
+                    "WARNING · scripts/01_measure.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z",
                 )
             ],
             registration=protocol_check.registration_stamp(text),

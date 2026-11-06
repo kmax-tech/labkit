@@ -273,7 +273,7 @@ class WaivedAudit(unittest.TestCase):
             [
                 (
                     "BLOCKER",
-                    "BLOCKER · scripts/01_measure.py:1 · x · y · LAB-015 Preflight audit before freezing · z",
+                    "BLOCKER · scripts/01_measure.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z",
                 )
             ],
             registration=registration_of(self.area),

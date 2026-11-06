@@ -45,7 +45,10 @@ def area_with_record(limit_reason: str | None = "one draw") -> tuple[Path, Path]
     )
     text = protocol.read_text(encoding="utf-8")
     items = [
-        ("WARNING", "WARNING · scripts/01_measure.py:1 · one draw · x · LAB-019 r · z")
+        (
+            "WARNING",
+            "WARNING · scripts/01_measure.py:1 · statement · one draw · x · LAB-019 r · z",
+        )
     ]
     path = findings.write(
         area,

@@ -496,7 +496,12 @@ class ProgressAccount(unittest.TestCase):
             scope_sha.area_stamp(self.area)[0],
             promises.block_stamp(self.protocol.read_text(encoding="utf-8")),
             (1, 0, 0),
-            [("BLOCKER", "the mean counts a hidden file")],
+            [
+                (
+                    "BLOCKER",
+                    "BLOCKER · a.py:1 · statement · the mean counts a hidden file",
+                )
+            ],
             run_id=run_id,
             shown_sha=shown_sha(self.area, self.area / "runs" / run_id),
             registration=registration_of(self.area),

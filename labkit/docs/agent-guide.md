@@ -217,12 +217,16 @@ Before you report any result, run `finalize <area>`, then `labkit-audit
 
 `labkit-audit <area> --decide <N> <STATUS> --why "<REASON>" --record <record>`
 
-READ lines are hints, not findings to decide.
+READ lines are hints, not findings to decide. The third field of each
+finding is what it is about, the auditor's subject: `implementation` (code, data handling or
+run depart from the registration) or `statement` (the run is right; the
+finding is about what the text says). `--decide` refuses `limitation` for
+an `implementation` finding.
 
 | status | what follows |
 |---|---|
 | `fixed` | The next analysis audit judges the repair. Until it finds the fault resolved, the number is held. |
-| `limitation` | The number carries a Limitation line. The verdict holds within the limit. A second auditor must uphold a BLOCKER. |
+| `limitation` | `statement` findings only. The number carries a Limitation line. The verdict holds within the limit. A second auditor must uphold a BLOCKER. |
 | `false-positive` | A BLOCKER needs a second auditor (`labkit-audit <area> --review --record <record>`) before the number leaves. A WARNING does not. |
 
 `fixed` means that you corrected the whole named fault. If the finding ends
@@ -321,7 +325,7 @@ is missing, and name it. `--no-verify` is never a way out. The decision list
 names this section; the ways out, one per cause:
 
 - **an implementation error** — The code does not do what the
-  registration says. If the protocol has adopted a result, withdraw it
+  registration says (the auditor's `implementation`; never a limitation). If the protocol has adopted a result, withdraw it
   first: `protocol-fill <PROTOCOL> --withdraw --why "<why>"`. Fix the code
   and decide `fixed`, naming the change. Measure again under the unchanged
   registration, and audit the new run. Example: if the code uses an
@@ -329,8 +333,10 @@ names this section; the ways out, one per cause:
 - **a missed criterion** — That is the result. Report the miss first.
   Example: held-out performance is below the registered margin. Lowering
   the margin is not a repair.
-- **an unjudged promise** — If you cannot fix a fault, decide it
-  `limitation` with `--not-assessable <ID>`. Report the values as
+- **an unjudged promise** — If the run is right but cannot judge a
+  promise (a `statement` finding), decide it `limitation` with
+  `--not-assessable <ID>`. An `implementation` fault you cannot fix is
+  handed over, not limited. Report the values as
   description, not as a pass. A `compute` without promises has none to
   leave unjudged, and `--decide` refuses every id. There, name the limit in
   the Conclusion (`limitation`), or hand the protocol over.

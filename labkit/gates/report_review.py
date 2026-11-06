@@ -64,7 +64,7 @@ from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
 from labkit.checks.report_blocks import Discussion, ReportBlockError, discussions
-from labkit.formats import attempts, console, report_reviews
+from labkit.formats import attempts, console, findings, report_reviews
 from labkit.formats.report_reviews import ReportClaim, held_by
 from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.repo import (
@@ -82,19 +82,19 @@ REPORT_REVIEW = "report"
 ATTEMPT_MODE = report_reviews.ATTEMPT_MODE
 #: a claim line of the reviewer's report
 CLAIM = re.compile(
-    audit_reply.LEAD
+    findings.LEAD
     + r"\**CLAIM\s*#(\d+)\**\s*"
-    + audit_reply.SEP
+    + findings.SEP
     + r"\s*line\s*(\d+)\s*"
-    + audit_reply.SEP
+    + findings.SEP
     + r"\s*\**(result|contradiction)\**\s*"
-    + audit_reply.SEP
+    + findings.SEP
     + r"\s*(.*?)\s*$",
     re.M,
 )
 VERDICT = re.compile(r"verdict:\s*(\d+)\s*claims?(?:\(s\))?", re.I)
 #: a line that announces a claim, whatever follows: held to CLAIM's form
-CLAIM_LEAD = re.compile(audit_reply.LEAD + r"\**CLAIM\b", re.I)
+CLAIM_LEAD = re.compile(findings.LEAD + r"\**CLAIM\b", re.I)
 INLINE_NOTE = (
     "Everything you are told to read is inlined below; each part starts with "
     "a `===== <label> =====` line. Nothing else is in scope."

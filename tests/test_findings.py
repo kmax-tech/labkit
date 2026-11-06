@@ -16,8 +16,14 @@ BLOCK = "b10c0000000a"  # the promise block every fixture record names
 RUN = "2026-01-01T00-00-00_0001"  # the run every analysis fixture record names
 SHOWN = "5" * 12  # what every analysis fixture record was shown of RUN
 TWO = [
-    ("BLOCKER", "BLOCKER · a.py:1 · x · y · LAB-038 What the prompt demands · z"),
-    ("WARNING", "WARNING · b.py:2 · x · y · LAB-019 The stamp covers everything · z"),
+    (
+        "BLOCKER",
+        "BLOCKER · a.py:1 · statement · x · y · LAB-038 What the prompt demands · z",
+    ),
+    (
+        "WARNING",
+        "WARNING · b.py:2 · statement · x · y · LAB-019 The stamp covers everything · z",
+    ),
 ]
 
 
@@ -65,14 +71,24 @@ class UndecidedFindings(unittest.TestCase):
     findings; the gates grade what it returns (audit 2026-10-23, C1)."""
 
     def test_every_open_finding_of_every_record_in_order(self):
-        area = area_with([("preflight", TWO), ("analysis", [("NOTE", "n")])])
+        area = area_with(
+            [
+                ("preflight", TWO),
+                ("analysis", [("NOTE", "NOTE · n.py:1 · statement · n")]),
+            ]
+        )
         records = findings.area_records(area)
         found = findings.open_findings(records)
         self.assertEqual([u.grade for u in found], ["BLOCKER", "WARNING", "NOTE"])
         self.assertEqual(found[0].line, f"{records[0].path.name}: {TWO[0][1]}")
 
     def test_a_mode_narrows_to_its_records(self):
-        area = area_with([("preflight", TWO), ("analysis", [("NOTE", "n")])])
+        area = area_with(
+            [
+                ("preflight", TWO),
+                ("analysis", [("NOTE", "NOTE · n.py:1 · statement · n")]),
+            ]
+        )
         records = findings.area_records(area)
         self.assertEqual(
             [u.grade for u in findings.open_findings(records, mode="preflight")],
@@ -118,10 +134,17 @@ class WriteRead(unittest.TestCase):
 
     def test_quotes_and_unicode_survive(self):
         area = area_with(
-            [("analysis", [("NOTE", 'NOTE · x · "quoted" · ä · \\ backslash')])]
+            [
+                (
+                    "analysis",
+                    [("NOTE", 'NOTE · x · statement · "quoted" · ä · \\ backslash')],
+                )
+            ]
         )
         rec = findings.area_records(area)[0]
-        self.assertEqual(rec.findings[0].text, 'NOTE · x · "quoted" · ä · \\ backslash')
+        self.assertEqual(
+            rec.findings[0].text, 'NOTE · x · statement · "quoted" · ä · \\ backslash'
+        )
 
     def test_a_second_audit_in_the_same_minute_does_not_overwrite(self):
         area = Path(tempfile.mkdtemp())
@@ -264,7 +287,7 @@ class WriteRead(unittest.TestCase):
             "s",
             "b",
             (0, 1, 2),
-            [("WARNING", "w")],
+            [("WARNING", "WARNING · w.py:1 · statement · w")],
             registration=registration_of(area),
         )
 
@@ -397,7 +420,9 @@ class ModelTextReadsBack(unittest.TestCase):
     record would not have read back (review of the reason fix, 2026-10-20)."""
 
     def test_every_character_json_leaves_raw_reads_back(self):
-        text = "NOTE · a.py:1 · x\x7fy\u2028z\x85w\u2029v · y · LAB-019 r · z"
+        text = (
+            "NOTE · a.py:1 · statement · x\x7fy\u2028z\x85w\u2029v · y · LAB-019 r · z"
+        )
         area = area_with([("preflight", [("NOTE", text)])])
         path = next((area / "audits").glob("*.toml"))
         self.assertEqual(findings.read(path).findings[0].text, text)
@@ -579,7 +604,7 @@ class WriteDecision(unittest.TestCase):
     def test_a_table_between_findings_does_not_shift_the_count(self):
         """A sub-table after finding 1, then findings 2 and 3: a count that
         restarted at the sub-table reached 1 again at finding 3."""
-        three = TWO + [("NOTE", "NOTE · c.py:3 · x · y · LAB-019 r · z")]
+        three = TWO + [("NOTE", "NOTE · c.py:3 · statement · x · y · LAB-019 r · z")]
         area = area_with([("preflight", three)])
         path = next((area / "audits").glob("*.toml"))
         text = path.read_text(encoding="utf-8")
@@ -603,6 +628,104 @@ class WriteDecision(unittest.TestCase):
         self.assertIn(
             'reason = ""\nstatus = "fixed"\n', path.read_text(encoding="utf-8")
         )
+
+
+class Subject(unittest.TestCase):
+    """The auditor names what each finding is about — `implementation` or
+    `statement`, the third field of its line — and `limitation` is refused
+    for an implementation finding (one-explainer plan, "Next architectural
+    boundary to repair"; decided 2026-11-06)."""
+
+    IMPL = "BLOCKER · a.py:1 · implementation · 1 null draw for 200 · y · new class · z"
+    STAT = "WARNING · b.py:2 · statement · claim wider than run · y · new class · z"
+
+    def record(self) -> Path:
+        area = area_with(
+            [("preflight", [("BLOCKER", self.IMPL), ("WARNING", self.STAT)])]
+        )
+        return next((area / "audits").glob("*.toml"))
+
+    def test_the_subject_is_read_from_the_line_and_stored(self):
+        self.assertEqual(findings.subject_of(self.IMPL), findings.IMPLEMENTATION)
+        # read from the grade line alone, the evidence below it aside, in
+        # each form the reply parser reads (a dash, a colon after the grade)
+        for line, subject in (
+            (self.STAT + "\n- evidence", "statement"),
+            ("BLOCKER — a.py:1 — implementation — y", "implementation"),
+            ("**BLOCKER:** a.py:1 · `statement` · y", "statement"),
+        ):
+            with self.subTest(line=line):
+                self.assertEqual(findings.subject_of(line), subject)
+        path = self.record()
+        self.assertIn('subject = "implementation"', path.read_text(encoding="utf-8"))
+        rec = findings.read(path)
+        self.assertEqual(
+            [f.subject for f in rec.findings], ["implementation", "statement"]
+        )
+
+    def test_a_line_without_its_subject_is_no_record(self):
+        for line in (
+            "BLOCKER · a.py:1 · x · y · new class · z",
+            "BLOCKER · a.py:1",
+            "BLOCKER · a.py:1 · Implementation · y",
+        ):
+            with self.subTest(line=line):
+                with self.assertRaisesRegex(ValueError, "without its subject"):
+                    area_with([("preflight", [("BLOCKER", line)])])
+
+    def test_limitation_is_refused_for_an_implementation_finding(self):
+        path = self.record()
+        before = path.read_bytes()
+        with self.assertRaisesRegex(
+            findings.FindingsError, "an implementation finding is no limitation"
+        ):
+            findings.write_decision(
+                path, 1, "limitation", "one draw is enough", "stands"
+            )
+        self.assertEqual(path.read_bytes(), before)  # the file untouched
+        after = findings.write_decision(path, 1, "fixed", "200 permutations now")
+        self.assertEqual(after.findings[0].subject, "implementation")
+
+    def test_the_twin_a_statement_finding_takes_limitation(self):
+        path = self.record()
+        after = findings.write_decision(path, 2, "limitation", "scope of the claim")
+        self.assertEqual(after.findings[1].status, "limitation")
+        self.assertEqual(after.findings[1].subject, "statement")
+
+    def test_the_decisions_a_finding_allows(self):
+        rec = findings.read(self.record())
+        impl, stat = rec.findings
+        self.assertEqual(findings.allowed_decisions(impl), ("fixed", "false-positive"))
+        self.assertEqual(findings.allowed_decisions(stat), findings.DECIDED)
+        self.assertIsNone(findings.decision_after_restore(impl))
+        decision = findings.decision_after_restore(stat)
+        assert decision is not None
+        self.assertEqual(decision[0], "limitation")
+
+    def test_a_record_without_subjects_reads_and_decides_as_before(self):
+        path = self.record()
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace('subject = "implementation"\n', "").replace(
+                'subject = "statement"\n', ""
+            ),
+            encoding="utf-8",
+        )
+        rec = findings.read(path)
+        self.assertEqual([f.subject for f in rec.findings], ["", ""])
+        self.assertIsNone(findings.decision_after_restore(rec.findings[1]))
+        after = findings.write_decision(path, 1, "limitation", "old record", "stands")
+        self.assertEqual(after.findings[0].status, "limitation")
+
+    def test_a_subject_outside_the_two_does_not_read(self):
+        path = self.record()
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace('subject = "statement"', 'subject = "wording"'),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(findings.FindingsError, "subject 'wording'"):
+            findings.read(path)
 
 
 class DecideCommand(unittest.TestCase):
@@ -675,9 +798,9 @@ class DecisionList(unittest.TestCase):
     printed lines and decided findings the record does not hold."""
 
     REPORT = (
-        "BLOCKER · scripts/01_measure.py:12 · the key is never written · x · LAB-004 Identifiers make the intent addressable · y\n"
+        "BLOCKER · scripts/01_measure.py:12 · statement · the key is never written · x · LAB-004 Identifiers make the intent addressable · y\n"
         "READ · PROTOCOL-x.md:5 · Answer still a placeholder · write it with --from-run\n"
-        "WARNING · scripts/01_measure.py:30 · one draw · x · LAB-050 Analysis audit before reporting · y\n"
+        "WARNING · scripts/01_measure.py:30 · statement · one draw · x · LAB-050 Analysis audit before reporting · y\n"
         "READ · README.md:3 · a stamped placeholder\n"
         "verdict: 1 blocker, 1 warning, 0 notes\n"
     )
@@ -1115,12 +1238,16 @@ class CorrectedField(unittest.TestCase):
         )
 
     def test_the_place_is_read_from_the_grade_line(self):
-        f = self.finding("WARNING · `PROTOCOL-x.md:Data / scope` · says 4 · fix")
+        f = self.finding(
+            "WARNING · `PROTOCOL-x.md:Data / scope` · statement · says 4 · fix"
+        )
         self.assertEqual(f.place, ("PROTOCOL-x.md", "Data / scope"))
         self.assertIsNone(
             self.finding("WARNING — PROTOCOL-x.md:Data / scope — x").place
         )
-        self.assertIsNone(self.finding("WARNING · PROTOCOL-x.md · x · y").place)
+        self.assertIsNone(
+            self.finding("WARNING · PROTOCOL-x.md · statement · x · y").place
+        )
 
     def test_a_label_named_whole_is_the_corrected_field(self):
         for place, name in (
@@ -1128,19 +1255,25 @@ class CorrectedField(unittest.TestCase):
             ("terms of this protocol", "terms of this protocol"),
             ("Null condition / anchors (in the same run)", "null condition / anchors"),
         ):
-            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · x · y")
+            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · statement · x · y")
             self.assertEqual(
                 findings.corrected_field(f, self.PROTOCOL, self.TEXT), name
             )
 
     def test_the_twins_part_of_a_label_a_line_another_file_or_status_name_none(self):
         for line, status in (
-            ("WARNING · PROTOCOL-x.md:Terms · x · y", "fixed"),
-            ("WARNING · PROTOCOL-x.md:2 · x · y", "fixed"),
-            ("WARNING · PROTOCOL-y.md:Data / scope · x · y", "fixed"),
-            ("WARNING · scripts/01_measure.py:Data / scope · x · y", "fixed"),
-            ("WARNING · PROTOCOL-x.md:Data / scope · x · y", "limitation"),
-            ("WARNING · PROTOCOL-x.md:Unit · x · y", "fixed"),  # no such field
+            ("WARNING · PROTOCOL-x.md:Terms · statement · x · y", "fixed"),
+            ("WARNING · PROTOCOL-x.md:2 · statement · x · y", "fixed"),
+            ("WARNING · PROTOCOL-y.md:Data / scope · statement · x · y", "fixed"),
+            (
+                "WARNING · scripts/01_measure.py:Data / scope · statement · x · y",
+                "fixed",
+            ),
+            ("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y", "limitation"),
+            (
+                "WARNING · PROTOCOL-x.md:Unit · statement · x · y",
+                "fixed",
+            ),  # no such field
         ):
             f = self.finding(line, status)
             self.assertIsNone(
@@ -1150,10 +1283,10 @@ class CorrectedField(unittest.TestCase):
     def test_the_question_is_no_corrected_field(self):
         text = "- **Question / hypothesis:** how many lines on average?\n" + self.TEXT
         for place in ("Question / hypothesis", "question / hypothesis"):
-            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · x · y")
+            f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · statement · x · y")
             self.assertIsNone(findings.corrected_field(f, self.PROTOCOL, text), place)
         # the twin: the other fields of the same text still are
-        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · x · y")
+        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y")
         self.assertEqual(
             findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
         )

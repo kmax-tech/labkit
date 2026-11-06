@@ -201,7 +201,7 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
 
     def line(self, place: str, grade: str = "WARNING") -> str:
         decided = findings.Finding(
-            grade, f"{grade} · {place} · something is wrong", "fixed", "why"
+            grade, f"{grade} · {place} · statement · something is wrong", "fixed", "why"
         )
         return audit_decisions.repair_hint(self.area, self.record, None, decided)
 

@@ -38,13 +38,13 @@ from labkit.tools import protocol_result
 RUN = "2026-10-07T10-00-00_ab12"
 BLOCKER = (
     "BLOCKER",
-    "BLOCKER · experiments/01-x/scripts/01_measure.py:1 · the threshold is fit "
+    "BLOCKER · experiments/01-x/scripts/01_measure.py:1 · statement · the threshold is fit "
     "in-sample · criterion_1_pass reads True for any rows · LAB-050 Analysis audit before "
     "reporting · fit it out of sample",
 )
 WARNING = (
     "WARNING",
-    "WARNING · experiments/01-x/scripts/01_measure.py:1 · one seed · the spread is "
+    "WARNING · experiments/01-x/scripts/01_measure.py:1 · statement · one seed · the spread is "
     "unknown · LAB-015 Preflight audit before freezing · report the spread",
 )
 UPHELD = "DECISION #1 · upheld · the Conclusion claims an in-sample fit and no more\nverdict: 1 upheld, 0 rejected, 0 insufficient\n"
@@ -932,7 +932,7 @@ class StandsCheckHint(unittest.TestCase):
 #: a WARNING placed in the protocol, as a unit finding is (round 2, t34 r1)
 IN_PROTOCOL: tuple[str, str] = (
     "WARNING",
-    "WARNING · experiments/01-x/PROTOCOL-x.md:Unit · the Unit field calls the "
+    "WARNING · experiments/01-x/PROTOCOL-x.md:Unit · statement · the Unit field calls the "
     "powers ms² · every power is misread · LAB-015 Preflight audit before "
     "freezing · state the unit the run computes",
 )

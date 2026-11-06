@@ -376,10 +376,16 @@ evidence file under the same ID (top of this document).*
 
   Every finding is decided (fixed / limitation / false-positive, each but
   fixed with a reason) or stays open in a handover that ends the protocol
-  without a result; a BLOCKER or WARNING decided limitation also
+  without a result. The auditor names each finding's subject:
+  `implementation` — code, data handling or run depart from the
+  registration or a correct measurement — is never decided limitation, it
+  is repaired and measured anew; `statement` — the run is right, the
+  finding is about what the text or the result claims — may be. A BLOCKER
+  or WARNING decided limitation also
   carries its effect on the verdicts — they stand, read within it, or the run
   leaves the named promises not assessable (a number may be reported
-  within a fault; a verdict needs an instrument fit to judge it). How
+  within a limit of what the run can judge; a verdict needs an instrument
+  fit to judge it). How
   severe a finding is and what the result still allows are two
   questions: the effect follows from what the promise claims, not from
   the grade. The reported protocol carries each named effect as a

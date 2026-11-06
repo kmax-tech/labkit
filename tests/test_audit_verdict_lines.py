@@ -44,7 +44,7 @@ def _run(answer: str) -> tuple[int, str, list[Path]]:
     return rc, err.getvalue(), sorted((area / "audits").glob("*.toml"))
 
 
-LINE = "BLOCKER · a.py:1 · x · y · LAB-015 Preflight audit before freezing · z\n"
+LINE = "BLOCKER · a.py:1 · statement · x · y · LAB-015 Preflight audit before freezing · z\n"
 
 
 class VerdictHeldToLines(unittest.TestCase):
@@ -62,7 +62,7 @@ class VerdictHeldToLines(unittest.TestCase):
         rc, _, records = _run(LINE + "verdict: 1 blockers, 0 warnings, 0 notes")
         self.assertEqual((rc, len(records)), (1, 1))
         rc, _, records = _run(
-            "NOTE · a.py:1 · x\nverdict: 0 blockers, 0 warnings, 1 notes"
+            "NOTE · a.py:1 · statement · x\nverdict: 0 blockers, 0 warnings, 1 notes"
         )
         self.assertEqual((rc, len(records)), (0, 1))
 

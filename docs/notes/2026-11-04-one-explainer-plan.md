@@ -20,14 +20,14 @@ The table of who decides, judges and writes what moved to [Architecture, "Who do
 
 ### Entry points to check when a boundary changes
 
-| Entry | State or purpose | Existing coordination to retain |
-|---|---|---|
-| `report-check AREA` | Working tree, declared or undeclared protocol | `report_context.checked`, `report_check.chain_gaps` |
-| Commit and `report-check --if-reported --staged` | Index, affected paths and reached reports | `agent_hooks.commit_gates`, `report_check.reached_by`, staged-area guards |
-| Stop | Working tree and session changes | `agent_hooks.stop`, existing report and undecided-state checks |
-| `labkit-next` and hook step output | The state the caller judges | `next_step.next_step`, `next_step.steps_for`, shared readers |
-| Adoption | Written proposal, followed by report generation and checking | `protocol_fill.adopt`, `tools.adopt`; preserve proposal and interrupted-adoption rules |
-| Handover | Explicit end without an adopted result | Existing handover writer and checks; does not repair the scientific fault |
+| Entry                                            | State or purpose                                             | Existing coordination to retain                                                        |
+|--------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| `report-check AREA`                              | Working tree, declared or undeclared protocol                | `report_context.checked`, `report_check.chain_gaps`                                    |
+| Commit and `report-check --if-reported --staged` | Index, affected paths and reached reports                    | `agent_hooks.commit_gates`, `report_check.reached_by`, staged-area guards              |
+| Stop                                             | Working tree and session changes                             | `agent_hooks.stop`, existing report and undecided-state checks                         |
+| `labkit-next` and hook step output               | The state the caller judges                                  | `next_step.next_step`, `next_step.steps_for`, shared readers                           |
+| Adoption                                         | Written proposal, followed by report generation and checking | `protocol_fill.adopt`, `tools.adopt`; preserve proposal and interrupted-adoption rules |
+| Handover                                         | Explicit end without an adopted result                       | Existing handover writer and checks; does not repair the scientific fault              |
 
 This table is the bounded entry-point inventory for future changes, not an instruction to thread a new result object through all callers.
 
@@ -38,6 +38,8 @@ The proposal to pass a single evaluation result through gates, hooks, adoption, 
 Reconsider only when a concrete case shows gate and guidance disagree despite those shared readers, or repeated execution becomes a measured cost. Then name the exact duplicated paths to remove, set a package-line budget before coding and test the same-state discrepancy. A proposed structural guarantee alone does not reopen the decision. File writes and concurrent edits remain distinct states and must not be hidden by caching.
 
 ### Next architectural boundary to repair
+
+**Built 2026-11-06** (see `CHANGELOG.md`, Unreleased): the subject is named `implementation` or `statement` (the author's choice), stored as `subject` in the record; the contract below holds in `tests/test_architecture.py` (`NextComposesNoDecision`). The text below is the order as written before the build.
 
 `next_step._finding_on_the_field` is the concrete remaining responsibility violation: it sees a restore step and an open finding located in the protocol and composes `--decide ... limitation`, without knowing the scientific cause. A finding about a missing registered check can therefore receive the same recommendation as a description issue.
 
@@ -95,12 +97,12 @@ Then Phase 1 does not continue as written; the note gets the reason and the next
 
 Built on `32b51e32`: `report_hold.discussion_review_findings` reads the review a report owes for discussing a run of a protocol, per protocol and from the state given; `report_check.chain_gaps` carries it (stage 8), so `report-check AREA` holds it and `labkit-next` names it; `next_step` takes the state (`--staged` reads the index); the post-change hook prints that finding instead of its own `review_hint`, which is gone; the report scan `discussing_reports` and the new reader share one home (`discussing_candidates`: the tree walked as `reports_without_block` walks it, no git; the index listed by git). Tests: the tree (gate, stop and `next` hold and name one finding, text and way out equal), the index (the commit and `next --staged` read the staged state; a review of it releases both while the tree, edited after, owes its own), the counter-case (a review of the state releases all three, the chain moves on to the adoption), the hook's silence once a review stands.
 
-| Measured | Package | Tests |
-|---|---:|---:|
-| lines added | 181 | 212 |
-| lines removed | 103 | 50 |
-| net | +78 | +162 |
-| test functions | | ±0 (4 added, 4 of `review_hint` removed) |
+| Measured       | Package |                                    Tests |
+|----------------|--------:|-----------------------------------------:|
+| lines added    |     181 |                                      212 |
+| lines removed  |     103 |                                       50 |
+| net            |     +78 |                                     +162 |
+| test functions |         | ±0 (4 added, 4 of `review_hint` removed) |
 
 Lines include docstrings. Of the package's net, the new reader and scan are about 60, the state threading in `next` about 40, the hook's gate call about 20, against `review_hint`'s 40 removed.
 
@@ -116,18 +118,18 @@ Special cases that remain: a report whose discussion blocks do not read is held 
 **Option A, built the same day (second commit), under the terms fixed for it: success is net negative package lines with the invariant test green and no exception list, at most one session.** The stop held a protocol whose registered report is not written with a line it composed from `report_hold.missing_report`; `labkit-next` named the progress account for the same state. Now the hold stays that finding and the stop prints `next`'s step (`Step.render`, the one spelling), tested as equal. For a gate to print `next`'s step, the step's logic moved from `tools` into `gates` (`labkit.gates.next_step`; the command is `tools.next_command`), which the layer rule required — the policy layer the plan wants, made real; `FILLABLE_HEAD_KEYS` moved from `protocol_edit` to `protocol_block` on the way (a format fact under a tool). One design point held against the first draft: `next` keeps naming the one concrete command (the discussion with the run id), not the finding's three generic ways — the hold is the finding, the action is `next`'s choice, as the corrected invariant says; the existing tests of that choice (`ProgressAccount`) stood and were right. Predicted before building: +20 to +40, because the holding logic (which protocols, whether the report is missing) stays in the hook and only its text line goes.
 
 | Measured, Option A | Package |
-|---|---:|
-| lines added | 189 |
-| lines removed | 150 |
-| net | **+39** |
+|--------------------|--------:|
+| lines added        |     189 |
+| lines removed      |     150 |
+| net                | **+39** |
 
 Split by origin, from the commit's per-file counts:
 
-| Part of Option A | Net | Paid again by the next surface? |
-|---|---:|---|
-| the move `tools/next_step` → `gates/next_step` + `tools/next_command` (+39 −121 +111; of it `render` +6, two module docstrings and imports +23) | +29 | no, one-time |
-| the head-key catalogue from `protocol_edit` to `protocol_block` (housekeeping the move exposed) | +5 | no, one-time |
-| the hook's line replaced by the render call (`agent_hooks`, +7 −2) | +5 | yes, per surface — and the removed composition was one line |
+| Part of Option A                                                                                                                                | Net | Paid again by the next surface?                             |
+|-------------------------------------------------------------------------------------------------------------------------------------------------|----:|-------------------------------------------------------------|
+| the move `tools/next_step` → `gates/next_step` + `tools/next_command` (+39 −121 +111; of it `render` +6, two module docstrings and imports +23) | +29 | no, one-time                                                |
+| the head-key catalogue from `protocol_edit` to `protocol_block` (housekeeping the move exposed)                                                 |  +5 | no, one-time                                                |
+| the hook's line replaced by the render call (`agent_hooks`, +7 −2)                                                                              |  +5 | yes, per surface — and the removed composition was one line |
 
 The invariant test is green without an exception list, one session (about two hours), but the lines are positive: **the success criterion is not met.** What is shown: on the first two candidates Phase 1 saved no code, with one-time costs of +34 here and about +40 in the pilot (the state parameter). Not shown: that it cannot — the recurring part of Option A is +5 for one line removed, and a surface whose own composition is a paragraph, not a line (`_stop_checks`' four prose blocks), would weigh differently. Per the terms: the work goes to the usage round with this state, and Phase 1's line forecast is withdrawn below; if the round speaks for Phase 1, this table says where to resume. What stands from the two pilots is not size but structure: one finding for gate, hooks and `next` in two states; `next` in the gates layer, printable by any hook; a state parameter; one report scan. Criterion 1's remaining branch (the scan lists the tree by a walk and the index by git) stays: a tree-walk helper for all files would cross `.venv` and `.git`, so the two sources are inherent until a bounded walk exists.
 
@@ -136,10 +138,10 @@ The invariant test is green without an exception list, one session (about two ho
 Result (commits `36a110ef`, `3af7c599`; measured against `461e37d6` with `git diff --numstat`, lines with docstrings):
 
 | Measured, step 3 | Package | Tests |
-|---|---:|---:|
-| lines added | 52 | 46 |
-| lines removed | 95 | 69 |
-| net | **−43** | −23 |
+|------------------|--------:|------:|
+| lines added      |      52 |    46 |
+| lines removed    |      95 |    69 |
+| net              | **−43** |   −23 |
 
 Per file: `ways_out` −45 (the short routes and the `full` branch), `finalize` −6, `audit_decisions` +8 (the constant and its comment), `audit_prompt` ±0, agent guide and `AGENTS.md` template ±0 in count, reworded. The suite green without an exception list, one session. **The success criterion is met for the first time**: this step removed composition and added none — the pilot and Option A each added a reader or a move. The invariant held is the weaker one that the cycle allows: finalize names no step (test: no command but `labkit-next` in the note); the decision list names none (test: the route text absent, the one line present). What stands in the way after this step, of the table's five homes: `agent_hooks.stop`'s own paragraphs (the undecided blockers and the report-check output, composed around `_capture`) and `scaffold.next_steps` (the lane after `labkit-init exp`, about 250 lines with its three helpers) — the second is the removal-first candidate with the most lines, and the one that changes what a cold agent sees first; it needs its own prediction and a probe case before building.
 
@@ -148,10 +150,10 @@ Per file: `ways_out` −45 (the short routes and the `full` branch), `finalize` 
 Result (commit `50e83954`, measured against `3c8da70e`):
 
 | Measured, step 4 | Package | Tests |
-|---|---:|---:|
-| lines added | 120 | 63 |
-| lines removed | 35 | 18 |
-| net | **+85** | +45 |
+|------------------|--------:|------:|
+| lines added      |     120 |    63 |
+| lines removed    |      35 |    18 |
+| net              | **+85** |   +45 |
 
 Over the budget (+40) and the forecast (+30). Where it went: `next_step` +65 — the row itself 35 (13 of them its docstring, which carries the two incidents the way protects against), 12 for the order's docstring, 20 for `_before_the_chain`, a helper that exists only because the linter's complexity bound (C901) was reached — and `agent_hooks` +20 (the printer `next_steps_for` 25 and its two calls 8 against the constant and the prose, 26). The invariant holds (the stop's stderr and the commit's stdout carry `next`'s rendered step, byte-equal, each from its state; the way's text stands in one place, `next_step._undecided_step`; the suite green, one session). Reading: the same shape as the pilot and Option A — closing a gap *adds* a row, a printer and a helper; the removed prose was smaller than the path that replaces it. Of the +85, about 45 are one-time (the printer, the helper, the order's docstring) and 35 the row, which is the state's one home from now on. **Re-decision owed (the terms say stop, not cut):** keep, since Phase 1's case is the invariant and the one home, not size — or revert `50e83954` and leave the stop's own way in place. Recommended: keep; Max decides. Decided: keep (Max, 2026-11-04).
 
@@ -159,11 +161,11 @@ Correction to step 3's closing line, from the analysis before step 5: the lane a
 
 **Step 5 result** (commit `142afa6a`, built by a subagent on that analysis):
 
-| Measured, step 5 | Package | Tests |
-|---|---:|---:|
-| lines added | 11 | 32 |
-| lines removed | 305 | 168 |
-| net | **−294** | −136 |
+| Measured, step 5 |  Package | Tests |
+|------------------|---------:|------:|
+| lines added      |       11 |    32 |
+| lines removed    |      305 |   168 |
+| net              | **−294** |  −136 |
 
 `change_kind` ends with `next_step(area, protocol).render(...)` after its log lines; the invariant test (`tests/test_scaffold.py`, `test_a_kind_change_closes_with_labkit_nexts_step_and_no_lane`) holds the report's tail byte-equal to the render and free of a numbered lane. The suite green, one session.
 
@@ -187,10 +189,10 @@ Correction to step 3's closing line, from the analysis before step 5: the lane a
 
 Today labkit is a deny-list: the agent may change any file, and the gates recognise known violations afterwards. A deny-list grows with every error observed, and so do its tests (the registration comparison that broke on whitespace and on a glossed field name, V1 and V2 of the maintainability review, are errors of recognising a hand-edited head). The alternative is an allow-list: one way, and what lies beside it is not forbidden case by case but not provided for. This plan takes its first step only: the writer refuses what a gate would later hold. The ledger is deferred and the historical bindings stay, so hand edits before the first commit stay unrecognised and the test class "semantically equivalent hand edits" does not fall away yet — it shrinks where a writer's precondition replaces a gate's recognition, and no earlier.
 
-| Class | Files | Who writes | What labkit checks |
-|---|---|---|---|
+| Class       | Files                                                                                                                                                                                                                              | Who writes             | What labkit checks                                                                                                                                                                                                                                                |
+|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands only | today: against HEAD once committed (`evidence.change_blockers`). Step 1 (Phase 3, first item): the writer refuses what a gate would later hold. A comparison against what labkit last wrote, before the first commit, is the deferred write-ledger proposal below |
-| free | measuring code, report prose, notes, data, `MANIFEST.sha256` | the agent | consequences only: code changed since the run, a report citing a run nothing adopted |
+| free        | measuring code, report prose, notes, data, `MANIFEST.sha256`                                                                                                                                                                       | the agent              | consequences only: code changed since the run, a report citing a run nothing adopted                                                                                                                                                                              |
 
 The second row exists and stays: research content must be free. The first row exists by half — `runlog` writes the runs, `protocol-fill` the head, `evidence.change_blockers` compares committed evidence against HEAD. What is missing is the consequence: a hand edit of a machine-led file is not a case with its own cure but a refusal with one way out, and the writer refuses what the gates would later hold (a registered field after the first measurement). The gap between a write and its first commit (what HEAD cannot compare yet) is a proposal below, not part of this plan. A writer's refusal removes no check at the read; writer and reader share one validation, so the rule has one home and one test instead of two implementations that can disagree. What does not change are the bindings across time — the registration to the first measurement's commit, the record to the run it audited — which compare a present text with a historical one and stay as they are. What it does not solve stays with the agent audit: a number that is formally clean and wrong. Deliberate circumvention stays possible (a forged ledger line); labkit guards against error, not adversaries, as the [review-record limit](2026-11-02-review-record-forgery.md) already says.
 
@@ -207,16 +209,16 @@ The second row exists and stays: research content must be free. The first row ex
 
 Counted at the baseline (`grep` over `labkit/`, tests excluded).
 
-| Finding | Where | Count |
-|---|---|---:|
-| `fix=` sites composing a way out as prose | 31 modules | 245 |
-| of these naming a command in backticks | | 64 |
-| of these prose only ("decide the finding", "fill the field") | | 180 |
-| code reading a `fix` string as text to decide | `next_step._refused_measurement` (`measure_command(...) in fix`), `ways_out.declared_first` (prepends to `fix`) | 2 |
-| the withdraw-first rule in two homes | `ways_out.declared_first` via `report_check.chain_gaps`, and `next_step._held_step` composing its own withdrawal sentence | 2 |
-| step-naming code outside `next_step` | `finalize.undeclared_hint` (adopt command and the steps owed), `agent_hooks._report_hint` + `report_review.review_hint` (the post-change hook's step), `agent_hooks.stop` composing `"{gap.text}. Next: {gap.fix}"` per touched area, `scaffold.next_steps` (the lane after `labkit-init exp`), `ways_out.blocker_routes` (nine routes printed with every decision list and shown to the auditor) | 5 homes |
-| the register-a-report hint in two homes | `next_step._report_hint`, `agent_hooks._report_hint` (a different hint under the same name) | 2 |
-| hooks that do not call `next_step` | `agent_hooks.stop`, the pre-commit path | 2 |
+| Finding                                                      | Where                                                                                                                                                                                                                                                                                                                                                                                             |   Count |
+|--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------:|
+| `fix=` sites composing a way out as prose                    | 31 modules                                                                                                                                                                                                                                                                                                                                                                                        |     245 |
+| of these naming a command in backticks                       |                                                                                                                                                                                                                                                                                                                                                                                                   |      64 |
+| of these prose only ("decide the finding", "fill the field") |                                                                                                                                                                                                                                                                                                                                                                                                   |     180 |
+| code reading a `fix` string as text to decide                | `next_step._refused_measurement` (`measure_command(...) in fix`), `ways_out.declared_first` (prepends to `fix`)                                                                                                                                                                                                                                                                                   |       2 |
+| the withdraw-first rule in two homes                         | `ways_out.declared_first` via `report_check.chain_gaps`, and `next_step._held_step` composing its own withdrawal sentence                                                                                                                                                                                                                                                                         |       2 |
+| step-naming code outside `next_step`                         | `finalize.undeclared_hint` (adopt command and the steps owed), `agent_hooks._report_hint` + `report_review.review_hint` (the post-change hook's step), `agent_hooks.stop` composing `"{gap.text}. Next: {gap.fix}"` per touched area, `scaffold.next_steps` (the lane after `labkit-init exp`), `ways_out.blocker_routes` (nine routes printed with every decision list and shown to the auditor) | 5 homes |
+| the register-a-report hint in two homes                      | `next_step._report_hint`, `agent_hooks._report_hint` (a different hint under the same name)                                                                                                                                                                                                                                                                                                       |       2 |
+| hooks that do not call `next_step`                           | `agent_hooks.stop`, the pre-commit path                                                                                                                                                                                                                                                                                                                                                           |       2 |
 
 Not in the way, named so they are not counted twice: `report_hold.report_hints`, `report_hold.replacement_hints`, `audit_decisions.read_hints` and `audit_decisions.stands_check_hint` are static-evidence warnings or reading aids, not step namers; `preflight.contract_hint` and `protocol_edit.field_address_hint` explain a refused input's spelling, which is a refusal's way out and stays with the refusal.
 
@@ -232,30 +234,30 @@ Deliverable: the two tables below, one row per format and per gate, each with th
 
 Readers from an AST scan of direct read calls outside `labkit/formats/` and outside tests (2026-11-04; spot-checked: `deliverable`, `criterion_bar`, `timebox`, `promises.load` are read by templates and their own tests only). Chain link: I intent, P promise, C code, R run, N reported number. Class as the principle above names it; *derived* means no file of its own. Verdicts are proposals; each *goes*, *moves* or *merges* needs a before/after proposal of its own (what the files, readers and tests look like on both sides) before it is a Breaking entry (Phase 3). A reader does not justify a format: it may be part of the same unnecessary construction.
 
-| Format | File | Link | Class | Readers (g gates · c checks · r run · t tools · p probes · tpl templates) | Proposed verdict |
-|---|---|---|---|---|---|
-| `protocol_block` | PROTOCOL-*.md, the toml block | I P | machine-led | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3 | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer, Phase 3's first item |
-| `protocol_check` | PROTOCOL-*.md prose fields, prompt blocks | I P | machine-led (content free, structure labkit's) | g 8 · c 4 · r 2 · t 5 · p 1 | stays; `repeated_fields` and the MUST checks become the writer's preconditions once the fields are written only through it |
-| `promises` | `[[promise]]` tables | P | machine-led | parse: g 4 · c 6 · r 1 · t 4; `load`, `write_constant`: tpl only | stays; `load`/`write_constant` are the scripts' API and move to the script-helper home (below) |
-| `protocol_history` | the protocol as git holds it | P→R | derived (git) | g 6 · c 1 · r 1 | stays: the binding to the first measurement's commit compares a present with a historical text and is not replaced by "as last written"; with one writer that refuses a registered field after the first measurement it fires rarely, but it stays |
-| `runs` | `runs/<id>/*.json` | R | machine-led | g 7 · c 6 · r 3 · t 2 · p 1 · tpl 1 | stays |
-| runs index | `runs.tsv` (`run/runlog.indexed_runs`) | R | machine-led | g 3 · r 1 | moves into `formats/` (a format read by gates lives outside the formats layer) |
-| `answering_run` | none | R→N | derived | g 4 · c 5 · r 2 · t 1 · p 1 | merges into the state reader (Phase 4) |
-| `attempts` | `audits/attempts.jsonl` | R→N | machine-led | g 4 · t 1 | stays; merge candidate with `failed_attempts` (two journals of audit attempts) — decide in Phase 3 |
-| `failed_attempts` | `audits/<min>-<mode>-failed.toml` | R→N | machine-led | g 2 · c 1 · r 1 · p 1 | merge candidate into `attempts` |
-| `findings` | `audits/<min>-{preflight,analysis}.toml` with decisions | P→N | machine-led | g 8 · c 2 · r 1 | stays |
-| `audit_gaps` | none | P→N | derived | g 2 · c 1 · r 1 | merges into the state reader |
-| `followup` | none | N | derived | g 4 | merges into the state reader |
-| `handovers` | `audits/handovers/*.json` + report block | N | machine-led | g 5 · t 1 · c 1 (block) | stays |
-| `reviews` | `audits/<min>-review.toml` | N | machine-led | g 2 | merge candidate with `report_reviews`: one review record with a kind |
-| `report_reviews` | `audits/report-reviews/*.toml` | N | machine-led | g 2 | merge candidate with `reviews` |
-| `evidence` | audits/ and runs/ against HEAD | all | derived (git) | g 4 · t 1 | stays; the write-to-commit gap is the deferred write-ledger proposal, not a change to this module |
-| `comment_blocks` | `<!-- labkit … -->` in reports | N | machine-led inside free files | c 1 (gates through `report_blocks`) | stays |
-| `data_manifest` | `MANIFEST.sha256` | C→R | free | c 1 | stays |
-| `deliverable` | `pred_results/*.csv` | R | free | nobody; tpl writes it | goes from `formats/`: a write-only helper is the scripts', not a format |
-| `criterion_bar` | none | P | script helper | tpl 2 | moves to the script-helper home |
-| `timebox` | none (Timebox field) | P | script helper | tpl 1 | moves to the script-helper home |
-| `rules` | `docs/standard.md`, `docs/rules.tsv` | — | repo-level | g 1 · c 1 · t 1 | stays |
+| Format             | File                                                    | Link | Class                                          | Readers (g gates · c checks · r run · t tools · p probes · tpl templates) | Proposed verdict                                                                                                                                                                                                                                   |
+|--------------------|---------------------------------------------------------|------|------------------------------------------------|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `protocol_block`   | PROTOCOL-*.md, the toml block                           | I P  | machine-led                                    | g 9 · c 8 · r 2 · t 8 · p 1 · tpl 3                                       | stays; the head's writers are `protocol_fill`, `protocol_edit`, `scaffold` — one writer, Phase 3's first item                                                                                                                                      |
+| `protocol_check`   | PROTOCOL-*.md prose fields, prompt blocks               | I P  | machine-led (content free, structure labkit's) | g 8 · c 4 · r 2 · t 5 · p 1                                               | stays; `repeated_fields` and the MUST checks become the writer's preconditions once the fields are written only through it                                                                                                                         |
+| `promises`         | `[[promise]]` tables                                    | P    | machine-led                                    | parse: g 4 · c 6 · r 1 · t 4; `load`, `write_constant`: tpl only          | stays; `load`/`write_constant` are the scripts' API and move to the script-helper home (below)                                                                                                                                                     |
+| `protocol_history` | the protocol as git holds it                            | P→R  | derived (git)                                  | g 6 · c 1 · r 1                                                           | stays: the binding to the first measurement's commit compares a present with a historical text and is not replaced by "as last written"; with one writer that refuses a registered field after the first measurement it fires rarely, but it stays |
+| `runs`             | `runs/<id>/*.json`                                      | R    | machine-led                                    | g 7 · c 6 · r 3 · t 2 · p 1 · tpl 1                                       | stays                                                                                                                                                                                                                                              |
+| runs index         | `runs.tsv` (`run/runlog.indexed_runs`)                  | R    | machine-led                                    | g 3 · r 1                                                                 | moves into `formats/` (a format read by gates lives outside the formats layer)                                                                                                                                                                     |
+| `answering_run`    | none                                                    | R→N  | derived                                        | g 4 · c 5 · r 2 · t 1 · p 1                                               | merges into the state reader (Phase 4)                                                                                                                                                                                                             |
+| `attempts`         | `audits/attempts.jsonl`                                 | R→N  | machine-led                                    | g 4 · t 1                                                                 | stays; merge candidate with `failed_attempts` (two journals of audit attempts) — decide in Phase 3                                                                                                                                                 |
+| `failed_attempts`  | `audits/<min>-<mode>-failed.toml`                       | R→N  | machine-led                                    | g 2 · c 1 · r 1 · p 1                                                     | merge candidate into `attempts`                                                                                                                                                                                                                    |
+| `findings`         | `audits/<min>-{preflight,analysis}.toml` with decisions | P→N  | machine-led                                    | g 8 · c 2 · r 1                                                           | stays                                                                                                                                                                                                                                              |
+| `audit_gaps`       | none                                                    | P→N  | derived                                        | g 2 · c 1 · r 1                                                           | merges into the state reader                                                                                                                                                                                                                       |
+| `followup`         | none                                                    | N    | derived                                        | g 4                                                                       | merges into the state reader                                                                                                                                                                                                                       |
+| `handovers`        | `audits/handovers/*.json` + report block                | N    | machine-led                                    | g 5 · t 1 · c 1 (block)                                                   | stays                                                                                                                                                                                                                                              |
+| `reviews`          | `audits/<min>-review.toml`                              | N    | machine-led                                    | g 2                                                                       | merge candidate with `report_reviews`: one review record with a kind                                                                                                                                                                               |
+| `report_reviews`   | `audits/report-reviews/*.toml`                          | N    | machine-led                                    | g 2                                                                       | merge candidate with `reviews`                                                                                                                                                                                                                     |
+| `evidence`         | audits/ and runs/ against HEAD                          | all  | derived (git)                                  | g 4 · t 1                                                                 | stays; the write-to-commit gap is the deferred write-ledger proposal, not a change to this module                                                                                                                                                  |
+| `comment_blocks`   | `<!-- labkit … -->` in reports                          | N    | machine-led inside free files                  | c 1 (gates through `report_blocks`)                                       | stays                                                                                                                                                                                                                                              |
+| `data_manifest`    | `MANIFEST.sha256`                                       | C→R  | free                                           | c 1                                                                       | stays                                                                                                                                                                                                                                              |
+| `deliverable`      | `pred_results/*.csv`                                    | R    | free                                           | nobody; tpl writes it                                                     | goes from `formats/`: a write-only helper is the scripts', not a format                                                                                                                                                                            |
+| `criterion_bar`    | none                                                    | P    | script helper                                  | tpl 2                                                                     | moves to the script-helper home                                                                                                                                                                                                                    |
+| `timebox`          | none (Timebox field)                                    | P    | script helper                                  | tpl 1                                                                     | moves to the script-helper home                                                                                                                                                                                                                    |
+| `rules`            | `docs/standard.md`, `docs/rules.tsv`                    | —    | repo-level                                     | g 1 · c 1 · t 1                                                           | stays                                                                                                                                                                                                                                              |
 
 Script-helper home: the functions a stamped measuring script imports (`promises.load`, `write_constant`, `criterion_bar.bar_of`, `timebox.seconds_of`, `deliverable.write_csv`) are the area code's API, not formats the gates read; they belong under `labkit/run/` beside `runlog`, `llm` and `batch`, where the public API already lives, and in the Public API table once a lab imports them. Without area record files and so not formats either: `standard_contract`, `scope_sha`, `repo`, `jsonl`, `files`, `console`, `shell`, `gate`, `prompts`, `reference`.
 
@@ -263,17 +265,17 @@ Script-helper home: the functions a stamped measuring script imports (`promises.
 
 Transitive reads from a static call graph (branch-dependent reads counted). A gate is one of the five that decide; a hook is a surface that should call a gate and `next` (Phase 1), listed here because today it reads on its own.
 
-| Entry | Decides | Formats read | Proposed verdict |
-|---|---|---|---|
-| `preflight_area` | the registration may freeze | protocol_block, protocol_check, promises, protocol_history, findings, audit_gaps, handovers; runs and answering_run through the scope basis | stays |
-| `finalize_area` | the run is what the registration promised | the protocol four, runs, answering_run, findings, followup, data_manifest | stays |
-| `report_check` | the number may be released | everything finalize reads, plus attempts, failed_attempts, handovers, reviews, report_reviews, evidence, comment_blocks, runs.tsv | stays, the release gate |
-| `hold_report` | a report may stand as it is | comment_blocks, handovers, runs, answering_run, protocol_block, promises, attempts, report_reviews, findings | merges into `report_check`'s chain: called from its command path and the hooks today, outside `chain_gaps`, so `next` does not see its holds |
-| `measurement_refusal` / `freeze_gate` | a measurement may start | the protocol four, runs, answering_run, one preflight record; `freeze_gate` also area_records, failed_attempts | stays as the start gate; its registration reads (`registration_missing`, `registration_in_commit`) duplicate preflight's and get one home |
-| hook `pre_run` | — | head; low lane one check, else preflight_area | surface: keeps calling preflight, prints `next` |
-| hook `post_change` | — | attempts, evidence, runs.tsv, protocol_report on a changed protocol, comment_blocks on a changed report | surface: `protocol_report` here is a sixth reader of the protocol state; after Phase 4 it reads the state once |
-| hook `stop` | — | handovers, attempts, evidence, report_hold, report_check with all it reads, runs.tsv | surface: prints `next` per touched area (Phase 1) |
-| hook `undecided` | — | handovers, attempts, evidence, protocol_block, promises, comment_blocks | surface: the pre-commit's gate call; prints `next` |
+| Entry                                 | Decides                                   | Formats read                                                                                                                                | Proposed verdict                                                                                                                             |
+|---------------------------------------|-------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `preflight_area`                      | the registration may freeze               | protocol_block, protocol_check, promises, protocol_history, findings, audit_gaps, handovers; runs and answering_run through the scope basis | stays                                                                                                                                        |
+| `finalize_area`                       | the run is what the registration promised | the protocol four, runs, answering_run, findings, followup, data_manifest                                                                   | stays                                                                                                                                        |
+| `report_check`                        | the number may be released                | everything finalize reads, plus attempts, failed_attempts, handovers, reviews, report_reviews, evidence, comment_blocks, runs.tsv           | stays, the release gate                                                                                                                      |
+| `hold_report`                         | a report may stand as it is               | comment_blocks, handovers, runs, answering_run, protocol_block, promises, attempts, report_reviews, findings                                | merges into `report_check`'s chain: called from its command path and the hooks today, outside `chain_gaps`, so `next` does not see its holds |
+| `measurement_refusal` / `freeze_gate` | a measurement may start                   | the protocol four, runs, answering_run, one preflight record; `freeze_gate` also area_records, failed_attempts                              | stays as the start gate; its registration reads (`registration_missing`, `registration_in_commit`) duplicate preflight's and get one home    |
+| hook `pre_run`                        | —                                         | head; low lane one check, else preflight_area                                                                                               | surface: keeps calling preflight, prints `next`                                                                                              |
+| hook `post_change`                    | —                                         | attempts, evidence, runs.tsv, protocol_report on a changed protocol, comment_blocks on a changed report                                     | surface: `protocol_report` here is a sixth reader of the protocol state; after Phase 4 it reads the state once                               |
+| hook `stop`                           | —                                         | handovers, attempts, evidence, report_hold, report_check with all it reads, runs.tsv                                                        | surface: prints `next` per touched area (Phase 1)                                                                                            |
+| hook `undecided`                      | —                                         | handovers, attempts, evidence, protocol_block, promises, comment_blocks                                                                     | surface: the pre-commit's gate call; prints `next`                                                                                           |
 
 Reading of the two tables: every record format is read by a gate, so nothing goes for want of a reader; what goes or moves is the script-helper group misfiled under formats. The size sits in the *readers*: the protocol state has six independent reader paths (preflight, finalize, start check, report_check, `protocol_report` in the hook, `next`), and three derived views (answering_run, audit_gaps, followup) are recomputed by each. That is Phase 4's case.
 
@@ -291,12 +293,12 @@ Change: a `Command` (frozen dataclass in `labkit/formats/repo.py`, the builders'
 
 Kinds, fixed here so the `--do` proposal has nothing to decide:
 
-| Kind | Commands | Why |
-|---|---|---|
-| MECHANICAL | `adopt` (only when `next` names one run; several candidates make the choice RESEARCH, and `next` must then hand out that kind, never `adopt`), `into`, `withdraw`, `wait` | labkit's own checked writers; each refuses on its own and leaves the files as they were |
-| CONTENT | `fill` (a MUST field's value), `discuss` (the `--why`), the Conclusion | the agent writes words labkit cannot know |
-| RESEARCH | `audit`, `review`, a decision, choosing among several runs | a model call or a judgement |
-| DESTRUCTIVE | `restore` (`git checkout -- <evidence>`), `init` on a tree that has files | discards or overwrites work; printed, never run |
+| Kind        | Commands                                                                                                                                                                  | Why                                                                                     |
+|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| MECHANICAL  | `adopt` (only when `next` names one run; several candidates make the choice RESEARCH, and `next` must then hand out that kind, never `adopt`), `into`, `withdraw`, `wait` | labkit's own checked writers; each refuses on its own and leaves the files as they were |
+| CONTENT     | `fill` (a MUST field's value), `discuss` (the `--why`), the Conclusion                                                                                                    | the agent writes words labkit cannot know                                               |
+| RESEARCH    | `audit`, `review`, a decision, choosing among several runs                                                                                                                | a model call or a judgement                                                             |
+| DESTRUCTIVE | `restore` (`git checkout -- <evidence>`), `init` on a tree that has files                                                                                                 | discards or overwrites work; printed, never run                                         |
 
 Files: `labkit/formats/repo.py`, `labkit/formats/gate.py`, `labkit/checks/report_blocks.py`, the 64 command sites (31 modules, list by `grep -rn 'fix=' labkit | grep '\``'`), `labkit/gates/ways_out.py`, `labkit/tools/next_step.py`. Tests: `tests/test_gate.py` (a BLOCKER with a `step` renders the same `fix` as before — the twin: the rendered line is byte-equal for every builder), `tests/test_next_step.py` (the measurement refusal found by name, not text). CHANGELOG: internal change; `GateFinding` is not in the public API (`docs/architecture.md`, "Public API"), so one Breaking entry suffices. Done when: `grep -rn '\.fix' labkit --include='*.py'` shows only rendering (`with_way_out`, `line`) and no comparison. Forecast: package +100 to +150 (`Command`, its builders) and −100 (`declared_first`, the text matching, the second withdraw-first home): about even, honestly; it pays in Phase 4 and in the `--do` proposal, not by itself. Measured afterwards.
 
@@ -315,11 +317,11 @@ Predicted: package about +70 (`Command`, kinds and the builders' wrap +45, the t
 
 **Phase 2 core result** (commit `a80865d8`, steps 1–3 of the list above and `step=` at the measure, adopt and render sites; measured against `c3a4a404`):
 
-| Measured, Phase 2 core | Package | Tests |
-|---|---:|---:|
-| lines added | 331 | 131 |
-| lines removed | 147 | 20 |
-| net | **+184** | +111 |
+| Measured, Phase 2 core |  Package | Tests |
+|------------------------|---------:|------:|
+| lines added            |      331 |   131 |
+| lines removed          |      147 |    20 |
+| net                    | **+184** |  +111 |
 
 Over the budget (+120) and far over the forecast (+70). Where: `repo` +89 (the kinds and names table with its comment 40, `Command` 25, the builders' wrap 24), `gate` +48 (two fields and their docstrings 14, `way` 8, `withdrawn_first` 16, the docstrings of `line` and `block` 10), `finalize` +23 (the three `withdrawn_first` calls formatted over lines, `step=` at six sites), `answering_run` +14 (the `step` field through the run choice), `next_step` +10, `result_render` +8, the rest +12; against `ways_out` −23 (`declared_first`). The Done-when holds: `grep -rn '\.fix' labkit` shows rendering and fallbacks only; every builder's line is byte-equal (`tests/test_repo.py`, `EveryBuilderIsACommand`; `tests/test_gate.py`, `TheWayAsData`); the suite green with no containment assertion changed (only equality on the builders' return type, `.line`). Reading: the forecast counted the data model as a few lines and it is not — the names and kinds table alone is 40 lines of a contract that did not exist, and every field owes its docstring. The original plan's forecast ("about even, honestly; it pays in Phase 4 and in `--do`, not by itself") was the right one; the refinement undercut it. **Re-decision owed:** (a) keep the core and stop Phase 2 here — the datum exists where `next` and the hooks reason (measure, adopt, render), the remaining `step=` sites (withdraw, into, discuss, about 25) follow when their modules are open or when `--do` is triggered; (b) keep and finish the sites now (+25, no reader yet); (c) revert `a80865d8`. Recommended: (a); Max decides. Decided: (b) (Max, 2026-11-04). **Part 4 result** (commit `747aae1d`): 15 sites carry their step (into, discuss, handover, decide), the command bound once for text and datum; three hand-written discuss lines stay (`report_hold` ×2, `report_review_inputs`): the builder renders the `--why` in double quotes and the text does not, so the text is not the builder's byte for byte — a Phase 3 verdict. Package +28, tests ±0. **Phase 2 in all: package +212, tests +111.** Done when met: no code reads a fix as text; every builder's line byte-equal; the suite green.
 
@@ -358,17 +360,17 @@ The size is measured by use, not by lines: the next round of agents on real task
 
 The round: area 17's labkit arm under the result demand, the same three tasks, prompts byte for byte, solver, judges, brief and sheets; nine attempts on v0.108.0 (da46ce1b) against area 17's nine on 76bcd331, two fresh `opus` judges per attempt, three split questions decided by area 17's precedents (`experiments/19-one-explainer-completes-delivery-under-time-limit`, analysis run `2026-11-04T18-19-34_34d2`).
 
-| | before (76bcd331) | after (v0.108.0) |
-|---|---:|---:|
-| complete deliveries (every central question supported, nothing missing) | 2 | 3 |
-| supported answers | 5 | 4 |
-| stopped at the 2400 s limit | 5 | 1 |
-| missing deliverables | 6 | 3 |
-| no REPORT.md | 4 | 1 |
-| attempts with an adopted run | 2 | 7 |
-| unsupported central claims | 2 | 3 |
-| `labkit-next` calls over the nine | 40 | 28 |
-| median minutes | 40.0 | 30.4 |
+|                                                                         | before (76bcd331) | after (v0.108.0) |
+|-------------------------------------------------------------------------|------------------:|-----------------:|
+| complete deliveries (every central question supported, nothing missing) |                 2 |                3 |
+| supported answers                                                       |                 5 |                4 |
+| stopped at the 2400 s limit                                             |                 5 |                1 |
+| missing deliverables                                                    |                 6 |                3 |
+| no REPORT.md                                                            |                 4 |                1 |
+| attempts with an adopted run                                            |                 2 |                7 |
+| unsupported central claims                                              |                 2 |                3 |
+| `labkit-next` calls over the nine                                       |                40 |               28 |
+| median minutes                                                          |              40.0 |             30.4 |
 
 The registered reading (B1: complete deliveries up, time-limit stops not up) holds, so **Phase 1 continues** with the next removal-first candidate (the pilot result names it). What the round does not show: that the closing loop alone did it — one labkit version per side, nine attempts each, two days apart. What it shows beside the reading: the agents now reach the end of the loop (eight reports, seven adopted runs), and the failures moved to the report's text — the three unsupported claims are a right number with a wrong support or a wrong verdict wording (a fixed bar "not assessable" because two null draws differ; a one-draw check called "correct and sufficient" over the registered 200-permutation test, in prose against the audit's BLOCKER; selection among five estimators called "unbiased"). That is the report review's question, not the closing loop's, and it is where the next round should look. The `--do` proposal is not triggered: typed commands fell, and the cost sat on the audits at the end (the one time-limit attempt spent its last calls on `labkit-audit` after the number existed) and on the text. The second count the plan asked for, hook holds per attempt, is not in the sandbox trace (it records commands; the hooks answer inside Claude Code) — it needs the agent transcript, which `usability trace` reads and the sandbox does not keep.
 
@@ -376,17 +378,17 @@ The registered reading (B1: complete deliveries up, time-limit stops not up) hol
 
 The same design on the state after Phase 1 steps 3–6 and Phase 2 (`747aae1d`), the before now area 19's round on v0.108.0; the registered reading was no loss (B1 with `>=` on the complete deliveries).
 
-| | area 17 (76bcd331) | area 19 (v0.108.0) | area 20 (747aae1d) |
-|---|---:|---:|---:|
-| complete deliveries | 2 | 3 | 8 |
-| supported answers | 5 | 4 | 8 |
-| stopped at the limit | 5 | 1 | 1 |
-| missing deliverables | 6 | 3 | 0 |
-| no REPORT.md | 4 | 1 | 0 |
-| attempts with an adopted run | 2 | 7 | 6 |
-| unsupported central claims | 2 | 3 | 1 |
-| `labkit-next` calls over the nine | 40 | 28 | 35 |
-| median minutes | 40.0 | 30.4 | 36.9 |
+|                                   | area 17 (76bcd331) | area 19 (v0.108.0) | area 20 (747aae1d) |
+|-----------------------------------|-------------------:|-------------------:|-------------------:|
+| complete deliveries               |                  2 |                  3 |                  8 |
+| supported answers                 |                  5 |                  4 |                  8 |
+| stopped at the limit              |                  5 |                  1 |                  1 |
+| missing deliverables              |                  6 |                  3 |                  0 |
+| no REPORT.md                      |                  4 |                  1 |                  0 |
+| attempts with an adopted run      |                  2 |                  7 |                  6 |
+| unsupported central claims        |                  2 |                  3 |                  1 |
+| `labkit-next` calls over the nine |                 40 |                 28 |                 35 |
+| median minutes                    |               40.0 |               30.4 |               36.9 |
 
 B1 holds, so **Phase 3 starts on this state**. What the round does not show: that the steps between 0.108.0 and 747aae1d made the difference of five — the changes are small from an agent's seat (the hooks' wording, the decision list's line, finalize's note, a row `next` names rarely), and the run-to-run spread of nine Haiku attempts on these tasks has never been measured. The sign is the finding; the size is not. Before the next before/after reading, one state should be run twice, judged the same way, to put a number on the spread — that round costs what the others cost and reads nothing new about labkit, which is why it was not run first and why it is owed now. The one failure left (assay r1) is area 19's assay pattern again: seven estimators tried on the same folds and the search unmentioned, the missed 0.90 called "not assessable"; the report review let it through twice. That is Phase 3's first verdict to weigh, not the closing loop's. The `--do` proposal stays untriggered: typed commands rose (28 → 35) with the completions, and the cost sat at the loop's end (an audit the last command five times).
 
@@ -394,14 +396,14 @@ B1 holds, so **Phase 3 starts on this state**. What the round does not show: tha
 
 The traces of areas 19 and 20 (labkit-evidence `usability/2026-11-04-usage-rounds/agent-paths-19-vs-20.md`) named two states `next` does not carry. Both are reproduced in the repair probe on `d4fd0a43` (labkit-evidence `usability/2026-11-02-repair-paths/`, cases `c7` and `c8` on the new base `mkbase8`, logs `logs-d4fd0a43-c78/`, commit `b3c9135b`), and the probe's invariant `inv` grew the three checks it lacked: the commit is judged by the real pre-commit hook (`git hook run pre-commit`) instead of its two gates alone; the agent's partial staging (protocol, audit records and report staged, `runs/` untracked — t34-r2's commit) is checked beside the all-staged one; and the first command of `next`'s step is run on a copy of the case (`protocol-fill`, `labkit-adopt`, `git`; placeholders filled) — the step `next` names must run in the state it named it for. Six findings, each against the principle it breaks:
 
-| # | State (probe) | What breaks | Principle | Fix |
-|---|---|---|---|---|
-| 1 | an adoption committed with `runs/` untracked, no report registered (`c7`; t34-r2 E48): `report-check --if-reported --staged` holds "the working tree differs from the index" (`report_check.py:1057`, a print and `return 1`), `next --staged` says nothing | the hook holds on a finding `next`'s set does not carry | one mouth | the gap becomes a row of `next --staged` before the chain, built in one home (the `tree_differs` blocker `report_hold.py:1270` composes for the report review already), its step `git add -- AREA` a Command (`STAGE`, mechanical); report-check's command path prints that step and no text of its own; twin test in `test_next_step` (INDEX, an untracked run dir) |
-| 2 | frozen at high, measured, audited clean, the six † result fields placeholders (`c8`; tassay-r2 E103–109): `next` names `labkit-adopt`, adopt refuses with six blockers | `next` judges the state as it is, adopt the state the adoption makes (`protocol_check.owed` owes the † fields once `result_due`); the named step is refused by its own command | one mouth; the way out as data | `next`'s adoption row asks the one home what the adoption will owe (`owed(text, head, adopting=True)`): a placeholder → `protocol-fill P "Question †=<value>"`, the field absent → `labkit-init exp NAME --report`; adopt's check calls the same function, so the two agree by construction; test: a frozen fixture with † placeholders → next names the fill, filled → adopt |
-| 3 | any MUST field missing in the index (`mkbase8`, `c8`): the pre-commit's step 1 (`protocol-check --staged`) prints its own lines ("MISSING (must) …", "pre-commit: must fields missing") and never `next`'s step, which has the row | the hook composes its own words; Phase 1 reached the hook's steps 2 and 2b, not step 1 | one mouth | the pre-commit becomes one entry, `claude-hook pre-commit`: it runs the policy's gates (the fields on the index, report-check, undecided) and prints `steps_for` once; the shell hook keeps 1b (area numbers), 3 (guard) and 4 (local), states of the repo, not of an area; `install_hooks` shrinks |
-| 4 | the frozen full form without the † fields (`mkbase8` before `--report`): `next` names `protocol-fill P "Why this design=<value>"`, protocol-fill answers "no field labelled" | the step names a writer that cannot write it: the field is absent, not empty | the way out as data; the allow-list direction | `FieldReport` tells absent from placeholder as data and `_fill_line` names `labkit-init exp NAME --report` for an absent † field (Command `INIT`); and `labkit-init exp --repeat-cost medium|high` stamps the † fields at once — the full form owes them at the freeze, so the state "frozen without them" stops existing for stamped areas (the pilot cut stays short) |
-| 5 | an audit record in the tree, not in the index (`c7` before its audits are staged): the undecided row names `labkit-audit --findings` | one step for every `undecided_state` blocker, where an unstaged record's is `git add` and a lost one's `git checkout` | the way out as data | each blocker carries its step (`GateFinding.step`) and `_undecided_step` renders `held[0].step` |
-| 6 | `[kept]key=` refused, `[protocol]type=` accepted (t34-r3 E9/E10) | two regexes, two rules for one syntax (`KEPT_LABEL` needs a separator, `TABLE_PREFIX` none) | one home | one table-prefix rule for `protocol`, `model` and `kept` |
+| #   | State (probe)                                                                                                                                                                                                                                               | What breaks                                                                                                                                                                    | Principle                                     | Fix                                                                                                                                                                                                                                                                                                                                                                           |
+|-----|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1   | an adoption committed with `runs/` untracked, no report registered (`c7`; t34-r2 E48): `report-check --if-reported --staged` holds "the working tree differs from the index" (`report_check.py:1057`, a print and `return 1`), `next --staged` says nothing | the hook holds on a finding `next`'s set does not carry                                                                                                                        | one mouth                                     | the gap becomes a row of `next --staged` before the chain, built in one home (the `tree_differs` blocker `report_hold.py:1270` composes for the report review already), its step `git add -- AREA` a Command (`STAGE`, mechanical); report-check's command path prints that step and no text of its own; twin test in `test_next_step` (INDEX, an untracked run dir)          |
+| 2   | frozen at high, measured, audited clean, the six † result fields placeholders (`c8`; tassay-r2 E103–109): `next` names `labkit-adopt`, adopt refuses with six blockers                                                                                      | `next` judges the state as it is, adopt the state the adoption makes (`protocol_check.owed` owes the † fields once `result_due`); the named step is refused by its own command | one mouth; the way out as data                | `next`'s adoption row asks the one home what the adoption will owe (`owed(text, head, adopting=True)`): a placeholder → `protocol-fill P "Question †=<value>"`, the field absent → `labkit-init exp NAME --report`; adopt's check calls the same function, so the two agree by construction; test: a frozen fixture with † placeholders → next names the fill, filled → adopt |
+| 3   | any MUST field missing in the index (`mkbase8`, `c8`): the pre-commit's step 1 (`protocol-check --staged`) prints its own lines ("MISSING (must) …", "pre-commit: must fields missing") and never `next`'s step, which has the row                          | the hook composes its own words; Phase 1 reached the hook's steps 2 and 2b, not step 1                                                                                         | one mouth                                     | the pre-commit becomes one entry, `claude-hook pre-commit`: it runs the policy's gates (the fields on the index, report-check, undecided) and prints `steps_for` once; the shell hook keeps 1b (area numbers), 3 (guard) and 4 (local), states of the repo, not of an area; `install_hooks` shrinks                                                                           |
+| 4   | the frozen full form without the † fields (`mkbase8` before `--report`): `next` names `protocol-fill P "Why this design=<value>"`, protocol-fill answers "no field labelled"                                                                                | the step names a writer that cannot write it: the field is absent, not empty                                                                                                   | the way out as data; the allow-list direction | `FieldReport` tells absent from placeholder as data and `_fill_line` names `labkit-init exp NAME --report` for an absent † field (Command `INIT`); and `labkit-init exp --repeat-cost medium|high` stamps the † fields at once — the full form owes them at the freeze, so the state "frozen without them" stops existing for stamped areas (the pilot cut stays short)       |
+| 5   | an audit record in the tree, not in the index (`c7` before its audits are staged): the undecided row names `labkit-audit --findings`                                                                                                                        | one step for every `undecided_state` blocker, where an unstaged record's is `git add` and a lost one's `git checkout`                                                          | the way out as data                           | each blocker carries its step (`GateFinding.step`) and `_undecided_step` renders `held[0].step`                                                                                                                                                                                                                                                                               |
+| 6   | `[kept]key=` refused, `[protocol]type=` accepted (t34-r3 E9/E10)                                                                                                                                                                                            | two regexes, two rules for one syntax (`KEPT_LABEL` needs a separator, `TABLE_PREFIX` none)                                                                                    | one home                                      | one table-prefix rule for `protocol`, `model` and `kept`                                                                                                                                                                                                                                                                                                                      |
 
 Three cost drivers the probe cannot show, because they are the agent's path and not a hold: the freeze by hand (tassay-r2, 19 minutes and 58 events — `frozen` and `preflight_audit` are the one machine-led head part with no writer; `protocol_edit.FREEZE_KEYS` refuses and says "by hand"); the stop's one hold per turn (three of four held agents ended at the second stop, two with `--no-verify`); and a registered field edited by hand after an audit finding named it (t34-r3: Unit five times with the Edit tool; `fixed` was refused with the right rule in 120 words, `next` said "restore" five times — the agent stood between the auditor's "misdescribed" and `next`'s "restore", and the commit took the change three times). Fixes: the freeze as `protocol-fill PROTOCOL --freeze` — no new command, the agent's vocabulary stays (the round showed it inventing flags and commands once it knows several); the writer refuses with the gate's own finding (preflight clean, the preflight record decided: `freeze_gate`'s functions, one home) and writes both keys — Phase 3's first item in its narrowest form, and a Command (`FREEZE`) `next` names; the stop holds again when the tree changed since its last hold (the held state's fingerprint in the stop base; an unchanged tree lets go, so the no-loop guarantee stays); the restore step names the decision in one line when an open finding points at the field — restore, then `limitation` (the registered text stands, the misdescription is reported) — and `audit_decisions`' refusal shrinks to that line.
 
@@ -409,25 +411,25 @@ Decided 2026-11-05 (the author's review): (a) the pre-commit holds on "registrat
 
 The rule for building every one of them: the old speaker goes out before the row comes in — a fix that adds `next`'s row and leaves the gate's print standing has made a third mouth — and the probe (`run-all.sh`, now with `c7`, `mkbase8`, `c8`) is clean after. None of the fixes gives a hook or a command a voice: writers take their preconditions from the gates' validation functions, hooks keep holding by grade, `next` keeps choosing.
 
-| Step | Fixes | Predicted package delta | Budget | Done when |
-|---|---|---:|---:|---|
-| A — the commit's one mouth | 1, 3, 5 | about −10 to +30 (`next_step` +35, `repo` +5, `agent_hooks` +40 for the entry, `install_hooks` −60 of shell text, `report_check` −12, the undecided texts −15) | +60 | the probe has no BREACH; `install_hooks` speaks only in its repo-level steps (1b, 3, 4); the entry holds on the same blockers, with the same exit codes and the same index view as the three steps did (a twin test runs one state both ways); the `git add -- AREA` step says it stages the whole area and how many files (a partial staging takes more than the missing record); tests: `test_next_step` INDEX twin, `test_agent_hooks` pre-commit entry |
-| B — the fields the adoption and the freeze will owe | 2, 4 | about +55 (`protocol_check` +16, `next_step` +28, `scaffold` +10 for the `--report` fields in the full form) | +90 | `inv/step` clean on `c8` and `mkbase8`; `mkbase8` reaches the adoption without `--report`; the twin: a frozen fixture with † placeholders → next names the fill, filled → adopt. Correction (review 2026-11-05): `--report` appends two groups — the ten design fields (Why this design …), should-level, MUST once frozen (what held `mkbase8`'s freeze), and the six † result fields (Question †, Did † …), MUST only with a result declared (what refused `c8`'s adoption); the full form stamps both as placeholders, empty until each one's own due point, as `owed` already grades them |
-| C — the freeze in `protocol-fill` | the freeze by hand | about +50 (`protocol_fill` +40 sharing `freeze_gate`'s checks, `repo` +5, `next_step` +5) | +80 | `mkbase8` freezes by `--freeze`; a freeze over an undecided record is refused with the gate's finding and the file is untouched; `FREEZE_KEYS`' "by hand" text is gone. The writer checks the proposed state: it builds the head with `frozen = true` and `preflight_audit = <record>` and runs the pure freeze checks (`start_check._freeze_findings` and the registration's) on that text before writing — the run's start check as it stands cannot be called, it demands the freeze already |
-| D — the stop, the restore line, the regex | the stop's one hold, t34-r3's two mouths, 6 | about +15 (`agent_hooks` +25 for the held state's fingerprint, `audit_decisions` −10, `protocol_edit` ±0) | +40 | the stop's guarantee becomes "the same checked state holds once per turn" (not "no loop": an agent that changes something after every hold is held again): the fingerprint is content — the hashes of the files the checks read, files added or removed, HEAD — never git's status lines (test: a changed tree twice in one turn, an unchanged one once); the restore step names `limitation` when an open finding points at the field (test); `[kept]key=` fills |
+| Step                                                | Fixes                                       |                                                                                                                                        Predicted package delta | Budget | Done when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+|-----------------------------------------------------|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------:|-------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| A — the commit's one mouth                          | 1, 3, 5                                     | about −10 to +30 (`next_step` +35, `repo` +5, `agent_hooks` +40 for the entry, `install_hooks` −60 of shell text, `report_check` −12, the undecided texts −15) |    +60 | the probe has no BREACH; `install_hooks` speaks only in its repo-level steps (1b, 3, 4); the entry holds on the same blockers, with the same exit codes and the same index view as the three steps did (a twin test runs one state both ways); the `git add -- AREA` step says it stages the whole area and how many files (a partial staging takes more than the missing record); tests: `test_next_step` INDEX twin, `test_agent_hooks` pre-commit entry                                                                                                                                    |
+| B — the fields the adoption and the freeze will owe | 2, 4                                        |                                                   about +55 (`protocol_check` +16, `next_step` +28, `scaffold` +10 for the `--report` fields in the full form) |    +90 | `inv/step` clean on `c8` and `mkbase8`; `mkbase8` reaches the adoption without `--report`; the twin: a frozen fixture with † placeholders → next names the fill, filled → adopt. Correction (review 2026-11-05): `--report` appends two groups — the ten design fields (Why this design …), should-level, MUST once frozen (what held `mkbase8`'s freeze), and the six † result fields (Question †, Did † …), MUST only with a result declared (what refused `c8`'s adoption); the full form stamps both as placeholders, empty until each one's own due point, as `owed` already grades them |
+| C — the freeze in `protocol-fill`                   | the freeze by hand                          |                                                                      about +50 (`protocol_fill` +40 sharing `freeze_gate`'s checks, `repo` +5, `next_step` +5) |    +80 | `mkbase8` freezes by `--freeze`; a freeze over an undecided record is refused with the gate's finding and the file is untouched; `FREEZE_KEYS`' "by hand" text is gone. The writer checks the proposed state: it builds the head with `frozen = true` and `preflight_audit = <record>` and runs the pure freeze checks (`start_check._freeze_findings` and the registration's) on that text before writing — the run's start check as it stands cannot be called, it demands the freeze already                                                                                               |
+| D — the stop, the restore line, the regex           | the stop's one hold, t34-r3's two mouths, 6 |                                                      about +15 (`agent_hooks` +25 for the held state's fingerprint, `audit_decisions` −10, `protocol_edit` ±0) |    +40 | the stop's guarantee becomes "the same checked state holds once per turn" (not "no loop": an agent that changes something after every hold is held again): the fingerprint is content — the hashes of the files the checks read, files added or removed, HEAD — never git's status lines (test: a changed tree twice in one turn, an unchanged one once); the restore step names `limitation` when an open finding points at the field (test); `[kept]key=` fills                                                                                                                             |
 
 Each step is one commit per fix, each with its predicted and measured delta; a step over budget stops for a re-decision, as before. The spread round and the third reading come after D.
 
 **Steps A and B built (2026-11-05).** Measured, package lines by `git diff --numstat -- labkit`:
 
-| Step | Commits | Measured | Budget | Probe |
-|---|---|---|---:|---|
-| A, fix 1 | `12ee8eb6` | +52 (`report_hold` +22 for the one builder and its docstring, `next_step` +26, `repo` +9, `report_check` −5) | | c7 clean |
-| A, fix 3 | `3a9cea47` | +10 (`agent_hooks` +28 for the entry, `install_hooks` −39 of shell, `repo` +16 for `indexed_changes`; report-check refuses a head that does not read instead of a traceback, which the entry surfaced) | | the whole probe on its archive (`logs-3a9cea47/`): 148 checks, the two breaches left are c8's `inv/step` (step B's) |
-| A, fix 5 | not built | re-estimated +80 to +120: the undecided blockers are strings from four sources (`attempts.area_gaps`, `findings.record_status`, `findings.open_blockers`, `evidence.changes`), and a step as data means each source returns a finding with its way — a format refactor, not a row. Moved to Phase 4 (the state model makes every gate return findings) or a proposal of its own; the row's generic text stays until then | | |
-| A | | **+62 against +60** | +60 | done but for fix 5 |
-| B, fixes 2 and 4 | `101c6898` | +104 (`next_step` +83: `_adoption_owes`, the placeholder row, `_fill_line`'s three ways and the closing rows split out for the complexity lint; `protocol_check` +9, `repo` +10, `scaffold` +2) | +90 | c8 clean on the working tree (`logs-stepB-wt/`) and on the archive |
-| B | | **+104 against +90**, the forecast +55 was too low by the rows' docstrings and the split | +90 | done: the whole probe on its archive (`logs-101c6898/`), 148 checks, no breach |
+| Step             | Commits    | Measured                                                                                                                                                                                                                                                                                                                                                                                                                 | Budget | Probe                                                                                                               |
+|------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------:|---------------------------------------------------------------------------------------------------------------------|
+| A, fix 1         | `12ee8eb6` | +52 (`report_hold` +22 for the one builder and its docstring, `next_step` +26, `repo` +9, `report_check` −5)                                                                                                                                                                                                                                                                                                             |        | c7 clean                                                                                                            |
+| A, fix 3         | `3a9cea47` | +10 (`agent_hooks` +28 for the entry, `install_hooks` −39 of shell, `repo` +16 for `indexed_changes`; report-check refuses a head that does not read instead of a traceback, which the entry surfaced)                                                                                                                                                                                                                   |        | the whole probe on its archive (`logs-3a9cea47/`): 148 checks, the two breaches left are c8's `inv/step` (step B's) |
+| A, fix 5         | not built  | re-estimated +80 to +120: the undecided blockers are strings from four sources (`attempts.area_gaps`, `findings.record_status`, `findings.open_blockers`, `evidence.changes`), and a step as data means each source returns a finding with its way — a format refactor, not a row. Moved to Phase 4 (the state model makes every gate return findings) or a proposal of its own; the row's generic text stays until then |        |                                                                                                                     |
+| A                |            | **+62 against +60**                                                                                                                                                                                                                                                                                                                                                                                                      |    +60 | done but for fix 5                                                                                                  |
+| B, fixes 2 and 4 | `101c6898` | +104 (`next_step` +83: `_adoption_owes`, the placeholder row, `_fill_line`'s three ways and the closing rows split out for the complexity lint; `protocol_check` +9, `repo` +10, `scaffold` +2)                                                                                                                                                                                                                          |    +90 | c8 clean on the working tree (`logs-stepB-wt/`) and on the archive                                                  |
+| B                |            | **+104 against +90**, the forecast +55 was too low by the rows' docstrings and the split                                                                                                                                                                                                                                                                                                                                 |    +90 | done: the whole probe on its archive (`logs-101c6898/`), 148 checks, no breach                                      |
 
 Over budget twice, by 2 and by 14; the excess is documentation of the rows, not a second mouth — none of the four fixes left the old speaker standing (the probe's byte-equal check holds). A side finding of B: `scaffold.promote` (`--report`) appends every † item of the template regardless of kind, so a computation gets the two bar fields (`Answer form + resolution †`, `Noise ceiling → threshold †`) the stamp's `owed_cut` drops; small, noted for Phase 3's inventory.
 
@@ -441,14 +443,14 @@ Decided (the author, 2026-11-05): fix 5 moves to Phase 4; B's excess stays.
 
 Two rounds of nine labkit/demand attempts on one state, labkit 0.110.0 (`924df483`, steps A–D), the same prompts, judges, brief and sheets as areas 17, 19 and 20 (A3 and A2 by sha), judged by 36 fresh opus judges, one split question decided.
 
-| | round a | round b | spread |
-|---|---:|---:|---:|
-| complete deliveries | 7 | 5 | 2 |
-| failed attempts (not complete) | 2 | 4 | |
-| stopped at the time limit | 0 | 0 | 0 |
-| median minutes | 7.1 | 11.1 | 4.0 |
-| unsupported central claims | 2 | 3 | |
-| missing deliverables | 0 | 2 | |
+|                                | round a | round b | spread |
+|--------------------------------|--------:|--------:|-------:|
+| complete deliveries            |       7 |       5 |      2 |
+| failed attempts (not complete) |       2 |       4 |        |
+| stopped at the time limit      |       0 |       0 |      0 |
+| median minutes                 |     7.1 |    11.1 |    4.0 |
+| unsupported central claims     |       2 |       3 |        |
+| missing deliverables           |       0 |       2 |        |
 
 [B1] holds: area 20's gain of 5 (3 → 8) lies beyond a spread of 2; area 19's 2 → 3 does not. Two draws give a sample of the spread, not its bound. What varies is one task: every failed attempt but one is the assay report — a model selected on the scored folds and not disclosed (three of round b's), a pooled score called validation, a missed bar called "not assessable" — the pattern areas 19 and 20 already named for the report review (Phase 3's first verdict). The minutes fell from area 20's 36.9 to 7 and 11 with no time-limit stop in eighteen attempts; this design has no before, so it cannot credit 0.110.0 with that. Every attempt of both rounds wrote an audit record and ran an analysis audit; no open BLOCKER at any stop.
 
@@ -458,22 +460,22 @@ What follows (decided 2026-11-05, one change per measurement; the failed attempt
 
 One round of nine labkit/demand attempts on 0.111.0 (`58aa7ae1`, the run history in the review bundle and nothing else against 0.110.0), judged as areas 17–21, against area 21's two rounds as the before (its counts, spreads and four burden counters frozen in the anchors). Evidence: labkit-paper `experiments/22-run-history-in-the-review-lifts-complete-deliveries`, branch `usage-round-4`, run `2026-11-05T22-53-46_97c3`.
 
-| | area 21 a | area 21 b | area 22 |
-|---|---:|---:|---:|
-| complete deliveries | 7 | 5 | 5 |
-| failed attempts | 2 | 4 | 4 |
-| stopped at the time limit | 0 | 0 | 4 |
-| median minutes | 7.1 | 11.1 | 40.0 |
-| unsupported central claims | 2 | 3 | 1 |
-| missing deliverables | 0 | 2 | 2 |
-| audit calls | 75 | 85 | 77 |
-| `limitation` decisions | 19 | 20 | 17 |
-| report reviews | 18 | 18 | 10 |
-| reviews after a new run | 0 | 0 | 0 |
-| seconds per turn (median) | 4.8 | 5.3 | 20.8 |
-| turns (median) | 109 | 111 | 101 |
-| labkit commands over nine | 279 | 240 | 265 |
-| machine minutes of the round | 28 | 30 | 92 |
+|                              | area 21 a | area 21 b | area 22 |
+|------------------------------|----------:|----------:|--------:|
+| complete deliveries          |         7 |         5 |       5 |
+| failed attempts              |         2 |         4 |       4 |
+| stopped at the time limit    |         0 |         0 |       4 |
+| median minutes               |       7.1 |      11.1 |    40.0 |
+| unsupported central claims   |         2 |         3 |       1 |
+| missing deliverables         |         0 |         2 |       2 |
+| audit calls                  |        75 |        85 |      77 |
+| `limitation` decisions       |        19 |        20 |      17 |
+| report reviews               |        18 |        18 |      10 |
+| reviews after a new run      |         0 |         0 |       0 |
+| seconds per turn (median)    |       4.8 |       5.3 |    20.8 |
+| turns (median)               |       109 |       111 |     101 |
+| labkit commands over nine    |       279 |       240 |     265 |
+| machine minutes of the round |        28 |        30 |      92 |
 
 [B1] false: C1 5 lies inside the band 5–7, the registered reading is "not shown". The instrument was not the same: the solver took four times as long per turn at the same number of turns and commands, the round 92 machine minutes against 28 and 30, and three of the four failed attempts are time-limit stops that ended inside the closing loop (task 34 r1: the demand never compared, `labkit-adopt` refused twice — a source outside git, a script changed since the run; 34 r2: no report; assay r2: the round's one undisclosed search, five estimators on the same folds, one audit and no review). What the round shows of the change: every report review's bundle carried `RUNS` (the record's fingerprint part) and no review claimed anything from it; the target case reached no review; `reviews_after_run` stayed 0; the burden counters sit inside the before's band or below (fewer reviews, because fewer attempts reached one). Decided (the author, 2026-11-05): repeat the round when the solver is back near area 21's speed, with seconds per turn as a registered admissibility condition (within twice area 21's 5.0, the first wave checked before the rest is counted) — until then the run history is neither shown nor refuted. By-catch for the plan's edges: 6 of 9 attempts ended without an adopted run (2 and 5 before), two sts512 reports were written from a discussed, unadopted run and drew 13 and 14 `result` claims each — the review does its job, and the agent has no step the review names to turn the discussed run into the adopted one.
 
@@ -481,21 +483,21 @@ One round of nine labkit/demand attempts on 0.111.0 (`58aa7ae1`, the run history
 
 Area 22's design run again at the solver's normal speed, the speed registered as an admissibility condition ([A4]: median seconds per tool call at most 10.0; the first wave read before the rest ran). Evidence: labkit-paper `experiments/23-run-history-in-the-review-lifts-complete-deliveries-rerun`, branch `usage-round-4`, run `2026-11-06T12-45-42_fbe4`.
 
-| | area 21 a | area 21 b | area 22 | area 23 |
-|---|---:|---:|---:|---:|
-| complete deliveries | 7 | 5 | 5 | 2 |
-| failed attempts | 2 | 4 | 4 | 7 |
-| stopped at the time limit | 0 | 0 | 4 | 0 |
-| median minutes | 7.1 | 11.1 | 40.0 | 9.8 |
-| unsupported central claims | 2 | 3 | 1 | 2 |
-| missing deliverables | 0 | 2 | 2 | 6 |
-| adopted runs | 7 | 4 | 3 | 5 |
-| handover-only reports ("no result is reported") | 1 | 1 | 1 | 3 |
-| audit calls | 75 | 85 | 77 | 122 |
-| `limitation` decisions | 19 | 20 | 17 | 36 |
-| report reviews / claims | 18 / 33 | 18 / 102 | 10 / 46 | 20 / 116 |
-| reviews after a new run | 0 | 0 | 0 | 0 |
-| seconds per tool call (median) | 4.8 | 5.3 | 20.8 | 5.5 |
+|                                                 | area 21 a | area 21 b | area 22 |  area 23 |
+|-------------------------------------------------|----------:|----------:|--------:|---------:|
+| complete deliveries                             |         7 |         5 |       5 |        2 |
+| failed attempts                                 |         2 |         4 |       4 |        7 |
+| stopped at the time limit                       |         0 |         0 |       4 |        0 |
+| median minutes                                  |       7.1 |      11.1 |    40.0 |      9.8 |
+| unsupported central claims                      |         2 |         3 |       1 |        2 |
+| missing deliverables                            |         0 |         2 |       2 |        6 |
+| adopted runs                                    |         7 |         4 |       3 |        5 |
+| handover-only reports ("no result is reported") |         1 |         1 |       1 |        3 |
+| audit calls                                     |        75 |        85 |      77 |      122 |
+| `limitation` decisions                          |        19 |        20 |      17 |       36 |
+| report reviews / claims                         |   18 / 33 |  18 / 102 | 10 / 46 | 20 / 116 |
+| reviews after a new run                         |         0 |         0 |       0 |        0 |
+| seconds per tool call (median)                  |       4.8 |       5.3 |    20.8 |      5.5 |
 
 [B1] false, and this time the round is admissible (A1–A4): C1 2 lies below the band 5–7. Where the deliveries failed: all three sts512 attempts ended in a handover whose REPORT.md says "no result is reported" — the adoption was refused (the registration or the promises changed after the first measurement, fix A's hold), the report review named every number of the unadopted run a `result` claim, and the agents rewrote the report until the review named 0 claims, instead of restoring the registration as `next` named (sts512 r2: 6 reviews, 40 claims; r3: 3 reviews, 38 claims; area 21 b's sts512 r1 and r2 met the same claims and kept their numbers); task 34's three reports lack two columns and the RMSSD statement (r1), rest on an uncorrected missed beat (r2, disclosed), or never answer the demand (r3); assay r2 calls 0.8665 < 0.90 "cannot be assessed" (area 21 a r3's pattern). The change itself: `RUNS` stood in all 20 review bundles and no review claimed anything from it — rightly, by the brief, on the round's one search (assay r3: six estimators on the same folds, the registered one kept and reported; decided supported, the author, 2026-11-06); the case the history is for — the best of several models reported undisclosed — did not occur. The burden rose: audit calls 122, `limitation` 36, reviews 20 with 116 claims. One round cannot tell whether the handover pattern (3 of 3 against 1 of 6 in area 21) is 0.111.0's or a draw; the claims per review (5.8) equal area 21 b's (5.7). What follows, by the plan's stop criterion: the run history is not shown; the next candidate is the answer block bound to the registered question — six of the seven failed attempts are reports without the number or the verdict. Before it, the closing loop's pattern is the heavier finding for the chain's edges: a refused adoption plus the review's `result` rule leaves the agent a handover whose numbers the review then strips; `next` names the restore, no agent took it (area 22's sts512 r2 the same).
 

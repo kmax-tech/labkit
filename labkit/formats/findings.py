@@ -147,6 +147,37 @@ EFFECT_FORM = (
     '`stands` or `<ID>[, <ID>] not assessable` (e.g. "criterion-1 not assessable")'
 )
 GRADES = ("BLOCKER", "WARNING", "NOTE")
+#: the grammar of an answer line, one home for the audit and both
+#: reviewers (audit 2026-10-27, third): what may stand before its keyword
+#: (indentation, a quote, a bullet, a code mark, a heading's hashes) and the
+#: separator after it — the ` · ` the instructions ask for, or a dash or
+#: colon, which agents write too (audit 2026-10-15: two blockers written as
+#: `BLOCKER — …` parsed as none, and the record read as covered)
+LEAD = r"^[\s>*`#-]*"
+SEP = r"(?:·|—|–|:)"
+#: a finding's grade line up to its first field; between its fields a dot
+#: or a dash — never a colon, which `<file>:<line>` holds
+_GRADE_LEAD = re.compile(
+    LEAD + r"\**(?:" + "|".join(GRADES) + r")\**\s*" + SEP + r"\s*"
+)
+_FIELD_SEP = re.compile(r"\s+[·—–]\s+")
+#: what a finding is about, the auditor's judgement in the third field of
+#: its line (`<GRADE> · <file>:<place> · <subject> · …`). `implementation`: the
+#: code, the data handling or the run does not do what the registration
+#: says or a correct measurement needs — the repair changes them and
+#: measures anew, so `limitation` is refused for it (`subject_refusal`).
+#: `statement`: the run does what it should, and the finding is about what
+#: the registered text, the result or the report says — a limit of the
+#: claim (`limitation`) or a description corrected in place (`fixed`).
+IMPLEMENTATION = "implementation"
+STATEMENT = "statement"
+SUBJECTS = (IMPLEMENTATION, STATEMENT)
+SUBJECT_FORM = (
+    f"the third field of the finding line names its subject: `{IMPLEMENTATION}` "
+    f"(the code, the data handling or the run departs from the registration "
+    f"or a correct measurement) or `{STATEMENT}` (the run is right; the finding "
+    f"is about what the registered text, the result or the report says)"
+)
 MODES = (PREFLIGHT_AUDIT, ANALYSIS_AUDIT)
 #: what an analysis record names as its run when no completed run was
 #: bound to the protocol while the auditor read — it saw no rows
@@ -187,6 +218,10 @@ class Finding:
     # never by a person ("" for the auditor's own findings); its origin is
     # found by following the chain (`followup.origin_of`)
     carries: str = ""
+    # SUBJECTS: the auditor's third field, read when the record is written
+    # (`subject_of`) and carried with the finding, never set by a decision;
+    # "" in a record written before labkit read it (0.112.0 and earlier)
+    subject: str = ""
 
     @property
     def one_line(self) -> str:
@@ -313,6 +348,70 @@ def check_of(text: str) -> tuple[str, str]:
             f"is {CHECK_FORM}"
         )
     return m["key"], (m["paren"] or m["dash"] or "").strip()
+
+
+def subject_of(text: str) -> str:
+    """The subject (SUBJECTS) a finding names in the third field of its
+    grade line, TEXT's first line: `<GRADE> · <file>:<place> · <subject> · …`,
+    its fields parted by a dot or a dash as the parser reads them (`LEAD`,
+    `SEP`).
+    Raises ValueError, quoting the line, when the field is not one of
+    SUBJECTS: which decisions a finding allows rests on it (`subject_refusal`),
+    and a guess would decide it."""
+    first = text.splitlines()[0] if text else ""
+    # the lead takes the grade and the separator after it, a colon
+    # included; the fields after it part at a dot or a dash only, so
+    # fields[0] is `<file>:<place>` and fields[1] the subject
+    lead = _GRADE_LEAD.match(first)
+    fields = _FIELD_SEP.split(first[lead.end() :]) if lead else []
+    subject = fields[1].strip().strip("`*") if len(fields) > 1 else ""
+    if subject not in SUBJECTS:
+        raise ValueError(
+            f"a finding line without its subject: {first[:160]!r} — {SUBJECT_FORM}"
+        )
+    return subject
+
+
+def subject_refusal(f: Finding, status: str) -> str | None:
+    """Why STATUS cannot decide F, by the subject the auditor gave it, or None:
+    an `implementation` finding is never closed by `limitation` — the
+    number came from code or data that depart from what was registered, and
+    a limit line does not change that (a registered 200-permutation check
+    run as one null draw, docs/notes/2026-11-04-one-explainer-plan.md). A
+    finding of a record written before subjects were read ("") is held to
+    nothing here."""
+    if status != "limitation" or f.subject != IMPLEMENTATION:
+        return None
+    return (
+        "an implementation finding is no limitation: the code, the data "
+        "handling or the run departs from the registration — repair it and "
+        "measure anew, then decide `fixed`; `false-positive` when the auditor "
+        "misread; or end the protocol without a result by a handover "
+        "(`protocol-fill <PROTOCOL> --handover`), where the finding stays open"
+    )
+
+
+def allowed_decisions(f: Finding) -> tuple[str, ...]:
+    """The decided statuses F can take, in DECIDED's order: every one but
+    those `subject_refusal` refuses for F's subject."""
+    return tuple(s for s in DECIDED if subject_refusal(f, s) is None)
+
+
+def decision_after_restore(f: Finding) -> tuple[str, str] | None:
+    """(status, the reason left for the person) F takes when its place is a
+    registered protocol field and the field is restored as registered:
+    `limitation` for a `statement` finding — the registered text stands,
+    and what the finding names is a limit of the claim; None for an
+    implementation finding, which is
+    repaired in code or data and measured anew (`subject_refusal`), and for
+    one of a record that names no subject — no decision follows from the place
+    alone."""
+    if f.subject != STATEMENT:
+        return None
+    return (
+        "limitation",
+        "<the registered text stands; what the finding names is a limit>",
+    )
 
 
 def check_order(check: str, note: str = "") -> str:
@@ -897,11 +996,13 @@ def write(
         check, note = check_of(text)
         if grade not in GRADES:
             raise ValueError(f"grade {grade!r} — one of {', '.join(GRADES)}")
+        subject = subject_of(text)
         lines += [
             "",
             "[[finding]]",
             f"grade = {_s(grade)}",
             f"text = {_s(text)}",
+            f"subject = {_s(subject)}",
             *([f"check = {_s(check)}"] if check else []),
             *([f"check_note = {_s(note)}"] if note else []),
             'status = "open"',
@@ -930,6 +1031,7 @@ def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
             "[[finding]]",
             f"grade = {_s(f.grade)}",
             f"text = {_s(f.text)}",
+            *([f"subject = {_s(f.subject)}"] if f.subject else []),
             *([f"check = {_s(f.check)}"] if f.check else []),
             *([f"check_note = {_s(f.check_note)}"] if f.check_note else []),
             f"carries = {_s(f.carries)}",
@@ -1099,7 +1201,7 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     effect = row.get("effect", "")
     if not isinstance(effect, str):
         raise FindingsError(f"{path}: finding {i}: effect is not a string")
-    check, note = _check_fields(path, i, row)
+    check, note, subject = _auditor_fields(path, i, row)
     carries = row.get("carries", "")
     if not isinstance(carries, str) or (carries and not CARRIES_REF.match(carries)):
         raise FindingsError(
@@ -1114,6 +1216,7 @@ def _finding(path: Path, i: int, row: object) -> Finding:
         check,
         note,
         carries,
+        subject,
     )
     problem = _effect_problem(found)
     if problem:
@@ -1121,10 +1224,12 @@ def _finding(path: Path, i: int, row: object) -> Finding:
     return found
 
 
-def _check_fields(path: Path, i: int, row: dict) -> tuple[str, str]:
-    """(check, check_note) of the i-th `[[finding]]` table: a metrics key or
-    "", and a note only beside a check. Raises FindingsError otherwise
-    (`carries` is read beside it, `_carries_field`)."""
+def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str]:
+    """(check, check_note, subject) of the i-th `[[finding]]` table — the
+    fields labkit-audit takes from the auditor's line, never a decision: a
+    metrics key or "", a note only beside a check, and one of SUBJECTS or
+    "" (a record written before subjects were read). Raises FindingsError
+    otherwise (`carries` is read beside them)."""
     check = row.get("check", "")
     if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
         raise FindingsError(
@@ -1136,7 +1241,12 @@ def _check_fields(path: Path, i: int, row: dict) -> tuple[str, str]:
         raise FindingsError(
             f"{path}: finding {i}: check_note {note!r} — a string, and only with a check"
         )
-    return check, note
+    subject = row.get("subject", "")
+    if not isinstance(subject, str) or (subject and subject not in SUBJECTS):
+        raise FindingsError(
+            f"{path}: finding {i}: subject {subject!r} — one of {', '.join(SUBJECTS)}, or absent"
+        )
+    return check, note, subject
 
 
 def read(path: Path) -> Record:
@@ -1356,7 +1466,8 @@ def write_decision(
     (`files.write_atomic`) only when exactly that finding changed. Raises
     FindingsError — the file untouched — on a record that does not read, a
     number outside it, a status outside STATUSES, a reason owed and empty,
-    a BLOCKER limitation without its effect or an effect anywhere else, or a
+    `limitation` on an implementation finding (`subject_refusal`), a BLOCKER
+    limitation without its effect or an effect anywhere else, or a
     finding without the status and reason lines labkit-audit writes (a
     one-line or a multi-line TOML string each)."""
     from labkit.formats.files import write_atomic
@@ -1371,7 +1482,10 @@ def write_decision(
     if status in REASON_OWED and not reason.strip():
         raise FindingsError(f"status {status!r} owes a reason — why it is {status}")
     old = before.findings[n - 1]
-    # the check stays the auditor's: a decision never sets or drops it
+    refused = subject_refusal(old, status)
+    if refused is not None:
+        raise FindingsError(f"{path}: finding {n}: {refused}")
+    # the check and the subject stay the auditor's: a decision never sets them
     decided = Finding(
         old.grade,
         old.text,
@@ -1381,6 +1495,7 @@ def write_decision(
         old.check,
         old.check_note,
         old.carries,
+        old.subject,
     )
     _hold_effect(decided)
     text = _decided_text(path, n, decided)
@@ -1650,7 +1765,8 @@ def decide_way(
         open_finding.record.path.name,
         protocol=protocol,
     )
-    way = f"decide it ({DECIDED_LIST}): `{cmd}`"
+    allowed = " / ".join(allowed_decisions(open_finding.finding))
+    way = f"decide it ({allowed}): `{cmd}`"
     if open_finding.grade != "BLOCKER":
         return way
     return (
