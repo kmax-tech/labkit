@@ -1,11 +1,6 @@
 # One explainer — gates return data, `labkit-next` explains and does the mechanical steps
 
-2026-11-04. Baseline `35242fc3`. Planned, not ordered: `TODO.md`
-("Reihenfolge") puts it after the release gaps of the
-[maintainability repair plan](2026-11-03-maintainability-repair-plan.md)
-and before the next usage round. This note owns the work order; the
-format-and-gate inventory it starts with is the size question's answer,
-the phases after it are the cut that inventory prepares.
+2026-11-04. Baseline `35242fc3`. Planned, not ordered: `TODO.md` ("Reihenfolge") puts it after the release gaps of the [maintainability repair plan](2026-11-03-maintainability-repair-plan.md) and before the next usage round. This note owns the work order; the format-and-gate inventory it starts with is the size question's answer, the phases after it are the cut that inventory prepares.
 
 ## Architecture boundary review and current decisions (2026-11-06)
 
@@ -66,123 +61,49 @@ Acceptance for the finding-kind step includes a paired case: a registered 200-pe
 
 ## The question
 
-Since the simplification started (`76d81f78`) the package grew 6 % and
-the suite 12 %; the repairs added contracts faster than the shared rules
-removed lines. The size is not additive but multiplicative: every format
-is a reader, a writer, a validation and its tests, every gate reads
-several formats, and every gate explains its own refusal. The
-contradictions of the last weeks (two gates naming different next steps
-for one state, a hold that sent an agent to measure a third time, a hint
-that disagreed with the stop hook) sat exactly there.
+Since the simplification started (`76d81f78`) the package grew 6 % and the suite 12 %; the repairs added contracts faster than the shared rules removed lines. The size is not additive but multiplicative: every format is a reader, a writer, a validation and its tests, every gate reads several formats, and every gate explains its own refusal. The contradictions of the last weeks (two gates naming different next steps for one state, a hold that sent an agent to measure a third time, a hint that disagreed with the stop hook) sat exactly there.
 
-labkit does not own the state: the agent edits protocol, code, report and
-runs freely and in any order, so every gate re-derives the state from the
-files. That stays — a stored state lies after the next free edit
-([derived views copy no truth](../architecture.md)). What changes is who
-orders the states and who explains them.
+labkit does not own the state: the agent edits protocol, code, report and runs freely and in any order, so every gate re-derives the state from the files. That stays — a stored state lies after the next free edit ([derived views copy no truth](../architecture.md)). What changes is who orders the states and who explains them.
 
 ## Review of 2026-11-04 and the first step
 
-A second reading of this note (another session, same day) held: the
-direction — one decision, one understandable output — is right; the
-note as a whole is not a build order, because it bundles simplification
-with new guards (a write ledger) and new functions (`--do`) and could
-grow the code first. Accepted, with these consequences, worked into the
-sections below:
+A second reading of this note (another session, same day) held: the direction — one decision, one understandable output — is right; the note as a whole is not a build order, because it bundles simplification with new guards (a write ledger) and new functions (`--do`) and could grow the code first. Accepted, with these consequences, worked into the sections below:
 
-1. The write ledger is a system of its own (storage, restore, parallel
-   sessions, fresh clones). It leaves the plan and becomes a proposal
-   with a trigger.
-2. Byte equality is not the registration binding. "Equal to what the
-   tool last wrote" does not prove "equal to the first measurement" or
-   "audited as such"; an allowed write can still change the registered
-   question. The historical bindings stay; the allow-list changes who
-   writes and what the writer refuses, not what the gates compare.
-3. Hooks and `next` must judge the same file state: the index at the
-   commit, the working tree otherwise. `next_step` takes the state
-   (`Checked.state` exists: TREE, INDEX, PROPOSED); a hook never holds on
-   one state and prints a step from another.
-4. `--do` is a function of its own, needs structured arguments (paths and
-   ids, not a shell line to parse) and is no precondition of the usage
-   round. It becomes a proposal with a trigger.
-5. A reader does not justify a format, and a merge can breed variants.
-   Every *merges* or *goes* needs a before/after proposal of its own.
+1. The write ledger is a system of its own (storage, restore, parallel sessions, fresh clones). It leaves the plan and becomes a proposal with a trigger.
+2. Byte equality is not the registration binding. "Equal to what the tool last wrote" does not prove "equal to the first measurement" or "audited as such"; an allowed write can still change the registered question. The historical bindings stay; the allow-list changes who writes and what the writer refuses, not what the gates compare.
+3. Hooks and `next` must judge the same file state: the index at the commit, the working tree otherwise. `next_step` takes the state (`Checked.state` exists: TREE, INDEX, PROPOSED); a hook never holds on one state and prints a step from another.
+4. `--do` is a function of its own, needs structured arguments (paths and ids, not a shell line to parse) and is no precondition of the usage round. It becomes a proposal with a trigger.
+5. A reader does not justify a format, and a merge can breed variants. Every *merges* or *goes* needs a before/after proposal of its own.
 
-And: tests do not reduce to transitions wholesale. A shared writer
-removes no check at the read: files can be edited by hand, restored or
-copied from another clone, so the reader validates what it reads as
-long as provenance (the ledger) is deferred. What a shared writer gives
-is one validation function for writer and reader — one implementation
-to test instead of two that can disagree (V1 and V2 were two comparisons
-disagreeing, not one check too many). Corrupted files, missing git
-objects and concurrent writes stay real inputs with their tests.
+And: tests do not reduce to transitions wholesale. A shared writer removes no check at the read: files can be edited by hand, restored or copied from another clone, so the reader validates what it reads as long as provenance (the ledger) is deferred. What a shared writer gives is one validation function for writer and reader — one implementation to test instead of two that can disagree (V1 and V2 were two comparisons disagreeing, not one check too many). Corrupted files, missing git objects and concurrent writes stay real inputs with their tests.
 
-**The first step, limited and measured:** close the known gap — the
-review a report owes that only *discusses* a run — by letting the gate
-(`report_hold.hold_report`), the hooks and `labkit-next` read the same
-findings in the same file state: same state, same hold, the fitting next
-step. Remove the competing logic on the way and record the effort
-(sessions, lines added and removed, tests changed). Then decide, on that
-result, whether Phase 1 continues as written. This is the pilot of the
-architecture before its build-out.
+**The first step, limited and measured:** close the known gap — the review a report owes that only *discusses* a run — by letting the gate (`report_hold.hold_report`), the hooks and `labkit-next` read the same findings in the same file state: same state, same hold, the fitting next step. Remove the competing logic on the way and record the effort (sessions, lines added and removed, tests changed). Then decide, on that result, whether Phase 1 continues as written. This is the pilot of the architecture before its build-out.
 
 Acceptance of the pilot, fixed before it starts:
 
-1. Gate (`report_hold.hold_report`), the stop and pre-commit hooks and
-   `labkit-next` name the same owed report review for the same area,
-   from the same findings.
-2. Working tree and index are tested apart: the pre-commit judges the
-   index, the stop and the console the tree, each with its own test.
-3. A valid counter-case passes: a report whose discussed run's review
-   stands is held by none of the three (no false blocker).
-4. The competing logic is gone, not bypassed: the hook's own
-   composition of that hold and `next`'s separate path to it do not
-   survive as dead code.
-5. Measured afterwards: effort, the special cases that remain, and
-   usability (the commands an agent needs from the hold to the release).
-6. The shared-findings invariant of Phase 1, as a test for this one
-   hold: the stop, the pre-commit and `next_step(area, state)` read the
-   owed review from the same findings of the same state; with no other
-   blocker standing, the hooks hold and `next` names this step.
+1. Gate (`report_hold.hold_report`), the stop and pre-commit hooks and `labkit-next` name the same owed report review for the same area, from the same findings.
+2. Working tree and index are tested apart: the pre-commit judges the index, the stop and the console the tree, each with its own test.
+3. A valid counter-case passes: a report whose discussed run's review stands is held by none of the three (no false blocker).
+4. The competing logic is gone, not bypassed: the hook's own composition of that hold and `next`'s separate path to it do not survive as dead code.
+5. Measured afterwards: effort, the special cases that remain, and usability (the commands an agent needs from the hold to the release).
+6. The shared-findings invariant of Phase 1, as a test for this one hold: the stop, the pre-commit and `next_step(area, state)` read the owed review from the same findings of the same state; with no other blocker standing, the hooks hold and `next` names this step.
 
-The pilot needs no `Command`: `next` takes the hold as one row in its
-order, reads it from `Checked.state`, and the finding's identity is the
-`GateFinding` itself. Phase 2 starts after it, not inside it.
+The pilot needs no `Command`: `next` takes the hold as one row in its order, reads it from `Checked.state`, and the finding's identity is the `GateFinding` itself. Phase 2 starts after it, not inside it.
 
-Stop or replan — fixed now, so the decision is falsifiable — when any
-of these holds after the pilot:
+Stop or replan — fixed now, so the decision is falsifiable — when any of these holds after the pilot:
 
-- the hold needs more than one new row in `next`'s order, or a branch
-  on the file state inside that row (the state parameter did not carry);
-- the package has net more lines than before the pilot after the
-  competing logic is removed (tests apart);
-- the invariant test needs an exception list (a finding the hooks hold
-  on that `next`'s set does not carry, or the reverse);
+- the hold needs more than one new row in `next`'s order, or a branch on the file state inside that row (the state parameter did not carry);
+- the package has net more lines than before the pilot after the competing logic is removed (tests apart);
+- the invariant test needs an exception list (a finding the hooks hold on that `next`'s set does not carry, or the reverse);
 - the pilot takes more than two sessions.
 
-The forecasts and the two sessions are a budget for a new decision:
-exceeding them triggers an explanation and a re-decision, never the
-removal of clear code or of a check to meet the number.
+The forecasts and the two sessions are a budget for a new decision: exceeding them triggers an explanation and a re-decision, never the removal of clear code or of a check to meet the number.
 
-Then Phase 1 does not continue as written; the note gets the reason and
-the next proposal.
+Then Phase 1 does not continue as written; the note gets the reason and the next proposal.
 
 ## Pilot result (2026-11-04, one session, about two hours)
 
-Built on `32b51e32`: `report_hold.discussion_review_findings` reads the
-review a report owes for discussing a run of a protocol, per protocol
-and from the state given; `report_check.chain_gaps` carries it (stage
-8), so `report-check AREA` holds it and `labkit-next` names it;
-`next_step` takes the state (`--staged` reads the index); the post-change
-hook prints that finding instead of its own `review_hint`, which is gone;
-the report scan `discussing_reports` and the new reader share one home
-(`discussing_candidates`: the tree walked as `reports_without_block`
-walks it, no git; the index listed by git). Tests: the tree (gate, stop and `next` hold and
-name one finding, text and way out equal), the index (the commit and
-`next --staged` read the staged state; a review of it releases both while
-the tree, edited after, owes its own), the counter-case (a review of the
-state releases all three, the chain moves on to the adoption), the hook's
-silence once a review stands.
+Built on `32b51e32`: `report_hold.discussion_review_findings` reads the review a report owes for discussing a run of a protocol, per protocol and from the state given; `report_check.chain_gaps` carries it (stage 8), so `report-check AREA` holds it and `labkit-next` names it; `next_step` takes the state (`--staged` reads the index); the post-change hook prints that finding instead of its own `review_hint`, which is gone; the report scan `discussing_reports` and the new reader share one home (`discussing_candidates`: the tree walked as `reports_without_block` walks it, no git; the index listed by git). Tests: the tree (gate, stop and `next` hold and name one finding, text and way out equal), the index (the commit and `next --staged` read the staged state; a review of it releases both while the tree, edited after, owes its own), the counter-case (a review of the state releases all three, the chain moves on to the adoption), the hook's silence once a review stands.
 
 | Measured | Package | Tests |
 |---|---:|---:|
@@ -191,47 +112,18 @@ silence once a review stands.
 | net | +78 | +162 |
 | test functions | | ±0 (4 added, 4 of `review_hint` removed) |
 
-Lines include docstrings. Of the package's net, the new reader and scan
-are about 60, the state threading in `next` about 40, the hook's gate
-call about 20, against `review_hint`'s 40 removed.
+Lines include docstrings. Of the package's net, the new reader and scan are about 60, the state threading in `next` about 40, the hook's gate call about 20, against `review_hint`'s 40 removed.
 
 Against the stop criteria:
 
-1. One new row (through `chain_gaps`, none in `next_step` itself); the
-   state arrived as a parameter, but three places branch on it
-   (`_protocol_text`, `_progress_step`, the scan's tree paths). Partly hit.
-2. Net package lines: +78. **Hit.** The gap was closed by adding a reader
-   path and a parameter; the competing logic removed was 40 lines.
+1. One new row (through `chain_gaps`, none in `next_step` itself); the state arrived as a parameter, but three places branch on it (`_protocol_text`, `_progress_step`, the scan's tree paths). Partly hit.
+2. Net package lines: +78. **Hit.** The gap was closed by adding a reader path and a parameter; the competing logic removed was 40 lines.
 3. No exception list in the invariant test. Not hit.
 4. One session. Not hit.
 
-Special cases that remain: a report whose discussion blocks do not read
-is held by `hold_report` and not named by `next` (left to the block's own
-hold, deliberately); `reports_without_block` reads the tree in both (closed 2026-11-06: it reads the state given, through the one scan `state_reports`)
-states; the hook's command renders paths from the hook's working
-directory, the repo in a session (the test sets it). Usability: from the
-hold to the release the agent types the same one command as before; what
-changed is that `labkit-next` names it instead of only the stop's refusal.
+Special cases that remain: a report whose discussion blocks do not read is held by `hold_report` and not named by `next` (left to the block's own hold, deliberately); `reports_without_block` reads the tree in both (closed 2026-11-06: it reads the state given, through the one scan `state_reports`) states; the hook's command renders paths from the hook's working directory, the repo in a session (the test sets it). Usability: from the hold to the release the agent types the same one command as before; what changed is that `labkit-next` names it instead of only the stop's refusal.
 
-**Option A, built the same day (second commit), under the terms fixed
-for it: success is net negative package lines with the invariant test
-green and no exception list, at most one session.** The stop held a
-protocol whose registered report is not written with a line it composed
-from `report_hold.missing_report`; `labkit-next` named the progress
-account for the same state. Now the hold stays that finding and the stop
-prints `next`'s step (`Step.render`, the one spelling), tested as equal.
-For a gate to print `next`'s step, the step's logic moved from `tools`
-into `gates` (`labkit.gates.next_step`; the command is
-`tools.next_command`), which the layer rule required — the policy layer
-the plan wants, made real; `FILLABLE_HEAD_KEYS` moved from `protocol_edit`
-to `protocol_block` on the way (a format fact under a tool). One design
-point held against the first draft: `next` keeps naming the one concrete
-command (the discussion with the run id), not the finding's three
-generic ways — the hold is the finding, the action is `next`'s choice,
-as the corrected invariant says; the existing tests of that choice
-(`ProgressAccount`) stood and were right. Predicted before building: +20
-to +40, because the holding logic (which protocols, whether the report
-is missing) stays in the hook and only its text line goes.
+**Option A, built the same day (second commit), under the terms fixed for it: success is net negative package lines with the invariant test green and no exception list, at most one session.** The stop held a protocol whose registered report is not written with a line it composed from `report_hold.missing_report`; `labkit-next` named the progress account for the same state. Now the hold stays that finding and the stop prints `next`'s step (`Step.render`, the one spelling), tested as equal. For a gate to print `next`'s step, the step's logic moved from `tools` into `gates` (`labkit.gates.next_step`; the command is `tools.next_command`), which the layer rule required — the policy layer the plan wants, made real; `FILLABLE_HEAD_KEYS` moved from `protocol_edit` to `protocol_block` on the way (a format fact under a tool). One design point held against the first draft: `next` keeps naming the one concrete command (the discussion with the run id), not the finding's three generic ways — the hold is the finding, the action is `next`'s choice, as the corrected invariant says; the existing tests of that choice (`ProgressAccount`) stood and were right. Predicted before building: +20 to +40, because the holding logic (which protocols, whether the report is missing) stays in the hook and only its text line goes.
 
 | Measured, Option A | Package |
 |---|---:|
@@ -247,55 +139,11 @@ Split by origin, from the commit's per-file counts:
 | the head-key catalogue from `protocol_edit` to `protocol_block` (housekeeping the move exposed) | +5 | no, one-time |
 | the hook's line replaced by the render call (`agent_hooks`, +7 −2) | +5 | yes, per surface — and the removed composition was one line |
 
-The invariant test is green without an exception list, one session
-(about two hours), but the lines are positive: **the success criterion
-is not met.** What is shown: on the first two candidates Phase 1 saved
-no code, with one-time costs of +34 here and about +40 in the pilot (the
-state parameter). Not shown: that it cannot — the recurring part of
-Option A is +5 for one line removed, and a surface whose own composition
-is a paragraph, not a line (`_stop_checks`' four prose blocks), would
-weigh differently. Per the terms: the work goes to the usage round with
-this state, and Phase 1's line forecast is withdrawn below; if the round
-speaks for Phase 1, this table says where to resume. What stands from the two pilots is not
-size but structure: one finding for gate, hooks and `next` in two
-states; `next` in the gates layer, printable by any hook; a state
-parameter; one report scan. Criterion 1's remaining branch (the scan
-lists the tree by a walk and the index by git) stays: a tree-walk helper
-for all files would cross `.venv` and `.git`, so the two sources are
-inherent until a bounded walk exists.
+The invariant test is green without an exception list, one session (about two hours), but the lines are positive: **the success criterion is not met.** What is shown: on the first two candidates Phase 1 saved no code, with one-time costs of +34 here and about +40 in the pilot (the state parameter). Not shown: that it cannot — the recurring part of Option A is +5 for one line removed, and a surface whose own composition is a paragraph, not a line (`_stop_checks`' four prose blocks), would weigh differently. Per the terms: the work goes to the usage round with this state, and Phase 1's line forecast is withdrawn below; if the round speaks for Phase 1, this table says where to resume. What stands from the two pilots is not size but structure: one finding for gate, hooks and `next` in two states; `next` in the gates layer, printable by any hook; a state parameter; one report scan. Criterion 1's remaining branch (the scan lists the tree by a walk and the index by git) stays: a tree-walk helper for all files would cross `.venv` and `.git`, so the two sources are inherent until a bounded walk exists.
 
-**Step 3 (2026-11-04, after the usage round): finalize's note and the
-decision list's routes.** Two removal-first candidates of the table under
-"What stands in the way", built as one step under the same terms.
-(a) `finalize.undeclared_hint` — 17 lines composing the audit, its
-decisions, the report fields and the adopt command for a protocol that
-declares no result yet — becomes one line naming `labkit-next AREA`
-(`finalize.undeclared_note`), as Phase 1 states it; the orientation
-test's premise that every line to the adoption names the report fields
-first goes with it (`next`'s order decides; the adoption's refusal names
-that step). Tried first and dropped the same hour: finalize rendering
-`next`'s step itself — finalize is a station of `next`'s chain
-(`report_check.chain_gaps` → `finalize_gaps` → `finalize_area`), so the
-render called finalize again without end (eight tests of
-`test_repair_guidance` in a RecursionError, found by the subagent that
-built (b)). The rule this leaves: a console path that is itself a station
-of the chain points to `next`; only paths outside the chain (the hooks)
-print its step. (b) `ways_out.blocker_routes(full=False)`
-— the nine routes in one line each, printed with every decision list —
-leaves the list: one line names the cause question, where the routes
-stand (`labkit-next --guide`, "When you are stuck"; the stamped
-AGENTS.md) and `labkit-next AREA`; `WAYS_OUT_SHORT`, `NO_PROMISE_SHORT`,
-`WAYS_OUT_IN_FULL` and the `full` parameter go; the auditor's prompt
-keeps the full routes. Predicted: package net about −30 (finalize −7,
-ways_out −30, audit_decisions +3, imports +2), tests about −25. Stop
-criteria: net negative package lines for the step; the invariant held by
-a test — on an area with a completed, unadopted run finalize's note
-equals `next`'s rendered step; the suite green without an exception
-list; one session. A budget exceeded is explained and re-decided, never
-met by cutting a check.
+**Step 3 (2026-11-04, after the usage round): finalize's note and the decision list's routes.** Two removal-first candidates of the table under "What stands in the way", built as one step under the same terms. (a) `finalize.undeclared_hint` — 17 lines composing the audit, its decisions, the report fields and the adopt command for a protocol that declares no result yet — becomes one line naming `labkit-next AREA` (`finalize.undeclared_note`), as Phase 1 states it; the orientation test's premise that every line to the adoption names the report fields first goes with it (`next`'s order decides; the adoption's refusal names that step). Tried first and dropped the same hour: finalize rendering `next`'s step itself — finalize is a station of `next`'s chain (`report_check.chain_gaps` → `finalize_gaps` → `finalize_area`), so the render called finalize again without end (eight tests of `test_repair_guidance` in a RecursionError, found by the subagent that built (b)). The rule this leaves: a console path that is itself a station of the chain points to `next`; only paths outside the chain (the hooks) print its step. (b) `ways_out.blocker_routes(full=False)` — the nine routes in one line each, printed with every decision list — leaves the list: one line names the cause question, where the routes stand (`labkit-next --guide`, "When you are stuck"; the stamped AGENTS.md) and `labkit-next AREA`; `WAYS_OUT_SHORT`, `NO_PROMISE_SHORT`, `WAYS_OUT_IN_FULL` and the `full` parameter go; the auditor's prompt keeps the full routes. Predicted: package net about −30 (finalize −7, ways_out −30, audit_decisions +3, imports +2), tests about −25. Stop criteria: net negative package lines for the step; the invariant held by a test — on an area with a completed, unadopted run finalize's note equals `next`'s rendered step; the suite green without an exception list; one session. A budget exceeded is explained and re-decided, never met by cutting a check.
 
-Result (commits `36a110ef`, `3af7c599`; measured against `461e37d6` with
-`git diff --numstat`, lines with docstrings):
+Result (commits `36a110ef`, `3af7c599`; measured against `461e37d6` with `git diff --numstat`, lines with docstrings):
 
 | Measured, step 3 | Package | Tests |
 |---|---:|---:|
@@ -303,54 +151,9 @@ Result (commits `36a110ef`, `3af7c599`; measured against `461e37d6` with
 | lines removed | 95 | 69 |
 | net | **−43** | −23 |
 
-Per file: `ways_out` −45 (the short routes and the `full` branch),
-`finalize` −6, `audit_decisions` +8 (the constant and its comment),
-`audit_prompt` ±0, agent guide and `AGENTS.md` template ±0 in count,
-reworded. The suite green without an exception list, one session. **The
-success criterion is met for the first time**: this step removed
-composition and added none — the pilot and Option A each added a reader
-or a move. The invariant held is the weaker one that the cycle allows:
-finalize names no step (test: no command but `labkit-next` in the
-note); the decision list names none (test: the route text absent, the
-one line present). What stands in the way after this step, of the
-table's five homes: `agent_hooks.stop`'s own paragraphs (the undecided
-blockers and the report-check output, composed around `_capture`) and
-`scaffold.next_steps` (the lane after `labkit-init exp`, about 250
-lines with its three helpers) — the second is the removal-first
-candidate with the most lines, and the one that changes what a cold
-agent sees first; it needs its own prediction and a probe case before
-building.
+Per file: `ways_out` −45 (the short routes and the `full` branch), `finalize` −6, `audit_decisions` +8 (the constant and its comment), `audit_prompt` ±0, agent guide and `AGENTS.md` template ±0 in count, reworded. The suite green without an exception list, one session. **The success criterion is met for the first time**: this step removed composition and added none — the pilot and Option A each added a reader or a move. The invariant held is the weaker one that the cycle allows: finalize names no step (test: no command but `labkit-next` in the note); the decision list names none (test: the route text absent, the one line present). What stands in the way after this step, of the table's five homes: `agent_hooks.stop`'s own paragraphs (the undecided blockers and the report-check output, composed around `_capture`) and `scaffold.next_steps` (the lane after `labkit-init exp`, about 250 lines with its three helpers) — the second is the removal-first candidate with the most lines, and the one that changes what a cold agent sees first; it needs its own prediction and a probe case before building.
 
-**Step 4 (2026-11-04): the stop's and the commit's own paragraphs.**
-Decided to take (a) first (Max, 2026-11-04). Found before building: in
-the stop's own fixture (a head that reads, MUST fields unfilled, one open
-preflight BLOCKER) `next` names the field step and the stop holds on the
-BLOCKER — a hold on a finding `next`'s set does not carry, the
-contradiction Phase 1 exists to remove. So, by the plan's rule, the state
-becomes a row in `next`'s order first: "an audit BLOCKER nobody decided,
-a record or the journal lost or unreadable" (`agent_hooks.undecided_state`,
-the stop's and the commit's own reading, acknowledged losses excluded).
-Placed first ahead of the MUST fields, it broke the repair-path rule
-(`tests/test_repair_paths.py`: a rewritten registration with an
-undecided BLOCKER owes the way back first, probe 2026-11-02) — so the
-row stands after report-check's chain and catches what the chain
-carries no gap for; the invariant asks that `next`'s order carries the
-finding, not that it names it first (the hook holds by policy, `next`
-chooses by its order). The undecided way (`UNDECIDED_WAY`,
-the decide / restore / hand-over sentence the stop and the commit
-printed) moves into that step's `next`, one home. Then the stop's three
-paragraphs and the commit's one say only what holds (the fact and the
-policy) and print `next`'s rendered step per touched protocol
-(`agent_hooks.next_steps_for`, the tree at the stop, the index at the
-commit), de-duplicated against the missing-report lines Option A already
-renders. Predicted: package about +30 (`next_step` +30 for the row,
-`agent_hooks` about ±0: −26 prose and constant, +26 the helper and its
-calls), tests about +20. This step closes a gap, so its criterion is not
-size: the invariant test — the stop's stderr and the commit's stdout
-carry `next`'s rendered step for the held area, byte-equal to
-`next_step(...).render`, in the state each judges, and the way's text
-has one home (grep) —, the suite green without an exception list, one
-session, package lines at most +40; above that, stop and re-decide.
+**Step 4 (2026-11-04): the stop's and the commit's own paragraphs.** Decided to take (a) first (Max, 2026-11-04). Found before building: in the stop's own fixture (a head that reads, MUST fields unfilled, one open preflight BLOCKER) `next` names the field step and the stop holds on the BLOCKER — a hold on a finding `next`'s set does not carry, the contradiction Phase 1 exists to remove. So, by the plan's rule, the state becomes a row in `next`'s order first: "an audit BLOCKER nobody decided, a record or the journal lost or unreadable" (`agent_hooks.undecided_state`, the stop's and the commit's own reading, acknowledged losses excluded). Placed first ahead of the MUST fields, it broke the repair-path rule (`tests/test_repair_paths.py`: a rewritten registration with an undecided BLOCKER owes the way back first, probe 2026-11-02) — so the row stands after report-check's chain and catches what the chain carries no gap for; the invariant asks that `next`'s order carries the finding, not that it names it first (the hook holds by policy, `next` chooses by its order). The undecided way (`UNDECIDED_WAY`, the decide / restore / hand-over sentence the stop and the commit printed) moves into that step's `next`, one home. Then the stop's three paragraphs and the commit's one say only what holds (the fact and the policy) and print `next`'s rendered step per touched protocol (`agent_hooks.next_steps_for`, the tree at the stop, the index at the commit), de-duplicated against the missing-report lines Option A already renders. Predicted: package about +30 (`next_step` +30 for the row, `agent_hooks` about ±0: −26 prose and constant, +26 the helper and its calls), tests about +20. This step closes a gap, so its criterion is not size: the invariant test — the stop's stderr and the commit's stdout carry `next`'s rendered step for the held area, byte-equal to `next_step(...).render`, in the state each judges, and the way's text has one home (grep) —, the suite green without an exception list, one session, package lines at most +40; above that, stop and re-decide.
 
 Result (commit `50e83954`, measured against `3c8da70e`):
 
@@ -360,34 +163,9 @@ Result (commit `50e83954`, measured against `3c8da70e`):
 | lines removed | 35 | 18 |
 | net | **+85** | +45 |
 
-Over the budget (+40) and the forecast (+30). Where it went: `next_step`
-+65 — the row itself 35 (13 of them its docstring, which carries the two
-incidents the way protects against), 12 for the order's docstring, 20
-for `_before_the_chain`, a helper that exists only because the linter's
-complexity bound (C901) was reached — and `agent_hooks` +20 (the printer
-`next_steps_for` 25 and its two calls 8 against the constant and the
-prose, 26). The invariant holds (the stop's stderr and the commit's
-stdout carry `next`'s rendered step, byte-equal, each from its state;
-the way's text stands in one place, `next_step._undecided_step`; the
-suite green, one session). Reading: the same shape as the pilot and
-Option A — closing a gap *adds* a row, a printer and a helper; the
-removed prose was smaller than the path that replaces it. Of the +85,
-about 45 are one-time (the printer, the helper, the order's docstring)
-and 35 the row, which is the state's one home from now on. **Re-decision
-owed (the terms say stop, not cut):** keep, since Phase 1's case is the
-invariant and the one home, not size — or revert `50e83954` and leave
-the stop's own way in place. Recommended: keep; Max decides. Decided:
-keep (Max, 2026-11-04).
+Over the budget (+40) and the forecast (+30). Where it went: `next_step` +65 — the row itself 35 (13 of them its docstring, which carries the two incidents the way protects against), 12 for the order's docstring, 20 for `_before_the_chain`, a helper that exists only because the linter's complexity bound (C901) was reached — and `agent_hooks` +20 (the printer `next_steps_for` 25 and its two calls 8 against the constant and the prose, 26). The invariant holds (the stop's stderr and the commit's stdout carry `next`'s rendered step, byte-equal, each from its state; the way's text stands in one place, `next_step._undecided_step`; the suite green, one session). Reading: the same shape as the pilot and Option A — closing a gap *adds* a row, a printer and a helper; the removed prose was smaller than the path that replaces it. Of the +85, about 45 are one-time (the printer, the helper, the order's docstring) and 35 the row, which is the state's one home from now on. **Re-decision owed (the terms say stop, not cut):** keep, since Phase 1's case is the invariant and the one home, not size — or revert `50e83954` and leave the stop's own way in place. Recommended: keep; Max decides. Decided: keep (Max, 2026-11-04).
 
-Correction to step 3's closing line, from the analysis before step 5:
-the lane after a fresh `labkit-init exp` has been gone since 0.104.0
-(`stamp_area` ends with one line naming `labkit-next`); `next_steps`
-and its seven helpers (about 275 lines) print only after
-`--change-kind`. So step 5 is a plain removal with one invariant test
-(the kind change's report ends with `next`'s rendered step) and changes
-nothing a cold agent sees at the start — every `usability stage` probe
-since 0.104.0, the 2026-11-04 smoke included, already ran on `next`'s
-step alone. Predicted: package about −290, tests about −140.
+Correction to step 3's closing line, from the analysis before step 5: the lane after a fresh `labkit-init exp` has been gone since 0.104.0 (`stamp_area` ends with one line naming `labkit-next`); `next_steps` and its seven helpers (about 275 lines) print only after `--change-kind`. So step 5 is a plain removal with one invariant test (the kind change's report ends with `next`'s rendered step) and changes nothing a cold agent sees at the start — every `usability stage` probe since 0.104.0, the 2026-11-04 smoke included, already ran on `next`'s step alone. Predicted: package about −290, tests about −140.
 
 **Step 5 result** (commit `142afa6a`, built by a subagent on that analysis):
 
@@ -397,156 +175,43 @@ step alone. Predicted: package about −290, tests about −140.
 | lines removed | 305 | 168 |
 | net | **−294** | −136 |
 
-`change_kind` ends with `next_step(area, protocol).render(...)` after
-its log lines; the invariant test (`tests/test_scaffold.py`,
-`test_a_kind_change_closes_with_labkit_nexts_step_and_no_lane`) holds
-the report's tail byte-equal to the render and free of a numbered lane.
-The suite green, one session.
+`change_kind` ends with `next_step(area, protocol).render(...)` after its log lines; the invariant test (`tests/test_scaffold.py`, `test_a_kind_change_closes_with_labkit_nexts_step_and_no_lane`) holds the report's tail byte-equal to the render and free of a numbered lane. The suite green, one session.
 
-**Phase 1 after steps 3–5 (2026-11-04).** Of the table's five step-naming
-homes outside `next` ("What stands in the way"), none composes a step
-list any more: `review_hint` and `_report_hint` (pilot), `missing_reports`
-(Option A), `undeclared_hint` and the decision list's routes (step 3),
-the stop's and the commit's paragraphs (step 4), `scaffold.next_steps`
-(step 5). Measured over steps 3–5 against `461e37d6`: package net −252
-(−43, +85, −294), tests net −114. With the pilot's +78 and Option A's
-+39, Phase 1 stands at about −135 package lines in all; the forecast
-withdrawn on 2026-11-04 is not reinstated — the sign comes from one
-removal (the lane) that had been dead for a fresh stamp since 0.104.0.
-What remains of the "Done when": the `grep -rn "Next: "` sign shows five
-sites, all refusals' ways out (`agent_hooks` pre-run's cd, `timebox`,
-`lanes`, `scaffold.explore_next` for an exploration file without a
-protocol, which `next` has no row for) and `repair_hint`'s pointer to
-`labkit-next` — none a step list; the invariant test over the probe
-cases (the six-case repair probe as oracle) is not run in the suite and
-stays owed before Phase 1 is called done.
+**Phase 1 after steps 3–5 (2026-11-04).** Of the table's five step-naming homes outside `next` ("What stands in the way"), none composes a step list any more: `review_hint` and `_report_hint` (pilot), `missing_reports` (Option A), `undeclared_hint` and the decision list's routes (step 3), the stop's and the commit's paragraphs (step 4), `scaffold.next_steps` (step 5). Measured over steps 3–5 against `461e37d6`: package net −252 (−43, +85, −294), tests net −114. With the pilot's +78 and Option A's +39, Phase 1 stands at about −135 package lines in all; the forecast withdrawn on 2026-11-04 is not reinstated — the sign comes from one removal (the lane) that had been dead for a fresh stamp since 0.104.0. What remains of the "Done when": the `grep -rn "Next: "` sign shows five sites, all refusals' ways out (`agent_hooks` pre-run's cd, `timebox`, `lanes`, `scaffold.explore_next` for an exploration file without a protocol, which `next` has no row for) and `repair_hint`'s pointer to `labkit-next` — none a step list; the invariant test over the probe cases (the six-case repair probe as oracle) is not run in the suite and stays owed before Phase 1 is called done.
 
-**The probe-case invariant (2026-11-04, after step 5).** The six-case
-repair probe (labkit-evidence, `usability/2026-11-02-repair-paths/`)
-gained a helper `inv` in its shared library, run at every `labkit-next`
-of every case: it runs the stop hook on the tree (a session transcript
-dated at the case's start) and the two commit gates on everything staged
-(`report-check --if-reported --staged`, `claude-hook undecided`), and
-checks the two observable halves of Phase 1's invariant — a hook that
-holds prints `labkit-next`'s rendered step for the state it judges, byte
-for byte; no hook holds while `next` says "nothing". The other half
-(`next` names a chain gap ⇒ a hook holds) is not an invariant by design:
-the stop holds reported numbers, undecided BLOCKERs and missing reports,
-not every gap. Run on a non-editable install of `0020447d`
-(`logs-0020447d` beside the earlier logs). First finding, from the clean
-path before the full run ended: the commit's report-check gate holds the
-report review owed after the adoption and prints the gate's own finding
-with its `Next:` line, not `next --staged`'s step — the stop at the same
-state prints it (step 4), the pre-commit path does not. **Step 6
-(prediction):** `agent_hooks.next_steps_for` moves to
-`next_step.steps_for` (one home for the stop, the commit's undecided
-gate and report-check's hook entry); `report-check --if-reported` prints
-the steps after a hold; the stamped pre-commit's two echo lines say only
-what holds. Predicted: package about +10 (the move ±0, report-check +8,
-the template ±0), tests about +20; criterion: the clean path's breach
-gone on a rerun of the probe, no new breach, the suite green, one
-session, package at most +20.
+**The probe-case invariant (2026-11-04, after step 5).** The six-case repair probe (labkit-evidence, `usability/2026-11-02-repair-paths/`) gained a helper `inv` in its shared library, run at every `labkit-next` of every case: it runs the stop hook on the tree (a session transcript dated at the case's start) and the two commit gates on everything staged (`report-check --if-reported --staged`, `claude-hook undecided`), and checks the two observable halves of Phase 1's invariant — a hook that holds prints `labkit-next`'s rendered step for the state it judges, byte for byte; no hook holds while `next` says "nothing". The other half (`next` names a chain gap ⇒ a hook holds) is not an invariant by design: the stop holds reported numbers, undecided BLOCKERs and missing reports, not every gap. Run on a non-editable install of `0020447d` (`logs-0020447d` beside the earlier logs). First finding, from the clean path before the full run ended: the commit's report-check gate holds the report review owed after the adoption and prints the gate's own finding with its `Next:` line, not `next --staged`'s step — the stop at the same state prints it (step 4), the pre-commit path does not. **Step 6 (prediction):** `agent_hooks.next_steps_for` moves to `next_step.steps_for` (one home for the stop, the commit's undecided gate and report-check's hook entry); `report-check --if-reported` prints the steps after a hold; the stamped pre-commit's two echo lines say only what holds. Predicted: package about +10 (the move ±0, report-check +8, the template ±0), tests about +20; criterion: the clean path's breach gone on a rerun of the probe, no new breach, the suite green, one session, package at most +20.
 
-**Step 6 result** (commit `c3a4a404`): package +9, tests +24; the probe
-rerun on it (`logs-c3a4a404`): 20 breaches → 3, all in cases 6 (the
-registered report removed): the staged path is the report at the root,
-which lies in no area, so `steps_for` found no protocol while
-report-check's hook entry reached it through the head that registers
-the report. `steps_for` now follows `report_hold.registering_protocols`
-too (in `a80865d8`); the third run (`logs-a80865d8`) is the check. The
-stop printed `next`'s step in all 38 of its holds in every run, and no
-hook held while `next` said "nothing" (108 checks per run).
+**Step 6 result** (commit `c3a4a404`): package +9, tests +24; the probe rerun on it (`logs-c3a4a404`): 20 breaches → 3, all in cases 6 (the registered report removed): the staged path is the report at the root, which lies in no area, so `steps_for` found no protocol while report-check's hook entry reached it through the head that registers the report. `steps_for` now follows `report_hold.registering_protocols` too (in `a80865d8`); the third run (`logs-a80865d8`) is the check. The stop printed `next`'s step in all 38 of its holds in every run, and no hook held while `next` said "nothing" (108 checks per run).
 
 
-**Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1
-does not continue as written. The reason is structural, not accidental:
-closing a gap *adds* a path, and the gain of Phase 1 comes only where a
-surface's own composition is *removed* and `next` takes its place. The
-state parameter is a one-time cost now paid. The next candidate that is
-removal-first: the stop hook's own lines for a report not written
-(`agent_hooks.missing_reports`, `report_hold.missing_report` composed
-there) replaced by `next`'s step for the touched area, with the same
-measurement. Whether to take it, or to go to the usage round with the
-pilot as it stands, was the decision then open; taken the same day:
-Option A built (its table above), then the usage round — its reading
-under "Then: the usage round".
+**Reading, and the decision this owes.** Criterion 2 is hit, so Phase 1 does not continue as written. The reason is structural, not accidental: closing a gap *adds* a path, and the gain of Phase 1 comes only where a surface's own composition is *removed* and `next` takes its place. The state parameter is a one-time cost now paid. The next candidate that is removal-first: the stop hook's own lines for a report not written (`agent_hooks.missing_reports`, `report_hold.missing_report` composed there) replaced by `next`'s step for the touched area, with the same measurement. Whether to take it, or to go to the usage round with the pilot as it stands, was the decision then open; taken the same day: Option A built (its table above), then the usage round — its reading under "Then: the usage round".
 
 ## Target
 
-1. **One ordering, one explainer.** `labkit-next` is the only code that
-   turns an area's state into a step. A gate returns findings as data:
-   what holds, where, which rule, and the way out as a *command object*,
-   not a sentence. No gate, hook or console path composes a "Next:"
-   sentence of its own.
-2. **Mechanical steps run themselves, if the `--do` proposal is
-   triggered.** `labkit-next --do` executes a
-   step whose command is one of labkit's own checked writers (adopt,
-   block into the report, withdrawal, wait for an open run). It never
-   runs git, never a model, never writes content it would have to invent.
-3. **Research steps stay with the agent.** Which run answers when several
-   could, the Conclusion, a decision on a finding, the `--why` of a
-   discussion: `next` names what is expected and stops.
-4. **State is derived, from few files, by one reader each.** No format
-   gains a second reader; a format no gate reads is a candidate to go.
+1. **One ordering, one explainer.** `labkit-next` is the only code that turns an area's state into a step. A gate returns findings as data: what holds, where, which rule, and the way out as a *command object*, not a sentence. No gate, hook or console path composes a "Next:" sentence of its own.
+2. **Mechanical steps run themselves, if the `--do` proposal is triggered.** `labkit-next --do` executes a step whose command is one of labkit's own checked writers (adopt, block into the report, withdrawal, wait for an open run). It never runs git, never a model, never writes content it would have to invent.
+3. **Research steps stay with the agent.** Which run answers when several could, the Conclusion, a decision on a finding, the `--why` of a discussion: `next` names what is expected and stops.
+4. **State is derived, from few files, by one reader each.** No format gains a second reader; a format no gate reads is a candidate to go.
 
 ## The direction: toward an allow-list — step 1 is the writer that refuses
 
-Today labkit is a deny-list: the agent may change any file, and the gates
-recognise known violations afterwards. A deny-list grows with every
-error observed, and so do its tests (the registration comparison that
-broke on whitespace and on a glossed field name, V1 and V2 of the
-maintainability review, are errors of recognising a hand-edited head).
-The alternative is an allow-list: one way, and what lies beside it is not
-forbidden case by case but not provided for. This plan takes its first
-step only: the writer refuses what a gate would later hold. The ledger
-is deferred and the historical bindings stay, so hand edits before the
-first commit stay unrecognised and the test class "semantically
-equivalent hand edits" does not fall away yet — it shrinks where a
-writer's precondition replaces a gate's recognition, and no earlier.
+Today labkit is a deny-list: the agent may change any file, and the gates recognise known violations afterwards. A deny-list grows with every error observed, and so do its tests (the registration comparison that broke on whitespace and on a glossed field name, V1 and V2 of the maintainability review, are errors of recognising a hand-edited head). The alternative is an allow-list: one way, and what lies beside it is not forbidden case by case but not provided for. This plan takes its first step only: the writer refuses what a gate would later hold. The ledger is deferred and the historical bindings stay, so hand edits before the first commit stay unrecognised and the test class "semantically equivalent hand edits" does not fall away yet — it shrinks where a writer's precondition replaces a gate's recognition, and no earlier.
 
 | Class | Files | Who writes | What labkit checks |
 |---|---|---|---|
 | machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands only | today: against HEAD once committed (`evidence.change_blockers`). Step 1 (Phase 3, first item): the writer refuses what a gate would later hold. A comparison against what labkit last wrote, before the first commit, is the deferred write-ledger proposal below |
 | free | measuring code, report prose, notes, data, `MANIFEST.sha256` | the agent | consequences only: code changed since the run, a report citing a run nothing adopted |
 
-The second row exists and stays: research content must be free. The
-first row exists by half — `runlog` writes the runs, `protocol-fill` the
-head, `evidence.change_blockers` compares committed evidence against
-HEAD. What is missing is the consequence: a hand edit of a machine-led file
-is not a case with its own cure but a refusal with one way out, and the
-writer refuses what the gates would later hold (a registered field after
-the first measurement). The gap between a write and its first commit
-(what HEAD cannot compare yet) is a proposal below, not part of this
-plan. A writer's refusal removes no check at the read; writer and
-reader share one validation, so the rule has one home and one test
-instead of two implementations that can disagree. What does not change
-are the
-bindings across time — the registration to the first measurement's
-commit, the record to the run it audited — which compare a present text
-with a historical one and stay as they are. What it does not solve
-stays with the agent audit: a number that is formally clean and wrong. Deliberate circumvention stays possible (a forged
-ledger line); labkit guards against error, not adversaries, as the
-[review-record limit](2026-11-02-review-record-forgery.md) already says.
+The second row exists and stays: research content must be free. The first row exists by half — `runlog` writes the runs, `protocol-fill` the head, `evidence.change_blockers` compares committed evidence against HEAD. What is missing is the consequence: a hand edit of a machine-led file is not a case with its own cure but a refusal with one way out, and the writer refuses what the gates would later hold (a registered field after the first measurement). The gap between a write and its first commit (what HEAD cannot compare yet) is a proposal below, not part of this plan. A writer's refusal removes no check at the read; writer and reader share one validation, so the rule has one home and one test instead of two implementations that can disagree. What does not change are the bindings across time — the registration to the first measurement's commit, the record to the run it audited — which compare a present text with a historical one and stay as they are. What it does not solve stays with the agent audit: a number that is formally clean and wrong. Deliberate circumvention stays possible (a forged ledger line); labkit guards against error, not adversaries, as the [review-record limit](2026-11-02-review-record-forgery.md) already says.
 
 ## What already exists
 
-- `labkit-next` (`labkit/tools/next_step.py`) is the ordering: field
-  report → evidence restore → handover → open run → progress account →
-  report-check's chain gaps → adoption → report block → nothing. It adds
-  no check; it reads what the gates compute.
-- `GateFinding.fix` (`labkit/formats/gate.py:85`) is required for every
-  BLOCKER and is what `next` prints as the step (`first.fix`). The way
-  out is already data in the sense of a field — but a prose field.
-- `GateFinding.changed_since` is the precedent for the rule: "callers
-  order their advice by it, never by the words".
-- `audit_decisions.repair_hint` is the precedent for an explanation that
-  names no action and points to `labkit-next`
-  (`docs/architecture.md`, "What does a repair decided `fixed` owe next?").
-- `labkit-adopt` is the precedent for a mechanical step that runs
-  labkit's own writers in order and stops at the first refusal.
-- The command builders in `labkit/formats/repo.py` (`withdraw_command`,
-  `into_command`, `measure_command`, `audit_command`,
-  `report_blocks.discuss_command`) are the one spelling of each command.
+- `labkit-next` (`labkit/tools/next_step.py`) is the ordering: field report → evidence restore → handover → open run → progress account → report-check's chain gaps → adoption → report block → nothing. It adds no check; it reads what the gates compute.
+- `GateFinding.fix` (`labkit/formats/gate.py:85`) is required for every BLOCKER and is what `next` prints as the step (`first.fix`). The way out is already data in the sense of a field — but a prose field.
+- `GateFinding.changed_since` is the precedent for the rule: "callers order their advice by it, never by the words".
+- `audit_decisions.repair_hint` is the precedent for an explanation that names no action and points to `labkit-next` (`docs/architecture.md`, "What does a repair decided `fixed` owe next?").
+- `labkit-adopt` is the precedent for a mechanical step that runs labkit's own writers in order and stops at the first refusal.
+- The command builders in `labkit/formats/repo.py` (`withdraw_command`, `into_command`, `measure_command`, `audit_command`, `report_blocks.discuss_command`) are the one spelling of each command.
 
 ## What stands in the way
 
@@ -563,42 +228,19 @@ Counted at the baseline (`grep` over `labkit/`, tests excluded).
 | the register-a-report hint in two homes | `next_step._report_hint`, `agent_hooks._report_hint` (a different hint under the same name) | 2 |
 | hooks that do not call `next_step` | `agent_hooks.stop`, the pre-commit path | 2 |
 
-Not in the way, named so they are not counted twice: `report_hold.report_hints`,
-`report_hold.replacement_hints`, `audit_decisions.read_hints` and
-`audit_decisions.stands_check_hint` are static-evidence warnings or
-reading aids, not step namers; `preflight.contract_hint` and
-`protocol_edit.field_address_hint` explain a refused input's spelling,
-which is a refusal's way out and stays with the refusal.
+Not in the way, named so they are not counted twice: `report_hold.report_hints`, `report_hold.replacement_hints`, `audit_decisions.read_hints` and `audit_decisions.stands_check_hint` are static-evidence warnings or reading aids, not step namers; `preflight.contract_hint` and `protocol_edit.field_address_hint` explain a refused input's spelling, which is a refusal's way out and stays with the refusal.
 
-(The TODO entry of 2026-11-04 counted "14 hint functions in 9 modules";
-that count took the static-evidence hints for step namers. The table
-above is the corrected inventory.)
+(The TODO entry of 2026-11-04 counted "14 hint functions in 9 modules"; that count took the static-evidence hints for step namers. The table above is the corrected inventory.)
 
 ## Phase 0 — Inventory and verdicts (no code)
 
 Status: tables done 2026-11-04; the verdicts are proposals and open.
 
-Deliverable: the two tables below, one row per format and per gate, each
-with the chain link it secures (intent → promise → code → run → number),
-its readers, and a verdict: *stays*, *merges into X*, *goes*. A format no
-gate or check reads, and a gate that only repeats what another checks,
-are the candidates; their tests go with them. Each row also says its
-class under the principle above, machine-led or free. Periphery
-(`tools/`, `probes/`) is judged apart and does not count against the
-guards.
+Deliverable: the two tables below, one row per format and per gate, each with the chain link it secures (intent → promise → code → run → number), its readers, and a verdict: *stays*, *merges into X*, *goes*. A format no gate or check reads, and a gate that only repeats what another checks, are the candidates; their tests go with them. Each row also says its class under the principle above, machine-led or free. Periphery (`tools/`, `probes/`) is judged apart and does not count against the guards.
 
 ### Table A — formats
 
-Readers from an AST scan of direct read calls outside `labkit/formats/`
-and outside tests (2026-11-04; spot-checked: `deliverable`,
-`criterion_bar`, `timebox`, `promises.load` are read by templates and
-their own tests only). Chain link: I intent, P promise, C code, R run,
-N reported number. Class as the principle above names it; *derived*
-means no file of its own. Verdicts are proposals; each *goes*, *moves*
-or *merges* needs a before/after proposal of its own (what the files,
-readers and tests look like on both sides) before it is a Breaking
-entry (Phase 3). A reader does not justify a format: it may be part of
-the same unnecessary construction.
+Readers from an AST scan of direct read calls outside `labkit/formats/` and outside tests (2026-11-04; spot-checked: `deliverable`, `criterion_bar`, `timebox`, `promises.load` are read by templates and their own tests only). Chain link: I intent, P promise, C code, R run, N reported number. Class as the principle above names it; *derived* means no file of its own. Verdicts are proposals; each *goes*, *moves* or *merges* needs a before/after proposal of its own (what the files, readers and tests look like on both sides) before it is a Breaking entry (Phase 3). A reader does not justify a format: it may be part of the same unnecessary construction.
 
 | Format | File | Link | Class | Readers (g gates · c checks · r run · t tools · p probes · tpl templates) | Proposed verdict |
 |---|---|---|---|---|---|
@@ -625,21 +267,11 @@ the same unnecessary construction.
 | `timebox` | none (Timebox field) | P | script helper | tpl 1 | moves to the script-helper home |
 | `rules` | `docs/standard.md`, `docs/rules.tsv` | — | repo-level | g 1 · c 1 · t 1 | stays |
 
-Script-helper home: the functions a stamped measuring script imports
-(`promises.load`, `write_constant`, `criterion_bar.bar_of`,
-`timebox.seconds_of`, `deliverable.write_csv`) are the area code's API,
-not formats the gates read; they belong under `labkit/run/` beside
-`runlog`, `llm` and `batch`, where the public API already lives, and in
-the Public API table once a lab imports them. Without area record files
-and so not formats either: `standard_contract`, `scope_sha`, `repo`,
-`jsonl`, `files`, `console`, `shell`, `gate`, `prompts`, `reference`.
+Script-helper home: the functions a stamped measuring script imports (`promises.load`, `write_constant`, `criterion_bar.bar_of`, `timebox.seconds_of`, `deliverable.write_csv`) are the area code's API, not formats the gates read; they belong under `labkit/run/` beside `runlog`, `llm` and `batch`, where the public API already lives, and in the Public API table once a lab imports them. Without area record files and so not formats either: `standard_contract`, `scope_sha`, `repo`, `jsonl`, `files`, `console`, `shell`, `gate`, `prompts`, `reference`.
 
 ### Table B — gates
 
-Transitive reads from a static call graph (branch-dependent reads
-counted). A gate is one of the five that decide; a hook is a surface
-that should call a gate and `next` (Phase 1), listed here because today
-it reads on its own.
+Transitive reads from a static call graph (branch-dependent reads counted). A gate is one of the five that decide; a hook is a surface that should call a gate and `next` (Phase 1), listed here because today it reads on its own.
 
 | Entry | Decides | Formats read | Proposed verdict |
 |---|---|---|---|
@@ -653,92 +285,19 @@ it reads on its own.
 | hook `stop` | — | handovers, attempts, evidence, report_hold, report_check with all it reads, runs.tsv | surface: prints `next` per touched area (Phase 1) |
 | hook `undecided` | — | handovers, attempts, evidence, protocol_block, promises, comment_blocks | surface: the pre-commit's gate call; prints `next` |
 
-Reading of the two tables: every record format is read by a gate, so
-nothing goes for want of a reader; what goes or moves is the
-script-helper group misfiled under formats. The size sits in the
-*readers*: the protocol state has six independent reader paths
-(preflight, finalize, start check, report_check, `protocol_report` in
-the hook, `next`), and three derived views (answering_run, audit_gaps,
-followup) are recomputed by each. That is Phase 4's case.
+Reading of the two tables: every record format is read by a gate, so nothing goes for want of a reader; what goes or moves is the script-helper group misfiled under formats. The size sits in the *readers*: the protocol state has six independent reader paths (preflight, finalize, start check, report_check, `protocol_report` in the hook, `next`), and three derived views (answering_run, audit_gaps, followup) are recomputed by each. That is Phase 4's case.
 
 ## Phase 1 — One mouth: every console path prints `labkit-next`'s step
 
-Change: the stop hook and the pre-commit path hold on the findings
-`next_step` derives for the same state and print its step; they compose
-no line and judge no fact of their own. The shared findings are the
-truth; `next` chooses one action from them. So the invariant is not
-"the hook holds exactly when `next` names a blocking step" — several
-blockers can stand at once and `next` names the first, and `next`
-places the progress account before some blocks on purpose. The
-invariant, held by a test over every hold the hooks know: gate, hook and
-`next` read the same applicable findings of the same file state; the
-hook holds by its fixed policy (a BLOCKER among them, grade decides, the
-words never); `next` names its step from that same set, by its order. A
-hook that holds on a finding `next`'s set does not contain, or `next`
-naming a step from a finding the hook's set does not contain, is the
-contradiction this plan exists to remove. For the isolated report case
-the test may then demand the same hold and the same action.
-`finalize.undeclared_hint` becomes one line naming `labkit-next AREA`.
-`scaffold.next_steps` prints `next_step` for the stamped area instead of
-its own lane. `blocker_routes` leaves the decision list (one line names
-`labkit-next`); the nine routes stay in `labkit-next --guide` and the
-stamped `AGENTS.md`, where `tests/test_ways_out.py` already holds them
-to real commands. `agent_hooks._report_hint` and `report_review.review_hint`
-go where `next` names the review. Today it names the *registered*
-report's review (`report_hold.report_owed`, reached through
-`report_check.chain_gaps` and `_handed_over`) but not the review a report
-that merely *discusses* a run owes: that hold lives in
-`report_hold.hold_report`, called from the command path of `report-check`
-(`report_check.py:1005`) and the hooks, outside `chain_gaps`. This is the
-first known state `next` does not name; it becomes a row in `next`'s
-order, with a test, before the hook's own line goes.
+Change: the stop hook and the pre-commit path hold on the findings `next_step` derives for the same state and print its step; they compose no line and judge no fact of their own. The shared findings are the truth; `next` chooses one action from them. So the invariant is not "the hook holds exactly when `next` names a blocking step" — several blockers can stand at once and `next` names the first, and `next` places the progress account before some blocks on purpose. The invariant, held by a test over every hold the hooks know: gate, hook and `next` read the same applicable findings of the same file state; the hook holds by its fixed policy (a BLOCKER among them, grade decides, the words never); `next` names its step from that same set, by its order. A hook that holds on a finding `next`'s set does not contain, or `next` naming a step from a finding the hook's set does not contain, is the contradiction this plan exists to remove. For the isolated report case the test may then demand the same hold and the same action. `finalize.undeclared_hint` becomes one line naming `labkit-next AREA`. `scaffold.next_steps` prints `next_step` for the stamped area instead of its own lane. `blocker_routes` leaves the decision list (one line names `labkit-next`); the nine routes stay in `labkit-next --guide` and the stamped `AGENTS.md`, where `tests/test_ways_out.py` already holds them to real commands. `agent_hooks._report_hint` and `report_review.review_hint` go where `next` names the review. Today it names the *registered* report's review (`report_hold.report_owed`, reached through `report_check.chain_gaps` and `_handed_over`) but not the review a report that merely *discusses* a run owes: that hold lives in `report_hold.hold_report`, called from the command path of `report-check` (`report_check.py:1005`) and the hooks, outside `chain_gaps`. This is the first known state `next` does not name; it becomes a row in `next`'s order, with a test, before the hook's own line goes.
 
-Requirement: `next_step` takes the file state the caller judges
-(`Checked.state`: TREE for the stop and the console, INDEX for the
-pre-commit) and reads every finding from it; a hook holds and names the
-step from one state.
+Requirement: `next_step` takes the file state the caller judges (`Checked.state`: TREE for the stop and the console, INDEX for the pre-commit) and reads every finding from it; a hook holds and names the step from one state.
 
-Files: `labkit/gates/agent_hooks.py`, `labkit/gates/finalize.py`,
-`labkit/tools/scaffold.py`, `labkit/gates/audit_decisions.py`,
-`labkit/gates/audit_prompt.py`, `labkit/tools/next_step.py`.
-Tests: `tests/test_agent_hooks*.py` (63 tests today) and
-`tests/test_next_step.py` (17) — each hook assertion on a composed line
-becomes an assertion on the step; the six-case repair probe
-(`labkit-evidence`, `usability/2026-11-02-repair-paths/`) records per
-case the sequence of steps `next` names, as the regression oracle.
-CHANGELOG: Breaking (hook output changes; `blocker_routes` no longer
-printed with decisions).
-Done when: the invariant test above passes for the stop and the
-pre-commit over the probe cases; `grep -rn "Next: " labkit
---include='*.py'` outside `formats/gate.py` and `tools/next_step.py` is
-empty (a necessary sign, not the proof — it is met by rewording); and
-every hint named in the table above either is gone or names no action.
-Forecast withdrawn 2026-11-04: two removal candidates measured +78 and
-+39 package lines, of which about +40 and +34 are one-time costs (the
-pilot result above); not shown that Phase 1 cannot save code, shown that
-these two candidates did not. Phase 1's case is now
-structure — one finding, one spelling, `next` printable by every hook —
-not size; it continues only if the usage round shows the contradictions
-it removes cost agents work — shown 2026-11-04 in the registered reading
-of labkit-paper's area 19 ("Then: the usage round" below): Phase 1
-continues with the next removal-first candidate.
+Files: `labkit/gates/agent_hooks.py`, `labkit/gates/finalize.py`, `labkit/tools/scaffold.py`, `labkit/gates/audit_decisions.py`, `labkit/gates/audit_prompt.py`, `labkit/tools/next_step.py`. Tests: `tests/test_agent_hooks*.py` (63 tests today) and `tests/test_next_step.py` (17) — each hook assertion on a composed line becomes an assertion on the step; the six-case repair probe (`labkit-evidence`, `usability/2026-11-02-repair-paths/`) records per case the sequence of steps `next` names, as the regression oracle. CHANGELOG: Breaking (hook output changes; `blocker_routes` no longer printed with decisions). Done when: the invariant test above passes for the stop and the pre-commit over the probe cases; `grep -rn "Next: " labkit --include='*.py'` outside `formats/gate.py` and `tools/next_step.py` is empty (a necessary sign, not the proof — it is met by rewording); and every hint named in the table above either is gone or names no action. Forecast withdrawn 2026-11-04: two removal candidates measured +78 and +39 package lines, of which about +40 and +34 are one-time costs (the pilot result above); not shown that Phase 1 cannot save code, shown that these two candidates did not. Phase 1's case is now structure — one finding, one spelling, `next` printable by every hook — not size; it continues only if the usage round shows the contradictions it removes cost agents work — shown 2026-11-04 in the registered reading of labkit-paper's area 19 ("Then: the usage round" below): Phase 1 continues with the next removal-first candidate.
 
 ## Phase 2 — The way out as data
 
-Change: a `Command` (frozen dataclass in `labkit/formats/repo.py`, the
-builders' home): `name` (one of a small enum: `adopt`, `into`,
-`withdraw`, `discuss`, `measure`, `audit`, `review`, `wait`, `restore`,
-`fill`, `init`), `kind` (`MECHANICAL`, `CONTENT`, `RESEARCH`,
-`DESTRUCTIVE`), its arguments as fields (protocol, run id, report,
-record — paths resolved, not shell text), and `line` rendered from them
-(the shell line as today). Every builder returns one;
-`GateFinding` gains `step: Command | None`; `fix` keeps its type and is
-rendered from `step` by `with_way_out` where a step is given, so the 180
-prose-only sites do not change and the 64 command sites pass the object.
-Then `next_step._refused_measurement` tests `step.name == measure`,
-`_held_step` and `report_check.chain_gaps` share one withdraw-first rule
-(it moves into `next`; `ways_out.declared_first` goes), and no code
-reads `fix` as text.
+Change: a `Command` (frozen dataclass in `labkit/formats/repo.py`, the builders' home): `name` (one of a small enum: `adopt`, `into`, `withdraw`, `discuss`, `measure`, `audit`, `review`, `wait`, `restore`, `fill`, `init`), `kind` (`MECHANICAL`, `CONTENT`, `RESEARCH`, `DESTRUCTIVE`), its arguments as fields (protocol, run id, report, record — paths resolved, not shell text), and `line` rendered from them (the shell line as today). Every builder returns one; `GateFinding` gains `step: Command | None`; `fix` keeps its type and is rendered from `step` by `with_way_out` where a step is given, so the 180 prose-only sites do not change and the 64 command sites pass the object. Then `next_step._refused_measurement` tests `step.name == measure`, `_held_step` and `report_check.chain_gaps` share one withdraw-first rule (it moves into `next`; `ways_out.declared_first` goes), and no code reads `fix` as text.
 
 Kinds, fixed here so the `--do` proposal has nothing to decide:
 
@@ -749,83 +308,22 @@ Kinds, fixed here so the `--do` proposal has nothing to decide:
 | RESEARCH | `audit`, `review`, a decision, choosing among several runs | a model call or a judgement |
 | DESTRUCTIVE | `restore` (`git checkout -- <evidence>`), `init` on a tree that has files | discards or overwrites work; printed, never run |
 
-Files: `labkit/formats/repo.py`, `labkit/formats/gate.py`,
-`labkit/checks/report_blocks.py`, the 64 command sites (31 modules, list
-by `grep -rn 'fix=' labkit | grep '\``'`), `labkit/gates/ways_out.py`,
-`labkit/tools/next_step.py`.
-Tests: `tests/test_gate.py` (a BLOCKER with a `step` renders the same
-`fix` as before — the twin: the rendered line is byte-equal for every
-builder), `tests/test_next_step.py` (the measurement refusal found by
-name, not text).
-CHANGELOG: internal change; `GateFinding` is not in the public API
-(`docs/architecture.md`, "Public API"), so one Breaking entry suffices.
-Done when: `grep -rn '\.fix' labkit --include='*.py'` shows only
-rendering (`with_way_out`, `line`) and no comparison.
-Forecast: package +100 to +150 (`Command`, its builders) and −100
-(`declared_first`, the text matching, the second withdraw-first home):
-about even, honestly; it pays in Phase 4 and in the `--do` proposal,
-not by itself. Measured afterwards.
+Files: `labkit/formats/repo.py`, `labkit/formats/gate.py`, `labkit/checks/report_blocks.py`, the 64 command sites (31 modules, list by `grep -rn 'fix=' labkit | grep '\``'`), `labkit/gates/ways_out.py`, `labkit/tools/next_step.py`. Tests: `tests/test_gate.py` (a BLOCKER with a `step` renders the same `fix` as before — the twin: the rendered line is byte-equal for every builder), `tests/test_next_step.py` (the measurement refusal found by name, not text). CHANGELOG: internal change; `GateFinding` is not in the public API (`docs/architecture.md`, "Public API"), so one Breaking entry suffices. Done when: `grep -rn '\.fix' labkit --include='*.py'` shows only rendering (`with_way_out`, `line`) and no comparison. Forecast: package +100 to +150 (`Command`, its builders) and −100 (`declared_first`, the text matching, the second withdraw-first home): about even, honestly; it pays in Phase 4 and in the `--do` proposal, not by itself. Measured afterwards.
 
 ### Phase 2 refined by the inventory (2026-11-04, before building)
 
-The inventory (a read-only subagent over the tree at `c3a4a404`): 242
-real `fix=` sites — 99 compose their command through a builder (62
-directly, 37 through a helper such as `measure_anew`, `record_way`,
-`_review_step`), 82 hand-write shell text (11 of them duplicating a
-builder's line: `labkit-adopt`, `protocol-fill --discuss`, the measure
-line, `protocol-check --contract`), 51 are prose, 10 pass a fix through.
-Code that reads a fix as text: `next_step._refused_measurement`
-(`measure_command(...) in fix`), `ways_out.declared_first` (prepends
-the withdrawal to the text) and, not in the plan,
-`report_check.adoption_order_note` (`ADOPT_TOOL`, `--from-run`,
-`--render` searched in the blocker messages). The withdraw-first rule
-has two deciders (`report_check.held_declaration` by `changed_since`
-for stages 4–7, `finalize.declaring_protocol` for stage 3) and one
-prefixer (`declared_first`).
+The inventory (a read-only subagent over the tree at `c3a4a404`): 242 real `fix=` sites — 99 compose their command through a builder (62 directly, 37 through a helper such as `measure_anew`, `record_way`, `_review_step`), 82 hand-write shell text (11 of them duplicating a builder's line: `labkit-adopt`, `protocol-fill --discuss`, the measure line, `protocol-check --contract`), 51 are prose, 10 pass a fix through. Code that reads a fix as text: `next_step._refused_measurement` (`measure_command(...) in fix`), `ways_out.declared_first` (prepends the withdrawal to the text) and, not in the plan, `report_check.adoption_order_note` (`ADOPT_TOOL`, `--from-run`, `--render` searched in the blocker messages). The withdraw-first rule has two deciders (`report_check.held_declaration` by `changed_since` for stages 4–7, `finalize.declaring_protocol` for stage 3) and one prefixer (`declared_first`).
 
-Built in this order, rendering byte-equal at every step (the suite's
-containment assertions on fix text are the twin):
+Built in this order, rendering byte-equal at every step (the suite's containment assertions on fix text are the twin):
 
-1. `repo.Command` (frozen: `name`, `kind`, `line`; `__str__` is the
-   line, so every f-string site keeps working) and the kinds as the
-   table above fixes them; every builder returns one — `adopt`, `into`,
-   `withdraw`, `wait` MECHANICAL; `discuss`, `handover` CONTENT;
-   `measure`, `audit`, `decide`, `review` RESEARCH; `check`
-   (`gate_command`, `contract_command`) MECHANICAL. A builder built on
-   another reads `.line`. `result_render`'s hand-written
-   `protocol-fill --render` / `--from-run` lines become a builder
-   (`render_command`, MECHANICAL), the one hand-written duplicate the
-   text reads depend on; the other hand-written duplicates are left for
-   Phase 3's verdicts.
-2. `GateFinding.step: Command | None` and
-   `GateFinding.withdraw_first: Command | None`, keyword, default None;
-   `line` and `message` render the prefix from `withdraw_first` exactly
-   as `WITHDRAW_FIRST` did. `declared_first` goes; `withdrawn_first`
-   sets the field. The two deciders stay where they are (Phase 4's
-   state model is where they merge); what moves here is the text.
-3. The three text reads read data: `_refused_measurement` by
-   `step.name == MEASURE`, `adoption_order_note` by the steps' names
-   (`adopt` against the rest, `render` projections aside), the prefix
-   by the field.
-4. `step=` set at every site whose fix embeds a builder's command for
-   `measure`, `adopt`, `withdraw`, `into`, `discuss`, `render` — the
-   names `next` and the hooks reason about (about 45 sites); the other
-   builder sites may follow in Phase 3 with their verdicts.
+1. `repo.Command` (frozen: `name`, `kind`, `line`; `__str__` is the line, so every f-string site keeps working) and the kinds as the table above fixes them; every builder returns one — `adopt`, `into`, `withdraw`, `wait` MECHANICAL; `discuss`, `handover` CONTENT; `measure`, `audit`, `decide`, `review` RESEARCH; `check` (`gate_command`, `contract_command`) MECHANICAL. A builder built on another reads `.line`. `result_render`'s hand-written `protocol-fill --render` / `--from-run` lines become a builder (`render_command`, MECHANICAL), the one hand-written duplicate the text reads depend on; the other hand-written duplicates are left for Phase 3's verdicts.
+2. `GateFinding.step: Command | None` and `GateFinding.withdraw_first: Command | None`, keyword, default None; `line` and `message` render the prefix from `withdraw_first` exactly as `WITHDRAW_FIRST` did. `declared_first` goes; `withdrawn_first` sets the field. The two deciders stay where they are (Phase 4's state model is where they merge); what moves here is the text.
+3. The three text reads read data: `_refused_measurement` by `step.name == MEASURE`, `adoption_order_note` by the steps' names (`adopt` against the rest, `render` projections aside), the prefix by the field.
+4. `step=` set at every site whose fix embeds a builder's command for `measure`, `adopt`, `withdraw`, `into`, `discuss`, `render` — the names `next` and the hooks reason about (about 45 sites); the other builder sites may follow in Phase 3 with their verdicts.
 
-Predicted: package about +70 (`Command`, kinds and the builders' wrap
-+45, the two fields and their rendering +25, `render_command` +15,
-`step=` at 45 sites +45; against `declared_first` and the three text
-reads −60), tests about +40 (the twin per builder, the refusal by
-name, the prefix by field). Criterion, as the plan's "Done when":
-`grep -rn '\.fix' labkit --include='*.py'` shows rendering and
-fallbacks only, no comparison; every builder's line byte-equal before
-and after (a test per builder); the suite green without a changed
-containment assertion; two sessions at most; package at most +120.
-Above that, stop and re-decide; never met by dropping a builder.
+Predicted: package about +70 (`Command`, kinds and the builders' wrap +45, the two fields and their rendering +25, `render_command` +15, `step=` at 45 sites +45; against `declared_first` and the three text reads −60), tests about +40 (the twin per builder, the refusal by name, the prefix by field). Criterion, as the plan's "Done when": `grep -rn '\.fix' labkit --include='*.py'` shows rendering and fallbacks only, no comparison; every builder's line byte-equal before and after (a test per builder); the suite green without a changed containment assertion; two sessions at most; package at most +120. Above that, stop and re-decide; never met by dropping a builder.
 
-**Phase 2 core result** (commit `a80865d8`, steps 1–3 of the list above
-and `step=` at the measure, adopt and render sites; measured against
-`c3a4a404`):
+**Phase 2 core result** (commit `a80865d8`, steps 1–3 of the list above and `step=` at the measure, adopt and render sites; measured against `c3a4a404`):
 
 | Measured, Phase 2 core | Package | Tests |
 |---|---:|---:|
@@ -833,170 +331,42 @@ and `step=` at the measure, adopt and render sites; measured against
 | lines removed | 147 | 20 |
 | net | **+184** | +111 |
 
-Over the budget (+120) and far over the forecast (+70). Where: `repo`
-+89 (the kinds and names table with its comment 40, `Command` 25, the
-builders' wrap 24), `gate` +48 (two fields and their docstrings 14,
-`way` 8, `withdrawn_first` 16, the docstrings of `line` and `block`
-10), `finalize` +23 (the three `withdrawn_first` calls formatted over
-lines, `step=` at six sites), `answering_run` +14 (the `step` field
-through the run choice), `next_step` +10, `result_render` +8, the
-rest +12; against `ways_out` −23 (`declared_first`). The Done-when
-holds: `grep -rn '\.fix' labkit` shows rendering and fallbacks only;
-every builder's line is byte-equal (`tests/test_repo.py`,
-`EveryBuilderIsACommand`; `tests/test_gate.py`, `TheWayAsData`); the
-suite green with no containment assertion changed (only equality on
-the builders' return type, `.line`). Reading: the forecast counted the
-data model as a few lines and it is not — the names and kinds table
-alone is 40 lines of a contract that did not exist, and every field
-owes its docstring. The original plan's forecast ("about even,
-honestly; it pays in Phase 4 and in `--do`, not by itself") was the
-right one; the refinement undercut it. **Re-decision owed:** (a) keep
-the core and stop Phase 2 here — the datum exists where `next` and the
-hooks reason (measure, adopt, render), the remaining `step=` sites
-(withdraw, into, discuss, about 25) follow when their modules are open
-or when `--do` is triggered; (b) keep and finish the sites now (+25,
-no reader yet); (c) revert `a80865d8`. Recommended: (a); Max decides.
-Decided: (b) (Max, 2026-11-04). **Part 4 result** (commit `747aae1d`):
-15 sites carry their step (into, discuss, handover, decide), the command
-bound once for text and datum; three hand-written discuss lines stay
-(`report_hold` ×2, `report_review_inputs`): the builder renders the
-`--why` in double quotes and the text does not, so the text is not the
-builder's byte for byte — a Phase 3 verdict. Package +28, tests ±0.
-**Phase 2 in all: package +212, tests +111.** Done when met: no code
-reads a fix as text; every builder's line byte-equal; the suite green.
+Over the budget (+120) and far over the forecast (+70). Where: `repo` +89 (the kinds and names table with its comment 40, `Command` 25, the builders' wrap 24), `gate` +48 (two fields and their docstrings 14, `way` 8, `withdrawn_first` 16, the docstrings of `line` and `block` 10), `finalize` +23 (the three `withdrawn_first` calls formatted over lines, `step=` at six sites), `answering_run` +14 (the `step` field through the run choice), `next_step` +10, `result_render` +8, the rest +12; against `ways_out` −23 (`declared_first`). The Done-when holds: `grep -rn '\.fix' labkit` shows rendering and fallbacks only; every builder's line is byte-equal (`tests/test_repo.py`, `EveryBuilderIsACommand`; `tests/test_gate.py`, `TheWayAsData`); the suite green with no containment assertion changed (only equality on the builders' return type, `.line`). Reading: the forecast counted the data model as a few lines and it is not — the names and kinds table alone is 40 lines of a contract that did not exist, and every field owes its docstring. The original plan's forecast ("about even, honestly; it pays in Phase 4 and in `--do`, not by itself") was the right one; the refinement undercut it. **Re-decision owed:** (a) keep the core and stop Phase 2 here — the datum exists where `next` and the hooks reason (measure, adopt, render), the remaining `step=` sites (withdraw, into, discuss, about 25) follow when their modules are open or when `--do` is triggered; (b) keep and finish the sites now (+25, no reader yet); (c) revert `a80865d8`. Recommended: (a); Max decides. Decided: (b) (Max, 2026-11-04). **Part 4 result** (commit `747aae1d`): 15 sites carry their step (into, discuss, handover, decide), the command bound once for text and datum; three hand-written discuss lines stay (`report_hold` ×2, `report_review_inputs`): the builder renders the `--why` in double quotes and the text does not, so the text is not the builder's byte for byte — a Phase 3 verdict. Package +28, tests ±0. **Phase 2 in all: package +212, tests +111.** Done when met: no code reads a fix as text; every builder's line byte-equal; the suite green.
 
-**The probe-case invariant, third run** (`logs-a80865d8`, after the
-Phase 2 core): 108 checks, 0 breaches. Phase 1's "Done when" is met on
-the six repair paths: every hold of the stop and the commit prints
-`labkit-next`'s step for its state, byte for byte, and no hook holds
-while `next` says "nothing". Phase 1 is done; what remains of it is
-the two deciders of the withdraw-first rule, Phase 4's.
+**The probe-case invariant, third run** (`logs-a80865d8`, after the Phase 2 core): 108 checks, 0 breaches. Phase 1's "Done when" is met on the six repair paths: every hold of the stop and the commit prints `labkit-next`'s step for its state, byte for byte, and no hook holds while `next` says "nothing". Phase 1 is done; what remains of it is the two deciders of the withdraw-first rule, Phase 4's.
 
 ## Proposal — `labkit-next --do` (trigger: the usage round counts the typed commands as a cost)
 
-Not a phase (the former Phase 3; the phases are renumbered). Not part
-of the work order; kept here because Phase 2's `Command` is its
-precondition. Change: `labkit-next AREA --do` prints the step as today, then: a
-MECHANICAL step is run in-process through the writer's function (not a
-subprocess), its refusal line printed as the writer prints it; then the
-next step is printed again. One step per call — no loop, so a wrong
-derivation runs one checked writer at most. CONTENT and RESEARCH steps
-exit 3 with the step as without `--do`; DESTRUCTIVE steps print the
-command and exit 3. `--do` on "nothing" exits 0 and runs nothing.
+Not a phase (the former Phase 3; the phases are renumbered). Not part of the work order; kept here because Phase 2's `Command` is its precondition. Change: `labkit-next AREA --do` prints the step as today, then: a MECHANICAL step is run in-process through the writer's function (not a subprocess), its refusal line printed as the writer prints it; then the next step is printed again. One step per call — no loop, so a wrong derivation runs one checked writer at most. CONTENT and RESEARCH steps exit 3 with the step as without `--do`; DESTRUCTIVE steps print the command and exit 3. `--do` on "nothing" exits 0 and runs nothing.
 
-Files: `labkit/tools/next_step.py` (the dispatch by `step.name`),
-`labkit/tools/adopt.py`, `labkit/tools/protocol_fill.py` (into,
-withdraw), `labkit/run/runlog.py` (wait).
-Tests: one per kind (ran, refused by the writer, exit 3, nothing), and
-the repair probe's six cases driven by `--do` until the first CONTENT or
-RESEARCH step: the recorded step sequence of Phase 1 must be reproduced.
-The dispatch reads `Command`'s fields, never its `line`.
-Docs: `labkit/templates/AGENTS.md.template` ("Run `labkit-next <area>`"
-becomes "Run `labkit-next <area> --do`; it runs the mechanical steps and
-stops where you have to write or decide"), `labkit/docs/agent-guide.md`,
-`docs/workflow.md` (the steps at a glance).
-CHANGELOG: feature, with the kinds table.
-Done when: in the six probe cases the number of commands an agent must
-type is counted before and after, and recorded in this note.
+Files: `labkit/tools/next_step.py` (the dispatch by `step.name`), `labkit/tools/adopt.py`, `labkit/tools/protocol_fill.py` (into, withdraw), `labkit/run/runlog.py` (wait). Tests: one per kind (ran, refused by the writer, exit 3, nothing), and the repair probe's six cases driven by `--do` until the first CONTENT or RESEARCH step: the recorded step sequence of Phase 1 must be reproduced. The dispatch reads `Command`'s fields, never its `line`. Docs: `labkit/templates/AGENTS.md.template` ("Run `labkit-next <area>`" becomes "Run `labkit-next <area> --do`; it runs the mechanical steps and stops where you have to write or decide"), `labkit/docs/agent-guide.md`, `docs/workflow.md` (the steps at a glance). CHANGELOG: feature, with the kinds table. Done when: in the six probe cases the number of commands an agent must type is counted before and after, and recorded in this note.
 
 ## Phase 3 — The verdicts of Phase 0, executed
 
-First item, and step 1 of the allow-list direction: one writer of the
-protocol head. `protocol_fill`, `protocol_edit` and `scaffold` write it
-today; one home writes it, and that writer refuses what a gate would
-later hold (a registered field after the first measurement, a bound
-field twice), through the same validation function the readers use.
-The reader's checks stay — a file may be edited by hand, restored or
-copied from another clone — but they call one implementation, not a
-second one. Before/after proposal like every other row.
+First item, and step 1 of the allow-list direction: one writer of the protocol head. `protocol_fill`, `protocol_edit` and `scaffold` write it today; one home writes it, and that writer refuses what a gate would later hold (a registered field after the first measurement, a bound field twice), through the same validation function the readers use. The reader's checks stay — a file may be edited by hand, restored or copied from another clone — but they call one implementation, not a second one. Before/after proposal like every other row.
 
-Each *goes* or *merges* row of the inventory is first a before/after
-proposal (one section in this note or a note of its own), then one
-commit with one Breaking entry naming the last version that read the
-format; tests go with the format. The two merge candidates (`attempts`
-with `failed_attempts`, `reviews` with `report_reviews`) are separate
-proposals: a merge that adds a kind field and branches on it has bred
-variants, not removed a format. The rule "existing legacy paths go in
-one Breaking release" holds — collect the rows, release once.
+Each *goes* or *merges* row of the inventory is first a before/after proposal (one section in this note or a note of its own), then one commit with one Breaking entry naming the last version that read the format; tests go with the format. The two merge candidates (`attempts` with `failed_attempts`, `reviews` with `report_reviews`) are separate proposals: a merge that adds a kind field and branches on it has bred variants, not removed a format. The rule "existing legacy paths go in one Breaking release" holds — collect the rows, release once.
 
 ## Phase 4 — The state model
 
-Change: one reader builds `AreaState` from the files (the seed is
-`report_context.Checked`, built today by `next` alone): area, repo,
-protocol text and head, promises, the runs and the index, the answering
-and the declared run, the records with their decisions, attempts,
-reviews, handovers, the evidence comparison. Gates become pure
-functions `AreaState → findings`; the twelve gate and check modules that
-open files today (`agent_hooks` 9 sites, `audit_decisions` 6,
-`audit_prompt` 5, `finalize` 4, `decision_review` 4, …) read none. The
-derived views (`answering_run`, `audit_gaps`, `followup`) become fields
-of the state, computed once. Tests build a state with a builder instead
-of writing twenty files (`tests/protocol_fixture.py` is the start).
+Change: one reader builds `AreaState` from the files (the seed is `report_context.Checked`, built today by `next` alone): area, repo, protocol text and head, promises, the runs and the index, the answering and the declared run, the records with their decisions, attempts, reviews, handovers, the evidence comparison. Gates become pure functions `AreaState → findings`; the twelve gate and check modules that open files today (`agent_hooks` 9 sites, `audit_decisions` 6, `audit_prompt` 5, `finalize` 4, `decision_review` 4, …) read none. The derived views (`answering_run`, `audit_gaps`, `followup`) become fields of the state, computed once. Tests build a state with a builder instead of writing twenty files (`tests/protocol_fixture.py` is the start).
 
-Why after Phase 1: only
-when `next` is the single explainer is it visible which state fields
-the gates need; before, every hook's own path would claim fields of its
-own. `--do` is no precondition.
-Files: new `labkit/gates/area_state.py` (or `report_context` grown),
-every gate module, `tests/conftest.py`.
-CHANGELOG: Breaking (gate signatures).
-Done when: `grep -c "read_text\|open(" labkit/gates/*.py labkit/checks/*.py`
-is zero outside the state reader, and the architecture test
-(`tests/test_architecture.py`) holds the new layer.
-Forecast: package +400 (the reader and the state) and −600 to −900
-(file access and the recomputed views in twelve modules); tests −10 %
-by lines where a builder replaces file setups. The most uncertain
-forecast here; it is the one to check hardest.
+Why after Phase 1: only when `next` is the single explainer is it visible which state fields the gates need; before, every hook's own path would claim fields of its own. `--do` is no precondition. Files: new `labkit/gates/area_state.py` (or `report_context` grown), every gate module, `tests/conftest.py`. CHANGELOG: Breaking (gate signatures). Done when: `grep -c "read_text\|open(" labkit/gates/*.py labkit/checks/*.py` is zero outside the state reader, and the architecture test (`tests/test_architecture.py`) holds the new layer. Forecast: package +400 (the reader and the state) and −600 to −900 (file access and the recomputed views in twelve modules); tests −10 % by lines where a builder replaces file setups. The most uncertain forecast here; it is the one to check hardest.
 
 ## Two tasks apart from the phases
 
 Both are mechanical, both can run per module beside other work.
 
-- **The command table.** 21 console commands are named in
-  `pyproject.toml`, the AGENTS template, the agent guide, `ways_out` and
-  in strings; `tests/test_ways_out.py` holds the template to the routes
-  by hand. One table in code (name, entry function, kind as Phase 2
-  defines it), from which the template, the guide, `next` and the test
-  read. Phase 2's `Command.name` is its key.
-- **History into notes.** 585 dated incidents stand in 85 package files
-  (`grep -rhoE "20(25|26)-[0-9]{2}-[0-9]{2}" labkit --include='*.py'`),
-  a quarter of the 11,800 docstring lines, against the repo's own rule
-  (the current rule in the docstring, the history in a note). Per module
-  touched: the sentence that names a present limit stays with a short
-  why; the incident moves to the topic's note under `docs/notes/` and
-  the docstring links it. It runs module by module beside the pilot;
-  its delta is reported apart, so it does not mask the pilot's.
-  **First module, 2026-11-04: `labkit/formats/runs.py`**, 19 incidents
-  moved to [run record history](2026-11-04-run-record-history.md) (a
-  37-line table), the module 997 → 986 lines, the rules and their short
-  why kept, five dates left as example run ids. Measured delta: −11
-  package lines, one commit, about forty minutes. The forecast above was
-  wrong in kind: a dated incident is mostly a parenthesis inside a
-  sentence whose rule stays, so the 585 dates are worth about 300 to
-  400 lines over the package, not a quarter of the docstrings. The gain
-  is legibility (the docstring states the rule, the note the story), and
-  a reader who wants the why finds it in one table per module; the size
-  gain is small. Continue per module when a module is open for another
-  reason, not as a pass of its own.
+- **The command table.** 21 console commands are named in `pyproject.toml`, the AGENTS template, the agent guide, `ways_out` and in strings; `tests/test_ways_out.py` holds the template to the routes by hand. One table in code (name, entry function, kind as Phase 2 defines it), from which the template, the guide, `next` and the test read. Phase 2's `Command.name` is its key.
+- **History into notes.** 585 dated incidents stand in 85 package files (`grep -rhoE "20(25|26)-[0-9]{2}-[0-9]{2}" labkit --include='*.py'`), a quarter of the 11,800 docstring lines, against the repo's own rule (the current rule in the docstring, the history in a note). Per module touched: the sentence that names a present limit stays with a short why; the incident moves to the topic's note under `docs/notes/` and the docstring links it. It runs module by module beside the pilot; its delta is reported apart, so it does not mask the pilot's. **First module, 2026-11-04: `labkit/formats/runs.py`**, 19 incidents moved to [run record history](2026-11-04-run-record-history.md) (a 37-line table), the module 997 → 986 lines, the rules and their short why kept, five dates left as example run ids. Measured delta: −11 package lines, one commit, about forty minutes. The forecast above was wrong in kind: a dated incident is mostly a parenthesis inside a sentence whose rule stays, so the 585 dates are worth about 300 to 400 lines over the package, not a quarter of the docstrings. The gain is legibility (the docstring states the rule, the note the story), and a reader who wants the why finds it in one table per module; the size gain is small. Continue per module when a module is open for another reason, not as a pass of its own.
 
 ## Then: the usage round
 
-The size is measured by use, not by lines: the next round of agents on
-real tasks counts, per task, the commands typed, the refusals met and
-whether the correct number was reported. The round needs the first
-step above, not `--do`; it decides whether Phase 1 continues and whether
-the proposals get their trigger and whether the work continues from
-Phase 2. Whether Phase 1 continues is the pilot's decision alone, by
-its stop criteria above.
+The size is measured by use, not by lines: the next round of agents on real tasks counts, per task, the commands typed, the refusals met and whether the correct number was reported. The round needs the first step above, not `--do`; it decides whether Phase 1 continues and whether the proposals get their trigger and whether the work continues from Phase 2. Whether Phase 1 continues is the pilot's decision alone, by its stop criteria above.
 
 ### Reading of the first round (2026-11-04, labkit-paper area 19)
 
-The round: area 17's labkit arm under the result demand, the same three
-tasks, prompts byte for byte, solver, judges, brief and sheets; nine
-attempts on v0.108.0 (da46ce1b) against area 17's nine on 76bcd331, two
-fresh `opus` judges per attempt, three split questions decided by area 17's
-precedents (`experiments/19-one-explainer-completes-delivery-under-time-limit`,
-analysis run `2026-11-04T18-19-34_34d2`).
+The round: area 17's labkit arm under the result demand, the same three tasks, prompts byte for byte, solver, judges, brief and sheets; nine attempts on v0.108.0 (da46ce1b) against area 17's nine on 76bcd331, two fresh `opus` judges per attempt, three split questions decided by area 17's precedents (`experiments/19-one-explainer-completes-delivery-under-time-limit`, analysis run `2026-11-04T18-19-34_34d2`).
 
 | | before (76bcd331) | after (v0.108.0) |
 |---|---:|---:|
@@ -1010,32 +380,11 @@ analysis run `2026-11-04T18-19-34_34d2`).
 | `labkit-next` calls over the nine | 40 | 28 |
 | median minutes | 40.0 | 30.4 |
 
-The registered reading (B1: complete deliveries up, time-limit stops not
-up) holds, so **Phase 1 continues** with the next removal-first candidate
-(the pilot result names it). What the round does not show: that the
-closing loop alone did it — one labkit version per side, nine attempts
-each, two days apart. What it shows beside the reading: the agents now
-reach the end of the loop (eight reports, seven adopted runs), and the
-failures moved to the report's text — the three unsupported claims are a
-right number with a wrong support or a wrong verdict wording (a fixed bar
-"not assessable" because two null draws differ; a one-draw check called
-"correct and sufficient" over the registered 200-permutation test, in
-prose against the audit's BLOCKER; selection among five estimators called
-"unbiased"). That is the report review's question, not the closing
-loop's, and it is where the next round should look. The `--do` proposal
-is not triggered: typed commands fell, and the cost sat on the audits
-at the end (the one time-limit attempt spent its last calls on
-`labkit-audit` after the number existed) and on the text. The second
-count the plan asked for, hook holds per attempt, is not in the sandbox
-trace (it records commands; the hooks answer inside Claude Code) — it
-needs the agent transcript, which `usability trace` reads and the sandbox
-does not keep.
+The registered reading (B1: complete deliveries up, time-limit stops not up) holds, so **Phase 1 continues** with the next removal-first candidate (the pilot result names it). What the round does not show: that the closing loop alone did it — one labkit version per side, nine attempts each, two days apart. What it shows beside the reading: the agents now reach the end of the loop (eight reports, seven adopted runs), and the failures moved to the report's text — the three unsupported claims are a right number with a wrong support or a wrong verdict wording (a fixed bar "not assessable" because two null draws differ; a one-draw check called "correct and sufficient" over the registered 200-permutation test, in prose against the audit's BLOCKER; selection among five estimators called "unbiased"). That is the report review's question, not the closing loop's, and it is where the next round should look. The `--do` proposal is not triggered: typed commands fell, and the cost sat on the audits at the end (the one time-limit attempt spent its last calls on `labkit-audit` after the number existed) and on the text. The second count the plan asked for, hook holds per attempt, is not in the sandbox trace (it records commands; the hooks answer inside Claude Code) — it needs the agent transcript, which `usability trace` reads and the sandbox does not keep.
 
 ### Reading of the second round (2026-11-04, labkit-paper area 20)
 
-The same design on the state after Phase 1 steps 3–6 and Phase 2
-(`747aae1d`), the before now area 19's round on v0.108.0; the registered
-reading was no loss (B1 with `>=` on the complete deliveries).
+The same design on the state after Phase 1 steps 3–6 and Phase 2 (`747aae1d`), the before now area 19's round on v0.108.0; the registered reading was no loss (B1 with `>=` on the complete deliveries).
 
 | | area 17 (76bcd331) | area 19 (v0.108.0) | area 20 (747aae1d) |
 |---|---:|---:|---:|
@@ -1049,22 +398,7 @@ reading was no loss (B1 with `>=` on the complete deliveries).
 | `labkit-next` calls over the nine | 40 | 28 | 35 |
 | median minutes | 40.0 | 30.4 | 36.9 |
 
-B1 holds, so **Phase 3 starts on this state**. What the round does not
-show: that the steps between 0.108.0 and 747aae1d made the difference of
-five — the changes are small from an agent's seat (the hooks' wording,
-the decision list's line, finalize's note, a row `next` names rarely),
-and the run-to-run spread of nine Haiku attempts on these tasks has
-never been measured. The sign is the finding; the size is not. Before
-the next before/after reading, one state should be run twice, judged
-the same way, to put a number on the spread — that round costs what the
-others cost and reads nothing new about labkit, which is why it was not
-run first and why it is owed now. The one failure left (assay r1) is
-area 19's assay pattern again: seven estimators tried on the same folds
-and the search unmentioned, the missed 0.90 called "not assessable"; the
-report review let it through twice. That is Phase 3's first verdict to
-weigh, not the closing loop's. The `--do` proposal stays untriggered:
-typed commands rose (28 → 35) with the completions, and the cost sat at
-the loop's end (an audit the last command five times).
+B1 holds, so **Phase 3 starts on this state**. What the round does not show: that the steps between 0.108.0 and 747aae1d made the difference of five — the changes are small from an agent's seat (the hooks' wording, the decision list's line, finalize's note, a row `next` names rarely), and the run-to-run spread of nine Haiku attempts on these tasks has never been measured. The sign is the finding; the size is not. Before the next before/after reading, one state should be run twice, judged the same way, to put a number on the spread — that round costs what the others cost and reads nothing new about labkit, which is why it was not run first and why it is owed now. The one failure left (assay r1) is area 19's assay pattern again: seven estimators tried on the same folds and the search unmentioned, the missed 0.90 called "not assessable"; the report review let it through twice. That is Phase 3's first verdict to weigh, not the closing loop's. The `--do` proposal stays untriggered: typed commands rose (28 → 35) with the completions, and the cost sat at the loop's end (an audit the last command five times).
 
 ### Reading of the agents' traces (2026-11-05): the two contradictions reproduced, four more found, the fixes by this plan's principles
 
@@ -1177,33 +511,14 @@ Area 22's design run again at the solver's normal speed, the speed registered as
 
 ## Proposal — the write ledger (deferred; the gap is shown, the decision is whether its protection is worth a system)
 
-What HEAD cannot compare: a file labkit wrote and the agent edited
-before the first commit. The gap is demonstrated: the
-[review-record forgery note](2026-11-02-review-record-forgery.md) shows
-`rejected` rewritten to `upheld` before the first commit releasing the
-decision. That case is a deliberate rewrite, and labkit guards against
-error, not adversaries — so it shows the gap but is not this proposal's
-trigger. The trigger is an *accidental* edit of a machine-led file
-before its first commit that releases a wrong number, seen in a probe
-or a lab. Until then the open question stays open: which protection,
-at what cost. A ledger of what labkit last wrote (per area,
-content hashes) would close it, and is a system of its own: where it
-lives (the git dir, like the attempt journal's copy), what a fresh clone
-does without it (falls back to HEAD), two sessions writing the same area
-(the lock the journal already uses), and restore.
+What HEAD cannot compare: a file labkit wrote and the agent edited before the first commit. The gap is demonstrated: the [review-record forgery note](2026-11-02-review-record-forgery.md) shows `rejected` rewritten to `upheld` before the first commit releasing the decision. That case is a deliberate rewrite, and labkit guards against error, not adversaries — so it shows the gap but is not this proposal's trigger. The trigger is an *accidental* edit of a machine-led file before its first commit that releases a wrong number, seen in a probe or a lab. Until then the open question stays open: which protection, at what cost. A ledger of what labkit last wrote (per area, content hashes) would close it, and is a system of its own: where it lives (the git dir, like the attempt journal's copy), what a fresh clone does without it (falls back to HEAD), two sessions writing the same area (the lock the journal already uses), and restore.
 
 ## Out of reach here
 
-Rollout to the labs' pinned labkit and their `AGENTS.md`; the house
-doctrine; new static-evidence checks (they wait for the benchmark).
+Rollout to the labs' pinned labkit and their `AGENTS.md`; the house doctrine; new static-evidence checks (they wait for the benchmark).
 
 ## Risks
 
-- `--do` executes on a wrong step derivation. Held by: only labkit's own
-  writers, each with its own refusal; one step per call; the probe cases
-  as oracle; git never.
-- Phase 1 reveals states `next` does not name (the hooks named them on
-  their own). That is the point: each becomes a row in `next`'s order,
-  with a test, before the hook's line goes.
-- The 64 command sites are spread over 31 modules; a site missed keeps a
-  prose `fix` and simply yields no `--do` — visible, not wrong.
+- `--do` executes on a wrong step derivation. Held by: only labkit's own writers, each with its own refusal; one step per call; the probe cases as oracle; git never.
+- Phase 1 reveals states `next` does not name (the hooks named them on their own). That is the point: each becomes a row in `next`'s order, with a test, before the hook's line goes.
+- The 64 command sites are spread over 31 modules; a site missed keeps a prose `fix` and simply yields no `--do` — visible, not wrong.
