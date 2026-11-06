@@ -512,7 +512,7 @@ def _scope_held(
                     f"restore {labels} as {first.dir.name} registered them"
                     f"{shown_then(protocol, first, root)}, and measure again, then "
                     f"audit that run (the earlier runs stay)"
-                )
+                ) + description_added(diffs)
                 waiting = awaiting_followup(area, protocol, text, run)
                 moved = moved_fields(seen, text)
                 refs = [
@@ -556,7 +556,7 @@ def _scope_held(
         f"{shown_then(protocol, now.first, root)} — the runs measured under them "
         f"stay; an audit that read the rewritten fields is owed again "
         f"(`labkit-next` names it)"
-    )
+    ) + description_added(now.held)
     analysis = audit_command(area, "--mode", "analysis", protocol=protocol)
     declaring: Path | None = None
     if all(refs) and code_since_run(area, run)[0]:
@@ -655,6 +655,31 @@ CORRECTION_ROUTE = (
     "on that finding judged exactly this text — a fresh audit without that "
     "verdict releases nothing"
 )
+
+
+#: the clause of a scope hold whose every held field only grew
+DESCRIPTION_ADDED = (
+    " — the registered text stands inside the new one: an addition that only "
+    "describes what was delivered, the number unchanged, goes into the Conclusion "
+    "or the report after the restore, not into the registered field; one that "
+    "changes the data, the population or a bar is no description, and the "
+    "restore is the way"
+)
+
+
+def description_added(diffs: list[tuple[str, str, str]]) -> str:
+    """DESCRIPTION_ADDED when every field of DIFFS — (what, from, to), the
+    values as `protocol_history.scope_value` compares them — only grew: the
+    registered text stands inside the new one. "" when one was rewritten
+    or DIFFS is empty. Pure. The hold is the same either way (labkit
+    cannot tell a description from a changed population); the clause
+    names where the addition belongs. "512 validation pairs" grew to
+    "512 validation pairs and 512 test pairs", the hold said "restore"
+    alone, and the agents handed over (labkit-paper area 23, sts512 r2
+    and r3, 2026-11-06)."""
+    if not diffs or not all(old != new and old in new for _, old, new in diffs):
+        return ""
+    return DESCRIPTION_ADDED
 
 
 def correction_way(diffs: list[tuple[str, str, str]]) -> str:

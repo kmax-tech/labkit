@@ -1150,6 +1150,22 @@ class CorrectedDescription(CorrectionCommands):
         self.assertEqual(rc, 1, out)
         self.assertIn("Data / scope misdescribing the unchanged run", out)
         self.assertNotIn("has no correction in place", out)
+        # a rewrite: the hold names no place for an addition
+        self.assertNotIn("stands inside the new one", out)
+
+    def test_a_description_that_only_grew_is_told_where_the_addition_belongs(self):
+        """The registered text stands inside the new one: the hold stays
+        (labkit cannot tell a description from a changed population), and
+        its way names the Conclusion or the report for the addition
+        (`finalize.description_added`; labkit-paper area 23, sts512 r2 and
+        r3, 2026-11-06: "and 512 test pairs" added, restore alone named,
+        the attempts handed over)."""
+        self.describe(self.WRONG + "; the two shortest held out as a check")
+        rc, out = self.lab.adopt(self.protocol, self.run_a)
+        self.assertEqual(rc, 1, out)
+        self.assertIn(self.HELD, out)
+        self.assertIn("stands inside the new one", out)
+        self.assertIn("restore Data / scope as", out)
 
     def test_a_resolved_on_another_field_releases_this_one_not(self):
         warning = self.audited("WARNING", "Unit")

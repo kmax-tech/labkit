@@ -21,6 +21,17 @@ pins (`requirements.txt` / `requirements.lock`).
   the inside of a discussion or handover block. A word beside the number
   alone still counts for nothing. Reviews already written stand (the
   brief is not part of the review's fingerprint).
+- **A registered field that only grew is told where the addition
+  belongs.** The hold on what the number is about stays as it is (labkit
+  cannot tell a description from a changed population), but when the
+  registered text stands inside the new one its way out adds: an
+  addition that only describes what was delivered goes into the
+  Conclusion or the report after the restore, not into the registered
+  field; one that changes the data, the population or a bar is no
+  description (`finalize.description_added`). "512 validation pairs"
+  grew to "512 validation pairs and 512 test pairs", the hold named the
+  restore alone, and the attempts handed over without a number
+  (labkit-paper area 23, sts512 r2 and r3, 2026-11-06).
 
 ### Fixed
 
