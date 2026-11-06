@@ -213,7 +213,9 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
     from labkit.formats.repo import into_command
     from labkit.gates.report_hold import reports_without_block
 
-    unblocked = reports_without_block(ctx.repo, protocol, ctx.declared)
+    unblocked = reports_without_block(
+        ctx.repo, protocol, ctx.declared, staged=ctx.state == INDEX
+    )
     if unblocked:
         first = unblocked[0]
         return Step(
@@ -241,9 +243,10 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
 
 def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
     """Per protocol the state PATHS change reaches
-    (`report_check.touched_protocols`: the protocols of the areas touched
-    and those registering one of PATHS as their report, as the index holds
-    them when STAGED, else the tree), `labkit-next`'s step for the state
+    (`report_check.reached_by`: the protocols of the areas touched, those
+    registering one of PATHS as their report and those a report among
+    PATHS shows a result of, as the index holds them when STAGED, else the
+    tree), `labkit-next`'s step for the state
     the caller judges — the index when STAGED (the commit's gates), else
     the tree (the stop) — as the console prints it (`Step.render`): the
     one action the stop, the commit's undecided gate and report-check's
@@ -251,11 +254,11 @@ def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
     own. A head that does not read, or a protocol the index does not hold,
     is told in one line in the step's place; a run index that does not
     read once per index."""
-    from labkit.gates.report_check import touched_protocols
+    from labkit.gates.report_check import reached_by
     from labkit.run.runlog import RunIndexError
 
     out: list[str] = []
-    for protocol in touched_protocols(paths, repo, staged=staged):
+    for protocol in reached_by(paths, repo, staged=staged).protocols:
         area = protocol.parent.resolve()
         named = shown(area, Path.cwd())
         try:

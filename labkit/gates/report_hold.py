@@ -231,19 +231,20 @@ def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
     )
 
 
-def reports_without_block(repo: Path, protocol: Path, run_id: str) -> list[Path]:
-    """The reports under REPO (`held_place`) that cite RUN_ID, the run PROTOCOL
+def reports_without_block(
+    repo: Path, protocol: Path, run_id: str, *, staged: bool = False
+) -> list[Path]:
+    """The reports of REPO, as the state holds them (`state_reports`: the
+    index when STAGED, else the tree), that cite RUN_ID, the run PROTOCOL
     has adopted, and carry no result block of PROTOCOL — what the stop and
     the commit refuse (`hold_report`), found before them: labkit-next said
     "nothing holds it" and labkit-adopt "none registered", and then the hook
-    held REPORT.md (reference pilot 2026-11-01, tasks 21 and 34). A block
-    that does not read counts as none."""
+    held REPORT.md (reference pilot 2026-11-01, tasks 21 and 34); read from
+    the tree in both states, `next --staged` said "nothing" while the
+    commit held a report the index alone carried (workflow check
+    2026-11-05, finding ii). A block that does not read counts as none."""
     out: list[Path] = []
-    root = repo.resolve()
-    for path in sorted(root.rglob(f"*{REPORT_SUFFIX}")):
-        if not held_place(repo, path) or not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
+    for path, text in state_reports(repo, staged=staged):
         if run_id not in {r for _, r in report_blocks.cited_run_ids(text)}:
             continue
         try:
@@ -1528,17 +1529,15 @@ def adoption_unstaged(protocol: Path, run_id: str, sources: Sources) -> bool:
 DISCUSSES_TOUCHED = "a report discussing a run of an area this change touches"
 
 
-def discussing_candidates(
-    repo: Path, *, staged: bool
-) -> list[tuple[Path, str, list[report_blocks.Discussion] | None]]:
-    """(path, text, its discussion blocks — None when they do not read) of
-    every report of REPO that discusses a run, as the state holds it: in
-    the tree every Markdown file at a held place (`held_place`: no
-    protocol, not under SKIP_DIRS — the walk `reports_without_block`
-    makes, no git needed), in the index every file it holds (STAGED; []
-    outside a repository), each read through `report_entry`. The one scan
-    behind `discussing_reports` and `discussion_review_findings`. Raises
-    RuntimeError when git fails on the index."""
+def state_reports(repo: Path, *, staged: bool) -> list[tuple[Path, str]]:
+    """(path, text) of every Markdown file at a held place (`held_place`:
+    no protocol, not under SKIP_DIRS) as the state holds it: in the tree
+    every one under REPO (a walk, no git needed), in the index every file
+    it holds (STAGED; [] outside a repository), each read through
+    `report_entry`; one the state holds no text for is left out. The one
+    scan of the reports a state holds, behind `discussing_candidates` and
+    `reports_without_block`. Raises RuntimeError when git fails on the
+    index."""
     root = repo.resolve()
     if staged:
         if git_root(repo) is None:
@@ -1548,12 +1547,27 @@ def discussing_candidates(
     else:
         candidates = sorted(root.rglob(f"*{REPORT_SUFFIX}"))
         links = None
-    out: list[tuple[Path, str, list[report_blocks.Discussion] | None]] = []
+    out: list[tuple[Path, str]] = []
     for full in dict.fromkeys(candidates):
         if not held_place(repo, full):
             continue
         _, text = report_entry(repo, full, staged=staged, index_links=links)
-        if text is None or report_blocks.DISCUSS_OPEN not in text:
+        if text is not None:
+            out.append((full, text))
+    return out
+
+
+def discussing_candidates(
+    repo: Path, *, staged: bool
+) -> list[tuple[Path, str, list[report_blocks.Discussion] | None]]:
+    """(path, text, its discussion blocks — None when they do not read) of
+    every report of REPO that discusses a run, as the state holds it
+    (`state_reports`). The one scan behind `discussing_reports` and
+    `discussion_review_findings`. Raises RuntimeError when git fails on
+    the index."""
+    out: list[tuple[Path, str, list[report_blocks.Discussion] | None]] = []
+    for full, text in state_reports(repo, staged=staged):
+        if report_blocks.DISCUSS_OPEN not in text:
             continue
         try:
             out.append((full, text, report_blocks.discussions(text)))

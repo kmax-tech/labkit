@@ -133,7 +133,7 @@ from __future__ import annotations
 import argparse
 import shlex
 import subprocess
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from labkit.formats.gate import GUARANTEED
@@ -970,16 +970,33 @@ def affected_protocols(
     return [p for area in sorted(areas) for p in indexed if p.parent == area]
 
 
-def touched_protocols(paths: list[Path], repo: Path, *, staged: bool) -> list[Path]:
-    """Every protocol the state PATHS change reaches, each once: those of
-    the areas PATHS touch (`affected_protocols`), those whose head
-    registers a path among them as their report
-    (`report_hold.registering_protocols`), and those whose first
-    measurements did (`formerly_registering`) — the index's when STAGED,
-    the tree's otherwise. The one reader for the gate (`if_reported`) and
-    for the step printed beside its hold (`next_step.steps_for`): read
-    apart, a protocol the index held and the tree had deleted was held
-    with no step beside it (workflow check 2026-11-05, finding iv)."""
+@dataclass(frozen=True)
+class Touched:
+    """What the state a change holds reaches (`reached_by`): PROTOCOLS,
+    each once; REPORTS, the (path, text) of every report among the changed
+    paths (`report_hold.report_files`); SOURCES, the repo's protocols and
+    runs read for them (`repo_sources`; empty when no report is among the
+    paths)."""
+
+    protocols: list[Path]
+    reports: list[tuple[Path, str]]
+    sources: Sources
+
+
+def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
+    """Every protocol the state PATHS change reaches, each once, with the
+    reports among PATHS and the sources read for them (`Touched`): the
+    protocols of the areas PATHS touch (`affected_protocols`), those whose
+    head registers a path among them as their report
+    (`report_hold.registering_protocols`), those whose first measurements
+    did (`formerly_registering`), and those a report among PATHS shows a
+    result of (`held_by_reports`: a block names it, or its prose cites a
+    run the protocol declares) — the index's when STAGED, the tree's
+    otherwise. The one reader for the gate (`if_reported`) and for the
+    step printed beside its hold (`next_step.steps_for`): read apart, a
+    protocol the index held and the tree had deleted was held with no step
+    beside it, and so was a report at the root citing an adopted run
+    (workflow check 2026-11-05, finding iv)."""
     protocols = affected_protocols(paths, repo, staged=staged)
     for p in [
         *registering_protocols(paths, repo, staged=staged),
@@ -987,7 +1004,16 @@ def touched_protocols(paths: list[Path], repo: Path, *, staged: bool) -> list[Pa
     ]:
         if p not in protocols:
             protocols.append(p)
-    return protocols
+    reports = report_files(paths, repo, staged=staged)
+    sources = (
+        repo_sources(repo, staged=staged)
+        if reports
+        else Sources(repo.resolve(), set(), {}, {}, {})
+    )
+    for p in held_by_reports(reports, sources):
+        if p not in protocols:
+            protocols.append(p)
+    return Touched(protocols, reports, sources)
 
 
 def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
@@ -1015,17 +1041,17 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     of it reaches the protocol that owes it its result
     (`report_hold.report_owed`, through `hold_declared`). Returns the worst
     exit code."""
-    protocols = touched_protocols(paths, repo, staged=staged)
-    reports = report_files(paths, repo, staged=staged)
+    touched = reached_by(paths, repo, staged=staged)
+    protocols, reports = touched.protocols, touched.reports
     reached = reached_reports(protocols, reports, repo, staged=staged)
     held = {p for p, _ in reports} | {p for p, _, _ in reached}
     reached += discussing_reports(paths, held, repo, staged=staged)
     sources = (
         repo_sources(repo, staged=staged)
-        if reports or reached
-        else Sources(repo.resolve(), set(), {}, {}, {})
+        if reached and not reports
+        else touched.sources
     )
-    for p in held_by_reports(reports + [(p, t) for p, t, _ in reached], sources):
+    for p in held_by_reports([(p, t) for p, t, _ in reached], sources):
         if p not in protocols:
             protocols.append(p)
     worst = 0

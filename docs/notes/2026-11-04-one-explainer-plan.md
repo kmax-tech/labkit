@@ -150,7 +150,7 @@ Against the stop criteria:
 
 Special cases that remain: a report whose discussion blocks do not read
 is held by `hold_report` and not named by `next` (left to the block's own
-hold, deliberately); `reports_without_block` reads the tree in both
+hold, deliberately); `reports_without_block` reads the tree in both (closed 2026-11-06: it reads the state given, through the one scan `state_reports`)
 states; the hook's command renders paths from the hook's working
 directory, the repo in a session (the test sets it). Usability: from the
 hold to the release the agent types the same one command as before; what

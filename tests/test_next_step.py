@@ -829,7 +829,7 @@ class TwoProtocols(unittest.TestCase):
 class ProtocolInTheIndexOnly(unittest.TestCase):
     """The commit holds the index: a protocol the index holds and the tree
     has deleted is held by the commit's gate, and the step printed beside
-    the hold is read from the same protocols (`report_check.touched_protocols`).
+    the hold is read from the same protocols (`report_check.reached_by`).
     `steps_for` counted the tree's protocols and printed no step for the
     hold (workflow check 2026-11-05, finding iv)."""
 
@@ -864,3 +864,46 @@ class ProtocolInTheIndexOnly(unittest.TestCase):
             self.assertEqual(
                 next_step.steps_for(self.lab.root, [self.script], staged=False), []
             )
+
+
+class ReportInTheIndexOnly(unittest.TestCase):
+    """A report citing the adopted run without its block, held by the index
+    and deleted in the tree: the commit's gate holds it, and `next --staged`
+    names the block to write from the same state
+    (`report_hold.reports_without_block` reads the index then). It read the
+    tree in both states and said "nothing holds it" beside the hold
+    (workflow check 2026-11-05, finding ii)."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, "analysis", self.run_id)
+        rc, out = self.lab.adopt(self.protocol, self.run_id)
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("adopted")
+        self.report = self.lab.root / "REPORT.md"
+        self.report.write_text(
+            f"# Report\n\nrun {self.run_id} gave 3.0\n", encoding="utf-8"
+        )
+        self.lab.git("add", "--", str(self.report))
+        self.report.unlink()
+
+    def test_next_staged_names_the_block_the_commit_holds(self):
+        from labkit.gates import agent_hooks
+
+        with contextlib.chdir(self.lab.root):
+            staged = next_step.next_step(
+                self.area, self.protocol.resolve(), state=report_context.INDEX
+            )
+            self.assertIn("without its generated block", staged.where)
+            self.assertIn("--into REPORT.md", staged.next)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = agent_hooks.commit_gates([])
+            self.assertEqual(rc, 1, out.getvalue())
+            self.assertIn(staged.render("experiments/01-lines"), out.getvalue())
+            # the twin: the tree holds no such report, so nothing holds there
+            tree = next_step.next_step(self.area, self.protocol.resolve())
+        self.assertIn("nothing holds it", tree.where)
