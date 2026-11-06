@@ -28,7 +28,7 @@ Problem: Für Daten außerhalb von Git gibt es mehrere Nachweiswege. In Nutzungs
 
 Keine neue Pin-Datei und kein neuer Schalter. Die Änderung bricht das bisherige Format; 0.112.0 ist die letzte Version mit den alten Nachweiswegen.
 
-**Vor dem Bau prüfen:** Was passiert bei einem Commit, der den Bericht, aber nicht `runs/<id>/` enthält? Entweder verweigert schon der Commit diesen Stand, oder `finalize` und `report-check` müssen im frischen Klon ausdrücklich den fehlenden Datensatz melden. Ein stilles Bestehen wäre im selben Schritt zu beheben.
+**Vorprüfung erledigt (2026-11-06):** Ein Commit des Berichts ohne `runs/<id>/` wird verweigert, auch wenn `runs/` per `.gitignore` ausgeblendet ist; ein am Hook vorbei gemachter Commit scheitert im frischen Klon laut an `finalize` und `report-check`. Ein Regressionstest hält das fest; keine weitere Architektur nötig. Einzelheiten im [Entwurf](docs/notes/2026-11-06-pin-route.md#check-before-building-the-records-lifetime).
 
 **Fertig, wenn:** Die Fälle aus dem [Entwurf zur Pin-Route](docs/notes/2026-11-06-pin-route.md) samt korrekten Gegenfällen geprüft sind und die Reparaturprobe mit ignorierter Modellquelle bis zu Übernahme und Commit durchläuft. Prognose: etwa 130 Paketzeilen weniger; bei weniger als 100 eingesparten Zeilen oder einem neuen Modul den Entwurf erneut bewerten.
 

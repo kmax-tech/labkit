@@ -538,6 +538,7 @@ class IfReported(unittest.TestCase):
         audited: bool = True,
         git: bool = False,
         report: str | None = None,
+        must_fields: bool = False,
     ) -> Path:
         """A low-lane area (no freeze owed, so the bare fixture head passes
         station 1) whose protocol says ANSWER and declares DECLARED as its
@@ -546,7 +547,9 @@ class IfReported(unittest.TestCase):
         when AUDITED. GIT: the
         root is a repository (before the record: the stamp's paths are
         repo-relative) and everything is committed at the end. REPORT: the
-        head's registered report file (`report = "…"`)."""
+        head's registered report file (`report = "…"`). MUST_FIELDS: the four
+        MUST fields the fixture's prose lacks are registered too, so the
+        hook's protocol-check passes."""
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "scripts").mkdir(parents=True)
         if git:
@@ -562,7 +565,17 @@ class IfReported(unittest.TestCase):
             head(repeat_cost="low", result=declared, promises=C1_BLOCK, report=report)
             + "- **Question / hypothesis:** does it hold?\n"
             + C1_PROSE
-            + f"- **Recorded results:** {answer}\n",
+            + f"- **Recorded results:** {answer}\n"
+            + "".join(
+                f"- **{label}:** n/a — test\n"
+                for label in (
+                    "Terms of this protocol",
+                    "Data / scope",
+                    "Exclusions / filters",
+                    "Unit",
+                )
+                if must_fields
+            ),
             encoding="utf-8",
         )
         if git:
@@ -718,6 +731,55 @@ class IfReported(unittest.TestCase):
         with contextlib.chdir(root):
             after = next_step.next_step(area, proto, state=report_context.INDEX)
         self.assertNotIn("git add", after.next)
+
+    def test_a_commit_without_the_adopted_runs_record_is_held(self):
+        """The record is the run's integrity evidence, so the commit that
+        first cites an adopted run must carry `runs/<id>/` (pin route, "Check
+        before building", docs/notes/2026-11-06-pin-route.md): left out of
+        the index, the commit gate names its files; kept out by an ignore
+        rule, it names the rule's way out. The twin, the record staged,
+        passes. A fresh clone of a commit made past the hook fails loudly
+        elsewhere (`report_blocks`: "cites run … no runs/<id>/ in the
+        repo")."""
+        from labkit.gates import claude_hooks
+
+        area = self._area(
+            f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
+            declared=self.RUN,
+            git=True,
+            must_fields=True,
+        )
+        root = area.parent.parent
+        # the run, its audit and the adoption staged, not yet committed: the
+        # registration alone is in HEAD
+        self._git(root, "reset", "-q", "--soft", "HEAD~1")
+        run = f"experiments/01-x/runs/{self.RUN}"
+        self._git(root, "rm", "-r", "-q", "--cached", run)
+
+        def commit_gate() -> tuple[int, str]:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.chdir(root):
+                rc = claude_hooks.main(["pre-commit"])
+            return rc, out.getvalue()
+
+        rc, out = commit_gate()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("the working tree differs from the index", out)
+        self.assertIn(f"{run}/config.json", out)
+        (root / ".gitignore").write_text("runs/\n", encoding="utf-8")
+        self._git(root, "add", ".gitignore")
+        rc, out = commit_gate()
+        self.assertEqual(rc, 1, out)
+        self.assertIn(
+            f"runs/{self.RUN}/config.json: git ignores it — evidence labkit wrote",
+            out,
+        )
+        self._git(root, "rm", "-q", "--cached", ".gitignore")
+        (root / ".gitignore").unlink()
+        self._git(root, "add", run)
+        rc, out = commit_gate()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("finalized, audited, checked", out)
 
     def test_staged_finds_a_protocol_deleted_only_in_the_tree(self):
         """The script staged, the reported protocol deleted in the tree and
