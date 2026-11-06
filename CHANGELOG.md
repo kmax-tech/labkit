@@ -5,6 +5,43 @@ announced here with the last version that still has the old behaviour.
 Reproduce an old run with the repo's own commit and the labkit version it
 pins (`requirements.txt` / `requirements.lock`).
 
+## Unreleased
+
+### Changed
+
+- **The report review's marking rule.** The brief named a run as no
+  result only "in the same sentence or the same bullet", and said in the
+  same breath that "a mark beside it does not change what the line tells
+  a reader": a reviewer flagged numbers under the heading "Measurement
+  values observed (not adopted as result)", and the agent stripped the
+  report of every number (labkit-paper area 23, sts512 r3, 2026-11-06).
+  Now three marks count, and only these: the sentence or bullet; a
+  heading naming what follows as not adopted, not a result, discussed or
+  preliminary, up to the next heading of the same or a higher level; and
+  the inside of a discussion or handover block. A word beside the number
+  alone still counts for nothing. Reviews already written stand (the
+  brief is not part of the review's fingerprint).
+
+### Fixed
+
+- **`labkit-next` names the adopt line as `labkit-adopt` reads it.** With
+  two protocols in the area the step carries `--protocol`; `next` built
+  the line by hand without it, and `labkit-adopt` refused it ("name one
+  with --protocol"). One builder (`repo.adopt_command`) for `next`, the
+  gates and `labkit-adopt`'s own resume line.
+- **The commit's gate and `next --staged` read the same protocols and
+  reports.** The step printed beside a commit hold counted the tree's
+  protocols: a protocol the index held and the tree had deleted was held
+  with no step beside it. And `next --staged` searched the tree for a
+  report citing the adopted run without its block, so a report the index
+  alone carried was held by the commit while `next --staged` said
+  "nothing holds it". One reader of what a change reaches
+  (`report_check.reached_by`: the areas' protocols, the registering ones,
+  and those a changed report shows a result of) and one scan of the
+  reports a state holds (`report_hold.state_reports`) serve the gate and
+  the step. A root `REPORT.md` citing an adopted run now gets `next`'s
+  step beside the commit's hold as well.
+
 ## 0.111.0 — 2026-11-05
 
 ### Breaking

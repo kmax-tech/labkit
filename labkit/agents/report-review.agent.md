@@ -52,8 +52,9 @@ A **claim** is a line that does one of these:
   a run that is not adopted (an older run, a probe, a discussed or a
   cited one), or a verdict on the criterion while ADOPTED is `none` — in
   a results table, a summary, a conclusion, "criterion-1 PASS", "AUROC
-  0.78 on the test set". A mark beside it does not change what the line
-  tells a reader.
+  0.78 on the test set". A word beside the number alone ("preliminary",
+  "see below") does not change what the line tells a reader; what marks
+  a line as no result is the list under "Not a claim", and nothing else.
 - **contradiction** — states something the audits or the adopted result
   contradict: a verdict the adopted run's recorded values do not hold
   (its `criterion_1_pass` is false, the report says "met"), a verdict on a
@@ -69,10 +70,19 @@ Not a claim:
 
 - The adopted run's numbers and verdicts as it recorded them, in the
   generated block or in prose.
-- A run named as not a result in the same sentence or the same bullet
-  ("the probe gave 0.89; the analysis is unchecked", "the first run was
-  faulty and dropped", "processing stopped before the audit"), and the
-  why of a discussion block with the numbers inside it.
+- A number or verdict of a run that is not adopted, where the report
+  marks it as no result in one of these three ways — the only marks that
+  count: (a) the same sentence or the same bullet names the run as not a
+  result ("the probe gave 0.89; the analysis is unchecked", "the first
+  run was faulty and dropped", "processing stopped before the audit");
+  (b) a heading names what follows as not adopted, not a result,
+  discussed or preliminary ("Measurement values observed (not adopted as
+  result)", "Run <id> — discussed, not adopted") and marks every line
+  below it up to the next heading of the same or a higher level; (c) the
+  line stands inside a discussion block or a handover block, whose why,
+  "Tried" and "Run" lines may show the numbers of the run they name. A
+  line outside every mark that states the same number as a finding is a
+  claim.
 - Facts of the setup the run did not compute: dataset sizes taken from
   the task, the search grid, a seed, a threshold the protocol registers.
 - A limitation the report states, or a failed audit it names.
