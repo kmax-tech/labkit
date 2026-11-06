@@ -545,6 +545,33 @@ WARNING). What an undecided audit finding is to each gate:
 `notes-check` holds the measurement notes (`claude-hook post-change`) and
 stands beside the chain, not in it.
 
+## Who does what
+
+The gates above say in which order a state is held; this section says
+which part may decide, judge or write what — the contract later checks
+are built against. Each row states what holds today, separately from a
+known breach and a planned change, and names the test that holds it
+where one does. Only the function names are held to the code
+(`tests/test_architecture.py`, `EveryNamedHomeExists`): a rename without
+this line fails the suite. That a part keeps to its boundary is not
+proved by this table; it rests on the tests the "Today" column names.
+
+| Responsibility | Home | Boundary | Today |
+|---|---|---|---|
+| Choose the protocols and reports a file state reaches | `report_check.reached_by`, `report_hold.state_reports` | one reader for the gate and the step beside it; the index at the commit, the working tree otherwise | holds (`tests/test_next_step.py`: `TwoProtocols`, `ProtocolInTheIndexOnly`, `ReportInTheIndexOnly`) |
+| Read a reviewer's reply | `report_review.parse_claims` | complete claims or a named error; no claim silently dropped | holds (`tests/test_report_review.py`) |
+| Hold the release | the checks, in order at `report_check.chain_gaps`; gates and hooks apply it to the state and entry they judge | mechanical findings only; no scientific judgement inferred | holds (`tests/test_report_check.py`, `tests/test_withdrawal_order.py`) |
+| Judge a scientific deviation | the analysis auditor and the report reviewer, recorded as audit findings and report reviews | whether the code departs from the registration, whether a claim needs qualification | holds as agent audit — a judgement, not a guarantee |
+| Name the next step | `next_step` | reads the findings and the stated prerequisites; chooses no scientific decision | **known breach:** `next_step._finding_on_the_field` composes `--decide … limitation` for an open finding located in the protocol, without knowing its cause. **Planned:** the finding's kind (`TODO.md`, task 3) removes it and adds "`next_step` composes no decision kind of its own" to `tests/test_architecture.py` |
+| Write an artifact | the protocol, report and run writers (`protocol_fill`, `runlog`, `audit`) | each writes its own files and validates what it writes | holds per writer, by its tests |
+
+Who writes which file:
+
+| Class | Files | Meant to be written by | What labkit checks today | Planned |
+|---|---|---|---|---|
+| machine-led | the protocol head and its tables, the generated protocol sections, `runs.tsv` and the run records, audit records and decisions, attempt journals, reviews, handover records, the result, discussion and handover blocks in reports | labkit's commands | committed evidence against HEAD (`evidence.change_blockers`, `tests/test_report_blocks.py`). **Gap:** a hand edit before the first commit is not caught; the agent can edit these files by hand | the writer refuses what a gate would later hold ([One explainer](notes/2026-11-04-one-explainer-plan.md), Phase 3, first item) |
+| free | measuring code, report prose, notes, data, `MANIFEST.sha256` | the agent | consequences only: code changed since the run, a report citing a run nothing adopted | `MANIFEST.sha256` goes with the pin route (`TODO.md`, task 2) |
+
 ## Where verdicts are recorded
 
 Audits, reviews, runs and sessions leave records; the mechanical gates

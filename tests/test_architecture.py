@@ -199,6 +199,68 @@ class TheReleaseGateCallsNoModel(unittest.TestCase):
         self.assertEqual(out.stdout.strip(), "[]", out.stderr)
 
 
+#: what follows the dot of a backticked file name (`runs.tsv`, `metrics.json`):
+#: such a reference names a file, not a module's attribute
+FILE_SUFFIXES = {"csv", "json", "jsonl", "lock", "log", "md", "patch", "py"}
+FILE_SUFFIXES |= {"sh", "sha256", "toml", "tsv", "txt"}
+
+
+def top_level_names(module: str) -> set[str]:
+    """The names MODULE binds at its top level — functions, classes,
+    assignments and imports: what `module.name` in the doc can mean."""
+    tree = ast.parse(module_paths()[module].read_text(encoding="utf-8"))
+    out: set[str] = set()
+    for n in tree.body:
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            out.add(n.name)
+        elif isinstance(n, ast.Assign):
+            out.update(t.id for t in n.targets if isinstance(t, ast.Name))
+        elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
+            out.add(n.target.id)
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            out.update((a.asname or a.name).split(".")[0] for a in n.names)
+    return out
+
+
+def doc_references() -> list[tuple[int, str, str]]:
+    """(line, module, name) for every backticked span of the doc that starts
+    with `module.name`, module a labkit module; a longer chain
+    (`gate.GateFinding.evidence_kind`) counts by its first two parts."""
+    doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    known = set(modules())
+    out: list[tuple[int, str, str]] = []
+    for number, line in enumerate(doc.splitlines(), 1):
+        for span in re.findall(r"`([^`]+)`", line):
+            m = re.match(r"([a-z_][a-z0-9_]*)\.([A-Za-z_]\w*)", span)
+            if m and m.group(1) in known and m.group(2) not in FILE_SUFFIXES:
+                out.append((number, m.group(1), m.group(2)))
+    return out
+
+
+class EveryNamedHomeExists(unittest.TestCase):
+    """Every `module.name` the doc names is defined in that module: a rename
+    without the doc's line fails here instead of leaving the map naming a
+    home that is gone (the gates in order, the chain and the one-home table
+    are prose; 2026-11-06)."""
+
+    def test_every_reference_resolves(self):
+        names: dict[str, set[str]] = {}
+        gone = [
+            f"docs/architecture.md:{number}: {module}.{name}"
+            for number, module, name in doc_references()
+            if name not in names.setdefault(module, top_level_names(module))
+        ]
+        self.assertEqual(gone, [])
+
+    def test_the_check_bites(self):
+        # the twin: the reader finds references at all, and a name the module
+        # does not define is not among its names
+        refs = doc_references()
+        self.assertGreater(len(refs), 100)
+        self.assertIn(("report_check", "chain_gaps"), {(m, n) for _, m, n in refs})
+        self.assertNotIn("chain_gapz", top_level_names("report_check"))
+
+
 class OneNameOneThing(unittest.TestCase):
     def test_no_public_name_in_two_modules(self):
         where: dict[str, list[str]] = defaultdict(list)

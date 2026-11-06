@@ -16,17 +16,7 @@ Report markings answer two different questions. A heading can tell the reviewer 
 
 ### Responsibility boundaries
 
-| Responsibility | Home | Boundary |
-|---|---|---|
-| Determine affected protocols and reports in the selected file state | `report_check.reached_by`, `report_hold.state_reports` | Shared readers for gate and guidance; index at commit, working tree otherwise |
-| Interpret and validate a file or reply | Its format reader; `report_review.parse_claims` for the reviewer reply | Complete data or a named error; no silently discarded claim |
-| Evaluate release obligations | Existing checks and `report_check.chain_gaps` | Mechanical findings; no inferred scientific judgement |
-| Judge a scientific deviation | Auditor, recorded as an audit finding | Decide whether implementation departs from registration or a claim needs qualification |
-| Enforce release | Gates and hooks | Apply the policy for the state and entry being judged |
-| Name the next step | `next_step` | Read findings and explicit prerequisites; never infer that a scientific fault is an acceptable limitation from its location |
-| Write an artifact | Existing protocol, report and run writers | Validate and perform their own changes; a changed basis owes the checks that bind it |
-
-A boundary holds against drift only where a test holds it. `tests/test_architecture.py` already reads the layer table of `docs/architecture.md` and fails when imports point upward, when importing the release gate loads a model backend, or when a public name lives in two modules. The `next_step` row joins it in the finding-kind step (below); the other rows rest on their twin tests.
+The table of who decides, judges and writes what moved to [Architecture, "Who does what"](../architecture.md#who-does-what) on 2026-11-06, where `tests/test_architecture.py` (`EveryNamedHomeExists`) holds every function it names to the code. The `next_step` row's contract joins that test in the finding-kind step (below).
 
 ### Entry points to check when a boundary changes
 
