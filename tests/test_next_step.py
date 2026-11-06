@@ -664,7 +664,7 @@ class DiscussingReport(unittest.TestCase):
             proto_text,
             discussed_under(self.report, text, self.protocol),
         )
-        whole, parts = report_reviews.fingerprint(pieces)
+        whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = review_keys(self.area, self.report, self.protocol)
         report_reviews.write_report_review(
             self.area,

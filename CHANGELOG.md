@@ -7,6 +7,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ## Unreleased
 
+### Breaking
+
+- **A report review written before this version no longer stands.** The
+  brief the reviewer read — its instructions and the standard's excerpt
+  — is part of the review's fingerprint now
+  (`report_hold.review_fingerprint`, `audit_prompt.review_brief`):
+  report-check names every earlier review as changed, and `labkit-audit
+  AREA --report-review REPORT` writes a new one. From now on a corrected
+  brief makes every review under the old rule stale — until 0.111.0 a
+  claim raised under a rule since corrected held the report on, and
+  `--report-review` refused a new draw on the unchanged state (review
+  2026-11-06, finding 2). The marking rule below is the first such
+  correction.
+
 ### Changed
 
 - **The report review's marking rule.** The brief named a run as no
@@ -19,8 +33,11 @@ pins (`requirements.txt` / `requirements.lock`).
   heading naming what follows as not adopted, not a result, discussed or
   preliminary, up to the next heading of the same or a higher level; and
   the inside of a discussion or handover block. A word beside the number
-  alone still counts for nothing. Reviews already written stand (the
-  brief is not part of the review's fingerprint).
+  alone still counts for nothing. The mechanical gate reads the
+  structured form only: a cited answering run of a protocol that has
+  adopted no result is held until it stands in a discussion block
+  (`report_hold.undeclared_findings`) — a heading satisfies the reviewer,
+  not the gate, and the gate's hold names the `--discuss` command.
 - **A registered field that only grew is told where the addition
   belongs.** The hold on what the number is about stays as it is (labkit
   cannot tell a description from a changed population), but when the
@@ -35,6 +52,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A reviewer's reply off the form is no review.** A `CLAIM` line of a
+  kind outside `result|contradiction` matched no claim, and a reply
+  ending in `verdict: 0 claim(s)` counted as clean — the report was
+  released on a slip; a claim written below the closing line was
+  ignored. Both are refused now, with the way out "run the same command
+  again" (`report_review.parse_claims`; review 2026-11-06, finding 1).
+- **The run history tells an absent setting from one set to `null`.**
+  `RUNS` compared settings with `c.get(k)`, so `{}` and `{"random_state":
+  null}` read as the same and the key never showed as varying; an absent
+  key now reads `absent` on the line and in the comparison
+  (`report_review_inputs.ABSENT`; review 2026-11-06, finding 4).
 - **`labkit-next` names the adopt line as `labkit-adopt` reads it.** With
   two protocols in the area the step carries `--protocol`; `next` built
   the line by hand without it, and `labkit-adopt` refused it ("name one

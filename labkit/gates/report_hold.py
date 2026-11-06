@@ -1302,7 +1302,7 @@ def review_gap(
             return gap
     try:
         pieces = review_pieces(area, path, text, protocol, protocol_text, discussed)
-        whole, parts = report_reviews.fingerprint(pieces)
+        whole, parts = review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, path, protocol)
         found = report_reviews.area_report_reviews(area)
         if staged:
@@ -1574,6 +1574,19 @@ def discussing_candidates(
         except report_blocks.ReportBlockError:
             out.append((full, text, None))
     return out
+
+
+def review_fingerprint(pieces: list[tuple[str, str]]) -> tuple[str, dict[str, str]]:
+    """The fingerprint of a report review's state (`report_reviews.fingerprint`):
+    the PIECES the reviewer read (`review_pieces`) and the brief it read
+    them under (`audit_prompt.review_brief`). The one fingerprint the
+    review writes and the gate compares. Until 0.111.0 the brief was no
+    part of it, so a review that flagged under a rule since corrected held
+    the report on, and `--report-review` refused a new draw on the
+    unchanged state (review 2026-11-06, finding 2)."""
+    from labkit.gates.audit_prompt import review_brief
+
+    return report_reviews.fingerprint([*pieces, *review_brief()])
 
 
 def discussion_review_findings(

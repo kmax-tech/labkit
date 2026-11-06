@@ -585,7 +585,7 @@ class ReportFiles(unittest.TestCase):
         pieces = report_review.review_pieces(
             area, report, text, proto, proto.read_text(encoding="utf-8"), discussed
         )
-        whole, parts = report_reviews.fingerprint(pieces)
+        whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = report_review.review_keys(area, report, proto)
         report_reviews.write_report_review(
             area,

@@ -51,7 +51,7 @@ from labkit.formats import (
     scope_sha,
     standard_contract,
 )
-from labkit.gates import report_check
+from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
 
 
@@ -961,7 +961,7 @@ class RegisteredReport(unittest.TestCase):
             proto.read_text(encoding="utf-8"),
             report_review.discussed_under(report, text, proto),
         )
-        whole, parts = report_reviews.fingerprint(pieces)
+        whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = report_review.review_keys(area, report, proto)
         report_reviews.write_report_review(
             area,

@@ -30,7 +30,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.checks import report_blocks  # noqa: E402
-from labkit.gates import agent_hooks  # noqa: E402
+from labkit.gates import agent_hooks, report_hold  # noqa: E402
 from labkit.tools import protocol_result
 from labkit.formats import findings, promises, repo, scope_sha, shell  # noqa: E402
 from protocol_fixture import (
@@ -685,7 +685,7 @@ class PostChange(unittest.TestCase):
             proto.read_text(encoding="utf-8"),
             discussed_under(report, text, proto),
         )
-        whole, parts = report_reviews.fingerprint(pieces)
+        whole, parts = report_hold.review_fingerprint(pieces)
         rkey, pkey = review_keys(area, report, proto)
         report_reviews.write_report_review(
             area,

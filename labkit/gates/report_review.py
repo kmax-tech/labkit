@@ -93,6 +93,8 @@ CLAIM = re.compile(
     re.M,
 )
 VERDICT = re.compile(r"verdict:\s*(\d+)\s*claims?(?:\(s\))?", re.I)
+#: a line that announces a claim, whatever follows: held to CLAIM's form
+CLAIM_LEAD = re.compile(audit_reply.LEAD + r"\**CLAIM\b", re.I)
 INLINE_NOTE = (
     "Everything you are told to read is inlined below; each part starts with "
     "a `===== <label> =====` line. Nothing else is in scope."
@@ -129,8 +131,8 @@ def gather_report(
         area, report, text, protocol, protocol.read_text(encoding="utf-8"), discussed
     )
     repo = layout_root(area)
-    label, rules_text = audit_prompt.standard_excerpt(REPORT_REVIEW)
-    shown_pieces = [*pieces, (f"FILE: {label}", rules_text)]
+    _, rules = audit_prompt.review_brief()
+    shown_pieces = [*pieces, rules]
     body = prompt_body(shown_pieces)
     prompt = (
         f"{audit_prompt.instructions(REPORT_REVIEW)}\n\nMODE: report review · AREA: "
@@ -142,10 +144,32 @@ def gather_report(
 def parse_claims(report: str, n_lines: int) -> list[ReportClaim]:
     """The claims before the LAST closing line, each citing a line of a
     report of N_LINES, numbered 1, 2, … in order, and as many as the
-    closing count says. Raises AuditError otherwise — a reply that
-    disagrees with itself names nothing."""
+    closing count says; every line announcing a claim keeps the form, and
+    nothing follows the closing line. Raises AuditError otherwise — a
+    reply that disagrees with itself names nothing. A claim of a kind
+    outside `result|contradiction` matched nothing and the reply counted
+    as clean (review 2026-11-06, finding 1)."""
     last = audit_reply.last_verdict(VERDICT, report, "the reply", "a review")
-    found = list(CLAIM.finditer((report or "")[: last.start()]))
+    body = (report or "")[: last.start()]
+    stray = [
+        line.strip()
+        for line in body.splitlines()
+        if CLAIM_LEAD.match(line) and not CLAIM.match(line)
+    ]
+    if stray:
+        raise AuditError(
+            f"{len(stray)} CLAIM line(s) do not keep the form `CLAIM #<k> · line <n> "
+            f"· result|contradiction · <why>` (the first: {stray[0][:80]!r}) — "
+            "nothing is named",
+            fix=ANSWER_AGAIN,
+        )
+    if (report or "")[last.end() :].strip():
+        raise AuditError(
+            "text after the closing line — the closing `verdict:` line is the last "
+            "line, and a claim below it names nothing",
+            fix=ANSWER_AGAIN,
+        )
+    found = list(CLAIM.finditer(body))
     numbers = [int(m.group(1)) for m in found]
     if numbers != list(range(1, len(found) + 1)):
         raise AuditError(
@@ -188,7 +212,7 @@ def review_report(
     try:
         chosen = the_protocol(area, protocol)
         prompt, discussed, pieces = gather_report(area, report, chosen)
-        whole, parts = report_reviews.fingerprint(pieces)
+        whole, parts = report_hold.review_fingerprint(pieces)
         report_key, protocol_key = review_keys(area, report, chosen)
         standing = report_reviews.standing(
             report_reviews.area_report_reviews(area), report_key, protocol_key, whole

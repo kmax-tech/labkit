@@ -109,6 +109,18 @@ def instructions(mode: str = "preflight") -> str:
     )
 
 
+def review_brief() -> list[tuple[str, str]]:
+    """What the report reviewer reads besides the bundle, as (label, text)
+    pieces: its instructions (`REPORT_AGENT`, "BRIEF") and the standard's
+    excerpt they cite (`standard_excerpt`). The part of a review's
+    fingerprint that is the brief, not the state
+    (`report_hold.review_fingerprint`): a corrected brief makes every
+    earlier review stale, so a claim an old rule raised no longer holds
+    the report."""
+    label, rules_text = standard_excerpt("report")
+    return [("BRIEF", instructions("report")), (f"FILE: {label}", rules_text)]
+
+
 def cited_rules(mode: str = "preflight") -> list[str]:
     """The `LAB-nnn` ids the instructions for MODE cite, in order of first
     mention — the part of the standard the auditor gets to read."""

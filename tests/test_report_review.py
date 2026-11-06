@@ -174,6 +174,19 @@ class Parse(unittest.TestCase):
         with self.assertRaisesRegex(AuditError, "verdict"):
             report_review.parse_claims("CLAIM #1 · line 5 · result · x", 5)
 
+    def test_a_claim_line_off_the_form_names_nothing(self):
+        """A kind outside result|contradiction matched no claim, and the
+        reply counted as clean with its closing `0 claim(s)` — a reviewer's
+        slip released the report (review 2026-11-06, finding 1)."""
+        reply = "CLAIM #1 · line 5 · unsupported · not adopted\nverdict: 0 claim(s)\n"
+        with self.assertRaisesRegex(AuditError, "do not keep the form"):
+            report_review.parse_claims(reply, 5)
+
+    def test_text_after_the_closing_line_is_no_review(self):
+        reply = "verdict: 0 claim(s)\nCLAIM #1 · line 5 · result · x\n"
+        with self.assertRaisesRegex(AuditError, "after the closing line"):
+            report_review.parse_claims(reply, 5)
+
 
 class Command(unittest.TestCase):
     """The review writes its record; a state it judged is not drawn on
@@ -302,6 +315,24 @@ class Command(unittest.TestCase):
         rc, out, _, calls = self.review(HONEST, self.CLEAN)
         self.assertEqual((rc, calls), (0, 0))  # no second call on a judged state
         self.assertIn("nothing to do", out)
+
+    def test_a_corrected_brief_makes_an_earlier_review_stale(self):
+        """The brief is part of the review's state: a claim raised under a
+        rule since corrected does not hold the report on, and the next
+        draw runs (review 2026-11-06, finding 2)."""
+        from labkit.gates import audit_prompt
+
+        rc, _, _, calls = self.review(MARKED, self.CLAIMED)
+        self.assertEqual((rc, calls), (1, 1))
+        rc, _, err, calls = self.review(MARKED, self.CLEAN)
+        self.assertEqual((rc, calls), (2, 0), err)
+        corrected = audit_prompt.instructions("report") + "\n(the rule, corrected)\n"
+        with mock.patch.object(
+            audit_prompt, "instructions", lambda mode="preflight": corrected
+        ):
+            rc, out, err, calls = self.review(MARKED, self.CLEAN)
+        self.assertEqual((rc, calls), (0, 1), err)
+        self.assertIn("this state is released", out)
 
     def test_its_own_record_leaves_the_fingerprint_as_it_was(self):
         report = self.a.report(HONEST)
