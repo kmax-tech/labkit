@@ -786,3 +786,41 @@ class MissingRegisteredReport(unittest.TestCase):
             )
         self.assertIn("carries no account of it yet", step.where)
         self.assertIn("--discuss", step.next)
+
+
+class TwoProtocols(unittest.TestCase):
+    """The adopt line `next` names runs as named: with two protocols in the
+    area it carries `--protocol`, as `repo.adopt_command` builds it — the
+    one home of that line. `next` built it by hand without the flag, and
+    `labkit-adopt` refused it with "name one with --protocol" (workflow
+    check 2026-11-05, finding iii)."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, "analysis", run_id)
+        text = self.protocol.read_text(encoding="utf-8")
+        head = protocol_block.head(text)
+        assert head.id is not None
+        second = self.area / "PROTOCOL-s2-lines.md"
+        second.write_text(text.replace(head.id, "p-0123456789abcdef"), encoding="utf-8")
+        self.lab.commit("a second protocol")
+
+    def test_the_adopt_step_names_the_protocol_and_runs(self):
+        from labkit.tools import adopt
+
+        with contextlib.chdir(self.lab.root):
+            step = next_step.next_step(self.area, self.protocol.resolve())
+            self.assertIn("labkit-adopt", step.next)
+            line = re.search(r"`(labkit-adopt [^`]*)`", step.next)
+            assert line is not None, step.next
+            self.assertIn(
+                "--protocol experiments/01-lines/PROTOCOL-lines.md", line.group(1)
+            )
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                rc = adopt.main(shlex.split(line.group(1))[1:])
+        self.assertNotIn("name one with --protocol", out.getvalue())
+        self.assertEqual(rc, 0, out.getvalue())

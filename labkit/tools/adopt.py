@@ -34,6 +34,7 @@ from labkit.checks import recheck
 from labkit.formats import console, protocol_block
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
+    adopt_command,
     area_path,
     choose_protocol,
     layout_root,
@@ -67,7 +68,7 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
             return rc
         text = protocol.read_text(encoding="utf-8")
     adopted = protocol_block.declared_run(text)
-    again = f"labkit-adopt {shown(area, Path.cwd())} {adopted}"
+    again = adopt_command(protocol, adopted or "<run_id>").line
     report = protocol_block.head(text).report
     if report is None:
         print("labkit-adopt: 2. report — none registered in the head")

@@ -82,6 +82,7 @@ from labkit.formats.gate import BLOCKER, Findings, GateFinding
 from labkit.formats.repo import (
     MEASURE,
     RESTORE,
+    adopt_command,
     area_protocols,
     audit_command,
     decide_command,
@@ -205,7 +206,7 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
             return owed_then
         return Step(
             f"nothing holds the answering run {run}; no run is adopted yet",
-            f"`labkit-adopt {shown(ctx.area, Path.cwd())} {run}` adopts it: it writes "
+            f"`{adopt_command(protocol, run)}` adopts it: it writes "
             "the result and the report's block and checks them — a refusal "
             "names its step",
             "the number in any report: report only an adopted number",
