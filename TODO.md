@@ -6,15 +6,11 @@ Die bisherige Fassung mit den ausführlichen Herleitungen liegt im [historischen
 
 ## Reihenfolge
 
-### 1. Version 0.112.0 veröffentlichen — beim Autor
+### 1. Version 0.112.0 veröffentlichen — erledigt 2026-11-06
 
-Die Test-Labore installieren labkit von GitHub und brauchen den veröffentlichten Stand. Vorher den Abschnitt „Unreleased“ im CHANGELOG mit den Änderungen abgleichen, dann `just release 0.112.0` ausführen und pushen.
+Veröffentlicht als `v0.112.0` (`c8dbfe89`) und auf GitHub gepusht. Sie ist die letzte Version mit den alten Nachweiswegen für Daten außerhalb von Git (siehe Aufgabe 2).
 
-Die Version bindet den vollständigen Review-Brief samt Standardauszug an die Berichtsprüfung: Ändert sich der Brief, wird die bisherige Prüfung ungültig. Durch den Formatbruch werden alle älteren Berichtsprüfungen einmal veraltet.
-
-**Fertig, wenn:** Version und Tag auf GitHub verfügbar sind und die Test-Labore diesen Stand installieren können. Release und Push bleiben beim Autor.
-
-### 2. Daten anhand des Laufdatensatzes prüfen — nach 0.112.0
+### 2. Daten anhand des Laufdatensatzes prüfen — in Arbeit
 
 Problem: Für Daten außerhalb von Git gibt es mehrere Nachweiswege. In Nutzungsrunde 23 fanden die Agenten keinen passenden Weg für die ignorierte Modellquelle und übergaben ohne Ergebnis.
 
