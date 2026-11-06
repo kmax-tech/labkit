@@ -267,6 +267,46 @@ class RepairPaths(unittest.TestCase):
         )
         self.assertIn("an implementation finding is no limitation", refused)
 
+    def test_an_undetermined_finding_on_the_field_waits_for_its_check(self):
+        """The third subject on the field: a suspicion the auditor could not
+        settle from what it was shown. `next`'s restore step names the check
+        to write and measure and the `--findings` ways out, offers no
+        decision, and `--decide … limitation` is refused — a limit line does
+        not settle a suspicion."""
+        # written, not committed: the commit holds an open BLOCKER by design,
+        # and next reads the records the tree holds
+        self.run_(
+            ".venv/bin/python",
+            str(EXAMPLES / "standin-audit.py"),
+            AREA,
+            "Unit",
+            "whether hidden files are counted is not shown",
+            "undetermined",
+        )
+        record = sorted((self.lab / AREA / "audits").glob("*-analysis*.toml"))[-1].name
+        self.fill(f"Unit={UNIT}, hidden files not counted")
+        nxt = self.run_(".venv/bin/labkit-next", AREA)
+        self.assertIn(
+            f"finding 1 of {record} names this protocol as an undetermined finding",
+            nxt,
+        )
+        self.assertIn("the follow-up judges its value", nxt)
+        self.assertNotIn("--decide 1 limitation", nxt)
+        refused = self.run_(
+            ".venv/bin/labkit-audit",
+            AREA,
+            "--decide",
+            "1",
+            "limitation",
+            "--why",
+            "the rows look fine",
+            "--record",
+            f"{AREA}/audits/{record}",
+            ok=False,
+        )
+        self.assertIn("undetermined", refused)
+        self.assertNotIn("decided limitation", refused)
+
     def test_a_field_not_named_by_its_label_is_held(self):
         """`:Terms` is not the label "Terms of this protocol": no correction
         is bound to it; the line says a changed registration is held and

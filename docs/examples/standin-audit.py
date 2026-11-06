@@ -6,7 +6,9 @@ area's newest run and its protocol as it now reads — no model call.
 
 Without PLACE, a clean record; with it, one WARNING at
 `<the protocol's file name>:PLACE` saying WHAT, about SUBJECT
-(`implementation` or `statement`, the default). Prints the record's path."""
+(`implementation` or `statement`, the default) — for `undetermined` a
+BLOCKER closing with the check that settles it, as the format owes
+(`findings.undetermined_finding_problem`). Prints the record's path."""
 
 import sys
 from pathlib import Path
@@ -20,12 +22,18 @@ run = sorted((area / "runs").iterdir())[-1]
 text = protocol.read_text(encoding="utf-8")
 found = []
 subject = sys.argv[4] if len(sys.argv) > 4 else findings.STATEMENT
+grade = "BLOCKER" if subject == findings.UNDETERMINED else "WARNING"
+check = (
+    " · check: hidden_files_counted — confirms if above 0, clears if 0"
+    if subject == findings.UNDETERMINED
+    else ""
+)
 if len(sys.argv) > 2:
     found = [
         (
-            "WARNING",
-            f"WARNING · {protocol.name}:{sys.argv[2]} · {subject} · {sys.argv[3]} · "
-            "LAB-015 Preflight audit before freezing",
+            grade,
+            f"{grade} · {protocol.name}:{sys.argv[2]} · {subject} · {sys.argv[3]} · "
+            f"LAB-015 Preflight audit before freezing{check}",
         )
     ]
 path = findings.write(
@@ -34,7 +42,11 @@ path = findings.write(
     "walkthrough-stand-in",
     scope_sha.area_stamp(area)[0],
     promises.block_stamp(text),
-    (0, len(found), 0),
+    (
+        sum(g == "BLOCKER" for g, _ in found),
+        sum(g == "WARNING" for g, _ in found),
+        0,
+    ),
     found,
     registration=protocol_check.registration_stamp(text),
     run_id=run.name,
