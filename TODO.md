@@ -2382,6 +2382,8 @@ Records sind auf main integriert (`e754b0c3`). Verträge und Belege:
 
 ## Architektur und Lesbarkeit — notiert, nicht geplant
 
+**Architekturabgleich (2026-11-06, entschieden von Max):** Der separate Koordinationsplan (Codex) ist zurückgenommen; Zuständigkeiten und Einstiegspunkte stehen als Abschnitt im [One-explainer-Plan](docs/notes/2026-11-04-one-explainer-plan.md#architecture-boundary-review-and-current-decisions-2026-11-06). Die Reparaturen sind gebaut (Eintrag oben, `1cbba86b`, `3eff4772`). (1) Der ganze Review-Brief samt Standardauszug bleibt im Fingerprint — jede Briefänderung macht alle Berichtsprüfungen veraltet, keine Auswahl „inhaltlicher“ Teile. (2) Der gemeinsame Ergebnistyp bleibt zurückgestellt (0,06 s), bis ein Widerspruch trotz gemeinsamer Leser oder messbare Kosten ihn begründen; ein Datenweg verhindert keine Drift. (3) Pin-Route und Schritt (4) Befundart bleiben zwei Schritte mit je eigener Sonde, in dieser Reihenfolge. In der Befundart fällt `next_step._finding_on_the_field` (`next` baut selbst `--decide … limitation`), und `tests/test_architecture.py` bekommt die Vertragszeile „`next_step` wählt keine Entscheidungsart selbst“ — die Suite wird rot, wenn `next` wieder rät. (4) Die Nutzungsrunde danach zählt `limitation` weiter; Areal 23 hatte 36 gegen 19 und 20, dass ein Teil dem fertigen Befehl folgte, ist eine Vermutung.
+
 ### Typgrenze bei fester Vorhersagebewertung (2026-11-01)
 
 Aufgabe 60 bewertet feste Modell- und Regelvorhersagen, während `compute`

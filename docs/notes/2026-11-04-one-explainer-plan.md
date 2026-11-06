@@ -7,6 +7,63 @@ and before the next usage round. This note owns the work order; the
 format-and-gate inventory it starts with is the size question's answer,
 the phases after it are the cut that inventory prepares.
 
+## Architecture boundary review and current decisions (2026-11-06)
+
+This section incorporates the author's review of the separate workflow-coordination proposal. That proposal is withdrawn; this note remains the one work order. The aim is to enforce the existing responsibilities, not to introduce a central orchestrator or a new migration programme.
+
+### Accepted repair status and review identity
+
+The strict report-reply parser, the absent-versus-null distinction, the marking clarification and the binding of the full reviewer brief are repairs already built by the parallel session and committed (`3eff4772`, `1cbba86b`; findings and verdicts in `TODO.md`, entry of `d779d808`). Do not implement them a second time.
+
+The author has accepted the full brief in the fingerprint: the review instructions and the standard excerpt they include, as assembled by `audit_prompt.review_brief` and bound by `report_hold.review_fingerprint`. Every change to those inputs, including an editorial correction, invalidates earlier reviews. This deliberately favours one simple and complete rule over a maintained selection of supposedly substantive passages. Batch editorial changes where practical; selective policy hashing is not an open task.
+
+Report markings answer two different questions. A heading can tell the reviewer that the following values are observations, not an adopted result. The mechanical gate still requires the structured discussion block for a cited answering run whose protocol adopts no result, and its hold names `protocol-fill --discuss`. These requirements are complementary and must be stated together; the heading is not a substitute for the block. This decision is settled and does not require another marking architecture.
+
+### Responsibility boundaries
+
+| Responsibility | Home | Boundary |
+|---|---|---|
+| Determine affected protocols and reports in the selected file state | `report_check.reached_by`, `report_hold.state_reports` | Shared readers for gate and guidance; index at commit, working tree otherwise |
+| Interpret and validate a file or reply | Its format reader; `report_review.parse_claims` for the reviewer reply | Complete data or a named error; no silently discarded claim |
+| Evaluate release obligations | Existing checks and `report_check.chain_gaps` | Mechanical findings; no inferred scientific judgement |
+| Judge a scientific deviation | Auditor, recorded as an audit finding | Decide whether implementation departs from registration or a claim needs qualification |
+| Enforce release | Gates and hooks | Apply the policy for the state and entry being judged |
+| Name the next step | `next_step` | Read findings and explicit prerequisites; never infer that a scientific fault is an acceptable limitation from its location |
+| Write an artifact | Existing protocol, report and run writers | Validate and perform their own changes; a changed basis owes the checks that bind it |
+
+A boundary holds against drift only where a test holds it. `tests/test_architecture.py` already reads the layer table of `docs/architecture.md` and fails when imports point upward, when importing the release gate loads a model backend, or when a public name lives in two modules. The `next_step` row joins it in the finding-kind step (below); the other rows rest on their twin tests.
+
+### Entry points to check when a boundary changes
+
+| Entry | State or purpose | Existing coordination to retain |
+|---|---|---|
+| `report-check AREA` | Working tree, declared or undeclared protocol | `report_context.checked`, `report_check.chain_gaps` |
+| Commit and `report-check --if-reported --staged` | Index, affected paths and reached reports | `agent_hooks.commit_gates`, `report_check.reached_by`, staged-area guards |
+| Stop | Working tree and session changes | `agent_hooks.stop`, existing report and undecided-state checks |
+| `labkit-next` and hook step output | The state the caller judges | `next_step.next_step`, `next_step.steps_for`, shared readers |
+| Adoption | Written proposal, followed by report generation and checking | `protocol_fill.adopt`, `tools.adopt`; preserve proposal and interrupted-adoption rules |
+| Handover | Explicit end without an adopted result | Existing handover writer and checks; does not repair the scientific fault |
+
+This table is the bounded entry-point inventory for future changes, not an instruction to thread a new result object through all callers.
+
+### Deferred shared-evaluation refactor
+
+The proposal to pass a single evaluation result through gates, hooks, adoption, handover and `next` remains deferred. Finding (v) was measured at about 0.06 seconds for the second chain on the counting lab and explicitly judged not worth the refactor. The repaired file-state and affected-protocol readers already share the relevant logic. No reproduced divergence on the same checked basis currently justifies a new result type or central coordinator.
+
+Reconsider only when a concrete case shows gate and guidance disagree despite those shared readers, or repeated execution becomes a measured cost. Then name the exact duplicated paths to remove, set a package-line budget before coding and test the same-state discrepancy. A proposed structural guarantee alone does not reopen the decision. File writes and concurrent edits remain distinct states and must not be hidden by caching.
+
+### Next architectural boundary to repair
+
+`next_step._finding_on_the_field` is the concrete remaining responsibility violation: it sees a restore step and an open finding located in the protocol and composes `--decide ... limitation`, without knowing the scientific cause. A finding about a missing registered check can therefore receive the same recommendation as a description issue.
+
+Keep this with the already ordered finding-kind step after the model-pin route; the two stay separate steps, each with its own probe, so that a breach points at one of them. The auditor classifies the deviation, the recorded finding carries that information, and decision validation refuses `limitation` for an implementation deviation; `next` uses the recorded classification rather than guessing it. Classification remains an agent judgement. Until that step the line stays as it is; from it on, guidance recommends no scientific decision from the filename or place of a finding. This is a boundary constraint for that step, not an additional feature or a new work order.
+
+The step adds the contract to `tests/test_architecture.py`: `next_step` composes no decision kind of its own — a kind in a `--decide` line it prints comes from the recorded finding — so the suite turns red when guidance starts guessing again.
+
+Removing the recommendation likely changes what agents decide. Area 23 recorded 36 `limitation` decisions against 19 and 20 in area 21; that part of them followed the ready-made command is a guess, not a finding. The next usage round counts `limitation` decisions as before and reads a drop as a possible effect of this step.
+
+Acceptance for the finding-kind step includes a paired case: a registered 200-permutation check implemented as one null draw is directed to repair and a new measurement, never closed by `limitation`; a genuine claim limitation follows its allowed decision route. Report observations may remain explicitly marked under the existing discussion contract while the underlying fault is repaired. Keep parser, marking and review-identity repairs in their own completed commits; they are prerequisites, not a second architecture project.
+
 ## The question
 
 Since the simplification started (`76d81f78`) the package grew 6 % and
