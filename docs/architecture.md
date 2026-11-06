@@ -478,7 +478,7 @@ what concerns only this house stays in the author's dotfiles.**
 | labkit (this repo) | `docs/coding-style.md` | copy, stamped with the master's hash; edit the master, then `lib sync pull` (the house scaffolder's command, not a labkit one) |
 | author's dotfiles (`~/.claude/resources/`) | the house standard (`arbeitsstandard.md.template`, German, house chapters), the dated evidence behind every rule (`arbeitsstandard.evidence.md`), the house ledger (`rule-registry.tsv`: `LOCAL` and `CODE` ids, `LAB` rows marked `moved:labkit`), the coding style, the house scaffolder (`tools/local-init.py`: house files, the thread in `~/work`, sync; its lab part hands over to `labkit-init`), the note seeds, the thesis starter | master |
 | a lab repo | labkit as a pinned package, which brings the standard; `docs/coding-style.md`, `CLAUDE.md`, the scripts stamped from the templates (a repo pinned below 0.77 still carries its `docs/arbeitsstandard.md` copy) | copies, stamped by the scaffolder |
-| author's global `~/.claude/CLAUDE.md` | one-line reflexes that point at rule ids | master (house only) |
+| author's global agent rules (`~/.claude/resources/agent-rules.md`; Claude imports it from `~/.claude/CLAUDE.md`, Codex reads it as `~/.codex/AGENTS.md`) | one-line reflexes that point at rule ids, shared by Claude and Codex | master (house only) |
 
 **What is still in the dotfiles.** The thesis starter, which carries house
 material (lecture links, run snapshots with the author's paths); it stays
