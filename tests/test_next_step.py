@@ -17,6 +17,7 @@ import shlex
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,6 +46,84 @@ def run_next(area: Path, cwd: Path) -> tuple[int, str, str]:
     finally:
         os.chdir(old)
     return rc, out.getvalue(), err.getvalue()
+
+
+class OneChainPerHold(unittest.TestCase):
+    """The stop, the commit and report-check's hook entry ran report-check's
+    chain and then `next`'s step ran it again for the same protocol — the
+    nested finalize with the area's tests and `02_analyze.py --check` twice
+    inside the stop's budget (audit 2026-11-07, second, A3). The step now
+    reads the chain the hold found; the twin: `next` alone runs it once."""
+
+    def setUp(self) -> None:
+        self.lab = Lab()
+        self.addCleanup(self.lab.close)
+        self.area, self.protocol = stamp_count(self.lab)
+        root = self.lab.root
+        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
+        self.lab.conclude(self.protocol)
+        rc, out = self.lab.adopt(self.protocol, run_id)
+        self.assertEqual(rc, 0, out)
+        self.lab.commit("adopted")
+        # the code changed under the adopted number: report-check holds it
+        self.measure = self.area / "scripts" / "01_measure.py"
+        self.measure.write_text(
+            self.measure.read_text(encoding="utf-8") + "\n# changed after it\n",
+            encoding="utf-8",
+        )
+        self.rel = self.measure.relative_to(root).as_posix()
+
+    def counted(self, fn):
+        """Run FN with report-check's chain counted: (FN's result, its
+        stdout, how often the chain ran)."""
+        calls: list[Path] = []
+        real = report_check.chain_gaps
+
+        def counting(ctx, **kw):
+            calls.append(ctx.protocol)
+            return real(ctx, **kw)
+
+        out = io.StringIO()
+        with (
+            contextlib.chdir(self.lab.root),
+            mock.patch.object(report_check, "chain_gaps", counting),
+            contextlib.redirect_stdout(out),
+        ):
+            result = fn()
+        return result, out.getvalue(), len(calls)
+
+    def test_the_hook_entry_runs_the_chain_once_and_names_the_step(self):
+        code, out, runs = self.counted(
+            lambda: report_check.main(["--if-reported", self.rel])
+        )
+        self.assertEqual(code, 1, out)
+        self.assertEqual(runs, 1, out)
+        self.assertIn("labkit-next: experiments/01-lines", out)
+        self.assertIn("--withdraw", out)
+
+    def test_the_commit_runs_the_chain_once_and_names_the_step(self):
+        from labkit.gates import agent_hooks
+
+        self.lab.git("add", "-A")
+        code, out, runs = self.counted(lambda: agent_hooks.commit_gates([]))
+        self.assertEqual(code, 1, out)
+        self.assertEqual(runs, 1, out)
+        self.assertIn("labkit-next: experiments/01-lines", out)
+
+    def test_the_stop_runs_the_chain_once_and_names_the_step(self):
+        (code, err), _, runs = self.counted(self.lab.stop_hook)
+        self.assertEqual(code, 2, err)
+        self.assertEqual(runs, 1, err)
+        self.assertIn("report-check holds a number", err)
+        self.assertIn("labkit-next: experiments/01-lines", err)
+
+    def test_the_twin_next_alone_runs_the_chain_once(self):
+        step, _, runs = self.counted(
+            lambda: next_step.next_step(self.area, self.protocol.resolve())
+        )
+        self.assertEqual(runs, 1)
+        self.assertIn("--withdraw", step.next)
 
 
 class TheChain(unittest.TestCase):

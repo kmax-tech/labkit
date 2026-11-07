@@ -65,7 +65,9 @@ class ProtocolLinks(unittest.TestCase):
         refused = REFUSED in sources.unreadable.get(self.protocol, "")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_check.hold_declared(self.protocol, self.root, staged=staged)
+            rc = report_check.hold_declared(
+                self.protocol, self.root, staged=staged
+            ).exit
         return refused, rc, out.getvalue()
 
     def test_a_regular_protocol_reads_in_tree_and_index(self):

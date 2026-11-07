@@ -1214,27 +1214,36 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
             file=sys.stderr,
         )
     rc = 0
+    chains: dict[Path, report_check.ReleaseChain] = {}
     if changed:
         # every changed path, not only a protocol: a script edited after the
-        # answer was written back reopens the area's reported numbers
+        # answer was written back reopens the area's reported numbers; its
+        # lines are kept to be told under the stop's own heading
+        lines: list[str] = []
         try:
-            rc, out = _capture(
-                lambda: report_check.if_reported(changed, repo, staged=False)
+            reported = report_check.hold_reported(
+                changed, repo, staged=False, tell=lines.append
             )
+            rc, chains = reported.exit, reported.chains
         except RunIndexError as exc:
             # a run index that does not read: what is reported cannot be told
-            rc, out = 1, f"  {exc.why}"
+            rc, lines = 1, [f"  {exc.why}"]
         if rc != 0:
             print(
                 "report-check holds a number written back or committed in this "
                 "session — the stop holds, and a commit would be refused the same "
-                "way:\n" + out,
+                "way:\n" + "\n".join(lines).rstrip(),
                 file=sys.stderr,
             )
     if undecided or rc != 0:
         # what to do is `next`'s step per protocol touched, read from the tree
-        # the stop judges; the missing-report lines above are that step already
-        steps = [s for s in steps_for(repo, changed, staged=False) if s not in missing]
+        # the stop judges and the chains report-check ran on it; the
+        # missing-report lines above are that step already
+        steps = [
+            s
+            for s in steps_for(repo, changed, staged=False, chains=chains)
+            if s not in missing
+        ]
         if steps:
             print("\n".join(steps), file=sys.stderr)
     # commits it could not read keep the base where it is: past them, no
@@ -1448,7 +1457,8 @@ def commit_gates(argv: list[str]) -> int:
     if protocols:
         template = protocol_report.template_lines(protocol_report.find_template(None))
         held = protocol_report.check_files(protocols, template, staged=True)
-    held = report_check.if_reported(paths, repo, staged=True) != 0 or held
+    reported = report_check.hold_reported(paths, repo, staged=True)
+    held = reported.exit != 0 or held
     state = undecided_state(repo, paths, staged=True)
     for line in state.acknowledged:
         print(f"claude-hook pre-commit: {line}")
@@ -1464,6 +1474,7 @@ def commit_gates(argv: list[str]) -> int:
     if not held:
         return 0
     # what to do is `next`'s step, read from the index the commit judges
-    for step in steps_for(repo, paths, staged=True):
+    # and the chains report-check ran on it
+    for step in steps_for(repo, paths, staged=True, chains=reported.chains):
         print(step)
     return 1

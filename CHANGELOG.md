@@ -93,6 +93,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The stop and the commit run report-check's chain once per protocol.**
+  On a hold they ran it, then ran it again to print `labkit-next`'s step —
+  the nested finalize with the area's tests and `02_analyze.py --check` a
+  second time inside the stop's budget. report-check's hook entry
+  (`hold_reported`) returns the chains it ran, and the step reads them
+  (`next_step.steps_for`, `chains`). The stop no longer captures
+  report-check's stdout: the gate tells its lines through a channel the
+  caller passes (`tell`).
 - **report-check tells finalize's warnings, and one cause is one blocker.**
   The nested finalize passed only its blockers on, so its warnings (a
   newer run by name, one draw only, model provenance, arms, open audit

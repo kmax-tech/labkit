@@ -241,7 +241,7 @@ class Undecided(unittest.TestCase):
 
         self._touch(self.area)
         damaged = RunIndexError("runs.tsv:2: 1 of 8 tab-separated columns")
-        with mock.patch.object(report_check, "if_reported", side_effect=damaged):
+        with mock.patch.object(report_check, "hold_reported", side_effect=damaged):
             rc, _, err = self._stop()
             self.assertEqual(rc, 2)
             self.assertIn("runs.tsv:2: 1 of 8 tab-separated columns", err)

@@ -66,6 +66,7 @@ no check of its own: every hold it names is a gate's finding.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -94,6 +95,7 @@ from labkit.formats.repo import (
 from labkit.gates.report_context import INDEX, TREE
 
 if TYPE_CHECKING:
+    from labkit.gates.report_check import ReleaseChain
     from labkit.gates.report_context import Checked
 
 
@@ -121,13 +123,23 @@ class Step:
         return "\n".join(lines)
 
 
-def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
+def next_step(
+    area: Path,
+    protocol: Path | None,
+    *,
+    state: str = TREE,
+    chain: ReleaseChain | None = None,
+) -> Step:
     """The next step of AREA under PROTOCOL (`Step`), in the module's order,
     read from STATE — the working tree (TREE) or the index (INDEX), the
     state the caller judges: a hook that holds the index names a step from
     the index. PROTOCOL None and no protocol in AREA is the first step;
     PROTOCOL must otherwise be the one the caller chose
-    (`repo.choose_protocol`). Raises `protocol_block.BlockError` on a head
+    (`repo.choose_protocol`). CHAIN, what report-check's chain found for
+    PROTOCOL in STATE when the caller ran it already
+    (`report_check.hold_reported`), is read instead of running it again —
+    not while no run is adopted, where the step asks the chain without the
+    stations the adoption writes. Raises `protocol_block.BlockError` on a head
     that does not read, ValueError for INDEX on a protocol the index does
     not hold, and whatever `report_context.checked` raises on a run choice
     that cannot be made."""
@@ -176,7 +188,8 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     if account is not None:
         return account
     pending = ctx.declared is None and ctx.run is not None
-    chain = report_check.chain_gaps(ctx, adoption_pending=pending)
+    if chain is None or pending:
+        chain = report_check.chain_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
     filled = Findings(
         None,
@@ -241,7 +254,13 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
     )
 
 
-def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
+def steps_for(
+    repo: Path,
+    paths: list[Path],
+    *,
+    staged: bool,
+    chains: Mapping[Path, ReleaseChain] | None = None,
+) -> list[str]:
     """Per protocol the state PATHS change reaches
     (`report_check.reached_by`: the protocols of the areas touched, those
     registering one of PATHS as their report and those a report among
@@ -253,7 +272,9 @@ def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
     hook entry name beside what they hold; none composes a step of its
     own. A head that does not read, or a protocol the index does not hold,
     is told in one line in the step's place; a run index that does not
-    read once per index."""
+    read once per index. CHAINS, per protocol, what the caller's
+    report-check found in the same state (`report_check.Reported`): read,
+    not run again."""
     from labkit.gates.report_check import reached_by
     from labkit.run.runlog import RunIndexError
 
@@ -262,7 +283,12 @@ def steps_for(repo: Path, paths: list[Path], *, staged: bool) -> list[str]:
         area = protocol.parent.resolve()
         named = shown(area, Path.cwd())
         try:
-            step = next_step(area, protocol, state=INDEX if staged else TREE)
+            step = next_step(
+                area,
+                protocol,
+                state=INDEX if staged else TREE,
+                chain=(chains or {}).get(protocol),
+            )
         except RunIndexError as exc:  # a ValueError too: before it
             if exc.why not in out:
                 out.append(exc.why)

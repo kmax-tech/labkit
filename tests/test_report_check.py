@@ -963,10 +963,15 @@ class IfReported(unittest.TestCase):
         )
 
     def test_the_cli_takes_staged(self):
-        with mock.patch.object(report_check, "if_reported", return_value=0) as gate:
+        clean = report_check.Reported(0, {})
+        with mock.patch.object(
+            report_check, "hold_reported", return_value=clean
+        ) as gate:
             report_check.main(["--if-reported", "--staged", "a/PROTOCOL-x.md"])
         gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=True)
-        with mock.patch.object(report_check, "if_reported", return_value=0) as gate:
+        with mock.patch.object(
+            report_check, "hold_reported", return_value=clean
+        ) as gate:
             report_check.main(["--if-reported", "a/PROTOCOL-x.md"])
         gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=False)
 

@@ -15,12 +15,12 @@
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
 This module holds the protocol's release stations and the entry points
-(`if_reported`, `hold_declared`, `main`): the order and the conditions of
+(`hold_reported`, `hold_declared`, `main`): the order and the conditions of
 what runs stand here. The context every station reads is
 `report_context.checked`; the replacement station lives in
 `report_replacement`, the stations on the audit decisions (limits, reviews,
 follow-up) in `report_decisions`. Finding the reports a change reaches and what holds
-each lives in `report_hold`, which `if_reported` calls after the protocols.
+each lives in `report_hold`, which `hold_reported` calls after the protocols.
 
 `finalize` holds the run before the number is written back and comes
 before the analysis audit; report-check comes last and holds the whole
@@ -92,6 +92,7 @@ from __future__ import annotations
 import argparse
 import shlex
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -493,6 +494,104 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
 FINALIZE = "finalize: "
 
 
+#: where a gate's lines go as they are found: `print` on the console; a
+#: hook that tells them elsewhere passes its own (`hold_reported`)
+Tell = Callable[[str], None]
+
+
+@dataclass(frozen=True)
+class Released:
+    """report-check's verdict on one protocol: EXIT (0 clean or warnings
+    only, 1 a blocker, 2 no context) and CHAIN, what the chain found
+    (`ReleaseChain`) — None where it did not run: an early end, a staged
+    area whose tree differs from the index, a protocol that declares no
+    result."""
+
+    exit: int
+    chain: ReleaseChain | None
+
+
+def report_check(
+    area: Path,
+    protocol: Path | None = None,
+    *,
+    state: str = TREE,
+    text: str | None = None,
+    review: bool = True,
+) -> int:
+    """`release_check`'s exit code — the command's and the adoption's form:
+    0 clean or warnings, 1 blocked, 2 no context."""
+    return release_check(area, protocol, state=state, text=text, review=review).exit
+
+
+def release_check(
+    area: Path,
+    protocol: Path | None = None,
+    *,
+    state: str = TREE,
+    text: str | None = None,
+    review: bool = True,
+    tell: Tell = print,
+) -> Released:
+    """Check AREA before reporting (`Released`: the exit code and what the
+    chain found), every line through TELL.
+
+    0. Choose the protocol and read Checked; missing or unreadable ends with 2
+       — the only early end.
+    1. The chain (`chain_gaps`: its stations, their order and conditions),
+       every finding told; an adoption named beside other blockers is told
+       as the last step (`tell_adoption_order`).
+    2. Summary: 1 with any blocker, otherwise 0.
+
+    STATE and TEXT name the declaration's file state: the tree by default,
+    the index for the pre-commit, the written proposal for adoption. REVIEW
+    false leaves the registered report's review out — `labkit-adopt`'s own
+    check right after it wrote the block: the review reads the final text,
+    which comes after. The nested finalize gate and analysis script read
+    their own inputs. A refusal before the chain goes to stderr
+    (`console.refuse`), not through TELL.
+    """
+    # 0. protocol and context — the only early end
+    chosen = choose_protocol(area, protocol, "report-check")
+    if chosen is None:
+        return Released(2, None)
+    try:
+        ctx = checked(area, chosen, state=state, text=text)
+    except (protocol_block.BlockError, AuditError) as exc:
+        console.refuse("report-check", f"{chosen.name}: {exc}")
+        return Released(2, None)
+    tell(
+        f"  {chosen.name}: read from the {ctx.state}; the head has adopted "
+        f"{ctx.declared or 'no run'}; the answering run is "
+        f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
+    )
+    ln = lane(ctx.head.repeat_cost)
+    findings = Findings(
+        tell,
+        area=shown(ctx.area, Path.cwd()),
+        audit=audit_command(ctx.area, protocol=ctx.protocol).line,
+    )
+    if not ln.freeze:
+        tell(
+            f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
+            f"audit owed (LAB-017 The number of audits follows the cost tier); the "
+            f"registration as committed at the first measurement, the full run, "
+            f"the analysis audit and the check are owed instead"
+        )
+    # 1. the chain
+    chain = chain_gaps(ctx, review=review)
+    findings.take_all(chain.found)
+    # adoption last — an adoption line beside other blockers is the last
+    # step, not the fix (stuck-state probe 2026-10-28)
+    tell_adoption_order(findings)
+
+    # 2. summary — 1 with a blocker, otherwise 0
+    if not findings.blocked:
+        held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
+        tell(f"  {chosen.name}: {held}")
+    return Released(findings.report("report-check", "reporting"), chain)
+
+
 def without_unreportable_warnings(
     finalized: list[GateFinding], run: Path | None
 ) -> list[GateFinding]:
@@ -609,69 +708,6 @@ def recomputation_findings(area: Path, repo: Path) -> list[GateFinding]:
         if failed
         else []
     )
-
-
-def report_check(
-    area: Path,
-    protocol: Path | None = None,
-    *,
-    state: str = TREE,
-    text: str | None = None,
-    review: bool = True,
-) -> int:
-    """Check AREA before reporting; 0 clean or warnings, 1 blocked, 2 no context.
-
-    0. Choose the protocol and read Checked; missing or unreadable ends with 2
-       — the only early end.
-    1. The chain (`chain_gaps`: its stations, their order and conditions),
-       every finding told; an adoption named beside other blockers is told
-       as the last step (`tell_adoption_order`).
-    2. Summary: 1 with any blocker, otherwise 0.
-
-    STATE and TEXT name the declaration's file state: the tree by default,
-    the index for the pre-commit, the written proposal for adoption. REVIEW
-    false leaves the registered report's review out — `labkit-adopt`'s own
-    check right after it wrote the block: the review reads the final text,
-    which comes after. The nested finalize gate and analysis script read
-    their own inputs.
-    """
-    # 0. protocol and context — the only early end
-    chosen = choose_protocol(area, protocol, "report-check")
-    if chosen is None:
-        return 2
-    try:
-        ctx = checked(area, chosen, state=state, text=text)
-    except (protocol_block.BlockError, AuditError) as exc:
-        console.refuse("report-check", f"{chosen.name}: {exc}")
-        return 2
-    print(
-        f"  {chosen.name}: read from the {ctx.state}; the head has adopted "
-        f"{ctx.declared or 'no run'}; the answering run is "
-        f"{ctx.run.name if ctx.run is not None else 'none — ' + ctx.why}"
-    )
-    ln = lane(ctx.head.repeat_cost)
-    findings = Findings(
-        area=shown(ctx.area, Path.cwd()),
-        audit=audit_command(ctx.area, protocol=ctx.protocol).line,
-    )
-    if not ln.freeze:
-        print(
-            f'  {ctx.protocol.name}: repeat_cost = "{ctx.head.repeat_cost}" — no freeze and no preflight '
-            f"audit owed (LAB-017 The number of audits follows the cost tier); the "
-            f"registration as committed at the first measurement, the full run, "
-            f"the analysis audit and the check are owed instead"
-        )
-    # 1. the chain
-    findings.take_all(chain_gaps(ctx, review=review).found)
-    # adoption last — an adoption line beside other blockers is the last
-    # step, not the fix (stuck-state probe 2026-10-28)
-    tell_adoption_order(findings)
-
-    # 2. summary — 1 with a blocker, otherwise 0
-    if not findings.blocked:
-        held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
-        print(f"  {chosen.name}: {held}")
-    return findings.report("report-check", "reporting")
 
 
 @dataclass(frozen=True)
@@ -992,7 +1028,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     did (`formerly_registering`), and those a report among PATHS shows a
     result of (`held_by_reports`: a block names it, or its prose cites a
     run the protocol declares) — the index's when STAGED, the tree's
-    otherwise. The one reader for the gate (`if_reported`) and for the
+    otherwise. The one reader for the gate (`hold_reported`) and for the
     step printed beside its hold (`next_step.steps_for`): read apart, a
     protocol the index held and the tree had deleted was held with no step
     beside it, and so was a report at the root citing an adopted run
@@ -1016,7 +1052,25 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     return Touched(protocols, reports, sources)
 
 
+@dataclass(frozen=True)
+class Reported:
+    """What `hold_reported` found: EXIT, the worst exit code of every hold;
+    CHAINS, per protocol whose chain ran (a declared result), what it found
+    — the chain a step printed beside the hold reads instead of running it
+    again (`next_step.steps_for`)."""
+
+    exit: int
+    chains: dict[Path, ReleaseChain]
+
+
 def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
+    """`hold_reported`'s worst exit code, its lines on stdout."""
+    return hold_reported(paths, repo, staged=staged).exit
+
+
+def hold_reported(
+    paths: list[Path], repo: Path, *, staged: bool, tell: Tell = print
+) -> Reported:
     """`report-check` for every protocol of an area one of PATHS touches
     whose head declares a result, and for every report among PATHS
     (`report_files`): the gate at the stop and the commit. A result declared
@@ -1039,8 +1093,9 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
     head registers a file among PATHS as its report is held too
     (`registering_protocols`): the report lies in no area, and a change
     of it reaches the protocol that owes it its result
-    (`report_hold.report_owed`, through `hold_declared`). Returns the worst
-    exit code."""
+    (`report_hold.report_owed`, through `hold_declared`). Every line goes
+    through TELL. Returns the worst exit code and the chains that ran
+    (`Reported`)."""
     touched = reached_by(paths, repo, staged=staged)
     protocols, reports = touched.protocols, touched.reports
     reached = reached_reports(protocols, reports, repo, staged=staged)
@@ -1055,48 +1110,62 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
         if p not in protocols:
             protocols.append(p)
     worst = 0
+    chains: dict[Path, ReleaseChain] = {}
     for protocol in protocols:
-        worst = max(worst, hold_declared(protocol, repo, staged=staged))
+        released = hold_declared(protocol, repo, staged=staged, tell=tell)
+        worst = max(worst, released.exit)
+        if released.chain is not None:
+            chains[protocol] = released.chain
     for path, text in reports:
-        worst = max(worst, hold_report(path, text, repo, sources, staged=staged))
+        worst = max(
+            worst, hold_report(path, text, repo, sources, staged=staged, tell=tell)
+        )
     for path, text, held_as in reached:
         worst = max(
             worst,
-            hold_report(path, text, repo, sources, held_as=held_as, staged=staged),
+            hold_report(
+                path, text, repo, sources, held_as=held_as, staged=staged, tell=tell
+            ),
         )
-    return worst
+    return Reported(worst, chains)
 
 
-def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
+def hold_declared(
+    protocol: Path, repo: Path, *, staged: bool, tell: Tell = print
+) -> Released:
     """`report-check` on PROTOCOL when its head declares a result, as the
     state holds it (the index when STAGED); for an exploration only its
-    registered report's obligation (`hold_registered`); 0 for a protocol
-    the commit does not hold, 2 for one that cannot be read or is a
-    symbolic link in that state (`repo.protocol_links`)."""
+    registered report's obligation (`hold_registered`); exit 0 for a
+    protocol the commit does not hold, 2 for one that cannot be read or is
+    a symbolic link in that state (`repo.protocol_links`). Every line goes
+    through TELL, a refusal to stderr. The chain is the declared branch's
+    (`release_check`), None on every other."""
     link = protocol_links(repo, [protocol], staged=staged)
     if link:
         console.refuse("report-check", link[protocol])
-        return 2
+        return Released(2, None)
     try:
         text = state_text(repo, protocol, staged=staged)
     except (OSError, UnicodeError) as exc:  # a refusal, never a traceback
         console.refuse("report-check", f"{protocol}: {exc}")
-        return 2
+        return Released(2, None)
     if text is None:
         if staged:
-            return 0  # not in the commit: nothing declared there
+            return Released(0, None)  # not in the commit: nothing declared there
         console.refuse("report-check", f"{protocol}: no such file")
-        return 2
+        return Released(2, None)
     declared, gap = declaration(text)
     if declared is None and gap is None:
         # an exploration: nothing declared; its registered report, once
         # delivered, is owed the handover or the result all the same
         try:
-            return hold_registered(protocol, text, repo, staged=staged)
+            return Released(
+                hold_registered(protocol, text, repo, staged=staged, tell=tell), None
+            )
         except protocol_block.BlockError as exc:  # a refusal, never a traceback
             console.refuse("report-check", f"{protocol}: {exc}")
-            return 2
-    print(
+            return Released(2, None)
+    tell(
         f"═══ report-check {protocol} (its head has adopted "
         f"{declared or 'a result that does not read'}) ═══"
     )
@@ -1105,12 +1174,16 @@ def hold_declared(protocol: Path, repo: Path, *, staged: bool) -> int:
         # the one hold of this state, `next --staged`'s row too
         gap = staged_area_gap(repo, area, "the stations read")
         if gap is not None:
-            print(f"  {gap.line}")
-            return 1
-    return report_check(area, protocol, state=INDEX if staged else TREE, text=text)
+            tell(f"  {gap.line}")
+            return Released(1, None)
+    return release_check(
+        area, protocol, state=INDEX if staged else TREE, text=text, tell=tell
+    )
 
 
-def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> int:
+def hold_registered(
+    protocol: Path, text: str, repo: Path, *, staged: bool, tell: Tell = print
+) -> int:
     """The registered report's obligation of PROTOCOL, a protocol that
     declares no result (`report_hold.report_owed` with no declared run):
     0 when the head registers no report, the file is not delivered in the
@@ -1145,8 +1218,8 @@ def hold_registered(protocol: Path, text: str, repo: Path, *, staged: bool) -> i
         if changed
         else "its registered report is delivered"
     )
-    print(f"═══ report-check {protocol} (its head has adopted no result; {why}) ═══")
-    out = Findings()
+    tell(f"═══ report-check {protocol} (its head has adopted no result; {why}) ═══")
+    out = Findings(tell)
     out.take_all(gaps)
     return out.report("report-check", "reporting")
 
@@ -1159,14 +1232,15 @@ def main(argv: list[str]) -> int:
         staged = bool(rest) and rest[0] == "--staged"
         paths = [Path(a) for a in (rest[1:] if staged else rest)]
         repo = git_root(cwd) or cwd
-        rc = if_reported(paths, repo, staged=staged)
-        if rc != 0:
+        reported = hold_reported(paths, repo, staged=staged)
+        if reported.exit != 0:
             # what to do is `next`'s step, from the state this gate judged
+            # and the chains it ran
             from labkit.gates.next_step import steps_for
 
-            for step in steps_for(repo, paths, staged=staged):
+            for step in steps_for(repo, paths, staged=staged, chains=reported.chains):
                 print(step)
-        return rc
+        return reported.exit
     ap = argparse.ArgumentParser(
         prog="report-check",
         description=(__doc__ or "").split("\n\n")[0],

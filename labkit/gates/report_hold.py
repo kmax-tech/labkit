@@ -11,7 +11,7 @@ registered report owes (`report_owed`: the file the head's `report`
 names carries the result block of the declared run or the protocol's
 handover block, once it exists; `registering_protocols` finds the
 protocols a change of that file reaches). `report_check` is the
-entry: `if_reported` decides the order and the conditions — the
+entry: `hold_reported` decides the order and the conditions — the
 protocols first, then every report — and calls into here. Split off
 `report_check` (audit 2026-10-27, third, M3): the protocol's release
 stations and the reports' holding shared only format imports.
@@ -19,10 +19,9 @@ stations and the reports' holding shared only format imports.
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import os
 import shlex
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -1028,8 +1027,9 @@ def hold_report(
     *,
     held_as: str = AMONG_PATHS,
     staged: bool = False,
+    tell: Callable[[str], None] = print,
 ) -> int:
-    """Hold one report. First: a report that is a symbolic link in the
+    """Hold one report, every line through TELL. First: a report that is a symbolic link in the
     state, ending where no report is held (`refused_link`), is refused alone, one blocker naming the copy that
     replaces it (`link_gap`) — the checks below wait for that copy. Then:
     its result blocks equal their protocols' rendering,
@@ -1049,8 +1049,8 @@ def hold_report(
     (`repo.own_path`). HELD_AS says in the heading why this report is held.
     0 clean or warnings only, 1 a blocker."""
     rel = path.relative_to(repo.resolve()).as_posix()
-    print(f"═══ report-check {rel} ({held_as}) ═══")
-    out = Findings()
+    tell(f"═══ report-check {rel} ({held_as}) ═══")
+    out = Findings(tell)
     link_target = refused_link(repo, path, staged=staged)
     if link_target is not None:
         # alone: a block names its protocol from the report's directory,
@@ -1597,7 +1597,7 @@ def discussion_review_findings(
     holds each such report with (`report_review_owed`), read here per
     protocol so that `report_check.chain_gaps` — and through it
     `report-check AREA` and `labkit-next` — holds and names exactly what
-    the stop and the commit hold (`report_check.if_reported`), one
+    the stop and the commit hold (`report_check.hold_reported`), one
     function for both. Only the discussion blocks naming PROTOCOL count; a
     report whose blocks do not read is left to its own hold (`hold_report`
     names the block). STAGED: the index's files and texts, [] outside a
