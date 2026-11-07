@@ -229,6 +229,14 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"glob\(f?\"(\[0-9\]\*|\*)-|split_area_name\([^)]*\)\[1\] ==",
         {"repo"},
     ),
+    # the area's test file was named three times; the README's copy wrote
+    # `test__<slug>.py` for an area without a number (audit 2026-11-07,
+    # second): `repo.area_test_stem`
+    (
+        "an area's test file named by hand",
+        r"f[\"']test_\{",
+        {"repo"},
+    ),
     # labkit-audit printed three refusals and its progress lines itself
     # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
     # `console.progress`
@@ -373,6 +381,7 @@ class OneHome(unittest.TestCase):
             "an area's code globbed by hand": 'scripts = sorted(area.glob("scripts/*.py"))',
             "a section heading found by hand": 'if line.startswith("## "):',
             "a refusal or progress line printed by hand": 'print(f"labkit-audit: {exc}", file=sys.stderr)',
+            "an area's test file named by hand": 'stem = f"test_{nn}_" + name',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

@@ -93,6 +93,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **An area without a number gets a README that names it.** Restamped
+  with `labkit-init exp NAME --change-kind`, an area named without `NN-`
+  got a README with `# Experiment : NAME`, the route `runlog
+  experiments/-NAME` and the test file `tests/test__NAME.py`; the stamped
+  test and preflight use `tests/test_NAME.py`. The README now names the
+  area by its directory, and scaffold and preflight take the test file's
+  name from one function (`repo.area_test_stem`). A numbered area's README
+  is unchanged.
 - **A README placeholder is told as static evidence.** finalize's
   warning on a stamped `<…>` left in an area's README carried the
   guaranteed tier, but it comes from a pattern over prose that also

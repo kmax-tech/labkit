@@ -90,6 +90,7 @@ from labkit.formats.repo import (
     layout_root,
     no_such_area,
     shown,
+    area_test_stem,
     split_area_name,
 )
 from labkit.formats.protocol_check import check_fields
@@ -140,7 +141,7 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     # (fallacy-dataset-generation, 2026-10-09)
     area = area.resolve()
     nn, name = split_area_name(area.name)
-    stem = (f"test_{nn}_" if nn else "test_") + name.replace("-", "_")
+    stem = area_test_stem(nn, name)
     pattern = f"tests/{stem}.py"
     tests_dir = repo / "tests"
     files = (

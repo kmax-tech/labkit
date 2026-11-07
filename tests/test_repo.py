@@ -120,6 +120,11 @@ class RepoWide(unittest.TestCase):
         self.assertEqual(repo.split_area_name("100-foo"), ("100", "foo"))
         self.assertEqual(repo.split_area_name("explore"), (None, "explore"))
 
+    def test_area_test_stem_with_and_without_a_number(self):
+        self.assertEqual(repo.area_test_stem("01", "count-docs"), "test_01_count_docs")
+        self.assertEqual(repo.area_test_stem(None, "count-docs"), "test_count_docs")
+        self.assertEqual(repo.area_test_stem("", "count-docs"), "test_count_docs")
+
     def test_lab_root_is_the_nearest_models_toml(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

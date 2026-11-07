@@ -446,6 +446,14 @@ def split_area_name(name: str) -> tuple[str | None, str]:
     return (m.group(1), m.group(2)) if m else (None, name)
 
 
+def area_test_stem(nn: str | None, slug: str) -> str:
+    """The stem of an area's test file: `test_<NN>_<slug>`, or `test_<slug>`
+    for an area without a number, dashes as underscores — the file the
+    scaffolder stamps and preflight runs (`tests/<stem>.py`, split files
+    `tests/<stem>_<part>.py`)."""
+    return ((f"test_{nn}_" if nn else "test_") + slug).replace("-", "_")
+
+
 #: the folder of a lab repo that holds its experiment areas
 EXPERIMENTS = "experiments"
 

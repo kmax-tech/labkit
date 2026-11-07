@@ -95,6 +95,7 @@ from labkit.formats.repo import (
     git_root,
     lab_root,
     requirement_lines,
+    area_test_stem,
     split_area_name,
     text_at,
     worktree_roots,
@@ -477,8 +478,13 @@ def area_slug(name: str) -> str:
     return slug
 
 
-def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool) -> str:
+def area_readme(
+    area_name: str, slug: str, sk: standard_contract.Skeleton, probe: bool
+) -> str:
     """The area README: the one question, the route through the area, the contract on one page.
+
+    AREA_NAME is the area's directory name, `NN-<slug>` or, for an area
+    without a number, the bare name; SLUG names its protocol.
 
     A computation (SK the compute skeleton, kind compute at every tier) carries no blank:
     its question and contract live in the protocol, and a README placeholder
@@ -487,7 +493,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
     the State list names it only then, and parser cases only for the prompt
     skeleton, the one with a parser."""
     skeleton = sk is not standard_contract.COMPUTE
-    test = f"`.venv/bin/python -m pytest tests/test_{nn}_{slug.replace('-', '_')}.py`"
+    nn = split_area_name(area_name)[0]
+    test = f"`.venv/bin/python -m pytest tests/{area_test_stem(nn, slug)}.py`"
     if not skeleton:
         state = f"the area test green ({test})"
     elif sk is standard_contract.MODEL:
@@ -519,7 +526,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
         "Recorded results line to the run's `metrics.json`."
     )
     recheck = "`02_analyze.py --check`"  # the one public recheck of every skeleton
-    return f"""# Experiment {nn}: {slug}
+    title = f"Experiment {nn}: {slug}" if nn else f"Experiment: {slug}"
+    return f"""# {title}
 
 *Self-contained: data, scripts, output and this description live here.*
 
@@ -528,8 +536,8 @@ def area_readme(nn: str, slug: str, sk: standard_contract.Skeleton, probe: bool)
 <!-- labkit:route -->
 **Trace it.**
 - Contract and reported answer: `PROTOCOL-{slug}.md`
-- Runs and provenance: `runlog experiments/{nn}-{slug}` (from the repo root)
-- Effective values: `labkit-params experiments/{nn}-{slug}`
+- Runs and provenance: `runlog experiments/{area_name}` (from the repo root)
+- Effective values: `labkit-params experiments/{area_name}`
 - Where the ids are decided: `scripts/01_measure.py:evaluate_rows`
 - Immutable record: `config.json` of the chosen run under `runs/`
 <!-- /labkit:route -->
@@ -676,7 +684,7 @@ def script_stamps(
         raise ValueError("deliverable columns without a deliverable to hold them to")
     out: dict[Path, str] = {}
     alias = model if isinstance(model, str) else "TODO-alias"
-    tname = (f"test_{nn}_{slug}" if nn else f"test_{slug}").replace("-", "_") + ".py"
+    tname = area_test_stem(nn, slug) + ".py"
     for tmpl, dest in skeleton.scripts:
         # `<NN>_<name>` first: the scripts name the area's test file too (the
         # probe's "paste into tests/test_<NN>_<name>.py" stayed unreplaced,
@@ -793,7 +801,10 @@ def stamp_area(
     write_if_absent(
         area / "README.md",
         area_readme(
-            nn, slug, skeleton, standard_contract.lane(repeat_cost).probe_allowed
+            area.name,
+            slug,
+            skeleton,
+            standard_contract.lane(repeat_cost).probe_allowed,
         ),
         log,
     )
@@ -1231,7 +1242,7 @@ def stamp_files(
     skeleton = standard_contract.skeleton(repeat_cost, kind, bool(model))
     out = script_stamps(root, area, nn, slug, skeleton, model)
     out[area / "README.md"] = area_readme(
-        nn, slug, skeleton, standard_contract.lane(repeat_cost).probe_allowed
+        area.name, slug, skeleton, standard_contract.lane(repeat_cost).probe_allowed
     )
     return out
 

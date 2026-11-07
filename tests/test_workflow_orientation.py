@@ -18,7 +18,7 @@ class WorkflowOrientation(unittest.TestCase):
     def test_the_area_route_includes_analysis_before_adoption(self):
         for sk in standard_contract.SKELETONS:
             with self.subTest(instrument=sk.instrument):
-                text = scaffold.area_readme("01", "example", sk, True)
+                text = scaffold.area_readme("01-example", "example", sk, True)
                 route = text.split("**The gates, in order.**", 1)[1].split(
                     "## State", 1
                 )[0]
@@ -70,10 +70,25 @@ class WorkflowOrientation(unittest.TestCase):
         self.assertIn(step, line)
         self.assertLess(line.index(step), line.index("labkit-adopt"))
 
+    def test_an_area_without_a_number_is_named_as_its_directory(self):
+        # `--change-kind` restamps an area named without `NN-`; the README
+        # named `tests/test__x.py` and `experiments/-x` (audit 2026-11-07,
+        # second)
+        text = scaffold.area_readme(
+            "explore", "explore", standard_contract.COMPUTE, False
+        )
+        self.assertIn("# Experiment: explore\n", text)
+        self.assertIn("`runlog experiments/explore`", text)
+        self.assertIn("tests/test_explore.py", text)
+        self.assertNotIn("test__", text)
+        self.assertNotIn("experiments/-", text)
+
     def test_the_area_route_names_the_area_from_the_root(self):
         # `runlog .` from the root, as AGENTS.md asks, read the repo as an
         # area (audit 2026-10-27, third, I10)
-        text = scaffold.area_readme("01", "example", standard_contract.COMPUTE, False)
+        text = scaffold.area_readme(
+            "01-example", "example", standard_contract.COMPUTE, False
+        )
         self.assertIn("`runlog experiments/01-example`", text)
         self.assertIn("`labkit-params experiments/01-example`", text)
         self.assertNotIn("`runlog .`", text)
