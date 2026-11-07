@@ -1,7 +1,31 @@
-"""hook_pre_run — the pre-run hook: whether a shell command starts a run
-(`run_scripts`, `executed_py`) and, for its area, preflight before a full
-run or the registration note at low repeat cost (`before_run`, `pre_run`).
-What it holds and why: `agent_hooks`' docstring, "pre-run".
+"""hook_pre_run — the pre-run hook (`claude-hook pre-run`, PreToolUse on
+Bash): whether a shell command starts a run (`run_scripts`,
+`executed_py`) and, for its area, preflight before a full run or the
+registration note at low repeat cost (`before_run`, `pre_run`).
+
+The command is a run start when it names a .py file that opens a run
+(`runlog.run(` / `runlog.Run(`, or `lanes.Lanes(`, whose `main` opens
+it: the prompt skeleton) and is not one of the stamps' throwaway stages
+(`standard_contract.NO_RUN_FLAGS`: `--show`, `--probe`, `--eval-only`,
+`00_prepare.py --audit`, `--calibrate-null`). For that script's area (the
+nearest directory above it with a PROTOCOL-*.md) `preflight` runs:
+  · protocol frozen (`frozen = true`) + blockers           → exit 2, blocked
+  · protocol unfrozen (a pilot by declaration) + blockers  → context only
+  · clean                                                   → one line
+`LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
+visible in the transcript, like `--no-verify` on a commit.
+The gate follows the cost tier (LAB-017 The number of audits follows the cost tier): at `repeat_cost = "low"` preflight
+does not run before a command — a rerun at low repeat cost is the probe — and
+the hook only says whether the registration is written
+(`protocol_check.low_registration_missing`: the question; for a fit or
+an apply also criterion, quality check and null condition;
+with a model the data profile), which is
+what `runlog` will demand of a full run there. A `high`/
+undeclared protocol keeps the gate above.
+
+Exit 0, or 2 to block the command (the stderr text goes back to the
+agent). Before the session's first Bash command it keeps the stop's base
+(`hook_session.keep_stop_base`).
 """
 
 from __future__ import annotations

@@ -1,12 +1,22 @@
 """hook_session — what the agent hooks know of their session and how they
 answer the harness: the repository the hooks hold (`project_dir`,
-`session_repo`), the additional context a hook returns (`tell_context`),
-the session log `.git/labkit-sessions.jsonl` (`record_session`,
-`read_sessions`, `sessions`), the stop's base and held files under the git
-directory (`keep_stop_base`, `stop_base_file`, `stop_held_file`,
-`state_fingerprint`) and the commits a session made (`committed_in_session`).
-The hooks themselves are `hook_pre_run`, `hook_post_change` and
-`agent_hooks` (the stop and the commit); what each holds: `agent_hooks`.
+`session_repo`: the adapter's explicit project directory, else
+`CLAUDE_PROJECT_DIR`, else the event's cwd, its root found from a
+subdirectory too), the additional context a hook returns
+(`tell_context`), the stop's base and held files under the git directory
+(`keep_stop_base`, `stop_base_file`, `stop_held_file`,
+`state_fingerprint`), the commits a session made (`committed_in_session`)
+and the session log.
+
+session log
+    Every stop also appends one line to the repo's `.git/labkit-sessions.jsonl`
+    (inside .git: local, never committed): the session id, the transcript
+    path, the time, and the runs whose run_id dates from after this
+    session's previous stop (or its first transcript record). `claude-hook
+    sessions --run RUN_ID` finds the session — and so the transcript — a run
+    came from: what the agent read and decided before it, for debugging.
+
+`claude-hook sessions` exits 0, or 1 when no session made the run.
 """
 
 from __future__ import annotations

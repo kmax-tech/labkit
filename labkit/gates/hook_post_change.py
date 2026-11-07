@@ -1,8 +1,30 @@
-"""hook_post_change — the post-change hook: protocol-check and notes-check
-on every changed protocol and measurement note, the review hint of a
-report that discusses a run, and what the stop and the commit will hold of
-an area's evidence (`post_change`). What it tells and why: `agent_hooks`'
-docstring, "post-change".
+"""hook_post_change — the post-change hook (`claude-hook post-change`,
+PostToolUse on Bash, Write and Edit): protocol-check and notes-check on
+every changed protocol and measurement note, the review hint of a report
+that discusses a run, and what an area's evidence lost (`post_change`).
+
+Every file the repo now reports as changed (git status, untracked
+included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
+notes/messung/*.md (not 00-*), is checked with protocol-check or
+notes-check. A changed Markdown report that discusses a run (a
+discussion block, `report_blocks.discussions`) gets the report review it owes
+while no review of this state names no claim
+(`report_hold.report_review_owed`, the gate's own finding) — a hint;
+the review is one model call and the agent's to start. A report is read at its own path
+(`repo.own_path`), as the stop and the commit read it: one that is a
+symbolic link is told their refusal and its way out
+(`report_hold.link_gap`). An area whose `audits/` or `runs/` git status
+names (deleted, changed or new) is told what the stop and the commit
+will hold of its evidence — a record gone, a record rewritten beyond its
+decision lines, a closed run's file changed — with the restore each line
+names, right after the tool did it (`_untold_evidence`); it holds
+nothing itself. A per-session cache of content hashes keeps a
+file that was already checked or hinted at this content, and an area's
+evidence in a state already told, from being reported after every later
+command.
+
+Exit 0 always; what it tells is `additionalContext` on stdout. It holds
+nothing itself.
 """
 
 from __future__ import annotations

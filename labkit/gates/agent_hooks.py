@@ -1,75 +1,21 @@
-"""Shared live-hook checks for Claude Code and Codex.
+"""agent_hooks — the stop and the commit: the two gates of an agent session
+the agent meets without calling them. The adapters (`claude_hooks`,
+`codex_hooks`) read each harness's event and call one implementation; the
+other two hooks stand in their own modules, and what a hook knows of its
+session in `hook_session`.
 
-The adapters supply a project directory and the command name; each hook
-has one implementation, shared by both: the stop and the commit here,
-pre-run in `hook_pre_run`, post-change in `hook_post_change`, the session
-log and the stop's base in `hook_session`. This docstring describes them
-all.
+    claude-hook pre-run       PreToolUse  (matcher: Bash)          `hook_pre_run`
+    claude-hook post-change   PostToolUse (matcher: Bash|Write|Edit) `hook_post_change`
+    claude-hook stop          Stop                                 here
+    claude-hook pre-commit    run by the stamped .githooks/pre-commit  here
+    claude-hook sessions [--run RUN_ID]   the session log          `hook_session`
 
-    claude-hook pre-run       PreToolUse  (matcher: Bash)
-    claude-hook post-change   PostToolUse (matcher: Bash|Write|Edit)
-    claude-hook stop          Stop
-    claude-hook undecided <paths…>        the pre-commit's half of the stop hook: an area a path
-                                          touches holds an undecided audit BLOCKER → exit 1
-    claude-hook sessions [--run RUN_ID]   the session log: which session, which transcript, which runs
-
-The adapters read JSON events on stdin and answer both harnesses: `pre-run` and `stop` block with exit 2 (the stderr
-text goes back to the agent), `post-change` is `additionalContext` on
-stdout and exit 0.
-
-The repository the hooks hold is the one the project directory
-(the adapter's explicit `project_dir`, else `CLAUDE_PROJECT_DIR`, else
-the event's cwd) lies in, its root found from
-a subdirectory too (`session_repo`). Outside every repository the stop
-cannot tell what changed: it says so and holds, once per turn; post-change
-checks only the tool's own file. `undecided` reads its paths against the
-repository of the current directory, where git runs the pre-commit.
-
-A rule the agent has to remember is the weak layer; these hooks are the
-layer that does not depend on remembering. Why each rule holds:
+The repository the hooks hold is the one the project directory lies in
+(`hook_session.session_repo`). Outside every repository the stop cannot
+tell what changed: it says so and holds, once per turn. A rule the agent
+has to remember is the weak layer; these hooks are the layer that does
+not depend on remembering. Why each rule holds:
 docs/notes/2026-10-19-hooks-and-report-check.md.
-
-pre-run
-    The command is a run start when it names a .py file that opens a run
-    (`runlog.run(` / `runlog.Run(`, or `lanes.Lanes(`, whose `main` opens
-    it: the prompt skeleton) and is not one of the stamps' throwaway stages
-    (`standard_contract.NO_RUN_FLAGS`: `--show`, `--probe`, `--eval-only`,
-    `00_prepare.py --audit`, `--calibrate-null`). For that script's area (the
-    nearest directory above it with a PROTOCOL-*.md) `preflight` runs:
-      · protocol frozen (`frozen = true`) + blockers           → exit 2, blocked
-      · protocol unfrozen (a pilot by declaration) + blockers  → context only
-      · clean                                                   → one line
-    `LABKIT_PREFLIGHT=skip` in the command string skips the gate; it is
-    visible in the transcript, like `--no-verify` on a commit.
-    The gate follows the cost tier (LAB-017 The number of audits follows the cost tier): at `repeat_cost = "low"` preflight
-    does not run before a command — a rerun at low repeat cost is the probe — and
-    the hook only says whether the registration is written
-    (`protocol_check.low_registration_missing`: the question; for a fit or
-    an apply also criterion, quality check and null condition;
-    with a model the data profile), which is
-    what `runlog` will demand of a full run there. A `high`/
-    undeclared protocol keeps the gate above.
-
-post-change
-    Every file the repo now reports as changed (git status, untracked
-    included) plus the tool's own file_path, filtered to PROTOCOL-*.md and
-    notes/messung/*.md (not 00-*), is checked with protocol-check or
-    notes-check. A changed Markdown report that discusses a run (a
-    discussion block, `report_blocks.discussions`) gets the report review it owes
-    while no review of this state names no claim
-    (`report_hold.report_review_owed`, the gate's own finding) — a hint;
-    the review is one model call and the agent's to start. A report is read at its own path
-    (`repo.own_path`), as the stop and the commit read it: one that is a
-    symbolic link is told their refusal and its way out
-    (`report_hold.link_gap`). An area whose `audits/` or `runs/` git status
-    names (deleted, changed or new) is told what the stop and the commit
-    will hold of its evidence — a record gone, a record rewritten beyond its
-    decision lines, a closed run's file changed — with the restore each line
-    names, right after the tool did it (`_untold_evidence`); it holds
-    nothing itself. A per-session cache of content hashes keeps a
-    file that was already checked or hinted at this content, and an area's
-    evidence in a state already told, from being reported after every later
-    command.
 
 stop
     Before the agent ends its turn: every protocol of an area a changed
@@ -111,29 +57,26 @@ stop
     The same stop holds every area the session touched (a changed file
     under it, git status) to its audit records: a BLOCKER nobody decided,
     or audit evidence gone or unreadable → exit 2, naming file and finding
-    (`undecided.undecided_blockers`); a current handover of the area acknowledges
+    (`undecided.undecided_state`); a current handover of the area acknowledges
     the loss and the open BLOCKERs it records, and one that no longer
     matches says why.
-    The pre-commit runs `claude-hook undecided` on the staged paths for the
-    same rule. Deciding is cheap and visible: `limitation` with a reason is
+    The commit holds the same rule on the index (`commit_gates`). Deciding is cheap and visible: `limitation` with a reason is
     a documented deviation, which is what the gate is for; a hand-written
     `fixed` is a lie the next audit sees (LAB-015 Preflight audit before freezing).
 
-session log
-    Every stop also appends one line to the repo's `.git/labkit-sessions.jsonl`
-    (inside .git: local, never committed): the session id, the transcript
-    path, the time, and the runs whose run_id dates from after this
-    session's previous stop (or its first transcript record). `claude-hook
-    sessions --run RUN_ID` finds the session — and so the transcript — a run
-    came from: what the agent read and decided before it, for debugging.
+pre-commit
+    `claude-hook pre-commit`, run by the stamped `.githooks/pre-commit`
+    from the repository's root, holds the index the commit carries in one
+    entry (`commit_gates`): the MUST fields of every protocol the commit
+    adds or changes, report-check over every staged path
+    (`report_check.hold_reported`), and the undecided state
+    (`undecided.undecided_state`); then `labkit-next`'s step per protocol
+    touched, from the chains the hold ran.
 
-Exit codes, per subcommand — 2 is what Claude Code reads as "block", so
-it means three things here: pre-run 0, or 2 to block the command; stop 0,
-or 2 to keep the agent working; post-change 0; undecided 0, or 1 with
-findings on stdout; sessions 0, or 1 when no session made the run; a usage
-error (no event, no RUN_ID, no paths) 2 on stderr, as every labkit command
-(`console.refuse`). An unexpected failure is a traceback, exit 1, never
-swallowed.
+Exit codes: stop 0, or 2 to keep the agent working (2 is what Claude Code
+reads as "block"); pre-commit 0, or 1 held; a usage error 2 on stderr, as
+every labkit command (`console.refuse`). An unexpected failure is a
+traceback, exit 1, never swallowed.
 """
 
 from __future__ import annotations
@@ -244,7 +187,12 @@ def _budget(seconds: float) -> Iterator[None]:
 
 
 def stop(event: dict) -> int:
-    """Stop hook: a number written back or committed in this session gets report-check, and an area it worked in that measured owes its registered report (`missing_reports`); blockers, or checks that outrun the stop's budget, send the agent back (exit 2), once per turn."""
+    """Stop hook: an area this session worked in is held to its audit
+    evidence first (`undecided.undecided_state`, the session's own commits
+    too), then a number written back or committed in this session gets
+    report-check, and an area that measured owes its registered report
+    (`missing_reports`); blockers, or checks that outrun the stop's budget,
+    send the agent back (exit 2), once per turn."""
     repo = session_repo(event)
     if repo is None:
         # nothing tells the stop what the session changed or committed: a
