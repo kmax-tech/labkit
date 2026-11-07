@@ -350,6 +350,72 @@ class OutputEntry:
     continues: tuple[str, ...] = ()  # runs whose rows this file already held
 
 
+#: the one `data=` key of a run's record that holds no input but the
+#: leakage verdict across splits, a sentence (`provenance.describe_data`)
+LEAKAGE_CHECK_KEY = "leakage_check"
+
+
+@dataclass(frozen=True)
+class DataEntry:
+    """One input a run read (`data=` in its record), as `runlog` writes it:
+    KEY as given, the path as the record holds it (`resolve_recorded` reads
+    it back), its sha256 cut to RECORD_SHA_CHARS, and the rows of a text
+    input — None for a binary one (`provenance.BinaryInput`). Not the
+    outputs (`OutputEntry`)."""
+
+    key: str
+    recorded: str
+    sha256: str
+    rows: int | None
+
+
+def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
+    """The inputs of a run record's `data=` table DATA, in its order, each
+    held to the shape `runlog` writes — a path as nonempty text, sha256 as
+    text, rows a count or null (present); the leakage verdict (LEAKAGE_CHECK_KEY) is
+    no input. Raises ArtefactError naming WHERE (the record) and the key on
+    any other shape: whether an entry reads is decided here once, which of
+    its fields a check needs stays with that check (audit 2026-11-07, S11:
+    five readers, one turned a missing path into the text "None")."""
+    out: list[DataEntry] = []
+    for key, value in data.items():
+        if key == LEAKAGE_CHECK_KEY:
+            continue
+        if not isinstance(value, dict):
+            raise ArtefactError(f"{where}: data[{key!r}] is no entry ({value!r})")
+        e = cast(dict[str, object], value)
+        if "rows" not in e:
+            raise ArtefactError(
+                f"{where}: data[{key!r}] has no rows field (a count, or null "
+                f"for a binary input)"
+            )
+        path, sha, rows = e.get("path"), e.get("sha256"), e["rows"]
+        if not isinstance(path, str) or not path:
+            raise ArtefactError(
+                f"{where}: data[{key!r}] in the run's record names no path — "
+                f"nothing says which bytes the run read"
+            )
+        if not isinstance(sha, str):
+            raise ArtefactError(
+                f"{where}: data[{key!r}] in the run's record: the run recorded "
+                f"no sha256 for it — nothing holds the bytes the number came from"
+            )
+        if rows is not None and not _is_count(rows):
+            raise ArtefactError(f"{where}: data[{key!r}]: rows is {rows!r}")
+        out.append(DataEntry(key, path, sha, cast("int | None", rows)))
+    return out
+
+
+def read_data(run_dir: Path) -> list[DataEntry] | None:
+    """The inputs RUN_DIR's record names (`data_entries`), [] when it gave
+    none; None when the run has no readable record (`read_run_config`).
+    Raises ArtefactError as `data_entries` does."""
+    cfg = read_run_config(run_dir)
+    if cfg is None:
+        return None
+    return data_entries(cfg.data, str(run_dir / CONFIG_FILE))
+
+
 def recorded_path(path: Path, inside: Path) -> str:
     """How a run's record (outputs.json, config.json `data`) writes PATH:
     relative to the root of the repo INSIDE lies in, when PATH lies in that

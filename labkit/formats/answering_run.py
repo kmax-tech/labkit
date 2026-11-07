@@ -27,6 +27,7 @@ from labkit.formats.scope_sha import digest
 from labkit.formats.runs import (
     as_stored,
     binding_of,
+    data_entries,
     COMPLETED,
     JsonObject,
     ProtocolBinding,
@@ -261,15 +262,11 @@ def repeat_mismatch(
         out.append("the model resolved differently (models_resolved)")
     out += _config_mismatch(_table(parent, "config"), _table(new, "config"), reseed_of)
 
-    def digests(cfg: JsonObject) -> JsonObject:
-        data = _table(cfg, "data")
-        return {
-            k: (_table(data, k).get("sha256"), _table(data, k).get("rows"))
-            for k in data
-            if isinstance(data[k], dict)
-        }
+    def digests(cfg: JsonObject, which: str) -> JsonObject:
+        entries = data_entries(_table(cfg, "data"), f"the {which} run's record")
+        return {e.key: (e.sha256, e.rows) for e in entries}
 
-    if digests(parent) != digests(new):
+    if digests(parent, "parent") != digests(new, "new"):
         out.append("the inputs (data=) differ")
     return out
 

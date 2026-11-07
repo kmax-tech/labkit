@@ -7,6 +7,7 @@ walk used to stand six times with six decisions (audit 2026-10-13).
 
 import json
 import os
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -278,3 +279,42 @@ class NowStamp(unittest.TestCase):
         self.assertRegex(stamp, r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
         read = datetime.fromisoformat(stamp)
         self.assertLess(abs((datetime.now() - read).total_seconds()), 5)
+
+
+class DataEntries(unittest.TestCase):
+    """A run record's `data=` entries are read in one place
+    (`runs.data_entries`): the shape `runlog` writes, or ArtefactError
+    naming the key — five readers each guarded their own, and one turned a
+    missing path into the text "None" (audit 2026-11-07, S11)."""
+
+    GOOD = {
+        "cases": {"path": "data/cases.jsonl", "sha256": "ab12", "rows": 3},
+        "model": {"path": "/scratch/model.bin", "sha256": "cd34", "rows": None},
+        runs.LEAKAGE_CHECK_KEY: "skipped: need >=2 of train/dev/test",
+    }
+
+    def test_the_shape_runlog_writes_reads_and_the_verdict_is_no_input(self):
+        self.assertEqual(
+            runs.data_entries(self.GOOD, "config.json"),
+            [
+                runs.DataEntry("cases", "data/cases.jsonl", "ab12", 3),
+                runs.DataEntry("model", "/scratch/model.bin", "cd34", None),
+            ],
+        )
+
+    def test_every_other_shape_is_refused_naming_the_key(self):
+        for broken, says in (
+            ({"path": "", "sha256": "ab", "rows": 1}, "names no path"),
+            ({"sha256": "ab", "rows": 1}, "names no path"),
+            ({"path": "x", "rows": 1}, "recorded no sha256"),
+            ({"path": "x", "sha256": None, "rows": 1}, "recorded no sha256"),
+            ({"path": "x", "sha256": "ab"}, "has no rows field"),
+            ({"path": "x", "sha256": "ab", "rows": True}, "rows is True"),
+            ({"path": "x", "sha256": "ab", "rows": "3"}, "rows is '3'"),
+            ("a sentence", "is no entry"),
+        ):
+            with self.subTest(broken=broken):
+                with self.assertRaisesRegex(
+                    runs.ArtefactError, rf"config.json: data\['b'\].*{re.escape(says)}"
+                ):
+                    runs.data_entries({"b": broken}, "config.json")

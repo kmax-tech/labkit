@@ -68,9 +68,9 @@ def counts_text(run_dir: Path) -> str:
     if "n_items" not in metrics:
         raise ValueError(f"{run_dir.name} records no n_items in metrics.json")
     read = [
-        f"{Path(str(e['path'])).name} {e['rows']} lines"
-        for _, e in sorted(cfg.data.items())
-        if isinstance(e, dict) and isinstance(e.get("rows"), int)
+        f"{Path(e.recorded).name} {e.rows} lines"
+        for e in sorted(runs.data_entries(cfg.data, str(run_dir)), key=lambda e: e.key)
+        if e.rows is not None
     ]
     items = f"{metrics['n_items']} items prepared"
     if "n_labelled" in metrics:

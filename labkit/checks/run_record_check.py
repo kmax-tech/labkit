@@ -39,9 +39,11 @@ from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.runs import (
+    ArtefactError,
     OutputEntry,
     RunConfig,
     RunConfigError,
+    read_data,
     read_metrics,
     read_outputs,
     next_output_name,
@@ -437,11 +439,10 @@ def criterion_n_input_mismatches(answering_run: Path) -> list[str]:
     }
     if not ns:
         return []
-    cfg = read_run_config(answering_run)
     counts: dict[str, int] = {}
-    for key, d in (cfg.data if cfg else {}).items():
-        if isinstance(d, dict) and isinstance(d.get("rows"), int):
-            counts[f"data[{key}].rows"] = d["rows"]
+    for d in read_data(answering_run) or []:
+        if d.rows is not None:
+            counts[f"data[{d.key}].rows"] = d.rows
     for o in read_outputs(answering_run) or []:
         if o.lines is not None:
             counts[f"{o.path.name} lines"] = o.lines
@@ -517,15 +518,22 @@ def provenance_findings(
 
 def _recorded_sources(
     area: Path, answering_run: Path
-) -> tuple[list[tuple[Path, object]], list[GateFinding]]:
+) -> tuple[list[tuple[Path, str]], list[GateFinding]]:
     """(sources, blockers): each `data=` source of ANSWERING_RUN's record as
-    (path, recorded sha256 or None); a blocker when the record holds no
-    `data=` or a source entry names no path. A value that is no entry (the
-    leakage verdict `provenance.describe_data` writes beside them) is no
-    source. Reads the record, writes nothing."""
-    cfg = read_run_config(answering_run)
-    data = cfg.data if cfg else {}
-    if not data:
+    (path, recorded sha256), read by `runs.read_data`; a blocker when the
+    record holds no `data=` or an entry does not read (no path, no sha256:
+    its sentence). Reads the record, writes nothing."""
+    try:
+        entries = read_data(answering_run) or []
+    except ArtefactError as exc:
+        return [], [
+            blocker(
+                str(exc),
+                fix="pass every source in `data=` to runlog.run, then "
+                f"{measure_anew(area)}",
+            )
+        ]
+    if not entries:
         return [], [
             blocker(
                 "source not frozen — the run carries no `data=`",
@@ -533,31 +541,18 @@ def _recorded_sources(
                 f"recorded, then {measure_anew(area)}",
             )
         ]
-    sources: list[tuple[Path, object]] = []
-    blockers: list[GateFinding] = []
-    for key, v in data.items():
-        if not isinstance(v, dict):
-            continue  # `leakage_check`: the verdict across splits, a sentence
-        if not v.get("path"):
-            blockers.append(
-                blocker(
-                    f"data[{key!r}] in the run's record names no path — nothing "
-                    f"says which bytes the run read",
-                    fix=measure_anew(area),
-                )
-            )
-            continue
-        sources.append((resolve_recorded(v["path"], answering_run), v.get("sha256")))
-    return sources, blockers
+    return [
+        (resolve_recorded(e.recorded, answering_run), e.sha256) for e in entries
+    ], []
 
 
 def _source_finding(
-    repo: Path | None, area: Path, source: Path, sha: object
+    repo: Path | None, area: Path, source: Path, sha: str
 ) -> tuple[GateFinding | None, str | None]:
     """(blocker, outside note) for one SOURCE the run recorded with
     checksum SHA. The record is the one integrity evidence, git status a
     hygiene rule beside it (docs/notes/2026-11-06-pin-route.md). In this
-    order: gone (`_gone`); no checksum recorded; inside REPO, a file
+    order: gone (`_gone`); inside REPO, a file
     neither tracked nor ignored by a rule (`_untracked_source`), even when
     the bytes match; bytes unlike the record (`source_drift`) — tracked,
     ignored or outside REPO alike. Otherwise no blocker, and the note for a
@@ -569,15 +564,6 @@ def _source_finding(
     do."""
     if not source.exists():
         return _gone(source, area), None
-    if not isinstance(sha, str):
-        return (
-            blocker(
-                f"source {source}: the run recorded no sha256 for it — nothing "
-                f"holds the bytes the number came from",
-                fix=f"pass the source in `data=` to runlog.run, then {measure_anew(area)}",
-            ),
-            None,
-        )
     # git's half only for bytes that lie in the repository: one outside it
     # (a model directory on scratch, reached directly or by a link) git can
     # neither track nor ignore, and its refusal named both as ways out

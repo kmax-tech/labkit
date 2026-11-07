@@ -29,6 +29,7 @@ from labkit.formats.scope_sha import (
 )
 from labkit.formats.runs import (
     DIRTY_MARK,
+    LEAKAGE_CHECK_KEY,
     NO_GIT,
     RECORD_SHA_CHARS,
     recorded_path,
@@ -502,7 +503,7 @@ def describe_data(paths: dict, base_dir: Path) -> dict:  # noqa: C901 complexity
         verdicts.append(
             f"no shared ids between {sorted(controls)} and {sorted(measured)}"
         )
-    out["leakage_check"] = (
+    out[LEAKAGE_CHECK_KEY] = (
         ("ok: " + "; ".join(verdicts))
         if verdicts
         else (

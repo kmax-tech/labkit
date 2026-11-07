@@ -186,7 +186,7 @@ class Provenance(unittest.TestCase):
         rc, out = self._finalize()
         self.assertEqual(rc, 1, out)
         self.assertIn("the run recorded no sha256 for it", out)
-        self.assertIn("pass the source in `data=`", out)
+        self.assertIn("pass every source in `data=`", out)
 
     def test_a_data_entry_naming_no_path_blocks(self):
         data = self._frozen()

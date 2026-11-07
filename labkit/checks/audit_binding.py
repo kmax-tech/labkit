@@ -169,19 +169,18 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
     model.json, which no piece showed, and three decision reviews said
     insufficient. [] for a run without such inputs or a record that does
     not read (the record checks name that)."""
-    cfg = runs.read_run_config(run_dir)
-    if cfg is None:
-        return []
+    try:
+        entries = runs.read_data(run_dir) or []
+    except runs.ArtefactError:
+        return []  # a record that does not read: the record checks name it
     out: list[tuple[str, str]] = []
-    for key, entry in sorted(cfg.data.items()):
-        if (
-            not isinstance(entry, dict)
-            or "rows" not in entry
-            or entry["rows"] is not None
-        ):
-            continue
-        recorded, digest = str(entry.get("path")), str(entry.get("sha256"))
-        label = f"{DEPENDENCY_LABEL}{recorded} ({key}, the run recorded sha {digest})"
+    for entry in sorted(entries, key=lambda e: e.key):
+        if entry.rows is not None:
+            continue  # a text input: its rows stand in the ROWS pieces
+        recorded, digest = entry.recorded, entry.sha256
+        label = (
+            f"{DEPENDENCY_LABEL}{recorded} ({entry.key}, the run recorded sha {digest})"
+        )
         path = runs.resolve_recorded(recorded, run_dir)
         if not path.is_file():
             why = "a directory" if path.is_dir() else "gone from the tree"

@@ -65,6 +65,13 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"protocol-fill (?:\{[^}]*\} --from-run|--from-run \{)",
         {"repo"},
     ),
+    # a run record's `data=` entry read by key in five places, one turning a
+    # missing path into "None" (audit 2026-11-07, S11); `runs.data_entries`
+    (
+        "a data= entry read by key",
+        r"""(\.get\(|\[)\s*["']rows["']""",
+        {"runs"},
+    ),
     # the run record's file names had one constant of four (audit
     # 2026-10-27, third, S6); `runs.CONFIG_FILE`, `COMPLETION_FILE`, `OUTPUTS_FILE`
     (
@@ -335,6 +342,7 @@ class OneHome(unittest.TestCase):
             "a command cut at -- by hand": "cut = argv.index('--')",
             "an adopt command spelled by hand": 'print(f"protocol-fill {PROTOCOL.name} --from-run {rid}")',
             "a run record file spelled by hand": 'cfg = run_dir / "config.json"',
+            "a data= entry read by key": 'n = entry.get("rows")',
             "a kind compared as a word": 'if kind == "apply":',
             "core.hooksPath set by hand": 'git_run(["config", "core.hooksPath", ".githooks"], root)',
             "an answer-line separator spelled by hand": 'CLAIM = re.compile(r"CLAIM\\s*(?:·|—|–|:)")',

@@ -114,6 +114,15 @@ pins (`requirements.txt` / `requirements.lock`).
   refused. The entry now carries a `subject:` line, the carried prefix
   names the settlement (`carried from … (unresolved as implementation)`),
   and the refusal of a subject on such a line names the recorded one.
+- **A run record's `data=` entries are read in one place.** Five readers
+  each guarded the entries their own way; the follow-up's dependency
+  pieces turned a missing path or sha256 into the text `"None"`.
+  `runs.data_entries` / `runs.read_data` hold every entry to the shape
+  `runlog` writes (a path, a sha256, rows as a count or null) and raise
+  `ArtefactError` naming the key otherwise; finalize blocks on it (the
+  provenance station, and the criterion-n station, which reads the
+  inputs at both repeat costs). `runs.LEAKAGE_CHECK_KEY` names the one
+  key that holds no input.
 
 ## 0.112.0 — 2026-11-06
 

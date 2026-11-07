@@ -1438,8 +1438,19 @@ def runs_metrics(answering_run: Path) -> dict:
 
 
 def check_criterion_n(findings: Findings, answering_run: Path) -> None:
-    """Station 7: a criterion's denominator that matches no recorded input count."""
-    w = criterion_n_input_mismatches(answering_run)
+    """Station 7: a criterion's denominator that matches no recorded input
+    count; a record whose inputs or outputs do not read blocks — at repeat
+    cost high no other station reads the inputs (`runs.read_data`)."""
+    try:
+        w = criterion_n_input_mismatches(answering_run)
+    except ArtefactError as exc:
+        findings.block(
+            f"the record of {answering_run.name} does not read: {exc}",
+            fix=f"measure anew (`{measure_command(answering_run.parent.parent)}`) "
+            f"and audit that run; the run's own files stay as they are",
+            step=measure_command(answering_run.parent.parent),
+        )
+        return
     for line in w:
         findings.warn(line, evidence_kind=STATIC_EVIDENCE)
     if not w:
