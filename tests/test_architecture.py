@@ -294,7 +294,10 @@ def top_level_names(module: str) -> set[str]:
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             out.add(n.name)
         elif isinstance(n, ast.Assign):
-            out.update(t.id for t in n.targets if isinstance(t, ast.Name))
+            # `A, B = …` binds each name of the tuple
+            out.update(
+                x.id for t in n.targets for x in ast.walk(t) if isinstance(x, ast.Name)
+            )
         elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
             out.add(n.target.id)
         elif isinstance(n, (ast.Import, ast.ImportFrom)):
@@ -302,11 +305,13 @@ def top_level_names(module: str) -> set[str]:
     return out
 
 
-def doc_references() -> list[tuple[int, str, str]]:
-    """(line, module, name) for every backticked span of the doc that starts
-    with `module.name`, module a labkit module; a longer chain
-    (`gate.GateFinding.evidence_kind`) counts by its first two parts."""
-    doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+def doc_references(path: Path | None = None) -> list[tuple[int, str, str]]:
+    """(line, module, name) for every backticked span of PATH (the
+    architecture doc when None) that starts with `module.name`, module a
+    labkit module; a longer chain (`gate.GateFinding.evidence_kind`) counts
+    by its first two parts."""
+    path = path or ROOT / "docs" / "architecture.md"
+    doc = path.read_text(encoding="utf-8")
     known = set(modules())
     out: list[tuple[int, str, str]] = []
     for number, line in enumerate(doc.splitlines(), 1):
@@ -332,6 +337,32 @@ class EveryNamedHomeExists(unittest.TestCase):
         ]
         self.assertEqual(gone, [])
 
+    def test_every_reference_in_code_tests_and_docs_resolves(self):
+        """A docstring or comment naming `module.name` names a home that
+        exists: five pointed at functions renamed or gone (2026-11-07). The
+        dated audits and notes record a former state and are not read."""
+        files = [
+            *sorted(PACKAGE.rglob("*.py")),
+            *sorted((ROOT / "tests").glob("*.py")),
+            *sorted(
+                p
+                for p in (ROOT / "docs").glob("*.md")
+                if not p.name.startswith("audit-")
+            ),
+            ROOT / "README.md",
+            *sorted((PACKAGE / "docs").glob("*.md")),
+            *sorted((PACKAGE / "agents").glob("*.md")),
+            *sorted((PACKAGE / "templates").glob("*.template")),
+        ]
+        names: dict[str, set[str]] = {}
+        gone = [
+            f"{path.relative_to(ROOT)}:{number}: {module}.{name}"
+            for path in files
+            for number, module, name in doc_references(path)
+            if name not in names.setdefault(module, top_level_names(module))
+        ]
+        self.assertEqual(gone, [])
+
     def test_the_check_bites(self):
         # the twin: the reader finds references at all, and a name the module
         # does not define is not among its names
@@ -339,6 +370,7 @@ class EveryNamedHomeExists(unittest.TestCase):
         self.assertGreater(len(refs), 100)
         self.assertIn(("report_check", "chain_gaps"), {(m, n) for _, m, n in refs})
         self.assertNotIn("chain_gapz", top_level_names("report_check"))
+        self.assertIn("RESTORE", top_level_names("commands"))  # `A, B = …`
 
 
 def literal_decisions(source: str) -> list[int]:

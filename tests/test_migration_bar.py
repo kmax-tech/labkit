@@ -55,8 +55,8 @@ class ProseValueReaders(unittest.TestCase):
         ),  # the Prompt block held to the constants and the sent prompts
     )
     #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
-    #: head — `answering_run_field`, `answering_run_open`, `finalize.cited_runs`,
-    #: `finalize.cited_run_gaps` read prose for it
+    #: head — `answering_run_field`, `answering_run_open` and finalize's former
+    #: `cited_runs`, `cited_run_gaps` read prose for it
     #: left since phase 4: `[model]` decides the cut and carries the arms
     GONE = (
         "answering_run_field",

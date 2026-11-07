@@ -175,7 +175,7 @@ def spec(alias: str) -> BackendSpec:
 
 
 def resolve(alias: str) -> JsonObject:
-    """Alias -> the spec as a run records it (`llm_backends.record`): put
+    """Alias -> the spec as a run records it (`llm_specs.record`): put
     this into runlog's config. A new dict every call, from the frozen spec
     (`spec`)."""
     return record(spec(alias))

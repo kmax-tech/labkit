@@ -1,6 +1,6 @@
 """Two ways round the audit at high repeat cost, both reported (third haiku round
 on 0.99.0, labkit-paper area 09): t18 wrote `preflight_audit = "n/a — …"`
-and runlog took it (now refused: `findings.waived_audit_gap`, in preflight
+and runlog took it (now refused: `audit_gaps.audit_record_gap`, in preflight
 and protocol-check too); the next move is lowering `repeat_cost` to `low`, where
 nothing is owed before the run — exact over git, the head as first committed
 against the head now (`protocol_history.repeat_cost_lowered`, a WARNING in

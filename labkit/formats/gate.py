@@ -125,7 +125,7 @@ class GateFinding:
             — reads its `name`, never the words of `fix`.
         withdraw_first: The withdrawal (`commands.withdraw_command`) a hold
             names before its own way out while the declared run's code
-            changed since it ran (`report_check.withdrawn_first`); told
+            changed since it ran (`withdrawn_first`); told
             as `WITHDRAW_FIRST` before `fix` in every form (`way`).
         evidence_kind: GUARANTEED or STATIC_EVIDENCE, keyword, required.
         changed_since: The run whose code or declared scope this blocker

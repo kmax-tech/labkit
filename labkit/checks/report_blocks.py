@@ -623,7 +623,7 @@ def numbers_beside_discussed(
 
 def generated_lines(text: str) -> set[int]:
     """The line numbers of TEXT inside a result block, a discussion block or
-    a handover block (`handovers.blocks`), the opening and closing lines
+    a handover block (`handovers.handover_blocks`), the opening and closing lines
     included. Raises ReportBlockError on a block that does not read."""
     spans = [(b.first, b.last) for b in blocks(text)]
     spans += [(d.first, d.last) for d in discussions(text)]

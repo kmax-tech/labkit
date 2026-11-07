@@ -289,7 +289,7 @@ class Finding:
     # a carried finding: the earlier finding it continues, `<record file>#<n>`
     # — written by labkit-audit when a follow-up did not find it resolved,
     # never by a person ("" for the auditor's own findings); its origin is
-    # found by following the chain (`followup.origin_of`)
+    # found by following the chain (`followup.chain`)
     carries: str = ""
     # SUBJECTS: the auditor's third field, read when the record is written
     # (`subject_of`) and carried with the finding, never set by a decision;

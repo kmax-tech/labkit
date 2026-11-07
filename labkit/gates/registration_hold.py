@@ -386,7 +386,7 @@ def moved_fields(seen: str, text: str) -> set[str]:
 
 def declaring_protocol(protocol: Path, text: str, run: Path) -> Path | None:
     """PROTOCOL (TEXT its text) when it declares RUN as its result, so a
-    hold on RUN withdraws first (`ways_out.declared_first`); None otherwise,
+    hold on RUN withdraws first (`gate.withdrawn_first`); None otherwise,
     and while the declaration is an adoption's proposal under its own
     check (`report_context.pending_adoption`): no adoption stands to
     withdraw (reference pilot 2026-11-01, task 60)."""
