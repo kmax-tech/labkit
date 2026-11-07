@@ -103,7 +103,6 @@ from labkit.formats.findings import DIR
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     INDEX_REV,
-    audit_command,
     files_at,
     git_dir_path,
     git_root,
@@ -112,6 +111,7 @@ from labkit.formats.repo import (
     text_at,
     unreadable_at,
 )
+from labkit.formats.commands import audit_command
 from labkit.formats.runs import name_minute, now_stamp
 from labkit.formats.scope_sha import digest
 

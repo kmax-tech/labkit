@@ -93,7 +93,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from labkit.formats.repo import gate_command
+from labkit.formats.commands import gate_command
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.formats.prompts import prompt_body
 from labkit.formats import console, promises, protocol_block, rules, standard_contract

@@ -50,10 +50,6 @@ from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.report_reviews import held_by
 from labkit.formats.repo import (
     REPORT_SUFFIX,
-    adopt_command,
-    audit_command,
-    handover_command,
-    into_command,
     git_root,
     under_root,
     indexed_files,
@@ -62,8 +58,6 @@ from labkit.formats.repo import (
     indexed_protocols,
     own_path,
     protocol_links,
-    report_review_command,
-    stage_command,
     PROTOCOL_NAME,
     repo_protocols,
     SKIP_DIRS,
@@ -71,6 +65,14 @@ from labkit.formats.repo import (
     state_text,
     status_entries,
     text_at,
+)
+from labkit.formats.commands import (
+    adopt_command,
+    audit_command,
+    handover_command,
+    into_command,
+    report_review_command,
+    stage_command,
 )
 from labkit.formats.runs import read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
@@ -213,7 +215,7 @@ def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
     report-check's declared branch (`report_check.hold_declared`), the
     report review (`review_gap`) and `next --staged`'s row
     (`next_step._staged_area_step`), so the hold and the step agree; its
-    step stages the whole area (`repo.stage_command`) — a partial staging
+    step stages the whole area (`commands.stage_command`) — a partial staging
     takes more than the one file a reader has in mind (t34-r2 of
     labkit-paper's area 20, 2026-11-04: fifteen files, the run among
     them)."""

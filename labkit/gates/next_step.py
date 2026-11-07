@@ -80,16 +80,14 @@ from labkit.formats import (
 )
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
 from labkit.formats.gate import Findings, GateFinding
-from labkit.formats.repo import (
+from labkit.formats.repo import layout_root, shown, state_text
+from labkit.formats.commands import (
     MEASURE,
     RESTORE,
     adopt_command,
     audit_command,
     decide_command,
-    layout_root,
     report_fields_command,
-    shown,
-    state_text,
     withdraw_command,
 )
 from labkit.gates.report_context import INDEX, TREE
@@ -227,7 +225,7 @@ def _closing_step(ctx: Checked, protocol: Path, text: str) -> Step:
             "names its step",
             "the number in any report: report only an adopted number",
         )
-    from labkit.formats.repo import into_command
+    from labkit.formats.commands import into_command
     from labkit.gates.report_hold import reports_without_block
 
     unblocked = reports_without_block(
@@ -479,7 +477,7 @@ def _held_step(
 
 
 def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
-    """One sentence more on a restore step (`repo.RESTORE`, a registered
+    """One sentence more on a restore step (`commands.RESTORE`, a registered
     field changed after the first measurement) while an analysis finding
     still open names the protocol as its place: what the auditor's subject
     of that finding leaves after the restore. A `statement` finding takes the
@@ -546,7 +544,7 @@ def _registered_report(ctx: "Checked") -> Path | None:
 
 def _refused_measurement(ctx: "Checked", first: GateFinding) -> Step | None:
     """The step when FIRST, CTX's first hold, names a measurement as its
-    step (`GateFinding.step`, `repo.MEASURE`) before any run answers and
+    step (`GateFinding.step`, `commands.MEASURE`) before any run answers and
     runlog's start gate would refuse it now
     (`start_check.measurement_refusal`): the refusal's own first step.
     None otherwise — with a stamped id only, the one a run binds to. It

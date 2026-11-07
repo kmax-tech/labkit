@@ -45,7 +45,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from labkit.formats.repo import Command
+    from labkit.formats.commands import Command
 
 BLOCKER = "BLOCKER"
 WARNING = "WARNING"
@@ -119,11 +119,11 @@ class GateFinding:
         fix: The way out — what closes the finding, a command where one
             exists. Required for a BLOCKER (refused without one), optional
             for a WARNING; told in every form (`line`).
-        step: The command the way out names, as data (`repo.Command`),
+        step: The command the way out names, as data (`commands.Command`),
             where it names one of labkit's own; code that decides on a
             finding's way — `next_step`, `report_check.adoption_order_note`
             — reads its `name`, never the words of `fix`.
-        withdraw_first: The withdrawal (`repo.withdraw_command`) a hold
+        withdraw_first: The withdrawal (`commands.withdraw_command`) a hold
             names before its own way out while the declared run's code
             changed since it ran (`report_check.withdrawn_first`); told
             as `WITHDRAW_FIRST` before `fix` in every form (`way`).
@@ -256,7 +256,7 @@ def coded(
 #: gate that knows the area fills it (`Findings(area=…)`)
 AREA_SLOT = "<area>"
 #: the slot as it opens an audit command — filled with the gate's audit head,
-#: which names `--protocol` where the area holds several (`repo.audit_command`)
+#: which names `--protocol` where the area holds several (`commands.audit_command`)
 AUDIT_SLOT = f"labkit-audit {AREA_SLOT}"
 
 
@@ -274,7 +274,7 @@ class Findings:
             finding taken is replaced by it, shell-quoted, so a named
             command runs as printed (ninth haiku round: a step naming
             `<area>` was not taken).
-        audit: The audit command's head for that area (`repo.audit_command`
+        audit: The audit command's head for that area (`commands.audit_command`
             with no step: the area quoted, `--protocol` where the area holds
             several); every `AUDIT_SLOT` is replaced by it before the plain
             slot is filled. Without it the plain area stands there.

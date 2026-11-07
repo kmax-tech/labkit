@@ -41,7 +41,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 import re
 from collections.abc import Callable
 
-from labkit.formats.repo import gate_command
+from labkit.formats.commands import gate_command
 from labkit.formats.gate import GUARANTEED, GateFinding, blocker
 from labkit.formats import console
 from labkit.formats.gate import EXIT_CONTRACT, Findings

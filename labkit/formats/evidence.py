@@ -53,7 +53,6 @@ from labkit.formats.attempts import JOURNAL
 from labkit.formats.gate import GateFinding, blocker, with_way_out
 from labkit.formats.repo import (
     GitError,
-    audit_command,
     blobs_now,
     files_at,
     git_root,
@@ -63,6 +62,7 @@ from labkit.formats.repo import (
     state_text,
     text_at,
 )
+from labkit.formats.commands import audit_command
 from labkit.formats.runs import (
     COMPLETION_FILE,
     CONFIG_FILE,

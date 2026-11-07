@@ -53,8 +53,6 @@ from labkit.formats.runs import (
 from labkit.formats.answering_run import repeats_of
 from labkit.formats.runs import lineage, model_provenance_run
 from labkit.formats.repo import (
-    gate_command,
-    measure_anew,
     GitError,
     blobs_now,
     blobs_then,
@@ -65,6 +63,7 @@ from labkit.formats.repo import (
     resolves_under,
     shown,
 )
+from labkit.formats.commands import gate_command, measure_anew
 
 
 def _tracked(repo: Path, path: Path) -> bool:

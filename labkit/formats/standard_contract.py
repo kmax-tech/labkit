@@ -36,7 +36,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats.protocol_block import REPEAT_COSTS, KINDS
+from labkit.formats.protocol_block import KINDS
+from labkit.formats.runs import REPEAT_COSTS
 
 LOW, HIGH = REPEAT_COSTS
 COMPUTE_KIND, FIT_KIND, APPLY_KIND = KINDS

@@ -104,15 +104,8 @@ from labkit.formats import (
 from labkit.formats.standard_contract import PREFLIGHT_AUDIT
 from labkit.checks.result_render import rendering
 from labkit.formats.gate import with_way_out
-from labkit.formats.repo import (
-    GitError,
-    adopt_command,
-    audit_command,
-    git_root,
-    measure_command,
-    shown,
-    state_text,
-)
+from labkit.formats.repo import GitError, git_root, shown, state_text
+from labkit.formats.commands import adopt_command, audit_command, measure_command
 from labkit.checks import data_counts, recheck, report_blocks
 from labkit.checks.run_record_check import code_since_run
 from labkit.gates import report_check, report_hold

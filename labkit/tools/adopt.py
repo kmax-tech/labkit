@@ -34,7 +34,6 @@ from labkit.checks import recheck
 from labkit.formats import console, protocol_block
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
-    adopt_command,
     area_path,
     choose_protocol,
     layout_root,
@@ -42,6 +41,7 @@ from labkit.formats.repo import (
     own_path,
     shown,
 )
+from labkit.formats.commands import adopt_command
 
 
 def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
@@ -73,7 +73,7 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
     if report is None:
         print("labkit-adopt: 2. report — none registered in the head")
         # a report the head does not register, which the hooks still hold
-        from labkit.formats.repo import into_command
+        from labkit.formats.commands import into_command
         from labkit.gates.report_hold import reports_without_block
 
         for path in reports_without_block(layout_root(area), protocol, adopted or ""):
@@ -96,7 +96,7 @@ def adopt_in_one_step(area: Path, protocol: Path, run_id: str | None) -> int:
         _resumes(adopted, 3, again)
         return rc
     if report is not None:
-        from labkit.formats.repo import report_review_command
+        from labkit.formats.commands import report_review_command
 
         path = own_path(layout_root(area).resolve() / report)
         print(

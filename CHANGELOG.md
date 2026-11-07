@@ -9,6 +9,16 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **labkit's step commands moved from `labkit.formats.repo` to
+  `labkit.formats.commands`.** `Command` and every `*_command` builder,
+  and `next_after_run`, which the stamped measure scripts
+  (`measure-quick-script`, `measure-estimator-script`) import: a script
+  stamped before reads `from labkit.formats.repo import next_after_run`
+  and fails at its import under this labkit — change that one line to
+  `from labkit.formats.commands import next_after_run`. The last
+  version with them in `repo` is the one before this release.
+  `REPEAT_COSTS` moved from `protocol_block` to `runs`.
+
 - **A report's result block states the question and the protocol's
   answer, and the adoption owes that answer.** The block opens with two
   lines rendered from the protocol: `Question:` — the registered Question /

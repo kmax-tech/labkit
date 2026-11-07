@@ -73,6 +73,7 @@ import os
 import re
 import shlex
 
+from labkit.formats import runs
 from labkit.formats import console
 from pathlib import Path, PurePosixPath
 
@@ -1675,7 +1676,7 @@ def main(argv: list[str]) -> int:
     )
     exp.add_argument(
         "--repeat-cost",
-        choices=protocol_block.REPEAT_COSTS,
+        choices=runs.REPEAT_COSTS,
         help="stamp this repeat cost into the head; low stamps the low cut",
     )
     exp.add_argument(

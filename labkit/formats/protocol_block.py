@@ -39,12 +39,13 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from labkit.formats.repo import (
+    area_protocols,
     PROTOCOL_NAME,
     REPORT_SUFFIX,
     git_root,
     repo_protocols,
 )
-from labkit.formats.runs import RUN_ID
+from labkit.formats.runs import REPEAT_COSTS, RUN_ID
 
 #: the head format this labkit reads; a protocol of another standard is
 #: read with the labkit release it was written for
@@ -59,7 +60,6 @@ MIGRATION = (
     "without an intent paragraph)"
 )
 TYPES = ("exploratory", "confirmatory")
-REPEAT_COSTS = ("low", "high")
 #: what the kept number asserts (standard 0.22): a computation judges no
 #: prediction; a fit judges a model trained or adjusted in this experiment;
 #: an apply judges a model used unchanged — the obligations follow
@@ -1023,10 +1023,6 @@ def find_by_id(area: Path, pid: str) -> Path:
     """The one protocol in `area` whose head carries `pid` — the binding a
     run recorded. A run's recorded path goes stale by design (renaming keeps
     the id); raises BlockError when no protocol or several carry it."""
-    from labkit.formats.repo import (
-        area_protocols,
-    )  # layer 1 both; imported late, no cycle
-
     hits = []
     for p in area_protocols(area):
         try:

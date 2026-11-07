@@ -70,7 +70,8 @@ from labkit.checks.result_render import rendering
 from labkit.formats import attempts, console, findings, reviews
 from labkit.formats.findings import EFFECT_STANDS
 from labkit.formats.protocol_check import conclusion_written
-from labkit.formats.repo import audit_command, layout_root, shown, the_protocol
+from labkit.formats.repo import layout_root, shown, the_protocol
+from labkit.formats.commands import audit_command
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.formats.prompts import prompt_body
 from labkit.formats.standard_contract import ANALYSIS_AUDIT

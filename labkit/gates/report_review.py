@@ -67,12 +67,8 @@ from labkit.checks.report_blocks import Discussion, ReportBlockError, discussion
 from labkit.formats import attempts, console, findings, report_reviews
 from labkit.formats.report_reviews import ReportClaim, held_by
 from labkit.checks.report_review_inputs import review_keys, review_pieces
-from labkit.formats.repo import (
-    layout_root,
-    report_review_command,
-    shown,
-    the_protocol,
-)
+from labkit.formats.repo import layout_root, shown, the_protocol
+from labkit.formats.commands import report_review_command
 from labkit.formats.prompts import prompt_body
 from labkit.gates import audit, audit_prompt, audit_reply, report_hold
 from labkit.gates.ways_out import ANSWER_AGAIN

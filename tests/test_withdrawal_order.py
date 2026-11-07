@@ -21,7 +21,7 @@ from typing import Any, cast
 from unittest import mock
 
 from labkit.formats.gate import blocker, withdrawn_first
-from labkit.formats.repo import withdraw_command
+from labkit.formats.commands import withdraw_command
 from labkit.gates import report_check, report_context
 from test_end_to_end import CountCommands
 

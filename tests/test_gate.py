@@ -8,6 +8,7 @@ import contextlib
 import io
 import unittest
 
+from labkit.formats import commands
 from labkit.formats import gate
 
 
@@ -335,28 +336,26 @@ if __name__ == "__main__":
 
 class TheWayAsData(unittest.TestCase):
     """The one-explainer plan, Phase 2: a finding carries the command its
-    way out names as data (`GateFinding.step`, a `repo.Command`) and the
+    way out names as data (`GateFinding.step`, a `commands.Command`) and the
     withdrawal a hold names first as data (`withdraw_first`); what is told
     does not change — the twin of every site that passes a step."""
 
     def test_a_step_changes_no_line(self):
-        from labkit.formats import repo
 
-        step = repo.Command(repo.ADOPT, "labkit-adopt experiments/01-x R1")
+        step = commands.Command(commands.ADOPT, "labkit-adopt experiments/01-x R1")
         plain = gate.blocker("x", fix=f"`{step}` adopts it")
         with_step = gate.blocker("x", fix=f"`{step}` adopts it", step=step)
         self.assertEqual(with_step.line, plain.line)
         self.assertEqual(with_step.message, plain.message)
         self.assertEqual(str(step), step.line)
-        self.assertEqual(step.kind, repo.MECHANICAL)
+        self.assertEqual(step.kind, commands.MECHANICAL)
         with self.assertRaisesRegex(ValueError, "a command's name"):
-            repo.Command("dance", "x")
+            commands.Command("dance", "x")
 
     def test_withdraw_first_is_told_before_the_way_and_only_on_a_blocker(self):
-        from labkit.formats import repo
 
-        withdrawal = repo.Command(
-            repo.WITHDRAW, 'protocol-fill P --withdraw --why "<why>"'
+        withdrawal = commands.Command(
+            commands.WITHDRAW, 'protocol-fill P --withdraw --why "<why>"'
         )
         held = gate.blocker("the code changed", fix="measure anew")
         warned = gate.GateFinding(

@@ -92,7 +92,7 @@ import shlex
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from labkit.formats.repo import gate_command
+from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
     GUARANTEED,
     STATIC_EVIDENCE,
@@ -132,21 +132,23 @@ from labkit.formats.answering_run import (
 )
 from labkit.formats import protocol_history
 from labkit.formats.repo import (
-    adopt_command,
     AmbiguousArea,
-    Command,
-    RESTORE,
     area_path,
     area_protocols,
-    audit_command,
     git_root,
-    handover_command,
     layout_root,
-    measure_command,
     no_such_area,
     ProtocolChoiceError,
     shown,
     the_protocol,
+)
+from labkit.formats.commands import (
+    adopt_command,
+    Command,
+    RESTORE,
+    audit_command,
+    handover_command,
+    measure_command,
     withdraw_command,
 )
 from labkit.gates.ways_out import (
@@ -399,7 +401,7 @@ def registration_changes(
 
 
 def restore_step(protocol: Path, first: RunDir, root: Path | None) -> Command | None:
-    """The restore of a scope hold as a step (`repo.RESTORE`): the `git
+    """The restore of a scope hold as a step (`commands.RESTORE`): the `git
     show` of PROTOCOL as the first measurement FIRST's commit holds it —
     what `shown_then` names in words; None without a recorded commit or a
     repository. Read by `next_step` to tell a restore from another hold."""

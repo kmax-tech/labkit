@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from labkit.formats import protocol_block, protocol_check, runs, standard_contract
-from labkit.formats.repo import next_after_run
+from labkit.formats.commands import next_after_run
 from labkit.run import batch, llm, runlog
 
 #: calls per batch handed to `llm.complete_many` (the area's `workers` at a

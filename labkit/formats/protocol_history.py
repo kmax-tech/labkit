@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
+from labkit.formats import runs
 from labkit.formats.gate import GUARANTEED
 from labkit.formats import promises, protocol_block, standard_contract
 from labkit.formats.gate import AS_WRITTEN, BLOCKER, WARNING, GateFinding
@@ -214,7 +215,7 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     if was is None or head.repeat_cost is None:
         return None
     commit, first = was.commit, was.repeat_cost
-    tiers = protocol_block.REPEAT_COSTS
+    tiers = runs.REPEAT_COSTS
     if first not in tiers or tiers.index(head.repeat_cost) >= tiers.index(first):
         return None
     since = (

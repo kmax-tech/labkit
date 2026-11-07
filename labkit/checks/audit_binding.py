@@ -31,7 +31,8 @@ from labkit.formats import (
 )
 from labkit.formats.answering_run import adopted_run, bound_answering_run
 from labkit.formats.gate import with_way_out
-from labkit.formats.repo import contract_command, layout_root, shown
+from labkit.formats.repo import layout_root, shown
+from labkit.formats.commands import contract_command
 from labkit.formats.runs import read_outputs
 from labkit.formats.scope_sha import area_stamp
 from labkit.formats.standard_contract import ANALYSIS_AUDIT

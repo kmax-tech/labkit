@@ -22,16 +22,18 @@ from labkit.formats import (
     protocol_history,
 )
 from labkit.formats.repo import (
-    Command,
     ProtocolChoiceError,
     area_protocols,
+    given_or_in,
+    shown,
+    the_protocol,
+)
+from labkit.formats.commands import (
+    Command,
     audit_command,
     decide_command,
     gate_command,
-    given_or_in,
     handover_command,
-    shown,
-    the_protocol,
 )
 from labkit.formats.protocol_check import (
     FieldPlaceError,

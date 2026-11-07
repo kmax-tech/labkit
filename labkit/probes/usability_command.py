@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from labkit.formats.protocol_block import REPEAT_COSTS
+from labkit.formats.runs import REPEAT_COSTS
 from labkit.probes import agent_transcript
 from labkit.formats import console
 from labkit.probes.usability import LOG_TAGS, TASKS, log_step, restamp, stage

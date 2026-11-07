@@ -173,7 +173,7 @@ class EveryWayOut(unittest.TestCase):
     def test_every_literal_way_out_names_its_command(self):
         """`<what is refused>. Next: <command>` (agent-surface plan, step 6):
         the step after a repair by hand is the check run again
-        (`repo.gate_command`)."""
+        (`commands.gate_command`)."""
         missing = []
         for path in sorted((ROOT / "labkit").rglob("*.py")):
             rel = path.relative_to(ROOT).as_posix()

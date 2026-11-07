@@ -141,7 +141,7 @@ REPO = AREA.parent.parent
 sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
 from labkit.formats import criterion_bar, deliverable, promises, protocol_block, scope_sha, standard_contract, timebox
-from labkit.formats.repo import next_after_run
+from labkit.formats.commands import next_after_run
 from labkit.formats.answering_run import first_measurements
 
 HEAD = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))

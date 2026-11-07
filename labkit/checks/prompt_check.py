@@ -16,7 +16,8 @@ import ast
 import re
 from pathlib import Path
 
-from labkit.formats.repo import gate_command, shown
+from labkit.formats.repo import shown
+from labkit.formats.commands import gate_command
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.scope_sha import SCRIPT_GLOB, area_files
 from labkit.formats.gate import BLOCKER, WARNING, GateFinding, coded

@@ -262,6 +262,11 @@ def read_failure(run_dir: Path) -> str | None:
         raise RunConfigError(f"{path}: unreadable ({exc})") from exc
 
 
+#: the repeat costs a protocol head declares (`[protocol] repeat_cost`) and
+#: a run records as it ran under — here, below protocol_block, which reads
+#: the head and imports the run id from this module
+REPEAT_COSTS = ("low", "high")
+
 RUN_ID = re.compile(
     r"\b(?P<date>\d{4}-\d{2}-\d{2})T(?P<h>\d{2})-(?P<m>\d{2})-(?P<s>\d{2})_[0-9a-f]{2,12}\b"
 )
@@ -940,10 +945,6 @@ def parse_run_config(obj: object) -> RunConfig:
         raise RunConfigError(problem)
     try:
         kind = parse_run_kind(cfg["run_kind"])
-        # the head's alphabet lives in protocol_block, which imports RUN_ID from
-        # here: imported at the call, not at the module (no cycle, one home)
-        from labkit.formats.protocol_block import REPEAT_COSTS
-
         if cfg["repeat_cost"] is not None and cfg["repeat_cost"] not in REPEAT_COSTS:
             raise RunConfigError(
                 f"repeat_cost = {cfg['repeat_cost']!r}; expected "

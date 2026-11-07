@@ -32,12 +32,8 @@ from labkit.checks.audit_binding import (
 )
 from labkit.checks.result_render import render_gaps, rendering
 from labkit.formats.protocol_check import conclusion_written
-from labkit.formats.repo import (
-    area_protocols,
-    audit_command,
-    decide_command,
-    shown,
-)
+from labkit.formats.repo import area_protocols, shown
+from labkit.formats.commands import audit_command, decide_command
 from labkit.gates.report_context import Checked
 
 

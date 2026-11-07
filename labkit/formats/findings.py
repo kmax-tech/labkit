@@ -109,13 +109,12 @@ from labkit.formats.protocol_check import (
 from labkit.formats.repo import (
     INDEX_REV,
     PROTOCOL_NAME,
-    audit_command,
-    decide_command,
     files_at,
     git_root,
     shown,
     text_at,
 )
+from labkit.formats.commands import audit_command, decide_command
 from labkit.formats.runs import as_stored, date_minute, name_minute
 from labkit.formats.scope_sha import digest
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
@@ -1927,7 +1926,7 @@ def decide_way(
     area: Path, open_finding: OpenFinding, protocol: Path | None = None
 ) -> str:
     """The way out of OPEN_FINDING, an audit finding nobody decided in AREA:
-    its `--decide` command (`repo.decide_command`, STATUS and the reason
+    its `--decide` command (`commands.decide_command`, STATUS and the reason
     left for the person), and for a BLOCKER the `--findings` command that
     prints the ways out by cause beside it — the fix the gates that hold an
     undecided finding name."""

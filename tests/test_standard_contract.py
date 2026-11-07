@@ -8,7 +8,8 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from labkit.formats import protocol_block, standard_contract as sc
+from labkit.formats import runs
+from labkit.formats import standard_contract as sc
 from labkit.tools import scaffold
 from labkit.formats.protocol_check import FIELDS
 
@@ -46,7 +47,7 @@ class Lanes(unittest.TestCase):
             sc.lane("days")
 
     def test_the_tiers_are_the_heads(self):
-        self.assertEqual((sc.LOW, sc.HIGH), protocol_block.REPEAT_COSTS)
+        self.assertEqual((sc.LOW, sc.HIGH), runs.REPEAT_COSTS)
 
 
 class Registration(unittest.TestCase):

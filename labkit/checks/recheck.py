@@ -36,7 +36,7 @@ from labkit.formats import (
     runs,
     answering_run,
 )
-from labkit.formats.repo import adopt_command
+from labkit.formats.commands import adopt_command
 from labkit.checks import run_record_check
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to

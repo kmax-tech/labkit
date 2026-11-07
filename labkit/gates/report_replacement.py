@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from labkit.formats.repo import gate_command
+from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
     GateFinding,
     blocker,
@@ -25,11 +25,8 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.gates import ways_out
-from labkit.formats.repo import (
-    decide_command,
-    git_root,
-    handover_command,
-)
+from labkit.formats.repo import git_root
+from labkit.formats.commands import decide_command, handover_command
 from labkit.gates.report_context import Checked
 
 

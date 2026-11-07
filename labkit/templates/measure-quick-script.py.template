@@ -53,7 +53,7 @@ import json
 from pathlib import Path
 
 from labkit.formats import deliverable, protocol_block, reference
-from labkit.formats.repo import next_after_run
+from labkit.formats.commands import next_after_run
 from labkit.run import runlog
 
 AREA = Path(__file__).resolve().parent.parent

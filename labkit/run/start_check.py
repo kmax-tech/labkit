@@ -20,6 +20,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
 
@@ -361,7 +362,7 @@ def _audit_unavailable(
                 f"attempt of the code as it is now (code {sha}, promises "
                 f"{block_sha or 'no protocol'}, at least "
                 f"{failed_attempts.ATTEMPT_TIMEOUT_S} s) is recorded; attempts: {seen}",
-                f"run the audit: `{repo.audit_command(base_dir, '--mode', 'preflight', protocol=base_dir / bound.name if bound.head is not None else None)}`; "
+                f"run the audit: `{commands.audit_command(base_dir, '--mode', 'preflight', protocol=base_dir / bound.name if bound.head is not None else None)}`; "
                 "when the backend does not answer, it writes "
                 f"audits/<date>-preflight{findings.FAILED_SUFFIX}, and this "
                 "acknowledgement rests on that file — and its number cannot be "
@@ -751,7 +752,7 @@ def freeze_gate(base_dir: Path, prepared: Prepared) -> tuple[bool, str | None]:
                 "unfrozen protocol, an ignored finding; LABKIT_UNFROZEN=1 does not "
                 "pass it:\n  " + "\n  ".join(blockers),
                 f"decide each ({findings.DECIDED_LIST}) with the command "
-                f"`{repo.audit_command(base_dir, '--findings')}` prints per finding",
+                f"`{commands.audit_command(base_dir, '--findings')}` prints per finding",
             )
         )
     gaps = _freeze_findings(base_dir, prepared.bound)

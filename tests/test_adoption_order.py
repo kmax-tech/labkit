@@ -13,8 +13,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats import commands
 from labkit.gates.report_check import adoption_order_note  # noqa: E402
-from labkit.formats import protocol_block, repo  # noqa: E402
+from labkit.formats import protocol_block  # noqa: E402
 from labkit.formats.gate import blocker  # noqa: E402
 from labkit.run import start_check  # noqa: E402
 
@@ -22,12 +23,12 @@ from labkit.run import start_check  # noqa: E402
 ADOPT = blocker(
     "finalize: [result] names A, which cannot answer for p-1: unfinalized",
     fix="withdraw the adoption, audit the run that answers, then `labkit-adopt E <run_id>` adopts it",
-    step=repo.Command(repo.ADOPT, "labkit-adopt E <run_id>"),
+    step=commands.Command(commands.ADOPT, "labkit-adopt E <run_id>"),
 )
 RENDER = blocker(
     "result section: the Recorded results line differs from its rendering",
-    fix=f"`{repo.render_command()}` writes it again",
-    step=repo.render_command(),
+    fix=f"`{commands.render_command()}` writes it again",
+    step=commands.render_command(),
 )
 OPEN = blocker(
     "finalize: 2026-10-27T22-45-analysis.toml: BLOCKER · scripts/01_measure.py:113 · the refinement is truncated",

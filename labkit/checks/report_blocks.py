@@ -86,7 +86,7 @@ from labkit.formats.comment_blocks import (
 )
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.protocol_block import toml_string
-from labkit.formats.repo import DISCUSS, Command, adopt_command, into_command
+from labkit.formats.commands import DISCUSS, Command, adopt_command, into_command
 
 #: the block's opening and closing lines, each a line of its own
 OPEN = re.compile(
@@ -267,7 +267,7 @@ def block_gaps(
     now, one blocker each with its way out, or []: SOURCES maps each block's protocol (as
     written) to its `BlockSource`; the command that writes it again names
     protocol and report as the working directory reaches them
-    (`repo.into_command`). Exact: the declared run and equality of the
+    (`commands.into_command`). Exact: the declared run and equality of the
     body, no reading of what the body says."""
     gaps: list[GateFinding] = []
     for b in found:

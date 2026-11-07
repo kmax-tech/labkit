@@ -25,10 +25,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.formats import runs
 from labkit import PACKAGE_DIR
 from labkit.formats import console, promises, protocol_block, standard_contract
 from labkit.formats.repo import (
-    adopt_command,
     shown,
     git_root,
     protocol_link,
@@ -36,6 +36,7 @@ from labkit.formats.repo import (
     repo_protocols,
     state_text,
 )
+from labkit.formats.commands import adopt_command
 from labkit.formats.audit_gaps import RecordGap, audit_record_gap
 from labkit.formats.gate import BLOCKER, EXIT_CONTRACT, GateFinding, with_way_out
 from labkit.formats.protocol_history import (
@@ -459,7 +460,7 @@ def print_contract(protocol: Path | None = None) -> None:
         + f"; standard = {protocol_block.STANDARD!r}, type one of "
         + ", ".join(protocol_block.TYPES)
         + ", repeat_cost one of "
-        + ", ".join(protocol_block.REPEAT_COSTS)
+        + ", ".join(runs.REPEAT_COSTS)
         + ", kind one of "
         + ", ".join(protocol_block.KINDS)
         + " (what the kept number asserts: a computation judges no prediction, a fit "

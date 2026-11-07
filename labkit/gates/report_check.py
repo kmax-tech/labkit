@@ -154,21 +154,23 @@ from labkit.gates.report_hold import (
 )
 from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
+    area_protocols,
+    choose_protocol,
+    git_root,
+    indexed_protocols,
+    protocol_links,
+    shown,
+    state_text,
+)
+from labkit.formats.commands import (
     ADOPT,
     ADOPT_TOOL,
     RENDER,
     adopt_command,
-    area_protocols,
     audit_command,
-    choose_protocol,
     freeze_command,
     gate_command,
-    git_root,
-    indexed_protocols,
     measure_command,
-    protocol_links,
-    shown,
-    state_text,
     withdraw_command,
 )
 from labkit.formats.runs import read_run_config, run_path, unreportable
@@ -941,9 +943,9 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
 
 def adoption_order_note(blockers: list[GateFinding]) -> str | None:
     """The order to tell when BLOCKERS name an adoption (a finding whose
-    step is `repo.ADOPT`) beside blockers that are not themselves
+    step is `commands.ADOPT`) beside blockers that are not themselves
     projections of one (an adoption, or a rewrite of the result section,
-    step `repo.RENDER`): adoption runs this check and is refused while any
+    step `commands.RENDER`): adoption runs this check and is refused while any
     of them stands, so they come first. None otherwise — then the adoption
     line is the way out as printed. Why: printed bare, the adoption line
     beside an open BLOCKER on that run read as the fix to three of three

@@ -22,9 +22,7 @@ from labkit.formats.protocol_check import (
     registration_drift,
     registration_stamp,
 )
-from labkit.formats.repo import (
-    audit_command,
-)
+from labkit.formats.commands import audit_command
 from labkit.formats.scope_sha import area_stamp, validation_note
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 from labkit.formats.attempts import AttemptError, running, running_words

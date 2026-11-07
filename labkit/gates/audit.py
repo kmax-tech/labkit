@@ -84,13 +84,8 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats.gate import GUARANTEED, WARNING, GateFinding, coded, with_way_out
-from labkit.formats.repo import (
-    area_path,
-    audit_command,
-    decide_command,
-    no_such_area,
-    shown,
-)
+from labkit.formats.repo import area_path, no_such_area, shown
+from labkit.formats.commands import audit_command, decide_command
 from labkit.formats.runs import completed_runs
 from labkit.formats.scope_sha import (
     area_stamp,

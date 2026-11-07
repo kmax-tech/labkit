@@ -63,7 +63,7 @@ RULES: list[tuple[str, str, set[str]]] = [
     (
         "an adopt command spelled by hand",
         r"protocol-fill (?:\{[^}]*\} --from-run|--from-run \{)",
-        {"repo"},
+        {"commands"},
     ),
     # a run record's `data=` entry read by key in five places, one turning a
     # missing path into "None" (audit 2026-11-07, S11); `runs.data_entries`
@@ -103,8 +103,12 @@ RULES: list[tuple[str, str, set[str]]] = [
     ),
     # report-check printed `--into` with the protocol relative to the report
     # and the report relative to the repo: run from neither (audit
-    # 2026-10-27, third, S2); `repo.into_command`
-    ("an --into command spelled by hand", r"protocol-fill \{[^}]*\} --into", {"repo"}),
+    # 2026-10-27, third, S2); `commands.into_command`
+    (
+        "an --into command spelled by hand",
+        r"protocol-fill \{[^}]*\} --into",
+        {"commands"},
+    ),
     # thirteen modules read config.json's labkit fields by key; RunConfig
     # holds them typed where the record is read (2026-10-20)
     (
@@ -176,8 +180,8 @@ RULES: list[tuple[str, str, set[str]]] = [
     # the walk and the table of the gates' rules
     ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
     # four sites built the printed `--decide` line, each its own way (audit
-    # 2026-10-27, table C); `repo.decide_command`
-    ("a decide command spelled by hand", r"--decide \{", {"repo"}),
+    # 2026-10-27, table C); `commands.decide_command`
+    ("a decide command spelled by hand", r"--decide \{", {"commands"}),
     # the stop, the handover and --findings each filtered open findings to
     # BLOCKERs themselves, one by status and grade (audit 2026-10-27, table C);
     # `findings.open_blockers`

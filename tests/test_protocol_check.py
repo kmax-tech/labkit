@@ -26,6 +26,7 @@ REPO = Path(__file__).resolve().parent.parent
 TEMPLATE = REPO / "labkit" / "templates" / "experiment-protocol.md.template"
 
 sys.path.insert(0, str(REPO))
+from labkit.formats import runs  # noqa: E402
 from labkit.formats import (  # noqa: E402
     findings,
     promises,
@@ -1483,7 +1484,7 @@ class TestRepeatCost(unittest.TestCase):
         )
 
     def test_the_tier_is_read_from_the_head(self):
-        for tier in protocol_block.REPEAT_COSTS:
+        for tier in runs.REPEAT_COSTS:
             self.assertEqual(
                 protocol_block.head(head(repeat_cost=tier)).repeat_cost, tier
             )

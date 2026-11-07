@@ -914,7 +914,7 @@ class MissingRegisteredReport(unittest.TestCase):
 
 class TwoProtocols(unittest.TestCase):
     """The adopt line `next` names runs as named: with two protocols in the
-    area it carries `--protocol`, as `repo.adopt_command` builds it — the
+    area it carries `--protocol`, as `commands.adopt_command` builds it — the
     one home of that line. `next` built it by hand without the flag, and
     `labkit-adopt` refused it with "name one with --protocol" (workflow
     check 2026-11-05, finding iii)."""

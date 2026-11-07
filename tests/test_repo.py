@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats import commands
 from labkit.formats import repo  # noqa: E402
 from labkit.run import provenance, runlog  # noqa: E402
 
@@ -553,7 +554,7 @@ class GitHomes(unittest.TestCase):
 
 
 class AuditCommand(unittest.TestCase):
-    """`repo.audit_command`: the one builder of a printed audit step — paths
+    """`commands.audit_command`: the one builder of a printed audit step — paths
     as the working directory reaches them, quoted, `--protocol` where the
     area holds several (audit 2026-10-27, D)."""
 
@@ -562,7 +563,7 @@ class AuditCommand(unittest.TestCase):
         area = root / "experiments" / "01-x"
         area.mkdir(parents=True)
         (area / "PROTOCOL-a.md").write_text("# a\n")
-        one = repo.audit_command(
+        one = commands.audit_command(
             area,
             "--review",
             "--record",
@@ -574,7 +575,7 @@ class AuditCommand(unittest.TestCase):
             one.line, "labkit-audit experiments/01-x --review --record 'r 1.toml'"
         )
         (area / "PROTOCOL-b.md").write_text("# b\n")
-        two = repo.audit_command(
+        two = commands.audit_command(
             area, "--mode", "analysis", protocol=area / "PROTOCOL-b.md", base=root
         )
         self.assertEqual(
@@ -583,7 +584,7 @@ class AuditCommand(unittest.TestCase):
             "--protocol experiments/01-x/PROTOCOL-b.md",
         )
         self.assertEqual(
-            repo.audit_command(area, base=root.parent).line,
+            commands.audit_command(area, base=root.parent).line,
             "labkit-audit 'my lab/experiments/01-x'",
         )
         # runs as printed: the words read back to the area and the protocol from there
@@ -663,11 +664,11 @@ class AdoptCommand(unittest.TestCase):
             old = Path.cwd()
             try:
                 os.chdir(root)
-                at_root = repo.adopt_command(proto, "R1")
+                at_root = commands.adopt_command(proto, "R1")
                 os.chdir(proto.parent)
-                in_area = repo.adopt_command(proto)
+                in_area = commands.adopt_command(proto)
                 os.chdir(root.parent)
-                above = repo.adopt_command(proto)
+                above = commands.adopt_command(proto)
             finally:
                 os.chdir(old)
         self.assertEqual(at_root.line, "labkit-adopt experiments/01-x R1")
@@ -683,7 +684,7 @@ if __name__ == "__main__":
 
 class EveryBuilderIsACommand(unittest.TestCase):
     """The one-explainer plan, Phase 2: every builder returns a
-    `repo.Command` whose `str()` is its line — so a finding's text embeds
+    `commands.Command` whose `str()` is its line — so a finding's text embeds
     it as before — and whose name and kind are the table's."""
 
     def test_names_kinds_and_lines(self):
@@ -697,36 +698,38 @@ class EveryBuilderIsACommand(unittest.TestCase):
             os.chdir(root)
             try:
                 built = {
-                    repo.ADOPT: repo.adopt_command(proto, "R1"),
-                    repo.WITHDRAW: repo.withdraw_command(proto),
-                    repo.MEASURE: repo.measure_command(area),
-                    repo.CHECK: repo.gate_command("finalize", area),
-                    repo.INTO: repo.into_command(proto, root / "REPORT.md"),
-                    repo.HANDOVER: repo.handover_command(proto),
-                    repo.AUDIT: repo.audit_command(area, "--mode", "analysis"),
-                    repo.DECIDE: repo.decide_command(
+                    commands.ADOPT: commands.adopt_command(proto, "R1"),
+                    commands.WITHDRAW: commands.withdraw_command(proto),
+                    commands.MEASURE: commands.measure_command(area),
+                    commands.CHECK: commands.gate_command("finalize", area),
+                    commands.INTO: commands.into_command(proto, root / "REPORT.md"),
+                    commands.HANDOVER: commands.handover_command(proto),
+                    commands.AUDIT: commands.audit_command(area, "--mode", "analysis"),
+                    commands.DECIDE: commands.decide_command(
                         area, 1, "fixed", "<why>", "r.toml"
                     ),
-                    repo.REVIEW: repo.report_review_command(
+                    commands.REVIEW: commands.report_review_command(
                         area, root / "REPORT.md", proto
                     ),
-                    repo.RENDER: repo.render_command(),
+                    commands.RENDER: commands.render_command(),
                 }
             finally:
                 os.chdir(old)
         for name, command in built.items():
             with self.subTest(name=name):
-                self.assertIsInstance(command, repo.Command)
+                self.assertIsInstance(command, commands.Command)
                 self.assertEqual(command.name, name)
                 self.assertEqual(str(command), command.line)
-                self.assertEqual(command.kind, repo.COMMAND_KIND[name])
-        self.assertEqual(repo.contract_command(proto).name, repo.CHECK)
+                self.assertEqual(command.kind, commands.COMMAND_KIND[name])
+        self.assertEqual(commands.contract_command(proto).name, commands.CHECK)
         self.assertEqual(
-            built[repo.MEASURE].line,
+            built[commands.MEASURE].line,
             ".venv/bin/python experiments/01-x/scripts/01_measure.py",
         )
-        self.assertEqual(built[repo.RENDER].line, "protocol-fill <PROTOCOL> --render")
         self.assertEqual(
-            repo.render_command(from_run=True).line,
+            built[commands.RENDER].line, "protocol-fill <PROTOCOL> --render"
+        )
+        self.assertEqual(
+            commands.render_command(from_run=True).line,
             "protocol-fill <PROTOCOL> --from-run",
         )

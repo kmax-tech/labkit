@@ -22,7 +22,8 @@ from typing import cast
 from labkit.formats.runs import metrics_path, run_path, runs_path
 from labkit.formats import promises, protocol_block
 from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
-from labkit.formats.repo import Command, commit_known, earliest_commits, measure_command
+from labkit.formats.repo import commit_known, earliest_commits
+from labkit.formats.commands import Command, measure_command
 from labkit.formats.scope_sha import digest
 from labkit.formats.runs import (
     as_stored,

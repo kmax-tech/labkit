@@ -37,7 +37,8 @@ from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
 from labkit.formats.gate import GateFinding, blocker
-from labkit.formats.repo import git_root, render_command
+from labkit.formats.repo import git_root
+from labkit.formats.commands import render_command
 from labkit.formats.protocol_check import (
     CONCLUSION_LABEL,
     QUESTION_LABEL,
