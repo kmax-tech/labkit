@@ -89,7 +89,7 @@ skeleton's `00_prepare.py --audit` counts are hints for the data profile, not th
 
 If you fix code, audit the fixed code before the freeze.
 
-Commit the code and the registration. Keep raw data under `data/raw/`. Prepare inputs with a script, `scripts/00_prepare.py`, into `data/prepared/`. Put small inputs into git if you can legally share them. Keep large or protected data outside git on purpose, by an ignore rule (a `.gitignore` or `.git/info/exclude`), and write their source or access route and version into Data / scope. Pass every input in `data=`: the run records its sha256, and finalize holds each source, in git or outside it, to the bytes the run read. A file neither tracked nor ignored blocks. To resume a run, use the same measurement command.
+Commit the code and the registration. Keep raw data under `data/raw/`. Prepare inputs with a script, `scripts/00_prepare.py`, into `data/prepared/`. Put small inputs into git if you can legally share them. Keep large or protected data outside git on purpose, by an ignore rule (a `.gitignore` or `.git/info/exclude`), and write their source or access route and version into Data / scope. Pass every input in `data=`: the run records its sha256. At `repeat_cost = low`, finalize holds each source, in git or outside it, to the bytes the run read, and a file neither tracked nor ignored blocks. At `high` it skips that comparison and the git check (the agent audit covers provenance there); the data counts in Data / scope and the registered outputs are still held to the run at both repeat costs. To resume a run, use the same measurement command.
 
 ### 4. Finalize, audit and decide
 

@@ -136,8 +136,9 @@ Run-record details: [protocol/run binding](protocol-run-binding.md).
 **Allowed changes:** none through this command; it only reads evidence.
 
 **Command and output:** `finalize AREA` checks the selected answering run,
-registration, code, provenance, outputs, promises, area tests and audit
-evidence. It prints findings and writes no result declaration.
+registration, code, provenance (at repeat cost low only: each data input
+against the bytes its run recorded), outputs, promises, area tests and
+audit evidence. It prints findings and writes no result declaration.
 
 **Done / way out:** no blocker remains. This permits the next checks; it
 does not release a result. A real implementation repair needs a new run
