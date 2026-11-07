@@ -159,6 +159,39 @@ class Layers(unittest.TestCase):
         self.assertEqual(up, [])
 
 
+def on_a_cycle(graph: dict[str, set[str]]) -> list[str]:
+    """The modules of GRAPH (module → the modules it imports) that reach
+    themselves through their imports, sorted."""
+
+    def reaches(start: str) -> set[str]:
+        seen: set[str] = set()
+        todo = list(graph.get(start, ()))
+        while todo:
+            m = todo.pop()
+            if m not in seen:
+                seen.add(m)
+                todo.extend(graph.get(m, ()))
+        return seen
+
+    return sorted(m for m in graph if m in reaches(m))
+
+
+class NoImportCycle(unittest.TestCase):
+    """The downward rule forbids an upward import but not a cycle inside a
+    layer; five stood until 2026-11-07, each a helper kept in the module of
+    its first caller (architecture audit, L1). Lazy imports count."""
+
+    def test_no_module_reaches_itself_through_its_imports(self):
+        graph = {m: imports_of(m) - {m} for m in modules()}
+        self.assertEqual(on_a_cycle(graph), [])
+
+    def test_the_check_bites(self):
+        self.assertEqual(
+            on_a_cycle({"a": {"b"}, "b": {"c"}, "c": {"a"}, "d": {"a"}}),
+            ["a", "b", "c"],
+        )
+
+
 class Packaging(unittest.TestCase):
     def test_every_package_ships(self):
         """pyproject names every folder holding an `__init__.py`: a package
