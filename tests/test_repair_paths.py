@@ -511,7 +511,7 @@ class RegisteredReportRepairs(RepairPaths):
             ".venv/bin/python",
             "-c",
             "from pathlib import Path; from labkit.gates import agent_hooks; "
-            "r = Path('.').resolve(); print(agent_hooks.missing_reports(r, [r / 'REPORT.md']).lines)",
+            "r = Path('.').resolve(); print(agent_hooks.missing_reports(r, [r / 'REPORT.md']).steps)",
         )
         self.assertIn("which is not written", stop)
         self.run_("git", "checkout", "HEAD", "--", "REPORT.md")

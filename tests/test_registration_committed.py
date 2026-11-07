@@ -1063,11 +1063,25 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         report = self.root / "REPORT.md"
         report.write_text("# Report\n\n0.93\n", encoding="utf-8")
         with contextlib.chdir(self.root):
-            (line,) = agent_hooks.missing_reports(self.root, [report]).lines
+            (line,) = agent_hooks.missing_reports(self.root, [report]).steps.values()
             self.assertIn("labkit-next:", line)
             note = self.root / "NOTE.md"
             note.write_text("# Note\n", encoding="utf-8")
-            self.assertEqual(agent_hooks.missing_reports(self.root, [note]).lines, [])
+            self.assertEqual(agent_hooks.missing_reports(self.root, [note]).steps, {})
+
+    def test_an_index_that_does_not_read_is_no_missing_report(self):
+        """A run index that does not read is told apart from a report not
+        written: whether a measurement owes the report cannot be told, so it
+        holds under its own heading, never as an unwritten report."""
+        from labkit.gates import agent_hooks
+
+        self._register("docs/OTHER.md")
+        (self.area / "runs.tsv").write_text("not a header\n", encoding="utf-8")
+        with contextlib.chdir(self.root):
+            missing = agent_hooks.missing_reports(self.root, [self.proto])
+        self.assertEqual(missing.steps, {})
+        (line,) = missing.unreadable
+        self.assertIn("runs.tsv", line)
 
     def test_the_first_measurement_starts_only_with_its_report_committed(self):
         from labkit.run import start_check

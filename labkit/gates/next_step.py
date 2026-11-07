@@ -66,7 +66,7 @@ no check of its own: every hold it names is a gate's finding.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -262,7 +262,7 @@ def steps_for(
     *,
     staged: bool,
     chains: Mapping[Path, ReleaseChain] | None = None,
-    rendered: Mapping[Path, str] | None = None,
+    skip: Collection[Path] = (),
 ) -> list[str]:
     """Per protocol the state PATHS change reaches
     (`report_check.reached_by`: the protocols of the areas touched, those
@@ -277,8 +277,8 @@ def steps_for(
     is told in one line in the step's place; a run index that does not
     read once per index. CHAINS, per protocol, what the caller's
     report-check found in the same state (`report_check.HoldVerdict`): read,
-    not run again; RENDERED, per protocol a step the caller already
-    composed (`agent_hooks.MissingReports.steps`): returned as it is."""
+    not run again; SKIP, the protocols whose step the caller printed
+    already (`agent_hooks.MissingReports.steps`): left out."""
     from labkit.gates.report_check import reached_by
     from labkit.run.runlog import RunIndexError
 
@@ -286,8 +286,7 @@ def steps_for(
     for protocol in reached_by(paths, repo, staged=staged).protocols:
         area = protocol.parent.resolve()
         named = shown(area, Path.cwd())
-        if rendered is not None and protocol in rendered:
-            out.append(rendered[protocol])
+        if protocol in skip:
             continue
         try:
             step = next_step(

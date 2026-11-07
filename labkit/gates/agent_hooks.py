@@ -316,26 +316,23 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
             )
     # after report-check, so its chains are read instead of run again
     missing = missing_reports(repo, changed, chains=chains)
-    if missing.lines:
-        print(
-            "a protocol of an area this session worked in registers a report "
-            "that is not written — the stop holds:\n  " + "\n  ".join(missing.lines),
-            file=sys.stderr,
-        )
+    _tell_missing(missing)
     if undecided or rc != 0:
         # what to do is `next`'s step per protocol touched, read from the tree
         # the stop judges and the chains report-check ran on it; a protocol
-        # whose missing report printed its step above is not printed again
+        # whose missing report printed its step above is left out
         steps = steps_for(
-            repo, changed, staged=False, chains=chains, rendered=missing.steps
+            repo, changed, staged=False, chains=chains, skip=missing.steps.keys()
         )
-        steps = [s for s in steps if s not in missing.lines]
         if steps:
             print("\n".join(steps), file=sys.stderr)
     # commits it could not read keep the base where it is: past them, no
     # later stop would check them
     return (
-        rc != 0 or bool(undecided) or bool(missing.lines) or session.hold,
+        rc != 0
+        or bool(undecided)
+        or bool(missing.steps or missing.unreadable)
+        or session.hold,
         not in_tree and not session.unchecked,
         checked_head,
     )
@@ -344,13 +341,33 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
 @dataclass(frozen=True)
 class MissingReports:
     """What the stop holds for registered reports not written
-    (`missing_reports`): LINES, what it prints — per protocol the step
-    `labkit-next` names, a run index that does not read once; STEPS, per
-    protocol its rendered step, so the steps the stop prints after its
-    holds are not composed a second time (`next_step.steps_for`)."""
+    (`missing_reports`): STEPS, per protocol whose report is not written the
+    step `labkit-next` names for it, rendered — the stop prints them and
+    leaves those protocols out of the steps it prints after its holds
+    (`next_step.steps_for`); UNREADABLE, a run index that does not read,
+    once per index: whether a measurement owes the report cannot be told."""
 
-    lines: list[str]
     steps: dict[Path, str]
+    unreadable: list[str]
+
+
+def _tell_missing(missing: MissingReports) -> None:
+    """Print on stderr what MISSING holds the stop for: each report not
+    written with its step, apart from a run index that does not read."""
+    if missing.steps:
+        print(
+            "a protocol of an area this session worked in registers a report "
+            "that is not written — the stop holds:\n  "
+            + "\n  ".join(missing.steps.values()),
+            file=sys.stderr,
+        )
+    if missing.unreadable:
+        print(
+            "whether a protocol of an area this session worked in owes its "
+            "registered report cannot be told — the stop holds:\n  "
+            + "\n  ".join(missing.unreadable),
+            file=sys.stderr,
+        )
 
 
 def missing_reports(
@@ -371,7 +388,7 @@ def missing_reports(
     to the checks that hold it where it is touched; a run index that does
     not read is told, once per index (`runlog.RunIndexError`): whether a
     measurement owes the report cannot be told."""
-    out = MissingReports([], {})
+    out = MissingReports({}, [])
     for protocol in report_check.reached_by(paths, repo, staged=False).protocols:
         area = protocol.parent.resolve()
         try:
@@ -384,8 +401,8 @@ def missing_reports(
         except RunIndexError as exc:
             # whether a measurement owes the report cannot be told; one
             # line per index, not per protocol reading it
-            if exc.why not in out.lines:
-                out.lines.append(exc.why)
+            if exc.why not in out.unreadable:
+                out.unreadable.append(exc.why)
             continue
         if gap is not None:
             # the hold is the gate's finding; what to do is `next`'s step,
@@ -393,7 +410,6 @@ def missing_reports(
             step = next_step(area, protocol, chain=(chains or {}).get(protocol)).render(
                 shown(area, Path.cwd())
             )
-            out.lines.append(step)
             out.steps[protocol] = step
     return out
 
