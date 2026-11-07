@@ -38,7 +38,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, Mapping
 
-from labkit.formats import files, jsonl, runs, scope_sha
+from labkit.formats import digests
+from labkit.formats import files, jsonl, runs
 
 
 def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
@@ -100,12 +101,12 @@ def row_runs(path: Path) -> RowRuns:
 
 
 def content_sha(value: object) -> str:
-    """The digest (`scope_sha.digest`, 12 hex digits) of VALUE as the file
+    """The digest (`digests.digest`, 12 hex digits) of VALUE as the file
     stores it (`runs.as_stored`, keys sorted): an input's fingerprint for a row to
     carry, so a ledger can tell an edited item from the one the row was
     made from. Key order does not change it; `1` and `true` differ. Raises
     TypeError for a value JSON cannot hold."""
-    return scope_sha.digest(runs.as_stored(value).encode("utf-8"))
+    return digests.digest(runs.as_stored(value).encode("utf-8"))
 
 
 def _key(value: object) -> str:

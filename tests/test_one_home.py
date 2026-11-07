@@ -27,7 +27,7 @@ IN_TEMPLATES = {
 
 #: (what, the shape of a copy, the module(s) where it belongs)
 RULES: list[tuple[str, str, set[str]]] = [
-    ("sha256 by hand", r"hashlib\.", {"scope_sha"}),
+    ("sha256 by hand", r"hashlib\.", {"digests"}),
     # the estimator skeleton and the prompt skeleton each added a margin by
     # hand, and a bar the task states fitted neither (labkit-paper area 17,
     # 2026-11-02): `criterion_bar.bar_of`

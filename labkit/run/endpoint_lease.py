@@ -68,7 +68,8 @@ import uuid
 from pathlib import Path
 from collections.abc import Iterator
 
-from labkit.formats import files, runs, scope_sha
+from labkit.formats import digests
+from labkit.formats import files, runs
 
 _HELD: set[tuple[str, str]] = set()  # (endpoint, alias) held by this process
 _FILES: dict[tuple[str, str], Path] = {}
@@ -103,7 +104,7 @@ def endpoint_dir(endpoint: str) -> str:
     canonical = urllib.parse.urlunsplit(
         (u.scheme.lower(), u.netloc.lower(), u.path.rstrip("/"), u.query, "")
     )
-    return f"{_slug(canonical)[:60]}-{scope_sha.digest(canonical.encode('utf-8'))}"
+    return f"{_slug(canonical)[:60]}-{digests.digest(canonical.encode('utf-8'))}"
 
 
 def _script() -> str:

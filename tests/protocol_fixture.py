@@ -6,13 +6,14 @@ One home for the shape, so a fixture states only what it varies:
 
 from __future__ import annotations
 
+from labkit.formats import digests
 from labkit.formats.runs import RunKind
 
 import json
 import subprocess
 from pathlib import Path
 
-from labkit.formats import promises, runs, scope_sha
+from labkit.formats import promises, runs
 
 PID = "p-0123456789abcdef"
 
@@ -104,7 +105,7 @@ def script_sha_of(script: Path) -> str:
     """The `script_sha` a run of SCRIPT records (`provenance.snapshot_script`):
     a fixture run that names the script it ran, so the code-since-run check
     (finalize station 3) finds it unchanged."""
-    return scope_sha.file_digest(script)[: scope_sha.DIGEST_CHARS]
+    return digests.file_digest(script)[: digests.DIGEST_CHARS]
 
 
 def source_entry(source: Path, recorded: str | None = None) -> dict:

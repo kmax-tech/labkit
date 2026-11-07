@@ -141,7 +141,7 @@ def run_state(run_dir: Path, alive: bool | None) -> RunState:
 COMPLETED: Final = "completed"
 UNREADABLE: Final = "unreadable"
 #: the width of every digest a run RECORDS (a data file, an output) — the
-#: area stamp and a promise's scope hash keep `scope_sha.DIGEST_CHARS`;
+#: area stamp and a promise's scope hash keep `digests.DIGEST_CHARS`;
 #: `recheck.pin` compares by prefix, so the width is part of the format
 RECORD_SHA_CHARS = 16
 

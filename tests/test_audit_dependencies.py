@@ -14,8 +14,9 @@ import unittest
 from pathlib import Path
 
 from protocol_fixture import run_record  # noqa: E402
+from labkit.formats import digests
 from labkit.checks import audit_binding
-from labkit.formats import runs, scope_sha
+from labkit.formats import runs
 
 MODEL = {"weights": [0.8, 0.6], "mean": [52.0, 128.0], "std": [12.0, 16.0]}
 
@@ -44,7 +45,7 @@ class DeclaredDependencies(unittest.TestCase):
     def entry(self, path: Path, rows: int | None) -> dict:
         return {
             "path": path.relative_to(self.root).as_posix(),
-            "sha256": scope_sha.file_digest(path)[: runs.RECORD_SHA_CHARS],
+            "sha256": digests.file_digest(path)[: runs.RECORD_SHA_CHARS],
             "rows": rows,
         }
 

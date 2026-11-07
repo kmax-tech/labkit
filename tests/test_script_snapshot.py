@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from labkit.formats import scope_sha
+from labkit.formats import digests
 from labkit.run import provenance
 
 
@@ -43,12 +43,12 @@ class SnapshotScript(unittest.TestCase):
         with mock.patch.object(Path, "write_bytes", write_then_edit):
             sha = provenance.snapshot_script(self.run_dir)
         self.assertEqual(self._copy(), b"N = 1\n")
-        self.assertEqual(sha, scope_sha.digest(self._copy()))
+        self.assertEqual(sha, digests.digest(self._copy()))
 
     def test_an_unchanged_script_records_its_own_hash(self) -> None:
         sha = provenance.snapshot_script(self.run_dir)
         self.assertEqual(sha, provenance.script_sha())
-        self.assertEqual(sha, scope_sha.digest(self._copy()))
+        self.assertEqual(sha, digests.digest(self._copy()))
 
 
 if __name__ == "__main__":

@@ -192,8 +192,9 @@ from labkit.formats.repo import (
     status_entries,
     touched_paths,
 )
-from labkit.formats.scope_sha import areas_touched, file_digest
-from labkit.formats.scope_sha import digest as scope_digest
+from labkit.formats.scope_sha import areas_touched
+from labkit.formats.digests import file_digest
+from labkit.formats.digests import digest as scope_digest
 
 # The stamps' throwaway stages (`standard_contract.NO_RUN_FLAGS`): none of
 # them opens a run, and the probe is what comes BEFORE preflight, so gating

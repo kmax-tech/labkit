@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import NamedTuple
 
+from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
     findings,
@@ -27,7 +28,6 @@ from labkit.formats import (
     protocol_block,
     protocol_check,
     runs,
-    scope_sha,
 )
 from labkit.formats.answering_run import adopted_run, bound_answering_run
 from labkit.formats.gate import with_way_out
@@ -187,7 +187,7 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
             why = "a directory" if path.is_dir() else "gone from the tree"
             out.append((label, f"{NOT_SHOWN} {why}"))
             continue
-        now = scope_sha.file_digest(path)[: len(digest)]
+        now = digests.file_digest(path)[: len(digest)]
         if now != digest:
             out.append(
                 (
@@ -290,7 +290,7 @@ def run_shown(area: Path, run_dir: Path | None, why: str, text: str) -> RunShown
         ]
     )
     bound = runs.as_stored(pieces) + "\n" + protocol_check.audited_texts(text)
-    return RunShown(pieces, scope_sha.digest(bound.encode("utf-8")))
+    return RunShown(pieces, digests.digest(bound.encode("utf-8")))
 
 
 def rows_excerpt(path: Path, name: str) -> tuple[str, str]:

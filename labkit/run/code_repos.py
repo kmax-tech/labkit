@@ -43,7 +43,7 @@ from labkit.formats import repo
 from labkit.formats.files import write_atomic, write_atomic_bytes
 from labkit.formats.gate import with_way_out
 from labkit.formats.runs import CODE_DIR, CODE_FILE, RECORD_SHA_CHARS, RUN_SCHEMA
-from labkit.formats.scope_sha import file_digest
+from labkit.formats.digests import file_digest
 
 #: an imported file above this size is not copied, and a measurement
 #: refuses to start on it (`require_recordable`): a "source file" that

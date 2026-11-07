@@ -59,7 +59,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from labkit.formats import files, protocol_block, runs, scope_sha
+from labkit.formats import digests
+from labkit.formats import files, protocol_block, runs
 
 #: the kinds of promise — each one an id's stem: `criterion-1`
 KINDS = ("criterion", "quality-check", "branch")
@@ -506,7 +507,7 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
         ensure_ascii=False,
     )
     return PromiseTables(
-        promises=tuple(out), sha=scope_sha.digest(canonical.encode("utf-8"))
+        promises=tuple(out), sha=digests.digest(canonical.encode("utf-8"))
     )
 
 
@@ -825,7 +826,7 @@ def declared_scope_sha(base: Path, scope: tuple[str, ...]) -> str:
     renaming an entry changes the stamp too. A missing file or function is
     a PromiseError, never an empty digest.
     """
-    return scope_sha.tree_digest(scope_sources(base, scope))
+    return digests.tree_digest(scope_sources(base, scope))
 
 
 def scope_drift(recorded: dict | None, base: Path) -> list[str]:

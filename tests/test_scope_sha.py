@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.formats import digests
 from labkit.gates import audit_prompt, audit_reply
 from labkit.formats import scope_sha
 
@@ -26,20 +27,20 @@ class Digests(unittest.TestCase):
         f = Path(tempfile.mkdtemp()) / "x.bin"
         f.write_bytes(b"abc" * 1_000_000)  # past one read chunk
         self.assertEqual(
-            scope_sha.file_digest(f), hashlib.sha256(b"abc" * 1_000_000).hexdigest()
+            digests.file_digest(f), hashlib.sha256(b"abc" * 1_000_000).hexdigest()
         )
 
     def test_tree_digest_moves_on_name_content_order_and_trailer(self):
-        base = scope_sha.tree_digest([("a", b"1"), ("b", b"2")])
-        self.assertEqual(len(base), scope_sha.DIGEST_CHARS)
-        self.assertEqual(base, scope_sha.tree_digest([("a", b"1"), ("b", b"2")]))
-        self.assertNotEqual(base, scope_sha.tree_digest([("a", b"1"), ("c", b"2")]))
-        self.assertNotEqual(base, scope_sha.tree_digest([("a", b"1"), ("b", b"3")]))
-        self.assertNotEqual(base, scope_sha.tree_digest([("b", b"2"), ("a", b"1")]))
+        base = digests.tree_digest([("a", b"1"), ("b", b"2")])
+        self.assertEqual(len(base), digests.DIGEST_CHARS)
+        self.assertEqual(base, digests.tree_digest([("a", b"1"), ("b", b"2")]))
+        self.assertNotEqual(base, digests.tree_digest([("a", b"1"), ("c", b"2")]))
+        self.assertNotEqual(base, digests.tree_digest([("a", b"1"), ("b", b"3")]))
+        self.assertNotEqual(base, digests.tree_digest([("b", b"2"), ("a", b"1")]))
         self.assertNotEqual(
-            base, scope_sha.tree_digest([("a", b"1"), ("b", b"2")], trailer=["pin"])
+            base, digests.tree_digest([("a", b"1"), ("b", b"2")], trailer=["pin"])
         )
-        self.assertEqual(len(scope_sha.tree_digest([("a", b"1")], chars=None)), 64)
+        self.assertEqual(len(digests.tree_digest([("a", b"1")], chars=None)), 64)
 
     def test_tree_digest_is_the_spelled_out_shape(self):
         # the shape the stamps were recorded with: name, newline, hex of the
@@ -48,7 +49,7 @@ class Digests(unittest.TestCase):
         h.update(b"a\n" + hashlib.sha256(b"1").hexdigest().encode() + b"\n")
         h.update(b"labkit==1\n")
         self.assertEqual(
-            scope_sha.tree_digest([("a", b"1")], trailer=["labkit==1"], chars=None),
+            digests.tree_digest([("a", b"1")], trailer=["labkit==1"], chars=None),
             h.hexdigest(),
         )
 
@@ -88,7 +89,7 @@ class TestScopeSha(unittest.TestCase):
         a = self._sha(["--area", str(self.area), str(self.anchor)])
         b = self._sha(["--area", str(self.area), str(self.anchor)])
         self.assertEqual(a, b)
-        self.assertEqual(len(a), scope_sha.DIGEST_CHARS)
+        self.assertEqual(len(a), digests.DIGEST_CHARS)
 
     def test_content_change_moves_the_stamp(self):
         """The failure of the shell version: an edited anchor left it untouched."""

@@ -20,7 +20,7 @@ from protocol_fixture import run_record, head
 from labkit.tools import protocol_result
 from labkit.checks import recheck
 from labkit.formats import answering_run
-from labkit.formats.scope_sha import file_digest
+from labkit.formats.digests import file_digest
 
 PID_A = "p-aaaaaaaaaaaaaaaa"
 PID_B = "p-bbbbbbbbbbbbbbbb"

@@ -28,12 +28,8 @@ from labkit.formats.runs import (
     script_copy_path,
     untracked_copy_path,
 )
-from labkit.formats.scope_sha import (
-    DIGEST_CHARS,
-    SourceError,
-    file_digest,
-    measured_code,
-)
+from labkit.formats.scope_sha import SourceError, measured_code
+from labkit.formats.digests import DIGEST_CHARS, file_digest
 from labkit.run import batch
 from labkit.run.provenance import source_digest, visible_files
 from labkit.formats import jsonl, promises, protocol_block

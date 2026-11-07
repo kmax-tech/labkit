@@ -24,7 +24,7 @@ from labkit.formats import promises, protocol_block
 from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding
 from labkit.formats.repo import commit_known, earliest_commits
 from labkit.formats.commands import Command, measure_command
-from labkit.formats.scope_sha import digest
+from labkit.formats.digests import digest
 from labkit.formats.runs import (
     as_stored,
     binding_of,
@@ -171,7 +171,7 @@ REPEAT_SEED_KEY = "seed"
 
 def repeat_seed(run_id: str, draw: int) -> int:
     """The seed draw DRAW of RUN_ID gets when its seed is drawn anew: the
-    first four bytes of sha256("<run_id>:<draw>") (`scope_sha.digest`, eight
+    first four bytes of sha256("<run_id>:<draw>") (`digests.digest`, eight
     hex characters) as an unsigned integer —
     below 2**32, which numpy's and scikit-learn's `random_state` take.
     Anyone recomputes it from the repeat's record (`repeat_of`, `draw`);

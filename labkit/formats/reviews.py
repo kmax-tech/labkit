@@ -85,7 +85,7 @@ from labkit.formats.findings import REVIEW_NAME, create_file, written_order
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_check import reported_claim
 from labkit.formats.runs import as_stored, date_minute, name_minute
-from labkit.formats.scope_sha import digest
+from labkit.formats.digests import digest
 
 VERDICTS = ("upheld", "rejected", "insufficient")
 UPHELD, REJECTED, INSUFFICIENT = VERDICTS

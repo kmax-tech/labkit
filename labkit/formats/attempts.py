@@ -113,7 +113,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import audit_command
 from labkit.formats.runs import name_minute, now_stamp
-from labkit.formats.scope_sha import digest
+from labkit.formats.digests import digest
 
 EVENTS = ("started", "ended", "interrupted")
 #: how an attempt ended: the record, the evidence of a failed call, or no file

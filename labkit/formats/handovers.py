@@ -41,6 +41,7 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
+from labkit.formats import digests
 from labkit.formats import (
     answering_run,
     files,
@@ -49,7 +50,6 @@ from labkit.formats import (
     protocol_block,
     report_reviews,
     runs,
-    scope_sha,
 )
 from labkit.formats.comment_blocks import (
     HEAD_END,
@@ -145,7 +145,7 @@ class Handover:
 
 def protocol_fingerprint(text: str) -> str:
     """SHA256 of normalized UTF-8 text for the protocol projection."""
-    return scope_sha.digest(text.encode("utf-8"), chars=None)
+    return digests.digest(text.encode("utf-8"), chars=None)
 
 
 def evidence(

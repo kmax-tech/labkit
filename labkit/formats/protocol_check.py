@@ -40,11 +40,11 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from labkit.formats import digests
 from labkit import PACKAGE_DIR
 from labkit.formats import (
     promises,
     protocol_block,
-    scope_sha,
     standard_contract,
     answering_run,
 )
@@ -1102,11 +1102,11 @@ def registration_stamp(text: str) -> dict[str, str]:
     values = field_values(text)
     out = {REGISTRATION_KIND: kind or REGISTRATION_ABSENT}
     if kept is not None:
-        out[REGISTRATION_KEPT] = scope_sha.digest(
+        out[REGISTRATION_KEPT] = digests.digest(
             protocol_block.kept_toml(kept).encode("utf-8")
         )
     if ref is not None:
-        out[REGISTRATION_REFERENCE] = scope_sha.digest(
+        out[REGISTRATION_REFERENCE] = digests.digest(
             protocol_block.reference_toml(ref).encode("utf-8")
         )
     for label in labels:
@@ -1114,7 +1114,7 @@ def registration_stamp(text: str) -> dict[str, str]:
         out[label] = (
             REGISTRATION_ABSENT
             if value is None
-            else scope_sha.digest(value.encode("utf-8"))
+            else digests.digest(value.encode("utf-8"))
         )
     return out
 

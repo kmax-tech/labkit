@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import protocol_fixture as fixture  # noqa: E402
 from protocol_fixture import protocol_text_of, registration_of, run_record, shown_sha  # noqa: E402
+from labkit.formats import digests
 from labkit.gates import (
     audit,
     audit_decisions,
@@ -740,7 +741,7 @@ class OneSnapshot(unittest.TestCase):
             label.removeprefix("FILE: "): body[:-1]  # the join's newline
             for label, body in zip(parts[1::2], parts[2::2], strict=True)
         }
-        return scope_sha.tree_digest(
+        return digests.tree_digest(
             sorted((key, shown[key].encode("utf-8")) for key in stamped)
         )
 
@@ -1847,14 +1848,14 @@ class RequiredCheck(unittest.TestCase):
         """A changed or removed check is another decision; a finding without
         one keeps the digest it had before checks existed."""
         base = findings.Finding("BLOCKER", "x", "fixed", "r")
-        legacy = scope_sha.digest(
+        legacy = digests.digest(
             findings.as_stored(["BLOCKER", "x", "fixed", "r", ""]).encode("utf-8")
         )
         self.assertEqual(findings.decision_digest(base), legacy)
         with_check = findings.Finding("BLOCKER", "x", "fixed", "r", "", "a_key")
         other = findings.Finding("BLOCKER", "x", "fixed", "r", "", "b_key")
-        digests = {findings.decision_digest(f) for f in (base, with_check, other)}
-        self.assertEqual(len(digests), 3)
+        seen = {findings.decision_digest(f) for f in (base, with_check, other)}
+        self.assertEqual(len(seen), 3)
 
     def test_a_check_changed_or_removed_later_stales_the_verdict(self):
         """The verdict binds the decision as shown, check included: the same
@@ -2080,7 +2081,7 @@ class FileCheck(unittest.TestCase):
         model.write_bytes(content)
         path = area / "runs" / "2026-01-01T00-00-00_0001" / "config.json"
         cfg = json.loads(path.read_text(encoding="utf-8"))
-        digest = scope_sha.file_digest(model)[: runs.RECORD_SHA_CHARS]
+        digest = digests.file_digest(model)[: runs.RECORD_SHA_CHARS]
         cfg["data"] = {
             "predictor_primary": {"path": self.MODEL, "sha256": digest, "rows": None}
         }

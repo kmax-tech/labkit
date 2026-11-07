@@ -21,12 +21,7 @@ from pathlib import Path
 from labkit.formats import jsonl, repo
 from labkit.formats.files import write_atomic_bytes
 from labkit.formats.gate import with_way_out
-from labkit.formats.scope_sha import (
-    DIGEST_CHARS,
-    digest,
-    file_digest,
-    tree_digest,
-)
+from labkit.formats.digests import DIGEST_CHARS, digest, file_digest, tree_digest
 from labkit.formats.runs import (
     DIRTY_MARK,
     LEAKAGE_CHECK_KEY,
@@ -340,7 +335,7 @@ def visible_files(directory: Path) -> list[Path]:
 def source_digest(path: Path) -> str:
     """Read PATH and return its source digest without changing any files.
 
-    A file uses `scope_sha.file_digest`. A directory uses a full tree digest
+    A file uses `digests.file_digest`. A directory uses a full tree digest
     of each visible file's relative path and content; hidden path components
     are excluded. Adding, removing, renaming or editing a visible file changes
     the digest. Filesystem errors propagate to the caller.

@@ -59,7 +59,7 @@ from typing import Literal
 
 from labkit.formats.files import write_atomic, write_once
 from labkit.formats.repo import lab_root
-from labkit.formats.scope_sha import digest
+from labkit.formats.digests import digest
 from labkit.formats.runs import (
     LLM_CACHE_FILE,
     LLM_CALLS_FILE,

@@ -50,7 +50,7 @@ from labkit.formats.gate import with_way_out
 from labkit.formats.files import lock_held, write_atomic
 from labkit.formats.repo import local_dir
 from labkit.formats.runs import now_stamp
-from labkit.formats.scope_sha import digest
+from labkit.formats.digests import digest
 
 #: the folder of the records, under the git directory (`repo.local_dir`)
 STARTS_DIR = "labkit-run-starts"

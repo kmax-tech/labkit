@@ -107,8 +107,9 @@ import tempfile
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
+from labkit.formats import digests
 from labkit.tools import scaffold
-from labkit.formats import console, jsonl, repo, runs, scope_sha, standard_contract
+from labkit.formats import console, jsonl, repo, runs, standard_contract
 from labkit.probes import sab_cases
 
 #: What the scaffold stamps into a repo and an area; their sha pins the measured
@@ -326,7 +327,7 @@ def scaffold_sha() -> str:
     for p in STAMPED:
         if not p.is_file():
             raise console.Refused("usability", f"stamped master missing: {p}")
-    return scope_sha.tree_digest((p.name, p.read_bytes()) for p in STAMPED)
+    return digests.tree_digest((p.name, p.read_bytes()) for p in STAMPED)
 
 
 @dataclass(frozen=True)

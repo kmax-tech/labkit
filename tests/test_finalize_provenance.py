@@ -16,10 +16,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.formats import digests
 from labkit import PACKAGE_DIR  # noqa: E402
 from labkit.checks import run_record_check  # noqa: E402
 from labkit.gates import finalize  # noqa: E402
-from labkit.formats import promises, scope_sha  # noqa: E402
+from labkit.formats import promises  # noqa: E402
 from labkit.formats.runs import RECORD_SHA_CHARS  # noqa: E402
 from labkit.run import provenance  # noqa: E402
 from protocol_fixture import run_record, PID, head, scope_file, script_sha_of  # noqa: E402
@@ -47,7 +48,7 @@ def _git(cwd, *args):
 def _recorded(path: Path) -> str:
     """The sha256 prefix outputs.json records for PATH as it is now — the
     registered-outputs station holds the file to it."""
-    return scope_sha.file_digest(path)[:RECORD_SHA_CHARS]
+    return digests.file_digest(path)[:RECORD_SHA_CHARS]
 
 
 def _snapshot(area: Path, protocol: str) -> dict | None:
@@ -342,7 +343,7 @@ class Provenance(unittest.TestCase):
         self._run(SHORT, self._frozen(), commit=False)
         manifest = self.repo / "data" / "MANIFEST.sha256"
         manifest.write_text(
-            f"{scope_sha.file_digest(self.src)}  data/raw/cases.jsonl\n",
+            f"{digests.file_digest(self.src)}  data/raw/cases.jsonl\n",
             encoding="utf-8",
         )
         _git(self.repo, "add", "experiments", str(manifest))

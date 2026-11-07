@@ -116,7 +116,7 @@ from labkit.formats.repo import (
 )
 from labkit.formats.commands import audit_command, decide_command
 from labkit.formats.runs import as_stored, date_minute, name_minute
-from labkit.formats.scope_sha import digest
+from labkit.formats.digests import digest
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
 DIR = "audits"

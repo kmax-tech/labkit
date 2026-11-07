@@ -25,7 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import test_end_to_end as e2e  # noqa: E402  the stamped lab and the count
 
-from labkit.formats import deliverable, runs, scope_sha, standard_contract  # noqa: E402
+from labkit.formats import digests
+from labkit.formats import deliverable, runs, standard_contract  # noqa: E402
 from labkit.gates import report_check  # noqa: E402
 from labkit.tools import scaffold  # noqa: E402
 
@@ -269,7 +270,7 @@ class CountDelivers(unittest.TestCase):
             self.delivered.read_text(encoding="utf-8"), "lines_mean\n3.0\n"
         )
         self.assertEqual(
-            entry.sha256, scope_sha.file_digest(self.delivered)[: runs.RECORD_SHA_CHARS]
+            entry.sha256, digests.file_digest(self.delivered)[: runs.RECORD_SHA_CHARS]
         )
         self.assertEqual(entry.lines, 2)
         raw = json.loads(
