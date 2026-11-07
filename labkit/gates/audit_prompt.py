@@ -64,7 +64,6 @@ from labkit.formats.standard_contract import (
 )
 from labkit.gates import ways_out
 from labkit.gates.ways_out import (
-    PLACE_UNCLEAR_WAY,
     AUDIT_AGAIN,
     HANDOVER,
     PROTOCOL_NAMED,
@@ -611,11 +610,7 @@ def earlier_of(
         try:
             return findings.corrected_field(f, protocol, text)
         except protocol_check.FieldPlaceError as exc:
-            raise AuditError(
-                f"{f.one_line}: which field of {protocol.name} its correction is "
-                f"bound to cannot be told — {exc}",
-                fix=PLACE_UNCLEAR_WAY,
-            ) from exc
+            raise ways_out.unclear_correction(f.one_line, protocol.name, exc) from exc
 
     try:
         c = followup.chain(records)
@@ -653,6 +648,8 @@ def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange
     at = f.place
     if at is None:
         raise ValueError(f"{f.one_line}: names no field of {protocol.name}")
+    # called only for a field `corrected_field` named, so any unclear place
+    # here is a fault of the caller and raises
     hit = protocol_check.field_at(text, at[1])
     pid = protocol_block.head(text).id
     if pid is None:

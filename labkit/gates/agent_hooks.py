@@ -298,8 +298,9 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     # registration (low) or preflight (`standard_contract.lane`)
     if all(standard_contract.lane(h.repeat_cost).registration for h in heads):
         return False, _low_registration_line(head, texts)
-    # the stations' findings as data (`preflight_area`'s collector, the
-    # channel every line goes through), not the printed report read back
+    # the stations' findings as data, not the printed report read back:
+    # tell=None collects only and prints nothing, and preflight_area tells
+    # every line through it (`SilentCollectors` in tests/test_next_step.py)
     found = Findings(tell=None)
     rc = preflight.preflight_area(area, protocol, found)
     said = "\n".join(found.summary("preflight", "freezing"))

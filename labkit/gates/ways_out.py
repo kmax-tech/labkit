@@ -10,6 +10,8 @@ names the cause rule and where the ways stand (`audit_decisions.CAUSE_FIRST`).
 
 from __future__ import annotations
 
+from labkit.checks.audit_binding import AuditError
+
 
 #: what a BLOCKER is and what closes it, shown to the analysis auditor: an
 #: agent whose code missed the registered bar moved the bar to the score
@@ -52,6 +54,19 @@ PLACE_UNCLEAR_WAY = (
     "or audit the area anew (`--mode analysis`) so that a finding names the "
     "field in full; `labkit-next` names the step"
 )
+
+
+def unclear_correction(finding_line: str, protocol: str, exc: Exception) -> AuditError:
+    """The error where a `fixed` finding (FINDING_LINE, its one line) names a
+    place of PROTOCOL that begins several fields or means one written twice
+    (EXC, the `protocol_check.FieldPlaceError`): which field its correction
+    is bound to cannot be told — the one sentence finalize and the follow-up
+    audit raise, its way out `PLACE_UNCLEAR_WAY`."""
+    return AuditError(
+        f"{finding_line}: which field of {protocol} its correction is bound to "
+        f"cannot be told — {exc}",
+        fix=PLACE_UNCLEAR_WAY,
+    )
 
 
 def report_way_while_lost(findings_command: str) -> str:

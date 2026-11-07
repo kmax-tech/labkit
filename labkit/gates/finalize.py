@@ -150,7 +150,7 @@ from labkit.formats.repo import (
     withdraw_command,
 )
 from labkit.gates.ways_out import (
-    PLACE_UNCLEAR_WAY,
+    unclear_correction,
     HANDOVER,
     PROTOCOL_NAMED,
     register_anew,
@@ -836,11 +836,7 @@ def _correction_field(
     try:
         return corrected_field(f, protocol, text)
     except FieldPlaceError as exc:
-        raise AuditError(
-            f"{f.one_line}: which field of {protocol.name} its correction is "
-            f"bound to cannot be told — {exc}",
-            fix=PLACE_UNCLEAR_WAY,
-        ) from exc
+        raise unclear_correction(f.one_line, protocol.name, exc) from exc
 
 
 def awaiting_followup(

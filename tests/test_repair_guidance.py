@@ -235,7 +235,7 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
     def test_a_start_several_labels_share_is_said_and_binds_nothing(self):
         # `Data` begins Data / scope, Data preparation and Data profile
         line = self.line("PROTOCOL-x.md:Data")
-        self.assertIn("whether the finding names a field could not be read", line)
+        self.assertIn("its place names no one field of the protocol", line)
         self.assertIn("'Data' begins 3 fields", line)
         self.assertNotIn("a correction of", line)
 

@@ -913,6 +913,8 @@ def repair_hint(
                     named = hit.label
                 elif not protocol_history.correctable(hit.label):
                     fixed_as_registered = hit.label
+        except FieldPlaceError as exc:  # read fine: the place is unclear
+            unread = f" (its place names no one field of the protocol: {exc})"
         except (ValueError, OSError) as exc:
             unread = (
                 f" (whether the finding names a field could not be read: "

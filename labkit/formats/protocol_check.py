@@ -361,10 +361,15 @@ def field_name(label: str) -> str:
     return label.split("(")[0].replace("†", "").strip().casefold()
 
 
+#: the three ways a place names no one field (`FieldPlaceError.kind`)
+UNKNOWN_PLACE, AMBIGUOUS_PLACE, TWICE_WRITTEN = "unknown", "ambiguous", "twice"
+
+
 class FieldPlaceError(ValueError):
-    """PLACE names no one field: BEGUN, the field names it begins — several
-    (ambiguous), or none (unknown); TWICE, a field it names that the text
-    writes more than once."""
+    """PLACE names no one field, KIND says how: UNKNOWN_PLACE (it begins no
+    field — a line number, a section, a label the text lacks),
+    AMBIGUOUS_PLACE (it begins several: BEGUN names them), TWICE_WRITTEN
+    (the field it names is written more than once: TWICE, its label)."""
 
     def __init__(
         self, place: str, begun: list[str], *, twice: str | None = None
@@ -372,6 +377,13 @@ class FieldPlaceError(ValueError):
         self.place = place
         self.begun = begun
         self.twice = twice
+        self.kind = (
+            TWICE_WRITTEN
+            if twice is not None
+            else AMBIGUOUS_PLACE
+            if begun
+            else UNKNOWN_PLACE
+        )
         if twice is not None:
             why = f"{place!r} names {twice!r}, written more than once"
         elif begun:
@@ -405,7 +417,20 @@ def field_at(text: str, place: str) -> "FieldLine":
     """The field of TEXT that PLACE means (`field_meant` over the labels TEXT
     holds) — for a place an audit finding or a reading hint names. Raises
     FieldPlaceError when PLACE begins several fields or none (a line number
-    and a section name none), or means a field TEXT writes more than once."""
+    and a section name none), or means a field TEXT writes more than once.
+    What each caller makes of an unknown place / an ambiguous or twice
+    written one:
+
+    - `findings.corrected_field`: no correction (None, `field_or_none`) /
+      raised;
+    - finalize and the follow-up audit: — / an AuditError, a blocker
+      (`ways_out.unclear_correction`);
+    - `audit_decisions.repair_hint`: "any other repair" / "its place names
+      no one field", told;
+    - `audit_decisions.read_hints`: the hint left out, its reason told, for
+      both;
+    - `audit_prompt._field_change`: raised for both — it is called only for
+      a field `corrected_field` named."""
     found = fields(text)
     name = field_meant([f.name for f in found], place)
     hits = [f for f in found if f.name == name]
@@ -422,7 +447,7 @@ def field_or_none(text: str, place: str) -> "FieldLine | None":
     try:
         return field_at(text, place)
     except FieldPlaceError as exc:
-        if exc.begun or exc.twice is not None:
+        if exc.kind != UNKNOWN_PLACE:
             raise
         return None
 
