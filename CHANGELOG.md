@@ -86,6 +86,13 @@ pins (`requirements.txt` / `requirements.lock`).
   an `implementation` or `undetermined` finding `--decide` then refused
   it. Such a finding now shows its allowed decisions and the refusal's
   ways out in place of the route (`audit_decisions.limitation_line`).
+- **The ways out shown to the auditor name the subject they serve.** The
+  unjudged-promise route and its no-promise form said "a fault you cannot
+  fix → `limitation`", which `--decide` refuses for an implementation
+  finding; they now offer `limitation` for a `statement` finding only and
+  say an `implementation` fault you cannot fix is handed over, as the
+  agent guide does. `tests/test_ways_out.py` holds the subject words in
+  both places, not only the cause names.
 
 ## 0.112.0 — 2026-11-06
 

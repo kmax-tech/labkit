@@ -40,6 +40,37 @@ class WaysOut(unittest.TestCase):
             for name, _ in ways_out.WAYS_OUT:
                 self.assertIn(f"    {name}: ", printed)
 
+    def test_each_way_out_names_the_subject_it_serves_in_both_places(self):
+        """A way out bound to a finding's subject says which, in the printed
+        list and in the guide, and only a `statement` way offers
+        `limitation`: the printed routes said "a fault you cannot fix →
+        `limitation`" while `--decide` refused it for an implementation
+        finding (audit 2026-11-07, S2)."""
+        guide = {
+            m.group(1): m.group(2)
+            for m in re.finditer(
+                r"^- \*\*([^*]+)\*\* — (.*?)(?=^- \*\*|\Z)",
+                stuck_section(),
+                re.M | re.S,
+            )
+        }
+        serves = {
+            "an implementation error": "`implementation`",
+            "an unsettled suspicion": "`undetermined`",
+            ways_out.UNJUDGED_PROMISE: "`statement`",
+        }
+        for name, subject in serves.items():
+            with self.subTest(name=name):
+                self.assertIn(subject, dict(ways_out.WAYS_OUT)[name])
+                self.assertIn(subject, guide[name])
+        for promised in (True, False):
+            for line in ways_out.blocker_routes(promised):
+                if "decide it `limitation`" in line:
+                    self.assertIn("`statement`", line)
+                    self.assertIn(
+                        "`implementation` fault you cannot fix is handed over", line
+                    )
+
     def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
         """A computation registers no promise and `--decide` refuses every
         id an effect names (t34, t21 of the pilot, 2026-10-28): its routes

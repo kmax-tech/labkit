@@ -93,10 +93,12 @@ UNJUDGED_PROMISE = "an unjudged promise"
 WAYS_OUT = (
     (
         "an implementation error",
-        "the code does not do what the registration says: fix the code (where "
-        "the protocol has adopted a result, withdraw it first — `protocol-fill "
-        '<PROTOCOL> --withdraw --why "<why>"`), decide `fixed` naming the change, '
-        "measure again under the unchanged registration, audit the new run",
+        "the code does not do what the registration says (the auditor's "
+        "`implementation`; never a limitation): fix the code (where the protocol "
+        "has adopted a result, withdraw it first — `protocol-fill <PROTOCOL> "
+        '--withdraw --why "<why>"`), decide `fixed` naming the change, measure '
+        "again under the unchanged registration, audit the new run; a repair "
+        "that is not possible is handed over with its reason, not limited",
     ),
     (
         "an unsettled suspicion",
@@ -116,9 +118,11 @@ WAYS_OUT = (
     ),
     (
         UNJUDGED_PROMISE,
-        "a fault you cannot fix leaves a promise unjudged: decide it `limitation` "
-        "with `--not-assessable <ID>`; the criterion then reads not "
-        "assessable — report the measured numbers as description, no verdict",
+        "the run is right but cannot judge a promise (the auditor's `statement`): "
+        "decide it `limitation` with `--not-assessable <ID>`; the criterion then "
+        "reads not assessable — report the measured numbers as description, no "
+        "verdict. An `implementation` fault you cannot fix is handed over, not "
+        "limited",
     ),
     (
         "an invalid registration",
@@ -163,12 +167,14 @@ WAYS_OUT = (
 #: the unjudged-promise cause's way out where the protocol registers no
 #: promise — a computation has no [[promise]] table, and `--decide` refuses
 #: every id an effect names there (`audit_decisions._registered`); the routes left
-#: are the ones that work: limit the claim, fix the fault, defer and hand over
+#: are the ones that work: limit the claim (a statement finding only), fix the
+#: fault, defer and hand over
 NO_PROMISE_ROUTE = (
     "this protocol registers no promise, so no effect leaves one not "
-    "assessable (`--decide` refuses every id): a fault you cannot fix limits "
+    "assessable (`--decide` refuses every id): a `statement` finding limits "
     "the claim — decide it `limitation`, the limit named in the Conclusion (a "
-    "second auditor must uphold it) — or hand over"
+    "second auditor must uphold it) — or hand over; an `implementation` fault "
+    "you cannot fix is handed over, not limited"
 )
 
 
