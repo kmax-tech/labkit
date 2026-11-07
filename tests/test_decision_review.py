@@ -303,8 +303,68 @@ class TheCall(unittest.TestCase):
                 self.assertEqual("hand the protocol over" in line, not offered)
                 rc, _, err, sent = run_review(area, UPHELD)  # contested: refused
                 self.assertEqual((rc, sent), (2, []))
-                self.assertEqual("effect `not assessable`" in err, offered, err)
+                self.assertEqual("--not-assessable <ID>" in err, offered, err)
                 self.assertEqual("hand the protocol over" in err, not offered)
+
+    def test_rejected_false_positive_routes_follow_each_findings_subject(self):
+        """A rejected false-positive offers only decisions the subject allows,
+        both after the review and when a repeat review is refused."""
+        for subject in findings.SUBJECTS:
+            with self.subTest(subject=subject):
+                line = BLOCKER[1].replace("· statement ·", f"· {subject} ·")
+                if subject == findings.UNDETERMINED:
+                    line += (
+                        " · check: feature_count — clears if one, confirms otherwise"
+                    )
+                area, _ = area_with(
+                    [("BLOCKER", line)],
+                    {1: ("false-positive", "the kept rows show one feature", "")},
+                    metrics={"feature_count": 1},
+                )
+                rc, out, err, _ = run_review(area, REJECTED)
+                self.assertEqual(rc, 1, err)
+                (route,) = [ln for ln in out.splitlines() if "  rejected: " in ln]
+                rc, _, err, sent = run_review(area, UPHELD)
+                self.assertEqual((rc, sent), (2, []))
+                allowed = subject == findings.STATEMENT
+                for hint in (route, err):
+                    self.assertEqual("--decide N limitation" in hint, allowed, hint)
+                    self.assertEqual("--not-assessable <ID>" in hint, allowed, hint)
+                    self.assertEqual("limit the claim" in hint, allowed, hint)
+                    if not allowed:
+                        self.assertIn("repair or required check", hint)
+                        self.assertIn("counter-evidence", hint)
+                        self.assertIn("--handover", hint)
+
+    def test_mixed_rejections_keep_their_recovery_routes_separate(self):
+        """A statement's limitation route must not become an implementation's
+        route when the same review rejects both false-positive decisions."""
+        area, _ = area_with(
+            [
+                BLOCKER,
+                ("BLOCKER", BLOCKER[1].replace("· statement ·", "· implementation ·")),
+            ],
+            {
+                1: ("false-positive", "counter-evidence for the statement", ""),
+                2: ("false-positive", "counter-evidence for the code", ""),
+            },
+        )
+        answer = (
+            "DECISION #1 · rejected · the claim still exceeds the rows\n"
+            "DECISION #2 · rejected · the code still departs from registration\n"
+            "verdict: 0 upheld, 2 rejected, 0 insufficient\n"
+        )
+        rc, out, err, _ = run_review(area, answer)
+        self.assertEqual(rc, 1, err)
+        routes = [ln for ln in out.splitlines() if "  rejected: " in ln]
+        self.assertEqual(len(routes), 2, out)
+        self.assertIn("--decide N limitation", routes[0])
+        self.assertIn("finding #1", routes[0])
+        self.assertNotIn("--decide N limitation", routes[1])
+        self.assertIn("finding #2", routes[1])
+        rc, _, err, sent = run_review(area, answer)
+        self.assertEqual((rc, sent), (2, []))
+        self.assertEqual(err.count("--decide N limitation"), 1, err)
 
     def test_report_check_asks_a_limit_without_its_effect_to_decide_again(self):
         """A BLOCKER decided limitation without its effect (a record changed by
@@ -483,7 +543,7 @@ class TheCall(unittest.TestCase):
         rc, _, err, sent = run_review(area, UPHELD)
         self.assertEqual((rc, sent), (2, []))
         self.assertIn("another draw settles nothing", err)
-        self.assertIn("decide again", err)
+        self.assertIn("decide the finding again first", err)
         rc, out, _, sent = run_review(area, UPHELD, "--again")
         # the draw itself says upheld, the exit the state: held
         self.assertEqual((rc, len(sent)), (1, 1))

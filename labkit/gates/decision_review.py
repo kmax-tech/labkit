@@ -26,10 +26,12 @@ through the record and the run) and each decision as it stood
 a claim since changed. The call is an attempt in the area's journal
 (`attempts.attempt`, mode `review`): the answer kept before it is read,
 the end naming the review file or why there is none — so a review
-deleted before the commit is named. After `rejected` the person decides again first —
-limits the claim, changes the effect to `not assessable` (where the
-protocol registers a promise; else hands the protocol over), or fixes
-the fault (`rejected_way`); a new audit is due when its basis changes or the finding is
+deleted before the commit is named. After `rejected` the person decides
+again within the decisions the finding's subject allows
+(`findings.allowed_decisions`, `rejected_way`): repair or supply
+counter-evidence, or hand over; a permitted limitation may narrow the
+claim or leave a registered promise not assessable. A new audit is due
+when its basis changes or the finding is
 disputed, and does not by itself settle the rejection. After
 `insufficient` the missing evidence is supplied and the review run again.
 Closing the finding instead — `false-positive`, `fixed`
@@ -394,13 +396,9 @@ def contested_gap(
     ]
     if not held:
         return None
-    decide_again = (
-        "decide again (`--decide N …`, the reason naming the evidence, or the "
-        "effect `not assessable`) or limit the claim, then review"
-        if audit_decisions.may_leave_unassessed(area, protocol)
-        else "decide again (`--decide N …`, the reason naming the evidence) or "
-        "limit the claim, then review — or hand the protocol over "
-        "(no promise is registered to leave not assessable)"
+    promised = audit_decisions.may_leave_unassessed(area, protocol)
+    decide_again = "; ".join(
+        f"finding #{n}: {rejected_way(record.findings[n - 1], promised)}" for n in held
     )
     return AuditError(
         f"{record.path.name}: finding(s) {', '.join(map(str, held))} were reviewed as "
@@ -486,9 +484,13 @@ def review(
         )
     )
     if r:
-        print(
-            f"  rejected: {rejected_way(audit_decisions.may_leave_unassessed(area, chosen))}"
-        )
+        promised = audit_decisions.may_leave_unassessed(area, chosen)
+        for d in decisions:
+            if d.verdict == "rejected":
+                print(
+                    f"  rejected: {rejected_way(rec.findings[d.finding - 1], promised)} "
+                    f"(finding #{d.finding})"
+                )
     if i:
         print(
             "  insufficient: supply the evidence the reviewer names (in the "
@@ -497,18 +499,27 @@ def review(
     return 1 if held else 0
 
 
-def rejected_way(promised: bool) -> str:
-    """What a decision a review rejected owes first: limit the claim, change
-    the effect (`<ID> not assessable` only where the protocol registers a
-    promise, PROMISED — else hand the protocol over) or fix the
-    fault; never another audit that settles nothing."""
-    routes = (
-        "limit the claim (the Conclusion), change the effect (`--decide N limitation "
-        '--why "REASON" --not-assessable <ID>`) or fix the fault'
-        if promised
-        else "limit the claim (the Conclusion) or fix the fault — or hand the "
-        "protocol over (no promise is registered to leave not assessable)"
-    )
+def rejected_way(finding: findings.Finding, promised: bool) -> str:
+    """What a reviewed decision on FINDING owes first, within its allowed
+    decisions (`findings.allowed_decisions`). A permitted limitation may
+    leave a promise not assessable only when PROMISED. No state is read
+    or written; another draw alone settles nothing."""
+    if "limitation" not in findings.allowed_decisions(finding):
+        routes = (
+            "complete the repair or required check the finding names, supply "
+            "counter-evidence for `false-positive`, or hand the protocol over "
+            "with the finding open (`protocol-fill <PROTOCOL> --handover`)"
+        )
+    elif promised:
+        routes = (
+            "limit the claim (the Conclusion), change the effect (`--decide N limitation "
+            '--why "REASON" --not-assessable <ID>`) or fix the fault'
+        )
+    else:
+        routes = (
+            "limit the claim (the Conclusion) or fix the fault — or hand the "
+            "protocol over (no promise is registered to leave not assessable)"
+        )
     return (
         f"decide the finding again first — {routes}; a new audit only when its "
         "basis changes or the finding itself is disputed — auditing again does "

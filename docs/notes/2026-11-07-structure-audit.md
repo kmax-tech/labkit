@@ -25,6 +25,12 @@ HEAD 8894a146 runs: ruff, format, pyright clean, 3072 passed, 1 skipped. The pac
 - Verdict and kind lists spelled by hand in reviewer regexes beside their tuples (`labkit/gates/decision_review.py:84`, `labkit/gates/report_review.py:90`); no test holds the auditor template's grade and FIX lines to `SUBJECTS` and `FIX_VERDICTS` (commit 4cfd2dd8 fixed exactly that drift once).
 - Prose behind the code: `RECORD_SHA_CHARS` called the width of every recorded digest (`labkit/formats/runs.py:141`); the standard's glossary and LAB-072 still name a checksum or `.sha256` pin (`labkit/docs/standard.md:54`, `labkit/docs/standard.md:400`); README and architecture describe the result block without its `Question:` / `Answer:` lines; the FIX form in architecture lacks the subject field; `audit.py` help says "the limit for limit".
 
+## Follow-up — recovery after a rejected decision review
+
+2026-11-07. The same drift as S1 also affected `decision_review.rejected_way`: after a reviewer rejected `false-positive` on an implementation finding, the hint offered `--decide N limitation --not-assessable <ID>`, which the decision writer refuses. `contested_gap`, the refusal of another review on the same state, offered the same unavailable effect. Both hints considered whether the protocol registered promises but ignored the finding's subject.
+
+Both now use `rejected_way` per finding, which consults `findings.allowed_decisions`. A rejected implementation or undetermined finding names repair or the required check, counter-evidence, and handover; a permitted limitation keeps its route only where the protocol registers a promise to leave unassessed. Tests exercise all three subjects through the review command and its repeated-call refusal, retain the statement/no-promise twin, and keep the routes separate when one review rejects findings of different subjects.
+
 ## Solved well
 
 One TOML quoter (`protocol_block.toml_string`), one source digest for writer and checker (`provenance.source_digest`), `adoption_owes` moved out of `next` so `next` and the adoption refusal agree by construction, and `findings.LEAD` / `SEP` read by every reviewer regex.
