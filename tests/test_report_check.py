@@ -16,6 +16,7 @@ cites a run.
 
 from __future__ import annotations
 
+from labkit.tools import report_command
 from labkit.formats.runs import RunKind
 from labkit.tools import protocol_fill
 from labkit.tools import protocol_result
@@ -967,12 +968,12 @@ class IfReported(unittest.TestCase):
         with mock.patch.object(
             report_check, "hold_reported", return_value=clean
         ) as gate:
-            report_check.main(["--if-reported", "--staged", "a/PROTOCOL-x.md"])
+            report_command.main(["--if-reported", "--staged", "a/PROTOCOL-x.md"])
         gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=True)
         with mock.patch.object(
             report_check, "hold_reported", return_value=clean
         ) as gate:
-            report_check.main(["--if-reported", "a/PROTOCOL-x.md"])
+            report_command.main(["--if-reported", "a/PROTOCOL-x.md"])
         gate.assert_called_once_with([Path("a/PROTOCOL-x.md")], mock.ANY, staged=False)
 
     def _gate(self, area: Path, *paths: Path) -> tuple[int, str]:
@@ -980,7 +981,7 @@ class IfReported(unittest.TestCase):
         buf = io.StringIO()
         paths = paths or (area / "PROTOCOL-x.md",)
         with contextlib.redirect_stdout(buf):
-            code = report_check.main(["--if-reported", *map(str, paths)])
+            code = report_command.main(["--if-reported", *map(str, paths)])
         return code, buf.getvalue()
 
     def test_a_changed_script_reopens_the_areas_reported_number(self):

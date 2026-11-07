@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.tools import report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
 from labkit.formats import protocol_block, report_reviews  # noqa: E402
 from labkit.formats.gate import GateFinding  # noqa: E402
@@ -96,7 +97,7 @@ class OneChainPerHold(unittest.TestCase):
 
     def test_the_hook_entry_runs_the_chain_once_and_names_the_step(self):
         code, out, runs = self.counted(
-            lambda: report_check.main(["--if-reported", self.rel])
+            lambda: report_command.main(["--if-reported", self.rel])
         )
         self.assertEqual(code, 1, out)
         self.assertEqual(runs, 1, out)

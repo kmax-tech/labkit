@@ -31,6 +31,7 @@ from unittest import mock
 
 from protocol_fixture import PID, completed_run, head, scope_file
 
+from labkit.tools import report_command
 from labkit.formats import answering_run, protocol_history, runs
 from labkit.formats.gate import Findings
 from labkit.formats.runs import RunKind
@@ -1027,7 +1028,7 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         rel = self.proto.relative_to(self.root).as_posix()
         out = io.StringIO()
         with contextlib.chdir(self.root), contextlib.redirect_stdout(out):
-            code = report_check.main(["--if-reported", "--staged", rel])
+            code = report_command.main(["--if-reported", "--staged", rel])
             step = next_step(self.area, self.proto, state=INDEX).render(
                 self.area.relative_to(self.root).as_posix()
             )

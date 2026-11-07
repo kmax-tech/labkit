@@ -31,6 +31,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from labkit.tools import report_command
 from labkit.gates import audit, agent_hooks, finalize, preflight, report_check
 from labkit.tools import protocol_fill, scaffold
 from labkit.formats import (
@@ -475,7 +476,7 @@ class Count(unittest.TestCase):
         try:
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                rc = report_check.main([str(self.area)])
+                rc = report_command.main([str(self.area)])
             self.assertEqual(rc, 1, out.getvalue())
             self.assertIn("no scripts/02_analyze.py", out.getvalue())
             self.assertIn("analyze-quick-script.py.template", out.getvalue())
@@ -1821,7 +1822,7 @@ class Judge(unittest.TestCase):
     def _report_check(self) -> tuple[int, str]:
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_check.main([str(self.area)])
+            rc = report_command.main([str(self.area)])
         return rc, out.getvalue()
 
     def _review(self, record: Path, verdict: str = "upheld") -> tuple[int, str]:

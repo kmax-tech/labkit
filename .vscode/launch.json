@@ -78,7 +78,7 @@
         "labkit.checks.protocol_report",
         "labkit.tools.protocol_fill",
         "labkit.tools.repo_check",
-        "labkit.gates.report_check",
+        "labkit.tools.report_command",
         "labkit.run.runlog_command",
         "labkit.tools.scaffold",
         "labkit.formats.scope_sha",

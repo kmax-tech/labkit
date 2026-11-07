@@ -43,7 +43,7 @@ labkit-params = "labkit.tools.params:cli"
 labkit-calltree = "labkit.tools.calltree:cli"
 labkit-init = "labkit.tools.scaffold:cli"
 labkit-check = "labkit.tools.repo_check:cli"
-report-check = "labkit.gates.report_check:cli"
+report-check = "labkit.tools.report_command:cli"
 
 [tool.setuptools]
 # every package by name: a layer package left out ships as a wheel without its

@@ -28,9 +28,10 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from labkit.tools import report_command
 from labkit.formats import findings, protocol_block  # noqa: E402
 from protocol_fixture import decide_words  # noqa: E402
-from labkit.gates import audit, report_check  # noqa: E402
+from labkit.gates import audit  # noqa: E402
 from labkit.gates import report_context
 from labkit.gates import report_replacement
 from labkit.run import llm  # noqa: E402
@@ -136,7 +137,7 @@ class _Chain(unittest.TestCase):
         lab.fill(self.protocol, "Raw output=one pair per finding, from the run")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = report_check.main([str(self.area)])
+            rc = report_command.main([str(self.area)])
         self.assertEqual(rc, 0, buf.getvalue())
         rc, err = lab.stop_hook()
         self.assertEqual(rc, 0, err)

@@ -16,9 +16,10 @@ from pathlib import Path
 
 import test_counter_cases as cases
 import test_end_to_end as e2e
+from labkit.tools import report_command
 from labkit.formats import attempts, findings, handovers, protocol_block, repo
 from labkit.checks import report_blocks
-from labkit.gates import audit, report_check
+from labkit.gates import audit
 from labkit.gates import undecided
 from labkit.tools import protocol_fill
 from labkit.tools import protocol_result
@@ -101,7 +102,7 @@ class HandoverRecovery(cases._Chain):
         """`report-check AREA`, its output captured."""
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-            rc = report_check.main([str(self.area)])
+            rc = report_command.main([str(self.area)])
         return rc, out.getvalue()
 
     @staticmethod

@@ -15,7 +15,7 @@
 Exit codes: 0 clean, 1 a blocker, 2 usage error.
 
 This module holds the protocol's release stations and the entry points
-(`hold_reported`, `hold_declared`, `main`): the order and the conditions of
+(`hold_reported`, `hold_declared`; the command line is `tools.report_command`): the order and the conditions of
 what runs stand here. The context every station reads is
 `report_context.checked`; the replacement station lives in
 `report_replacement`, the stations on the audit decisions (limits, reviews,
@@ -89,7 +89,6 @@ the check would judge a state the commit does not hold.
 
 from __future__ import annotations
 
-import argparse
 import shlex
 import subprocess
 from collections.abc import Callable
@@ -100,7 +99,6 @@ from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
     BLOCKER,
-    EXIT_CONTRACT,
     WARNING,
     Findings,
     GateFinding,
@@ -160,7 +158,6 @@ from labkit.formats.repo import (
     ADOPT_TOOL,
     RENDER,
     adopt_command,
-    area_path,
     area_protocols,
     audit_command,
     choose_protocol,
@@ -169,7 +166,6 @@ from labkit.formats.repo import (
     git_root,
     indexed_protocols,
     measure_command,
-    no_such_area,
     protocol_links,
     shown,
     state_text,
@@ -1231,53 +1227,3 @@ def hold_registered(
     out = Findings(tell)
     out.take_all(gaps)
     return out.report("report-check", "reporting")
-
-
-def main(argv: list[str]) -> int:
-    """Command line of `report-check`."""
-    if argv and argv[0] == "--if-reported":
-        cwd = Path.cwd()
-        rest = argv[1:]
-        staged = bool(rest) and rest[0] == "--staged"
-        paths = [Path(a) for a in (rest[1:] if staged else rest)]
-        repo = git_root(cwd) or cwd
-        reported = hold_reported(paths, repo, staged=staged)
-        if reported.exit != 0:
-            # what to do is `next`'s step, from the state this gate judged
-            # and the chains it ran
-            from labkit.gates.next_step import steps_for
-
-            for step in steps_for(repo, paths, staged=staged, chains=reported.chains):
-                print(step)
-        return reported.exit
-    ap = argparse.ArgumentParser(
-        prog="report-check",
-        description=(__doc__ or "").split("\n\n")[0],
-        # the hooks' form is parsed above, before argparse; it is still part
-        # of this command's contract and stands in its --help (audit 2026-10-23, C2)
-        epilog=(
-            "report-check --if-reported [--staged] PATH ...\n"
-            "    every protocol of an area a path touches whose head has adopted a\n"
-            "    result, and every report among PATHS citing a run (the stop\n"
-            "    hook; with --staged the pre-commit: the head and the report as\n"
-            "    the index holds them, and the area's tree must equal the index)\n"
-            f"{EXIT_CONTRACT}"
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    ap.add_argument("area", type=area_path)
-    ap.add_argument("--protocol", type=Path, default=None)
-    a = ap.parse_args(argv)
-    if not a.area.is_dir():
-        console.refuse("report-check", no_such_area(a.area))
-        return 2
-    return report_check(a.area.resolve(), a.protocol)
-
-
-def cli() -> None:
-    """Console entry point `report-check`."""
-    console.exit_with(main)
-
-
-if __name__ == "__main__":
-    cli()

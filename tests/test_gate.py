@@ -33,7 +33,8 @@ class HelpStatesTheExitContract(unittest.TestCase):
     def test_every_mechanical_gate(self):
         from labkit.checks import code_check, intent_check, notes_check
         from labkit.checks import protocol_report
-        from labkit.gates import finalize, preflight, report_check
+        from labkit.gates import finalize, preflight
+        from labkit.tools import report_command
 
         for mod in (
             code_check,
@@ -42,7 +43,7 @@ class HelpStatesTheExitContract(unittest.TestCase):
             protocol_report,
             finalize,
             preflight,
-            report_check,
+            report_command,
         ):
             with self.subTest(gate=mod.__name__):
                 text = self._help(mod.main)
@@ -50,9 +51,9 @@ class HelpStatesTheExitContract(unittest.TestCase):
                 self.assertIn("1 at least one blocker", text)
 
     def test_report_check_names_the_hooks_form(self):
-        from labkit.gates import report_check
+        from labkit.tools import report_command
 
-        self.assertIn("--if-reported [--staged] PATH", self._help(report_check.main))
+        self.assertIn("--if-reported [--staged] PATH", self._help(report_command.main))
 
     def test_labkit_audit_states_its_own(self):
         from labkit.gates import audit

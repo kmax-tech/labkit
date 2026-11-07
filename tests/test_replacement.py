@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.tools import report_command
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import (  # noqa: E402
     findings,
@@ -246,7 +247,7 @@ class Gate(_Areas):
         self._b(replaces(A_ID))
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = report_check.main([str(self.b)])
+            code = report_command.main([str(self.b)])
         self.assertEqual(code, 1)
         self.assertIn("not declared: criterion-1 margin 0.25 → 0.15", out.getvalue())
 

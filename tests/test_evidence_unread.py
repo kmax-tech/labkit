@@ -20,8 +20,8 @@ import tempfile
 from pathlib import Path
 
 import test_end_to_end as e2e
+from labkit.tools import report_command
 from labkit.formats import evidence
-from labkit.gates import report_check
 from labkit.gates import next_step
 
 UNREAD = "cannot be compared with"
@@ -77,7 +77,7 @@ class ChangedRunUnreadable(e2e.CountCommands):
         try:
             out = io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
-                rc = report_check.main([str(self.area)])
+                rc = report_command.main([str(self.area)])
             step = next_step.next_step(self.area, self.protocol)
         finally:
             os.chdir(old)

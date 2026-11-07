@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.tools import report_command
 from labkit.checks import code_check
 from labkit.formats import repo
 
@@ -95,13 +96,13 @@ class BareName(unittest.TestCase):
         was refused in four of seven cold probes (2026-10-20) while
         code-check and finalize took it. The area here is empty, so each
         refuses — for the empty area, not for a missing one."""
-        from labkit.gates import audit, report_check
+        from labkit.gates import audit
 
         commands = {
             "labkit-audit": lambda: audit.main(
                 ["01-docs-per-case", "--mode", "analysis"]
             ),
-            "report-check": lambda: report_check.main(["01-docs-per-case"]),
+            "report-check": lambda: report_command.main(["01-docs-per-case"]),
         }
         for name, call in commands.items():
             with self.subTest(command=name):
@@ -164,7 +165,7 @@ class AmbiguousName(unittest.TestCase):
         self.assertEqual(self.in_root(lambda: repo.area_path("z")), Path("z"))
 
     def test_every_command_refuses_with_the_candidates(self):
-        from labkit.gates import audit, finalize, preflight, report_check
+        from labkit.gates import audit, finalize, preflight
         from labkit.run import runlog_command
         from labkit.tools import params
 
@@ -175,7 +176,7 @@ class AmbiguousName(unittest.TestCase):
             "params": lambda: params.main(["x"]),
             "runlog": lambda: runlog_command.main(["x"]),
             "labkit-audit": lambda: audit.main(["x", "--mode", "analysis"]),
-            "report-check": lambda: report_check.main(["x"]),
+            "report-check": lambda: report_command.main(["x"]),
         }
         for name, call in commands.items():
             with self.subTest(command=name):

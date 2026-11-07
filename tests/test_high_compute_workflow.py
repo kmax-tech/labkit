@@ -17,9 +17,10 @@ from unittest import mock
 
 import test_end_to_end as e2e
 from protocol_fixture import fill_known_case
+from labkit.tools import report_command
 from labkit.checks import protocol_report
 from labkit.formats import protocol_block, standard_contract
-from labkit.gates import preflight, report_check
+from labkit.gates import preflight
 from labkit.run import runlog_command
 from labkit.tools import protocol_fill
 
@@ -153,5 +154,5 @@ class HighComputeWorkflow(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
-            rc = report_check.main([str(area)])
+            rc = report_command.main([str(area)])
         self.assertEqual(rc, 0, output.getvalue())
