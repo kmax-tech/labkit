@@ -3,7 +3,7 @@
 Why this exists: with metrics.json alone as the finish, a break between
 writing the numbers and writing the index row would look exactly like a
 clean finish — and `note` and the end-of-run git state would live only in
-the index, which could not be rebuilt from the directory. So a v2 run is
+the index, which could not be rebuilt from the directory. So a run is
 complete only with BOTH metrics.json and completion.json, and every change
 to runs.tsv takes one lock.
 
@@ -125,8 +125,8 @@ class TestStates(unittest.TestCase):
             d = _run_dir(_area(t), "r1", metrics=False, completion=False)
             self.assertEqual(_state(d, alive=None), "unknown")
 
-    def test_undecidable_liveness_v2_with_metrics_is_unknown(self):
-        """Same for a v2 run that has metrics but no completion."""
+    def test_undecidable_liveness_with_metrics_is_unknown(self):
+        """Same for a run that has metrics but no completion."""
         with tempfile.TemporaryDirectory() as t:
             d = _run_dir(_area(t), "r1", completion=False)
             self.assertEqual(_state(d, alive=None), "unknown")
@@ -226,7 +226,7 @@ class TestActive(unittest.TestCase):
 
 
 class TestReindex(unittest.TestCase):
-    def test_a_completed_v2_run_is_rebuilt_in_full(self):
+    def test_a_completed_run_is_rebuilt_in_full(self):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             _run_dir(area, "r1", protocol_id="p-0123456789abcdef")

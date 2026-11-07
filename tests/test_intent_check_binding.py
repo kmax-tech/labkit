@@ -229,7 +229,7 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertEqual(code, 2, out)
         self.assertIn(f"belongs to protocol {B_ID}", out)
 
-    def test_unbound_v2_run_is_allowed_with_a_warning(self):
+    def test_an_unbound_run_is_allowed_with_a_warning(self):
         d = _run(self.area, "r1", pid=None, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])
         self.assertEqual(code, 0, out)
@@ -257,8 +257,8 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertIn("not completed (unreadable)", out)
         self.assertIn("labkit 0.47", out)
 
-    def test_incomplete_v2_run_is_rejected_even_when_named_explicitly(self):
-        """A v2 run with metrics.json but no completion.json must fail.
+    def test_an_incomplete_run_is_rejected_even_when_named_explicitly(self):
+        """A run with metrics.json but no completion.json must fail.
 
         The explicit --metrics path goes through the state check too, so
         naming the file is no loophole around the completion gate.

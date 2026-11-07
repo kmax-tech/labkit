@@ -1346,7 +1346,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.assertIn(f"{field} ", held)
         return held
 
-    def test_t1_a_followup_on_the_new_run_that_judges_the_correction_releases_it(
+    def test_a_followup_on_the_new_run_that_judges_the_correction_releases_it(
         self,
     ):
         correction = self.corrected_for_a()
@@ -1365,7 +1365,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
 
-    def test_t2_the_verdict_on_the_earlier_run_alone_releases_the_new_one_not(self):
+    def test_the_verdict_on_the_earlier_run_alone_releases_the_new_one_not(self):
         correction = self.corrected_for_a()
         code = self.code_repaired()
         run_b = self.measure()
@@ -1378,7 +1378,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 1, out)
 
-    def test_t10_the_code_repair_beside_a_correction_is_measured_again(self):
+    def test_the_code_repair_beside_a_correction_is_measured_again(self):
         """The hold before the new run names the measurement, then the
         follow-up on it (the decision's line points to labkit-next) — not
         restore and decide the repair `limitation`."""
@@ -1394,14 +1394,14 @@ class CorrectionThenNewRun(CorrectionCommands):
             f"the measuring code changed since {self.run_a} ran: measure again", out
         )
 
-    def test_t3_the_correction_judged_unresolved_on_the_new_run_holds(self):
+    def test_the_correction_judged_unresolved_on_the_new_run_holds(self):
         correction = self.corrected_for_a()
         code = self.code_repaired()
         run_b = self.measure()
         self.judged((code, "resolved"), (correction, "unresolved"))
         self.held_as_b_saw(run_b, "Data / scope")
 
-    def test_t4_a_field_edited_after_the_new_run_holds(self):
+    def test_a_field_edited_after_the_new_run_holds(self):
         """Edited after B ran, then judged on the new text: B saw another text."""
         correction = self.corrected_for_a()
         code = self.code_repaired()
@@ -1410,7 +1410,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.judged((code, "resolved"), (correction, "resolved"))
         self.held_as_b_saw(run_b, "Data / scope")
 
-    def test_t4_a_field_edited_after_the_verdict_on_the_new_run_holds(self):
+    def test_a_field_edited_after_the_verdict_on_the_new_run_holds(self):
         correction = self.corrected_for_a()
         code = self.code_repaired()
         self.measure()
@@ -1420,7 +1420,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.assertEqual(rc, 1, out)
         self.assertIn(self.HELD, out)
 
-    def test_t5_another_field_changed_without_its_own_release_holds(self):
+    def test_another_field_changed_without_its_own_release_holds(self):
         correction = self.corrected_for_a()
         code = self.code_repaired()
         self.lab.fill(self.protocol, "--force", f"Unit={self.UNIT_RIGHT}")
@@ -1429,7 +1429,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         held = self.held_as_b_saw(run_b, "Unit")
         self.assertNotIn("Data / scope", held)  # released; Unit is not
 
-    def test_t5_the_twin_two_fields_each_released_pass(self):
+    def test_the_twin_two_fields_each_released_pass(self):
         rc, out, _ = self.analysis(
             "BLOCKER · PROTOCOL-lines.md:Data / scope · statement · Data / scope says 4 "
             "documents, the run read 3 · the denominator · LAB-050 Analysis audit "
@@ -1460,7 +1460,7 @@ class CorrectionThenNewRun(CorrectionCommands):
         rc, out = self.lab.adopt(self.protocol, run_b)
         self.assertEqual(rc, 0, out)
 
-    def test_t6_a_question_corrected_then_measured_again_holds(self):
+    def test_a_question_corrected_then_measured_again_holds(self):
         """Question / hypothesis has no correction in place
         (`protocol_history.correctable`): a new run under a rewritten
         question is held even with a `resolved` on it, and the hold and the

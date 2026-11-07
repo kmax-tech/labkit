@@ -1919,7 +1919,7 @@ class CheckNote(unittest.TestCase):
     machine-read, the note is kept whole and bound. Six answers of the
     second pilot write it so."""
 
-    def test_the_six_refused_answers_now_write_whole_records(self):
+    def test_pilot_answers_preserve_check_keys_and_notes(self):
         for name in ("C-1", "C-2", "C-3", "D-1", "D-2", "D-3"):
             with self.subTest(name):
                 answer = (PILOT2 / f"{name}.report.txt").read_text(encoding="utf-8")

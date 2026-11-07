@@ -162,7 +162,7 @@ class PreflightRecord(unittest.TestCase):
         assert gap is not None
         self.assertEqual(gap.fix, audit_gaps.audit_way(self.area))
 
-    def test_a_record_without_the_registration_is_no_longer_read(self):
+    def test_a_record_without_the_registration_does_not_read(self):
         text = _protocol()
         path = self.area / findings.DIR / self._record(text)
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)

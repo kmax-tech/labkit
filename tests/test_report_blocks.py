@@ -697,7 +697,7 @@ class ReportFiles(unittest.TestCase):
         )
         self.assertNotIn("which no protocol has adopted as its result", out)
 
-    def test_the_prose_marker_is_not_read_eighth_round_t3(self):
+    def test_the_prose_marker_is_not_read(self):
         """The prose marker is no form the gate reads, backticks around the
         id or not:
         the citation is held as the promotion, the sentence names the

@@ -15,7 +15,7 @@ notes-only commit on branch `v1v2-field-values`, whose code was
 failed one test:
 
 ```
-FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_a_question_corrected_then_measured_again_holds
 1 failed, 2892 passed, 1 skipped, 6926 subtests passed in 187.09s
 
 tests/test_end_to_end.py:1421: held = self.held_as_b_saw(run_b, "Question / hypothesis")
@@ -44,9 +44,9 @@ or protocol code) failed two runs in a row, each on another test of
 this class, while other sessions ran suites (load average 13–18):
 
 ```
-FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t5_the_twin_two_fields_each_released_pass
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_the_twin_two_fields_each_released_pass
 tests/test_end_to_end.py:1379: AssertionError   # finalize after run B: rc != 0
-FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_a_question_corrected_then_measured_again_holds
 ```
 
 t5 failed the other way: finalize held where the twin must pass. The
@@ -194,7 +194,7 @@ With the hook keeping its whole output (`d217ec4a`), two refusals were
 caught in full, on branch `unread-checks-block` (load average 7–13):
 
 ```
-FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_t6_a_question_corrected_then_measured_again_holds
+FAILED tests/test_end_to_end.py::CorrectionThenNewRun::test_a_question_corrected_then_measured_again_holds
 E   AssertionError: no hold naming Question / hypothesis; runs ['2026-11-04T10-10-50_4c7a', '2026-11-04T10-10-50_4f01'], B 2026-11-04T10-10-50_4c7a:
 E     BLOCKER: 2026-11-04T10-10-50_4f01 and 2026-11-04T10-10-50_4c7a started in the same second — the run ids cannot say which is newest.
 

@@ -442,7 +442,7 @@ class ConflictingRegistrations(_Areas):
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the margin raised, runs")
 
-    def test_k3_holds_the_predecessor(self):
+    def test_different_first_registrations_hold_the_predecessor(self):
         ctx = report_context.checked(self.a, self.a / "PROTOCOL-x.md")
         (finding,) = registration_hold.registration_changes(
             ctx.area, ctx.protocol, ctx.head.id, ctx.run

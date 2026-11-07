@@ -176,7 +176,7 @@ class ClaudeCliProvenance(unittest.TestCase):
         self.assertNotIsInstance(cm.exception, B.UnprovenAnswer)
         self.assertIn("is_error=True", str(cm.exception))
 
-    def test_the_stop_as_cli_2_1_285_reported_it_is_unproven(self) -> None:
+    def test_multiple_models_without_safety_stops_are_unproven(self) -> None:
         """The reply of a stopped audit, field for field: a success, no
         error, no `safety_stops` at all."""
         reply = cli_reply(

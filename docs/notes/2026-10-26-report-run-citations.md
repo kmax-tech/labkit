@@ -76,7 +76,7 @@ Step 5 makes that review owed for a report with a discussion block.
   miss. Decided against it in the plan review on 2026-10-26: the format
   break comes right away, so the intermediate repair would be built and
   removed in the same series. The t3 text is a regression test instead
-  (`test_the_prose_marker_is_not_read_eighth_round_t3`).
+  (`test_the_prose_marker_is_not_read`).
 - **A TOML head for the whole report** (`[[runs]]` at the top). It is a
   second place beside the visible citation. The block keeps the
   declaration where the reader sees it.
