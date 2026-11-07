@@ -52,17 +52,17 @@ HEAD 8894a146 läuft grün (3072 Tests). Muster: Eine Regel ändert sich an ihre
 
 HEAD 42ba5445 grün (3085 Tests). Grobstruktur trägt: Schichtregel getestet und eingehalten, `preflight_area`/`finalize_area` lesbar mit Bedingungen am Aufruf, git/Digests/Run-ID je ein Zuhause. Schwach: report-check (Reihenfolge eine Ebene tiefer, Gates verschachtelt und per stdout gekoppelt), Helfer im Modul ihres ersten Aufrufers (fünf Importzyklen, fünf Module mit mehreren Aufgaben), Protokolltext-Bearbeitung mehrfach geschrieben. Befunde mit `pfad:zeile`: [Notiz](docs/notes/2026-11-07-architecture-audit.md). Offene Punkte, je eine Entscheidung:
 
-1. **Stationen von report-check am Einstieg (A5):** die Stationsfolge aus `chain_gaps` sichtbar in `report_check` wie bei `finalize_area`, eine Stage-Liste statt drei.
-2. **Verschachtelte Prüfungen (A1, A2):** finalize-Warnungen in report-check weiterreichen oder die Beschränkung auf Blocker dokumentieren; eine Ursache als ein Blocker.
-3. **Kein zweiter Kettenlauf am Stop/Commit (A3):** den nächsten Schritt aus den schon berechneten Befunden ableiten.
-4. **Prüfstufe korrekt etikettieren (A4):** Modellherkunft, Arme, README-Platzhalter als static evidence.
-5. **Befunde als Daten statt abgefangener Ausgabe (L1, L2):** `undecided_state` in ein eigenes Gate-Modul; `protocol_report` liefert Befunde, der Befehl druckt.
-6. **Testdateiname nach `--change-kind` (Bug):** eine Funktion für `tests/test_<NN>_<slug>.py`.
-7. **Eine Leseart für Ort und Feld eines Befunds (S5 erweitert):** zusammen mit Punkt 5 der Strukturprüfung.
+1. ~~**Stationen von report-check am Einstieg (A5):**~~ erledigt 4d6bcf69 — `chain_gaps` ist der Einstieg mit Plan und allen Bedingungen; `registration_stage` und `report_gaps` sind eingefaltet, Modul- und `report_check`-Docstring verweisen nur noch darauf.
+2. ~~**Verschachtelte Prüfungen (A1, A2):**~~ erledigt 4d6bcf69 — finalize-Warnungen kommen in report-check, Stop und Commit an (`finalize_findings`); fehlender Antwortlauf, doppelt geschriebenes Feld und unberichtbare Läufe zählen je einmal, wo finalize denselben Text liest (nicht auf dem Vorschlag einer Übernahme). Bewusst stehen gelassen: ein offener BLOCKER im Analyse-Record erscheint bei finalize je Befund und in der Analysestation als „Record nicht entschieden“ — zwei Regeln laut Tabelle in `findings.open_findings`.
+3. ~~**Kein zweiter Kettenlauf am Stop/Commit (A3):**~~ erledigt 79731817 — `hold_reported` gibt die gelaufenen Ketten zurück, `steps_for` liest sie; der Stop fängt report-check nicht mehr per stdout ab (`tell`). Noch doppelt: `undecided_state` läuft im Stop und in `next_step._undecided_step` erneut (billig, ohne finalize).
+4. ~~**Prüfstufe korrekt etikettieren (A4):**~~ erledigt 23dcce3f — nur der README-Platzhalter war falsch etikettiert. Modellherkunft und Arme bleiben `guaranteed`: die Stufe bewertet den gemeldeten Satz (`gate.GateFinding`), und der ist exakt, wenn er erscheint; dass sie manches übersehen, macht sie nicht heuristisch. Der Audit-Befund war insoweit überzogen.
+5. **Befunde als Daten statt abgefangener Ausgabe (L1, L2):** teilweise erledigt 79731817 (report-check im Stop). Offen: `undecided_state` in ein eigenes Gate-Modul (Zyklus next_step ↔ agent_hooks); `protocol_report.check_files` und `notes_check` liefern Befunde statt zu drucken (post-change fängt sie noch ab); `preflight_area` druckt neben seinem stillen Sammler (`before_run`).
+6. ~~**Testdateiname nach `--change-kind` (Bug):**~~ erledigt 85b71937 — `repo.area_test_stem`; zusätzlich gefunden: das README nannte für einen Bereich ohne Nummer auch `# Experiment : x` und `runlog experiments/-x`.
+7. **Eine Leseart für Ort und Feld eines Befunds (S5 erweitert):** zusammen mit Punkt 5 der Strukturprüfung, getrennt von 8. Vorher entscheiden (Zweitmeinung 2026-11-07): welche Regel für „welches Feld nennt dieser Ort“ gilt — exakt, Präfix oder eindeutiges Präfix; die heutigen Unterschiede können Verhalten ausdrücken.
 8. **Protokolltext-Grammatiken zusammenführen:** TOML-Tabelle, Feldlabel, Platzhalter, `## Runs` in `protocol_block`/`protocol_check`.
 9. **Module nach Aufgabe teilen (L3):** `findings`, `repo`, `agent_hooks`, `report_hold`, `finalize` — eigener Schritt oder weiter „wenn die Stelle ohnehin bearbeitet wird“.
-10. **Doku-Nachzug `docs/architecture.md`:** Prüftabelle (A6–A8), Schichtabsätze, ein Doku-Commit.
-11. **Doktrin-Spalte für Gates, Tools, Probes (L5):** streichen oder belassen.
+10. **Doku-Nachzug `docs/architecture.md`:** wird je Code-Schritt mitgezogen (Gates-Absatz und Gate-Tabelle in 4d6bcf69, Hook-Zeilen in 79731817). Offen: Prüftabelle (A6–A8), Schicht-Absätze aus L3–L5.
+11. **Doktrin-Spalte für Gates, Tools, Probes (L5):** streichen, sofern sie keine konkrete Entscheidung trägt (Zweitmeinung 2026-11-07); der Test liest die Spalte, also mit ihm zusammen ändern.
 12. **Kleinkram:** Lock-Probe, Literale neben Tupeln, Verzeichnismengen, kleinere Doppelungen.
 
 ### Begriffsprüfung — erledigt 2026-11-07
