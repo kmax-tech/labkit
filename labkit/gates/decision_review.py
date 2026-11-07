@@ -75,7 +75,7 @@ from labkit.formats.commands import audit_command
 from labkit.formats.scope_sha import Snapshot, area_snapshot, validation_note
 from labkit.formats.prompts import prompt_body
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
-from labkit.gates import audit, audit_decisions, audit_prompt, audit_reply
+from labkit.gates import audit_call, audit_decisions, audit_prompt, audit_reply
 from labkit.gates.ways_out import ANSWER_AGAIN
 
 #: the review's mode: its instructions, the prompt's MODE line and its
@@ -440,7 +440,7 @@ def review(
         )
         # journaled like an audit: a review deleted before the commit is
         # noticed by the attempt that names it (ninth haiku round, t5)
-        with audit.journaled_answer(
+        with audit_call.journaled_answer(
             area, REVIEW, model, evidence.scope_sha, evidence.prompt, timeout
         ) as (running, report):
             lines = parse_review(report, evidence.numbers)
@@ -464,7 +464,7 @@ def review(
                 again=again,
             )
             running.end("record", file=attempts.under_audits(area, written))
-    except audit.REFUSAL_ERRORS as exc:
+    except audit_call.REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     u, r, i = reviews.counts_of(decisions)

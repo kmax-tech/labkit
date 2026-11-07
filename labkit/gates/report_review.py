@@ -70,7 +70,7 @@ from labkit.checks.report_review_inputs import review_keys, review_pieces
 from labkit.formats.repo import layout_root, shown, the_protocol
 from labkit.formats.commands import report_review_command
 from labkit.formats.prompts import prompt_body
-from labkit.gates import audit, audit_prompt, audit_reply, report_hold
+from labkit.gates import audit_call, audit_prompt, audit_reply, report_hold
 from labkit.gates.ways_out import ANSWER_AGAIN
 
 REPORT_REVIEW = "report"
@@ -244,7 +244,7 @@ def review_report(
         # journaled like an audit, started on the inputs' fingerprint: a
         # review with claims deleted before the commit is noticed by the
         # attempt that names it (ninth haiku round, t5)
-        with audit.journaled_answer(
+        with audit_call.journaled_answer(
             area, ATTEMPT_MODE, model, whole, prompt, timeout
         ) as (running, reply):
             claims = parse_claims(
@@ -261,7 +261,7 @@ def review_report(
                 again=again,
             )
             running.end("record", file=attempts.under_audits(area, written))
-    except audit.REFUSAL_ERRORS as exc:
+    except audit_call.REFUSAL_ERRORS as exc:
         console.refuse("labkit-audit", str(exc).strip(chr(39)))
         return 2
     print(reply)

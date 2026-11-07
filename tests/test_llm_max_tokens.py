@@ -18,7 +18,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from llm_fixture import cli_reply, typed  # noqa: E402
 
-from labkit.gates import audit  # noqa: E402
+from labkit.gates import audit_call
 from labkit.run import llm  # noqa: E402
 
 SPECS = {
@@ -66,8 +66,8 @@ class TakesMaxTokens(unittest.TestCase):
     def test_the_audit_asks_for_room_only_where_a_backend_caps(self) -> None:
         with _specs():
             self.assertEqual(
-                (audit._report_room("cli"), audit._report_room("local")),
-                (None, audit.REPORT_TOKENS),
+                (audit_call.report_room("cli"), audit_call.report_room("local")),
+                (None, audit_call.REPORT_TOKENS),
             )
 
 

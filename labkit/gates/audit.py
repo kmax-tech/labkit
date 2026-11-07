@@ -68,10 +68,9 @@ the prose can still change.
 from __future__ import annotations
 
 import argparse
-import contextlib
 import sys
 import time
-from collections.abc import Generator, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 
 from labkit.checks.audit_binding import AuditError
@@ -122,9 +121,9 @@ from labkit.gates.ways_out import (
     AUDIT_AGAIN,
 )
 from labkit.run import llm, llm_backends
+from labkit.gates.audit_call import REFUSAL_ERRORS, report_room
 
 DEFAULT_MODEL = "opus"  # without `[audit] model` in models.toml (`llm.audit_alias`)
-REPORT_TOKENS = 4096  # room for a report of many findings, where a backend caps
 DEFAULT_TIMEOUT_S = (
     failed_attempts.ATTEMPT_TIMEOUT_S
 )  # one call reads the area, the rules, the rows
@@ -243,7 +242,7 @@ def _answer_or_record(
         )
     # the alias is resolved before the attempt begins: an alias models.toml
     # does not know is a usage error (KeyError), not an attempt
-    room = _report_room(args.model)
+    room = report_room(args.model)
     running = attempts.begin(
         args.area,
         args.mode,
@@ -303,46 +302,6 @@ def _answer_or_record(
     except BaseException as exc:
         running.end("none", error=f"{type(exc).__name__}: {exc}")
         raise
-
-
-def _report_room(alias: str) -> int | None:
-    """The token cap an audit report is given: REPORT_TOKENS where the
-    backend takes a cap, none where it has none (claude-cli: it sends the
-    model's own output cap, 128000 for opus 5.5 on CLI 2.1.285; an answer
-    past it comes back cut and resumed — `llm_backends.UnprovenAnswer`)."""
-    return REPORT_TOKENS if llm.takes_max_tokens(alias) else None
-
-
-#: what the audit and both reviewers refuse with exit 2 and a sentence
-#: instead of a traceback: their own errors (AuditError, BackendError,
-#: PromptTruncated are RuntimeErrors; FindingsError, ReviewError,
-#: ReportReviewError, AttemptError, ProtocolChoiceError, PromiseError are
-#: ValueErrors), git failing (RuntimeError), an alias models.toml does not
-#: know (KeyError), a file gone. Each command listed its own; the report
-#: review's lacked ValueError (audit 2026-10-27, third, M7).
-REFUSAL_ERRORS = (ValueError, RuntimeError, KeyError, FileNotFoundError)
-
-
-@contextlib.contextmanager
-def journaled_answer(
-    area: Path, mode: str, model: str, fingerprint: str, prompt: str, timeout: int
-) -> Generator[tuple[attempts.Running, str]]:
-    """A reviewer's model call as an attempt of MODE on AREA started on
-    FINGERPRINT (`attempts.attempt`): the alias resolved first (an unknown
-    one is a usage error, not an attempt), the attempt's notes told, the
-    answer kept before anything reads it, its tokens told. The block reads
-    and records the answer and ends the attempt (`Running.end`); a block
-    that raises ends it `none`. The decision and the report review use it —
-    the call was written twice; the audit ends its attempt across two steps
-    itself (`_answer_or_record`)."""
-    room = _report_room(model)
-    with attempts.attempt(area, mode, model, fingerprint) as running:
-        for note in running.notes:
-            console.progress("labkit-audit", note)
-        answer = llm.complete(model, prompt, timeout=timeout, max_tokens=room)
-        running.keep_answer(answer)
-        console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
-        yield running, answer
 
 
 def main(argv: list[str]) -> int:
@@ -768,7 +727,7 @@ def _clarity(args: argparse.Namespace) -> int:
             args.model,
             prompt,
             timeout=args.timeout,
-            max_tokens=_report_room(args.model),
+            max_tokens=report_room(args.model),
         )
         console.progress("labkit-audit", f"tokens · {llm.last_usage().describe()}")
         result = parse_clarity(report)
