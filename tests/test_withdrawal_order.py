@@ -89,14 +89,14 @@ class RewordedInTheChain(CountCommands):
 
     def held_by(self) -> Path | None:
         ctx = report_context.checked(self.area, self.protocol)
-        return report_check.chain_gaps(ctx)[1]
+        return report_check.chain_gaps(ctx).held_by
 
     def test_rewording_finalize_keeps_the_withdrawal_first(self):
         self.adopted_a()
         self.change_code()
         self.measure()
         self.assertEqual(self.held_by(), self.protocol)
-        finalized = report_check.finalize_gaps
+        finalized = report_check.finalize_findings
 
         def reworded(area: Path, protocol: Path):
             return [
@@ -104,7 +104,7 @@ class RewordedInTheChain(CountCommands):
                 for f in finalized(area, protocol)
             ]
 
-        with mock.patch.object(report_check, "finalize_gaps", reworded):
+        with mock.patch.object(report_check, "finalize_findings", reworded):
             self.assertEqual(self.held_by(), self.protocol)
 
 

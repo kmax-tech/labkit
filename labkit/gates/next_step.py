@@ -78,7 +78,7 @@ from labkit.formats import (
     protocol_check,
 )
 from labkit.formats.standard_contract import ANALYSIS_AUDIT
-from labkit.formats.gate import BLOCKER, Findings, GateFinding
+from labkit.formats.gate import Findings, GateFinding
 from labkit.formats.repo import (
     MEASURE,
     RESTORE,
@@ -176,17 +176,17 @@ def next_step(area: Path, protocol: Path | None, *, state: str = TREE) -> Step:
     if account is not None:
         return account
     pending = ctx.declared is None and ctx.run is not None
-    gaps, held_by = report_check.chain_gaps(ctx, adoption_pending=pending)
+    chain = report_check.chain_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
     filled = Findings(
         None,
         area=shown(area, Path.cwd()),
         audit=audit_command(area, protocol=protocol).line,
     )
-    filled.take_all(g for g in gaps if g.grade == BLOCKER)
+    filled.take_all(chain.blockers)
     held = filled.found
     if held:
-        return _held_step(ctx, held, held_by, hint if ctx.run is None else "")
+        return _held_step(ctx, held, chain.held_by, hint if ctx.run is None else "")
     # the stop's and the commit's own hold the chain carries no gap for
     undecided = _undecided_step(area, protocol, staged=staged)
     if undecided is not None:

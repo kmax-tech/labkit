@@ -93,6 +93,18 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **report-check tells finalize's warnings, and one cause is one blocker.**
+  The nested finalize passed only its blockers on, so its warnings (a
+  newer run by name, one draw only, model provenance, arms, open audit
+  WARNINGs, untracked outputs) reached no one who ran report-check, the
+  stop or the commit; they are told there now, prefixed `finalize:`. A
+  cause finalize already holds on the text report-check reads is not
+  held again: no answering run was three blockers (finalize, its
+  intent-check, the analysis station) and is one; a field written twice
+  at high repeat cost was two; an unreportable run's marks were a
+  blocker and a warning. The stations, their order and conditions stand
+  in one list, `report_check.chain_gaps`, which returns what they found
+  as data (`report_check.ReleaseChain`).
 - **An area without a number gets a README that names it.** Restamped
   with `labkit-init exp NAME --change-kind`, an area named without `NN-`
   got a README with `# Experiment : NAME`, the route `runlog

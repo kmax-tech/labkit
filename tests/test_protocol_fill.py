@@ -890,7 +890,8 @@ class Adopt(unittest.TestCase):
     def test_a_checked_full_run_is_adopted(self):
         rc, out, text = self._adopt(self._area())
         self.assertEqual(rc, 0, out)
-        self.assertIn("report-check: all clear", out)
+        # finalize's warnings on the fixture's run are told, nothing blocks
+        self.assertIn("report-check: 0 blockers", out)
         self.assertIn(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})", text
         )

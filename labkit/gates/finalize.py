@@ -155,6 +155,7 @@ from labkit.gates.ways_out import (
     register_anew,
 )
 from labkit.checks.audit_binding import AuditError, covering_analysis
+from labkit.checks.intent_check import NoRunChosen
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.gates.report_context import pending_adoption
@@ -253,7 +254,7 @@ def undeclared_note(text: str, protocol: Path) -> str | None:
     """A note while the protocol declares no result yet — the normal state
     before adoption, so no warning: it names `labkit-next AREA` and no step
     of its own. finalize is a station of `next`'s chain
-    (`report_check.chain_gaps` → `finalize_gaps`), so it cannot print
+    (`report_check.chain_gaps` → `finalize_findings`), so it cannot print
     `next`'s step without calling itself; the one explainer stays `next`.
     None once a run is declared."""
     if protocol_block.declared_run(text) is not None:
@@ -1084,6 +1085,13 @@ def check_intent_keys_in_metrics(
         held = intent_hold(
             protocol, metrics_path(answering_run) if answering_run is not None else None
         )
+    except NoRunChosen:
+        # without an answering run intent-check makes the same run choice
+        # (`bound_answering_run`, the same text) after reading the block:
+        # station 1 holds it, one cause one blocker
+        assert answering_run is None, "intent-check chose no run beside station 1's"
+        findings.note(NO_RUN)
+        return
     except console.Refused as exc:  # nothing to hold: a blocker, as its exit 2
         findings.block(
             f"intent-check: {exc.why}",
@@ -1495,10 +1503,12 @@ def finalize_area(
     1b. registration — only with a run: its promise block as the first
        measurement registered it (`registration_changes`), a blocker
        naming every change.
-    2. intent-check — always; with an answering run it reads its metrics.
+    2. intent-check — always; with an answering run it reads its metrics,
+       without one it holds the promise block alone (step 1 names the run).
     3. declared scopes — only with a run.
-    4. open fields — always; warnings only: protocol placeholders and
-       stamped `<…>` placeholders left in the area's README.
+    4. open fields — always: protocol placeholders and stamped `<…>`
+       placeholders left in the area's README warn; a bound field written
+       twice and data counts typed by hand or stale block.
     5. provenance — only for repeat_cost = low, and only with a run.
     6. area tests — always.
     7. registered outputs, criterion n, the null lane, the kept number and

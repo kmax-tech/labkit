@@ -219,9 +219,15 @@ class ReportCheck(unittest.TestCase):
         ctx = report_context.checked(area, area / "PROTOCOL-x.md")
         self.assertIsNone(ctx.run)
         self.assertIn("no completed run bound to", ctx.why)
-        code, out = self._run(area)
+        out = io.StringIO()
+        # the real finalize: its first station holds the missing run
+        with (
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+            contextlib.redirect_stdout(out),
+        ):
+            code = report_check.report_check(area)
         self.assertEqual(code, 1)
-        self.assertIn(f"the answering run is none — {ctx.why}", out)
+        self.assertIn(f"the answering run is none — {ctx.why}", out.getvalue())
 
     def test_a_freeze_with_a_must_gap_blocks(self):
         """Frozen with the stamp's `<…>` promise sentences: the flag is set,
@@ -266,10 +272,20 @@ class ReportCheck(unittest.TestCase):
             + proto.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
-        code, out = self._run(area, fields=True)
-        self.assertEqual(code, 1, out)
-        self.assertIn("Unit written 2 times (lines 1 and 2)", out)
-        self.assertIn("keep one copy and delete the others", out)
+        out = io.StringIO()
+        # the real finalize: its open-fields station holds the doubled field,
+        # the freeze station does not hold it a second time
+        with (
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+            contextlib.redirect_stdout(out),
+        ):
+            code = report_check.report_check(area)
+        self.assertEqual(code, 1, out.getvalue())
+        self.assertIn(
+            "finalize: PROTOCOL-x.md: Unit written 2 times (lines 1 and 2)",
+            out.getvalue(),
+        )
+        self.assertIn("keep one copy and delete the others", out.getvalue())
 
     def test_low_owes_no_freeze_and_everything_after_it(self):
         """The twin at low repeat cost: unfrozen, no preflight audit, and clean — a
@@ -342,7 +358,7 @@ class ReportCheck(unittest.TestCase):
             mock.patch.object(report_check, "finalize_area", return_value=2),
             self.assertRaises(RuntimeError) as caught,
         ):
-            report_check.finalize_gaps(area, area / "PROTOCOL-x.md")
+            report_check.finalize_findings(area, area / "PROTOCOL-x.md")
         self.assertIn("kept no blocker", str(caught.exception))
 
     def test_finalize_findings_arrive_as_data_not_through_stdout(self):
@@ -377,14 +393,99 @@ class ReportCheck(unittest.TestCase):
         self.assertNotIn("── completion ──", out.getvalue())
         self.assertNotIn("finalize: 1 blocker", out.getvalue())
 
+    def test_finalize_warnings_reach_report_check(self):
+        """finalize's warnings were dropped inside report-check, the stop and
+        the commit (audit 2026-11-07, second, A1): one warning of the nested
+        finalize stands in the chain and in the output, prefixed."""
+        area = self._area(repeat_cost="low", frozen=False)
+        self._audited(area)
+
+        def warning_finalize(area_: Path, protocol: Path | None, collected) -> int:
+            collected.warn("one draw only", evidence_kind="guaranteed")
+            return 0
+
+        out = io.StringIO()
+        with (
+            mock.patch.object(report_check, "finalize_area", warning_finalize),
+            mock.patch.object(report_check, "check_analysis_script", return_value=None),
+            contextlib.redirect_stdout(out),
+        ):
+            ctx = report_context.checked(area, area / "PROTOCOL-x.md")
+            found = report_check.chain_gaps(ctx).found
+            report_check.report_check(area)
+        warned = [f.text for f in found if f.grade == "WARNING"]
+        self.assertIn("finalize: one draw only", warned)
+        self.assertIn("WARNING: finalize: one draw only", out.getvalue())
+
+    def test_no_answering_run_is_one_blocker(self):
+        """finalize's run choice, intent-check's same choice and the analysis
+        station each held a missing run (audit 2026-11-07, second, A2)."""
+        area = self._area(repeat_cost="low", frozen=False)  # no run at all
+        with mock.patch.object(
+            report_check, "check_analysis_script", return_value=None
+        ):
+            ctx = report_context.checked(area, area / "PROTOCOL-x.md")
+            blockers = [f.text for f in report_check.chain_gaps(ctx).blockers]
+        self.assertEqual(
+            [b for b in blockers if "no completed run bound" in b],
+            [b for b in blockers if "run" in b and "bound" in b],
+        )
+        self.assertEqual(
+            len([b for b in blockers if "no completed run bound" in b]), 1, blockers
+        )
+        self.assertFalse([b for b in blockers if "intent-check" in b], blockers)
+        self.assertFalse([b for b in blockers if "no answering run" in b], blockers)
+
+    def test_an_unreportable_mark_is_one_blocker_not_also_a_warning(self):
+        area = self._area(repeat_cost="low", frozen=False)
+        run = self._answered(area)
+        completed_run(
+            area, run.name, metrics={"criterion_1_pass": True}, unfrozen_ack=True
+        )
+        self._audited(area, run)
+        with mock.patch.object(
+            report_check, "check_analysis_script", return_value=None
+        ):
+            ctx = report_context.checked(area, area / "PROTOCOL-x.md")
+            found = report_check.chain_gaps(ctx).found
+        marked = [
+            f for f in found if "acknowledged over an unfrozen protocol" in f.text
+        ]
+        self.assertEqual(
+            [f.grade for f in marked], ["BLOCKER"], [f.text for f in found]
+        )
+
+    def test_a_field_written_twice_is_one_blocker_at_the_freeze(self):
+        area = self._area()
+        protocol = area / "PROTOCOL-x.md"
+        protocol.write_text(
+            protocol.read_text(encoding="utf-8") + C1_PROSE, encoding="utf-8"
+        )
+        with mock.patch.object(
+            report_check, "check_analysis_script", return_value=None
+        ):
+            ctx = report_context.checked(area, protocol)
+            blockers = [f.text for f in report_check.chain_gaps(ctx).blockers]
+        twice = [b for b in blockers if "written 2 times" in b]
+        self.assertEqual(len(twice), 1, blockers)
+        # on the adoption's proposal finalize reads the tree, not this text:
+        # the freeze station holds it there
+        proposed = dataclasses.replace(ctx, state=report_context.PROPOSED)
+        with mock.patch.object(
+            report_check, "check_analysis_script", return_value=None
+        ):
+            blockers = [f.text for f in report_check.chain_gaps(proposed).blockers]
+        self.assertEqual(len([b for b in blockers if "written 2 times" in b]), 2)
+
     def test_each_station_blocks_on_its_own(self):
         area = self._area(frozen=False)
+        self._answered(area)  # the analysis station holds an answering run only
         code, out = self._run(area, finalize=1, check="02_analyze.py --check exits 1")
         self.assertEqual(code, 1)
         for needle in (
             "not `frozen = true`",
             "finalize",
-            "analysis audit: no answering run to hold it to",
+            "analysis audit: no analysis audit saw the area as it is now",
             "--check exits 1",
         ):
             self.assertIn(needle, out)
@@ -1357,7 +1458,7 @@ class RegisteredReport(unittest.TestCase):
         proto = area / "PROTOCOL-x.md"
         self.assertIsNone(protocol_block.declared_run(proto.read_text("utf-8")))
         ctx = report_context.checked(area, proto)
-        gaps = report_check.report_gaps(ctx, adoption_pending=True)
+        gaps = report_check.chain_gaps(ctx, adoption_pending=True).found
         self.assertTrue(any("analysis" in g.text for g in gaps), gaps)
 
     def test_the_twin_a_discussion_of_another_run_is_no_progress_account(self):

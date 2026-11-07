@@ -25,53 +25,12 @@ each lives in `report_hold`, which `if_reported` calls after the protocols.
 `finalize` holds the run before the number is written back and comes
 before the analysis audit; report-check comes last and holds the whole
 chain, at every repeat cost (why each station holds what it holds:
-docs/notes/2026-10-19-hooks-and-report-check.md):
-
-  0. protocol       choose the protocol; read its head, declaration and
-                    answering run into Checked. No protocol or unreadable
-                    context ends with exit 2.
-     evidence       the area's committed evidence as the commit holds it
-                    (`evidence.change_blockers`): a record changed beyond
-                    its decision lines, a review or another audit file
-                    changed, a closed run's files changed — each a blocker
-                    whose way out is the restore from HEAD. The comparison
-                    is the pre-commit's own, so the tree check holds what
-                    the commit will refuse.
-  1. declaration    report an unreadable `[result]` as a blocker.
-  2. registration   where the lane freezes: the flag, required fields and
-                    promise tables must hold. Otherwise, where the lane
-                    owes registration: check the commit of the first
-                    measurement. At low repeat cost no freeze or preflight audit
-                    is owed (LAB-017 The number of audits follows the cost tier).
-  3. finalize       run finalize and name its blockers.
-  4. full run       with an answering run: require a measurement without
-                    an unfrozen acknowledgement (`runs.unreportable`).
-  5. analysis       where the lane owes an analysis audit: a decided record
-                    must cover the current code, promises, answering run
-                    and shown evidence; while the area's audit evidence is
-                    gone the blocker names the loss and its restore, since
-                    labkit-audit starts no audit then. Check the generated
-                    Recorded results and Limitation lines against that run and
-                    those records.
-  6. recomputation  always run `scripts/02_analyze.py --check` under the
-                    repo's interpreter: its outputs, metrics and cited
-                    result must agree (LAB-041 Generate numbers, don't retype them).
-  7. decisions      where the lane owes an analysis audit: check reviews
-                    of accepted `stands` decisions. An unconfirmed BLOCKER
-                    blocks; an unconfirmed WARNING warns.
-  8. report         where the head registers a report file (`report`) and
-                    that file is delivered: it carries the result block of
-                    the declared run or the protocol's handover block
-                    (`report_hold.report_owed`).
-  9. summary        1 if any stage found a blocker, otherwise 0.
-
-`report_check` lists the stages and their conditions in this order. A
-blocker does not stop later applicable stages. It reads and runs checks;
-it does not itself write the protocol or run records. Checked supplies
-this gate's protocol text, head, declaration and selected answering run.
-The nested finalize gate and the analysis script read their own inputs;
-this is not a single file snapshot across all stages. The output names
-the file state whose declaration was checked.
+docs/notes/2026-10-19-hooks-and-report-check.md). The stations, their
+order and every condition under which one runs stand in one place,
+`chain_gaps` — its docstring is the plan, its body keeps each `if` —; it
+is the one list `report_check` prints and `next_step` reads. A blocker
+does not stop later stations. The gate reads and runs checks; it does not
+itself write the protocol or run records.
 
 `--if-reported` is the gate that runs unasked: `claude-hook stop` runs it
 on every changed path and sends the agent back once per stop (a hook that
@@ -175,7 +134,7 @@ from labkit.checks.audit_binding import (
     analysis_now,
     covering_analysis,
 )
-from labkit.gates.finalize import finalize_area
+from labkit.gates.finalize import finalize_area, unreportable_warnings
 from labkit.gates.preflight import area_test_python, contract_hint
 from labkit.gates import ways_out
 from labkit.gates.report_hold import (
@@ -272,9 +231,10 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     return f"{script} --check exits {r.returncode}: " + " | ".join(tail)
 
 
-def freeze_gaps(ctx: Checked) -> list[GateFinding]:
+def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
     """Why the freeze does not hold — the flag unset, or a must
-    gap protocol-check names (the stamp's `<…>` promise sentences among them)."""
+    gap protocol-check names (the stamp's `<…>` promise sentences among them);
+    REPEATED: a bound field written more than once too (`repeated_gaps`)."""
     name = ctx.protocol.name
     fields = contract_hint(ctx.protocol)
     gaps = (
@@ -296,14 +256,6 @@ def freeze_gaps(ctx: Checked) -> list[GateFinding]:
         blocker(f"{name}: {label}", fix=f"write the field; {fields}")
         for label in report.missing_must
     ]
-    gaps += [
-        blocker(
-            f"{name}: {twice}",
-            fix=f"{REPEATED_WAY_OUT}; then "
-            f"`protocol-check {shlex.quote(shown(ctx.protocol, Path.cwd()))}`",
-        )
-        for twice in report.repeated
-    ]
     # a must field still holding its `<…>` placeholder passed here while
     # protocol-check and preflight refused it (audit 2026-10-15)
     gaps += [
@@ -313,7 +265,21 @@ def freeze_gaps(ctx: Checked) -> list[GateFinding]:
         )
         for n, label in report.must_holes
     ]
-    return gaps
+    return gaps + (repeated_gaps(ctx) if repeated else [])
+
+
+def repeated_gaps(ctx: Checked) -> list[GateFinding]:
+    """A blocker per bound field CTX's text writes more than once
+    (`protocol_check.FieldReport.repeated`): which copy is registered
+    cannot be told."""
+    return [
+        blocker(
+            f"{ctx.protocol.name}: {twice}",
+            fix=f"{REPEATED_WAY_OUT}; then "
+            f"`protocol-check {shlex.quote(shown(ctx.protocol, Path.cwd()))}`",
+        )
+        for twice in check_fields(ctx.text).repeated
+    ]
 
 
 def registration_gaps(ctx: Checked) -> list[GateFinding]:
@@ -523,30 +489,84 @@ def unreportable_gaps(ctx: Checked, freeze_owed: bool) -> list[GateFinding]:
     ]
 
 
-def finalize_gaps(area: Path, protocol: Path) -> list[GateFinding]:
-    """Finalize's blockers, each named here with
-    its prefix — a hook that says "run it to see them" asks for a round
-    trip the agent does not take. finalize runs on a silent collector
-    (`Findings(tell=None)`): its findings arrive as data and nothing of its
-    output reaches this gate's, so finalize puts every reason into the
-    blocker itself (the runs it looked at, intent-check's lines, the test
-    counts) and keeps its exit-2 reason (no protocol to hold) as a blocker
-    too. A non-zero exit without a blocker is a bug in finalize, not a
-    state to report around."""
+#: what names a finding of the nested finalize in this gate's output
+FINALIZE = "finalize: "
+
+
+def without_unreportable_warnings(
+    finalized: list[GateFinding], run: Path | None
+) -> list[GateFinding]:
+    """FINALIZED, finalize's findings (`finalize_findings`), without the
+    warnings it tells for RUN's marks that make its number unreportable
+    (`finalize.unreportable_warnings`, the one spelling) — the full-run
+    station holds the same marks as blockers. FINALIZED as it is without a
+    run."""
+    if run is None:
+        return finalized
+    told = {FINALIZE + line for line in unreportable_warnings(run)}
+    return [f for f in finalized if not (f.grade == WARNING and f.text in told)]
+
+
+def cut_off_adoption_gaps(ctx: Checked) -> list[GateFinding]:
+    """A blocker while an adoption was cut off during its check: the head may
+    hold a proposal no check passed (`report_context.pending_adoption`);
+    never on the proposal itself, which that adoption is checking."""
+    if ctx.state == PROPOSED or not pending_adoption(ctx.protocol).is_file():
+        return []
+    return [
+        blocker(
+            f"{ctx.protocol.name}: an adoption was cut off during its check — "
+            f"the protocol may hold a proposal no check passed "
+            f"({pending_adoption(ctx.protocol).name} keeps it as it was before)",
+            fix=f"`{adopt_command(ctx.protocol)}` puts it back first and adopts again",
+            step=adopt_command(ctx.protocol),
+        )
+    ]
+
+
+def declaration_gaps(ctx: Checked) -> list[GateFinding]:
+    """A blocker when CTX's `[result]` table does not read
+    (`Checked.declaration_gap`)."""
+    if not ctx.declaration_gap:
+        return []
+    return [
+        blocker(
+            f"{ctx.protocol.name}: {ctx.declaration_gap}",
+            fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
+            f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
+            f"`[result]` table for it",
+            step=withdraw_command(ctx.protocol),
+        )
+    ]
+
+
+def report_binding_gaps(ctx: Checked, *, unread: bool) -> list[GateFinding]:
+    """The report CTX's head registers against the one its first
+    measurements stood under (`report_hold.report_binding_gap`, UNREAD
+    passed on), as a list."""
+    gap = report_binding_gap(ctx.protocol, ctx.text, unread=unread)
+    return [] if gap is None else [gap]
+
+
+def finalize_findings(area: Path, protocol: Path) -> list[GateFinding]:
+    """Finalize's blockers and warnings, each named here with its prefix
+    (`FINALIZE`) — a hook that says "run it to see them" asks for a round
+    trip the agent does not take, and a warning dropped here reached no
+    one who ran report-check, the stop or the commit. finalize runs on a
+    silent collector (`Findings(tell=None)`): its findings arrive as data
+    and its headers and notes reach nothing, so finalize puts every reason
+    into the finding itself (the runs it looked at, intent-check's lines,
+    the test counts) and keeps its exit-2 reason (no protocol to hold) as a
+    blocker too. A non-zero exit without a blocker is a bug in finalize,
+    not a state to report around."""
     collected = Findings(tell=None)  # the data, not the console
     finalized = finalize_area(area, protocol, collected)
-    if finalized == 0:
-        return []
-    if not collected.blocked:
+    if finalized != 0 and not collected.blocked:
         raise RuntimeError(
             f"finalize {area} exits {finalized} and kept no blocker — every "
             f"reason finalize has must be a finding"
         )
-    return [
-        replace(f, text=f"finalize: {f.text}")
-        for f in collected.found
-        if f.grade == BLOCKER
-    ]
+    return [replace(f, text=FINALIZE + f.text) for f in collected.found]
 
 
 def analysis_findings(
@@ -601,29 +621,19 @@ def report_check(
 ) -> int:
     """Check AREA before reporting; 0 clean or warnings, 1 blocked, 2 no context.
 
-    0. Choose the protocol and read Checked; missing or unreadable ends with 2.
-       Committed evidence changed against HEAD blocks
-       (`evidence.change_blockers`).
-    1. Declaration: an unreadable `[result]` blocks, later stages continue.
-    2. Registration: check the freeze where the lane owes it; otherwise check
-       the first measurement's committed registration where owed.
-    3. Finalize: always collect its blockers.
-    4. Full run: check reportability only when an answering run exists.
-    5. Analysis: coverage and rendered results only where the lane owes it.
-    6. Recomputation: always run the analysis script's `--check`.
-    7. Decisions: review accepted `stands` only where analysis is owed.
-    8. Report: the registered report, only when the head names one and the
-       file is delivered in STATE, carries the result block or the handover,
-       and then (REVIEW) a clean report review of that state.
-    9. Summary: return 1 with any blocker, otherwise 0.
+    0. Choose the protocol and read Checked; missing or unreadable ends with 2
+       — the only early end.
+    1. The chain (`chain_gaps`: its stations, their order and conditions),
+       every finding told; an adoption named beside other blockers is told
+       as the last step (`tell_adoption_order`).
+    2. Summary: 1 with any blocker, otherwise 0.
 
-    Every applicable stage runs despite earlier blockers. STATE and TEXT
-    name the declaration's file state: the tree by default, the index for
-    the pre-commit, the written proposal for adoption. REVIEW false leaves
-    the registered report's review out — `labkit-adopt`'s own check right
-    after it wrote the block: the review reads the final text, which comes
-    after. The nested finalize gate and analysis script read their own
-    inputs.
+    STATE and TEXT name the declaration's file state: the tree by default,
+    the index for the pre-commit, the written proposal for adoption. REVIEW
+    false leaves the registered report's review out — `labkit-adopt`'s own
+    check right after it wrote the block: the review reads the final text,
+    which comes after. The nested finalize gate and analysis script read
+    their own inputs.
     """
     # 0. protocol and context — the only early end
     chosen = choose_protocol(area, protocol, "report-check")
@@ -651,62 +661,51 @@ def report_check(
             f"registration as committed at the first measurement, the full run, "
             f"the analysis audit and the check are owed instead"
         )
-    findings.take_all(report_gaps(ctx, review=review))
+    # 1. the chain
+    findings.take_all(chain_gaps(ctx, review=review).found)
     # adoption last — an adoption line beside other blockers is the last
     # step, not the fix (stuck-state probe 2026-10-28)
     tell_adoption_order(findings)
 
-    # 9. summary — 1 with a blocker, otherwise 0
+    # 2. summary — 1 with a blocker, otherwise 0
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         print(f"  {chosen.name}: {held}")
     return findings.report("report-check", "reporting")
 
 
-def registration_stage(ctx: Checked) -> list[GateFinding]:
-    """Stage 2 of `report_gaps`: the freeze where CTX's lane owes it, else
-    the first measurement's committed registration where owed
-    (`registration_gaps`); a declared replacement's changes; and the report
-    registered before the first measurement (`report_hold.report_binding_gap`)
-    — its unreadable commits are the registration station's to name where
-    that station ran."""
-    ln = lane(ctx.head.repeat_cost)
-    out: list[GateFinding] = []
-    if ln.freeze:
-        out += freeze_gaps(ctx)
-    elif ln.registration:
-        out += registration_gaps(ctx)
-    out += replacement_gaps(ctx)
-    binding = report_binding_gap(ctx.protocol, ctx.text, unread=not ln.registration)
-    if binding is not None:
-        out.append(binding)
-    return out
+@dataclass(frozen=True)
+class ReleaseChain:
+    """What report-check's chain found for one protocol in one file state
+    (`chain_gaps`): FOUND, every blocker and warning in the chain's order;
+    HELD_BY, the protocol whose declaration every later hold withdraws
+    first (`held_declaration`; None when none does)."""
 
+    found: list[GateFinding]
+    held_by: Path | None
 
-def report_gaps(
-    ctx: Checked, *, adoption_pending: bool = False, review: bool = True
-) -> list[GateFinding]:
-    """Every gap report-check holds CTX to, in the order of the chain
-    (`chain_gaps`, without the declaration it holds)."""
-    return chain_gaps(ctx, adoption_pending=adoption_pending, review=review)[0]
+    @property
+    def blockers(self) -> list[GateFinding]:
+        """The blockers of FOUND, in the chain's order."""
+        return [f for f in self.found if f.grade == BLOCKER]
 
 
 def chain_gaps(
     ctx: Checked, *, adoption_pending: bool = False, review: bool = True
-) -> tuple[list[GateFinding], Path | None]:
-    """(gaps, held_by): every gap report-check holds CTX to, in the order of
-    the chain — the one list `report_check` prints and `next_step` reads —,
-    and the protocol whose declaration every later hold withdraws first
-    (`held_declaration`; None when none does):
+) -> ReleaseChain:
+    """Every finding report-check holds CTX to, in the order of the chain —
+    the one list `report_check` prints and `next_step` reads (`ReleaseChain`):
 
-    0. Evidence: a change of the area's committed evidence that breaks its
-       rule (`evidence.change_blockers`; in the index for INDEX, else in the
-       tree), first — its restore comes before any other step.
-    1. Declaration: an unreadable `[result]` blocks; later stages continue.
+    0. Evidence: an adoption cut off during its check, then a change of the
+       area's committed evidence that breaks its rule
+       (`evidence.change_blockers`; in the index for INDEX, else in the
+       tree) — its restore comes before any other step.
+    1. Declaration: an unreadable `[result]` blocks.
     2. Registration: the freeze where the lane owes it, else the first
-       measurement's committed registration where owed; a declared
-       replacement's changes.
-    3. Finalize: its blockers, always.
+       measurement's committed registration where the lane owes that; a
+       declared replacement's changes; the report registered before the
+       first measurement (`report_hold.report_binding_gap`).
+    3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it.
     6. Recomputation: the analysis script's `--check`, always.
@@ -717,76 +716,76 @@ def chain_gaps(
        the commit hold such a report with, named here so that `next`
        names the same step; REVIEW False leaves it out).
 
-    Every applicable stage runs despite earlier blockers; a declared run
+    Every applicable station runs despite earlier blockers; a declared run
     whose code changed puts the withdrawal before every later hold
-    (`withdrawn_first`). ADOPTION_PENDING (no run adopted yet, the one a
-    next step asks about): the stages the adoption writes and holds on its
-    proposal — the result section (`report_decisions.limit_gaps`), the recomputation, the
-    report — are left out, since the tree cannot pass them before the
-    adoption writes them; `protocol_fill.adopt` checks the whole proposal.
-    Prints nothing."""
+    (`withdrawn_first`). One cause is one blocker: where finalize reads the
+    text CTX holds (every state but the adoption's proposal, `same_text`),
+    a cause finalize already holds is not held a second time — no answering
+    run (station 5), a field written twice (station 2), the marks that make
+    a run unreportable (finalize's warning, station 4's blocker).
+    ADOPTION_PENDING (no run adopted yet, the one a next step asks about):
+    the stations the adoption writes and holds on its proposal — the result
+    section (`report_decisions.limit_gaps`), the recomputation, the report —
+    are left out, since the tree cannot pass them before the adoption
+    writes them; `protocol_fill.adopt` checks the whole proposal. Prints
+    nothing."""
     ln = lane(ctx.head.repeat_cost)
-    out: list[GateFinding] = []
-    # 0. an adoption cut off during its check: the head may hold a proposal
-    # no check passed (`report_context.pending_adoption`)
-    if ctx.state != PROPOSED and pending_adoption(ctx.protocol).is_file():
-        out.append(
-            blocker(
-                f"{ctx.protocol.name}: an adoption was cut off during its check — "
-                f"the protocol may hold a proposal no check passed "
-                f"({pending_adoption(ctx.protocol).name} keeps it as it was before)",
-                fix=f"`{adopt_command(ctx.protocol)}` puts it back first and "
-                f"adopts again",
-                step=adopt_command(ctx.protocol),
-            )
-        )
+    # finalize reads the protocol as the tree holds it — the text CTX holds
+    # in every state but the proposal an adoption checks
+    same_text = ctx.state != PROPOSED
+    # 0. evidence — an adoption cut off, then committed evidence changed
+    out = cut_off_adoption_gaps(ctx)
     out += evidence.change_blockers(ctx.area, staged=ctx.state == INDEX)
     # 1. declaration
-    if ctx.declaration_gap:
-        out.append(
-            blocker(
-                f"{ctx.protocol.name}: {ctx.declaration_gap}",
-                fix=f"`{withdraw_command(ctx.protocol)}` removes it; audit the run "
-                f"that answers, then `{adopt_command(ctx.protocol)}` writes the "
-                f"`[result]` table for it",
-                step=withdraw_command(ctx.protocol),
-            )
-        )
-    # 2. registration
-    out += registration_stage(ctx)
-    # 3. finalize
-    finalized = finalize_gaps(ctx.area, ctx.protocol)
+    out += declaration_gaps(ctx)
+    # 2. registration — the freeze where the lane owes it, else the
+    # committed registration where the lane owes that
+    if ln.freeze:
+        # a field written twice: finalize's station 4 holds it on the text it reads
+        out += freeze_gaps(ctx, repeated=not same_text)
+    elif ln.registration:
+        out += registration_gaps(ctx)
+    out += replacement_gaps(ctx)
+    # the commits the registration station names unreadable are its to name
+    # where it ran (`report_binding_gap`'s UNREAD)
+    out += report_binding_gaps(ctx, unread=not ln.registration)
+    # 3. finalize — always; the marks station 4 holds as blockers are not
+    # told again as finalize's warnings where it read this text
+    finalized = finalize_findings(ctx.area, ctx.protocol)
+    if same_text:
+        finalized = without_unreportable_warnings(finalized, ctx.run)
     out += finalized
     held_by = held_declaration(ctx, finalized)
     # while the declared run's code changed, every later hold names the
     # withdrawal first (`gate.withdrawn_first`, the datum `withdraw_first`)
     withdrawal = withdraw_command(held_by) if held_by is not None else None
-    # 4. full run
+    # 4. full run — only with an answering run
     if ctx.run is not None:
         out += withdrawn_first(unreportable_gaps(ctx, ln.freeze), withdrawal)
-    # 5. analysis
-    if ANALYSIS_AUDIT in ln.audits:
+    # 5. analysis — where the lane owes it; without an answering run,
+    # finalize's first station holds the run choice where it reads this text
+    if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or not same_text):
         analysis = analysis_findings(
             ctx, ln.analysis_rule, result_section=not adoption_pending
         )
         out += withdrawn_first(analysis, withdrawal)
-    # 6. recomputation
+    # 6. recomputation — always, but before an adoption
     if not adoption_pending:
         out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), withdrawal)
-    # 7. decisions
+    # 7. decisions — where the lane owes the analysis
     if ANALYSIS_AUDIT in ln.audits:
         out += withdrawn_first(review_findings(ctx), withdrawal)
         out += withdrawn_first(followup_findings(ctx), withdrawal)
-    # 8. report
+    # 8. report — but before an adoption; its review not on the proposal:
+    # its text is in every review's fingerprint, so the adoption would hold
+    # itself (`report_findings` says why)
     if not adoption_pending:
         out += report_findings(ctx, review=review)
     if review and ctx.state != PROPOSED:
-        # not on the proposal: its text is in every review's fingerprint,
-        # so the adoption would hold itself (`report_findings` says why)
         out += discussion_review_findings(
             ctx.protocol, ctx.text, ctx.repo, staged=ctx.state == INDEX
         )
-    return out, held_by
+    return ReleaseChain(out, held_by)
 
 
 def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccount:
@@ -801,7 +800,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
       measurement, or the metrics.json does not read; the run is the newest
       measurement, WHY the sentences that put it there;
     - HELD: the answering run, and the blockers report-check holds its
-      adoption with (`report_gaps`, the adoption pending; an audit that
+      adoption with (`chain_gaps`, the adoption pending; an audit that
       cannot be held to the run among them);
     - ADOPTABLE: the answering run, and nothing holds it.
 
@@ -850,8 +849,9 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
         return handovers.RunAccount(run, handovers.HELD, (str(exc),))
     held = tuple(
         g.text
-        for g in report_gaps(ctx, adoption_pending=ctx.declared is None, review=False)
-        if g.grade == BLOCKER
+        for g in chain_gaps(
+            ctx, adoption_pending=ctx.declared is None, review=False
+        ).blockers
     )
     state = handovers.HELD if held else handovers.ADOPTABLE
     return handovers.RunAccount(run, state, held)

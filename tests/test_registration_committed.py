@@ -1183,7 +1183,12 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self._run("0" * 40)
         with mock.patch.object(report_check, "freeze_gaps", return_value=[]):
             ctx = report_context.checked(self.area, self.proto)
-            gaps = report_check.registration_stage(ctx)
+            # finalize names the commit too, for its own comparison
+            gaps = [
+                g
+                for g in report_check.chain_gaps(ctx).found
+                if not g.text.startswith(report_check.FINALIZE)
+            ]
         unread = [
             g for g in gaps if "cannot be read" in g.text or "does not hold" in g.text
         ]
