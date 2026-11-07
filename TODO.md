@@ -48,6 +48,23 @@ HEAD 8894a146 läuft grün (3072 Tests). Muster: Eine Regel ändert sich an ihre
 10. ~~**Ein Leser für `data=`-Einträge (S11)**~~ erledigt 87b0e53c — neben `runs.read_outputs`.
 11. ~~**Vorlage gegen Tupel testen:**~~ erledigt a79f32e8 — Grade- und FIX-Zeile der Auditor-Anweisung gegen `SUBJECTS`, `SETTLED_SUBJECTS`, `FIX_VERDICTS`.
 
+### Audit 2026-11-07 (zweites) — Architektur, Check-Ablauf, Zuständigkeiten
+
+HEAD 42ba5445 grün (3085 Tests). Grobstruktur trägt: Schichtregel getestet und eingehalten, `preflight_area`/`finalize_area` lesbar mit Bedingungen am Aufruf, git/Digests/Run-ID je ein Zuhause. Schwach: report-check (Reihenfolge eine Ebene tiefer, Gates verschachtelt und per stdout gekoppelt), Helfer im Modul ihres ersten Aufrufers (fünf Importzyklen, fünf Module mit mehreren Aufgaben), Protokolltext-Bearbeitung mehrfach geschrieben. Befunde mit `pfad:zeile`: [Notiz](docs/notes/2026-11-07-architecture-audit.md). Offene Punkte, je eine Entscheidung:
+
+1. **Stationen von report-check am Einstieg (A5):** die Stationsfolge aus `chain_gaps` sichtbar in `report_check` wie bei `finalize_area`, eine Stage-Liste statt drei.
+2. **Verschachtelte Prüfungen (A1, A2):** finalize-Warnungen in report-check weiterreichen oder die Beschränkung auf Blocker dokumentieren; eine Ursache als ein Blocker.
+3. **Kein zweiter Kettenlauf am Stop/Commit (A3):** den nächsten Schritt aus den schon berechneten Befunden ableiten.
+4. **Prüfstufe korrekt etikettieren (A4):** Modellherkunft, Arme, README-Platzhalter als static evidence.
+5. **Befunde als Daten statt abgefangener Ausgabe (L1, L2):** `undecided_state` in ein eigenes Gate-Modul; `protocol_report` liefert Befunde, der Befehl druckt.
+6. **Testdateiname nach `--change-kind` (Bug):** eine Funktion für `tests/test_<NN>_<slug>.py`.
+7. **Eine Leseart für Ort und Feld eines Befunds (S5 erweitert):** zusammen mit Punkt 5 der Strukturprüfung.
+8. **Protokolltext-Grammatiken zusammenführen:** TOML-Tabelle, Feldlabel, Platzhalter, `## Runs` in `protocol_block`/`protocol_check`.
+9. **Module nach Aufgabe teilen (L3):** `findings`, `repo`, `agent_hooks`, `report_hold`, `finalize` — eigener Schritt oder weiter „wenn die Stelle ohnehin bearbeitet wird“.
+10. **Doku-Nachzug `docs/architecture.md`:** Prüftabelle (A6–A8), Schichtabsätze, ein Doku-Commit.
+11. **Doktrin-Spalte für Gates, Tools, Probes (L5):** streichen oder belassen.
+12. **Kleinkram:** Lock-Probe, Literale neben Tupeln, Verzeichnismengen, kleinere Doppelungen.
+
 ### Begriffsprüfung — erledigt 2026-11-07
 
 Die [Begriffsprüfung](docs/notes/2026-11-07-terminology-audit.md) hält die korrigierten Widersprüche zwischen Definitionen, Anweisungen und Implementierung fest, einschließlich der drei Textreste im Laborstandard. Die zwei Bedeutungen von `lane` (Ablauf nach Wiederholungskosten und Vergleichsarm) sind jetzt im README unterschieden; eine Umbenennung der Schnittstellen ist damit nicht geplant. Erneut prüfen, wenn neue Begriffe oder geänderte Entscheidungen eingeführt werden; kein zusätzlicher Bauauftrag vor den Aufgaben 1–5.
