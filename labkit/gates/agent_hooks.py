@@ -87,7 +87,8 @@ import os
 import subprocess
 import signal
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from types import FrameType
 
@@ -107,14 +108,13 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.checks import protocol_report
-from labkit.gates import report_check, report_hold
+from labkit.gates import report_check
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.next_step import next_step, steps_for
 from labkit.gates.undecided import undecided_state
 from labkit.run.runlog import RunIndexError
 from labkit.formats.repo import (
     PROTOCOL_GLOB,
-    area_protocols,
     git_root,
     indexed_changes,
     head_sha,
@@ -292,13 +292,6 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
             "(LAB-015 Preflight audit before freezing):\n  " + "\n  ".join(undecided),
             file=sys.stderr,
         )
-    missing = missing_reports(repo, changed)
-    if missing:
-        print(
-            "a protocol of an area this session worked in registers a report "
-            "that is not written — the stop holds:\n  " + "\n  ".join(missing),
-            file=sys.stderr,
-        )
     rc = 0
     chains: dict[Path, report_check.ReleaseChain] = {}
     if changed:
@@ -321,64 +314,87 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
                 "way:\n" + "\n".join(lines).rstrip(),
                 file=sys.stderr,
             )
+    # after report-check, so its chains are read instead of run again
+    missing = missing_reports(repo, changed, chains=chains)
+    if missing.lines:
+        print(
+            "a protocol of an area this session worked in registers a report "
+            "that is not written — the stop holds:\n  " + "\n  ".join(missing.lines),
+            file=sys.stderr,
+        )
     if undecided or rc != 0:
         # what to do is `next`'s step per protocol touched, read from the tree
-        # the stop judges and the chains report-check ran on it; the
-        # missing-report lines above are that step already
-        steps = [
-            s
-            for s in steps_for(repo, changed, staged=False, chains=chains)
-            if s not in missing
-        ]
+        # the stop judges and the chains report-check ran on it; a protocol
+        # whose missing report printed its step above is not printed again
+        steps = steps_for(
+            repo, changed, staged=False, chains=chains, rendered=missing.steps
+        )
+        steps = [s for s in steps if s not in missing.lines]
         if steps:
             print("\n".join(steps), file=sys.stderr)
     # commits it could not read keep the base where it is: past them, no
     # later stop would check them
     return (
-        rc != 0 or bool(undecided) or bool(missing) or session.hold,
+        rc != 0 or bool(undecided) or bool(missing.lines) or session.hold,
         not in_tree and not session.unchecked,
         checked_head,
     )
 
 
-def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
-    """Per protocol of every area PATHS touch (`areas_touched`), and every
-    protocol whose head registers a file among PATHS as its report
-    (`report_hold.registering_protocols`: a REPORT.md at the root touches no
-    area), whose registered report is not written though the area measured
+@dataclass(frozen=True)
+class MissingReports:
+    """What the stop holds for registered reports not written
+    (`missing_reports`): LINES, what it prints — per protocol the step
+    `labkit-next` names, a run index that does not read once; STEPS, per
+    protocol its rendered step, so the steps the stop prints after its
+    holds are not composed a second time (`next_step.steps_for`)."""
+
+    lines: list[str]
+    steps: dict[Path, str]
+
+
+def missing_reports(
+    repo: Path,
+    paths: list[Path],
+    *,
+    chains: Mapping[Path, report_check.ReleaseChain] | None = None,
+) -> MissingReports:
+    """Per protocol the state PATHS change reaches (`report_check.reached_by`,
+    the one reader the gate and the step use: the areas touched, the
+    protocols registering one of PATHS as their report or whose first
+    measurements did, those a report among PATHS shows a result of), whose
+    registered report is not written though the area measured
     (`registered_report.missing_report`): the hold, printed as `labkit-next`
-    prints the step it names from that finding (`next_step.Step.render`).
-    A head
-    that does not read is left to the checks that hold it where it is
-    touched; a run index that does not read is told, once per index
-    (`runlog.RunIndexError`): whether a measurement owes the report cannot
-    be told."""
-    out: list[str] = []
-    registering = report_hold.registering_protocols(paths, repo, staged=False)
-    touched = list(areas_touched(paths, repo))
-    touched = [a.resolve() for a in touched]
-    touched += [
-        p.parent.resolve() for p in registering if p.parent.resolve() not in touched
-    ]
-    for area in touched:
-        for protocol in area_protocols(area):
-            try:
-                text = protocol.read_text(encoding="utf-8")
-                gap = registered_report.missing_report(
-                    protocol, text, repo, declared=protocol_block.declared_run(text)
-                )
-            except (OSError, UnicodeError, protocol_block.BlockError):
-                continue  # held as a protocol where it is touched
-            except RunIndexError as exc:
-                # whether a measurement owes the report cannot be told; one
-                # line per index, not per protocol reading it
-                if exc.why not in out:
-                    out.append(exc.why)
-                continue
-            if gap is not None:
-                # the hold is the gate's finding; what to do is `next`'s step,
-                # read from the same finding — one spelling, never two
-                out.append(next_step(area, protocol).render(shown(area, Path.cwd())))
+    prints the step it names from that finding (`next_step.Step.render`,
+    reading CHAINS, what report-check found for a protocol in this state,
+    instead of running the chain again). A head that does not read is left
+    to the checks that hold it where it is touched; a run index that does
+    not read is told, once per index (`runlog.RunIndexError`): whether a
+    measurement owes the report cannot be told."""
+    out = MissingReports([], {})
+    for protocol in report_check.reached_by(paths, repo, staged=False).protocols:
+        area = protocol.parent.resolve()
+        try:
+            text = protocol.read_text(encoding="utf-8")
+            gap = registered_report.missing_report(
+                protocol, text, repo, declared=protocol_block.declared_run(text)
+            )
+        except (OSError, UnicodeError, protocol_block.BlockError):
+            continue  # held as a protocol where it is touched
+        except RunIndexError as exc:
+            # whether a measurement owes the report cannot be told; one
+            # line per index, not per protocol reading it
+            if exc.why not in out.lines:
+                out.lines.append(exc.why)
+            continue
+        if gap is not None:
+            # the hold is the gate's finding; what to do is `next`'s step,
+            # read from the same finding — one spelling, never two
+            step = next_step(area, protocol, chain=(chains or {}).get(protocol)).render(
+                shown(area, Path.cwd())
+            )
+            out.lines.append(step)
+            out.steps[protocol] = step
     return out
 
 

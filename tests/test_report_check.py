@@ -1316,7 +1316,7 @@ class RegisteredReport(unittest.TestCase):
         from labkit.gates import next_step
 
         with contextlib.chdir(root):
-            (line,) = agent_hooks.missing_reports(root, [proto])
+            (line,) = agent_hooks.missing_reports(root, [proto]).lines
             step = next_step.next_step(area, proto)
         self.assertEqual(line, step.render("experiments/01-x"))
         self.assertIn("REPORT.md carries no account of it yet", line)

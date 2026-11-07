@@ -888,7 +888,7 @@ class MissingRegisteredReport(unittest.TestCase):
             self.assertIn("REPORT.md carries no account of it yet", step.where)
             self.assertIn("--discuss", step.next)
             self.assertIn("REPORT.md", gap.text)
-            (line,) = agent_hooks.missing_reports(self.lab.root, [self.protocol])
+            (line,) = agent_hooks.missing_reports(self.lab.root, [self.protocol]).lines
             self.assertEqual(line, step.render("experiments/01-lines"))
             rc, err = self.lab.stop_hook()
         self.assertEqual(rc, 2, err)
@@ -902,7 +902,7 @@ class MissingRegisteredReport(unittest.TestCase):
         with contextlib.chdir(self.lab.root):
             step = next_step.next_step(self.area, self.protocol.resolve())
             self.assertEqual(
-                agent_hooks.missing_reports(self.lab.root, [self.protocol]), []
+                agent_hooks.missing_reports(self.lab.root, [self.protocol]).lines, []
             )
         self.assertIn("carries no account of it yet", step.where)
         self.assertIn("--discuss", step.next)

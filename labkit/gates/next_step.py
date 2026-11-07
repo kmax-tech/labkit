@@ -262,6 +262,7 @@ def steps_for(
     *,
     staged: bool,
     chains: Mapping[Path, ReleaseChain] | None = None,
+    rendered: Mapping[Path, str] | None = None,
 ) -> list[str]:
     """Per protocol the state PATHS change reaches
     (`report_check.reached_by`: the protocols of the areas touched, those
@@ -276,7 +277,8 @@ def steps_for(
     is told in one line in the step's place; a run index that does not
     read once per index. CHAINS, per protocol, what the caller's
     report-check found in the same state (`report_check.HoldVerdict`): read,
-    not run again."""
+    not run again; RENDERED, per protocol a step the caller already
+    composed (`agent_hooks.MissingReports.steps`): returned as it is."""
     from labkit.gates.report_check import reached_by
     from labkit.run.runlog import RunIndexError
 
@@ -284,6 +286,9 @@ def steps_for(
     for protocol in reached_by(paths, repo, staged=staged).protocols:
         area = protocol.parent.resolve()
         named = shown(area, Path.cwd())
+        if rendered is not None and protocol in rendered:
+            out.append(rendered[protocol])
+            continue
         try:
             step = next_step(
                 area,

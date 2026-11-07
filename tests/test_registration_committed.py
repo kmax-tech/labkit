@@ -1050,6 +1050,25 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         code, out = self._if_reported([note])
         self.assertNotIn("now registers", out)
 
+    def test_the_stop_reaches_an_unwritten_report_through_the_former_one(self):
+        """The stop finds registered reports not written by the gate's own
+        reader (`report_check.reached_by`): a change to the report the first
+        measurement registered reaches the protocol, whose head now
+        registers another, unwritten one. The twin: an unrelated note
+        reaches nothing."""
+        from labkit.gates import agent_hooks
+
+        self._run(self._register("REPORT.md"))
+        self._head_now("docs/OTHER.md")
+        report = self.root / "REPORT.md"
+        report.write_text("# Report\n\n0.93\n", encoding="utf-8")
+        with contextlib.chdir(self.root):
+            (line,) = agent_hooks.missing_reports(self.root, [report]).lines
+            self.assertIn("labkit-next:", line)
+            note = self.root / "NOTE.md"
+            note.write_text("# Note\n", encoding="utf-8")
+            self.assertEqual(agent_hooks.missing_reports(self.root, [note]).lines, [])
+
     def test_the_first_measurement_starts_only_with_its_report_committed(self):
         from labkit.run import start_check
 
