@@ -337,6 +337,17 @@ Files: `labkit/tools/next_step.py` (the dispatch by `step.name`), `labkit/tools/
 
 First item, and step 1 of the allow-list direction: one writer of the protocol head. `protocol_fill`, `protocol_edit` and `scaffold` write it today; one home writes it, and that writer refuses what a gate would later hold (a registered field after the first measurement, a bound field twice), through the same validation function the readers use. The reader's checks stay — a file may be edited by hand, restored or copied from another clone — but they call one implementation, not a second one. Before/after proposal like every other row.
 
+Inventory for this item (2026-11-07, read from the code at `391b6022`, not reproduced). The measure is one validation function for writer and reader, not fewer lines.
+
+- Already one implementation, nothing to merge: the report binding (`protocol_fill.report_bound` calls `report_hold.report_binding_gap`), the freeze (`audit_gaps.freeze_refusals`), the adoption (`protocol_check.adoption_owes`, then report-check), the low registration (`protocol_check.low_registration_missing`, read by `start_check`, `protocol_history` and the hooks), the head's choices (`protocol_block.FILLABLE_HEAD_KEYS`, `KINDS`).
+- Writer and gate disagree:
+  1. `labkit/tools/scaffold.py:1035` (`restampable_area`): "has measured" is `runs/` not empty; the gate's is `answering_run.first_measurements` (a run bound to the protocol that declared itself a measurement). `--change-kind` is refused after a probe or a pilot that binds nothing.
+  2. `labkit/tools/protocol_edit.py:144` (`fill`): a bound field written twice gets `--line <n>`; the gates refuse the duplicate itself (`protocol_check.repeated_fields`, `REPEATED_WAY_OUT`: keep one copy). The writer's way out fills one copy and leaves the hold standing.
+- The writer writes what a gate holds later, with no check of its own (a new refusal through the gate's function, no merge):
+  3. `labkit/tools/protocol_edit.py:150` and `:457` (`fill`, `fill_sentence` with `--force`): a registered or scope field and a promise sentence are overwritten after the first measurement; finalize holds that through `protocol_history.first_measured_differences`.
+  4. `labkit/tools/protocol_edit.py:312` (`fill_head`): a set head key is answered with "edit the TOML head to change it", a hand edit of the head, the kind included, which `scope_differences` holds after the first measurement.
+- Not duplicates: "registered" has three lists that answer different questions — what an audit judged (`protocol_check.registration_stamp`), what the number is about from the first measurement on (`SCOPE_FIELDS`, the promises, kind, `[kept]`, `[reference]`, `COMPARED_FIELDS`), what a reading hint may not rewrite (`HELD_FIELDS`). The writer's refusal in 3 and 4 takes the second, the one finalize holds.
+
 Each *goes* or *merges* row of the inventory is first a before/after proposal (one section in this note or a note of its own), then one commit with one Breaking entry naming the last version that read the format; tests go with the format. The two merge candidates (`attempts` with `failed_attempts`, `reviews` with `report_reviews`) are separate proposals: a merge that adds a kind field and branches on it has bred variants, not removed a format. The rule "existing legacy paths go in one Breaking release" holds — collect the rows, release once.
 
 ## Phase 4 — The state model
