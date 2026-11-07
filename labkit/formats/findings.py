@@ -681,7 +681,7 @@ def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
     cannot be told, and the caller says so.
     What a correction in place is bound to: a follow-up audit judges it on
     the field's change (`followup.earlier_corrections`), and finalize
-    releases that change only on its `resolved` (`finalize.scope_changes`)."""
+    releases that change only on its `resolved` (`registration_hold.scope_changes`)."""
     at = f.place
     if f.status != "fixed" or at is None or at[0] != protocol.name:
         return None

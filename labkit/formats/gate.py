@@ -211,7 +211,7 @@ def withdrawn_first(
     (`GateFinding.withdraw_first`) when one is given; a warning, a blocker
     without a way out, or None come back as they are. The one place the
     rule becomes a datum; who decides it is `report_check.held_declaration`
-    and `finalize.declaring_protocol`."""
+    and `registration_hold.declaring_protocol`."""
     if withdrawal is None:
         return found
     return [

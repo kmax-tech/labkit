@@ -31,6 +31,7 @@ from unittest import mock
 
 from protocol_fixture import PID, completed_run, head, scope_file
 
+from labkit.gates import registration_hold
 from labkit.tools import report_command
 from labkit.formats import answering_run, protocol_history, runs
 from labkit.formats.gate import Findings
@@ -332,7 +333,9 @@ def _registration_changes(area: Path, proto: Path) -> list:
     """finalize's registration station on the answering run report-check
     chooses."""
     ctx = report_context.checked(area, proto)
-    return finalize.registration_changes(ctx.area, ctx.protocol, ctx.head.id, ctx.run)
+    return registration_hold.registration_changes(
+        ctx.area, ctx.protocol, ctx.head.id, ctx.run
+    )
 
 
 class RegistrationAsFirstMeasured(_Repository):

@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.gates import registration_hold
 from labkit.tools import report_command
 from labkit.checks import result_render  # noqa: E402
 from labkit.formats import (  # noqa: E402
@@ -28,7 +29,7 @@ from labkit.formats import (  # noqa: E402
     protocol_block,
     protocol_history,
 )
-from labkit.gates import finalize, report_check, report_hold  # noqa: E402
+from labkit.gates import report_check, report_hold  # noqa: E402
 from labkit.gates import report_context
 from labkit.gates import report_replacement
 from protocol_fixture import completed_run, head, registration_of, started_at  # noqa: E402
@@ -445,7 +446,7 @@ class ConflictingRegistrations(_Areas):
 
     def test_k3_holds_the_predecessor(self):
         ctx = report_context.checked(self.a, self.a / "PROTOCOL-x.md")
-        (finding,) = finalize.registration_changes(
+        (finding,) = registration_hold.registration_changes(
             ctx.area, ctx.protocol, ctx.head.id, ctx.run
         )
         self.assertEqual(finding.grade, report_check.BLOCKER)

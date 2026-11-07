@@ -1066,7 +1066,7 @@ class CorrectedDescription(CorrectionCommands):
     field as its place, is decided `fixed`, and a follow-up audit judges the
     change (the field as registered against the field now). Only that
     `resolved`, in a record of exactly this state, releases the change from
-    the hold of what the number is about (`finalize.resolved_corrections`);
+    the hold of what the number is about (`registration_hold.resolved_corrections`);
     a fresh audit without it, a verdict on another field, a text edited
     after the verdict and a place given as a line number release nothing,
     at every grade. Fifth SAB-like draw, 2026-10-28 (a corrected count
@@ -1178,7 +1178,7 @@ class CorrectedDescription(CorrectionCommands):
         """The registered text stands inside the new one: the hold stays
         (labkit cannot tell a description from a changed population), and
         its way names the Conclusion or the report for the addition
-        (`finalize.description_added`; labkit-paper area 23, sts512 r2 and
+        (`registration_hold.description_added`; labkit-paper area 23, sts512 r2 and
         r3, 2026-11-06: "and 512 test pairs" added, restore alone named,
         the attempts handed over)."""
         self.describe(self.WRONG + "; the two shortest held out as a check")

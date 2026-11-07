@@ -21,6 +21,7 @@ import unittest
 from pathlib import Path
 
 import test_end_to_end as e2e
+from labkit.gates import registration_hold
 from labkit import PACKAGE_DIR
 from labkit.formats import findings
 from labkit.gates import audit_decisions
@@ -243,7 +244,7 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
         """finalize releases a correction by its field: a place several
         labels begin is a blocker with its reason, never a silent miss."""
         from labkit.checks.audit_binding import AuditError
-        from labkit.gates import finalize, ways_out
+        from labkit.gates import ways_out
 
         protocol = self.area / "PROTOCOL-x.md"
         text = protocol.read_text(encoding="utf-8")
@@ -251,14 +252,16 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
             "WARNING", "WARNING · PROTOCOL-x.md:Data · statement · x", "fixed", "why"
         )
         with self.assertRaises(AuditError) as caught:
-            finalize._correction_field(decided, protocol, text)
+            registration_hold._correction_field(decided, protocol, text)
         self.assertIn("'Data' begins 3 fields", caught.exception.why)
         self.assertEqual(caught.exception.fix, ways_out.PLACE_UNCLEAR_WAY)
         # the twin: a start of one label is that field
         unit = findings.Finding(
             "WARNING", "WARNING · PROTOCOL-x.md:Uni · statement · x", "fixed", "why"
         )
-        self.assertEqual(finalize._correction_field(unit, protocol, text), "unit")
+        self.assertEqual(
+            registration_hold._correction_field(unit, protocol, text), "unit"
+        )
 
     def test_several_protocols_keep_the_line_one_line(self):
         (self.area / "PROTOCOL-y.md").write_text(

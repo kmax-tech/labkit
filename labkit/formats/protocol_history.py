@@ -391,7 +391,7 @@ HELD_FIELDS = tuple(dict.fromkeys(REGISTERED_FIELDS + SCOPE_FIELDS))
 #: (docs/notes/2026-11-02-registered-field-repair.md, 2026-11-03)
 UNCORRECTABLE_FIELDS = ("Question / hypothesis",)
 #: what one of UNCORRECTABLE_FIELDS is after the first measurement: the
-#: hold of its change (`finalize.correction_way`) and the decision's line
+#: hold of its change (`registration_hold.correction_way`) and the decision's line
 #: (`audit_decisions.repair_hint`, which states the condition) say it so
 STANDS_AS_REGISTERED = (
     "has no correction in place — it stands as registered, a typo included; "
@@ -404,7 +404,7 @@ def correctable(label: str) -> bool:
     `fixed`, judged `resolved` — release a change of the field LABEL? Not
     for UNCORRECTABLE_FIELDS, compared by `field_name`. The one rule the
     correction (`findings.corrected_field`), the hold and the decision's
-    line (`finalize.correction_way`) read. Pure."""
+    line (`registration_hold.correction_way`) read. Pure."""
     return field_name(label) not in {field_name(f) for f in UNCORRECTABLE_FIELDS}
 
 

@@ -20,7 +20,7 @@ from labkit.checks.audit_binding import AuditError
 #: the kind owes and the kind to the first measurement's commit
 #: (`report_check.registration_gaps`), and the promise block to the
 #: registration the first measurements recorded
-#: (`finalize.registration_changes`) — a bar lowered after it and
+#: (`registration_hold.registration_changes`) — a bar lowered after it and
 #: measured again is held
 #: the ways out of a BLOCKER, by its cause: (name, what to do). Shown to the
 #: analysis auditor (`blocker_routes`, in `audit_prompt`) and stated in the
