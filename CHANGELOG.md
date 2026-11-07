@@ -116,6 +116,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Refusals say what to do now, not which labkit version changed it.**
+  A run without a declared constant or without its promise block names
+  the gap and the reproduction with the labkit version its repo pins; a
+  missing `02_analyze.py` names the template to copy for the area's kind;
+  the import check's warning drops the case it was found in.
 - **Whether an audit attempt still runs is asked with a shared lock probe.**
   The attempt journal probed its lock exclusively, so a second caller
   asking at the same moment read the first prober as a running attempt

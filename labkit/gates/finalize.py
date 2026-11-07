@@ -458,8 +458,8 @@ def check_declared_scopes(
         owed = promises.promise_tables_owed(None, frozen=False, full_run=True)
         findings.block(
             f"{answering_run.name} recorded no promise block: {owed} — a run "
-            f"under labkit 0.70.0 or earlier is held and reproduced with "
-            f"its pinned version",
+            f"records the block it was measured under, so this one cannot "
+            f"answer; reproduce it with the labkit version its repo pins",
             fix=f"a block added after the run is a new registration: "
             f"{register_anew(per='per change, the promise block among them')}",
         )

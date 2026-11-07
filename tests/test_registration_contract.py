@@ -218,7 +218,8 @@ class FinalizeBlocksAnUnrecordedBlock(unittest.TestCase):
                     finalize.check_declared_scopes(findings, area, run)
                 self.assertTrue(
                     any(
-                        "recorded no promise block" in b and "0.70.0" in b
+                        "recorded no promise block" in b
+                        and "the labkit version its repo pins" in b
                         for b in findings.blocked
                     ),
                     findings.blocked,

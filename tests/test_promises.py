@@ -414,7 +414,7 @@ class Chain(unittest.TestCase):
         rc, out = self.check()
         self.assertEqual(rc, 1)
         self.assertIn("recorded no constant of that name", out)
-        self.assertIn("0.70.0", out)
+        self.assertIn("the labkit version its repo pins", out)
 
     def test_run_config_agreeing_with_a_constant_is_silent(self):
         with contextlib.redirect_stdout(io.StringIO()):

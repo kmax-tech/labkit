@@ -208,9 +208,9 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
     if not (area / script).is_file():
         return (
             f"no {script} — the check that holds the note to the run is owed; "
-            f"every skeleton stamps it (an area stamped at low repeat cost before 0.100.0 "
-            f"carried the check inside 01_measure.py: stamp "
-            f"labkit/templates/analyze-quick-script.py.template beside it)"
+            f"copy it from labkit/templates/: analyze-quick-script.py.template "
+            f"for a computation, analyze-script.py.template for a fit or an "
+            f"apply, as {script}"
         )
     try:
         r = subprocess.run(

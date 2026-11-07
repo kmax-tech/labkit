@@ -371,10 +371,9 @@ def promised_constant_mismatches(
         elif r.state == "missing":
             out.append(
                 f"{run_name}: [{r.promise_id}] declares {r.name} = {r.promised!r}, "
-                f"the run recorded no constant of that name — a run under "
-                f"labkit 0.71 or later cannot start without it; an older run is "
-                f"held and reproduced with its pinned version (0.70.0 was the "
-                f"last that let it pass)."
+                f"the run recorded no constant of that name — a run starts only "
+                f"with every declared constant recorded, so this one cannot "
+                f"answer; reproduce it with the labkit version its repo pins."
             )
     return out
 

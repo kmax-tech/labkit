@@ -246,7 +246,7 @@ def _coverage_in(
                             f"{where}:{node.lineno}",
                             f"names area `{foreign[0]}` · a file of another area "
                             f"determines this number, and this area's stamp does "
-                            f"not cover it (uniagent 15–17: the script of 14)",
+                            f"not cover it",
                             rule=rule,
                             fix=fix,
                             evidence_kind=STATIC_EVIDENCE,
