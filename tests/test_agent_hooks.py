@@ -669,11 +669,8 @@ class PostChange(unittest.TestCase):
             self.assertIn("--report-review", _run(hook_post_change.post_change, ev)[1])
 
     def test_a_report_whose_review_stands_gets_no_review_command(self):
-        """The counter-case, and the competing logic removed: the hook named
-        the review whenever a run was discussed, reviewed or not
-        (report_review's `review_hint`, until 0.107.0), while the gate held
-        only without a review of the state. The hook reads the gate's
-        finding now: a review of this state naming no claim silences it."""
+        """The counter-case: the hook names the review from the gate's own
+        finding, so a review of this state naming no claim silences it."""
         from labkit.checks.report_review_inputs import review_keys, review_pieces
         from labkit.formats import report_reviews
         from labkit.gates.report_review import discussed_under

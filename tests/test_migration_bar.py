@@ -54,17 +54,16 @@ class ProseValueReaders(unittest.TestCase):
             "registered_prompt_blocks",
         ),  # the Prompt block held to the constants and the sent prompts
     )
-    #: left since phase 3 (2026-10-21): the declaration is `[result] run` in the
-    #: head — `answering_run_field`, `answering_run_open` and finalize's former
-    #: `cited_runs`, `cited_run_gaps` read prose for it
-    #: left since phase 4: `[model]` decides the cut and carries the arms
+    #: names that read the declaration from prose, which is `[result] run` in
+    #: the head, or the cut and the arms, which `[model]` decides — none may
+    #: stand in the package
     GONE = (
         "answering_run_field",
         "answering_run_open",
         "cited_runs",
         "cited_run_gaps",
         "model_named_in",
-        "measure_runs",  # phase 5: the declaration makes the result due
+        "measure_runs",  # the declaration makes the result due
     )
     #: the one reader of generated sections: exact equality with the rendering
     GENERATED = ((result_render, "render_gaps"),)
