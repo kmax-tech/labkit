@@ -80,6 +80,17 @@ pins (`requirements.txt` / `requirements.lock`).
   `[[fix_verdict]]` table — which the carried finding takes. A subject on
   any other FIX line is refused. New way out: "an unsettled suspicion".
 
+- **A data source outside the repository is held by its checksum
+  alone.** At repeat cost low, `finalize` asked git whether every source
+  was tracked or ignored; for one outside the repository (a model
+  directory on scratch, reached directly or by a link) git can do
+  neither, so it always blocked, with two ways out that could not work.
+  Now its bytes are held to the sha256 the run recorded and a note names
+  where it lies and that its source or access route and version belong
+  in Data / scope; a changed byte still blocks. finalize's summary says
+  "tracked in git or kept outside it". The standard's Fixed inputs says
+  where data may lie.
+
 ### Fixed
 
 - **The decision list offers only the decisions a finding's subject

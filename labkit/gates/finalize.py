@@ -1229,8 +1229,9 @@ def check_data_counts(findings: Findings, protocol: Path, text: str) -> bool:
 
 def check_provenance(findings: Findings, area: Path, answering_run: Path) -> None:
     """Station 5: every source the run read frozen in its record, its bytes
-    the ones the record names, and tracked in git or kept outside it by an
-    ignore rule; the outputs tracked (`provenance_findings`)."""
+    the ones the record names, and tracked in git or kept outside it — by
+    an ignore rule, or lying outside the repository; the outputs tracked,
+    an untracked one a warning (`provenance_findings`)."""
     b, w, outside = provenance_findings(area, answering_run)
     findings.take_all(b)
     for line in w:
@@ -1240,7 +1241,7 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
     if not b and not w:
         findings.note(
             "  source frozen in the run; source tracked in git"
-            + (" or ignored by a rule" if outside else "")
+            + (" or kept outside it" if outside else "")
             + "; output tracked in git; each source's bytes as the run recorded them"
         )
 

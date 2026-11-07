@@ -63,6 +63,7 @@ from labkit.formats.repo import (
     git_root,
     git_run,
     own_path,
+    resolves_under,
     shown,
 )
 
@@ -466,12 +467,13 @@ def provenance_findings(
 ) -> tuple[list[GateFinding], list[str], list[str]]:
     """(blockers, warnings, outside) for a run at low repeat cost: every
     source the run read is frozen in its record (`data=`), its bytes now
-    are the ones the record's sha256 names, and git holds it — tracked, or
-    kept outside on purpose by an ignore rule (`_source_finding`, the
-    standard's Fixed inputs: large or protected data stay out of the
-    repository, which holds their source or access route and version in
-    Data / scope). OUTSIDE names each source an ignore rule keeps out of
-    git. Raises GitError when git cannot list a directory source's tracked
+    are the ones the record's sha256 names, and in the repository git
+    holds it — tracked, or kept outside on purpose by an ignore rule; a
+    source that lies outside the repository is held by its checksum alone
+    (`_source_finding`, the standard's Fixed inputs: large or protected
+    data stay out of the repository, which holds their source or access
+    route and version in Data / scope). OUTSIDE names each source kept out
+    of git, by an ignore rule or by lying outside the repository. Raises GitError when git cannot list a directory source's tracked
     files or say which are ignored (`_ignoring_rules`): finalize then ends
     in that error, not in a blocker with a way out that may not lead out.
     A `data=` entry naming no path blocks. Outside a git repository every
@@ -555,11 +557,14 @@ def _source_finding(
     """(blocker, outside note) for one SOURCE the run recorded with
     checksum SHA. The record is the one integrity evidence, git status a
     hygiene rule beside it (docs/notes/2026-11-06-pin-route.md). In this
-    order: gone (`_gone`); no checksum recorded; a file neither tracked nor
-    ignored by a rule (`_untracked_source`), even when the bytes match;
-    bytes unlike the record (`source_drift`) — tracked or ignored alike.
-    Otherwise no blocker, and for a source an ignore rule keeps out of git
-    the note naming the rule. REPO None (no repository): git's half is
+    order: gone (`_gone`); no checksum recorded; inside REPO, a file
+    neither tracked nor ignored by a rule (`_untracked_source`), even when
+    the bytes match; bytes unlike the record (`source_drift`) — tracked,
+    ignored or outside REPO alike. Otherwise no blocker, and the note for a
+    source kept outside git: the ignore rule that keeps it out, or that it
+    lies outside REPO (its resolved path), where git can neither track nor
+    ignore it — held by the checksum alone, its source or access route
+    owed in Data / scope. REPO None (no repository): git's half is
     skipped. Raises GitError as `_untracked_files` and `_ignoring_rules`
     do."""
     if not source.exists():
@@ -573,8 +578,13 @@ def _source_finding(
             ),
             None,
         )
+    # git's half only for bytes that lie in the repository: one outside it
+    # (a model directory on scratch, reached directly or by a link) git can
+    # neither track nor ignore, and its refusal named both as ways out
+    # (audit 2026-11-07, S9)
+    beyond = repo is not None and not resolves_under(repo, source)
     # a directory: file by file; ignored files are among the untracked
-    untracked = [] if repo is None else _untracked_files(repo, source)
+    untracked = [] if repo is None or beyond else _untracked_files(repo, source)
     rules = {} if repo is None else _ignoring_rules(repo, untracked)
     loose = [f for f in untracked if own_path(f) not in rules]
     if loose:
@@ -590,6 +600,12 @@ def _source_finding(
                 f"{measure_anew(area)}",
             ),
             None,
+        )
+    if beyond:
+        return None, (
+            f"source {source} lies outside the repository ({source.resolve()}), "
+            f"pinned by the checksum the run recorded (sha256 {sha}); its source "
+            f"or access route and version belong in Data / scope"
         )
     if not untracked:
         return None, None
@@ -633,14 +649,12 @@ def _untracked_files(repo: Path, source: Path) -> list[Path]:
     SOURCE.md passed two untracked GeoJSON files). An empty or all-hidden
     directory passes — the run read no file of it. A symbolic link under it
     counts as tracked when git holds the link, not its target's content.
-    The directory is resolved first; one outside REPO holds no tracked
-    file. Raises GitError when git fails."""
+    The directory is resolved first and lies in REPO (`_source_finding`
+    passes one outside it over). Raises GitError when git fails."""
     if not source.is_dir():
         return [] if _tracked(repo, source) else [source]
     base = source.resolve()
     files = visible_files(base)
-    if base != repo and repo not in base.parents:
-        return files
     # both sides resolved: git lists paths under REPO (git_root resolves it)
     # and BASE is resolved, so a file is the same Path in either set
     listed = git_run(["ls-files", "-z", "--", str(base)], repo)

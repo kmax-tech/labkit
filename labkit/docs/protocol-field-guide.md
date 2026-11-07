@@ -328,7 +328,8 @@ result is only a plan.
   `protocol-fill <PROTOCOL> --data-counts` writes them at the end of the
   field. `finalize` holds that part to the run. Commit small inputs that can legally be shared. Keep large or
   protected data (a model directory, a model-answer cache, archives)
-  outside git on purpose, by an ignore rule, and name here the source, the
+  outside git on purpose, by an ignore rule or outside the repository
+  (a model directory on scratch), and name here the source, the
   access route and the version — prose, no checksum: the run records the
   sha256 of every `data=` input, and at `repeat_cost = low` `finalize`
   holds each source to it (at `high` that comparison is skipped and the

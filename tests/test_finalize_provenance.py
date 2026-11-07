@@ -265,7 +265,7 @@ class Provenance(unittest.TestCase):
             out,
         )
         self.assertIn(
-            "source tracked in git or ignored by a rule; output tracked in git",
+            "source tracked in git or kept outside it; output tracked in git",
             out,
         )
 
@@ -277,6 +277,48 @@ class Provenance(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn(f"source {self.src} is not the bytes the run read", out)
         self.assertIn("else from the source or access route Data / scope names", out)
+
+    def held_outside(self, reached_by_link: bool) -> None:
+        """A model file on scratch, recorded as itself or through a link in
+        the repository: finalize passes it with the note."""
+        with tempfile.TemporaryDirectory() as scratch:
+            model = Path(scratch) / "model.bin"
+            model.write_bytes(b"weights")
+            source = model
+            if reached_by_link:
+                source = self.repo / "data" / "model.bin"
+                source.symlink_to(model)
+            self._run(SHORT, {"model": self._entry(source)}, commit=True)
+            rc, out = self._finalize()
+            self.assertEqual(rc, 0, out)
+            self.assertIn(
+                f"source {source} lies outside the repository "
+                f"({model.resolve()}), pinned by the checksum the run recorded",
+                out,
+            )
+            self.assertIn("access route and version belong in Data / scope", out)
+
+    def test_a_source_outside_the_repository_is_held_by_its_checksum(self):
+        """A source that lies outside the repository (a model directory on
+        scratch) git can neither track nor ignore; its refusal named both as
+        ways out (audit 2026-11-07, S9). Held by the checksum the run
+        recorded, it passes with a note naming where it lies and what Data /
+        scope owes."""
+        self.held_outside(reached_by_link=False)
+
+    def test_a_link_in_the_repository_to_bytes_outside_it_is_the_same(self):
+        self.held_outside(reached_by_link=True)
+
+    def test_the_twin_a_source_outside_the_repository_changed_blocks(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            model = Path(scratch) / "model.bin"
+            model.write_bytes(b"weights")
+            self._run(SHORT, {"model": self._entry(model)}, commit=True)
+            model.write_bytes(b"weights, retrained")
+            rc, out = self._finalize()
+            self.assertEqual(rc, 1, out)
+            self.assertIn(f"source {model} is not the bytes the run read", out)
+            self.assertNotIn("neither tracked in git nor ignored", out)
 
     def test_an_ignored_source_that_is_gone_names_the_route(self):
         (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")

@@ -596,6 +596,15 @@ def under_root(root: Path, path: Path) -> bool:
     return own_path(path).is_relative_to(root.resolve())
 
 
+def resolves_under(root: Path, path: Path) -> bool:
+    """Do PATH's bytes lie in ROOT — PATH resolved, every link followed?
+    The counterpart of `under_root`, which keeps a link where it lies: a
+    link in the repo to a file outside is not held here. The question git
+    can answer for a data source: what lies outside ROOT it can neither
+    track nor ignore (`run_record_check._source_finding`)."""
+    return path.resolve().is_relative_to(root.resolve())
+
+
 def own_path(path: Path) -> Path:
     """PATH with its directory resolved and its own name kept: a symbolic
     link stays the link, where `resolve()` would give the file it names.
