@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from labkit.gates import hook_pre_run  # noqa: E402
 from labkit.formats import gate  # noqa: E402
 
 #: the calls that build a gate finding: (name, index of the grade argument,
@@ -299,12 +300,10 @@ class TheHooks(unittest.TestCase):
     def test_a_run_outside_an_area_is_told_its_way_out(self):
         import tempfile
 
-        from labkit.gates import agent_hooks
-
         with tempfile.TemporaryDirectory() as d:
             script = Path(d) / "01_measure.py"
             script.write_text("from labkit.run import runlog\n", encoding="utf-8")
-            blocks, line = agent_hooks.before_run(script, Path(d))
+            blocks, line = hook_pre_run.before_run(script, Path(d))
         self.assertFalse(blocks)
         self.assertIn("no PROTOCOL-*.md above it", line)
         self.assertIn(f"{gate.WAY_OUT}stamp an area for it with `labkit-init exp", line)

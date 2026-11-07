@@ -11,6 +11,9 @@ tool wrote them (git status, not the tool name), once per content.
 
 from __future__ import annotations
 
+from labkit.gates import hook_post_change
+from labkit.gates import hook_pre_run
+from labkit.gates import hook_session
 from labkit.formats.runs import RunKind
 
 import contextlib
@@ -154,7 +157,7 @@ class PreRun(unittest.TestCase):
             encoding="utf-8",
         )
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/01-x/scripts/01_measure.py"),
         )
         self.assertEqual(rc, 2)
@@ -174,12 +177,12 @@ class PreRun(unittest.TestCase):
         os.environ["CLAUDE_PROJECT_DIR"] = str(scripts)
         try:
             rc, _, err = _run(
-                agent_hooks.pre_run, _bash(scripts, "python 01_measure.py")
+                hook_pre_run.pre_run, _bash(scripts, "python 01_measure.py")
             )
             self.assertEqual(rc, 2, err)
             self.assertIn("BLOCKED", err)
             rc, out, err = _run(
-                agent_hooks.pre_run, _bash(scripts, "python 01_measure.py --probe 3")
+                hook_pre_run.pre_run, _bash(scripts, "python 01_measure.py --probe 3")
             )
             self.assertEqual((rc, out, err), (0, "", ""))
         finally:
@@ -202,7 +205,7 @@ class PreRun(unittest.TestCase):
             f"{full} --probe 3\n{full}",
             f"{full} --show 2 | head; {full}",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual(rc, 2, cmd)
             self.assertIn("BLOCKED", err, cmd)
         # the twin: a throwaway stage alone, before or after a cd, is free
@@ -210,7 +213,7 @@ class PreRun(unittest.TestCase):
             "cd experiments/01-x && python scripts/01_measure.py --probe 3",
             f"{full} --show 2 | head",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual((rc, out, err), (0, "", ""), cmd)
 
     def test_command_segments(self):
@@ -233,9 +236,9 @@ class PreRun(unittest.TestCase):
             f"cat > notes.md <<'EOF'\n{script}\nEOF",
             f"python -c 'print(1); {script}'",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual((rc, out, err), (0, "", ""), cmd)
-        _, out, _ = _run(agent_hooks.pre_run, _bash(root, script))
+        _, out, _ = _run(hook_pre_run.pre_run, _bash(root, script))
         self.assertNotEqual(out, "")
 
     def test_unfrozen_with_blockers_only_reports(self):
@@ -245,7 +248,7 @@ class PreRun(unittest.TestCase):
             encoding="utf-8",
         )
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/01-x/scripts/01_measure.py"),
         )
         self.assertEqual(rc, 0)
@@ -281,7 +284,7 @@ class PreRun(unittest.TestCase):
             registration=registration_of(area),
         )
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/01-x/scripts/01_measure.py"),
         )
         self.assertEqual((rc, err), (0, ""))
@@ -305,7 +308,7 @@ class PreRun(unittest.TestCase):
             encoding="utf-8",
         )
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/01-x/scripts/01_measure.py"),
         )
         self.assertEqual(rc, 0)
@@ -324,7 +327,7 @@ class PreRun(unittest.TestCase):
             encoding="utf-8",
         )
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/01-x/scripts/01_measure.py"),
         )
         self.assertEqual(rc, 0)
@@ -336,7 +339,7 @@ class PreRun(unittest.TestCase):
         root = _repo(True)
         for flag in ("--probe 3", "--show 2", "--eval-only"):
             rc, out, err = _run(
-                agent_hooks.pre_run,
+                hook_pre_run.pre_run,
                 _bash(root, f"python experiments/01-x/scripts/01_measure.py {flag}"),
             )
             self.assertEqual((rc, out, err), (0, "", ""), flag)
@@ -369,7 +372,7 @@ class PreRun(unittest.TestCase):
             f"{python}/02-judge/scripts/00_prepare.py",
             f"{python}/03-local/scripts/01_measure.py",
         ):
-            rc, _, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, _, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual(rc, 2, cmd)
             self.assertIn("BLOCKED", err)
         for cmd in (
@@ -379,13 +382,13 @@ class PreRun(unittest.TestCase):
             f"{python}/03-local/scripts/01_measure.py --calibrate-null",
             f"{python}/03-local/scripts/01_measure.py --calibrate-null 50",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual((rc, out, err), (0, "", ""), cmd)
 
     def test_script_without_run_passes_silently(self):
         root = _repo(True, script="print('analysis only')\n")
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/01-x/scripts/01_measure.py"),
         )
         self.assertEqual((rc, out, err), (0, "", ""))
@@ -405,10 +408,10 @@ class PreRun(unittest.TestCase):
             'p = Path("lib/opens.py")\nprint(p.read_text())\nEOF',
             "ls -l lib/opens.py",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual((rc, out, err), (0, "", ""), cmd)
         # the twin: running the same file is seen
-        rc, out, _ = _run(agent_hooks.pre_run, _bash(root, "python lib/opens.py"))
+        rc, out, _ = _run(hook_pre_run.pre_run, _bash(root, "python lib/opens.py"))
         self.assertEqual(rc, 0)
         self.assertIn("opens a run, but no PROTOCOL", out)
 
@@ -426,7 +429,7 @@ class PreRun(unittest.TestCase):
 
         def executed(cmd: str) -> list[str]:
             return [
-                p for seg in shell.segments(cmd) for p in agent_hooks.executed_py(seg)
+                p for seg in shell.segments(cmd) for p in hook_pre_run.executed_py(seg)
             ]
 
         for cmd, want in runs.items():
@@ -445,7 +448,7 @@ class PreRun(unittest.TestCase):
     def test_skip_token_is_reported_not_blocked(self):
         root = _repo(True)
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(
                 root,
                 "LABKIT_PREFLIGHT=skip python experiments/01-x/scripts/01_measure.py",
@@ -477,7 +480,7 @@ class PreRun(unittest.TestCase):
             f"{measure} --repeat-of 2026-01-01T00-00-00_0001",
             f"{measure} --model sonnet",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual(rc, 0, cmd)
             ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
             self.assertIn(f"{head}: blockers, protocol not frozen", ctx)
@@ -487,17 +490,17 @@ class PreRun(unittest.TestCase):
             f"{measure} --eval-only",
             "python experiments/01-judge/scripts/02_analyze.py --check",
         ):
-            rc, out, err = _run(agent_hooks.pre_run, _bash(root, cmd))
+            rc, out, err = _run(hook_pre_run.pre_run, _bash(root, cmd))
             self.assertEqual((rc, out, err), (0, "", ""), cmd)
         proto = root / "experiments/01-judge/PROTOCOL-judge.md"
         text = proto.read_text(encoding="utf-8")
         self.assertEqual(text.count("frozen = false"), 1)
         proto.write_text(text.replace("frozen = false", "frozen = true"))
-        rc, out, err = _run(agent_hooks.pre_run, _bash(root, measure))
+        rc, out, err = _run(hook_pre_run.pre_run, _bash(root, measure))
         self.assertEqual(rc, 2)
         self.assertIn(f"{head}: BLOCKED", err)
         rc, out, err = _run(
-            agent_hooks.pre_run,
+            hook_pre_run.pre_run,
             _bash(root, "python experiments/02-count/scripts/01_measure.py"),
         )
         self.assertEqual(rc, 0)
@@ -511,7 +514,7 @@ class PreRun(unittest.TestCase):
         # gate), so this test sees only the path resolution
         root = _repo(False)
         ev = _bash(root / "experiments/01-x", "python scripts/01_measure.py")
-        rc, out, err = _run(agent_hooks.pre_run, ev)
+        rc, out, err = _run(hook_pre_run.pre_run, ev)
         self.assertEqual(rc, 0, err)
         self.assertIn(
             "preflight 01-x", json.loads(out)["hookSpecificOutput"]["additionalContext"]
@@ -538,7 +541,7 @@ class PostChange(unittest.TestCase):
             encoding="utf-8",
         )
         rc, out, err = _run(
-            agent_hooks.post_change,
+            hook_post_change.post_change,
             _bash(self.root, "cat > PROTOCOL-x.md <<EOF ... EOF"),
         )
         self.assertEqual(rc, 0)
@@ -554,7 +557,7 @@ class PostChange(unittest.TestCase):
         os.environ["CLAUDE_PROJECT_DIR"] = str(sub)
         ev = _bash(sub, "cat > 01-x/PROTOCOL-x.md <<EOF ... EOF")
         ev["session_id"] = "s-" + os.urandom(4).hex()
-        self.assertEqual(_run(agent_hooks.post_change, ev), (0, "", ""))
+        self.assertEqual(_run(hook_post_change.post_change, ev), (0, "", ""))
         p = self.root / "experiments/01-x/PROTOCOL-x.md"
         p.write_text(
             _protocol(False).replace(
@@ -564,7 +567,7 @@ class PostChange(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        rc, out, _ = _run(agent_hooks.post_change, ev)
+        rc, out, _ = _run(hook_post_change.post_change, ev)
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("experiments/01-x/PROTOCOL-x.md", ctx)
@@ -579,8 +582,8 @@ class PostChange(unittest.TestCase):
         p.write_text(_protocol(False) + "\nmore\n", encoding="utf-8")
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
-        rc, out1, _ = _run(agent_hooks.post_change, ev)
-        rc, out2, _ = _run(agent_hooks.post_change, ev)
+        rc, out1, _ = _run(hook_post_change.post_change, ev)
+        rc, out2, _ = _run(hook_post_change.post_change, ev)
         self.assertIn("PROTOCOL-x.md", out1)
         self.assertEqual(out2, "")
 
@@ -592,7 +595,7 @@ class PostChange(unittest.TestCase):
         )
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
-        rc, out, _ = _run(agent_hooks.post_change, ev)
+        rc, out, _ = _run(hook_post_change.post_change, ev)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("2026-10-05-x.md", ctx)
         self.assertNotIn("00-index.md", ctx)
@@ -605,21 +608,23 @@ class PostChange(unittest.TestCase):
         note.write_text("# x\n\nno kind line\n", encoding="utf-8")
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
-        rc, out, _ = _run(agent_hooks.post_change, ev)
+        rc, out, _ = _run(hook_post_change.post_change, ev)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("größe.md", ctx)
 
     def test_wants_check_takes_any_notes_messung_pair(self):
         self.assertEqual(
-            agent_hooks.wants_check(Path("/home/u/notes/lab/notes/messung/a.md")),
+            hook_post_change.wants_check(Path("/home/u/notes/lab/notes/messung/a.md")),
             "note",
         )
-        self.assertIsNone(agent_hooks.wants_check(Path("/home/u/notes/x/messung/a.md")))
+        self.assertIsNone(
+            hook_post_change.wants_check(Path("/home/u/notes/x/messung/a.md"))
+        )
 
     def test_sessions_run_without_a_value_is_a_usage_error(self):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            rc = agent_hooks.sessions(["--run"])
+            rc = hook_session.sessions(["--run"])
         self.assertEqual(rc, 2)
         self.assertEqual(out.getvalue(), "")  # a refusal, not a finding
         self.assertIn("needs a RUN_ID", err.getvalue())
@@ -643,14 +648,14 @@ class PostChange(unittest.TestCase):
         working directory, the repo."""
         ev = self._marked_report()
         with contextlib.chdir(self.root):
-            rc, out1, _ = _run(agent_hooks.post_change, ev)
+            rc, out1, _ = _run(hook_post_change.post_change, ev)
             self.assertEqual(rc, 0)
             ctx = json.loads(out1)["hookSpecificOutput"]["additionalContext"]
             self.assertIn(
                 "`labkit-audit experiments/01-x --report-review REPORT.md`", ctx
             )
             self.assertIn("has no clean report review of this state", ctx)
-            self.assertEqual(_run(agent_hooks.post_change, ev)[1], "")  # same text
+            self.assertEqual(_run(hook_post_change.post_change, ev)[1], "")  # same text
             block = "\n".join(
                 report_blocks.discussion_lines(
                     "experiments/01-x/PROTOCOL-x.md",
@@ -661,7 +666,7 @@ class PostChange(unittest.TestCase):
             (self.root / "REPORT.md").write_text(
                 f"# Report\n\n{block}\n", encoding="utf-8"
             )
-            self.assertIn("--report-review", _run(agent_hooks.post_change, ev)[1])
+            self.assertIn("--report-review", _run(hook_post_change.post_change, ev)[1])
 
     def test_a_report_whose_review_stands_gets_no_review_command(self):
         """The counter-case, and the competing logic removed: the hook named
@@ -699,7 +704,7 @@ class PostChange(unittest.TestCase):
             again=False,
         )
         with contextlib.chdir(self.root):
-            rc, out, _ = _run(agent_hooks.post_change, ev)
+            rc, out, _ = _run(hook_post_change.post_change, ev)
         self.assertEqual(rc, 0)
         self.assertNotIn("--report-review", out)
 
@@ -715,7 +720,7 @@ class PostChange(unittest.TestCase):
         target = self.root / "data" / "report.md"
         report.rename(target)
         report.symlink_to(Path("data") / "report.md")
-        rc, out, _ = _run(agent_hooks.post_change, ev)
+        rc, out, _ = _run(hook_post_change.post_change, ev)
         self.assertEqual(rc, 0)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("REPORT.md: a symbolic link to data/report.md", ctx)
@@ -726,7 +731,7 @@ class PostChange(unittest.TestCase):
         # command back (cold review 2026-10-27); another hint is told
         report.unlink()
         report.write_bytes(target.read_bytes())
-        rc, out, _ = _run(agent_hooks.post_change, ev)
+        rc, out, _ = _run(hook_post_change.post_change, ev)
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("--report-review", ctx)
 
@@ -735,12 +740,12 @@ class PostChange(unittest.TestCase):
         (self.root / "REPORT.md").write_text(
             "# Report\n\nrun 2026-10-25T20-57-42_9ae7 looked at\n", encoding="utf-8"
         )
-        self.assertNotIn("--report-review", _run(agent_hooks.post_change, ev)[1])
+        self.assertNotIn("--report-review", _run(hook_post_change.post_change, ev)[1])
 
     def test_nothing_changed_is_silent(self):
         ev = _bash(self.root, "ls")
         ev["session_id"] = "s-" + os.urandom(4).hex()
-        self.assertEqual(_run(agent_hooks.post_change, ev), (0, "", ""))
+        self.assertEqual(_run(hook_post_change.post_change, ev), (0, "", ""))
 
 
 if __name__ == "__main__":
@@ -853,7 +858,7 @@ class Stop(unittest.TestCase):
         """A Bash command of the session: pre-run keeps the stop base."""
         event = _bash(self.root, command)
         event["transcript_path"] = str(self.transcript)
-        return _run(agent_hooks.pre_run, event)
+        return _run(hook_pre_run.pre_run, event)
 
     def test_a_blocker_sends_the_agent_back(self):
         self._answer("2026-10-01T09-00-00_ffff")
@@ -913,7 +918,7 @@ class Stop(unittest.TestCase):
         self.assertEqual((rc, out, err), (0, "", ""))
 
     def _base(self) -> str:
-        path = agent_hooks.stop_base_file(self.root, "s1")
+        path = hook_session.stop_base_file(self.root, "s1")
         assert path is not None
         return path.read_text(encoding="utf-8").strip()
 
@@ -923,7 +928,7 @@ class Stop(unittest.TestCase):
         session's commits since its stop base are held; a stop sent back
         once in the turn may end, the base stays, the next turn's stop
         holds again."""
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))  # keeps the base
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))  # keeps the base
         base = self._base()
         self._answer("2026-10-01T09-00-00_ffff")
         _git(self.root, "add", "-A")
@@ -946,7 +951,7 @@ class Stop(unittest.TestCase):
         moved past the bad commit, so dropping the fix was never held. The
         base stays until a stop on a clean tree passes; the twin: the fix
         committed, the tree clean, the base moves."""
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
         base = self._base()
         protocol = "experiments/01-x/PROTOCOL-x.md"
         self._answer("2026-10-01T09-00-00_ffff")
@@ -973,7 +978,7 @@ class Stop(unittest.TestCase):
         self.assertEqual(self._base(), repo.head_sha(self.root))
 
     def test_the_twin_a_correct_commit_stops_and_moves_the_base(self):
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
         self._answer(self.RUN)
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "the answer")
@@ -985,15 +990,15 @@ class Stop(unittest.TestCase):
         self._answer("2026-10-01T09-00-00_ffff")
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "an older answer")
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))  # the session begins
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))  # kept once, not moved
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))  # the session begins
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))  # kept once, not moved
         self.assertEqual(self._base(), repo.head_sha(self.root))
         rc, out, err = self._stop()
         self.assertEqual((rc, out, err), (0, "", ""))
 
     def test_a_base_that_left_the_history_is_said(self):
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))
-        path = agent_hooks.stop_base_file(self.root, "s1")
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
+        path = hook_session.stop_base_file(self.root, "s1")
         assert path is not None
         path.write_text("0" * 40 + "\n", encoding="utf-8")
         rc, _, err = self._stop()
@@ -1010,7 +1015,7 @@ class Stop(unittest.TestCase):
         keeps no base past them. The twin: the fix committed, a clean stop
         keeps HEAD, and the next stop is silent."""
         self._command()
-        path = agent_hooks.stop_base_file(self.root, "s1")
+        path = hook_session.stop_base_file(self.root, "s1")
         assert path is not None
         self._answer("2026-10-01T09-00-00_ffff")
         _git(self.root, "add", "-A")
@@ -1052,7 +1057,7 @@ class Stop(unittest.TestCase):
         read keeps HEAD (the stops above)."""
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "a commit the stop cannot date")
-        path = agent_hooks.stop_base_file(self.root, "s1")
+        path = hook_session.stop_base_file(self.root, "s1")
         assert path is not None
         event = {"session_id": "s1", "cwd": str(self.root), "stop_hook_active": False}
         rc, _, err = _run(agent_hooks.stop, event)
@@ -1062,7 +1067,7 @@ class Stop(unittest.TestCase):
         self.assertFalse(path.exists())
         rc, _, _ = _run(agent_hooks.stop, {**event, "stop_hook_active": True})
         self.assertEqual(rc, 0)  # once per turn
-        _run(agent_hooks.pre_run, {**_bash(self.root, "ls"), "session_id": "s1"})
+        _run(hook_pre_run.pre_run, {**_bash(self.root, "ls"), "session_id": "s1"})
         self.assertTrue(path.exists())  # the way out: a Bash command keeps a base
         self.assertEqual(_run(agent_hooks.stop, event)[0], 0)
 
@@ -1074,7 +1079,7 @@ class Stop(unittest.TestCase):
             "import time\ntime.sleep(30)\n", encoding="utf-8"
         )
         self._answer(self.RUN)
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
         base = self._base()
         began = time.monotonic()
         with mock.patch.object(agent_hooks, "STOP_BUDGET_S", 1.0):
@@ -1100,7 +1105,7 @@ class Stop(unittest.TestCase):
             encoding="utf-8",
         )
         self._answer(self.RUN)
-        _run(agent_hooks.pre_run, _bash(self.root, "ls"))
+        _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
         # 10 s, not 3: under a load of 25 the budget ran out before the
         # script had started its child, and no pid file was left to read
         # (2026-10-28); `sleep 41` still outlives any budget by far
@@ -1134,4 +1139,4 @@ class Stop(unittest.TestCase):
         )
 
     def test_a_session_id_that_is_no_file_name_keeps_no_base(self):
-        self.assertIsNone(agent_hooks.stop_base_file(self.root, "../x"))
+        self.assertIsNone(hook_session.stop_base_file(self.root, "../x"))

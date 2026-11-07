@@ -25,6 +25,8 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.gates import hook_post_change
+from labkit.gates import hook_session
 from labkit.formats import evidence, findings  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
 from labkit.gates import undecided
@@ -248,7 +250,7 @@ class Session(unittest.TestCase):
             "stop_hook_active": False,
             "transcript_path": str(self.transcript),
         }
-        agent_hooks.keep_stop_base(self.root, self.event)  # the first Bash command
+        hook_session.keep_stop_base(self.root, self.event)  # the first Bash command
 
     def _stop(self) -> tuple[int, str]:
         rc, _, err = _run(agent_hooks.stop, self.event)
@@ -333,7 +335,7 @@ class Told(unittest.TestCase):
         }
 
     def _told(self) -> str:
-        rc, out, _ = _run(agent_hooks.post_change, self.event)
+        rc, out, _ = _run(hook_post_change.post_change, self.event)
         self.assertEqual(rc, 0)  # it tells, never holds
         if not out:
             return ""

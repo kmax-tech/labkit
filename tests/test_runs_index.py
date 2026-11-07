@@ -13,6 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from labkit.gates import hook_post_change
 from labkit.run import runlog
 from labkit.tools import scaffold
 from protocol_fixture import head
@@ -130,16 +131,15 @@ class IndexRead(unittest.TestCase):
             )
 
     def test_the_evidence_hook_tells_a_damaged_index_instead_of_failing(self):
-        from labkit.gates import agent_hooks
 
         with tempfile.TemporaryDirectory() as d:
             header = "\t".join(runlog.RUN_INDEX_COLS)
             area = self.area_with(d, header, "2026-01-01T00-00-00_0002")
-            (line,) = agent_hooks.index_problems(area)
+            (line,) = hook_post_change.index_problems(area)
             self.assertIn("runs.tsv:2", line)
             # the twin: a whole row of a run whose folder is gone is told as gone
             self.area_with(d, header, self.row("2026-01-01T00-00-00_0001"))
-            (line,) = agent_hooks.index_problems(area)
+            (line,) = hook_post_change.index_problems(area)
             self.assertIn("2026-01-01T00-00-00_0001: its directory is gone", line)
 
     def test_a_run_does_not_start_on_a_short_row(self):

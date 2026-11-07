@@ -8,6 +8,9 @@ The shared checks also provide the git gate and session-log commands.
 import json
 import sys
 
+from labkit.gates import hook_post_change
+from labkit.gates import hook_pre_run
+from labkit.gates import hook_session
 from labkit.formats import console
 from labkit.gates import agent_hooks
 
@@ -26,14 +29,14 @@ def main(argv: list[str]) -> int:
         )
         return console.usage("claude-hook", text, asked=bool(argv))
     if argv[0] == "sessions":
-        return agent_hooks.sessions(argv[1:])
+        return hook_session.sessions(argv[1:])
     if argv[0] == "pre-commit":
         return agent_hooks.commit_gates(argv[1:])
     event = json.loads(sys.stdin.read() or "{}")
     if argv[0] == "pre-run":
-        return agent_hooks.pre_run(event)
+        return hook_pre_run.pre_run(event)
     if argv[0] == "post-change":
-        return agent_hooks.post_change(event)
+        return hook_post_change.post_change(event)
     if argv[0] == "stop":
         return agent_hooks.stop(event)
     console.refuse("claude-hook", f"unknown event {argv[0]!r}")

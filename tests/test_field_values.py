@@ -15,10 +15,11 @@ import re
 import unittest
 from pathlib import Path
 
+from labkit.gates import hook_pre_run
 from labkit.checks import protocol_report
 from labkit.formats import protocol_block, protocol_check, protocol_history
 from labkit.formats.gate import Findings
-from labkit.gates import agent_hooks, finalize, preflight
+from labkit.gates import finalize, preflight
 from labkit.run import start_check
 from labkit.gates import next_step
 from protocol_fixture import head
@@ -289,7 +290,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         self.assertIn(WAY_OUT, step.next)
 
     def test_the_run_hook_does_not_call_it_written(self):
-        line = agent_hooks._low_registration_line("hook", [self.twice])
+        line = hook_pre_run._low_registration_line("hook", [self.twice])
         self.assertIn("Unit written 2 times", line)
         self.assertNotIn("registration written", line)
 
@@ -304,7 +305,7 @@ class TheCommandsNameItAsWrittenMoreThanOnce(unittest.TestCase):
         )
         self.assertFalse([f for f in found.found if "written" in f.line])
         self.assertEqual(protocol_check.check_fields(self.clean).repeated, [])
-        line = agent_hooks._low_registration_line("hook", [self.clean])
+        line = hook_pre_run._low_registration_line("hook", [self.clean])
         self.assertIn("registration written", line)
 
 

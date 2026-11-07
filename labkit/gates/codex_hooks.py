@@ -12,6 +12,8 @@ import json
 import sys
 from pathlib import Path
 
+from labkit.gates import hook_post_change
+from labkit.gates import hook_pre_run
 from labkit.formats import console
 from labkit.gates import agent_hooks
 
@@ -82,12 +84,12 @@ def main(argv: list[str]) -> int:
         return 2
     if action == "pre-run":
         try:
-            return agent_hooks.pre_run(event, require_resolved_scripts=True)
-        except agent_hooks.UnresolvedScriptError as exc:
+            return hook_pre_run.pre_run(event, require_resolved_scripts=True)
+        except hook_pre_run.UnresolvedScriptError as exc:
             console.refuse("codex-hook", str(exc))
             return 2
     if action == "post-change":
-        return agent_hooks.post_change(event)
+        return hook_post_change.post_change(event)
     return agent_hooks.stop(event)
 
 

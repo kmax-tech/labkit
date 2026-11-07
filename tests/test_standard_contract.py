@@ -8,6 +8,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from labkit.gates import hook_pre_run
 from labkit.formats import runs
 from labkit.formats import standard_contract as sc
 from labkit.tools import scaffold
@@ -143,7 +144,6 @@ class Skeletons(unittest.TestCase):
         must be put in one of the two lists here."""
         import re
 
-        from labkit.gates import agent_hooks
         from labkit.run import lanes
 
         run_flags = {"--seed", "--repeat-of", "--model"}  # each starts a run
@@ -151,7 +151,7 @@ class Skeletons(unittest.TestCase):
         sources = [Path(lanes.__file__)] + [
             p
             for p in sorted(scaffold.TEMPLATES.glob("*.py.template"))
-            if agent_hooks.OPENS_RUN.search(p.read_text(encoding="utf-8"))
+            if hook_pre_run.OPENS_RUN.search(p.read_text(encoding="utf-8"))
         ]
         seen: set[str] = set()
         for path in sources:
