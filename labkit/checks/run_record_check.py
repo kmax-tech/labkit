@@ -21,6 +21,7 @@ from dataclasses import dataclass, replace
 import shlex
 from pathlib import Path
 
+from labkit.formats.commands import register_anew
 from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats.runs import (
     NO_GIT,
@@ -988,7 +989,7 @@ def kept_number_gaps(
             fix=f"write `{key}` as a finite number from evaluate_rows() (the compute "
             f"skeleton reads the key from the head's [kept]), then "
             f"{measure_anew(area)}; when [kept] names the wrong number, set it "
-            f"before the first measurement — after it, register anew "
-            f"(`labkit-init exp <new-name> --kind compute`)",
+            f"before the first measurement — after it, "
+            + register_anew(per="per change, the [kept] among them", kind="compute"),
         )
     ]

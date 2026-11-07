@@ -140,10 +140,8 @@ from labkit.gates.registration_hold import (
     check_registration,
     declaring_protocol,
 )
-from labkit.gates.ways_out import (
-    PROTOCOL_NAMED,
-    register_anew,
-)
+from labkit.gates.ways_out import PROTOCOL_NAMED
+from labkit.formats.commands import register_anew
 from labkit.checks.intent_check import NoRunChosen
 from labkit.checks.intent_check import hold as intent_hold
 from labkit.gates.preflight import area_tests, tell_test_run

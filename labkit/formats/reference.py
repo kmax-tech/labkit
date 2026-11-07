@@ -26,6 +26,7 @@ be rendered. Pure: nothing here reads or writes a file.
 
 from __future__ import annotations
 
+from labkit.formats.commands import register_anew
 from labkit.formats.gate import AREA_SLOT
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.protocol_block import (
@@ -225,8 +226,8 @@ def comparison_gaps(
                 f"the head registers {', '.join(f'{k} = {now[k]!r}' for k in moved)} — "
                 f"the reference changed after the run, and a value set after a "
                 f"result was seen does not answer the registered question",
-                fix="restore the [reference] the run compared with, or register anew "
-                "(`labkit-init exp <new-name> --kind …`) and measure there",
+                fix="restore the [reference] the run compared with, or "
+                + register_anew(per="per change, the [reference] among them"),
             )
         ]
     return []

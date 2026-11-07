@@ -311,3 +311,17 @@ def decide_command(
         f"{audit_command(area, protocol=protocol, base=base)} --decide {n} "
         f'{status} --why "{reason}"{ids} --record {shlex.quote(record)}',
     )
+
+
+def register_anew(pid: str = "<id>", per: str = "per change", kind: str = "…") -> str:
+    """The way out of a registration that cannot be answered as written
+    (K1): a new exploratory protocol of KIND naming the earlier one PID, its
+    changes declared PER what the caller names — the one wording every
+    layer prints for it: the ways out, report-check's and finalize's holds,
+    the reference and kept-number checks."""
+    return (
+        f"register anew: a new protocol (`labkit-init exp <new-name> --kind {kind}`), "
+        '`type = "exploratory"`, committed before its own first run, naming the '
+        f'earlier one in `[replaces] protocol = "{pid}"` with one '
+        f"`[[replaces.change]]` (what, from, to, why) {per}"
+    )

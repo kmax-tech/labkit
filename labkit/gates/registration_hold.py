@@ -47,11 +47,8 @@ from labkit.formats.commands import (
     measure_command,
     withdraw_command,
 )
-from labkit.gates.ways_out import (
-    unclear_correction,
-    HANDOVER,
-    register_anew,
-)
+from labkit.gates.ways_out import unclear_correction, HANDOVER
+from labkit.formats.commands import register_anew
 from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.gates.report_context import pending_adoption
 from labkit.formats.protocol_check import (

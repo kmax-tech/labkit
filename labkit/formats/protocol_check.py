@@ -199,7 +199,7 @@ def field_values(text: str, normalise: Callable[[str], str] = fold) -> dict[str,
 #: the way out of a field written more than once (`repeated_fields`), the
 #: one wording every gate and `labkit-next` give. Versions of a field send
 #: no one to a successor protocol: that way has conditions of its own
-#: (`ways_out.register_anew`), which the hold of the changed registration
+#: (`commands.register_anew`), which the hold of the changed registration
 #: names where they apply
 REPEATED_WAY_OUT = (
     "keep one copy and delete the others; where the copies are versions of "

@@ -93,6 +93,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from labkit.formats import commands
 from labkit.formats.gate import GUARANTEED
 from labkit.formats.runs import RunDir
 from labkit.formats.gate import (
@@ -335,7 +336,7 @@ def _registration_at(
     # registration, committed before its own first run, or the handover
     anew = (
         "when the missing choices can be made on grounds the new registration "
-        f"states, {ways_out.register_anew(str(ctx.head.id))}; else "
+        f"states, {commands.register_anew(str(ctx.head.id))}; else "
         f"{ways_out.HANDOVER}"
     )
     if then.cause == NO_COMMIT:

@@ -10,6 +10,7 @@ names the cause rule and where the ways stand (`audit_decisions.CAUSE_FIRST`).
 
 from __future__ import annotations
 
+from labkit.formats.commands import register_anew
 from labkit.checks.audit_binding import AuditError
 
 
@@ -79,19 +80,6 @@ ANSWER_AGAIN = (
 )
 #: the way out of an audit whose inputs moved while it read them
 AUDIT_AGAIN = "run the audit again on the state as it stands"
-
-
-def register_anew(pid: str = "<id>", per: str = "per change") -> str:
-    """The way out of a registration that cannot be answered as written
-    (K1): a new exploratory protocol naming the earlier one PID, its
-    changes declared PER what the caller names — the one wording the ways
-    out and report-check's holds (K3) print."""
-    return (
-        "register anew: a new protocol (`labkit-init exp <new-name> --kind …`), "
-        '`type = "exploratory"`, committed before its own first run, naming the '
-        f'earlier one in `[replaces] protocol = "{pid}"` with one '
-        f"`[[replaces.change]]` (what, from, to, why) {per}"
-    )
 
 
 #: the cause whose way out is an effect `<ID> not assessable` — WAYS_OUT
