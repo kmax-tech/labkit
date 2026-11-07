@@ -1,10 +1,10 @@
-"""Tests for runlog's freeze gate (2026-10-05).
+"""Tests for runlog's freeze gate.
 
 A full run (`run_kind='measurement'`) on a protocol whose head is not `frozen = true`,
 or whose `preflight_audit` is still empty, is refused before any run
 directory exists. Probes (`run_kind='probe'`) pass; a full run acknowledges
 with LABKIT_UNFROZEN=1 over an audit the backend refused (the failed
-attempt `labkit-audit` wrote, 0.99.0) and the acknowledgement lands in
+attempt `labkit-audit` wrote) and the acknowledgement lands in
 config.json with that attempt; `run_kind` is recorded for every run. At
 `repeat_cost = "low"` the gate is the written registration (question,
 criterion, quality check), not the freeze (LAB-017 The number of audits follows the cost tier); the tier
@@ -55,7 +55,7 @@ REGISTRATION = """
 - **Null condition / anchors:** [quality-check-2] the shuffled-label lane stays at chance
 - **Data profile:** 6 and 6 cases, mean words alike; no marker only in one class
 """
-# a computation: no model, no id, the question only — the gate owes nothing more (0.87.1)
+# a computation: no model, no id, the question only — the gate owes nothing more
 SECONDS_COMPUTE = (
     head(repeat_cost="low", promises=None)
     + "\n- **Question / hypothesis:** how many documents per case?\n"
@@ -124,8 +124,8 @@ class FreezeGate(unittest.TestCase):
         )
 
     def test_a_frozen_computation_without_promise_tables_starts(self):
-        # its stamp removes the tables (`protocol_cuts.bar_cut`) and the freeze
-        # asked for them again (review 2026-10-27, 1); a fit is still held
+        # its stamp removes the tables (`protocol_cuts.bar_cut`), so the freeze
+        # does not ask for them again; a fit is still held
         r, out = self._start(
             self._audited(kind="compute", promises=None), run_kind="measurement"
         )
@@ -136,9 +136,9 @@ class FreezeGate(unittest.TestCase):
             )
 
     def test_a_first_low_measurement_needs_the_registration_committed(self):
-        # it started on a written, uncommitted registration; finalize was clean
-        # and adoption refused for good (audit 2026-10-27, third, I1). The twin:
-        # committed, it starts; a second measurement is not held here.
+        # a start on a written, uncommitted registration is refused: finalize
+        # would be clean and adoption refused for good. The twin: committed,
+        # it starts; a second measurement is not held here.
         import subprocess
 
         def git(*args: str) -> None:
@@ -171,8 +171,7 @@ class FreezeGate(unittest.TestCase):
 
     def test_an_audit_line_of_other_code_is_refused(self):
         """Twin of the start above: the code changed after the audit, so the
-        line's stamp no longer covers it (review 2026-10-07: a hand-written
-        line was never checked against anything)."""
+        line's stamp no longer covers it."""
         text = self._audited()
         (self.tmp / "scripts" / "m.py").write_text("x = 2\n")
         area = self._area(text)
@@ -184,8 +183,8 @@ class FreezeGate(unittest.TestCase):
 
     def test_a_stamp_no_audit_record_saw_is_refused(self):
         """The line's sha is the code's now, but no preflight audit saw that
-        code: after fixing the findings a cold agent stamped the new sha
-        without a second audit (cloud judge probe, 2026-10-14)."""
+        code: the new sha stamped after fixing the findings, without a
+        second audit."""
         text = self._audited(record=False)
         old = findings.write(
             self.tmp,
@@ -211,8 +210,8 @@ class FreezeGate(unittest.TestCase):
 
     def test_a_promise_rewritten_after_the_audit_is_refused(self):
         """The code is the audited code, the record is decided — and a
-        promise sentence changed after the audit: the record named the
-        code only, and the run started (review 2026-10-18)."""
+        promise sentence changed after the audit: the record names the
+        promises too, so the run is refused."""
         text = self._audited()
         area = self._area(
             text.replace("the criterion holds", "the criterion holds twice")
@@ -252,8 +251,8 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("there is no such record", str(cm.exception))
 
     def test_a_line_of_the_old_form_names_no_record(self):
-        """Until 0.103.0 the field was `<date> · scope sha <12 hex> · N
-        findings`; it is read as naming no record, with the honest ways."""
+        """A line of the form `<date> · scope sha <12 hex> · N findings` is
+        read as naming no record, with the honest ways."""
         sha = (
             scope_sha.area_stamp(self.tmp)[0]
             if (self.tmp / "scripts").is_dir()
@@ -269,8 +268,7 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("names no record", str(cm.exception))
 
     def test_a_waived_audit_is_refused_at_hours_and_names_the_honest_ways(self):
-        """Until 0.99.0 `n/a — <reason>` passed as a visible decision; third
-        haiku round, t18: the agent waived its own audit. The refusal names
+        """`n/a — <reason>` waives no audit an agent owes: the refusal names
         labkit-audit and the failed attempt, and offers no word to write."""
         text = head(
             repeat_cost="high",
@@ -293,7 +291,7 @@ class FreezeGate(unittest.TestCase):
 
     def test_full_run_on_an_unstamped_id_is_refused_before_mkdir(self):
         """Twin of the frozen start above: same protocol, id not stamped — the
-        number would be bound to nothing (review 2026-10-07), at every tier."""
+        number would be bound to nothing, at every tier."""
         for text in (
             head(
                 id="<protocol-id>",
@@ -375,8 +373,8 @@ class FreezeGate(unittest.TestCase):
         self.assertIn("not `frozen = true`", str(cm.exception))
 
     def test_prose_head_is_refused_before_mkdir(self):
-        """The measurement short form (`Type: measurement`, prose head) is
-        gone: such a protocol is a loud refusal, even for a pilot (TODO 8)."""
+        """A protocol in the measurement short form (`Type: measurement`,
+        prose head) is a loud refusal, even for a pilot."""
         area = self._area(PROSE_HEAD)
         with self.assertRaises(SystemExit) as cm:
             runlog.Run("t", {}, area, run_kind="probe")
@@ -395,10 +393,10 @@ class FreezeGate(unittest.TestCase):
             os.environ.pop("CLAUDECODE", None)
 
     def test_any_agent_names_its_foreground_limit(self):
-        """Under Codex or another agent the gate asked only for CLAUDECODE
-        and let a long run die with that harness's timeout (TODO item 6).
-        The variable names the limit for any agent; 0 says there is none,
-        even under Claude Code."""
+        """The foreground limit is one variable for any agent, not CLAUDECODE
+        alone, so a long run under Codex or another agent does not die with
+        that harness's timeout; 0 says there is none, even under Claude
+        Code."""
         env = start_check.FOREGROUND_TIMEOUT_ENV
         frozen = self._audited()  # passes every gate but this one
         try:
@@ -436,7 +434,7 @@ class FreezeGate(unittest.TestCase):
 
     def _audit_failed(self, text: str) -> Path:
         """The failed preflight attempt at this code and these promises that a
-        acknowledgement rests on (0.99.0)."""
+        acknowledgement rests on."""
         scope_file(self.tmp)
         return failed_attempts.write_failed(
             self.tmp,
@@ -465,8 +463,8 @@ class FreezeGate(unittest.TestCase):
         self.assertEqual(cfg["audit_failed"], tried.name)
 
     def test_the_acknowledgement_without_a_failed_audit_is_refused(self):
-        """Second haiku round on 0.98.0: no agent started an audit, and the
-        hatch asked for nothing. It acknowledges an audit that could not run."""
+        """The hatch asks for the failed attempt: it acknowledges an audit
+        that could not run, not one nobody started."""
         os.environ["LABKIT_UNFROZEN"] = "1"
         try:
             with self.assertRaises(SystemExit) as cm:

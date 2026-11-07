@@ -2,8 +2,7 @@
 
 `derived_from` re-reads a parent's rows without a model call; `repeat_of`
 asks the model again with the same instrument on the same items, so the
-spread of the number becomes visible (TODO item 4: every audit of the cloud
-judge probe named "one unseeded draw", 2026-10-14). A repeat is supporting
+spread of the number becomes visible. A repeat is supporting
 evidence: the primary run keeps answering the protocol in every default
 choice, and a run that differs in protocol, block, config or inputs is no
 repeat at all.
@@ -120,8 +119,8 @@ class Repeats(unittest.TestCase):
         self.assertIsNone(run_record_check.single_draw(self.area, primary))
 
     def test_a_named_repeat_is_never_written_back_not_even_with_force(self):
-        """`protocol-fill --from-run <repeat>` wrote a repeat's number into
-        Answer, Result and Runs (review 2026-10-15). recheck.run_dir, the one
+        """`protocol-fill --from-run <repeat>` writes no repeat's number into
+        Answer, Result and Runs: recheck.run_dir, the one
         choice behind --from-run and --check, refuses it; the primary is
         written."""
 
@@ -195,8 +194,8 @@ class Repeats(unittest.TestCase):
                 self.assertIn(needle, answering_run.repeat_mismatch(_read(parent), new))
 
     def test_a_damaged_table_is_not_an_empty_one(self):
-        """Review 2026-10-20: a parent recording `"config": ["invalid-record"]`
-        read as an empty config, and a repeat with an empty one passed."""
+        """A parent recording `"config": ["invalid-record"]` is refused, not
+        read as an empty config a repeat with an empty one would match."""
         with self.assertRaises(runs.RunConfigError) as cm:
             answering_run.repeat_mismatch(_read({}), {"config": ["invalid-record"]})
         self.assertIn("config = ['invalid-record'], not an object", str(cm.exception))
@@ -237,9 +236,9 @@ class Repeats(unittest.TestCase):
         )
 
     def test_same_block_other_code_script_or_model_is_no_repeat(self):
-        """A record with the same block but another declared_scope_sha came
-        back comparable (review 2026-10-15): plan() could change and the new
-        run still count as a draw of the old. The whole promise snapshot, the
+        """A record with the same block but another declared_scope_sha is
+        not comparable, or plan() could change and the new run still count
+        as a draw of the old. The whole promise snapshot, the
         measure script and the resolved model are compared too."""
         first = self._run()
         parent = runs.read_run_config(self.area / "runs" / first)
@@ -289,8 +288,8 @@ class Repeats(unittest.TestCase):
         self.assertEqual(self._cfg(self._run(repeat_of=first))["draw"], 3)
 
     def test_every_draw_is_held_like_the_kept_number(self):
-        """--draws read each draw's file unchecked: an edited repeat file
-        changed the flipped items (review 2026-10-15). recheck.verified pins
+        """--draws reads no draw's file unchecked, or an edited repeat file
+        would change the flipped items. recheck.verified pins
         a draw's output to its recorded digest before anything is shown."""
         from labkit.run import batch
         from labkit.checks import recheck
@@ -339,7 +338,7 @@ class Repeats(unittest.TestCase):
     def test_an_unreadable_run_refuses_the_next_draw_with_a_sentence(self):
         """Mutant: a run that cannot say whether it is a draw — its number
         may be the next one. Refused with the field named, not a traceback
-        and not a reused number (2026-10-15)."""
+        and not a reused number."""
         first = self._run()
         bad = self.area / "runs" / "2026-10-15T00-00-00_dead"
         bad.mkdir()
@@ -370,7 +369,7 @@ class Repeats(unittest.TestCase):
     def test_a_derived_run_needs_a_completed_primary_parent(self):
         """Every kind of parent a derived run can name. A derived run is no
         repeat, so it may answer — derived from a repeat, it would let the
-        best of several draws answer through the back door (2026-10-15).
+        best of several draws answer through the back door.
         Twin: a completed primary parent, and a derived one, are taken."""
         primary = self._run()
         repeat = self._run(repeat_of=primary)
@@ -390,7 +389,7 @@ class Repeats(unittest.TestCase):
             (unfinalized.name, "names no completed run"),
             (unreadable.name, "derived_from="),
             ("2026-01-01T00-00-00_0000", "names no completed run"),
-            # a path to a run, even the right one, is no run id (review 2026-10-20)
+            # a path to a run, even the right one, is no run id
             (f"./{primary}", "is not a run id"),
             (f"../../elsewhere/runs/{primary}", "is not a run id"),
         ):
@@ -417,7 +416,7 @@ def _area(block: str) -> tuple[Path, Path]:
 
 
 class Reseed(unittest.TestCase):
-    """A fit's spread over seeds (audit 2026-10-27, C1 and A13): with
+    """A fit's spread over seeds: with
     `reseed`, runlog sets the repeat's seed to `repeat_seed` of the parent
     and the draw and records it; every other config key stays the
     parent's, and a seed the script or the protocol fixes is not drawn."""

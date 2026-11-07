@@ -1,4 +1,4 @@
-"""Tests for claude-hook — the two Claude Code hooks (2026-10-05).
+"""Tests for claude-hook — the two Claude Code hooks.
 
 pre-run: a command that starts a run script in an area triggers preflight;
 frozen + blockers blocks (exit 2), unfrozen + blockers only reports,
@@ -67,7 +67,7 @@ BODY = """\
 
 
 def _protocol(frozen: bool, repeat_cost: str = "high") -> str:
-    # every area here answers from a full run, so it carries the tables (0.19)
+    # every area here answers from a full run, so it carries the tables
     return (
         "# Experiment protocol: x\n\n"
         + head(
@@ -165,9 +165,9 @@ class PreRun(unittest.TestCase):
         self.assertIn("preflight", err)
 
     def test_a_session_started_below_the_area_finds_it(self):
-        """Claude Code started in `<area>/scripts`: the walk to the area
-        ended at the project directory, and the run read as unbound. The
-        twin: a throwaway stage from there stays free."""
+        """Claude Code started in `<area>/scripts`: the walk from there
+        finds the area, and the run is gated as a bound one. The twin: a
+        throwaway stage from there stays free."""
         root = _repo(True)
         scripts = root / "experiments/01-x/scripts"
         (scripts / "01_measure.py").write_text(
@@ -189,9 +189,9 @@ class PreRun(unittest.TestCase):
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
 
     def test_a_cd_or_a_compound_line_does_not_pass_the_gate(self):
-        """`cd AREA && python scripts/01_measure.py` resolved the script
-        against the event's cwd and found nothing; one `--probe` anywhere in
-        a line freed every command in it (audit 2026-10-15)."""
+        """`cd AREA && python scripts/01_measure.py` resolves the script
+        against the directory the `cd` reaches, and each command of a line is
+        judged on its own: a `--probe` frees only the command it stands in."""
         root = _repo(True)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
@@ -223,9 +223,9 @@ class PreRun(unittest.TestCase):
         )
 
     def test_a_script_inside_a_heredoc_or_a_quote_is_no_run(self):
-        """The hook read a heredoc's body and a quoted `;` as shell: writing a
-        file that mentions the measure script, or a `-c` string, was gated
-        as running it. The twin: the same script run is held."""
+        """A heredoc's body and a quoted `;` are no shell: writing a file that
+        mentions the measure script, or a `-c` string, is not running it. The
+        twin: the same script run is held."""
         root = _repo(False)
         (root / "experiments/01-x/scripts/01_measure.py").write_text(
             'from labkit.run import runlog\nwith runlog.run("t", {}) as r:\n    pass\n',
@@ -256,11 +256,9 @@ class PreRun(unittest.TestCase):
         self.assertIn("pilot", ctx)
 
     def test_without_a_blocker_the_warnings_reach_the_context(self):
-        """On exit 0 the hook gave the summary's one line — "0 blockers, N
-        warning(s) — review the warnings above" with nothing above — and
-        an agent froze on the false "0 blockers" with its audit's finding
-        still open (SAB task 71, 2026-10-29). The warnings come with the
-        summary, the open finding among them; a blocker's note is as before."""
+        """On exit 0 the warnings come with the summary, the open finding
+        among them, so "0 blockers" never stands with nothing above it for
+        an agent to read as clean."""
         from test_preflight import CLEAN_PROTOCOL
 
         root = _repo(False)
@@ -347,10 +345,9 @@ class PreRun(unittest.TestCase):
     def test_every_stamped_no_run_stage_passes_and_the_runs_stay_gated(self):
         """The stamped producer documents `00_prepare.py --audit` as "no
         write", and the estimator's `--calibrate-null` as "No run, nothing
-        written"; the hook knew only --show, --probe and --eval-only and
-        blocked `--audit` on a frozen protocol with blockers (labkit-paper
-        area 15, round 2, t15, D7). The twins: the producer's and the
-        measurement's own runs stay blocked."""
+        written": the hook passes every such stage, on a frozen protocol with
+        blockers too. The twins: the producer's and the measurement's own
+        runs stay blocked."""
         from labkit.tools import scaffold
 
         root = Path(tempfile.mkdtemp())
@@ -394,9 +391,8 @@ class PreRun(unittest.TestCase):
         self.assertEqual((rc, out, err), (0, "", ""))
 
     def test_a_script_merely_named_is_silent(self):
-        # uniagent 2026-10-10: 85 of 272 hook lines in one session said a lib
-        # module "opens a run" because a command READ it — sed, cat, a path
-        # inside a heredoc. Only a run of the file is a run.
+        # a command that READS a module — sed, cat, a path inside a heredoc —
+        # does not run it: only a run of the file is a run
         root = _repo(True)
         (root / "lib").mkdir(exist_ok=True)
         (root / "lib" / "opens.py").write_text(RUN_SCRIPT, encoding="utf-8")
@@ -459,12 +455,10 @@ class PreRun(unittest.TestCase):
 
     def test_the_prompt_skeleton_is_a_run_start(self):
         """The prompt skeleton opens its run inside `lanes.Lanes.main`
-        (`run/lanes.py`): its own text names no `runlog.run(`, and the hook
-        let every LLM measurement pass without preflight (audit 2026-10-27,
-        criterion-5). Its full run, a repeat and a run under another model get
-        preflight — frozen with blockers is held, unfrozen only told; its
-        throwaway stages and its analysis stay free; the compute skeleton
-        keeps its gate."""
+        (`run/lanes.py`), so its own text names no `runlog.run(`. Its full
+        run, a repeat and a run under another model get preflight — frozen
+        with blockers is held, unfrozen only told; its throwaway stages and
+        its analysis stay free; the compute skeleton keeps its gate."""
         from labkit.tools import scaffold
 
         root = Path(tempfile.mkdtemp()) / "lab"
@@ -551,8 +545,8 @@ class PostChange(unittest.TestCase):
 
     def test_a_session_started_in_a_subdirectory_checks_the_repo(self):
         """The project directory below the repo root has no `.git` of its
-        own: git status was never read, and a protocol written by a heredoc
-        went unchecked. The twin: nothing changed, nothing said."""
+        own: git status is read from the repo, and a protocol written by a
+        heredoc is checked. The twin: nothing changed, nothing said."""
         sub = self.root / "experiments"
         os.environ["CLAUDE_PROJECT_DIR"] = str(sub)
         ev = _bash(sub, "cat > 01-x/PROTOCOL-x.md <<EOF ... EOF")
@@ -572,8 +566,8 @@ class PostChange(unittest.TestCase):
         ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
         self.assertIn("experiments/01-x/PROTOCOL-x.md", ctx)
         self.assertIn("MISSING (must): Null condition / anchors", ctx)
-        # the checker ran from the repo root on the relative path: no line
-        # names the file absolutely (audit 2026-10-27, third, M4)
+        # the checker runs from the repo root on the relative path: no line
+        # names the file absolutely
         self.assertNotIn(str(self.root.resolve()), ctx)
         self.assertNotIn(str(self.root), ctx)
 
@@ -602,8 +596,7 @@ class PostChange(unittest.TestCase):
 
     def test_a_note_with_an_umlaut_in_its_name_is_checked(self):
         """`git status --porcelain` quotes such a name with octal escapes;
-        the path then was no file and the note was never checked (audit
-        2026-10-15)."""
+        the hook reads the name unquoted, so the note is checked."""
         note = self.root / "notes/messung/2026-10-05-größe.md"
         note.write_text("# x\n\nno kind line\n", encoding="utf-8")
         ev = _bash(self.root, "ls")
@@ -641,11 +634,10 @@ class PostChange(unittest.TestCase):
         return ev
 
     def test_a_report_marking_a_run_gets_the_review_command_once_per_text(self):
-        """Seventh haiku round: the mark was taken and the numbers stayed;
-        the review that reads them is named where the report is written —
-        as the gate's own finding (`report_hold.report_review_owed`), its
-        command as the stop and the commit print it, paths from the hook's
-        working directory, the repo."""
+        """The review that reads a report's numbers is named where the
+        report is written — as the gate's own finding
+        (`report_hold.report_review_owed`), its command as the stop and the
+        commit print it, paths from the hook's working directory, the repo."""
         ev = self._marked_report()
         with contextlib.chdir(self.root):
             rc, out1, _ = _run(hook_post_change.post_change, ev)
@@ -706,11 +698,10 @@ class PostChange(unittest.TestCase):
         self.assertNotIn("--report-review", out)
 
     def test_a_report_that_is_a_link_is_told_its_refusal_where_it_is_written(self):
-        """post-change resolved every path, so a REPORT.md linking to a file
-        under data/ was read where it points — a skipped directory — and
-        got no word, while the stop and the commit refuse it. It hears the
-        refusal and its way out now. The twin: the regular report above
-        gets the review command."""
+        """A REPORT.md linking to a file under data/ hears, where it is
+        written, the refusal and the way out the stop and the commit give
+        it, not the silence of the skipped directory it points into. The
+        twin: the regular report above gets the review command."""
         ev = self._marked_report()
         report = self.root / "REPORT.md"
         (self.root / "data").mkdir()
@@ -724,8 +715,8 @@ class PostChange(unittest.TestCase):
         self.assertIn("rm REPORT.md && cp data/report.md REPORT.md", ctx)
         self.assertNotIn("--report-review", ctx)
         # the way out followed in the same session: the copy has the bytes
-        # the link read, and the cache, keyed on them, kept the review
-        # command back (cold review 2026-10-27); another hint is told
+        # the link read, so a cache keyed on the bytes alone would keep the
+        # review command back; another hint is told
         report.unlink()
         report.write_bytes(target.read_bytes())
         rc, out, _ = _run(hook_post_change.post_change, ev)
@@ -750,11 +741,10 @@ if __name__ == "__main__":
 
 
 class Stop(unittest.TestCase):
-    """`claude-hook stop`: a number written back in this session goes through
-    report-check before the agent ends its turn (finalize until 0.99.0; the
-    whole release check since — third haiku round: t3 and t5 reported a
-    probe's number and no agent ever called report-check). The area is at
-    low, where the hook's rule is the same and no freeze is owed."""
+    """`claude-hook stop`: a number written back in this session goes
+    through report-check, the whole release check, before the agent ends its
+    turn. The area is at low, where the hook's rule is the same and no freeze
+    is owed."""
 
     RUN = "2026-10-07T10-00-00_ab12"
 
@@ -873,8 +863,7 @@ class Stop(unittest.TestCase):
 
     def test_a_script_changed_under_a_reported_number_is_sent_back(self):
         """The answer committed, then a script edited: the protocol is not
-        among the changed files, and the stop hook let it pass (audit
-        2026-10-19)."""
+        among the changed files, and the stop still sends it back."""
         self._command()  # the session's first command keeps the base
         self._answer(self.RUN)
         _git(self.root, "add", "-A")
@@ -889,7 +878,7 @@ class Stop(unittest.TestCase):
         self.assertIn("no analysis audit saw the area as it is now", err)
 
     def test_a_probes_number_written_back_is_sent_back(self):
-        """Third haiku round (t3, t5): measured with run_kind='probe', reported."""
+        """Measured with run_kind='probe', reported: sent back."""
         self._run_dir(run_kind="probe")
         self._answer(self.RUN)
         rc, _, err = self._stop()
@@ -920,11 +909,10 @@ class Stop(unittest.TestCase):
         return path.read_text(encoding="utf-8").strip()
 
     def test_a_commit_past_the_pre_commit_is_held_at_every_stop(self):
-        """Eighth haiku round (t3): `git commit --no-verify` left the tree
-        clean, and the stop, reading git status only, held nothing. The
-        session's commits since its stop base are held; a stop sent back
-        once in the turn may end, the base stays, the next turn's stop
-        holds again."""
+        """`git commit --no-verify` leaves the tree clean, so git status alone
+        would hold nothing. The session's commits since its stop base are
+        held; a stop sent back once in the turn may end, the base stays, the
+        next turn's stop holds again."""
         _run(hook_pre_run.pre_run, _bash(self.root, "ls"))  # keeps the base
         base = self._base()
         self._answer("2026-10-01T09-00-00_ffff")
@@ -943,10 +931,10 @@ class Stop(unittest.TestCase):
         self.assertEqual(rc, 2)
 
     def test_a_bad_commit_beside_an_uncommitted_fix_keeps_the_base(self):
-        """The stop reads the tree: a commit past the pre-commit with the
-        wrong run declared, and the fix uncommitted, passed — and the base
-        moved past the bad commit, so dropping the fix was never held. The
-        base stays until a stop on a clean tree passes; the twin: the fix
+        """A commit past the pre-commit with the wrong run declared, and the
+        fix in the tree only, passes the stop, which reads the tree — but the
+        base does not move past the bad commit, so dropping the fix is held.
+        The base stays until a stop on a clean tree passes; the twin: the fix
         committed, the tree clean, the base moves."""
         _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
         base = self._base()
@@ -1006,11 +994,9 @@ class Stop(unittest.TestCase):
         self,
     ):
         """`rm -rf .git/labkit-stop-base` after a commit past the pre-commit:
-        the stop checked no commit and said nothing, and the next command
-        kept a new base past the bad commit. Without a base the stop says so
-        and holds the commits dated since the transcript began; pre-run
-        keeps no base past them. The twin: the fix committed, a clean stop
-        keeps HEAD, and the next stop is silent."""
+        without a base the stop says so and holds the commits dated since
+        the transcript began; pre-run keeps no base past them. The twin: the
+        fix committed, a clean stop keeps HEAD, and the next stop is silent."""
         self._command()
         path = hook_session.stop_base_file(self.root, "s1")
         assert path is not None
@@ -1046,12 +1032,11 @@ class Stop(unittest.TestCase):
 
     def test_without_a_transcript_the_missing_base_holds_and_keeps_none(self):
         """No base and no transcript start: the session's commits cannot be
-        read. The stop said so, passed, and kept HEAD as its base — past the
-        commits it had just not checked (cold review 2026-10-27). A check
-        that cannot run is not clean: it holds, once per turn, keeps no
-        base, and names the way out — the files checked by hand, then a
-        Bash command keeps a base. The twin: a clean stop with its commits
-        read keeps HEAD (the stops above)."""
+        read. A check that cannot run is not clean: it holds, once per turn,
+        keeps no base — HEAD would lie past the commits it did not check —
+        and names the way out — the files checked by hand, then a Bash
+        command keeps a base. The twin: a clean stop with its commits read
+        keeps HEAD (the stops above)."""
         _git(self.root, "add", "-A")
         _git(self.root, "commit", "-qm", "a commit the stop cannot date")
         path = hook_session.stop_base_file(self.root, "s1")
@@ -1090,9 +1075,9 @@ class Stop(unittest.TestCase):
         self.assertEqual(self._base(), base)
 
     def test_over_budget_no_process_the_checks_started_is_left(self):
-        """The budget killed only the check's direct child: a process that
-        child started ran on, reparented (cold review 2026-10-27). Every
-        process below the hook ends."""
+        """Every process below the hook ends at the budget, not only the
+        check's direct child: a process that child started would run on,
+        reparented."""
         pidfile = self.root / "grandchild.pid"
         (self.area / "scripts" / "02_analyze.py").write_text(
             "import pathlib, subprocess\n"
@@ -1103,9 +1088,9 @@ class Stop(unittest.TestCase):
         )
         self._answer(self.RUN)
         _run(hook_pre_run.pre_run, _bash(self.root, "ls"))
-        # 10 s, not 3: under a load of 25 the budget ran out before the
-        # script had started its child, and no pid file was left to read
-        # (2026-10-28); `sleep 41` still outlives any budget by far
+        # 10 s, not 3: under heavy load a shorter budget runs out before the
+        # script has started its child, and no pid file is left to read;
+        # `sleep 41` still outlives any budget by far
         with mock.patch.object(agent_hooks, "STOP_BUDGET_S", 10.0):
             rc, _, err = self._stop()
         self.assertEqual(rc, 2, err)

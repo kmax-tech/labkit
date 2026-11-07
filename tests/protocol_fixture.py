@@ -18,7 +18,7 @@ from labkit.formats import promises, runs
 PID = "p-0123456789abcdef"
 
 #: The tables a frozen fixture carries unless it says otherwise — the stamp's
-#: shape (0.71.0: frozen = true owes a promise block); the scope is the
+#: shape (frozen = true owes a promise block); the scope is the
 #: script `scope_file` writes.
 DEFAULT_BLOCK = """\
 [[promise]]
@@ -44,8 +44,8 @@ scope = ["scripts/01_measure.py"]
 #: metrics key a block id lacks, fails intent-check
 C1_BLOCK = DEFAULT_BLOCK.split("\n\n")[0] + "\n"
 C1_PROSE = "- **Inference criterion:** [criterion-1] the criterion holds\n"
-#: the `[kept]` a computation's fixture head carries unless it says otherwise
-#: (standard 0.24): the key its runs hold as their kept number, and its unit
+#: the `[kept]` a computation's fixture head carries unless it says otherwise:
+#: the key its runs hold as their kept number, and its unit
 KEPT = ("n", "1")
 
 
@@ -132,8 +132,8 @@ def run_record(
     test of a damaged record breaks a field explicitly: DROP leaves fields
     out (a record from before the schema), or it deletes one from the
     result (`del record["unfrozen_ack"]`). The one home for the record's shape in
-    the tests: a fixture that wrote a part of it read, until 2026-10-20, as
-    a record with defaults."""
+    the tests: a fixture that wrote a part of it would read as a record with
+    defaults."""
     record: dict = {
         "schema_version": 4,
         "experiment": "x",
@@ -179,9 +179,9 @@ def completed_run(
     kept_number: bool = True,
 ) -> Path:
     """A run directory as runlog leaves one: bound to PID, its promise
-    snapshot taken from the area's PROTOCOL-x.md (0.71: a run under a frozen
-    protocol recorded its block), a full run unless LONG says a probe, not
-    acknowledged unless UNFROZEN_ACK (0.99.0: both recorded, `runs.unreportable`),
+    snapshot taken from the area's PROTOCOL-x.md (a run under a frozen
+    protocol records its block), a full run unless LONG says a probe, not
+    acknowledged unless UNFROZEN_ACK (both recorded, `runs.unreportable`),
     METRICS written when given, finished when COMPLETION. Under a computation
     whose head names a `[kept] key` the run holds it, as the compute skeleton
     writes it: METRICS without that key gain it as 1 unless KEPT_NUMBER is
@@ -240,19 +240,19 @@ def head(
 ) -> str:
     """The fenced TOML block; `promises` is appended inside it verbatim. A
     frozen or low head without an explicit block carries `DEFAULT_BLOCK`;
-    `None` means no block even then (the mutant of standard 0.19's rule).
-    RESULT is the run id a `[result]` table declares (phase 3, 2026-10-21);
-    MODEL the alias of a `[model]` table, ARMS its `[model.arms.<arm>]`
-    tables as {arm: (profile, fingerprint, alias)}, LABELS a `[gate]` table
-    (phase 4). CLAIM is TOML written into `[model]` below the alias verbatim
-    (`number_describes`, `annotation_validity`). KIND is the head's `kind` (standard 0.22); None derives it as
+    `None` means no block even then (the mutant of that rule).
+    RESULT is the run id a `[result]` table declares; MODEL the alias of a
+    `[model]` table, ARMS its `[model.arms.<arm>]` tables as {arm: (profile,
+    fingerprint, alias)}, LABELS a `[gate]` table. CLAIM is TOML written into
+    `[model]` below the alias verbatim (`number_describes`,
+    `annotation_validity`). KIND is the head's `kind`; None derives it as
     the stamp would — `apply` with a model, else `compute` — so a fixture
     states only what it varies; a literal `kind="<compute | fit | apply>"`
     writes the placeholder. REPORT is the head's optional `report`, the
-    registered report file (standard 0.23, 2026-10-29). REFERENCE is TOML
-    written into a `[reference]` table verbatim — a computation's stated
-    value (2026-10-29). KEPT is a computation's `[kept]` (key, unit), written
-    only with kind = "compute"; None leaves the table out (standard 0.24)."""
+    registered report file. REFERENCE is TOML written into a `[reference]`
+    table verbatim — a computation's stated value. KEPT is a computation's
+    `[kept]` (key, unit), written only with kind = "compute"; None leaves
+    the table out."""
     if kind is None:
         kind = "apply" if model is not None else "compute"
     if promises == "" and (frozen or repeat_cost == "low"):

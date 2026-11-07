@@ -43,9 +43,8 @@ class WaysOut(unittest.TestCase):
     def test_each_way_out_names_the_subject_it_serves_in_both_places(self):
         """A way out bound to a finding's subject says which, in the printed
         list and in the guide, and only a `statement` way offers
-        `limitation`: the printed routes said "a fault you cannot fix →
-        `limitation`" while `--decide` refused it for an implementation
-        finding (audit 2026-11-07, S2)."""
+        `limitation`, since `--decide` refuses it for an implementation
+        finding."""
         guide = {
             m.group(1): m.group(2)
             for m in re.finditer(
@@ -73,8 +72,7 @@ class WaysOut(unittest.TestCase):
 
     def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
         """A computation registers no promise and `--decide` refuses every
-        id an effect names (t34, t21 of the pilot, 2026-10-28): its routes
-        name what works — limit the claim, fix, defer and hand over."""
+        id an effect names: its routes name what works — limit the claim, fix, defer and hand over."""
         promised = "\n".join(ways_out.blocker_routes(True))
         self.assertIn("--not-assessable <ID>", promised)
         bare = "\n".join(ways_out.blocker_routes(False))
@@ -91,15 +89,17 @@ class WaysOut(unittest.TestCase):
         )
 
     def test_a_handover_needs_a_named_missing_prerequisite(self):
-        """The file-check agent committed past the hook rather than hand
-        over; a refusal alone is no reason either — it names its next step."""
+        """A handover names its missing prerequisite and never commits past
+        the hook; a refusal alone is no reason either — it names its next
+        step."""
         for text in (dict(ways_out.WAYS_OUT)["none of these"], stuck_section()):
             text = " ".join(text.split())
             self.assertIn("prerequisite", text)
             self.assertIn("--no-verify", text)
 
     def test_a_miss_comes_before_a_new_registration_and_never_becomes_a_pass(self):
-        """The repair case read a missed criterion as an invalid registration."""
+        """A missed criterion is no invalid registration: the miss comes first
+        and a new registration never turns it into a pass."""
         names = [name for name, _ in ways_out.WAYS_OUT]
         self.assertLess(
             names.index("a missed criterion"), names.index("an invalid registration")
@@ -113,8 +113,8 @@ class WaysOut(unittest.TestCase):
             self.assertIn('type = "exploratory"', text)
 
     def test_a_handover_names_the_protocol_not_its_runs(self):
-        """A run id in a report reads as its number: the counter-case's
-        handover that named the answering run was held."""
+        """A run id in a report reads as its number, so a handover names
+        the protocol, not its runs."""
         for text in (dict(ways_out.WAYS_OUT)["none of these"], stuck_section()):
             text = " ".join(text.split())
             self.assertIn("the report names the protocol, not its runs", text)
@@ -138,9 +138,7 @@ class WaysOut(unittest.TestCase):
             and {"--decide", "--not-assessable"} <= decide
         )
         # every flag of every code span, held to the command the span starts
-        # with; it read only a flag right after a backtick, so --handover,
-        # --why, --tried, --into and --findings went unchecked (audit
-        # 2026-10-27, table C)
+        # with, not only a flag right after a backtick
         known = {"labkit-init": init, "labkit-audit": decide, "protocol-fill": report}
         seen = set()
         for span in re.findall(r"`([^`]*)`", both):

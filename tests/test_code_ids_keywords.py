@@ -1,9 +1,8 @@
-"""code-check reads keyword-argument keys, not only string literals (2026-10-06).
+"""code-check reads keyword-argument keys, not only string literals.
 
 `r.metrics(criterion_1_pass=...)` reaches metrics.json as "criterion_1_pass" without being a
-string literal. Reading literals only produced a BLOCKER against correct
-code ("no script mentions a 'c1' key") — found in the first promise-block
-run, and the same for `k1_pass=` since the check existed.
+string literal. Reading literals only would give a BLOCKER against correct
+code ("no script mentions a 'c1' key").
 
 The decisive fixture is a twin pair: the same report written as a dict
 literal and as keyword arguments must get the same verdict. A local

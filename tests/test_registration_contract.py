@@ -1,4 +1,4 @@
-"""The registration's contract (standard 0.19): a frozen protocol and every
+"""The registration's contract: a frozen protocol and every
 full run carry the promises as data, and a run under a block records every
 registered constant unchanged — refused by runlog before mkdir, a MUST
 finding in protocol-check, a blocker in finalize.
@@ -107,7 +107,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
 
     def test_a_full_run_at_seconds_without_a_block_is_refused(self) -> None:
         """At repeat_cost = low nothing freezes, but every run is the full run:
-        the registration it is held to is data (standard 0.19)."""
+        the registration it is held to is data."""
         with tempfile.TemporaryDirectory() as d:
             area = _area(d, head(repeat_cost="low", promises=None) + BODY)
             with self.assertRaises(SystemExit) as cm:
@@ -134,7 +134,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
 
     def test_frozen_without_a_block_is_a_must_finding(self) -> None:
         # a fit or an apply registers by its kind; a computation registers
-        # nothing, frozen too (review 2026-10-27, 1)
+        # nothing, frozen too
         for kind, owed in (("fit", True), ("apply", True), ("compute", False)):
             with self.subTest(kind=kind):
                 report = protocol_check.check_fields(
@@ -164,7 +164,7 @@ class RunlogRefusesBeforeMkdir(unittest.TestCase):
             any("declares no [[promise]]" in m for m in report.missing_must),
             report.missing_must,
         )
-        # the twin: a computation names no id and owes no table (0.87.1)
+        # the twin: a computation names no id and owes no table
         report = protocol_check.check_fields(head(repeat_cost="low", promises=None))
         self.assertFalse(
             any("declares no [[promise]]" in m for m in report.missing_must),

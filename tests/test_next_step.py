@@ -2,9 +2,7 @@
 
 The counting skeleton walked through the chain: at every station the
 step named is the command that moves it on, and taking it moves the area
-to the next station. The plan (docs/notes/2026-10-30-agent-surface.md,
-step 2): in round 1, five agents stopped with a handover and no number,
-four ran and never adopted, two never ran.
+to the next station.
 """
 
 from __future__ import annotations
@@ -52,11 +50,11 @@ def run_next(area: Path, cwd: Path) -> tuple[int, str, str]:
 
 
 class OneChainPerHold(unittest.TestCase):
-    """The stop, the commit and report-check's hook entry ran report-check's
-    chain and then `next`'s step ran it again for the same protocol — the
-    nested finalize with the area's tests and `02_analyze.py --check` twice
-    inside the stop's budget (audit 2026-11-07, second, A3). The step now
-    reads the chain the hold found; the twin: `next` alone runs it once."""
+    """The stop, the commit and report-check's hook entry run report-check's
+    chain once per protocol: `next`'s step reads the chain the hold found
+    rather than running the nested finalize (the area's tests,
+    `02_analyze.py --check`) again inside the stop's budget. The twin:
+    `next` alone runs it once."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -132,8 +130,7 @@ class OneChainPerHold(unittest.TestCase):
 class SilentCollectors(unittest.TestCase):
     """A gate run inside another tells every line through the collector it
     is handed: a silent one writes nothing to stdout or stderr — the pre-run
-    hook's answer is its own output, and it kept preflight's stdout off it
-    by redirecting until 2026-11-07. The twin: the console collector of the
+    hook's answer is its own output. The twin: the console collector of the
     same call prints."""
 
     def test_preflight_tells_nothing_past_a_silent_collector(self):
@@ -198,7 +195,7 @@ class TheChain(unittest.TestCase):
         self.assertNotIn("<area>", step.where + step.next)
         self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         # audited, the Conclusion open: the adoption owes it, so next names
-        # it before the adoption (answer block, 2026-11-06)
+        # it before the adoption
         step = self.step()
         self.assertIn("adopting " + run_id + " would owe 1 field(s)", step.where)
         self.assertIn('"Conclusion=<value>"` fills the first', step.next)
@@ -216,7 +213,7 @@ class TheChain(unittest.TestCase):
         self.assertTrue(step.next.startswith("nothing"), step)
         self.assertEqual(step.held, "")
         # a report citing the adopted run without its block is what the hooks
-        # hold: named here first (reference pilot 2026-11-01, tasks 21 and 34)
+        # hold: named here first
         report = self.lab.root / "REPORT.md"
         report.write_text(f"The mean is 3.0 (run {run_id}).\n", encoding="utf-8")
         self.addCleanup(report.unlink, missing_ok=True)
@@ -228,9 +225,9 @@ class TheChain(unittest.TestCase):
         self.assertTrue(self.step().next.startswith("nothing"))  # the twin
 
     def test_an_open_run_is_the_step_before_any_other(self):
-        """A run still open read as nothing, and labkit-next sent the agent to
-        measure again beside it (reference pilot 2026-11-01, task 15). The
-        twin: a run that broke off (failure.json) is not open."""
+        """A run still open is not nothing: labkit-next does not send the
+        agent to measure again beside it. The twin: a run that broke off
+        (failure.json) is not open."""
         import json
 
         from labkit.formats import runs
@@ -270,10 +267,10 @@ class TheChain(unittest.TestCase):
 
 
 class ADetachedStartBeforeItsRecord(unittest.TestCase):
-    """`labkit-next` said "measure" while `runlog --wait` waited for a
-    command `runlog start` detached that had not opened its run yet;
-    following it, the area measured twice (2026-11-04, case A of
-    docs/notes/2026-11-04-liveness-and-wait.md). Real processes: a start
+    """`labkit-next` does not say "measure" while `runlog --wait` waits for
+    a command `runlog start` detached that has not opened its run yet:
+    following it, the area would measure twice
+    (docs/notes/2026-11-04-liveness-and-wait.md). Real processes: a start
     whose command holds until a flag file exists."""
 
     def test_the_start_comes_first_and_the_step_returns_once_it_ended(self):
@@ -351,8 +348,8 @@ class BeforeTheChain(unittest.TestCase):
         return rc, out.getvalue(), err.getvalue()
 
     def test_without_an_area_and_none_stamped_the_step_creates_one(self):
-        """Round 2: fourteen bare `labkit-next` calls, before any area
-        existed, met the usage line."""
+        """A bare `labkit-next` before any area exists names the stamp
+        that creates one, not the usage line."""
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "tests").mkdir()
             rc, out, err = self._bare(Path(d))
@@ -419,8 +416,8 @@ class BeforeTheChain(unittest.TestCase):
         text is not (protocol-fill knows no field it cannot see): a † field
         comes with `labkit-init exp … --report`, another absent field is a
         line to write; a freeze key or a contradiction has no single step.
-        The repair probe's base8 (2026-11-05): `next` named a fill of an
-        absent field, protocol-fill answered "no field labelled"."""
+        So `next` never names a fill protocol-fill answers with "no field
+        labelled"."""
         area = Path("experiments/01-x")
         line = next_step._fill_line
         self.assertEqual(
@@ -450,8 +447,8 @@ class BeforeTheChain(unittest.TestCase):
         """One mouth: `next` asks `check_fields` what the adoption's state
         owes (`adopting`) — a frozen protocol's † result fields — and names
         the fill before `labkit-adopt`, which would refuse the written
-        result for them (labkit-paper's tassay-r2, the repair probe's c8).
-        The twins: filled, or unfrozen, the adoption owes nothing more."""
+        result for them. The twins: filled, or unfrozen, the adoption owes
+        nothing more."""
         from protocol_fixture import head
 
         protocol = Path("experiments/01-x/PROTOCOL-x.md")
@@ -493,12 +490,12 @@ if __name__ == "__main__":
 
 
 class ProgressAccount(unittest.TestCase):
-    """B (2026-11-02): with a registered report, the step after a measurement
+    """With a registered report, the step after a measurement
     is the progress account — a discussion block of the answering run —,
     before the audit and before any gap; it releases nothing, the commit
     takes it, the stop names the next step once, and the adoption puts the
-    result block where it stood (labkit-paper area 17: five of six timed-out
-    attempts left no report, the report being written last)."""
+    result block where it stood, so an attempt cut off before the end still
+    leaves a report."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -720,10 +717,9 @@ class ProgressAccount(unittest.TestCase):
 
 
 class DiscussingReport(unittest.TestCase):
-    """The pilot of one explainer (docs/notes/2026-11-04-one-explainer-plan.md):
-    a report that discusses a run owes a report review of its state. The
-    stop and the commit held it (`report_hold.hold_report`), `labkit-next`
-    never named it. Now gate, hooks and `next` read the one finding
+    """A report that discusses a run owes a report review of its state.
+    The stop and the commit hold it (`report_hold.hold_report`), and gate,
+    hooks and `next` read the one finding
     (`report_hold.discussion_review_findings`) of the one state — the tree
     at the stop, the index at the commit — and a review of the state
     releases all three."""
@@ -865,12 +861,11 @@ class DiscussingReport(unittest.TestCase):
 
 
 class MissingRegisteredReport(unittest.TestCase):
-    """Option A of the one-explainer pilot: the stop held a protocol whose
-    registered report is not written after a measurement with a line of
-    its own (the finding's three ways), while `labkit-next` named the
-    progress account. Now the hold stays the gate's finding
-    (`registered_report.missing_report`) and the stop prints the step `next`
-    names for that state — one spelling, one action."""
+    """A protocol whose registered report is not written after a
+    measurement: the hold is the gate's finding
+    (`registered_report.missing_report`), and the stop prints the step
+    `next` names for that state, the progress account, not the finding's
+    three ways — one spelling, one action."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -916,9 +911,8 @@ class MissingRegisteredReport(unittest.TestCase):
 class TwoProtocols(unittest.TestCase):
     """The adopt line `next` names runs as named: with two protocols in the
     area it carries `--protocol`, as `commands.adopt_command` builds it — the
-    one home of that line. `next` built it by hand without the flag, and
-    `labkit-adopt` refused it with "name one with --protocol" (workflow
-    check 2026-11-05, finding iii)."""
+    one home of that line; without the flag `labkit-adopt` refuses it with
+    "name one with --protocol"."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -955,9 +949,8 @@ class TwoProtocols(unittest.TestCase):
 class ProtocolInTheIndexOnly(unittest.TestCase):
     """The commit holds the index: a protocol the index holds and the tree
     has deleted is held by the commit's gate, and the step printed beside
-    the hold is read from the same protocols (`report_check.reached_by`).
-    `steps_for` counted the tree's protocols and printed no step for the
-    hold (workflow check 2026-11-05, finding iv)."""
+    the hold is read from the same protocols (`report_check.reached_by`),
+    not from the tree's."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -996,9 +989,8 @@ class ReportInTheIndexOnly(unittest.TestCase):
     """A report citing the adopted run without its block, held by the index
     and deleted in the tree: the commit's gate holds it, and `next --staged`
     names the block to write from the same state
-    (`report_hold.reports_without_block` reads the index then). It read the
-    tree in both states and said "nothing holds it" beside the hold
-    (workflow check 2026-11-05, finding ii)."""
+    (`report_hold.reports_without_block` reads the index then), never
+    "nothing holds it" beside the hold."""
 
     def setUp(self) -> None:
         self.lab = Lab()

@@ -1,6 +1,6 @@
-"""`area_tests` on a relative area path (0.74.3): `preflight .` and
-`finalize .` pass Path(".") whose .name is "" — the pattern read
-`tests/test_.py` and the area's own test counted as absent.
+"""`area_tests` on a relative area path: `preflight .` and `finalize .`
+pass Path(".") whose .name is "", and the pattern is read from the resolved
+area — never `tests/test_.py`, which would count the area's own test absent.
 
     .venv/bin/python -m pytest tests/test_area_tests_relative_path.py
 """

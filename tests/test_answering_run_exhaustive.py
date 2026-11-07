@@ -1,9 +1,8 @@
 """`answering_run.bound_answering_run` over every area of up to three runs drawn from
 nine kinds, held to an oracle that restates the rule from its docstrings.
 
-The worst faults the audit of 2026-10-15 found were in this choice (the
-wrong run's number written into the protocol), and the case tests in
-tests/test_answering_run.py each cover one arrangement. Here every
+A wrong choice here writes the wrong run's number into the protocol; the
+case tests in tests/test_answering_run.py each cover one arrangement. Here every
 arrangement up to three runs is checked (820 areas, once on different days
 and once in one second): the oracle is written from the rule, not from
 the code, so a disagreement is a finding on one side or the other.
@@ -170,7 +169,7 @@ def _name(i: int, one_second: bool) -> str:
 class EveryArrangement(unittest.TestCase):
     def test_up_to_three_runs_of_nine_kinds(self) -> None:
         """Each arrangement twice: started on different days, and all in one
-        second (the suffix then orders them by chance, 2026-10-15)."""
+        second (the suffix then orders them by chance)."""
         checked = 0
         for one_second in (False, True):
             for n in range(4):
@@ -266,9 +265,9 @@ def _chosen_by_every_check(area: Path, protocol: Path) -> dict[str, str]:
 class EveryCheckChoosesTheSameRun(unittest.TestCase):
     """finalize, intent-check, recheck, params and the audit each call
     `bound_answering_run`, and each renders its outcome its own way (a
-    blocker, exit 2, SystemExit, a printed line, a ROWS label) — the audit
-    of 2026-10-15 found four renderings with four semantics. Here all five
-    are held to the one choice on every arrangement above."""
+    blocker, exit 2, SystemExit, a printed line, a ROWS label). Here all
+    five are held to the one choice on every arrangement above, so no
+    rendering gives the choice a meaning of its own."""
 
     def test_every_check_names_the_run_bound_answering_run_names(self) -> None:
         for one_second in (False, True):
@@ -301,7 +300,7 @@ class EveryCompletedArrangement(unittest.TestCase):
     the nine kinds: the completed runs in name order, repeats only when
     asked; an unreadable run raises — it may be the newest and must not
     vanish. `usability_score.latest_run` takes the last of them, and refuses when
-    the last two started in one second (2026-10-15)."""
+    the last two started in one second."""
 
     def test_up_to_three_runs_of_nine_kinds(self) -> None:
         for one_second in (False, True):
@@ -363,7 +362,7 @@ class EveryDrawArrangement(unittest.TestCase):
     say whether it is a draw of PARENT (unreadable), a draw number that is
     no integer, or two completed draws with one number is a refusal — a
     spread over fewer draws than were taken, or a reused number, would pass
-    unseen (2026-10-15)."""
+    unseen."""
 
     def test_up_to_three_runs_of_seven_kinds(self) -> None:
         for one_second in (False, True):

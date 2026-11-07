@@ -1,11 +1,10 @@
 """The stamped AGENTS.md: short, dated nowhere, every command a real one.
 
-The prose did not carry (agent-surface plan, docs/notes/2026-10-30-agent-
-surface.md): agents followed the gate messages at the point of use, not
-4,774 words read once. AGENTS.md keeps the loop, six words, the kinds
-table and the stop rule under WORD_LIMIT; the workflow in full is the
-agent guide (`labkit-next --guide`). A date or an incident in either is
-history for a note, not an instruction.
+Agents follow the gate messages at the point of use, not long prose read
+once (docs/notes/2026-10-30-agent-surface.md). AGENTS.md keeps the loop,
+six words, the kinds table and the stop rule under WORD_LIMIT; the workflow
+in full is the agent guide (`labkit-next --guide`). A date or an incident
+in either is history for a note, not an instruction.
 """
 
 from __future__ import annotations
@@ -104,9 +103,9 @@ def spans(text: str) -> list[str]:
 
 
 class Examples(unittest.TestCase):
-    """An example an agent copies must be one labkit takes: a review ran a
-    shown `--decide` call (refused, no `--why`) and a shown branch (refused,
-    no consequences)."""
+    """An example an agent copies must be one labkit takes: a shown
+    `--decide` call parses with its `--why`, a shown branch with its
+    consequences."""
 
     def test_every_decide_call_shown_is_one_the_parser_takes(self):
 

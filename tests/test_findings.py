@@ -1,4 +1,4 @@
-"""Audit findings as data (2026-10-12): written by labkit-audit, decided by the person, read by preflight."""
+"""Audit findings as data: written by labkit-audit, decided by the person, read by preflight."""
 
 import contextlib
 import re
@@ -69,7 +69,7 @@ def set_status(path: Path, n: int, status: str, reason: str = "") -> None:
 
 class UndecidedFindings(unittest.TestCase):
     """`findings.open_findings` is the one walk over the records for `open`
-    findings; the gates grade what it returns (audit 2026-10-23, C1)."""
+    findings; the gates grade what it returns."""
 
     def test_every_open_finding_of_every_record_in_order(self):
         area = area_with(
@@ -175,8 +175,8 @@ class WriteRead(unittest.TestCase):
         self.assertEqual(len(findings.area_records(area)), 2)
 
     def test_audits_writing_at_once_keep_every_record(self):
-        """Review 2026-10-20: a free name was looked for, then written to —
-        two audits at once took one name and one record was lost."""
+        """Two audits at once never take one name: a free name looked for,
+        then written to, would lose a record."""
         import threading
 
         area = Path(tempfile.mkdtemp())
@@ -265,7 +265,7 @@ class WriteRead(unittest.TestCase):
 
     def test_a_verdict_counting_more_than_the_lines_is_refused(self):
         """Two blockers in the verdict, none readable as a line: written, the
-        record read as covered with nothing open (audit 2026-10-15)."""
+        record would read as covered with nothing open."""
         area = Path(tempfile.mkdtemp())
         with self.assertRaises(ValueError) as cm:
             findings.write(
@@ -304,9 +304,9 @@ class Decisions(unittest.TestCase):
         self.assertEqual(rec.findings[1].reason, "the reference line stays a limit")
 
     def test_a_deferred_finding_of_0_103_does_not_read(self):
-        """`deferred` is gone: an unsettled finding stays open, and a handover
-        records it; a record of labkit 0.103.0 that says deferred is refused
-        by name. The twin: the statuses of today read (above)."""
+        """An unsettled finding stays open, and a handover records it; a
+        record that says `deferred` is refused by name. The twin: the
+        statuses of today read (above)."""
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         set_status(path, 2, "deferred", "own task")
@@ -325,7 +325,7 @@ class Decisions(unittest.TestCase):
     def test_counts_outrunning_the_tables_are_loud_on_read(self):
         """The writer refuses `blockers = 2` without a table; a person editing
         the file can write the same — the reader holds the same line, or the
-        record reads as covered with nothing open (review 2026-10-18)."""
+        record reads as covered with nothing open."""
         area = area_with([("preflight", TWO)])
         path = next((area / "audits").glob("*.toml"))
         text = path.read_text(encoding="utf-8")
@@ -369,11 +369,10 @@ class Decisions(unittest.TestCase):
 
 
 class HandDecisions(unittest.TestCase):
-    """A decision is written through `--decide` (decided 2026-10-27); a
-    record changed by hand is not one labkit wrote. Such a record still
-    reads when it is TOML, and one that is not is refused with where it went
-    wrong and why (an unescaped quote made a record unreadable, count probe
-    2026-10-20)."""
+    """A decision is written through `--decide`; a record changed by hand
+    is not one labkit wrote. Such a record still reads when it is TOML, and
+    one that is not (an unescaped quote) is refused with where it went wrong
+    and why."""
 
     def test_the_file_names_the_one_way_to_decide_and_hand_forms_still_read(self):
         area = area_with([("preflight", TWO)])
@@ -418,7 +417,7 @@ class HandDecisions(unittest.TestCase):
 class ModelTextReadsBack(unittest.TestCase):
     """The auditor's finding text is the model's: json left DEL and the
     line breaks `str.splitlines` cuts (U+0085, U+2028, U+2029) raw, and the
-    record would not have read back (review of the reason fix, 2026-10-20)."""
+    record must read back all the same."""
 
     def test_every_character_json_leaves_raw_reads_back(self):
         text = (
@@ -431,9 +430,8 @@ class ModelTextReadsBack(unittest.TestCase):
 
 class WriteDecision(unittest.TestCase):
     """The person's decision, given explicitly, stored safely: the tool
-    validates it, writes it as TOML and replaces the file whole. It decides
-    nothing (count probes 2026-10-20: two hand-written reasons broke the
-    file)."""
+    validates it, writes it as TOML and replaces the file whole, so a
+    reason never breaks the file. It decides nothing."""
 
     def record(self) -> Path:
         area = area_with([("preflight", TWO)])
@@ -468,10 +466,10 @@ class WriteDecision(unittest.TestCase):
         self.assertEqual(list(path.parent.glob(".*tmp*")), [])
 
     def test_a_multi_line_value_is_replaced_whole_by_the_one_writer(self):
-        """`--decide` is the one supported way to write a decision (decided
-        2026-10-27), so it writes every decision a record can hold: a reason
-        set as a multi-line string — basic or literal — is replaced whole,
-        the result one line. The twin: the one-line form, above, as before."""
+        """`--decide` is the one supported way to write a decision, so it
+        writes every decision a record can hold: a reason set as a
+        multi-line string — basic or literal — is replaced whole, the result
+        one line. The twin: the one-line form, above."""
         for opening, closing in (('"""', '"""'), ("'''", "'''")):
             with self.subTest(form=opening):
                 path = self.record()
@@ -502,9 +500,9 @@ class WriteDecision(unittest.TestCase):
 
     def test_a_multi_line_value_closes_where_toml_closes_it(self):
         """An escaped quote run and up to two quotes before the closing three
-        belong to the value; the scan closed early there, refusing the record
-        as "not TOML" or leaving a stray line (cold review 2026-10-27). Each
-        hand form reads, is replaced whole, and the next line stays."""
+        belong to the value; a scan that closes early there refuses the
+        record as "not TOML" or leaves a stray line. Each hand form reads, is
+        replaced whole, and the next line stays."""
         for hand, value in (
             ('reason = """x \\""" y\nstill x"""\n', 'x """ y\nstill x'),
             ('reason = """he said "no""""\n', 'he said "no"'),
@@ -604,7 +602,7 @@ class WriteDecision(unittest.TestCase):
 
     def test_a_table_between_findings_does_not_shift_the_count(self):
         """A sub-table after finding 1, then findings 2 and 3: a count that
-        restarted at the sub-table reached 1 again at finding 3."""
+        restarts at the sub-table would reach 1 again at finding 3."""
         three = TWO + [("NOTE", "NOTE · c.py:3 · statement · x · y · LAB-019 r · z")]
         area = area_with([("preflight", three)])
         path = next((area / "audits").glob("*.toml"))
@@ -634,8 +632,7 @@ class WriteDecision(unittest.TestCase):
 class Subject(unittest.TestCase):
     """The auditor names what each finding is about — `implementation` or
     `statement`, the third field of its line — and `limitation` is refused
-    for an implementation finding (one-explainer plan, "Next architectural
-    boundary to repair"; decided 2026-11-06)."""
+    for an implementation finding."""
 
     IMPL = "BLOCKER · a.py:1 · implementation · 1 null draw for 200 · y · new class · z"
     STAT = "WARNING · b.py:2 · statement · claim wider than run · y · new class · z"
@@ -705,9 +702,9 @@ class Subject(unittest.TestCase):
 
     def test_a_record_without_subjects_does_not_read(self):
         """A record of labkit 0.112.0 or earlier names no subject; it is
-        read with that version, never decided here without one (audit
-        2026-11-07, S4: it took `limitation` without the finding's cause).
-        The refusal names the version."""
+        read with that version, never decided here without one, which would
+        take `limitation` without the finding's cause. The refusal names the
+        version."""
         path = self.record()
         text = path.read_text(encoding="utf-8")
         path.write_text(
@@ -733,7 +730,7 @@ class Undetermined(unittest.TestCase):
     """A suspicion the auditor cannot settle from what it was shown is its
     own subject, `undetermined`: a BLOCKER that names the check settling it
     and what its value must show, never decided `limitation`, and judged by
-    the follow-up on the check's value (decided 2026-11-06)."""
+    the follow-up on the check's value."""
 
     LINE = (
         "BLOCKER · a.py:1 · undetermined · the denominator may count generated "
@@ -856,10 +853,8 @@ class UndeterminedVerdict(unittest.TestCase):
 class TemplatesNameTheTuples(unittest.TestCase):
     """The lines an auditor or agent copies name exactly the values labkit
     reads: the grade line's grades and subjects, the FIX line's verdicts,
-    the settled form's subjects, and the stamped AGENTS.md's subjects. The
-    template once showed `implementation|statement` while `undetermined`
-    stood below it (commit 4cfd2dd8, audit 2026-11-07). Only the copyable
-    lines are held, not the prose."""
+    the settled form's subjects, and the stamped AGENTS.md's subjects. Only
+    the copyable lines are held, not the prose."""
 
     ROOT = Path(__file__).resolve().parents[1] / "labkit"
     AUDITOR = (ROOT / "agents/experiment-preflight.agent.md").read_text(
@@ -965,8 +960,8 @@ class DecisionList(unittest.TestCase):
     """After recording, labkit-audit lists the record's findings with the
     number `--decide` takes — read from the stored record, never counted in
     the model's text — and the READ lines apart: printed, not recorded,
-    nothing to decide. Five of six sandbox probes (2026-10-21) numbered the
-    printed lines and decided findings the record does not hold."""
+    nothing to decide, so an agent never numbers the printed lines and
+    decides findings the record does not hold."""
 
     REPORT = (
         "BLOCKER · scripts/01_measure.py:12 · statement · the key is never written · x · LAB-004 Identifiers make the intent addressable · y\n"
@@ -1007,8 +1002,7 @@ class DecisionList(unittest.TestCase):
         self.assertNotRegex(text, r"\n  3 · ")
         self.assertIn("reading hints — not recorded, nothing to decide", text)
         self.assertIn("READ · PROTOCOL-x.md:5", text)
-        # an open BLOCKER is decided by its cause (ninth haiku round, t5: the
-        # bar moved to the score after the audit): the list prints the one
+        # an open BLOCKER is decided by its cause: the list prints the one
         # line that says so and where the ways out stand (the guide), with
         # the area as shown — not the routes themselves
         self.assertIn(
@@ -1073,7 +1067,7 @@ class Repo(unittest.TestCase):
 
 class AuditCoverage(unittest.TestCase):
     """A full run at high repeat cost owes a preflight record of the code as it
-    is now, every finding decided (2026-10-14: a stamp no audit had seen)."""
+    is now, every finding decided — never a stamp no audit has seen."""
 
     SHA = "abc123def456"
 
@@ -1139,9 +1133,8 @@ class AuditCoverage(unittest.TestCase):
 
 class Binding(unittest.TestCase):
     """A record binds what the auditor read — code, promises and (analysis)
-    the run; until 0.97.1 only the code, so a promise rewritten after the
-    audit or a later run under the same code kept the record valid (review
-    2026-10-18)."""
+    the run, so a promise rewritten after the audit or a later run under the
+    same code leaves the record not covering."""
 
     SHA = "abc123def456"
 
@@ -1194,8 +1187,8 @@ class Binding(unittest.TestCase):
         self.assertIn(f"run {RUN}", gap)
 
     def test_the_same_run_showing_other_rows_or_metrics_is_not_covered(self):
-        """The run id alone could not tell a metrics.json or output rows
-        changed after the audit (review 2026-10-20)."""
+        """The run id alone cannot tell a metrics.json or output rows
+        changed after the audit."""
         area = area_with([("analysis", [])])
         gap = (
             audit_gaps.audit_coverage(
@@ -1322,7 +1315,7 @@ class Binding(unittest.TestCase):
         ana.write_text(text.replace(f'run_id = "{RUN}"\n', ""), encoding="utf-8")
         with self.assertRaisesRegex(findings.FindingsError, "run_id is missing"):
             findings.read(ana)
-        # an analysis record written before shown_sha existed is no longer read
+        # an analysis record without shown_sha is not read
         ana.write_text(text.replace(f'shown_sha = "{SHOWN}"\n', ""), encoding="utf-8")
         with self.assertRaisesRegex(
             findings.FindingsError, "run the analysis audit again"
@@ -1332,8 +1325,8 @@ class Binding(unittest.TestCase):
 
 class NumberOf(unittest.TestCase):
     def test_two_equal_findings_keep_their_own_numbers(self):
-        # list.index gave the second the first's number, and a printed
-        # --decide named the wrong one (audit 2026-10-27, third, K5)
+        # list.index would give the second the first's number, and a
+        # printed --decide would name the wrong one
         from types import SimpleNamespace
 
         first = findings.Finding("BLOCKER", "same text", "open", "")
@@ -1346,8 +1339,7 @@ class NumberOf(unittest.TestCase):
 
 class AuditedStateMatch(unittest.TestCase):
     """One type for the state an audit saw: the prompt binds it, the record
-    carries it, `covering_records` compares the two (audit 2026-10-27,
-    third, plan 2)."""
+    carries it, `covering_records` compares the two."""
 
     def test_the_registration_compares_as_a_mapping(self):
         a = findings.AuditedState("c", "b", {"kind": "fit", "q": "1"}, RUN, SHOWN)
@@ -1361,7 +1353,7 @@ class AuditedStateMatch(unittest.TestCase):
             a, findings.AuditedState("c", "b", {"kind": "fit", "q": "1"})
         )
         self.assertEqual(a.words(), f"code c, promises b, run {RUN}, shown {SHOWN}")
-        # hashable as it compares (audit 2026-10-28, C5)
+        # hashable as it compares
         self.assertEqual(
             len(
                 {
@@ -1393,9 +1385,8 @@ class AuditedStateMatch(unittest.TestCase):
 class OneGrammarOfTheGradeLine(unittest.TestCase):
     """The grade line's fields are read by one grammar (`tagged_line`): its
     place, its subject, the file a review is shown and a reading hint's
-    place. Until 2026-11-07 the place split at ` · ` alone and compared the
-    grade bare, so `BLOCKER — PROTOCOL-x.md:Unit — statement — …` had a
-    subject and no place (structure audit, S5)."""
+    place. A split at ` · ` alone would give
+    `BLOCKER — PROTOCOL-x.md:Unit — statement — …` a subject and no place."""
 
     def finding(self, line: str) -> findings.Finding:
         return findings.Finding("BLOCKER", line + "\n  evidence", "open", "")
@@ -1438,7 +1429,7 @@ class CorrectedField(unittest.TestCase):
     begins (`Finding.place`, `protocol_check.field_at`,
     `findings.corrected_field`); no line number, no search in the finding's
     text. A start several labels share raises: which field the correction is
-    bound to cannot be told (decided 2026-11-07)."""
+    bound to cannot be told."""
 
     TEXT = (
         "- **Terms of this protocol:** n/a — no coinage\n"

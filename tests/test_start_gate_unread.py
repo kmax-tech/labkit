@@ -2,10 +2,11 @@
 cannot read is named as such, never as "not committed" nor as "registers
 no report".
 
-`repo.text_at` says None both for a file HEAD lacks and for git failing.
-The start check (`start_check._committed_registration`) read that None as
-"is not committed — commit the protocol" at low repeat cost, and as "HEAD
-registers no report" for the report binding, on both lanes. Each case is
+`repo.text_at` says None both for a file HEAD lacks and for git failing,
+so the start check (`start_check._committed_registration`) must not read
+that None as "is not committed — commit the protocol" at low repeat cost,
+nor as "HEAD registers no report" for the report binding, on both lanes.
+Each case is
 real: the blob of the protocol at HEAD removed from the lab's object store.
 The twin: the protocol truly uncommitted keeps its sentence; the recovery:
 the object restored, the run's start check passes."""
@@ -65,8 +66,8 @@ class UnreadHeadAtTheStart(e2e.CountCommands):
 
 class UnreadHeadForTheReportBinding(e2e.CountCommands):
     """At high repeat cost only the report binding reads HEAD here: an
-    unreadable HEAD read as "registers no report" let a protocol that
-    registers none pass, though what HEAD registers could not be told."""
+    unreadable HEAD read as "registers no report" would let a protocol that
+    registers none pass, though what HEAD registers cannot be told."""
 
     def test_an_unreadable_head_holds_the_binding_too(self):
         area, protocol = self.lab.exp("hi", repeat_cost="high", kind="compute")

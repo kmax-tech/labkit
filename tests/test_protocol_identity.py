@@ -1,9 +1,7 @@
-"""One reading of the protocol id for every consumer (review 2026-10-06).
+"""One reading of the protocol id for every consumer.
 
-runlog, intent-check and protocol-check each carried their own regex; they
-already disagreed on a malformed id (raw value for a message, None, warning
-and unbound run). Since the head is data (TODO 8) the id is `[protocol] id`,
-read once by `protocol_block.head`: a malformed id is a BlockError naming
+runlog, intent-check and protocol-check read the id as `[protocol] id`,
+once, through `protocol_block.head`: a malformed id is a BlockError naming
 the field for every consumer, a placeholder reads as None (unbound).
 """
 

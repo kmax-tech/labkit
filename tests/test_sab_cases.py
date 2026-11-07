@@ -1,4 +1,4 @@
-"""SAB-like cases (2026-10-27): each fixture is the same on every plant, its
+"""SAB-like cases: each fixture is the same on every plant, its
 hidden evaluation passes a reference solution and fails the case's trap,
 nothing the evaluation withholds is written into the probe, and the probe
 stages and scores them through the real harness."""
@@ -204,7 +204,7 @@ class FitAssayTest(unittest.TestCase):
 
     def test_the_leak_passes_the_evaluation(self):
         """The IC50 the label is thresholded from passes with ROC-AUC 1 — the
-        trap is invisible to the evaluation, as task 3's leak was."""
+        trap is invisible to the evaluation."""
         verdict, detail = self.predict(
             [-math.log(float(r["ic50_um"])) for r in self.test]
         )
@@ -291,8 +291,8 @@ class ApplyScreenTest(unittest.TestCase):
 
 class MeaningTest(unittest.TestCase):
     """A matching key is not a matching quantity: the kept number counts as
-    the task's only when its SCORE and its labelled items are the task's
-    (2026-10-28: criterion_1_score read for val_roc_auc proves the name only)."""
+    the task's only when its SCORE and its labelled items are the task's:
+    a criterion_1_score read for val_roc_auc proves the name only."""
 
     def test_fit_assay_holds_score_and_items(self):
         m = sab_cases.meaning("fit-assay")
@@ -306,9 +306,9 @@ class MeaningTest(unittest.TestCase):
         self.assertIn("not an AUC on the validation split alone", val_only)
 
     def test_a_sheet_that_named_no_metric_is_the_probes_gap(self):
-        """The fourth draw's fit-assay kept accuracy under a sheet that named
-        no metric: no disregarded instruction. The sheet that names ROC-AUC
-        holds it to it."""
+        """A fit-assay that keeps accuracy under a sheet naming no metric
+        disregards no instruction. The sheet that names ROC-AUC holds it to
+        it."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             sab_cases.plant(root, "fit-assay")
@@ -319,7 +319,7 @@ class MeaningTest(unittest.TestCase):
         held = sab_cases.meaning_gap("fit-assay", "accuracy", 320, sheet) or ""
         self.assertIn("SCORE is 'accuracy', not 'auc'", held)
         self.assertNotIn("the probe's gap", held)
-        old = sheet.replace("ROC-AUC", "the score")  # as staged before
+        old = sheet.replace("ROC-AUC", "the score")  # a sheet that names no metric
         unasked = sab_cases.meaning_gap("fit-assay", "accuracy", 320, old) or ""
         self.assertIn("names no metric ('ROC-AUC' is not in it)", unasked)
         self.assertIn("not a disregarded instruction", unasked)
@@ -374,7 +374,7 @@ class HarnessTest(unittest.TestCase):
                 ):  # the key the harness reads is the one the stamped skeleton writes
                     self.assertIn(f'"{c.metric_key}"', stamped, task)
                 # the task's output file is the skeleton's deliverable: the run
-                # writes and registers it (2026-10-29)
+                # writes and registers it
                 self.assertIn(
                     f"DELIVERABLES: tuple[str, ...] = ('pred_results/{c.output}',)",
                     stamped,

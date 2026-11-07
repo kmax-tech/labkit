@@ -1,9 +1,7 @@
 """Tests for the `runlog` console command (labkit.run.runlog:cli).
 
 Why this is tested: the working standard's "look, don't ask" rule hands users
-this exact command. Its predecessor — `python lib/runlog.py <area>` against a
-shim — printed nothing and exited 0 (found 2026-09-06): the shim replaces
-sys.modules, so the package's __main__ block never ran. A listing command
+this exact command. A listing command
 whose silent failure is indistinguishable from "no open runs" must prove that
 it prints.
 """
@@ -36,8 +34,8 @@ class TestCli(unittest.TestCase):
             self.assertIn("no open runs", out)
 
     def test_a_missing_area_is_refused_not_read_as_idle(self):
-        """`runlog <typo>` said "no open runs" with exit 0, and `--wait`
-        reported the misspelt area as finished (audit 2026-10-15)."""
+        """`runlog <typo>` is refused, never "no open runs" with exit 0, and
+        `--wait` never reports the misspelt area as finished."""
         with tempfile.TemporaryDirectory() as d:
             missing = str(Path(d) / "does-not-exist")
             for argv in ([missing], [missing, "--wait"], [missing, "--follow"]):
@@ -71,8 +69,9 @@ class TestCli(unittest.TestCase):
             self.assertIn("01_measure.py", out)
 
     def test_help_prints_usage_instead_of_reading_it_as_an_area(self):
-        """`runlog --help` once answered "--help: no open runs" — a flag read
-        as a directory name. Whoever looks for the flags must find usage."""
+        """`runlog --help` prints usage, never "--help: no open runs" — a
+        flag read as a directory name. Whoever looks for the flags must find
+        usage."""
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             with self.assertRaises(SystemExit) as ctx:

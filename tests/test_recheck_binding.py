@@ -1,11 +1,11 @@
 """recheck chooses the run by the protocol's binding, like finalize.
 
-Audit 2026-10-15: `recheck.run_dir` took the area's newest completed run
-with no look at the binding, so in an area holding two protocols (the
-series rule: s1, s2, …) `protocol-fill PROTOCOL-a.md --from-run` wrote the
+In an area holding two protocols (the series rule: s1, s2, …) the newest
+completed run may be bound to the other one. `recheck.run_dir` reads the
+binding, so `protocol-fill PROTOCOL-a.md --from-run` never writes the
 number of the run bound to protocol B into A, and `--check` of a correct
-area blocked on a newer producer run. The twin: the run bound to A, older
-and with the number A's note cites, is the one chosen.
+area does not block on a newer producer run. The twin: the run bound to A,
+older and with the number A's note cites, is the one chosen.
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
-"""result_render: the result section is held to equality with its rendering
-(phase 5 of the 1.0 line, 2026-10-21). The sources — the declared run's
+"""result_render: the result section is held to equality with its
+rendering. The sources — the declared run's
 metrics.json and the covering analysis records — render the Recorded results line and
 the Limitation lines; `--from-run` writes them, `--render` writes them again, and
 a line that differs from the rendering is a blocker whatever it says.
@@ -112,9 +112,9 @@ class Rendering(unittest.TestCase):
 
 class ReportableVerdicts(unittest.TestCase):
     """K2 (docs/notes/2026-10-27-new-registration-contracts.md): every
-    quality check conditions every criterion. The repair case
-    (2026-10-27) rendered `criterion_1_pass = True` beside "quality-check-3 not assessable"; the
-    primary verdict is now the derived one, the run's metrics unchanged."""
+    quality check conditions every criterion, so `criterion_1_pass = True`
+    is never rendered beside "quality-check-3 not assessable": the primary
+    verdict is the derived one, the run's metrics unchanged."""
 
     def block(self) -> promises.PromiseTables:
         block = promises.parse_block(head(repeat_cost="low"))
@@ -249,10 +249,9 @@ class RenderGaps(unittest.TestCase):
         self.assertEqual(len(written), 2)
 
     def test_a_generated_label_written_twice_is_a_gap(self):
-        """Review 2026-10-22: the check kept the fields in a dict, so a wrong
-        Limitation line above the record's correct one — or a retyped Recorded
-        results below the generated one — passed. Every line of a label is
-        held."""
+        """Every line of a label is held, not one per field: a wrong
+        Limitation line above the record's correct one, or a retyped Recorded
+        results below the generated one, is a gap."""
         exp = result_render.Rendering(
             "criterion_1_pass = True (run r1)",
             (

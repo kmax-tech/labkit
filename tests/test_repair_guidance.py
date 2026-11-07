@@ -3,14 +3,12 @@ explains what `fixed` means for the kind of repair and points to
 `labkit-next` for the step it owes; it names no action of its own, so it
 cannot contradict the step labkit-next names.
 
-Review 2026-11-03 (M2; probe in labkit-evidence
-usability/2026-11-03-maintainability/, and the review of the first repair,
-which found four more states): the line chose its own action and
-contradicted labkit-next — "owes no new measurement" beside a code change,
-"measure again" with the repair already measured, no withdrawal with run A
-adopted, a third run with B already measured, "measure again" while the
-answering run's choice was blocked, and a released field called refused.
-Through the real commands; no model call."""
+The states where an action of the line's own would contradict
+labkit-next: "owes no new measurement" beside a code change, "measure
+again" with the repair already measured, no withdrawal with run A adopted,
+a third run with B already measured, "measure again" while the answering
+run's choice is blocked, and a released field called refused. Through the
+real commands; no model call."""
 
 from __future__ import annotations
 
@@ -90,8 +88,9 @@ class Guidance(e2e.CorrectionCommands):
 
 
 class TheLineExplainsAndPointsToNext(Guidance):
-    """Each state where the line contradicted labkit-next: the line names no
-    action; labkit-next still names the one the state owes."""
+    """Each state where an action of the line's own would contradict
+    labkit-next: the line names no action; labkit-next names the one the
+    state owes."""
 
     def test_a_correction_beside_a_code_change_before_and_after_measuring(self):
         correction = self.audited("WARNING", "Data / scope")
@@ -117,7 +116,7 @@ class TheLineExplainsAndPointsToNext(Guidance):
         self.assertTrue(self.next_().startswith("audit "), self.next_())
 
     def test_a_code_repair_measured_while_a_stands_adopted(self):
-        """Review case: labkit-next withdraws A first."""
+        """A case: labkit-next withdraws A first."""
         self.adopt_a()
         code = self.code_finding()
         self.change_code()
@@ -126,7 +125,7 @@ class TheLineExplainsAndPointsToNext(Guidance):
         self.assertIn("--withdraw", self.next_())
 
     def test_a_correction_beside_a_measured_repair_while_a_stands_adopted(self):
-        """Review case: no third run is named; labkit-next withdraws first."""
+        """A case: no third run is named; labkit-next withdraws first."""
         self.adopt_a()
         correction = self.audited("WARNING", "Data / scope")
         self.describe(self.RIGHT)
@@ -136,7 +135,7 @@ class TheLineExplainsAndPointsToNext(Guidance):
         self.assertIn("--withdraw", self.next_())
 
     def test_a_blocked_choice_of_the_answering_run(self):
-        """Review case: a newer run that does not read blocks the choice."""
+        """A case: a newer run that does not read blocks the choice."""
         code = self.code_finding()
         self.change_code()
         run_b = self.measure()
@@ -146,8 +145,7 @@ class TheLineExplainsAndPointsToNext(Guidance):
         self.points_to_next(self.decided(code, "the code repaired"))
 
     def test_a_field_edited_after_the_new_run_then_released_on_it(self):
-        """Review case (V5 against the text B saw): Data / scope edited after
-        B ran, the correction released on B; finalize holds it as B saw
+        """A case against the text B saw: Data / scope edited after B ran, the correction released on B; finalize holds it as B saw
         it, and the line names nothing that could contradict that hold."""
         correction = self.released_for_a()
         code = self.code_finding()
@@ -164,7 +162,7 @@ class TheLineExplainsAndPointsToNext(Guidance):
         self.points_to_next(self.decided(later, "nothing changed yet"))
 
     def test_a_released_correction_is_not_called_refused(self):
-        """V5: a later `fixed` decision does not call the released field
+        """A later `fixed` decision does not call the released field
         refused."""
         self.released_for_a()
         line = self.decided(self.code_finding(), "nothing changed yet")
@@ -184,8 +182,7 @@ class TheLineExplainsAndPointsToNext(Guidance):
 
 class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
     """Which explanation a `fixed` finding gets is read from its place and
-    the standard's field sets, never from the area's state (second review
-    of M2): only a field of what the number is about is a correction in
+    the standard's field sets, never from the area's state: only a field of what the number is about is a correction in
     place, the question stands as registered, both only after the first
     measurement; every other place is "any other repair"."""
 

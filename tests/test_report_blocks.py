@@ -3,9 +3,9 @@ numbers without an assigned source (`checks/report_blocks`), and the gate
 that holds a changed report at the stop and the commit
 (`report_check.if_reported`).
 
-Why (labkit-paper area 09, fifth haiku round, 2026-10-22): the protocol's
-Answer was held exactly while REPORT.md at the repository root stated
-counts and a median no run produced, and no gate read the file.
+Why: the protocol's Answer is held exactly, and a REPORT.md at the
+repository root can state counts and a median no run produced unless a
+gate reads the file.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ class Blocks(unittest.TestCase):
 
     def test_a_new_run_replaces_the_protocols_block_and_no_other(self):
         """A run change: the protocol's block is replaced, not joined by a
-        second (review 2026-10-22); another protocol's block stays."""
+        second; another protocol's block stays."""
         other = "experiments/02-y/PROTOCOL-y.md"
         text = report_blocks.with_block("", P, RUN, "a = 1")
         text = report_blocks.with_block(text, other, RUN, "b = 1")
@@ -101,7 +101,7 @@ class Blocks(unittest.TestCase):
             "the protocol has adopted run 2026-10-08T10-00-00_cd34 now", gap.line
         )
         # protocol and report as the working directory reaches them, runnable
-        # from there (audit 2026-10-27, third, S2)
+        # from there
         self.assertIn(
             f"`protocol-fill {P} --into REPORT.md` replaces the block", gap.line
         )
@@ -167,9 +167,8 @@ class Discussions(unittest.TestCase):
 
     def test_a_carriage_return_in_the_why_is_a_second_line(self):
         """A text-mode read turns a lone `\\r` into a line break: the block's
-        line came back split, differed from its head, and writing it again
-        wrote the same split line (audit 2026-10-27, step 1.4). It is
-        refused as more than one line; the twin, every other control
+        line would come back split, differ from its head, and be written
+        again split. It is refused as more than one line; the twin, every other control
         character, reads back (`test_control_characters_…`)."""
         for why in ("carriage\rreturn", "trailing\r inside"):
             with self.subTest(why=why):
@@ -178,9 +177,8 @@ class Discussions(unittest.TestCase):
 
     def test_control_characters_in_the_why_read_back_from_the_file(self):
         """The head's strings are written by `protocol_block.toml_string`,
-        the one TOML string writer: json.dumps here left DEL raw, a head
-        tomllib refuses, so the report no longer read (audit 2026-10-27,
-        criterion-15). Each why reads back unchanged, through the file as the gate
+        the one TOML string writer: json.dumps leaves DEL raw, a head
+        tomllib refuses. Each why reads back unchanged, through the file as the gate
         reads it, and its line equals its head."""
         for why in (
             "del\x7fx",
@@ -203,7 +201,7 @@ class Discussions(unittest.TestCase):
     def test_a_lone_surrogate_in_the_why_is_refused_naming_it(self):
         """An argument not decoded as UTF-8 reaches `--why` — or the
         protocol's path, or the run id — as a lone surrogate; writing the
-        report then ended in a traceback. The refusal names the field."""
+        report must not end in a traceback. The refusal names the field."""
         for args, field in (
             ((P, RUN, "bad \udcff byte"), "--why"),
             (("experiments/01-\udcff/PROTOCOL-x.md", RUN, "a look"), "protocol path"),
@@ -267,7 +265,7 @@ class Discussions(unittest.TestCase):
 
 
 class AdoptionReplacesTheAccount(unittest.TestCase):
-    """`with_block` after a progress account (B, 2026-11-02): the result
+    """`with_block` after a progress account: the result
     block takes the place of the discussion of the same protocol and run;
     other protocols' blocks, other runs' discussions and the prose stay."""
 
@@ -378,7 +376,7 @@ class ReportFiles(unittest.TestCase):
         self.assertIn("differs from the protocol's rendering", out)
 
     def test_the_block_shows_the_question_and_the_answer_verbatim(self):
-        """Answer block (2026-11-06): the block opens with the registered
+        """Answer block: the block opens with the registered
         Question / hypothesis and the Conclusion, carried over from the
         protocol; a retyped Answer line blocks like a retyped number, and a
         Conclusion changed after `--into` makes the block stale until it is
@@ -518,9 +516,8 @@ class ReportFiles(unittest.TestCase):
         self.assertIn("without its generated block", out)
 
     def test_a_cited_declared_result_without_its_block_blocks(self):
-        """Fifth haiku round (2026-10-22): all three labkit reports retyped
-        the declared number in prose; 0.103.0 warned. The chain is clean
-        here — the missing block alone blocks, and the sentence carries the
+        """A report that retypes the declared number in prose owes the
+        block. The chain is clean here — the missing block alone blocks, and the sentence carries the
         command with the paths as the report names them."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
@@ -540,8 +537,8 @@ class ReportFiles(unittest.TestCase):
             f"../experiments/01-x/PROTOCOL-x.md, without its generated block",
             out,
         )
-        # the command runs from there: it named the protocol relative to the
-        # report and the report relative to the repo (audit 2026-10-27, S2)
+        # the command runs from there: protocol and report as the repo root
+        # names them
         self.assertIn(
             "`protocol-fill experiments/01-x/PROTOCOL-x.md --into notes/REPORT.md` "
             "writes it",
@@ -559,10 +556,9 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 0, out)  # the twin: the block written, the prose stays
 
     def test_a_block_naming_its_protocol_by_another_path_is_that_block(self):
-        """A block written from a scratch file named its protocol as
-        `../work/experiments/…`: compared as written, the commit was held for
-        a block that stood there, while the block's own check resolved the
-        path and accepted it (reference pilot 2026-11-01, task 34)."""
+        """A block written from a scratch file names its protocol as
+        `../work/experiments/…`: the commit resolves the path as the block's
+        own check does, and never holds for a block that stands there."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
@@ -669,10 +665,9 @@ class ReportFiles(unittest.TestCase):
         )
 
     def test_the_answering_run_cited_unadopted_blocks_and_names_both_ways_out(self):
-        """Sixth haiku round (2026-10-23, t3 and t18): `--from-run` refused,
-        REPORT.md written from the run's metrics.json by hand, the hook
-        warned of an exploration's citation and let the commit pass — at
-        low repeat cost the report is the promotion. The citation of a protocol's
+        """A REPORT.md written from the run's metrics.json by hand, without
+        `--from-run`, is no exploration's citation — at low repeat cost the
+        report is the promotion. The citation of a protocol's
         answering run that declares no result blocks, wherever the report
         lies; the sentence names the adoption and the discussion block."""
         area = self._area(
@@ -703,10 +698,8 @@ class ReportFiles(unittest.TestCase):
         self.assertNotIn("which no protocol has adopted as its result", out)
 
     def test_the_prose_marker_is_not_read_eighth_round_t3(self):
-        """Eighth haiku round (2026-10-26, t3): the agent wrote the prose
-        marker with backticks around the id; the old pattern did not read it,
-        the gate held twice and the agent committed with `--no-verify`. The
-        prose marker is no form the gate reads any more, backticks or not:
+        """The prose marker is no form the gate reads, backticks around the
+        id or not:
         the citation is held as the promotion, the sentence names the
         discussion block."""
         area = self._area(
@@ -744,8 +737,8 @@ class ReportFiles(unittest.TestCase):
             "blockers unreviewed",
             "# Report\n\nThe question stays open.\n",
         )
-        # eighth haiku round (t18): the review was a hint and was passed
-        # over — now the report is held until a review of its state is done
+        # no hint to pass over: the report is held until a review of its
+        # state is done
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -826,10 +819,9 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
     def test_a_review_of_unstaged_sources_releases_no_commit(self):
-        """Review 2026-10-26: the review read a run's metrics from the tree
-        while the commit carried others — the gate released a state the
-        commit did not hold. At the commit the area's tree must be the
-        index's."""
+        """A review that reads a run's metrics from the tree while the
+        commit carries others would release a state the commit does not
+        hold. At the commit the area's tree must be the index's."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=None,
@@ -852,9 +844,9 @@ class ReportFiles(unittest.TestCase):
         self.assertIn("metrics.json", out)
 
     def test_a_source_change_reaches_the_untouched_discussing_report(self):
-        """Review 2026-10-26: only a source of the review changed — the
-        report untouched — and the commit passed with a stale review. The
-        source is the protocol: a closed run's metrics.json, the source
+        """A change to a source of the review alone — the report untouched —
+        leaves the review stale, and the commit is held. The source is the
+        protocol: a closed run's metrics.json, the source
         first used here, may not change once committed, and report-check
         holds that edit itself (`evidence.change_blockers`)."""
         area = self._area(
@@ -1049,9 +1041,9 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual([(d.run_id, d.why) for d in found], [(self.RUN, "two")])
 
     def test_discuss_with_a_control_character_writes_a_block_that_reads_back(self):
-        """A DEL in `--why` wrote a head tomllib refuses: the next `--discuss`
-        and the gate refused the report (audit 2026-10-27, C15). A lone
-        surrogate ended in a traceback; it is refused, nothing written."""
+        """A DEL in `--why` is written as a head tomllib reads, so the next
+        `--discuss` and the gate read the report. A lone surrogate is
+        refused, nothing written, never a traceback."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=None,
@@ -1096,9 +1088,9 @@ class ReportFiles(unittest.TestCase):
         )
 
     def test_a_run_change_names_the_new_run_and_into_replaces_the_block(self):
-        """Review 2026-10-22: after a new run was adopted, `--into` appended
-        a second block, the old one blocked as undeclared, and the message
-        offered to adopt the old run again."""
+        """After a new run is adopted, the message names the new run and
+        `--into` replaces the block: no second block beside the old one, no
+        offer to adopt the old run again."""
         root, report = self._reported()
         area = root / "experiments" / "01-x"
         new = "2026-10-08T10-00-00_cd34"
@@ -1157,13 +1149,10 @@ class ReportFiles(unittest.TestCase):
             protocol_fill.into_report(text, area, "", P)
 
     def test_the_two_step_commit_reaches_the_committed_report(self):
-        """Sixth haiku round (2026-10-23, t5, commits b47f915 and b629ddd):
-        REPORT.md citing the run was committed while the protocol with the
-        declaration stayed unstaged — the index's protocol declared nothing,
-        the hook warned of an exploration's citation and let it pass; the
-        next commit staged the protocol, and the untouched report was not
-        held again. Now a protocol whose declaration differs from HEAD's
-        reaches the committed reports citing that run."""
+        """A REPORT.md citing the run can be committed while the protocol
+        with the declaration stays unstaged, the protocol following in the
+        next commit with the report untouched. A protocol whose declaration
+        differs from HEAD's reaches the committed reports citing that run."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=None,
@@ -1176,8 +1165,8 @@ class ReportFiles(unittest.TestCase):
         )
         self._git(root, "add", "REPORT.md")
         code, out = self._gate(root, report, staged=True)
-        # step one, as t5 wrote it: the answering run's number without the
-        # adoption — held at this commit already (the t3/t18 case)
+        # step one: the answering run's number without the adoption — held
+        # at this commit already
         self.assertEqual(code, 1, out)
         self.assertIn("the answering run of experiments/01-x/PROTOCOL-x.md", out)
         # step one as an exploration would write it passes
@@ -1264,8 +1253,7 @@ class ReportFiles(unittest.TestCase):
 
     def _linked(self, git: bool = False) -> tuple[Path, Path]:
         """(the repo root, REPORT.md) where REPORT.md is a symbolic link to
-        data/REPORT.md, the rendered report with its number retyped — the
-        red team's s1 (audit 2026-10-27, A10)."""
+        data/REPORT.md, the rendered report with its number retyped."""
         root, report = self._reported(git=git)
         (root / "data").mkdir()
         target = root / "data" / "REPORT.md"
@@ -1278,8 +1266,8 @@ class ReportFiles(unittest.TestCase):
         return root, report
 
     def test_a_report_linked_into_data_is_refused_naming_the_copy(self):
-        """quality-check-10: the link was resolved before the data/ test, so the forged
-        block behind it passed the stop and the commit."""
+        """The data/ test reads the link, not only what it resolves to, so
+        the forged block behind it passes neither the stop nor the commit."""
         root, report = self._linked()
         code, out = self._gate(root, report, root / "data" / "REPORT.md")
         self.assertEqual(code, 1, out)
@@ -1366,9 +1354,9 @@ class ReportFiles(unittest.TestCase):
             self.assertEqual((code, out), (0, ""))
 
     def test_a_link_to_a_held_report_is_read_where_the_report_lies(self):
-        """CLAUDE.md -> AGENTS.md was refused once AGENTS.md cited a run, and
-        the printed way out replaced the link with a copy — the convention
-        the twin above protects (cold review 2026-10-27). A link ending at
+        """CLAUDE.md -> AGENTS.md stays a link when AGENTS.md cites a run:
+        a way out that replaces the link with a copy breaks the convention
+        the twin above protects. A link ending at
         a place a report is held is no report itself: the file it points to
         is held where it lies. The twin: a link into data/ is refused
         (above)."""

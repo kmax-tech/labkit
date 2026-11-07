@@ -138,8 +138,9 @@ class Ledger(unittest.TestCase):
 
 
 class IdsCompareAsStored(unittest.TestCase):
-    """Python's sets take `True == 1`: an output row with id `true` balanced
-    an input id `1`, and a resume skipped item 1 (review 2026-10-20)."""
+    """Python's sets take `True == 1`; the ledger does not: an output row with
+    id `true` does not balance an input id `1`, and a resume does not skip
+    item 1."""
 
     def setUp(self):
         self.out = Path(tempfile.mkdtemp()) / "out.jsonl"

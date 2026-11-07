@@ -1,6 +1,5 @@
 """gate.Findings: one spelling of the grade, one summary, one exit contract
-for every gate that blocks (audit 2026-10-15: five shapes, three
-spellings, and preflight counted code-check's lines a second time)."""
+for every gate that blocks."""
 
 from __future__ import annotations
 
@@ -23,7 +22,7 @@ class HelpStatesTheExitContract(unittest.TestCase):
     """Every gate's --help ends with the exit contract — one line, one home
     (`gate.EXIT_CONTRACT`; labkit-audit its own, `audit.AUDIT_EXIT_CONTRACT`)
     — and report-check's names the hooks' form, which is parsed before
-    argparse (audit 2026-10-23, C2)."""
+    argparse."""
 
     def _help(self, main) -> str:
         out = io.StringIO()
@@ -66,8 +65,8 @@ class HelpStatesTheExitContract(unittest.TestCase):
 
 class EvidenceKind(unittest.TestCase):
     """`evidence_kind` says what carries a finding's sentence, given at every
-    site (audit 2026-10-23, C5): static evidence warns and never blocks, the
-    dotted form names it, the summary counts it."""
+    site: static evidence warns and never blocks, the dotted form names it,
+    the summary counts it."""
 
     def test_static_evidence_never_blocks(self):
         with self.assertRaises(ValueError) as caught:
@@ -170,8 +169,8 @@ class Findings(unittest.TestCase):
 
     def test_the_grade_is_data_never_a_word_of_the_line(self):
         """A path or quoted text must not grade a finding: a doubled id in
-        PROTOCOL-WARNING.md passed as a warning (review 2026-10-20). The
-        field counts; the words are only told."""
+        PROTOCOL-WARNING.md is a blocker. The field counts; the words are
+        only told."""
         f = gate.Findings()
         with contextlib.redirect_stdout(io.StringIO()):
             entries = (
@@ -230,7 +229,7 @@ class Findings(unittest.TestCase):
 class Silent(unittest.TestCase):
     """The findings are data; the console is one channel for them, and a
     gate inside a gate wants the data alone (report-check's finalize
-    station — until 0.100.0 it redirected stdout to silence finalize)."""
+    station)."""
 
     def test_a_silent_collector_keeps_the_findings_and_prints_nothing(self):
         f = gate.Findings(tell=None)
@@ -294,7 +293,7 @@ class Silent(unittest.TestCase):
 class AreaSlot(unittest.TestCase):
     """A step a check names with `<area>` runs as printed: an audit command
     takes the gate's audit head (`--protocol` where the area holds several),
-    any other the area quoted (audit 2026-10-27, D)."""
+    any other the area quoted."""
 
     def test_the_audit_slot_takes_the_head_and_the_area_is_quoted(self):
         f = gate.Findings(
@@ -335,10 +334,10 @@ if __name__ == "__main__":
 
 
 class TheWayAsData(unittest.TestCase):
-    """The one-explainer plan, Phase 2: a finding carries the command its
-    way out names as data (`GateFinding.step`, a `commands.Command`) and the
-    withdrawal a hold names first as data (`withdraw_first`); what is told
-    does not change — the twin of every site that passes a step."""
+    """A finding carries the command its way out names as data
+    (`GateFinding.step`, a `commands.Command`) and the withdrawal a hold
+    names first as data (`withdraw_first`); the data changes nothing that is
+    told — the twin of every site that passes a step."""
 
     def test_a_step_changes_no_line(self):
 

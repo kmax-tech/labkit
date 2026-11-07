@@ -1,10 +1,8 @@
 """The compute skeleton reads its inputs from the frozen INPUTS.
 
-The usability fixture gives every case its own `inputs` path; the skeleton
-froze only the constant INPUTS, so every cold agent read the record's path
-and the number followed a value the run did not freeze — the analysis
-audit warned in each of three sandbox probes (2026-10-21). INPUTS decides
-what is read; a record that names another path is refused.
+A case may carry its own `inputs` path; read from there, the number would
+follow a value the run did not freeze. INPUTS decides what is read; a
+record that names another path is refused.
 """
 
 import contextlib
@@ -85,9 +83,8 @@ class InputDir(unittest.TestCase):
 
 
 class FillList(unittest.TestCase):
-    """The skeleton's docstring names every blank it stamps: it said "the
-    three TODOs" while INPUTS was a fourth place to fill, and an agent left
-    its TODO behind (sandbox probe, 2026-10-21)."""
+    """The skeleton's docstring names every blank it stamps, INPUTS among
+    them, so no TODO is left behind unnamed."""
 
     def test_every_constant_and_function_with_a_todo_is_named(self):
         import re
@@ -121,9 +118,8 @@ class FillList(unittest.TestCase):
 
 class KeptNumber(unittest.TestCase):
     """The kept number is the one the head's `[kept] key` names, and a
-    number. Reference pilot trial 2, task 34 (2026-11-01): the script's
-    METRIC_KEY named a flag, `hrv_computed = True` became the adopted result
-    while the protocol's Unit named HRV_MeanNN. The skeleton reads the key
+    number, so a flag such as `hrv_computed = True` never becomes the
+    adopted result. The skeleton reads the key
     from the head (`metric_key`); the run and `--check` (`metrics_of`) and
     the area's test refuse a bool, a text or a missing key, naming the key;
     the twin, a numeric kept number, passes all three."""
@@ -242,8 +238,8 @@ class KeptNumber(unittest.TestCase):
                     text=True,
                     timeout=120,
                     # both rewrites of the test file have the same size within
-                    # the same second: a cached .pyc of the first was run for
-                    # the second (the merged suite, 2026-11-01)
+                    # the same second: a cached .pyc of the first would run
+                    # for the second
                     env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
                 )
                 self.assertEqual(r.returncode, code, r.stdout + r.stderr)

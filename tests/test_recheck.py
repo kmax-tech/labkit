@@ -1,4 +1,4 @@
-"""recheck (2026-10-05): the three mechanics a `--check` needs, each at its edge —
+"""recheck: the three mechanics a `--check` needs, each at its edge —
 prefix sha, intent keys, vanished keys, rounding in the note, the run_id."""
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ class Area(unittest.TestCase):
         self.run_dir = self.area / "runs" / "2026-10-05T19-00-00_ab12"
         self.run_dir.mkdir(parents=True)
         # a current run: schema_version 4 plus a completion record — metrics
-        # alone (a legacy run) is never completed since labkit 0.48
+        # alone is never a completed run
         (self.run_dir / "config.json").write_text(
             json.dumps(
                 run_record(
@@ -97,8 +97,7 @@ class Area(unittest.TestCase):
             recheck.holds(self.area, self.out, lambda rows: {"mean_n": 3.5}, self.note)
         self.assertIn("vanished ['n_cases']", str(cm.exception))
         # the way out: a key the rows' evaluation does not produce is computed
-        # there (check-path case, 2026-10-28: a required check computed beside
-        # the rows was refused, and the agent dropped it)
+        # there, so a required check is moved into it, not dropped
         self.assertIn("compute each in `evaluate_rows()`", str(cm.exception))
         v = recheck.holds(
             self.area, self.out, lambda rows: {**evaluate(rows), "max_n": 4}, self.note
@@ -133,7 +132,7 @@ class Area(unittest.TestCase):
             recheck.holds(self.area, self.out, evaluate, self.note)
         self.assertIn("has no answer yet", str(cm.exception))
         self.assertIn("labkit-adopt", str(cm.exception))
-        # the adoption is the last step: its precondition stands beside it (2026-10-28)
+        # the adoption is the last step: its precondition stands beside it
         self.assertIn("report-check shows no other blocker", str(cm.exception))
 
     def test_number_must_be_a_token(self):
@@ -151,7 +150,7 @@ class Area(unittest.TestCase):
         self.assertTrue(recheck._present("+0.2", "delta 0.2"))
 
     def test_sign_and_exponent_belong_to_the_number(self):
-        """Review 2026-10-20: `0.5` was found in `-0.5`, `1` and `5` in `1e-5`."""
+        """A number is found whole: `0.5` not in `-0.5`, `1` and `5` not in `1e-5`."""
         self.assertFalse(recheck._present("0.5", "delta -0.5"))
         self.assertFalse(recheck._present("0.5", "delta −0.5"))
         self.assertFalse(recheck._present("1", "p = 1e-5"))
@@ -215,7 +214,7 @@ class Area(unittest.TestCase):
         self.assertIn("numbers not in", str(cm.exception))
 
     def test_a_value_of_another_json_type_differs(self):
-        """Review 2026-10-20: `true` and `1` were equal to Python's `==`."""
+        """`true` and `1` differ, though Python's `==` holds them equal."""
         for stored, again in (
             (True, 1),
             (1, 1.0),
@@ -230,7 +229,7 @@ class Area(unittest.TestCase):
 
     def test_a_tuple_is_the_list_the_run_recorded(self):
         """evaluate() returns a tuple, metrics.json holds a list: the same
-        value after the JSON round trip, not a difference (audit 2026-10-15)."""
+        value after the JSON round trip, not a difference."""
         self.assertEqual(recheck.agree({"a": [1, 2]}, {"a": (1, 2)}), [])
         with self.assertRaises(SystemExit):
             recheck.agree({"a": [1, 2]}, {"a": (1, 3)})

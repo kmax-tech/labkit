@@ -1,8 +1,8 @@
 """labkit-adopt — the adoption, the report's result block and the check in
 one command, stopping at the first step that does not pass.
 
-The plan (docs/notes/2026-10-30-agent-surface.md, step 4): in round 1 four
-agents ran and never adopted; the adoption took three commands in order.
+One command, not three to run in order
+(docs/notes/2026-10-30-agent-surface.md, step 4).
 """
 
 from __future__ import annotations
@@ -51,11 +51,10 @@ class Adopt(unittest.TestCase):
         return area, protocol, run_id
 
     def test_without_its_conclusion_the_adoption_is_refused_and_nothing_written(self):
-        """The adoption owes the Conclusion (answer block, decided
-        2026-11-06): refused before the result stands, the protocol and the
-        registered report as they were (until 0.112.0 it adopted, and the
-        Conclusion was owed only after). The twin: written, the adoption and
-        a block with the question and the answer follow."""
+        """The adoption owes the Conclusion (answer block): refused before
+        the result stands, the protocol and the registered report as they
+        were. The twin: written, the adoption and a block with the question
+        and the answer follow."""
         area, protocol, run_id = self.measured("REPORT.md", concluded=False)
         self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
         report = self.lab.root / "REPORT.md"
@@ -95,10 +94,8 @@ class Adopt(unittest.TestCase):
         self.assertIn(f"has adopted {run_id} already", out)
 
     def test_an_adoption_killed_during_its_check_is_held_and_put_back(self):
-        """A kill during the adoption's check skips every restore: the time
-        limit landed 2.3 min into the check, and the unchecked `[result]`
-        stayed in the head (reference pilot 2026-11-01, task 21). Killed for
-        real here (SIGKILL in a child process): the kept copy stands,
+        """A kill during the adoption's check skips every restore, and the
+        unchecked `[result]` stays in the head. Killed for real here (SIGKILL in a child process): the kept copy stands,
         report-check refuses on it, and the next labkit-adopt puts the
         protocol back first and adopts with its check."""
         import signal
@@ -234,9 +231,9 @@ class Adopt(unittest.TestCase):
 
     def test_an_unregistered_report_citing_the_run_is_named_with_its_command(self):
         """A REPORT.md the head does not register still holds the commit
-        when it cites the adopted run without its block; step 2 named no
-        report and the agent stopped there (reference pilot 2026-11-01,
-        tasks 21 and 34). The twin above: no such report, no hint."""
+        when it cites the adopted run without its block, and the adoption
+        names it with its command. The twin above: no such report, no
+        hint."""
         area, protocol, run_id = self.measured(None)
         self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
         (self.lab.root / "REPORT.md").write_text(

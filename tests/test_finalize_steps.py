@@ -66,8 +66,7 @@ class Steps(unittest.TestCase):
             self.assertIsNone(run)
             (finding,) = found.found
             self.assertIn("no runs/2026-10-07T11-00-00_cc33/", finding.text)
-            # the command names the protocol: without it argparse refused it
-            # (audit 2026-10-27, H5)
+            # the command names the protocol: without it argparse refuses it
             fix = finding.fix or ""
             self.assertIn('PROTOCOL-x.md --withdraw --why "<why>"', fix)
             self.assertIn(" <run_id>`", fix)
@@ -89,15 +88,14 @@ class DeclaredRunHint(unittest.TestCase):
     """While no result is declared, finalize notes the command that declares
     the answering run and writes its number — a note, not a warning: it is
     the normal state before adoption, and finalize stays clear. A command
-    that runs: it names the protocol (review 2026-10-20: `--from-run <run>`
-    alone exits 2)."""
+    that runs: it names the protocol (`--from-run <run>` alone exits 2)."""
 
     RUN = Path("/x/runs/2026-10-07T10-00-00_aa11")
     PROTOCOL = Path("/x/PROTOCOL-a.md")
 
     def test_no_declaration_names_labkit_next_and_no_step(self):
-        """finalize names no step of its own (the one-explainer plan, step
-        3): the note points to `labkit-next AREA`, the one explainer —
+        """finalize names no step of its own: the note points to
+        `labkit-next AREA`, the one explainer —
         finalize is a station of `next`'s chain, so it cannot print the
         step without calling itself."""
         note = finalize.undeclared_note(head(repeat_cost="low"), self.PROTOCOL)
@@ -281,8 +279,8 @@ class ReadmeRoute(unittest.TestCase):
             )
 
     def test_a_script_that_does_not_parse_raises_naming_it(self):
-        # a sed edit left an unterminated f-string (Qwen pilot): a traceback
-        # out of finalize, not a finding
+        # an unterminated f-string, as a sed edit leaves one: an error naming
+        # the script and its line, not a traceback
         broken = 'def evaluate_rows(rows):\n    return f"{rows\n'
         with tempfile.TemporaryDirectory() as d:
             area = self._area(d, ROUTE, script=broken)

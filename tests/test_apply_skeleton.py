@@ -43,9 +43,8 @@ class ApplySkeleton(unittest.TestCase):
         return area, module
 
     def test_importing_the_script_reads_no_predictor_file(self):
-        # CONFIG hashed PREDICTOR_FILES at import, so the area's test, which
-        # imports the script, read the model files (workflow review
-        # 2026-10-27, TODO 8 (4)); main() binds them
+        # the area's test imports the script, so CONFIG must not hash
+        # PREDICTOR_FILES at import; main() binds them
         with contextlib.redirect_stdout(io.StringIO()):
             area, _ = scaffold.stamp_area(
                 self.root, "late", repeat_cost="low", kind="apply"
@@ -109,8 +108,8 @@ class ApplySkeleton(unittest.TestCase):
         self.assertTrue(all(r["fold"] is None for r in rows))
 
     def test_apply_null_scores_the_same_predictions_against_permuted_labels(self):
-        # decided 2026-10-27: no second instrument by default — the primary's
-        # predictions against the gold permuted with the seed, as fit's lane
+        # no second instrument by default — the primary's predictions
+        # against the gold permuted with the seed, as fit's lane
         area, measure = self.measure_module("apply")
         primary = mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
@@ -142,10 +141,9 @@ class ApplySkeleton(unittest.TestCase):
         self.assertLess(metrics["quality_check_2_score"], 1.0)
 
     def test_calibrate_null_measures_the_permutation_spread_before_registration(self):
-        # the stamped null_band 0.1 was kept although the skeleton asked to
-        # derive it, and --probe had no way at low (SAB-like draw 3,
-        # 2026-10-28): the band comes from permutations of the gold with the
-        # predictions fixed, by a rule fixed before calibration
+        # the band is derived, not the stamped default: it comes from
+        # permutations of the gold with the predictions fixed, by a rule
+        # fixed before calibration
         area, measure = self.measure_module("apply")
         primary = mock.Mock()
         primary.predict.side_effect = lambda xs: [x[0] for x in xs]
@@ -172,8 +170,8 @@ class ApplySkeleton(unittest.TestCase):
         return primary
 
     def test_the_untouched_stamp_copies_no_constant(self):
-        """The band rule's None defaults were reported as copies of the
-        registered rule on every apply stamp (Sonnet on 56e9899)."""
+        """The band rule's None defaults are no copies of the registered
+        rule: an untouched apply or fit stamp reports none."""
         from labkit.checks import code_check
         from labkit.formats import promises
 
@@ -187,9 +185,9 @@ class ApplySkeleton(unittest.TestCase):
                     )
 
     def test_another_count_than_the_registered_rule_is_refused(self):
-        """The fifth SAB-like draw calibrated over 50 permutations while the
-        rule said 200: with the rule registered, 50 answers another rule. The
-        twin: without a registered rule the count is free."""
+        """With the rule registered at 200 permutations, a calibration over
+        50 answers another rule. The twin: without a registered rule the
+        count is free."""
         _, measure = self.measure_module("apply")
         with mock.patch.object(measure, "make_estimator", return_value=self.primary()):
             with self.assertRaisesRegex(ValueError, "null_permutations = 200"):
@@ -202,8 +200,8 @@ class ApplySkeleton(unittest.TestCase):
             )
 
     def test_the_first_measurement_refuses_a_band_its_rule_does_not_give(self):
-        """The fifth draw registered 0.05 while the rule gave 0.13; the check
-        runs before the run opens (a started measurement binds the
+        """A registered band other than the one its rule gives is refused;
+        the check runs before the run opens (a started measurement binds the
         registration) and never changes the band. The twin: the band the
         rule gives passes, and its predictions are reused."""
         _, measure = self.measure_module("apply")
@@ -228,12 +226,11 @@ class ApplySkeleton(unittest.TestCase):
             self.assertEqual(measure.band_check(held, self.items()), preds)
 
     def test_a_null_that_does_not_move_gives_no_band(self):
-        """2026-10-29, apply-screen with Haiku: the first calibration ran on
-        predictions that matched no gold, every permutation scored 0.0, and
-        `--calibrate-null --write` registered `null_band = 0.0` without a
-        word. A spread of zero is refused by the rule's one home, so the
-        calibration, its `--write` and the first measurement's check all
-        refuse. The twin: predictions that vary give a band as before."""
+        """Predictions that match no gold score 0.0 under every permutation,
+        a spread of zero that would register `null_band = 0.0` without a
+        word. The rule's one home refuses it, so the calibration, its
+        `--write` and the first measurement's check all refuse. The twin:
+        predictions that vary give a band."""
         _, measure = self.measure_module("apply")
         one_class = mock.Mock()
         one_class.predict.side_effect = lambda xs: [0 for _ in xs]
@@ -375,8 +372,8 @@ class ApplySkeleton(unittest.TestCase):
                     self.assertEqual(exact, sum(draws, Fraction(0)) / len(draws))
 
     def test_spearman_is_the_pearson_correlation_of_mean_ranks(self):
-        """sts512 registers Spearman, and the skeleton offered accuracy, r2
-        and auc only (reference pilot trial 2, 2026-11-01). Checked by hand:
+        """The skeleton offers Spearman beside accuracy, r2 and auc.
+        Checked by hand:
         x = 1, 2, 2, 3 ranks 1, 2.5, 2.5, 4; y = 0.5, 0.1, 0.9, 0.7 ranks
         2, 1, 4, 3; the centred products sum to 1.5, the squares to 4.5 and
         5, so rho = 1.5 / sqrt(22.5). Without ties rho is exact: 1 and -1
@@ -403,9 +400,8 @@ class ApplySkeleton(unittest.TestCase):
         )
 
     def test_a_registered_null_order_is_the_control_and_its_score_the_bar(self):
-        """sts512 registers a staged permutation, read, never regenerated; the
-        skeleton had only the seeded shuffle, and the agent kept it (reference
-        pilot 2026-11-01). With NULL_ORDER the null lane follows the file, its
+        """A registered null order is a staged permutation, read, never
+        regenerated. With NULL_ORDER the null lane follows the file, its
         score plus margin is the bar, and no band is forced where none is
         registered. The twins: no band and no order is refused; an order that
         is no permutation of the items is refused."""
@@ -445,8 +441,8 @@ class ApplySkeleton(unittest.TestCase):
     def test_apply_holds_the_bar_and_the_null_to_the_expectation(self):
         """A permuted null's draw is the anchor, not the bar: the same
         registered lane passes or fails by the expectation alone, whatever
-        the draw — one draw put the bar anywhere between 0.54 and 0.78
-        (null-lane decision, 2026-10-28). The twin: a fitted null (no
+        the draw, which alone can put the bar anywhere in a wide range. The
+        twin: a fitted null (no
         donors) keeps its score as the bar and chance as [quality-check-2]'s target."""
         _, measure = self.measure_module("apply")
         golds = ["pos"] * 6 + ["neg"] * 6
@@ -475,14 +471,14 @@ class ApplySkeleton(unittest.TestCase):
 
     def test_the_scored_lanes_are_the_ones_finalize_reads(self):
         # the skeleton's lane names and finalize's null-lane station must
-        # agree, or the station holds nothing (audit 2026-10-28, H7)
+        # agree, or the station holds nothing
         from labkit.checks import run_record_check
 
         _, measure = self.measure_module("apply")
         self.assertEqual(measure.SCORED_LANES, run_record_check.NULL_LANES)
 
     def test_each_skeleton_keeps_c1_under_its_contract_key(self):
-        # the probes named the key by hand (audit 2026-10-28, H6)
+        # the key comes from the contract, not typed by hand
         from labkit.formats import standard_contract
         from labkit.tools.scaffold import template
 
@@ -588,9 +584,9 @@ class ApplySkeleton(unittest.TestCase):
         self.assertIn("predictor_sha", str(problem))
 
     def test_a_code_change_refuses_to_resume_the_rows_of_the_old_code(self):
-        """The row identity carries the measuring code: a repair measured
-        again kept the faulty rows while it held only the estimator line
-        (repair case, 2026-10-28). The twin: the same code resumes."""
+        """The row identity carries the measuring code, not only the
+        estimator line: a repair measured again does not keep the faulty
+        rows. The twin: the same code resumes."""
         area, measure = self.measure_module("apply")
         predictor = mock.Mock()
         predictor.predict.side_effect = lambda xs: [0 for _ in xs]
@@ -649,8 +645,8 @@ class ApplySkeleton(unittest.TestCase):
             measure.predictor_digests()
 
     def test_fit_holds_the_bar_to_the_mean_of_its_refits(self):
-        """One permuted-label refit decided a fit's verdict (fourth SAB-like
-        draw: criterion_1_score = criterion_1_threshold). The bar and [quality-check-2] read the mean of
+        """One permuted-label refit does not decide a fit's verdict. The bar
+        and [quality-check-2] read the mean of
         NULL_REFITS refits, each draw kept and named; the twin: a null of one
         unnumbered draw keeps its score as the bar."""
         _, measure = self.measure_module("fit")

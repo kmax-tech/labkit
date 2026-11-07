@@ -1,7 +1,6 @@
 """The report review's bundle: every run of the area in one line each
 (`runs_text`), so a search the report keeps silent about is visible to the
-reviewer — the adopted run's metrics alone showed none of it (labkit-paper
-areas 19–21, 2026-11-05)."""
+reviewer — the adopted run's metrics alone show none of it."""
 
 from __future__ import annotations
 
@@ -71,8 +70,8 @@ class RunsText(unittest.TestCase):
 
     def test_an_absent_setting_is_not_one_set_to_null(self):
         """`{}` and `{"random_state": null}` read as different settings on
-        the lines: compared as `c.get(k)`, both were `null`, and the
-        difference vanished (review 2026-11-06, finding 4)."""
+        the lines: compared as `c.get(k)`, both would read `null`, and the
+        difference would vanish."""
         area = self._area()
         a = completed_run(area, "2026-01-01T00-00-01_a")
         b = completed_run(area, "2026-01-01T00-00-02_b")

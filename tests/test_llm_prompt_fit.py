@@ -1,12 +1,10 @@
 """ollama must not answer a cut prompt as if it had read it all.
 
 Why this file exists: ollama fits a prompt longer than its context window by
-dropping tokens and answers the rest; the reply looks like any other. The
-ollama paths set no `num_ctx` until 0.83.0, so the server's default window
-applied — and an audit prompt of tens of kB would have
-reached a local auditor with its protocol cut off, and come back clean
-(found 2026-10-11 while asking whether the auditor can run on a local
-model). Each blocking check has its twin: the whole prompt passes.
+dropping tokens and answers the rest; the reply looks like any other. Without
+a `num_ctx` the server's default window applies, and an audit prompt of tens
+of kB would reach a local auditor with its protocol cut off and come back
+clean. Each blocking check has its twin: the whole prompt passes.
 """
 
 import json

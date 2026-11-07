@@ -1,4 +1,4 @@
-"""labkit-check: one command says whether a lab repo is on its pin and the pin is current (2026-10-12)."""
+"""labkit-check: one command says whether a lab repo is on its pin and the pin is current."""
 
 import subprocess
 import tempfile
@@ -204,9 +204,9 @@ class Report(unittest.TestCase):
         self.assertIn("UNDECIDED", lines[0])
 
     def test_a_lock_on_the_tags_commit_is_the_same_pin(self):
-        """`pip freeze` writes the commit the requirements tag points at; the
-        probe's pin line was STALE on every stamp (2026-10-13). The twin: a
-        lock on another commit stays two pins."""
+        """`pip freeze` writes the commit the requirements tag points at, so
+        a lock on that commit is the same pin, never STALE. The twin: a lock
+        on another commit stays two pins."""
         installed = install_hooks.labkit_version()
         master = master_repo(installed, (f"v{installed}",))
         commit = git(master, "rev-parse", "HEAD").strip()

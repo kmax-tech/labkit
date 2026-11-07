@@ -1,10 +1,9 @@
 """Tests for the protocol id — identity a run can bind to (`[protocol] id`).
 
-Why this exists: nothing in a run said which protocol it belonged to, so in
-a series area (`PROTOCOL-s1-*` ... `PROTOCOL-s13-*`) every automatic pairing
-of protocol and run was a guess, and `code-check` silently checked s1 while
-s13 was the protocol just built (2026-09-26). The id is what a run binds to;
-the path only says where it was found.
+Why: in a series area (`PROTOCOL-s1-*` ... `PROTOCOL-s13-*`) a pairing of
+protocol and run by path alone is a guess, and `code-check` could check s1
+while s13 is the protocol just built. The id is what a run binds to; the
+path only says where it was found.
 
 The gates tested here: the field is due (a placeholder is a must gap), the
 value has one shape, an id occurs once per repository, and an edit against HEAD is worth a
@@ -88,8 +87,8 @@ class TestFieldIsDue(unittest.TestCase):
         self.assertIn("MISSING (must): [protocol] id", out)
 
     def test_a_prose_head_is_rejected(self):
-        """The id as a prose line (Standard 0.16/0.17) is read by labkit 0.47
-        only; here the protocol fails on its missing head."""
+        """The id as a prose line is no id: the protocol fails on its
+        missing head."""
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "PROTOCOL-x.md"
             p.write_text(
@@ -140,9 +139,9 @@ class TestUniqueness(unittest.TestCase):
         self.assertEqual(code, 1)
 
     def test_a_copy_made_later_in_the_same_process_is_seen(self):
-        """The index was a module-level cache cleared only by `main`: a
-        caller of the API checked, copied the protocol, checked again, and
-        the duplicate stayed invisible (review 2026-10-14)."""
+        """A caller of the API that checks, copies the protocol and checks
+        again in the same process sees the duplicate: no cached index
+        hides it."""
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / ".git").mkdir()
             first = _protocol(d, name="PROTOCOL-s1-a.md")
@@ -156,10 +155,10 @@ class TestUniqueness(unittest.TestCase):
         self.assertTrue(any("DUPLICATE" in f.text for f in found), found)
 
     def test_a_file_name_does_not_grade_a_duplicate(self):
-        """The grade was read from the finding's text, and the text carries
-        the path: PROTOCOL-WARNING.md turned the doubled id into a warning in
-        protocol-check and in preflight. The twin: the same doubled id under
-        another name blocks too."""
+        """The grade is not read from the finding's text, which carries the
+        path: in PROTOCOL-WARNING.md a doubled id blocks in protocol-check
+        and in preflight. The twin: the same doubled id under another name
+        blocks too."""
         from labkit.formats.gate import BLOCKER, Findings
         from labkit.gates import preflight
 
@@ -178,8 +177,9 @@ class TestUniqueness(unittest.TestCase):
                 self.assertEqual(grades, [BLOCKER], found.found)
 
     def test_no_ok_line_beside_a_finding(self):
-        """`clean` ignored the findings printed before it: a doubled id stood
-        above "OK — must fields filled". The twin: nothing found, OK."""
+        """`clean` counts the findings printed before it: no "OK — must
+        fields filled" stands below a doubled id. The twin: nothing found,
+        OK."""
         from dataclasses import replace
 
         from labkit.formats.gate import BLOCKER, GUARANTEED, GateFinding

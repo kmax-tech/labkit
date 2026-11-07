@@ -1,6 +1,5 @@
-"""A missing area names the directory a relative path resolved against
-(2026-10-07: an agent ran code-check from inside the area with the
-repo-relative path and tried four spellings)."""
+"""A missing area names the directory a relative path resolved against, so
+a repo-relative path given from inside the area is told why it missed."""
 
 import contextlib
 import io
@@ -40,8 +39,7 @@ class NoSuchArea(unittest.TestCase):
 
 
 class BareName(unittest.TestCase):
-    """`01-<name>` and `<name>`, as `labkit-init exp` prints them, find the area
-    (2026-10-07: two agents were refused for `01-docs-per-case`)."""
+    """`01-<name>` and `<name>`, as `labkit-init exp` prints them, find the area."""
 
     def resolve(self, arg: str) -> Path:
         old = Path.cwd()
@@ -73,10 +71,10 @@ class BareName(unittest.TestCase):
         self.assertEqual(self.resolve("nope"), Path("nope"))
 
     def test_the_name_is_read_by_the_area_name_grammar_not_a_glob(self):
-        """`[0-9]*-<name>` matched `02-count-docs` for `docs` too — a false
-        "matches 2 areas" — and `*` matched every numbered area (audit
-        2026-10-27, step 1.4). A bare name names the area called so or
-        `NN-<name>` (`repo.AREA_NAME`), nothing else."""
+        """A bare name names the area called so or `NN-<name>`
+        (`repo.AREA_NAME`), nothing else: a glob `[0-9]*-<name>` would match
+        `02-count-docs` for `docs` too — a false "matches 2 areas" — and
+        `*` every numbered area."""
         exp = self.root / "experiments"
         (exp / "02-count-docs").mkdir()
         (exp / "03-docs-per-case-v2").mkdir()
@@ -92,10 +90,9 @@ class BareName(unittest.TestCase):
         self.assertEqual(repo.areas_named(self.root / "none", "docs"), [])
 
     def test_audit_and_report_check_take_the_name(self):
-        """Both took the argument as a plain path: `labkit-audit 01-<name>`
-        was refused in four of seven cold probes (2026-10-20) while
-        code-check and finalize took it. The area here is empty, so each
-        refuses — for the empty area, not for a missing one."""
+        """Both take the area's name, as code-check and finalize do, not
+        only a plain path. The area here is empty, so each refuses — for the
+        empty area, not for a missing one."""
         from labkit.gates import audit
 
         commands = {
@@ -126,9 +123,9 @@ class BareName(unittest.TestCase):
 
 
 class AmbiguousName(unittest.TestCase):
-    """A name two areas carry (`01-x`, `02-x`, called with `x`) was refused
-    as "no such area … give its name" — the name it was given (review,
-    2026-10-20). It names the candidates and asks for one path."""
+    """A name two areas carry (`01-x`, `02-x`, called with `x`) is not
+    refused as "no such area … give its name" — the name it was given: the
+    refusal names the candidates and asks for one path."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

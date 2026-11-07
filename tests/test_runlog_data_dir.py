@@ -1,6 +1,5 @@
-"""A directory as a run's data source is frozen like a file (review 2026-10-07:
-it could not be, so the stamped count skeleton passed no `data=` for a
-directory and `finalize` refused every such run as "source not frozen")."""
+"""A directory as a run's data source is frozen like a file, so `finalize`
+does not refuse a run that reads one as "source not frozen"."""
 
 import tempfile
 import unittest
@@ -48,8 +47,8 @@ class DirectorySource(unittest.TestCase):
 
     def test_bytecode_does_not_move_the_digest_nor_count(self):
         """A run importing modules shipped in its source writes `.pyc` there;
-        counted, its digest never matched the registered one (reference pilot
-        2026-11-01, task 60). The twin: a real `.py` file still counts."""
+        counted, its digest would never match the registered one. The twin: a
+        real `.py` file still counts."""
         base = self.describe()
         cache = self.src / "a" / "__pycache__"
         cache.mkdir()

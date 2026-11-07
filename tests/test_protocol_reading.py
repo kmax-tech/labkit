@@ -1,5 +1,5 @@
 """protocol_reading measures how a protocol reads: form facts and a cold
-reader's answer held to the run's number (2026-10-07)."""
+reader's answer held to the run's number."""
 
 import json
 import tempfile
@@ -265,7 +265,7 @@ class EntryLabels(unittest.TestCase):
 
 
 class AuditFixes(unittest.TestCase):
-    """Findings of the 2026-10-07 code audit, each pinned."""
+    """Edge cases of the reading and of the answer's shape, each pinned."""
 
     TEXT = (
         "## Summary\n\n- **Conclusion:** The CI was wide, as the paragraph says.\n\n"

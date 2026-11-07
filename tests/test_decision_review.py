@@ -286,9 +286,9 @@ class TheCall(unittest.TestCase):
 
     def test_after_a_rejection_not_assessable_is_offered_only_with_a_promise(self):
         """A computation registers no promise and `--decide` refuses every id
-        an effect names; the review offered `--effect "<ID> not assessable"`
-        there all the same (pilot t34, t21, 2026-10-28). Its routes name
-        what works instead; the twin keeps the route."""
+        an effect names, so its review offers no `--effect "<ID> not
+        assessable"`: its routes name what works instead; the twin keeps the
+        route."""
         for block, offered in ((None, False), ("", True)):
             with self.subTest(promises="none" if block is None else "default"):
                 area, _ = area_with(
@@ -430,9 +430,9 @@ class TheCall(unittest.TestCase):
         )
 
     def test_a_rewritten_claim_makes_the_review_stale(self):
-        """The wording of the claim separates upheld from rejected (replay
-        2026-10-22): a Conclusion strengthened after the review is another
-        claim, and the gate asks again."""
+        """The wording of the claim separates upheld from rejected: a
+        Conclusion strengthened after the review is another claim, and the
+        gate asks again."""
         area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         run_review(area, UPHELD)
         code, out = gate(area)
@@ -464,11 +464,10 @@ class TheCall(unittest.TestCase):
         )
 
     def test_a_rejection_before_a_claim_edit_stays_in_the_sentence(self):
-        """Eighth haiku round (t5, decision 08-48 #2): the review rejected a
-        decision, the agent edited the Conclusion, and report-check named
-        the decision only "not reviewed" — the rejection was out of sight.
-        Now the state says not reviewed as claimed now and what the earlier
-        review said; the grade is unchanged (a WARNING stays a warning)."""
+        """A review rejected a decision, then the Conclusion was edited: the
+        state says not reviewed as claimed now and what the earlier review
+        said, so the rejection stays in sight; the grade is unchanged (a
+        WARNING stays a warning)."""
         for grade, code_now in ((WARNING, 0), (BLOCKER, 1)):
             area, record = area_with([grade], {1: ("limitation", "noted", "stands")})
             run_review(area, REJECTED)
@@ -505,11 +504,9 @@ class TheCall(unittest.TestCase):
         self.assertIn("review again", out)
 
     def test_an_again_draw_alone_releases_nothing(self):
-        """`--again` on a decision never reviewed skipped the contested check
-        and its `upheld` released the decision, though the rule decided for
-        both reviews is that an `--again` draw releases nothing (2026-10-27).
-        The record says it was one, its verdicts count, and the exit says
-        the state. The twin: a review without `--again` on the same state
+        """An `--again` draw releases nothing, on a decision never reviewed
+        too: the record says it was one, its verdicts count, and the exit
+        says the state. The twin: a review without `--again` on the same state
         releases it."""
         area, record = area_with(
             [BLOCKER], {1: ("limitation", "Finding noted", "stands")}
@@ -531,10 +528,9 @@ class TheCall(unittest.TestCase):
         self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
 
     def test_a_rejected_decision_is_not_released_by_a_later_draw(self):
-        """Review 2026-10-22: the newest matching review won, so an unchanged
-        rejected could be re-reviewed until an upheld came. Now every draw
-        on one state counts, the command refuses another draw, and deciding
-        again is the way out."""
+        """Every draw on one state counts, so an unchanged rejected is not
+        re-reviewed until an upheld comes: the command refuses another draw,
+        and deciding again is the way out."""
         area, record = area_with(
             [BLOCKER], {1: ("limitation", "Finding noted", "stands")}
         )
@@ -575,13 +571,9 @@ class TheCall(unittest.TestCase):
         self.assertTrue(reviews.upholding(rec, 1, reviews.area_reviews(area), text))
 
     def test_dismissed_after_insufficient_owes_a_review_of_its_own(self):
-        """Sixth haiku round (2026-10-23, t5, steps 104–105): the reviewer
-        found the evidence for a `stands` insufficient; the agent dismissed
-        the finding with "insufficient evidence withdrawn" and the state
-        was released — a dismissal needed no review. Now a finding a review
-        did not uphold is held under `false-positive` or `fixed`
-        until a review upholds the new decision; a filled-in reason alone
-        releases nothing."""
+        """A finding a review did not uphold is held under `false-positive`
+        or `fixed` until a review upholds the new decision: a dismissal with
+        a filled-in reason alone releases nothing."""
         area, record = area_with(
             [BLOCKER], {1: ("limitation", "rows are stale, see the diff", "stands")}
         )
@@ -616,8 +608,8 @@ class TheCall(unittest.TestCase):
 
     def test_a_first_dismissal_of_a_blocker_owes_a_review(self):
         """A BLOCKER dismissed without any review on it: the deciding
-        agent's own decision does not release it (decided 2026-10-28); a
-        review that upholds the dismissal does."""
+        agent's own decision does not release it; a review that upholds the
+        dismissal does."""
         area, record = area_with(
             [BLOCKER],
             {1: ("false-positive", "the threshold is read from the config", "")},
@@ -685,8 +677,8 @@ class TheCall(unittest.TestCase):
 
     def test_the_gate_names_the_conclusion_before_the_review(self):
         """The refusal names what `--review` needs first: with the
-        Conclusion a placeholder, the step is to write it, then the review
-        (ninth haiku round, t3, never ran the review the gate named)."""
+        Conclusion a placeholder, the step is to write it, then the
+        review."""
         area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         proto = area / "PROTOCOL-x.md"
         proto.write_text(
@@ -706,11 +698,10 @@ class TheCall(unittest.TestCase):
         self.assertIn(f"--review --record {record.name}`", out)
 
     def test_record_by_bare_name_and_a_conclusion_still_owed(self):
-        """Round on 86e38bc (judge-2): `--record 2026-…-analysis.toml` as the
-        gate names it was refused with "No such file"; and a review made
-        while the Conclusion was a placeholder went stale when it was
-        written — a second opus call. The name resolves under audits/,
-        and the review asks for the Conclusion first."""
+        """`--record 2026-…-analysis.toml` as the gate names it resolves
+        under audits/; and the review asks for the Conclusion first, since a
+        review made while the Conclusion is a placeholder goes stale when it
+        is written."""
         area, record = area_with([BLOCKER], {1: ("limitation", "in-sample", "stands")})
         rc, _, _, sent = run_review(area, UPHELD, "--record", record.name)
         self.assertEqual((rc, len(sent)), (0, 1))
@@ -759,8 +750,8 @@ class TheFile(unittest.TestCase):
         )
         self.assertEqual(reviews.read_review(path).counts, (1, 0, 0))
         text = path.read_text(encoding="utf-8")
-        # a review written before `again` was recorded is not read: whether
-        # it was an `--again` draw cannot be told
+        # a review that records no `again` is not read: whether it was an
+        # `--again` draw cannot be told
         path.write_text(text.replace("again = false\n", ""), encoding="utf-8")
         with self.assertRaisesRegex(reviews.ReviewError, "again is missing"):
             reviews.read_review(path)
@@ -797,8 +788,7 @@ class Journal(unittest.TestCase):
     """A review is an attempt in the area's journal, as an audit is: the
     start before the call, the answer kept before it is read, the end with
     the record or why there is none. A review deleted before the commit is
-    named by the attempt that wrote it (ninth haiku round, t5 deleted a
-    report review that named two claims)."""
+    named by the attempt that wrote it."""
 
     def test_a_review_is_journaled_with_its_answer_and_its_record(self):
         area, _ = area_with(
@@ -887,9 +877,7 @@ CHECKED: tuple[str, str] = (
 
 class RequiredCheckBesideTheDecision(unittest.TestCase):
     """A `stands` resting on what a required check would show meets what the
-    run records (round 2, t21 r10: "verified: one feature" against a run
-    that never counted them, judged `insufficient`; the same finding with
-    the count in the run was upheld twice). The review shows the check's
+    run records. The review shows the check's
     value beside the decision, and the decision names a key the run lacks —
     a hint, never a hold."""
 
@@ -989,7 +977,7 @@ class StandsCheckHint(unittest.TestCase):
                 self.assertNotIn("hint: this limitation rests", out)
 
 
-#: a WARNING placed in the protocol, as a unit finding is (round 2, t34 r1)
+#: a WARNING placed in the protocol, as a unit finding is
 IN_PROTOCOL: tuple[str, str] = (
     "WARNING",
     "WARNING · experiments/01-x/PROTOCOL-x.md:Unit · statement · the Unit field calls the "
@@ -1001,8 +989,8 @@ SCRIPT_PIECE = "===== FILE: experiments/01-x/scripts/01_measure.py ====="
 
 class TheMeasuringScriptWithoutANamedFile(unittest.TestCase):
     """A finding placed in the protocol names no code; the review then shows
-    the reviewed run's measuring script (round 2, t34 r1: a Unit finding on
-    band powers reviewed without the call that computed them)."""
+    the reviewed run's measuring script, the call that computed the
+    number."""
 
     def test_a_finding_in_the_protocol_gets_the_runs_measuring_script(self):
         area, _ = area_with(

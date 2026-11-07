@@ -1,9 +1,9 @@
 """Tests for intent-check's choice BY BINDING (protocol head id).
 
-Why this exists: the choice used to be made by directory — newest run in
-the area with intent keys. In a series area (`PROTOCOL-s1-*` ...
-`PROTOCOL-s13-*`) that pairs a protocol with whatever ran last, and the
-check comes back green about promises nobody made here.
+Why the binding: a choice by directory — the newest run in the area with
+intent keys — pairs a protocol of a series area (`PROTOCOL-s1-*` ...
+`PROTOCOL-s13-*`) with whatever ran last, and the check comes back green
+about promises nobody made here.
 
 The decisive fixture is two protocols registering THE SAME intent ids. If
 the choice were driven by the set of ids — or by `protocol.path`, or by
@@ -129,7 +129,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
 
     def test_a_newer_run_of_the_other_protocol_does_not_shadow(self):
         """Recency must not beat the binding: B's run is newer and would win
-        under the old area-wide rule."""
+        under an area-wide choice by recency."""
         _run(self.area, "2026-01-01T00-00-00_aaaa", pid=A_ID, metrics=FULL)
         _run(
             self.area,
@@ -189,7 +189,7 @@ class TestTwoProtocolsSameIntentIds(unittest.TestCase):
         self.assertIn("unfinalized", out)
 
     def test_probe_run_does_not_shadow_the_gate_run_among_bound_runs(self):
-        """The 2026-09-09 rule, now inside the bound set."""
+        """A probe run does not shadow the gate run, among the bound runs too."""
         _run(self.area, "2026-01-01T00-00-00_gate", pid=A_ID, metrics=FULL)
         _run(self.area, "2026-01-01T00-00-01_prob", pid=A_ID, metrics={"calls": 12})
         code, out = _check([self.a])
@@ -237,9 +237,9 @@ class TestExplicitMetrics(unittest.TestCase):
         self.assertIn("unbound", out)
 
     def test_the_warning_is_a_note_not_a_finding(self):
-        """`hold` keeps the choice's lines apart from the findings: finalize
-        made every printed line a blocker, the unbound warning among them
-        (audit follow-up 2026-10-23, F4)."""
+        """`hold` keeps the choice's lines apart from the findings, so
+        finalize, which makes every finding a blocker, does not make the
+        unbound warning one."""
         d = _run(self.area, "r1", pid=None, metrics={"criterion_1_pass": True})
         held = intent_check.hold(self.a, d / "metrics.json")
         self.assertEqual(len(held.notes), 1, held)
@@ -260,8 +260,8 @@ class TestExplicitMetrics(unittest.TestCase):
     def test_incomplete_v2_run_is_rejected_even_when_named_explicitly(self):
         """A v2 run with metrics.json but no completion.json must fail.
 
-        Before the fix, the explicit --metrics path skipped the state check,
-        so naming the file was a loophole around the completion gate.
+        The explicit --metrics path goes through the state check too, so
+        naming the file is no loophole around the completion gate.
         """
         d = _run(self.area, "r1", pid=A_ID, completion=False, metrics=FULL)
         code, out = _check([self.a, "--metrics", d / "metrics.json"])

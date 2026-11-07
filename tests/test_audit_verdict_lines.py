@@ -1,7 +1,7 @@
 """labkit-audit: the verdict and the finding lines are one result. A report
 whose verdict counts other blockers or warnings than its lines is no audit
-(exit 2, nothing recorded) — a line withdrawn in prose below it once gave
-exit 0 and left an open blocker in the record (review 2026-10-20).
+(exit 2, nothing recorded), so a line withdrawn in prose below it never
+leaves an open blocker in the record.
 
     .venv/bin/python -m pytest tests/test_audit_verdict_lines.py
 """

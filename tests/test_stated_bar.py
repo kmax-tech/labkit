@@ -1,9 +1,9 @@
 """[criterion-1]'s bar in the estimator and the prompt skeleton: `at_least`,
 a bar the task states, or `margin`, a lead over the null value — exactly
 one, from one home (`labkit.formats.criterion_bar`;
-docs/notes/2026-11-02-absolute-task-bar.md). The cases are labkit-paper
-area 17's: a task's absolute bar written as a margin passed a value below
-it; here the stated bar holds at its boundary whatever the null scores."""
+docs/notes/2026-11-02-absolute-task-bar.md). A task's absolute bar written
+as a margin passes a value below it; the stated bar holds at its boundary
+whatever the null scores."""
 
 from __future__ import annotations
 
@@ -94,7 +94,7 @@ class StatedBar(unittest.TestCase):
         """Accuracy at least 0.90: 0.89 misses and 0.90 meets it, with the
         permutation expectation at 0.52, 0.518, 0.498 and 1/3 — the bar is
         0.90 in every case. The twin: the same bar written as a margin of
-        0.40 over the null (area 17's translation) passes 0.89 at 1/3."""
+        0.40 over the null passes 0.89 at 1/3."""
         measure = self.stamp("apply", "constants = { at_least = 0.9 }")
         self.assertEqual((measure.CONFIG.at_least, measure.CONFIG.margin), (0.9, None))
         cfg = replace(measure.CONFIG, null_band=1.0)  # the criterion alone
@@ -140,8 +140,8 @@ class StatedBar(unittest.TestCase):
                 self.assertIn("for a bar the task states", str(cm.exception))
 
     def test_a_stated_bar_still_owes_the_null_lane(self):
-        """The null lane and [quality-check-2] are unchanged: a null off its
-        band withholds the verdict, and a band is owed as before."""
+        """The null lane and [quality-check-2] hold beside a stated bar: a null
+        off its band withholds the verdict, and a band is owed."""
         measure = self.stamp("apply", "constants = { at_least = 0.9 }")
         pairs = binary(60, 0, 0, 40)
         reg = self.apply_rows(measure, pairs)[: len(pairs)]
@@ -193,10 +193,10 @@ class StatedBar(unittest.TestCase):
             )
 
     def test_a_stated_spearman_bar_is_not_a_margin_over_zero(self):
-        """sts512 (area 17): "Spearman at least 0.95" registered as margin
-        0.05 put the bar at 0.05. As `at_least = 0.95`, ten items with four
-        adjacent pairs swapped (rho 0.9515) meet it and five swapped (rho
-        0.9394) miss it."""
+        """A task's "Spearman at least 0.95" registered as margin 0.05 puts
+        the bar at 0.05. As `at_least = 0.95`, ten items with four adjacent
+        pairs swapped (rho 0.9515) meet it and five swapped (rho 0.9394) miss
+        it."""
         measure = self.stamp("apply", "constants = { at_least = 0.95 }")
         cfg = replace(measure.CONFIG, score="spearman", null_band=1.0)
 

@@ -1,5 +1,5 @@
 """`labkit-params`: the table of a run's values — what each row claims, and
-what the view refuses to claim (2026-10-08).
+what the view refuses to claim.
 
     .venv/bin/python -m pytest tests/test_params.py
 """
@@ -118,8 +118,8 @@ class Table(unittest.TestCase):
             )  # recorded as `model`: not an unrecorded constant
 
     def test_a_model_spec_under_a_foreign_key_is_evidence(self) -> None:
-        """uniagent 14–17 recorded the resolved model as `judge`: the run has
-        it, labkit does not hold it — the row says so instead of "recorded"."""
+        """A run that recorded the resolved model as `judge` has it, labkit
+        does not hold it — the row says so instead of "recorded"."""
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
             run = _run(
@@ -169,9 +169,8 @@ class Table(unittest.TestCase):
             self.assertEqual(rows["min_acc"].evidence_kind, gate.STATIC_EVIDENCE)
 
     def test_an_upper_case_copy_stands_in_the_registered_row(self) -> None:
-        """Cold reader 2026-10-09: the script copied `min_acc` as `MIN_ACC`;
-        the registered row said only "not recorded" and the copy stood as a
-        row of its own."""
+        """A script that copies `min_acc` as `MIN_ACC`: the registered row
+        names the copy, and the copy stands as no row of its own."""
         with tempfile.TemporaryDirectory() as d:
             area = _area(d, SCRIPT.replace("min_acc = 0.7", "MIN_ACC = 0.7"))
             run = _run(

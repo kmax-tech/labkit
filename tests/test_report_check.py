@@ -3,12 +3,11 @@ only), finalize clean and named, the answering run a full run, an analysis
 audit of code, promises and that run as they are now, `02_analyze.py
 --check` passing.
 
-The cloud judge probe (2026-10-14, draw 3) skipped the analysis audit, the
-check and the note, and finalize was green; finalize cannot ask for what
-follows the analysis audit, so the end has its own gate. Until 0.99.0 the
-gate exited 0 at `repeat_cost = "low"`, so a probe's number passed there as a
-reported one (TODO 1, 2026-10-19). Each station is tested where it lives
-(audit_gaps.audit_coverage, recheck.holds, finalize); here: what is owed when,
+finalize runs before the analysis audit and cannot ask for it or for what
+follows — the check and the note — so the end has its own gate, at every
+repeat cost: a probe's number never passes as a reported one. Each station
+is tested where it lives (audit_gaps.audit_coverage, recheck.holds,
+finalize); here: what is owed when,
 that every station blocks on its own, and `--if-reported` — the gate the
 stop hook and the pre-commit run — holds exactly the protocols whose answer
 cites a run.
@@ -152,8 +151,8 @@ class ReportCheck(unittest.TestCase):
 
     def test_a_question_rewritten_after_the_audit_is_refused(self):
         """The analysis audit judged one question; the protocol now asks
-        another, and report-check passed it with the old audit (review
-        2026-10-23, finding 1). The refusal names the field."""
+        another, and the old audit does not pass it. The refusal names the
+        field."""
         area = self._area()
         proto = self._asked(area, "what is the mean line count per case?")
         self._audited(area)
@@ -233,7 +232,7 @@ class ReportCheck(unittest.TestCase):
 
     def test_a_freeze_with_a_must_gap_blocks(self):
         """Frozen with the stamp's `<…>` promise sentences: the flag is set,
-        the freeze registers nothing (cloud judge probe, draw 4)."""
+        the freeze registers nothing."""
         area = self._area()
         self._audited(area)
         proto = area / "PROTOCOL-x.md"
@@ -249,9 +248,8 @@ class ReportCheck(unittest.TestCase):
         self.assertIn("still carries the stamp's", out)
 
     def test_a_must_field_still_a_placeholder_blocks(self):
-        """Station 1 read `missing_must` only: a must field holding its
-        stamped `<…>` passed the last gate while protocol-check and preflight
-        refused it (audit 2026-10-15)."""
+        """A must field holding its stamped `<…>` blocks at station 1, as
+        protocol-check and preflight refuse it — not only a missing one."""
         area = self._area()
         self._audited(area)
         proto = area / "PROTOCOL-x.md"
@@ -301,8 +299,8 @@ class ReportCheck(unittest.TestCase):
         self.assertNotIn("frozen,", out)
 
     def test_at_low_a_probes_number_is_refused(self):
-        """Third haiku round: t3 and t5 reported a probe's number; at low repeat cost
-        the gate said "nothing owed here"."""
+        """A probe's number reported at low repeat cost is refused: the lane
+        owes no freeze, but a full run all the same."""
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         completed_run(
@@ -338,8 +336,8 @@ class ReportCheck(unittest.TestCase):
         self.assertNotIn("LAB-050", out)
 
     def test_finalize_blockers_are_named_not_pointed_at(self):
-        """Inside the stop hook "run it to see them" was a round trip the
-        agent did not take: finalize's blockers stand in report-check's list."""
+        """finalize's blockers stand in report-check's list: inside the stop
+        hook, "run it to see them" is a round trip an agent does not take."""
         area = self._area(repeat_cost="low", frozen=False)  # no run at all
         out = io.StringIO()
         with (
@@ -352,9 +350,8 @@ class ReportCheck(unittest.TestCase):
         self.assertNotIn("run it to see", out.getvalue())
 
     def test_finalize_exiting_without_a_blocker_is_a_bug_not_a_hint(self):
-        """Until the 2026-10-23 audit a non-zero finalize without a blocker
-        became "run it to see why" — the round trip again. finalize keeps
-        every reason as a blocker now; a bare exit is a bug and says so."""
+        """finalize keeps every reason as a blocker; a non-zero exit without
+        one is a bug and says so, never "run it to see why"."""
         area = self._area(repeat_cost="low", frozen=False)
         with (
             mock.patch.object(report_check, "finalize_area", return_value=2),
@@ -366,8 +363,7 @@ class ReportCheck(unittest.TestCase):
     def test_finalize_findings_arrive_as_data_not_through_stdout(self):
         """finalize runs on a silent collector: its blockers reach this gate
         as findings, its headers and notes reach nothing, and stdout is never
-        redirected for it (until 0.100.0 it was, and the blockers were read
-        back from the collector while the output was thrown away)."""
+        redirected for it."""
         area = self._area(repeat_cost="low", frozen=False)
         out = io.StringIO()
         seen: dict[str, object] = {}
@@ -387,7 +383,7 @@ class ReportCheck(unittest.TestCase):
             code = report_check.report_check(area)
         self.assertEqual(code, 1, out.getvalue())
         self.assertEqual(seen, {"stdout_untouched": True, "silent": True})
-        # the nested gate's way out reaches the line (TODO 3.2: nested gates)
+        # the nested gate's way out reaches the line
         self.assertIn(
             "BLOCKER: finalize: no completed run bound to p-x. Next: measure: `x`",
             out.getvalue(),
@@ -396,9 +392,8 @@ class ReportCheck(unittest.TestCase):
         self.assertNotIn("finalize: 1 blocker", out.getvalue())
 
     def test_finalize_warnings_reach_report_check(self):
-        """finalize's warnings were dropped inside report-check, the stop and
-        the commit (audit 2026-11-07, second, A1): one warning of the nested
-        finalize stands in the chain and in the output, prefixed."""
+        """A warning of the nested finalize stands in report-check's chain
+        and in its output, prefixed — so the stop and the commit show it too."""
         area = self._area(repeat_cost="low", frozen=False)
         self._audited(area)
 
@@ -420,8 +415,8 @@ class ReportCheck(unittest.TestCase):
         self.assertIn("WARNING: finalize: one draw only", out.getvalue())
 
     def test_no_answering_run_is_one_blocker(self):
-        """finalize's run choice, intent-check's same choice and the analysis
-        station each held a missing run (audit 2026-11-07, second, A2)."""
+        """A missing run is one blocker, finalize's: intent-check's same
+        choice and the analysis station do not hold it again."""
         area = self._area(repeat_cost="low", frozen=False)  # no run at all
         with mock.patch.object(
             report_check, "check_analysis_script", return_value=None
@@ -502,10 +497,10 @@ class ReportCheck(unittest.TestCase):
         self.assertIn("(LAB-050 Analysis audit before reporting)", out)
 
     def test_an_analysis_audit_of_an_earlier_run_or_other_promises_blocks(self):
-        """Same code, a later answering run: until 0.97.1 the old record
-        held, since it named the code only (review 2026-10-18). The twin:
-        a record of the newest run is clean. Then a promise sentence edited
-        after the audit."""
+        """Same code, a later answering run: a record of the earlier run
+        does not hold it, since a record names its run, not the code only. The
+        twin: a record of the newest run is clean. Then a promise sentence
+        edited after the audit."""
         area = self._area()
         self._audited(area)  # of the first run
         later = self._answered(area, "2026-01-02T00-00-00_0002")
@@ -527,8 +522,8 @@ class ReportCheck(unittest.TestCase):
         self.assertIn("no analysis audit saw the area as it is now", out)
 
     def test_the_same_run_with_other_metrics_or_rows_than_audited_blocks(self):
-        """The record named the run id only, so a metrics.json or output rows
-        changed after the audit still read as audited (review 2026-10-20).
+        """A metrics.json or output rows changed after the audit do not read
+        as audited: the record names the run as it was, not its id only.
         The twin: the audited run as it was is clean."""
         area = self._area()
         run = self._answered(area)
@@ -565,11 +560,9 @@ class ReportCheck(unittest.TestCase):
         self.assertIn("numbers not in PROTOCOL", failed)
 
     def test_the_check_is_one_command_at_every_tier(self):
-        """The counting skeleton carried its check inside `01_measure.py` and
-        stamped no analysis script; station 4 asked for `02_analyze.py` and
-        refused every correct count (audit 2026-10-19). Now every skeleton
-        stamps `02_analyze.py` (`standard_contract.CHECK_SCRIPT`), and the
-        station names the one it is missing — at low repeat cost as at high."""
+        """Every skeleton stamps `02_analyze.py` (`standard_contract.CHECK_SCRIPT`),
+        never a check inside `01_measure.py`, and station 4 names the one it
+        is missing — at low repeat cost as at high."""
         for cost in ("low", "high"):
             with self.subTest(cost):
                 area = self._area(repeat_cost=cost, frozen=cost != "low")
@@ -587,8 +580,8 @@ class ReportCheck(unittest.TestCase):
         """Analysis is owed where the lane's `audits` name the analysis
         audit — every lane of the standard does; a lane without it (built
         here, not in the contract) owes no record, and reportability names the
-        freeze only where the lane owes it (review 2026-10-19: the release
-        read only `freeze` off the contract)."""
+        freeze only where the lane owes it — the release reads both off the
+        contract, not `freeze` alone."""
         area = self._area(repeat_cost="low", frozen=False)
         run = self._answered(area)
         completed_run(
@@ -612,9 +605,9 @@ class ReportCheck(unittest.TestCase):
             decisions.assert_not_called()
 
     def test_a_check_printing_bytes_no_codec_reads_is_a_named_gap(self):
-        """`protocol-fill --from-run` ran this inside `adopt`; a
-        UnicodeDecodeError left the unchecked answer in the protocol
-        (audit 2026-10-19)."""
+        """`protocol-fill --from-run` runs this inside `adopt`: output no codec
+        reads is a named gap, never a UnicodeDecodeError that leaves the
+        unchecked answer in the protocol."""
         area = self._area()
         (area / "scripts" / "02_analyze.py").write_text(
             "import sys\nsys.stderr.buffer.write(b'bad \\xff byte\\n')\nsys.exit(1)\n",
@@ -625,11 +618,11 @@ class ReportCheck(unittest.TestCase):
 
 
 class IfReported(unittest.TestCase):
-    """`report-check --if-reported`: the gate at the stop and the commit (it
-    was `finalize --if-reported` until 0.99.0). A number written back into
+    """`report-check --if-reported`: the gate at the stop and the commit.
+    A number written back into
     "Recorded results" is held to the whole chain; a protocol whose
     answer is still open owes nothing — an exploration ends with no reported
-    result, probes in `runs/` or not (TODO 2, 2026-10-19)."""
+    result, probes in `runs/` or not."""
 
     RUN = "2026-10-07T10-00-00_ab12"
 
@@ -731,8 +724,7 @@ class IfReported(unittest.TestCase):
 
     def test_staged_reads_the_answer_as_the_index_holds_it(self):
         """The pre-commit's form: a reported answer in the index, the tree's
-        reopened — the hook read the tree and passed the commit (audit
-        2026-10-19)."""
+        reopened — the hook reads the index, the state the commit holds."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
@@ -793,14 +785,13 @@ class IfReported(unittest.TestCase):
         self.assertNotIn("analysis audit", out)  # no station ran
 
     def test_the_commits_tree_vs_index_hold_is_nexts_step(self):
-        """One mouth (docs/notes/2026-11-04-one-explainer-plan.md, the
-        traces' reading): t34-r2 committed its adoption with the run
-        untracked, report-check held "the working tree differs from the
-        index" and `labkit-next --staged` under it said "nothing" — a hold
-        on a finding `next` did not carry. Now the gate prints the one
-        finding (`report_hold.staged_area_gap`) and `next --staged` names
-        its step, the whole area staged; in the tree `next` says nothing
-        of it, and once staged neither does."""
+        """One mouth (docs/notes/2026-11-04-one-explainer-plan.md): an
+        adoption committed with the run untracked is held as "the working
+        tree differs from the index", and the hold is a finding `next`
+        carries — the gate prints the one finding
+        (`report_hold.staged_area_gap`) and `next --staged` names its step,
+        the whole area staged; in the tree `next` says nothing of it, and
+        once staged neither does."""
         from labkit.gates import next_step, report_context
 
         area = self._area(
@@ -890,7 +881,7 @@ class IfReported(unittest.TestCase):
     def test_staged_finds_a_protocol_deleted_only_in_the_tree(self):
         """The script staged, the reported protocol deleted in the tree and
         not in the index: the commit keeps the protocol, so the gate holds
-        it — the search for protocols read the tree and found none."""
+        it — the search for protocols reads the index, not the tree."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
@@ -907,11 +898,10 @@ class IfReported(unittest.TestCase):
         self.assertIn("the working tree differs from the index", out)
 
     def test_an_adoption_written_but_not_staged_is_named_as_such(self):
-        """Task 34 of the pressure pilot (2026-10-29): `--from-run` wrote the
-        declaration into the tree, the commit staged the report and not the
-        protocol, and the hook said "declares no result"; the agent took it
-        for a rejected review's effect and withdrew. The hold now names the
-        unstaged protocol and `git add`; staged, that line is gone (the twin).
+        """`--from-run` wrote the declaration into the tree, and the commit
+        stages the report, not the protocol: the hold names the unstaged
+        protocol and `git add`, never a bare "declares no result" an agent
+        could read as a rejected review; staged, that line is gone (the twin).
         """
         area = self._area("criterion-1 met", git=True)
         root = area.parent.parent
@@ -987,7 +977,7 @@ class IfReported(unittest.TestCase):
 
     def test_a_changed_script_reopens_the_areas_reported_number(self):
         """The protocol untouched, a script under it edited: the analysis
-        audit saw other code, and both hooks passed it (audit 2026-10-19)."""
+        audit saw other code, and both hooks hold the reported number."""
         area = self._area(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             declared=self.RUN,
@@ -1044,7 +1034,7 @@ class IfReported(unittest.TestCase):
         self.assertIn("finalized, audited, checked", out)
 
     def test_a_reported_probe_is_refused(self):
-        """Third haiku round, t3 and t5: the probe's number, written back."""
+        """The probe's number, written back."""
         code, out = self._gate(
             self._area(
                 f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
@@ -1081,13 +1071,12 @@ if __name__ == "__main__":
 
 
 class RegisteredReport(unittest.TestCase):
-    """The registered report owes its result (Max, 2026-10-29): a protocol
+    """The registered report owes its result: a protocol
     whose head says `report = "REPORT.md"` holds that file, once it is
     delivered, to the result block of the declared run or the protocol's
-    handover block — at the stop, the commit and the plain call. In the
-    pressure pilot of that day three of six agents deleted the run id
-    from REPORT.md after the hook refused the citation, and the commit
-    passed: a number without a run id was outside the gate."""
+    handover block — at the stop, the commit and the plain call. A number
+    without a run id is inside the gate too, so deleting the run id after a
+    refused citation passes nothing."""
 
     RUN = IfReported.RUN
     _git = staticmethod(IfReported._git)
@@ -1150,7 +1139,7 @@ class RegisteredReport(unittest.TestCase):
     def test_a_registered_report_without_its_block_is_held_with_the_three_ways_out(
         self,
     ):
-        """The delivered state of tasks 34, 15 and 60: a number, no run id.
+        """A delivered report with a number and no run id.
         Held when the report is among the paths (it lies in no area) and
         when the protocol is; the plain call's station holds it too."""
         area = self._area(git=True)
@@ -1194,12 +1183,11 @@ class RegisteredReport(unittest.TestCase):
         self.assertIn(self.OWED, gap.text)
 
     def test_the_adoption_is_not_held_against_itself(self):
-        """Route probe, 2026-10-29: with the registered REPORT.md already in
-        the tree (no block yet), `--from-run` ran this check on the proposed
-        protocol and was refused for the block only `--into` can write after
-        it; `--into` was refused for the missing declaration; the hook for
-        both. The adoption's own check (PROPOSED) does not hold the report;
-        the tree and the index do (the twin)."""
+        """With the registered REPORT.md already in the tree (no block yet),
+        the adoption's own check (PROPOSED) does not hold the report for the
+        block only `--into` can write after it — else `--from-run` and
+        `--into` would each refuse the other's step; the tree and the index
+        hold it (the twin)."""
         area = self._area(git=True)
         root = area.parent.parent
         report = root / "REPORT.md"
@@ -1228,8 +1216,7 @@ class RegisteredReport(unittest.TestCase):
         )
         report.write_text(new, encoding="utf-8")
         # the block releases the result; the report's text still owes its
-        # review — the prose may present another run (reference pilot
-        # 2026-11-01, task 15)
+        # review — the prose may present another run
         code, out = self._gate(root, report)
         self.assertEqual(code, 1, out)
         self.assertNotIn(self.OWED, out)
@@ -1262,11 +1249,10 @@ class RegisteredReport(unittest.TestCase):
     def test_the_registered_report_is_held_by_a_claim_and_reviewed_again_after_a_change(
         self,
     ):
-        """Reference pilot 2026-11-01, task 15: REPORT.md called an older
-        run's criterion "PASS"; no review was owed, and `--report-review`
-        refused a report without a discussion block. The registered report
-        owes a review of its final state: a claim holds it; a clean review
-        releases that state only — a later edit owes another."""
+        """A REPORT.md may call an older run's criterion "PASS", with or
+        without a discussion block: the registered report owes a review of its
+        final state; a claim holds it; a clean review releases that state only
+        — a later edit owes another."""
         from labkit.formats.report_reviews import ReportClaim
 
         area = self._area(declared=self.RUN, git=True)
@@ -1299,10 +1285,9 @@ class RegisteredReport(unittest.TestCase):
         self.assertIn("changed since", out)
 
     def test_a_registered_report_never_written_is_an_incomplete_delivery(self):
-        """The registered report owes its review; left unwritten it owed
-        none, and an agent could end without one (reference pilot
-        2026-11-01). Once the area measured, the stop holds a protocol whose
-        registered report is missing — deleting the run does not lift it;
+        """The registered report owes its review, written or not: once the
+        area measured, the stop holds a protocol whose registered report is
+        missing — deleting the run does not lift it;
         the twins: before a measurement, and with the report written,
         nothing."""
         import shutil
@@ -1440,11 +1425,11 @@ class RegisteredReport(unittest.TestCase):
     def test_the_progress_account_passes_the_commit_and_the_stop_names_the_next_step(
         self,
     ):
-        """B (2026-11-02): while nothing is adopted, a discussion of the
-        answering run is the progress account — the commit takes it without a
-        model call, the stop names the adoption or the handover once. The
-        release is unchanged: nothing is adopted, and report-check of the
-        protocol still owes the analysis audit."""
+        """While nothing is adopted, a discussion of the answering run is the
+        progress account — the commit takes it without a model call, the stop
+        names the adoption or the handover once. It releases nothing: nothing
+        is adopted, and report-check of the protocol still owes the analysis
+        audit."""
         area = self._fixture(
             f"criterion-1 met · recorded: kept number: n = 1 (run {self.RUN})",
             git=True,

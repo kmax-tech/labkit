@@ -1,11 +1,8 @@
 """The deliverable of an external task is a registered output of the
-answering run (2026-10-29): the stamped skeleton names it (DELIVERABLES),
+answering run: the stamped skeleton names it (DELIVERABLES),
 writes it from the kept rows and registers it, so outputs.json pins it by
 path and sha256, and finalize (report-check through it) holds the file in
 the tree to that record — swapped or gone is a blocker, untouched passes.
-An injection benchmark swapped `pred_results/*.csv` in seven delivered
-states and no gate noticed (docs/usability/2026-10-29-injection-ab4ce6d.md,
-M7).
 """
 
 from __future__ import annotations
@@ -47,8 +44,9 @@ class RenderCsv(unittest.TestCase):
             deliverable.render_csv([{"a": 1, "b": 2}, {"a": 1}])
 
     def test_the_columns_the_task_names_pass_and_a_gap_is_refused_by_name(self):
-        """Task 34 of the pressure pilot: both arms dropped a column the task
-        names, and the evaluation could not read the file (2026-10-29)."""
+        """A file missing a column the task names, carrying one it does not
+        name or ordering them otherwise is refused by name, and nothing is
+        written: the evaluation could not read it."""
         columns = ("person_id", "probability", "flag")
         row = {"person_id": "p1", "probability": 0.5, "flag": 1}
         self.assertEqual(

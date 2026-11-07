@@ -3,13 +3,12 @@ the declared run's code (or that of a run it derives from, or a declared
 scope) changed — carried as data by the comparison that found it
 (`GateFinding.changed_since`), never read off the blockers' words.
 
-Review 2026-11-03 (M1 = V3): `report_check.held_declaration` searched the
-finalized texts for `changed since <declared run>`. Rewording that phrase
-dropped the withdrawal-first order and `labkit-next` advised a third
-measurement; a blocker about a predecessor run names another id and lost
-it; an unrelated blocker quoting the phrase gained it. Code that could
-not be compared (a commit the clone lacks) is no change and keeps no
-withdrawal-first order (second review)."""
+Read off the words `changed since <declared run>`, a reworded phrase would
+drop the withdrawal-first order and `labkit-next` would advise a third
+measurement; a blocker about a predecessor run, naming another id, would
+lose it; an unrelated blocker quoting the phrase would gain it. Code that
+could not be compared (a commit the clone lacks) is no change and keeps no
+withdrawal-first order."""
 
 from __future__ import annotations
 
@@ -54,7 +53,7 @@ class HeldDeclaration(unittest.TestCase):
         self.assertEqual(self.held(found), self.PROTOCOL)
 
     def test_a_predecessor_runs_change_puts_it_first_too(self):
-        """V3: the changed code of a run the answer derives from names that
+        """The changed code of a run the answer derives from names that
         run, not the declared one."""
         found = self.changed("finalize: code changed", run=PREDECESSOR)
         self.assertEqual(self.held(found), self.PROTOCOL)
@@ -83,7 +82,7 @@ class HeldDeclaration(unittest.TestCase):
 
 
 class RewordedInTheChain(CountCommands):
-    """The review's probe in the real chain: adopt A, change the measuring
+    """In the real chain: adopt A, change the measuring
     code, measure B; finalize's blockers reworded keep the withdrawal
     first (`chain_gaps`' held_by), the twin unreworded alike."""
 

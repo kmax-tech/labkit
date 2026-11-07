@@ -1,9 +1,8 @@
 """Every fenced block in every Markdown file labkit stamps is closed.
 
-The low cut of a count dropped the closing fence of its ```toml block
-with the promise tables it removes; every count probe of 2026-10-20 got a
-protocol ending inside the block — the fence walker read it to the end, so
-no check failed, and the audit raised it in each run."""
+A cut that drops a ```toml block's closing fence with the promise tables it
+removes leaves a protocol ending inside the block, and the fence walker
+reads it to the end without a failed check."""
 
 import contextlib
 import io
@@ -93,8 +92,8 @@ class WithoutPromiseTables(unittest.TestCase):
 
 class StampReadBack(unittest.TestCase):
     """The stamp writes the head's id and tier by replacing template tokens;
-    a token the template no longer carried left the placeholder without a
-    word. The stamped head is read back."""
+    a token the template lacks would leave the placeholder without a word,
+    so the stamped head is read back."""
 
     def test_a_head_without_the_asked_tier_is_refused(self):
         from labkit.tools import scaffold as sc

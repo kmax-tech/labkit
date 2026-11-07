@@ -66,8 +66,8 @@ class Refusal(unittest.TestCase):
 
 class RefusalsOnStderr(unittest.TestCase):
     """A refusal goes through console.refuse to stderr; stdout carries only
-    what a check found (CHANGELOG 0.96.1). The shape that broke it, a print
-    to stdout right before `return 2`, is held here for every module."""
+    what a check found. The shape that would break it, a print to stdout
+    right before `return 2`, is held here for every module."""
 
     @staticmethod
     def refusals_on_stdout(source: str) -> list[int]:
@@ -113,8 +113,8 @@ class RefusalsOnStderr(unittest.TestCase):
             self.assertEqual((code, out.getvalue(), err.getvalue()), want)
 
     def test_no_command_prints_its_usage_on_stdout_and_exits_2(self):
-        """`return 0 if argv else 2` after the usage on stdout: eight commands
-        called without arguments refused on stdout (2026-10-20)."""
+        """`return 0 if argv else 2` after the usage on stdout would refuse
+        a command called without arguments on stdout; no module holds it."""
         found = [
             f"{p.relative_to(ROOT)}"
             for p in sorted((ROOT / "labkit").rglob("*.py"))

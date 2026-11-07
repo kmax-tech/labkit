@@ -5,12 +5,12 @@ action it names, the gate. On the count task in a staged lab repo
 `docs/examples/standin-audit.py` — every other step is a command a person
 runs.
 
-Why (probe 2026-11-02, docs/notes/2026-11-02-registered-field-repair.md):
-an audit finding on the registered Unit field, decided `fixed`, was
-answered with "measure again", and finalize refused the rewrite after the
-new measurement; `labkit-next` named a new audit instead, and an audit of
-the first run on the rewritten text released it. A Conclusion rewritten
-after the audit was told to measure and audit again, which it never owed.
+What it holds: a registered field rewritten on an audit finding and
+decided `fixed` owes no new measurement — finalize would refuse the
+rewrite after one — and is released by the follow-up audit's verdict on
+the correction, not by a fresh audit of the first run on the rewritten
+text. A Conclusion rewritten after the audit owes no new measurement or
+audit.
 """
 
 from __future__ import annotations
@@ -213,12 +213,11 @@ class RepairPaths(unittest.TestCase):
         self.assertEqual(self.runs(), 1)
 
     def test_the_restore_step_names_the_decision_while_the_finding_is_open(self):
-        """Step D of the one-explainer plan: with the audit's finding on the
-        field still open, `next`'s restore step says in one line what goes
-        with the restore — decide it `limitation`, or `fixed` for a
-        correction a follow-up releases (t34-r3 of labkit-paper's area 20
-        rewrote Unit five times between the two). The twin: the way taken,
-        nothing held."""
+        """With the audit's finding on the field still open, `next`'s restore
+        step says in one line what goes with the restore — decide it
+        `limitation`, or `fixed` for a correction a follow-up releases — so
+        the field is not rewritten back and forth between the two. The
+        twin: the way taken, nothing held."""
         record = self.audit("Unit", "the Unit field is too vague · rewrite it")
         self.fill(f"Unit={UNIT}, hidden files not counted")
         nxt = self.run_(".venv/bin/labkit-next", AREA)
@@ -309,9 +308,8 @@ class RepairPaths(unittest.TestCase):
 
     def test_a_start_of_one_label_names_that_field(self):
         """`:Terms` begins one label, "Terms of this protocol": the field is
-        named, exact first, then a unique start (`protocol_check.field_at`,
-        decided 2026-11-07 — until then only the label in full named it), and
-        the decision's line takes the correction route."""
+        named, exact first, then a unique start (`protocol_check.field_at`),
+        and the decision's line takes the correction route."""
         _, said = self.rewritten(
             "Terms of this protocol", "Terms", "case: one line of cases.jsonl"
         )
@@ -389,10 +387,8 @@ def review_answer(verdict: str) -> str:
 class RegisteredReportRepairs(RepairPaths):
     """The same lab with `report = "REPORT.md"` registered before the first
     measurement and its progress account committed — the repair paths that
-    end at the report (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md): a report deleted after the
-    adoption, a handover that owes the report review, a BLOCKER on the
-    Conclusion decided `fixed`. The model is given its answer
+    end at the report: a report deleted after the adoption, a handover that
+    owes the report review, a BLOCKER on the Conclusion decided `fixed`. The model is given its answer
     (`tests/answer_audit.py`); every other step is a command."""
 
     @classmethod
@@ -494,9 +490,9 @@ class RegisteredReportRepairs(RepairPaths):
     test_the_twin_a_code_repair_is_measured_again_and_audited = None  # type: ignore[assignment]
 
     def test_a_registered_report_deleted_after_the_adoption_is_held(self):
-        """`git rm REPORT.md`, committed alone, passed the commit,
-        report-check and labkit-next ("the number may be reported"); only
-        the stop named a missing report, and only for an area the session
+        """`git rm REPORT.md`, committed alone, is held by the commit,
+        report-check and labkit-next, never "the number may be reported" —
+        not by the stop alone, and not only for an area the session
         touched. The twin: the report restored passes."""
         self.adopted()
         self.run_("git", "rm", "-q", "REPORT.md")
@@ -535,10 +531,10 @@ class RegisteredReportRepairs(RepairPaths):
         )
 
     def test_a_handover_with_its_report_review_stays_a_handover(self):
-        """The handover's record bound every file under audits/, and the
-        report review it owes writes there: the review voided the handover,
-        a new handover voided the review. The twin: an analysis audit after
-        the handover still voids it — new evidence is not acknowledged."""
+        """The report review a handover owes writes under audits/, and the
+        handover's record leaves what it writes out: the review does not void
+        the handover. The twin: an analysis audit after the handover still
+        voids it — new evidence is not acknowledged."""
         self.run_(
             ".venv/bin/protocol-fill",
             P,
@@ -585,15 +581,13 @@ class RegisteredReportRepairs(RepairPaths):
         )
 
     def test_a_handover_after_an_analysis_audit_stays_through_its_review(self):
-        """The journal `audits/attempts.jsonl` already held the analysis
-        audit's lines when the handover was written; the report review it
-        owes appended its own, and the handover was void: bound by the
-        file's blob id, checked by a digest of another kind (probe
-        2026-11-03, docs/notes/2026-11-03-handover-journal-binding.md). Its
-        open BLOCKER then held the stop and the commit, and `labkit-next`
-        offered the adoption. Now `labkit-next`, the stop and the commit
-        agree: handed over, before and after the commit. The twin: a new
-        analysis audit after it voids it in all three."""
+        """The journal `audits/attempts.jsonl` holds the analysis audit's
+        lines when the handover is written; the report review it owes
+        appends its own, and the handover stays: `labkit-next`, the stop and
+        the commit agree, handed over, before and after the commit — its
+        open BLOCKER holds neither the stop nor the commit, and no adoption
+        is offered. The twin: a new analysis audit after it voids it in all
+        three."""
         self.session_starts()
         self.answered(
             "BLOCKER · scripts/01_measure.py:130 · statement · evaluate_rows() drops cases · the "
@@ -713,10 +707,9 @@ class RegisteredReportRepairs(RepairPaths):
         return record, said
 
     def test_a_conclusion_blocker_fixed_is_released_by_the_decision_review(self):
-        """The follow-up audit the decision named was never shown the
-        finding (the Conclusion is not in the audited state), a FIX verdict
-        on it was refused, and nothing else released it. The decision
-        review judges the claim as it stands and binds it."""
+        """A follow-up audit is never shown the finding (the Conclusion is
+        not in the audited state), so a FIX verdict on it is refused. The
+        decision review judges the claim as it stands and binds it."""
         record, said = self.conclusion_blocker()
         self.assertIn("the decision review judges the Conclusion as it stands", said)
         self.assertNotIn("waits for the follow-up audit", said)
@@ -815,8 +808,8 @@ class RegisteredReportRepairs(RepairPaths):
             )
 
     def test_a_committed_decision_review_turned_upheld_is_held_in_the_tree(self):
-        """`rejected` → `upheld` in three lines released the decision it
-        judged in every tree check; only the commit refused it."""
+        """`rejected` → `upheld` in three lines would release the decision
+        it judged: every tree check holds it, not the commit alone."""
         record, _ = self.conclusion_blocker()
         self.answered(
             review_answer("rejected"), "--review", "--record", record, ok=False
@@ -833,7 +826,7 @@ class RegisteredReportRepairs(RepairPaths):
 
     def test_a_committed_analysis_blocker_removed_is_held_in_the_tree(self):
         """The BLOCKER's table deleted and `blockers = 1` → `0`: no review
-        was owed any more, and the adoption passed."""
+        would be owed and the adoption would pass, so the tree holds it."""
         record, _ = self.conclusion_blocker()
         path = self.lab / AREA / "audits" / record
         text = path.read_text(encoding="utf-8")
@@ -845,8 +838,8 @@ class RegisteredReportRepairs(RepairPaths):
         self,
     ):
         """A report review naming a claim, committed past the hook, then
-        `claims = 1` → `0` and its table deleted: the report counted as
-        reviewed clean."""
+        `claims = 1` → `0` and its table deleted: the report would count as
+        reviewed clean, so the tree holds it."""
         self.adopted()
         report = self.lab / "REPORT.md"
         report.write_text(
@@ -887,8 +880,9 @@ class RegisteredReportRepairs(RepairPaths):
     ):
         """After a handover its report is released by the report review
         alone, and labkit-next and the stop's report-check on an
-        exploration never reached report-check's first station: a claim
-        removed from a committed review read "handed over … nothing"."""
+        exploration do not reach report-check's first station: a claim
+        removed from a committed review is held there too, never "handed
+        over … nothing"."""
         self.run_(
             ".venv/bin/protocol-fill",
             P,
@@ -964,10 +958,9 @@ class RegisteredReportRepairs(RepairPaths):
         return record
 
     def test_a_decided_correction_names_its_follow_up_first(self):
-        """`labkit-next` offered three ways at a decided correction, the
-        way back first, and no follow-up command (probe 2026-11-02, smaller
-        points). The step is the follow-up the decision named; taken, the
-        unchanged run is adopted, nothing measured again."""
+        """At a decided correction the step is the follow-up the decision
+        named, not the way back; taken, the unchanged run is adopted,
+        nothing measured again."""
         record = self.scope_corrected(decided=True)
         nxt = self.run_(".venv/bin/labkit-next", AREA)
         self.assertIn(
@@ -1099,10 +1092,10 @@ class RegisteredReportRepairs(RepairPaths):
     def test_a_code_repair_measured_before_the_withdrawal_is_withdrawn_not_measured_again(
         self,
     ):
-        """The repaired code measured while the faulty run stood adopted:
-        `labkit-next` advised a renamed output and a third measurement
-        (probe 2026-11-02, case 5). The step is the withdrawal; after it,
-        the steps it names adopt the run already measured. Nothing is let
+        """The repaired code measured while the faulty run stands adopted:
+        the step is the withdrawal, not a renamed output and a third
+        measurement; after it, the steps it names adopt the run already
+        measured. Nothing is let
         through: the new run is not adopted over the standing adoption."""
         record = self.code_repaired_after_the_adoption()
         self.run_(".venv/bin/python", f"{AREA}/scripts/01_measure.py")
@@ -1172,9 +1165,8 @@ class RegisteredReportRepairs(RepairPaths):
         named: the decision's line, `--withdraw`, `labkit-next` — withdraw,
         measure again, the follow-up on run 2 that judges the correction
         again, the adoption and the report review. The verdict on run 1
-        releases nothing for run 2 (probe 2026-11-03, the correction then a
-        code fault: run 2 was held whatever its follow-up said, and the
-        decision's line said restore and decide `limitation`)."""
+        releases nothing for run 2; run 2's own follow-up does, and the
+        decision's line names no restore and no `limitation`."""
         correction = self.scope_corrected(decided=True)
         self.answered(
             f"FIX · {correction}#1 · resolved · twelve cases, as run 1 read\n\n"
@@ -1206,8 +1198,7 @@ class RegisteredReportRepairs(RepairPaths):
         )
         said = self.decide(code, "fixed", "evaluate_rows averages over every case")
         # the decision's line points to labkit-next, which withdraws first
-        # (`withdraw_as_named`); it names no action of its own (review
-        # 2026-11-03, M2)
+        # (`withdraw_as_named`); it names no action of its own
         self.assertIn("names the step this repair owes now", said)
         self.assertNotIn("measure again", said)
         self.assertNotIn("limitation", said)
@@ -1280,10 +1271,9 @@ class RegisteredReportRepairs(RepairPaths):
     "needs the suite's venv with labkit's commands, and git",
 )
 class BeforeTheFirstMeasurement(unittest.TestCase):
-    """The registration written and not committed: `labkit-next` named
-    "measure", and runlog refused the measurement — its start gate holds
-    the first measurement to the registration as committed (probe
-    2026-11-02, docs/notes/2026-11-02-repair-path-probe.md, "Smaller")."""
+    """The registration written and not committed: runlog's start gate
+    holds the first measurement to the registration as committed, so
+    `labkit-next` must not name "measure" before the commit."""
 
     def setUp(self) -> None:
         self.lab = Path(tempfile.mkdtemp()) / "lab"

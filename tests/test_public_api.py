@@ -297,7 +297,7 @@ class FindModelsToml(unittest.TestCase):
             llm.find_models_toml()
 
     def test_the_former_name_is_gone(self) -> None:
-        # deprecated in 0.108.0, removed after it (CHANGELOG, Breaking)
+        # no alias under the private name
         self.assertFalse(hasattr(llm, "_find_models_toml"))
 
 

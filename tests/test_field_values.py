@@ -2,11 +2,9 @@
 (`protocol_check.field_values`): the label by `field_name`, whitespace
 folded, a field written twice never read as one of its copies.
 
-Review 2026-11-03 (V1, V2): `scope_differences` looked labels up as
-written, so `Unit (per judged item)` hid a changed unit; a field written
-twice was read first by the stamps and last by the comparisons; Data
-profile was compared raw by `registration_differences` and folded by the
-stamp."""
+Labels are looked up folded, so `Unit (per judged item)` cannot hide a
+changed unit; the stamps and the comparisons read the same copies and fold
+the Data profile alike."""
 
 import contextlib
 import io
@@ -95,7 +93,7 @@ class WrittenTwice(unittest.TestCase):
 
     def test_counts_in_one_copy_of_data_scope_cut_no_other(self):
         """`scope_value` drops the generated counts to the end of a value;
-        applied to the joined copies it dropped the second one."""
+        applied to the joined copies it would drop the second one."""
         counted = "**Data / scope:** corpus X · counts (prepare run r1): 120 items"
         old = protocol(counted, "**Data / scope:** corpus Y")
         new = protocol(counted, "**Data / scope:** corpus Z")

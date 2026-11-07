@@ -1,10 +1,9 @@
 """Named endpoints, round-robin and failover in lib/llm.py.
 
-Why this file exists: a second ollama URL (second srun session) used to mean
-either editing every model block or ad-hoc URL juggling in scripts. Now
-[endpoints] names URLs once, a model may list several, and llm round-robins
-across them with failover. Two servers are two INSTRUMENT INSTANCES (batch
-invariance), so which server answered must be observable per call — these
+[endpoints] names URLs once — a second ollama URL (a second srun session)
+is one line, not an edit of every model block or URL juggling in scripts —
+a model may list several, and llm round-robins across them with failover.
+Two servers are two INSTRUMENT INSTANCES (batch invariance), so which server answered must be observable per call — these
 tests pin the resolution rules AND the actually-requested URLs, in the spirit
 of test_llm_chat_options.py: test what is sent, and where.
 """
@@ -116,7 +115,7 @@ class TestResolveEndpoints(_Base):
         self.assertEqual(spec["endpoints"], ["http://a.invalid:1111"])
 
     def test_the_string_form_is_refused_with_the_list_spelling(self):
-        # `endpoint = "..."` is not read since 0.89.0: one spelling, one reader
+        # `endpoint = "..."` is not read: one spelling, one reader
         with self.assertRaises(ValueError) as ctx:
             self.llm.resolve("oldform")
         self.assertIn("endpoints = ['a']", str(ctx.exception))

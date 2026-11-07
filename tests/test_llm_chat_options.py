@@ -1,16 +1,13 @@
 """The chat path must send `num_predict` — else generation runs free.
 
-Why this file exists: until 2026-08-19 `llm.complete` set the token budget
-ONLY in the `raw=True` branch at `/api/generate`. The chat branch that every
-experiment takes sent nothing but `temperature` and silently dropped
-`max_tokens`. Consequence: `gpt-oss` generated 3520 tokens at a nominal
-2048 and was not done (server log, ~19 t/s), the request ran into the
-timeout, and the symptom — timeouts, aborted runs — looked like an
-overloaded cluster. Half a session went to the wrong hypothesis.
+The chat branch every experiment takes must carry the token budget, not
+only the `raw=True` branch at `/api/generate`. Without it a model generates
+past its nominal budget into the timeout, and the symptom — timeouts,
+aborted runs — looks like an overloaded cluster.
 
-The bug was invisible because `max_tokens` has a default: every call looked
-correct while the effect was missing. Against exactly that, this test
-checks the *payload sent*, not the signature.
+A dropped budget is invisible because `max_tokens` has a default: every
+call looks correct while the effect is missing. Against exactly that, this
+test checks the *payload sent*, not the signature.
 """
 
 import json

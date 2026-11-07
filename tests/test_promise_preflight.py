@@ -1,6 +1,6 @@
 """code-check (and so preflight) holds the promise block to the code before
-any run (Durchstich 2026-10-06: a renamed key surfaced only after the run,
-in intent-check, when the tokens were spent).
+any run, so a renamed key surfaces before the tokens are spent, not in
+intent-check after the run.
 
 Twin pair: the clean script passes; renaming the reported key from the
 declared `criterion_1_pass` to `criterion_1_passed` is a blocker, though the id `c1` is still
@@ -82,8 +82,8 @@ class PromisePreflight(unittest.TestCase):
 
     def test_an_admissibility_key_never_read_is_a_warning(self):
         """[quality-check-1] computed, reported, and nothing hangs on it: the C verdict
-        is reported whether the anchors held or not (probe 11, "a label
-        without effect"). Static evidence, so a WARNING."""
+        is reported whether the anchors held or not: a label without
+        effect. Static evidence, so a WARNING."""
         label_only = SCRIPT.replace(' if m["quality_check_1_anchor_ok"] else None', "")
         findings = intent_id_lines(*area_with(label_only))
         self.assertEqual(len(findings), 1, findings)
@@ -128,8 +128,8 @@ class PromisePreflight(unittest.TestCase):
         self.assertEqual(intent_id_lines(area, protocol), [])
 
     def test_a_loop_over_a_key_tuple_decides(self):
-        """uniagent 16: `if not all(metrics[k] for k in ADMISSIBILITY)` holds
-        the verdict; the first version of the check called it unread."""
+        """`if not all(metrics[k] for k in ADMISSIBILITY)` holds the
+        verdict: a loop over a key tuple reads every key it names."""
         script = (
             "ADMISSIBILITY = ('quality_check_1_anchor_ok',)\n"
             "def evaluate(rows):\n"

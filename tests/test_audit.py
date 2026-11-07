@@ -1,9 +1,9 @@
-"""labkit-audit (2026-10-06): the experiment-preflight audit as a command,
+"""labkit-audit: the experiment-preflight audit as a command,
 through labkit.run.llm instead of a Claude subagent.
 
 The model call is faked; what is tested is what the auditor gets to read,
 what refuses, and the exit-code contract — 1 for a blocker OR a warning,
-because the benchmark's hardest fault came only as a WARNING."""
+because a hard fault can come as a WARNING only."""
 
 from __future__ import annotations
 
@@ -254,12 +254,12 @@ class Audit(unittest.TestCase):
         prompt = sent[0]
         self.assertIn("MODE: analysis", prompt)
         # after a measurement the auditor names the ways the gates print, not
-        # a new registration value (fourth SAB-like draw, 2026-10-28)
+        # a new registration value
         self.assertIn("After the first measurement the registration binds", prompt)
         routes = prompt.split("===== WAYS OUT OF A BLOCKER =====\n")[1]
         for name, _ in ways_out.WAYS_OUT:
             self.assertIn(f"    {name}: ", routes)
-        # the record names the run whose rows the auditor read (review 2026-10-18)
+        # the record names the run whose rows the auditor read
         record = next((area / "audits").glob("*-analysis.toml")).read_text()
         self.assertIn('run_id = "2026-01-01T00-00-00_0001"', record)
         self.assertIn(
@@ -341,7 +341,7 @@ class Audit(unittest.TestCase):
         self.assertIn("warnings = 1", text)
 
     def test_a_backend_that_does_not_answer_leaves_the_failed_attempt(self):
-        """0.99.0: the evidence an acknowledged full run's LABKIT_UNFROZEN=1 rests on —
+        """The evidence an acknowledged full run's LABKIT_UNFROZEN=1 rests on —
         written by labkit-audit with the backend's words, the code, the
         promises and the time the call had; a usage error writes none."""
         area = repo_with()
@@ -373,9 +373,8 @@ class Audit(unittest.TestCase):
         # no answer came, so none is kept
         self.assertEqual(attempt.answer, "")
         self.assertFalse((area / "audits" / findings.ANSWERS).exists())
-        # eighth haiku round (t18): `rm audits/*.toml` before a new attempt —
-        # the next audit names the attempt whose evidence is gone and
-        # refuses before any call
+        # `rm audits/*.toml` before a new attempt: the next audit names the
+        # attempt whose evidence is gone and refuses before any call
         files[0].unlink()
         err = io.StringIO()
         with (
@@ -393,8 +392,8 @@ class Audit(unittest.TestCase):
         self.assertEqual(len(attempts.read_journal(area)), 1)  # no new attempt
 
     def test_an_unproven_answer_ends_the_auditing_of_this_state_with_that_model(self):
-        """The fit probes: a safety classifier stopped the auditor on every
-        try, and each try cost minutes and a dollar. The first unproven
+        """A try a safety classifier stops costs minutes and a dollar and
+        is stopped again on the same state. The first unproven
         answer is recorded with cause `unproven`; the next try with the
         same model on the same state is refused before any call; another
         model, or a backend that merely did not answer, may try again."""
@@ -423,8 +422,7 @@ class Audit(unittest.TestCase):
         rc, err = audit_once()
         self.assertEqual(rc, 2)
         self.assertIn("Do not run it again on this state", err)
-        # the way on names the other alias as a command (registered pilot
-        # part 1, 15-r3 guessed `sonnet`, which models.toml lacks)
+        # the way on names the other alias as a command, one models.toml holds
         self.assertIn("audit with another alias: `labkit-audit", err)
         self.assertIn("--model haiku`", err)
         out = io.StringIO()
@@ -434,7 +432,7 @@ class Audit(unittest.TestCase):
             contextlib.redirect_stderr(io.StringIO()),
         ):
             audit.main([str(area), "--findings"])
-        # --findings offers the other alias beside the handover (15-r2 handed over)
+        # --findings offers the other alias beside the handover
         self.assertIn("audit did not complete", out.getvalue())
         self.assertIn("audit with another alias: `labkit-audit", out.getvalue())
         (tried,) = failed_attempts.failed_attempts(area)
@@ -444,7 +442,7 @@ class Audit(unittest.TestCase):
         rc, err = audit_once()
         self.assertEqual(rc, 2)
         self.assertIn("no further try on the same code, promises and model", err)
-        # the second try names the other alias too (reference pilot, 15)
+        # the second try names the other alias too
         self.assertIn("--model haiku`", err)
         self.assertEqual(calls, ["opus"])  # refused before any call
         self.assertEqual(len(failed_attempts.failed_attempts(area)), 1)
@@ -528,8 +526,8 @@ class Audit(unittest.TestCase):
 
     def test_the_stamp_is_taken_before_the_call(self):
         """A lib module edited while the model answers: the record names the
-        code the auditor read, not the code afterwards (audit 2026-10-15),
-        and the change is said."""
+        code the auditor read, not the code afterwards, and the change is
+        said."""
         area = repo_with()
         before = scope_sha.area_stamp(area)[0]
         lib = area.parent.parent / "lib" / "scoring.py"
@@ -577,9 +575,9 @@ class Audit(unittest.TestCase):
         )
 
     def test_a_running_audit_is_named_where_the_records_are_read(self):
-        """A running audit read as "no audit record yet" (--findings) and
-        "none has run yet" (adopt's gap); agents started a second, polled
-        and deleted records (registered pilot part 1: 15, 34, 60)."""
+        """A running audit is named where the records are read (--findings
+        and adopt's gap), never taken for "no audit record yet" or "none
+        has run yet"."""
         area = repo_with()
         stamp = scope_sha.area_stamp(area)[0]
         block = promises.NO_BLOCK
@@ -610,9 +608,8 @@ class Audit(unittest.TestCase):
         self.assertIn("none has run yet", gap or "")  # the twin: none running
 
     def test_a_finding_written_with_a_dash_or_colon_is_read(self):
-        """`BLOCKER — …` and `BLOCKER: …` parsed as no finding while the
-        verdict counted two; the record then read as covered (audit
-        2026-10-15)."""
+        """`BLOCKER — …` and `BLOCKER: …` are findings: the record holds what
+        the verdict counts and never reads as covered without them."""
         report = (
             "BLOCKER — a.py:1 — implementation — wrong denominator\n"
             "**BLOCKER:** b.py:2 · statement · x\n"
@@ -643,10 +640,9 @@ class Audit(unittest.TestCase):
         )
 
     def test_the_summary_asks_to_decide_what_the_record_lists(self):
-        """At repeat cost low notes are counted, not listed or recorded; the
-        summary asked to decide them all the same ("6 findings (… 3 notes —
-        decide each …)" beside "3 to decide", pilot of labkit-paper area 15,
-        t15 and PubMedQA). The twin: listed notes are recorded and decided."""
+        """At repeat cost low notes are counted, not listed or recorded, and
+        the summary asks to decide only what the record lists. The twin:
+        listed notes are recorded and decided."""
         counted = WARN.replace("0 notes", "3 notes")
         _, out, err, _ = run(repo_with(), counted)
         self.assertIn(
@@ -672,7 +668,7 @@ class Audit(unittest.TestCase):
 
 
 class OneSnapshot(unittest.TestCase):
-    """Acceptance of the audit snapshot (2026-10-20): a file changed between
+    """The audit snapshot: a file changed between
     reading and the model call cannot give a record whose digest describes
     other contents than the prompt. Inside the reading — listing, snapshot,
     rendering — a change refuses the audit; during the model call the
@@ -760,9 +756,8 @@ class OneSnapshot(unittest.TestCase):
                 self.assertEqual(findings.area_records(area), [])
 
     def test_a_script_added_between_listing_and_snapshot_refuses(self):
-        """Review 2026-10-20: the snapshot came after gather(), the prompt
-        used gather's list — a script added in between stood in the stamp
-        and not in the prompt."""
+        """A script added between the listing and the snapshot would stand
+        in the stamp and not in the prompt: the audit refuses."""
         area = self.area()
         new = area / "scripts" / "02_new.py"
         rc, err, sent = self.audit(
@@ -836,10 +831,8 @@ class OneSnapshot(unittest.TestCase):
 
 
 class DecisionListReachesThePerson(unittest.TestCase):
-    """The numbered list is what the person acts on. Printed on stderr while
-    the report went to buffered stdout, it came out before the report in a
-    pipe, and `2>&1 | tail -30` cut it off; one agent paid for a second
-    audit only to see it (sandbox judge probes, 2026-10-21)."""
+    """The numbered list is what the person acts on: in one pipe it comes
+    after the report, so `2>&1 | tail -30` keeps it."""
 
     def test_in_one_pipe_the_list_comes_after_the_report(self):
         import subprocess
@@ -902,8 +895,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
         return rc, out.getvalue(), err.getvalue()
 
     def test_findings_counts_a_decided_finding_apart_and_marks_it(self):
-        """Listed "3 to decide" minutes after all three were decided, a
-        record read as open (registered pilot part 1, 60-r3)."""
+        """A decided finding is counted apart and marked: a record whose
+        findings are decided never reads as open."""
         area = repo_with()
         run(area, WARN)
         rc, _, err = self._main(str(area), "--decide", "1", "limitation", "--why", "r")
@@ -914,8 +907,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertIn("  1 · [decided limitation] WARNING · a.py:1", out)
 
     def test_a_decision_on_a_record_that_does_not_exist_is_refused(self):
-        """A guessed --record name ended in a traceback (registered pilot
-        part 1, 34-r1): refused, naming the records the area holds."""
+        """A guessed --record name is refused, not a traceback, naming the
+        records the area holds."""
         area = repo_with()
         run(area, WARN)
         (held,) = (area / "audits").glob("*.toml")
@@ -930,9 +923,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
 
     def test_findings_shows_an_earlier_record_with_an_open_note(self):
         """A frozen preflight blocks on every open finding, whatever its
-        grade (`findings.open_findings`); the listing showed only records
-        with an open BLOCKER, so the NOTE the agent was sent to decide was
-        in a record `--findings` hid (SAB task 34, 2026-10-29). The twin:
+        grade (`findings.open_findings`), so the listing shows every record
+        with an open finding, a NOTE too. The twin:
         an earlier record with nothing open stays hidden, counted."""
         area = repo_with()
         run(area, NOTE)
@@ -958,8 +950,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
 
     def test_not_assessable_is_offered_only_where_a_promise_is_registered(self):
         """A computation registers no promise, and `--decide` refuses every id
-        an effect names: its decision list named `--effect "<ID> not
-        assessable"` anyway (pilot t34, t21, 2026-10-28). The twin: a
+        an effect names: its decision list names no `--effect "<ID> not
+        assessable"`. The twin: a
         protocol with a [[promise]] table keeps the route."""
         bare = repo_with()  # PROTOCOL: no [[promise]] table
         rc, out, err, _ = run(bare, BLOCK)
@@ -1066,12 +1058,10 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual(rc, 0)
 
     def test_a_decide_without_its_reason_is_refused_naming_the_reason(self):
-        """`--decide 1 accepted --effect stands` was refused "unrecognized
-        arguments: stands" — argparse took `--effect` for the reason — six
-        times in four cells, and the agents then dropped the effect (SAB
-        round 1, 2026-10-29). The three shapes seen name the form, the
-        missing reason and where the effect goes; the twin: the correct
-        form decides."""
+        """`--decide 1 accepted --effect stands` without its reason: argparse
+        takes `--effect` for the reason and refuses "unrecognized arguments:
+        stands". The three shapes name the form, the missing reason and
+        where the effect goes; the twin: the correct form decides."""
         area = repo_with()
         run(area, BLOCK)
         form = '--decide takes <n> <status> --why "<reason>"'
@@ -1116,11 +1106,9 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertEqual((decided.status, decided.effect), ("limitation", "stands"))
 
     def test_an_accepted_warning_is_told_its_review_warns_and_does_not_hold(self):
-        """Agents read a low repeat cost as "no review needed" after the
-        line under a WARNING's `stands` said the number would not leave
-        without one, and the adoption then let it through (SAB round 1,
-        2026-10-29). The line says what holds per grade, at every repeat
-        cost; the twin (the BLOCKER's line) is in the test below."""
+        """The line under a WARNING's `stands` says what holds per grade, at
+        every repeat cost: its review warns and does not hold. The twin
+        (the BLOCKER's line) is in the test below."""
         f = findings.Finding(
             grade="WARNING",
             text="WARNING · a.py:1 · statement · x",
@@ -1137,10 +1125,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
         self.assertNotIn("does not leave", said)
 
     def test_the_confirmation_says_what_the_status_entails(self):
-        """Agents used `dismissed` for "I will fix it", `deferred` for "no
-        longer relevant" and `accepted` for "repaired", and decided `fixed`
-        on the audited state itself (SAB round 1, 2026-10-29). Under the
-        decision, one line says what the status entails
+        """The status words alone are misread, so under the decision one
+        line says what the status entails
         (`findings.decision_entails`); under `fixed`, a hint when nothing
         the record binds has changed. The twin: the recorded decision is
         what was given, and a changed area draws no hint."""
@@ -1204,9 +1190,8 @@ class DecisionListReachesThePerson(unittest.TestCase):
             (area / "scripts" / "01_measure.py").write_text(SCRIPT + "# repaired\n")
             repaired = decide("fixed", "dropped the feature")
             self.assertNotIn("hint:", repaired)
-            # round 2: seven of eight reviews came after a repair and were refused —
-            # the decision says the review no longer applies, labkit-next names
-            # the step (review 2026-11-03, M2: no action of its own)
+            # the decision says the review no longer applies and labkit-next
+            # names the step: the decision prints no action of its own
             self.assertIn(
                 f"{record.name} judged the state before it, so a decision review "
                 "of it no longer applies once the change is in the area",
@@ -1274,12 +1259,11 @@ class DecisionListReachesThePerson(unittest.TestCase):
                 self.assertEqual("--review" in out.getvalue(), owes_review)
 
     def test_a_missing_area_is_refused_with_one_sentence_on_every_step(self):
-        """`labkit-audit experiments/01-x --findings` from a subdirectory
-        said "no audit record yet" where records existed, and `--review`
-        a 30-line FileNotFoundError traceback (SAB round 1, 2026-10-29):
-        a path that is no directory is refused before any step, with the
-        path as given, the working directory and the way back. The twin:
-        the area reached from the repository root is read as before."""
+        """A path that is no directory (`labkit-audit experiments/01-x
+        --findings` from a subdirectory) is refused before any step, with
+        the path as given, the working directory and the way back — never
+        "no audit record yet" or a traceback. The twin: the area reached
+        from the repository root is read."""
         area = repo_with()
         run(area, WARN)
         old = Path.cwd()
@@ -1345,9 +1329,8 @@ if __name__ == "__main__":
 
 
 class FixVerdicts(unittest.TestCase):
-    """The analysis audit judges every earlier `fixed` BLOCKER (eighth haiku
-    round, t3: a leak `fixed` by dropping one of two leaking features, the
-    check the finding asked for never run). One verdict per shown finding,
+    """The analysis audit judges every earlier `fixed` BLOCKER: a fix can
+    miss the check the finding asked for. One verdict per shown finding,
     bound to the decision shown; what does not read refuses the record,
     what is left out stays unchecked — never resolved."""
 
@@ -1465,7 +1448,7 @@ class FixVerdicts(unittest.TestCase):
             f"fix {earlier.name}#1: no verdict — its follow-up stays unchecked", out
         )
 
-    #: the FIX entry of pilot draw B-2 (2026-10-26) as the auditor wrote it,
+    #: the FIX entry of pilot draw B-2 as the auditor wrote it,
     #: its record name replaced by the fixture's
     B2 = (
         "FIX · {ref} · unresolved · The leaked feature is still produced:\n"
@@ -1478,8 +1461,8 @@ class FixVerdicts(unittest.TestCase):
     )
 
     def test_a_why_over_several_lines_is_kept_whole(self):
-        """Pilot B-2: the evidence below the FIX line is the verdict's ground;
-        the record held only the first line. The blank line ends the entry,
+        """The evidence below the FIX line is the verdict's ground and is
+        kept whole. The blank line ends the entry,
         the READ line after it is not part of the why."""
         area, earlier = self.area()
         rc, _, err, _ = self.audit(
@@ -1610,7 +1593,7 @@ class FixVerdicts(unittest.TestCase):
                 rc, _, err, sent = self.audit(area, CLEAN)
                 if status == "open":
                     # refused before the call: a follow-up judges decided
-                    # BLOCKERs only (registered pilot part 1, 60-r3)
+                    # BLOCKERs only
                     self.assertEqual((rc, sent), (2, []), err)
                     self.assertIn("stand undecided", err)
                     self.assertIn(f"{rec.name}#1", err)
@@ -1692,9 +1675,9 @@ class RequiredCheck(unittest.TestCase):
 
     def test_the_decision_list_gives_the_check_as_a_work_order(self):
         """Where the person decides: a finding that names a check says what
-        the measuring script owes and what follows — in the repair case the
-        check went unwritten and every follow-up judged the repair not
-        assessable. The twin: a finding without a check names none."""
+        the measuring script owes and what follows, so the check gets
+        written and a follow-up can judge the repair. The twin: a finding
+        without a check names none."""
         area, earlier = self.fv.area(self.CHECKED)
         record = findings.read(earlier)
         lines = "\n".join(audit_decisions.decision_lines(record, area, ""))
@@ -1713,8 +1696,8 @@ class RequiredCheck(unittest.TestCase):
                 audit_decisions.decision_lines(findings.read(plain_record), plain, "")
             ),
         )
-        # a WARNING with a check promises no follow-up: none judges it, and an
-        # undecided one lapsed (reference pilot 2026-11-01, task 21)
+        # a WARNING with a check promises no follow-up: none judges it, so an
+        # undecided one would lapse
         warned = dataclasses.replace(
             record,
             findings=[dataclasses.replace(record.findings[0], grade="WARNING")],
@@ -1724,11 +1707,10 @@ class RequiredCheck(unittest.TestCase):
         self.assertIn("no follow-up audit judges a WARNING; decide it now", lines)
 
     def test_the_decision_list_offers_only_the_decisions_a_subject_allows(self):
-        """The list offered `limitation` under every BLOCKER, and `--decide`
-        refused it for an implementation or undetermined finding (audit
-        2026-11-07, S1): such a finding gets its allowed decisions and the
-        refusal's ways out instead. The twin: a statement finding keeps the
-        limitation route."""
+        """`--decide` refuses `limitation` for an implementation or
+        undetermined finding, so the list offers such a finding its allowed
+        decisions and the refusal's ways out instead. The twin: a statement
+        finding keeps the limitation route."""
         undetermined = (
             FixVerdicts.LEAK.replace("· statement ·", "· undetermined ·")
             + " · check: feature_sources — confirms if poisson_ratio is listed"
@@ -1797,7 +1779,7 @@ class RequiredCheck(unittest.TestCase):
         `unresolved` names what the fault turned out to be and the carried
         finding takes that subject, `resolved` clears it; with the check
         missing, `not_assessable` carries it undetermined. Every other
-        combination records nothing (decided 2026-11-06)."""
+        combination records nothing."""
         line = (
             FixVerdicts.LEAK.replace("· statement ·", "· undetermined ·")
             + " · check: feature_sources — confirms if poisson_ratio is listed"
@@ -1846,7 +1828,7 @@ class RequiredCheck(unittest.TestCase):
 
     def test_the_check_is_part_of_the_decision_digest(self):
         """A changed or removed check is another decision; a finding without
-        one keeps the digest it had before checks existed."""
+        one keeps its check-less digest."""
         base = findings.Finding("BLOCKER", "x", "fixed", "r")
         legacy = digests.digest(
             findings.as_stored(["BLOCKER", "x", "fixed", "r", ""]).encode("utf-8")
@@ -1923,9 +1905,9 @@ PILOT2 = (
 
 
 def with_subject(text: str, subject: str = "statement") -> str:
-    """TEXT, a finding answered before the subject field (0.112.0 and
-    earlier), with SUBJECT as the third field of its grade line: the
-    archived pilot answers stay as they were answered."""
+    """TEXT, a finding answered without the subject field, with SUBJECT as
+    the third field of its grade line: the archived pilot answers stay as
+    they were answered."""
     first, newline, rest = text.partition("\n")
     grade, place, *more = first.split(" · ")
     return " · ".join([grade, place, subject, *more]) + newline + rest
@@ -1935,7 +1917,7 @@ class CheckNote(unittest.TestCase):
     """The check field may carry what its value must show, after the key,
     in one of two forms to the end of the line; only the key is
     machine-read, the note is kept whole and bound. Six answers of the
-    second pilot wrote it so, and their records were refused."""
+    second pilot write it so."""
 
     def test_the_six_refused_answers_now_write_whole_records(self):
         for name in ("C-1", "C-2", "C-3", "D-1", "D-2", "D-3"):
@@ -1976,8 +1958,7 @@ class CheckNote(unittest.TestCase):
                 "the score per seed",
             ),
             # a sentence's closing period: kept in a dash note, and after the
-            # parenthesis it voids nothing (pilot round 2, t71: the whole
-            # answer was refused)
+            # parenthesis it voids nothing
             "x · check: quality_check_2_spread — the score per seed.": (
                 "quality_check_2_spread",
                 "the score per seed.",
@@ -2009,9 +1990,9 @@ class CheckNote(unittest.TestCase):
                     findings.check_of(line)
 
     def test_a_period_after_the_note_records_the_whole_answer(self):
-        """A line in the shape labkit's auditor wrote in pilot round 2 (t71):
-        a note in parentheses with a semicolon, closed by a period; its twin,
-        the same line without the period, reads as before."""
+        """A line in the shape labkit's auditor writes: a note in parentheses
+        with a semicolon, closed by a period; its twin, the same line
+        without the period, reads alike."""
         line = (
             "BLOCKER · a.py:1 · statement · a count misses some values · one passes · LAB-015 "
             "Preflight audit before freezing · count them in every group · check: "
@@ -2063,9 +2044,8 @@ class CheckNote(unittest.TestCase):
 
 class FileCheck(unittest.TestCase):
     """A repair that a file confirms — a model's weights, not a computed
-    value — is required as `· check: file:<path>` (repair case, 2026-10-28:
-    the follow-up asked to confirm `std` from model.json, which no piece
-    showed, and the agent had no way to hand it over). The check stands
+    value — is required as `· check: file:<path>`, so the follow-up is
+    shown the file it confirms the repair from. The check stands
     where the run declares the file as a dependency shown whole; a file
     named only by its digest does not answer it. Each with its twin."""
 
@@ -2138,9 +2118,8 @@ class FileCheck(unittest.TestCase):
 
 class KeptAnswer(unittest.TestCase):
     """The model's answer is kept before anything reads it, and the
-    attempt's end names it — a record or not (second fixed-followup pilot:
-    six answers that did not read survived only through the runner's
-    `--out`). A kept answer releases nothing; a lost one is a gap."""
+    attempt's end names it — a record or not, so an answer that does not
+    read survives. A kept answer releases nothing; a lost one is a gap."""
 
     def kept(self, area: Path) -> tuple[attempts.Attempt, Path]:
         (attempt,) = attempts.read_journal(area)
@@ -2161,8 +2140,7 @@ class KeptAnswer(unittest.TestCase):
     def test_an_answer_that_does_not_read_names_its_way_out(self):
         """A refusal of an answer that ends its attempt without a record
         names the way on: draw again (or the refusal's own fix), the kept
-        answer, and `--findings` with its handover (pilot round 2, t71:
-        "a check field that does not read" and nothing after it)."""
+        answer, and `--findings` with its handover."""
         unreadable = (
             f"{BLOCK.splitlines()[0]} · check: a2 spread\n"
             "verdict: 1 blockers, 0 warnings, 0 notes"
@@ -2175,7 +2153,6 @@ class KeptAnswer(unittest.TestCase):
                 "answer what it names, then run the audit again",
             ),
             # a heading is the refusal still, not an answer out of form
-            # (registered pilot part 1, 15-r1: redrawn for nothing)
             "the auditor refused as a heading": (
                 "## refused: protocol not filled — the audit reads the FILLED protocol",
                 "answer what it names, then run the audit again",
@@ -2186,8 +2163,7 @@ class KeptAnswer(unittest.TestCase):
                 area = repo_with()
                 rc, out, err, _ = run(area, answer)
                 self.assertEqual(rc, 2, err)
-                # no report on stdout beside a refusal: it read as an audit
-                # (registered pilot part 1, 60-r2)
+                # no report on stdout beside a refusal: it would read as an audit
                 self.assertNotIn(answer.splitlines()[0], out)
                 attempt, path = self.kept(area)
                 self.assertEqual(attempt.outcome, "none")
@@ -2262,11 +2238,8 @@ class UnrecordedCall(unittest.TestCase):
     `--findings`, as the stamped AGENTS.md says: named with its kept
     answer, the handover offered, exit 2 — until a completed audit of its
     mode, on the same code and promise block, comes after it in the
-    journal; a `-failed.toml` by the same rule. Pilot round 2 (labkit-paper
-    area 15, t71): `--findings` said "no audit record yet" after an
-    unrecordable preflight answer, and named neither the call nor a way
-    on; then an earlier successful audit hid a later failed call, exit 0
-    (review of the repair, 2026-10-28)."""
+    journal; a `-failed.toml` by the same rule. An earlier completed audit
+    does not hide a later failed call."""
 
     UNREADABLE = (
         f"{BLOCK.splitlines()[0]} · check: a2 spread\n"
@@ -2430,9 +2403,9 @@ class UnrecordedCall(unittest.TestCase):
         self.assertIn(f"audit call superseded: attempt {attempt.id}", out)
 
     def as_historical(self, area: Path, attempt: attempts.Attempt) -> str:
-        """Rewrite ATTEMPT's start in AREA's journal (and its copy) as labkit
-        0.103.0 wrote it, without `block_sha` and `protocol`; return the
-        journal's text."""
+        """Rewrite ATTEMPT's start in AREA's journal (and its copy) in the
+        older form without `block_sha` and `protocol`; return the journal's
+        text."""
         journal = attempts.journal_path(area)
         rows = [json.loads(x) for x in journal.read_text(encoding="utf-8").splitlines()]
         (start,) = [
@@ -2536,10 +2509,9 @@ PILOT_REPORTS = 27
 
 
 def read_as_before(answer: str) -> list[tuple[str, str]]:
-    """The findings of ANSWER as `parse` read them until findings kept
-    their lines below the grade line: each finding line alone, stripped —
-    the old reading frozen here on purpose, so the twin compares against
-    it and not against the code under test."""
+    """The findings of ANSWER read one line each: each finding line alone,
+    stripped — the single-line reading frozen here on purpose, so the twin
+    compares against it and not against the code under test."""
     body = answer[: list(audit_reply.VERDICT.finditer(answer))[-1].start()]
     return [
         (f.group(1), line.strip())
@@ -2550,7 +2522,7 @@ def read_as_before(answer: str) -> list[tuple[str, str]]:
 
 LAB015 = "LAB-015 Preflight audit before freezing"
 #: synthetic answers, no task content, in the three shapes the pilots'
-#: auditors wrote a finding below its line (round 2, t21 and t71; area 12):
+#: auditors wrote a finding below its line:
 #: (answer, number of the finding, its lines as the record must keep them,
 #: its check and check note)
 #: — bullets right below the line, effect, rule and repair after a blank
@@ -2646,14 +2618,12 @@ INDENTED_LINES = [
 class WholeFinding(unittest.TestCase):
     """A finding may go on below its grade line and is recorded whole: it
     ends at the next finding line or a section (a FIX, READ, notes tally,
-    verdict or scope line, a code fence), a blank line does not end it
-    (pilot round 2, t21: a WARNING stored as its first 136 characters, its
-    bullets, effect, rule and repair only in the kept answer). The one
+    verdict or scope line, a code fence), a blank line does not end it. The one
     shape that does not read — text below a blank line after the last
     finding — is refused with its way out. The twin: the kept pilot
     reports read exactly as before. The answers here are synthetic, in
-    the shapes the pilots' auditors wrote; the pilots' own answers were
-    compared outside this repository."""
+    the shapes the pilots' auditors wrote; the pilots' own answers stay
+    outside this repository."""
 
     SHAPES = {
         "bullets": (BULLETS, 2, BULLETS_LINES, "", ""),
@@ -2738,11 +2708,9 @@ class WholeFinding(unittest.TestCase):
                 self.assertEqual(findings.area_records(area)[0].findings[0].text, text)
 
     def test_an_empty_fix_section_said_in_words_ends_the_last_finding(self):
-        # task 21, 2026-10-29: the auditor closed with "FIX lines: none — the
-        # area has no earlier decided BLOCKER." below a blank line; the
-        # parser read it as a remark it could not place and refused two paid
-        # audits. The line opens the (empty) FIX section: the finding is
-        # whole, no fix entry is read, the verdict counts.
+        # "FIX lines: none — …" below a blank line opens the (empty) FIX
+        # section: the finding is whole, no fix entry is read, the verdict
+        # counts.
         for closing in (
             "FIX lines: none — the area has no earlier decided BLOCKER.",
             "FIX: none",
@@ -2766,10 +2734,8 @@ class WholeFinding(unittest.TestCase):
                 )
 
     def test_an_indented_paragraph_below_a_blank_line_is_the_last_findings(self):
-        # 2026-10-29, apply-screen with Haiku and with Sonnet: the auditor
-        # closed the last finding's evidence list with a blank line and went
-        # on indented ("  Effect: …", "  · LAB-003 …"); both answers were
-        # refused and the paid audits lost. Indented, the line is the
+        # a blank line after the last finding's evidence list, then indented
+        # lines ("  Effect: …", "  · LAB-003 …"): indented, the line is the
         # finding's; an unindented one is still refused (the test above)
         verdict = "verdict: 1 blockers, 0 warnings, 0 notes"
         for tail in (
@@ -2803,8 +2769,7 @@ class WholeFinding(unittest.TestCase):
 
     def test_the_check_closes_the_line_that_holds_it(self):
         """One check per finding, closing its line: the last, or the first
-        with the finding's bullets below — refused whole before, two audits
-        lost (registered pilot part 1, 34-r3 and 60-r2)."""
+        with the finding's bullets below."""
         line = f"BLOCKER · a.py:1 · statement · x · y · {self.LAB015} · z"
         area = repo_with()
         answer = (
@@ -2862,9 +2827,8 @@ class WholeFinding(unittest.TestCase):
 class AuditorRefusal(unittest.TestCase):
     """The preflight auditor answers an unfilled protocol with one line,
     `refused: protocol not filled …` (`experiment-preflight.agent.md`);
-    `parse` found no verdict line and the person read only "no readable
-    `verdict:` line", the auditor's reason kept but never shown (audit
-    2026-10-27, C16)."""
+    the person is shown the auditor's reason, not "no readable `verdict:`
+    line"."""
 
     LINE = (
         "refused: protocol not filled — the audit reads the FILLED protocol "
@@ -2958,8 +2922,7 @@ class Carried(unittest.TestCase):
         carried as that; its text keeps the origin's word. The next follow-up
         is shown the recorded subject and the prefix naming the settlement,
         takes a plain `unresolved`, and refuses a subject on it, naming the
-        recorded one (audit 2026-11-07, S3: the prompt showed only the
-        text, and an auditor judging by it was refused)."""
+        recorded one: the text alone keeps the origin's word."""
         area, r1 = self.fv.area(
             FixVerdicts.LEAK.replace("· statement ·", "· undetermined ·")
             + " · check: feature_sources — confirms if poisson_ratio is listed"
@@ -3104,9 +3067,8 @@ class Carried(unittest.TestCase):
         self.assertIn("records name no protocol", err)
 
     def test_a_printed_decide_line_runs_as_printed_where_several(self):
-        """The `--decide` line named no protocol; with an effect's ids it was
-        refused in an area of several protocols (cold review 2026-10-27).
-        Printed with `--protocol`, it runs as printed with an effect filled
+        """In an area of several protocols the `--decide` line is printed
+        with `--protocol`, so it runs as printed with an effect's ids filled
         in; the twin, the same line without it, is refused."""
         area, r1 = self.fv.area()
         x0 = area / "PROTOCOL-x0.md"
@@ -3237,7 +3199,7 @@ class FollowupGate(unittest.TestCase):
     def test_in_an_area_of_several_protocols_no_step_names_the_refused_audit(self):
         """The follow-up audit refuses an area holding several protocols
         (`audit_prompt.earlier_of`); the hold says so instead of naming the command
-        it would refuse (audit 2026-10-27, B1). The twin: one protocol names it."""
+        it would refuse. The twin: one protocol names it."""
         area, _ = self.fv.area()
         self.fv.audit(area, CLEAN)
         (line,) = self.gate(area)
@@ -3260,8 +3222,8 @@ class FollowupGate(unittest.TestCase):
     def test_every_step_ending_in_the_follow_up_is_replaced_where_several(self):
         """Not only the bare follow-up: a step that asks for a run and then
         the follow-up, and the step of a BLOCKER `fixed` in the state
-        audited, end in the audit the area refuses (cold review
-        2026-10-27). The twin: a step that names no follow-up stays."""
+        audited, end in the audit the area refuses. The twin: a step that
+        names no follow-up stays."""
         for step in (
             followup.STEP_AUDIT,
             f"a run that writes `x` to metrics.json, then {followup.STEP_AUDIT}",
@@ -3457,9 +3419,9 @@ GATE = PILOT2 / "gate"
 
 
 def as_today(record: bytes) -> bytes:
-    """A pilot's record with the decision statuses of labkit 0.103.0
-    (`accepted`, `dismissed`) in today's words (`limitation`, `false-positive`),
-    and each finding given the subject a record names since (`statement`, as
+    """A pilot's record with its older decision statuses (`accepted`,
+    `dismissed`) in today's words (`limitation`, `false-positive`), and
+    each finding given the subject a record names (`statement`, as
     `with_subject` gives the archived answers): the archive stays as kept."""
     today = record.replace(b'status = "accepted"', b'status = "limitation"').replace(
         b'status = "dismissed"', b'status = "false-positive"'
@@ -3474,14 +3436,14 @@ def as_today(record: bytes) -> bytes:
 class PilotRecords(unittest.TestCase):
     """The release rule on the records the second pilot kept: the partial
     fix (A-1, unresolved) and the unshown check (D2-1) hold, the full fix
-    with its check shown (C-1) releases. The pilot's records predate
-    carrying, so A-1's negative verdict holds the earlier head itself."""
+    with its check shown (C-1) releases. The pilot's records carry
+    nothing, so A-1's negative verdict holds the earlier head itself."""
 
     def holds(self, case: str, record: Path) -> list[followup.Hold]:
         area = Path(tempfile.mkdtemp()) / "experiments" / "01-x"
         (area / "audits").mkdir(parents=True)
-        # the pilot's records keep the status words of their day (`accepted`,
-        # labkit 0.103.0); the copies speak today's
+        # the pilot's records keep their older status words (`accepted`);
+        # the copies speak today's
         earlier = area / "audits" / "2026-10-26T08-17-analysis.toml"
         earlier.write_bytes(as_today((GATE / f"earlier-{case}.toml").read_bytes()))
         later = area / "audits" / "2026-10-26T18-00-analysis.toml"
@@ -3498,10 +3460,8 @@ class PilotRecords(unittest.TestCase):
 
 
 class ReadHintsOnRegisteredFields(unittest.TestCase):
-    """A reading hint that rewrites a registered field is no hint: printed
-    unfiltered, hints on the question, the terms and the data scope were
-    taken as harmless, rewritten over four rounds, and finalize refused the
-    rewrite 24 minutes later (reference pilot 2026-11-01, task 21)."""
+    """A reading hint that rewrites a registered field is no hint: it is
+    left out and counted, since finalize refuses the rewrite."""
 
     PROTOCOL = (
         "# Experiment protocol: x\n\n"
@@ -3535,8 +3495,8 @@ class ReadHintsOnRegisteredFields(unittest.TestCase):
                 "READ · PROTOCOL-x.md:Conclusion · a list · one sentence\n"
             )
             hints = audit_decisions.read_hints(report, area)
-            # a field named instead of a line is held too (reference pilot
-            # 2026-11-01, task 60); a result field named stays shown; a label
+            # a field named instead of a line is held too; a result field
+            # named stays shown; a label
             # the protocol holds no field of is not shown, with its reason
             self.assertEqual(hints.held, 2)
             self.assertEqual(
@@ -3574,10 +3534,10 @@ class ReadHintsOnRegisteredFields(unittest.TestCase):
             )
 
     def test_the_scope_list_reads_a_prefix_on_every_line_and_skips_the_protocol(self):
-        """The auditor wrote `scope:` before every entry, and the protocol
-        among them: each file was reported read and unlisted at once, and the
-        protocol in every audit (reference pilot 2026-11-01, 21, 60, 15, sts512).
-        The twin: a file the stamp lacks still warns."""
+        """An auditor may write `scope:` before every entry, the protocol
+        among them: each entry is read without its prefix, and the protocol
+        is never reported read and unlisted. The twin: a file the stamp
+        lacks still warns."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             (root / ".git").mkdir()
@@ -3611,8 +3571,8 @@ class ReadHintsOnRegisteredFields(unittest.TestCase):
 
 class LabAuditAlias(unittest.TestCase):
     """A round fixes its audit model in the lab's models.toml (`[audit] model`),
-    so every record names the alias that answered — repointing `opus` at
-    another model would have recorded "opus" (reference pilot 2026-11-01)."""
+    so every record names the alias that answered — an `opus` repointed at
+    another model would still record "opus"."""
 
     TOML = (
         '[models.haiku]\nbackend = "claude-cli"\nmodel = "claude-haiku-4-5-20251001"\n'

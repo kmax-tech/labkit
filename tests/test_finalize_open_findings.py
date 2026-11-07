@@ -1,12 +1,11 @@
 """finalize names undecided audit findings and an answering run whose number
-cannot be reported; report-check refuses that number (plan 2026-10-17, A3).
+cannot be reported; report-check refuses that number.
 
-Benchmark rounds (labkit-paper area 09): the leakage BLOCKER lay undecided
-in audits/ and nothing between it and the reported number said so; in the
-second haiku round on 0.98.0 the answering runs were probes (run_kind='probe') or
-acknowledged runs (LABKIT_UNFROZEN=1), and both gates were silent. finalize
-warns about such a run and blocks on an open BLOCKER; report-check blocks
-the run (`runs.unreportable`, one telling).
+A BLOCKER undecided in audits/ must be said before the reported number,
+and so must an answering run that is a probe (run_kind='probe') or an
+acknowledged run (LABKIT_UNFROZEN=1). finalize warns about such a run
+and blocks on an open BLOCKER; report-check blocks the run
+(`runs.unreportable`, one telling).
 """
 
 from __future__ import annotations
@@ -137,9 +136,9 @@ class OpenFindings(unittest.TestCase):
         self.assertIn("not TOML", out)
 
     def test_a_record_of_a_deleted_run_is_a_blocker(self):
-        """Fifth haiku round (labkit-paper area 09, t18, 2026-10-22): two
-        measured runs removed with `rm -rf runs/…` after their audits; the
-        records stayed and finalize read "every finding decided"."""
+        """A measured run removed with `rm -rf runs/…` after its audit leaves
+        its record standing; finalize never reads that as "every finding
+        decided"."""
         path = self._record([], mode="analysis")
         path.write_text(
             path.read_text(encoding="utf-8").replace('run_id = "r1"', 'run_id = "r0"'),
@@ -152,8 +151,7 @@ class OpenFindings(unittest.TestCase):
         )
         self.assertIn("a run an audit read is a kept run", out)
         # the way out lifts the blocker: git, a handover or a new registration —
-        # never "measure anew", which left the record standing (reference
-        # pilot 2026-11-01, task 60, both trials)
+        # never "measure anew", which leaves the record standing
         self.assertIn("git checkout HEAD -- ", out)
         self.assertIn("--handover", out)
         self.assertIn("register anew", out)
@@ -199,7 +197,7 @@ class UnreportableRun(unittest.TestCase):
         self.assertIn("a reported number owes a full run", out)
 
     def test_a_probe_warns_in_finalize_and_blocks_in_report_check(self):
-        """Haiku t3 and t18 on 0.98.0: measured without run_kind='measurement', reported."""
+        """A run measured without run_kind='measurement' is not reported."""
         completed_run(self.area, "r1", metrics=METRICS, run_kind="probe")
         code, out = _finalize(self.area)
         self.assertEqual(code, 0, out)

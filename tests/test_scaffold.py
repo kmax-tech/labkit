@@ -99,10 +99,10 @@ class Lab(unittest.TestCase):
         self.assertTrue(scaffold.labkit_pin("abc1234").endswith("labkit.git@abc1234"))
 
     def test_stale_editable_metadata_refuse_the_pin(self) -> None:
-        """The first re-stamp after the 0.88.7 release pinned v0.88.5: the
-        editable install's metadata kept its last `pip install -e` while the
-        templates came from the source (2026-10-13). This suite runs from the
-        checkout, so source_version() is the pyproject's."""
+        """The editable install's metadata keeps its last `pip install -e`
+        while the templates come from the source: metadata off the source
+        refuses the pin. This suite runs from the checkout, so
+        source_version() is the pyproject's."""
         source = scaffold.source_version()
         self.assertIsNotNone(source)
         real = scaffold.importlib.metadata.version
@@ -118,9 +118,10 @@ class Lab(unittest.TestCase):
             scaffold.importlib.metadata.version = real
 
     def test_lab_from_a_checkout_off_the_pin_is_refused(self) -> None:
-        """Stamped from main under a v0.103.0 pin, AGENTS.md named `--kind`,
-        which that labkit lacks (2026-10-27). This suite runs from the
-        checkout, so `check_lab_pin` compares."""
+        """A lab stamped from a checkout whose templates differ from the
+        pinned labkit's is refused: its AGENTS.md could name a flag that
+        labkit lacks. This suite runs from the checkout, so `check_lab_pin`
+        compares."""
         self.assertIsNotNone(scaffold.source_version())
         root = self.root / "lab"
         off = mock.patch.object(
@@ -291,7 +292,7 @@ class Exp(unittest.TestCase):
                 (proto,) = (root / "experiments").glob("*-x/PROTOCOL-x.md")
                 text = proto.read_text(encoding="utf-8")
                 if kind == "compute":
-                    # standard 0.22: no bar field and no promise table at any tier
+                    # no bar field and no promise table at any tier
                     self.assertEqual(promises.ids_in_prose(text), set())
                     self.assertIsNone(promises.parse_block(text))
                     labels = {f.label for f in protocol_check.fields(text)}
@@ -332,9 +333,8 @@ class Exp(unittest.TestCase):
     def test_the_low_cut_has_no_report_fields_the_full_form_carries_them(self) -> None:
         """The † fields: never in the low cut (nothing freezes there), in the
         full form from the stamp — the freeze owes the should ones and the
-        adoption the result ones, and a frozen protocol without them held
-        its agent for 19 minutes (labkit-paper's tassay-r2, 2026-11-04);
-        `--report` appends them to an area stamped before (`promote`)."""
+        adoption the result ones; `--report` appends them to an area stamped
+        without them (`promote`)."""
         quiet(scaffold.stamp_area, self.root, "foo-bar", "low", kind="fit")
         proto = self.area() / "PROTOCOL-foo-bar.md"
 
@@ -355,8 +355,8 @@ class Exp(unittest.TestCase):
         self.assertEqual(fields(), [])
         quiet(scaffold.stamp_area, self.root, "other", report=True, kind="fit")
         self.assertGreater(len(fields()), 3)
-        # the cut marks are the template's, never a written protocol's (the
-        # --report path kept 12-16 of them after the l-rename, review 2026-10-25)
+        # the cut marks are the template's, never a written protocol's, on
+        # the --report path too
         self.assertNotRegex(proto.read_text(encoding="utf-8"), r"<!-- l[bm]? -->")
 
     def test_numbers_count_up_and_a_typed_number_is_dropped(self) -> None:
@@ -385,11 +385,10 @@ class Exp(unittest.TestCase):
         return {p: p.read_bytes() for p in sorted(self.root.rglob("*")) if p.is_file()}
 
     def test_a_name_two_areas_carry_is_refused_naming_both(self) -> None:
-        """`--report` and `--change-kind` took the first area of the slug in
-        directory order, without a word (audit 2026-10-27, doubled homes:
-        the copy `02-x` was promoted); a new area's refusal named one of
-        them. Each refuses naming both and the command that picks one,
-        nothing changed; an area without a number is told to take one."""
+        """`--report`, `--change-kind` and a new area of a slug two areas
+        carry each refuse naming both and the command that picks one,
+        nothing changed — never the first area in directory order; an area
+        without a number is told to take one."""
         self._two_areas_of_one_name()
         before = self._snapshot()
         for call, said in (
@@ -418,11 +417,10 @@ class Exp(unittest.TestCase):
         self.assertIn("`labkit-init exp 01-x --report`", caught.exception.why)
 
     def test_a_typed_number_no_area_carries_is_refused(self) -> None:
-        """`exp 02-x --change-kind` beside `01-x` alone restamped `01-x`:
-        the number typed was dropped for an existing area too (cold review
-        of this change). For `--report` and `--change-kind` it names the
-        area or is refused naming the areas of that name; a new area still
-        drops it (`test_numbers_count_up_and_a_typed_number_is_dropped`)."""
+        """`exp 02-x --change-kind` beside `01-x` alone never restamps
+        `01-x`: for `--report` and `--change-kind` the number typed names the
+        area or is refused naming the areas of that name; a new area drops
+        it (`test_numbers_count_up_and_a_typed_number_is_dropped`)."""
         self._two_areas_of_one_name()
         before = self._snapshot()
         for call, said in (
@@ -489,8 +487,6 @@ class Exp(unittest.TestCase):
         self.assertFalse((area / "scripts" / "00_prepare.py").exists())
         # the one public recheck of every skeleton: the compute skeleton's 02_analyze.py
         # imports evaluate_rows from 01_measure.py and carries the --check
-        # (until 0.99.0 the check sat inside 01_measure.py, and report-check
-        # asked for a file the skeleton never stamped, audit 2026-10-19)
         analyze = (area / "scripts" / "02_analyze.py").read_text(encoding="utf-8")
         self.assertIn('"--check"', analyze)
         # the metrics recomputed are the formula's plus the reference verdict
@@ -509,14 +505,14 @@ class Exp(unittest.TestCase):
         self.assertIn("evaluate_rows", readme)
         self.assertNotIn("--probe", readme)  # the counting skeleton has no probe
         # a computation's README carries no blank: question and contract live in the
-        # protocol (cloud draw 11: the placeholder was the one gate line left)
+        # protocol
         self.assertEqual(readme_check.readme_placeholders(area), [])
         self.assertIn("PROTOCOL-foo-bar.md", readme)
         # the state box names the test file as stamped (underscores, not the slug)
         self.assertIn("tests/test_01_foo_bar.py", readme)
         self.assertTrue((self.root / "tests" / "test_01_foo_bar.py").is_file())
         self.assertIn('"_prov": {"run": run.run_id}', script)  # rows name their run
-        self.assertLess(len(proto.splitlines()), 53)  # was 102 lines of guide prose
+        self.assertLess(len(proto.splitlines()), 53)  # a protocol, not guide prose
 
     def test_low_with_a_model_keeps_criterion_promises_and_the_null_lane(
         self,
@@ -543,7 +539,7 @@ class Exp(unittest.TestCase):
         ):
             self.assertIn(needle, proto, needle)
         # the stamped skeleton reads those constants: its config builds
-        # (a commented hint made every first run a TypeError, 2026-10-15)
+        # (a commented hint would make every first run a TypeError)
         import importlib.util
         import sys
 
@@ -558,9 +554,9 @@ class Exp(unittest.TestCase):
 
     def test_the_stamped_prepare_step_runs_under_the_promise_block(self) -> None:
         """runlog refuses any run under the block whose config lacks a
-        registered constant, the prepare step too; the stamped 00_prepare.py
-        passed none, so the first step of every area with a model refused
-        (cold Sonnet, judge at high, 2026-10-14)."""
+        registered constant, the prepare step too: the stamped 00_prepare.py
+        passes them, or the first step of every area with a model would
+        refuse."""
         import subprocess
         import sys
 
@@ -604,7 +600,7 @@ class Exp(unittest.TestCase):
         r = run()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("1 items ->", r.stdout)
-        # the run binds the raw file it read (audit 2026-10-21: none recorded)
+        # the run binds the raw file it read
         import json
 
         # the refused attempt left its record too; the written run is the newest
@@ -622,10 +618,10 @@ class Exp(unittest.TestCase):
     def test_the_stamped_criterion_holds_a_lane_exactly_at_null_plus_margin(
         self,
     ) -> None:
-        """[criterion-1] compared floats: 5/12 + 0.25 is 0.6666666666666667, 8/12 is
-        0.6666666666666666, so a lane exactly at null + margin failed (the
-        preflight audit of a cold Sonnet probe, 2026-10-14). The twin: one
-        item below the bar still fails."""
+        """[criterion-1] compares exactly: as floats 5/12 + 0.25 is
+        0.6666666666666667 and 8/12 is 0.6666666666666666, so a lane exactly
+        at null + margin would fail. The twin: one item below the bar still
+        fails."""
         import importlib.util
         import sys
 
@@ -662,9 +658,8 @@ class Exp(unittest.TestCase):
         )
 
     def test_a_counting_area_keeps_its_kind(self) -> None:
-        """An agent told to train a random forest stamped `--kind compute`
-        (docs/notes/2026-10-26-kind-choice.md); the kind questions decide
-        (`KIND_QUESTIONS`, the `--kind` help and the refusal). A counting
+        """The kind questions decide the kind (`KIND_QUESTIONS`, the `--kind`
+        help and the refusal; docs/notes/2026-10-26-kind-choice.md). A counting
         area stamped as a computation keeps that kind in its head."""
         quiet(scaffold.stamp_area, self.root, "count-docs", "low", kind="compute")
         proto = next(self.root.glob("experiments/*-count-docs/PROTOCOL-*.md"))
@@ -693,11 +688,9 @@ class Exp(unittest.TestCase):
         return area, proto, pid
 
     def test_a_kind_changed_before_the_run_keeps_the_work(self) -> None:
-        """The next steps once said `rm -r` the area and stamp it anew: the
-        explore file moved into the area went with it, and the computation's
-        test under tests/ survived and was skipped by the new stamp — a fit
-        script beside a test expecting COUNT_FIELD (review 2026-10-26).
-        `--change-kind` keeps the explore file and the written Question,
+        """Removing the area and stamping it anew would take the explore
+        file moved into the area with it and leave the computation's test
+        under tests/ beside a fit script. `--change-kind` keeps the explore file and the written Question,
         keeps the id, and stamps the fit's scripts and test whole."""
         area, proto, pid = self._compute_area_with_work()
         explore = area / "explore" / "foo-bar.py"
@@ -837,11 +830,11 @@ class Exp(unittest.TestCase):
         return self.area()
 
     def test_a_template_upgrade_is_no_edit_of_the_stamp(self) -> None:
-        """ "Edited since the stamp" compared the area with the INSTALLED
-        labkit's templates: after a pin raise an unedited stamp read as the
-        user's edit, and `--change-kind` held for nothing (audit 2026-10-27,
-        criterion-13). Unchanged since the commit that added it, under another pin,
-        it is the earlier labkit's stamp: replaced, the commit named. The
+        """ "Edited since the stamp" is not judged against the INSTALLED
+        labkit's templates alone, or after a pin raise an unedited stamp
+        would read as the user's edit. Unchanged since the commit that added
+        it, under another pin, it is the earlier labkit's stamp: replaced,
+        the commit named. The
         twin: an edit since that commit still holds."""
         measure = dict(
             (dest, tmpl) for tmpl, dest in standard_contract.COMPUTE.scripts
@@ -898,12 +891,10 @@ class Exp(unittest.TestCase):
     def test_an_edit_is_no_earlier_stamp_after_a_rename_a_re_add_or_a_shallow_clone(
         self,
     ) -> None:
-        """The commit that "added" the file was taken as the stamp: a rename
-        after an edit, a delete and re-add with one's own text, and a
-        shallow clone's only commit each made an edit read as the earlier
-        labkit's stamp, and `--change-kind` replaced it (cold review
-        2026-10-27). The first addition is followed through renames; a
-        re-add or a shallow clone is no evidence. The twin: a rename
+        """The stamp is the file's first addition, followed through renames;
+        a delete and re-add with one's own text, or a shallow clone's only
+        commit, is no evidence, so `--change-kind` never replaces an edit as
+        the earlier labkit's stamp. The twin: a rename
         without an edit is still the earlier stamp."""
         old = "#!/usr/bin/env python3\n# an earlier labkit's line\n"
         new = "#!/usr/bin/env python3\n"
@@ -991,7 +982,7 @@ class Exp(unittest.TestCase):
     def test_an_edit_committed_with_the_stamp_still_holds(self) -> None:
         """Without a pin raise this labkit's templates are the ones the area
         was stamped from: a difference committed with the stamp is an edit
-        and holds, as before — also when a lock file appears later, which
+        and holds — also when a lock file appears later, which
         names no other labkit than the pin it had."""
         area, _, _ = self._compute_area_with_work()
         script = area / "scripts" / "01_measure.py"
@@ -1026,9 +1017,7 @@ class Exp(unittest.TestCase):
         self,
     ) -> None:
         """`--report-file PATH` writes `report = "PATH"` into the stamped
-        head — the file that owes the protocol's result (pressure pilot
-        2026-10-29: three of six agents deleted the run id from REPORT.md
-        and the commit passed). With a model the line stays in [protocol];
+        head — the file that owes the protocol's result. With a model the line stays in [protocol];
         `--change-kind` keeps it; a path the head refuses is refused at the
         stamp, and a promotion takes none."""
         quiet(
@@ -1080,7 +1069,7 @@ class Exp(unittest.TestCase):
     def test_a_reference_is_stamped_into_the_head_and_refused_on_a_bar(self) -> None:
         """`--reference VALUE[±TOL]` stamps a computation's `[reference]`
         table — the stated value the task asks the kept number (`--kept`) to
-        match (2026-10-29); with a report file the `report` line stays in
+        match; with a report file the `report` line stays in
         [protocol]; a fit or an apply is refused naming [C] with nothing
         written, `--change-kind` to one is held by the written table, and
         `--relation` without `--reference` is an argument error."""
@@ -1097,7 +1086,7 @@ class Exp(unittest.TestCase):
             scaffold.parse_reference_flag("3+-0.5", None, None).tolerance, 0.5
         )
         for spec, relation, said in (
-            # the key of 0.23's `KEY=VALUE` is the [kept] key's now
+            # a key in the value is refused: the key compared is the [kept] one
             ("lines_mean=0.62±0.01", None, "the key compared is the kept number's"),
             ("abc", None, "are numbers"),
             ("0.2", None, "names no tolerance"),
@@ -1239,10 +1228,10 @@ class Exp(unittest.TestCase):
         self.assertIsNone(scaffold.parse_kept_flags(None, None))
 
     def test_explore_refuses_the_flags_of_an_area_stamp(self) -> None:
-        """`--explore` dropped `--kind`, `--repeat-cost`, `--model` and
-        `--report` without a word: the person believed them stamped. Each is
-        refused with nothing written; the twin, `--explore` alone, stamps
-        (below)."""
+        """`--explore` beside `--kind`, `--repeat-cost`, `--model` or
+        `--report` would drop them, and the person believe them stamped:
+        each is refused with nothing written; the twin, `--explore` alone,
+        stamps (below)."""
         argv = ["exp", "foo-bar", "--repo", str(self.root), "--explore"]
         explore = self.root / "experiments" / "explore" / "foo-bar.py"
         for extra in (
@@ -1269,9 +1258,9 @@ class Exp(unittest.TestCase):
     def test_change_kind_with_explore_is_refused_before_anything_is_written(
         self,
     ) -> None:
-        """`--explore` returned before the `--change-kind` guard: the pair
-        stamped the explore file and exited 0 (audit 2026-10-27, C13). It is
-        refused with nothing written; the twin, `--explore` alone, stamps."""
+        """`--explore` with `--change-kind` is refused with nothing written,
+        never the explore file stamped with exit 0; the twin, `--explore`
+        alone, stamps."""
         argv = ["exp", "foo-bar", "--repo", str(self.root)]
         explore = self.root / "experiments" / "explore" / "foo-bar.py"
         err = io.StringIO()
@@ -1304,8 +1293,8 @@ class Exp(unittest.TestCase):
         _, proto, _ = self._compute_area_with_work()
         quiet(scaffold.stamp_area, self.root, "other", "high", kind="fit")
         (high,) = (self.root / "experiments").glob("*-other")
-        # the full form carries the † fields from the stamp (one-explainer plan,
-        # step B); `--report` serves an area stamped before that: drop them
+        # the full form carries the † fields from the stamp; `--report`
+        # serves an area stamped without them: drop them
         stripped = high / "PROTOCOL-other.md"
         stripped.write_text(
             re.sub(
@@ -1327,11 +1316,9 @@ class Exp(unittest.TestCase):
         }
 
     def test_a_write_that_dies_midway_leaves_the_protocol_whole(self) -> None:
-        """`--report` and `--change-kind` rewrote the protocol in place
-        (`Path.write_text`): a write that died midway left it truncated
-        (audit 2026-10-27, doubled homes: protocols written non-atomically).
-        Both write through `files.write_atomic`, which keeps the old file's
-        mode."""
+        """`--report` and `--change-kind` write the protocol through
+        `files.write_atomic`, which keeps the old file's mode: a write that
+        dies midway leaves it as it was, never truncated."""
         for flag, (protocol, call) in self._rewrites().items():
             with self.subTest(flag=flag):
                 before = protocol.read_text(encoding="utf-8")
@@ -1360,11 +1347,10 @@ class Exp(unittest.TestCase):
         self.assertEqual(script.read_text(encoding="utf-8"), before)
 
     def test_a_kind_change_that_fails_at_the_protocol_changes_nothing(self) -> None:
-        """The scripts were written before the protocol: a protocol write that
-        died left the scripts of the new kind beside the old protocol, and a
-        second `--change-kind` was refused as "edited since the stamp"
-        (phase-1 leftover). Every file is staged first (`files.write_all`):
-        the area stays as it was, and the change runs again."""
+        """Every file is staged first (`files.write_all`): a protocol write
+        that dies leaves no scripts of the new kind beside the old protocol,
+        the area stays as it was, and the change runs again, not refused as
+        "edited since the stamp"."""
         area, _, _ = self._compute_area_with_work()
 
         def snapshot() -> dict[str, str]:
@@ -1389,9 +1375,8 @@ class Exp(unittest.TestCase):
         self.assertIn(scaffold.KIND_QUESTIONS, str(caught.exception))
 
     def test_init_exp_from_inside_the_area_finds_the_lab(self) -> None:
-        """Run from an area directory, labkit-init called the area "not a lab
-        repo" (cloud judge probe, 2026-10-14); it finds the lab above, as git
-        finds its repo."""
+        """Run from an area directory, labkit-init finds the lab above, as
+        git finds its repo, and never calls the area "not a lab repo"."""
         import os
 
         quiet(scaffold.stamp_area, self.root, "foo-bar", kind="fit")
@@ -1428,8 +1413,8 @@ class Exp(unittest.TestCase):
         )
 
     def test_the_stamped_measure_refuses_rows_of_another_prompt(self) -> None:
-        """Resume by id alone kept the old prompt's answers under a new one
-        (cloud judge probe, 2026-10-14). The stamped measure() hands its
+        """Resume by id alone would keep the old prompt's answers under a
+        new one: the stamped measure() hands its
         instrument to the Store: rows of another prompt stop it before any
         call; rows of its own resume."""
         import importlib.util
@@ -1473,9 +1458,9 @@ class Exp(unittest.TestCase):
         self.assertEqual(calls.call_count, 1)  # only registered:b was asked
 
     def test_the_probe_names_the_area_test_file_and_its_case_list(self) -> None:
-        """The probe printed `tests/test_<NN>_<name>.py PARSER_CASES`: the
-        placeholder unreplaced in the scripts, and a list the test computes
-        rather than holds (cloud judge probe, 2026-10-14)."""
+        """The stamped probe names the area's test file, never the
+        placeholder `tests/test_<NN>_<name>.py`, and the case list the test
+        holds."""
         quiet(scaffold.stamp_area, self.root, "foo-bar", model="haiku", kind="apply")
         script = (self.area() / "scripts" / "01_measure.py").read_text(encoding="utf-8")
         # the area names its test; `lanes` prints "paste into <it> PROBE_CASES"
@@ -1519,8 +1504,7 @@ class Exp(unittest.TestCase):
         self.assertRegex(req, r"(?m)^pytest$")
 
     def test_minutes_without_a_model_stamps_the_estimator_skeleton(self) -> None:
-        """2026-10-17: nine of nine pilot attempts were classical ML and got the
-        prompt skeleton. Without `--model` at high repeat cost the instrument is
+        """Without `--model` at high repeat cost the instrument is
         an estimator: no prompt, no parser, a permuted-label null lane, the
         promise constants in its words, and the model-shaped fields answered."""
         from labkit.formats import promises, protocol_check
@@ -1537,10 +1521,10 @@ class Exp(unittest.TestCase):
         self.assertIn("**Model / tool:** n/a — no model call", proto)
         model_line = next(ln for ln in proto.splitlines() if "**Model / tool:**" in ln)
         self.assertNotIn("<", model_line)  # an n/a with a `<…>` tail read as filled
-        # not owed without a model, so not stamped at all (audit 2026-10-27,
-        # third, I9): an "n/a" answered a field nobody asks for
+        # not owed without a model, so not stamped at all: an "n/a" would
+        # answer a field nobody asks for
         self.assertNotIn("**Prompt (verbatim, per variant):**", proto)
-        self.assertNotIn("```text", proto)  # the prompt's example block is gone
+        self.assertNotIn("```text", proto)  # no prompt example block
         self.assertNotIn("**Parser cases harvested:**", proto)  # no model text to parse
         self.assertFalse(protocol_check.model_named(proto))
         block = promises.parse_block(proto)
@@ -1781,9 +1765,7 @@ class Exp(unittest.TestCase):
         """An apply that registers a null order (`NULL_ORDER`) and no band:
         the stamped test's null rows name their donors as the run's do, so
         every test runs, the band tests only where a band is registered.
-        Reference pilot trial 2, sts512 (2026-11-01): the synthetic null rows
-        carried no donors, nine of eleven tests raised "registers no
-        null_band", and finalize refused a correct run
+        Null rows without donors would raise "registers no null_band"
         (docs/notes/2026-11-01-registered-null-order.md). The twins: with a
         band beside the order it passes too; without the order, the same
         missing band is refused."""
@@ -1826,10 +1808,8 @@ class Exp(unittest.TestCase):
         self.assertIn("registers no null_band", r.stdout)
 
     def test_the_stamped_area_test_holds_the_registered_null_band(self) -> None:
-        """AGENTS.md calls the stamped promise numbers examples to set; the
-        area test asserted the example band, 1, and failed at 5 — a pilot
-        agent set its band back to 1 to pass it (labkit-paper area 15, round
-        2, PubMedQA, D4). Every registered band passes the null-band tests
+        """AGENTS.md calls the stamped promise numbers examples to set, so
+        the area test asserts no example band: every registered band passes the null-band tests
         while the formula is right; the twins, a band one item narrow and a
         one-sided band, fail at the example and at another width."""
         quiet(
@@ -1896,8 +1876,8 @@ class Exp(unittest.TestCase):
     def test_the_model_stamp_holds_three_answer_words_and_unbalanced_gold(
         self,
     ) -> None:
-        """The null lane sat at half the items, right only for two balanced
-        labels — PubMedQA answers yes, no or maybe on 22/21/7 gold. With
+        """Half the items is chance only for two balanced labels —
+        PubMedQA answers yes, no or maybe on 22/21/7 gold. With
         three answer words the stamped test runs, chance is what the lane's
         own answers reach against the gold permuted, and the parser reads an
         answer word in any case; the twin, a lane that tracks the gold, is
@@ -1985,8 +1965,8 @@ class Exp(unittest.TestCase):
         self.assertIsNone(out["criterion_1_pass"])
 
     def test_the_stamp_declares_the_model_in_the_head(self) -> None:
-        """Phase 4 (2026-10-21): `--model <alias>` writes `[model] alias`, a bare
-        `--model` its placeholder, no flag no table; the prose field asks for
+        """`--model <alias>` writes `[model] alias`, a bare `--model` its
+        placeholder, no flag no table; the prose field asks for
         the instrument's sentence, not the alias."""
         quiet(
             scaffold.stamp_area,
@@ -2046,10 +2026,10 @@ class Exp(unittest.TestCase):
         self.assertFalse(f.exists())
 
     def test_the_step_after_explore_is_a_command_that_runs(self) -> None:
-        """After `--explore` the printed next step was `labkit-init exp
-        foo-bar`, which is refused without `--kind` (audit 2026-10-27, B4).
-        It prints one complete command per kind with the questions that
-        choose; each runs from the lab and takes the explore file along."""
+        """After `--explore` the printed next step is one complete command
+        per kind with the questions that choose, never `labkit-init exp
+        foo-bar`, which is refused without `--kind`; each runs from the lab
+        and takes the explore file along."""
         import os
         import shlex
 
@@ -2099,8 +2079,7 @@ class Exp(unittest.TestCase):
 class AreaNumbers(unittest.TestCase):
     """A new area's number is one above every number the repository holds —
     this tree, `_archiv/`, every branch, every other worktree — and
-    `labkit-init numbers` holds one number per area (labkit-paper,
-    2026-10-27: two branches of one repo each had their next area at 12)."""
+    `labkit-init numbers` holds one number per area."""
 
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -2224,7 +2203,7 @@ class Report(unittest.TestCase):
     """--report answers what a model-free protocol cannot: seed, noise, parser."""
 
     def stamped(self, model: bool | str) -> str:
-        """An area stamped with MODEL (the head's `[model]`, phase 4), then promoted."""
+        """An area stamped with MODEL (the head's `[model]`), then promoted."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             scaffold.stamp_lab(root, "lab")
@@ -2234,8 +2213,8 @@ class Report(unittest.TestCase):
             return proto.read_text(encoding="utf-8")
 
     def test_no_model_fills_the_parser_field_and_leaves_randomness_owed(self) -> None:
-        """2026-10-17: a seeded estimator owes its randomness fields; --report
-        no longer writes "no seed, spread 0" into them (Sonnet v2 t5)."""
+        """A seeded estimator owes its randomness fields; --report writes no
+        "no seed, spread 0" into them."""
         text = self.stamped(False)
         self.assertNotIn("**Parser cases harvested:**", text)  # no model text to parse
         self.assertNotIn("n/a — deterministic", text)
@@ -2249,8 +2228,8 @@ class Report(unittest.TestCase):
 class OwedCut(unittest.TestCase):
     """The full form stamps only the fields its kind and model owe — the
     rule the checker applies (`protocol_check.not_owed`); a high
-    computation without a model was stamped a data profile, a prompt and
-    instrument checks (audit 2026-10-27, third, I9)."""
+    computation without a model gets no data profile, prompt or instrument
+    checks."""
 
     def test_a_high_computation_is_stamped_without_model_and_criterion_fields(self):
         with tempfile.TemporaryDirectory() as d:
@@ -2269,8 +2248,8 @@ class OwedCut(unittest.TestCase):
         self.assertIn("**Question / hypothesis:**", compute)
 
     def test_raw_output_asks_for_the_runs_rows_not_the_probes(self):
-        # the estimator stamp asked for rows "as --probe prints them" in a
-        # field written after the run (audit 2026-10-27, third, I11)
+        # a field written after the run asks for the run's rows, not rows
+        # "as --probe prints them"
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "lab"
             scaffold.stamp_lab(root, "lab")
@@ -2282,8 +2261,7 @@ class OwedCut(unittest.TestCase):
         self.assertNotIn("**Raw output", fit)
 
     def test_a_fit_with_a_model_is_not_stamped_no_model_call(self):
-        # the estimator stamp wrote "n/a — no model call" beside `[model]
-        # alias` (audit 2026-10-27, third, I12)
+        # "n/a — no model call" stands only where no `[model] alias` does
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "lab"
             scaffold.stamp_lab(root, "lab")
@@ -2339,10 +2317,9 @@ if __name__ == "__main__":
 
 
 class ModelNamed(unittest.TestCase):
-    """`--report` asks `protocol_check.model_named`, since phase 4 the head's
-    `[model]` table: prose that says "—", "none" or names an alias decides
-    nothing (until 0.100.0 a regex over the Model / tool line did, and a `—`
-    or a `†` label read as "a model", audit 2026-10-15)."""
+    """`--report` asks `protocol_check.model_named`, the head's `[model]`
+    table: prose that says "—", "none" or names an alias decides nothing,
+    and a `—` or a `†` label never reads as "a model"."""
 
     PARSER = "- **Parser cases harvested:** <cases>\n"
 

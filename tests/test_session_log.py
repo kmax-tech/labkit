@@ -1,6 +1,5 @@
 """The stop hook keeps a session log: which session, which transcript, which
-runs — so a run can be traced back to what the agent did before it
-(2026-10-07)."""
+runs — so a run can be traced back to what the agent did before it."""
 
 import contextlib
 import io

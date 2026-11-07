@@ -62,7 +62,7 @@ class Head(unittest.TestCase):
         self.assertIn(fragment, str(cm.exception))
 
     def test_a_typo_in_a_choice_is_loud(self):
-        # `Cost: second` used to read as undeclared, i.e. as `high`
+        # a typo is loud, never read as undeclared, i.e. as `high`
         self.assertRejects(
             head(repeat_cost="second"),
             "repeat_cost = 'second' — one of low, high",
@@ -91,9 +91,9 @@ class Head(unittest.TestCase):
         )
 
     def test_the_report_is_optional_and_reads_back_normalised(self):
-        """`report` registers the file that owes the protocol's result
-        (2026-10-29: three of six agents deleted the run id from REPORT.md
-        and the commit passed); absent, nothing is owed."""
+        """`report` registers the file that owes the protocol's result, so a
+        REPORT.md whose run id is deleted does not pass the commit; absent,
+        nothing is owed."""
         self.assertIsNone(protocol_block.head(head()).report)
         self.assertEqual(
             protocol_block.head(head(report="REPORT.md")).report, "REPORT.md"
@@ -123,7 +123,7 @@ class Head(unittest.TestCase):
         self.assertRejects(
             head().replace('"0.26"', '"0.18"'), "reproduced with the labkit release"
         )
-        # a protocol with runs is never offered the conversion (review 2026-10-28)
+        # a protocol with runs is never offered the conversion
         self.assertRejects(
             head().replace('"0.26"', '"0.18"'),
             "only a protocol not yet run may be updated",
@@ -148,10 +148,10 @@ if __name__ == "__main__":
 
 class TomlString(unittest.TestCase):
     """`toml_string` is the one writer of a TOML string labkit writes (a
-    promise sentence, a finding's reason and effect). Until now it was held
-    only through its callers; this table holds the writer itself: every
-    value reads back through tomllib unchanged and stays on one line, so the
-    fence walker and the one-line decision regex never cut it."""
+    promise sentence, a finding's reason and effect). This table holds the
+    writer itself, not only through its callers: every value reads back
+    through tomllib unchanged and stays on one line, so the fence walker and
+    the one-line decision regex never cut it."""
 
     TRICKY = (
         'a "quoted" word',
@@ -195,10 +195,9 @@ def with_result(block: str, body: str) -> str:
 
 class DeclaredRun(unittest.TestCase):
     """`[result] run` is the one declaration that a protocol reports a
-    number (phase 3 of the 1.0 line, 2026-10-21): absent while exploring,
-    written by `protocol-fill --from-run`, exact or unreadable — a typed id
-    that is no run id runlog writes is refused where it stands, not read as
-    a citation the gates then chase."""
+    number: absent while exploring, written by `protocol-fill --from-run`,
+    exact or unreadable — a typed id that is no run id runlog writes is
+    refused where it stands, not read as a citation the gates then chase."""
 
     def test_no_table_is_no_declaration(self):
         self.assertIsNone(protocol_block.declared_run(head(repeat_cost="low")))
@@ -237,9 +236,9 @@ class DeclaredRun(unittest.TestCase):
 
 
 class ModelTable(unittest.TestCase):
-    """`[model]` says a model is in the loop (phase 4 of the 1.0 line,
-    2026-10-21): the alias, the compared arms finalize holds to the run;
-    absent is a computation or an estimator. Exact or unreadable, like the head."""
+    """`[model]` says a model is in the loop: the alias, the compared arms
+    finalize holds to the run; absent is a computation or an estimator.
+    Exact or unreadable, like the head."""
 
     def test_no_table_is_no_model(self):
         self.assertIsNone(protocol_block.model(head(repeat_cost="low")))

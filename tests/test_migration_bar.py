@@ -1,16 +1,14 @@
-"""The measuring bar for the 1.0 line — today's mechanical contract at every
-transition the migration replaces, pinned literally (TODO "Reihenfolge",
-2026-10-21, phase 1).
+"""The measuring bar for the 1.0 line — the mechanical contract where the
+gates read prose or typed sources, pinned literally.
 
 The line: machine contracts structured, the explanation as prose, the
-result rendered from bound sources. Phases 2–5 move what the gates read out
-of the Markdown prose and into the TOML head, the run records and the
-findings files. This file names what reads prose for a decision today, what
-declares a result reported, which fields each lane owes and what
-`--from-run` writes — so that every phase changes a line here on purpose
-and nothing changes by accident. What a cold probe measures (the number,
-its binding, misuse, cost) lives in `docs/usability/`; the flows are in
-`tests/test_end_to_end.py`; this is the inventory between them.
+result rendered from bound sources: the gates read the TOML head, the run
+records and the findings files. This file names what reads prose for a
+decision, what declares a result reported, which fields each lane owes and
+what `--from-run` writes — so that a change to any of them changes a line
+here on purpose and nothing changes by accident. What a cold probe measures
+(the number, its binding, misuse, cost) lives in `docs/usability/`; the
+flows are in `tests/test_end_to_end.py`; this is the inventory between them.
 """
 
 from __future__ import annotations
@@ -34,7 +32,7 @@ RUN = "2026-10-21T10-00-00_abcd"
 
 class ProseValueReaders(unittest.TestCase):
     """Every function that reads a value out of the protocol's prose and
-    steers a decision with it — the inventory phases 3–5 shrink. A reader
+    steers a decision with it — an inventory that only shrinks. A reader
     leaves this list when its question is answered from a typed source
     (`[result]`, `[model]`, `[gate]`, the run record, `audits/*.toml`), and
     the removal is a conscious edit here, never a side effect."""
@@ -80,7 +78,7 @@ class ProseValueReaders(unittest.TestCase):
 
 
 class Declaration(unittest.TestCase):
-    """What declares a result reported since phase 3: `[result] run` in the
+    """What declares a result reported: `[result] run` in the
     TOML head, written by `--from-run`. The four shapes it tells apart;
     the Recorded results line is a generated section and declares nothing by itself."""
 
@@ -129,7 +127,7 @@ class LaneDuties(unittest.TestCase):
     """Which prose fields each lane owes today, as `protocol_check.owed`
     answers from the head — its `[model]` table decides the cut. The lists are the
     standard's decision (LAB-003, LAB-004, LAB-017), not the format's:
-    phase 5 may change how a field is recognised, not whether it is owed —
+    a format change may change how a field is recognised, not whether it is owed —
     a change to a list here is a change of the standard."""
 
     LOW = [
@@ -220,9 +218,9 @@ class LaneDuties(unittest.TestCase):
         self.assertEqual(self.owed(frozen), (self.FULL_MUST + self.FULL_SHOULD, []))
 
     def test_the_full_form_owes_model_and_criterion_fields_only_with_them(self):
-        # a high computation without a model was asked for its data profile,
-        # prompt, instrument and resolution checks (audit 2026-10-27, third,
-        # I9); a fit without a model keeps its instrument and criterion fields
+        # a high computation without a model owes no data profile, prompt,
+        # instrument or resolution check; a fit without a model keeps its
+        # instrument and criterion fields
         def must(kind: str, model: str | None = None) -> list[str]:
             text = head(
                 repeat_cost="high",
@@ -245,8 +243,8 @@ class LaneDuties(unittest.TestCase):
             self.assertNotIn(label, fit)
 
     def test_a_declared_result_makes_the_report_fields_due(self):
-        """Since phase 5 the declaration makes the result due; a run id in the
-        Runs list declares nothing (until 0.101.0 it did, minus "prepare")."""
+        """The declaration makes the result due; a run id in the Runs list
+        declares nothing."""
         frozen = head(
             repeat_cost="high",
             kind="fit",
@@ -272,9 +270,9 @@ class LaneDuties(unittest.TestCase):
 
 
 class WriteBack(unittest.TestCase):
-    """What `--from-run` writes from the run and what stays the author's.
-    Phase 3 renders Recorded results and the Limitation lines from the run and the
-    record instead; the Result stays the author's two sentences throughout."""
+    """What `--from-run` writes from the run and what stays the author's:
+    Recorded results and the Limitation lines are rendered from the run and the
+    record; the Result stays the author's two sentences."""
 
     def test_from_run_writes_the_answer_and_the_author_writes_the_rest(self):
         self.assertEqual(protocol_result.WRITTEN_BY_RUN, ("Recorded results",))

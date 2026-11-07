@@ -1,12 +1,10 @@
 """Tests for intent-check's metrics choice: newest WITH intent keys.
 
-Why this is tested: 2026-09-09, area 71 — the check defaulted to the newest
-runs/*/metrics.json, which was the producer's, and reported every promise as
-unimplemented. The fix must pick the newest metrics file that reports any
-intent key, fall back to the newest overall when none does (the honest
-"nothing implemented yet"), and say when it skipped newer runs. Since the
-binding, the choice runs among the completed runs bound to the protocol's
-id (`test_intent_check_binding.py`).
+Why this is tested: the newest runs/*/metrics.json may be a producer's,
+which reports no promise. The choice picks the newest metrics file that
+reports any intent key and says when it skipped newer runs; when none
+does, no run answers. The choice runs among the completed runs bound to
+the protocol's id (`test_intent_check_binding.py`).
 """
 
 import contextlib
@@ -93,10 +91,8 @@ class TestMetricsChoice(unittest.TestCase):
             self.assertIn("skipped 1 newer bound run(s)", out)
 
     def test_no_run_with_keys_is_no_answer(self):
-        """Until 0.96.0 the newest run was taken with a warning and every
-        promise read as unimplemented; finalize blocked on the same state.
-        One telling (`AnsweringRun.explain`): a probe or producer run is no
-        answer, exit 2."""
+        """One telling with finalize (`AnsweringRun.explain`): a probe or
+        producer run is no answer, exit 2."""
         with tempfile.TemporaryDirectory() as d:
             proto = _area(
                 d,
@@ -127,9 +123,9 @@ class TestMetricsChoice(unittest.TestCase):
 
 
 class TestSeriesArea(unittest.TestCase):
-    """A series area (LAB-061 Sub-experiment series carry their number in the name: PROTOCOL-s1-*, PROTOCOL-s2-*, ...) once made the
-    automatic choice a guess that had to refuse (2026-09-26). The binding
-    turns it into a filter; naming the run explicitly still works."""
+    """In a series area (LAB-061 Sub-experiment series carry their number in the name: PROTOCOL-s1-*, PROTOCOL-s2-*, ...): the binding makes
+    the automatic choice a filter, not a guess; naming the run explicitly
+    works too."""
 
     def test_explicit_metrics_works_in_a_series_area(self):
         with tempfile.TemporaryDirectory() as d:

@@ -3,7 +3,7 @@
 Each pair below is a declared copy no reader would compare by hand: the
 editor's search exclusions are "the same list as pyrightconfig.json's
 exclude", and `models.toml` must define the alias `labkit-audit` calls by
-default. Audit 2026-10-27 (second), D: neither was tied.
+default.
 
     .venv/bin/python -m pytest tests/test_template_ties.py
 """
@@ -36,8 +36,8 @@ class TemplateTies(unittest.TestCase):
     def test_the_guide_states_a_required_check_as_the_decision_list_does(self):
         """The work order of a finding's `check:` is one wording: the
         decision list and the follow-up's holds print `findings.check_order`,
-        the agent guide states it (repair case, 2026-10-28: "its requested
-        diagnostic run and assessed" left the check unwritten)."""
+        the agent guide states it — another wording can leave the check
+        unwritten."""
         from labkit.formats import findings
 
         guide = TEMPLATES.parent / "docs" / "agent-guide.md"

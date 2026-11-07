@@ -4,12 +4,12 @@ such; it is never read as "no journal there".
 The journal is appended to, never cut (`attempts.area_gaps`): its text at
 HEAD and in the index is read through `repo.text_at`, whose None is both
 "not there" and "git failed". With the journal's blob missing from the
-object store, a journal cut in the tree or in the commit raised no blocker
-at all once its copy in the git directory was gone (a fresh clone) — the
-protection passed in silence; `expected_evidence` reported no error for
-the unreadable journal, though it promises to. Each failure here is real:
-the blob removed. The twin: the readable journal cut is held as cut; the
-recovery: the blob restored, the cut is held again."""
+object store and its copy in the git directory gone (a fresh clone), a
+journal cut in the tree or in the commit is a blocker naming the unreadable
+journal, and `expected_evidence` reports it as an error — the protection
+never passes in silence. Each failure here is real: the blob removed. The
+twin: the readable journal cut is held as cut; the recovery: the blob
+restored, the cut is held again."""
 
 from __future__ import annotations
 

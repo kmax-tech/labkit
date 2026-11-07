@@ -36,7 +36,7 @@ def cli_reply(
 ) -> str:
     """A `claude -p --output-format json` reply as the CLI writes one when
     MODEL answers whole: one turn, no safety stop, MODEL alone in
-    `modelUsage` (fields observed on CLI 2.1.304, 2026-10-22). FIELDS
+    `modelUsage` (the fields of CLI 2.1.304). FIELDS
     replace or add keys; WITHOUT names one to drop."""
     body: dict[str, object] = {
         "type": "result",

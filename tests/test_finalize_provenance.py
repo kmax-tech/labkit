@@ -105,7 +105,7 @@ class Provenance(unittest.TestCase):
             "git_full": started,
             "protocol": {"id": PID, "path": "PROTOCOL-x.md"},
             "data": data or {},
-            # a frozen protocol's run recorded its block (0.71)
+            # a frozen protocol's run records its block
             "promises": _snapshot(self.area, protocol),
         }
         (d / "config.json").write_text(json.dumps(run_record(cfg)), encoding="utf-8")
@@ -164,8 +164,7 @@ class Provenance(unittest.TestCase):
     def test_a_tracked_source_changed_since_the_run_blocks(self):
         """The record is the one integrity evidence for every source: a
         tracked file regenerated after the run is not what the number came
-        from (pin route, 2026-11-06; until 0.112.0 a tracked source was
-        compared with nothing)."""
+        from."""
         self._run(SHORT, self._frozen(), commit=True)
         self.src.write_text('{"id": 2}\n', encoding="utf-8")
         _git(self.repo, "commit", "-qam", "regenerated")
@@ -225,8 +224,8 @@ class Provenance(unittest.TestCase):
     def test_untracked_source_way_out_names_both_documented_routes(self):
         # the standard's Fixed inputs: small shareable inputs are committed,
         # large or protected data are kept outside git on purpose, with
-        # source or access route and version in Data / scope (pilot t34: the
-        # blocker named `git add` alone)
+        # source or access route and version in Data / scope: the way out
+        # names both
         self._run(SHORT, self._frozen(), commit=False)
         line = self._blocker_line()
         self.assertIn("Next: if it is small and may legally be shared", line)
@@ -240,8 +239,7 @@ class Provenance(unittest.TestCase):
     def test_an_untracked_source_blocks_though_data_scope_names_its_checksum(self):
         """git status is the hygiene rule beside the record: matching bytes
         do not settle whether the data belong to the project, and a
-        checksum in Data / scope pins nothing any more (until 0.112.0 it
-        did)."""
+        checksum in Data / scope pins nothing."""
         sha = self._frozen()["cases"]["sha256"]
         protocol = SHORT + f"- **Data / scope:** cases.jsonl, release 3, sha256 {sha}\n"
         self._run(protocol, self._frozen(), commit=False)
@@ -251,10 +249,8 @@ class Provenance(unittest.TestCase):
         self.assertIn("neither tracked in git nor ignored by a rule", line)
 
     def test_an_ignored_source_with_the_recorded_bytes_passes(self):
-        """sts512 (labkit-paper area 23, 2026-11-06): a model directory the
-        sandbox excludes from git found no route and every attempt handed
-        over without a number. Ignored on purpose and the bytes the record
-        names, it passes, the rule named."""
+        """A model directory excluded from git on purpose, holding the bytes
+        the record names, passes, the rule named."""
         (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
         self._run(SHORT, self._frozen(), commit=True)  # `git add -A` skips it
         rc, out = self._finalize()
@@ -301,8 +297,7 @@ class Provenance(unittest.TestCase):
 
     def test_a_source_outside_the_repository_is_held_by_its_checksum(self):
         """A source that lies outside the repository (a model directory on
-        scratch) git can neither track nor ignore; its refusal named both as
-        ways out (audit 2026-11-07, S9). Held by the checksum the run
+        scratch) git can neither track nor ignore. Held by the checksum the run
         recorded, it passes with a note naming where it lies and what Data /
         scope owes."""
         self.held_outside(reached_by_link=False)
@@ -339,7 +334,7 @@ class Provenance(unittest.TestCase):
         self.assertIn(f"commit it (`git add {self.src}`)", line)
 
     def test_a_manifest_beside_an_untracked_source_pins_nothing(self):
-        """`MANIFEST.sha256` was a route until 0.112.0; it is not read."""
+        """`MANIFEST.sha256` is no route; it is not read."""
         self._run(SHORT, self._frozen(), commit=False)
         manifest = self.repo / "data" / "MANIFEST.sha256"
         manifest.write_text(
@@ -370,7 +365,7 @@ class Provenance(unittest.TestCase):
         )
 
     def test_an_ignored_directory_with_one_file_tracked_passes(self):
-        # pilot t21: benchmark/ excluded, only SOURCE.md committed (with -f);
+        # data/raw/ excluded, only SOURCE.md committed (with -f);
         # the other files are ignored on purpose and the digest holds them
         (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")
         geo, data = self._directory_source()

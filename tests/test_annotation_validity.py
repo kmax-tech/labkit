@@ -1,11 +1,10 @@
 """Tests for what a computation over a model's outputs claims (`[model]
 number_describes`, `annotation_validity`).
 
-Why this exists: until the 0.22 rename a `compute` head with a `[model]`
-table was refused — a model in the loop was taken to judge predictions. A
-share of model labels judges none, but it may claim a property of the data
+Why this exists: a model in the loop need not judge predictions. A share
+of model labels judges none, but it may claim a property of the data
 through the model as annotator ("30 % of the texts are causal"), and then
-the annotator's suitability needs evidence (TODO, `compute` plan item 2).
+the annotator's suitability needs evidence.
 labkit holds the claim and the evidence to each other and binds a protocol
 reference; whether the evidence carries the annotation stays the audit's.
 """
@@ -241,8 +240,8 @@ class Binding(unittest.TestCase):
 
 
 class Stamp(unittest.TestCase):
-    """`labkit-init exp --kind compute --model` stamps the claim keys
-    instead of refusing; the usability staging no longer rewrites it."""
+    """`labkit-init exp --kind compute --model` stamps the claim keys; the
+    usability staging keeps the kind."""
 
     def test_a_computation_with_a_model_is_stamped_with_its_claim(self):
         tmpl = scaffold.template(scaffold.PROTOCOL_TEMPLATE.name)
@@ -332,8 +331,7 @@ class Evidence(unittest.TestCase):
 
     def test_the_model_shown_is_the_one_the_validation_ran_with(self):
         """The run record names the model that answered; today's models.toml
-        may name another, and is shown only as such (review 2026-10-23,
-        finding 4)."""
+        may name another, and is shown only as such."""
         with tempfile.TemporaryDirectory() as d:
             share, pid = self._lab(
                 d, head(id=VALIDATION_ID, kind="apply", model="haiku", result=RUN)
@@ -524,8 +522,7 @@ class AffectedByEvidence(StaleEvidence):
     """A change to the bound validation stales the computation's audit
     (`StaleEvidence`), so the automatic choice of what to recheck — the
     stop, the commit's gate, report-check (`scope_sha.areas_touched`) —
-    picks the computation's area too, not only the validation's (review
-    2026-10-23, finding 3)."""
+    picks the computation's area too, not only the validation's."""
 
     def _changed(self, val: Path, root: Path) -> dict[str, Path]:
         return {

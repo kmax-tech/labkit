@@ -1,10 +1,10 @@
 """Tests for `runlog --wait`, `runlog start` and the run_kind='measurement' detach gate.
 
-Why this is tested: the 2026-08-13 scar — a long run started in a Claude Code
-foreground shell died with the tool timeout, which killed the whole process
-group including the batch lock, twice in one evening. The mechanics that
-prevent a repeat are (a) `runlog start` detaching the run into its OWN
-session, so a killed starter/waiter is harmless (Detach-Probe), and (b) the
+Why this is tested: a long run started in a Claude Code foreground shell
+dies with the tool timeout, which kills the whole process group including
+the batch lock. The mechanics that prevent it are (a) `runlog start`
+detaching the run into its OWN session, so a killed starter/waiter is
+harmless, and (b) the
 `run_kind='measurement'` gate refusing the foreground start before any work. `--wait`'s
 exit codes (0 idle / 2 crashed / 3 still running) are a contract scripts
 build on — a silent change would flip monitoring logic.
@@ -56,9 +56,9 @@ class TestWait(unittest.TestCase):
             self.assertIn("2026-09-09T10-00-00_done", out)
 
     def test_a_pre_schema_run_is_unreadable_and_ends_the_wait(self):
-        """A run without schema_version ended long ago; counting it as open
-        made --wait loop until --max-seconds (found porting 0.48). Since
-        0.89.0 its metadata is unreadable — a failed state, exit 2, named."""
+        """A run without schema_version ended long ago; counted as open it
+        would make --wait loop until --max-seconds. Its metadata is
+        unreadable — a failed state, exit 2, named."""
         with tempfile.TemporaryDirectory() as d:
             old = Path(d) / "runs" / "2026-08-01T10-00-00_old"
             old.mkdir(parents=True)
@@ -92,9 +92,9 @@ class TestWait(unittest.TestCase):
             self.assertIn("2026-09-09T10-00-00_dead", out)
 
     def test_a_crashed_run_names_why_it_broke_off(self):
-        """2026-10-23: a claude-cli answer another model wrote ends a run
-        loudly, and the reason stood on stderr alone; runlog keeps it with
-        the run, and --wait names it."""
+        """A claude-cli answer another model wrote ends a run loudly; runlog
+        keeps the reason with the run, not on stderr alone, and --wait names
+        it."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(
@@ -131,10 +131,10 @@ class TestWait(unittest.TestCase):
         self.assertIn("broke off with RuntimeError: claude-cli: requested m", out)
 
     def test_a_metric_json_cannot_hold_is_refused_naming_its_key(self):
-        """A numpy `bool_` passed to run.metrics() failed only when the run
-        wrote metrics.json — a bare json error naming no key, no failure.json
-        (reference pilot 2026-11-01, sts512). Refused at the call now, the run
-        breaks off with its reason recorded. The twin: plain values pass."""
+        """A numpy `bool_` passed to run.metrics() is refused at the call,
+        naming its key — not a bare json error when the run writes
+        metrics.json — and the run breaks off with its reason recorded. The
+        twin: plain values pass."""
 
         class NotJson:
             pass
@@ -158,8 +158,8 @@ class TestWait(unittest.TestCase):
 
     def test_an_unreadable_failure_json_is_refused_and_restored_ends_the_wait(self):
         """A failure.json that does not read says nothing of whether the run
-        broke off: `runlog AREA` and `--wait` ended in a traceback (review
-        of step 6). Refused naming the file; restored, the wait ends."""
+        broke off: `runlog AREA` and `--wait` refuse it naming the file, not
+        with a traceback; restored, the wait ends."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(
@@ -214,9 +214,8 @@ class TestWait(unittest.TestCase):
     def test_a_run_that_broke_off_while_its_process_lives_ends_the_wait(self):
         """A run that recorded why it broke off (failure.json) is not open,
         though the process that ran it lives on (a notebook, a test):
-        labkit-next and the twin refusal read it as ended, and `--wait`
-        waited for it until its process ended (2026-11-04, case F of the
-        liveness comparison). Real process; its twin is the live run
+        labkit-next, the twin refusal and `--wait` read it as ended, not open
+        until its process ends. Real process; its twin is the live run
         without failure.json above, which still waits (exit 3)."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
@@ -293,7 +292,7 @@ class TestWait(unittest.TestCase):
 
     def test_a_live_run_whose_script_cannot_be_checked_is_shown_as_running(self):
         """No `ps` in a sandbox: the pid exists, its command line cannot be
-        read; the status says to treat it as running (pubmedqa50-r2)."""
+        read; the status says to treat it as running."""
         with tempfile.TemporaryDirectory() as d:
             run_dir = Path(d) / "runs" / "2026-09-09T10-00-00_live"
             run_dir.mkdir(parents=True)
@@ -318,8 +317,8 @@ class TestWait(unittest.TestCase):
 
     def test_an_earlier_crash_beside_a_running_run_does_not_end_the_wait(self):
         """A start refused by the open run's output lock leaves a crashed
-        run; --wait ended at once with exit 2 and named only that one, and
-        the agent took the running run's lock for stale (pubmedqa50, 2026-11-01)."""
+        run; --wait does not end at once with exit 2 naming only that one,
+        which would make the running run's lock look stale."""
         with tempfile.TemporaryDirectory() as d:
             me = runs._command_of(os.getpid()) or "python"
             for name, pid, script in (
@@ -353,8 +352,8 @@ class TestWait(unittest.TestCase):
 
 class TestStartDetaches(unittest.TestCase):
     def test_child_runs_in_its_own_session_and_survives_to_completion(self):
-        """Detach-Probe (K4+K5): the started command has a session of its own
-        — killing the starter's group cannot take it down — and it finishes
+        """The started command has a session of its own — killing the
+        starter's group cannot take it down — and it finishes
         (marker file appears) with its output captured in the log."""
         with tempfile.TemporaryDirectory() as d:
             marker = Path(d) / "done.txt"
@@ -418,10 +417,10 @@ class TestStartDetaches(unittest.TestCase):
 
 
 class TestStartWaitsForTheRun(unittest.TestCase):
-    """`runlog start` returned at once, so `runlog AREA --wait` right after it
-    saw no open run and exited 0 before the child made its directory
-    (review 2026-10-27). It returns once the run exists, says when the
-    command ended first, and gives up with exit 3."""
+    """`runlog start` returns once the run exists, so `runlog AREA --wait`
+    right after it never sees an idle area before the child made its
+    directory; it says when the command ended first, and gives up with
+    exit 3."""
 
     def _start(self, d: str, script: str, *more: str) -> tuple[int, str]:
         """`runlog start D … -- python -c SCRIPT` from D; stdout and stderr."""
@@ -475,11 +474,10 @@ class TestStartWaitsForTheRun(unittest.TestCase):
 
 
 class TestWaitSeesADetachedStart(unittest.TestCase):
-    """`runlog start` stopped waiting after --max-seconds while its command
-    still prepared rows before `runlog.run` opened the record; `runlog AREA
-    --wait` then saw no open run and said "no open runs", exit 0, four
-    seconds before the run opened (labkit-paper area 15, round 2, t21, D6).
-    A command `runlog start` detached counts until it ends."""
+    """`runlog start` may stop waiting after --max-seconds while its command
+    still prepares rows before `runlog.run` opens the record; `runlog AREA
+    --wait` then must not say "no open runs", exit 0. A command `runlog
+    start` detached counts until it ends."""
 
     def _start(self, d: str, script: Path) -> tuple[int, str]:
         cwd = os.getcwd()
@@ -658,13 +656,12 @@ def _wait_for(d: str, max_seconds: str = "20") -> tuple[int, str]:
 
 
 class TestARefusedSecondWriterBesideALiveRun(unittest.TestCase):
-    """The scene of pubmedqa50-r2 (registered pilot part 1, 2026-11-01), with
-    real processes: a measurement writes its output under the lock; a
-    second start of the same script is refused by that lock and leaves a
+    """With real processes: a measurement writes its output under the lock;
+    a second start of the same script is refused by that lock and leaves a
     crashed run. The refusal says the holder is alive, `--wait` waits for
     the live run and names the crash as earlier, and ends 0 once the live
-    run finished — before, it ended at once with exit 2 naming the crash
-    alone, and the agent deleted the live run's lock."""
+    run finished — not at once with exit 2 naming the crash alone, which
+    makes the live run's lock look stale."""
 
     SCRIPT = (
         "import sys, time\n"
@@ -707,9 +704,8 @@ class TestARefusedSecondWriterBesideALiveRun(unittest.TestCase):
                     [sys.executable, str(script), d, "0"], env=env, cwd=d,
                     capture_output=True, text=True, timeout=60,
                 )  # fmt: skip
-                # refused at the start since the run of the same script is open
-                # (reference pilot 2026-11-01, task 15): no second run record,
-                # so nothing crashed beside the live run
+                # refused at the start since the run of the same script is open:
+                # no second run record, so nothing crashed beside the live run
                 self.assertNotEqual(second.returncode, 0)
                 self.assertIn("01_measure.py is still measuring", second.stderr)
                 self.assertIn("--wait", second.stderr)
@@ -737,13 +733,11 @@ class TestARefusedSecondWriterBesideALiveRun(unittest.TestCase):
 
 
 class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
-    """The started command died while it prepared its rows: `runlog AREA
-    --wait` said "no open runs — no finished runs", exit 0, and the error
-    stood in the log alone (review of D6, 2026-10-28). A started command
-    that ended without a run record, and not with exit 0, is a failed
-    state: `--wait` exits 2 naming its exit and log, the status names it,
-    until the next `runlog start` in the area says it once more and clears
-    it."""
+    """A started command that died while it prepared its rows — without a
+    run record, and not with exit 0 — is a failed state, not "no open runs
+    — no finished runs" with the error in the log alone: `--wait` exits 2
+    naming its exit and log, the status names it, until the next `runlog
+    start` in the area says it once more and clears it."""
 
     def test_a_command_that_dies_while_preparing_fails_the_wait(self):
         with tempfile.TemporaryDirectory() as d:
@@ -785,10 +779,9 @@ class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
             )
 
     def test_a_start_clears_only_the_failures_it_read_and_showed(self):
-        """Display and cleanup read the records apart: a command that ended
-        between the two reads lost its record unseen — an exit 7 neither
-        shown nor kept (review of 6e7e06b, 2026-10-28). The order is made
-        here: the start's display read sees the command running, then its
+        """Display and cleanup read the records apart, so a command that ends
+        between the two reads must keep its record — an exit 7 neither shown
+        nor kept would be lost unseen. The order is made here: the start's display read sees the command running, then its
         supervisor writes exit 7. It stays for the next `runlog AREA` and
         `--wait` (exit 2), its log untouched. The twin: the failure the
         start read and showed (exit 3) is cleared and not shown again."""
@@ -877,9 +870,9 @@ class TestAStartThatEndsWithoutARunIsAFailure(unittest.TestCase):
 
 class TestAWrapperIsNamedForWhatItIs(unittest.TestCase):
     """A wrapper process's run records another pid; beside that open run
-    the wrapper read "starting … no run record yet", like a second run still
-    to come (review of D6, 2026-10-28). It reads as a started process still
-    active and matched to no open run by its pid; with no open run at all it
+    the wrapper reads as a started process still active and matched to no
+    open run by its pid, not "starting … no run record yet" like a second
+    run still to come; with no open run at all it
     still reads "no run record yet"
     (`test_the_area_is_not_idle_while_the_started_command_has_no_record`)."""
 
@@ -908,8 +901,8 @@ class TestAWrapperIsNamedForWhatItIs(unittest.TestCase):
 
 class TestTheLabRootIsNoArea(unittest.TestCase):
     def test_runlog_on_the_lab_root_refuses(self):
-        # `runlog .` from the root read the repo as an area: "no open runs",
-        # and --wait idle while a measurement ran (audit 2026-10-27, third, I10)
+        # `runlog .` from the root is refused, not read as an area: "no open
+        # runs", and --wait idle while a measurement runs
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "experiments" / "01-x").mkdir(parents=True)
             for argv in ([d], [d, "--wait", "--max-seconds", "1"]):
@@ -925,9 +918,8 @@ class TestTheLabRootIsNoArea(unittest.TestCase):
 
 class TestStartNamesTheArea(unittest.TestCase):
     """The area is named, not guessed: the default log lands in its output/,
-    and the printed wait command names it. Before, the log went to output/
-    under the working directory, and a cold agent started from the repo root
-    looked for it in the area (cloud judge probe, 2026-10-14)."""
+    and the printed wait command names it — started from the repo root
+    too, not into output/ under the working directory."""
 
     def test_the_default_log_lands_in_the_area(self):
         with tempfile.TemporaryDirectory() as d:
@@ -980,14 +972,14 @@ class TestLongGate(unittest.TestCase):
         env.pop("LABKIT_DETACHED", None)
         env.update(extra_env)
         with tempfile.TemporaryDirectory() as d:
-            # run_kind='measurement' also passes the freeze gate (2026-10-05): the run
+            # run_kind='measurement' also passes the freeze gate: the run
             # needs a frozen, audited protocol, or it is refused for a
             # different reason than the one this test is about.
             scope_file(Path(d))  # the frozen fixture's block names it
             sha = scope_sha.area_stamp(Path(d))[0]
             text = head(frozen=True, preflight_audit="x")
             # a decided record of this code and these promises, named in the
-            # head: since 0.99.0 the field names an audit, `n/a` is refused
+            # head: the field names an audit, `n/a` is refused
             record = findings.write(
                 Path(d),
                 "preflight",

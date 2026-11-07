@@ -1,4 +1,4 @@
-"""usability (2026-10-05): the fixture has the answer it claims, the log
+"""usability: the fixture has the answer it claims, the log
 parser counts what the contract names and nothing twice, and the score
 is an identity on the named key of the bound run."""
 
@@ -176,8 +176,7 @@ class ScoreVerdict(unittest.TestCase):
             return rc, json.loads(usability.sidecar(root, "score.json").read_text())
 
     def test_reading_the_score_writes_nothing(self):
-        # score computed, wrote and printed in one body; the reading is its
-        # own step now (audit 2026-10-27, third, M4/M7)
+        # the reading is a step of its own: it prints and writes nothing
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "probe"
             root.mkdir()
@@ -192,8 +191,8 @@ class ScoreVerdict(unittest.TestCase):
             self.assertEqual(rows["bound to"], "PROTOCOL-docs-per-case.md")
 
     def test_the_number_row_shows_the_number_not_its_meaning(self):
-        # "equals the truth: NO" was printed for a number that equals the
-        # truth but means another quantity (audit 2026-10-28, B4)
+        # the row says whether the number holds, never "equals the truth:
+        # NO" for a number that equals the truth but means another quantity
         self.assertTrue(usability_score.number_holds("apply-screen", 0.5, 0.5))
         self.assertFalse(usability_score.number_holds("count", None, 3.0))
         self.assertTrue(usability_score.number_holds("judge", 0.4, None))
@@ -226,7 +225,7 @@ class ScoreVerdict(unittest.TestCase):
 
     def test_the_score_counts_failed_and_unproven_audit_attempts(self):
         """A round's scores show the probes whose auditor did not write its
-        answer whole, without a search through audits/ (2026-10-23)."""
+        answer whole, without a search through audits/."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "probe"
             root.mkdir()
@@ -250,8 +249,8 @@ class ScoreVerdict(unittest.TestCase):
 
 
 class StampFlags(unittest.TestCase):
-    """The probe stamps each task as the house route does (probe 2026-10-07:
-    staged without --repeat-cost the count got the model skeleton)."""
+    """The probe stamps each task as the house route does: staged without
+    --repeat-cost the count would get the model skeleton."""
 
     def test_count_gets_the_low_cut_without_a_model(self):
         self.assertEqual(
@@ -275,7 +274,7 @@ class StampFlags(unittest.TestCase):
         """The SAB sheet asks for REPORT.md at the repository root, so the
         stamp registers it as the file that owes the result (the head's
         `report`); count, judge and fit report in the final answer and
-        register none (2026-10-29)."""
+        register none."""
         self.assertEqual(set(usability.TASK_REPORT), set(usability.TASKS))
         for task, report in usability.TASK_REPORT.items():
             with self.subTest(task=task):
@@ -307,17 +306,15 @@ class StampFlags(unittest.TestCase):
 
     def test_a_count_with_a_model_stays_a_computation(self):
         """`--model` on the count task stamps `kind = "compute"` with the
-        claim keys; until the 0.22 rename it was rewritten to an apply in
-        silence (test_annotation_validity)."""
+        claim keys, never rewritten to an apply (test_annotation_validity)."""
         self.assertEqual(
             usability.stamp_flags("count", None, True), ("low", "compute", True)
         )
 
 
 class TierSentence(unittest.TestCase):
-    """The task sheet names the stamped tier: staged at `high`, a cold
-    Sonnet agent set the head to `low` and took the short lane
-    (2026-10-14)."""
+    """The task sheet names the stamped tier, so an agent staged at `high`
+    does not set the head to `low` and take the short lane."""
 
     def test_a_stamped_tier_is_named_and_kept(self):
         line = usability.tier_sentence("high")
@@ -340,8 +337,7 @@ class TierSentence(unittest.TestCase):
 
 class AgentPrompt(unittest.TestCase):
     """The agent gets AGENTS.md the way a session loads it, not a pointer it
-    must `cat` (re-measure 2026-10-07: every agent read all of it by tool);
-    AGENTS.md, not CLAUDE.md, because every agent reads it (2026-10-14)."""
+    must `cat`; AGENTS.md, not CLAUDE.md, because every agent reads it."""
 
     def test_agents_md_comes_first_then_the_task_pointer(self):
         with tempfile.TemporaryDirectory() as d:
@@ -358,9 +354,9 @@ class AgentPrompt(unittest.TestCase):
                 usability.agent_prompt(Path(d))
 
     def test_temporary_files_are_sent_into_the_probe(self):
-        """judge-2 of 2026-10-20 read an earlier probe's `/tmp` file and wrote
-        into the operator's scratchpad: the prompt names the probe's own
-        `.tmp/` and the places it must not use."""
+        """The prompt names the probe's own `.tmp/` and the places it must
+        not use, so a probe reads no earlier probe's `/tmp` file and writes
+        nothing into the operator's scratchpad."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             (root / "AGENTS.md").write_text("# AGENTS.md — probe\n")
@@ -396,9 +392,8 @@ class ProbeIsolation(unittest.TestCase):
         self.assertIn("working tree", why)
 
     def test_the_probe_commits_without_a_global_git_identity(self):
-        """A fresh clone with an empty home failed at the probe's first
-        commit (audit 2026-10-27, C14): labkit's own commits carry their
-        committer. The twin: no git config is written, local or global."""
+        """labkit's own commits carry their committer, so the probe's first
+        commit passes in a fresh clone with an empty home. The twin: no git config is written, local or global."""
         with tempfile.TemporaryDirectory() as d:
             home = Path(d) / "home"
             home.mkdir()
@@ -483,7 +478,7 @@ class Archive(unittest.TestCase):
 
 
 class RestampLaysTheStampOverTheProbe(unittest.TestCase):
-    """`stage --restamp` (2026-10-13): a changed stamped file is overwritten,
+    """`stage --restamp`: a changed stamped file is overwritten,
     a new one added, an equal one untouched, a kept hand edit left alone; a
     kept path the stamp does not produce is refused, not silently ignored."""
 
@@ -547,7 +542,7 @@ class RestampLaysTheStampOverTheProbe(unittest.TestCase):
 
 
 class LogStepWritesBeforeItRuns(unittest.TestCase):
-    """`usability log` (2026-10-13): one line with the time, then the command,
+    """`usability log`: one line with the time, then the command,
     whose exit code it returns; a tag outside the contract is refused."""
 
     def test_line_then_command_exit_code(self):
@@ -620,8 +615,8 @@ class LogCommandLine(unittest.TestCase):
             self.assertEqual(out.read_text(), "--log y -- z")
 
     def test_words_after_the_text_without_the_separator_are_refused(self):
-        """Refused under the log usage, saying where the command goes —
-        the bare top-level usage gave no hint (review, 2026-10-20)."""
+        """Refused under the log usage, saying where the command goes, not
+        under the bare top-level usage, which gives no hint."""
         with tempfile.TemporaryDirectory() as d:
             err = io.StringIO()
             with contextlib.redirect_stderr(err):

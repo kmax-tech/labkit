@@ -1,4 +1,4 @@
-"""Tests for the promise block (2026-10-06): promises as data, the guaranteed tier.
+"""Tests for the promise block: promises as data, the guaranteed tier.
 
 The chain: promise (id, key, constants, declared scope) → run (records the
 block's digest and a scope hash per promise) → report (intent-check holds
@@ -382,9 +382,8 @@ class Chain(unittest.TestCase):
         self.assertIn("promises changed after the run", out)
 
     def test_run_config_contradicting_a_constant_is_refused_before_mkdir(self):
-        """Durchstich 2026-10-06: the script kept min_f1 = 0.5 against 0.6.
-        Since 0.71 the run never starts; the record can only carry the
-        registered value."""
+        """A config contradicting a registered constant: the run never
+        starts, so the record can only carry the registered value."""
         with self.assertRaises(SystemExit) as cm:
             with contextlib.redirect_stdout(io.StringIO()):
                 runlog.Run("t", {"min_acc": 0.5}, self.area, run_kind="probe")
@@ -394,7 +393,7 @@ class Chain(unittest.TestCase):
         self.assertFalse((self.area / "runs").exists())
 
     def test_a_record_contradicting_a_constant_is_still_a_finding(self):
-        """An old or hand-edited record (runlog 0.70 let it through): intent-check names it."""
+        """A hand-edited record contradicting a constant: intent-check names it."""
         run = self.start()
         cfg_path = run.dir / "config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
@@ -503,8 +502,8 @@ class Chain(unittest.TestCase):
         self.assertIn("[quality-check-1] is in the promise block but never named", out)
 
     def test_recheck_refuses_a_changed_block(self):
-        """Durchstich 2026-10-06: the threshold lowered after the run left
-        the verdict unchanged, and recheck held the note anyway."""
+        """A threshold lowered after the run may leave the verdict
+        unchanged; recheck refuses the note all the same."""
         run = self.complete(self.start(), self.GOOD)
         recheck.block_unchanged(run, self.area)  # unchanged: passes
         self.protocol.write_text(
@@ -521,8 +520,8 @@ class Chain(unittest.TestCase):
         self.assertIn("now carries none", promises.block_drift(rec, None) or "")
 
     def test_finalize_blocks_a_changed_scope(self):
-        """Durchstich 2026-10-06: a scope edited after the run went through
-        finalize; only recheck saw it."""
+        """A scope edited after the run is a finalize blocker, not only
+        recheck's."""
         from labkit.gates import finalize
 
         self.complete(self.start(), self.GOOD)
@@ -566,8 +565,8 @@ if __name__ == "__main__":
 
 class Decorators(unittest.TestCase):
     def test_a_changed_decorator_moves_the_declared_scope(self):
-        """Review 2026-10-07: decorators were excluded, so `@cache` → `@retry`
-        left the stamp alone while the behaviour changed."""
+        """A decorator is part of the declared scope: `@cache` → `@retry`
+        changes the behaviour, and so the stamp."""
         with tempfile.TemporaryDirectory() as d:
             base = Path(d)
             (base / "m.py").write_text("@cache\ndef evaluate(r):\n    return r\n")
@@ -579,9 +578,9 @@ class Decorators(unittest.TestCase):
 
 
 class Redefinition(unittest.TestCase):
-    """Review 2026-10-20: `file:score` hashed the first of two `def score`;
-    Python runs the second, so its result went 2 → 999 under an unmoved
-    stamp. A name bound twice at the top level is refused."""
+    """Of two `def score` Python runs the second, so a stamp of
+    `file:score` over the first would stay put while the result goes
+    2 → 999. A name bound twice at the top level is refused."""
 
     def stamp(self, source: str) -> str:
         with tempfile.TemporaryDirectory() as d:
@@ -607,7 +606,7 @@ class Redefinition(unittest.TestCase):
 
 class Constants(unittest.TestCase):
     """A constant is named like its config key, has one home, and is held
-    type-strictly (0.71.0)."""
+    type-strictly."""
 
     def assertRejects(self, text: str, fragment: str):
         with self.assertRaises(promises.PromiseError) as cm:
@@ -659,8 +658,8 @@ class Constants(unittest.TestCase):
         self.assertEqual(promises.constant_records(block, {})[0].state, "missing")
 
     def test_a_stamp_placeholder_sentence_is_a_table_not_yet_written(self):
-        """Three `<…>` sentences were frozen, hashed into the run's block
-        digest and passed every gate (cloud judge probe, 2026-10-14). The
+        """A stamp's `<…>` sentence, frozen, would be hashed into the run's
+        block digest and pass as registered: it is a table not yet written. The
         twin: the written sentence passes; an unfrozen pilot may carry one."""
         stamped = parsed(
             protocol_text(C1).replace(
@@ -708,7 +707,7 @@ class Constants(unittest.TestCase):
             promises.promise_tables_owed(None, frozen=False, full_run=True) or "",
         )
         # a computation registers nothing, frozen too: the high-cost freeze
-        # asked for the tables its own stamp removes (review 2026-10-27, 1)
+        # asks for no table its own stamp removes
         for frozen, full_run in ((True, False), (True, True), (False, True)):
             with self.subTest(frozen=frozen, full_run=full_run):
                 self.assertIsNone(
@@ -776,7 +775,7 @@ class Outcomes(unittest.TestCase):
         )
 
     def test_a_sentence_without_an_arrow_is_refused(self):
-        """The free text of 0.103.0: nothing held the recorded value to it."""
+        """Free text is refused: nothing would hold the recorded value to it."""
         self.assertRefused(
             "generalises if criterion-1 met; noisy if quality-check-1 not met",
             "outcome 1 'generalises if criterion-1 met' holds 0 `→`, not one",

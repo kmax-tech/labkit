@@ -1,5 +1,5 @@
 """A computation's kept number, registered in the head's `[kept]` table
-(standard 0.24, docs/notes/2026-11-01-kept-key-in-the-head.md): the
+(docs/notes/2026-11-01-kept-key-in-the-head.md): the
 metrics key and its unit, read in one place (`protocol_block.kept`), owed
 or refused by kind in one (`protocol_check.kept_gaps`), filled by
 `protocol-fill kept.key=… kept.unit=…`, held to the answering run by
@@ -187,7 +187,7 @@ class Filled(unittest.TestCase):
 
 class HeldToTheRun(unittest.TestCase):
     """The guaranteed gate: the answering run holds the `[kept] key` as a
-    finite number — what task 34's `hrv_computed = 1` would not pass."""
+    finite number — a flag such as `hrv_computed` in its place does not pass."""
 
     def test_a_flag_text_nan_or_a_missing_key_blocks_naming_what_it_holds(self):
         area = Path("experiments/01-hrv")

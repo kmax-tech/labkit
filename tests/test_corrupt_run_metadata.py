@@ -1,9 +1,10 @@
-"""An unreadable run artefact is shown, never skipped (review 2026-10-06).
+"""An unreadable run artefact is shown, never skipped.
 
-Before: an unreadable config.json made a run vanish from `runlog`'s open
-runs, from `reindex` and from intent-check's listing, and an unreadable
-metrics.json made intent-check fall back to the next older run as if the
-newer had reported nothing. A damaged newer run let an older one stand in.
+An unreadable config.json does not make a run vanish from `runlog`'s open
+runs, from `reindex` or from intent-check's listing, and an unreadable
+metrics.json does not make intent-check fall back to the next older run as
+if the newer had reported nothing: a damaged newer run never lets an older
+one stand in.
 """
 
 from __future__ import annotations
@@ -123,9 +124,9 @@ if __name__ == "__main__":
 
 
 class Shape(unittest.TestCase):
-    """Valid JSON of the wrong shape is unreadable metadata too (review
-    2026-10-07: `[]` read as a run, and a list failed later as an
-    AttributeError far from the file)."""
+    """Valid JSON of the wrong shape is unreadable metadata too: `[]` is no
+    run, and a list raises at the file, not later as an AttributeError far
+    from it."""
 
     def test_wrong_shapes_raise_naming_the_problem(self):
 

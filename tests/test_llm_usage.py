@@ -1,9 +1,8 @@
 """`last_usage()` hands out what a completion cost — the token counts every
-backend reports and labkit dropped until 0.81.0.
+backend reports.
 
-Why: 30 Claude Code transcripts (labkit, uniagent, 2026-10-11) summed to
-seven billion cache-read tokens, and no labkit line anywhere said what one
-audit or one probe had cost. The counts were in every reply.
+Why: the counts are in every reply, and without them no labkit line says
+what one audit or one probe cost.
 """
 
 import contextlib

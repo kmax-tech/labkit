@@ -1,8 +1,9 @@
 """Tests for intent-check — registered promises vs. metrics keys.
 
-Fixture material mirrors the real cases of 2026-09-08: a criterion whose
-code implements one conjunct of three (62), gate metrics written although
-the registration forbids content numbers (63), a fork with no branch (64).
+Fixture material mirrors three real cases, numbered as the tests cite
+them: a criterion whose code implements one conjunct of three (62), gate
+metrics written although the registration forbids content numbers (63), a
+fork with no branch (64).
 The metrics structures are shaped like real runs/*/metrics.json files.
 """
 
@@ -94,9 +95,9 @@ class TestIntentCheck(unittest.TestCase):
     def test_blank_template_registers_no_ids(self):
         """The template's explanatory preamble must not register intent ids.
 
-        Before the fix, the example ids in the preamble text matched the
-        regex, so a fresh unfilled protocol registered phantom ids that
-        could silently pass if a run happened to write keys like them.
+        The example ids in the preamble text would otherwise register
+        phantom ids in a fresh unfilled protocol, which could silently pass
+        if a run happened to write keys like them.
         """
         tmpl = (
             REPO / "labkit" / "templates" / "experiment-protocol.md.template"
@@ -122,8 +123,8 @@ class TestIntentCheck(unittest.TestCase):
         )
 
     def test_f1_score_is_no_intent_id(self):
-        """The collision that renamed forks to W: f1_score is a metric name,
-        and in an F namespace it would have satisfied a branchless fork."""
+        """Forks are W, not F: f1_score is a metric name, and in an F
+        namespace it would satisfy a branchless fork."""
         self.assertEqual(
             intent_check.reported_intent_ids({"f1_score": 0.8, "f1": 0.8}), set()
         )
@@ -194,8 +195,7 @@ class TestIntentCheck(unittest.TestCase):
 
     def test_ids_but_no_run_yet_exits_two(self):
         """With a bound protocol, no completed run means nothing to hold the
-        promises against — exit 2, not a silent pass (the old "due at
-        report time" exit 0 belonged to the directory choice)."""
+        promises against — exit 2, not a silent pass."""
         self.proto.write_text(PROTOCOL, encoding="utf-8")
         rc, out = self._run([str(self.proto)])
         self.assertEqual(rc, 2, out)
@@ -204,8 +204,8 @@ class TestIntentCheck(unittest.TestCase):
         self.assertIn(intent_check.METRICS_HINT, out)  # its own command line
 
     def test_finalize_is_not_offered_a_flag_it_lacks(self):
-        # finalize calls hold() and has no --metrics; it passed the hint on
-        # (audit 2026-10-27, third, I12)
+        # finalize calls hold() and has no --metrics: the hint is the
+        # command line's, not hold()'s
         self.proto.write_text(PROTOCOL, encoding="utf-8")
         with self.assertRaises(intent_check.NoRunChosen) as caught:
             intent_check.hold(self.proto, None)
@@ -246,9 +246,8 @@ class TestIntentCheck(unittest.TestCase):
 
 
 class KeysInImportedCode(unittest.TestCase):
-    """A registered key written in imported repo code is found (uniagent,
-    2026-10-07: every key lives in src/measure/comparison.py, and code-check
-    called four promises absent)."""
+    """A registered key written in imported repo code is found: every key
+    may live in a module the script imports."""
 
     def test_a_key_in_src_counts_for_the_area(self):
         import tempfile

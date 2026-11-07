@@ -1,4 +1,4 @@
-"""runlog data= leakage beyond splits (2026-10-05): a control set (anchor,
+"""runlog data= leakage beyond splits: a control set (anchor,
 gate, placebo) sharing an id with the measured set is a refusal."""
 
 from __future__ import annotations

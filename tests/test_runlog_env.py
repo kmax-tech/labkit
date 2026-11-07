@@ -107,9 +107,9 @@ if __name__ == "__main__":
 
 
 class TestVcsPins(unittest.TestCase):
-    """Git pins are compared by commit, not skipped as pinned-any
-    (2026-09-15: installed labkit was two minor versions behind the lock,
-    drift said 0, and the pinned tag did not even exist)."""
+    """Git pins are compared by commit, not skipped as pinned-any: an
+    install behind its lock, or a pinned tag that does not exist, is
+    drift."""
 
     def test_parse_reads_ref_and_url(self):
         lock = write_lock(
@@ -122,7 +122,7 @@ class TestVcsPins(unittest.TestCase):
 
     def test_parse_reads_an_editable_freeze_line(self):
         """`pip freeze` writes an editable install this way; the lock it wrote
-        must not report drift against itself (probe 2026-10-07)."""
+        must not report drift against itself."""
         lock = write_lock("-e git+https://github.com/x/labkit.git@fd4cd60#egg=labkit\n")
         self.assertEqual(
             provenance.parse_vcs_pins(lock),
@@ -194,7 +194,7 @@ class TestVcsPins(unittest.TestCase):
         )
 
     def test_missing_local_tag_is_drift(self):
-        """The scar itself: a lock pinning a tag that does not exist is
+        """A lock pinning a tag that does not exist is
         uninstallable — that must count, whatever is installed."""
         d, sha = self._make_repo()
         self.assertEqual(provenance.resolve_ref(f"file://{d}", "v9.9.9"), "")

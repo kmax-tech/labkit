@@ -42,9 +42,9 @@ class WriteAtomic(unittest.TestCase):
         self.assertFalse([p for p in d.iterdir() if f".tmp{os.getpid()}" in p.name])
 
     def test_a_failed_write_leaves_the_old_file_and_no_temp_file(self):
-        """The staging file stayed behind a failed write (`.REPORT.md.tmp<pid>`
-        beside the report, phase 1.4). The twin: a write that succeeds
-        leaves no temp file either (above)."""
+        """A failed write leaves no staging file (`.REPORT.md.tmp<pid>`
+        beside the report). The twin: a write that succeeds leaves no temp
+        file either (above)."""
         d = Path(tempfile.mkdtemp())
         target = d / "PROTOCOL-x.md"
         files.write_atomic(target, "kept")

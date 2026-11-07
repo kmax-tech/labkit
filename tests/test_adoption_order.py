@@ -1,8 +1,7 @@
-"""Adoption comes last (2026-10-28): report-check tells that order when an
-adoption line (`--from-run`) stands beside a blocker adoption cannot clear,
-and stays silent when the adoption line is the way out as printed — three
-of three Haiku readers took `--from-run <run> --force` beside an open
-BLOCKER on that run for the fix (docs/usability/2026-10-28-haiku-stuck-reading.md)."""
+"""Adoption comes last: report-check tells that order when an adoption
+line (`--from-run`) stands beside a blocker adoption cannot clear, and stays
+silent when the adoption line is the way out as printed — a reader takes
+`--from-run <run> --force` beside an open BLOCKER on that run for the fix."""
 
 from __future__ import annotations
 
@@ -56,9 +55,8 @@ HEAD = '```toml\n[protocol]\nstandard = "0.26"\nid = "p-0123456789abcdef"\ntype 
 
 
 class FirstStepBeforeARun(unittest.TestCase):
-    """runlog's refusal names the freeze only where the repeat cost owes one
-    (Haiku start reading, 2026-10-28: two of three readers called "Freeze
-    first" at low repeat cost a contradiction)."""
+    """runlog's refusal names the freeze only where the repeat cost owes one:
+    "Freeze first" at low repeat cost reads as a contradiction."""
 
     def first_step(self, cost: str) -> str:
         text = HEAD.format(cost=cost)

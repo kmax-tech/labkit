@@ -1,15 +1,14 @@
 """LABKIT_UNFROZEN=1 acknowledges an audit that could not run, not one nobody ran.
 
-Second haiku round on labkit 0.98.0 (labkit-paper area 09, 2026-10-18): no
-labkit agent started an audit, so the refusal over an open BLOCKER never
-fired; t5 measured with run_kind='measurement' and LABKIT_UNFROZEN=1, and the hatch asked
-for nothing. Since 0.99.0 the hatch at `high` rests on the failed
+Without an audit started, the refusal over an open BLOCKER never fires, so
+a hatch that asked for nothing would let run_kind='measurement' run
+unaudited. The hatch at `high` rests on the failed
 attempt `labkit-audit` writes when the backend does not answer
 (`audits/<date>-preflight-failed.toml`): at the code as it stamps now, the
 promises as they read now, with the default timeout at least. An attempt at
 other code, other promises, in another mode, or with a short timeout is not
 one; a file nobody can read is loud. At `repeat_cost = "low"` no audit is owed
-before the run, so the hatch there is unchanged.
+before the run, so the hatch there asks for no attempt.
 """
 
 from __future__ import annotations
@@ -105,10 +104,9 @@ class FailedAudit(unittest.TestCase):
         self.assertIn(findings.FAILED_SUFFIX, msg)
 
     def test_the_owed_audit_names_the_bound_protocol_where_several(self):
-        """The refusal printed `labkit-audit AREA --mode preflight`, which
-        refuses to choose in an area of several protocols (cold review
-        2026-10-27); it names the bound one there. The twin: one protocol,
-        no `--protocol`."""
+        """In an area of several protocols the refusal's audit step names
+        the bound one: `labkit-audit AREA --mode preflight` refuses to choose
+        there. The twin: one protocol, no `--protocol`."""
         self.assertNotIn("--protocol", self._refused())
         (self.tmp / "PROTOCOL-y.md").write_text(
             head(id="p-ffffffffffffffff", repeat_cost="high", promises=DEFAULT_BLOCK),

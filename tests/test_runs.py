@@ -1,8 +1,8 @@
 """runs — the one walk over an area's `runs/`, and the atomic write.
 
 `run_dirs` reads every directory's metadata once and hands the three cases
-back as data (no run, a run, an unreadable run); the callers decide. The
-walk used to stand six times with six decisions (audit 2026-10-13).
+back as data (no run, a run, an unreadable run); the callers decide, so
+the walk stands once, not once per caller with a decision of its own.
 """
 
 import json
@@ -77,7 +77,7 @@ class RunDirs(unittest.TestCase):
 class TypedRecords(unittest.TestCase):
     """The run record is checked once, where the file is read, and handed on
     as types: a run's facts and its binding are dataclasses, its state one
-    of a closed set — no reader guesses a dict's keys again (2026-10-20)."""
+    of a closed set — no reader guesses a dict's keys."""
 
     def setUp(self):
         self.area = Path(tempfile.mkdtemp())
@@ -165,7 +165,7 @@ class RunIdShape(unittest.TestCase):
             "output",
             "2026-10-13T14-00-57",
             "start-2026-10-13T14-00-57.log",
-            "2026-02-30T12-00-00_abcd",  # the shape, not a date: the stop hook crashed on it
+            "2026-02-30T12-00-00_abcd",  # the shape, not a date: no crash on it
         ):
             with self.subTest(name):
                 self.assertIsNone(runs.run_started(name))
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
 class ScriptOnCommandLine(unittest.TestCase):
     """`is_alive` asks whether a live PID still runs the recorded script; a
-    substring held `python not_01_measure.py` for `01_measure.py`."""
+    substring would hold `python not_01_measure.py` for `01_measure.py`."""
 
     def test_the_script_as_a_word_or_a_path_matches(self):
         for cmd in (
@@ -206,9 +206,9 @@ class ScriptOnCommandLine(unittest.TestCase):
 
 
 class OutputPathsTravel(unittest.TestCase):
-    """outputs.json recorded absolute paths: a cloud run's `/home/user/...`
-    failed `02_analyze.py --check` in every other checkout (2026-10-14). A path
-    inside the repo is recorded relative to its root and resolved on read."""
+    """A path inside the repo is recorded in outputs.json relative to its
+    root and resolved on read: an absolute `/home/user/...` would fail
+    `02_analyze.py --check` in every other checkout."""
 
     def _repo(self, base: Path) -> Path:
         run = base / "experiments" / "01-x" / "runs" / "r1"
@@ -231,8 +231,8 @@ class OutputPathsTravel(unittest.TestCase):
                 )
 
     def test_a_relative_data_path_is_recorded_against_the_repo_not_the_cwd(self):
-        """A `data=` path was kept as passed, relative to the working
-        directory; it is recorded against the repo root and read back."""
+        """A `data=` path is recorded against the repo root, not as passed
+        relative to the working directory, and read back."""
 
         with tempfile.TemporaryDirectory() as d:
             run = self._repo(Path(d))
@@ -284,8 +284,8 @@ class NowStamp(unittest.TestCase):
 class DataEntries(unittest.TestCase):
     """A run record's `data=` entries are read in one place
     (`runs.data_entries`): the shape `runlog` writes, or ArtefactError
-    naming the key — five readers each guarded their own, and one turned a
-    missing path into the text "None" (audit 2026-11-07, S11)."""
+    naming the key — no reader guards its own, and a missing path never
+    becomes the text "None"."""
 
     GOOD = {
         "cases": {"path": "data/cases.jsonl", "sha256": "ab12", "rows": 3},

@@ -1,8 +1,7 @@
-"""Two ways round the audit at high repeat cost, both reported (third haiku round
-on 0.99.0, labkit-paper area 09): t18 wrote `preflight_audit = "n/a — …"`
-and runlog took it (now refused: `audit_gaps.audit_record_gap`, in preflight
-and protocol-check too); the next move is lowering `repeat_cost` to `low`, where
-nothing is owed before the run — exact over git, the head as first committed
+"""Two ways round the audit at high repeat cost, both reported: a waived
+record (`preflight_audit = "n/a — …"`) is refused (`audit_gaps.audit_record_gap`,
+in runlog, preflight and protocol-check); lowering `repeat_cost` to `low`, where
+nothing is owed before the run, warns — exact over git, the head as first committed
 against the head now (`protocol_history.repeat_cost_lowered`, a WARNING in
 protocol-check and preflight). Twins: a raised or unchanged tier, a file git
 does not know, a line with a real stamp.
@@ -98,7 +97,7 @@ class RepeatCostLowered(unittest.TestCase):
         )
 
     def test_lowered_after_a_migration_warns_from_the_migration_commit(self):
-        """A protocol first committed under standard 0.22 (`cost = "hours"`)
+        """A protocol first committed in a head this standard does not read (`cost = "hours"`)
         is compared from the first commit this standard reads; the warning
         counts the earlier commits it could not compare."""
         root, protocol = _repo("high")
@@ -129,7 +128,7 @@ class RepeatCostLowered(unittest.TestCase):
     def test_a_placeholder_committed_first_is_no_base_to_compare_against(self):
         """Stamp committed with `repeat_cost = "<low | high>"`, then declared
         `high`, then lowered: the warning compares against the first
-        declaration, not the placeholder (review 2026-10-25)."""
+        declaration, not the placeholder."""
         root, protocol = _repo("high")
         text = protocol.read_text(encoding="utf-8")
         protocol.write_text(

@@ -63,9 +63,8 @@ def _run_finalize(area, protocol=None):
 
 class TestIntentStationReadsTheBlock(unittest.TestCase):
     """Station 2 runs whenever the block declares promises, not only when
-    the prose brackets their ids: a fit probe wrote `criterion-1:` beside three
-    [[promise]] tables, and finalize read "no intent ids registered"
-    (round on d549696, 2026-10-22)."""
+    the prose brackets their ids: a protocol writing `criterion-1:` beside its
+    [[promise]] tables is not read as "no intent ids registered"."""
 
     def _finalize(self, proto: str, metrics: dict) -> tuple[int, str]:
         with tempfile.TemporaryDirectory() as d:
@@ -103,8 +102,7 @@ class TestIntentStationReadsTheBlock(unittest.TestCase):
 class TestOneRunForEveryStation(unittest.TestCase):
     """A probe run after the measurement must not become the run finalize
     judges: intent-check skips it (no intent keys), so the other stations
-    must too (review 2026-10-07: scope drift and the criterion_1_n check ran on the
-    probe and finalize said all clear)."""
+    do too — scope drift and the criterion_1_n check read the measurement."""
 
     def test_stations_check_the_run_intent_check_chose(self):
         with tempfile.TemporaryDirectory() as d:
@@ -145,7 +143,7 @@ class TestFinalize(unittest.TestCase):
                             (code, out.getvalue(), err.getvalue()), (2, "", "")
                         )
                         # the reason is kept as a blocker — report-check reads
-                        # the collector, not the console (audit 2026-10-23, B1)
+                        # the collector, not the console
                         (blocker,) = findings.blocked
                         self.assertEqual(
                             lines, [] if silent else [f"  BLOCKER: {blocker}"]
@@ -185,9 +183,8 @@ class TestFinalize(unittest.TestCase):
 
     def test_the_blocker_carries_what_was_looked_at(self):
         """The runs excluded and why travel in the blocker itself: as notes
-        they reached no caller that collects the findings as data —
-        report-check said "no completed run" and nothing more (audit
-        2026-10-23, B1)."""
+        they would reach no caller that collects the findings as data, and
+        report-check would say "no completed run" and nothing more."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
@@ -204,7 +201,7 @@ class TestFinalize(unittest.TestCase):
     def test_intent_check_lines_are_the_blockers(self):
         """Each line intent-check prints is a blocker of its own, not a
         note beside one "intent-check failed (see its lines above)" — in a
-        silent collector there was nothing above (audit 2026-10-23, B1)."""
+        silent collector there is nothing above."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
@@ -231,7 +228,8 @@ class TestFinalize(unittest.TestCase):
         self.assertNotIn("see its lines above", "\n".join(collected.blocked))
 
     def test_the_summary_repeats_each_blocker_last(self):
-        """Inside a commit hook the blocker sat among 20 lines (probe 2026-10-07)."""
+        """Inside a commit hook a blocker stands among many lines; the summary
+        repeats it last."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             (area / "PROTOCOL-x.md").write_text(CLEAN_PROTOCOL)
@@ -307,7 +305,7 @@ class TestFinalize(unittest.TestCase):
 
     def test_unreadable_head_exits_two(self):
         """A prose head (Standard 0.16/0.17) is read by labkit 0.47; here it
-        is a usage error naming the [protocol] table (TODO 8)."""
+        is a usage error naming the [protocol] table."""
         prose = (
             "# Experiment protocol: x\n\n- **Standard:** 0.16\n"
             f"- **Protocol id:** {PID}\n- **Frozen before run:** yes\n" + BODY
@@ -334,8 +332,8 @@ class TestFinalize(unittest.TestCase):
 
 class AreaTestsBeforeReporting(unittest.TestCase):
     """finalize runs the area's tests on every tier: a later edit of
-    evaluate() that mutes the criterion is caught before a number leaves
-    (2026-10-07); no test is no finding here."""
+    evaluate() that mutes the criterion is caught before a number leaves;
+    no test is no finding here."""
 
     def area(self, d: str, test_body: str | None) -> Path:
         area = Path(d)
@@ -373,8 +371,8 @@ class CorrectionWay(unittest.TestCase):
     the changed fields (`registration_hold.correction_way`): the correction route only
     for a field a correction can release (`protocol_history.correctable`),
     the question standing as registered, nothing for the head's parts or a
-    promise — so neither names a way the gate refuses (2026-11-03,
-    docs/notes/2026-11-02-registered-field-repair.md)."""
+    promise — so neither names a way the gate refuses
+    (docs/notes/2026-11-02-registered-field-repair.md)."""
 
     def test_a_description_is_offered_the_correction_route(self):
         way = registration_hold.correction_way([("Unit", "ms", "milliseconds")])

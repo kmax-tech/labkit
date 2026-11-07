@@ -1,6 +1,6 @@
-"""labkit.run.lanes: the judge's run mechanics, moved out of the stamped skeleton.
+"""labkit.run.lanes: the judge's run mechanics, kept outside the stamped skeleton.
 
-What the move must keep (review 2026-10-21): each answer stays with its own
+What lanes must hold: each answer stays with its own
 job whatever order the calls finish in; a break mid-run resumes to a
 complete file with every job once; re-evaluating the kept rows gives the
 run's numbers. And what the audit must still see: the stamped
@@ -83,8 +83,8 @@ def lanes_in(d: Path, n: int = 6) -> tuple[lanes.Lanes, list[dict]]:
 
 class PromptsShowNamedFields(Case):
     """A lane may show part of an item: PubMedQA's placebo shown the research
-    question with the context answered it (registered pilot, 2026-10-31), so
-    a prompt names fields beside `{text}`; the gold label and the run's own
+    question with the context answers it, so a prompt names fields beside
+    `{text}`; the gold label and the run's own
     keys are never shown, and a field the item lacks is refused."""
 
     def test_a_prompt_shows_the_fields_it_names_and_nothing_else(self):
@@ -103,7 +103,9 @@ class PromptsShowNamedFields(Case):
             self.assertEqual(
                 run.render({**job, "lane": "registered"}), "Q: Is it?\nfull"
             )
-            self.assertEqual(plain.render(job), "N: full")  # `{text}` alone, as before
+            self.assertEqual(
+                plain.render(job), "N: full"
+            )  # `{text}` alone, the default
 
     def test_gold_bookkeeping_missing_fields_and_odd_placeholders_are_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -207,10 +209,10 @@ class ResumeAfterABreak(Case):
 
 
 class ResumeKeepsOneModel(Case):
-    """2026-10-23 review: the instrument held the alias and the prompts'
-    digest only; models.toml edited between two processes put another
-    model behind the alias, the resume kept model-a's answers and added
-    model-b's, and the balance passed."""
+    """The instrument holds the model behind the alias, not only the alias
+    and the prompts' digest: models.toml edited between two processes puts
+    another model behind the alias, and a resume must not keep model-a's
+    answers and add model-b's under a balance that passes."""
 
     def _first_half(self, d: Path) -> tuple[lanes.Lanes, list[dict]]:
         run, items = lanes_in(d)
@@ -282,8 +284,8 @@ class ResumeKeepsOneModel(Case):
                 run.balance(run.out, jobs)
 
     def test_rows_without_the_model_identity_are_refused(self):
-        """Rows a labkit before 0.104.0 wrote name the alias only: they
-        cannot show which model answered, so they never resume."""
+        """Rows that name the alias only cannot show which model answered,
+        so they never resume."""
         with tempfile.TemporaryDirectory() as d:
             run, items = lanes_in(Path(d))
             jobs = run.plan(items)
@@ -303,8 +305,8 @@ class ResumeKeepsOneModel(Case):
 
 class WorkersAreTheAreas(Case):
     """The calls in flight are the area's `workers`, not the backend's
-    default: a protocol registering one request at a time ran as four
-    (pubmedqa50, 2026-11-01)."""
+    default: a protocol registering one request at a time runs one at a
+    time."""
 
     def test_measure_hands_the_areas_workers_to_every_batch(self):
         with tempfile.TemporaryDirectory() as d:
@@ -362,9 +364,9 @@ class WorkersAreTheAreas(Case):
 
 class PromptIsTheRegisteredOne(Case):
     """The prompts as sent are held to the protocol's Prompt block before any
-    paid call: pubmedqa50-r1 (registered pilot part 1) sent an answer line
-    and a closing `Answer:` the registration did not have, and only the
-    analysis audit, after 16 minutes of measurement, saw it."""
+    paid call: an answer line or a closing `Answer:` the registration does
+    not have is refused there, not first seen by the analysis audit after
+    the measurement."""
 
     BLOCK = (
         "\n- **Prompt (verbatim, per variant):**\n\n  ```text\n  registered:\n"
@@ -425,8 +427,8 @@ class PromptIsTheRegisteredOne(Case):
 
     def test_a_drifted_tagged_prompt_is_refused_before_any_call(self):
         """A block that opens and closes with a tag is a prompt, not the
-        stamp's placeholder (review 2026-11-03, R1: it was dropped, and
-        the drifted prompt went out unchecked)."""
+        stamp's placeholder (dropped as one, the drifted prompt would go out
+        unchecked)."""
         with tempfile.TemporaryDirectory() as d:
             run = self.with_block(
                 Path(d),
@@ -498,8 +500,8 @@ class EvaluateKeptRows(Case):
 
 class NoItemsNoCheck(unittest.TestCase):
     def test_show_and_probe_refuse_a_missing_items_file(self):
-        # a missing file read as no items, and --probe printed "0 of 0"
-        # with exit 0 (audit 2026-10-27, third, I7)
+        # a missing file is refused, not read as no items (--probe would
+        # print "0 of 0" with exit 0)
         with tempfile.TemporaryDirectory() as d:
             run, _ = lanes_in(Path(d))
             run.items.unlink()

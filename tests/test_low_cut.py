@@ -1,4 +1,4 @@
-"""The low cut (2026-10-05): one template, tagged `<!-- l -->`; the
+"""The low cut: one template, tagged `<!-- l -->`; the
 checker's FIELDS name exactly the tagged fields as the cut; the registration
 gate asks for question, criterion, quality check and cost."""
 
@@ -90,8 +90,8 @@ class Cut(unittest.TestCase):
 
     def test_frozen_at_seconds_is_refused_not_graduated(self):
         """Nothing freezes at low repeat cost (LAB-017 The number of audits follows the cost tier): `frozen = true` there owes no
-        should field, but claims a freeze no gate held — one must finding
-        (review 2026-10-07: it used to pass silently)."""
+        should field, but claims a freeze no gate held — one must finding,
+        never a silent pass."""
         text = (
             head(repeat_cost="low", frozen=True)
             + """
@@ -121,10 +121,10 @@ class Registration(unittest.TestCase):
     )
 
     def test_a_fit_without_a_model_owes_the_bar_and_its_reference(self):
-        """Standard 0.22: a RandomForest at low repeat cost owed its question only
-        (fifth haiku round); a fit owes criterion, admissibility and the
-        null condition, and a computation with a [model] table that does not
-        say what its number describes is a gap (test_annotation_validity)."""
+        """A RandomForest at low repeat cost owes more than its question: a
+        fit owes criterion, admissibility and the null condition, and a
+        computation with a [model] table that does not say what its number
+        describes is a gap (test_annotation_validity)."""
         text = head(repeat_cost="low", kind="fit") + "- **Question / hypothesis:** q\n"
         self.assertEqual(
             protocol_check.low_registration_missing(text),
@@ -150,7 +150,7 @@ class Registration(unittest.TestCase):
         self.assertIn("Inference criterion", missing)  # undecided: the most is owed
 
     def test_a_count_owes_only_its_question(self):
-        """Without a model there is no bar to clear: the gate is the question (0.87.1)."""
+        """Without a model there is no bar to clear: the gate is the question."""
         text = head(repeat_cost="low") + "- **Question / hypothesis:** how many?\n"
         self.assertEqual(protocol_check.low_registration_missing(text), [])
         text = head(repeat_cost="low") + "- **Question / hypothesis:** <the question>\n"
@@ -178,8 +178,8 @@ class Registration(unittest.TestCase):
         )
 
     def test_with_a_model_the_judged_data_profile_is_owed(self):
-        """Review 2026-10-21: printing the profile is not judging it; the run
-        waits for the judgement in the protocol."""
+        """Printing the profile is not judging it; the run waits for the
+        judgement in the protocol."""
         text = (
             head(repeat_cost="low", model="haiku")
             + self.QUESTION.replace("- **Data profile:** 6 and 6 items; 'because' in both classes\n", "")
@@ -214,8 +214,8 @@ class Registration(unittest.TestCase):
 
 class CountPlaceholders(unittest.TestCase):
     """Without a model the Terms and Question placeholders say what a computation
-    owes: three cold agents wrote a Terms sentence for a plain count, one read
-    'hypothesis' as an expectation to invent (Haiku H5–H7, 2026-10-13)."""
+    owes, so a plain count gets no Terms sentence and 'hypothesis' is not
+    read as an expectation to invent."""
 
     def test_the_count_cut_says_na_and_no_hypothesis(self):
         cut = protocol_cuts.low_cut(

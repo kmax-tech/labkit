@@ -1,4 +1,4 @@
-"""A failed audit attempt as data (0.99.0): written by labkit-audit when the
+"""A failed audit attempt as data: written by labkit-audit when the
 backend does not answer, read by runlog's freeze gate, never a record of findings."""
 
 import tempfile

@@ -1,4 +1,4 @@
-"""labkit-audit --mode clarity (2026-10-09): the code-clarity agent's area
+"""labkit-audit --mode clarity: the code-clarity agent's area
 mode as a command. The model call is faked; tested is what the reader gets
 to read (README, protocol, measure script — no lib, no standard), the
 verdict parsing and the exit-code contract: 1 on any finding, 0 on none,

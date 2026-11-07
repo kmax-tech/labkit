@@ -50,8 +50,8 @@ class Contract(unittest.TestCase):
 class Daggers(unittest.TestCase):
     def test_dagger_marks_exactly_the_report_grade_fields(self):
         """† in the template = should or report in FIELDS, and every report
-        field carries †: the legend and the checker say the same thing
-        (review 2026-10-07: 14 † fields were never checked)."""
+        field carries †: the legend and the checker say the same thing, so
+        no † field goes unchecked."""
         daggered = {f.name for f in protocol_check.fields(TEMPLATE) if "†" in f.label}
         levels = {f.label.casefold(): f.level for f in protocol_check.FIELDS}
         for name in daggered:
@@ -83,8 +83,7 @@ class Placeholders(unittest.TestCase):
             self.assertTrue(self.one(line).placeholder, line)
 
     def test_indented_content_below_a_bare_label_is_its_value(self):
-        """Twin pair (found migrating the thesis example, 2026-10-07):
-        sub-bullets or an indented paragraph below count as the value; the
+        """Twin pair: sub-bullets or an indented paragraph below count as the value; the
         next field at the same depth does not."""
         sub = protocol_check.fields(
             "- **Model I/O:**\n  - *In:* topic + text\n- **Unit:** u\n"
@@ -102,7 +101,7 @@ class Placeholders(unittest.TestCase):
 
 class Fields(unittest.TestCase):
     def test_a_word_elsewhere_does_not_fill_a_field(self):
-        # the keyword check let "prompt" in any sentence cover Model I/O
+        # "prompt" in any sentence does not cover Model I/O
         text = (
             head(model="haiku")
             + "We will write a prompt later.\n- **Question / hypothesis:** q\n"
@@ -124,7 +123,7 @@ class Fields(unittest.TestCase):
 
     def test_a_value_on_the_next_line_is_written(self):
         """Twin of the registration gate: written below the label passes, a
-        multi-line placeholder stays a placeholder (review 2026-10-07)."""
+        multi-line placeholder stays a placeholder."""
         written = (
             head(repeat_cost="low") + "- **Question / hypothesis:**\n  Does X beat Y?\n"
             "- **Inference criterion:** [criterion-1] x\n- **Quality check:** [quality-check-1] y\n"
@@ -173,7 +172,7 @@ class Fields(unittest.TestCase):
         self.assertNotIn(
             "Analysis audit", protocol_check.check_fields(frozen).missing_must
         )
-        self.assertNotIn(  # a run in the list declares nothing (phase 5)
+        self.assertNotIn(  # a run in the list declares nothing
             "Analysis audit", protocol_check.check_fields(frozen + listed).missing_must
         )
         declared = head(frozen=True, preflight_audit="x", result=run)
@@ -209,7 +208,7 @@ class Fields(unittest.TestCase):
 
 class OpenHolesFollowTheCut(unittest.TestCase):
     """At low repeat cost a placeholder outside the cut is not owed, so it is not
-    listed; inside the cut it is (usability probe 2026-10-07)."""
+    listed; inside the cut it is."""
 
     BODY = "- **Unit:** <one file>\n- **Free knobs:** <which>\n"
 
@@ -256,10 +255,10 @@ class OpenHolesFollowTheCut(unittest.TestCase):
 
 
 class StampedLeftovers(unittest.TestCase):
-    """A frozen, reported protocol kept `- <run_id> — <…>` under Runs and
-    `- <…>` under Notes, and protocol-check said nothing (uniagent area 08,
-    2026-10-07): the template line carries a cut marker, the written one
-    does not, and `- <…>` has no label for a field check to see."""
+    """A frozen, reported protocol that keeps `- <run_id> — <…>` under Runs
+    or `- <…>` under Notes is told: the template line carries a cut
+    marker, the written one does not, and `- <…>` has no label for a field
+    check to see."""
 
     def leftovers(self, body: str, frozen: bool = False) -> str:
         with tempfile.TemporaryDirectory() as d:
@@ -280,8 +279,8 @@ class StampedLeftovers(unittest.TestCase):
         self.assertIn("- <…>", out)
 
     def test_before_the_run_the_stamped_runs_line_names_from_run_not_a_leftover(self):
-        """Two cold agents stopped at 'still verbatim template text' for the
-        line only --from-run can write (Haiku H6, H7, 2026-10-13)."""
+        """The line only --from-run can write names that way, not 'still
+        verbatim template text', so no agent stops at it."""
         out = self.leftovers(
             "## Runs\n\n- <run_id> — <one sentence: what this run was>\n\n"
             "## Notes\n\n- <…>\n"
@@ -327,8 +326,8 @@ if __name__ == "__main__":
 
 class SubBulletValues(unittest.TestCase):
     """A field written as a list below its label holds that list as its value:
-    read as nothing, a Data / scope list compared empty in the scope hold and
-    hid its source digest (reference pilot 2026-11-01, task 21)."""
+    read as nothing, a Data / scope list would compare empty in the scope
+    hold and hide its source digest."""
 
     TEXT = (
         "- **Data / scope:**\n"

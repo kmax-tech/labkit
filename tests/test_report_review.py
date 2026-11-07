@@ -1,7 +1,7 @@
 """report_review: the cold reader on a report that discusses a run as not
 reported — what its prompt carries, how its reply is read, what it prints.
-The model is faked; whether it catches t18 is measured, not tested
-(docs/usability/2026-10-25-report-review-pilot.md)."""
+The model is faked; whether it catches a misreported run is measured, not
+tested (docs/usability/2026-10-25-report-review-pilot.md)."""
 
 from __future__ import annotations
 
@@ -111,9 +111,9 @@ class Gather(unittest.TestCase):
         self.assertIn("LAB-011", prompt)  # the cited rules are inlined
 
     def test_a_report_with_no_discussion_block_is_reviewed_too(self):
-        """Reference pilot 2026-11-01, task 15: the review refused a report
-        citing a run without a discussion block ("nothing to review"), so
-        an older run's "PASS" met no reader. It reads such a report: the
+        """A report citing a run without a discussion block is read, never
+        refused as "nothing to review", so an older run's "PASS" meets a
+        reader. It reads such a report: the
         adopted run (none here), no discussion, and each cited run's metrics
         labelled as cited, not adopted."""
         with tempfile.TemporaryDirectory() as d:
@@ -175,9 +175,9 @@ class Parse(unittest.TestCase):
             report_review.parse_claims("CLAIM #1 · line 5 · result · x", 5)
 
     def test_a_claim_line_off_the_form_names_nothing(self):
-        """A kind outside result|contradiction matched no claim, and the
-        reply counted as clean with its closing `0 claim(s)` — a reviewer's
-        slip released the report (review 2026-11-06, finding 1)."""
+        """A kind outside result|contradiction is refused, not read as no
+        claim: a reply closing `0 claim(s)` around it does not count as clean,
+        so a reviewer's slip releases no report."""
         reply = "CLAIM #1 · line 5 · unsupported · not adopted\nverdict: 0 claim(s)\n"
         with self.assertRaisesRegex(AuditError, "do not keep the form"):
             report_review.parse_claims(reply, 5)
@@ -190,8 +190,8 @@ class Parse(unittest.TestCase):
 
 class Command(unittest.TestCase):
     """The review writes its record; a state it judged is not drawn on
-    again; a claim holds until an input changes (eighth haiku round, t18:
-    the review as a hint was passed over)."""
+    again; a claim holds until an input changes — a hint would be passed
+    over."""
 
     CLAIMED = (
         "CLAIM #1 · line 5 · contradiction · criterion-1 PASS against criterion-1 not assessable\n"
@@ -246,9 +246,8 @@ class Command(unittest.TestCase):
             err,
         )
         # --again draws and records the draw, releases nothing — and says so,
-        # the draw and the state apart: a clean draw on a held state printed
-        # "released" while the commit stayed refused (ninth haiku round, t5),
-        # then exited 0, which read as done (audit 2026-10-27, C6)
+        # the draw and the state apart: a clean draw on a held state neither
+        # prints "released" nor exits 0, while the commit stays refused
         rc, out, _, calls = self.review(MARKED, self.CLEAN, again=True)
         self.assertEqual((rc, calls), (1, 1))
         self.assertIn("report review: this draw names 0 claim(s), recorded in ", out)
@@ -319,7 +318,7 @@ class Command(unittest.TestCase):
     def test_a_corrected_brief_makes_an_earlier_review_stale(self):
         """The brief is part of the review's state: a claim raised under a
         rule since corrected does not hold the report on, and the next
-        draw runs (review 2026-11-06, finding 2)."""
+        draw runs."""
         from labkit.gates import audit_prompt
 
         rc, _, _, calls = self.review(MARKED, self.CLAIMED)
@@ -375,9 +374,9 @@ class Command(unittest.TestCase):
         self.assertEqual(attempts.area_gaps(self.a.area).blockers, [])
 
     def test_a_deleted_review_with_a_claim_is_named_and_refuses_the_next_call(self):
-        """Ninth haiku round, t5: a report review naming two claims was
-        deleted; without it nothing held the state, and a clean draw would
-        have released it."""
+        """A deleted report review naming two claims is named and still
+        holds: without it nothing would hold the state, and a clean draw would
+        release it."""
         self.review(MARKED, self.CLAIMED)
         (r,) = self.reviews()
         r.path.unlink()
@@ -407,9 +406,8 @@ class Command(unittest.TestCase):
         self.assertIn("exit 1, empty stderr", a.error)
 
     def test_a_plain_value_error_is_refused_not_a_traceback(self):
-        # the report review listed no ValueError among its refusals; one
-        # list serves the audit and both reviewers now (audit 2026-10-27,
-        # third, M7)
+        # one list of refusals, ValueError among them, serves the audit and
+        # both reviewers
         report = self.a.report(MARKED)
 
         def broken(*args, **kw):

@@ -1,7 +1,6 @@
-"""Ids in the letters labkit 0.47 read are refused, never read (review 2026-10-07:
-a protocol with [K1] passed intent-check with "no intent ids registered" and
-exit 0 — every promise unchecked, and the house CLAUDE template still asked
-for those letters)."""
+"""Ids in the letters labkit 0.47 read are refused, never read: a protocol with
+[K1] would otherwise pass intent-check with "no intent ids registered" and
+exit 0, every promise unchecked."""
 
 import contextlib
 import io

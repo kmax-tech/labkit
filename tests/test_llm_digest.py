@@ -1,9 +1,9 @@
-"""Digest pinning in llm.resolve (2026-08-18).
+"""Digest pinning in llm.resolve.
 
 The model NAME is not the model: "qwen2.5:7b" can mean different weights in
 three months. For ollama backends `resolve` pulls the digest from /api/tags
 into the run config. The resolution is a pure function and is tested here
-against a real /api/tags payload excerpt (gammaweb, 2026-08-18).
+against an excerpt of a real /api/tags payload.
 """
 
 import sys

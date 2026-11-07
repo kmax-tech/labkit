@@ -34,13 +34,11 @@ WRITER = (
 
 
 class TestTheLockHolderIsToldByItsFlock(unittest.TestCase):
-    """Is the lock's writer still writing? The refusal said "pid N is
-    alive: still writing — wait, never delete" whenever the pid existed: a
-    pid reused by another process kept a dead run's lock "alive" while
-    `runlog --wait` ended at once (2026-11-04, case D of
-    docs/notes/2026-11-04-liveness-and-wait.md). The Store holds its lock
-    file's flock; the kernel tells. Real processes; only `ps` being
-    unavailable is mocked."""
+    """Is the lock's writer still writing? The Store holds its lock file's
+    flock; the kernel tells, not the pid, which another process may reuse and
+    so keep a dead run's lock "alive"
+    (docs/notes/2026-11-04-liveness-and-wait.md). Real processes; only `ps`
+    being unavailable is mocked."""
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -111,8 +109,8 @@ class TestTheLockHolderIsToldByItsFlock(unittest.TestCase):
 
     def test_a_free_lock_from_another_host_advises_no_deletion(self):
         """A shared file system may not carry a flock across hosts: free
-        here says nothing of a writer on the host the line names (review of
-        step 6; `attempts.alive_of` answers None for another host too)."""
+        here says nothing of a writer on the host the line names
+        (`attempts.alive_of` answers None for another host too)."""
         self._killed_writer()
         line = self.lock.read_text(encoding="utf-8")
         here = f"host {socket.gethostname()}"
@@ -192,9 +190,9 @@ class TestStore(unittest.TestCase):
         self.assertIn("never delete its lock", str(ctx.exception))
 
     def test_a_lock_that_names_no_held_flock_advises_no_deletion(self):
-        """A lock line without the flock marker (labkit 0.107.0 or earlier,
-        or by hand) holds nothing to test: its pid decides nothing, and no
-        deletion is advised (docs/notes/2026-11-04-liveness-and-wait.md)."""
+        """A lock line without the flock marker (an earlier labkit's, or
+        written by hand) holds nothing to test: its pid decides nothing, and
+        no deletion is advised."""
         lock = self.out.with_suffix(".jsonl.lock")
         lock.write_text("pid 99999999 · 2026-11-01T01:00:00 · x.py\n", encoding="utf-8")
         with self.assertRaises(SystemExit) as ctx:
@@ -268,7 +266,7 @@ if __name__ == "__main__":
 
 
 class TestProvenanceStamp(unittest.TestCase):
-    """Per-row provenance (2026-08-20): a copied/filtered output file loses its
+    """Per-row provenance: a copied/filtered output file loses its
     runs.tsv join and goes silent about what produced it — the _prov stamp
     keeps every row self-contained (run pointer, model@digest, endpoint)."""
 
@@ -310,8 +308,8 @@ class TestProvenanceStamp(unittest.TestCase):
 
 
 class DamagedFile(unittest.TestCase):
-    """Only a torn LAST line is an interrupted write (review 2026-10-07: a
-    broken line mid-file was skipped and the rows after it kept)."""
+    """Only a torn LAST line is an interrupted write; a broken line mid-file
+    is refused with its line, never skipped with the rows after it kept."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -350,8 +348,8 @@ class DamagedFile(unittest.TestCase):
 
 
 class StoreInstrument(unittest.TestCase):
-    """Resume by id alone let a new prompt keep the old prompt's answers (the
-    cloud judge probe's analysis audit, 2026-10-14). With `instrument`, every
+    """Resume by id alone would let a new prompt keep the old prompt's
+    answers. With `instrument`, every
     row carries it and a resume refuses rows of another."""
 
     A = {"prompt_sha": "aaaaaaaaaaaa", "model": "haiku"}
@@ -394,10 +392,10 @@ class StoreInstrument(unittest.TestCase):
         self.assertEqual([r["id"] for r in todo], ["x:2"])
 
     def test_every_row_carries_the_instrument_as_it_was_given(self):
-        """A shallow copy shared its inner dicts with the caller: changed
-        after construction, later rows carried another stamp than earlier
-        ones, while the resume compared against the first (review
-        2026-10-20)."""
+        """The instrument is copied whole at construction: a shallow copy
+        would share its inner dicts with the caller, and changed after
+        construction, later rows would carry another stamp than earlier ones,
+        while the resume compares against the first."""
         given = {"model": {"alias": "haiku"}, "prompt_sha": "a"}
         out = Path(tempfile.mkdtemp()) / "rows.jsonl"
         with batch.Store(out, instrument=given) as store:
@@ -421,8 +419,8 @@ class StoreInstrument(unittest.TestCase):
 
 class TestWriteDatasetLegend(unittest.TestCase):
     """The `_meta` header is what a reader opens first; the prepare template
-    stamps `about` and the gold legend as `TODO: …`, and nothing refused a
-    dataset written with them (review, 2026-10-21)."""
+    stamps `about` and the gold legend as `TODO: …`, and a dataset written
+    with them is refused."""
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

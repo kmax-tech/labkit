@@ -1,8 +1,8 @@
 """The null lane moved — held over the run's kept rows, not in the script.
 
-A cold agent deleted the estimator skeleton's own guard ("the null lane
-predicts what the registered lane predicts on every item") before it first
-ran (SAB-like apply case, 2026-10-27). finalize reads the rows the run
+A guard in the script ("the null lane predicts what the registered lane
+predicts on every item") is one an agent can delete before the first run,
+so finalize reads the rows the run
 registered as its output and blocks a null lane that answers what the
 registered lane answers on every item, gold included: such a null measures
 no noise floor (LAB-034 Null condition in the same run). A fitted null that

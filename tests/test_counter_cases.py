@@ -1,5 +1,5 @@
-"""The correct ways through the whole chain, after the contracts the repair
-case gave rise to (K1–K3, docs/notes/2026-10-27-new-registration-contracts.md):
+"""The correct ways through the whole chain under the registration
+contracts K1–K3 (docs/notes/2026-10-27-new-registration-contracts.md):
 a fix measured again under unchanged promises, and a missed criterion
 reported as the result, each released — run, analysis audit, decision,
 follow-up, adoption, report-check, the stop and the commit. And the two
@@ -151,7 +151,7 @@ class _Chain(unittest.TestCase):
 class RepairUnderUnchangedPromises(_Chain):
     """An implementation error found by the analysis audit, fixed, measured
     again under the same promises and followed up: released. The twin of
-    the repair case, which moved its bars instead (K3 holds that)."""
+    a repair that moves its bars instead, which K3 holds."""
 
     def test_a_fix_measured_again_and_followed_up_is_released(self):
         e2e._replace(self.measure_script, [(RIGHT, SWAPPED)])
@@ -186,8 +186,7 @@ class RepairUnderUnchangedPromises(_Chain):
 
 
 class SupersededCallReleasesNothing(_Chain):
-    """Counter-test 2 of the D3 rule (2026-10-28): a later audit that
-    supersedes a failed call confirms neither the call's content nor the
+    """A later audit that supersedes a failed call confirms neither the call's content nor the
     repair of any finding. A BLOCKER recorded, the code changed, a failed
     call and the audit that supersedes it: the adoption stays held until a
     follow-up judges the BLOCKER resolved with its required check shown,

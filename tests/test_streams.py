@@ -1,7 +1,7 @@
 """Findings go to stdout, a refusal to run goes to stderr (`console.refuse`).
 
-Audit 2026-10-15: 44 refusals went to stdout and 25 to stderr, so a caller
-reading stdout for a gate's findings read "no such area" as one.
+A refusal on stdout would let a caller reading stdout for a gate's findings
+read "no such area" as one.
 """
 
 from __future__ import annotations

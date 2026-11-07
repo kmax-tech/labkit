@@ -1,8 +1,8 @@
-"""A registered constant that no sentence names and no scope file reads (2026-10-17, plan P step criterion-3).
+"""A registered constant that no sentence names and no scope file reads.
 
-Three Haiku protocols (labkit-paper area 09, 2026-10-16) kept the stamp's
-`margin`, `max_empty` and `null_band_items` under sentences that never used
-them, one of them with `margin = 0.70` re-read as a threshold. runlog holds a
+A stamp's constant (`margin`, `max_empty`, `null_band_items`) kept under
+sentences that never use it is read as something else — `margin = 0.70` as
+a threshold. runlog holds a
 constant to the run's config; this holds it to the sentence and the code —
 static evidence, a warning, never a blocker.
 """

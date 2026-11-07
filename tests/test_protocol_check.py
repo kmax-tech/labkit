@@ -2,16 +2,14 @@
 
 The checker turns freely written protocols into a pass/fail decision, so it
 gets the parser treatment (LAB-023 No silent loss): tested with real raw text.
-The frozen excerpt below is verbatim from experiments/_archiv/17-bruchstufe-nli/PROTOCOL-bruchstufe-nli.md
-(2026-08-11), one of the five freely written protocols that omitted exactly
-"Typ" and "Modell-I/O" — the two fields whose omission caused bad runs on
-2026-08-13. It names no term either, which is why it also fails the Begriffe
-field added on 2026-08-19. The excerpt is frozen here so the test keeps working
-after the live protocol gets fixed.
+The frozen excerpt below is verbatim from experiments/_archiv/17-bruchstufe-nli/PROTOCOL-bruchstufe-nli.md,
+a freely written protocol that omits "Typ" and "Modell-I/O" and names no
+term. The excerpt is frozen here so the test keeps working after the live
+protocol gets fixed.
 
-Since TODO 8 the head is the ```toml block's [protocol] table and the prose
-fields are held by their exact template label (`FIELDS`); keyword matching
-anywhere in the text is gone on purpose.
+The head is the ```toml block's [protocol] table and the prose fields are
+held by their exact template label (`FIELDS`); a keyword anywhere in the
+text satisfies no field, on purpose.
 """
 
 import contextlib
@@ -117,7 +115,7 @@ REPORT_FIELDS = """\
 
 
 def pilot(**head_kw) -> str:
-    """A pilot with a model in the loop (the head's `[model]`, phase 4) unless
+    """A pilot with a model in the loop (the head's `[model]`) unless
     `model=None` is passed; PILOT_FIELDS names haiku in prose for the reader."""
     head_kw.setdefault("model", "haiku")
     return "# x\n\n" + head(**head_kw) + "\n" + PILOT_FIELDS
@@ -184,8 +182,8 @@ class AuditedTexts(unittest.TestCase):
 
 
 class TestFrozenNeedsTheAudit(unittest.TestCase):
-    """`frozen = true` means audited first (LAB-015 Preflight audit before freezing): the old checker failed a
-    frozen protocol whose audit field was still a placeholder."""
+    """`frozen = true` means audited first (LAB-015 Preflight audit before freezing): a
+    frozen protocol whose audit field is still a placeholder fails."""
 
     def test_frozen_without_audit_line_fails(self):
         rc, out = run_main(frozen(preflight_audit=""))
@@ -198,9 +196,9 @@ class TestFrozenNeedsTheAudit(unittest.TestCase):
 
 
 class TestResultAfterARun(unittest.TestCase):
-    """A declared result (`[result] run`, phase 5) makes the result fields due
-    — a placeholder counts as empty, not only a dash. Until 0.101.0 a run id
-    in the Runs list, minus "prepare" and "probe", stood for the run."""
+    """A declared result (`[result] run`) makes the result fields due — a
+    placeholder counts as empty, not only a dash. A run id in the Runs list
+    alone declares nothing."""
 
     RUN_ID = "2026-09-06T10-00-00_aa11"
     RUN = f"\n## Runs\n\n- {RUN_ID} — the full run\n"
@@ -225,9 +223,8 @@ class TestResultAfterARun(unittest.TestCase):
 
 class TestStagedReadsTheIndex(unittest.TestCase):
     """`protocol-check --staged` judges the protocol as git's index holds it
-    — the state the commit carries — where the pre-commit said it checked
-    the staged state and read the tree. Twin: without the flag the tree is
-    read; a file the index does not hold is refused."""
+    — the state the commit carries — not the tree. Twin: without the flag
+    the tree is read; a file the index does not hold is refused."""
 
     #: frozen = true turns the pilot's should gaps into must gaps: a blocker
     FROZEN_WITH_GAPS = pilot(frozen=True, preflight_audit=AUDIT_LINE)
@@ -301,8 +298,8 @@ class TestFlagsAnywhere(unittest.TestCase):
             self.assertIn("protocol-fill PROTOCOL-x.md --list", bare.getvalue())
 
     def test_contract_with_a_protocol_prints_its_own_row(self):
-        # It printed five fixed rows whatever the protocol, none for a
-        # high-cost computation (audit 2026-10-27, H8).
+        # One row, the protocol's own — a high-cost computation's too — not
+        # fixed rows whatever the protocol.
         with tempfile.TemporaryDirectory() as d:
             protocol = Path(d) / "PROTOCOL-x.md"
             protocol.write_text(head(repeat_cost="high", kind="compute"))
@@ -321,11 +318,9 @@ class TestFlagsAnywhere(unittest.TestCase):
 
 class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
     """`protocol-check PROTOCOL --contract` names what that protocol owes —
-    the fields protocol-check holds it to. It printed the full form's lists
-    unfiltered under "what PROTOCOL owes": criterion, admissibility, Model
-    I/O, Prompt and Data profile for a computation without a model, and not
-    the rendered example the freeze owes (labkit-paper area 15, round 2,
-    t15, t60, t21, t34)."""
+    the fields protocol-check holds it to, not the full form's lists: no
+    criterion, admissibility, Model I/O, Prompt or Data profile for a
+    computation without a model, and the rendered example the freeze owes."""
 
     LABELS = {f.label for f in protocol_check.FIELDS}
     RUN = "2026-09-06T10-00-00_aa11"  # a run id in runlog's shape
@@ -373,9 +368,9 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
         self.assertIn("a rendered example", frozen_line)
 
     def test_the_freeze_owes_the_promise_sentences_where_the_kind_registers(self):
-        # The freeze refused the stamp's `<…>` sentences and nothing had named
-        # them before: the contract's freeze line names them where the kind
-        # registers; a computation whose prose names no id owes none.
+        # The freeze refuses the stamp's `<…>` sentences, so the contract's
+        # freeze line names them ahead, where the kind registers; a
+        # computation whose prose names no id owes none.
         out = self.contract(head(repeat_cost="high", kind="apply", model="haiku"))
         (frozen_line,) = [
             ln for ln in out.splitlines() if ln.startswith("  once frozen = true also")
@@ -475,8 +470,8 @@ class TestFixtures(unittest.TestCase):
 
     def test_frozen_passes(self):
         """OK only when nothing at all is found: the area's code exists and
-        the audit line names the stamp it has now (until 2026-10-20 the OK
-        stood beside a preflight_audit warning)."""
+        the audit line names the stamp it has now, so no preflight_audit
+        warning stands beside the OK."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             scope_file(area)
@@ -551,9 +546,8 @@ class TestCheckFields(unittest.TestCase):
         self.assertEqual(report.missing_should, SHOULD)
 
     def test_a_count_owes_no_bar_field_at_any_tier(self):
-        """Standard 0.22: a computation owes neither a success criterion nor the
-        other fields of a bar (`<!-- lb -->`), in the full form too; a fit
-        owes them."""
+        """A computation owes neither a success criterion nor the other fields
+        of a bar (`<!-- lb -->`), in the full form too; a fit owes them."""
         bar = [f.label for f in protocol_check.FIELDS if f.low_cut == "lb"]
         self.assertIn("Inference criterion", bar)
         for cost in ("high",):
@@ -572,8 +566,8 @@ class TestCheckFields(unittest.TestCase):
         self.assertEqual(report.missing_must, [])
 
     def test_a_keyword_in_prose_does_not_satisfy_a_field(self):
-        """A word anywhere used to satisfy a field (`prompt` in a sentence
-        covered Model I/O). Only the label line counts."""
+        """A word anywhere satisfies no field (`prompt` in a sentence does not
+        cover Model I/O). Only the label line counts."""
         text = (
             head(kind="fit", model="haiku")
             + "We ask the model a prompt about terms, model I/O and anchors.\n"
@@ -651,13 +645,12 @@ class TestMain(unittest.TestCase):
         return code, out.getvalue()
 
     def test_template_itself_must_fail(self):
-        """Expectation INVERTED on 2026-08-17 — and that is the point.
+        """The template itself fails — and that is the point.
 
-        Until then this test required the template itself to pass. That was
-        the assumption covering the actual bug: a protocol indistinguishable
-        from the template counted as filled. Exactly thus 28 protocols were
-        reported clean while **none** contained a real model input/output
-        example. The template consists of placeholders; it MUST fail now.
+        A protocol indistinguishable from the template is not filled: a
+        checker that passed the template would report protocols clean that
+        hold no real model input/output example. The template consists of
+        placeholders; it MUST fail.
         """
         code, out = self._run([str(TEMPLATE)])
         self.assertEqual(code, 1)
@@ -686,13 +679,12 @@ class TestMain(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
-# --- Placeholder detection (2026-08-17) --------------------------------------
+# --- Placeholder detection ---------------------------------------------------
 #
-# The occasion: across 28 protocols NOT ONE contained a real model
-# input/output example while the checker reported them clean — the word
-# "Prompt" in the template placeholder satisfied it. The lines below are
-# verbatim from experiments/13-akzeptanzregel/PROTOCOL-akzeptanzregel.md
-# (2026-08-17, before the repair). German labels: placeholder detection reads
+# A placeholder is no value: the word "Prompt" in the template placeholder
+# does not satisfy the field. The lines below are verbatim from an unfilled
+# version of experiments/13-akzeptanzregel/PROTOCOL-akzeptanzregel.md.
+# German labels: placeholder detection reads
 # any bold label; which ones are owed is the template's (English) list.
 
 REAL_PLACEHOLDER_BLOCK = """\
@@ -760,10 +752,10 @@ class TestPlaceholders(unittest.TestCase):
 
 class TestStampPlaceholders(unittest.TestCase):
     """The stamp's own `<…>` phrases are recognised exactly, wherever they
-    stand in a value: an agent wrote the alias before the Model / tool arm
-    lines and left them, and the field read as filled (sandbox, 2026-10-21).
-    A placeholder the author coins inside their own prose is not a stamp's
-    and stays unrecognised — that limit is deliberate."""
+    stand in a value: text written before or after a phrase left in place
+    does not make the field read as filled. A placeholder the author coins
+    inside their own prose is not a stamp's and stays unrecognised — that
+    limit is deliberate."""
 
     def test_the_template_yields_phrases_and_no_single_word(self):
         phrases = protocol_check.stamp_placeholders()
@@ -833,9 +825,8 @@ def stamped_prompt() -> str:
 class TestStampedPromptBlock(unittest.TestCase):
     """The stamp writes the Prompt label with an empty value and a fence that
     holds only the template's `<the real prompt — …>`. That fence is no
-    value: read as one, an unfilled Prompt passed the commit hook, finalize
-    and `--list`, which the contract says the hook holds (pilot PubMedQA,
-    labkit c2c5da2, 2026-10-28)."""
+    value: an unfilled Prompt is held by the commit hook, finalize and
+    `--list` alike, as the contract says the hook holds it."""
 
     def stamp(self, repeat_cost: str) -> str:
         with tempfile.TemporaryDirectory() as d:
@@ -905,10 +896,9 @@ class TestTemplateLines(unittest.TestCase):
 
 
 class TestFrozenWithoutExample(unittest.TestCase):
-    """`frozen = true` without a rendered example (2026-08-18).
+    """`frozen = true` without a rendered example.
 
-    Occasion (MH): the flow had to change — register first, then run the
-    pipeline ONCE over a handful of real items, put the result into the
+    The flow: register first, then run the pipeline ONCE over a handful of real items, put the result into the
     protocol as the example, and only then freeze. Freezing on an unchecked
     instrument freezes the error in.
     """
@@ -942,9 +932,8 @@ class TestFrozenWithoutExample(unittest.TestCase):
 
     def test_a_computation_without_a_model_owes_no_example(self):
         # The compute skeleton has no --show and no --probe: its run is the
-        # instrument check, and the freeze comes before it. The must
-        # refused every frozen high computation at the commit (labkit-paper
-        # area 15, round 2, t21 and t34: three --no-verify commits).
+        # instrument check, and the freeze comes before it, so a frozen high
+        # computation owes no example at the commit.
         text = frozen(model=None, kind="compute").replace(*self.NO_EXAMPLE)
         self.assertEqual(protocol_report.code_blocks(text), 0)
         _, out = run_main(text)
@@ -976,7 +965,7 @@ class TestFrozenWithoutExample(unittest.TestCase):
 
 
 class TestGraduationGate(unittest.TestCase):
-    """`frozen = true` escalates should to must (2026-08-18) — pilot light, report heavy."""
+    """`frozen = true` escalates should to must — pilot light, report heavy."""
 
     def test_pilot_without_frozen_only_warns(self):
         rc, out = run_main(pilot())
@@ -997,7 +986,7 @@ class TestGraduationGate(unittest.TestCase):
 
 
 class TestPromptAndExample(unittest.TestCase):
-    """Verbatim prompt + one real example are musts (2026-08-20).
+    """Verbatim prompt + one real example are musts.
 
     That is the core of the protocol: seeing later what really went in and
     came out. A Prompt field without a code block is a must failure
@@ -1016,8 +1005,8 @@ class TestPromptAndExample(unittest.TestCase):
         self.assertIn("no code block", out)
 
     def test_prompt_na_needs_no_code_block(self):
-        """`- **Prompt:** n/a — no model` is no prompt to paraphrase; the old
-        regex let `\\*{0,2}` backtrack past the n/a and flagged it."""
+        """`- **Prompt:** n/a — no model` is no prompt to paraphrase; a regex
+        whose `\\*{0,2}` backtracks past the n/a would flag it."""
         rc, out = run_main(
             self.PARAPHRASE.replace("asks, in effect, for a fallacy", "n/a — no model")
         )
@@ -1041,7 +1030,7 @@ class TestPromptAndExample(unittest.TestCase):
 
     def test_raw_output_is_not_owed_without_a_model_at_seconds(self):
         """A count has no prompt+answer pair to show: the field is `sm`, owed
-        only with a model named (cloud probe 2026-10-12 filled it with n/a)."""
+        only with a model named."""
         text = (
             pilot(repeat_cost="low", model=None).replace(
                 "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
@@ -1057,8 +1046,7 @@ class TestPromptAndExample(unittest.TestCase):
 
     def test_a_count_at_seconds_owes_neither_criterion_nor_limits(self):
         """Without a model the low cut has no criterion, no admissibility
-        condition, and after the run only the Result line of the Summary
-        (decisions 2026-10-12, five cloud probes)."""
+        condition, and after the run only the Result line of the Summary."""
         base = pilot(repeat_cost="low", model=None).replace(
             "- **Model / tool:** haiku", "- **Model / tool:** n/a — deterministic"
         )
@@ -1084,7 +1072,7 @@ class TestPromptAndExample(unittest.TestCase):
         ):
             self.assertNotIn(label, out)
         # the twin: a model declared in the head brings the criterion back
-        # (prose alone decides nothing since phase 4)
+        # (prose alone decides nothing)
         rc, out = run_main(
             text.replace(
                 head(repeat_cost="low"), head(repeat_cost="low", model="haiku"), 1
@@ -1132,10 +1120,8 @@ class TestPromptAndExample(unittest.TestCase):
 
 class TestPilotStampNotFrozen(unittest.TestCase):
     """The template's legend MENTIONS the frozen rule — that must not make a
-    fresh stamp look frozen (2026-08-20: '`Frozen before run: yes` makes them
-    musts' in the head text made every fresh pilot stamp look frozen; all
-    should-gaps were wrongly escalated to musts). Frozen is now one typed
-    value in the head."""
+    fresh stamp look frozen and escalate its should-gaps to musts. Frozen is
+    one typed value in the head."""
 
     def test_template_head_is_not_frozen(self):
         h = protocol_block.head(TEMPLATE.read_text(encoding="utf-8"))
@@ -1147,11 +1133,10 @@ class TestPilotStampNotFrozen(unittest.TestCase):
 
 
 class TestTerms(unittest.TestCase):
-    """Terms are a must (2026-08-19).
+    """Terms are a must.
 
     The template asks for them twice — in the context block and after the
-    dry run — and the checker looked at neither. 20 of 31 protocols in the
-    repo named not a single term while five definition notes sat next door.
+    dry run; the context block's "Terms of this protocol" is the must field.
     """
 
     TERMS = "- **Terms of this protocol:** n/a — standard vocabulary\n"
@@ -1162,9 +1147,8 @@ class TestTerms(unittest.TestCase):
         self.assertIn("MISSING (must): Terms of this protocol", out)
 
     def test_only_the_quality_check_label_satisfies_the_field(self):
-        """The field is "Quality check"; its earlier labels "Admissibility
-        condition" (labkit 0.103.0), "Stop rule", "Kill", "Abbruch" no
-        longer pass (TODO 8)."""
+        """The field is "Quality check"; other labels — "Admissibility
+        condition", "Stop rule", "Kill", "Abbruch" — do not pass."""
         adm = "- **Quality check:** [quality-check-1] yield >= 90%\n"
         for wording in (
             "- **Admissibility condition:** [quality-check-1] yield >= 90%\n",
@@ -1187,8 +1171,8 @@ class TestTerms(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_placeholder_does_not_count_as_filled(self):
-        # The label is there, the field is not filled — exactly the gap
-        # closed for the prompt field on 2026-08-17.
+        # The label is there, the field is not filled — the same gap the
+        # prompt field's placeholder detection holds.
         rc, out = run_main(
             pilot().replace(self.TERMS, "- **Terms of this protocol:** <every label>\n")
         )
@@ -1208,8 +1192,8 @@ class TestTerms(unittest.TestCase):
 
 class TestHelpFlag(unittest.TestCase):
     def test_help_prints_usage_and_exits_zero(self):
-        """`protocol-check --help` used to read the flag as a filename and
-        answer "nicht lesbar" — whoever looks for the flags must find usage."""
+        """`protocol-check --help` is the flag, not a filename: whoever looks
+        for the flags must find usage."""
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             code = protocol_report.main(["--help"])
@@ -1218,9 +1202,8 @@ class TestHelpFlag(unittest.TestCase):
 
 
 class TestSeriesDetector(unittest.TestCase):
-    """A follow-up registration appended to the same protocol is a series
-    (2026-09-06): one file had grown to 649 lines out of three experiments,
-    each under a "... (deklariert vor dem Lauf)" heading. One question per
+    """A follow-up registration appended to the same protocol, under a
+    "... (deklariert vor dem Lauf)" heading, is a series. One question per
     protocol — the follow-up gets its own PROTOCOL-s<N> file."""
 
     def test_declared_follow_up_heading_warns(self):
@@ -1236,8 +1219,8 @@ class TestSeriesDetector(unittest.TestCase):
 
 
 class TestProtocolRunListNotCountedAsProse(unittest.TestCase):
-    """The protocol run list is mandatory content, not prose (2026-09-06): 93 of
-    a protocol's 409 lines were its run list — the length budget must not teach
+    """The protocol run list is mandatory content, not prose: the length
+    budget must not teach
     people to stop documenting runs."""
 
     def test_a_huge_run_list_does_not_flag_the_protocol(self):
@@ -1249,13 +1232,9 @@ class TestProtocolRunListNotCountedAsProse(unittest.TestCase):
 
 
 class TestAuditFields(unittest.TestCase):
-    """The two audits (2026-09-08). Occasion: ten small errors in four weeks —
-    a sign flip between BT score and log-odds, r2 fitted and scored on the
-    same anchors, a gate without a positive control, a probe writing into the
-    run's output file; none caught by the chain itself. Hence two audits
-    (lab standard LAB-015 Preflight audit before freezing code vs. intent before freezing, LAB-050 Analysis audit before reporting
+    """The two audits (lab standard LAB-015 Preflight audit before freezing code vs. intent before freezing, LAB-050 Analysis audit before reporting
     evaluation vs. frozen criterion before reporting). The preflight audit is
-    now a head value (`preflight_audit`), the analysis audit a field written
+    a head value (`preflight_audit`), the analysis audit a field written
     after the run."""
 
     def test_template_stamps_both(self):
@@ -1288,7 +1267,7 @@ class TestAuditFields(unittest.TestCase):
 
 
 class TestResolutionCheckGate(unittest.TestCase):
-    """The resolution check field (LAB-016 Resolution check before freezing, 2026-09-09) is a should: owed as a
+    """The resolution check field (LAB-016 Resolution check before freezing) is a should: owed as a
     must once frozen; the template's own "Answer form + resolution †" field
     must NOT stand in for it."""
 
@@ -1344,7 +1323,7 @@ class TestResolutionCheckGate(unittest.TestCase):
 
 
 class TestProseBudgetEscalation(unittest.TestCase):
-    """A frozen protocol escalates prose budgets from warning to must (2026-09-13)."""
+    """A frozen protocol escalates prose budgets from warning to must."""
 
     INTENT = "## Intent\n" + "Eine Zeile Prose.\n" * 40
 
@@ -1368,7 +1347,7 @@ class TestProseBudgetEscalation(unittest.TestCase):
 
 class TestHeadValues(unittest.TestCase):
     """The head is typed data; a value outside its choices is one loud MUST
-    failure naming the field, never a silent "not found" (TODO 8)."""
+    failure naming the field, never a silent "not found"."""
 
     def test_the_measurement_short_form_is_rejected(self):
         rc, out = run_main(pilot(type="measurement"))
@@ -1377,9 +1356,7 @@ class TestHeadValues(unittest.TestCase):
 
     def test_another_standard_is_rejected(self):
         """A newer or older standard gets one hard failure and zero other
-        findings — a gate judging another template produces false positives
-        (2026-09-14: a pre-0.15 checker flagged the 0.15 template's stamped
-        preamble as "verbatim template text" for a whole session)."""
+        findings — a gate judging another template produces false positives."""
         for std in ("0.99", "0.20", "0.17", "0.15"):
             with self.subTest(std):
                 rc, out = run_main(
@@ -1414,7 +1391,7 @@ class TestExclusions(unittest.TestCase):
         self.assertIn("Exclusions / filters", TEMPLATE.read_text(encoding="utf-8"))
 
     def test_the_gate_labels_moved_into_the_head(self):
-        """Phase 4 (2026-10-21): `[gate] labels` in the TOML head, no prose field."""
+        """`[gate] labels` stand in the TOML head, no prose field."""
         text = TEMPLATE.read_text(encoding="utf-8")
         self.assertNotIn("Gate labels (expected)", text)
         self.assertIn("[gate] labels", text)
@@ -1424,9 +1401,9 @@ class TestExclusions(unittest.TestCase):
 
 
 class TestIntentBudgetCalibration(unittest.TestCase):
-    """Intent budget 35 (calibration 2026-09-15, n=94): the intent-id
-    registrations moved mandatory content into Intent — the disciplined
-    confirmatory cluster tops out at 35 prose lines and must pass."""
+    """Intent budget 35: the intent-id registrations put mandatory content
+    into Intent — a disciplined confirmatory protocol reaches 35 prose lines
+    and must pass."""
 
     def test_intent_35_lines_is_within_budget(self):
         text = "## Intent\n" + "Prose line.\n" * 35
@@ -1438,9 +1415,9 @@ class TestIntentBudgetCalibration(unittest.TestCase):
 
 
 class TestProseLinesReadFencesLikeTheParser(unittest.TestCase):
-    """Audit 2026-10-18: `prose_lines` toggled on ``` by hand, so a `~~~`
-    fence and a ``` nested in a fence counted code as prose; the one fence
-    walker (`protocol_block.fence_spans`) reads both right."""
+    """`prose_lines` reads fences through the one fence walker
+    (`protocol_block.fence_spans`): a `~~~` fence and a ``` nested in a
+    fence are code, not prose, which a toggle on ``` by hand would miss."""
 
     def test_tilde_fence_is_not_prose(self):
         text = "## Intent\nProse.\n~~~\ncode\ncode\n~~~\nMore prose.\n"
@@ -1457,8 +1434,8 @@ class TestProseLinesReadFencesLikeTheParser(unittest.TestCase):
 
 class TestStampedLegendIsNotTemplateText(unittest.TestCase):
     """The template's preamble (before the first `## `) is a stamped legend
-    that survives filling — the verbatim-template check must not flag it
-    (2026-09-14/15: every freshly stamped protocol was flagged forever)."""
+    that survives filling — the verbatim-template check must not flag it,
+    or every freshly stamped protocol stays flagged."""
 
     def test_preamble_lines_are_excluded(self):
         lines = protocol_report.template_lines(protocol_report.find_template(None))
@@ -1476,7 +1453,7 @@ class TestStampedLegendIsNotTemplateText(unittest.TestCase):
 
 
 class TestRepeatCost(unittest.TestCase):
-    """The repeat cost (2026-10-05) is a head value: `repeat_cost` in [protocol]."""
+    """The repeat cost is a head value: `repeat_cost` in [protocol]."""
 
     def test_template_stamps_cost_as_placeholder(self):
         self.assertIsNone(
@@ -1490,7 +1467,7 @@ class TestRepeatCost(unittest.TestCase):
             )
 
     def test_a_typo_is_a_loud_error(self):
-        """`Cost: second` used to read as undeclared and so as `high`."""
+        """`Cost: second` is a loud error, never read as undeclared and so as `high`."""
         with self.assertRaisesRegex(
             protocol_block.BlockError, r"\[protocol\] repeat_cost = 'second'"
         ):
@@ -1537,9 +1514,8 @@ class PromiseNames(unittest.TestCase):
 
 class RegistrationProse(unittest.TestCase):
     """The run list is not prose: only the `## Runs` section is left out of
-    the length budget (`protocol_block.RUNS_HEADING`). Until 2026-11-07 any
-    heading holding "runs" or "Läufe" was — a second definition beside the
-    writer's (architecture audit, H12)."""
+    the length budget (`protocol_block.RUNS_HEADING`), the writer's one
+    definition; another heading holding "runs" or "Läufe" is prose."""
 
     def test_only_the_runs_section_is_left_out(self):
         from labkit.checks import protocol_report

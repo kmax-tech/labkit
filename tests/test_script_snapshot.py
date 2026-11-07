@@ -31,8 +31,8 @@ class SnapshotScript(unittest.TestCase):
         return (self.run_dir / "script-source.py").read_bytes()
 
     def test_the_hash_is_the_copys_even_when_the_script_changes_meanwhile(self) -> None:
-        """An editor saving between the copy and a second read gave a record
-        whose hash matched no stored script."""
+        """An editor saving between the copy and a second read would give
+        a record whose hash matches no stored script."""
         real_write = Path.write_bytes
 
         def write_then_edit(path: Path, data: bytes) -> int:

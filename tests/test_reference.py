@@ -603,9 +603,9 @@ class Rendered(unittest.TestCase):
 class AuditorInstruction(unittest.TestCase):
     """Twin 6: the instruction text the auditor reads says a computation
     owes no criterion, and names the WARNING for an unregistered stated
-    value — not a BLOCKER for a missing criterion (pressure pilot task 60,
-    2026-10-29). A prompt test on the text, whitespace collapsed; the
-    SAB-like compute case is audited by hand."""
+    value — not a BLOCKER for a missing criterion. A prompt test on the
+    text, whitespace collapsed; the SAB-like compute case is audited by
+    hand."""
 
     @staticmethod
     def one_line(text: str) -> str:

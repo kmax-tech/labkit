@@ -3,14 +3,9 @@ the first measurement: the measurements git's history puts first
 (`answering_run.first_measurements`) and the commit each record names
 (`runs.recorded_commit`). What stood before the number is what that commit
 holds; the tree now says nothing about it, and runlog's start gate reads
-the tree. A run id is local time, so it orders only runs at one commit.
-
-Why (labkit-paper area 09, fifth haiku round, 2026-10-22): none of the
-three labkit agents had committed criterion and quality check
-before the first measurement, and every gate was green. The order (A11,
-audit 2026-10-27): a run started under `TZ=Etc/GMT+12` sorted before an
-earlier one at a commit without the registration and became the first
-measurement.
+the tree. A run id is local time, so it orders only runs at one commit:
+a run started under `TZ=Etc/GMT+12` never sorts itself before an earlier
+one at a commit without the registration.
 """
 
 from __future__ import annotations
@@ -196,7 +191,7 @@ class RegistrationAtTheFirstMeasurement(_Repository):
             f"({sha[:12]}) lacks Question / hypothesis",
             out,
         )
-        # the way on (TODO 12a, decided 2026-10-28): exploratory, then a new
+        # the way on: exploratory, then a new
         # registration naming it, or a handover
         self.assertIn("that measurement is exploratory", out)
         self.assertIn("[replaces] protocol =", out)
@@ -205,8 +200,8 @@ class RegistrationAtTheFirstMeasurement(_Repository):
     def test_a_kind_changed_after_the_first_measurement_blocks(self):
         """Registered and measured as a computation, then turned into a fit
         with its bar written: the bar did not stand before the number. The
-        commit is judged by today's kind, and the change is named (review
-        2026-10-26: the check read the kind of the commit and was silent)."""
+        commit is judged by today's kind, not its own, and the change is
+        named."""
         sha = self._commit(REGISTRATION, kind="compute")
         self._run(sha)
         self._commit(REGISTRATION + BAR, kind="fit")
@@ -342,9 +337,9 @@ def _registration_changes(area: Path, proto: Path) -> list:
 class RegistrationAsFirstMeasured(_Repository):
     """K3 (docs/notes/2026-10-27-new-registration-contracts.md): the
     answering run holds the registration its protocol's first measurement
-    recorded. The repair case (2026-10-27): run 98dd failed [quality-check-2] at
-    null_band 0.1, the band became 0.15 "to accommodate observed null
-    score", and the next run passed."""
+    recorded. The repair case: run 98dd fails [quality-check-2] at
+    null_band 0.1, the band becomes 0.15 "to accommodate observed null
+    score", and the next run passes — held."""
 
     # named before RUN: the answering run is still the newest by name
     FIRST = "2026-10-07T09-25-31_98dd"
@@ -383,8 +378,8 @@ class RegistrationAsFirstMeasured(_Repository):
     def test_the_way_back_undoes_every_change_and_then_passes(self):
         """The start state of the repair case: [quality-check-3] added and the band raised
         after the first measurement. The way back names both, and taken, it
-        releases the protocol — a restore that named only the band left
-        [quality-check-3] and was held again."""
+        releases the protocol — a restore of the band alone would leave
+        [quality-check-3] and be held again."""
         first = self._register(_block(0.1))
         self._run(first, self.FIRST)
         a3 = (
@@ -435,9 +430,9 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn("git show", line)
 
     def test_a_sentence_and_a_bar_changed_together_are_both_named(self):
-        """The fourth SAB-like draw: the margin and the sentences changed in
-        one edit, the hold named the constant only, the agent restored it,
-        measured again and was held again for the sentence."""
+        """The margin and the sentence changed in one edit: the hold names
+        both, so a restore of the constant alone is not held a second time for
+        the sentence."""
         first = self._register(_block(0.1))
         self._run(first, self.FIRST)
         self._run(self._register(_block(0.15, "within the calibrated band")), RUN)
@@ -533,7 +528,7 @@ class RegistrationAsFirstMeasured(_Repository):
         self.assertIn("the report names the protocol, not its runs", finding.line)
 
 
-#: a computation's scope as Labor-21 r3 registered it (round 2, 2026-10-31)
+#: a computation's scope as a protocol registers it: all roads
 ALL_ROADS = (
     "- **Question / hypothesis:** the deforested share within 5.5 km of the roads\n"
     "- **Data / scope:** roads.geojson and deforestedArea.geojson\n"
@@ -545,12 +540,11 @@ REFERENCE = 'value = 0.62\ntolerance = 0.01\nrelation = "within"\n'
 
 class ScopeAsFirstMeasured(_Repository):
     """What a number is about holds from its first measurement on, at every
-    kind (docs/notes/2026-10-31-scope-frozen.md). The case (round 2 of the
-    pressure design, Labor-21 r3): all roads gave 0.4749 against a stated
-    0.62; the roads were then filtered to BR highways in the script and in
-    Data / scope and Exclusions / filters, the next run gave 0.6259 and was
-    adopted, and every gate was green — a computation has no promise block,
-    and only the block was held."""
+    kind (docs/notes/2026-10-31-scope-frozen.md). The case: all roads give
+    0.4749 against a stated 0.62; the roads are then filtered to BR highways
+    in the script and in Data / scope and Exclusions / filters, and the next
+    run gives 0.6259 — a computation has no promise block, so the fields
+    themselves are held."""
 
     FIRST = "2026-10-07T09-25-31_98dd"
 
@@ -629,9 +623,9 @@ class ScopeAsFirstMeasured(_Repository):
     def test_a_first_measurement_whose_reference_did_not_read_yet_still_holds_the_fields(
         self,
     ):
-        """Labor-21 r3: the first runs started on a commit whose [reference]
-        did not parse, the table was repaired, the fields rewritten later —
-        the fields are compared whatever the head held then."""
+        """The first runs started on a commit whose [reference] does not
+        parse, the table repaired, the fields rewritten later: the fields are
+        compared whatever the head held then."""
         broken = (
             'value = 0.62\ntolerance = 0.01\nrelation = "within"\nunit = "fraction"\n'
         )
@@ -681,10 +675,9 @@ class ScopeAsFirstMeasured(_Repository):
     def test_a_field_rewritten_after_the_last_measurement_is_held_before_any_run(
         self,
     ):
-        """Probe 2026-11-02 (area 17, c17-t34-labkit-demand-r1): the Unit
-        rewritten after the one measurement, then an audit of that run on the
-        new text — no run saw the change, and the adoption passed. The
-        protocol as it stands is held to the first measurement too."""
+        """The Unit rewritten after the one measurement, then an audit of
+        that run on the new text — no run saw the change. The protocol as it
+        stands is held to the first measurement too."""
         self._run(self._register(ALL_ROADS), RUN)
         self._rewrite("a fraction of the buffer's area", "a share of the buffer")
         (line,) = self._changes()
@@ -747,13 +740,13 @@ class ScopeAsFirstMeasured(_Repository):
 
 class FirstMeasurementInGitOrder(_Repository):
     """Git's history orders the measurements, a run id only those at one
-    commit (A11, audit 2026-10-27)."""
+    commit."""
 
     def test_a_run_started_under_another_tz_does_not_become_the_first(self):
-        """The fault: R0 measured at a commit without the registration (the
-        tree held it), the registration was committed, and R1 started under
-        each zone. Under Etc/GMT+12 R1's id sorts before R0's, and R1 —
-        whose commit holds the registration — was the first measurement."""
+        """R0 measured at a commit without the registration (the tree held
+        it), the registration committed, and R1 started under each zone.
+        Under Etc/GMT+12 R1's id sorts before R0's; R0 stays the first
+        measurement, though R1's commit holds the registration."""
         before = self._commit("")
         r0 = self._run(before, _run_id("Etc/GMT-1", "0000"), dirty=True)
         after = self._commit(REGISTRATION)
@@ -799,7 +792,8 @@ class FirstMeasurementInGitOrder(_Repository):
     def test_diverged_history_holds_the_first_of_each_branch(self):
         """A side branch without the registration: neither commit is an
         ancestor of the other, so git cannot say which run came first, and
-        the run on the uninterpretation is held — though it sorts later."""
+        the run on the branch without the registration is held — though it
+        sorts later."""
         base = self._commit("")
         left = self._commit(REGISTRATION)
         _git(self.root, "checkout", "-q", base)
@@ -1016,10 +1010,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         self.assertNotIn("now registers", out)
 
     def test_the_hook_entry_prints_next_steps_step_after_a_hold(self):
-        """The one-explainer plan, step 6: `report-check --if-reported
-        --staged` (the pre-commit) holds and then prints `labkit-next
-        --staged`'s step for the area, byte for byte; its findings keep
-        their own lines."""
+        """`report-check --if-reported --staged` (the pre-commit) holds and
+        then prints `labkit-next --staged`'s step for the area, byte for byte;
+        its findings keep their own lines."""
         from labkit.gates.next_step import next_step
         from labkit.gates.report_context import INDEX
 

@@ -1,14 +1,14 @@
 """The stamped measure scripts account for every item of their source.
 
 Pairing: a shorter answer list than the items it answers is refused, never
-cut to the shorter length — `zip` without `strict=True` dropped the
-unanswered items, and the output looked like a complete run of fewer items.
+cut to the shorter length — `zip` without `strict=True` drops the
+unanswered items, and the output looks like a complete run of fewer items.
 
 Balance: before a number, the kept rows are held to the source (`balance`,
 `batch.Ledger`) — a missing, doubled or stray row, or one made from an
 item as it was before an edit, stops the evaluation; the complete,
 unchanged file passes. Counted from rows alone, six of twelve items could
-be missing and every check of the stamp still passed (review 2026-10-20).
+be missing and every other check of the stamp would still pass.
 
 The scripts are the real stamp (`scaffold.stamp_area`), loaded as the
 area's own test loads them; only the model call or the estimator is
@@ -190,8 +190,8 @@ class Balance(unittest.TestCase):
         self.assertIn("item_sha", str(cm.exception))
 
     def test_judge_probe_shows_the_answer_to_the_item_as_it_is_now(self) -> None:
-        """The probe resumed its file: an item edited since the last probe
-        made no new call and showed the old answer (review 2026-10-20)."""
+        """An item edited since the last probe gets a new call: the probe
+        shows its answer to the item as it is now, never the old one."""
         m = self.judge
         answer = lambda model, prompts, *, workers: [  # noqa: E731
             "Yes" if "corrected" in p else "No" for p in prompts

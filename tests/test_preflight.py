@@ -110,8 +110,8 @@ class TestAreaTests(unittest.TestCase):
             self.assertIn("WARNING: no tests/test_", out)
 
     def test_missing_test_file_blocks_once_frozen(self):
-        """frozen = true owes every gap; a missing resolution test is one
-        (2026-10-07: it only warned, a protocol froze without any test)."""
+        """frozen = true owes every gap; a missing resolution test is one,
+        so no protocol freezes without a test."""
         with _area_dir() as d:
             area, _ = _area(
                 d, _protocol(frozen=True, preflight_audit="2026-10-07 · scope sha 0")
@@ -141,11 +141,11 @@ class TestAreaTests(unittest.TestCase):
 
 
 class TellTestRun(unittest.TestCase):
-    """preflight and finalize render the area-test run alike (S7)."""
+    """preflight and finalize render the area-test run alike."""
 
     def test_a_failed_run_carries_its_counts_into_the_blocker(self):
-        # the 10-23 branch-1 fix stood in finalize only; preflight's blocker lost
-        # pytest's counts for a collecting caller
+        # preflight's blocker carries pytest's counts for a collecting caller,
+        # as finalize's does
         tests = preflight.AreaTests(
             "tests/test_01_x.py",
             [Path("test_01_x.py")],
@@ -167,8 +167,7 @@ class TellTestRun(unittest.TestCase):
 
 
 class TestAreaTestNames(unittest.TestCase):
-    """An area runs its own stamped test, not one whose name extends its own
-    (uniagent 2026-10-07: area 08 ran area 09's test)."""
+    """An area runs its own stamped test, not one whose name extends its own."""
 
     def test_a_longer_name_is_not_this_areas_test(self):
         with _area_dir() as d:
@@ -222,8 +221,7 @@ class TestPreflight(unittest.TestCase):
 
     def test_the_protocol_flag_takes_the_file_name_its_usage_shows(self):
         # usage: preflight <AREA> [--protocol PROTOCOL-*.md], and the pre-run
-        # hook's label names it so; from the repo root it was "no such
-        # protocol" (labkit-paper area 15, round 2, t71)
+        # hook's label names it so; from the repo root too
         with _area_dir() as d:
             area, p = _area(d)
             with contextlib.chdir(area.parent.parent):
@@ -243,7 +241,7 @@ class TestPreflight(unittest.TestCase):
     def test_prose_head_is_rejected_loudly(self):
         """A protocol with the head as prose lines (Standard 0.16/0.17) is
         read by labkit 0.47; here it is a blocker naming the [protocol]
-        table, not a protocol checked against guessed fields (TODO 8)."""
+        table, not a protocol checked against guessed fields."""
         prose = (
             "# Experiment protocol: x\n\n- **Standard:** 0.16\n"
             "- **Protocol id:** p-0123456789abcdef\n- **Frozen before run:** no\n"
@@ -344,7 +342,7 @@ class TestNoScriptsDirectory(unittest.TestCase):
 
 class GraduationGate(unittest.TestCase):
     """Frozen turns should-gaps into blockers — the same rule as in
-    protocol-check, from the same function (2026-10-05)."""
+    protocol-check, from the same function."""
 
     def test_frozen_protocol_with_should_gaps_has_blockers(self):
         with _area_dir() as d:
@@ -356,8 +354,8 @@ class GraduationGate(unittest.TestCase):
             self.assertIn("MISSING (must): Problem in one sentence", buf.getvalue())
 
     def test_a_collector_receives_the_findings_and_nothing_is_printed(self):
-        # the pre-run hook read the printed report back (audit 2026-10-27,
-        # third, M4); a silent collector carries the same blockers as data
+        # the pre-run hook reads the findings, not the printed report: a
+        # silent collector carries the same blockers as data
         with _area_dir() as d:
             area, _ = _area(d, _protocol(frozen=True))
             found = Findings(tell=None)
@@ -536,9 +534,8 @@ class TestAuditFindings(unittest.TestCase):
 
     def test_a_stale_audit_line_blocks_once_frozen(self):
         """The line names a sha, a decided record carries that sha, the code
-        stamps another: preflight said "all decided" and passed the state
-        runlog refuses at the run (audit 2026-10-15). The twin, the code's
-        own sha, is clean."""
+        stamps another: preflight blocks the state runlog refuses at the
+        run, never "all decided". The twin, the code's own sha, is clean."""
         from labkit.formats import scope_sha
 
         with _area_dir() as d:
@@ -576,8 +573,8 @@ class TestAuditFindings(unittest.TestCase):
             p.write_text(_protocol(frozen=True, preflight_audit=good.name))
             code, out = _run_preflight(area)
             self.assertNotIn("preflight_audit:", out)
-            # the promises rewritten after the audit: the record named the
-            # code only until 0.97.1 (review 2026-10-18)
+            # the promises rewritten after the audit: the record names the
+            # promise block, not only the code
             p.write_text(
                 p.read_text().replace(
                     "the criterion holds", "the criterion holds twice"
@@ -609,7 +606,7 @@ class TestAuditFindings(unittest.TestCase):
             self.assertEqual(code, 0, out)
             self.assertNotIn("16-there", out)
             # a handover of that area that records it sets it aside: told,
-            # the area ended without a result (audit 2026-10-27, second)
+            # the area ended without a result
             (record,) = findings.area_records(other)
             handovers.write_record(
                 handovers.new_path(other),

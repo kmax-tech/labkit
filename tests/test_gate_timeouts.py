@@ -1,6 +1,6 @@
 """A gate's subprocess has a time limit: a hanging area test or `--check`
-hung preflight, finalize and report-check until the hook's own timeout
-killed them, wordless (audit 2026-10-15). Over the limit is a failing
+does not hang preflight, finalize and report-check until the hook's own
+timeout kills them, wordless. Over the limit is a failing
 test, a failing check — said in the finding.
 """
 

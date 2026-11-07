@@ -1,8 +1,8 @@
 """A server reply of the wrong shape fails as one ReplyError naming the
 backend, the route and the field — not as the KeyError, AttributeError,
 TypeError or JSONDecodeError it raised deep in each parser, and not as a
-string count stored as a token number (review 2026-10-20). A reply of the
-right shape is read as before.
+string count stored as a token number. A reply of the right shape is
+read.
 
     .venv/bin/python -m pytest tests/test_llm_replies.py
 """
@@ -89,7 +89,7 @@ class WrongShapes(unittest.TestCase):
 
 
 class RightShapes(unittest.TestCase):
-    """The twins: replies as the APIs define them are read as before."""
+    """The twins: replies as the APIs define them are read."""
 
     def test_each_backend_reads_its_answer_and_counts(self) -> None:
         with _reply({"response": " ok ", "prompt_eval_count": 3, "eval_count": 1}):
@@ -112,9 +112,8 @@ class RightShapes(unittest.TestCase):
 class ClaudeCliProvenance(unittest.TestCase):
     """The reply names who wrote the answer; anything but the requested
     model alone, whole, is no answer of it. The stop and the switch are the
-    shapes a safety classifier left in the fit probes' audits (round
-    de663ed, 2026-10-22): `claude-opus-5-5` stopped, `claude-opus-4-8`
-    continued, `result` held only the continuation."""
+    shapes a safety classifier leaves: the requested model stops, another
+    continues, and `result` holds only the continuation."""
 
     def test_the_requested_model_alone_in_one_turn_is_its_answer(self) -> None:
         self.assertEqual(
@@ -141,10 +140,9 @@ class ClaudeCliProvenance(unittest.TestCase):
             B._cli_result(cli_reply(num_turns=2), "m")
 
     def test_two_turns_name_no_cause_the_reply_does_not_show(self) -> None:
-        """t18 on e9f088f was a safety stop the CLI did not count; a probe on
-        2.1.308 cut at the output limit with `safety_stops = 0`. Neither
-        field value proves a cause: the message names both, with or without
-        the count."""
+        """A safety stop may go uncounted, and a cut at the output limit
+        may show `safety_stops = 0`: neither field value proves a cause, so
+        the message names both, with or without the count."""
         for reply in (
             cli_reply(num_turns=2),
             cli_reply(without="safety_stops", num_turns=2),
@@ -155,8 +153,8 @@ class ClaudeCliProvenance(unittest.TestCase):
                 B._cli_result(reply, "m")
 
     def test_a_stopped_answer_flagged_as_error_is_unproven_not_retried(self) -> None:
-        """fit-1 on 4f4f238: every audit try was stopped and continued, and
-        the call was retried — the stop must win over `is_error`."""
+        """A try stopped and continued may also carry `is_error`: the stop
+        must win over it, or the call is retried."""
         reply = cli_reply(
             "claude-opus-5-5",
             is_error=True,
@@ -179,8 +177,8 @@ class ClaudeCliProvenance(unittest.TestCase):
         self.assertIn("is_error=True", str(cm.exception))
 
     def test_the_stop_as_cli_2_1_285_reported_it_is_unproven(self) -> None:
-        """The reply of a stopped audit in the fit probe on 97e6470, field
-        for field: a success, no error, no `safety_stops` at all."""
+        """The reply of a stopped audit, field for field: a success, no
+        error, no `safety_stops` at all."""
         reply = cli_reply(
             "claude-opus-5-5",
             without="safety_stops",

@@ -1,4 +1,4 @@
-"""runs.read_metrics: the one loader for a run's metrics.json (review 2026-10-08)."""
+"""runs.read_metrics: the one loader for a run's metrics.json."""
 
 import json
 import tempfile

@@ -1,4 +1,5 @@
-"""The remaining audit points of 0.48 (review 2026-10-07), one test each."""
+"""Small audit contracts, one test each: the parser, the head, scopes,
+constant copies, an unreadable run and the analysis audit's READ lines."""
 
 import contextlib
 import io
@@ -61,7 +62,7 @@ class Scopes(unittest.TestCase):
 
 class ConstantCopies(unittest.TestCase):
     """Static evidence: a literal copy of a declared constant warns; reading
-    it from the block does not (Durchstich 2026-10-07)."""
+    it from the block does not."""
 
     def findings(self, source: str) -> list[str]:
         with tempfile.TemporaryDirectory() as d:
@@ -99,7 +100,7 @@ class ConstantCopies(unittest.TestCase):
 
     def test_a_none_default_copies_nothing(self):
         """The apply skeleton's config defaults its band rule to None (no
-        rule registered); the check warned on the untouched stamp. The twin:
+        rule registered), and the untouched stamp does not warn. The twin:
         a typed default with a value still warns."""
         self.assertEqual(
             self.findings("class C:\n    min_mean: float | None = None\n"),

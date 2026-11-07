@@ -1,5 +1,5 @@
 """The editor's command list and the justfile's timeline example name modules
-that are console commands: a module that lost its CLI in a split runs under
+that are console commands: a module without its CLI runs under
 `python -m` without a word and exits 0."""
 
 import json
@@ -24,7 +24,6 @@ class DevEntryPoints(unittest.TestCase):
         launch = json.loads(re.sub(r"(?m)^\s*//.*$", "", text))
         (pick,) = [i for i in launch["inputs"] if i["id"] == "command"]
         # both ways: a command module missing from the list is drift too
-        # (six were, audit 2026-10-23)
         self.assertEqual(set(pick["options"]), command_modules())
 
     def test_the_timeline_example_names_a_command_module(self):

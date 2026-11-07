@@ -34,8 +34,8 @@ class WorkflowOrientation(unittest.TestCase):
                 self.assertEqual(positions, sorted(positions), route)
 
     def test_the_step_after_a_run_goes_through_the_audit(self):
-        # every skeleton printed only the adoption, which then refused for
-        # the missing audit (audit 2026-10-27, third, I3)
+        # the analysis audit stands before the adoption, which refuses
+        # without it — in every skeleton
         protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
         line = commands.next_after_run(protocol, "2026-10-27T10-00-00_ab12")
         stages = ("finalize", "--mode analysis", "decide", "Conclusion", "labkit-adopt")
@@ -56,8 +56,8 @@ class WorkflowOrientation(unittest.TestCase):
         """The adoption runs protocol-check, which refuses a frozen protocol
         without the report fields owed once a result is declared: the step
         stands before the adoption, from one home (`commands.report_fields_step`),
-        in the run's next line (labkit-init prints no closing steps since the
-        one explainer; finalize's note is `labkit-next`'s step, whose order
+        in the run's next line (labkit-init prints no closing steps;
+        finalize's note is `labkit-next`'s step, whose order
         decides — the adoption's refusal names the fields). The twin: the
         step names the contract line that lists them."""
         protocol = Path("experiments/01-x/PROTOCOL-x.md").resolve()
@@ -73,8 +73,7 @@ class WorkflowOrientation(unittest.TestCase):
 
     def test_an_area_without_a_number_is_named_as_its_directory(self):
         # `--change-kind` restamps an area named without `NN-`; the README
-        # named `tests/test__x.py` and `experiments/-x` (audit 2026-11-07,
-        # second)
+        # names neither `tests/test__x.py` nor `experiments/-x`
         text = scaffold.area_readme(
             "explore", "explore", standard_contract.COMPUTE, False
         )
@@ -85,8 +84,8 @@ class WorkflowOrientation(unittest.TestCase):
         self.assertNotIn("experiments/-", text)
 
     def test_the_area_route_names_the_area_from_the_root(self):
-        # `runlog .` from the root, as AGENTS.md asks, read the repo as an
-        # area (audit 2026-10-27, third, I10)
+        # `runlog .` from the root, as AGENTS.md asks, would read the repo as
+        # an area: the route names the area from the root
         text = scaffold.area_readme(
             "01-example", "example", standard_contract.COMPUTE, False
         )

@@ -1,10 +1,11 @@
 """A scope file that is not Python is one blocker, not a traceback.
 
-Audit 2026-10-15: with a `lib/` in the repo the import walk
-(`scope_sha._lib_names`) raised ValueError from inside preflight station 3
-and code-check — a traceback, exit 1, and so NOT blocking in the pre-run
-hook: a stale `analysis/old.py` with a syntax error let a frozen area's
-run command through. The twin: the same area with the file fixed is clean.
+With a `lib/` in the repo the import walk (`scope_sha._lib_names`) parses
+the scope files; a ValueError out of it inside preflight station 3 and
+code-check would be a traceback, exit 1, and so NOT blocking in the pre-run
+hook: a stale `analysis/old.py` with a syntax error would let a frozen
+area's run command through. The twin: the same area with the file fixed is
+clean.
 """
 
 from __future__ import annotations
@@ -81,9 +82,9 @@ class UnreadableSource(unittest.TestCase):
 
 
 class UnreadableSourceWithoutLib(unittest.TestCase):
-    """Audit 2026-10-18: without a `lib/` the import walk parses nothing, so a
-    broken script with a `constants` promise reached a bare `ast.parse` in
-    the constant check — the traceback of 0.93.0 again, by another door."""
+    """Without a `lib/` the import walk parses nothing, so a broken script
+    with a `constants` promise is first parsed by the constant check: one
+    blocker there too, not a traceback by another door."""
 
     def setUp(self) -> None:
         self.repo = Path(tempfile.mkdtemp())

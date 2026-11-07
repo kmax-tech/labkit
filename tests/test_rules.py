@@ -51,7 +51,7 @@ class ShippedStandard(unittest.TestCase):
     def test_ledger_holds_every_number_once_in_order(self) -> None:
         numbers = [int(r.id.split("-")[1]) for r in rules.load_ledger(rules.LEDGER)]
         self.assertEqual(numbers, sorted(set(numbers)))
-        # the seven numbers that left for the authoring lab's LOCAL ledger (0.82.0)
+        # the seven numbers that live in the authoring lab's LOCAL ledger
         self.assertEqual(
             sorted(set(range(1, max(numbers) + 1)) - set(numbers)),
             [2, 70, 73, 78, 80, 81, 99],
@@ -192,10 +192,10 @@ class Refs(unittest.TestCase):
         self.assertEqual(rules.check_refs("f", "(LAB-001 A negative)", ROWS), [])
 
     def test_a_start_running_on_into_other_words_is_caught(self) -> None:
-        """LAB-017 was cited as "… follows the repeat cost" for "… follows the
-        cost tier" in three files, each wrapped after a right start, and the
-        check passed them on two words read from one line (audit
-        2026-10-27). A start must break off; a wrapped name is read on."""
+        """A name wrapped after a right start is read on across the break,
+        so a wrong ending (LAB-017 as "… follows the repeat cost" for "…
+        follows the cost tier") does not pass on two words read from one
+        line. A start must break off; a wrapped name is read on."""
         wrapped = "the gate (LAB-003 No run without an\n    intent statement) holds\n"
         same_line = "as LAB-001 A negative finding is a fact says\n"
         for text in (wrapped, same_line):
@@ -327,7 +327,7 @@ class Cli(unittest.TestCase):
 
     def test_show_an_unknown_id_refuses(self) -> None:
         """Nothing to show is a refusal — stderr, exit 2 — like every labkit
-        command's (`console.refuse`; until 2026-10-23 exit 1)."""
+        command's (`console.refuse`)."""
         code, out = self.run_main("show", "LAB-002")  # a number that left for LOCAL
         self.assertEqual(
             (code, out.strip()), (2, "rules show: LAB-002: no such rule in the ledger")

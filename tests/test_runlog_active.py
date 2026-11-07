@@ -4,9 +4,8 @@ Why this deserves tests: the working standard says what is currently running
 gets **looked up, not asked about**. A wrong answer is therefore more
 expensive than none — it keeps a dead run from being restarted.
 
-Exactly that happened on 2026-08-15: `runlog` reported a run from August 13
-as running because the OS had recycled its PID to a macOS service
-(`RemoteManagement`). An existence check via `os.kill(pid, 0)` cannot
+The OS recycles PIDs: a dead run's PID may belong to another process (a
+macOS service, say), and an existence check via `os.kill(pid, 0)` cannot
 notice that in principle.
 """
 
@@ -37,7 +36,7 @@ class TestIsAlive(unittest.TestCase):
         self.assertTrue(is_alive(os.getpid(), token))
 
     def test_a_recycled_pid_is_not_reported_as_running(self):
-        """The 2026-08-15 case: the PID is alive but a different process."""
+        """A recycled PID: alive, but a different process."""
         self.assertFalse(is_alive(os.getpid(), "05_refusal.py"))
 
     def test_a_dead_pid_is_false(self):
@@ -65,9 +64,9 @@ if __name__ == "__main__":
 
 
 class TestOutputsJson(unittest.TestCase):
-    """runlog.Run.output (2026-08-18): whoever stands inside the run dir must
-    be able to answer where the run wrote WITHOUT reading source code —
-    config.json freezes only the INPUTS (finding by MH while reading a run)."""
+    """runlog.Run.output: whoever stands inside the run dir must be able to
+    answer where the run wrote WITHOUT reading source code — config.json
+    freezes only the INPUTS."""
 
     def test_registered_output_lands_in_outputs_json_with_hash(self):
         import json
@@ -104,10 +103,10 @@ class TestOutputsJson(unittest.TestCase):
 
 
 class TestUntrackedSourceSnapshot(unittest.TestCase):
-    """source-untracked/ (2026-08-18, objection by MH): the single-file
-    snapshot left sibling modules unsaved — on the first run of a fresh area
-    the WHOLE scripts/ folder is untracked, in no commit and no diff.
-    Now: patch = tracked drift, source-untracked/ = what git does not see."""
+    """source-untracked/: on the first run of a fresh area the WHOLE
+    scripts/ folder is untracked, in no commit and no diff, so sibling
+    modules are saved beside the script: patch = tracked drift,
+    source-untracked/ = what git does not see."""
 
     def _repo(self, d):
         import subprocess
@@ -184,7 +183,7 @@ class TestUntrackedSourceSnapshot(unittest.TestCase):
     def test_a_tracked_entry_does_not_trigger(self):
         # Area committed once -> from then on "commit before the run" applies,
         # not copying; a snapshot that keeps firing would hoover up data
-        # (the first draft copied output/ and old runs/ along).
+        # (output/ and old runs/ along).
         import subprocess
         import sys
         import tempfile

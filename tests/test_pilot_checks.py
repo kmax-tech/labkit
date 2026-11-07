@@ -41,7 +41,8 @@ def vcs(commit=COMMIT):
     ],
 )
 def test_commit_refuses_missing_directory_and_wrong_revision(checks, metadata, message):
-    # Both real installations said 0.1.0; the pilot install had only dir_info.
+    # an installation's version names no revision, and a local install has
+    # only dir_info: the commit comes from vcs_info alone
     with pytest.raises(ValueError, match=message):
         checks.validate_sandbox_commit(PIN, metadata)
 

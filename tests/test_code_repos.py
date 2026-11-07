@@ -1,5 +1,5 @@
-"""The code a run imported, per git repository (`code_repos`, stagekit
-plan step 2b): a framework installed editable from its own checkout, a
+"""The code a run imported, per git repository (`code_repos`): a framework
+installed editable from its own checkout, a
 topic module nobody committed, a module imported only during the run —
 each lands in `code.json` with commit, patch and copies; a measurement
 refuses untracked code it cannot copy, and passes on code it can.
@@ -82,8 +82,8 @@ class CodeRecord(unittest.TestCase):
         return found[0]
 
     def test_a_local_change_in_another_checkout_is_in_the_record(self) -> None:
-        """The plan's first probe: an uncommitted change in an editable
-        framework appears in the run record, with the commit it sits on."""
+        """An uncommitted change in an editable framework appears in the
+        run record, with the commit it sits on."""
         fw = self.tmp / "framework"
         name, path = self.module(self.tmp)
         checkout(fw, {path.name: path.read_text()})
@@ -113,8 +113,8 @@ class CodeRecord(unittest.TestCase):
         self.assertEqual(entry["untracked"], {})
 
     def test_an_untracked_topic_module_is_copied_into_the_record(self) -> None:
-        """The plan's second probe: a module nobody committed, in the lab
-        repo holding the topic, is copied as it was imported."""
+        """A module nobody committed, in the lab repo holding the topic, is
+        copied as it was imported."""
         topic = self.lab / "topic"
         topic.mkdir()
         name, path = self.module(topic, "LABELS = ['ad hominem']\n")

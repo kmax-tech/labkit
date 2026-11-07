@@ -1,11 +1,10 @@
 """A label typed short and a flag from another command name what is meant.
 
-In the Qwen pilot's stage C, 23 of 39 `protocol-fill` calls failed on a
-shortened label (`Terms` for `Terms of this protocol`) although `--list`
-had been read, and `labkit-init exp --type` got argparse's bare line. An
-unambiguous prefix now names its field; an ambiguous one and a near miss
-are named; an unknown flag is told with the flag meant. Each with its twin:
-the full label, and the flag taken.
+An unambiguous prefix of a label (`Terms` for `Terms of this protocol`)
+names its field in `protocol-fill`; an ambiguous one and a near miss are
+named; an unknown flag (`labkit-init exp --type`) is told with the flag
+meant, not with argparse's bare line. Each with its twin: the full label,
+and the flag taken.
 """
 
 from __future__ import annotations

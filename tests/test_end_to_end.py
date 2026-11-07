@@ -6,11 +6,11 @@ scripts under the interpreter, `finalize`, `protocol-fill --from-run`, the
 stop hook, the pre-commit's `report-check --if-reported --staged`), and
 what every station holds is the contract's answer (`standard_contract`).
 
-The four findings of the 2026-10-19 audit are pinned here on the real
-chain, not on fixtures: the gate asked for a check script the skeleton
-never stamped (1), a script changed under a reported number passed both
-hooks (2), the pre-commit read the tree where the commit holds the index
-(3), and a refused adoption left the unchecked declaration standing (4).
+Four findings are pinned here on the real chain, not on fixtures, numbered
+as the tests cite them: the gate asks only for a check script the skeleton
+stamps (1), a script changed under a reported number is held by both hooks
+(2), the pre-commit reads the index the commit holds, not the tree (3), and
+a refused adoption leaves no unchecked declaration standing (4).
 """
 
 from __future__ import annotations
@@ -243,9 +243,8 @@ def assert_draws(
 ) -> None:
     """`02_analyze.py --draws` on the kept run prints its criterion value
     under the measure skeleton's key (`CRITERION_VALUE_KEY`): the value metrics.json
-    holds, never the other skeleton's key. The analysis skeleton is shared;
-    it read the model's key for every skeleton and printed `criterion_1_accuracy
-    None` for a fit (2026-10-22)."""
+    holds, never the other skeleton's key. The analysis skeleton is shared,
+    so it must not read the model's key for every skeleton."""
     metrics = json.loads((area / "runs" / run_id / "metrics.json").read_text())
     out = lab.script(area, "02_analyze.py", "--draws")
     test.assertIn(f"draw 1  {run_id}  {key} {metrics[key]}  criterion_1_pass True", out)
@@ -354,8 +353,7 @@ class Count(unittest.TestCase):
     def _adopted(self) -> str:
         """Run, finalize, record, adopt — once per class. Every later test
         rests on this state and calls it first, so each test runs alone and
-        in any order (audit 2026-10-18: test_04–06 read what test_02 left
-        behind, and only `--dist loadscope` kept the suite green)."""
+        in any order, under any `--dist`."""
         cls = type(self)
         if cls.run_id:
             return cls.run_id
@@ -611,9 +609,8 @@ class CountCommands(unittest.TestCase):
         """Run the measuring script, in a later second than every run the
         area holds: run ids carry the second, and two in one second leave
         the answering run's choice blocked (`answering_run.same_second_rival`)
-        — a history no lab writes by hand, which made the correction tests
-        fail under load (docs/notes/2026-11-03-finalize-hold-missing-once.md).
-        Waits for the clock, not for a guessed time."""
+        — a history no lab writes by hand. Waits for the clock, not for a
+        guessed time."""
         runs = self.area / "runs"
         held = runs.iterdir() if runs.is_dir() else ()
         newest = max((d.name[: len(_SECOND)] for d in held), default="")
@@ -705,15 +702,15 @@ class CountCommands(unittest.TestCase):
 
 class MeasuredRunsKeepTheirSecond(CountCommands):
     def test_two_measurements_back_to_back_carry_different_seconds(self):
-        """The fixture's `measure` never writes two runs of one second: the
-        correction tests failed in hooks with both runs in one second
-        (2026-11-04: `…10-10-50_4f01` beside `…10-10-50_4c7a`)."""
+        """The fixture's `measure` never writes two runs of one second:
+        two would block the answering run's choice in the correction tests'
+        hooks."""
         a, b = self.measure(), self.measure()
         self.assertNotEqual(a[: len(_SECOND)], b[: len(_SECOND)])
 
 
 class TwoRunsInOneSecondAreRefused(CountCommands):
-    """The refusal the fixture now steers clear of (`measure`), held on its
+    """The refusal the fixture steers clear of (`measure`), held on its
     own and deterministically: a second completed run whose id carries the
     first one's second leaves the answering run's choice blocked, and
     finalize says so with its way out instead of holding or passing on a
@@ -738,10 +735,7 @@ class Withdraw(CountCommands):
     answers, adopt it (`--from-run`). While a run stands adopted, every
     check and the analysis audit hold that run, not the newest by name
     (`answering_run.bound_answering_run`), so a withdrawal moves the state
-    and the next audit follows earlier findings up. File-check case, 2026-10-28: a BLOCKER on the declared run,
-    fixed by re-adopting, stayed held, and the agent committed past the
-    hook; a first fix bound the declaration but left `--from-run --force`
-    as the way, which then could never pass. No test here writes a
+    and the next audit follows earlier findings up. No test here writes a
     protocol head by hand."""
 
     # -- the repair case
@@ -874,10 +868,10 @@ class Withdraw(CountCommands):
     # -- no adoption stands: the refusal does not tell to withdraw one
     def test_adopting_a_run_whose_code_changed_names_no_withdrawal(self):
         """The adoption's own check sees its proposal declare the run; with
-        that run's code changed it told the agent to "withdraw the adoption
-        first", and the withdrawal then found nothing (reference pilot
-        2026-11-01, task 60). The twin is the test below: a standing
-        adoption is told to withdraw first."""
+        that run's code changed and no adoption standing, it does not tell
+        the agent to "withdraw the adoption first": there is nothing to
+        withdraw. The twin is the test below: a standing adoption is told to
+        withdraw first."""
         run_a = self.measure()
         rc, out, _ = self.analysis(self.clean)
         self.assertEqual(rc, 0, out)
@@ -892,9 +886,8 @@ class Withdraw(CountCommands):
     def test_a_code_change_after_the_adoption_is_told_to_withdraw_first(self):
         """The commit of a fix after an adoption is held (the hook holds the
         code to the declared run). Each hold names the withdrawal before its
-        own way out — six holds that said "measure anew" led past a note
-        below them (decision-reading probe, file-check case, 2026-10-28) —
-        so the agent does not spend an audit under the old declaration. The
+        own way out, so the agent does not spend an audit under the old
+        declaration. The
         twin: once withdrawn, the same commit passes."""
         run_a = self.adopted_a()
         self.change_code()
@@ -934,8 +927,7 @@ class Withdraw(CountCommands):
 
     def test_a_false_positive_blocker_is_held_until_a_second_auditor_upholds_it(self):
         """The deciding agent's own `dismissed` does not release a blocking
-        finding, its first dismissal too (decided 2026-10-28; until then it
-        released the number on its reason alone). The twin: a review that
+        finding, its first dismissal too. The twin: a review that
         upholds it releases the adoption."""
         run_a = self.measure()
         rc, out, _ = self.analysis(
@@ -1069,11 +1061,8 @@ class CorrectedDescription(CorrectionCommands):
     the hold of what the number is about (`registration_hold.resolved_corrections`);
     a fresh audit without it, a verdict on another field, a text edited
     after the verdict and a place given as a line number release nothing,
-    at every grade. Fifth SAB-like draw, 2026-10-28 (a corrected count
-    could never be followed up) and probe 2026-11-02 (an audit of the first
-    run on a rewritten field released it unjudged,
-    docs/notes/2026-11-02-registered-field-repair.md). Through the real
-    commands; no test writes a head by hand."""
+    at every grade (docs/notes/2026-11-02-registered-field-repair.md).
+    Through the real commands; no test writes a head by hand."""
 
     def test_the_corrected_description_is_followed_up_and_released(self):
         blocking = self.audited("BLOCKER", "Data / scope")
@@ -1137,7 +1126,7 @@ class CorrectedDescription(CorrectionCommands):
         self.asked(self.MEDIAN)
         line = self.decide(warning, 1, "fixed", "the question now asks for the median")
         # the decision's line explains the condition the gate holds; it names
-        # no way of its own (review 2026-11-03, M2)
+        # no way of its own
         self.assertIn(
             "Question / hypothesis: after the first measurement it has no "
             "correction in place",
@@ -1178,9 +1167,7 @@ class CorrectedDescription(CorrectionCommands):
         """The registered text stands inside the new one: the hold stays
         (labkit cannot tell a description from a changed population), and
         its way names the Conclusion or the report for the addition
-        (`registration_hold.description_added`; labkit-paper area 23, sts512 r2 and
-        r3, 2026-11-06: "and 512 test pairs" added, restore alone named,
-        the attempts handed over)."""
+        (`registration_hold.description_added`), not the restore alone."""
         self.describe(self.WRONG + "; the two shortest held out as a check")
         rc, out = self.lab.adopt(self.protocol, self.run_a)
         self.assertEqual(rc, 1, out)
@@ -1289,12 +1276,8 @@ class CorrectionThenNewRun(CorrectionCommands):
     only by a follow-up on B whose `resolved` judges the correction again,
     with the field as B saw it, as it stands and as judged all one text;
     the earlier verdict on A releases nothing for B. Another field changed
-    without a release of its own holds; several fields each released pass.
-    Probe 2026-11-03 (labkit-evidence
-    usability/2026-11-03-correction-then-code-fault/): B was held even
-    when its follow-up resolved the correction again, and the only way left
-    was writing the known-false count back and measuring a third time.
-    docs/notes/2026-11-02-registered-field-repair.md, "Decided 2026-11-03"."""
+    without a release of its own holds; several fields each released pass
+    (docs/notes/2026-11-02-registered-field-repair.md, "Decided 2026-11-03")."""
 
     RIGHT_TOO = "data/raw/docs, the 3 documents, read directly"
     UNIT_RIGHT = "one text document of data/raw/docs"
@@ -1354,9 +1337,8 @@ class CorrectionThenNewRun(CorrectionCommands):
         self.assertEqual(rc, 1, out)
         holds = [ln for ln in out.splitlines() if self.HELD in ln and "BLOCKER" in ln]
         if not holds:
-            # the whole finalize output and the runs it chose among: a missing
-            # hold failed as a bare StopIteration under load, and what finalize
-            # saw was lost (docs/notes/2026-11-03-finalize-hold-missing-once.md)
+            # the whole finalize output and the runs it chose among, so a
+            # missing hold shows what finalize saw, not a bare StopIteration
             runs = sorted(p.name for p in (self.area / "runs").iterdir())
             self.fail(f"no hold naming {field}; runs {runs}, B {run_b}:\n{out}")
         held = holds[0]
@@ -1399,8 +1381,7 @@ class CorrectionThenNewRun(CorrectionCommands):
     def test_t10_the_code_repair_beside_a_correction_is_measured_again(self):
         """The hold before the new run names the measurement, then the
         follow-up on it (the decision's line points to labkit-next) — not
-        restore and decide the
-        repair `limitation` (probe 2026-11-03, s2 2b)."""
+        restore and decide the repair `limitation`."""
         self.corrected_for_a()
         self.code_repaired()
         # the decision's line points to labkit-next; the hold names the step
@@ -1588,9 +1569,8 @@ class DataCounts(unittest.TestCase):
     """The counts of Data / scope come from the preparation run, through the
     real commands: the stamped 00_prepare.py records them, `protocol-fill
     --data-counts` writes them as the field's end, finalize holds that part
-    to the run. Fifth SAB-like draw, 2026-10-28: two agents typed counts the
-    data did not hold after a prepare script that printed the total alone.
-    The twin: a count typed over the written part is held."""
+    to the run, so no count is typed that the data does not hold. The twin:
+    a count typed over the written part is held."""
 
     def setUp(self) -> None:
         self.lab = Lab()
@@ -1719,8 +1699,7 @@ class Judge(unittest.TestCase):
 
     def _adopted(self) -> str:
         """Run, finalize, record, adopt, commit — once per class; every later
-        test calls it first and so runs alone and in any order (audit
-        2026-10-18)."""
+        test calls it first and so runs alone and in any order."""
         cls = type(self)
         if cls.run_id:
             return cls.run_id
@@ -1844,7 +1823,7 @@ class Judge(unittest.TestCase):
         return rc, out.getvalue()
 
     def test_04_an_accepted_blocker_reaches_the_protocol_as_its_limit(self):
-        """Review 2026-10-21 (judge-2): an accepted BLOCKER may carry a
+        """An accepted BLOCKER may carry a
         number read within it, but an instrument unfit for criterion-1 leaves criterion-1
         unjudged — the decision says which, the protocol carries it as a
         Limitation line, report-check holds the two together."""
@@ -1899,8 +1878,7 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn("`stands` on a BLOCKER decided limitation not reviewed", out)
         # the review judges the claim, the Conclusion — written already, since
-        # the adoption owes it (judge-2 on 86e38bc reviewed a placeholder and
-        # paid a second review); here worded to the limit before the review
+        # the adoption owes it; here worded to the limit before the review
         lab.fill(
             self.protocol,
             "--force",
@@ -1925,10 +1903,10 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertNotIn("effect", record.read_text(encoding="utf-8"))
         # but `fixed` in the state audited: no follow-up has seen a repair, the
-        # code is the audited code — report-check holds it (fixed-followup
-        # pilots, 2026-10-26); the twin, the finding dismissed as not applying
-        # to this state, passes once a second auditor upholds the dismissal
-        # (a dismissed BLOCKER owes a review, 2026-10-28)
+        # code is the audited code — report-check holds it; the twin, the
+        # finding dismissed as not applying to this state, passes once a
+        # second auditor upholds the dismissal (a dismissed BLOCKER owes a
+        # review)
         rc, out = self._report_check()
         self.assertEqual(rc, 1, out)
         self.assertIn("decided `fixed` in the state audited", out)
@@ -1945,9 +1923,9 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_05_an_accepted_warning_that_names_its_effect_reaches_the_result(self):
-        """Review 2026-10-21 (judge-2/3): the cue that limits how the number
-        reads was a WARNING, accepted, and the Answer said `criterion_1_pass = True`
-        alone. A WARNING may name its effect; named, it reaches the result."""
+        """A cue that limits how the number reads may be a WARNING,
+        accepted, under an Answer of `criterion_1_pass = True` alone. A
+        WARNING may name its effect; named, it reaches the result."""
         self._adopted()
         lab = type(self).lab
         record = findings.write(
@@ -1981,7 +1959,7 @@ class Judge(unittest.TestCase):
         rc, out = self._report_check()
         self.assertEqual(rc, 0, out)
         # decided again as a false positive it is no limit — and the result
-        # section must say so again: the rendering is exact (phase 5), a Limit
+        # section must say so again: the rendering is exact, a Limit
         # line and a note the records no longer decide are blockers until
         # written back
         rc, out = self._decide(
@@ -2000,11 +1978,9 @@ class Judge(unittest.TestCase):
         self.assertEqual(rc, 0, out)
 
     def test_06_a_declared_run_id_must_name_a_run_of_the_area(self):
-        """labkit-paper area 08, 2026-10-21: an agent typed `(run
-        2026-10-21T12-48-00_final)` into Recorded results; the gates read only the
-        exact id shape, saw no citation and let the commit through. Since
-        phase 3 the declaration is `[result] run`: a typed id there does not
-        read and blocks where it stands, a shaped one must be a run."""
+        """The declaration is `[result] run`: an id typed there that does
+        not read blocks where it stands, and one of the run-id shape must be
+        a run of the area."""
         self._adopted()
         lab = type(self).lab
         text = self.protocol.read_text(encoding="utf-8")
@@ -2173,7 +2149,7 @@ class Estimator(unittest.TestCase):
         run_id = lab.run_id_of(out)
         rc, out = lab.finalize(self.area)
         self.assertEqual(rc, 0, out)
-        # no model: Raw output is not owed, and the stamp left it out (I11)
+        # no model: Raw output is not owed, and the stamp left it out
         self.assertNotIn("**Raw output", self.protocol.read_text(encoding="utf-8"))
         lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
         rc, out = lab.adopt(self.protocol, run_id)
@@ -2201,7 +2177,7 @@ class Estimator(unittest.TestCase):
         self._the_class_counts_reach_the_report_block_and_are_held()
 
     def _a_repeat_draws_a_derived_seed_and_never_answers(self, run_id: str) -> None:
-        """`01_measure.py --repeat-of` (audit 2026-10-27, C1): the kept run
+        """`01_measure.py --repeat-of`: the kept run
         drawn again with the seed labkit derives — a run of its own, never
         the answer; `--draws` shows it and the declared run still answers.
         A seed of the script's own beside it is refused."""
@@ -2220,7 +2196,8 @@ class Estimator(unittest.TestCase):
             recorded["config"]["seed"], answering_run.repeat_seed(run_id, 2)
         )
         # measured with the recorded seed: every row of the draw's own file
-        # carries it (a script that kept the parent's seed showed a spread of 0)
+        # carries it (a script that kept the parent's seed would show a spread
+        # of 0)
         (draw_file,) = (self.area / "output").glob("*_draw2.jsonl")
         rows = [
             json.loads(x) for x in draw_file.read_text(encoding="utf-8").splitlines()
@@ -2271,9 +2248,9 @@ class Estimator(unittest.TestCase):
 class StatedBar(unittest.TestCase):
     """A bar the task states, end to end at low repeat cost: "accuracy at
     least 0.90" registered as `at_least`, an unchanged predictor right on
-    10 of the 12 labelled points. labkit-paper area 17 wrote such a bar as a
-    margin over the null and adopted a false pass; here the run records the
-    registered bar, and the adoption renders the miss
+    10 of the 12 labelled points. Written as a margin over the null, such a
+    bar would adopt a false pass; here the run records the registered bar,
+    and the adoption renders the miss
     (docs/notes/2026-11-02-absolute-task-bar.md)."""
 
     def test_the_registered_bar_reaches_the_run_and_the_result(self):

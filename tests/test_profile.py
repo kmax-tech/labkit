@@ -1,9 +1,7 @@
 """labkit.run.profile: the data profile per gold class, before any model call.
 
-Three judge probes left the stamped `audit()` TODO alone, and their audits
-found a cue only one class carried — six connectives, every causal item
-holds one, no other item does (sandbox, 2026-10-21). The profile counts
-what the area names; an open decision prints as open, never as an empty
+The profile counts what the area names, so a cue only one class carries
+shows before any model call; an open decision prints as open, never as an empty
 table, and "checked, no hit" reads apart from "none counted". The counts
 are static evidence for the judgement and the audit, never proof.
 """
@@ -53,10 +51,9 @@ class Counts(unittest.TestCase):
         self.assertEqual(p.any_marker, {"causal": 2, "not_causal": 2})
 
     def test_a_marker_padded_with_spaces_is_refused(self):
-        """Two cold agents wrote " so " to keep it out of longer words; the
-        whole-word match then needed a word character on neither side of the
-        spaces, and `…cut, so the…` went uncounted — 5/6 instead of 6/6
-        (sandbox, 2026-10-21). Markers match as whole words already."""
+        """A marker padded with spaces (" so ") makes the whole-word match
+        need a word character on neither side of the spaces, so `…cut, so
+        the…` would go uncounted. Markers match as whole words already."""
         for padded in (" so ", "so ", " so"):
             with (
                 self.subTest(padded=padded),
@@ -190,8 +187,7 @@ class TheStampedPrepare(unittest.TestCase):
 
     def test_a_fits_audit_prints_the_yield_without_the_text_profile(self):
         """The estimator's rows carry numeric features and no text: its
-        stamped `--audit` calls no profile (a fit probe on d549696 ended in
-        `item m0 has no 'text'`)."""
+        stamped `--audit` calls no profile, which reads a text per item."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "lab"
             with (

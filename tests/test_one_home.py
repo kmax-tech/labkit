@@ -1,10 +1,9 @@
 """One home per question — held by grep, not by memory.
 
 `docs/architecture.md` names the home of every recurring question and says
-a second answer is drift. Three audits (2026-10-06, 2026-10-13,
-2026-10-15) removed the same kinds of copies — a hand-spelled sha256, a
-`git` run outside `repo`, a `PROTOCOL-*.md` scan, the id letters, a fence
-regex — and they came back within two weeks each time. This test greps
+a second answer is drift. Copies of the same kinds — a hand-spelled
+sha256, a `git` run outside `repo`, a `PROTOCOL-*.md` scan, the id letters,
+a fence regex — come back while memory alone holds them. This test greps
 `labkit/*.py` for the shapes a copy takes; a match outside the home fails,
 naming file and line. A line that must stay says why in a comment on it or
 directly above it that names the home it is not after `home:`.
@@ -18,7 +17,7 @@ from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[1] / "labkit"
 #: rules that also hold in the stamped script templates — a stamped area reads
-#: its tier off the contract like labkit does (review 2026-10-19)
+#: its tier off the contract like labkit does
 IN_TEMPLATES = {
     "a tier rule read off the head",
     "an adopt command spelled by hand",
@@ -28,9 +27,8 @@ IN_TEMPLATES = {
 #: (what, the shape of a copy, the module(s) where it belongs)
 RULES: list[tuple[str, str, set[str]]] = [
     ("sha256 by hand", r"hashlib\.", {"digests"}),
-    # the estimator skeleton and the prompt skeleton each added a margin by
-    # hand, and a bar the task states fitted neither (labkit-paper area 17,
-    # 2026-11-02): `criterion_bar.bar_of`
+    # a margin added by hand in a skeleton misses a bar the task states:
+    # `criterion_bar.bar_of`
     (
         "a criterion bar computed by hand",
         r"Fraction\(str\([^)]*\b(margin|at_least)\)\)",
@@ -49,97 +47,94 @@ RULES: list[tuple[str, str, set[str]]] = [
     ("the area name NN-slug", r"\^\(\\d\+\)-", {"repo"}),
     ("a temp-and-rename write", r"os\.replace\(", {"files"}),
     ("the run-id shape", r"\\d\{4\}-\\d\{2\}-\\d\{2\}T", {"runs"}),
-    # "relative to the repo, else absolute" stood about 18 times (audit
-    # 2026-10-18); the conditional form is held here, a try/except copy is not
+    # "relative to the repo, else absolute" has one answer; the conditional
+    # form is held here, the try/except copy among the block rules
     ("a path shown relative by hand", r"\.is_relative_to\(", {"repo", "runs"}),
-    # the hook and the transcript cut a shell line three ways (audit 2026-10-18)
+    # a shell line is cut one way, for the hook and the transcript alike
     ("a shell line cut by hand", r"shlex\.(shlex|split)\(", {"shell"}),
-    # runlog start and usability log each cut at `--` by hand (2026-10-20)
+    # a command line is cut at `--` in one place (runlog start, usability log)
     ("a command cut at -- by hand", r"\.index\(\s*[\"']--[\"']\s*\)", {"console"}),
-    # six sites spelled `protocol-fill <file name> --from-run`; run from the
-    # repo root the bare name failed (count probe, 2026-10-20); finalize
-    # printed one with no protocol at all, which argparse refuses (audit
-    # 2026-10-27, H5)
+    # `protocol-fill <file name> --from-run` spelled by hand fails run from
+    # the repo root, and one with no protocol at all is refused by argparse
     (
         "an adopt command spelled by hand",
         r"protocol-fill (?:\{[^}]*\} --from-run|--from-run \{)",
         {"commands"},
     ),
-    # a run record's `data=` entry read by key in five places, one turning a
-    # missing path into "None" (audit 2026-11-07, S11); `runs.data_entries`
+    # a run record's `data=` entry read by key can turn a missing path into
+    # "None"; `runs.data_entries`
     (
         "a data= entry read by key",
         r"""(\.get\(|\[)\s*["']rows["']""",
         {"runs"},
     ),
-    # the run record's file names had one constant of four (audit
-    # 2026-10-27, third, S6); `runs.CONFIG_FILE`, `COMPLETION_FILE`, `OUTPUTS_FILE`
+    # the run record's file names are constants; `runs.CONFIG_FILE`,
+    # `COMPLETION_FILE`, `OUTPUTS_FILE`
     (
         "a run record file spelled by hand",
         r"/ \"(config|completion|outputs)\.json\"",
         {"runs"},
     ),
-    # a kind compared as a word (audit 2026-10-27, third, S5);
+    # a kind is a constant, never compared as a word;
     # `standard_contract.*_KIND`
     (
         "a kind compared as a word",
         r"kind [=!]= \"(compute|fit|apply)\"",
         {"standard_contract"},
     ),
-    # `core.hooksPath` set in two places (audit 2026-10-27, third, S9)
+    # `core.hooksPath` is set in one place
     (
         "core.hooksPath set by hand",
         r"\"core\.hooksPath\", \"\.githooks\"",
         {"install_hooks"},
     ),
-    # the audit and both reviewers each spelled the answer-line separator and
-    # joined the prompt themselves (audit 2026-10-27, third); `findings.SEP`,
-    # `findings.LEAD`, `prompts.prompt_body`
+    # the audit and both reviewers share the answer-line separator and the
+    # prompt's joining; `findings.SEP`, `findings.LEAD`, `prompts.prompt_body`
     ("an answer-line separator spelled by hand", r"\(\?:·\|—\|–\|:\)", {"findings"}),
     (
         "a prompt joined by hand",
         r"\.join\(f\"===== \{|f\"\\n?===== FILE: \{",
         {"prompts"},
     ),
-    # report-check printed `--into` with the protocol relative to the report
-    # and the report relative to the repo: run from neither (audit
-    # 2026-10-27, third, S2); `commands.into_command`
+    # an `--into` command spelled by hand can name the protocol relative to
+    # the report and the report relative to the repo, and run from neither;
+    # `commands.into_command`
     (
         "an --into command spelled by hand",
         r"protocol-fill \{[^}]*\} --into",
         {"commands"},
     ),
-    # thirteen modules read config.json's labkit fields by key; RunConfig
-    # holds them typed where the record is read (2026-10-20)
+    # config.json's labkit fields are not read by key: RunConfig holds them
+    # typed where the record is read
     (
         "a run record read by key",
         r"read_run_config\([^)]*\)\s*or \{\}|\.config\.get\(\"",
         {"runs"},
     ),
-    # six hand-spelled copies of a record's time (audit 2026-10-18)
+    # a record's time has one spelling
     ("a record time spelled by hand", r"%Y-%m-%dT%H:%M:%S", {"runs"}),
-    # nine writers spelled an audit file's minute by hand (audit 2026-10-27,
-    # third); `runs.name_minute`, `runs.date_minute`
+    # an audit file's minute has one spelling; `runs.name_minute`,
+    # `runs.date_minute`
     ("a record minute spelled by hand", r"%Y-%m-%dT%H[-:]%M[\"']", {"runs"}),
-    # runlog's repeat_of and start_check's derived_from each read their
-    # parent run (audit 2026-10-27, third, S4); `start_check.completed_parent`
+    # runlog's repeat_of and start_check's derived_from read their parent run
+    # in one place; `start_check.completed_parent`
     ("a parent run read by hand", r"names no completed run", {"start_check"}),
-    # finalize and preflight each rendered the area-test run; the 10-23 branch-1
-    # fix landed in one (audit 2026-10-27, third, S7); `preflight.tell_test_run`
+    # finalize and preflight render the area-test run alike, so a fix lands
+    # in both; `preflight.tell_test_run`
     (
         "an area-test run rendered by hand",
         r"pytest is not installed in this",
         {"preflight"},
     ),
-    # the probes named the skeletons' criterion keys by hand and scored three
-    # draws "absent" (audit 2026-10-28, H6); `standard_contract.criterion_key`
+    # a skeleton's criterion key named by hand drifts, and a draw scores
+    # "absent"; `standard_contract.criterion_key`
     (
         "a criterion key named by hand",
         r"\"criterion_1_(?:score|accuracy)\"",
         {"standard_contract"},
     ),
-    # audit modes, the experiments folder and a file:// URL were spelled by
-    # hand in several modules (audit 2026-10-28, H5, H8)
+    # audit modes, the experiments folder and a file:// URL have one
+    # spelling each
     (
         "an audit mode spelled by hand",
         r"[=!]= \"(?:analysis|preflight)\"|mode=\"(?:analysis|preflight)\"",
@@ -155,11 +150,11 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"url\[7:\]|removeprefix\(\"(?:git\+)?file://\"\)",
         {"repo"},
     ),
-    # the run's start and reindex each checked the index header and spelled
-    # its name (audit 2026-10-28, H4); `runlog.RUN_INDEX`, `header_refusal`
+    # the run's start and reindex share the index's name and header check;
+    # `runlog.RUN_INDEX`, `header_refusal`
     ("the run index named by hand", r"\"runs\.tsv\"", {"runlog"}),
-    # scaffold, provenance and repo_check each asked git for a ref's commit
-    # (audit 2026-10-27, third, S8); `repo.commit_of`, `repo.text_at`
+    # a ref's commit is asked of git in one place; `repo.commit_of`,
+    # `repo.text_at`
     ("a ref's commit asked of git by hand", r"\^\{\{commit\}\}", {"repo"}),
     (
         "a run id's start second compared by hand",
@@ -172,92 +167,85 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"repo"},
     ),
     # what a tier owes is read off `standard_contract.lane`, never off the
-    # head's word: seven modules compared it by hand and the gate and the
-    # skeleton disagreed (audit 2026-10-19)
+    # head's word: a comparison by hand lets the gate and the skeleton
+    # disagree
     ("a tier rule read off the head", r"[=!]=\s*\{?\"low\"", {"standard_contract"}),
-    # four gates walked the records for `open` findings themselves, each
-    # grading differently (audit 2026-10-23, C1); `findings.open_findings` holds
-    # the walk and the table of the gates' rules
+    # the walk over the records for `open` findings grades one way;
+    # `findings.open_findings` holds the walk and the table of the gates' rules
     ("an open-finding walk", r"for \w+ in \w+\.open\b(?!\()", {"findings"}),
-    # four sites built the printed `--decide` line, each its own way (audit
-    # 2026-10-27, table C); `commands.decide_command`
+    # the printed `--decide` line is built one way; `commands.decide_command`
     ("a decide command spelled by hand", r"--decide \{", {"commands"}),
-    # the stop, the handover and --findings each filtered open findings to
-    # BLOCKERs themselves, one by status and grade (audit 2026-10-27, table C);
-    # `findings.open_blockers`
+    # the stop, the handover and --findings filter open findings to BLOCKERs
+    # in one place; `findings.open_blockers`
     (
         "open BLOCKERs filtered by hand",
         r"\.grade == \"BLOCKER\" and \w+\.status == \"open\"|"
         r"open_findings\([^\n]*\) if \w+\.grade ==",
         {"findings"},
     ),
-    # about twenty call sites spelled a run's directory and its metrics file
-    # by hand (audit 2026-10-23); `runs.run_path`, `runs_path`, `metrics_path`
+    # a run's directory and its metrics file are spelled in one place;
+    # `runs.run_path`, `runs_path`, `metrics_path`
     (
         "a run directory spelled by hand",
         r"/ [\"']runs[\"']|[\"']runs[\"'] /|f\"runs/",
         {"runs"},
     ),
     ("the metrics file spelled by hand", r"\"metrics\.json\"", {"runs"}),
-    # six readers turned JSONL lines into objects themselves, each with its
-    # own error sentence (audit 2026-10-23); `jsonl.objects` / `data_rows`,
-    # `batch` keeps the torn-last-line loop that is its own
+    # JSONL lines become objects in one place, with one error sentence;
+    # `jsonl.objects` / `data_rows`, `batch` keeps the torn-last-line loop
+    # that is its own
     ("a JSONL line parsed by hand", r"json\.loads\(line\)", {"jsonl", "batch"}),
-    # four checks globbed an area's scripts by hand (audit 2026-10-23);
     # `scope_sha.area_files` is where an area's code is
     (
         "an area's code globbed by hand",
         r"glob\(\"(scripts|analysis)/\*\.py\"\)|\"scripts\"\)\.glob\(",
         {"scope_sha"},
     ),
-    # four readers found a protocol's `## ` headings themselves, two inside
-    # fences too (audit 2026-10-23); `protocol_block.section_starts`
+    # a protocol's `## ` headings are found by one reader, which skips
+    # fences; `protocol_block.section_starts`
     (
         "a section heading found by hand",
         r"startswith\(\"## \"\)|\(\?=\^## ",
         {"protocol_block"},
     ),
-    # seven sites listed the decided statuses, two copied the rule that a
-    # carried finding closed as a false positive owes a review (audit
-    # 2026-10-27, C17): `findings.DECIDED_LIST`, `findings.CLOSING`
+    # the decided statuses, and the rule that a carried finding closed as a
+    # false positive owes a review, have one home: `findings.DECIDED_LIST`,
+    # `findings.CLOSING`
     (
         "the decided statuses spelled by hand",
         r"fixed / limitation / false-positive|\(\"fixed\", \"false-positive\"\)",
         {"findings"},
     ),
-    # a bare area name was read by two globs, `*` running over dashes, and
-    # three slug comparisons that took the first match (audit 2026-10-27):
+    # a bare area name is read neither by a glob, whose `*` runs over
+    # dashes, nor by a slug comparison taking the first match:
     # `repo.areas_named` reads it by the name grammar
     (
         "an area name globbed by hand",
         r"glob\(f?\"(\[0-9\]\*|\*)-|split_area_name\([^)]*\)\[1\] ==",
         {"repo"},
     ),
-    # the area's test file was named three times; the README's copy wrote
-    # `test__<slug>.py` for an area without a number (audit 2026-11-07,
-    # second): `repo.area_test_stem`
+    # the area's test file is named in one place, so an area without a
+    # number gets no `test__<slug>.py`: `repo.area_test_stem`
     (
         "an area's test file named by hand",
         r"f[\"']test_\{",
         {"repo"},
     ),
-    # a `[table]` of the TOML head was found by its own regex in six places
-    # (architecture audit 2026-11-07, second, H4): `protocol_block.table_span`
+    # a `[table]` of the TOML head is found by one regex:
+    # `protocol_block.table_span`
     (
         "a head table header spelled by hand",
         r"(?<!\\\[)\\\[\\s\*[a-z]+\\s\*\\\](?!\\\])",
         {"protocol_block"},
     ),
-    # "is a value the stamp's <…>" was spelled four times, one stripping
-    # first (architecture audit 2026-11-07, second, H10):
+    # "is a value the stamp's <…>" has one answer:
     # `protocol_block.is_stamp_placeholder`
     (
         "a stamp placeholder tested by hand",
         r"startswith\(\"<\"\)[^\n]*endswith\(\">\"\)",
         {"protocol_block"},
     ),
-    # labkit-audit printed three refusals and its progress lines itself
-    # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
+    # a command's refusals and progress lines go through `console.refuse`,
     # `console.progress`
     (
         "a refusal or progress line printed by hand",
@@ -269,17 +257,16 @@ RULES: list[tuple[str, str, set[str]]] = [
 
 #: shapes over several lines — (what, regex over the file, the module(s) where it belongs)
 BLOCK_RULES: list[tuple[str, str, set[str]]] = [
-    # the conditional form is held above; the try/except copy was not
-    # (TODO, 2026-10-23): `repo.shown` for a shown path, `scope_sha._key`
-    # for a stamp's key, else the question is answered elsewhere
+    # the conditional form is held above, the try/except copy here:
+    # `repo.shown` for a shown path, `scope_sha._key` for a stamp's key, else
+    # the question is answered elsewhere
     (
         "a path shown relative by hand (try/except form)",
         r"try:\n[^\n]*\.relative_to\([^\n]*\n\s*except ValueError:",
         {"repo", "runs", "scope_sha"},
     ),
-    # the one-line form is held above; two progress lines of labkit-audit
-    # stood as a print over four lines beside `console.progress` (audit
-    # follow-up 2026-10-23). A `labkit-*` command's own line only: what
+    # the one-line form is held above, a print over several lines here,
+    # beside `console.progress`. A `labkit-*` command's own line only: what
     # `batch`, `llm` and `runlog` tell the operator from inside a run is
     # not a command's progress
     (

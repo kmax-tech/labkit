@@ -1,10 +1,9 @@
 """Tests for batch.Store(mode="produce") — a producer replaces its file.
 
-Why this is tested: 2026-09-09, area 71 — a second producer run APPENDED its
-plan to the first one (625+528 = 1153 rows) because Store is append-only by
-design; only the producer's --verify caught the hybrid file. Produce mode
-must make re-running the producer idempotent (one run's file, atomically),
-and a crash must leave the previous file untouched.
+Why this is tested: Store is append-only by design, so a second producer
+run would append its plan to the first one's rows. Produce mode must make
+re-running the producer idempotent (one run's file, atomically), and a
+crash must leave the previous file untouched.
 """
 
 import json

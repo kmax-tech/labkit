@@ -2,7 +2,7 @@
 
 A git hook runs with GIT_DIR (and in a worktree more) exported; a test's
 `git init` + `git config` on its temporary directory then rewrites the real
-repo's config (2026-10-09: `core.bare = true`, a local user `t <t@t>`).
+repo's config (`core.bare = true`, a local user `t <t@t>`).
 tests/conftest.py drops every GIT_* variable. The twin runs the same steps
 without the conftest and must touch the decoy — otherwise the guarded run
 would prove nothing.

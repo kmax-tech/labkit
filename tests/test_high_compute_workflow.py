@@ -92,8 +92,8 @@ class HighComputeWorkflow(unittest.TestCase):
         )
         self.assertNotIn("[[promise]]", protocol.read_text(encoding="utf-8"))
         # the freeze commit: the lab's pre-commit runs protocol-check on the
-        # staged protocol, which held the compute lane to an example its
-        # skeleton never makes (labkit-paper area 15, round 2, t21 and t34)
+        # staged protocol, which must not hold the compute lane to an example
+        # its skeleton never makes
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             rc = protocol_report.main([str(protocol)])

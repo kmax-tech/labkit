@@ -53,9 +53,9 @@ class Lanes(unittest.TestCase):
 
 class Registration(unittest.TestCase):
     def test_a_count_registers_its_question_a_bar_its_criterion_and_reference(self):
-        """Standard 0.22: the registration follows what the number asserts
-        (`kind`), not the model technology — a RandomForest at low repeat cost owed
-        nothing but its question (fifth haiku round, t5 and t18)."""
+        """The registration follows what the number asserts (`kind`), not
+        the model technology: a RandomForest at low repeat cost is a fit and
+        owes what a fit owes, not only its question."""
         self.assertEqual(
             sc.registration_fields("compute", False), ("Question / hypothesis",)
         )
@@ -111,8 +111,8 @@ class TheRelease(unittest.TestCase):
 
 class Skeletons(unittest.TestCase):
     def test_which_skeleton_an_area_gets(self):
-        """By the kind, at every tier: a fit at low repeat cost got the count's
-        skeleton until 0.104 (fifth haiku round)."""
+        """By the kind, at every tier: a fit at low repeat cost gets the
+        estimator's skeleton, not the count's."""
         for cost in ("low", "high", None):
             with self.subTest(repeat_cost=cost):
                 self.assertIs(sc.skeleton(cost, "compute", False), sc.COMPUTE)
@@ -138,10 +138,9 @@ class Skeletons(unittest.TestCase):
 
     def test_every_flag_of_a_run_opening_stamp_is_a_run_or_a_no_run_stage(self):
         """NO_RUN_FLAGS is the one list of the stamps' stages that open no
-        run; the hook knew three of five, and `00_prepare.py --audit`, which
-        the producer documents as no write, was gated like a run start
-        (labkit-paper area 15, round 2, D7). A flag a run-opening stamp adds
-        must be put in one of the two lists here."""
+        run, so the hook knows every one: `00_prepare.py --audit`, which the
+        producer documents as no write, is not gated like a run start. A flag
+        a run-opening stamp adds must be put in one of the two lists here."""
         import re
 
         from labkit.run import lanes
@@ -190,7 +189,7 @@ class Described(unittest.TestCase):
 
     def test_the_before_run_line_says_which_gate_holds_which_list(self):
         # runlog checks the registration fields, the pre-commit hook every
-        # must field (Haiku start reading 2026-10-28: 3 of 3 asked)
+        # must field
         for kind in ("compute", "fit", "apply"):
             with self.subTest(kind=kind):
                 text = "\n".join(sc.describe("low", kind, False))

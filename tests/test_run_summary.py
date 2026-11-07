@@ -1,4 +1,4 @@
-"""runs.run_summary: what a run is, in one record (code-navigation round 11)."""
+"""runs.run_summary: what a run is, in one record."""
 
 import json
 import tempfile
@@ -40,8 +40,8 @@ class Summary(unittest.TestCase):
             self.assertEqual(s.run_kind, "measurement")
 
     def test_the_listing_names_each_runs_kind(self):
-        """Preparation, probe and measurement all read "fresh run of the
-        script" (review 2026-10-20)."""
+        """Preparation, probe and measurement are each named by kind, not
+        all as "fresh run of the script"."""
         import contextlib
         import io
 
@@ -78,7 +78,7 @@ class Summary(unittest.TestCase):
             )
             self.assertTrue(s.git.endswith("+dirty"))
             self.assertGreater(s.uncommitted_bytes, 0)
-            self.assertIsNone(s.command)  # recorded only from labkit 0.69
+            self.assertIsNone(s.command)  # the record holds no command
 
     def test_a_folder_without_config_refuses(self):
         with tempfile.TemporaryDirectory() as d:

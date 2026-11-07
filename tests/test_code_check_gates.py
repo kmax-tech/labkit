@@ -1,4 +1,4 @@
-"""code-check stations 1b and 1c (2026-10-05): every parse_* has a test,
+"""code-check stations 1b and 1c: every parse_* has a test,
 the protocol's prompt block is the PROMPT constant and not a transcript."""
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ class Gates(unittest.TestCase):
         self.assertTrue(f[0].startswith("BLOCKER"))
 
     def test_a_name_in_a_comment_string_or_import_is_no_test(self):
-        """Any mention silenced the check (review 2026-10-20)."""
+        """A mention alone never silences the check."""
         (self.repo / "tests" / "test_01_x.py").write_text(
             "from x import parse_answer  # parse_score: TODO\n"
             '"""parse_score is tested elsewhere"""\n',

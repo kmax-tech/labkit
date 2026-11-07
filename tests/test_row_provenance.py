@@ -1,6 +1,6 @@
 """A resumed output file names the run it continues, and finalize holds every
 row to the run — rows of a run this run neither is, continues nor derives
-from are a file of two measurements (2026-10-09).
+from are a file of two measurements.
 
     .venv/bin/python -m pytest tests/test_row_provenance.py
 """
@@ -94,10 +94,10 @@ class ResumedRunNamesWhatItContinues(unittest.TestCase):
 
 
 class AFinishedRunIsContinuedOutLoud(unittest.TestCase):
-    """A repair measured again into the faulty run's file appended nothing
-    and reported the faulty rows as its own (repair case, 2026-10-28), and
-    nothing said so. Continuing a finished run is said; continuing the run
-    that broke off is the resume it is meant for."""
+    """A repair measured again into the faulty run's file appends nothing
+    and would report the faulty rows as its own: continuing a finished run
+    is said; continuing the run that broke off is the resume it is meant
+    for."""
 
     def _measure(self, area: Path, out: Path, ids: list[str], *, crash: bool = False):
         said = io.StringIO()
@@ -220,8 +220,8 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
             self.assertIn(f"2 row(s) from {A}", blockers[0].text)
             self.assertIn("file of two measurements", blockers[0].text)
             self.assertIn("measure anew", blockers[0].fix or "")
-            # how, not just where: read as `rm`, the vague text cost the
-            # only clean run's rows (reference pilot 2026-11-01, task 15)
+            # how, not just where: a vague text is read as `rm` and costs
+            # the clean run's rows
             self.assertIn(
                 "a new name for the output in the measuring script",
                 blockers[0].fix or "",
@@ -270,8 +270,7 @@ class FinalizeHoldsRowsToTheRun(unittest.TestCase):
 
     def test_a_models_answers_reread_after_a_parser_fix_pass(self) -> None:
         """Rows that name no code — a model's answers — do not depend on the
-        script: a parser fix measured again re-reads them (the counter
-        cases' judge repair)."""
+        script: a parser fix measured again re-reads them."""
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)
             out = area / "x.jsonl"

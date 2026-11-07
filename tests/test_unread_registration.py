@@ -3,14 +3,11 @@ never read as "nothing changed".
 
 finalize holds the protocol, as the answering run saw it and as it stands,
 to what its first measurement registered, read back through git
-(`protocol_history.as_measured`). When git could not read that text — a
+(`protocol_history.as_measured`). When git cannot read that text — a
 commit's tree or a blob missing from the object store, a recorded patch
-that does not apply — finalize passed over it and said "what the number is
-about … are the ones the first measurement registered": a changed question
-went through finalize, and labkit-next sent the agent to the audit before
-adopting it (side finding 1 of
-docs/notes/2026-11-03-finalize-hold-missing-once.md). Each failure here is
-real: an object removed from the lab's repository, a patch that does not
+that does not apply — finalize does not pass over it as if the first
+measurement's registration stood, which would let a changed question
+through. Each failure here is real: an object removed from the lab's repository, a patch that does not
 apply. The twin: the same area readable is held for its changed question;
 the recovery: the object restored, finalize holds as before."""
 
@@ -114,10 +111,10 @@ class UnreadFirstMeasurement(ChangedQuestion):
 class UnreadCommitAtTheRegistrationStation(ChangedQuestion):
     """report-check's registration station reads the protocol as the first
     measurement's commit holds it (`protocol_history.committed_at`). A
-    commit git cannot read was told "was not committed — nothing stood
-    before the number", a cause that did not hold and a way out that did
-    not apply. It names git's failure and the way back; the twin, a
-    protocol the commit truly lacks, keeps its sentence."""
+    commit git cannot read is not told "was not committed", a cause that
+    does not hold with a way out that does not apply: it names git's
+    failure and the way back; the twin, a protocol the commit truly lacks,
+    keeps its sentence."""
 
     def station(self) -> list[str]:
         from labkit.gates import report_check, report_context
@@ -141,10 +138,9 @@ class ReleaseThatCannotBeChecked(e2e.CorrectionCommands):
     """A correction in place released for run A by its follow-up; then a
     file the run registered is gone, so the state A was audited in cannot
     be computed (`audit_binding.covering_analysis` raises AuditError).
-    `resolved_corrections` read that as "no release" and the hold told to
-    restore Data / scope as A registered it — the known-false value — while
-    only the registered-outputs station named the real cause (side finding
-    2). Held as a release that cannot be checked, naming the file; the
+    `resolved_corrections` does not read that as "no release", whose hold
+    would tell to restore Data / scope as A registered it — the known-false
+    value. Held as a release that cannot be checked, naming the file; the
     twin: the file there, finalize passes; the recovery: put back, passes."""
 
     def setUp(self) -> None:

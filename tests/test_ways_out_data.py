@@ -1,9 +1,9 @@
 """Every BLOCKER names its way out, as data (`gate.GateFinding.fix`), and so
 does every refusal an agent meets outside the gates' findings — an
 `AuditError` (labkit-audit, the reviews), an `AttemptError` (the attempt
-journal) and runlog's start refusals: the ways past the gates came where an
-agent saw no admissible next step, and a held step that named its command
-was followed (docs/notes/2026-10-27-standard-way-out.md). Held twice:
+journal) and runlog's start refusals: an agent that sees no admissible next
+step looks for a way past the gate, and a held step that names its command
+is followed (docs/notes/2026-10-27-standard-way-out.md). Held twice:
 `GateFinding` refuses a BLOCKER without a fix when it is built, and this
 test reads every site in labkit/ that builds one or raises one of those
 refusals — so a site no other test reaches is held too. What stays exempt
@@ -172,8 +172,7 @@ def commandless_blocker_ways(tree: ast.AST) -> list[tuple[int, str]]:
 
 class EveryWayOut(unittest.TestCase):
     def test_every_literal_way_out_names_its_command(self):
-        """`<what is refused>. Next: <command>` (agent-surface plan, step 6):
-        the step after a repair by hand is the check run again
+        """`<what is refused>. Next: <command>`: the step after a repair by hand is the check run again
         (`commands.gate_command`)."""
         missing = []
         for path in sorted((ROOT / "labkit").rglob("*.py")):
@@ -295,7 +294,7 @@ class EveryRefusal(unittest.TestCase):
 class TheHooks(unittest.TestCase):
     """The pre-run hook's notes name their step too; its block and the stop's
     tell the findings above, each with its fix (the undecided way is
-    `labkit-next`'s step since 0.109.0, tests/test_agent_hooks_undecided.py)."""
+    `labkit-next`'s step, tests/test_agent_hooks_undecided.py)."""
 
     def test_a_run_outside_an_area_is_told_its_way_out(self):
         import tempfile

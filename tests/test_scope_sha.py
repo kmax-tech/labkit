@@ -1,9 +1,7 @@
 """Tests for scope-sha — the audit stamp of lab standard LAB-015 Preflight audit before freezing / LAB-050 Analysis audit before reporting.
 
-Occasion (2026-09-08): the shell one-liner this command replaces produced a
-stable-looking stamp that covered no file CONTENT on macOS (BSD xargs has no
-`-a`; zsh's noclobber refused the `>` building the list). A stamp that stays
-put while an anchor file changes is worse than no stamp — so the properties
+A stamp that stays put while an anchor file changes is worse than no
+stamp — so the properties
 that make it a stamp get tested: order independence, content sensitivity,
 membership sensitivity, and a hard failure on a missing file.
 """
@@ -43,7 +41,7 @@ class Digests(unittest.TestCase):
         self.assertEqual(len(digests.tree_digest([("a", b"1")], chars=None)), 64)
 
     def test_tree_digest_is_the_spelled_out_shape(self):
-        # the shape the stamps were recorded with: name, newline, hex of the
+        # the shape the stamps are recorded with: name, newline, hex of the
         # content's sha256, newline — a recorded stamp must stay recomputable
         h = hashlib.sha256()
         h.update(b"a\n" + hashlib.sha256(b"1").hexdigest().encode() + b"\n")
@@ -158,10 +156,9 @@ class TestScopeSha(unittest.TestCase):
 
 
 class TestOneStampEverywhere(unittest.TestCase):
-    """Review 2026-10-07: scope-sha, preflight and labkit-audit gave four
-    different stamps for one unchanged area — the path spelling, the working
-    directory and whether lib/ and the pin counted all differed. One home
-    now: `area_stamp`."""
+    """scope-sha, preflight and labkit-audit give one stamp for one
+    unchanged area, whatever the path spelling and the working directory,
+    with lib/ and the pin counted alike. One home: `area_stamp`."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -224,9 +221,9 @@ class TestOneStampEverywhere(unittest.TestCase):
 
 
 class TestDeclaredScopeIsStamped(unittest.TestCase):
-    """Review 2026-10-20: `labkit-audit` reads a promise's declared scope in
-    full, the stamp covered it only when a script imported it — a declared
-    helper audited, then edited, left the old audit valid."""
+    """`labkit-audit` reads a promise's declared scope in full, so the stamp
+    covers it whether a script imports it or not — a declared helper
+    audited, then edited, leaves the old audit invalid."""
 
     def setUp(self):
         from protocol_fixture import head
@@ -292,9 +289,9 @@ class TestDeclaredScopeIsStamped(unittest.TestCase):
 
 
 class TestImportForms(unittest.TestCase):
-    """Review 2026-10-07: `from lib import scoring` and `import lib.scoring`
-    were read as a module `lib`; lib/scoring.py changed and the stamp stayed
-    at the same value. Every allowed form, transitively."""
+    """`from lib import scoring` and `import lib.scoring` bring
+    lib/scoring.py, not a module `lib`: a change there moves the stamp.
+    Every allowed form, transitively."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -333,8 +330,8 @@ class TestImportForms(unittest.TestCase):
 
     def test_a_package_brings_what_python_loads(self):
         """`import pkg` runs pkg/__init__.py only; pkg/core.py comes with
-        `import pkg.core` (2026-10-07: taking the whole package charged an
-        area with a sibling module it never imported)."""
+        `import pkg.core`, so an area is not charged with a sibling module
+        it never imports."""
         self.assertEqual(self.names("import pkg\n"), ["pkg/__init__.py"])
         self.assertEqual(
             self.names("import pkg.core\n"), ["pkg/__init__.py", "pkg/core.py"]
@@ -362,8 +359,8 @@ class TestImportForms(unittest.TestCase):
         self.assertNotIn("pkg/other.py", self.names("from pkg.core import C\n"))
 
     def test_src_is_a_root_as_lib_is(self):
-        """uniagent computes every registered key in src/measure: with lib/
-        alone neither the stamp nor the key search saw it (2026-10-07)."""
+        """A repo may compute every registered key in src/measure: with lib/
+        alone neither the stamp nor the key search would see it."""
         from labkit.formats import scope_sha as packaged
 
         src = self.repo / "src" / "measure"

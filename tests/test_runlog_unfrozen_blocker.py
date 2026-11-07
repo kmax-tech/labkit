@@ -1,12 +1,9 @@
 """runlog refuses a full run over an undecided audit BLOCKER, acknowledged or not.
 
-labkit-paper area 09, haiku round (2026-10-17): the preflight audit wrote its
-BLOCKER to audits/ before the first run; the agent took a killed second call
-for a failed audit and ran four full runs with LABKIT_UNFROZEN=1. The
-acknowledgement is for an unfrozen protocol a run may be acknowledged on,
-not for a finding nobody read. Without a record the acknowledged run stays
-possible over a failed
-audit attempt (0.99.0); a decided BLOCKER starts; a probe (run_kind='probe') runs so the BLOCKER can be examined;
+The acknowledgement (LABKIT_UNFROZEN=1) is for an unfrozen protocol a run
+may be acknowledged on, not for a finding nobody read. Without a record the
+acknowledged run stays possible over a failed
+audit attempt; a decided BLOCKER starts; a probe (run_kind='probe') runs so the BLOCKER can be examined;
 open WARNINGs ride in the acknowledgement's warning line.
 """
 
@@ -76,7 +73,7 @@ class UnfrozenBlocker(unittest.TestCase):
         )
 
     def _audit_failed(self) -> Path:
-        """The failed attempt the acknowledgement rests on (0.99.0)."""
+        """The failed attempt the acknowledgement rests on."""
         return failed_attempts.write_failed(
             self.tmp,
             "preflight",
@@ -108,7 +105,7 @@ class UnfrozenBlocker(unittest.TestCase):
 
     def test_without_a_record_the_acknowledged_run_starts_over_a_failed_audit(self):
         """No findings record, but the audit was tried and the backend did not
-        answer (0.98.0 let the run through without any attempt)."""
+        answer: the attempt is what the acknowledgement rests on."""
         tried = self._audit_failed()
         os.environ["LABKIT_UNFROZEN"] = "1"
         r, out = self._start(run_kind="measurement")

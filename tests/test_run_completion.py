@@ -1,18 +1,19 @@
 """Tests for the run's completion markers, its states, and the index lock.
 
-Why this exists: a run directory used to say "finished" with metrics.json
-alone, so a break between writing the numbers and writing the index row
-looked exactly like a clean finish — and the index, which alone held `note`
-and the end-of-run git state, could not be rebuilt from the directory. Since
-2026-09-26 a v2 run is complete only with BOTH metrics.json and
-completion.json, and every change to runs.tsv takes one lock.
+Why this exists: with metrics.json alone as the finish, a break between
+writing the numbers and writing the index row would look exactly like a
+clean finish — and `note` and the end-of-run git state would live only in
+the index, which could not be rebuilt from the directory. So a v2 run is
+complete only with BOTH metrics.json and completion.json, and every change
+to runs.tsv takes one lock.
 
 The states under test: completed · running · unknown · crashed ·
-unfinalized · corrupt · legacy. crashed/unfinalized/corrupt are failures;
+unfinalized · corrupt · unreadable. crashed/unfinalized/corrupt/unreadable are
+failures (`runs.FAILED_STATES`);
 `--wait` exits 2 on each. `unknown` is not a failure — it means liveness is
-undecidable, and treating it as failed would hide a running run. `legacy`
-(no `schema_version` >= 2) is never completed since labkit 0.48; such a run
-is read with labkit 0.47.
+undecidable, and treating it as failed would hide a running run. A run
+without `schema_version` >= 2 is unreadable, never completed; such a run is
+read with labkit 0.47.
 """
 
 import contextlib
@@ -36,8 +37,7 @@ from labkit.formats import runs, answering_run  # noqa: E402
 
 def _dead_pid() -> int:
     """A pid that belonged to a process which has ended — pid 1 lives in
-    many containers, so a fixture that means "dead" cannot use it
-    (review 2026-10-08)."""
+    many containers, so a fixture that means "dead" cannot use it."""
     proc = subprocess.Popen(["true"])
     proc.wait()
     return proc.pid
@@ -65,7 +65,7 @@ def _run_dir(
     d = area / "runs" / name
     d.mkdir(parents=True)
     cfg = run_record(pid=pid)
-    if schema is None:  # a record from before the schema: no version, no kind
+    if schema is None:  # a record without the schema: no version, no kind
         del cfg["schema_version"], cfg["run_kind"]
     else:
         cfg["schema_version"] = schema
@@ -140,9 +140,8 @@ class TestStates(unittest.TestCase):
             self.assertEqual(_state(d, alive=True), "running")
 
     def test_a_run_without_schema_version_is_unreadable_never_completed(self):
-        """labkit 0.48 dropped the metrics-only marker; 0.89.0 dropped the
-        `legacy` state: a run without `schema_version` >= 2 is unreadable
-        metadata whatever its files say — read it with labkit 0.47."""
+        """A run without `schema_version` >= 2 is unreadable metadata
+        whatever its files say — read it with labkit 0.47."""
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             cases = {
@@ -175,10 +174,9 @@ class TestActive(unittest.TestCase):
         self.assertEqual([r.state for r in live], ["unfinalized", "corrupt"])
 
     def test_what_a_run_is_and_what_it_recorded_stay_apart(self):
-        """active merged the state and the record into one dict, where a
-        record key could overwrite a computed one (2026-10-20): the record
-        is the typed `config`, the state beside it; an unreadable run has
-        no config and says why."""
+        """The state and the record stay apart, so no record key overwrites
+        a computed one: the record is the typed `config`, the state beside
+        it; an unreadable run has no config and says why."""
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             _run_dir(area, "2026-01-01T00-00-01_bbbb", completion=False)
@@ -336,7 +334,7 @@ if __name__ == "__main__":
 
 
 class TestDerivedRun(unittest.TestCase):
-    """A derived run re-evaluates a parent's rows and says so (2026-10-05)."""
+    """A derived run re-evaluates a parent's rows and says so."""
 
     def test_a_derived_run_records_its_parent(self):
         with tempfile.TemporaryDirectory() as d:

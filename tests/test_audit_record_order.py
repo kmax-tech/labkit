@@ -1,7 +1,7 @@
 """The audit records and failed attempts of an area in the order they were
-written: minute, then the number `_create` gave within the minute — by
-name, `-2` and `-3` sorted before the minute's first file, and the newest
-failed attempt read as the oldest (review 2026-10-20).
+written: minute, then the number `_create` gave within the minute — not by
+name, which sorts `-2` and `-3` before the minute's first file and reads the
+newest failed attempt as the oldest.
 
     .venv/bin/python -m pytest tests/test_audit_record_order.py
 """
@@ -76,9 +76,8 @@ class WrittenOrder(unittest.TestCase):
 
 
 class Counts(unittest.TestCase):
-    """blockers = -1 wrote, read and passed the coverage check (review
-    2026-10-20): a count is a non-negative integer, held alike on write and
-    read."""
+    """A count is a non-negative integer, held alike on write and read:
+    `blockers = -1` is refused, never passed to the coverage check."""
 
     def setUp(self) -> None:
         self.area = Path(tempfile.mkdtemp())

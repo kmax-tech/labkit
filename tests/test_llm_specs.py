@@ -1,7 +1,6 @@
-"""The backend specs (2026-10-20): one type per backend, its options and
-nothing else, refused at load when models.toml says what the backend cannot
-do; immutable all the way down; recorded in the shape runs have always
-held."""
+"""The backend specs: one type per backend, its options and nothing else,
+refused at load when models.toml says what the backend cannot do; immutable
+all the way down; recorded in the shape run records hold."""
 
 from __future__ import annotations
 
@@ -165,10 +164,9 @@ class Parse(unittest.TestCase):
 
 
 class ModelsFile(unittest.TestCase):
-    """Review 2026-10-20: the loader handed TOML values to the typed parser
-    unchecked — `[models] demo = "not a model table"` ended as an
-    AttributeError. The outer shape is held first; every error names the
-    file and the field."""
+    """The loader holds the outer shape before the typed parser sees a TOML
+    value: `[models] demo = "not a model table"` is an error naming the file
+    and the field, not an AttributeError."""
 
     def spec(self, body: str):
         import tempfile
@@ -257,7 +255,7 @@ class Record(unittest.TestCase):
 
     def test_the_record_keeps_the_shape_runs_hold(self):
         """models_resolved in config.json is a format: the typed spec writes
-        the keys the dict spec wrote — options only where models.toml set them."""
+        its fixed keys — options only where models.toml sets them."""
         self.assertEqual(
             record(ClaudeCliSpec("h", "haiku")),
             {
@@ -306,8 +304,8 @@ class Record(unittest.TestCase):
 
 
 class CallOptions(unittest.TestCase):
-    """claude-cli dropped `raw` and `stop` without a word; now refused
-    before any process starts."""
+    """`raw` and `stop`, which claude-cli cannot honour, are refused before
+    any process starts, never dropped without a word."""
 
     def call(self, **kw) -> list:
         started: list = []

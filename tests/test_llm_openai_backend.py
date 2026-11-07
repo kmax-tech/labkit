@@ -65,8 +65,7 @@ class TestReasoningGuard(_Base):
 
     Without a server-side --reasoning-parser the trace lands inside content,
     where letter/label readouts silently read the DELIBERATION instead of the
-    answer (measured in thesis-nandan: 6.6% one-directional label shift).
-    Content without a trace field is that misconfiguration's signature."""
+    answer and shift the labels. Content without a trace field is that misconfiguration's signature."""
 
     SPEC = {**_Base.SPEC, "reasoning": True}
 

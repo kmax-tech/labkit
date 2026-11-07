@@ -1,8 +1,7 @@
 """Tests for protocol-fill — fill a stamped placeholder by label.
 
-Why this is tested: filling protocol fields by quoting the placeholder text
-back failed in 3-round loops twice in one day (2026-09-09, PROTOCOL-67).
-The label match must hit single- and multi-line placeholders, refuse
+Why this is tested: filling a protocol field by quoting its placeholder text
+back is fragile, so a field is filled by its label. The label match must hit single- and multi-line placeholders, refuse
 ambiguity and silent overwrites, and leave every other byte alone.
 """
 
@@ -97,8 +96,8 @@ class TestFill(unittest.TestCase):
         self.assertIn("<second stamp>", out)
 
     def test_a_wrapped_label_is_read_whole(self):
-        """The stamped `Resolution check` label wraps; the old parser listed
-        it as `extremes)` (usability probe 2026-10-07)."""
+        """The stamped `Resolution check` label wraps; it is read whole, not
+        as `extremes)`."""
         text = "- **Resolution check (ZERO calls,\n  extremes):** <both numbers>\n"
         out = protocol_edit.fill(text, "Resolution check", "fires 1.0, silent 0.0")
         self.assertEqual(
@@ -117,8 +116,8 @@ TEMPLATE = (PACKAGE_DIR / "templates" / "experiment-protocol.md.template").read_
     encoding="utf-8"
 )
 # The shape the stamped measure skeleton builds its prompts in — an
-# f-string answer line joined from ANSWERS (re-measure 2026-10-07: a plain
-# literal in this test hid that the skeleton's prompts were unreadable).
+# f-string answer line joined from ANSWERS (a plain literal here would hide
+# a skeleton whose prompts the reader cannot read).
 SCRIPT = (
     'ANSWERS = {"Yes": "causal", "No": "not_causal"}\n'
     "ANSWER_LINE = f\"Answer with a single word, {' or '.join(ANSWERS)}.\"\n"
@@ -127,7 +126,7 @@ SCRIPT = (
     'PROMPT_NULL = ("Is this text written in English?\\n\\n"\n'
     '               "Text: {text}\\n\\n" + ANSWER_LINE + "\\n\\nAnswer:")\n'
 )
-# The PubMedQA pilot's form: the registered prompt joins `ANSWERS.keys()`,
+# A half-readable form: the registered prompt joins `ANSWERS.keys()`,
 # a call the static reader does not compute; the null prompt is literal.
 HALF_READABLE_SCRIPT = (
     'ANSWERS = {"Yes": "yes", "No": "no"}\n'
@@ -163,8 +162,8 @@ class HeadType(unittest.TestCase):
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
     def test_a_head_key_named_with_its_table_is_filled(self):
-        """Round 2: agents wrote `"[protocol] type=…"` and met "no field
-        labelled"; the key named with its table is the key."""
+        """`"[protocol] type=…"` fills the head key, not "no field labelled":
+        the key named with its table is the key."""
         text = protocol_edit.fill_many(self.HEAD, [("[protocol] type", "exploratory")])
         self.assertEqual(protocol_block.head(text).type, "exploratory")
 
@@ -185,9 +184,9 @@ class HeadType(unittest.TestCase):
         self.assertIn("- **Unit:** one row per case", text)
 
     def test_list_sets_the_fields_from_run_writes_apart(self):
-        """Listed among the rest, Result and Answer read as owed before the
-        run: a cold agent filled them with "pending run" and --from-run then
-        refused to overwrite them (cloud, 2026-10-14)."""
+        """Result and Answer are listed apart: among the rest they would read
+        as owed before the run, and a value filled in by hand ("pending
+        run") is one --from-run refuses to overwrite."""
         from labkit.tools import scaffold
 
         out = io.StringIO()
@@ -208,9 +207,8 @@ class HeadType(unittest.TestCase):
         self.assertIn("Question / hypothesis", before)
 
     def test_a_type_line_in_a_fenced_example_is_not_the_head(self):
-        """A prompt quoting TOML output carried `type = "<…>"`; it was taken
-        for the head (audit 2026-10-15). The head is read inside the one
-        ```toml block."""
+        """A prompt quoting TOML output may carry `type = "<…>"`; it is not
+        the head, which is read inside the one ```toml block."""
         example = (
             '- **Prompt:**\n\n  ```text\n  answer as\n  type = "<yes | no>"\n  ```\n\n'
         )
@@ -229,8 +227,9 @@ class HeadType(unittest.TestCase):
         self.assertIn('type = "confirmatory"', filled)
 
     def test_the_head_cost_left_by_the_stamp_is_listed_and_set(self):
-        """`labkit-init exp` without --repeat-cost leaves `cost = "<…>"`; --list named
-        only type, and the agent edited the head by hand (2026-10-21)."""
+        """`labkit-init exp` without --repeat-cost leaves `cost = "<…>"`; --list
+        names it beside type and a fill sets it, so the head is never edited
+        by hand."""
         text = self.HEAD.replace('repeat_cost = "low"', 'repeat_cost = "<low | high>"')
         self.assertEqual(protocol_edit.head_open(text, "repeat_cost"), 8)
         out = io.StringIO()
@@ -256,7 +255,7 @@ class HeadType(unittest.TestCase):
 
     def test_the_model_alias_left_by_a_bare_model_flag_is_listed_and_set(self):
         """`labkit-init exp --model` without an alias stamps `[model] alias =
-        "<alias from models.toml>"` (phase 4, 2026-10-21); --list names it
+        "<alias from models.toml>"`; --list names it
         and `"model alias=haiku"` writes it as a TOML string."""
         text = self.HEAD.replace(
             'preflight_audit = "none"\n',
@@ -285,9 +284,8 @@ class HeadType(unittest.TestCase):
             protocol_edit.fill_head(text, "alias", " ")
 
     def test_number_describes_is_listed_and_set_and_the_freeze_says_how(self):
-        # a MUST of a computation with a model that no tool set, and the
-        # freeze keys answered "no field labelled" (audit 2026-10-27, third,
-        # I5, I6)
+        # a MUST of a computation with a model is listed and set by the tool,
+        # and the freeze keys name `--freeze`, not "no field labelled"
         text = self.HEAD.replace(
             'preflight_audit = "none"\n',
             'preflight_audit = "none"\n\n[model]\nalias = "haiku"\n'
@@ -314,8 +312,8 @@ class HeadType(unittest.TestCase):
                     protocol_edit.fill_many(text, [(key, "true")])
 
     def test_list_sets_apart_the_fields_this_protocol_does_not_owe(self):
-        # a high computation without a model was told to fill its data
-        # profile and prompt (audit 2026-10-27, third, I9)
+        # a high computation without a model owes no data profile or prompt:
+        # they are listed apart
         text = head(repeat_cost="high", kind="compute") + (
             "- **Data profile:** <your judgement of the data>\n"
             "- **Question / hypothesis:** <the one question>\n"
@@ -345,12 +343,10 @@ class HeadType(unittest.TestCase):
 
 
 class Freeze(unittest.TestCase):
-    """`protocol-fill --freeze`, the one writer of the freeze (the
-    one-explainer plan, step C): it writes both keys once the proposed head
-    passes the freeze gate's checks and refuses them otherwise, the file as
-    it was. Until 0.109.0 the keys were set by hand and a frozen protocol
-    with open fields or an undecided audit met the gates one by one
-    (labkit-paper's tassay-r2, 2026-11-04)."""
+    """`protocol-fill --freeze`, the one writer of the freeze: it writes both
+    keys once the proposed head passes the freeze gate's checks and refuses
+    them otherwise, the file as it was — so a protocol with open fields or
+    an undecided audit is never frozen to meet the gates one by one."""
 
     def _area(self) -> tuple[Path, Path]:
         from protocol_fixture import scope_file
@@ -454,8 +450,7 @@ class Freeze(unittest.TestCase):
 
 class Prompts(unittest.TestCase):
     """The Prompt block written from the scripts' constants holds against
-    code-check's drift check (re-measure 2026-10-07: three agents patched
-    it by a Python snippet)."""
+    code-check's drift check, so it needs no hand patch."""
 
     def area(self, d: str) -> Path:
         area = Path(d)
@@ -511,9 +506,9 @@ class Prompts(unittest.TestCase):
         return rc, out.getvalue(), err.getvalue()
 
     def test_an_unreadable_constant_is_named_and_nothing_is_written(self):
-        """The PubMedQA pilot's answer line joined `ANSWERS.keys()`, a call
-        the static reader does not compute: `--prompts` wrote the null
-        prompt alone and said "filled" (repro on labkit c2c5da2, 2026-10-28)."""
+        """An answer line joined from `ANSWERS.keys()` is a call the static
+        reader does not compute: `--prompts` names it and writes nothing,
+        never the null prompt alone said "filled"."""
         with tempfile.TemporaryDirectory() as d:
             protocol = self.area(d)
             (protocol.parent / "scripts" / "01_measure.py").write_text(
@@ -539,8 +534,7 @@ class Prompts(unittest.TestCase):
 
 class OneCallFill(unittest.TestCase):
     """`protocol-fill P "LABEL=VALUE" ...` fills several fields at once, all or
-    nothing — six calls for six fields were every cold agent's largest sink
-    (cloud probes, 2026-10-13)."""
+    nothing — one call, not one per field."""
 
     BODY = (
         "- **Terms of this protocol:** <the terms>\n"
@@ -630,7 +624,7 @@ if __name__ == "__main__":
 
 
 class TestFromRun(unittest.TestCase):
-    """--from-run (0.88.0): the number is written back from metrics.json, never retyped."""
+    """--from-run: the number is written back from metrics.json, never retyped."""
 
     PROTOCOL = """# Experiment protocol: count
 
@@ -702,8 +696,7 @@ class TestFromRun(unittest.TestCase):
             + ")"
         )
         self.assertIn("- **Recorded results:** " + line, text)
-        # the Result is the author's two sentences, not the key dump again
-        # (three of three judge protocols carried it there, 2026-10-21):
+        # the Result is the author's two sentences, not the key dump again:
         # the write-back leaves the author's Conclusion as written
         self.assertIn("- **Conclusion:** the cases hold a few documents each.", text)
         self.assertIn("Conclusion", protocol_result.WRITTEN_AFTER_RUN)
@@ -732,7 +725,7 @@ class TestFromRun(unittest.TestCase):
         )  # [result], the Answer, the Runs line
 
     def test_the_run_is_declared_in_the_head_after_the_protocol_table(self):
-        """`[result] run` is the declaration (phase 3, 2026-10-21): written
+        """`[result] run` is the declaration: written
         once, right after the [protocol] table, read back exactly; the
         template's comment above [protocol] and every other byte stay."""
         area = self._area({"mean_docs_per_case": 3.5})
@@ -773,7 +766,7 @@ class TestFromRun(unittest.TestCase):
             )
 
     def test_the_command_refuses_an_unchecked_result_and_leaves_the_file(self):
-        """The one adoption path (2026-10-19): the fixture's run has no
+        """The one adoption path: the fixture's run has no
         analysis record — report-check
         refuses, and the protocol is byte-identical to before."""
         area = self._area({"mean_docs_per_case": 3.5})
@@ -907,8 +900,8 @@ class Adopt(unittest.TestCase):
         self.assertEqual(text, before)
 
     def test_a_check_that_raises_puts_the_file_back_and_raises(self):
-        """Only a blocker exit restored the protocol; an exception out of
-        report-check left the unchecked answer standing (audit 2026-10-19)."""
+        """An exception out of report-check restores the protocol as a
+        blocker exit does: the unchecked answer never stands."""
         area = self._area()
         proto = area / "PROTOCOL-x.md"
         before = proto.read_text(encoding="utf-8")
@@ -1068,9 +1061,9 @@ class WithdrawText(unittest.TestCase):
 
 class PromiseSentences(unittest.TestCase):
     """The [[promise]] sentences of the TOML head: `--list` names the open
-    ones and `"<id> sentence=..."` fills one as a TOML string. Every judge
-    probe of 2026-10-20 found them only by reading the file, one lost a
-    commit to them, and a hand-written TOML string broke on a quote."""
+    ones and `"<id> sentence=..."` fills one as a TOML string: nobody has to
+    find them by reading the file, and no hand-written TOML string breaks on
+    a quote."""
 
     BLOCK = (
         "[[promise]]\n"
@@ -1155,11 +1148,10 @@ class PromiseSentences(unittest.TestCase):
 
 
 class PromiseSentencesReview(unittest.TestCase):
-    """What an independent review of the sentence fill found (2026-10-20):
-    a valid id spelling dropped the table from `--list`, a line cut other
-    than the fence walker's moved the line, a value with a character that
-    `str.splitlines` cuts broke the written string, and a prose label of
-    one word plus "sentence" was taken for a promise id."""
+    """The sentence fill's edges: every valid id spelling keeps its table in
+    `--list`, the line is cut as the fence walker cuts it, a value with a
+    character that `str.splitlines` cuts is written as one valid string,
+    and a prose label of one word plus "sentence" is no promise id."""
 
     def text(self, id_line: str = 'id = "criterion-1"', prose: str = "") -> str:
         block = (
@@ -1239,8 +1231,8 @@ class FieldAddressGuidance(unittest.TestCase):
     """Misaddressed fields name the existing write path without changing input."""
 
     def test_a_table_prefix_without_a_space_is_read_for_every_table(self):
-        """`[protocol]type=` was read and `[kept]key=` refused (t34-r3 of
-        labkit-paper's area 20, 2026-11-04): one rule for the table prefix."""
+        """`[protocol]type=` and `[kept]key=` are both read: one rule for the
+        table prefix."""
         with tempfile.TemporaryDirectory() as tmp:
             protocol = Path(tmp) / "PROTOCOL-x.md"
             protocol.write_text(
@@ -1336,10 +1328,9 @@ class FieldAddressGuidance(unittest.TestCase):
 class ReportSetter(unittest.TestCase):
     """`protocol-fill P report=REPORT.md`: the head's `[protocol] report`
     registered on a stamped protocol before its first measurement — the
-    route for an area stamped without `--report-file` (labkit-paper area
-    17, 2026-11-02: none of 18 protocols registered the report their task
-    asked for). After the first measurement the registered report is bound:
-    no fill, `--force` included, registers, moves or drops it."""
+    route for an area stamped without `--report-file`. After the first
+    measurement the registered report is bound: no fill, `--force`
+    included, registers, moves or drops it."""
 
     def _area(self) -> tuple[Path, Path]:
         from protocol_fixture import head as fixture_head
@@ -1455,9 +1446,9 @@ class ReportSetter(unittest.TestCase):
         self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
 
     def test_a_short_index_row_refuses_the_registration_instead_of_hiding_a_run(self):
-        """runs.tsv truncated to the run id of a deleted measurement read as
-        no measurement, and the late registration passed (review 2026-11-03,
-        S2): refused, naming the line, the protocol unchanged."""
+        """runs.tsv truncated to the run id of a deleted measurement is not
+        read as no measurement: the late registration is refused, naming
+        the line, the protocol unchanged."""
         import shutil
 
         from labkit.run import runlog

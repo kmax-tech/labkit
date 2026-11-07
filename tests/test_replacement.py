@@ -2,10 +2,10 @@
 declares `[replaces]` answers a new, post-hoc question, and the declaration
 binds it — every change of the registration against its predecessor
 declared, `type = "exploratory"`, the predecessor's open BLOCKERs decided,
-its verdict rendered first. The repair case (2026-10-27): a second area
-lowered the criterion's margin 0.25 → 0.15 and declared nothing; a report
-that switched its citations from the old area to the new one is a hint,
-never a block (independent questions stay free).
+its verdict rendered first. The repair case: a second area lowers the
+criterion's margin 0.25 → 0.15 and declares nothing; a report that switches
+its citations from the old area to the new one is a hint, never a block
+(independent questions stay free).
 """
 
 from __future__ import annotations
@@ -126,12 +126,10 @@ class Differences(unittest.TestCase):
 
 class SameComparison(unittest.TestCase):
     """The predecessor's hold and the successor's declaration compare one
-    set of differences (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md): finalize held a changed
-    Exclusions / filters and pointed to a new registration with one
-    `[[replaces.change]]` per change, and the replacement station refused
-    that declaration — it compared only the kind, the promises and Data
-    profile."""
+    set of differences: a changed Exclusions / filters that finalize holds,
+    pointing to a new registration with one `[[replaces.change]]` per
+    change, is a difference the replacement station takes as declared too,
+    beside the kind, the promises and Data profile."""
 
     def test_every_difference_the_scope_hold_names_is_a_registration_difference(self):
         old = (

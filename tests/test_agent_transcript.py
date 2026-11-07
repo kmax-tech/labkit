@@ -1,6 +1,6 @@
 """agent_transcript reads what an agent did from its session transcript —
-the measurement the self-reported probe log could not be (re-measure
-2026-10-07: a read through `inspect.signature` never reached the log)."""
+the measurement the self-reported probe log cannot be: a read the agent
+does not report never reaches the log."""
 
 import json
 import re
@@ -213,17 +213,17 @@ class Timeline(unittest.TestCase):
 
 class Commands(unittest.TestCase):
     def test_every_installed_command_counts_and_no_other(self):
-        """The hand list missed labkit-params and labkit-audit and named a
-        `recheck` labkit never installed (audit 2026-10-18)."""
+        """Every installed console command counts, and a name labkit does not
+        install (`recheck`) does not."""
         line = "labkit-params experiments/01-x && recheck x; labkit-audit 01 --mode preflight"
         self.assertEqual(at.labkit_commands(line), ["labkit-params", "labkit-audit"])
 
 
 class OutsidePaths(unittest.TestCase):
-    """Paths the agent used outside its probe: judge-2 of 2026-10-20 named
-    its audit output `/tmp/j2_audit.out` as an earlier probe had, and read
-    that probe's file first. The score lists such paths for the operator —
-    static evidence, a shared store the isolation did not cover."""
+    """Paths the agent used outside its probe: an output in /tmp another
+    probe also writes, a file of another probe. The score lists such paths
+    for the operator — static evidence, a shared store the isolation does
+    not cover."""
 
     def test_a_shared_store_is_listed_the_probe_its_log_and_null_are_not(self):
         calls = [
@@ -262,10 +262,9 @@ class OutsidePaths(unittest.TestCase):
 
 
 class RecordsWithoutTimestamp(unittest.TestCase):
-    """Claude Code 2.1.285 writes session bookkeeping without a timestamp
-    (`atis-latch`, `last-prompt`, `cost-state`; the sandbox probe of
-    2026-10-21). Those carry no call and are skipped; a message record
-    without one is still refused."""
+    """Claude Code writes session bookkeeping without a timestamp
+    (`atis-latch`, `last-prompt`, `cost-state`). Those carry no call and are
+    skipped; a message record without one is refused."""
 
     def with_record(self, record: dict) -> Path:
         path = transcript(CALLS)
@@ -275,7 +274,7 @@ class RecordsWithoutTimestamp(unittest.TestCase):
         return path
 
     def test_bookkeeping_without_a_timestamp_is_skipped(self):
-        """`api-request-blob` (a subagent's transcript, 2026-11-04) carries a
+        """`api-request-blob` (in a subagent's transcript) carries a
         `message` key — a hash, not a message — and no timestamp: skipped by
         its type, not refused for its key."""
         for kind, extra in (
@@ -307,9 +306,9 @@ class RecordsWithoutTimestamp(unittest.TestCase):
 
 class BelongsByWorkingDirectory(unittest.TestCase):
     """An agent whose shell starts in the probe needs no `cd` and may name no
-    path at all (count-2 in the sandbox, 2026-10-21); its records carry the
-    probe as `cwd`. That proves the transcript as well as a mention; another
-    working directory and no mention are still refused."""
+    path at all; its records carry the probe as `cwd`. That proves the
+    transcript as well as a mention; another working directory and no
+    mention are refused."""
 
     def with_cwd(self, cwd: str) -> Path:
         path = transcript([(2.0, "Bash", {"command": "cat TASK.md"}, 1.0, "...")])

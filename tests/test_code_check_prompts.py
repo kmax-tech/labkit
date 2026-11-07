@@ -1,7 +1,6 @@
 """The prompt drift check reads prompts as the stamped skeleton builds
-them and every block under the Prompt field (re-measure 2026-10-07: it read
-literals only, so it never ran on a stamped area; once it ran it read only
-the first block and called a null prompt in a second block missing)."""
+them and every block under the Prompt field, so it runs on a stamped area
+and finds a null prompt in a second block."""
 
 import tempfile
 import unittest
@@ -85,9 +84,8 @@ class Blocks(unittest.TestCase):
         self.assertEqual(len(protocol_check.prompt_blocks(_write(moved))), 2)
 
     def test_a_tilde_fence_and_a_wrapped_label_are_read(self):
-        """`~~~` fences and a label wrapped onto the next line were invisible
-        to the prompt check's own parsers (audit 2026-10-15); the protocol
-        parser's fences and labels are read here."""
+        """`~~~` fences and a label wrapped onto the next line are read: the
+        prompt check reads the protocol parser's fences and labels."""
         tilde = TWO_BLOCKS.replace("```text", "~~~text").replace("  ```", "  ~~~")
         self.assertEqual(len(protocol_check.prompt_blocks(_write(tilde))), 2)
         wrapped = TWO_BLOCKS.replace(
@@ -97,8 +95,8 @@ class Blocks(unittest.TestCase):
         self.assertEqual(len(protocol_check.prompt_blocks(_write(wrapped))), 2)
 
     def test_an_empty_fence_is_reported_not_a_crash(self):
-        # a stamped protocol whose prompt fence was left empty raised
-        # IndexError (audit 2026-10-13): the first line of "" does not exist
+        # a stamped protocol whose prompt fence is left empty: the first line
+        # of "" does not exist
         empty = "- **Prompt:**\n\n  ```text\n  ```\n\n- **Unit:** x\n"
         findings = check(SCRIPT, empty)
         self.assertEqual(len(findings), 2, findings)  # PROMPT and PROMPT_NULL
@@ -124,8 +122,8 @@ TAGGED_BLOCK = """- **Prompt (verbatim, per variant):**
 
 class TaggedPrompts(unittest.TestCase):
     """A prompt that opens and closes with a tag is a prompt: only the
-    stamp's own placeholder fence is no registration (review 2026-11-03,
-    R1: every block starting with `<` was dropped, so drift went unseen)."""
+    stamp's own placeholder fence is no registration, so drift in a tagged
+    prompt is seen."""
 
     def test_a_drifted_tagged_prompt_blocks(self):
         (f,) = check(

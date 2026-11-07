@@ -1,12 +1,10 @@
 """Every consumer that picks or accepts a run asks `runs.completion_state`.
 
-Review 2026-10-06: the contract says a v2 run is complete only with BOTH
-metrics.json and completion.json (docs/protocol-run-binding.md), but
-recheck, a derived run's parent check, intent-check's legacy choice and
-the usability scorer looked at metrics.json alone — an unfinalized run
-could be rechecked as a kept number and accepted as a parent. (The
-legacy choice is gone since labkit 0.48: intent-check binds by protocol id,
-and an unstamped protocol names its run with `--metrics`.)
+The contract says a v2 run is complete only with BOTH metrics.json and
+completion.json (docs/protocol-run-binding.md). Recheck, a derived run's
+parent check and the usability scorer hold to it: a consumer that looked
+at metrics.json alone would recheck an unfinalized run as a kept number
+and accept it as a parent.
 
 The fixture is a twin pair in one area: an older completed run and a NEWER
 unfinalized one with the same metrics. Picking by metrics.json chooses the
@@ -115,9 +113,9 @@ class Twin(unittest.TestCase):
 
 class Edges(unittest.TestCase):
     def test_run_without_schema_is_unreadable_never_completed(self):
-        """labkit 0.48: metrics.json alone no longer marks a finish; since
-        0.89.0 a run without `schema_version >= 2` is unreadable metadata
-        (read it with labkit 0.47), refused wherever a run is chosen."""
+        """metrics.json alone marks no finish: a run without
+        `schema_version >= 2` is unreadable metadata (read it with labkit
+        0.47), refused wherever a run is chosen."""
         area = Path(tempfile.mkdtemp())
         old = make_run(area, DONE, completion=True, schema=None)
         with self.assertRaisesRegex(runs.RunConfigError, "labkit 0.47"):

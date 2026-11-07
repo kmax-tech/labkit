@@ -37,11 +37,9 @@ class RebuiltIndex(unittest.TestCase):
             self.assertEqual(len(appended.splitlines()), 3)  # header + two runs
             index.unlink()
             # the reading writes nothing; reindex appends what it found
-            # (audit 2026-10-27, third, M4)
             found = runlog.unindexed(area, set())
             self.assertEqual((len(found.rows), found.unreadable), (2, []))
-            # a folder without config.json was dropped without a word
-            # (audit 2026-10-28, C4)
+            # a folder without config.json is named, never dropped without a word
             stray = area / "runs" / "2026-10-28T10-00-00_abcd"
             stray.mkdir()
             self.assertEqual(runlog.unindexed(area, set()).no_record, [stray.name])
@@ -65,7 +63,7 @@ class IndexRefusal(unittest.TestCase):
         self.assertIn("more than once", why or "")
         self.assertIsNone(runlog.index_refusal(index, [row]))
         # old columns: one sentence for every reader and writer, raised where
-        # the index is read (audit 2026-10-28, H4; review 2026-11-03, S2)
+        # the index is read
         with tempfile.TemporaryDirectory() as d:
             old = Path(d) / "runs.tsv"
             old.write_text("run_id\n", encoding="utf-8")
@@ -77,8 +75,8 @@ class IndexRefusal(unittest.TestCase):
 class IndexRead(unittest.TestCase):
     """The index is read as it is written (`runlog._read_index`): the current
     columns, every row whole. A short row is refused with its line, never
-    read as no measurement (review 2026-11-03, S2: a row holding only its
-    run id dropped a measured run from `has_measured`)."""
+    read as no measurement: a row holding only its run id would drop a
+    measured run from `has_measured`."""
 
     PID = "p-0123456789abcdef"
 

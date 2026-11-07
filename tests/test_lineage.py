@@ -72,10 +72,10 @@ class Lineage(unittest.TestCase):
                     runs.lineage(c)
 
     def test_a_path_instead_of_a_run_name_is_refused_where_it_is_read(self) -> None:
-        """`./<own run>` is the run itself under another spelling, and the
-        name comparison let the walk loop forever; `../../<elsewhere>`
-        left the runs/ directory (review 2026-10-20). Both are refused as
-        the config is read, before any walk."""
+        """`./<own run>` is the run itself under another spelling, which a
+        name comparison would walk forever; `../../<elsewhere>` leaves the
+        runs/ directory. Both are refused as the config is read, before any
+        walk."""
         for parent in (f"./{C}", f"../../other/runs/{A}"):
             with self.subTest(parent=parent):
                 area = Path(tempfile.mkdtemp())
@@ -95,8 +95,8 @@ class Lineage(unittest.TestCase):
 
 class BreaksAboveTheFirstModelRecord(unittest.TestCase):
     """B recorded the model, so the walk to the model's run stops at B; a
-    loop or a missing run above B was never looked at, and the params rows
-    walked on past B without a loop check of their own."""
+    loop or a missing run above B is still refused by every reader, the
+    lineage being validated once before any of them walks."""
 
     def _area(self, above_b: str) -> Path:
         area = Path(tempfile.mkdtemp())

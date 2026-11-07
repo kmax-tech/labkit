@@ -4,7 +4,7 @@
 says the run does not judge criterion-1. An accepted BLOCKER owes one (`--decide`
 refuses it without), an accepted WARNING may name one — severity and
 what the result still allows are two questions — and nothing else
-carries one (review 2026-10-21).
+carries one.
 """
 
 import tempfile
@@ -113,9 +113,9 @@ class Decide(unittest.TestCase):
             findings.write_decision(self.path, 1, "fixed", "", "stands")
 
     def test_the_answer_note_counts_the_limits(self):
-        """One note however many limits; three "read within" tails grew the
-        Answer (sandbox, 2026-10-21). Which promise a limit leaves unjudged
-        stands in the line's verdicts (`result_render.verdicts`)."""
+        """One note however many limits, not a "read within" tail for each.
+        Which promise a limit leaves unjudged stands in the line's verdicts
+        (`result_render.verdicts`)."""
         a, b = "Limitation (audit x #1)", "Limitation (audit x #2)"
         self.assertEqual(findings.answer_note([]), "")
         self.assertEqual(
@@ -151,8 +151,8 @@ if __name__ == "__main__":
 
 
 class LimitLinesInRecordOrder(unittest.TestCase):
-    """Each limit was inserted right below Recorded results, so three of them read
-    #3, #2, #1 — all three final audits named it (2026-10-21)."""
+    """The limit lines follow the record's order below Recorded results: #1,
+    #2, #3, not each inserted right below it, which would read #3, #2, #1."""
 
     def test_the_limit_lines_follow_the_record_order(self):
 

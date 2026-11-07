@@ -3,9 +3,7 @@
 
 Why here: the field is *recorded provenance*. If resolution silently skips
 or crashes, nothing fails at run time — the config just keeps naming an
-alias whose meaning drifts with models.toml (the 2026-09-09 scar: 25 run
-configs said "sonnet"; the answering weights were reconstructable only via
-the pinned commit). Same silent class as the env fingerprint.
+alias whose meaning drifts with models.toml. Same silent class as the env fingerprint.
 
 Run:  .venv/bin/python -m unittest discover -s tests -v
 """

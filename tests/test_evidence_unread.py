@@ -3,10 +3,9 @@ source, reason and way back; it is never a traceback.
 
 `evidence.change_findings` (the tree or the index against HEAD) and
 `commit_changes` (each commit against its parent) compare through git.
-When git could not read an object they need, GitError went up through
-report-check and labkit-next as a traceback: nothing passed, but no way
-out was named. Each failure here is real: an object removed from the
-lab's object store. The twin: readable, the changed run file is held as
+When git cannot read an object they need, report-check and labkit-next
+hold the change and name the way out, not a GitError traceback. Each
+failure here is real: an object removed from the lab's object store. The twin: readable, the changed run file is held as
 changed; the recovery: the object restored, the same hold again."""
 
 from __future__ import annotations

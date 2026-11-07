@@ -3,7 +3,7 @@ runs end to end on this labkit and ends where `docs/workflow.md` says it
 ends: the number kept, declared, shown in the report, held by
 report-check — and a retyped generated number refused twice. The script is
 the workflow's example; a step it can no longer take is a drift of the
-tools under the text (TODO "Klarheit des Ablaufs", 2026-10-22).
+tools under the text.
 """
 
 from __future__ import annotations

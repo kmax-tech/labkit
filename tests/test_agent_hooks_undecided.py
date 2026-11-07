@@ -2,11 +2,9 @@
 audit records: a BLOCKER nobody decided sends the agent back, and refuses
 the commit (`claude-hook undecided`).
 
-Third haiku round on labkit 0.99.0 (labkit-paper area 09, t5): the agent
-ran the preflight audit, read its four BLOCKERs, left every finding `open`,
-measured with run_kind='probe' and reported. report-check would have refused the
-number, but no gate the agent has to call is a gate; the stop and the
-commit are the two it cannot choose. Twins: a decided BLOCKER, an open
+report-check refuses a number whose BLOCKERs stand open, but a gate the
+agent has to call is no gate; the stop and the commit are the two it cannot
+choose. Twins: a decided BLOCKER, an open
 WARNING, an area the session did not touch — all silent.
 """
 
@@ -103,11 +101,9 @@ class Undecided(unittest.TestCase):
         self.assertIn("labkit-next: experiments/01-x", err)  # the step is `next`'s
 
     def test_the_undecided_row_of_next_names_the_command_never_an_edit(self):
-        """`next`'s row for the hold (the way the stop printed itself until
-        0.108.0): the way to decide is the command, not an edit of the
-        record (ninth haiku round, t5 rewrote records field by field); an
-        outdated record stays (fourth SAB-like draw: "stale, let me remove");
-        the twin: nothing open, no row."""
+        """`next`'s row for the hold: the way to decide is the command, not
+        an edit of the record; an outdated record stays and is decided, not
+        removed; the twin: nothing open, no row."""
         from labkit.gates import next_step
 
         protocol = self.area / "PROTOCOL-x.md"
@@ -128,10 +124,10 @@ class Undecided(unittest.TestCase):
         self.assertIn("cannot be reported", step.held)
 
     def test_the_stop_and_the_commit_print_next_steps_step_for_the_hold(self):
-        """The one-explainer plan, step 4: the stop and the commit hold on
-        the undecided BLOCKER and print `labkit-next`'s step for it, byte
-        for byte, each from the state it judges (the tree, the index) — no
-        sentence of their own names a way; the way's text has one home."""
+        """The stop and the commit hold on the undecided BLOCKER and print
+        `labkit-next`'s step for it, byte for byte, each from the state it
+        judges (the tree, the index) — no sentence of their own names a way;
+        the way's text has one home (`next_step.Step.render`)."""
         from labkit.gates.next_step import next_step
         from labkit.gates.report_context import INDEX
 
@@ -154,7 +150,7 @@ class Undecided(unittest.TestCase):
             self.assertIn(staged, out.getvalue())
             self.assertIn(f"experiments/01-x: {path.name}: BLOCKER", out.getvalue())
         for text in (err, out.getvalue()):
-            self.assertNotIn("decide each BLOCKER", text)  # the old way's text
+            self.assertNotIn("decide each BLOCKER", text)  # no text of its own
 
     def test_the_committed_record_blocks_once_the_area_is_touched_again(self):
         self._record(self.area, [BLOCKER])
@@ -212,11 +208,10 @@ class Undecided(unittest.TestCase):
         self.assertEqual(rc, 0)
 
     def test_the_same_checked_state_holds_once_per_turn_a_changed_one_again(self):
-        """Step D of the one-explainer plan: the guarantee is "the same
-        checked state holds once per turn", not "no loop" — a tree changed
-        since the hold (content, a file added or gone, HEAD) is a new state
-        and holds again; the unchanged one lets go. Three of four held
-        agents ended at the second stop (labkit-paper's area 20)."""
+        """The guarantee is "the same checked state holds once per turn",
+        not "no loop" — a tree changed since the hold (content, a file added
+        or gone, HEAD) is a new state and holds again; the unchanged one lets
+        go."""
         self._record(self.area, [BLOCKER])
         with contextlib.chdir(self.root):
             self.assertEqual(self._stop()[0], 2)  # the hold, its state kept
@@ -232,9 +227,9 @@ class Undecided(unittest.TestCase):
             self.assertEqual(self._stop(active=True)[0], 2)
 
     def test_a_run_index_that_does_not_read_is_told_and_keeps_the_loop_guard(self):
-        """report-check raising on a damaged runs.tsv left the stop with
-        exit 2 on every turn, past `stop_hook_active` (review 2026-11-03,
-        S2): it is a finding of the stop, told once per turn."""
+        """report-check raising on a damaged runs.tsv is a finding of the
+        stop, told once per turn — never exit 2 on every turn, past
+        `stop_hook_active`."""
         from unittest import mock
 
         from labkit.gates import report_check
@@ -283,12 +278,10 @@ class Undecided(unittest.TestCase):
     def test_the_pre_commit_entry_runs_every_gate_on_the_index_and_prints_next_once(
         self,
     ):
-        """Step A of the one-explainer plan: one entry, the same gates as
-        the three commands it replaces (the protocol's fields,
+        """One entry, the gates of three commands (the protocol's fields,
         report-check, the undecided state), each telling its findings, and
         `next`'s step per protocol once; the twin, a clean index, passes
-        in silence. Until 0.109.0 `protocol-check --staged` told its own
-        lines and no step (the repair probe's base8, 2026-11-05)."""
+        in silence."""
         from labkit.checks import protocol_report
 
         path = self._record(self.area, [BLOCKER])
@@ -330,9 +323,9 @@ class Undecided(unittest.TestCase):
         self.assertEqual((rc, out.getvalue()), (0, ""))
 
     def test_the_commit_reads_the_decisions_the_index_holds(self):
-        """The pre-commit read the journal from the index and the decisions
-        from the tree: a BLOCKER decided in the tree and never staged passed
-        while the commit carried it open. The twins: the decision staged
+        """The pre-commit reads the decisions from the index, as the
+        journal: a BLOCKER decided in the tree and never staged holds the
+        commit, which carries it open. The twins: the decision staged
         passes, and a staged decision reopened only in the tree does not
         hold the commit, which carries the decision."""
         path = self._record(self.area, [BLOCKER])
@@ -360,11 +353,10 @@ class Undecided(unittest.TestCase):
         self.assertEqual(self._stop()[0], 2)
 
     def test_a_record_left_out_of_the_commit_holds_it(self):
-        """Reading the records the index carries let a fresh audit record,
-        never staged, out of the commit's view: a commit of the area's
-        script passed its open BLOCKER (cold review 2026-10-27). A record in
-        the tree the index lacks holds the commit, naming the `git add`; the
-        twin, the record staged and decided, passes."""
+        """A record in the tree the index lacks holds the commit, naming the
+        `git add`, so a fresh audit record never staged does not let a commit
+        of the area's script pass its open BLOCKER; the twin, the record
+        staged and decided, passes."""
         path = self._record(self.area, [BLOCKER])
         script = self._touch(self.area)
         _git(self.root, "add", str(script))
@@ -401,8 +393,8 @@ class Undecided(unittest.TestCase):
     def test_without_a_stop_base_only_the_sessions_commits_are_held(self):
         """The stop base gone: the commits dated since the transcript began
         stand in — never every protocol of the repo, or an old area's open
-        BLOCKER would hold every stop (decided 2026-10-17). The twin: a
-        session commit in that area holds."""
+        BLOCKER would hold every stop. The twin: a session commit in that
+        area holds."""
         with _dated(3600):  # the repo before the session
             self._record(self.other, [BLOCKER])
             _git(self.root, "add", "-A")
@@ -428,10 +420,10 @@ class Undecided(unittest.TestCase):
 
     def test_a_session_started_in_a_subdirectory_is_held_too(self):
         """The project directory below the repo root has no `.git` of its
-        own: the stop returned 0 in silence, and the pre-commit — git runs
-        it at the root, the session's CLAUDE_PROJECT_DIR inherited — read
-        the staged paths against the subdirectory and found no area. The
-        twins: an area the session did not touch stays silent from there."""
+        own: the stop still holds, and the pre-commit — git runs it at the
+        root, the session's CLAUDE_PROJECT_DIR inherited — reads the staged
+        paths against the root and finds the area. The twins: an area the
+        session did not touch stays silent from there."""
         path = self._record(self.area, [BLOCKER])
         sub = self.root / "experiments"
         os.environ["CLAUDE_PROJECT_DIR"] = str(sub)
@@ -462,8 +454,8 @@ class Undecided(unittest.TestCase):
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
 
     def test_outside_every_repository_the_stop_says_so_and_holds_once(self):
-        """No repository: the stop cannot tell what changed. It returned 0
-        in silence; it holds once per turn and says why."""
+        """No repository: the stop cannot tell what changed. It holds once
+        per turn and says why."""
         d = Path(tempfile.mkdtemp()).resolve()
         if repo.git_root(d) is not None:
             self.skipTest(f"the temp directory {d} lies inside a git repository")

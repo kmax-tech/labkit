@@ -1,10 +1,9 @@
 """Tests for code-check — the mechanical half of the preflight.
 
 Two duties, and the second is the one that decides whether the tool gets
-used: it must FIRE on a real omission, and it must stay SILENT on the shapes
-that made the first three calibration rounds unusable (2026-09-10, areas
-60-73) — a bare `"s65"` naming a source session, a runtime-built result
-dict, a field staged by a later step.
+used: it must FIRE on a real omission, and it must stay SILENT on correct
+shapes that look like one — a bare `"s65"` naming a source session, a
+runtime-built result dict, a field staged by a later step.
 """
 
 import contextlib
@@ -92,11 +91,11 @@ class TestIntentIdsAgainstCode(unittest.TestCase):
         self.assertIn("WARNING", out)
 
     def test_bare_id_string_is_not_an_unregistered_promise(self):
-        """The 72er scar: source sessions named after the areas they come from.
+        """Source sessions named after the areas they come from.
 
-        `"s65"` without a suffix is a name, not a metric key. Reading it as a
-        promise produced three findings and no defect. The S letter is gone;
-        the same bare form in today's namespace is `"quality_check_65"`.
+        `"s65"` without a suffix is a name, not a metric key; read as a
+        promise it gives findings and no defect. The same bare form in
+        today's namespace is `"quality_check_65"`.
         """
         with AreaFixture(
             PROTOCOL_TWO,
@@ -137,7 +136,7 @@ class TestSchemaFacts(unittest.TestCase):
         self.assertEqual(rc, 0, "schema facts must not fail the run")
 
     def test_runtime_built_dict_is_not_listed(self):
-        """The 65er scar: `R["one|forbidden"]` is a result dict, not a row."""
+        """`R["one|forbidden"]` is a result dict, not a row."""
         with AreaFixture(
             PROTOCOL_TWO,
             {
@@ -150,7 +149,7 @@ class TestSchemaFacts(unittest.TestCase):
         self.assertNotIn("'alpha'", facts)
 
     def test_meta_header_line_does_not_hide_the_real_fields(self):
-        """The 68er scar: line 1 is a `_meta` header, the fields start at 2."""
+        """Line 1 is a `_meta` header, the fields start at 2."""
         with AreaFixture(
             PROTOCOL_TWO,
             {"03_evaluate.py": CLEAN_CODE + 'v = row["claim"]\n'},
@@ -269,8 +268,7 @@ class TestBundle(unittest.TestCase):
         self.assertIn("criterion_1_pass", text)
 
     def test_an_unreadable_file_is_named_not_left_out(self):
-        # it was skipped without a word and still counted (audit
-        # 2026-10-28, B2)
+        # never skipped without a word, never counted as read
         with AreaFixture(PROTOCOL_TWO, {"03_evaluate.py": CLEAN_CODE}) as a:
             bad = a.path / "scripts" / "04_bytes.py"
             bad.parent.mkdir(exist_ok=True)
@@ -280,7 +278,7 @@ class TestBundle(unittest.TestCase):
                 a.path, a.path, a.path / "PROTOCOL-fixture.md", out
             )
             text = out.read_text(encoding="utf-8")
-        self.assertEqual(n, 2)  # the protocol and the readable script, as before
+        self.assertEqual(n, 2)  # the protocol and the readable script
         self.assertEqual(unreadable, ["scripts/04_bytes.py"])
         self.assertIn("===== FILE: scripts/04_bytes.py =====\nnot readable:", text)
 
@@ -315,8 +313,8 @@ class TestBundle(unittest.TestCase):
 
 class TestProtocolChoice(unittest.TestCase):
     """The series rule (LAB-061 Sub-experiment series carry their number in the name) puts many protocols in one area. Picking the
-    lexicographically first one wordlessly greened the check against s1
-    while s13 was the protocol just built (2026-09-26)."""
+    lexicographically first one would wordlessly green the check against s1
+    while s13 is the protocol just built."""
 
     def _second(self, area: Path, name="PROTOCOL-s2-later.md"):
         (area / name).write_text(
@@ -371,11 +369,10 @@ class TestProtocolChoice(unittest.TestCase):
 
 
 class TestSummaryLine(unittest.TestCase):
-    """What the closing line says is not checked. At low repeat cost it read
-    "schema, gate labels, placeholders: not checked — not owed at cost
-    seconds" (the tier then called seconds), and an agent took the protocol's open fields for not owed; the
-    pre-commit then refused the open promise sentence (judge probe,
-    2026-10-20). Only the agent's review is not owed there."""
+    """What the closing line says is not checked. At low repeat cost the
+    protocol's open fields are owed — the pre-commit refuses an open promise
+    sentence — so the line never calls them not owed. Only the agent's
+    review is not owed there."""
 
     def _out(self, cost: str) -> str:
         from protocol_fixture import head
@@ -392,7 +389,7 @@ class TestSummaryLine(unittest.TestCase):
         self.assertIn("schema, gate labels: not checked", out)
         self.assertIn("protocol-fill <PROTOCOL> --list", out)
         # the summary is the gate's, like every gate's, and comes after the
-        # note (audit 2026-10-23, C4); with blockers it ends on their list
+        # note; with blockers it ends on their list
         note_at, summary_at = (
             out.index("schema, gate labels"),
             out.index("\ncode-check: "),
@@ -400,8 +397,7 @@ class TestSummaryLine(unittest.TestCase):
         self.assertLess(note_at, summary_at, out)
 
     def test_above_seconds_the_shipped_audit_is_named(self):
-        """labkit ships no agent for the bundle (audit 2026-10-27, C12): the
-        note names the preflight audit it does ship, and the bundle as one
+        """labkit ships no agent for the bundle: the note names the preflight audit it does ship, and the bundle as one
         for an agent of the lab's own."""
         out = self._out("high")
         self.assertIn("labkit-audit <AREA> --mode preflight", out)
@@ -449,7 +445,7 @@ class TestStampCoverage(unittest.TestCase):
         self.assertEqual(len(found), 5, found)
         self.assertTrue(
             all(
-                # static evidence says so in the line (audit 2026-10-23, C5)
+                # static evidence says so in the line
                 f.startswith(
                     "WARNING · static evidence · experiments/01-x/scripts/01_measure.py:"
                 )
@@ -492,9 +488,9 @@ class TestStampCoverage(unittest.TestCase):
 
     def test_loading_a_file_the_stamp_covers_is_silent_a_computed_one_is_not(self):
         """The stamped 02_analyze.py loads its own 01_measure.py by
-        `AREA / "scripts" / "01_measure.py"`: every fresh area with a model
-        started with a WARNING from labkit's own skeleton (cold Sonnet,
-        2026-10-14). The twin: a path the reader cannot resolve, or a file
+        `AREA / "scripts" / "01_measure.py"`: a fresh area with a model
+        starts with no WARNING from labkit's own skeleton. The twin: a path
+        the reader cannot resolve, or a file
         outside the area's stamp, stays a finding."""
         repo, area = self._repo("from lib import scoring\n")
         (area / "scripts" / "02_analyze.py").write_text(
@@ -518,8 +514,8 @@ class TestStampCoverage(unittest.TestCase):
 
     def test_the_command_counts_it_as_a_warning_and_exits_0(self):
         """A warning is static evidence to read, not a stop: exit 0, as the
-        gate contract says (until 0.97.1 code-check exited 1 here, and a
-        calling script took evidence for a blocker — audit 2026-10-18)."""
+        gate contract says, so a calling script never takes evidence for a
+        blocker."""
         repo, area = self._repo("import sys\nsys.path.append(str(REPO / 'tools'))\n")
         (area / "PROTOCOL-x.md").write_text(
             "- **Protocol id:** p-0123456789abcdef\n", encoding="utf-8"

@@ -42,8 +42,8 @@ class BinaryInputs(unittest.TestCase):
             provenance.describe_data({"train": self.weights}, self.area)
 
     def test_the_refusal_names_key_file_and_the_binary_route(self):
-        # the pilot's agents met a bare decode error for a .npz and dropped
-        # the file from data= (labkit-paper area 15, t15 and t71)
+        # a bare decode error for a .npz leaves no way but to drop the file
+        # from data=: the refusal names the binary route
         features = self.area / "train.npz"
         features.write_bytes(b"PK\x03\x04\x8e\xc7\xff")
         with self.assertRaises(UnicodeDecodeError) as caught:

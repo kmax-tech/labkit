@@ -1,9 +1,6 @@
 """attempts — the journal of an area's audit attempts: a record that went
 missing is noticed, a running attempt is told by the lock it holds, a start
 is checked and written under one lock.
-
-Why (sixth haiku round, t3; eighth, t18): agents ran `rm audits/*.toml`
-before a new attempt, and nothing noticed that a record was gone.
 """
 
 from __future__ import annotations
@@ -158,9 +155,8 @@ class Gaps(unittest.TestCase):
         self.assertIn("HEAD's journal names it while HEAD lacks the file", gap)
 
     def test_heads_lost_file_names_the_restore_that_works_there(self):
-        """It said "restore and commit it" whether or not anything could
-        (pilot of labkit-paper area 15, t60): on disk it is staged, else
-        it is lost — never a restore that cannot work."""
+        """The restore named is one that works there: on disk it is staged,
+        else it is lost — never a restore that cannot work."""
         head = START + "\n" + END_R + "\n"
         (gap,) = self._gaps([], present={"r.toml"}, now=head, head=head).blockers
         self.assertIn(
@@ -247,7 +243,7 @@ class Begin(unittest.TestCase):
         git(area.parent.parent, "add", "-A")
         git(area.parent.parent, "commit", "-qm", "failed attempt")
         for f in (area / "audits").glob("*.toml"):
-            f.unlink()  # `rm audits/*.toml`, as t18 ran it
+            f.unlink()  # `rm audits/*.toml`
         with self.assertRaisesRegex(attempts.AttemptError, "committed and gone"):
             attempts.begin(
                 area, "analysis", "opus", "s", block_sha="b", protocol="PROTOCOL-x.md"
@@ -336,8 +332,7 @@ class Begin(unittest.TestCase):
 class JournalCopy(unittest.TestCase):
     """The journal's copy in the git directory, one per branch: a journal
     deleted in the tree before any commit is noticed, and a branch switch,
-    a merge or an older journal is no false block (2026-10-28; first
-    SAB-like draw and ninth haiku round t5 deleted `audits/` whole)."""
+    a merge or an older journal is no false block."""
 
     def attempt(self, area: Path, record: str = "r.toml") -> str:
         running = attempts.begin(
@@ -351,7 +346,7 @@ class JournalCopy(unittest.TestCase):
         area = area_in_repo()
         aid = self.attempt(area)
         self.assertEqual(attempts.area_gaps(area).blockers, [])
-        shutil.rmtree(area / "audits")  # rm -rf audits/, as the draws did
+        shutil.rmtree(area / "audits")  # rm -rf audits/
         lost = "\n".join(attempts.area_gaps(area).blockers)
         self.assertIn(f"lost 2 line(s) of attempt(s) {aid}", lost)
         self.assertIn("ended naming audits/r.toml, and the file is gone", lost)
@@ -382,8 +377,7 @@ class JournalCopy(unittest.TestCase):
         self.assertEqual(attempts.area_gaps(area).blockers, [])
 
     def test_a_broken_copy_line_is_a_problem_not_a_traceback(self):
-        # copy_gaps raised a bare ValueError the stop did not catch (audit
-        # 2026-10-28, B1)
+        # the stop reports problems; a bare ValueError would escape it
         area = area_in_repo()
         self.attempt(area)
         copy = attempts.journal_copy(area)
@@ -407,9 +401,8 @@ class JournalCopy(unittest.TestCase):
 
 class EvidenceCopy(unittest.TestCase):
     """The files an attempt ends with are copied as written beside the
-    journal's copy: in the fourth SAB-like draw an agent deleted a record
-    it had never staged, the commit passed, and the restores offered
-    (`git checkout`, `git add`) could not bring it back."""
+    journal's copy, so a record deleted before it was ever staged comes
+    back, which neither `git checkout` nor `git add` can do."""
 
     def attempt(self, area: Path) -> tuple[str, Path]:
         """An attempt that kept its answer and ended with a record written as
@@ -457,9 +450,8 @@ class EvidenceCopy(unittest.TestCase):
         self.assertEqual(undecided.undecided_blockers(root, [notes], staged=True), [])
 
     def test_an_area_deleted_whole_holds_the_commit_and_the_stop(self):
-        """`rm -rf <area>` took the protocol with the records, so no area
-        walk found the area and the commit's evidence hold passed with
-        three BLOCKERs open (SAB PubMedQA, 2026-10-29). The journal copy on
+        """`rm -rf <area>` takes the protocol with the records, so no area
+        walk finds the area. The journal copy on
         the branch still names the area (`attempts.copied_areas`): the
         commit and the stop hold its lost record and cut journal. Twins: a
         change in another area brings it in no more than before, and the
@@ -642,8 +634,7 @@ if __name__ == "__main__":
 class LockProbe(unittest.TestCase):
     """Whether an attempt's lock is held is asked with a shared probe
     (`files.lock_held`): a second caller probing at the same moment is no
-    holder. The exclusive probe `_is_free` used read a concurrent probe as
-    a running attempt (architecture audit 2026-11-07, second, H3)."""
+    holder, never a running attempt."""
 
     def test_a_holder_holds_and_a_concurrent_probe_does_not(self):
         import fcntl

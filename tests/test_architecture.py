@@ -1,8 +1,7 @@
 """The architecture map in docs/architecture.md, held to the code.
 
 The layer table is the one home of the map; this test reads it, so the doc
-cannot drift from the imports unnoticed (review 2026-10-08: three new
-modules were missing from it, and a gate imported a tool).
+cannot drift from the imports unnoticed.
 """
 
 import ast
@@ -72,7 +71,7 @@ def doctrine_modules() -> set[str]:
 
 
 #: core → doctrine imports that stand today, each a piece of doctrine inside
-#: the core, listed by name until it moves (2026-10-15). The test asks for
+#: the core, listed by name until it moves. The test asks for
 #: exactly this set: a new crossing fails, and so does a removed one left
 #: standing here — the list only shrinks, with one kind of exception: a
 #: rule the core had copied (`cost == "low"`) becoming a visible import
@@ -81,24 +80,23 @@ KNOWN_CROSSINGS = {
     # the freeze gate at a run's start: audit coverage (LAB-015), the low lane's
     # registration and which lane owes the freeze, the audit or the foreground
     # — doctrine that refuses a run, sitting in the run writer's start check
-    # (moved with it out of runlog; the same crossings, not new ones)
     ("start_check", "findings"),  # findings.open_findings, findings.area_records
     ("start_check", "audit_gaps"),  # audit_gaps.audit_record_gap
     ("start_check", "failed_attempts"),  # failed_attempts.audit_unavailable
     ("start_check", "protocol_check"),  # protocol_check.low_registration_missing
     # the same registration, as HEAD holds it, for a first measurement:
     # report-check holds that commit, and a start on an uncommitted one could
-    # never be adopted (audit 2026-10-27, third, I1) — a deliberate, bounded
+    # never be adopted — a deliberate, bounded
     # exception: it leaves with the doctrine checks at a run's start as a
     # whole (docs/architecture.md, "The import rule"), and licenses no other
     ("start_check", "protocol_history"),  # protocol_history.registration_in_commit
     ("start_check", "standard_contract"),  # standard_contract.lane
-    ("runlog", "standard_contract"),  # standard_contract.lane (was a copied rule)
+    ("runlog", "standard_contract"),  # standard_contract.lane (the exception above)
     # the field catalogue and a rule's text in the code check — the boundary
     # case: the TOML head is core, the prose fields are doctrine
-    ("prompt_check", "protocol_check"),  # protocol_check.fields (moved from code_check)
+    ("prompt_check", "protocol_check"),  # protocol_check.fields
     ("code_check", "rules"),  # rules.paragraph
-    ("code_check", "standard_contract"),  # standard_contract.lane (was a copied rule)
+    ("code_check", "standard_contract"),  # standard_contract.lane (the exception above)
     # the pin check is core; checking rule references and hooks is doctrine
     ("repo_check", "rules"),  # rules.check_refs, rules.load_ledger
     ("repo_check", "install_hooks"),  # install_hooks.check, .labkit_version
@@ -181,7 +179,7 @@ def on_a_cycle(graph: dict[str, set[str]]) -> list[str]:
 #: listed by name until a release announces its end (CHANGELOG)
 FORWARDING_EDGES = {
     # the stamped measure scripts' `from labkit.formats.repo import
-    # next_after_run`, since the step commands moved to commands (2026-11-07)
+    # next_after_run`, which forwards to commands
     ("repo", "commands"),
 }
 #: public names defined twice on purpose: the forwarders of FORWARDING_EDGES
@@ -190,8 +188,8 @@ FORWARDED_NAMES = {"next_after_run"}
 
 class NoImportCycle(unittest.TestCase):
     """The downward rule forbids an upward import but not a cycle inside a
-    layer; five stood until 2026-11-07, each a helper kept in the module of
-    its first caller (architecture audit, L1). Lazy imports count."""
+    layer; this test forbids the cycle too, FORWARDING_EDGES aside. Lazy
+    imports count."""
 
     def test_no_module_reaches_itself_through_its_imports(self):
         graph = {m: imports_of(m) - {m} for m in modules()}
@@ -262,9 +260,9 @@ class CoreAndDoctrine(unittest.TestCase):
 
 class TheReleaseGateCallsNoModel(unittest.TestCase):
     def test_importing_report_check_loads_no_model_backend(self):
-        # the pre-commit and the stop import it; through audit, the reviewers
-        # and their texts it loaded llm and llm_backends (audit 2026-10-27,
-        # third, M1). A fresh process: this one has them loaded already.
+        # the pre-commit and the stop import it, so no path through audit,
+        # the reviewers or their texts may load llm and llm_backends. A fresh
+        # process: this one has them loaded already.
         import subprocess
         import sys
 
@@ -326,7 +324,7 @@ class EveryNamedHomeExists(unittest.TestCase):
     """Every `module.name` the doc names is defined in that module: a rename
     without the doc's line fails here instead of leaving the map naming a
     home that is gone (the gates in order, the chain and the one-home table
-    are prose; 2026-11-06)."""
+    are prose)."""
 
     def test_every_reference_resolves(self):
         names: dict[str, set[str]] = {}
@@ -339,8 +337,8 @@ class EveryNamedHomeExists(unittest.TestCase):
 
     def test_every_reference_in_code_tests_and_docs_resolves(self):
         """A docstring or comment naming `module.name` names a home that
-        exists: five pointed at functions renamed or gone (2026-11-07). The
-        dated audits and notes record a former state and are not read."""
+        exists. The dated audits and notes record a former state and are not
+        read."""
         files = [
             *sorted(PACKAGE.rglob("*.py")),
             *sorted((ROOT / "tests").glob("*.py")),
@@ -398,9 +396,7 @@ class NextComposesNoDecision(unittest.TestCase):
     """`labkit-next` names steps and chooses no scientific decision: a status
     in a `--decide` line it prints comes from the recorded finding — its
     subject, through `findings.decision_after_restore` — never from the place
-    or file name of a finding (docs/architecture.md, "Who does what";
-    until 2026-11-06 `_finding_on_the_field` offered `limitation` for any
-    open finding on the protocol)."""
+    or file name of a finding (docs/architecture.md, "Who does what")."""
 
     def test_next_step_passes_no_literal_status(self):
         source = (PACKAGE / "gates" / "next_step.py").read_text(encoding="utf-8")

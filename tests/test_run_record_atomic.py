@@ -1,8 +1,7 @@
-"""A run directory exists only with its config.json (0.74.0): everything that
-can fail on its own — git, the environment, the model alias — is read
-before mkdir, and a failure while writing the record removes the directory.
-Before, a failure in between left a directory without config.json that the
-listings read as `legacy` ("written before labkit 0.21").
+"""A run directory exists only with its config.json: everything that can
+fail on its own — git, the environment, the model alias — is read before
+mkdir, and a failure while writing the record removes the directory, so no
+listing meets a run directory without config.json.
 
     .venv/bin/python -m pytest tests/test_run_record_atomic.py
 """
@@ -30,8 +29,7 @@ _real_strftime = time.strftime
 def one_second(fmt: str, *args: object) -> str:
     """`time.strftime` with the run id's time part held to one second: two
     starts that straddle a second boundary collide on nothing, and a test
-    of the collision passes or fails with the clock (the hook refused a
-    commit on that, 2026-10-23 and 2026-10-25)."""
+    of the collision would otherwise pass or fail with the clock."""
     if fmt == runlog.RUN_ID_TIME:
         return "2026-10-23T16-30-03"
     return _real_strftime(fmt, *args)  # type: ignore[arg-type]
@@ -68,9 +66,8 @@ class NoHalfMadeRun(unittest.TestCase):
 
     def test_every_record_file_is_written_whole_or_not_at_all(self) -> None:
         """config, outputs, metrics and completion go through `files.write_atomic`
-        (CODE-013); until 0.94.0 only completion.json did, and a listing that
-        read config.json mid-write saw a damaged run (audit 2026-10-15). No
-        staging file stays behind."""
+        (CODE-013), so a listing that reads config.json mid-write never sees
+        a damaged run. No staging file stays behind."""
         written: list[str] = []
         real = runlog.write_atomic
 
@@ -98,9 +95,8 @@ class NoHalfMadeRun(unittest.TestCase):
             self.assertEqual(staged, [])
 
     def test_the_other_files_a_run_leaves_are_written_whole_too(self) -> None:
-        """failure.json, a raw artefact and the script snapshot took the plain
-        path while the architecture said every record file is atomic (audit
-        2026-10-23, B2): now they go through `files.write_atomic` /
+        """failure.json, a raw artefact and the script snapshot are record
+        files too: they go through `files.write_atomic` /
         `write_atomic_bytes` as well, and no staging file stays behind."""
         written: list[str] = []
 
@@ -137,9 +133,9 @@ class NoHalfMadeRun(unittest.TestCase):
             self.assertEqual(staged, [])
 
     def test_a_taken_run_id_is_drawn_again(self) -> None:
-        """Two starts in one second drew the same suffix and the second
-        `mkdir` failed (test_repeats, 2026-10-21): a taken id is redrawn,
-        and a free one is kept as drawn — the first draw, no needless redraw."""
+        """Two starts in one second can draw the same suffix: a taken id is
+        redrawn, so the second `mkdir` never fails, and a free one is kept as
+        drawn — the first draw, no needless redraw."""
         draws = iter(["aaaa0000", "aaaa0000", "bbbb0000"])  # the 2nd collides
         fake = lambda: SimpleNamespace(hex=next(draws))  # noqa: E731
         with tempfile.TemporaryDirectory() as d:
@@ -177,7 +173,7 @@ class NoHalfMadeRun(unittest.TestCase):
     def test_a_filled_protocol_is_written_whole_or_not_at_all(self) -> None:
         """protocol-fill's own writes (a field, --prompts, --render, the
         report's result block) go through `files.write_atomic` like the
-        write-back of the result (audit 2026-10-23, B2)."""
+        write-back of the result."""
         written: list[str] = []
         real = files.write_atomic
 

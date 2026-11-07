@@ -1,6 +1,6 @@
 """`answering_run.bound_answering_run` and `runs.model_provenance_run` — the one
 choice of the run that answers, and the walk to the run that recorded the
-model (2026-10-08).
+model.
 
     .venv/bin/python -m pytest tests/test_answering_run.py
 """
@@ -125,7 +125,7 @@ class AnsweringRun(unittest.TestCase):
         self,
     ) -> None:
         """Mutant: every bound run is a probe — the newest is returned, but
-        the choice says it reports no intent key (2026-10-09)."""
+        the choice says it reports no intent key."""
         _run(self.area, "2026-10-01T10-00-00_aaaa", metrics={"n_rows": 3})
         newest = _run(self.area, "2026-10-02T10-00-00_bbbb", metrics={"n_rows": 4})
         choice = answering_run.bound_answering_run(self.area, PID, None)
@@ -301,8 +301,7 @@ if __name__ == "__main__":
 
 class Explain(unittest.TestCase):
     """`AnsweringRun.explain` is the one telling of the choice: finalize,
-    intent-check, recheck, params and the audit rendered it four ways with
-    four semantics (audit 2026-10-15)."""
+    intent-check, recheck, params and the audit render it alike."""
 
     def test_no_run_blocker_and_exclusions(self):
         choice = answering_run.AnsweringRun(
@@ -348,7 +347,7 @@ class NewestCompleted(unittest.TestCase):
     """`answering_run.newest_completed` is the one reading of "the newest run" for the
     scorer and runlog's last-finished line; a tie in the start second is
     refused there, by the same rule the answering choice uses
-    (`answering_run.same_second`) — the scorer compared seconds itself (0.97.0)."""
+    (`answering_run.same_second`)."""
 
     def _run(self, area: Path, name: str) -> Path:
         d = area / "runs" / name

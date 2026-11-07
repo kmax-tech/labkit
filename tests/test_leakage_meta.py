@@ -1,10 +1,9 @@
 """Integration: write_dataset → _ids → describe_data must not be fooled by _meta.
 
-write_dataset() puts a _meta header as the first line of every dataset. Before
-the fix, _ids() bailed out on the missing "id" key in that header and returned
-None, causing the leakage check to be silently skipped for exactly the
-standard-generated files it is meant to protect. describe_data()'s row count also
-included the _meta line.
+write_dataset() puts a _meta header as the first line of every dataset. _ids()
+skips that header, which has no "id" key, so the leakage check runs on exactly
+the standard-generated files it is meant to protect instead of being silently
+skipped; describe_data()'s row count leaves the _meta line out.
 """
 
 from __future__ import annotations
@@ -121,9 +120,8 @@ if __name__ == "__main__":
 
 
 class TestDamagedLineIsNamed(unittest.TestCase):
-    """A line that is not JSON names file and line (audit 2026-10-15: a
-    bare JSONDecodeError named neither); a row that is no object is not
-    checkable, like a row without an id."""
+    """A line that is not JSON names file and line; a row that is no object
+    is not checkable, like a row without an id."""
 
     def test_file_and_line_are_named(self):
         with TemporaryDirectory() as d:

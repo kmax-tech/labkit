@@ -1,4 +1,4 @@
-"""labkit-hooks: the hooks come with the pinned labkit (2026-10-07)."""
+"""labkit-hooks: the hooks come with the pinned labkit."""
 
 import json
 import subprocess
@@ -184,8 +184,8 @@ class Install(unittest.TestCase):
         self.assertTrue(any("never runs" in g for g in install_hooks.check(repo)))
 
     def test_a_foreign_command_with_a_labkit_name_inside_is_not_ours(self):
-        """`./bin/my-protocol-checker` matched `protocol-check` as a substring
-        and was erased by an install (audit 2026-10-15)."""
+        """`./bin/my-protocol-checker` holds `protocol-check` only as a
+        substring: it is not ours, so an install leaves it."""
         ours = lambda cmd: install_hooks._ours({"command": cmd})  # noqa: E731
         self.assertFalse(ours("./bin/my-protocol-checker"))
         self.assertFalse(ours("echo claude-hooks-are-great"))
@@ -196,9 +196,8 @@ class Install(unittest.TestCase):
         self.assertTrue(ours("x; claude-hook stop"))
 
     def test_a_leftover_protocol_check_hook_is_named_and_replaced(self):
-        # uniagent 2026-10-10: a jq one-liner from an earlier labkit ran
-        # protocol-check on every PROTOCOL write beside post-change — every
-        # report twice, and `check` said the settings were fine
+        # a jq one-liner running protocol-check on every PROTOCOL write
+        # beside post-change doubles every report: `check` names it
         repo = git_repo()
         (repo / ".claude").mkdir()
         jq = (
@@ -262,8 +261,8 @@ class Install(unittest.TestCase):
 
 
 class RepoOwnSteps(unittest.TestCase):
-    """A repo's own pre-commit steps survive an install (uniagent, 2026-10-07:
-    a replay test of its runs lived in the hook and would have been erased)."""
+    """A repo's own pre-commit steps survive an install: a step such as a
+    replay test of its runs is kept beside, never erased."""
 
     def test_a_foreign_hook_is_kept_beside_not_erased(self):
         repo = git_repo()
@@ -287,8 +286,7 @@ class RepoOwnSteps(unittest.TestCase):
 
     def test_the_pre_commit_runs_labkits_one_entry(self):
         """The commit's gates are one call, `claude-hook pre-commit`, which
-        reads the index itself (the one-explainer plan, step A: until
-        0.109.0 three calls, the first telling lines of its own). A shim
+        reads the index itself. A shim
         records the call; what the entry checks is `test_agent_hooks_undecided`'s."""
         repo = git_repo()
         install_hooks.install(repo)
@@ -350,9 +348,9 @@ class RepoOwnSteps(unittest.TestCase):
 
 
 class AreaNumbers(unittest.TestCase):
-    """Two branches each stamped their next area as 12 (labkit-paper,
-    2026-10-27). git completes a merge without conflicts on its own and
-    runs pre-merge-commit for it, never pre-commit."""
+    """Two branches can each stamp their next area as 12. git completes a
+    merge without conflicts on its own and runs pre-merge-commit for it,
+    never pre-commit."""
 
     def setUp(self):
         self.repo = git_repo()
@@ -407,10 +405,8 @@ class AreaNumbers(unittest.TestCase):
 
 class MergeChecks(unittest.TestCase):
     """A merge without a text conflict meets the commit's checks: a number
-    reported on one branch and its analysis changed on the other merged
-    cleanly and nothing held it (probed 2026-10-28 on the count
-    walkthrough). report-check is a stand-in here; the walkthrough probe
-    ran the real one."""
+    reported on one branch and its analysis changed on the other merge
+    cleanly, and the merge holds them. report-check is a stand-in here."""
 
     def setUp(self):
         self.repo = git_repo()

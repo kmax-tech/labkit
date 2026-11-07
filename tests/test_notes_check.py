@@ -1,11 +1,11 @@
 """Tests for notes_check.py against real messung-note heads.
 
-The checker turns the note-kind convention (LAB-082 In `notes/messung/` trägt jede Note ihre Sorte, 2026-09-10)
+The checker turns the note-kind convention (LAB-082 In `notes/messung/` trägt jede Note ihre Sorte)
 into a pass/fail decision, so it gets the parser treatment: tested with real
-raw text. The heads below are verbatim from the 2026-09-10 inventory of the
+raw text. The heads below are verbatim from the
 two lab repos (counterfactual-worlds, fallacy-datasets), frozen here so the
 tests keep working after the live notes evolve. They cover the wild variants
-that shaped the contract: multi-line meta paragraphs, an inline status word,
+the contract handles: multi-line meta paragraphs, an inline status word,
 a limitation blockquote BEFORE the meta line, and a kindless head.
 """
 

@@ -1,5 +1,5 @@
-"""Arms in the head (`[model.arms.<arm>]`, phase 4 of the 1.0 line; prose
-lines until 0.100.0): a protocol that compares two profiles names each with
+"""Arms in the head (`[model.arms.<arm>]`): a protocol that compares two
+profiles names each with
 file, fingerprint and model alias; finalize holds the table to the answering
 run and warns on what the run did not record.
 

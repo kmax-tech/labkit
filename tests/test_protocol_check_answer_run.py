@@ -3,7 +3,7 @@ no `[result] run` is a WARNING — the hint where the declaration of a reported
 result is not unambiguous. The declaration is the head's table (`protocol-fill
 --from-run` writes it with Recorded results; `report-check --if-reported` holds it at
 the stop and the commit). Twins: an answer under a declared run, and the open
-field of an exploration, are silent (TODO 2, 2026-10-19; phase 3, 2026-10-21).
+field of an exploration, are silent.
 """
 
 from __future__ import annotations

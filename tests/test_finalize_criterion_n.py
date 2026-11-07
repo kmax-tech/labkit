@@ -1,4 +1,4 @@
-"""finalize station 5 (2026-10-05): a c<i>_n that matches no recorded input
+"""finalize station 5: a c<i>_n that matches no recorded input
 count is a warning, never a blocker."""
 
 from __future__ import annotations
@@ -54,8 +54,7 @@ class CriterionN(unittest.TestCase):
         )
 
     def test_shrunk_denominator_warns(self):
-        # 2026-10-06 review: criterion_1_n = 7 against 12 recorded rows went unwarned
-        # while the check knew only the old letter
+        # criterion_1_n = 7 against 12 recorded rows: the denominator shrank
         self._metrics({"criterion_1_pass": True, "criterion_1_n": 7})
         w = run_record_check.criterion_n_input_mismatches(self.run_dir)
         self.assertEqual(len(w), 1)

@@ -1,8 +1,8 @@
 """max_tokens: a cap given to a backend that has none is refused, as an
 unhonoured temperature is; none given leaves it to the backend (ollama and
 openai still send DEFAULT_MAX_TOKENS, tests/test_llm_chat_options.py).
-claude-cli has no token flag, and an explicit cap was dropped without a
-word (review 2026-10-20).
+claude-cli has no token flag, so an explicit cap is refused there, never
+dropped without a word.
 
     .venv/bin/python -m pytest tests/test_llm_max_tokens.py
 """

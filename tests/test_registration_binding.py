@@ -1,11 +1,10 @@
 """Tests for the registration an audit record binds (`[audit] registration`,
 `protocol_check.registration_stamp`).
 
-Why this exists (review 2026-10-23, finding 1): the question was rewritten
-after the number was adopted — "mean line count" became "mean number of
-causal claims" — and the analysis audit still covered the area; report-check
-exited 0. A record bound the code, the promise tables and the run, not the
-registration the audit judged. Now it binds the kind and every field the
+Why this exists: a question rewritten after the number was adopted —
+"mean line count" becoming "mean number of causal claims" — must not stay
+covered by the analysis audit. A record binds the code, the promise tables,
+the run and the registration the audit judged: the kind and every field the
 kind owes; the report fields written after the run do not move it.
 """
 
@@ -49,7 +48,7 @@ class Stamp(unittest.TestCase):
         )
         self.assertEqual(stamp["kind"], "fit")
         compute = protocol_check.registration_stamp(_protocol("compute"))
-        # a computation's [kept] is part of its registration (standard 0.24)
+        # a computation's [kept] is part of its registration
         self.assertEqual(list(compute), ["kind", "kept", "Question / hypothesis"])
 
     def test_a_reflowed_field_keeps_its_stamp_and_a_reworded_one_does_not(self):

@@ -1,5 +1,5 @@
-"""Robustness found by the audit of 0.48.0 (review 2026-10-07): each case used
-to end in a traceback, a silent pass, or a statement that was not true."""
+"""Robustness: each case ends in a refusal or a true statement, never in a
+traceback, a silent pass, or a statement that is not true."""
 
 import contextlib
 import io

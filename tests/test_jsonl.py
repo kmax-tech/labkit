@@ -1,8 +1,8 @@
 """Tests for jsonl.record_lines — the one line reader of JSON Lines files.
 
 `json.dumps(..., ensure_ascii=False)` leaves U+2028, U+2029 and U+0085 raw;
-`str.splitlines()` breaks at them, so a record holding one read as two torn
-lines and the file was called damaged (2026-10-23).
+`str.splitlines()` breaks at them, so a record holding one would read as
+two torn lines and the file would be called damaged.
 """
 
 import json
@@ -25,7 +25,7 @@ class TestLines(unittest.TestCase):
         for sep in SEPARATORS:
             with self.subTest(sep=repr(sep)):
                 text = json.dumps({"t": f"a{sep}b"}, ensure_ascii=False) + "\n"
-                # the case is real: the old reader saw two lines here
+                # the case is real: str.splitlines sees two lines here
                 self.assertEqual(len(text.splitlines()), 2)
                 self.assertEqual(len(jsonl.record_lines(text)), 1)
 

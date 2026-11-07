@@ -1,4 +1,4 @@
-"""claude-cli backend (2026-10-05): the subprocess runs from a neutral
+"""claude-cli backend: the subprocess runs from a neutral
 directory, not from the repo the experiment lives in."""
 
 from __future__ import annotations
@@ -55,8 +55,8 @@ class CliIsolation(unittest.TestCase):
 
     def test_the_prompt_goes_on_stdin_not_argv(self):
         """A 200 kB audit prompt as one argv entry is `OSError: Argument list
-        too long` on Linux (128 kB per entry); macOS let it through, every
-        cloud session died (audit 2026-10-15)."""
+        too long` on Linux (128 kB per entry), though macOS lets it
+        through."""
         seen = {}
 
         def fake_run(cmd, **kw):
@@ -81,10 +81,9 @@ class CliIsolation(unittest.TestCase):
 
 class CliInput(unittest.TestCase):
     """`input = "prompt"` sends the prompt as the only message, beside the
-    CLI's fixed identity line in the system prompt: on CLI 2.1.309 the default
-    call carried a 27 k-character agent system prompt, environment
-    reminders and thinking beside a registered prompt (registered pilot,
-    pubmedqa50, 2026-11-01; checked behind a logging proxy)."""
+    CLI's fixed identity line in the system prompt: the default call
+    carries an agent system prompt of many thousand characters, environment
+    reminders and thinking beside a registered prompt."""
 
     def _call(self, table, environ, system=None):
         seen = {}

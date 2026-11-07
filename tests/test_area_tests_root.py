@@ -1,8 +1,8 @@
 """finalize looks for the area's tests where preflight does.
 
-Audit 2026-10-15: preflight asked `layout_root(area)`, finalize
-`git_root(area) or area` — in a stamped tree before `git init` preflight
-ran the failing `tests/test_01_x.py` and finalize reported "none".
+In a stamped tree before `git init` both find the failing
+`tests/test_01_x.py` under `layout_root(area)`: preflight runs it, finalize
+blocks on it and never reports "none".
 """
 
 from __future__ import annotations

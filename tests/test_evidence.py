@@ -4,9 +4,9 @@ tree and the index are held to HEAD, the session's commits to their
 parents, and HEAD's reflog keeps the closed runs a reset left behind.
 
 Why: the lab notebook's rule — a record is never erased or written over,
-a correction is added beside it (docs/notes/2026-10-27-standard-way-out.md);
-ninth haiku round t5 rewrote audit records field by field, and nothing
-held a committed run's files. Each blocker has its twin: a decision
+a correction is added beside it (docs/notes/2026-10-27-standard-way-out.md):
+an audit record is not rewritten field by field, a committed run's files
+are held. Each blocker has its twin: a decision
 through `--decide`, a run still open, a journal appended to, an amend of
 code alone, an ignored file labkit did not write.
 """
@@ -355,9 +355,9 @@ class Told(unittest.TestCase):
         self.assertIn(f"runs/{CLOSED}: the closed run's metrics.json (changed)", ctx)
 
     def test_an_untracked_run_runs_tsv_lists_deleted_is_told(self):
-        """An untracked run deleted leaves nothing for git status: an agent
-        deleted runs/ five times without a word (reference pilot 2026-11-01,
-        task 60). The index keeps it, so the hook tells. The twin: a run the
+        """An untracked run deleted leaves nothing for git status, so an
+        agent could delete runs/ without a word. The index keeps it, so the
+        hook tells. The twin: a run the
         index lists and that stands is silent."""
         gone = "2026-11-01T15-21-44_e8a0"
         (self.area / "runs.tsv").write_text(

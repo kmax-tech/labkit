@@ -50,7 +50,7 @@ class Fields(unittest.TestCase):
     def test_a_missing_field_is_refused_and_null_only_where_the_writer_writes_it(
         self,
     ) -> None:
-        """Missing is no null and no default (2026-10-20); null is a value
+        """Missing is no null and no default; null is a value
         only where the writer writes one."""
         for key in runs.RUN_CONFIG_KEYS[1:]:  # without the schema: its own check
             with self.subTest(missing=key):
@@ -67,10 +67,10 @@ class Fields(unittest.TestCase):
     def test_an_acknowledged_run_stays_unreportable_and_without_the_field_unreadable(
         self,
     ) -> None:
-        """Deleting `"unfrozen_ack": true` from config.json made an acknowledged
-        run read as a plain measurement, its number reportable (review
-        2026-10-20). The complete record stays unreportable; without the
-        field it is no record."""
+        """Deleting `"unfrozen_ack": true` from config.json does not make an
+        acknowledged run a plain measurement with a reportable number: the
+        complete record stays unreportable; without the field it is no
+        record."""
         area = Path(tempfile.mkdtemp())
         run = area / "runs" / "2026-01-01T00-00-00_aaaa"
         run.mkdir(parents=True)
@@ -91,8 +91,7 @@ class Fields(unittest.TestCase):
             runs.parse_run_config({"schema_version": 3, "cost_tier": "hours"})
 
     def test_the_records_repeat_cost_holds_the_heads_two_values_or_null(self) -> None:
-        """A retired or mistyped value is corrupt metadata, not a readable run
-        (review 2026-10-25: schema 4 read "hours" as a string and went on)."""
+        """A retired or mistyped value is corrupt metadata, not a readable run."""
         for value in ("hours", "seconds", "unexpected"):
             with self.subTest(value):
                 with self.assertRaisesRegex(
@@ -126,8 +125,8 @@ class WriterReaderParity(unittest.TestCase):
 class NestedValuesAreCopies(unittest.TestCase):
     """`frozen=True` freezes the fields, not a dict inside one: the nested
     tables are stored as their JSON text and every read is a fresh copy, so
-    one reader's change reaches no other (decided 2026-10-20 over storing
-    read-only views, which json.dumps cannot write)."""
+    one reader's change reaches no other (not read-only views, which
+    json.dumps cannot write)."""
 
     def test_changing_what_was_read_changes_nothing_stored(self) -> None:
         cfg = runs.parse_run_config(
@@ -146,7 +145,8 @@ class NestedValuesAreCopies(unittest.TestCase):
 
 
 class ReviewFindings(unittest.TestCase):
-    """The independent review of 8d789b4 and e0c21e0 (2026-10-20)."""
+    """The record as stored: its key order, the status line, the binding,
+    unreadable input, and an active run's config or error."""
 
     def test_the_record_keeps_its_key_order(self) -> None:
         cfg = runs.parse_run_config({**BASE, "config": {"zeta": 1, "alpha": 2}})

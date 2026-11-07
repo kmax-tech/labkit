@@ -1,9 +1,9 @@
 """The code that produced a run's number is the code here now (finalize
-station 3, `run_record_check.code_since_run`; audit 2026-10-27, A1).
+station 3, `run_record_check.code_since_run`).
 
-Red-team scenario g1: the script counted `len(files) + 1`, the run kept
-4.5, the script was fixed to `len(files)` and the old number adopted — no
-gate compared the run's code with today's. Each way the code can differ
+The case: the script counted `len(files) + 1`, the run kept 4.5, the
+script was fixed to `len(files)`, and the old number is not adopted — the
+run's code is compared with today's. Each way the code can differ
 holds, each with the way back; an analysis fix and a pin raise do not.
 """
 
@@ -209,14 +209,12 @@ class CodeSinceRun(unittest.TestCase):
         self.assertIn("01_measure.py is gone", line)
 
     def test_a_patch_an_earlier_labkit_wrote_still_reads(self) -> None:
-        """Before `repo.tree_patch` the run kept `git diff HEAD` as the
-        user's git printed it, stripped: a last hunk ending in blank lines
-        lost them, a colour setting coloured it, `diff.noprefix` dropped
-        the a/ b/, a dirty binary file had no full index line — and the
-        whole patch was applied, so any of these held correct code (cold
-        review 2026-10-27). Only the helpers' part is applied, recounted,
-        uncoloured, at its own prefix; the user's `apply.whitespace` is
-        not asked. Each run's helper is dirty, committed afterwards as it
+        """A patch an earlier labkit wrote is `git diff HEAD` as the user's
+        git printed it, stripped: a last hunk ending in blank lines lost
+        them, a colour setting coloured it, `diff.noprefix` dropped the a/ b/,
+        a dirty binary file had no full index line. Only the helpers' part is
+        applied, recounted, uncoloured, at its own prefix, so none of these
+        holds correct code; the user's `apply.whitespace` is not asked. Each run's helper is dirty, committed afterwards as it
         ran: no blocker; changed again: one."""
         figure = self.area / "output" / "fig.png"
         figure.parent.mkdir()
@@ -232,7 +230,7 @@ class CodeSinceRun(unittest.TestCase):
         ):
             with self.subTest(flags=flags):
                 # an added line with trailing blanks (apply.whitespace=error),
-                # and the hunk's last context blank lines, which the stripping cut
+                # and the hunk's last context blank lines, which stripping cuts
                 self.helper.write_text(
                     f"def n(files):\n    x = {i}  \n    return {i} * len(files)\n\n\n\n"
                 )
@@ -253,10 +251,9 @@ class CodeSinceRun(unittest.TestCase):
                 _git(self.repo, "commit", "-qam", "changed again")
 
     def test_a_script_in_a_subfolder_is_the_one_its_command_names(self) -> None:
-        """runlog records the script's name; a second script of that name
-        in scripts/llm/ was compared with scripts/01_measure.py, and the
-        printed `cp` overwrote the other one (cold review 2026-10-27). The
-        command names the path."""
+        """A second script of the name runlog records, in scripts/llm/, is
+        compared as itself, not with scripts/01_measure.py: the command names
+        the path, so the printed `cp` overwrites no other script."""
         other = self.area / "scripts" / "llm" / "01_measure.py"
         other.parent.mkdir()
         other.write_text("print('the llm lane')\n", encoding="utf-8")
@@ -270,8 +267,8 @@ class CodeSinceRun(unittest.TestCase):
 
     def test_a_derived_run_is_held_to_its_parents_code(self) -> None:
         """A re-evaluation rests on its parent's rows: the row code fixed
-        after the parent ran held the parent, not the derived run that
-        answers (cold review 2026-10-27). The chain is followed."""
+        after the parent ran holds the derived run that answers, not only the
+        parent. The chain is followed."""
         parent = self.run_now(name="2026-10-27T10-00-00_ab12")
         again = self.area / "scripts" / "03_reevaluate.py"
         again.write_text("print('re-evaluate')\n", encoding="utf-8")
@@ -287,8 +284,8 @@ class CodeSinceRun(unittest.TestCase):
 
     def test_only_a_found_difference_names_its_run(self) -> None:
         """`GateFinding.changed_since` is the comparison's datum: the run
-        whose code differs — the parent's for a derived run (V3, review
-        2026-11-03) — and nothing where the code could not be compared."""
+        whose code differs — the parent's for a derived run — and nothing
+        where the code could not be compared."""
         parent = self.run_now(name="2026-10-27T10-00-00_ab12")
         again = self.area / "scripts" / "03_reevaluate.py"
         again.write_text("print('re-evaluate')\n", encoding="utf-8")
@@ -313,10 +310,9 @@ class CodeSinceRun(unittest.TestCase):
         self.assertIsNone(gone.changed_since)
 
     def test_a_helper_in_another_repository_is_named_not_compared(self) -> None:
-        """`lib/` as a link out of the repository crashed finalize, as a
-        submodule it read as never committed — every finalize there held,
-        with no way out (cold review 2026-10-27). Such a module is a
-        warning; the area's own code is still compared."""
+        """`lib/` as a link out of the repository or as a submodule cannot be
+        compared: such a module is a warning, never a crash or a blocker
+        without a way out; the area's own code is still compared."""
         outside = Path(self._tmp.name).parent / f"{Path(self._tmp.name).name}-shared"
         outside.mkdir()
         self.addCleanup(lambda: subprocess.run(["rm", "-r", str(outside)], check=True))
@@ -364,8 +360,8 @@ class CodeSinceRun(unittest.TestCase):
 
 class FinalizeStation(unittest.TestCase):
     """finalize holds the number at station 3 for every kind — a
-    computation registers no promise id, and the declared-scope half of the
-    station said n/a for it."""
+    computation registers no promise id, and its code is compared all the
+    same."""
 
     def test_a_computation_whose_script_changed_is_held(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

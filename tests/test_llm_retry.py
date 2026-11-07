@@ -1,15 +1,12 @@
 """Exhausted retries raise ONE type — regardless of the backend.
 
-Why this file exists: on 2026-08-14 a 145-item run died on a DNS hiccup.
-`llm.py` had correctly retried four times with backoff and then passed
-`URLError` through — but all four batch scripts caught `RuntimeError`. With
-the claude CLI that is entirely correct (it throws `BackendError`, a
-`RuntimeError`); with the ollama backend it catches nothing. The bug lay
-latent in the code and only the backend switch activated it — the most
-expensive kind, because it stays invisible when testing on one backend.
+A caller catches `RuntimeError` after the retries: the claude CLI throws
+`BackendError`, a `RuntimeError`, and the ollama backend must not pass
+`URLError` through instead — a difference that stays invisible when
+testing on one backend.
 
-The fix lives in `llm.py`, not in a rule: exhausted retries wrap the
-exception in `BackendError` and attach the original via `__cause__`.
+The rule lives in `llm.py`: exhausted retries wrap the exception in
+`BackendError` and attach the original via `__cause__`.
 """
 
 import email.message
@@ -37,7 +34,7 @@ class TestExhaustedRetriesRaiseBackendError(unittest.TestCase):
         self.llm._complete_once = lambda *a, **k: (_ for _ in ()).throw(exc)
 
     def test_urlerror_becomes_backenderror(self):
-        """The 2026-08-14 case: ollama not resolvable."""
+        """Ollama not resolvable."""
         self._fail_with(urllib.error.URLError("nodename nor servname provided"))
         with self.assertRaises(self.llm.BackendError) as ctx:
             self.llm.complete("gpt-oss", "anything", attempts=2)
@@ -96,10 +93,9 @@ if __name__ == "__main__":
 
 
 class TestServerRefusalsAreNotRetried(unittest.TestCase):
-    """`HTTPError` is a `URLError`: a 404 (wrong model id) or 401 was retried
-    six times, 13 minutes of backoff, before it surfaced (audit 2026-10-15).
-    A 4xx is the server's answer about the request; a 5xx is still an
-    outage and keeps the retry."""
+    """`HTTPError` is a `URLError`, but a 404 (wrong model id) or 401 is not
+    retried through minutes of backoff: a 4xx is the server's answer about
+    the request; a 5xx is an outage and keeps the retry."""
 
     def setUp(self):
         from labkit.run import llm

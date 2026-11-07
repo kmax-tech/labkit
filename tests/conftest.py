@@ -1,23 +1,21 @@
 """Suite-wide isolation: no test writes outside a temporary directory.
 
 `llm.complete` takes an endpoint lease; without this, every test that calls
-it wrote into the real ~/.labkit/leases, and failed with PermissionError
-where home is read-only (review 2026-10-07). Tests that need their own
-lease directory still set LABKIT_LEASE_DIR themselves.
+it would write into the real ~/.labkit/leases and fail with PermissionError
+where home is read-only. Tests that need their own lease directory set
+LABKIT_LEASE_DIR themselves.
 
 Git's own variables are dropped for the same reason: inside a git hook (the
 pre-commit hook runs this suite) git exports GIT_DIR, GIT_INDEX_FILE and
 friends, and every `git init` / `git config` / `git commit` a test aims at its
-temporary repo then lands in the real one. Run from a worktree on 2026-10-09,
-the suite set `core.bare = true` and a local user `t <t@t>` in labkit's own
-.git/config, tagged a test commit `v1.0.0` and committed onto the worktree's
-HEAD (`tests/test_git_env_isolation.py`).
+temporary repo then lands in the real one: its config, its tags, its HEAD
+(`tests/test_git_env_isolation.py`).
 
 Every temporary path of a session lives under one directory, removed when the
 session ends: `tempfile` and every subprocess (through TMPDIR) create theirs
-there, so a test that never cleans up leaves nothing behind. Left in the
-system temp directory, those leftovers piled up run after run, and preflight,
-which reads an area's siblings as the repo's other areas, scanned them all
+there, so a test that never cleans up leaves nothing behind — preflight
+reads an area's siblings as the repo's other areas, and leftovers in the
+system temp directory would pile up there run after run
 (docs/notes/2026-10-20-test-temp-dirs.md).
 """
 

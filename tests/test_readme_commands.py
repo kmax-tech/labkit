@@ -2,8 +2,8 @@
 
 Every console script of pyproject.toml and every sub-command of the two
 multi-command tools stands in the README's command block; a count written
-in prose ("Sixteen") drifted the day the seventeenth command came
-(audit 2026-10-13), so the list is held here and the prose carries no number.
+in prose ("Sixteen") drifts the day a command is added, so the list is held
+here and the prose carries no number.
 """
 
 import contextlib

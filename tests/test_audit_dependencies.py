@@ -1,7 +1,5 @@
-"""The analysis audit sees the run's declared dependencies: in the repair
-case (2026-10-28) the follow-up could not confirm a repair against
-model.json, which no piece showed, and three decision reviews said
-insufficient.
+"""The analysis audit sees the run's declared dependencies: a follow-up can
+confirm a repair against a model file only when a piece shows it.
 
     .venv/bin/python -m pytest tests/test_audit_dependencies.py
 """

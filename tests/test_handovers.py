@@ -114,11 +114,11 @@ class HandoverRecovery(cases._Chain):
         return line
 
     def test_report_check_names_a_lost_record_and_the_restore_that_works(self):
-        """report-check said "none has run yet" and named `--mode analysis`
-        after an audit's record was deleted, though the journal holds the
-        attempt and labkit-audit refuses every audit until the record is
-        back (pilot of labkit-paper area 15, t60). The twin: an area never
-        audited is told so."""
+        """After an audit's record is deleted, report-check names the lost
+        record and the restore that works, not "none has run yet" and
+        `--mode analysis`: the journal holds the attempt, and labkit-audit
+        refuses every audit until the record is back. The twin: an area
+        never audited is told so."""
         rc, out = self.report_check()
         self.assertEqual(rc, 1, out)
         self.assertIn("none has run yet", self.analysis_blocker(out))
@@ -160,12 +160,10 @@ class HandoverRecovery(cases._Chain):
         self.assertNotIn("audit evidence is gone", line)
 
     def test_after_a_lost_record_a_discussion_names_the_way_that_leads_out(self):
-        """Pilot of labkit-paper area 15, t60: under a handover for a lost
-        record, protocol-fill and AGENTS.md prescribed `--discuss`, which
-        owes a report review; the review was refused (no attempt starts
-        while evidence is gone) and the commit demanded it — no exit. Now
-        every text names the route that works: restore, or the report cites
-        no run of the area. The twin: with the evidence intact the
+        """Under a handover for a lost record, every text names the route
+        that works: restore, or the report cites no run of the area — not
+        `--discuss`, which owes a report review that no attempt can give
+        while evidence is gone. The twin: with the evidence intact the
         discussion still owes its review."""
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
@@ -215,7 +213,7 @@ class HandoverRecovery(cases._Chain):
 
     def test_after_a_lost_record_a_citation_names_the_way_that_leads_out(self):
         """The same for the answering run cited undiscussed: its ways out,
-        adoption and discussion, both owe an attempt (t60's first refusal)."""
+        adoption and discussion, both owe an attempt."""
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
         (record,) = findings.area_records(self.area)
@@ -238,8 +236,8 @@ class HandoverRecovery(cases._Chain):
         self.assertNotIn("--discuss", line)
 
     def test_a_loss_a_handover_recorded_names_the_restore_that_works(self):
-        """It said "restore it" whether or not anything could (pilot of
-        labkit-paper area 15, t60, where nothing kept the record)."""
+        """A recorded loss says "restore it" only where something keeps the
+        record."""
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
         (record,) = findings.area_records(self.area)
@@ -261,8 +259,8 @@ class HandoverRecovery(cases._Chain):
         self.assertNotIn("until it is back", line)
 
     def test_findings_offer_the_handover_only_where_something_stands(self):
-        # It printed the handover command in a clean area and, before its
-        # own refusal, in an area never audited (audit 2026-10-27, H1).
+        # Neither a clean area nor one never audited is offered the handover
+        # command; an area with an open BLOCKER is.
         rc, out = self.findings_listing()
         self.assertEqual(rc, 2, out)
         self.assertIn("no audit record yet", out)
@@ -281,8 +279,7 @@ class HandoverRecovery(cases._Chain):
         self.assertIn("1 earlier record(s) without an open finding not shown", out)
 
     def test_a_stop_the_handover_lets_pass_names_the_loss(self):
-        # it passed in silence: "nothing wrong" instead of "loss acknowledged"
-        # (audit 2026-10-27, third, K9)
+        # it passes saying "loss acknowledged", not in silence
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
         (record,) = findings.area_records(self.area)
@@ -298,8 +295,8 @@ class HandoverRecovery(cases._Chain):
         self.assertEqual(len(state.acknowledged), 1)
 
     def test_a_handover_that_no_longer_matches_says_why(self):
-        # The stop held with the original loss and named no handover, so the
-        # agent wrote another (audit 2026-10-27, H2).
+        # The stop names the handover that no longer matches and why, not only
+        # the original loss, so the agent does not write another.
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
         (record,) = findings.area_records(self.area)
@@ -470,9 +467,9 @@ class HandoverRecovery(cases._Chain):
         self.assertRegex(out, rf"`labkit-adopt \S+01-judge {self.run_id}`")
 
     def test_a_measured_run_deleted_since_is_named_not_hidden(self):
-        """The agent deleted runs/ five times; the handover said "no run of it
-        was measured" while runs.tsv listed five (reference pilot 2026-11-01,
-        task 60). The twin is the test below: never measured stays so."""
+        """A run directory deleted after its measurement: the handover names
+        the run runs.tsv lists, never "no run of it was measured". The twin is
+        the test below: never measured stays so."""
         import shutil
 
         shutil.rmtree(self.area / "runs" / self.run_id)
@@ -577,7 +574,7 @@ class HandoverRecovery(cases._Chain):
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
         # each report still citing the withdrawn run is named with the
-        # command that discusses it (workflow review 2026-10-27, TODO 8 (2))
+        # command that discusses it
         self.assertIn("1 report(s) still cite the withdrawn run", out)
         self.assertIn("OTHER.md: protocol-fill", out)
         self.assertIn(f"--discuss {self.run_id}", out)
@@ -652,7 +649,7 @@ class HandoverRecovery(cases._Chain):
         )
 
     def test_an_undecodable_handover_record_is_a_sentence_in_tree_and_index(self):
-        # The pre-commit raised UnicodeDecodeError on it (audit 2026-10-27, H4).
+        # Not UnicodeDecodeError out of the pre-commit: a sentence naming it.
         broken = self.area / "audits" / "handovers" / "handover-broken.json"
         broken.parent.mkdir(parents=True)
         broken.write_bytes(b"\xff\xfe not json")
@@ -665,8 +662,8 @@ class HandoverRecovery(cases._Chain):
                 self.assertTrue(any(broken.name in line for line in lines), lines)
 
     def test_an_unreadable_handover_record_hides_no_other_gap(self):
-        # its HandoverError replaced every gap already found (audit
-        # 2026-10-27, third, K1)
+        # its HandoverError stands beside every gap already found, never
+        # in place of them
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
         (record,) = findings.area_records(self.area)
@@ -680,8 +677,8 @@ class HandoverRecovery(cases._Chain):
         self.assertTrue(any(broken.name in p for p in problems), problems)
 
     def test_a_link_staged_in_audits_is_a_sentence_at_the_commit(self):
-        # git listed it as no regular file and the pre-commit ended in a
-        # traceback (audit 2026-10-27, third, K3)
+        # git lists it as no regular file: a sentence, not a traceback out of
+        # the pre-commit
         rc, out = self.audit(cases.CLEAN)
         self.assertEqual(rc, 0, out)
         link = self.area / "audits" / "handovers" / "handover-link.json"
@@ -694,8 +691,8 @@ class HandoverRecovery(cases._Chain):
         self.assertTrue(any("regular, merged index file" in ln for ln in lines), lines)
 
     def test_a_handover_that_fails_at_the_report_names_what_it_wrote(self):
-        # record and protocol were written, the report not, and the refusal
-        # said nothing of them (audit 2026-10-27, third, K8)
+        # record and protocol are written, the report not: the refusal names
+        # what was written before it
         self.report.mkdir()  # a directory where the report goes: the write fails
         rc, out = self.handover()
         self.assertEqual(rc, 2, out)
@@ -705,8 +702,7 @@ class HandoverRecovery(cases._Chain):
         self.assertFalse(handovers.valid(self.area))
 
     def test_the_handover_writes_only_where_report_check_looks(self):
-        # it took REPORT.MD, a file report-check never holds (audit
-        # 2026-10-27, third, S3)
+        # REPORT.MD is refused: report-check never holds that file
         root = self.lab.root.resolve()  # as git_root gives it
         with self.assertRaises(handovers.HandoverError):
             handovers.report_destination(root, root / "REPORT.MD")
@@ -724,8 +720,8 @@ class HandoverRecovery(cases._Chain):
         self.assertIn(record.path.name, error)
 
     def test_two_areas_and_a_discussion_share_one_report(self):
-        # Every handover went into one whole-file REPORT.md, so the second
-        # area's voided the first's (audit 2026-10-27, H3).
+        # Each handover writes its own block, not the whole REPORT.md, so the
+        # second area's leaves the first's valid.
         rc, out = self.handover()
         self.assertEqual(rc, 0, out)
         other_area, other = e2e.judge_area(self.lab, "other-question")
@@ -779,8 +775,7 @@ if __name__ == "__main__":
 class ReviewTrace(unittest.TestCase):
     """What a report review writes is not handover evidence
     (`handovers.review_trace`, `journal_digest`): the review a registered
-    report owes after its handover block must not void the handover (probe
-    2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+    report owes after its handover block must not void the handover."""
 
     ANALYSIS = '{"event": "started", "id": "2026-11-02T10-00-analysis-ab12", "mode": "analysis"}\n'
     REVIEW = (
@@ -808,8 +803,8 @@ class ReviewTrace(unittest.TestCase):
     def test_the_journal_is_bound_without_the_report_reviews_lines(self):
         """One computation when the handover is written and when it is
         checked: the review's lines added after the handover leave the
-        binding as it was (2026-11-03: bound by blob id, checked by a digest
-        of another kind, every handover after an analysis audit was void)."""
+        binding as it was (bound by blob id and checked by a digest of
+        another kind, every handover after an analysis audit would be void)."""
         bound = self.digest(self.ANALYSIS)
         self.assertEqual(bound, self.blob(self.ANALYSIS))  # the file's own id
         self.assertEqual(self.digest(self.ANALYSIS + self.REVIEW), bound)

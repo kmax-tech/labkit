@@ -1,10 +1,8 @@
 """Tests for the endpoint lease — one alias at a time per model slot.
 
-Occasion (2026-09-08): a judge test fired next to a running probe on the same
-swap proxy. Both aliases resolve to one GPU slot, so they evicted each other
-(~5 min per swap); the timeouts came back as empty answers, and the area's
-stop rule "more than 2 of 96 rounds without a parsed mechanism => the parser
-is the finding" counts exactly those. An operator slip that lands in a
+Two aliases on one swap proxy that resolve to one GPU slot evict each other
+(minutes per swap); the timeouts come back as empty answers, which an area's
+parse-failure count takes for a finding. An operator slip that lands in a
 reported number is a missing interlock, so the interlock gets the parser
 treatment: the properties are tested, not the happy path.
 
@@ -97,7 +95,7 @@ class TestEndpointLease(unittest.TestCase):
         self.assertEqual([h["alias"] for h in el.holders(EP)], ["gpt-oss-vllm"])
 
     def test_second_alias_is_refused(self):
-        """The case that cost the day: judge test next to a running probe."""
+        """Two aliases, one slot: a judge test next to a running probe."""
         pid, script = self._live_other_process()
         self._foreign(EP, "gpt-oss-vllm", pid=pid, script=script)
         with self.assertRaises(SystemExit) as cm:
@@ -120,8 +118,8 @@ class TestEndpointLease(unittest.TestCase):
         self.assertEqual([h["alias"] for h in el.holders(EP2)], ["qwen"])
 
     def test_two_endpoints_one_slug_are_two_slots(self):
-        """`a-b` and `a_b` shared one directory: one slot's lease refused
-        the other (review 2026-10-14, reproduced)."""
+        """`a-b` and `a_b` are two directories: one slot's lease never
+        refuses the other."""
         pid, script = self._live_other_process()
         self._foreign("http://host/a-b", "gpt-oss-vllm", pid=pid, script=script)
         el.acquire("qwen", ["http://host/a_b"])  # must not raise
@@ -131,8 +129,8 @@ class TestEndpointLease(unittest.TestCase):
 
     def test_one_endpoint_spelled_twice_is_one_slot(self):
         """Host case and a trailing slash name the same slot; two directories
-        meant no interlock at all (on a case-sensitive filesystem — macOS
-        hid the case half)."""
+        would mean no interlock at all (on a case-sensitive filesystem —
+        macOS's case-insensitive one hides the case half)."""
         self.assertEqual(
             el.endpoint_dir("http://Host:8000/v1/"),
             el.endpoint_dir("HTTP://host:8000/v1"),
@@ -143,8 +141,9 @@ class TestEndpointLease(unittest.TestCase):
             el.acquire("qwen", ["HTTP://host:8000/v1"])
 
     def test_writers_in_the_same_second_are_ordered(self):
-        """On the second alone both re-reads saw the other as no younger and
-        both yielded; the token makes the order total — exactly one yields."""
+        """On the second alone both re-reads would see the other as no
+        younger and both yield; the token makes the order total — exactly
+        one yields."""
         a = {"started": "2026-10-14T12:00:00", "token": "1" * 32}
         b = {"started": "2026-10-14T12:00:00", "token": "2" * 32}
         yields = [el._order(b) < el._order(a), el._order(a) < el._order(b)]
@@ -205,8 +204,8 @@ class TestEndpointLease(unittest.TestCase):
         return f
 
     def test_fresh_unreadable_record_counts_as_busy(self):
-        """Undecidable = busy: it may be another process' lease (review
-        2026-10-06 — deleting on sight could drop a live holder)."""
+        """Undecidable = busy: it may be another process' lease, and
+        deleting on sight could drop a live holder."""
         f = self._broken(age_s=1)
         with self.assertRaises(SystemExit):
             el.acquire("qwen25-32b-awq", [EP])

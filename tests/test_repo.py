@@ -1,9 +1,8 @@
 """labkit.formats.repo — repo root, an area's protocols and git, answered once.
 
-Before 2026-10-06 two private `_git` helpers turned every git failure into
-"", which preflight read as "working tree clean". Now outside a repo is
-None, a failure inside one is loud, and an exit code that IS the answer
-goes through git_run.
+Outside a repo is None, a failure inside one is loud — never "", which
+preflight would read as "working tree clean" — and an exit code that IS the
+answer goes through git_run.
 """
 
 from __future__ import annotations
@@ -93,8 +92,8 @@ class Layout(unittest.TestCase):
 
 class RepoWide(unittest.TestCase):
     """`repo_protocols` reads the repo outside SKIP_DIRS: a protocol copied
-    under runs/<id>/ or shipped in .venv/ made a false "two protocols carry
-    id" blocker in three of four scans (audit 2026-10-15); `lab_root` is the
+    under runs/<id>/ or shipped in .venv/ would make a false "two protocols
+    carry id" blocker; `lab_root` is the
     one rule for the scaffolder and the model backend."""
 
     def test_repo_protocols_skips_records_and_packages(self):
@@ -172,8 +171,8 @@ class ProtocolChoice(unittest.TestCase):
 
     def test_a_bare_file_name_names_the_areas_protocol(self):
         # `preflight <AREA> [--protocol PROTOCOL-*.md]` and the pre-run hook's
-        # label name it so; from the repo root the name was refused
-        # (labkit-paper area 15, round 2, t71 and t21)
+        # label name it so, so the name is read in the area from any working
+        # directory
         (self.area / "PROTOCOL-a.md").write_text("")
         named = self.area / "PROTOCOL-b.md"
         named.write_text("")
@@ -192,8 +191,8 @@ class ProtocolChoice(unittest.TestCase):
                 repo.the_protocol(self.area, Path("sub") / "PROTOCOL-b.md")
 
     def test_a_name_there_as_given_is_read_as_given(self):
-        # the twin: what the working directory holds under the name is taken,
-        # as before — from inside the area that is the area's own file
+        # the twin: what the working directory holds under the name is taken
+        # — from inside the area that is the area's own file
         (self.area / "PROTOCOL-a.md").write_text("")
         (self.area / "PROTOCOL-b.md").write_text("")
         with contextlib.chdir(self.area):
@@ -274,7 +273,7 @@ class Git(unittest.TestCase):
 
 class CommittedSince(unittest.TestCase):
     """`paths_committed_since`: what the commits after a base touched — the
-    stop's second source beside git status (eighth haiku round, t3)."""
+    stop's second source beside git status."""
 
     def _commit(self, d: Path, msg: str) -> None:
         subprocess.run(["git", "add", "-A"], cwd=d, check=True)
@@ -316,7 +315,7 @@ class CommittedSince(unittest.TestCase):
 class CommitOrder(unittest.TestCase):
     """`commit_known`, `is_ancestor`, `earliest_commits`: the order git's
     history gives the commits runs recorded — the first measurement is
-    ordered by it, not by a run id's local time (A11, audit 2026-10-27)."""
+    ordered by it, not by a run id's local time."""
 
     def _commit(self, d: Path, msg: str) -> str:
         (d / "f.txt").write_text(msg)
@@ -370,7 +369,7 @@ class CommitOrder(unittest.TestCase):
         self.assertEqual(repo.earliest_commits(d, [first, amended]), [first, amended])
 
     def test_a_file_url_names_its_path_also_after_git_plus(self):
-        # three callers read file:// by hand (audit 2026-10-28, H8)
+        # the one reading of a file:// URL, which several callers share
         self.assertEqual(repo.file_url_path("file:///src/labkit"), Path("/src/labkit"))
         self.assertEqual(
             repo.file_url_path("git+file:///src/labkit"), Path("/src/labkit")
@@ -379,7 +378,7 @@ class CommitOrder(unittest.TestCase):
 
     def test_a_ref_names_its_commit_or_none(self):
         # one "ref → commit" for the lab-pin check, a lock's ref and a pin's
-        # tag (audit 2026-10-27, third, S8)
+        # tag
         d = make_repo()
         head = repo.head_sha(d)
         subprocess.run(["git", "tag", "v1.0.0"], cwd=d, check=True)
@@ -448,7 +447,7 @@ class HeadBefore(unittest.TestCase):
 
 
 class GitHomes(unittest.TestCase):
-    """The git questions asked in one place (audit 2026-10-27, D): HEAD, a
+    """The git questions asked in one place: HEAD, a
     dirty tree, a path in the git directory, the files a state holds."""
 
     def _commit(self, d: Path) -> None:
@@ -513,7 +512,7 @@ class GitHomes(unittest.TestCase):
     def test_text_at_reads_a_paths_own_entry_and_indexed_links_names_links(self):
         """A link in the tree is not followed to another entry, and a link
         git holds reads as the target it writes; `indexed_links` lists the
-        links with their targets (A10: a report linked into data/)."""
+        links with their targets (a report linked into data/)."""
         d = make_repo()
         (d / "data").mkdir()
         (d / "data" / "R.md").write_text("behind the link\n")
@@ -556,7 +555,7 @@ class GitHomes(unittest.TestCase):
 class AuditCommand(unittest.TestCase):
     """`commands.audit_command`: the one builder of a printed audit step — paths
     as the working directory reaches them, quoted, `--protocol` where the
-    area holds several (audit 2026-10-27, D)."""
+    area holds several."""
 
     def test_quoted_from_here_and_the_protocol_where_several(self):
         root = Path(tempfile.mkdtemp()) / "my lab"
@@ -652,7 +651,7 @@ class Shown(unittest.TestCase):
 
 class AdoptCommand(unittest.TestCase):
     """The adopt line names the protocol as the working directory reaches
-    it: a bare file name failed from the repo root (count probe, 2026-10-20)."""
+    it: a bare file name would fail from the repo root."""
 
     def test_the_protocol_is_named_from_the_working_directory(self):
         import os
@@ -697,9 +696,9 @@ if __name__ == "__main__":
 
 
 class EveryBuilderIsACommand(unittest.TestCase):
-    """The one-explainer plan, Phase 2: every builder returns a
-    `commands.Command` whose `str()` is its line — so a finding's text embeds
-    it as before — and whose name and kind are the table's."""
+    """Every builder returns a `commands.Command` whose `str()` is its
+    line — so a finding's text embeds it — and whose name and kind are the
+    table's."""
 
     def test_names_kinds_and_lines(self):
         with tempfile.TemporaryDirectory() as d:

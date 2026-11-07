@@ -1,4 +1,4 @@
-"""The cache of raw model answers (`llm_cache`, stagekit plan step 2), one
+"""The cache of raw model answers (`llm_cache`), one
 test per rule: repeat never reads the cache, replay never calls the model,
 an ollama model without a weights digest is not cached and the call says
 why, a re-pointed alias misses, a hit is marked in the run record with its

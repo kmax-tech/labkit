@@ -1,11 +1,10 @@
 """A protocol is a regular file, in the tree and in the index.
 
-The stop read a symbolic link's target in the tree and the commit read
-the link's stored name in the index, so the two judged different text
-(`report_hold.repo_sources` followed it, `repo.state_text` does not).
+A symbolic link reads as its target in the tree and as its stored name in
+the index, so the stop and the commit would judge different text.
 labkit refuses a protocol link with a sentence naming it, valid or
 broken, in each state by that state alone; a regular protocol reads in
-both. Audit 2026-10-27 (second), left open, settled the same day.
+both.
 
     .venv/bin/python -m pytest tests/test_protocol_links.py
 """
@@ -103,8 +102,8 @@ class ProtocolLinks(unittest.TestCase):
             self.assertIn(REFUSED, out.getvalue())
 
     def test_an_unreadable_protocol_is_a_refusal_not_a_traceback(self):
-        # the tree read caught OSError before it moved to repo.state_text
-        # (audit 2026-10-27, third, K2)
+        # the tree read goes through repo.state_text: its OSError is a
+        # refusal naming the protocol
         self.regular()
         self.protocol.chmod(0)
         try:

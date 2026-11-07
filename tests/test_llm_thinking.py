@@ -1,8 +1,7 @@
 """`last_thinking()` hands out the reasoning trace the answer alone hides.
 
-Why: uniagent kept only the classifier's answers, so a false framework `yes`
-on a BNC cable set could not be explained afterwards (2026-10-07). The
-trace was in the server's reply all along and labkit dropped it.
+Why: with only a classifier's answers kept, a false `yes` cannot be
+explained afterwards; the trace is in the server's reply.
 """
 
 import json
