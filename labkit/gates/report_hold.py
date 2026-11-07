@@ -1029,7 +1029,9 @@ def hold_report(
     staged: bool = False,
     tell: Callable[[str], None] = print,
 ) -> int:
-    """Hold one report, every line through TELL. First: a report that is a symbolic link in the
+    """Hold one report, every line through TELL.
+
+    First: a report that is a symbolic link in the
     state, ending where no report is held (`refused_link`), is refused alone, one blocker naming the copy that
     replaces it (`link_gap`) — the checks below wait for that copy. Then:
     its result blocks equal their protocols' rendering,

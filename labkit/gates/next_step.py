@@ -188,6 +188,9 @@ def next_step(
     if account is not None:
         return account
     pending = ctx.declared is None and ctx.run is not None
+    # a chain the caller ran is read — unless no run is adopted yet: the
+    # caller's chain then held the adoption's own stations, this step
+    # asks without them, so it runs the chain itself
     if chain is None or pending:
         chain = report_check.chain_gaps(ctx, adoption_pending=pending)
     # the area slot a check leaves (`gate.AREA_SLOT`) filled as a gate fills it
@@ -273,7 +276,7 @@ def steps_for(
     own. A head that does not read, or a protocol the index does not hold,
     is told in one line in the step's place; a run index that does not
     read once per index. CHAINS, per protocol, what the caller's
-    report-check found in the same state (`report_check.Reported`): read,
+    report-check found in the same state (`report_check.HoldVerdict`): read,
     not run again."""
     from labkit.gates.report_check import reached_by
     from labkit.run.runlog import RunIndexError

@@ -963,7 +963,7 @@ class IfReported(unittest.TestCase):
         )
 
     def test_the_cli_takes_staged(self):
-        clean = report_check.Reported(0, {})
+        clean = report_check.HoldVerdict(0, {})
         with mock.patch.object(
             report_check, "hold_reported", return_value=clean
         ) as gate:

@@ -500,7 +500,7 @@ Tell = Callable[[str], None]
 
 
 @dataclass(frozen=True)
-class Released:
+class ProtocolVerdict:
     """report-check's verdict on one protocol: EXIT (0 clean or warnings
     only, 1 a blocker, 2 no context) and CHAIN, what the chain found
     (`ReleaseChain`) — None where it did not run: an early end, a staged
@@ -519,12 +519,12 @@ def report_check(
     text: str | None = None,
     review: bool = True,
 ) -> int:
-    """`release_check`'s exit code — the command's and the adoption's form:
+    """`protocol_verdict`'s exit code — the command's and the adoption's form:
     0 clean or warnings, 1 blocked, 2 no context."""
-    return release_check(area, protocol, state=state, text=text, review=review).exit
+    return protocol_verdict(area, protocol, state=state, text=text, review=review).exit
 
 
-def release_check(
+def protocol_verdict(
     area: Path,
     protocol: Path | None = None,
     *,
@@ -532,8 +532,8 @@ def release_check(
     text: str | None = None,
     review: bool = True,
     tell: Tell = print,
-) -> Released:
-    """Check AREA before reporting (`Released`: the exit code and what the
+) -> ProtocolVerdict:
+    """Check AREA before reporting (`ProtocolVerdict`: the exit code and what the
     chain found), every line through TELL.
 
     0. Choose the protocol and read Checked; missing or unreadable ends with 2
@@ -554,12 +554,12 @@ def release_check(
     # 0. protocol and context — the only early end
     chosen = choose_protocol(area, protocol, "report-check")
     if chosen is None:
-        return Released(2, None)
+        return ProtocolVerdict(2, None)
     try:
         ctx = checked(area, chosen, state=state, text=text)
     except (protocol_block.BlockError, AuditError) as exc:
         console.refuse("report-check", f"{chosen.name}: {exc}")
-        return Released(2, None)
+        return ProtocolVerdict(2, None)
     tell(
         f"  {chosen.name}: read from the {ctx.state}; the head has adopted "
         f"{ctx.declared or 'no run'}; the answering run is "
@@ -589,7 +589,7 @@ def release_check(
     if not findings.blocked:
         held = ("frozen, " if ln.freeze else "") + "finalized, audited, checked"
         tell(f"  {chosen.name}: {held}")
-    return Released(findings.report("report-check", "reporting"), chain)
+    return ProtocolVerdict(findings.report("report-check", "reporting"), chain)
 
 
 def without_unreportable_warnings(
@@ -743,7 +743,9 @@ def chain_gaps(
        first measurement (`report_hold.report_binding_gap`).
     3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
-    5. Analysis: coverage and rendered results where the lane owes it.
+    5. Analysis: coverage and rendered results where the lane owes it,
+       with an answering run — without one (where finalize reads CTX's
+       text) finalize's run choice is the one blocker.
     6. Recomputation: the analysis script's `--check`, always.
     7. Decisions: reviews and follow-ups where the lane owes the analysis.
     8. Report: the registered report, once delivered in CTX's state, and
@@ -757,8 +759,10 @@ def chain_gaps(
     (`withdrawn_first`). One cause is one blocker: where finalize reads the
     text CTX holds (every state but the adoption's proposal, `same_text`),
     a cause finalize already holds is not held a second time — no answering
-    run (station 5), a field written twice (station 2), the marks that make
-    a run unreportable (finalize's warning, station 4's blocker).
+    run (left out of station 5), a field written twice (left out of station
+    2), the marks that make a run unreportable (finalize's warning left out
+    beside station 4's blocker). Finalize's own stations are named by what
+    they check, never by number, here.
     ADOPTION_PENDING (no run adopted yet, the one a next step asks about):
     the stations the adoption writes and holds on its proposal — the result
     section (`report_decisions.limit_gaps`), the recomputation, the report —
@@ -767,7 +771,9 @@ def chain_gaps(
     nothing."""
     ln = lane(ctx.head.repeat_cost)
     # finalize reads the protocol as the tree holds it — the text CTX holds
-    # in every state but the proposal an adoption checks
+    # in every state but the proposal an adoption checks: for INDEX the
+    # tree equals the index, since `hold_declared` and `next_step` hold an
+    # area whose tree differs from it before the chain (`staged_area_gap`)
     same_text = ctx.state != PROPOSED
     # 0. evidence — an adoption cut off, then committed evidence changed
     out = cut_off_adoption_gaps(ctx)
@@ -777,7 +783,8 @@ def chain_gaps(
     # 2. registration — the freeze where the lane owes it, else the
     # committed registration where the lane owes that
     if ln.freeze:
-        # a field written twice: finalize's station 4 holds it on the text it reads
+        # a field written twice: finalize's open-fields station holds it on
+        # the text it reads
         out += freeze_gaps(ctx, repeated=not same_text)
     elif ln.registration:
         out += registration_gaps(ctx)
@@ -785,8 +792,9 @@ def chain_gaps(
     # the commits the registration station names unreadable are its to name
     # where it ran (`report_binding_gap`'s UNREAD)
     out += report_binding_gaps(ctx, unread=not ln.registration)
-    # 3. finalize — always; the marks station 4 holds as blockers are not
-    # told again as finalize's warnings where it read this text
+    # 3. finalize — always; the unreportable marks this chain's full-run
+    # station holds as blockers are not told again as finalize's warnings
+    # where it read this text
     finalized = finalize_findings(ctx.area, ctx.protocol)
     if same_text:
         finalized = without_unreportable_warnings(finalized, ctx.run)
@@ -798,21 +806,22 @@ def chain_gaps(
     # 4. full run — only with an answering run
     if ctx.run is not None:
         out += withdrawn_first(unreportable_gaps(ctx, ln.freeze), withdrawal)
-    # 5. analysis — where the lane owes it; without an answering run,
-    # finalize's first station holds the run choice where it reads this text
+    # 5. analysis — where the lane owes it and an answering run exists;
+    # without one, finalize's run-choice station holds it where it reads
+    # this text
     if ANALYSIS_AUDIT in ln.audits and (ctx.run is not None or not same_text):
         analysis = analysis_findings(
             ctx, ln.analysis_rule, result_section=not adoption_pending
         )
         out += withdrawn_first(analysis, withdrawal)
-    # 6. recomputation — always, but before an adoption
+    # 6. recomputation — always, unless `adoption_pending`
     if not adoption_pending:
         out += withdrawn_first(recomputation_findings(ctx.area, ctx.repo), withdrawal)
     # 7. decisions — where the lane owes the analysis
     if ANALYSIS_AUDIT in ln.audits:
         out += withdrawn_first(review_findings(ctx), withdrawal)
         out += withdrawn_first(followup_findings(ctx), withdrawal)
-    # 8. report — but before an adoption; its review not on the proposal:
+    # 8. report — unless `adoption_pending`; its review not on the proposal:
     # its text is in every review's fingerprint, so the adoption would hold
     # itself (`report_findings` says why)
     if not adoption_pending:
@@ -1053,7 +1062,7 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
 
 
 @dataclass(frozen=True)
-class Reported:
+class HoldVerdict:
     """What `hold_reported` found: EXIT, the worst exit code of every hold;
     CHAINS, per protocol whose chain ran (a declared result), what it found
     — the chain a step printed beside the hold reads instead of running it
@@ -1070,7 +1079,7 @@ def if_reported(paths: list[Path], repo: Path, *, staged: bool) -> int:
 
 def hold_reported(
     paths: list[Path], repo: Path, *, staged: bool, tell: Tell = print
-) -> Reported:
+) -> HoldVerdict:
     """`report-check` for every protocol of an area one of PATHS touches
     whose head declares a result, and for every report among PATHS
     (`report_files`): the gate at the stop and the commit. A result declared
@@ -1095,7 +1104,7 @@ def hold_reported(
     of it reaches the protocol that owes it its result
     (`report_hold.report_owed`, through `hold_declared`). Every line goes
     through TELL. Returns the worst exit code and the chains that ran
-    (`Reported`)."""
+    (`HoldVerdict`)."""
     touched = reached_by(paths, repo, staged=staged)
     protocols, reports = touched.protocols, touched.reports
     reached = reached_reports(protocols, reports, repo, staged=staged)
@@ -1127,44 +1136,44 @@ def hold_reported(
                 path, text, repo, sources, held_as=held_as, staged=staged, tell=tell
             ),
         )
-    return Reported(worst, chains)
+    return HoldVerdict(worst, chains)
 
 
 def hold_declared(
     protocol: Path, repo: Path, *, staged: bool, tell: Tell = print
-) -> Released:
+) -> ProtocolVerdict:
     """`report-check` on PROTOCOL when its head declares a result, as the
     state holds it (the index when STAGED); for an exploration only its
     registered report's obligation (`hold_registered`); exit 0 for a
     protocol the commit does not hold, 2 for one that cannot be read or is
     a symbolic link in that state (`repo.protocol_links`). Every line goes
     through TELL, a refusal to stderr. The chain is the declared branch's
-    (`release_check`), None on every other."""
+    (`protocol_verdict`), None on every other."""
     link = protocol_links(repo, [protocol], staged=staged)
     if link:
         console.refuse("report-check", link[protocol])
-        return Released(2, None)
+        return ProtocolVerdict(2, None)
     try:
         text = state_text(repo, protocol, staged=staged)
     except (OSError, UnicodeError) as exc:  # a refusal, never a traceback
         console.refuse("report-check", f"{protocol}: {exc}")
-        return Released(2, None)
+        return ProtocolVerdict(2, None)
     if text is None:
         if staged:
-            return Released(0, None)  # not in the commit: nothing declared there
+            return ProtocolVerdict(0, None)  # not in the commit: nothing declared there
         console.refuse("report-check", f"{protocol}: no such file")
-        return Released(2, None)
+        return ProtocolVerdict(2, None)
     declared, gap = declaration(text)
     if declared is None and gap is None:
         # an exploration: nothing declared; its registered report, once
         # delivered, is owed the handover or the result all the same
         try:
-            return Released(
+            return ProtocolVerdict(
                 hold_registered(protocol, text, repo, staged=staged, tell=tell), None
             )
         except protocol_block.BlockError as exc:  # a refusal, never a traceback
             console.refuse("report-check", f"{protocol}: {exc}")
-            return Released(2, None)
+            return ProtocolVerdict(2, None)
     tell(
         f"═══ report-check {protocol} (its head has adopted "
         f"{declared or 'a result that does not read'}) ═══"
@@ -1175,8 +1184,8 @@ def hold_declared(
         gap = staged_area_gap(repo, area, "the stations read")
         if gap is not None:
             tell(f"  {gap.line}")
-            return Released(1, None)
-    return release_check(
+            return ProtocolVerdict(1, None)
+    return protocol_verdict(
         area, protocol, state=INDEX if staged else TREE, text=text, tell=tell
     )
 
