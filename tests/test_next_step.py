@@ -127,6 +127,33 @@ class OneChainPerHold(unittest.TestCase):
         self.assertIn("--withdraw", step.next)
 
 
+class SilentCollectors(unittest.TestCase):
+    """A gate run inside another tells every line through the collector it
+    is handed: a silent one writes nothing to stdout or stderr — the pre-run
+    hook's answer is its own output, and it kept preflight's stdout off it
+    by redirecting until 2026-11-07. The twin: the console collector of the
+    same call prints."""
+
+    def test_preflight_tells_nothing_past_a_silent_collector(self):
+        from labkit.formats.gate import Findings
+        from labkit.gates import preflight
+
+        lab = Lab()
+        self.addCleanup(lab.close)
+        area, protocol = stamp_count(lab)
+        for tell, prints in ((None, False), (print, True)):
+            out, err = io.StringIO(), io.StringIO()
+            with (
+                contextlib.chdir(lab.root),
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(err),
+            ):
+                preflight.preflight_area(area, protocol, Findings(tell))
+            with self.subTest(silent=tell is None):
+                self.assertEqual(bool(out.getvalue()), prints, out.getvalue())
+                self.assertEqual(err.getvalue(), "")
+
+
 class TheChain(unittest.TestCase):
     """At each station the step is the one the chain owes next."""
 

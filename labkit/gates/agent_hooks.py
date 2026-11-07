@@ -137,7 +137,6 @@ from __future__ import annotations
 
 import contextlib
 from fnmatch import fnmatch
-import io
 import json
 import os
 import subprocess
@@ -146,7 +145,7 @@ import signal
 import sys
 import tempfile
 from datetime import datetime
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from typing import NamedTuple
 from types import FrameType
@@ -254,16 +253,6 @@ def _context(event_name: str, text: str) -> None:
     )
 
 
-def _capture(fn: Callable[..., int], *args: object) -> tuple[int, str]:
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        rc = fn(*args)
-    return rc, buf.getvalue().rstrip()
-
-
-# ---------------------------------------------------------------- pre-run
-
-
 class UnresolvedScriptError(ValueError):
     """A relative Python script cannot be located for the pre-run check."""
 
@@ -309,11 +298,10 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     # registration (low) or preflight (`standard_contract.lane`)
     if all(standard_contract.lane(h.repeat_cost).registration for h in heads):
         return False, _low_registration_line(head, texts)
-    # the stations' findings as data (`preflight_area`'s collector), not
-    # the printed report read back; stdout is kept off the hook's own
+    # the stations' findings as data (`preflight_area`'s collector, the
+    # channel every line goes through), not the printed report read back
     found = Findings(tell=None)
-    with contextlib.redirect_stdout(io.StringIO()):
-        rc = preflight.preflight_area(area, protocol, found)
+    rc = preflight.preflight_area(area, protocol, found)
     said = "\n".join(found.summary("preflight", "freezing"))
     if rc == 1 and any(h.frozen for h in heads):
         return True, (
@@ -757,13 +745,21 @@ def _untold(
         if cache.get(str(path)) == digest:
             continue
         cache[str(path)] = digest
-        fn = protocol_report.main if kind == "protocol" else notes_check.main
         # from the repo root with the repo-relative path (the hook's cwd is
-        # wherever the agent stood): every line the checker writes names
+        # wherever the agent stood): every line the checker tells names
         # the file as pfad:zeile itself — the hook rewrote the absolute
         # path in the printed text before (audit 2026-10-27, third, M4)
+        told: list[str] = []
+        named = [Path(shown(path, repo))]
         with contextlib.chdir(repo):
-            _, out = _capture(fn, [shown(path, repo)])
+            if kind == "protocol":
+                template = protocol_report.template_lines(
+                    protocol_report.find_template(None)
+                )
+                protocol_report.check_files(named, template, tell=told.append)
+            else:
+                notes_check.check_notes(named, tell=told.append)
+        out = "\n".join(told).rstrip()
         if out:
             reports.append(out)
     return reports

@@ -21,6 +21,7 @@ Protocols with a prose head (Standard 0.16/0.17) are read by labkit 0.47.
 
 import re
 import shlex
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -731,80 +732,80 @@ def check_protocol(
     )
 
 
-def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in report order (2026-10-13)
+def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  # noqa: C901 one print per finding, in report order (2026-10-13)
     """The report as `protocol-check` prints it: one line per finding, the
     must findings repeated last."""
     f = r.path
     if r.head_error is not None:
-        print(f"{f}: HEAD (must): {r.head_error}")
+        tell(f"{f}: HEAD (must): {r.head_error}")
         return
     if r.audit_drift:
-        print(
+        tell(
             f"{f}: WARNING: preflight_audit: "
             + with_way_out(r.audit_drift.why, r.audit_drift.fix)
         )
     for finding in r.id_findings:
-        print(finding.line)
+        tell(finding.line)
     if r.repeat_cost_lowered:
-        print(r.repeat_cost_lowered)
+        tell(r.repeat_cost_lowered)
     if r.answer_unbound:
-        print(f"{f}: {r.answer_unbound}")
+        tell(f"{f}: {r.answer_unbound}")
     if r.runs_stamped:
-        print(
+        tell(
             f"{f}: Runs: the stamped entry is written by "
             f"`{adopt_command(f)}` after the run"
         )
     if r.clean:
         if r.pilot_note:
-            print(f"{f}: OK — must fields filled; {r.pilot_note}")
+            tell(f"{f}: OK — must fields filled; {r.pilot_note}")
         else:
-            print(f"{f}: OK — all must and should fields filled")
+            tell(f"{f}: OK — all must and should fields filled")
         return
     if r.pilot_note:
-        print(f"{f}: {r.pilot_note}")
+        tell(f"{f}: {r.pilot_note}")
     for label in r.missing_must:
-        print(f"{f}: MISSING (must): {label}")
+        tell(f"{f}: MISSING (must): {label}")
     for twice in r.repeated:
-        print(f"{f}: REPEATED (must): {twice}")
+        tell(f"{f}: REPEATED (must): {twice}")
     # no `missing (should)` lines: unfrozen they are named in the pilot
     # note above, frozen or at low repeat cost `owed()` makes them MUST (2026-10-09)
     for n, label in r.must_holes:
-        print(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
+        tell(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
     for n, label in r.soft_holes:
-        print(f"{f}:{n}: placeholder only: {label}")
+        tell(f"{f}:{n}: placeholder only: {label}")
     if r.left:
-        print(f"{f}: {len(r.left)} line(s) still verbatim template text, e.g.:")
+        tell(f"{f}: {len(r.left)} line(s) still verbatim template text, e.g.:")
         for s in r.left[:3]:
-            print(f"    {s[:88]}")
+            tell(f"    {s[:88]}")
     if r.no_block:
-        print(
+        tell(
             f"{f}: MISSING (must): mentions a prompt but contains no code "
             f"block — a verbatim prompt belongs in ``` ```, anything else "
             f"is a paraphrase."
         )
     if r.frozen_without_io:
-        print(
+        tell(
             f"{f}: MISSING (must): `frozen = true`, but not a "
             f"single rendered example (code block). Instrument check "
             f"first, then freeze — otherwise the error freezes in."
         )
     sev = "OVERSIZED (must)" if r.frozen else "oversized"
     if r.too_long:
-        print(
+        tell(
             f"{f}: {sev}: {r.n_lines} prose lines (tables/code excluded) "
             f"— a protocol is a registration, not a lab journal. "
             f"Narratives (freeze history, diagnoses) belong in commit "
             f"messages or a note; ONE sentence per freeze stays here."
         )
     for lb, n, lim in r.big:
-        print(
+        tell(
             f"{f}: {sev}: section '{lb}': {n} prose lines (budget "
             f"{lim}) — one field is one line; if a justification needs "
             f"more, it goes into a note and the [[wikilink]] stays "
             f"here."
         )
     if r.run_unreported:
-        print(
+        tell(
             f"{f}: MISSING (must): the head has adopted run {r.declared} but "
             f"{', '.join(field_label(n) for n in r.run_unreported)} empty — write "
             f"the result in the SAME session: `protocol-fill --render` for the "
@@ -812,41 +813,41 @@ def print_report(r: FileReport) -> None:  # noqa: C901 one print per finding, in
             f"Limitations) and Raw output are yours."
         )
     for n, ln in r.series:
-        print(
+        tell(
             f"{f}:{n}: follow-up registration in the same protocol "
             f"({ln[:60]!r}) — one question per protocol: a declared "
             f"follow-up gets its own PROTOCOL-s<N>-<slug>.md "
             f"(series rule, LAB-061 Sub-experiment series carry their number in the name)."
         )
     for n, label in r.bare_refs:
-        print(
+        tell(
             f"{f}:{n}: reference without a link: {label} — give the link "
             f"([area NN](../NN-<name>/PROTOCOL-<name>.md)) and the sentence "
             f"that matters here"
         )
     for n, label in r.before_run:
-        print(
+        tell(
             f"{f}:{n}: WARNING: {label} written before any run — no completed "
             f"run is bound to this protocol and the head has adopted no run (`[result] run`); "
             f"a report field describes a run that happened (write it with "
             f"`{adopt_command(f)}` after the run)"
         )
     for line in r.unmentioned_constants:
-        print(f"{f}: WARNING: {line}")
+        tell(f"{f}: WARNING: {line}")
     for n, ln in r.history:
-        print(
+        tell(
             f"{f}:{n}: change history in the text ({ln[:60]!r}) — docs "
             f"carry the current state, the why of the change goes in the "
             f"commit message (LAB-075 Docs carry the state, commits the change)."
         )
     if r.musts:
-        print(
+        tell(
             f"{f}: must fields missing or empty — fill them in, or "
             f"justify as 'n/a — <why>' (the reason must be there, not "
             f"just the angle brackets): {'; '.join(r.musts)}"
         )
     if r.repeated:
-        print(
+        tell(
             f"{f}: fields written more than once — {REPEATED_WAY_OUT}: "
             f"{'; '.join(r.repeated)}"
         )
@@ -875,8 +876,15 @@ def index_text(f: Path) -> str:
     return text
 
 
-def check_files(files: list[Path], tmpl: set[str], *, staged: bool = False) -> bool:
-    """Check and print every protocol in FILES; True when any blocks, a
+def check_files(
+    files: list[Path],
+    tmpl: set[str],
+    *,
+    staged: bool = False,
+    tell: Callable[[str], None] = print,
+) -> bool:
+    """Check every protocol in FILES and tell its report through TELL
+    (`print_report`); True when any blocks, a
     symbolic link among them too (`repo.protocol_link`). STAGED reads each
     text as git's index holds it (`index_text`) — the pre-commit's state —
     instead of the working tree. The repo's protocol ids are read once per
@@ -885,24 +893,24 @@ def check_files(files: list[Path], tmpl: set[str], *, staged: bool = False) -> b
     failed = False
     for f in files:
         if not staged and f.is_symlink():
-            print(protocol_link(f, "tree"))
+            tell(protocol_link(f, "tree"))
             failed = True
             continue
         try:
             text = index_text(f) if staged else f.read_text(encoding="utf-8")
         except OSError as exc:
-            print(f"{f}: not readable ({exc})")
+            tell(f"{f}: not readable ({exc})")
             failed = True
             continue
         except ValueError as exc:  # `index_text`, or bytes that are not UTF-8
-            print(str(exc))
+            tell(str(exc))
             failed = True
             continue
         root = git_root(f)
         if root not in ids_by_root:
             ids_by_root[root] = repo_protocol_ids(f)
         report = check_protocol(f, text, tmpl, ids_by_root[root])
-        print_report(report)
+        print_report(report, tell)
         failed = failed or report.blocks
     return failed
 

@@ -39,6 +39,7 @@ doctrine: extend, never move; regression = both lab repos exit 0 after the
 """
 
 import re
+from collections.abc import Callable
 
 from labkit.formats.repo import gate_command
 from labkit.formats.gate import GUARANTEED, GateFinding, blocker
@@ -204,7 +205,13 @@ def main(argv: list[str]) -> int:
     if not files:
         console.refuse("notes-check", "no notes/messung/*.md found")
         return 2
-    findings = Findings()
+    return check_notes(files)
+
+
+def check_notes(files: list[Path], tell: Callable[[str], None] = print) -> int:
+    """Check every note in FILES (`check_file`) and tell each finding, each
+    clean note's `OK` and the summary through TELL; 1 with a blocker, else 0."""
+    findings = Findings(tell)
     for f in files:
         try:
             must, warn = check_file(f)
@@ -219,7 +226,7 @@ def main(argv: list[str]) -> int:
         for line in warn:
             findings.warn(line, evidence_kind=GUARANTEED)
         if not must and not warn:
-            print(f"{f}: OK")
+            tell(f"{f}: OK")
     return findings.report("notes-check", "the note counts")
 
 
