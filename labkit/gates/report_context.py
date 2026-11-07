@@ -12,6 +12,7 @@ from pathlib import Path
 from labkit.formats import (
     protocol_block,
 )
+from labkit.formats.area_state import INDEX, PROPOSED, TREE, AreaState, state_of
 from labkit.checks.audit_binding import (
     audited_run,
 )
@@ -19,15 +20,13 @@ from labkit.formats.repo import (
     layout_root,
 )
 
-#: which file state the declaration (the answer line) is read from — named
-#: in the output, so a reader knows what was held. The stations read the
-#: working tree in every case; the caller makes the tree that state: the
-#: pre-commit holds the area's tree equal to the index (`tree_differs`), the
-#: adoption writes the proposal into the tree and puts it back on refusal
-#: (`protocol_fill.adopt`)
-TREE = "working tree"
-INDEX = "index"
-PROPOSED = "proposed protocol"
+#: which file state the declaration (the answer line) is read from
+#: (`area_state.TREE`, `INDEX`, `PROPOSED`), named in the output so a reader
+#: knows what was held. The stations read the working tree in every case;
+#: the caller makes the tree that state: the pre-commit holds the area's
+#: tree equal to the index (`tree_differs`), the adoption writes the
+#: proposal into the tree and puts it back on refusal (`protocol_fill.adopt`)
+__all__ = ["INDEX", "PROPOSED", "TREE", "Checked", "checked", "pending_adoption"]
 
 
 def pending_adoption(protocol: Path) -> Path:
@@ -64,6 +63,10 @@ class Checked:
             `answering_run.bound_answering_run`: the one choice every gate holds the
             protocol to), or None.
         why: Why there is no answering run, when RUN is None.
+        area_state: The area as the working tree holds it
+            (`area_state.state_of`): its runs, the runs git holds back, what
+            each protocol measured — the tree in every state, as the
+            stations read it (the caller makes the tree that state).
     """
 
     area: Path
@@ -76,6 +79,7 @@ class Checked:
     declaration_gap: str | None
     run: Path | None
     why: str
+    area_state: AreaState
 
 
 def checked(
@@ -83,7 +87,8 @@ def checked(
 ) -> Checked:
     """The context of one check: TEXT is the protocol as STATE holds it
     (the working tree when None). Raises `protocol_block.BlockError` on an
-    unreadable head, `AuditError` out of the run choice."""
+    unreadable head, `AuditError` out of the run choice,
+    `run_index.RunIndexError` on a run index that does not read."""
     if text is None:
         text = protocol.read_text(encoding="utf-8")
     head = protocol_block.head(text)
@@ -100,6 +105,7 @@ def checked(
         declaration_gap=declaration_gap,
         run=run,
         why=why,
+        area_state=state_of(area),
     )
 
 

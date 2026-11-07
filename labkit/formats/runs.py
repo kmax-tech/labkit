@@ -303,17 +303,32 @@ def read_run_config(run_dir: Path) -> RunConfig | None:
     if not cfg_file.is_file():
         return None
     try:
-        cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
+        text = cfg_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
         raise RunConfigError(
             f"{cfg_file}: unreadable run metadata ({exc}) — the run cannot "
+            f"say what it is; repair or move it aside"
+        ) from exc
+    return parse_run_record(text, cfg_file)
+
+
+def parse_run_record(text: str, where: Path) -> RunConfig:
+    """The RunConfig of TEXT, a config.json's content read from WHERE — the
+    file, or the same path as git holds it in the index or at a commit
+    (`run_dir_from_text`): its JSON through `parse_run_config`. The one
+    wording of an unreadable record. Raises RunConfigError naming WHERE."""
+    try:
+        cfg = json.loads(text)
+    except (json.JSONDecodeError, RecursionError) as exc:
+        raise RunConfigError(
+            f"{where}: unreadable run metadata ({exc}) — the run cannot "
             f"say what it is; repair or move it aside"
         ) from exc
     try:
         return parse_run_config(cfg)
     except RunConfigError as exc:
         raise RunConfigError(
-            f"{cfg_file}: unreadable run metadata ({exc}) — repair or move it aside"
+            f"{where}: unreadable run metadata ({exc}) — repair or move it aside"
         ) from exc
 
 
@@ -983,11 +998,16 @@ def parse_run_config(obj: object) -> RunConfig:
 class RunDir:
     """One directory under `runs/` and what its config.json says: `config`
     None and `error` None is no run (no config.json); `error` set is a run
-    whose metadata cannot be read (the RunConfigError's sentence)."""
+    whose metadata cannot be read (the RunConfigError's sentence).
+    `from_commit` names the commit the record was read back from
+    (`run_dir_from_text`) for a run the file state lacks and a commit
+    holds — the commit a checkout restores it from; None for a directory
+    the state holds (`area_state.committed_runs`)."""
 
     dir: Path
     config: RunConfig | None
     error: str | None
+    from_commit: str | None = None
 
     def __post_init__(self) -> None:
         if self.config is not None and self.error is not None:
@@ -1003,6 +1023,17 @@ def read_run_dir(d: Path) -> RunDir:
         return RunDir(d, read_run_config(d), None)
     except RunConfigError as exc:
         return RunDir(d, None, str(exc))
+
+
+def run_dir_from_text(d: Path, text: str, *, from_commit: str | None = None) -> RunDir:
+    """The `RunDir` of run directory D whose config.json git holds as TEXT:
+    in its index (FROM_COMMIT None), or at FROM_COMMIT for a run the file
+    state lacks — the run is then read as that commit recorded it. An
+    unreadable record is carried in `error`, never raised (`read_run_dir`)."""
+    try:
+        return RunDir(d, parse_run_record(text, d / CONFIG_FILE), None, from_commit)
+    except RunConfigError as exc:
+        return RunDir(d, None, str(exc), from_commit)
 
 
 def run_dirs(area: Path) -> list[RunDir]:

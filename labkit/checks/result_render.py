@@ -36,8 +36,8 @@ from labkit.checks.audit_binding import AuditError, covering_analysis
 from labkit.checks.recheck import LABKIT_KEYS
 from labkit.formats import findings, promises, protocol_block, reference, runs
 from labkit.formats.answering_run import first_registrations
+from labkit.formats.area_state import state_of
 from labkit.formats.gate import GateFinding, blocker
-from labkit.formats.repo import git_root
 from labkit.formats.commands import render_command
 from labkit.formats.protocol_check import (
     display_label,
@@ -306,7 +306,9 @@ def _unregistered(protocol: Path, pid: str, run_dir: Path) -> str | None:
     run recorded a block other than the one they recorded. None when it
     holds theirs, or when no block was recorded (another station names
     that). Raises RuntimeError when git fails."""
-    registered = first_registrations(protocol.parent, pid, git_root(protocol))
+    registered = first_registrations(
+        state_of(protocol.parent).measured_of(pid).first_groups
+    )
     if len(registered) > 1:
         return "its first measurements recorded different registrations"
     cfg = runs.read_run_config(run_dir)

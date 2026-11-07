@@ -108,9 +108,9 @@ from labkit.formats.answering_run import (
     adopted_run,
     bound_answering_run,
     bound_runs,
-    first_measurements,
     is_measurement,
 )
+from labkit.formats.area_state import state_of
 from labkit.formats.protocol_history import (
     NO_COMMIT,
     UNKNOWN_COMMIT,
@@ -164,6 +164,7 @@ from labkit.formats.repo import (
     state_text,
 )
 from labkit.formats.commands import (
+    checkout_command,
     ADOPT,
     ADOPT_TOOL,
     RENDER,
@@ -174,8 +175,7 @@ from labkit.formats.commands import (
     measure_command,
     withdraw_command,
 )
-from labkit.formats.runs import read_run_config, run_path, unreportable
-from labkit.formats.run_index import indexed_runs
+from labkit.formats.runs import RUNS_DIR, read_run_config, unreportable
 from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
@@ -286,7 +286,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
     """The committed registration where the lane owes it instead of the freeze
     (seconds): the registration stood in the protocol as committed at the
     first measurement — the commit its record names (`runs.recorded_commit`)
-    — at each run `answering_run.first_measurements` names: git's history
+    — at each run `area_state.Measured.firsts` names: git's history
     orders the measurements, a run id (local time) only those at one
     commit; on diverged history, or for a run whose commit cannot be
     placed, more than one is first and each is held. Blockers per run: it
@@ -304,7 +304,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
     if ctx.head.id is None:
         return []
     root = git_root(ctx.protocol)
-    first = first_measurements(ctx.area, ctx.head.id, root)
+    first = ctx.area_state.measured_of(ctx.head.id).firsts
     if not first:
         return []
     if root is None:
@@ -325,7 +325,7 @@ def _registration_at(
     """`registration_gaps` for RD, one of HELD first measurements, in the
     repository ROOT."""
     cfg = rd.config
-    assert cfg is not None, "first_measurements names read runs only"
+    assert cfg is not None, "the first measurements are read runs only"
     at = f"the first measurement {rd.dir.name}"
     # several are first on diverged history or beside a run git cannot
     # place: without the why, a reader takes the second blocker for a bug
@@ -835,12 +835,15 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     the account a handover records (`handovers.RunAccount`):
 
     - NOT_MEASURED: no measurement bound to it (completed or not) and none
-      unreadable — a preparation or probe run measures nothing;
+      unreadable (`area_state.Measured`) — a preparation or probe run
+      measures nothing;
     - UNUSABLE: a measurement of it, and no number from it — the run choice
       holds (no completed run, an unreadable or same-second rival:
       `answering_run.bound_answering_run`), it chose a run that is no
-      measurement, or the metrics.json does not read; the run is the newest
-      measurement, WHY the sentences that put it there;
+      measurement, the metrics.json does not read, or every measurement's
+      directory is gone (a commit holds it, or only the local index names
+      it); the run is the newest measurement, WHY the sentences that put
+      it there;
     - HELD: the answering run, and the blockers report-check holds its
       adoption with (`chain_gaps`, the adoption pending; an audit that
       cannot be held to the run among them);
@@ -852,31 +855,37 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     pid = protocol_block.head(text).id
     if not pid:
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
-    taken, rest = bound_runs(area, pid)
-    ours = [f for f in rest if f.binding.id == pid or f.state == runs.UNREADABLE]
-    measured = [f for f in [*taken, *ours] if is_measurement(f)]
+    held = state_of(area).measured_of(pid)
+    measured = [rd for rd in held.present if is_measurement(rd)]
     if not measured:
-        # measured to the end and deleted since: the index keeps them, so a
+        # measured and deleted since: git or the index keeps them, so a
         # handover never says "no run of it was measured" over deleted runs
-        gone = [r for r in indexed_runs(area, pid) if not run_path(area, r).is_dir()]
+        gone = {
+            rd.dir.name: f"{rd.dir.name}: measured, and runs/{rd.dir.name}/ is gone — "
+            f"`{checkout_command(Path(RUNS_DIR) / rd.dir.name, rd.from_commit or '')}` "
+            f"in the area restores it"
+            for rd in held.deleted
+            if is_measurement(rd)
+        } | {
+            r: f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
+            f"its rows are lost"
+            for r in held.lost
+        }
         if gone:
             return handovers.RunAccount(
-                max(gone),
-                handovers.UNUSABLE,
-                tuple(
-                    f"{r}: measured (runs.tsv lists it), and runs/{r}/ is gone — "
-                    f"its rows are lost"
-                    for r in gone
-                ),
+                max(gone), handovers.UNUSABLE, tuple(gone[r] for r in sorted(gone))
             )
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())
     choice = bound_answering_run(area, pid, adopted_run(text))
-    if choice.run_dir is None or not any(f.dir == choice.run_dir for f in measured):
-        why = [f"{f.dir.name}: {f.why or f.state}" for f in measured if f in ours]
+    if choice.run_dir is None or not any(rd.dir == choice.run_dir for rd in measured):
+        # why each measurement was left out of the choice
+        _, left = bound_runs(area, pid)
+        ours = {rd.dir for rd in measured}
+        why = [f"{f.dir.name}: {f.why or f.state}" for f in left if f.dir in ours]
         why += [choice.blocker] if choice.blocker else []
         if choice.run_dir is not None:
             why.append(f"{choice.run_dir.name}, the run chosen, is no measurement")
-        newest = max(f.dir.name for f in measured)
+        newest = max(rd.dir.name for rd in measured)
         return handovers.RunAccount(newest, handovers.UNUSABLE, tuple(why))
     run = choice.run_dir.name
     try:

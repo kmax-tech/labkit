@@ -82,7 +82,7 @@ from labkit import PACKAGE_DIR
 from labkit.formats import promises, protocol_block, protocol_check, standard_contract
 from labkit.gates import install_hooks
 from labkit.gates.next_step import next_step
-from labkit.formats.runs import runs_path
+from labkit.formats.area_state import state_of
 from labkit.formats.files import write_all, write_atomic
 from labkit.tools.protocol_edit import fill, fill_head
 from labkit.formats.repo import (
@@ -1031,11 +1031,10 @@ def restampable_area(root: Path, name: str, kind: str) -> Path:
             f"--change-kind: {area} holds {len(area_protocols(area))} protocol(s), "
             f"the stamp holds one ({protocol.name}) — change the kind by hand",
         )
-    runs_dir = runs_path(area)
-    if runs_dir.is_dir() and any(runs_dir.iterdir()):
+    if any(m.has_measured for m in state_of(area).measured.values()):
         raise console.Refused(
             "labkit-init",
-            f"--change-kind: {area} has measured ({runs_dir} is not empty) — the "
+            f"--change-kind: {area} has measured — the "
             f"kind is part of the registration that stood before the first "
             f"measurement, and changing it now does not change what stood then. "
             f"A model trained here is a new registration: `labkit-init exp "

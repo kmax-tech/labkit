@@ -558,17 +558,17 @@ def registrations_as_first_measured(
     protocol: Path, pid: str, root: Path | None
 ) -> tuple[list[tuple[str, str]], str]:
     """([(text, where)], "") — PROTOCOL's text as each of its first
-    measurements saw it (`answering_run.first_measurement_groups`, every run
-    at each first position; `as_measured`), one entry per distinct text,
+    measurements saw it (`area_state.Measured.first_groups`, every run at
+    each first position; `as_measured`), one entry per distinct text,
     WHERE naming the run; its text as it stands when it has no measurement
     yet. Several entries are first measurements that saw different
     registrations: K3 holds that protocol, a replacement declares its
     changes against each (K1). ([], why) when one first measurement's
     registration cannot be read back. Never an invented earlier value.
     Raises RuntimeError when git fails."""
-    from labkit.formats.answering_run import first_measurement_groups
+    from labkit.formats.area_state import state_of
 
-    groups = first_measurement_groups(protocol.parent, pid, root)
+    groups = state_of(protocol.parent).measured_of(pid).first_groups
     if not groups:
         return [
             (protocol.read_text(encoding="utf-8"), "as it stands (no measurement yet)")

@@ -204,6 +204,17 @@ def indexed_runs(base_dir: str | Path, protocol_id: str | None = None) -> list[s
     return [r[run_at] for r in rows if protocol_id is None or r[pid_at] == protocol_id]
 
 
+def indexed_bindings(base_dir: str | Path) -> dict[str, str]:
+    """Run id → protocol id ("" for a run recorded unbound) of every run the
+    area's run index lists, in index order — what the area state reads the
+    index for: the runs only the index knows (`area_state.AreaState.lost`).
+    Reads under the shared lock; {} without an index. Raises RunIndexError
+    on an index that does not read, as `indexed_runs`."""
+    _, rows = read_index_now(Path(base_dir) / RUN_INDEX)
+    run_at, pid_at = RUN_INDEX_COLS.index("run_id"), RUN_INDEX_COLS.index("protocol_id")
+    return {r[run_at]: r[pid_at] for r in rows}
+
+
 def index_refusal(index: Path, rows: list[list[str]]) -> str | None:
     """Why the run index INDEX (its ROWS, as `read_index` checked them)
     may not be appended to, or None: a run id listed more than once."""

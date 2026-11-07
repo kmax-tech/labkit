@@ -47,8 +47,10 @@ from labkit.checks import notes_check, protocol_report
 from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import report_hold
-from labkit.formats.runs import run_path
-from labkit.formats.run_index import RunIndexError, indexed_runs
+from labkit.formats.area_state import state_of
+from labkit.formats.commands import checkout_command
+from labkit.formats.run_index import RunIndexError
+from labkit.formats.runs import RUNS_DIR
 from labkit.formats.repo import (
     EXPERIMENTS,
     PROTOCOL_NAME,
@@ -97,26 +99,31 @@ def gone_run_areas(repo: Path) -> list[Path]:
     ]
 
 
-def gone_runs(area: Path) -> list[str]:
-    """The runs AREA's run index lists whose directories are gone. Raises
-    RunIndexError on an index that does not read."""
-    return [r for r in indexed_runs(area) if not run_path(area, r).is_dir()]
-
-
 def index_problems(area: Path) -> list[str]:
-    """What AREA's run index tells the evidence check: each run it lists
-    whose directory is gone, or why the index does not read — a damaged
-    index hides those runs, so it is told, never skipped."""
+    """What AREA's deleted runs tell the evidence check (`area_state`): each
+    run a commit holds whose directory is gone, with the checkout that
+    restores it; each run only the local run index lists, lost; or why the
+    index does not read — a damaged index hides those runs, so it is told,
+    never skipped."""
     try:
-        gone = gone_runs(area)
+        state = state_of(area)
     except RunIndexError as exc:
         return [exc.why]
-    return [
-        f"run {r}: its directory is gone — runs.tsv lists it as measured, and its "
-        f"rows are lost; only git, where it holds the run, restores them, and an "
-        f"audit that read it holds the adoption"
-        for r in gone
-    ]
+    return (
+        ([state.history_unread] if state.history_unread else [])
+        + [
+            f"run {rd.dir.name}: its directory is gone — "
+            f"`{checkout_command(Path(RUNS_DIR) / rd.dir.name, rd.from_commit or '')}` "
+            f"in the area restores it"
+            for rd in state.deleted
+        ]
+        + [
+            f"run {r}: its directory is gone — runs.tsv lists it as measured, and its "
+            f"rows are lost; only git, where it holds the run, restores them, and an "
+            f"audit that read it holds the adoption"
+            for r in state.lost
+        ]
+    )
 
 
 #: the post-change cache's key of an area's evidence state, before the area

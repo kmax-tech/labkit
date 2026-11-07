@@ -31,7 +31,7 @@ from labkit.formats.repo import (
     experiment_areas,
 )
 from labkit.gates.next_step import Step, next_step  # noqa: F401 — the tool's names
-from labkit.gates.report_context import INDEX, TREE
+from labkit.formats.area_state import INDEX, TREE
 
 #: the workflow in full, which `AGENTS.md` keeps short
 GUIDE = PACKAGE_DIR / "docs" / "agent-guide.md"

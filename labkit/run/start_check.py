@@ -137,14 +137,14 @@ def _committed_registration(base_dir: Path, bound: _Bound) -> list[str]:
     either. No commitment check outside Git or for an unbound protocol.
     Reads HEAD and the first measurements; writes nothing.
     """
-    from labkit.formats.answering_run import first_measurements
+    from labkit.formats.area_state import state_of
     from labkit.formats.protocol_history import registration_in_commit
 
     head, rel = bound.head, bound.binding.get("path")
     root = repo.git_root(base_dir)
     if root is None or head is None or head.id is None or not isinstance(rel, str):
         return []
-    if first_measurements(base_dir, head.id, root):
+    if state_of(base_dir).measured_of(head.id).firsts:
         return []
     protocol = (base_dir / rel).resolve()
     committed = repo.text_at(root, protocol, "HEAD")

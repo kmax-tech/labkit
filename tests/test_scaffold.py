@@ -3,6 +3,7 @@
 import ast
 import contextlib
 import io
+import json
 import re
 import shutil
 import subprocess
@@ -24,7 +25,7 @@ from labkit.formats import (
     rules,
     standard_contract,
 )
-from protocol_fixture import head  # noqa: E402
+from protocol_fixture import head, run_record  # noqa: E402
 
 
 def quiet(fn, *args, **kw):  # noqa: ANN001, ANN002, ANN003, ANN201 — test helper
@@ -759,7 +760,7 @@ class Exp(unittest.TestCase):
     def test_a_kind_change_refuses_to_lose_work_and_changes_nothing(self) -> None:
         """An edited stamp, or a run, holds the change; the area stays
         byte for byte as it was."""
-        area, _, _ = self._compute_area_with_work()
+        area, proto, pid = self._compute_area_with_work()
         script = area / "scripts" / "01_measure.py"
         script.write_text(script.read_text(encoding="utf-8") + "# mine\n")
 
@@ -777,7 +778,12 @@ class Exp(unittest.TestCase):
             "01_measure.py: edited since the compute stamp", str(caught.exception)
         )
         self.assertEqual(snapshot(), before)
-        (area / "runs" / "2026-10-26T10-00-00_abcd").mkdir(parents=True)
+        run = area / "runs" / "2026-10-26T10-00-00_abcd"
+        run.mkdir(parents=True)
+        (run / "config.json").write_text(
+            json.dumps(run_record(protocol={"id": pid, "path": proto.name})),
+            encoding="utf-8",
+        )
         before = snapshot()
         with self.assertRaises(console.Refused) as caught:
             scaffold.change_kind(self.root, "foo-bar", "fit")

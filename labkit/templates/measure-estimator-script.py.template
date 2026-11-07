@@ -142,7 +142,7 @@ sys.path.insert(0, str(REPO / "lib"))   # repo-local helpers only
 from labkit.run import batch, provenance, runlog
 from labkit.formats import criterion_bar, deliverable, promises, protocol_block, scope_sha, standard_contract, timebox
 from labkit.formats.commands import next_after_run
-from labkit.formats.answering_run import first_measurements
+from labkit.formats.area_state import state_of
 
 HEAD = protocol_block.head(PROTOCOL.read_text(encoding="utf-8"))
 KIND = HEAD.kind
@@ -692,7 +692,7 @@ def band_check(cfg: MeasureConfig, items: list[dict]) -> list | None:
     if KIND != "apply" or rule is None or make_null_predictor(cfg.seed) is not None:
         return None
     pid = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).id
-    if first_measurements(AREA, pid, REPO):
+    if pid is not None and state_of(AREA).measured_of(pid).firsts:
         return None  # registered and measured: the band stands as registered
     train = labelled(items)
     preds = predict_all(make_estimator(cfg.seed), train, "band_check()")
@@ -969,7 +969,7 @@ def main() -> None:
             ap.error("--write registers the band of a registered rule: name null_band_quantile "
                      "and null_permutations beside null_band in [quality-check-2]'s constants first")
         pid = protocol_block.head(PROTOCOL.read_text(encoding="utf-8")).id
-        if first_measurements(AREA, pid, REPO):
+        if pid is not None and state_of(AREA).measured_of(pid).firsts:
             ap.error("--write: this protocol has a first measurement — the registered band "
                      "stands; a band changed after it is refused (report-check)")
         try:

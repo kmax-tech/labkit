@@ -15,6 +15,7 @@ the run that recorded its model are a run record's question
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
@@ -330,14 +331,13 @@ def _shown(cfg: JsonObject, key: str) -> str:
     return as_stored(cfg[key]) if key in cfg else "(absent)"
 
 
-def is_measurement(facts: RunFacts) -> bool:
-    """Is the run FACTS names a measurement — `run_kind = "measurement"` in
-    its config.json, or a config.json that cannot be read (it may be one)?
-    A preparation or probe run measures nothing."""
-    if facts.state == UNREADABLE:
-        return True
-    cfg = read_run_config(facts.dir)
-    return cfg is not None and cfg.run_kind == "measurement"
+def is_measurement(rd: RunDir) -> bool:
+    """Is the run RD a measurement — `run_kind = "measurement"` in its
+    record, or a record that cannot be read (it may be one)? A preparation
+    or probe run measures nothing; a repeat is a measurement."""
+    return rd.error is not None or (
+        rd.config is not None and rd.config.run_kind == "measurement"
+    )
 
 
 def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
@@ -373,13 +373,32 @@ def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
 
 
 def first_measurements(area: Path, pid: str, repo: Path | None) -> list[RunDir]:
-    """The first measurements of PID in AREA — where the registered
-    question first met the data —, sorted by name; [] when PID has none. A
-    measurement is a run bound to PID that declared itself one
-    (`run_kind="measurement"`, no repeat), finished or not; a run whose
-    config.json cannot be read is not among them. The registration is held
+    """The first measurements of PID in AREA, one run per first position
+    (`area_state.Measured.firsts`) — kept here by name because the stamped
+    measure scripts of lab repos before 0.110 import it from this module
+    (`measure-estimator-script.py.template`, the band check); it forwards
+    to the area state and goes in a release that announces it (CHANGELOG).
+    REPO, the repository the caller names, is not read: the state finds
+    the area's repository itself (`repo.git_root`)."""
+    from labkit.formats.area_state import state_of
+
+    return list(state_of(area).measured_of(pid).firsts)
+
+
+def first_measurement_groups(
+    records: Sequence[RunDir], pid: str, repo: Path | None
+) -> list[list[RunDir]]:
+    """The first measurements of PID among RECORDS — where the registered
+    question first met the data —, every run at each first position: all
+    runs at each earliest commit, each run whose commit cannot be placed
+    on its own; each group sorted by name, the groups by their first run's
+    name. [] when PID has none. A measurement is a run bound to PID that
+    declared itself one (`run_kind="measurement"`, no repeat), finished or
+    not, present or read back from a commit (`RunDir.from_commit`); a run
+    whose record cannot be read is not among them. The registration is held
     to the commit each of them recorded (`report_check.registration_gaps`):
-    what stood before the number is what that commit holds.
+    what stood before the number is what that commit holds. Read through
+    the area state (`area_state.Measured.first_groups`, `firsts`).
 
     Git's history orders the measurements, not the clock: one precedes
     another when the commit it recorded (`runs.recorded_commit`) is an
@@ -396,29 +415,15 @@ def first_measurements(area: Path, pid: str, repo: Path | None) -> list[RunDir]:
       not hold (`repo.commit_known`), or REPO None (no repository) — is
       first as well: nothing shows that another came before it.
 
-    The rejected orders and the limits:
+    Runs at one commit share a committed protocol, not necessarily a
+    promise block (the tree may have differed between them), so a reader of
+    the registration they recorded reads every one; a run id does not
+    choose among them. The rejected orders and the limits:
     docs/notes/2026-10-27-first-measurement-order.md. Raises RuntimeError
     when git fails."""
-    return sorted(
-        (group[0] for group in first_measurement_groups(area, pid, repo)),
-        key=lambda rd: rd.dir.name,
-    )
-
-
-def first_measurement_groups(
-    area: Path, pid: str, repo: Path | None
-) -> list[list[RunDir]]:
-    """Every measurement at each first position `first_measurements` names
-    one run for: all runs at each earliest commit, each run whose commit
-    cannot be placed on its own — each group sorted by name, the groups by
-    their first run's name. Runs at one commit share a committed protocol,
-    not necessarily a promise block (the tree may have differed between
-    them), so a reader of the registration they recorded reads every one;
-    a run id does not choose among them. Raises RuntimeError when git
-    fails."""
     measured = [
         (rd, cfg)
-        for rd in run_dirs(area)
+        for rd in records
         if (cfg := rd.config) is not None
         and cfg.protocol.id == pid
         and cfg.repeat_of is None
@@ -442,19 +447,16 @@ def first_measurement_groups(
 
 
 def first_registrations(
-    area: Path, pid: str, repo: Path | None
+    groups: Sequence[Sequence[RunDir]],
 ) -> dict[str, tuple[RunDir, JsonObject]]:
-    """Every promise block the first measurements of protocol PID recorded
-    (`first_measurement_groups`, every run at each first position): its
+    """Every promise block the first measurements recorded — GROUPS, every
+    run at each first position (`area_state.Measured.first_groups`): its
     digest → (the first run by name that recorded it, its snapshot). One
     entry is the registration that stood before the number; several are a
     registration that cannot be told (K3, docs/notes/2026-10-27-new-
-    registration-contracts.md). A run that recorded no block is left out.
-    Raises RuntimeError when git fails."""
+    registration-contracts.md). A run that recorded no block is left out."""
     out: dict[str, tuple[RunDir, JsonObject]] = {}
-    for rd in (
-        rd for group in first_measurement_groups(area, pid, repo) for rd in group
-    ):
+    for rd in (rd for group in groups for rd in group):
         snap = rd.config.promises if rd.config is not None else None
         if snap is not None:
             out.setdefault(snap["block_sha"], (rd, snap))

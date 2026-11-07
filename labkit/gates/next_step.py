@@ -91,7 +91,7 @@ from labkit.formats.commands import (
     report_fields_command,
     withdraw_command,
 )
-from labkit.gates.report_context import INDEX, TREE
+from labkit.formats.area_state import INDEX, TREE
 from labkit.gates.undecided import undecided_state
 
 if TYPE_CHECKING:
@@ -617,10 +617,14 @@ def _report_hint(area: Path, protocol: Path, text: str) -> str:
     registers no report: how to register one — labkit cannot tell whether
     the task asks for a report file, and once the area measured the
     registration is refused (`protocol_fill.report_bound`). "" otherwise."""
-    from labkit.gates.registered_report import has_measured
+    from labkit.gates.registered_report import measured
 
     head = protocol_block.head(text)
-    if head.report is not None or not head.id or has_measured(area, head.id):
+    if (
+        head.report is not None
+        or not head.id
+        or measured(protocol, head.id).has_measured
+    ):
         return ""
     return (
         f"; if the task asks for a report file, register it now: `protocol-fill "

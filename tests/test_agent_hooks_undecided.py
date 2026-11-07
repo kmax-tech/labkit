@@ -129,7 +129,7 @@ class Undecided(unittest.TestCase):
         judges (the tree, the index) — no sentence of their own names a way;
         the way's text has one home (`next_step.Step.render`)."""
         from labkit.gates.next_step import next_step
-        from labkit.gates.report_context import INDEX
+        from labkit.formats.area_state import INDEX
 
         path = self._record(self.area, [BLOCKER])
         protocol = self.area / "PROTOCOL-x.md"

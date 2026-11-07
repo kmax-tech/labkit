@@ -1325,15 +1325,25 @@ class RegisteredReport(unittest.TestCase):
         (root / "REPORT.md").write_text("# Report\n", encoding="utf-8")
         self.assertIsNone(registered_report.missing_report(proto, text, root))
         (root / "REPORT.md").unlink()
-        # deleting the measured run does not lift it: runs.tsv still lists it
+        # deleting the measured run does not lift it: the commit holds it,
+        # and so does runs.tsv (`area_state.Measured`)
         from labkit.run import runlog
 
         runlog.reindex(area)
         shutil.rmtree(area / "runs")
         self.assertIsNotNone(registered_report.missing_report(proto, text, root))
-        # the twin: no measurement of it, nothing owed yet
         (area / run_index.RUN_INDEX).unlink()
-        self.assertIsNone(registered_report.missing_report(proto, text, root))
+        self.assertIsNotNone(registered_report.missing_report(proto, text, root))
+        # the twin: a run never committed, deleted with its index — no
+        # measurement anywhere, nothing owed yet
+        area = self._area(git=False)
+        proto = area / "PROTOCOL-x.md"
+        shutil.rmtree(area / "runs")
+        self.assertIsNone(
+            registered_report.missing_report(
+                proto, proto.read_text(encoding="utf-8"), area.parent.parent
+            )
+        )
 
     def test_the_twin_a_note_citing_a_run_owes_no_review(self):
         """A research note may describe an unreviewed run: only the report

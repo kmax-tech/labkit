@@ -20,6 +20,31 @@ pins (`requirements.txt` / `requirements.lock`).
   Why: the gates read the index through the area state (Phase 4 of the
   one-explainer plan), and `formats` is the layer below `run`.
 
+- **What a protocol measured is one answer: `area_state.Measured`.** The
+  state of an area (`labkit.formats.area_state`, Phase 4 of the
+  one-explainer plan) is built once from the formats' readers, and its
+  first field says whether a protocol measured and which measurements were
+  first. Gone: `registered_report.has_measured`, its copy in
+  `report_check.adoption_state`, `answering_run.first_measurements` as a
+  reader (it stays as a forwarder for the stamped measure scripts of
+  before 0.110, which imported it; a later release ends it);
+  `answering_run.first_measurement_groups(records, pid, repo)` and
+  `first_registrations(groups)` take the records instead of walking the
+  area; `answering_run.is_measurement` takes a `RunDir`. The file-state
+  names `TREE`, `INDEX`, `PROPOSED` live in `area_state` (`report_context`
+  still names them). `report_context.Checked` carries the state
+  (`area_state`).
+
+- **A deleted first measurement binds as it did when present.** Its record
+  is read back from the last commit that held it (`RunDir.from_commit`,
+  the commit a `git checkout` restores it from); the stop's evidence line
+  and the handover account name that checkout. Only a run that was never
+  committed and is gone — one the local `runs.tsv` alone lists — is held
+  as lost, with nothing read back. Before, `runs.tsv` alone decided, so
+  the same files judged differently on the machine that ran and in a
+  fresh clone. `labkit-init --change-kind` refuses on a measurement of the
+  area's protocol, no longer on any directory under `runs/`.
+
 - **`llm._find_models_toml` is gone.** Deprecated in 0.108.0 (released),
   which named this removal; call `llm.find_models_toml`. A lab's stamped
   `test-shared-helpers` from before 0.108.0 calls the old name and fails:

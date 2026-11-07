@@ -31,10 +31,8 @@ from labkit.formats.runs import (
     recorded_commit,
     read_run_config,
 )
-from labkit.formats.answering_run import (
-    first_measurement_groups,
-    first_registrations,
-)
+from labkit.formats.answering_run import first_registrations
+from labkit.formats.area_state import Measured, state_of
 from labkit.formats import protocol_history
 from labkit.formats.repo import (
     area_protocols,
@@ -88,12 +86,13 @@ def registration_changes(
     if pid is None or run is None:
         return []
     root = git_root(protocol)
-    scope = scope_changes(area, protocol, pid, run, root)
+    held = state_of(area).measured_of(pid)
+    scope = scope_changes(area, protocol, pid, run, root, held)
     cfg = read_run_config(run)
     now = cfg.promises if cfg is not None else None
     if now is None:
         return scope
-    registered = first_registrations(area, pid, root)
+    registered = first_registrations(held.first_groups)
     if len(registered) > 1:
         named = ", ".join(
             f"{rd.dir.name} (block {sha})" for sha, (rd, _) in registered.items()
@@ -169,7 +168,7 @@ SCOPE_QUOTE = 120
 
 
 def scope_changes(
-    area: Path, protocol: Path, pid: str, run: Path, root: Path | None
+    area: Path, protocol: Path, pid: str, run: Path, root: Path | None, held: Measured
 ) -> list[GateFinding]:
     """The answering RUN holds what its protocol's first measurement said the
     number is about (`protocol_history.scope_differences`: the question and
@@ -191,8 +190,9 @@ def scope_changes(
     new value and the way out: restore them — and, when a run measured
     under the change, measure again — or register anew. A code change
     measured again under the same fields passes: what the run computes is
-    the analysis audit's question, not this one. The first measurements are every run at each first
-    position (`first_measurement_groups`); the answering run, when it is
+    the analysis audit's question, not this one. The first measurements are
+    every run at each first position (HELD, what the area measured of PID:
+    `area_state.Measured.first_groups`); the answering run, when it is
     one of them, has no run text to compare, the text as it stands still
     is. In a repository, a text either comparison needs that cannot be read
     back — a first measurement's, the answering run's — is a BLOCKER of its
@@ -200,7 +200,7 @@ def scope_changes(
     (`unread_hold`): the comparison could not run, which is no "nothing
     changed" (docs/notes/2026-11-03-finalize-hold-missing-once.md).
     Raises RuntimeError when git fails."""
-    firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
+    firsts = [rd for group in held.first_groups for rd in group]
     others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
     if root is not None:
         needed = [*firsts, *([read_run_dir(run)] if others else [])]
@@ -485,7 +485,9 @@ def scope_now(
     `[reference]` never — they name no field a finding can place itself in
     (`protocol_history.correctable`). None without a difference. Raises RuntimeError when
     git fails."""
-    firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
+    firsts = [
+        rd for group in state_of(area).measured_of(pid).first_groups for rd in group
+    ]
     text = protocol.read_text(encoding="utf-8")
     found = protocol_history.first_measured_differences(
         protocol, firsts, text, root, protocol_history.scope_differences

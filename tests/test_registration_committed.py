@@ -29,7 +29,7 @@ from protocol_fixture import PID, completed_run, head, scope_file
 from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import report_command
-from labkit.formats import answering_run, protocol_history, runs
+from labkit.formats import area_state, protocol_history, runs
 from labkit.formats.gate import Findings
 from labkit.formats.runs import RunKind
 from labkit.gates import finalize, report_check
@@ -143,9 +143,7 @@ class _Repository(unittest.TestCase):
         return run
 
     def _first(self) -> list[Path]:
-        return [
-            rd.dir for rd in answering_run.first_measurements(self.area, PID, self.root)
-        ]
+        return [rd.dir for rd in area_state.state_of(self.area).measured_of(PID).firsts]
 
     def _gaps(self) -> list[str]:
         """The registration station's findings, as report-check prints them."""
@@ -283,7 +281,7 @@ class CommittedAtTheFirstMeasurement(_Repository):
     the registered report's binding — read, or one of three causes."""
 
     def _at(self, run: Path) -> protocol_history.CommittedAt:
-        (rd,) = answering_run.first_measurements(self.area, PID, self.root)
+        (rd,) = area_state.state_of(self.area).measured_of(PID).firsts
         self.assertEqual(rd.dir, run)
         return protocol_history.committed_at(self.proto, rd, self.root)
 
@@ -869,7 +867,7 @@ class OutsideARepository(unittest.TestCase):
             "WARNING: not a git repository — the registration cannot be held", out
         )
         self.assertEqual(
-            [rd.dir for rd in answering_run.first_measurements(area, PID, None)], [run]
+            [rd.dir for rd in area_state.state_of(area).measured_of(PID).firsts], [run]
         )
 
 
@@ -1014,7 +1012,7 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         then prints `labkit-next --staged`'s step for the area, byte for byte;
         its findings keep their own lines."""
         from labkit.gates.next_step import next_step
-        from labkit.gates.report_context import INDEX
+        from labkit.formats.area_state import INDEX
 
         self._run(self._register("REPORT.md"))
         _git(self.root, "add", "-A")

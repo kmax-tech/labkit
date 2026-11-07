@@ -181,9 +181,12 @@ FORWARDING_EDGES = {
     # the stamped measure scripts' `from labkit.formats.repo import
     # next_after_run`, which forwards to commands
     ("repo", "commands"),
+    # the stamped measure scripts' `from labkit.formats.answering_run import
+    # first_measurements` (before 0.110), which forwards to the area state
+    ("answering_run", "area_state"),
 }
 #: public names defined twice on purpose: the forwarders of FORWARDING_EDGES
-FORWARDED_NAMES = {"next_after_run"}
+FORWARDED_NAMES = {"next_after_run", "first_measurements"}
 
 
 class NoImportCycle(unittest.TestCase):
@@ -206,6 +209,58 @@ class NoImportCycle(unittest.TestCase):
         self.assertEqual(
             on_a_cycle({"a": {"b"}, "b": {"c"}, "c": {"a"}, "d": {"a"}}),
             ["a", "b", "c"],
+        )
+
+
+#: the readers of what an area measured (plan Phase 4, M1): outside
+#: `labkit/formats` only the area state calls them, by name as data — a
+#: module importing or naming one of them derives the field anew
+FIELD_READERS = {
+    "first_measurement_groups",  # answering_run, the first positions
+    "indexed_runs",  # run_index, the index's run ids
+    "indexed_bindings",  # run_index, the index's run id → protocol id
+    "committed_runs",  # area_state, the runs git holds back
+    "indexed_run_dirs",  # area_state, the runs git's index holds
+}
+
+
+def field_reader_uses(source: str) -> set[str]:
+    """The names of FIELD_READERS SOURCE imports or reads as an attribute
+    (`module.name`), docstrings and comments left out (an `ast` walk)."""
+    found: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom):
+            found |= {a.name for a in node.names if a.name in FIELD_READERS}
+        elif isinstance(node, ast.Attribute) and node.attr in FIELD_READERS:
+            found.add(node.attr)
+        elif isinstance(node, ast.Name) and node.id in FIELD_READERS:
+            found.add(node.id)
+    return found
+
+
+class OneAnswerPerStateQuestion(unittest.TestCase):
+    """M1 of the plan's Phase 4: has a protocol measured, and which
+    measurements were first, is answered by `area_state.Measured` alone —
+    no gate, check, tool or run module calls the readers it is built from."""
+
+    def test_only_the_area_state_calls_the_field_readers(self):
+        paths = module_paths()
+        offenders = {
+            m: sorted(used)
+            for m, p in sorted(paths.items())
+            if p.parent.name != "formats"
+            and (used := field_reader_uses(p.read_text(encoding="utf-8")))
+        }
+        self.assertEqual(offenders, {})
+
+    def test_the_check_bites(self):
+        self.assertEqual(
+            field_reader_uses(
+                "from labkit.formats.run_index import indexed_runs\n"
+                "x = run_index.indexed_bindings(a)\n"
+                '"""indexed_runs in a docstring"""\n'
+            ),
+            {"indexed_runs", "indexed_bindings"},
         )
 
 

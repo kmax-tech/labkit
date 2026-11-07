@@ -710,15 +710,16 @@ def _protocol_mismatch(
 
 
 def runs_since(area: Path, pid: str, run: str | None) -> list[str]:
-    """The measurements of AREA bound to PID, or unreadable, newer than RUN
-    (all of them when RUN is None), oldest first — a run id sorts by its
-    start (`answering_run.is_measurement`)."""
-    taken, rest = answering_run.bound_runs(area, pid)
+    """The measurements of AREA bound to PID, or unreadable, as the tree
+    holds them (`area_state.Measured.present`), newer than RUN (all of them
+    when RUN is None), oldest first — a run id sorts by its start
+    (`answering_run.is_measurement`)."""
+    from labkit.formats.area_state import state_of
+
     ours = [
-        f.dir.name
-        for f in [*taken, *rest]
-        if (f.binding.id == pid or f.state == runs.UNREADABLE)
-        and answering_run.is_measurement(f)
+        rd.dir.name
+        for rd in state_of(area).measured_of(pid).present
+        if answering_run.is_measurement(rd)
     ]
     return sorted(r for r in ours if run is None or r > run)
 

@@ -21,6 +21,15 @@ from protocol_fixture import run_record
 from labkit.formats import runs
 
 
+def _measured(*, firsts: tuple[str, ...]) -> mock.Mock:
+    """A stand-in for the stamped script's `state_of`: an area state whose
+    protocol has FIRSTS as its first measurements (`Measured.firsts`)."""
+    measured = mock.Mock(firsts=firsts)
+    return mock.Mock(
+        return_value=mock.Mock(measured_of=mock.Mock(return_value=measured))
+    )
+
+
 class ApplySkeleton(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -208,7 +217,7 @@ class ApplySkeleton(unittest.TestCase):
         primary = self.primary()
         with (
             mock.patch.object(measure, "make_estimator", return_value=primary),
-            mock.patch.object(measure, "first_measurements", return_value=[]),
+            mock.patch.object(measure, "state_of", _measured(firsts=())),
         ):
             rule = measure.band_rule(measure.CONFIG)
             assert rule is not None
@@ -236,7 +245,7 @@ class ApplySkeleton(unittest.TestCase):
         one_class.predict.side_effect = lambda xs: [0 for _ in xs]
         with (
             mock.patch.object(measure, "make_estimator", return_value=one_class),
-            mock.patch.object(measure, "first_measurements", return_value=[]),
+            mock.patch.object(measure, "state_of", _measured(firsts=())),
         ):
             with self.assertRaises(ValueError) as cm:
                 measure.calibrate_null(measure.CONFIG, self.items())
@@ -272,7 +281,7 @@ class ApplySkeleton(unittest.TestCase):
         _, measure = self.measure_module("apply")
         with (
             mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "first_measurements", return_value=["a run"]),
+            mock.patch.object(measure, "state_of", _measured(firsts=("a run",))),
         ):
             self.assertIsNone(measure.band_check(measure.CONFIG, self.items()))
 
@@ -291,7 +300,7 @@ class ApplySkeleton(unittest.TestCase):
             mock.patch.object(sys, "argv", argv),
             mock.patch.object(measure, "read_jsonl", return_value=self.items()),
             mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "first_measurements", return_value=[]),
+            mock.patch.object(measure, "state_of", _measured(firsts=())),
             contextlib.redirect_stdout(io.StringIO()),
         ):
             measure.main()
@@ -311,7 +320,7 @@ class ApplySkeleton(unittest.TestCase):
             mock.patch.object(sys, "argv", argv),
             mock.patch.object(measure, "read_jsonl", return_value=self.items()),
             mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "first_measurements", return_value=["a run"]),
+            mock.patch.object(measure, "state_of", _measured(firsts=("a run",))),
             contextlib.redirect_stdout(io.StringIO()),
             contextlib.redirect_stderr(io.StringIO()),
             self.assertRaises(SystemExit),
@@ -331,7 +340,7 @@ class ApplySkeleton(unittest.TestCase):
             mock.patch.object(sys, "argv", ["01_measure.py"]),
             mock.patch.object(measure, "read_jsonl", return_value=self.items()),
             mock.patch.object(measure, "make_estimator", return_value=self.primary()),
-            mock.patch.object(measure, "first_measurements", return_value=[]),
+            mock.patch.object(measure, "state_of", _measured(firsts=())),
             mock.patch.object(measure.runlog, "run") as start,
             self.assertRaises(SystemExit),
         ):
