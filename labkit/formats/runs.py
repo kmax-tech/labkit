@@ -1050,3 +1050,92 @@ def completed_runs(area: Path, *, with_repeats: bool) -> list[Path]:
 #: list: it means "can't tell", and treating it as failed would hide a run
 #: that is still going.
 FAILED_STATES = ("crashed", "unfinalized", "corrupt", "unreadable")
+
+
+def lineage(run_dir: Path) -> list[Path]:
+    """The run and its ancestors along `derived_from`, the run first. The
+    whole chain is checked, not only up to the run a reader needs: every
+    run has a config.json, every `derived_from` is a run id (held where the
+    config is read, `runs.read_run_config`) naming a run directory beside
+    it, and no run comes twice — compared as resolved paths, not names.
+
+    Raises:
+        ValueError: A run without config.json, a `derived_from` that is not
+            a run name, a parent that is not under run_dir's parent, or a
+            loop — wherever in the chain it sits. RunConfigError (a
+            ValueError) for a damaged config.json.
+    """
+    chain: list[Path] = []
+    here = run_dir
+    while True:
+        cfg = read_run_config(here)
+        if cfg is None:
+            raise ValueError(
+                f"{here}: no config.json — the lineage of {run_dir.name} breaks here"
+            )
+        chain.append(here)
+        parent = cfg.derived_from  # a run id, held where the config is read
+        if parent is None:
+            return chain
+        nxt = run_dir.parent / parent
+        if nxt.resolve() in (run.resolve() for run in chain):
+            names = " -> ".join([*(run.name for run in chain), parent])
+            raise ValueError(f"{run_dir.name}: derived_from loops: {names}")
+        here = nxt
+        if not here.is_dir():
+            raise ValueError(
+                f"{run_dir.name}: derived_from names {parent}, which is not under {run_dir.parent}"
+            )
+
+
+def model_provenance_run(run_dir: Path) -> Path | None:
+    """The run whose `models_resolved` says which model answered the rows
+    `run_dir` reads: the run itself when it recorded one, else the nearest
+    ancestor along `derived_from` that did (a derived run records none —
+    its rows are the parent's, and resolving the alias anew would be
+    provenance the rows never had). None when no run in the chain recorded
+    a model.
+
+    Raises:
+        ValueError: From `lineage` — a broken chain, also above the run
+            that recorded the model.
+    """
+    for run in lineage(run_dir):
+        cfg = read_run_config(run)
+        if cfg is not None and cfg.models_resolved:
+            return run
+    return None
+
+
+def recorded_models(run_dir: Path) -> str:
+    """Which model answered RUN_DIR's rows, as the run records say
+    (`model_provenance_run`): its `models_resolved` as stored, keys sorted,
+    under the run that recorded it — or a sentence that no run in the chain
+    recorded one, or that the chain does not read. What an audit is shown
+    of a bound validation, never today's models.toml."""
+    try:
+        source = model_provenance_run(run_dir)
+        cfg = read_run_config(source) if source is not None else None
+    except ValueError as exc:  # RunConfigError too
+        return f"run {run_dir.name}: its record does not read ({exc}); which model answered is not known"
+    if source is None or cfg is None:
+        return (
+            f"run {run_dir.name} recorded no model (no models_resolved, nor any "
+            "run it derives from); which model answered is not recorded"
+        )
+    via = "" if source == run_dir else f", the run {run_dir.name} derives from"
+    return f"models_resolved recorded by run {source.name}{via}:\n" + json.dumps(
+        cfg.models_resolved, ensure_ascii=False, sort_keys=True, indent=2
+    )
+
+
+def recorded_runs(run_dir: Path) -> list[Path]:
+    """RUN_DIR and, when another run recorded its model
+    (`model_provenance_run`), that run — the records `recorded_models`
+    reads, so a stamp over their `config.json` moves with the recorded
+    model. RUN_DIR alone when the chain does not read."""
+    try:
+        source = model_provenance_run(run_dir)
+    except ValueError:
+        return [run_dir]
+    return [run_dir] if source in (None, run_dir) else [run_dir, source]

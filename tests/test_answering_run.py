@@ -1,4 +1,4 @@
-"""`answering_run.bound_answering_run` and `answering_run.model_provenance_run` — the one
+"""`answering_run.bound_answering_run` and `runs.model_provenance_run` — the one
 choice of the run that answers, and the walk to the run that recorded the
 model (2026-10-08).
 
@@ -245,7 +245,7 @@ class ModelProvenance(unittest.TestCase):
         fresh = _run(
             self.area, "2026-10-01T10-00-00_aaaa", models_resolved={"m": {"model": "A"}}
         )
-        self.assertEqual(answering_run.model_provenance_run(fresh), fresh)
+        self.assertEqual(runs.model_provenance_run(fresh), fresh)
 
     def test_a_derived_run_points_to_the_ancestor_that_recorded_the_model(self) -> None:
         """Parent resolved alias m to A; the chain of derived runs recorded
@@ -259,7 +259,7 @@ class ModelProvenance(unittest.TestCase):
             "2026-10-03T10-00-00_cccc",
             derived_from="2026-10-02T10-00-00_bbbb",
         )
-        found = answering_run.model_provenance_run(child)
+        found = runs.model_provenance_run(child)
         self.assertEqual(found, parent)
         assert found is not None
         cfg = runs.read_run_config(found)
@@ -269,7 +269,7 @@ class ModelProvenance(unittest.TestCase):
     def test_a_chain_without_any_model_record_is_none(self) -> None:
         parent = _run(self.area, "2026-10-01T10-00-00_aaaa")
         child = _run(self.area, "2026-10-02T10-00-00_bbbb", derived_from=parent.name)
-        self.assertIsNone(answering_run.model_provenance_run(child))
+        self.assertIsNone(runs.model_provenance_run(child))
 
     def test_a_missing_ancestor_is_loud(self) -> None:
         child = _run(
@@ -278,7 +278,7 @@ class ModelProvenance(unittest.TestCase):
             derived_from="2026-10-01T10-00-00_dead",
         )
         with self.assertRaisesRegex(ValueError, "not under"):
-            answering_run.model_provenance_run(child)
+            runs.model_provenance_run(child)
 
     def test_a_loop_is_loud(self) -> None:
         _run(
@@ -292,7 +292,7 @@ class ModelProvenance(unittest.TestCase):
             derived_from="2026-10-01T10-00-00_aaaa",
         )
         with self.assertRaisesRegex(ValueError, "loops"):
-            answering_run.model_provenance_run(b)
+            runs.model_provenance_run(b)
 
 
 if __name__ == "__main__":

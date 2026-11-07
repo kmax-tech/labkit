@@ -37,7 +37,7 @@ Three ways a run depends on another run's rows — not one:
                    derived_from=ID)`), config.json holds it; the parent must
                    be completed and no repeat (else the best draw could
                    answer through it); the run makes no model call and records no
-                   model — `answering_run.model_provenance_run` walks this key alone
+                   model — `runs.model_provenance_run` walks this key alone
     repeat_of      per run; `runlog.run(..., repeat_of=ID)`: the same measurement
                    asked again — new model calls, its own model record, the
                    same protocol, block, config and inputs as ID or a

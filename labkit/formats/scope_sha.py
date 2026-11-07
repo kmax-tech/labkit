@@ -40,7 +40,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from labkit.formats.runs import CONFIG_FILE, metrics_path, run_path
+from labkit.formats.runs import CONFIG_FILE, metrics_path, recorded_runs, run_path
 from labkit.formats import console, protocol_block
 from pathlib import Path
 
@@ -497,7 +497,7 @@ def validation_basis(
     (`protocol_block.repo_protocol_ids`), that protocol's bytes, its
     declared run's `metrics.json` (a marker while it is missing), the run
     records that say which model answered (`config.json`,
-    `answering_run.recorded_runs`) and its area's `scripts/*.py` (where its
+    `runs.recorded_runs`) and its area's `scripts/*.py` (where its
     `PROMPT` constants live; its `Prompt` blocks stand in the protocol).
     Today's models.toml is not stamped: it can change after the validation
     without changing what was validated. A DOI binds no document bytes: only its string
@@ -569,11 +569,9 @@ def _validation_refs(
 def _bound_files(bound: Path) -> list[Path]:
     """The bound protocol, its declared run's `metrics.json`, the
     `config.json` of that run and of the run that recorded its model
-    (`answering_run.recorded_runs`: which model answered is a record, not
+    (`runs.recorded_runs`: which model answered is a record, not
     today's models.toml), and its area's scripts — paths even while missing,
     the files `_bound_entries` reads."""
-    # layer 1 both; answering_run imports promises, which imports this module
-    from labkit.formats.answering_run import recorded_runs
 
     out = [bound]
     try:

@@ -51,12 +51,8 @@ from labkit.formats.repo import (
 )
 from labkit.formats.runs import read_run_config
 from labkit.formats.scope_sha import parse_source
-from labkit.formats.answering_run import (
-    adopted_run,
-    bound_answering_run,
-    lineage,
-    model_provenance_run,
-)
+from labkit.formats.answering_run import adopted_run, bound_answering_run
+from labkit.formats.runs import lineage, model_provenance_run
 
 MEASURE_SCRIPT = Path("scripts") / "01_measure.py"
 
@@ -179,7 +175,7 @@ def model_rows(run_dir: Path) -> list[ParamRow]:
     """The model that answered the rows, from the record that holds it.
 
     Raises:
-        ValueError: From `answering_run.lineage` — a broken `derived_from`
+        ValueError: From `runs.lineage` — a broken `derived_from`
             chain, wherever in it.
     """
     found = model_provenance_run(run_dir)

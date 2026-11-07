@@ -1,4 +1,4 @@
-"""`answering_run.lineage` — the whole `derived_from` chain, validated once,
+"""`runs.lineage` — the whole `derived_from` chain, validated once,
 and its three readers: the model's run, the params rows, the rows a
 measurement file may hold.
 
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from protocol_fixture import run_record  # noqa: E402
 from labkit.checks.run_record_check import row_provenance_findings
-from labkit.formats import answering_run, runs
+from labkit.formats import runs
 from labkit.tools import params
 
 A, B, C = (f"2026-10-0{i}T10-00-00_{c * 4}" for i, c in ((1, "a"), (2, "b"), (3, "c")))
@@ -53,8 +53,8 @@ class Lineage(unittest.TestCase):
         a = _run(self.area, A)
         b = _run(self.area, B, derived_from=A)
         c = _run(self.area, C, derived_from=B)
-        self.assertEqual(answering_run.lineage(c), [c, b, a])
-        self.assertEqual(answering_run.lineage(a), [a])
+        self.assertEqual(runs.lineage(c), [c, b, a])
+        self.assertEqual(runs.lineage(a), [a])
 
     def test_each_break_is_loud_naming_what_broke(self) -> None:
         cases = {
@@ -69,7 +69,7 @@ class Lineage(unittest.TestCase):
                     _run(area, name, derived_from=parent)
                 c = _run(area, C, derived_from=links[0][0])
                 with self.assertRaisesRegex(ValueError, needle):
-                    answering_run.lineage(c)
+                    runs.lineage(c)
 
     def test_a_path_instead_of_a_run_name_is_refused_where_it_is_read(self) -> None:
         """`./<own run>` is the run itself under another spelling, and the
@@ -82,7 +82,7 @@ class Lineage(unittest.TestCase):
                 _run(area / "other", A)
                 c = _run(area, C, derived_from=parent)
                 with self.assertRaisesRegex(ValueError, "must name a run"):
-                    answering_run.lineage(c)
+                    runs.lineage(c)
                 with self.assertRaises(runs.RunConfigError):
                     runs.read_run_config(c)
 
@@ -90,7 +90,7 @@ class Lineage(unittest.TestCase):
         (self.area / "runs" / B).mkdir(parents=True)
         c = _run(self.area, C, derived_from=B)
         with self.assertRaisesRegex(ValueError, "no config.json"):
-            answering_run.lineage(c)
+            runs.lineage(c)
 
 
 class BreaksAboveTheFirstModelRecord(unittest.TestCase):
@@ -110,7 +110,7 @@ class BreaksAboveTheFirstModelRecord(unittest.TestCase):
             with self.subTest(needle=needle):
                 c = self._area(above_b)
                 with self.assertRaisesRegex(ValueError, needle):
-                    answering_run.model_provenance_run(c)
+                    runs.model_provenance_run(c)
                 with self.assertRaisesRegex(ValueError, needle):
                     params.model_rows(c)
                 blockers, _ = row_provenance_findings(c)
@@ -123,7 +123,7 @@ class BreaksAboveTheFirstModelRecord(unittest.TestCase):
         _run(area, A)
         b = _run(area, B, derived_from=A, models_resolved=MODEL)
         c = _run(area, C, derived_from=B)
-        self.assertEqual(answering_run.model_provenance_run(c), b)
+        self.assertEqual(runs.model_provenance_run(c), b)
         rows = params.model_rows(c)
         self.assertIn(f"models_resolved of {B}, inherited through {C}", rows[0].home)
         self.assertEqual(row_provenance_findings(c), ([], []))

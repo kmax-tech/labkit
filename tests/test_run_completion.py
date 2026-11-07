@@ -362,7 +362,7 @@ class TestDerivedRun(unittest.TestCase):
     def test_a_derived_run_records_no_model_resolution(self):
         """The rows are the parent's; resolving the alias under today's
         models.toml would be provenance the rows never had — the record
-        stays empty and `answering_run.model_provenance_run` walks to the parent."""
+        stays empty and `runs.model_provenance_run` walks to the parent."""
         with tempfile.TemporaryDirectory() as d:
             area = _area(d)
             parent = _run_dir(area, "2026-10-05T10-00-00_aaaa")
@@ -381,7 +381,7 @@ class TestDerivedRun(unittest.TestCase):
             res.assert_not_called()
             child = json.loads((r.dir / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(child["models_resolved"], {})
-            self.assertEqual(answering_run.model_provenance_run(r.dir), parent)
+            self.assertEqual(runs.model_provenance_run(r.dir), parent)
 
     def test_an_ordinary_run_records_no_parent(self):
         with tempfile.TemporaryDirectory() as d:

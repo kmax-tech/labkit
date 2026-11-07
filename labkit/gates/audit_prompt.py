@@ -34,7 +34,7 @@ from labkit.formats import (
     rules,
     scope_sha,
 )
-from labkit.formats.answering_run import recorded_models
+from labkit.formats.runs import recorded_models
 from labkit.formats.prompts import prompt_body
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_history import (
@@ -276,7 +276,7 @@ def validity_evidence(area: Path, text: str) -> tuple[tuple[str, str], ...]:
     computation whose number claims a property of the data
     (`number_describes = "target_property"`): the bound apply protocol in
     full, its declared run's `metrics.json` (the validation result), the
-    model its run recorded (`answering_run.recorded_models`), and today's
+    model its run recorded (`runs.recorded_models`), and today's
     models.toml entry and prompt sources (the protocol's `Prompt` blocks and
     the area's `PROMPT*` constants, `prompt_check`) marked as today's —
     a reference alone gives the audit nothing to judge. Not bound

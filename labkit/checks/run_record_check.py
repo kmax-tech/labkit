@@ -50,11 +50,8 @@ from labkit.formats.runs import (
     read_run_config,
     resolve_recorded,
 )
-from labkit.formats.answering_run import (
-    lineage,
-    model_provenance_run,
-    repeats_of,
-)
+from labkit.formats.answering_run import repeats_of
+from labkit.formats.runs import lineage, model_provenance_run
 from labkit.formats.repo import (
     gate_command,
     measure_anew,
@@ -94,7 +91,7 @@ def code_since_run(
 ) -> tuple[list[GateFinding], list[str]]:
     """(blockers, warnings): the code that produced ANSWERING_RUN's number
     is not the code here now (audit 2026-10-27, A1). For the run and each
-    run it derives from (`answering_run.lineage`: a re-evaluation rests on
+    run it derives from (`runs.lineage`: a re-evaluation rests on
     its parent's rows): its script against the hash the run recorded
     (`script_sha`), and each module the script imports
     (`scope_sha.measured_code`: beside it, under `lib/` or `src/`) against
@@ -827,7 +824,7 @@ def row_provenance_findings(
     note (a Store without `prov`), not proof of anything (2026-10-09). Rows
     of a continued run whose script differs from this run's are a blocker
     too (`_continued_with_other_code`): the number is that code's. A
-    broken lineage (`answering_run.lineage`) is the one blocker: without
+    broken lineage (`runs.lineage`) is the one blocker: without
     it no row can be held to a run."""
     blockers: list[GateFinding] = []
     notes: list[str] = []
