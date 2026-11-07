@@ -371,7 +371,7 @@ class Audit(unittest.TestCase):
         self.assertEqual((attempt.outcome, attempt.file), ("failed", files[0].name))
         # no answer came, so none is kept
         self.assertEqual(attempt.answer, "")
-        self.assertFalse((area / "audits" / attempts.ANSWERS).exists())
+        self.assertFalse((area / "audits" / findings.ANSWERS).exists())
         # eighth haiku round (t18): `rm audits/*.toml` before a new attempt —
         # the next audit names the attempt whose evidence is gone and
         # refuses before any call
@@ -2154,7 +2154,7 @@ class KeptAnswer(unittest.TestCase):
         attempt, path = self.kept(area)
         self.assertEqual(attempt.outcome, "none")
         self.assertIn("check field that does not read", attempt.error)
-        self.assertEqual(attempt.answer, f"{attempts.ANSWERS}/{attempt.id}.txt")
+        self.assertEqual(attempt.answer, f"{findings.ANSWERS}/{attempt.id}.txt")
         self.assertEqual(path.read_text(encoding="utf-8"), answer)
 
     def test_an_answer_that_does_not_read_names_its_way_out(self):

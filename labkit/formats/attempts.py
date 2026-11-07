@@ -99,7 +99,7 @@ from typing import IO
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats.files import write_atomic, write_atomic_bytes
-from labkit.formats.findings import DIR
+from labkit.formats.findings import ANSWERS, DIR, JOURNAL
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
     INDEX_REV,
@@ -115,9 +115,6 @@ from labkit.formats.commands import audit_command
 from labkit.formats.runs import name_minute, now_stamp
 from labkit.formats.scope_sha import digest
 
-JOURNAL = "attempts.jsonl"
-#: the folder under audits/ that keeps each answer, named by its attempt
-ANSWERS = "answers"
 EVENTS = ("started", "ended", "interrupted")
 #: how an attempt ended: the record, the evidence of a failed call, or no file
 OUTCOMES = ("record", "failed", "none")

@@ -49,7 +49,7 @@ from datetime import datetime
 from pathlib import Path
 
 from labkit.formats import findings
-from labkit.formats.attempts import JOURNAL
+from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import GateFinding, blocker, with_way_out
 from labkit.formats.repo import (
     GitError,

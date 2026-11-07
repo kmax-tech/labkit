@@ -120,6 +120,10 @@ from labkit.formats.scope_sha import digest
 from labkit.formats.standard_contract import ANALYSIS_AUDIT, PREFLIGHT_AUDIT
 
 DIR = "audits"
+#: the attempt journal under DIR (`attempts`)
+JOURNAL = "attempts.jsonl"
+#: the folder under DIR that keeps each answer, named by its attempt
+ANSWERS = "answers"
 #: the suffix of a failed attempt's file, never of a record of findings
 FAILED_SUFFIX = "-failed.toml"
 #: the name of a decision review (`reviews`), written beside the records

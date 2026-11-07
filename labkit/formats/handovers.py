@@ -184,14 +184,16 @@ def evidence(
         # an unmerged or link entry in the index: a sentence, not a
         # traceback at the commit (audit 2026-10-27, third, K3)
         raise HandoverError(f"{folder}: {exc}") from exc
-    from labkit.formats.attempts import JOURNAL  # attempts imports this module
-
     out: dict[str, str] = {}
     for p, sha in sorted(held.items()):
         rel = p.relative_to(folder).as_posix()
         if p == omit or review_trace(rel):
             continue
-        bound = journal_digest(root, p, sha, staged=staged) if rel == JOURNAL else sha
+        bound = (
+            journal_digest(root, p, sha, staged=staged)
+            if rel == findings.JOURNAL
+            else sha
+        )
         if bound is not None:
             out[rel] = bound
     return out
@@ -201,11 +203,9 @@ def review_trace(rel: str) -> bool:
     """Is REL, a path under an area's audits/, what a report review writes:
     its record (`report_reviews.FOLDER`) or its kept answer
     (`answers/<id>.txt`, the id naming `report_reviews.ATTEMPT_MODE`)? Pure."""
-    from labkit.formats.attempts import ANSWERS  # attempts imports this module
-
     first, _, name = rel.partition("/")
     return first == report_reviews.FOLDER or (
-        first == ANSWERS and f"-{report_reviews.ATTEMPT_MODE}-" in name
+        first == findings.ANSWERS and f"-{report_reviews.ATTEMPT_MODE}-" in name
     )
 
 
