@@ -49,6 +49,28 @@ def run_next(area: Path, cwd: Path) -> tuple[int, str, str]:
     return rc, out.getvalue(), err.getvalue()
 
 
+class BareNextFindsTheArea(unittest.TestCase):
+    """`labkit-next` without an area speaks of the repo's one area, numbered
+    or not (`repo.experiment_areas`); a folder without a protocol, the
+    stamp's `experiments/explore/`, is no area."""
+
+    def test_an_unnumbered_area_is_the_one_area(self):
+        from labkit.formats import repo
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "experiments" / "explore").mkdir(parents=True)
+            area = root / "experiments" / "lines"
+            area.mkdir()
+            self.assertEqual(repo.experiment_areas(root), [])
+            (area / "PROTOCOL-lines.md").write_text("# x\n", encoding="utf-8")
+            self.assertEqual(repo.experiment_areas(root), [area])
+            (root / "experiments" / "02-other").mkdir()
+            self.assertEqual(
+                repo.experiment_areas(root), [root / "experiments" / "02-other", area]
+            )
+
+
 class OneChainPerHold(unittest.TestCase):
     """The stop, the commit and report-check's hook entry run report-check's
     chain once per protocol: `next`'s step reads the chain the hold found

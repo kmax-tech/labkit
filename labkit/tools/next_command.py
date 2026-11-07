@@ -28,7 +28,7 @@ from labkit.formats.repo import (
     layout_root,
     no_such_area,
     shown,
-    stamped_areas,
+    experiment_areas,
 )
 from labkit.gates.next_step import Step, next_step  # noqa: F401 — the tool's names
 from labkit.gates.report_context import INDEX, TREE
@@ -50,7 +50,7 @@ def only_area(cwd: Path) -> Path | None:
     that creates an area — or several, refused naming each. Prints what it
     says: a bare `labkit-next` is the loop's first step before an area
     exists, so it names a step, not the usage line."""
-    areas = stamped_areas(layout_root(cwd))
+    areas = experiment_areas(layout_root(cwd))
     if len(areas) == 1:
         return areas[0]
     if not areas:
@@ -87,7 +87,7 @@ def main(argv: list[str]) -> int:
         return 0
     area = args.area if args.area is not None else only_area(Path.cwd())
     if area is None:
-        return 0 if not stamped_areas(layout_root(Path.cwd())) else 2
+        return 0 if not experiment_areas(layout_root(Path.cwd())) else 2
     if not area.is_dir():
         console.refuse("labkit-next", no_such_area(area))
         return 2
