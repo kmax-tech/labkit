@@ -427,7 +427,8 @@ def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step
         return Step(
             f"{protocol.name} is handed over, and {owed.text}",
             owed.fix
-            or f"`{audit_command(area, '--report-review', '<REPORT>', protocol=protocol)}`",
+            # the placeholder outside the builder, which would quote it
+            or f"`{audit_command(area, protocol=protocol)} --report-review <REPORT>`",
             "the commit and the stop: the report's final text is reviewed once",
         )
     return Step(

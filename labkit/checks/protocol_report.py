@@ -155,9 +155,11 @@ def prose_lines(text: str) -> list[tuple[str | None, str]]:
 
 def registration_prose(text: str) -> int:
     """How many prose lines (`prose_lines`) TEXT holds outside its `## Runs`
-    section (`protocol_block.RUNS_HEADING`): a protocol is a registration,
-    not a lab journal, and the run list is mandatory content, one entry per
-    run_id, not the registration — the count the length budget holds."""
+    section (`protocol_block.RUNS_HEADING`, a heading that opens with `##
+    Runs` exactly — `## Läufe` or `## Run list` count as prose): a protocol
+    is a registration, not a lab journal, and the run list is mandatory
+    content, one entry per run_id, not the registration — the count the
+    length budget holds."""
     return sum(
         1
         for section, _ in prose_lines(text)

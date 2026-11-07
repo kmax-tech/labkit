@@ -21,7 +21,7 @@ from dataclasses import dataclass, replace
 import shlex
 from pathlib import Path
 
-from labkit.formats.repo import NOT_CODE_DIRS
+from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats.runs import (
     NO_GIT,
     metrics_path,
@@ -189,7 +189,8 @@ def script_of(area: Path, cfg: RunConfig) -> Path | str:
     found = [
         p.resolve()
         for p in area.rglob(cfg.script)
-        if p.is_file() and not NOT_CODE_DIRS.intersection(p.relative_to(area).parts)
+        if p.is_file()
+        and not SKIP_DIRS_AND_OUTPUT.intersection(p.relative_to(area).parts)
     ]
     if len(found) == 1:
         return found[0]

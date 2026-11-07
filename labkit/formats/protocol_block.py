@@ -321,10 +321,12 @@ def parse_toml_block(text: str) -> dict:
 
 
 def is_stamp_placeholder(value: object) -> bool:
-    """Is VALUE still the stamp's placeholder — a string whose whole value,
-    spaces aside, is one `<…>`, as `labkit-init exp` writes it? A value
-    merely starting with `<` is content. The one test of the head's values,
-    a promise's sentence, a field's value and a data count's."""
+    """Is VALUE still the stamp's placeholder, as `labkit-init exp` writes
+    it — a string that, spaces aside, opens with `<` and closes with `>`?
+    A value merely starting with `<` is content; one holding several `<…>`
+    (`<a> and <b>`) reads as a placeholder too, as each stamp is one. The
+    one test of the head's values, a promise's sentence, a field's value
+    and a data count's."""
     if not isinstance(value, str):
         return False
     v = value.strip()

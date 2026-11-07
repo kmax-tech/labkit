@@ -18,7 +18,7 @@ import re
 import sys
 from pathlib import Path
 
-from labkit.formats.repo import NOT_CODE_DIRS
+from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats import jsonl, repo
 from labkit.formats.files import write_atomic_bytes
 from labkit.formats.gate import with_way_out
@@ -582,7 +582,7 @@ def snapshot_untracked_sources(run_dir: Path) -> list[str]:
     copied = []
     for rel in sorted(untracked):
         relp = Path(rel)
-        if relp.suffix != ".py" or NOT_CODE_DIRS.intersection(relp.parts):
+        if relp.suffix != ".py" or SKIP_DIRS_AND_OUTPUT.intersection(relp.parts):
             continue
         srcf = script_dir / relp
         try:

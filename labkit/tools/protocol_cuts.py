@@ -52,8 +52,9 @@ SECTION_KEYS = (
 )
 
 
-#: a template item's bold label, `- **Label:**` (the colon optional),
-#: wrapped lines included
+#: a template item's bold label — `- **Label:**`, or `- **Label**` with
+#: the colon outside or none —, a label wrapped over lines included; the
+#: label read lazily up to the first closing `**` (`_label_of`, `owed_cut`)
 FIELD_LABEL = re.compile(r"^-\s+\*\*(.+?)\s*:?\*\*", re.S)
 
 

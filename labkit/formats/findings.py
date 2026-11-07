@@ -190,11 +190,17 @@ class TaggedLine:
     @property
     def file_place(self) -> tuple[str, str] | None:
         """(file, place) of the first field, `<file>:<place>`: the file as
-        written and what follows its first colon, backticks and spaces
-        trimmed; None when the field holds no colon, no file or no place."""
+        written and what follows its first colon, spaces trimmed — inside
+        the backticks when the field opens with one (text after the closing
+        backtick is no part of the place); None when the field holds no
+        colon, no file or no place. Fields part at a dot or a dash
+        (`tagged_line`), so a place ends at ` — ` too."""
         if not self.fields:
             return None
-        file, colon, place = self.fields[0].strip("`").partition(":")
+        field = self.fields[0]
+        if field.startswith("`") and "`" in field[1:]:
+            field = field[1 : field.index("`", 1)]
+        file, colon, place = field.strip("`").partition(":")
         place = place.strip().strip("`").strip()
         if not colon or not file.strip() or not place:
             return None

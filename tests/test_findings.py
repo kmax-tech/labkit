@@ -1426,6 +1426,10 @@ class OneGrammarOfTheGradeLine(unittest.TestCase):
         assert line is not None
         self.assertEqual(line.file_place, ("PROTOCOL-x.md", "Terms"))
         self.assertIsNone(findings.tagged_line("BLOCKER · a:1 · b", ("READ",)))
+        # text after the closing backtick is no part of the place
+        line = findings.tagged_line("READ · `a.md:12` (vague) · say it", ("READ",))
+        assert line is not None
+        self.assertEqual(line.file_place, ("a.md", "12"))
 
 
 class CorrectedField(unittest.TestCase):

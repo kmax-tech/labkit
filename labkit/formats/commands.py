@@ -153,10 +153,11 @@ def measure_anew(area: Path) -> str:
 
 
 def gate_command(tool: str, target: Path) -> Command:
-    """The line that runs the check TOOL (`code-check`, `finalize`,
-    `report-check`, `preflight`, `notes-check`) on TARGET, named as the
-    working directory reaches it — the last step of a way out whose repair
-    is by hand."""
+    """The line that runs labkit's read-only TOOL on TARGET — a check
+    (`code-check`, `finalize`, `report-check`, `preflight`, `notes-check`,
+    `protocol-check`) or `labkit-next`, which reads the gates —, TARGET
+    shell-quoted as the working directory reaches it: the last step of a
+    way out whose repair is by hand. Its kind is CHECK: it writes nothing."""
     return Command(CHECK, f"{tool} {shlex.quote(shown(target, Path.cwd()))}")
 
 
@@ -164,7 +165,9 @@ def contract_command(protocol: Path) -> Command:
     """The `protocol-check … --contract` line that prints the fields PROTOCOL
     owes by occasion, the protocol named as the working directory reaches
     it (`shown`)."""
-    return Command(CHECK, f"protocol-check {shown(protocol, Path.cwd())} --contract")
+    return Command(
+        CHECK, f"protocol-check {shlex.quote(shown(protocol, Path.cwd()))} --contract"
+    )
 
 
 def render_command(*, from_run: bool = False) -> Command:

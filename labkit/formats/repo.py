@@ -251,7 +251,7 @@ SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "
 #: directories that hold no code of the lab: SKIP_DIRS and an area's
 #: `output/` — what a search for an area's scripts and the copy of a run's
 #: untracked code pass over
-NOT_CODE_DIRS = SKIP_DIRS | {"output"}
+SKIP_DIRS_AND_OUTPUT = SKIP_DIRS | {"output"}
 
 
 def repo_protocols(root: Path) -> list[Path]:
