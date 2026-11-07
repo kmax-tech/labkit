@@ -133,6 +133,30 @@ PROMISE_HEADER = re.compile(r"^\s*\[\[\s*promise\s*\]\]\s*(?:#.*)?$")
 TABLE_HEADER = re.compile(r"^\s*\[")
 
 
+def table_header(name: str) -> re.Pattern[str]:
+    """The header line of the head's `[NAME]` table, a trailing comment
+    allowed — not `[[NAME]]` (`PROMISE_HEADER` is the array's)."""
+    return re.compile(rf"^\s*\[\s*{re.escape(name)}\s*\]\s*(?:#.*)?$")
+
+
+def table_span(
+    lines: list[str], start: int, end: int, name: str
+) -> tuple[int, int] | None:
+    """The line range (first, end) of the `[NAME]` table's body within
+    LINES[START:END] — from below its header to the next table header, the
+    header itself at `first - 1` — or None without the table. The one walk
+    of a table that `protocol-fill` writes into (`protocol_edit`,
+    `protocol_result`)."""
+    header = table_header(name)
+    for i in range(start, end):
+        if header.match(lines[i]):
+            j = i + 1
+            while j < end and not TABLE_HEADER.match(lines[j]):
+                j += 1
+            return i + 1, j
+    return None
+
+
 #: characters json leaves raw that a one-line TOML string cannot hold raw:
 #: DEL (TOML forbids it unescaped) and the line breaks `str.splitlines` cuts
 #: beyond those json escapes — the fence walker would split the string

@@ -241,6 +241,13 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"f[\"']test_\{",
         {"repo"},
     ),
+    # a `[table]` of the TOML head was found by its own regex in six places
+    # (architecture audit 2026-11-07, second, H4): `protocol_block.table_span`
+    (
+        "a head table header spelled by hand",
+        r"(?<!\\\[)\\\[\\s\*[a-z]+\\s\*\\\](?!\\\])",
+        {"protocol_block"},
+    ),
     # labkit-audit printed three refusals and its progress lines itself
     # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
     # `console.progress`
@@ -386,6 +393,7 @@ class OneHome(unittest.TestCase):
             "a section heading found by hand": 'if line.startswith("## "):',
             "a refusal or progress line printed by hand": 'print(f"labkit-audit: {exc}", file=sys.stderr)',
             "an area's test file named by hand": 'stem = f"test_{nn}_" + name',
+            "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
         }
         for what, shape, _ in RULES:
             with self.subTest(what=what):

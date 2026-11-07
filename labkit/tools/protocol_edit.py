@@ -95,7 +95,10 @@ def field_address_hint(text: str, label: str) -> str | None:
         return None
     if target.startswith("kept."):
         span = protocol_block.toml_block_span(text)
-        if span is None or _table_span(text.splitlines(), *span, "kept") is None:
+        if (
+            span is None
+            or protocol_block.table_span(text.splitlines(), *span, "kept") is None
+        ):
             return None
     return f'{label!r} names a head key — use `"{target}=VALUE"`'
 
@@ -235,22 +238,6 @@ def _head_line(key: str) -> re.Pattern[str]:
     return re.compile(rf'^({re.escape(bare)}\s*=\s*)"<[^"\n]*>"\s*$')
 
 
-def _table_span(
-    lines: list[str], start: int, end: int, table: str
-) -> tuple[int, int] | None:
-    """The line range (start, end) of the TOML block's `[TABLE]` body within
-    LINES[START:END] — from below its header to the next table header — or
-    None without the table."""
-    header = re.compile(rf"^\s*\[\s*{re.escape(table)}\s*\]\s*(?:#.*)?$")
-    for i in range(start, end):
-        if header.match(lines[i]):
-            j = i + 1
-            while j < end and not protocol_block.TABLE_HEADER.match(lines[j]):
-                j += 1
-            return i + 1, j
-    return None
-
-
 def head_open(text: str, key: str) -> int | None:
     """Line number of the TOML head's `KEY = "<…>"` placeholder, KEY one of
     `HEAD_CHOICES`, or None once set — or, for a dotted KEY (`kept.key`),
@@ -275,7 +262,7 @@ def head_open(text: str, key: str) -> int | None:
         return None
     start, end = span
     if "." in key:
-        table = _table_span(lines, start, end, key.split(".", 1)[0])
+        table = protocol_block.table_span(lines, start, end, key.split(".", 1)[0])
         if table is None:
             return None
         start, end = table
@@ -301,7 +288,7 @@ def fill_head(text: str, key: str, value: str) -> str:
         if (
             table is not None
             and span is not None
-            and _table_span(text.splitlines(), *span, table) is None
+            and protocol_block.table_span(text.splitlines(), *span, table) is None
         ):
             raise ValueError(
                 f"the head has no [{table}] table to fill — add it to the TOML head "
@@ -358,7 +345,11 @@ def set_report(text: str, value: str, *, force: bool) -> str:
         )
     lines = text.split("\n")
     span = protocol_block.toml_block_span(text)
-    table = _table_span(lines, *span, "protocol") if span is not None else None
+    table = (
+        protocol_block.table_span(lines, *span, "protocol")
+        if span is not None
+        else None
+    )
     if table is None:
         raise ValueError("the head has no [protocol] table to register a report in")
     start, end = table

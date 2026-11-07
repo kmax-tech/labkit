@@ -36,8 +36,6 @@ RUNS_HEADING = re.compile(r"^## Runs\b")
 
 #: how `--from-run` names the declaration among what it filled
 RESULT_LABEL = "[result] run"
-_PROTOCOL_HEADER = re.compile(r"^\s*\[\s*protocol\s*\]\s*(?:#.*)?$")
-_RESULT_HEADER = re.compile(r"^\s*\[\s*result\s*\]\s*(?:#.*)?$")
 #: the `[result]` table's one line, its key and `=` and a trailing comment kept
 _RESULT_RUN_LINE = re.compile(r'^(\s*run\s*=\s*)"[^"\n]*"(\s*(?:#.*)?)$')
 
@@ -79,15 +77,9 @@ def fill_result_run(text: str, run_id: str) -> str:
 
 def _replace_result_run(lines: list[str], span: tuple[int, int], run_id: str) -> None:
     """Set the `run = "…"` line of the `[result]` table in LINES[SPAN] to RUN_ID."""
-    inside = False
-    for i in range(*span):
-        if _RESULT_HEADER.match(lines[i]):
-            inside = True
-            continue
-        if protocol_block.TABLE_HEADER.match(lines[i]):
-            inside = False
-            continue
-        m = _RESULT_RUN_LINE.match(lines[i]) if inside else None
+    body = protocol_block.table_span(lines, *span, "result")
+    for i in range(*body) if body is not None else ():
+        m = _RESULT_RUN_LINE.match(lines[i])
         if m:
             lines[i] = f'{m.group(1)}"{run_id}"{m.group(2)}'
             return
@@ -99,19 +91,14 @@ def _replace_result_run(lines: list[str], span: tuple[int, int], run_id: str) ->
 def _insert_result_table(lines: list[str], span: tuple[int, int], run_id: str) -> None:
     """Write `[result]` with RUN_ID after the last key of the `[protocol]`
     table in LINES[SPAN] — before the comments and tables that follow it."""
-    start, end = span
-    for i in range(start, end):
-        if not _PROTOCOL_HEADER.match(lines[i]):
-            continue
-        last_key = i
-        for j in range(i + 1, end):
-            if protocol_block.TABLE_HEADER.match(lines[j]):
-                break
-            if lines[j].strip() and not lines[j].lstrip().startswith("#"):
-                last_key = j
-        lines[last_key + 1 : last_key + 1] = ["", "[result]", f'run = "{run_id}"']
-        return
-    raise ValueError("no [protocol] table in the ```toml block")
+    body = protocol_block.table_span(lines, *span, "protocol")
+    if body is None:
+        raise ValueError("no [protocol] table in the ```toml block")
+    last_key = body[0] - 1  # the header, when the table holds no key
+    for j in range(*body):
+        if lines[j].strip() and not lines[j].lstrip().startswith("#"):
+            last_key = j
+    lines[last_key + 1 : last_key + 1] = ["", "[result]", f'run = "{run_id}"']
 
 
 #: the label `--from-run` writes from the run's metrics.json — `--list` sets
@@ -368,18 +355,10 @@ def without_result(text: str) -> str:
     if span is None:
         return text
     lines = text.split("\n")
-    start = next((i for i in range(*span) if _RESULT_HEADER.match(lines[i])), None)
-    if start is None:
+    body = protocol_block.table_span(lines, *span, "result")
+    if body is None:
         return text
-    end = next(
-        (
-            i
-            for i in range(start + 1, span[1])
-            if protocol_block.TABLE_HEADER.match(lines[i])
-        ),
-        span[1],
-    )
-    del lines[start:end]
+    del lines[body[0] - 1 : body[1]]  # the header and its body
     result = "\n".join(lines)
     if protocol_block.declared_run(result) is not None:
         raise ValueError("[result] adoption could not be withdrawn")
