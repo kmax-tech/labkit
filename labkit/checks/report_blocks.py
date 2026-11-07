@@ -403,7 +403,7 @@ REPORT_CHECK_AGAIN = "`report-check --if-reported <REPORT>`"
 
 #: the placeholder of a discussion's why in a printed command
 WHY_LOOKED_AT = "<what refused the adoption, what you found>"
-#: the placeholder of the progress account's why (`report_hold.progress_account`)
+#: the placeholder of the progress account's why (`registered_report.progress_account`)
 WHY_PROGRESS = "<what was measured, what is still open>"
 
 

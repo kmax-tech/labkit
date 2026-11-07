@@ -29,7 +29,7 @@ was gone (ninth haiku round, t5). report-check holds a report with a
 discussion block, and the report a protocol's head registers once it
 carries its result or handover block, until a review of exactly that
 state names no claim (`report_hold.report_review_owed`,
-`report_hold.report_owed`); a claim holds the state, and a later clean
+`registered_report.report_owed`); a claim holds the state, and a later clean
 draw does not release it. A research note citing a run is not held: it
 owes a review only when it discusses one, and may be reviewed by hand.
 On a state a review

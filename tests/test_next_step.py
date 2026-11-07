@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from labkit.gates import registered_report
 from labkit.tools import report_command
 from labkit.checks.report_review_inputs import review_keys, review_pieces  # noqa: E402
 from labkit.formats import protocol_block, report_reviews  # noqa: E402
@@ -868,7 +869,7 @@ class MissingRegisteredReport(unittest.TestCase):
     registered report is not written after a measurement with a line of
     its own (the finding's three ways), while `labkit-next` named the
     progress account. Now the hold stays the gate's finding
-    (`report_hold.missing_report`) and the stop prints the step `next`
+    (`registered_report.missing_report`) and the stop prints the step `next`
     names for that state — one spelling, one action."""
 
     def setUp(self) -> None:
@@ -879,10 +880,10 @@ class MissingRegisteredReport(unittest.TestCase):
         self.report = self.lab.root / "REPORT.md"
 
     def test_the_stop_prints_the_step_next_reads_from_the_same_finding(self):
-        from labkit.gates import agent_hooks, report_hold
+        from labkit.gates import agent_hooks
 
         with contextlib.chdir(self.lab.root):
-            gap = report_hold.missing_report(
+            gap = registered_report.missing_report(
                 self.protocol, self.protocol.read_text(encoding="utf-8"), self.lab.root
             )
             assert gap is not None

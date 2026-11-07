@@ -49,7 +49,7 @@ is held and blocks. A protocol whose head registers a report file
 (`report = "REPORT.md"`) owes that file its result once the file is
 delivered — in the tree at the stop, in the index at the commit —: the
 result block of the declared run or the protocol's handover block,
-declared or not (`report_hold.report_owed`, `hold_registered`); a
+declared or not (`registered_report.report_owed`, `hold_registered`); a
 report with the run id removed, a run id typed in, or a discussion block
 releases nothing (pressure pilot 2026-10-29: three of six agents deleted
 the run id after the hook refused the citation, and the commit passed).
@@ -143,14 +143,16 @@ from labkit.gates.report_hold import (
     held_by_reports,
     hold_report,
     reached_reports,
-    formerly_registering,
-    missing_report,
     registering_protocols,
-    report_binding_gap,
     repo_sources,
     report_files,
-    report_owed,
     staged_area_gap,
+)
+from labkit.gates.registered_report import (
+    formerly_registering,
+    missing_report,
+    report_binding_gap,
+    report_owed,
 )
 from labkit.formats.protocol_check import REPEATED_WAY_OUT, check_fields
 from labkit.formats.repo import (
@@ -639,7 +641,7 @@ def declaration_gaps(ctx: Checked) -> list[GateFinding]:
 
 def report_binding_gaps(ctx: Checked, *, unread: bool) -> list[GateFinding]:
     """The report CTX's head registers against the one its first
-    measurements stood under (`report_hold.report_binding_gap`, UNREAD
+    measurements stood under (`registered_report.report_binding_gap`, UNREAD
     passed on), as a list."""
     gap = report_binding_gap(ctx.protocol, ctx.text, unread=unread)
     return [] if gap is None else [gap]
@@ -738,7 +740,7 @@ def chain_gaps(
     2. Registration: the freeze where the lane owes it, else the first
        measurement's committed registration where the lane owes that; a
        declared replacement's changes; the report registered before the
-       first measurement (`report_hold.report_binding_gap`).
+       first measurement (`registered_report.report_binding_gap`).
     3. Finalize: its blockers and warnings, always (`finalize_findings`).
     4. Full run: reportability, only when an answering run exists.
     5. Analysis: coverage and rendered results where the lane owes it,
@@ -901,12 +903,12 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
 
 
 def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
-    """The registered report's obligation (`report_hold.report_owed`): the
+    """The registered report's obligation (`registered_report.report_owed`): the
     file the head's `report` names, as the state holds it, carries the
     result block of the declared run or the protocol's handover block —
     else one blocker; nothing registered: []. Not delivered: held where a
     result is adopted, or where the commit removes a report HEAD holds
-    (`report_hold.missing_report`); else [] — before the adoption the stop
+    (`registered_report.missing_report`); else [] — before the adoption the stop
     names a report not yet written. The file is read relative to the area's layout root (`Checked.repo`: the git
     repository where there is one), from the index when the state is the
     index. Not held on the PROPOSED state — the adoption's own check of the
@@ -1100,7 +1102,7 @@ def hold_reported(
     head registers a file among PATHS as its report is held too
     (`registering_protocols`): the report lies in no area, and a change
     of it reaches the protocol that owes it its result
-    (`report_hold.report_owed`, through `hold_declared`). Every line goes
+    (`registered_report.report_owed`, through `hold_declared`). Every line goes
     through TELL. Returns the worst exit code and the chains that ran
     (`HoldVerdict`)."""
     touched = reached_by(paths, repo, staged=staged)
@@ -1192,10 +1194,10 @@ def hold_registered(
     protocol: Path, text: str, repo: Path, *, staged: bool, tell: Tell = print
 ) -> int:
     """The registered report's obligation of PROTOCOL, a protocol that
-    declares no result (`report_hold.report_owed` with no declared run):
+    declares no result (`registered_report.report_owed` with no declared run):
     0 when the head registers no report, the file is not delivered in the
     state (but for a commit that removes one HEAD holds,
-    `report_hold.missing_report`), or it carries the protocol's handover block; 1 held, the
+    `registered_report.missing_report`), or it carries the protocol's handover block; 1 held, the
     blocker told under its own heading. The area's committed evidence
     changed against HEAD holds first (`evidence.change_blockers`): the
     report of a handover is released by the report reviews of that area.

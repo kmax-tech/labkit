@@ -95,7 +95,7 @@ PROTOCOL_HEAD_KEYS = (
 #: the head fields a protocol may carry: `report`, the file (a path
 #: relative to the repository root) assigned as this protocol's report —
 #: once it exists, it owes the protocol's result block or its handover
-#: block (`report_hold.report_owed`); absent, no file is owed anything
+#: block (`registered_report.report_owed`); absent, no file is owed anything
 OPTIONAL_HEAD_KEYS = ("report",)
 
 

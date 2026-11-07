@@ -20,11 +20,11 @@ The order, the first that applies is the step (`next_step`):
     a run still open             → `runlog … --wait`
     a measured run, nothing adopted, → the progress account: `protocol-fill
       the registered report without     … --discuss RUN --why … --into REPORT`
-      its account of that run           (`report_hold.progress_account`), before
+      its account of that run           (`registered_report.progress_account`), before
                                         any gap — saved first, released by nothing;
                                         a registered report not written at all
                                         is this state too: the stop holds it
-                                        (`report_hold.missing_report`) and
+                                        (`registered_report.missing_report`) and
                                         prints this step
     a gap report-check holds     → its way out, the first in the chain's
                                    order (`report_check.chain_gaps`; the
@@ -413,10 +413,10 @@ def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step
     """The step of a PROTOCOL (its TEXT) a current handover ended
     (`handovers.protocol_handed_over`), else None: the review its
     registered report owes once the handover block stands
-    (`report_hold.report_owed`, read from the index when STAGED), else nothing — a new attempt is a new
+    (`registered_report.report_owed`, read from the index when STAGED), else nothing — a new attempt is a new
     registration. It said "nothing" while the commit held the report for
     its review (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
-    from labkit.gates.report_hold import report_owed
+    from labkit.gates.registered_report import report_owed
 
     if not handovers.protocol_handed_over(area, protocol):
         return None
@@ -617,7 +617,7 @@ def _report_hint(area: Path, protocol: Path, text: str) -> str:
     registers no report: how to register one — labkit cannot tell whether
     the task asks for a report file, and once the area measured the
     registration is refused (`protocol_fill.report_bound`). "" otherwise."""
-    from labkit.gates.report_hold import has_measured
+    from labkit.gates.registered_report import has_measured
 
     head = protocol_block.head(text)
     if head.report is not None or not head.id or has_measured(area, head.id):
@@ -633,15 +633,15 @@ def _progress_step(ctx: "Checked") -> Step | None:
     """The progress account as the step, or None: the head registers a
     report, the gates hold the protocol to a measured run, nothing is
     adopted, and the report does not yet carry its discussion of that run
-    (`report_hold.progress_account`). It comes before every gap: the account
+    (`registered_report.progress_account`). It comes before every gap: the account
     is saved first and releases nothing, so a gap that holds — a change
     since the run, the audit still owed — is named on the next call. A
     registered report not written at all is the same state: the stop holds
-    the protocol with the gate's finding (`report_hold.missing_report`,
+    the protocol with the gate's finding (`registered_report.missing_report`,
     `agent_hooks.missing_reports`) and prints this step — the hold is the
     finding, the action is this one concrete command."""
     from labkit.checks import report_blocks
-    from labkit.gates.report_hold import progress_account
+    from labkit.gates.registered_report import progress_account
 
     report = _registered_report(ctx)
     if report is None or ctx.declared is not None or ctx.run is None:

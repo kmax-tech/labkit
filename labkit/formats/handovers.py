@@ -556,7 +556,7 @@ def block_mismatch(
     or, STAGED, the index, does not read (`read_record`), was written for
     another report, or the lines differ from `handover_lines` — or None
     when the block stands as written. The test of a block the gate found
-    in a report (`report_hold.report_owed`: a block typed by hand ends
+    in a report (`registered_report.report_owed`: a block typed by hand ends
     nothing); `mismatch` starts from the record and holds the area too."""
     path = own_path(report.parent / block.record)
     if not under_root(root, path):

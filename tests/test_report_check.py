@@ -16,6 +16,7 @@ cites a run.
 
 from __future__ import annotations
 
+from labkit.gates import registered_report
 from labkit.tools import report_command
 from labkit.formats.runs import RunKind
 from labkit.tools import protocol_fill
@@ -1306,7 +1307,7 @@ class RegisteredReport(unittest.TestCase):
         nothing."""
         import shutil
 
-        from labkit.gates import agent_hooks, report_hold
+        from labkit.gates import agent_hooks
 
         area = self._area(git=True)
         root = area.parent.parent
@@ -1320,7 +1321,7 @@ class RegisteredReport(unittest.TestCase):
             encoding="utf-8",
         )
         text = proto.read_text(encoding="utf-8")
-        gap = report_hold.missing_report(proto, text, root)
+        gap = registered_report.missing_report(proto, text, root)
         assert gap is not None
         self.assertIn("REPORT.md as its report, which is not written", gap.text)
         self.assertIn("labkit-adopt", gap.fix or "")
@@ -1336,17 +1337,17 @@ class RegisteredReport(unittest.TestCase):
         self.assertIn("REPORT.md carries no account of it yet", line)
         # the twin: the report written, nothing missing
         (root / "REPORT.md").write_text("# Report\n", encoding="utf-8")
-        self.assertIsNone(report_hold.missing_report(proto, text, root))
+        self.assertIsNone(registered_report.missing_report(proto, text, root))
         (root / "REPORT.md").unlink()
         # deleting the measured run does not lift it: runs.tsv still lists it
         from labkit.run import runlog
 
         runlog.reindex(area)
         shutil.rmtree(area / "runs")
-        self.assertIsNotNone(report_hold.missing_report(proto, text, root))
+        self.assertIsNotNone(registered_report.missing_report(proto, text, root))
         # the twin: no measurement of it, nothing owed yet
         (area / runlog.RUN_INDEX).unlink()
-        self.assertIsNone(report_hold.missing_report(proto, text, root))
+        self.assertIsNone(registered_report.missing_report(proto, text, root))
 
     def test_the_twin_a_note_citing_a_run_owes_no_review(self):
         """A research note may describe an unreviewed run: only the report

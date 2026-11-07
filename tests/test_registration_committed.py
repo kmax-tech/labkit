@@ -31,6 +31,7 @@ from unittest import mock
 
 from protocol_fixture import PID, completed_run, head, scope_file
 
+from labkit.gates import registered_report
 from labkit.gates import registration_hold
 from labkit.tools import report_command
 from labkit.formats import answering_run, protocol_history, runs
@@ -885,11 +886,11 @@ if __name__ == "__main__":
 class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
     """The report a protocol registered before its first measurement is
     bound to what that measurement's commit holds
-    (`report_hold.report_binding_gap`): dropped or moved since, held; the
+    (`registered_report.report_binding_gap`): dropped or moved since, held; the
     same on both lanes. Both selections reach the
     protocol: by its area where the head no longer names the report, and by
     the former report path where only that file changes
-    (`report_hold.formerly_registering`). Each with its correct twin."""
+    (`registered_report.formerly_registering`). Each with its correct twin."""
 
     REPEAT_COST = "low"
 
@@ -927,9 +928,8 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
         return text
 
     def _gap(self, text: str, *, unread: bool = True) -> str | None:
-        from labkit.gates import report_hold
 
-        gap = report_hold.report_binding_gap(self.proto, text, unread=unread)
+        gap = registered_report.report_binding_gap(self.proto, text, unread=unread)
         return None if gap is None else gap.text + " | " + (gap.fix or "")
 
     def test_the_twin_unchanged_passes(self):
@@ -1076,13 +1076,12 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
             self.assertEqual(start_check._freeze_findings(self.area, bound), [])
 
     def test_the_setter_and_gate_share_the_refusal_and_allow_restoration(self):
-        from labkit.gates import report_hold
         from labkit.tools import protocol_edit, protocol_fill
 
         self._run(self._register("REPORT.md"))
         before = self.proto.read_text(encoding="utf-8")
         proposed = protocol_edit.fill_many(before, [("report", "OTHER.md")], force=True)
-        gap = report_hold.report_binding_gap(self.proto, proposed, unread=True)
+        gap = registered_report.report_binding_gap(self.proto, proposed, unread=True)
         assert gap is not None
         assert gap.fix is not None
         for force in ([], ["--force"]):
@@ -1102,12 +1101,11 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
 
     def test_late_registration_gets_the_same_gate_and_setter_refusal(self):
         from labkit.tools import protocol_edit, protocol_fill
-        from labkit.gates import report_hold
 
         self._run(self._register(None))
         before = self.proto.read_text(encoding="utf-8")
         proposed = protocol_edit.fill_many(before, [("report", "REPORT.md")])
-        gap = report_hold.report_binding_gap(self.proto, proposed, unread=True)
+        gap = registered_report.report_binding_gap(self.proto, proposed, unread=True)
         assert gap is not None
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
@@ -1118,7 +1116,6 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
 
     def test_handover_and_new_protocol_allow_a_new_report(self):
         from labkit.formats import handovers
-        from labkit.gates import report_hold
         from labkit.tools import protocol_fill
 
         self._run(self._register("REPORT.md"))
@@ -1147,7 +1144,9 @@ class ReportRegisteredBeforeTheFirstMeasurement(_Repository):
             + REGISTRATION
         )
         successor.write_text(text, encoding="utf-8")
-        self.assertIsNone(report_hold.report_binding_gap(successor, text, unread=True))
+        self.assertIsNone(
+            registered_report.report_binding_gap(successor, text, unread=True)
+        )
         self.assertTrue(handovers.protocol_handed_over(self.area, self.proto))
 
     def test_a_handover_ends_a_changed_binding_without_releasing_a_result(self):

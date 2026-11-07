@@ -148,6 +148,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from types import FrameType
 
+from labkit.gates import registered_report
 from labkit.gates.hook_session import SessionCommits
 from labkit.gates.hook_session import write_stop_base
 from labkit.gates.hook_session import committed_in_session
@@ -400,7 +401,7 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
     protocol whose head registers a file among PATHS as its report
     (`report_hold.registering_protocols`: a REPORT.md at the root touches no
     area), whose registered report is not written though the area measured
-    (`report_hold.missing_report`): the hold, printed as `labkit-next`
+    (`registered_report.missing_report`): the hold, printed as `labkit-next`
     prints the step it names from that finding (`next_step.Step.render`).
     A head
     that does not read is left to the checks that hold it where it is
@@ -418,7 +419,7 @@ def missing_reports(repo: Path, paths: list[Path]) -> list[str]:
         for protocol in area_protocols(area):
             try:
                 text = protocol.read_text(encoding="utf-8")
-                gap = report_hold.missing_report(
+                gap = registered_report.missing_report(
                     protocol, text, repo, declared=protocol_block.declared_run(text)
                 )
             except (OSError, UnicodeError, protocol_block.BlockError):
