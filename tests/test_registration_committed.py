@@ -1,6 +1,6 @@
 """report-check at the low lane holds the registration to the commit of
 the first measurement: the measurements git's history puts first
-(`answering_run.first_measurements`) and the commit each record names
+(`area_state.Measured.firsts`) and the commit each record names
 (`runs.recorded_commit`). What stood before the number is what that commit
 holds; the tree now says nothing about it, and runlog's start gate reads
 the tree. A run id is local time, so it orders only runs at one commit:

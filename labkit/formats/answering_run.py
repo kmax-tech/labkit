@@ -6,7 +6,8 @@ and whether they are comparable (`repeats_of`, `repeat_mismatch`,
 within one second refused rather than guessed (`same_second_rival`),
 the answering run — the adopted one, else the newest — with the reasons
 the others were excluded (`bound_answering_run`), the first measurements in git's order
-(`first_measurements`). intent-check, finalize, recheck and
+over given records (`first_measurement_groups`; the area state reads them,
+`area_state.Measured`). intent-check, finalize, recheck and
 labkit-params read the choice here; a run's own `derived_from` chain and
 the run that recorded its model are a run record's question
 (`runs.lineage`, `runs.model_provenance_run`). Read-only.
@@ -370,19 +371,6 @@ def bound_runs(area: Path, pid: str) -> tuple[list[RunFacts], list[RunFacts]]:
             why = "unbound (no protocol id at run time)"
         left.append(replace(facts, why=why))
     return taken, left
-
-
-def first_measurements(area: Path, pid: str, repo: Path | None) -> list[RunDir]:
-    """The first measurements of PID in AREA, one run per first position
-    (`area_state.Measured.firsts`) — kept here by name because the stamped
-    measure scripts of lab repos before 0.110 import it from this module
-    (`measure-estimator-script.py.template`, the band check); it forwards
-    to the area state and goes in a release that announces it (CHANGELOG).
-    REPO, the repository the caller names, is not read: the state finds
-    the area's repository itself (`repo.git_root`)."""
-    from labkit.formats.area_state import state_of
-
-    return list(state_of(area).measured_of(pid).firsts)
 
 
 def first_measurement_groups(

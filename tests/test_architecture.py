@@ -181,12 +181,9 @@ FORWARDING_EDGES = {
     # the stamped measure scripts' `from labkit.formats.repo import
     # next_after_run`, which forwards to commands
     ("repo", "commands"),
-    # the stamped measure scripts' `from labkit.formats.answering_run import
-    # first_measurements` (before 0.110), which forwards to the area state
-    ("answering_run", "area_state"),
 }
 #: public names defined twice on purpose: the forwarders of FORWARDING_EDGES
-FORWARDED_NAMES = {"next_after_run", "first_measurements"}
+FORWARDED_NAMES = {"next_after_run"}
 
 
 class NoImportCycle(unittest.TestCase):

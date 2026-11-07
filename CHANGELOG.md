@@ -25,9 +25,11 @@ pins (`requirements.txt` / `requirements.lock`).
   one-explainer plan) is built once from the formats' readers, and its
   first field says whether a protocol measured and which measurements were
   first. Gone: `registered_report.has_measured`, its copy in
-  `report_check.adoption_state`, `answering_run.first_measurements` as a
-  reader (it stays as a forwarder for the stamped measure scripts of
-  before 0.110, which imported it; a later release ends it);
+  `report_check.adoption_state`, `answering_run.first_measurements` — the
+  stamped measure script of an `apply` area imported it for its band check
+  and now reads `area_state.state_of`: a lab's stamped `01_measure.py`
+  from before this release fails at import until `labkit-init exp
+  --restamp` renews it (the repo keeps no forwarder: one home per answer);
   `answering_run.first_measurement_groups(records, pid, repo)` and
   `first_registrations(groups)` take the records instead of walking the
   area; `answering_run.is_measurement` takes a `RunDir`. The file-state

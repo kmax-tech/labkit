@@ -641,7 +641,7 @@ def recorded_commit(cfg: RunConfig) -> str | None:
     it (`git_full`) —, or None when it started outside a repository or
     before the first commit (`git_full` "", `git` NO_GIT). The one commit
     of a run: what its measurement is ordered by
-    (`answering_run.first_measurements`) and what the registration is held
+    (`area_state.Measured.firsts`) and what the registration is held
     to. `git` carries the short form and whether the tree was dirty
     (`cfg.git.endswith(DIRTY_MARK)`): the commit says what stood committed,
     the mark that more stood in the tree."""
