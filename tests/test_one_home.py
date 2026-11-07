@@ -151,8 +151,8 @@ RULES: list[tuple[str, str, set[str]]] = [
         {"repo"},
     ),
     # the run's start and reindex share the index's name and header check;
-    # `runlog.RUN_INDEX`, `header_refusal`
-    ("the run index named by hand", r"\"runs\.tsv\"", {"runlog"}),
+    # `run_index.RUN_INDEX`, `header_refusal`
+    ("the run index named by hand", r"\"runs\.tsv\"", {"run_index"}),
     # a ref's commit is asked of git in one place; `repo.commit_of`,
     # `repo.text_at`
     ("a ref's commit asked of git by hand", r"\^\{\{commit\}\}", {"repo"}),

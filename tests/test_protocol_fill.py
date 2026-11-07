@@ -5,6 +5,7 @@ back is fragile, so a field is filled by its label. The label match must hit sin
 ambiguity and silent overwrites, and leave every other byte alone.
 """
 
+from labkit.formats import run_index
 from labkit.formats.runs import RunKind
 
 import contextlib
@@ -1441,7 +1442,7 @@ class ReportSetter(unittest.TestCase):
         self.assertIn("first measurement is missing", out)
         self.assertEqual(proto.read_text(encoding="utf-8"), before)
         # the twin: a probe is no measurement; nothing binds yet
-        (area / runlog.RUN_INDEX).unlink()
+        (area / run_index.RUN_INDEX).unlink()
         completed_run(area, "2026-01-01T00-00-00_0002", run_kind="probe")
         self.assertEqual(self._fill(proto, "report=REPORT.md")[0], 0)
 
@@ -1457,7 +1458,7 @@ class ReportSetter(unittest.TestCase):
         self._measurement(area, "2026-01-01T00-00-00_0001", metrics={"n": 1})
         runlog.reindex(area)
         shutil.rmtree(area / "runs")
-        index = area / runlog.RUN_INDEX
+        index = area / run_index.RUN_INDEX
         header, row = index.read_text(encoding="utf-8").splitlines()
         index.write_text(f"{header}\n{row.split(chr(9))[0]}\n", encoding="utf-8")
         before = proto.read_text(encoding="utf-8")

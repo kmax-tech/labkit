@@ -280,7 +280,7 @@ def steps_for(
     not run again; SKIP, the protocols whose step the caller printed
     already (`agent_hooks.MissingReports.steps`): left out."""
     from labkit.gates.report_check import reached_by
-    from labkit.run.runlog import RunIndexError
+    from labkit.formats.run_index import RunIndexError
 
     out: list[str] = []
     for protocol in reached_by(paths, repo, staged=staged).protocols:

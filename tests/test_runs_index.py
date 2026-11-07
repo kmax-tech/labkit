@@ -14,6 +14,7 @@ import unittest
 from pathlib import Path
 
 from labkit.gates import hook_post_change
+from labkit.formats import run_index
 from labkit.run import runlog
 from labkit.tools import scaffold
 from protocol_fixture import head
@@ -57,23 +58,23 @@ class RebuiltIndex(unittest.TestCase):
 
 class IndexRefusal(unittest.TestCase):
     def test_a_run_listed_twice_is_refused_old_columns_too(self):
-        row = ["2026-10-27T10-00-00_ab12"] + [""] * (len(runlog.RUN_INDEX_COLS) - 1)
+        row = ["2026-10-27T10-00-00_ab12"] + [""] * (len(run_index.RUN_INDEX_COLS) - 1)
         index = Path("runs.tsv")
-        why = runlog.index_refusal(index, [row, row])
+        why = run_index.index_refusal(index, [row, row])
         self.assertIn("more than once", why or "")
-        self.assertIsNone(runlog.index_refusal(index, [row]))
+        self.assertIsNone(run_index.index_refusal(index, [row]))
         # old columns: one sentence for every reader and writer, raised where
         # the index is read
         with tempfile.TemporaryDirectory() as d:
             old = Path(d) / "runs.tsv"
             old.write_text("run_id\n", encoding="utf-8")
-            with self.assertRaises(runlog.RunIndexError) as cm:
-                runlog._read_index(old)
+            with self.assertRaises(run_index.RunIndexError) as cm:
+                run_index.read_index(old)
             self.assertIn("don't match this runlog", cm.exception.why)
 
 
 class IndexRead(unittest.TestCase):
-    """The index is read as it is written (`runlog._read_index`): the current
+    """The index is read as it is written (`run_index.read_index`): the current
     columns, every row whole. A short row is refused with its line, never
     read as no measurement: a row holding only its run id would drop a
     measured run from `has_measured`."""
@@ -82,7 +83,7 @@ class IndexRead(unittest.TestCase):
 
     def area_with(self, d: str, *lines: str) -> Path:
         area = Path(d)
-        (area / runlog.RUN_INDEX).write_text(
+        (area / run_index.RUN_INDEX).write_text(
             "".join(f"{ln}\n" for ln in lines), encoding="utf-8"
         )
         return area
@@ -96,42 +97,42 @@ class IndexRead(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             area = self.area_with(
                 d,
-                "\t".join(runlog.RUN_INDEX_COLS),
+                "\t".join(run_index.RUN_INDEX_COLS),
                 self.row("2026-01-01T00-00-00_0001"),
             )
             self.assertEqual(
-                runlog.indexed_runs(area, self.PID), ["2026-01-01T00-00-00_0001"]
+                run_index.indexed_runs(area, self.PID), ["2026-01-01T00-00-00_0001"]
             )
-            self.assertEqual(runlog.indexed_runs(area, "p-other"), [])
+            self.assertEqual(run_index.indexed_runs(area, "p-other"), [])
 
     def test_a_short_row_is_refused_with_its_line(self):
         with tempfile.TemporaryDirectory() as d:
             area = self.area_with(
                 d,
-                "\t".join(runlog.RUN_INDEX_COLS),
+                "\t".join(run_index.RUN_INDEX_COLS),
                 self.row("2026-01-01T00-00-00_0001"),
                 "2026-01-01T00-00-00_0002",
             )
             for pid in (self.PID, None):
                 with self.subTest(pid=pid):
-                    with self.assertRaises(runlog.RunIndexError) as cm:
-                        runlog.indexed_runs(area, pid)
+                    with self.assertRaises(run_index.RunIndexError) as cm:
+                        run_index.indexed_runs(area, pid)
                     self.assertIn("runs.tsv:3", str(cm.exception))
                     self.assertIn("1 of 8 tab-separated columns", str(cm.exception))
 
     def test_an_old_header_is_refused_as_the_writer_refuses_it(self):
         with tempfile.TemporaryDirectory() as d:
             area = self.area_with(d, "run_id\tprotocol_id", f"r1\t{self.PID}")
-            with self.assertRaises(runlog.RunIndexError) as cm:
-                runlog.indexed_runs(area, self.PID)
+            with self.assertRaises(run_index.RunIndexError) as cm:
+                run_index.indexed_runs(area, self.PID)
             self.assertEqual(
-                cm.exception.why, runlog.header_refusal(["run_id", "protocol_id"])
+                cm.exception.why, run_index.header_refusal(["run_id", "protocol_id"])
             )
 
     def test_the_evidence_hook_tells_a_damaged_index_instead_of_failing(self):
 
         with tempfile.TemporaryDirectory() as d:
-            header = "\t".join(runlog.RUN_INDEX_COLS)
+            header = "\t".join(run_index.RUN_INDEX_COLS)
             area = self.area_with(d, header, "2026-01-01T00-00-00_0002")
             (line,) = hook_post_change.index_problems(area)
             self.assertIn("runs.tsv:2", line)
@@ -143,7 +144,7 @@ class IndexRead(unittest.TestCase):
     def test_a_run_does_not_start_on_a_short_row(self):
         with tempfile.TemporaryDirectory() as d:
             area = self.area_with(
-                d, "\t".join(runlog.RUN_INDEX_COLS), "2026-01-01T00-00-00_0002"
+                d, "\t".join(run_index.RUN_INDEX_COLS), "2026-01-01T00-00-00_0002"
             )
             (area / "PROTOCOL-x.md").write_text(
                 head(repeat_cost="low", promises=None)
@@ -158,19 +159,19 @@ class IndexRead(unittest.TestCase):
 
     def test_an_empty_index_gets_its_header_before_the_first_row(self):
         with tempfile.TemporaryDirectory() as d:
-            index = Path(d) / runlog.RUN_INDEX
+            index = Path(d) / run_index.RUN_INDEX
             index.write_text("", encoding="utf-8")
-            runlog._append_row(
+            run_index.append_row(
                 index, [self.row("2026-01-01T00-00-00_0001")][0].split("\t")
             )
-            header, rows = runlog._read_index(index)
-            self.assertEqual(header, runlog.RUN_INDEX_COLS)
+            header, rows = run_index.read_index(index)
+            self.assertEqual(header, run_index.RUN_INDEX_COLS)
             self.assertEqual(len(rows), 1)
 
     def test_reindex_refuses_a_short_row_too(self):
         with tempfile.TemporaryDirectory() as d:
             area = self.area_with(
-                d, "\t".join(runlog.RUN_INDEX_COLS), "2026-01-01T00-00-00_0002"
+                d, "\t".join(run_index.RUN_INDEX_COLS), "2026-01-01T00-00-00_0002"
             )
             err = io.StringIO()
             with (

@@ -112,7 +112,7 @@ from labkit.gates import report_check
 from labkit.gates.install_hooks import STOP_TIMEOUT_S
 from labkit.gates.next_step import next_step, steps_for
 from labkit.gates.undecided import undecided_state
-from labkit.run.runlog import RunIndexError
+from labkit.formats.run_index import RunIndexError
 from labkit.formats.repo import (
     PROTOCOL_GLOB,
     git_root,
@@ -386,7 +386,7 @@ def missing_reports(
     reading CHAINS, what report-check found for a protocol in this state,
     instead of running the chain again). A head that does not read is left
     to the checks that hold it where it is touched; a run index that does
-    not read is told, once per index (`runlog.RunIndexError`): whether a
+    not read is told, once per index (`run_index.RunIndexError`): whether a
     measurement owes the report cannot be told."""
     out = MissingReports({}, [])
     for protocol in report_check.reached_by(paths, repo, staged=False).protocols:

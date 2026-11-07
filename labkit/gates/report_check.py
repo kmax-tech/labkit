@@ -175,7 +175,7 @@ from labkit.formats.commands import (
     withdraw_command,
 )
 from labkit.formats.runs import read_run_config, run_path, unreportable
-from labkit.run.runlog import indexed_runs
+from labkit.formats.run_index import indexed_runs
 from labkit.formats.scope_sha import areas_touched
 from labkit.formats.standard_contract import (
     ANALYSIS_AUDIT,
@@ -848,7 +848,7 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
 
     Prints nothing. Raises `protocol_block.BlockError` on a head that does
     not read, `runs.RunConfigError` from a run's config.json,
-    `runlog.RunIndexError` from a run index that does not read."""
+    `run_index.RunIndexError` from a run index that does not read."""
     pid = protocol_block.head(text).id
     if not pid:
         return handovers.RunAccount(None, handovers.NOT_MEASURED, ())

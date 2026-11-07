@@ -31,6 +31,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol_fixture import run_record  # noqa: E402
+from labkit.formats import run_index
 from labkit.run import runlog, runlog_command  # noqa: E402
 from labkit.formats import runs, answering_run  # noqa: E402
 
@@ -231,9 +232,9 @@ class TestReindex(unittest.TestCase):
             area = _area(t)
             _run_dir(area, "r1", protocol_id="p-0123456789abcdef")
             self.assertEqual(runlog.reindex(area), 0)
-            _, rows = runlog._read_index(area / "runs.tsv")
+            _, rows = run_index.read_index(area / "runs.tsv")
         self.assertEqual(len(rows), 1)
-        row = dict(zip(runlog.RUN_INDEX_COLS, rows[0]))
+        row = dict(zip(run_index.RUN_INDEX_COLS, rows[0]))
         self.assertEqual(row["run_id"], "r1")
         self.assertEqual(row["git"], "abc1234")  # END state
         self.assertEqual(row["note"], "a note")
@@ -244,13 +245,13 @@ class TestReindex(unittest.TestCase):
             area = _area(t)
             _run_dir(area, "r1")
             (area / "runs.tsv").write_text(
-                "\t".join(runlog.RUN_INDEX_COLS)
+                "\t".join(run_index.RUN_INDEX_COLS)
                 + "\n"
                 + "r1\tOLD\ts.py\t{}\t{}\t{}\thand-written\t\n",
                 encoding="utf-8",
             )
             runlog.reindex(area)
-            _, rows = runlog._read_index(area / "runs.tsv")
+            _, rows = run_index.read_index(area / "runs.tsv")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0][6], "hand-written")
 
@@ -260,7 +261,7 @@ class TestReindex(unittest.TestCase):
             _run_dir(area, "r1", completion=False)
             _run_dir(area, "r2", metrics=False)
             runlog.reindex(area)
-            _, rows = runlog._read_index(area / "runs.tsv")
+            _, rows = run_index.read_index(area / "runs.tsv")
         self.assertEqual(rows, [])
 
     def test_pre_schema_runs_are_reported_not_invented(self):
@@ -270,7 +271,7 @@ class TestReindex(unittest.TestCase):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 code = runlog.reindex(area)
-            _, rows = runlog._read_index(area / "runs.tsv")
+            _, rows = run_index.read_index(area / "runs.tsv")
         self.assertEqual(rows, [])
         self.assertEqual(code, 2)
         self.assertIn("NOT INDEXED", out.getvalue())
@@ -279,7 +280,7 @@ class TestReindex(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             area = _area(t)
             (area / "runs.tsv").write_text(
-                "\t".join(runlog.RUN_INDEX_COLS)
+                "\t".join(run_index.RUN_INDEX_COLS)
                 + "\n"
                 + "r1\ta\ts\t{}\t{}\t{}\tn\t\n" * 2,
                 encoding="utf-8",
@@ -298,12 +299,12 @@ class TestReindex(unittest.TestCase):
 def _append_many(area_str, n):
     """Child process: n index rows, each taking the lock."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from labkit.run import runlog as rl
+    from labkit.formats import run_index as ri
 
     area = Path(area_str)
     for i in range(n):
-        with rl._index_lock(area):
-            rl._append_row(
+        with ri.index_lock(area):
+            ri.append_row(
                 area / "runs.tsv",
                 [f"{os.getpid()}-{i}", "g", "s", "{}", "{}", "{}", "n", ""],
             )
@@ -324,7 +325,7 @@ class TestIndexLock(unittest.TestCase):
                 p.start()
             for p in procs:
                 p.join(60)
-            _, rows = runlog._read_index(area / "runs.tsv")
+            _, rows = run_index.read_index(area / "runs.tsv")
         self.assertEqual(len(rows), 80)
         self.assertEqual(len({r[0] for r in rows}), 80)
 

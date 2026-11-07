@@ -9,6 +9,17 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **The run index has its own format module, `labkit.formats.run_index`.**
+  Its name and columns (`RUN_INDEX`, `RUN_INDEX_COLS`), its lock
+  (`index_lock`), its row (`index_row`, `append_row`), its reading
+  (`read_index`, `read_index_now`, `indexed_runs`) and its refusals
+  (`RunIndexError`, `header_refusal`, `index_refusal`) moved there from
+  `labkit.run.runlog`, which now writes through them. Code of a lab's own
+  that imported one of them from `runlog` (`RunIndexError`, `indexed_runs`)
+  changes that import; the public API (`runlog.run`, `Run.*`) is untouched.
+  Why: the gates read the index through the area state (Phase 4 of the
+  one-explainer plan), and `formats` is the layer below `run`.
+
 - **`llm._find_models_toml` is gone.** Deprecated in 0.108.0 (released),
   which named this removal; call `llm.find_models_toml`. A lab's stamped
   `test-shared-helpers` from before 0.108.0 calls the old name and fails:

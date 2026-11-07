@@ -233,7 +233,7 @@ class Undecided(unittest.TestCase):
         from unittest import mock
 
         from labkit.gates import report_check
-        from labkit.run.runlog import RunIndexError
+        from labkit.formats.run_index import RunIndexError
 
         self._touch(self.area)
         damaged = RunIndexError("runs.tsv:2: 1 of 8 tab-separated columns")

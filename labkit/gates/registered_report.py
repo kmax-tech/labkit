@@ -17,7 +17,7 @@ from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import review_gap
 from labkit.formats.answering_run import bound_runs, first_measurements, is_measurement
 from labkit.formats.runs import UNREADABLE
-from labkit.run.runlog import indexed_runs
+from labkit.formats.run_index import indexed_runs
 from labkit.formats.runs import run_path
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats import (
@@ -221,11 +221,11 @@ def progress_account(written: str, owner: str, run_id: str) -> bool:
 def has_measured(area: Path, pid: str) -> bool:
     """Does AREA hold a measurement of protocol PID — a bound run that
     declared itself one (`answering_run.is_measurement`), present, or one
-    `runs.tsv` lists whose directory is gone (`runlog.indexed_runs`)? A run
+    `runs.tsv` lists whose directory is gone (`run_index.indexed_runs`)? A run
     whose config cannot be read counts, as `report_check.adoption_state`
     counts it: it may be one. What a registered report owes from
     (`missing_report`) and what binds the report registered before it
-    (`protocol_fill`). Raises `runlog.RunIndexError` on a run index that
+    (`protocol_fill`). Raises `run_index.RunIndexError` on a run index that
     does not read: whether a deleted run was measured cannot be told."""
     taken, rest = bound_runs(area, pid)
     ours = [f for f in rest if f.binding.id == pid or f.state == UNREADABLE]
@@ -416,7 +416,7 @@ def missing_report(
     the working tree, or the index when STAGED —, while its area holds a
     measurement of it — bound and present (`answering_run.bound_runs`,
     `is_measurement`) or listed in runs.tsv and deleted since
-    (`runlog.indexed_runs`). One blocker naming the two ways to write it:
+    (`run_index.indexed_runs`). One blocker naming the two ways to write it:
     the adoption (its result block) and the handover (an end without a
     result). None when nothing is registered, the report is there, or
     nothing was measured — before a measurement a report owes nothing. At
@@ -428,7 +428,7 @@ def missing_report(
     a report deleted after the adoption would otherwise pass the commit,
     report-check and labkit-next. Raises
     `protocol_block.BlockError` on a head that does not read,
-    `runlog.RunIndexError` on a run index that does not read (`has_measured`)."""
+    `run_index.RunIndexError` on a run index that does not read (`has_measured`)."""
     head = protocol_block.head(text)
     if head.report is None or not head.id:
         return None

@@ -15,6 +15,7 @@ cites a run.
 
 from __future__ import annotations
 
+from labkit.formats import run_index
 from labkit.gates import registered_report
 from labkit.tools import report_command
 from labkit.formats.runs import RunKind
@@ -1331,7 +1332,7 @@ class RegisteredReport(unittest.TestCase):
         shutil.rmtree(area / "runs")
         self.assertIsNotNone(registered_report.missing_report(proto, text, root))
         # the twin: no measurement of it, nothing owed yet
-        (area / runlog.RUN_INDEX).unlink()
+        (area / run_index.RUN_INDEX).unlink()
         self.assertIsNone(registered_report.missing_report(proto, text, root))
 
     def test_the_twin_a_note_citing_a_run_owes_no_review(self):

@@ -48,7 +48,7 @@ from labkit.checks import report_blocks
 from labkit.checks.report_blocks import ReportBlockError
 from labkit.gates import report_hold
 from labkit.formats.runs import run_path
-from labkit.run.runlog import RunIndexError, indexed_runs
+from labkit.formats.run_index import RunIndexError, indexed_runs
 from labkit.formats.repo import (
     EXPERIMENTS,
     PROTOCOL_NAME,
