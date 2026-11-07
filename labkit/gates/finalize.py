@@ -150,6 +150,7 @@ from labkit.formats.repo import (
     withdraw_command,
 )
 from labkit.gates.ways_out import (
+    PLACE_UNCLEAR_WAY,
     HANDOVER,
     PROTOCOL_NAMED,
     register_anew,
@@ -161,6 +162,7 @@ from labkit.gates.preflight import area_tests, tell_test_run
 from labkit.gates.report_context import pending_adoption
 from labkit.formats.protocol_check import (
     REPEATED_WAY_OUT,
+    FieldPlaceError,
     field_name,
     kept_gaps,
     named_field,
@@ -819,10 +821,26 @@ def resolved_corrections(
                 continue
             if decision_digest(m.finding) != v.decision_sha:
                 continue
-            name = corrected_field(m.finding, protocol, text)
+            name = _correction_field(m.finding, protocol, text)
             if name is not None:
                 out.setdefault(name, Correction(v.ref, record.path.name, v.why))
     return out
+
+
+def _correction_field(
+    f: audit_findings.Finding, protocol: Path, text: str
+) -> str | None:
+    """`findings.corrected_field`, its unclear place as an AuditError: which
+    field the correction is bound to cannot be told, and the station that
+    holds the change names that as its blocker."""
+    try:
+        return corrected_field(f, protocol, text)
+    except FieldPlaceError as exc:
+        raise AuditError(
+            f"{f.one_line}: which field of {protocol.name} its correction is "
+            f"bound to cannot be told — {exc}",
+            fix=PLACE_UNCLEAR_WAY,
+        ) from exc
 
 
 def awaiting_followup(
@@ -852,7 +870,7 @@ def awaiting_followup(
         return r.path.name in covering
 
     def field_of(f: audit_findings.Finding) -> str | None:
-        return corrected_field(f, protocol, text)
+        return _correction_field(f, protocol, text)
 
     try:
         shown_ = earlier_blockers(records, current) + earlier_corrections(

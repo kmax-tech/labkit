@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from labkit.gates import audit_decisions, audit_reply
-from labkit.formats import findings
+from labkit.formats import findings, protocol_check
 from labkit.formats.repo import shown
 from labkit.formats import audit_gaps
 from protocol_fixture import registration_of  # noqa: E402
@@ -1391,10 +1391,12 @@ class AuditedStateMatch(unittest.TestCase):
 
 
 class CorrectedField(unittest.TestCase):
-    """A correction names its field exactly: the grade line's place is the
-    protocol's file and a label the protocol holds once (`Finding.place`,
-    `protocol_check.named_field`, `findings.corrected_field`) — no part of
-    a label, no line number, no search in the finding's text."""
+    """A correction names its field: the grade line's place is the protocol's
+    file and a label the protocol holds once — in full, or the one label it
+    begins (`Finding.place`, `protocol_check.field_at`,
+    `findings.corrected_field`); no line number, no search in the finding's
+    text. A start several labels share raises: which field the correction is
+    bound to cannot be told (decided 2026-11-07)."""
 
     TEXT = (
         "- **Terms of this protocol:** n/a — no coinage\n"
@@ -1424,6 +1426,7 @@ class CorrectedField(unittest.TestCase):
         for place, name in (
             ("Data / scope", "data / scope"),
             ("terms of this protocol", "terms of this protocol"),
+            ("Terms", "terms of this protocol"),  # the one label it begins
             ("Null condition / anchors (in the same run)", "null condition / anchors"),
         ):
             f = self.finding(f"WARNING · PROTOCOL-x.md:{place} · statement · x · y")
@@ -1433,7 +1436,6 @@ class CorrectedField(unittest.TestCase):
 
     def test_the_twins_part_of_a_label_a_line_another_file_or_status_name_none(self):
         for line, status in (
-            ("WARNING · PROTOCOL-x.md:Terms · statement · x · y", "fixed"),
             ("WARNING · PROTOCOL-x.md:2 · statement · x · y", "fixed"),
             ("WARNING · PROTOCOL-y.md:Data / scope · statement · x · y", "fixed"),
             (
@@ -1450,6 +1452,24 @@ class CorrectedField(unittest.TestCase):
             self.assertIsNone(
                 findings.corrected_field(f, self.PROTOCOL, self.TEXT), line
             )
+
+    def test_a_start_several_labels_share_raises(self):
+        text = self.TEXT + "- **Data preparation:** none\n"
+        f = self.finding("WARNING · PROTOCOL-x.md:Data · statement · x · y")
+        with self.assertRaises(protocol_check.FieldPlaceError) as caught:
+            findings.corrected_field(f, self.PROTOCOL, text)
+        self.assertEqual(caught.exception.begun, ["data / scope", "data preparation"])
+        # the twin: the full label is exact first, though it begins nothing else
+        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y")
+        self.assertEqual(
+            findings.corrected_field(f, self.PROTOCOL, text), "data / scope"
+        )
+
+    def test_a_field_written_twice_raises(self):
+        text = self.TEXT + "- **Data / scope:** data/raw/other\n"
+        f = self.finding("WARNING · PROTOCOL-x.md:Data / scope · statement · x · y")
+        with self.assertRaises(protocol_check.FieldPlaceError):
+            findings.corrected_field(f, self.PROTOCOL, text)
 
     def test_the_question_is_no_corrected_field(self):
         text = "- **Question / hypothesis:** how many lines on average?\n" + self.TEXT

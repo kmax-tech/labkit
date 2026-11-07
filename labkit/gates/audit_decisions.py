@@ -34,7 +34,13 @@ from labkit.formats.repo import (
     shown,
     the_protocol,
 )
-from labkit.formats.protocol_check import field_name, fields, named_field
+from labkit.formats.protocol_check import (
+    FieldPlaceError,
+    field_at,
+    field_name,
+    field_or_none,
+    fields,
+)
 from labkit.formats.protocol_history import HELD_FIELDS
 from labkit.formats.runs import (
     MetricsError,
@@ -146,15 +152,21 @@ def decision_lines(
             limit = limitation_line(f, review, unassessed if promised else None)
             if limit:
                 out.append(limit)
-    hints, held = read_hints(report, area, protocol)
-    if hints:
+    hints = read_hints(report, area, protocol)
+    if hints.shown:
         out.append("reading hints — not recorded, nothing to decide:")
-        out += [f"  {h}" for h in hints]
-    if held:
+        out += [f"  {h}" for h in hints.shown]
+    if hints.held:
         out.append(
-            f"{held} reading hint(s) on registered fields left out — those fields "
-            "are the registration as measured; a rewrite there is a departure "
-            "that finalize refuses (the kept answer holds them)"
+            f"{hints.held} reading hint(s) on registered fields left out — those "
+            "fields are the registration as measured; a rewrite there is a "
+            "departure that finalize refuses (the kept answer holds them)"
+        )
+    if hints.unclear:
+        out.append(
+            f"{len(hints.unclear)} reading hint(s) left out because their place "
+            "names no one field of the protocol, so whether it lies in a "
+            "registered field cannot be told: " + "; ".join(hints.unclear)
         )
     return out
 
@@ -199,30 +211,49 @@ def limitation_line(
     return ""
 
 
-def read_hints(
-    report: str, area: Path, protocol: Path | None = None
-) -> tuple[list[str], int]:
-    """(the READ lines of REPORT to print, how many were left out): a line
-    whose `<file>:<line>` falls in a registered field of the area's protocol
-    (`protocol_history.HELD_FIELDS`) is left out. The auditor's instructions
-    keep reading hints to the result part; printed unfiltered, hints on the
-    question, the terms and the data scope were taken as harmless, the agent
-    rewrote those fields over four rounds, and finalize refused the rewrite
-    24 minutes later (reference pilot 2026-11-01, task 21)."""
+@dataclass(frozen=True)
+class ReadHints:
+    """The READ lines of a report as `read_hints` sorts them: SHOWN, the lines
+    to print; HELD, how many fall in a registered field and are left out;
+    UNCLEAR, per line left out because its place names no one field of the
+    protocol, `<file>:<place>: <why>`."""
+
+    shown: list[str]
+    held: int
+    unclear: list[str]
+
+
+def read_hints(report: str, area: Path, protocol: Path | None = None) -> ReadHints:
+    """The READ lines of REPORT, sorted (`ReadHints`): a line whose
+    `<file>:<place>` falls in a registered field of the area's protocol
+    (`protocol_history.HELD_FIELDS`) is left out; so is one whose place, a
+    label, names no one field of that protocol (`protocol_check.field_at`:
+    none, or several begin with it) — a hint that cannot be placed could lie
+    in a registered field, so it is not shown, and the reason is. The
+    auditor's instructions keep reading hints to the result part; printed
+    unfiltered, hints on the question, the terms and the data scope were
+    taken as harmless, the agent rewrote those fields over four rounds, and
+    finalize refused the rewrite 24 minutes later (reference pilot
+    2026-11-01, task 21)."""
     shown_lines: list[str] = []
     held = 0
+    unclear: list[str] = []
     texts: dict[str, str] = {}
     for ln in report.splitlines():
         if not READ_HINT.match(ln):
             continue
         m = _READ_PLACE.search(ln)
-        if m is not None and _in_held_field(
-            area, protocol, m["file"], m["place"].strip(), texts
-        ):
-            held += 1
-            continue
+        if m is not None:
+            place = m["place"].strip()
+            try:
+                if _in_held_field(area, protocol, m["file"], place, texts):
+                    held += 1
+                    continue
+            except FieldPlaceError as exc:
+                unclear.append(f"{m['file']}:{place}: {exc}")
+                continue
         shown_lines.append(ln.strip())
-    return shown_lines, held
+    return ReadHints(shown_lines, held, unclear)
 
 
 def _in_held_field(
@@ -230,9 +261,11 @@ def _in_held_field(
 ) -> bool:
     """Does PLACE of FILE, a protocol of AREA, fall in one of HELD_FIELDS?
     PLACE is a line number, or a field named by its label or the label's
-    start (`:Terms` for "Terms of this protocol") — an auditor naming the
-    field slipped past a filter that read numbers only (reference pilot
-    2026-11-01, task 60)."""
+    start (`:Terms` for "Terms of this protocol"), resolved against the
+    protocol's own fields (`protocol_check.field_at`) — an auditor naming
+    the field slipped past a filter that read numbers only (reference pilot
+    2026-11-01, task 60). Raises FieldPlaceError when a label names no one
+    field of the protocol: none, or several begin with it."""
     name = Path(file).name
     if not (name.startswith("PROTOCOL-") and name.endswith(".md")):
         return False
@@ -243,8 +276,7 @@ def _in_held_field(
         texts[name] = path.read_text(encoding="utf-8")
     held = {field_name(label) for label in HELD_FIELDS}
     if not place.isdigit():
-        named = field_name(place)
-        return bool(named) and any(h.startswith(named) for h in held)
+        return field_at(texts[name], place).name in held
     at = [f for f in fields(texts[name]) if f.line <= int(place)]
     return bool(at) and at[-1].name in held
 
@@ -870,8 +902,9 @@ def repair_hint(
             path = the_protocol(area, protocol)
             text = path.read_text(encoding="utf-8")
             at = decided.place
+            # a place beginning several fields raises: told below as unread
             hit = (
-                named_field(text, at[1])
+                field_or_none(text, at[1])
                 if at is not None and at[0] == path.name
                 else None
             )

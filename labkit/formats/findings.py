@@ -104,7 +104,7 @@ from labkit.formats.protocol_history import correctable
 from labkit.formats.protocol_check import (
     CONCLUSION_LABEL,
     field_name,
-    named_field,
+    field_or_none,
 )
 from labkit.formats.repo import (
     INDEX_REV,
@@ -621,17 +621,21 @@ def decision_entails(
 def corrected_field(f: Finding, protocol: Path, text: str) -> str | None:
     """The field F corrects in PROTOCOL, TEXT its text, as `field_name`
     gives it: F decided `fixed`, its place (`Finding.place`) PROTOCOL's
-    file name and a field label TEXT holds once (`named_field`) that a
+    file name and the field TEXT holds that it means — its label in full,
+    or the one label it begins (`protocol_check.field_at`) — that a
     correction can release (`protocol_history.correctable`). None
     otherwise — a line number, a section or another file names no field,
-    and the question has no correction in place.
+    and the question has no correction in place. Raises
+    `protocol_check.FieldPlaceError` when the place begins several fields
+    or means one written twice: which field the correction is bound to
+    cannot be told, and the caller says so.
     What a correction in place is bound to: a follow-up audit judges it on
     the field's change (`followup.earlier_corrections`), and finalize
     releases that change only on its `resolved` (`finalize.scope_changes`)."""
     at = f.place
     if f.status != "fixed" or at is None or at[0] != protocol.name:
         return None
-    hit = named_field(text, at[1])
+    hit = field_or_none(text, at[1])
     return hit.name if hit is not None and correctable(hit.label) else None
 
 

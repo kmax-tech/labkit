@@ -228,6 +228,38 @@ class TheBranchFollowsTheFindingAndTheStandard(unittest.TestCase):
                 self.assertTrue(line.startswith("any other repair"), line)
                 self.assertNotIn("a correction of", line)
 
+    def test_a_start_of_one_label_is_that_field(self):
+        line = self.line("PROTOCOL-x.md:Uni")
+        self.assertIn("a correction of Unit in place", line)
+
+    def test_a_start_several_labels_share_is_said_and_binds_nothing(self):
+        # `Data` begins Data / scope, Data preparation and Data profile
+        line = self.line("PROTOCOL-x.md:Data")
+        self.assertIn("whether the finding names a field could not be read", line)
+        self.assertIn("'Data' begins 3 fields", line)
+        self.assertNotIn("a correction of", line)
+
+    def test_finalize_holds_a_correction_whose_field_cannot_be_told(self):
+        """finalize releases a correction by its field: a place several
+        labels begin is a blocker with its reason, never a silent miss."""
+        from labkit.checks.audit_binding import AuditError
+        from labkit.gates import finalize, ways_out
+
+        protocol = self.area / "PROTOCOL-x.md"
+        text = protocol.read_text(encoding="utf-8")
+        decided = findings.Finding(
+            "WARNING", "WARNING · PROTOCOL-x.md:Data · statement · x", "fixed", "why"
+        )
+        with self.assertRaises(AuditError) as caught:
+            finalize._correction_field(decided, protocol, text)
+        self.assertIn("'Data' begins 3 fields", caught.exception.why)
+        self.assertEqual(caught.exception.fix, ways_out.PLACE_UNCLEAR_WAY)
+        # the twin: a start of one label is that field
+        unit = findings.Finding(
+            "WARNING", "WARNING · PROTOCOL-x.md:Uni · statement · x", "fixed", "why"
+        )
+        self.assertEqual(finalize._correction_field(unit, protocol, text), "unit")
+
     def test_several_protocols_keep_the_line_one_line(self):
         (self.area / "PROTOCOL-y.md").write_text(
             (self.area / "PROTOCOL-x.md").read_text(encoding="utf-8"),

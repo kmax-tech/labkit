@@ -93,6 +93,20 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **One rule says which protocol field a place names.** The label in full
+  first, else the one label it begins (`protocol_check.field_meant`,
+  `field_at`); a start several labels share, or none, is an explicit
+  error. `protocol-fill` read labels so already; the field a `fixed`
+  finding corrects read the label in full only (`:Terms` bound no
+  correction to "Terms of this protocol" and now does), and the
+  reading-hint filter compared a start with the registered fields'
+  names without the protocol (any start of one, even one several
+  fields share). Where a place begins several fields, finalize and the
+  follow-up audit hold it as a blocker with its way out
+  (`ways_out.PLACE_UNCLEAR_WAY`), the decision's line says the field
+  could not be read, and a reading hint whose place names no one field
+  of the protocol is left out with its reason — a section name
+  included, since it could lie in a registered field.
 - **The stop and the commit run report-check's chain once per protocol.**
   On a hold they ran it, then ran it again to print `labkit-next`'s step —
   the nested finalize with the area's tests and `02_analyze.py --check` a

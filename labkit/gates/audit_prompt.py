@@ -64,6 +64,7 @@ from labkit.formats.standard_contract import (
 )
 from labkit.gates import ways_out
 from labkit.gates.ways_out import (
+    PLACE_UNCLEAR_WAY,
     AUDIT_AGAIN,
     HANDOVER,
     PROTOCOL_NAMED,
@@ -602,10 +603,19 @@ def earlier_of(
     text = protocol.read_text(encoding="utf-8") if protocol is not None else ""
 
     def field_of(f: findings.Finding) -> str | None:
-        """The field F corrects in the area's one protocol, or None."""
+        """The field F corrects in the area's one protocol, or None. Raises
+        AuditError when F's place begins several fields or means one written
+        twice (`findings.corrected_field`)."""
         if protocol is None:
             return None
-        return findings.corrected_field(f, protocol, text)
+        try:
+            return findings.corrected_field(f, protocol, text)
+        except protocol_check.FieldPlaceError as exc:
+            raise AuditError(
+                f"{f.one_line}: which field of {protocol.name} its correction is "
+                f"bound to cannot be told — {exc}",
+                fix=PLACE_UNCLEAR_WAY,
+            ) from exc
 
     try:
         c = followup.chain(records)
@@ -641,9 +651,9 @@ def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange
     as the first measurement registered it and as it reads now. Raises
     RuntimeError when git fails."""
     at = f.place
-    hit = protocol_check.named_field(text, at[1]) if at is not None else None
-    if at is None or hit is None:
+    if at is None:
         raise ValueError(f"{f.one_line}: names no field of {protocol.name}")
+    hit = protocol_check.field_at(text, at[1])
     pid = protocol_block.head(text).id
     if pid is None:
         return FieldChange(hit.label, None, "the protocol has no id", hit.value)
@@ -651,7 +661,7 @@ def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange
     if not texts:
         return FieldChange(hit.label, None, why, hit.value)
     then, where = texts[0]
-    old = protocol_check.named_field(then, at[1])
+    old = protocol_check.named_field(then, hit.label)
     return FieldChange(
         hit.label, old.value if old is not None else ABSENT, where, hit.value
     )

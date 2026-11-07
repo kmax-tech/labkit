@@ -42,6 +42,17 @@ HANDOVER = (
     "what stands in the way and what was tried; no number"
 )
 
+#: the way out when a finding decided `fixed` names a place that begins
+#: several protocol fields or means one written twice
+#: (`protocol_check.field_at`): the record's text is the auditor's and does
+#: not change, so no correction can be bound to that finding
+PLACE_UNCLEAR_WAY = (
+    "the finding stays as the auditor wrote it, so no correction in place is "
+    "bound to it: restore the field as the first measurement registered it, "
+    "or audit the area anew (`--mode analysis`) so that a finding names the "
+    "field in full; `labkit-next` names the step"
+)
+
 
 def report_way_while_lost(findings_command: str) -> str:
     """The way out of a report that cites or discusses a run of an area

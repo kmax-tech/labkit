@@ -3533,17 +3533,43 @@ class ReadHintsOnRegisteredFields(unittest.TestCase):
                 "READ · `PROTOCOL-x.md:Terms` · NVC unglossed · add it\n"
                 "READ · PROTOCOL-x.md:Conclusion · a list · one sentence\n"
             )
-            shown_hints, held = audit_decisions.read_hints(report, area)
+            hints = audit_decisions.read_hints(report, area)
             # a field named instead of a line is held too (reference pilot
-            # 2026-11-01, task 60); a result field named stays shown
-            self.assertEqual(held, 3)
+            # 2026-11-01, task 60); a result field named stays shown; a label
+            # the protocol holds no field of is not shown, with its reason
+            self.assertEqual(hints.held, 2)
             self.assertEqual(
-                [h.split(" · ")[1] for h in shown_hints],
+                hints.unclear, ["PROTOCOL-x.md:Terms: 'Terms' names no field"]
+            )
+            self.assertEqual(
+                [h.split(" · ")[1] for h in hints.shown],
                 [
                     f"PROTOCOL-x.md:{at['Conclusion']}",
                     "scripts/01_measure.py:4",
                     "PROTOCOL-x.md:Conclusion",
                 ],
+            )
+
+    def test_a_start_of_a_label_holds_by_the_one_field_it_names(self):
+        """Exact first, then a unique start (`protocol_check.field_at`): a
+        start of the question is held; one that begins two fields is left
+        out with the fields it begins — it might lie in a registered one."""
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "PROTOCOL-x.md").write_text(
+                self.PROTOCOL + "- **Data preparation:** none\n", encoding="utf-8"
+            )
+            report = (
+                "READ · PROTOCOL-x.md:Question · vague · name the documents\n"
+                "READ · PROTOCOL-x.md:Data · unclear · say which\n"
+                "READ · PROTOCOL-x.md:Concl · a list · one sentence\n"
+            )
+            hints = audit_decisions.read_hints(report, area)
+            self.assertEqual(hints.held, 1)
+            self.assertEqual(len(hints.unclear), 1)
+            self.assertIn("begins 2 fields", hints.unclear[0])
+            self.assertEqual(
+                [h.split(" · ")[1] for h in hints.shown], ["PROTOCOL-x.md:Concl"]
             )
 
     def test_the_scope_list_reads_a_prefix_on_every_line_and_skips_the_protocol(self):

@@ -307,15 +307,15 @@ class RepairPaths(unittest.TestCase):
         self.assertIn("undetermined", refused)
         self.assertNotIn("decided limitation", refused)
 
-    def test_a_field_not_named_by_its_label_is_held(self):
-        """`:Terms` is not the label "Terms of this protocol": no correction
-        is bound to it; the line says a changed registration is held and
-        points to labkit-next, which names the hold and its ways back."""
+    def test_a_start_of_one_label_names_that_field(self):
+        """`:Terms` begins one label, "Terms of this protocol": the field is
+        named, exact first, then a unique start (`protocol_check.field_at`,
+        decided 2026-11-07 — until then only the label in full named it), and
+        the decision's line takes the correction route."""
         _, said = self.rewritten(
             "Terms of this protocol", "Terms", "case: one line of cases.jsonl"
         )
-        self.assertIn("any other repair", said)
-        self.assertIn("a new measurement carries it rather than repairs it", said)
+        self.assertIn("a correction of Terms of this protocol in place", said)
         self.assertIn("names the step this repair owes now", said)
 
     def test_the_twin_a_conclusion_rewritten_owes_no_measurement_and_no_audit(self):

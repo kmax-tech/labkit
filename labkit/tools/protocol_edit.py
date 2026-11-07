@@ -21,6 +21,8 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats.protocol_check import (
+    FieldPlaceError,
+    field_meant,
     field_name,
     fields,
     placeholder_fields,
@@ -33,8 +35,8 @@ _LEAD = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)?")
 def field_for(text: str, field: str, line_no: int | None = None) -> str:
     """The field name (`field_name`) FIELD means in TEXT: its own when a field
     has it, else the one field whose name it begins (`Terms` → `terms of
-    this protocol`) — a label typed short names its field when no other
-    begins the same. Raises ValueError naming the fields a prefix begins
+    this protocol`) — `protocol_check.field_meant`, the rule every place
+    that names a field follows. Raises ValueError naming the fields a prefix begins
     when several do, else the nearest names (`difflib`) and the open
     placeholder fields. Misaddressed head keys and promise ids name their
     existing write syntax instead. LINE_NO restricts the fields to that line."""
@@ -42,11 +44,10 @@ def field_for(text: str, field: str, line_no: int | None = None) -> str:
     names = sorted(
         {f.name for f in fields(text) if line_no is None or f.line == line_no}
     )
-    if want in names:
-        return want
-    begun = [n for n in names if want and n.startswith(want)]
-    if len(begun) == 1:
-        return begun[0]
+    try:
+        return field_meant(names, field)
+    except FieldPlaceError as exc:
+        begun = exc.begun
     where = f" at line {line_no}" if line_no else ""
     if begun:
         raise ValueError(

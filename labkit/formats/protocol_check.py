@@ -361,11 +361,79 @@ def field_name(label: str) -> str:
     return label.split("(")[0].replace("†", "").strip().casefold()
 
 
+class FieldPlaceError(ValueError):
+    """PLACE names no one field: BEGUN, the field names it begins — several
+    (ambiguous), or none (unknown); TWICE, a field it names that the text
+    writes more than once."""
+
+    def __init__(
+        self, place: str, begun: list[str], *, twice: str | None = None
+    ) -> None:
+        self.place = place
+        self.begun = begun
+        self.twice = twice
+        if twice is not None:
+            why = f"{place!r} names {twice!r}, written more than once"
+        elif begun:
+            why = (
+                f"{place!r} begins {len(begun)} fields: "
+                + " · ".join(begun)
+                + " — name one in full"
+            )
+        else:
+            why = f"{place!r} names no field"
+        super().__init__(why)
+
+
+def field_meant(names: Iterable[str], place: str) -> str:
+    """The field name PLACE means among NAMES (each a `field_name`): its own
+    when one of NAMES is it, else the one name it begins (`Terms` → `terms
+    of this protocol`) — exact first, then a unique prefix, the one rule for
+    a field a person or an auditor names. Raises FieldPlaceError when PLACE
+    begins several names or none."""
+    want = field_name(place)
+    pool = sorted(set(names))
+    if want and want in pool:
+        return want
+    begun = [n for n in pool if want and n.startswith(want)]
+    if len(begun) == 1:
+        return begun[0]
+    raise FieldPlaceError(place, begun)
+
+
+def field_at(text: str, place: str) -> "FieldLine":
+    """The field of TEXT that PLACE means (`field_meant` over the labels TEXT
+    holds) — for a place an audit finding or a reading hint names. Raises
+    FieldPlaceError when PLACE begins several fields or none (a line number
+    and a section name none), or means a field TEXT writes more than once."""
+    found = fields(text)
+    name = field_meant([f.name for f in found], place)
+    hits = [f for f in found if f.name == name]
+    if len(hits) != 1:
+        raise FieldPlaceError(place, [], twice=hits[0].label)
+    return hits[0]
+
+
+def field_or_none(text: str, place: str) -> "FieldLine | None":
+    """`field_at`, None where PLACE names no field at all — a line number, a
+    section, another field's text: a place need not name a field. Raises
+    FieldPlaceError where it begins several fields or means one written
+    twice: that place names a field, but which cannot be told."""
+    try:
+        return field_at(text, place)
+    except FieldPlaceError as exc:
+        if exc.begun or exc.twice is not None:
+            raise
+        return None
+
+
 def named_field(text: str, place: str) -> "FieldLine | None":
     """The field of TEXT whose label PLACE names — `field_name` of both
     equal, so case, a parenthesised gloss and † aside, never a part of a
     label; None for a line number, a section, a label TEXT does not hold,
-    or one it holds more than once."""
+    or one it holds more than once. For a label the code itself names
+    (`CONCLUSION_LABEL`); a place a finding or a hint names goes through
+    `field_at`."""
     name = field_name(place)
     hits = [f for f in fields(text) if f.name == name]
     return hits[0] if len(hits) == 1 else None
