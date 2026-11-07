@@ -9,26 +9,28 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
-- **`llm._find_models_toml` is gone.** Deprecated in 0.108.0, which
-  named this removal; call `llm.find_models_toml`. A lab's stamped
-  `test-shared-helpers` from before 0.108.0 calls the old name and fails —
-  restamp it or change the one call.
+- **`llm._find_models_toml` is gone.** Deprecated in 0.108.0 (released),
+  which named this removal; call `llm.find_models_toml`. A lab's stamped
+  `test-shared-helpers` from before 0.108.0 calls the old name and fails:
+  change that one call to `llm.find_models_toml` — restamping the whole
+  test would overwrite edits of the lab's own.
 
-- **Only the `## Runs` section is left out of a protocol's prose budget.**
-  `protocol-check` left out any section whose heading held "runs" or
-  "Läufe", beside the writer's exact `## Runs`; a protocol with a German
-  `## Läufe` run list now counts it as prose — rename the heading to
-  `## Runs` (`protocol_block.RUNS_HEADING`, `protocol_report.registration_prose`).
+- **`## Runs` is the one heading of a protocol's run list.** The template
+  stamps it and `protocol-fill --from-run` writes into it; `protocol-check`
+  left out of the prose budget any section whose heading held "runs" or
+  "Läufe" besides. The grammar is narrower on purpose, so writer and reader
+  know the same section: a protocol whose run list stands under `## Läufe`
+  now counts it as prose — rename that one heading to `## Runs`
+  (`protocol_block.RUNS_HEADING`, `protocol_report.registration_prose`).
 
 - **labkit's step commands moved from `labkit.formats.repo` to
-  `labkit.formats.commands`.** `Command` and every `*_command` builder,
-  and `next_after_run`, which the stamped measure scripts
-  (`measure-quick-script`, `measure-estimator-script`) import: a script
-  stamped before reads `from labkit.formats.repo import next_after_run`
-  and fails at its import under this labkit — change that one line to
-  `from labkit.formats.commands import next_after_run`. The last
-  version with them in `repo` is the one before this release.
-  `REPEAT_COSTS` moved from `protocol_block` to `runs`.
+  `labkit.formats.commands`.** `Command` and every `*_command` builder: code
+  of a lab's own that imports one of them from `repo` changes that import.
+  `next_after_run`, which the stamped measure scripts import, moved too,
+  and `repo.next_after_run` still answers, forwarding to it: a measure
+  script stamped before runs unchanged; newly stamped ones import it from
+  `commands`. The forwarding name goes in a release that announces its end
+  first. `REPEAT_COSTS` moved from `protocol_block` to `runs`.
 
 - **A report's result block states the question and the protocol's
   answer, and the adoption owes that answer.** The block opens with two

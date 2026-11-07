@@ -678,6 +678,20 @@ class AdoptCommand(unittest.TestCase):
         )
 
 
+class StampedImports(unittest.TestCase):
+    """A measure script stamped before the step commands moved imports
+    `next_after_run` from repo: it still runs, on the one implementation."""
+
+    def test_the_old_import_forwards_to_commands(self):
+        from labkit.formats import commands
+
+        protocol = Path("experiments/01-x/PROTOCOL-x.md")
+        self.assertEqual(
+            repo.next_after_run(protocol, "r1"),
+            commands.next_after_run(protocol, "r1"),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
 

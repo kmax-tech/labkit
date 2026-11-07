@@ -121,6 +121,19 @@ def shown(path: Path, base: Path) -> str:
     return p.relative_to(b).as_posix() if p.is_relative_to(b) else p.as_posix()
 
 
+def next_after_run(protocol: Path, run_id: str) -> str:
+    """`commands.next_after_run` under the name the stamped measure scripts
+    import (`from labkit.formats.repo import next_after_run`): one
+    implementation, in `commands`; this name only forwards to it, so a
+    script stamped before the step commands left this module keeps running.
+    It goes in a release that announces its end first (CHANGELOG)."""
+    # commands imports this module: imported at the call, the one edge back
+    # (`tests/test_architecture.py`, FORWARDING_EDGES)
+    from labkit.formats.commands import next_after_run as steps_after_run
+
+    return steps_after_run(protocol, run_id)
+
+
 def no_such_area(area: Path) -> str:
     """The sentence for an area path that is not a directory, the one every
     command refuses with. A relative path resolves against the working

@@ -176,6 +176,18 @@ def on_a_cycle(graph: dict[str, set[str]]) -> list[str]:
     return sorted(m for m in graph if m in reaches(m))
 
 
+#: an import back along a cycle that stands on purpose: a name kept where
+#: stamped lab code imports it, forwarding to its one implementation —
+#: listed by name until a release announces its end (CHANGELOG)
+FORWARDING_EDGES = {
+    # the stamped measure scripts' `from labkit.formats.repo import
+    # next_after_run`, since the step commands moved to commands (2026-11-07)
+    ("repo", "commands"),
+}
+#: public names defined twice on purpose: the forwarders of FORWARDING_EDGES
+FORWARDED_NAMES = {"next_after_run"}
+
+
 class NoImportCycle(unittest.TestCase):
     """The downward rule forbids an upward import but not a cycle inside a
     layer; five stood until 2026-11-07, each a helper kept in the module of
@@ -183,7 +195,14 @@ class NoImportCycle(unittest.TestCase):
 
     def test_no_module_reaches_itself_through_its_imports(self):
         graph = {m: imports_of(m) - {m} for m in modules()}
+        for m, t in FORWARDING_EDGES:
+            graph[m].discard(t)
         self.assertEqual(on_a_cycle(graph), [])
+
+    def test_a_forwarding_edge_is_still_needed(self):
+        # an edge listed here that no longer stands is listed in vain
+        for m, t in FORWARDING_EDGES:
+            self.assertIn(t, imports_of(m), (m, t))
 
     def test_the_check_bites(self):
         self.assertEqual(
@@ -371,7 +390,11 @@ class OneNameOneThing(unittest.TestCase):
                     n, (ast.FunctionDef, ast.ClassDef)
                 ) and not n.name.startswith("_"):
                     where[n.name].append(m)
-        twice = {k: v for k, v in where.items() if len(v) > 1 and k not in ENTRY_POINTS}
+        twice = {
+            k: v
+            for k, v in where.items()
+            if len(v) > 1 and k not in ENTRY_POINTS | FORWARDED_NAMES
+        }
         self.assertEqual(twice, {}, "one public name, one thing (CODE-015)")
 
 
