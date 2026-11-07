@@ -45,16 +45,29 @@ def folder_map() -> dict[str, str]:
     return out
 
 
+#: the doctrine cell of a row whose every module is doctrine (gates, probes)
+WHOLE_ROW = "all"
+
+
+def doctrine_marks(modules_cell: str, doctrine_cell: str) -> set[str]:
+    """The modules one row of the layer table marks doctrine: every module of
+    MODULES_CELL when DOCTRINE_CELL is `WHOLE_ROW`, else the modules
+    DOCTRINE_CELL names, each one its row lists."""
+    listed = set(re.findall(r"`(\w+)`", modules_cell))
+    if doctrine_cell.strip() == WHOLE_ROW:
+        return listed
+    marked = set(re.findall(r"`(\w+)`", doctrine_cell))
+    if not marked <= listed:
+        raise AssertionError(f"doctrine marks {marked - listed} not in its row")
+    return marked
+
+
 def doctrine_modules() -> set[str]:
     """The modules the layer table marks doctrine; every other module is core."""
     doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
     out: set[str] = set()
     for m in re.finditer(r"^\| (?:\d|tools)[^|]*\| ([^|]+)\| ([^|]+)\|", doc, re.M):
-        listed = set(re.findall(r"`(\w+)`", m.group(1)))
-        marked = set(re.findall(r"`(\w+)`", m.group(2)))
-        if not marked <= listed:
-            raise AssertionError(f"doctrine marks {marked - listed} not in its row")
-        out |= marked
+        out |= doctrine_marks(m.group(1), m.group(2))
     return out
 
 
@@ -167,6 +180,21 @@ class CoreAndDoctrine(unittest.TestCase):
 
     def test_the_doctrine_column_marks_known_modules(self):
         self.assertLessEqual(doctrine_modules(), set(modules()))
+
+    def test_all_marks_the_whole_row_and_a_list_only_its_names(self):
+        row = "`audit`, `next_step` "
+        self.assertEqual(doctrine_marks(row, " all "), {"audit", "next_step"})
+        self.assertEqual(doctrine_marks(row, " `audit` "), {"audit"})
+        with self.assertRaises(AssertionError):
+            doctrine_marks(row, " `params` ")
+
+    def test_every_gate_and_probe_is_doctrine_and_two_tools_are_core(self):
+        doctrine, paths = doctrine_modules(), module_paths()
+        for m, f in paths.items():
+            if f.parent.name in ("gates", "probes"):
+                self.assertIn(m, doctrine)
+        self.assertNotIn("repo_check", doctrine)
+        self.assertNotIn("params", doctrine)
 
     def test_a_core_module_imports_no_doctrine_module(self):
         doctrine = doctrine_modules()
