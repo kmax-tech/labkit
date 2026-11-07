@@ -6,7 +6,6 @@ numbered findings both show after an audit.
 
 from __future__ import annotations
 
-import re
 import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -49,7 +48,7 @@ from labkit.formats.runs import (
     run_path,
 )
 from labkit.gates import ways_out
-from labkit.gates.audit_reply import READ_HINT
+from labkit.gates.audit_reply import READ_HINT, READ_TAG
 from labkit.run import llm
 
 DECISION_TEXT_WIDTH = 160
@@ -171,12 +170,6 @@ def decision_lines(
     return out
 
 
-#: a reading hint's place: `READ · <file>:<line> · …`
-_READ_PLACE = re.compile(
-    r"READ\**\s*\S+\s*`?(?P<file>[^\s:`]+):(?P<place>[^`·]+?)\s*`?\s*(?:·|$)"
-)
-
-
 def limitation_line(
     f: findings.Finding, review: Command, unassessed: str | None
 ) -> str:
@@ -242,15 +235,16 @@ def read_hints(report: str, area: Path, protocol: Path | None = None) -> ReadHin
     for ln in report.splitlines():
         if not READ_HINT.match(ln):
             continue
-        m = _READ_PLACE.search(ln)
-        if m is not None:
-            place = m["place"].strip()
+        hint = findings.tagged_line(ln.strip(), (READ_TAG,))
+        at = hint.file_place if hint is not None else None
+        if at is not None:
+            file, place = at
             try:
-                if _in_held_field(area, protocol, m["file"], place, texts):
+                if _in_held_field(area, protocol, file, place, texts):
                     held += 1
                     continue
             except FieldPlaceError as exc:
-                unclear.append(f"{m['file']}:{place}: {exc}")
+                unclear.append(f"{file}:{place}: {exc}")
                 continue
         shown_lines.append(ln.strip())
     return ReadHints(shown_lines, held, unclear)

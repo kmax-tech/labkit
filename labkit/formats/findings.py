@@ -94,7 +94,7 @@ import re
 import shlex
 import time
 import tomllib
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -158,12 +158,62 @@ GRADES = ("BLOCKER", "WARNING", "NOTE")
 #: `BLOCKER — …` parsed as none, and the record read as covered)
 LEAD = r"^[\s>*`#-]*"
 SEP = r"(?:·|—|–|:)"
-#: a finding's grade line up to its first field; between its fields a dot
-#: or a dash — never a colon, which `<file>:<line>` holds
-_GRADE_LEAD = re.compile(
-    LEAD + r"\**(?:" + "|".join(GRADES) + r")\**\s*" + SEP + r"\s*"
-)
+
+
+def tag_head(tags: Sequence[str]) -> str:
+    """The pattern of a tagged line's head: the lead a renderer adds
+    (`LEAD`), one of TAGS, bold or not, as group 1, then the separator
+    (`SEP`) — the one grammar every reader of an auditor's line starts
+    from (`tagged_line`, `audit_reply.FINDING`)."""
+    return LEAD + r"\**(" + "|".join(map(re.escape, tags)) + r")\**\s*" + SEP
+
+
+#: a finding's grade line up to its first field
+GRADE_HEAD = tag_head(GRADES)
+#: between a tagged line's fields a dot or a dash — never a colon, which
+#: `<file>:<line>` holds
 _FIELD_SEP = re.compile(r"\s+[·—–]\s+")
+
+
+@dataclass(frozen=True)
+class TaggedLine:
+    """An auditor's line read by the one grammar (`tagged_line`): TAG, the
+    grade or the tag (`READ`) that opens it; FIELDS, what follows the
+    separator, parted at a dot or a dash, each stripped of spaces."""
+
+    tag: str
+    fields: tuple[str, ...]
+
+    @property
+    def file_place(self) -> tuple[str, str] | None:
+        """(file, place) of the first field, `<file>:<place>`: the file as
+        written and what follows its first colon, backticks and spaces
+        trimmed; None when the field holds no colon, no file or no place."""
+        if not self.fields:
+            return None
+        file, colon, place = self.fields[0].strip("`").partition(":")
+        place = place.strip().strip("`").strip()
+        if not colon or not file.strip() or not place:
+            return None
+        return file.strip(), place
+
+
+def tagged_line(line: str, tags: Sequence[str] = GRADES) -> TaggedLine | None:
+    """LINE read as `<TAG> · <field> · <field> · …` (`TaggedLine`): the lead
+    and the separator as `tag_head` takes them, the fields parted at a dot
+    or a dash; None for a line that does not open with one of TAGS. The
+    one reading of a grade line's fields — its place (`Finding.place`), its
+    subject (`subject_of`), the file a review is shown
+    (`decision_review.named_files`) — and of a reading hint's place
+    (`audit_decisions.read_hints`)."""
+    m = re.match(tag_head(tags) + r"\s*", line)
+    if m is None:
+        return None
+    rest = line[m.end() :].strip()
+    fields = tuple(f.strip() for f in _FIELD_SEP.split(rest)) if rest else ()
+    return TaggedLine(m.group(1), fields)
+
+
 #: what a finding is about, the auditor's judgement in the third field of
 #: its line (`<GRADE> · <file>:<place> · <subject> · …`). `implementation`: the
 #: code, the data handling or the run does not do what the registration
@@ -247,19 +297,17 @@ class Finding:
     @property
     def place(self) -> tuple[str, str] | None:
         """(file, place) of the grade line as the instructions write it,
-        `<GRADE> · <file>:<place> · …`: the file's name and what follows its
-        first colon, backticks and spaces trimmed; None for a line in
-        another form. Read from that one field, never searched for in the
-        text."""
+        `<GRADE> · <file>:<place> · <subject> · …`, read by the one grammar
+        (`tagged_line`, its fields parted at a dot or a dash as `subject_of`
+        reads them): the file's name and what follows its first colon; None
+        for a line of another grade, or without a field after the place.
+        Read from that one field, never searched for in the text."""
         first = self.text.splitlines()[0] if self.text else ""
-        parts = first.split(" · ")
-        if len(parts) < 3 or parts[0].strip() != self.grade:
+        line = tagged_line(first)
+        if line is None or line.tag != self.grade or len(line.fields) < 2:
             return None
-        file, colon, place = parts[1].strip().strip("`").partition(":")
-        place = place.strip().strip("`").strip()
-        if not colon or not file.strip() or not place:
-            return None
-        return Path(file.strip()).name, place
+        at = line.file_place
+        return (Path(at[0]).name, at[1]) if at is not None else None
 
     @property
     def effect_owed(self) -> bool:
@@ -377,12 +425,11 @@ def subject_of(text: str) -> str:
     SUBJECTS: which decisions a finding allows rests on it (`subject_refusal`),
     and a guess would decide it."""
     first = text.splitlines()[0] if text else ""
-    # the lead takes the grade and the separator after it, a colon
-    # included; the fields after it part at a dot or a dash only, so
-    # fields[0] is `<file>:<place>` and fields[1] the subject
-    lead = _GRADE_LEAD.match(first)
-    fields = _FIELD_SEP.split(first[lead.end() :]) if lead else []
-    subject = fields[1].strip().strip("`*") if len(fields) > 1 else ""
+    # fields[0] is `<file>:<place>`, fields[1] the subject (`tagged_line`)
+    line = tagged_line(first)
+    subject = (
+        line.fields[1].strip("`*") if line is not None and len(line.fields) > 1 else ""
+    )
     if subject not in SUBJECTS:
         raise ValueError(
             f"a finding line without its subject: {first[:160]!r} — {SUBJECT_FORM}"

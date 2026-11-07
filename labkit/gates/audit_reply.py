@@ -21,16 +21,14 @@ from labkit.formats.repo import (
     area_protocols,
     layout_root,
 )
-from labkit.formats.findings import LEAD, SEP
+from labkit.formats.findings import GRADE_HEAD, LEAD, SEP
 from labkit.gates.audit_prompt import Followup
 from labkit.gates.ways_out import (
     ANSWER_AGAIN,
 )
 
 #: a finding line: the grade, then a separator
-FINDING = re.compile(
-    LEAD + r"\**(" + "|".join(findings.GRADES) + r")\**\s*" + SEP, re.M
-)
+FINDING = re.compile(GRADE_HEAD, re.M)
 VERDICT = re.compile(
     r"verdict:\s*(\d+)\s*blockers?(?:\(s\))?,\s*(\d+)\s*warnings?(?:\(s\))?"
     r"(?:,\s*(\d+)\s*notes?(?:\(s\))?)?",
@@ -364,6 +362,8 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
     return out
 
 
+#: what opens a reading hint: `READ · <file>:<place> · …`
+READ_TAG = "READ"
 #: a READ line of the auditor's report: a reading hint, printed and never
 #: recorded (the record keeps what FINDING matches)
-READ_HINT = re.compile(LEAD + r"\**READ\**\s*" + SEP)
+READ_HINT = re.compile(findings.tag_head((READ_TAG,)))

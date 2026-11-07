@@ -93,6 +93,14 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A finding's line is read by one grammar.** Its place split at ` · `
+  alone and compared the grade bare, while its subject read dashes, bold
+  and a bullet: `BLOCKER — PROTOCOL-x.md:Unit — statement — …` had a
+  subject and no place, so `labkit-next` passed it over and the
+  follow-up refused it as naming no field. `findings.tagged_line` reads
+  the place, the subject, the file a decision review is shown and a
+  reading hint's place; `audit_reply.FINDING` and `READ_HINT` are built
+  from the same head (`findings.tag_head`).
 - **One rule says which protocol field a place names.** The label in full
   first, else the one label it begins (`protocol_check.field_meant`,
   `field_at`); a start several labels share, or none, is an explicit

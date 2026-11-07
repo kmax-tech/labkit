@@ -162,12 +162,11 @@ def named_files(
     the snapshot holds code."""
     out: list[Path] = []
     for _, f in decided:
-        # the second field stands on the grade line, the finding's first
-        fields = f.text.split(" · ")
-        if len(fields) < 2:
+        # the field after the grade, on the finding's first line
+        line = findings.tagged_line(f.text.splitlines()[0] if f.text else "")
+        if line is None or not line.fields or not line.fields[0]:
             continue
-        word = fields[1].strip().split()[0] if fields[1].strip() else ""
-        name = word.split(":")[0].strip("`'\"()")
+        name = line.fields[0].split()[0].split(":")[0].strip("`'\"()")
         if not name:
             continue
         for base in (repo, area):

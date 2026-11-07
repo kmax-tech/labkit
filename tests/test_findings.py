@@ -1390,6 +1390,44 @@ class AuditedStateMatch(unittest.TestCase):
         self.assertEqual(audit_gaps.covering_records([record], other), [])
 
 
+class OneGrammarOfTheGradeLine(unittest.TestCase):
+    """The grade line's fields are read by one grammar (`tagged_line`): its
+    place, its subject, the file a review is shown and a reading hint's
+    place. Until 2026-11-07 the place split at ` · ` alone and compared the
+    grade bare, so `BLOCKER — PROTOCOL-x.md:Unit — statement — …` had a
+    subject and no place (structure audit, S5)."""
+
+    def finding(self, line: str) -> findings.Finding:
+        return findings.Finding("BLOCKER", line + "\n  evidence", "open", "")
+
+    def test_dots_dashes_bold_and_a_bullet_read_alike(self):
+        for line in (
+            "BLOCKER · PROTOCOL-x.md:Unit · statement · says cases · fix",
+            "BLOCKER — PROTOCOL-x.md:Unit — statement — says cases — fix",
+            "- **BLOCKER** · `PROTOCOL-x.md:Unit` · statement · says cases · fix",
+            "BLOCKER: PROTOCOL-x.md:Unit · statement · says cases · fix",
+        ):
+            with self.subTest(line=line):
+                f = self.finding(line)
+                self.assertEqual(f.place, ("PROTOCOL-x.md", "Unit"))
+                self.assertEqual(findings.subject_of(f.text), "statement")
+
+    def test_the_twins_another_grade_no_colon_or_no_field_after_it(self):
+        self.assertIsNone(
+            self.finding("WARNING · PROTOCOL-x.md:Unit · statement · x").place
+        )
+        self.assertIsNone(self.finding("BLOCKER · PROTOCOL-x.md · statement · x").place)
+        self.assertIsNone(self.finding("BLOCKER · PROTOCOL-x.md:Unit").place)
+
+    def test_a_reading_hint_is_read_by_the_same_grammar(self):
+        line = findings.tagged_line(
+            "READ · `PROTOCOL-x.md:Terms` · vague · add", ("READ",)
+        )
+        assert line is not None
+        self.assertEqual(line.file_place, ("PROTOCOL-x.md", "Terms"))
+        self.assertIsNone(findings.tagged_line("BLOCKER · a:1 · b", ("READ",)))
+
+
 class CorrectedField(unittest.TestCase):
     """A correction names its field: the grade line's place is the protocol's
     file and a label the protocol holds once — in full, or the one label it
