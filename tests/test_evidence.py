@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.formats import evidence, findings  # noqa: E402
 from labkit.gates import audit, agent_hooks  # noqa: E402
+from labkit.gates import undecided
 from protocol_fixture import head, registration_of  # noqa: E402
 from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
 
@@ -199,11 +200,11 @@ class Committed(unittest.TestCase):
         self.record.write_text(text.replace("seed", "SEED"), encoding="utf-8")
         _git(self.root, "add", "-A")
         with mock.patch.object(
-            agent_hooks.handovers,
+            undecided.handovers,
             "acknowledgement",
-            return_value=agent_hooks.handovers.Acknowledgement(True, {}),
+            return_value=undecided.handovers.Acknowledgement(True, {}),
         ):
-            state = agent_hooks.undecided_state(self.root, [self.record], staged=True)
+            state = undecided.undecided_state(self.root, [self.record], staged=True)
         (line,) = state.blockers
         self.assertTrue(line.startswith("experiments/01-x: audits/"))
         self.assertIn("in the index since HEAD", line)

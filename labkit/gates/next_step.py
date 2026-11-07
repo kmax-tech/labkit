@@ -37,7 +37,7 @@ The order, the first that applies is the step (`next_step`):
                                    (`start_check.measurement_refusal`)
     an audit BLOCKER nobody      → decide it by the `--decide` command
       decided, a record or the     `--findings` prints, restore, or hand over
-      journal lost or unreadable,  (`agent_hooks.undecided_state`: the hold of
+      journal lost or unreadable,  (`undecided.undecided_state`: the hold of
       and the chain carries no     the stop and the commit, which print this
       gap for it                   step; a loss a current handover
                                    acknowledges is not held). After the
@@ -93,6 +93,7 @@ from labkit.formats.repo import (
     withdraw_command,
 )
 from labkit.gates.report_context import INDEX, TREE
+from labkit.gates.undecided import undecided_state
 
 if TYPE_CHECKING:
     from labkit.gates.report_check import ReleaseChain
@@ -377,7 +378,7 @@ def _restore_step(area: Path, *, staged: bool) -> Step | None:
 def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
     """The step while AREA holds an audit BLOCKER nobody decided, a record
     or the attempt journal lost or unreadable, or evidence changed against
-    HEAD, in the state judged (`agent_hooks.undecided_state`, read for
+    HEAD, in the state judged (`undecided.undecided_state`, read for
     PROTOCOL's area: the stop's and the commit's own hold, a loss a current
     handover acknowledges not among them); None when nothing holds. Read
     after report-check's chain: a gap there names its own step first (the
@@ -389,7 +390,6 @@ def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
     (fourth SAB-like draw: "stale, let me remove"); restore from git; or
     hand over."""
     from labkit.formats import findings
-    from labkit.gates.agent_hooks import undecided_state
 
     held = undecided_state(layout_root(area), [protocol], staged=staged).blockers
     if not held:

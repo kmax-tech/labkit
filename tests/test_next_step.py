@@ -28,6 +28,7 @@ from labkit.formats import protocol_block, report_reviews  # noqa: E402
 from labkit.formats.gate import GateFinding  # noqa: E402
 from labkit.formats.repo import state_text  # noqa: E402
 from labkit.gates import report_check, report_context, report_hold  # noqa: E402
+from labkit.gates import undecided
 from labkit.gates.report_review import discussed_under  # noqa: E402
 from labkit.formats import standard_contract as sc  # noqa: E402
 from labkit.gates import next_step  # noqa: E402
@@ -574,7 +575,6 @@ class ProgressAccount(unittest.TestCase):
         """Retained protection: the account changes the commit rule for the
         report only; an undecided audit BLOCKER still holds the commit."""
         from labkit.formats import findings, promises, scope_sha
-        from labkit.gates import agent_hooks
         from protocol_fixture import registration_of, shown_sha
 
         run_id = self.measure()
@@ -597,7 +597,7 @@ class ProgressAccount(unittest.TestCase):
             registration=registration_of(self.area),
         )
         self.lab.git("add", "-A")
-        lines = agent_hooks.undecided_blockers(
+        lines = undecided.undecided_blockers(
             self.lab.root, [self.report, self.protocol], staged=True
         )
         self.assertTrue(

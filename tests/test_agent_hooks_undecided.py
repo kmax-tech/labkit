@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from labkit.gates import agent_hooks, claude_hooks  # noqa: E402
+from labkit.gates import undecided
 from labkit.formats import findings, repo  # noqa: E402
 from protocol_fixture import registration_of, head  # noqa: E402
 from test_agent_hooks import _dated, _git, _run, _transcript  # noqa: E402
@@ -305,17 +306,17 @@ class Undecided(unittest.TestCase):
                     staged=True,
                 )
             self.assertTrue(held)
-            undecided = agent_hooks.undecided_blockers(
+            held_lines = undecided.undecided_blockers(
                 self.root, [self.area / "PROTOCOL-x.md"], staged=True
             )
-            self.assertTrue(undecided)
+            self.assertTrue(held_lines)
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 rc = claude_hooks.main(["pre-commit"])
         self.assertEqual(rc, 1)
         text = out.getvalue()
         self.assertIn(fields.getvalue(), text)  # the fields gate's own lines
-        for line in undecided:
+        for line in held_lines:
             self.assertIn(line, text)  # the undecided gate's own lines
         self.assertIn(f"experiments/01-x: {path.name}: BLOCKER", text)
         self.assertEqual(text.count("labkit-next: experiments/01-x"), 1)
@@ -389,7 +390,7 @@ class Undecided(unittest.TestCase):
         bad.write_text("no = [toml\n", encoding="utf-8")
         _git(self.root, "add", "-A")
         bad.unlink()  # the tree lost it, the commit carries it
-        lines = agent_hooks.undecided_blockers(
+        lines = undecided.undecided_blockers(
             self.root, [self.area / "scripts" / "01_measure.py"], staged=True
         )
         self.assertTrue(
