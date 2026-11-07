@@ -39,14 +39,14 @@ HEAD 8894a146 läuft grün (3072 Tests). Muster: Eine Regel ändert sich an ihre
 1. ~~**Entscheidungsliste nach Befundart (S1):**~~ erledigt 44ce0cf5 — `--findings` druckt nur noch, was `findings.allowed_decisions` erlaubt; kein `limitation`-Angebot mehr für `implementation`/`undetermined`, das `--decide` dann ablehnt. Nachgezogen am 2026-11-07: Auch der Hinweis nach einem abgelehnten Entscheidungsreview und die Ablehnung eines erneuten Reviews folgen dieser Regel, je Befund getrennt. Regressionstest für alle drei Befundarten sowie einen gemischten Review.
 2. ~~**Auswege an die Befundart binden (S2):**~~ erledigt 98d2f719 — In den Auswegen von `ways_out` gilt „nicht behebbar → `limitation`“ nur noch für `statement`; der Test hält die Wörter, nicht nur die Namen.
 3. ~~**Übernommener Befund zeigt seine Art (S3):**~~ erledigt 86a4668e — Der Prompt des Folgeaudits nennt das `subject`; sonst wird ein Folgeaudit in der zweiten Runde abgelehnt.
-4. **Altpfad ohne `subject` (S4):** entweder per Breaking-Release entfernen oder als bewusste Ausnahme in `CLAUDE.md` vermerken.
+4. ~~**Altpfad ohne `subject` (S4):**~~ erledigt c65f429f (Breaking, entfernt) — entweder per Breaking-Release entfernen oder als bewusste Ausnahme in `CLAUDE.md` vermerken.
 5. **Eine Leseart der Befundzeile (S5):** `place`, `subject_of`, `named_files` und `FINDING` lesen über eine Funktion; dann hat eine Zeile mit Strich-Trennern Ort und Art zugleich.
 6. **Eine Regel „Conclusion geschrieben“ (S6):** `conclusion_written` über `written_line`.
 7. **Antwortblock-Nachzug (S7, S8):** Füll-Befehl nur für vorhandene Felder; Guide-Satz zu `--force`, README-Quickstart und Auditor-Anweisung `experiment-preflight.agent.md:75` auf „Conclusion vor der Adoption“.
-8. **Quelle außerhalb des Repos (S9):** entscheiden, ob sie allein an ihre sha256 gebunden wird oder ins Repo (ignoriert) muss; die Ablehnung nennt dann einen Ausweg, der wirklich geht.
-9. **Doku: Datenprüfung nur bei niedrigen Wiederholungskosten (S10)**, dazu die kosmetischen Punkte der Notiz in einem Doku-Commit.
-10. **Ein Leser für `data=`-Einträge (S11)** neben `runs.read_outputs`.
-11. **Vorlage gegen Tupel testen:** Grade- und FIX-Zeile der Auditor-Anweisung gegen `SUBJECTS`, `SETTLED_SUBJECTS`, `FIX_VERDICTS`.
+8. ~~**Quelle außerhalb des Repos (S9):**~~ erledigt 159b4c3d (Breaking: allein an die sha256 gebunden, Herkunft in Data / scope) — entscheiden, ob sie allein an ihre sha256 gebunden wird oder ins Repo (ignoriert) muss; die Ablehnung nennt dann einen Ausweg, der wirklich geht.
+9. ~~**Doku: Datenprüfung nur bei niedrigen Wiederholungskosten (S10)**~~ erledigt 3965dcf9. Offen bleiben die kosmetischen Punkte der Notiz (ein Doku-Commit).
+10. ~~**Ein Leser für `data=`-Einträge (S11)**~~ erledigt 87b0e53c — neben `runs.read_outputs`.
+11. ~~**Vorlage gegen Tupel testen:**~~ erledigt a79f32e8 — Grade- und FIX-Zeile der Auditor-Anweisung gegen `SUBJECTS`, `SETTLED_SUBJECTS`, `FIX_VERDICTS`.
 
 ### Begriffsprüfung — erledigt 2026-11-07
 
