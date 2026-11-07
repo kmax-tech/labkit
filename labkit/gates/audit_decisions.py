@@ -23,6 +23,7 @@ from labkit.formats import (
     protocol_history,
 )
 from labkit.formats.repo import (
+    Command,
     ProtocolChoiceError,
     area_protocols,
     audit_command,
@@ -63,9 +64,12 @@ def decision_lines(
     command that decides it (`--record` named, so a later audit cannot
     shift it), then the READ lines of REPORT apart: printed, not recorded,
     nothing to decide. Five of six sandbox probes (2026-10-21) numbered the
-    printed lines and decided findings the record does not hold. The effect
-    `<ID> not assessable` is named only where the protocol registers a
-    promise (`may_leave_unassessed`)."""
+    printed lines and decided findings the record does not hold. A finding
+    is offered only the decisions its subject allows
+    (`findings.allowed_decisions`): where `limitation` is refused, the line
+    in its place says why and names the ways that remain
+    (`findings.subject_refusal`). The effect `<ID> not assessable` is named
+    only where the protocol registers a promise (`may_leave_unassessed`)."""
     here = Path.cwd()
     where = shown(record.path, here)
     out: list[str] = []
@@ -131,26 +135,17 @@ def decision_lines(
                     f"again and run `{audit_command(area, '--mode', 'analysis', protocol=protocol, base=here)}` "
                     f"— the follow-up judges `fixed` by that value"
                 )
-            if f.grade == "BLOCKER":
-                out.append(
-                    "      limitation: the verdicts hold, read within it; a second "
-                    "auditor must uphold it before the number leaves, at every "
-                    f"repeat cost: `"
-                    f"{audit_command(area, '--review', '--record', record.path.name, protocol=protocol, base=here)}"
-                    f"`"
-                    + (
-                        f" or {unassessed}"
-                        if promised
-                        else " — no promise is registered to leave not assessable; "
-                        "a fault the claim cannot be read within: hand the "
-                        "protocol over"
-                    )
-                )
-            elif f.grade == "WARNING":
-                out.append(
-                    "      limitation: the verdicts hold, read within it (its missing "
-                    "review warns)" + (f" | {unassessed}" if promised else "")
-                )
+            review = audit_command(
+                area,
+                "--review",
+                "--record",
+                record.path.name,
+                protocol=protocol,
+                base=here,
+            )
+            limit = limitation_line(f, review, unassessed if promised else None)
+            if limit:
+                out.append(limit)
     hints, held = read_hints(report, area, protocol)
     if hints:
         out.append("reading hints — not recorded, nothing to decide:")
@@ -168,6 +163,40 @@ def decision_lines(
 _READ_PLACE = re.compile(
     r"READ\**\s*\S+\s*`?(?P<file>[^\s:`]+):(?P<place>[^`·]+?)\s*`?\s*(?:·|$)"
 )
+
+
+def limitation_line(
+    f: findings.Finding, review: Command, unassessed: str | None
+) -> str:
+    """The line under F in the decision list on `limitation`: what it does
+    for a BLOCKER (the second auditor's REVIEW command owed) or a WARNING,
+    with UNASSESSED — the `--not-assessable` route, None where the protocol
+    registers no promise; where F's subject refuses `limitation`, the
+    decisions it allows and the refusal's ways out in its place (the list
+    offered `limitation` for every finding and `--decide` refused it for
+    this one, audit 2026-11-07, S1); "" for a NOTE."""
+    refused = findings.subject_refusal(f, "limitation")
+    if refused is not None and f.grade in ("BLOCKER", "WARNING"):
+        allowed = " / ".join(findings.allowed_decisions(f))
+        return f"      {f.subject}: decide {allowed} — {refused}"
+    if f.grade == "BLOCKER":
+        return (
+            "      limitation: the verdicts hold, read within it; a second "
+            f"auditor must uphold it before the number leaves, at every "
+            f"repeat cost: `{review.line}`"
+            + (
+                f" or {unassessed}"
+                if unassessed is not None
+                else " — no promise is registered to leave not assessable; "
+                "a fault the claim cannot be read within: hand the protocol over"
+            )
+        )
+    if f.grade == "WARNING":
+        return (
+            "      limitation: the verdicts hold, read within it (its missing "
+            "review warns)" + (f" | {unassessed}" if unassessed is not None else "")
+        )
+    return ""
 
 
 def read_hints(

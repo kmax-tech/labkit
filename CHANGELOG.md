@@ -78,6 +78,15 @@ pins (`requirements.txt` / `requirements.lock`).
   `[[fix_verdict]]` table — which the carried finding takes. A subject on
   any other FIX line is refused. New way out: "an unsettled suspicion".
 
+### Fixed
+
+- **The decision list offers only the decisions a finding's subject
+  allows.** `labkit-audit --findings` (and the list printed after an
+  audit) offered a `limitation` route under every BLOCKER and WARNING; for
+  an `implementation` or `undetermined` finding `--decide` then refused
+  it. Such a finding now shows its allowed decisions and the refusal's
+  ways out in place of the route (`audit_decisions.limitation_line`).
+
 ## 0.112.0 — 2026-11-06
 
 ### Breaking

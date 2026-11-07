@@ -1722,6 +1722,42 @@ class RequiredCheck(unittest.TestCase):
         self.assertNotIn("the follow-up judges", lines)
         self.assertIn("no follow-up audit judges a WARNING; decide it now", lines)
 
+    def test_the_decision_list_offers_only_the_decisions_a_subject_allows(self):
+        """The list offered `limitation` under every BLOCKER, and `--decide`
+        refused it for an implementation or undetermined finding (audit
+        2026-11-07, S1): such a finding gets its allowed decisions and the
+        refusal's ways out instead. The twin: a statement finding keeps the
+        limitation route."""
+        undetermined = (
+            FixVerdicts.LEAK.replace("· statement ·", "· undetermined ·")
+            + " · check: feature_sources — confirms if poisson_ratio is listed"
+        )
+        for line, subject in (
+            (
+                FixVerdicts.LEAK.replace("· statement ·", "· implementation ·"),
+                "implementation",
+            ),
+            (undetermined, "undetermined"),
+        ):
+            with self.subTest(subject=subject):
+                area, earlier = self.fv.area(line)
+                lines = "\n".join(
+                    audit_decisions.decision_lines(findings.read(earlier), area, "")
+                )
+                self.assertNotIn("      limitation: the verdicts hold", lines)
+                self.assertIn(
+                    f"      {subject}: decide fixed / false-positive — an {subject} "
+                    "finding is no limitation",
+                    lines,
+                )
+                self.assertIn("--handover", lines)
+        area, earlier = self.fv.area(FixVerdicts.LEAK)
+        lines = "\n".join(
+            audit_decisions.decision_lines(findings.read(earlier), area, "")
+        )
+        self.assertIn("      limitation: the verdicts hold", lines)
+        self.assertNotIn("decide fixed / false-positive", lines)
+
     def test_the_value_shown_is_the_snapshots_and_the_key_is_recorded_present(self):
         area, earlier = self.fv.area(self.CHECKED)
         sources = {"space_group": "column space_group", "n_sites": "structure text"}
