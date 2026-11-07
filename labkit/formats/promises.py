@@ -285,12 +285,6 @@ def _outcome(n: int, part: str, *, last: bool, after_one: bool) -> BranchOutcome
     return BranchOutcome(condition, name, consequence)
 
 
-def is_placeholder(sentence: str) -> bool:
-    """Is SENTENCE still the stamp's placeholder — the whole value one `<…>`,
-    as `labkit-init exp` writes it?"""
-    return sentence.startswith("<") and sentence.endswith(">")
-
-
 @dataclass(frozen=True)
 class Promise:
     """One promise of a protocol to the code: its id, the metrics key that reports it, its sentence, scope and constants."""
@@ -437,7 +431,9 @@ def parse_block(text: str) -> PromiseTables | None:  # noqa: C901 complexity bas
             raise PromiseError(f"{where}: `sentence` is empty")
         sentence = sentence.strip()
         outcomes: tuple[BranchOutcome, ...] = ()
-        if kind_of(pid) == "branch" and not is_placeholder(sentence):
+        if kind_of(pid) == "branch" and not protocol_block.is_stamp_placeholder(
+            sentence
+        ):
             try:
                 outcomes = parse_outcomes(sentence)
             except PromiseError as exc:
@@ -611,7 +607,9 @@ def write_constant(protocol: Path, name: str, value: float) -> None:
 def placeholder_sentences(block: PromiseTables) -> list[str]:
     """The ids whose `sentence` is still a stamp placeholder: the whole value
     one `<…>`, as `labkit-init exp` writes it."""
-    return [p.id for p in block.promises if is_placeholder(p.sentence)]
+    return [
+        p.id for p in block.promises if protocol_block.is_stamp_placeholder(p.sentence)
+    ]
 
 
 def promise_tables_owed(

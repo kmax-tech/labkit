@@ -269,7 +269,26 @@ _BULLET = r"^\s*(?:[-*]\s+|\d+[.)]\s+)?"  # `- `, `* `, `1. `, `1) ` or none
 _FIELD_OPEN = re.compile(
     _BULLET + r"\*\*(?P<label>[^*]+?)(?::\*\*|\*\*\s*:)(?P<value>.*)$"
 )
+#: the lead of a field's label line, its indent and list marker
+#: (`protocol_edit` keeps it when it rewrites the line)
+FIELD_LEAD = re.compile(_BULLET)
 HTML_COMMENT = re.compile(r"<!--.*?-->")
+
+
+def label_line(label: str, *, placeholder: bool = False) -> re.Pattern[str]:
+    """The stamped line that opens field LABEL, `- **LABEL †:**`, the dagger
+    optional: group 1 the line up to its `:**` — with PLACEHOLDER up to the
+    stamped `<` that must follow, spaces included. The one pattern the
+    template cutter (`protocol_cuts`) writes stamped fields by."""
+    tail = r"\s*†?:\*\*" + (r"\s*)<" if placeholder else ")")
+    return re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + tail)
+
+
+def display_label(label: str) -> str:
+    """LABEL as a person reads it, the † that marks a result field dropped:
+    `Recorded results †` → `Recorded results` (its gloss kept; `field_name`
+    is the label normalised for comparison)."""
+    return label.replace("†", "").strip()
 
 
 def _continues(line: str, own: int) -> bool:
@@ -331,7 +350,7 @@ def stamp_block_placeholders() -> frozenset[str]:
         " ".join(" ".join(lines[start:end]).split())
         for _, start, end in protocol_block.fence_spans(lines)
     )
-    return frozenset(b for b in bodies if b.startswith("<") and b.endswith(">"))
+    return frozenset(b for b in bodies if protocol_block.is_stamp_placeholder(b))
 
 
 def is_stamp_placeholder_block(body: str) -> bool:
@@ -503,7 +522,7 @@ class FieldLine:
             not v
             or v.startswith("TODO")
             or "<why>" in v
-            or (v.startswith("<") and v.endswith(">"))
+            or protocol_block.is_stamp_placeholder(v)
             or holds_stamp_placeholder(v)
         )
 

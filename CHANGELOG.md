@@ -9,6 +9,12 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **Only the `## Runs` section is left out of a protocol's prose budget.**
+  `protocol-check` left out any section whose heading held "runs" or
+  "Läufe", beside the writer's exact `## Runs`; a protocol with a German
+  `## Läufe` run list now counts it as prose — rename the heading to
+  `## Runs` (`protocol_block.RUNS_HEADING`, `protocol_report.registration_prose`).
+
 - **labkit's step commands moved from `labkit.formats.repo` to
   `labkit.formats.commands`.** `Command` and every `*_command` builder,
   and `next_after_run`, which the stamped measure scripts
@@ -103,6 +109,15 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **The protocol's text is read by one grammar per thing.** A `[table]`
+  of the TOML head by `protocol_block.table_span` (six hand walks), a
+  field's label line by `protocol_check.label_line`, `FIELD_LEAD` and
+  `display_label` (copies in protocol-fill, the template cutter and the
+  result renderer), the stamp's `<…>` by
+  `protocol_block.is_stamp_placeholder` (four tests, one of them
+  stripping spaces first — a promise sentence with spaces around its
+  `<…>` now reads as the placeholder it is), the template cutter's
+  labels by `field_name`.
 - **A finding's line is read by one grammar.** Its place split at ` · `
   alone and compared the grade bare, while its subject read dashes, bold
   and a bullet: `BLOCKER — PROTOCOL-x.md:Unit — statement — …` had a

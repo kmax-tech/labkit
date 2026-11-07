@@ -1533,3 +1533,19 @@ class PromiseNames(unittest.TestCase):
             protocol_check.named_ids(["quality-check-2", "branch-1"], names),
             "quality-check-2 (null condition / anchors), branch-1",
         )
+
+
+class RegistrationProse(unittest.TestCase):
+    """The run list is not prose: only the `## Runs` section is left out of
+    the length budget (`protocol_block.RUNS_HEADING`). Until 2026-11-07 any
+    heading holding "runs" or "Läufe" was — a second definition beside the
+    writer's (architecture audit, H12)."""
+
+    def test_only_the_runs_section_is_left_out(self):
+        from labkit.checks import protocol_report
+
+        base = "## Intent\n\none line\n"
+        runs = "## Runs (protocol run list)\n\n- r1 — a\n- r2 — b\n"
+        other = "## Läufe\n\n- r1 — a\n- r2 — b\n"
+        self.assertEqual(protocol_report.registration_prose(base + runs), 3)
+        self.assertEqual(protocol_report.registration_prose(base + other), 3 + 4)

@@ -40,6 +40,7 @@ from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.repo import git_root
 from labkit.formats.commands import render_command
 from labkit.formats.protocol_check import (
+    display_label,
     CONCLUSION_LABEL,
     QUESTION_LABEL,
     RECORDED_RESULTS_LABEL,
@@ -351,7 +352,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                 step=RENDER,
             )
         )
-    labels = [f.label.replace("†", "").strip() for f in fields(text)]
+    labels = [display_label(f.label) for f in fields(text)]
     generated = [
         label
         for label in dict.fromkeys(labels)
@@ -371,7 +372,7 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
                     step=RENDER,
                 )
             )
-    have = {f.label.replace("†", "").strip(): f.value for f in fields(text)}
+    have = {display_label(f.label): f.value for f in fields(text)}
     for label, value in expected.limits:
         got = have.get(label)
         if got is None:

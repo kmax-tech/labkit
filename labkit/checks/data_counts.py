@@ -22,7 +22,7 @@ from collections import Counter
 from pathlib import Path
 
 from labkit.formats import runs
-from labkit.formats.protocol_block import COUNTS  # the pattern's one home
+from labkit.formats.protocol_block import COUNTS, is_stamp_placeholder
 
 #: the label of the field the counts stand in
 FIELD = "Data / scope"
@@ -98,7 +98,7 @@ def with_counts(value: str, counts: str) -> str:
     m = COUNTS.search(flat)
     if m:
         return (flat[: m.start()] + counts).strip()
-    if not flat or (flat.startswith("<") and flat.endswith(">")):
+    if not flat or is_stamp_placeholder(flat):
         return counts
     return f"{flat.rstrip(' .;')} · {counts}"
 

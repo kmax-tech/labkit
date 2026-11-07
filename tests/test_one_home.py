@@ -248,6 +248,14 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"(?<!\\\[)\\\[\\s\*[a-z]+\\s\*\\\](?!\\\])",
         {"protocol_block"},
     ),
+    # "is a value the stamp's <…>" was spelled four times, one stripping
+    # first (architecture audit 2026-11-07, second, H10):
+    # `protocol_block.is_stamp_placeholder`
+    (
+        "a stamp placeholder tested by hand",
+        r"startswith\(\"<\"\)[^\n]*endswith\(\">\"\)",
+        {"protocol_block"},
+    ),
     # labkit-audit printed three refusals and its progress lines itself
     # (audit 2026-10-18, half-finished move; 2026-10-23): `console.refuse`,
     # `console.progress`
@@ -393,6 +401,7 @@ class OneHome(unittest.TestCase):
             "a section heading found by hand": 'if line.startswith("## "):',
             "a refusal or progress line printed by hand": 'print(f"labkit-audit: {exc}", file=sys.stderr)',
             "an area's test file named by hand": 'stem = f"test_{nn}_" + name',
+            "a stamp placeholder tested by hand": 'if v.startswith("<") and v.endswith(">"):',
             "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
         }
         for what, shape, _ in RULES:

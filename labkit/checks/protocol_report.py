@@ -101,11 +101,6 @@ SERIES_HEAD = re.compile(
 )
 
 
-# The protocol run list is mandatory content (one entry per run_id), not
-# prose: a long list must not consume the registration's prose budget.
-PROTOCOL_RUN_LIST_HEAD = re.compile(r"(?i)^##\s.*(runs|l[\u00e4a]ufe)")
-
-
 # Change-history prose — the doc should carry the current rule, the commit the
 # change (LAB-075 Docs carry the state, commits the change). Warning only.
 CHANGELOG = re.compile(
@@ -156,6 +151,18 @@ def prose_lines(text: str) -> list[tuple[str | None, str]]:
             section = stripped
         out.append((section, stripped))
     return out
+
+
+def registration_prose(text: str) -> int:
+    """How many prose lines (`prose_lines`) TEXT holds outside its `## Runs`
+    section (`protocol_block.RUNS_HEADING`): a protocol is a registration,
+    not a lab journal, and the run list is mandatory content, one entry per
+    run_id, not the registration — the count the length budget holds."""
+    return sum(
+        1
+        for section, _ in prose_lines(text)
+        if not (section and protocol_block.RUNS_HEADING.match(section))
+    )
 
 
 def oversized_sections(text: str) -> list[tuple[str, int, int]]:
@@ -685,13 +692,7 @@ def check_protocol(
         f.name == "prompt" and not f.value.lower().startswith("n/a")
         for f in field_lines
     )
-    # A protocol is a registration, not a lab journal: only prose counts,
-    # and the protocol run list is not the registration.
-    n_lines = sum(
-        1
-        for section, _ in prose_lines(text)
-        if not (section and PROTOCOL_RUN_LIST_HEAD.match(section))
-    )
+    n_lines = registration_prose(text)
     numbered = list(enumerate((ln.strip() for ln in text.splitlines()), 1))
     # Post-run: a declared result makes an empty result field a MUST gap —
     # pilot suppression does not apply (write back, don't go quiet).

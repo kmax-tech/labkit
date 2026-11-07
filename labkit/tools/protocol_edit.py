@@ -21,15 +21,13 @@ from labkit.formats import (
     protocol_block,
 )
 from labkit.formats.protocol_check import (
+    FIELD_LEAD,
     FieldPlaceError,
     field_meant,
     field_name,
     fields,
     placeholder_fields,
 )
-
-# Bullet and indentation of a label line, kept when the line is rewritten.
-_LEAD = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)?")
 
 
 def field_for(text: str, field: str, line_no: int | None = None) -> str:
@@ -158,7 +156,7 @@ def fill(
     if stamped_id and not promises.ids_in_prose(value):
         value = stamped_id.group(0).rstrip() + " " + value
     lines = text.splitlines()
-    lead = _LEAD.match(lines[f.line - 1])
+    lead = FIELD_LEAD.match(lines[f.line - 1])
     assert lead is not None, "the pattern matches the empty prefix"
     lines[f.line - 1 : f.last] = [f"{lead.group(0)}**{f.label}:** {value}"]
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")

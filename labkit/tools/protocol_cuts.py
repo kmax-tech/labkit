@@ -16,7 +16,7 @@ import uuid
 from pathlib import Path
 from labkit.formats import promises, protocol_block
 from labkit.formats.standard_contract import APPLY_KIND, FIT_KIND, has_bar
-from labkit.formats.protocol_check import model_named
+from labkit.formats.protocol_check import field_name, label_line, model_named, not_owed
 from labkit.formats.repo import (
     repo_protocols,
 )
@@ -52,7 +52,9 @@ SECTION_KEYS = (
 )
 
 
-FIELD_LABEL = re.compile(r"^-\s+\*\*(.+?)\s*:?\*\*")
+#: a template item's bold label, `- **Label:**` (the colon optional),
+#: wrapped lines included
+FIELD_LABEL = re.compile(r"^-\s+\*\*(.+?)\s*:?\*\*", re.S)
 
 
 ProtocolBlocks = list[tuple[str, str, list[list[str]]]]
@@ -91,8 +93,10 @@ def _items(body: list[str]) -> list[list[str]]:
 
 
 def _label_of(item: list[str]) -> str:
+    """The field name (`field_name`) of a template item's label, else of
+    its first line."""
     m = FIELD_LABEL.match(item[0])
-    return (m.group(1) if m else item[0]).replace(DAGGER, "").strip().lower()
+    return field_name(m.group(1) if m else item[0])
 
 
 def _untag(line: str) -> str:
@@ -144,8 +148,6 @@ def bar_cut(tmpl: str, kind: str) -> str:
 #: what they check: a render check needs an instrument to render (a model's
 #: prompt, an estimator's `--show`), parser cases a model's text to parse
 STAMP_ONLY_NEEDS = {"render check": "instrument", "parser cases harvested": "model"}
-#: a template item's bold label, wrapped lines included
-_ITEM_LABEL = re.compile(r"^- \*\*(.+?):\*\*", re.S)
 
 
 def owed_cut(text: str) -> str:
@@ -155,7 +157,6 @@ def owed_cut(text: str) -> str:
     (`STAMP_ONLY_NEEDS`). A high computation without a model was stamped
     a data profile, a prompt, a render, instrument and resolution check
     and parser cases it could not have (audit 2026-10-27, third, I9)."""
-    from labkit.formats.protocol_check import field_name, model_named, not_owed
 
     head = protocol_block.head(text)
     model = model_named(text)
@@ -174,7 +175,7 @@ def owed_cut(text: str) -> str:
         if heading:
             out.append(heading)
         for item in _items(body):
-            m = _ITEM_LABEL.match("\n".join(item))
+            m = FIELD_LABEL.match("\n".join(item))
             if m and field_name(" ".join(m.group(1).split())) in spared:
                 continue
             out.extend(item)
@@ -370,7 +371,7 @@ DETERMINISTIC_NA = {
 def _replace_placeholder(lines: list[str], label: str, value: str) -> bool:
     """In place: the stamped `<…>` placeholder of LABEL (one line or wrapped)
     becomes VALUE on the label line; False when the field is not stamped."""
-    head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
+    head = label_line(label, placeholder=True)
     for i, line in enumerate(lines):
         if m := head.match(line):
             j = i
@@ -481,7 +482,7 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
     """In place: the stamped field LABEL becomes VALUE on its label line, and
     the stamped continuation below it (indented placeholder lines, a fenced
     example block) goes; False when the field is not stamped."""
-    head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*)")
+    head = label_line(label)
     for i, line in enumerate(lines):
         if not head.match(line):
             continue
@@ -518,7 +519,7 @@ def name_promise_ids(text: str, kind: str) -> str:
     for label, pid in PROMISE_FIELDS.items():
         if pid not in declared:
             raise ValueError(f"name_promise_ids: the stamped block declares no {pid}")
-        head = re.compile(r"^(\s*-\s*\*\*" + re.escape(label) + r"\s*†?:\*\*\s*)<")
+        head = label_line(label, placeholder=True)
         for i, line in enumerate(lines):
             if m := head.match(line):
                 lines[i] = f"{m.group(1)}[{pid}] {line[m.end() - 1 :]}"

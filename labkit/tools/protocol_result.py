@@ -23,6 +23,7 @@ from labkit.checks.result_render import Rendering, rendering
 from labkit.checks import recheck
 from labkit.checks.prompt_check import prompt_constants
 from labkit.formats.protocol_check import (
+    display_label,
     RECORDED_RESULTS_LABEL,
     BEFORE_RUN_CLAIMS,
     RUNS_PLACEHOLDER,
@@ -31,8 +32,6 @@ from labkit.formats.protocol_check import (
 )
 from labkit.tools.protocol_edit import fill
 
-
-RUNS_HEADING = re.compile(r"^## Runs\b")
 
 #: how `--from-run` names the declaration among what it filled
 RESULT_LABEL = "[result] run"
@@ -122,14 +121,7 @@ def runs_line(text: str, run_id: str, sentence: str) -> tuple[str, bool]:
     Returns (text, changed).
     """
     lines = text.split("\n")
-    heading = next(
-        (
-            i
-            for i in protocol_block.section_starts(lines)
-            if RUNS_HEADING.match(lines[i])
-        ),
-        None,
-    )
+    heading = protocol_block.runs_section(lines)
     if heading is None:
         raise ValueError("no `## Runs` section to name the run in")
     end = protocol_block.section_end(lines, heading)
@@ -198,7 +190,7 @@ def drop_stray_limits(
     dropped: list[str] = []
     lines = text.split("\n")
     for f in sorted(fields(text), key=lambda f: -f.line):
-        label = f.label.replace("†", "").strip()
+        label = display_label(f.label)
         if label.startswith(findings.LIMIT_PREFIX) and label not in keep_labels:
             del lines[f.line - 1 : f.last]
             dropped.append(label)
@@ -261,7 +253,7 @@ def limit_lines(
     written: list[str] = []
     for label, value in limits:
         lines = text.split("\n")
-        by_label = {f.label.replace("†", "").strip(): f for f in fields(text)}
+        by_label = {display_label(f.label): f for f in fields(text)}
         line = f"- **{label}:** {value}"
         have = by_label.get(label)
         if have is not None:
@@ -378,9 +370,8 @@ def withdrawn_runs_entry(text: str, run_id: str, day: str, why: str) -> str:
         return text
     text, _ = runs_line(text, run_id, "the run adopted as the result")
     lines = text.split("\n")
-    heading = next(
-        i for i in protocol_block.section_starts(lines) if RUNS_HEADING.match(lines[i])
-    )
+    heading = protocol_block.runs_section(lines)
+    assert heading is not None, "runs_line wrote the section's entry"
     end = protocol_block.section_end(lines, heading)
     at = next(i for i in range(heading + 1, end) if run_id in lines[i])
     lines[at] += mark

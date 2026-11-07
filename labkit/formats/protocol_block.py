@@ -214,6 +214,18 @@ def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
     return out
 
 
+#: the heading of the protocol's run list, one entry per run_id — written
+#: by `protocol-fill --from-run`, outside the prose budget (`protocol-check`)
+RUNS_HEADING = re.compile(r"^## Runs\b")
+
+
+def runs_section(lines: list[str]) -> int | None:
+    """The line index of LINES' `## Runs` heading (`RUNS_HEADING`), or None."""
+    return next(
+        (i for i in section_starts(lines) if RUNS_HEADING.match(lines[i])), None
+    )
+
+
 def section_starts(lines: list[str]) -> list[int]:
     """The 0-based indexes of the `## ` headings of a protocol — outside
     every fence (`fenced_lines`), in order. The one cut into sections: the
@@ -308,13 +320,15 @@ def parse_toml_block(text: str) -> dict:
     return data
 
 
-def _placeholder(value: object) -> bool:
-    """The template's `"<…>"`; a value merely starting with `<` is content."""
-    return (
-        isinstance(value, str)
-        and value.strip().startswith("<")
-        and value.strip().endswith(">")
-    )
+def is_stamp_placeholder(value: object) -> bool:
+    """Is VALUE still the stamp's placeholder — a string whose whole value,
+    spaces aside, is one `<…>`, as `labkit-init exp` writes it? A value
+    merely starting with `<` is content. The one test of the head's values,
+    a promise's sentence, a field's value and a data count's."""
+    if not isinstance(value, str):
+        return False
+    v = value.strip()
+    return v.startswith("<") and v.endswith(">")
 
 
 #: the keys of the `[result]` table: the one declaration that a number is reported
@@ -477,7 +491,7 @@ def model(text: str) -> Model | None:
         raise BlockError("[model] arms — one table per arm: [model.arms.<arm>]")
     arms = {name: _arm(name, raw) for name, raw in arms_raw.items()}
     describes = table.get("number_describes")
-    if describes is not None and not _placeholder(describes):
+    if describes is not None and not is_stamp_placeholder(describes):
         if describes not in NUMBER_DESCRIBES:
             raise BlockError(
                 f"[model] number_describes = {describes!r} — one of "
@@ -487,7 +501,7 @@ def model(text: str) -> Model | None:
         describes = None
     validity = table.get("annotation_validity")
     return Model(
-        None if _placeholder(alias) else alias,
+        None if is_stamp_placeholder(alias) else alias,
         arms,
         describes,
         None if validity is None else _validity(validity),
@@ -580,13 +594,13 @@ def kept(text: str) -> Kept | None:
             f'"{DIMENSIONLESS}" for a dimensionless number)'
         )
     key, unit = table["key"], table["unit"]
-    if _placeholder(key):
+    if is_stamp_placeholder(key):
         key = None
     elif not _metrics_key(key):
         raise BlockError(
             f"[kept] key = {key!r} — the metrics.json key of the kept number, one word"
         )
-    if _placeholder(unit):
+    if is_stamp_placeholder(unit):
         unit = None
     elif not isinstance(unit, str) or not unit.strip():
         raise BlockError(
@@ -894,7 +908,7 @@ def replaces(text: str) -> Replaces | None:
 
 def _choice(table: dict, field: str, allowed: tuple[str, ...]) -> str | None:
     value = table[field]
-    if _placeholder(value):
+    if is_stamp_placeholder(value):
         return None
     if value not in allowed:
         raise BlockError(
@@ -982,7 +996,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     pid = table["id"]
     if not isinstance(pid, str):
         raise BlockError(f"[protocol] id = {pid!r} — a string")
-    if _placeholder(pid):
+    if is_stamp_placeholder(pid):
         pid = None
     elif not ID_SHAPE.match(pid):
         raise BlockError(
@@ -995,7 +1009,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     audit = table["preflight_audit"]
     if not isinstance(audit, str):
         raise BlockError(f"[protocol] preflight_audit = {audit!r} — a string")
-    if _placeholder(audit):
+    if is_stamp_placeholder(audit):
         audit = ""
     return Head(
         standard=standard,
