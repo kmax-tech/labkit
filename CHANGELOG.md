@@ -9,6 +9,25 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **A report's result block states the question and the protocol's
+  answer, and the adoption owes that answer.** The block opens with two
+  lines rendered from the protocol: `Question:` — the registered Question /
+  hypothesis — and `Answer:` — the Conclusion, both verbatim on one line;
+  the Recorded results and Limitation lines follow as before. The one
+  renderer (`report_blocks.block_body`) refuses while the question or the
+  Conclusion is not written, so `--into` refuses to write the block and
+  report-check holds one already in a report, a hand-written one included.
+  A result adopted or being adopted owes the Conclusion at both cuts
+  (`protocol_check.owed`); `protocol-fill --from-run` asks it before its
+  first write (`protocol_check.adoption_owes`, the answer `labkit-next`
+  names before the adoption), so a missing Conclusion leaves the protocol
+  and the report as they were — until 0.112.0 the adoption passed with a
+  placeholder and the Conclusion was owed only after. The `Answer:` line is
+  the author's statement carried over, not a recorded verdict: the report
+  reviewer's brief says so and holds it against the verdicts below it.
+  Every result block written before is stale once (`--into` writes it
+  again), and with the changed brief every report review. Decision and
+  reach: `docs/notes/2026-11-06-answer-block.md`.
 - **The run's record is the one integrity evidence for its data.** At
   repeat cost low, `finalize` holds every source the run read (`data=`)
   to the sha256 the record names, and asks git one thing beside it: is

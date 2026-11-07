@@ -636,7 +636,7 @@ class TestFromRun(unittest.TestCase):
 
 ## Summary (after the run, for a person)
 
-- **Conclusion:** <the answer to the question above, in at most two plain sentences…>
+- **Conclusion:** the cases hold a few documents each.
 
 ## Intent (before the run)
 
@@ -703,8 +703,9 @@ class TestFromRun(unittest.TestCase):
         )
         self.assertIn("- **Recorded results:** " + line, text)
         # the Result is the author's two sentences, not the key dump again
-        # (three of three judge protocols carried it there, 2026-10-21)
-        self.assertIn("- **Conclusion:** <the answer to the question above", text)
+        # (three of three judge protocols carried it there, 2026-10-21):
+        # the write-back leaves the author's Conclusion as written
+        self.assertIn("- **Conclusion:** the cases hold a few documents each.", text)
         self.assertIn("Conclusion", protocol_result.WRITTEN_AFTER_RUN)
         self.assertIn("- " + self.RUN + " — the kept run", text)
         self.assertNotIn("duration_s", text)  # labkit's own key is not the number
@@ -799,7 +800,7 @@ class Adopt(unittest.TestCase):
 
 ## Summary (after the run, for a person)
 
-- **Conclusion:** <the answer to the question above, in at most two plain sentences…>
+- **Conclusion:** the cases hold a few documents each.
 
 ## Result (after the run — write back, don't go quiet)
 

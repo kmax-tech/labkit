@@ -567,6 +567,8 @@ class IfReported(unittest.TestCase):
             + "- **Question / hypothesis:** does it hold?\n"
             + C1_PROSE
             + f"- **Recorded results:** {answer}\n"
+            # a declared result owes its answer, which its block shows
+            + "- **Conclusion:** criterion-1 holds on the one case.\n"
             + "".join(
                 f"- **{label}:** n/a — test\n"
                 for label in (

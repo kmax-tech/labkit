@@ -57,6 +57,9 @@ class CountWalkthrough(unittest.TestCase):
             "all clear",
             "- **Recorded results:** kept number: mean_docs_per_case = 3.5 documents (run ",
             "<!-- labkit result: experiments/01-docs-per-case/PROTOCOL-docs-per-case.md run ",
+            "Question: What is the mean number of input documents per case over the "
+            "cases in data/raw/cases.jsonl?\nAnswer: The twelve cases hold 3.5 "
+            "documents each on average;",
             "refused, as it must be: the block differs from what the protocol renders",
             "refused, as it must be: the Recorded results line differs",
             "== done — the number 3.5 is kept under ",

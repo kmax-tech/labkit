@@ -88,7 +88,14 @@ class TheChain(unittest.TestCase):
         # the slot a check leaves is filled, as a gate fills it
         self.assertNotIn("<area>", step.where + step.next)
         self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, run_id)
-        # audited, nothing holds: adopt that run
+        # audited, the Conclusion open: the adoption owes it, so next names
+        # it before the adoption (answer block, 2026-11-06)
+        step = self.step()
+        self.assertIn("adopting " + run_id + " would owe 1 field(s)", step.where)
+        self.assertIn('"Conclusion=<value>"` fills the first', step.next)
+        self.assertNotIn("labkit-adopt experiments/01-lines", step.next)
+        self.lab.conclude(self.protocol)
+        # concluded, nothing holds: adopt that run
         step = self.step()
         self.assertIn(f"labkit-adopt experiments/01-lines {run_id}", step.next, step)
         self.assertIn("no run is adopted yet", step.where)
@@ -340,6 +347,7 @@ class BeforeTheChain(unittest.TestCase):
 
         protocol = Path("experiments/01-x/PROTOCOL-x.md")
         daggered = (
+            "- **Conclusion:** the bar was met.\n"
             "- **Question †:** <…>\n- **Did †:** <…>\n- **Expected or surprising †:** <…>\n"
             "- **Rival check †:** <…>\n- **Caps/drops †:** <…>\n- **Analysis audit †:** <…>\n"
         )
@@ -398,7 +406,10 @@ class ProgressAccount(unittest.TestCase):
             os.chdir(old)
 
     def measure(self) -> str:
-        return self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        """The count measured and its Conclusion written: the adoption owes it."""
+        run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.concluded(self.protocol)
+        return run_id
 
     def account(self, run_id: str) -> None:
         rc = protocol_fill.main(
@@ -614,6 +625,7 @@ class DiscussingReport(unittest.TestCase):
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
         self.run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.conclude(self.protocol)  # the adoption owes it
         # the analysis audit done: the chain names it before the report, and
         # `next` names the first hold — with it done, the review is the one left
         self.lab.record(self.area, self.protocol, sc.ANALYSIS_AUDIT, self.run_id)
@@ -805,6 +817,7 @@ class TwoProtocols(unittest.TestCase):
         self.addCleanup(self.lab.close)
         self.area, self.protocol = stamp_count(self.lab)
         run_id = self.lab.run_id_of(self.lab.script(self.area, "01_measure.py"))
+        self.lab.conclude(self.protocol)  # the adoption owes it
         self.lab.record(self.area, self.protocol, "analysis", run_id)
         text = self.protocol.read_text(encoding="utf-8")
         head = protocol_block.head(text)

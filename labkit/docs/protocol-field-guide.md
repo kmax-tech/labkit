@@ -223,7 +223,9 @@ the detail below does not hold.
 - **Conclusion:** say whether the bar set before the run was met. Write
   "The class descriptions kept the cable set out of the framework class in
   all five cases, as required", not "Both arms were run on 46 cases". A
-  reader who stops here must know the verdict.
+  reader who stops here must know the verdict. The adoption owes it, and
+  the report's result block shows it verbatim as `Answer:`, below the
+  registered Question / hypothesis.
 
 ### Intent (before the run, HEAD)
 

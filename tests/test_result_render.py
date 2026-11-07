@@ -261,6 +261,8 @@ class RenderGaps(unittest.TestCase):
                     "the verdicts stand, read within this limit — ok",
                 ),
             ),
+            None,  # the section's check reads no question and no answer
+            None,
         )
         good = (
             "- **Recorded results:** criterion_1_pass = True (run r1)\n"

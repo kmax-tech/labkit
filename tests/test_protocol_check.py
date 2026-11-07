@@ -449,7 +449,12 @@ class TestContractNamesWhatTheCheckHolds(unittest.TestCase):
                 )
                 self.assertEqual(
                     self.missing(reported),
-                    set(owed.now + owed.once_frozen + owed.once_reported),
+                    set(
+                        owed.now
+                        + owed.once_frozen
+                        + owed.once_reported
+                        + owed.at_adoption
+                    ),
                 )
                 with tempfile.TemporaryDirectory() as d:
                     path = Path(d) / "PROTOCOL-x.md"

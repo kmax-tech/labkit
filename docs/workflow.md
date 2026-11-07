@@ -220,7 +220,10 @@ adopting it.
 and values. Store measured quantities in the run rather than retyping them.
 
 **Command and output:** `protocol-fill PROTOCOL --into REPORT.md` writes or
-updates that protocol's result block. For a run only discussed, use
+updates that protocol's result block: the registered question (`Question:`),
+the Conclusion (`Answer:`), the Recorded results line and the Limitation
+lines, each as the protocol renders them; it refuses while the question or
+the Conclusion is not written. For a run only discussed, use
 `protocol-fill PROTOCOL --discuss RUN_ID --why "REASON" --into REPORT.md`.
 Then `labkit-audit AREA --report-review REPORT.md` writes the required
 semantic review for the final state.

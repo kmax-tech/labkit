@@ -45,6 +45,7 @@ from labkit.formats.protocol_history import (
 from labkit.formats.protocol_block import repo_protocol_ids
 from labkit.formats.protocol_check import (
     BARE_REFERENCE,
+    CONCLUSION_LABEL,
     PROTOCOL_TEMPLATE,
     FIELDS,
     REPEATED_WAY_OUT,
@@ -291,6 +292,8 @@ class OwedFields:
         once_frozen: Owed on top once `frozen = true` (the shoulds).
         after_run: Owed once the head declares a result (`[result] run`).
         once_reported: Owed once frozen and a result is declared.
+        at_adoption: Owed before the adoption, at both cuts: the Conclusion,
+            which the report's result block shows (`protocol_check.owed`).
         example: `frozen = true` owes a fenced block besides the TOML head.
     """
 
@@ -299,6 +302,7 @@ class OwedFields:
     once_frozen: list[str]
     after_run: list[str]
     once_reported: list[str]
+    at_adoption: list[str]
     example: bool
 
 
@@ -317,6 +321,7 @@ def owed_by_occasion(head: protocol_block.Head, model: bool) -> OwedFields:
         once_frozen=[] if low else labels("should"),
         after_run=labels("after"),
         once_reported=labels("report"),
+        at_adoption=[f.label for f in owed_here if f.label == CONCLUSION_LABEL],
         example=example_owed(head.repeat_cost, head.kind, model),
     )
 
@@ -364,8 +369,13 @@ def owed_field_lines(
             + ([PROMISE_SENTENCES] if registers and not owed_here.low else []),
         ),
         (
+            "before the adoption — labkit-adopt refuses without it, and the "
+            "report's result block shows it",
+            owed_here.at_adoption,
+        ),
+        (
             "after the run, once the head has adopted a result (`[result] run`)",
-            owed_here.after_run,
+            [f for f in owed_here.after_run if f not in owed_here.at_adoption],
         ),
         (
             "once frozen = true and a result is adopted also",

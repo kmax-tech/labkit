@@ -639,17 +639,13 @@ def _progress_step(ctx: "Checked") -> Step | None:
 
 def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
     """The step while adopting RUN would leave a MUST field open: the fields
-    the adoption's state owes (`protocol_check.check_fields` with
-    `adopting`, the same question report-check's field station asks of the
-    written result, so `labkit-adopt` would refuse) that the state as it
-    stands does not — a frozen protocol's † result fields. None when the
+    the adoption's state owes that the state as it stands does not
+    (`protocol_check.adoption_owes`, the one answer `--from-run` refuses
+    on) — the Conclusion, a frozen protocol's † result fields. None when the
     adoption owes nothing more. The one state `labkit-next` named a step its
     command refused (labkit-paper's tassay-r2, 2026-11-04; the repair
     probe's c8)."""
-    now = protocol_check.check_fields(text)
-    then = protocol_check.check_fields(text, adopting=True)
-    absent = [f for f in then.missing_must if f not in now.missing_must]
-    holes = [label for _, label in then.must_holes if (_, label) not in now.must_holes]
+    absent, holes = protocol_check.adoption_owes(text)
     if not absent and not holes:
         return None
     named = shown(protocol, Path.cwd())

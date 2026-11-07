@@ -38,6 +38,7 @@ from labkit.formats import (
     findings,
     promises,
     protocol_block,
+    protocol_check,
     scope_sha,
     standard_contract as sc,
 )
@@ -112,6 +113,18 @@ class Lab:
         if rc != 0:
             raise AssertionError(f"protocol-fill: {out.getvalue()}")
 
+    def conclude(
+        self, protocol: Path, answer: str = "The documents hold about two lines each."
+    ) -> None:
+        """Write PROTOCOL's Conclusion, which an adoption owes."""
+        self.fill(protocol, f"Conclusion={answer}")
+
+    def concluded(self, protocol: Path) -> None:
+        """PROTOCOL's Conclusion written (`conclude`) when it is still open."""
+        text = protocol.read_text(encoding="utf-8")
+        if protocol_check.written_line(text, protocol_check.CONCLUSION_LABEL) is None:
+            self.conclude(protocol)
+
     def fill_open(self, protocol: Path, **named: str) -> None:
         """Fill every open field with a sentence, NAMED ones with their value
         — the full form's many prose fields need text, not a particular text."""
@@ -180,7 +193,10 @@ class Lab:
         return rc, out.getvalue()
 
     def adopt(self, protocol: Path, run_id: str) -> tuple[int, str]:
-        """`protocol-fill PROTOCOL --from-run RUN_ID`."""
+        """`protocol-fill PROTOCOL --from-run RUN_ID`, the Conclusion written
+        first where it is open (`concluded`), as the author does: the
+        adoption owes it. Its refusal without one: tests/test_adopt.py."""
+        self.concluded(protocol)
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             rc = protocol_fill.main([str(protocol), "--from-run", run_id])
@@ -188,7 +204,9 @@ class Lab:
 
     def adopt_forced(self, protocol: Path, run_id: str) -> tuple[int, str]:
         """`protocol-fill PROTOCOL --from-run RUN_ID --force`: (exit, what it
-        printed, a refusal included)."""
+        printed, a refusal included), the Conclusion written first where it
+        is open (`concluded`)."""
+        self.concluded(protocol)
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             rc = protocol_fill.main([str(protocol), "--from-run", run_id, "--force"])
@@ -349,6 +367,7 @@ class Count(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         # finding (4): a refused adoption leaves the protocol as it was —
         # no analysis record yet, so the release refuses
+        lab.concluded(self.protocol)  # the answer written first, as owed
         before = self.protocol.read_text(encoding="utf-8")
         rc, out = lab.adopt(self.protocol, run_id)
         self.assertEqual(rc, 1, out)
@@ -1878,13 +1897,12 @@ class Judge(unittest.TestCase):
         rc, out = lab.adopt_forced(self.protocol, self.run_id)
         self.assertEqual(rc, 1, out)
         self.assertIn("`stands` on a BLOCKER decided limitation not reviewed", out)
-        # the review judges the claim: the Conclusion comes first (judge-2
-        # on 86e38bc reviewed a placeholder and paid a second review)
-        rc, out = self._review(record)
-        self.assertEqual(rc, 2, out)
-        self.assertIn("the Conclusion is not written yet", out)
+        # the review judges the claim, the Conclusion — written already, since
+        # the adoption owes it (judge-2 on 86e38bc reviewed a placeholder and
+        # paid a second review); here worded to the limit before the review
         lab.fill(
             self.protocol,
+            "--force",
             "Conclusion=criterion-1 is met as one draw on twelve items; nothing more is claimed.",
         )
         rc, out = self._review(record)

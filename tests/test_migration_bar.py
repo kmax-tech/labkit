@@ -263,8 +263,10 @@ class LaneDuties(unittest.TestCase):
             preflight_audit="2026-10-21 · x",
             result=RUN,
         )
+        # and the answer: a declared result owes its Conclusion at both cuts
         self.assertEqual(
-            self.owed(declared), (self.FULL_MUST + self.FULL_SHOULD + self.REPORT, [])
+            self.owed(declared),
+            (self.FULL_MUST + self.FULL_SHOULD + self.REPORT + ["Conclusion"], []),
         )
         listed = frozen + f"\n## Runs\n\n- {RUN} — the run\n"
         self.assertEqual(self.owed(listed), (self.FULL_MUST + self.FULL_SHOULD, []))

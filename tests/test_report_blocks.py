@@ -377,6 +377,76 @@ class ReportFiles(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("differs from the protocol's rendering", out)
 
+    def test_the_block_shows_the_question_and_the_answer_verbatim(self):
+        """Answer block (2026-11-06): the block opens with the registered
+        Question / hypothesis and the Conclusion, carried over from the
+        protocol; a retyped Answer line blocks like a retyped number, and a
+        Conclusion changed after `--into` makes the block stale until it is
+        written again."""
+        root, report = self._reported()
+        text = report.read_text(encoding="utf-8")
+        self.assertIn(
+            "Question: does it hold?\nAnswer: criterion-1 holds on the one case.\n",
+            text,
+        )
+        report.write_text(
+            text.replace("Answer: criterion-1 holds", "Answer: criterion-1 fails"),
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("differs from the protocol's rendering", out)
+        report.write_text(text, encoding="utf-8")  # the twin: as rendered
+        self.assertEqual(self._gate(root, report)[0], 0)
+        proto = root / P
+        proto.write_text(
+            proto.read_text(encoding="utf-8").replace(
+                "criterion-1 holds on the one case.", "criterion-1 holds, narrowly."
+            ),
+            encoding="utf-8",
+        )
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        new, _ = protocol_fill.into_report(
+            proto.read_text(encoding="utf-8"), proto.parent, text, P
+        )
+        report.write_text(new, encoding="utf-8")
+        self.assertIn("Answer: criterion-1 holds, narrowly.\n", new)
+        self.assertEqual(self._gate(root, report)[0], 0)
+
+    def test_no_block_renders_without_the_conclusion_written_or_by_hand(self):
+        """One refusal, from `block_body`, for the writer and the check: with
+        the Conclusion a placeholder `--into` is refused naming the field,
+        and a block written by hand with an empty Answer line is held at
+        report-check for the same reason."""
+        root, report = self._reported()
+        proto = root / P
+        text = proto.read_text(encoding="utf-8").replace(
+            "criterion-1 holds on the one case.",
+            "<the answer in at most two plain sentences…>",
+        )
+        proto.write_text(text, encoding="utf-8")
+        with self.assertRaisesRegex(
+            ValueError, "the protocol's Conclusion is not written"
+        ):
+            protocol_fill.into_report(text, proto.parent, "# Report\n", P)
+        hand = report.read_text(encoding="utf-8").replace(
+            "Answer: criterion-1 holds on the one case.", "Answer:"
+        )
+        report.write_text(hand, encoding="utf-8")
+        code, out = self._gate(root, report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("the protocol's Conclusion is not written", out)
+
+    def test_the_review_brief_reads_the_answer_line_as_the_authors_claim(self):
+        """The Answer line is carried over, not confirmed: the reviewer's
+        brief says so, beside the exemption of the recorded verdicts."""
+        from labkit.gates import audit_prompt
+
+        brief = " ".join(dict(audit_prompt.review_brief())["BRIEF"].split())
+        self.assertIn("`Answer:` line is no recorded verdict", brief)
+        self.assertIn("is the author's Conclusion carried over", brief)
+
     def test_an_invented_run_id_blocks(self):
         root, report = self._reported()
         with report.open("a", encoding="utf-8") as f:
@@ -1047,7 +1117,14 @@ class ReportFiles(unittest.TestCase):
         report.write_text(written, encoding="utf-8")
         self.assertEqual(
             [(b.run_id, b.body) for b in report_blocks.blocks(written)],
-            [(new, f"criterion-1 missed · recorded: kept number: n = 1 (run {new})")],
+            [
+                (
+                    new,
+                    "Question: does it hold?\n"
+                    "Answer: criterion-1 holds on the one case.\n"
+                    f"criterion-1 missed · recorded: kept number: n = 1 (run {new})",
+                )
+            ],
         )
         _, out = self._gate(root, report)
         self.assertNotIn("the result block of", out)

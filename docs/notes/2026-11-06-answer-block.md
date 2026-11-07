@@ -1,6 +1,6 @@
 # Answer block: the report states the question and the protocol's answer
 
-2026-11-06. Draft for task 4 of `TODO.md` ("Einen ausdrücklichen Antwortblock im Bericht entwerfen"), with a review of the same day worked in (one validation for writer and check, "generated" as carried over, the narrower reach) and the author's three decisions (below); no code changed. Built after the pin route and the finding's kind; the next usage round judges the three as one package — what this part contributed stays open by design.
+2026-11-06. Built 2026-11-07 (see `CHANGELOG.md`, Unreleased): the adoption asks `protocol_check.adoption_owes` before its first write, since no low-cut station of report-check held an open must field. Draft for task 4 of `TODO.md` ("Einen ausdrücklichen Antwortblock im Bericht entwerfen"), with a review of the same day worked in (one validation for writer and check, "generated" as carried over, the narrower reach) and the author's three decisions (below); no code changed. Built after the pin route and the finding's kind; the next usage round judges the three as one package — what this part contributed stays open by design.
 
 ## Problem
 

@@ -119,7 +119,7 @@ If a quality check is unmet or not assessable, every criterion is not assessable
 
 ### 5. Write the claim and obtain any decision review
 
-Write the Conclusion before the adoption, not as a list of metric keys. With a model, Raw output holds one real prompt and answer pair per finding, from the kept output that the finding names. To change the Conclusion after the adoption, add `--force`. The adoption and the report block stay valid. Redo each decision review that is owed. A new measurement is not owed.
+Write the Conclusion before the adoption, not as a list of metric keys: the adoption owes it and refuses without it, and the report's result block shows it verbatim as `Answer:` beside the registered question. With a model, Raw output holds one real prompt and answer pair per finding, from the kept output that the finding names. To change the Conclusion after the adoption, add `--force`. The adoption and the report block stay valid. Redo each decision review that is owed. A new measurement is not owed.
 
 If you decide a BLOCKER `limitation` or `false-positive`, run `labkit-audit <area> --review --record <record>`. If the review rejects it, correct the decision, the evidence or the claim. Do not draw again until a review approves.
 

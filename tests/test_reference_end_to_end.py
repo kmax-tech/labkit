@@ -176,6 +176,7 @@ class ReferenceOnTheChain(unittest.TestCase):
         self.assertIn("write `lines_median` as a finite number", out)
         self.assertIn("measure anew", out)
         self.lab.record(area, protocol, "analysis", run_id)
+        self.lab.concluded(protocol)  # the answer written first, as owed
         before = protocol.read_text(encoding="utf-8")
         rc, out = self.lab.adopt(protocol, run_id)
         self.assertEqual(rc, 1, out)

@@ -39,9 +39,12 @@ from labkit.formats.answering_run import first_registrations
 from labkit.formats.gate import GateFinding, blocker
 from labkit.formats.repo import git_root, render_command
 from labkit.formats.protocol_check import (
+    CONCLUSION_LABEL,
+    QUESTION_LABEL,
     RECORDED_RESULTS_LABEL,
     fields,
     recorded_results_field,
+    written_line,
 )
 
 
@@ -51,6 +54,12 @@ class Rendering:
 
     recorded_results: str  # the Recorded results line's value
     limits: tuple[tuple[str, str], ...]  # (label, value) per limit, in record order
+    # the registered question and the author's Conclusion — no recorded
+    # verdict —, each on one line, None while not written
+    # (`protocol_check.written_line`): the result block shows them verbatim
+    # and refuses without them (`report_blocks.block_body`)
+    question: str | None
+    conclusion: str | None
 
 
 def kept_phrase(key: str, value: object, unit: str) -> str:
@@ -207,7 +216,10 @@ def rendering(area: Path, text: str, run: Path) -> Rendering:
         + note
     )
     return Rendering(
-        recorded_results, tuple((label, value) for label, value, _ in limits)
+        recorded_results,
+        tuple((label, value) for label, value, _ in limits),
+        written_line(text, QUESTION_LABEL),
+        written_line(text, CONCLUSION_LABEL),
     )
 
 

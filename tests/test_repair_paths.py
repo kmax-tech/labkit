@@ -428,6 +428,13 @@ class RegisteredReportRepairs(RepairPaths):
             ["git", "add", AREA, "tests"],
             ["git", "commit", "-q", "-m", "register", "--", AREA, "tests"],
             [".venv/bin/python", f"{AREA}/scripts/01_measure.py"],
+            # the answer written after the run, as the adoption owes it — the
+            # honest one: the tests below write the overclaim themselves
+            [
+                ".venv/bin/protocol-fill",
+                P,
+                "Conclusion=The twelve cases hold 3.5 documents each on average.",
+            ],
         ]
         for step in steps:
             rc, out = sh(lab, *step)

@@ -6,15 +6,20 @@ A separate report (`REPORT.md`, a results note) carries a reported number
 in a report result block, written by `protocol-fill <PROTOCOL> --into <FILE>`:
 
     <!-- labkit result: experiments/01-x/PROTOCOL-x.md run 2026-10-22T09-13-08_0dc3 (protocol-fill --into; edit the protocol, not this block) -->
+    Question: Does the classifier separate the two classes on the held-out cases?
+    Answer: Yes: the AUC of 0.69 clears the registered bar of 0.65.
     auc = 0.69, n = 12 (run 2026-10-22T09-13-08_0dc3)
     <!-- /labkit result -->
 
 The opening line names the protocol the block belongs to — its path
 relative to the report, without spaces — and the run it shows. The body is
 what that protocol, declaring that run as its result, renders
-(`result_render.rendering`): its Recorded results line, limits note included, and one
-line per Limit (`block_body`) — the note's "Limitation lines below" stand below
-in the report too. What each check
+(`result_render.rendering`, `block_body`): its registered Question /
+hypothesis and its Conclusion verbatim, the Conclusion carried over as the
+author's answer and no recorded verdict; its Recorded results line, limits
+note included; and one line per Limit — the note's "Limitation lines
+below" stand below in the report too. No block renders while the question
+or the Conclusion is not written. What each check
 here states, and no more:
 
 - `block_gaps` (guaranteed): a block shows the run its protocol declares
@@ -70,6 +75,7 @@ from pathlib import Path
 
 from labkit.checks.result_render import Rendering
 from labkit.formats import handovers, runs
+from labkit.formats.protocol_check import CONCLUSION_LABEL, QUESTION_LABEL
 from labkit.formats.comment_blocks import (
     HEAD_END,
     CommentBlockError,
@@ -108,11 +114,41 @@ class Block:
     body: str
 
 
+#: the two lines a block opens with, the protocol's text carried over: the
+#: registered question and the author's answer, a statement to hold against
+#: the verdicts below it, not a recorded verdict (report-review brief)
+QUESTION_LINE = "Question: "
+ANSWER_LINE = "Answer: "
+
+
 def block_body(r: Rendering) -> str:
-    """A block's body as R renders it: the Recorded results line, then each Limit
-    line as the protocol carries it."""
+    """A block's body as R renders it: the registered question and the
+    Conclusion, verbatim on one line each, then the Recorded results line,
+    then each Limit line as the protocol carries it. The one rendering, so
+    the writer (`--into`) and the check (`block_gaps`) refuse alike: raises
+    ReportBlockError naming the field while the question or the Conclusion
+    is not written (`protocol_check.written_line`) — a result is shown with
+    its answer, never without."""
+    if r.question is None:
+        raise _not_written(QUESTION_LABEL)
+    if r.conclusion is None:
+        raise _not_written(CONCLUSION_LABEL)
     return "\n".join(
-        [r.recorded_results, *(f"- **{label}:** {value}" for label, value in r.limits)]
+        [
+            QUESTION_LINE + r.question,
+            ANSWER_LINE + r.conclusion,
+            r.recorded_results,
+            *(f"- **{label}:** {value}" for label, value in r.limits),
+        ]
+    )
+
+
+def _not_written(label: str) -> ReportBlockError:
+    """The refusal of a block whose protocol has not written LABEL."""
+    return ReportBlockError(
+        f"the protocol's {label} is not written (missing, a placeholder or only "
+        f"dashes) — the result block shows it verbatim beside the number: "
+        f'`protocol-fill <PROTOCOL> "{label}=<…>"` writes it, then the block again'
     )
 
 

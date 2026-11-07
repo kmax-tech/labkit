@@ -727,7 +727,9 @@ def kind_gap(text: str, head: protocol_block.Head) -> str | None:
     return None
 
 
-def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
+def open_holes(
+    text: str, head: protocol_block.Head, *, adopting: bool = False
+) -> list[tuple[int, str]]:
     """(line, label) of every placeholder still to fill.
 
     At `repeat_cost = "low"` only the cut's fields count: the rest of the full
@@ -737,9 +739,10 @@ def open_holes(text: str, head: protocol_block.Head) -> list[tuple[int, str]]:
     once the head declares a result — before it they cannot be filled, and
     every second agent read them as errors in the commit hook (re-measure
     2026-10-07; until 0.101.0 a run id in the Runs list, minus the words
-    "prepare" and "probe", stood for the run)."""
+    "prepare" and "probe", stood for the run). ADOPTING asks it of the state
+    an adoption makes, where the result is declared (`owed`)."""
     lines = fields(text)
-    if result_due(text) is None:
+    if result_due(text) is None and not adopting:
         after = {f.label.casefold() for f in FIELDS if f.level == "after"}
         lines = [f for f in lines if f.name not in after]
     if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
@@ -763,19 +766,25 @@ def owed(
     ADOPTING asks that question of the state an adoption makes, before it
     is made: what `labkit-next` names before `labkit-adopt`, so the two
     agree by construction (labkit-paper's tassay-r2, 2026-11-04: next said
-    adopt, adopt refused for these fields)."""
+    adopt, adopt refused for these fields). A result adopted or being
+    adopted owes its answer, the Conclusion, at both cuts: the report's
+    result block shows it (`report_blocks.block_body`), and the adoption
+    refuses without it, leaving the protocol as it was."""
     # which cut the protocol owes is the contract's answer; the marks on
     # the fields (`Field.low_cut`) are this module's
     owed_here = owed_fields(head.repeat_cost, head.kind, model_named(text))
+    # a declared result, or one being adopted, makes the result fields due;
+    # its answer, the Conclusion, joins the must on every branch below
+    due = adopting or result_due(text) is not None
+    answer = [f for f in owed_here if f.label == CONCLUSION_LABEL] if due else []
     if standard_contract.lane(head.repeat_cost).cut == standard_contract.LOW_CUT:
-        return [f for f in owed_here if f.level in ("must", "should")], []
+        return [f for f in owed_here if f.level in ("must", "should")] + answer, []
     must = [f for f in owed_here if f.level == "must"]
     should = [f for f in owed_here if f.level == "should"]
     if not head.frozen:
-        return must, should
-    due = adopting or result_due(text) is not None
+        return must + answer, should
     report = [f for f in owed_here if f.level == "report"] if due else []
-    return must + should + report, []
+    return must + should + report + answer, []
 
 
 def kind_registers(kind: str | None, text: str) -> bool:
@@ -896,7 +905,7 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
         missing_must.append(tables_gap)
     must_names = {f.label.casefold() for f in must}
     must_holes, soft_holes = [], []
-    for line, label in open_holes(text, head):
+    for line, label in open_holes(text, head, adopting=adopting):
         (must_holes if field_name(label) in must_names else soft_holes).append(
             (line, label)
         )
@@ -1083,6 +1092,10 @@ def written_before_run(
 
 RECORDED_RESULTS_LABEL = "Recorded results"
 CONCLUSION_LABEL = "Conclusion"
+#: the question registered before the run, anchored at the first
+#: measurement (`protocol_history.UNCORRECTABLE_FIELDS`) — not the Summary's
+#: `Question †`, its plain rewording written after the run
+QUESTION_LABEL = "Question / hypothesis"
 
 
 def reported_claim(text: str) -> list[tuple[str, str]]:
@@ -1166,6 +1179,35 @@ def result_due(text: str) -> str | None:
         return protocol_block.declared_run(text)
     except protocol_block.BlockError:
         return None
+
+
+def adoption_owes(text: str) -> tuple[list[str], list[str]]:
+    """(absent, holes): the MUST fields newly owed by adopting a result
+    into TEXT — owed then, not as TEXT stands; a gap open already is
+    another station's. ABSENT not in the text, HOLES
+    still a placeholder (`check_fields` with and without `adopting`): the
+    Conclusion, and a frozen protocol's † result fields. The one answer
+    `labkit-next` names before the adoption and `protocol-fill --from-run`
+    refuses on before its first write, so the two agree by construction
+    (labkit-paper's tassay-r2, 2026-11-04; answer block, 2026-11-06)."""
+    now = check_fields(text)
+    then = check_fields(text, adopting=True)
+    absent = [f for f in then.missing_must if f not in now.missing_must]
+    holes = [
+        label for at, label in then.must_holes if (at, label) not in now.must_holes
+    ]
+    return absent, holes
+
+
+def written_line(text: str, label: str) -> str | None:
+    """LABEL's value in TEXT on one line, whitespace collapsed, or None when
+    the field is not written, written twice, a placeholder or only dashes:
+    a value a report shows verbatim (`report_blocks.block_body`)."""
+    f = named_field(text, label)
+    if f is None or f.placeholder:
+        return None
+    value = " ".join(f.value.split())
+    return None if not value or DASHES_ONLY.match(value) else value
 
 
 def conclusion_written(text: str) -> bool:

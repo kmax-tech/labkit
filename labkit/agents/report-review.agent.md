@@ -64,12 +64,18 @@ A **claim** is a line that does one of these:
   a result presented as the measurement of the question when RUNS shows
   the same protocol measured under other settings before it and the
   report does not say that the setting was chosen on those runs; a value
-  given as the adopted run's that RUNS shows as another run's.
+  given as the adopted run's that RUNS shows as another run's. The
+  generated block's `Answer:` line is the author's Conclusion carried
+  over from the protocol, not a recorded verdict: hold it against the
+  recorded verdicts below it like any sentence of the report (the
+  recorded values say "not met", the Answer says "cannot be assessed").
 
 Not a claim:
 
 - The adopted run's numbers and verdicts as it recorded them, in the
-  generated block or in prose.
+  generated block or in prose. The block's `Question:` line is the
+  registration's question; its `Answer:` line is no recorded verdict and
+  can be a contradiction (above).
 - A number or verdict of a run that is not adopted, where the report
   marks it as no result in one of these three ways — the only marks that
   count: (a) the same sentence or the same bullet names the run as not a

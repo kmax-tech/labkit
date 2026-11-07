@@ -47,6 +47,10 @@ class HandoverRecovery(cases._Chain):
         self.area, self.protocol = e2e.judge_area(self.lab, "judge")
         self.lab.commit("registered judge")
         self.run_id = self.run_measure(e2e.Judge._model)
+        # the answer written after the run, as the author does: an adoption
+        # attempt below owes it, and must not change the protocol a handover
+        # has acknowledged
+        self.lab.conclude(self.protocol, "No verdict is reported yet.")
         self.report = self.lab.root / "REPORT.md"
 
     def tearDown(self) -> None:

@@ -40,10 +40,40 @@ class Adopt(unittest.TestCase):
             os.chdir(old)
         return rc, out.getvalue()
 
-    def measured(self, report_file: str | None) -> tuple[Path, Path, str]:
+    def measured(
+        self, report_file: str | None, concluded: bool = True
+    ) -> tuple[Path, Path, str]:
+        """The count measured, its Conclusion written unless CONCLUDED is False."""
         area, protocol = stamp_count(self.lab, report_file=report_file)
         run_id = self.lab.run_id_of(self.lab.script(area, "01_measure.py"))
+        if concluded:
+            self.lab.conclude(protocol)
         return area, protocol, run_id
+
+    def test_without_its_conclusion_the_adoption_is_refused_and_nothing_written(self):
+        """The adoption owes the Conclusion (answer block, decided
+        2026-11-06): refused before the result stands, the protocol and the
+        registered report as they were (until 0.112.0 it adopted, and the
+        Conclusion was owed only after). The twin: written, the adoption and
+        a block with the question and the answer follow."""
+        area, protocol, run_id = self.measured("REPORT.md", concluded=False)
+        self.lab.record(area, protocol, sc.ANALYSIS_AUDIT, run_id)
+        report = self.lab.root / "REPORT.md"
+        report.write_text("# Report\n\nProse.\n", encoding="utf-8")
+        before = (protocol.read_bytes(), report.read_bytes())
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("Conclusion", out)
+        self.assertEqual((protocol.read_bytes(), report.read_bytes()), before)
+        self.lab.conclude(protocol, "Two lines per document on average.")
+        rc, out = self.labkit_adopt(area, run_id)
+        self.assertEqual(rc, 0, out)
+        text = report.read_text(encoding="utf-8")
+        self.assertIn(
+            "Question: How many lines does a document of data/raw/docs hold on "
+            "average?\nAnswer: Two lines per document on average.\n",
+            text,
+        )
 
     def test_an_audited_run_is_adopted_written_into_the_report_and_checked(self):
         area, protocol, run_id = self.measured("REPORT.md")

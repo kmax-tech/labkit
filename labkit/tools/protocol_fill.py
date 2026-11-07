@@ -119,6 +119,7 @@ from labkit.gates import report_check, report_hold
 from labkit.gates import report_context
 from labkit.checks.prompt_check import prompt_constants, unreadable_prompt_constants
 from labkit.formats.protocol_check import (
+    adoption_owes,
     field_name,
     fields,
     not_owed,
@@ -227,6 +228,23 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
     restored = restore_cut_adoption(protocol)
     if restored is not None:
         text = restored
+    # asked before this adoption's first write, so its refusal leaves the
+    # protocol as it was (the one write above puts back an earlier adoption
+    # cut off during its check) — the answer labkit-next names before it
+    absent, holes = adoption_owes(text)
+    if absent or holes:
+        named = shown(protocol, Path.cwd())
+        console.refuse(
+            "protocol-fill",
+            with_way_out(
+                f"not adopted — the adoption owes {', '.join(absent + holes)}, "
+                f"still open; {protocol.name} is as it was",
+                f'write it (`protocol-fill {named} "{(absent + holes)[0]}=<…>"`; '
+                f"`protocol-check {named} --contract` names what the adoption "
+                "owes), then adopt again",
+            ),
+        )
+        return 2
     try:
         new, filled, run_id = from_run(
             text,
