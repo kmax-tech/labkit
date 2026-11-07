@@ -1,6 +1,6 @@
 """The stop hook and the pre-commit hold an area the session touched to its
 audit records: a BLOCKER nobody decided sends the agent back, and refuses
-the commit (`claude-hook undecided`).
+the commit (`claude-hook pre-commit`).
 
 report-check refuses a number whose BLOCKERs stand open, but a gate the
 agent has to call is no gate; the stop and the commit are the two it cannot

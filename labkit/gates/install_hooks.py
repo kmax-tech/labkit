@@ -6,18 +6,16 @@
 The hooks come with the pinned labkit, so raising the pin and running
 `install` again brings hooks that match the commands they call.
 
-    .githooks/pre-commit     protocol-check on staged protocols; the area
-                             numbers in the index (labkit-init numbers
-                             --staged) when a staged path lies under
-                             experiments/; report-check
-                             --if-reported on every staged path — a
-                             written-back answer in an area it touches (the
-                             whole release check, finalize among its
-                             stations); claude-hook undecided on the staged
-                             paths; the
-                             guard test where a repo has it; then the
-                             repo's own .githooks/pre-commit.local, if any
-                             (the repo owns it, labkit-hooks never writes it)
+    .githooks/pre-commit     labkit's gates on the index in one entry
+                             (claude-hook pre-commit: the MUST fields of
+                             every staged protocol, report-check on every
+                             staged path, the undecided audit state, then
+                             labkit-next's step); the area numbers in the
+                             index (labkit-init numbers --staged) when a
+                             staged path lies under experiments/; the guard
+                             test where a repo has it; then the repo's own
+                             .githooks/pre-commit.local, if any (the repo
+                             owns it, labkit-hooks never writes it)
     .githooks/pre-merge-commit
                              runs .githooks/pre-commit on the merge's index:
                              git runs this hook, never pre-commit, for a

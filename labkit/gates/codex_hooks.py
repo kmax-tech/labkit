@@ -65,7 +65,8 @@ def main(argv: list[str]) -> int:
     """Read one Codex event and run its gate; invalid input returns 2.
 
     Help and unknown actions do not read stdin. The checks may record stop
-    bases, session logs and content caches, as described in agent_hooks.
+    bases and session logs (`hook_session`) and content caches
+    (`hook_post_change`).
     """
     if not argv or argv[0] in ("-h", "--help"):
         return console.usage(

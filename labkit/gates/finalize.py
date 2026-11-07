@@ -422,7 +422,7 @@ def check_run_code(
     (`run_record_check.code_since_run`), for every kind — a fix after the
     run with no new run would leave the old code's number standing. A module in another repository is a warning. HELD_BY,
     the protocol that declares the answering run (None: none does), puts
-    the withdrawal first in each blocker's way out (`declared_first`)."""
+    the withdrawal first in each blocker's way out (`gate.withdrawn_first`)."""
     changed, apart = code_since_run(area, answering_run)
     findings.take_all(
         withdrawn_first(changed, withdraw_command(held_by) if held_by else None)
@@ -808,7 +808,9 @@ def finalize_area(
        naming every change.
     2. intent-check — always; with an answering run it reads its metrics,
        without one it holds the promise block alone (step 1 names the run).
-    3. declared scopes — only with a run.
+    3. the run's code and the declared scopes — only with a run: the code
+       that produced the number is the code here now (`check_run_code`),
+       each declared scope as the run saw it (`check_declared_scopes`).
     4. open fields — always: protocol placeholders and stamped `<…>`
        placeholders left in the area's README warn; a bound field written
        twice and data counts typed by hand or stale block.
