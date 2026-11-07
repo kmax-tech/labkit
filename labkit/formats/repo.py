@@ -209,6 +209,10 @@ PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
 #: `.venv/` is a record or a package, not a second protocol (audit
 #: 2026-10-15: four scans, one of them skipped these, three did not)
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
+#: directories that hold no code of the lab: SKIP_DIRS and an area's
+#: `output/` — what a search for an area's scripts and the copy of a run's
+#: untracked code pass over
+NOT_CODE_DIRS = SKIP_DIRS | {"output"}
 
 
 def repo_protocols(root: Path) -> list[Path]:

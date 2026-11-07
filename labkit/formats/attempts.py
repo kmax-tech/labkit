@@ -98,7 +98,7 @@ from typing import IO
 
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
-from labkit.formats.files import write_atomic, write_atomic_bytes
+from labkit.formats.files import lock_held, write_atomic, write_atomic_bytes
 from labkit.formats.findings import ANSWERS, DIR, JOURNAL
 from labkit.formats.gate import with_way_out
 from labkit.formats.repo import (
@@ -488,16 +488,12 @@ def _lock_file(area: Path, name: str) -> Path:
 
 
 def _is_free(path: Path) -> bool:
-    """Can the lock at PATH be taken now? (taken and given back at once)
-    A missing lock file is free."""
-    if not path.exists():
-        return True
-    with path.open("a") as fh:
-        try:
-            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            return False
-        fcntl.flock(fh, fcntl.LOCK_UN)
+    """Is the lock at PATH held by no process (`files.lock_held`: a shared
+    probe, so two callers asking at once never see each other as the
+    holder — an exclusive probe did)? A missing lock file is free."""
+    try:
+        return not lock_held(path)
+    except FileNotFoundError:
         return True
 
 

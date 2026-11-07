@@ -21,6 +21,7 @@ from dataclasses import dataclass, replace
 import shlex
 from pathlib import Path
 
+from labkit.formats.repo import NOT_CODE_DIRS
 from labkit.formats.runs import (
     NO_GIT,
     metrics_path,
@@ -71,8 +72,6 @@ def _tracked(repo: Path, path: Path) -> bool:
 
 CRITERION_N = promises.CRITERION_N_KEY
 
-#: what a script search in an area passes over: run records, outputs, data
-_NOT_CODE = frozenset({"runs", "output", "data", "__pycache__", ".git"})
 #: the way out of a code change since the run, the fix first: restoring the
 #: old code removes the difference, not a fault the change corrected
 FIX_FIRST = (
@@ -190,7 +189,7 @@ def script_of(area: Path, cfg: RunConfig) -> Path | str:
     found = [
         p.resolve()
         for p in area.rglob(cfg.script)
-        if p.is_file() and not _NOT_CODE.intersection(p.relative_to(area).parts)
+        if p.is_file() and not NOT_CODE_DIRS.intersection(p.relative_to(area).parts)
     ]
     if len(found) == 1:
         return found[0]

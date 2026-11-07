@@ -91,6 +91,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
+from labkit.formats.runs import as_stored
 from labkit.formats.runs import metrics_path, patch_path, run_path
 from labkit.run import batch, code_repos, detached
 from labkit.run.detached import DetachedStart
@@ -248,9 +249,9 @@ def index_row(
         run_id,
         git,
         script,
-        json.dumps(data, ensure_ascii=False, sort_keys=True),
-        json.dumps(config, ensure_ascii=False, sort_keys=True),
-        json.dumps(metrics, ensure_ascii=False, sort_keys=True),
+        as_stored(data),
+        as_stored(config),
+        as_stored(metrics),
         note,
         protocol_id,
     ]

@@ -637,3 +637,25 @@ class OneBlock(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LockProbe(unittest.TestCase):
+    """Whether an attempt's lock is held is asked with a shared probe
+    (`files.lock_held`): a second caller probing at the same moment is no
+    holder. The exclusive probe `_is_free` used read a concurrent probe as
+    a running attempt (architecture audit 2026-11-07, second, H3)."""
+
+    def test_a_holder_holds_and_a_concurrent_probe_does_not(self):
+        import fcntl
+
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "a.lock"
+            self.assertTrue(attempts._is_free(path))  # missing: free
+            path.write_text("")
+            with path.open("rb") as other:
+                fcntl.flock(other, fcntl.LOCK_SH | fcntl.LOCK_NB)  # a prober
+                self.assertTrue(attempts._is_free(path))
+            with path.open("a") as holder:
+                fcntl.flock(holder, fcntl.LOCK_EX)  # a running attempt
+                self.assertFalse(attempts._is_free(path))
+            self.assertTrue(attempts._is_free(path))

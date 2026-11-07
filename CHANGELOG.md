@@ -109,6 +109,10 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **Whether an audit attempt still runs is asked with a shared lock probe.**
+  The attempt journal probed its lock exclusively, so a second caller
+  asking at the same moment read the first prober as a running attempt
+  (`files.lock_held`, as the run writer asks).
 - **The protocol's text is read by one grammar per thing.** A `[table]`
   of the TOML head by `protocol_block.table_span` (six hand walks), a
   field's label line by `protocol_check.label_line`, `FIELD_LEAD` and
