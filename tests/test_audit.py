@@ -1405,7 +1405,7 @@ class FixVerdicts(unittest.TestCase):
         self.assertEqual(rc, 1, err)  # the unresolved finding is carried: a BLOCKER
         self.assertIn(
             f"===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n{ref}\n  finding: {self.LEAK}\n"
-            f"  decided: fixed — dropped poisson_ratio\n",
+            f"  subject: statement\n  decided: fixed — dropped poisson_ratio\n",
             sent[0],
         )
         (record,) = self.new_records(area, earlier)
@@ -1584,7 +1584,7 @@ class FixVerdicts(unittest.TestCase):
         findings.write_decision(earlier, 1, "limitation", "kept", "stands")
         _, _, _, sent = self.audit(area, CLEAN)
         self.assertIn(
-            f"{earlier.name}#1\n  finding: {self.LEAK}\n  decided: limitation "
+            f"{earlier.name}#1\n  finding: {self.LEAK}\n  subject: statement\n  decided: limitation "
             f"(effect: stands) — kept\n",
             sent[0],
         )
@@ -2951,6 +2951,53 @@ class Carried(unittest.TestCase):
         )
         c = followup.chain(findings.area_records(area))
         self.assertEqual(c.origin[f"{r3.path.name}#{len(r3.findings)}"], f"{r1.name}#1")
+
+    def test_a_settled_suspicion_is_judged_by_its_recorded_subject_next_time(self):
+        """An undetermined finding settled `unresolved · implementation` is
+        carried as that; its text keeps the origin's word. The next follow-up
+        is shown the recorded subject and the prefix naming the settlement,
+        takes a plain `unresolved`, and refuses a subject on it, naming the
+        recorded one (audit 2026-11-07, S3: the prompt showed only the
+        text, and an auditor judging by it was refused)."""
+        area, r1 = self.fv.area(
+            FixVerdicts.LEAK.replace("· statement ·", "· undetermined ·")
+            + " · check: feature_sources — confirms if poisson_ratio is listed"
+        )
+        self.new_state(area, 1)
+        r2 = self.audit_with(
+            area, f"FIX · {r1.name}#1 · unresolved · implementation · still read"
+        )
+        ((n2, f2),) = [(n, f) for n, f in enumerate(r2.findings, 1) if f.carries]
+        self.assertEqual(f2.subject, "implementation")
+        self.assertTrue(
+            f2.text.startswith(
+                f"carried from {r1.name}#1 (unresolved as implementation): "
+            )
+        )
+        findings.write_decision(r2.path, n2, "fixed", "poisson_ratio dropped")
+        self.new_state(area, 2)
+        ref = f"{r2.path.name}#{n2}"
+        rc, _, err, _ = self.fv.audit(
+            area, f"FIX · {ref} · unresolved · implementation · still read\n\n{CLEAN}"
+        )
+        self.assertEqual(rc, 2, err)
+        self.assertIn(f"{ref} is recorded as `implementation`", err)
+        rc, _, err, sent = self.fv.audit(
+            area, f"FIX · {ref} · unresolved · still read\n\n{CLEAN}"
+        )
+        self.assertEqual(rc, 1, err)
+        piece = (
+            sent[0]
+            .split("===== EARLIER DECIDED BLOCKERS AND CORRECTIONS =====\n")[1]
+            .split("\n=====")[0]
+        )
+        self.assertIn(
+            f"{ref}\n  finding: carried from {r1.name}#1 (unresolved as implementation): ",
+            piece,
+        )
+        self.assertIn("\n  subject: implementation\n  decided: fixed", piece)
+        (f3,) = [f for f in findings.area_records(area)[-1].findings if f.carries]
+        self.assertEqual(f3.subject, "implementation")
 
     def test_resolved_carries_nothing(self):
         area, r1 = self.fv.area()

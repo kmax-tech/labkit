@@ -466,7 +466,9 @@ def undetermined_fix_problem(judged: Finding, v: FixVerdict) -> str | None:
         if v.subject:
             return (
                 f"fix verdict on {v.ref}: a subject ({v.subject!r}) only on an "
-                f"`unresolved` verdict on an {UNDETERMINED} finding"
+                f"`unresolved` verdict on an {UNDETERMINED} finding — {v.ref} is "
+                f"recorded as `{judged.subject or 'no subject'}`: "
+                f"`FIX · {v.ref} · unresolved · <why>`"
             )
         return None
     if v.verdict == "resolved" and not v.check_present:

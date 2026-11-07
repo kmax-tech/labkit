@@ -93,6 +93,14 @@ pins (`requirements.txt` / `requirements.lock`).
   say an `implementation` fault you cannot fix is handed over, as the
   agent guide does. `tests/test_ways_out.py` holds the subject words in
   both places, not only the cause names.
+- **The follow-up audit is shown each earlier finding's recorded
+  subject.** A finding carried from `undetermined` and settled as
+  `implementation` kept the origin's word in its text, and the prompt
+  showed only the text: an auditor following its instructions wrote
+  `unresolved · implementation` on the next follow-up and the audit was
+  refused. The entry now carries a `subject:` line, the carried prefix
+  names the settlement (`carried from … (unresolved as implementation)`),
+  and the refusal of a subject on such a line names the recorded one.
 
 ## 0.112.0 — 2026-11-06
 

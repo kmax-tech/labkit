@@ -201,12 +201,14 @@ def undecided_earlier(
 def carried_finding(member: Member, verdict: FixVerdict, origin: Finding) -> Finding:
     """The open BLOCKER a new record carries for MEMBER after VERDICT did not
     find it resolved: the ORIGIN's text under one prefix naming what it
-    continues and why (so the text does not grow over a chain), the
+    continues, why and, for an undetermined finding settled, as what (so
+    the text does not grow over a chain), the
     member's check and note, the subject VERDICT settled an undetermined
     finding to or else the member's, `carries` = its ref."""
     return Finding(
         "BLOCKER",
-        f"carried from {member.ref} ({verdict.verdict}): {origin.text}",
+        f"carried from {member.ref} ({verdict.verdict}"
+        f"{f' as {verdict.subject}' if verdict.subject else ''}): {origin.text}",
         "open",
         "",
         "",
