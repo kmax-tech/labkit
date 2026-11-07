@@ -1,6 +1,7 @@
 """Audit findings as data (2026-10-12): written by labkit-audit, decided by the person, read by preflight."""
 
 import contextlib
+import re
 import io
 import tempfile
 import unittest
@@ -850,6 +851,52 @@ class UndeterminedVerdict(unittest.TestCase):
         ):
             with self.subTest(v=v):
                 self.assertIn("subject", findings.fix_verdict_problem([v]) or "")
+
+
+class TemplatesNameTheTuples(unittest.TestCase):
+    """The lines an auditor or agent copies name exactly the values labkit
+    reads: the grade line's grades and subjects, the FIX line's verdicts,
+    the settled form's subjects, and the stamped AGENTS.md's subjects. The
+    template once showed `implementation|statement` while `undetermined`
+    stood below it (commit 4cfd2dd8, audit 2026-11-07). Only the copyable
+    lines are held, not the prose."""
+
+    ROOT = Path(__file__).resolve().parents[1] / "labkit"
+    AUDITOR = (ROOT / "agents/experiment-preflight.agent.md").read_text(
+        encoding="utf-8"
+    )
+    AGENTS = (ROOT / "templates/AGENTS.md.template").read_text(encoding="utf-8")
+
+    def alternatives(self, pattern: str, text: str) -> tuple[str, ...]:
+        m = re.search(pattern, text, re.M)
+        assert m is not None, pattern
+        return tuple(m.group(1).split("|"))
+
+    def test_the_auditors_grade_line_names_the_grades_and_subjects(self):
+        line = r"^([A-Z|]+) · <file>:<line> · ([a-z|]+) ·$"
+        m = re.search(line, self.AUDITOR, re.M)
+        assert m is not None
+        self.assertEqual(tuple(m.group(1).split("|")), findings.GRADES)
+        self.assertEqual(tuple(m.group(2).split("|")), findings.SUBJECTS)
+
+    def test_the_fix_lines_name_the_verdicts_and_the_settled_subjects(self):
+        self.assertEqual(
+            self.alternatives(r"^FIX · <record>#<n> · ([a-z_|]+) · <why", self.AUDITOR),
+            findings.FIX_VERDICTS,
+        )
+        self.assertEqual(
+            self.alternatives(
+                r"`FIX · <record>#<n> · unresolved · ([a-z|]+) · <why>`", self.AUDITOR
+            ),
+            findings.SETTLED_SUBJECTS,
+        )
+
+    def test_the_stamped_agents_file_names_the_subjects(self):
+        m = re.search(r"^Subjects: (.*?)\.\n", self.AGENTS, re.M | re.S)
+        assert m is not None
+        self.assertEqual(
+            tuple(re.findall(r"`([a-z]+)`\s+\(", m.group(1))), findings.SUBJECTS
+        )
 
 
 class DecideCommand(unittest.TestCase):
