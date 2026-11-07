@@ -17,6 +17,7 @@ Two git calls, by what a non-zero exit means:
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import os
 import re
 import subprocess
@@ -142,6 +143,44 @@ def no_such_area(area: Path) -> str:
 
 #: an area's directory name as `labkit-init exp` prints it: `NN-<slug>`
 AREA_NAME = re.compile(r"^(\d+)-(.+)$")
+
+
+@dataclass(frozen=True)
+class AreaArgs:
+    """`<AREA> [--protocol PROTOCOL-*.md]` as a gate's command line names
+    them (`area_args`)."""
+
+    area: Path
+    protocol: Path | None
+
+
+def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
+    """ARGV of TOOL's `<AREA> [--protocol PROTOCOL-*.md]` command line
+    (`AreaArgs`), or the exit code it ends with: 0 after `--help` (USAGE,
+    its lines, printed), 2 for no argument, an area name several areas
+    carry (`area_path`), another argument, or an area that is no directory
+    — each refused with its sentence. The one reading of preflight's and
+    finalize's command line, which each spelled it."""
+    if not argv or argv[0] in ("-h", "--help"):
+        return console.usage(tool, "\n".join(usage), asked=bool(argv))
+    try:
+        area = area_path(argv[0])
+    except AmbiguousArea as exc:
+        console.refuse(tool, str(exc))
+        return 2
+    protocol = None
+    rest = argv[1:]
+    while rest:
+        if rest[0] == "--protocol" and len(rest) >= 2:
+            protocol = Path(rest[1])
+            rest = rest[2:]
+            continue
+        console.refuse(tool, f"unexpected argument {rest[0]!r}")
+        return 2
+    if not area.is_dir():
+        console.refuse(tool, no_such_area(area))
+        return 2
+    return AreaArgs(area, protocol)
 
 
 def split_area_name(name: str) -> tuple[str | None, str]:

@@ -67,6 +67,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from labkit.formats.repo import area_args
 from labkit.formats.gate import GUARANTEED, STATIC_EVIDENCE
 from labkit.checks.code_check import code_findings
 from labkit.formats import (
@@ -82,13 +83,10 @@ from labkit.gates import install_hooks
 from labkit.formats import findings as audit_findings
 from labkit.formats.gate import EXIT_CONTRACT, Findings
 from labkit.formats.repo import (
-    AmbiguousArea,
-    area_path,
     choose_protocol,
     git_root,
     tree_dirty,
     layout_root,
-    no_such_area,
     shown,
     area_test_stem,
     split_area_name,
@@ -616,34 +614,18 @@ def check_tests_owed(findings: Findings, tests: AreaTests, *, frozen: bool) -> N
 
 def main(argv: list[str]) -> int:
     """Command line of `preflight`: the mechanical gate before an area is frozen."""
-    if not argv or argv[0] in ("-h", "--help"):
-        lines = [
+    got = area_args(
+        "preflight",
+        argv,
+        [
             (__doc__ or "").strip().splitlines()[0],
             "usage: preflight <AREA> [--protocol PROTOCOL-*.md]",
             EXIT_CONTRACT,
-        ]
-        return console.usage("preflight", "\n".join(lines), asked=bool(argv))
-
-    try:
-        area = area_path(argv[0])
-    except AmbiguousArea as exc:
-        console.refuse("preflight", str(exc))
-        return 2
-    protocol = None
-    rest = argv[1:]
-    while rest:
-        if rest[0] == "--protocol" and len(rest) >= 2:
-            protocol = Path(rest[1])
-            rest = rest[2:]
-            continue
-        console.refuse("preflight", f"unexpected argument {rest[0]!r}")
-        return 2
-
-    if not area.is_dir():
-        console.refuse("preflight", no_such_area(area))
-        return 2
-
-    return preflight_area(area, protocol)
+        ],
+    )
+    if isinstance(got, int):  # --help, or a refusal told
+        return got
+    return preflight_area(got.area, got.protocol)
 
 
 def cli() -> None:

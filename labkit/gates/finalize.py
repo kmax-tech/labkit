@@ -92,6 +92,7 @@ import shlex
 from dataclasses import replace
 from pathlib import Path
 
+from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
     GUARANTEED,
@@ -125,11 +126,8 @@ from labkit.formats.answering_run import (
     bound_answering_run,
 )
 from labkit.formats.repo import (
-    AmbiguousArea,
-    area_path,
     area_protocols,
     layout_root,
-    no_such_area,
     ProtocolChoiceError,
     shown,
     the_protocol,
@@ -946,36 +944,20 @@ def declared_run_gaps(text: str, protocol: Path) -> list[GateFinding]:
 
 def main(argv: list[str]) -> int:
     """Command line of `finalize`: check one area."""
-    if not argv or argv[0] in ("-h", "--help"):
-        lines = [
+    got = area_args(
+        "finalize",
+        argv,
+        [
             (__doc__ or "").strip().splitlines()[0],
             "usage: finalize <AREA> [--protocol PROTOCOL-*.md]",
             "       (the gate at the stop and the commit is `report-check --if-reported`, "
             "which runs finalize as one station)",
             EXIT_CONTRACT,
-        ]
-        return console.usage("finalize", "\n".join(lines), asked=bool(argv))
-
-    try:
-        area = area_path(argv[0])
-    except AmbiguousArea as exc:
-        console.refuse("finalize", str(exc))
-        return 2
-    protocol = None
-    rest = argv[1:]
-    while rest:
-        if rest[0] == "--protocol" and len(rest) >= 2:
-            protocol = Path(rest[1])
-            rest = rest[2:]
-            continue
-        console.refuse("finalize", f"unexpected argument {rest[0]!r}")
-        return 2
-
-    if not area.is_dir():
-        console.refuse("finalize", no_such_area(area))
-        return 2
-
-    return finalize_area(area, protocol)
+        ],
+    )
+    if isinstance(got, int):  # --help, or a refusal told
+        return got
+    return finalize_area(got.area, got.protocol)
 
 
 def cli() -> None:
