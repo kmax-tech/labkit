@@ -36,9 +36,9 @@ Diese Punkte haben keinen Platz vor den Aufgaben 1–5. Eine Bedingung nennt, wa
 
 HEAD 8894a146 läuft grün (3072 Tests). Muster: Eine Regel ändert sich an ihrer Heimat, eine zweite Anzeige zieht nicht nach. Befunde mit `pfad:zeile`: [Notiz](docs/notes/2026-11-07-structure-audit.md). Offene Punkte, je eine Entscheidung:
 
-1. **Entscheidungsliste nach Befundart (S1):** `--findings` druckt nur noch, was `findings.allowed_decisions` erlaubt; kein `limitation`-Angebot mehr für `implementation`/`undetermined`, das `--decide` dann ablehnt.
-2. **Auswege an die Befundart binden (S2):** In den Auswegen von `ways_out` gilt „nicht behebbar → `limitation`“ nur noch für `statement`; der Test hält die Wörter, nicht nur die Namen.
-3. **Übernommener Befund zeigt seine Art (S3):** Der Prompt des Folgeaudits nennt das `subject`; sonst wird ein Folgeaudit in der zweiten Runde abgelehnt.
+1. ~~**Entscheidungsliste nach Befundart (S1):**~~ erledigt 44ce0cf5 — `--findings` druckt nur noch, was `findings.allowed_decisions` erlaubt; kein `limitation`-Angebot mehr für `implementation`/`undetermined`, das `--decide` dann ablehnt.
+2. ~~**Auswege an die Befundart binden (S2):**~~ erledigt 98d2f719 — In den Auswegen von `ways_out` gilt „nicht behebbar → `limitation`“ nur noch für `statement`; der Test hält die Wörter, nicht nur die Namen.
+3. ~~**Übernommener Befund zeigt seine Art (S3):**~~ erledigt 86a4668e — Der Prompt des Folgeaudits nennt das `subject`; sonst wird ein Folgeaudit in der zweiten Runde abgelehnt.
 4. **Altpfad ohne `subject` (S4):** entweder per Breaking-Release entfernen oder als bewusste Ausnahme in `CLAUDE.md` vermerken.
 5. **Eine Leseart der Befundzeile (S5):** `place`, `subject_of`, `named_files` und `FINDING` lesen über eine Funktion; dann hat eine Zeile mit Strich-Trennern Ort und Art zugleich.
 6. **Eine Regel „Conclusion geschrieben“ (S6):** `conclusion_written` über `written_line`.
