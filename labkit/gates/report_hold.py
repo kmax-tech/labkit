@@ -205,9 +205,7 @@ def staged_area_gap(repo: Path, area: Path, reads: str) -> GateFinding | None:
     report review (`review_gap`) and `next --staged`'s row
     (`next_step._staged_area_step`), so the hold and the step agree; its
     step stages the whole area (`commands.stage_command`) — a partial staging
-    takes more than the one file a reader has in mind (t34-r2 of
-    labkit-paper's area 20, 2026-11-04: fifteen files, the run among
-    them)."""
+    takes more than the one file a reader has in mind."""
     differs = tree_differs(repo, area)
     if not differs:
         return None
@@ -227,12 +225,10 @@ def reports_without_block(
     """The reports of REPO, as the state holds them (`state_reports`: the
     index when STAGED, else the tree), that cite RUN_ID, the run PROTOCOL
     has adopted, and carry no result block of PROTOCOL — what the stop and
-    the commit refuse (`hold_report`), found before them: labkit-next said
-    "nothing holds it" and labkit-adopt "none registered", and then the hook
-    held REPORT.md (reference pilot 2026-11-01, tasks 21 and 34); read from
-    the tree in both states, `next --staged` said "nothing" while the
-    commit held a report the index alone carried (workflow check
-    2026-11-05, finding ii). A block that does not read counts as none."""
+    the commit refuse (`hold_report`), found before them, so labkit-next and
+    labkit-adopt name the report the hook will hold; read from the state
+    the gate reads, so `next --staged` sees a report the index alone
+    carries. A block that does not read counts as none."""
     out: list[Path] = []
     for path, text in state_reports(repo, staged=staged):
         if run_id not in {r for _, r in report_blocks.cited_run_ids(text)}:
@@ -349,12 +345,10 @@ def committed_reports(
     the Markdown files `report_files` would hold) citing a run of RUN_IDS,
     with its text as the state holds it (`report_entry`, through a symbolic
     link — `hold_report` refuses the link). The reports a changed declaration
-    reaches without being changed themselves: sixth haiku round
-    (2026-10-23, t5), REPORT.md citing the run was committed while the
-    protocol stayed unstaged — the commit's protocol declared nothing and
-    the hook warned of an exploration's citation; the next commit staged
-    the declaration and held no report. The delivered state carried the
-    blocker neither commit saw. Empty outside a repository."""
+    reaches without being changed themselves: a report committed before
+    its protocol's declaration is held when the declaration is, so no
+    delivered state carries a blocker no commit saw. Empty outside a
+    repository."""
     if not run_ids or git_root(repo) is None:
         return []
     candidates = [
@@ -493,8 +487,8 @@ def owed_blocks(
         cited,
         declaring,
         # each block's protocol resolved and named as the owed ones are:
-        # compared as written, `../work/experiments/…` was a block
-        # missing and present at once (reference pilot 2026-11-01, 34)
+        # compared as written, one block could read as missing and present
+        # at once
         {
             report_blocks.path_from_report(block_protocol(report, b), report)
             for b in found
@@ -903,8 +897,8 @@ def review_hold(
     owes a review of PROTOCOL's area (its discussion, or the head
     registering it), STANDS where the report stands, PARTS the state's
     fingerprint parts, COMMAND the review to run."""
-    # `--discuss` under a handover for a lost record had no exit: the
-    # review it owes was refused (pilot of labkit-paper area 15, t60)
+    # first: under a handover for a lost record the review `--discuss`
+    # owes is refused, and this way out is the one that works
     lost = lost_evidence(protocol)
     if lost is not None:
         return blocker(
@@ -1040,9 +1034,8 @@ def undeclared_findings(
 def adoption_unstaged(protocol: Path, run_id: str, sources: Sources) -> bool:
     """Does the working tree's PROTOCOL declare RUN_ID while SOURCES — the
     index, when the gate runs staged — do not? Then the adoption was written
-    and not staged, and the hold names that instead of "declares no result"
-    (the agent of task 34, 2026-10-29, read the latter as a rejected
-    review's effect, withdrew the declaration and later deleted the run id).
+    and not staged, and the hold names that instead of "declares no result",
+    which would read as a rejected review's effect.
     False when SOURCES declare it, when the tree's protocol is gone or does
     not read, or when the gate reads the tree itself."""
     if sources.declared.get(protocol) == run_id:
@@ -1111,10 +1104,9 @@ def review_fingerprint(pieces: list[tuple[str, str]]) -> tuple[str, dict[str, st
     """The fingerprint of a report review's state (`report_reviews.fingerprint`):
     the PIECES the reviewer read (`review_pieces`) and the brief it read
     them under (`audit_prompt.review_brief`). The one fingerprint the
-    review writes and the gate compares. Until 0.111.0 the brief was no
-    part of it, so a review that flagged under a rule since corrected held
-    the report on, and `--report-review` refused a new draw on the
-    unchanged state (review 2026-11-06, finding 2)."""
+    review writes and the gate compares. The brief is part of it, so a
+    review that flagged under a rule since corrected does not hold the
+    report, and `--report-review` may draw again."""
     from labkit.gates.audit_prompt import review_brief
 
     return report_reviews.fingerprint([*pieces, *review_brief()])

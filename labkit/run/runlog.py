@@ -66,9 +66,9 @@ a leak raises before the run starts, rather than inflating a score nobody can
 explain later. Recording the files is what makes "which data was that?"
 answerable six weeks on; the split keys are what make it answerable by a tool.
 
-A run directory exists only with its config.json (0.74.0: everything that
-can fail is read before mkdir, a failure while writing the record removes
-the directory). An incomplete run leaves its dir with config.json but
+A run directory exists only with its config.json (everything that can
+fail is read before mkdir, a failure while writing the record removes the
+directory). An incomplete run leaves its dir with config.json but
 without the required completion markers — visible, not silent. The run-index row is written on
 clean exit only. States: completed · running · unknown · crashed ·
 unfinalized · corrupt · unreadable (config.json damaged, or written before
@@ -167,7 +167,7 @@ def notify_desktop(title: str, body: str) -> None:
     """Best-effort macOS notification — session-independent, never raises.
 
     The monitor of record for an overnight run must not be tomorrow's status
-    question (2026-08-17: a run finished at night and sat unnoticed for ~9 h).
+    question.
     Opt-out with LABKIT_NOTIFY=0; anything else leaves it on.
     """
     if os.environ.get("LABKIT_NOTIFY") == "0" or sys.platform != "darwin":
@@ -445,8 +445,7 @@ RUN_ID_DRAWS = 8
 def _make_run_dir(base_dir: Path) -> tuple[str, Path]:
     """A new run's id and its directory, created: `<second>_<4 hex>`
     (`RUN_ID_TIME`). The suffix is drawn again when the directory exists —
-    two starts in the same second drew the same four hex digits once and
-    `mkdir` failed the second run (test_repeats, 2026-10-21). More than
+    two starts in the same second can draw the same four hex digits. More than
     `RUN_ID_DRAWS` taken in a row is an error, not a loop."""
     for _ in range(RUN_ID_DRAWS):
         run_id = time.strftime(RUN_ID_TIME) + "_" + uuid.uuid4().hex[:4]
@@ -623,8 +622,8 @@ class Run:
             "data": self._data,
             "config": self._config,
         }
-        # whole or not at all, like every record file: a listing that read
-        # config.json mid-write saw a damaged run (CODE-013; audit 2026-10-15)
+        # whole or not at all, like every record file: a listing reading
+        # config.json mid-write would see a damaged run (CODE-013)
         write_atomic(
             self.dir / CONFIG_FILE, json.dumps(frozen, ensure_ascii=False, indent=2)
         )
@@ -634,11 +633,12 @@ class Run:
         code_repos.write_code(self.dir, self._code)
 
     def output(self, *paths: str | Path) -> None:
-        """Register the files this run WRITES (2026-08-18).
+        """Register the files this run WRITES.
 
-        config.json freezes the inputs, but where a run wrote its data lived
-        only in the script's code — whoever stood inside runs/<id>/ could not
-        answer "where did the data go?" without reading source. Registered
+        config.json freezes the inputs; without this, where a run wrote its
+        data lives only in the script's code — whoever stands inside
+        runs/<id>/ cannot answer "where did the data go?" without reading
+        source. Registered
         paths land in `outputs.json` at finalize, with sha256 and line count
         taken AFTER the run, so the record describes the file as the run left
         it. Register the batch.Store target right next to opening it.
@@ -651,8 +651,8 @@ class Run:
         run's. Where those rows depend on code, the row identity refuses a
         resume across a change (the estimator skeleton's `instrument()`
         carries the code) — a repair measured again into the faulty run's
-        file appended nothing and reported its rows as its own (repair case,
-        2026-10-28). A model's answers do not depend on the parser: a parser
+        file would append nothing and report its rows as its own. A model's
+        answers do not depend on the parser: a parser
         fix measured again re-reads them, and that stays possible. A derived
         run re-reads its parent's rows by design and is not told.
         """
@@ -676,8 +676,8 @@ class Run:
         """Add numbers to the run's metrics.json (written when the run
         finishes). Raises TypeError naming the key for a value JSON cannot
         hold (a numpy `bool_`): checked here, the run breaks off with its
-        reason recorded; at the end it failed as a bare json error naming no
-        key and left no failure.json (reference pilot 2026-11-01, sts512)."""
+        reason recorded; at the end it would fail as a bare json error naming
+        no key and leave no failure.json."""
         for key, value in kv.items():
             try:
                 json.dumps(value, allow_nan=True)
@@ -758,7 +758,7 @@ class Run:
         # the confirmed completion, then the index. A break after metrics
         # leaves `unfinalized` (numbers on disk, run not finished); a break
         # after completion.json leaves a run the index missed but `reindex`
-        # can rebuild in full. Before this file the two looked the same.
+        # can rebuild in full.
         code_repos.write_code(
             self.dir, self._code, code_repos.read_code(tuple(sys.modules.values()))
         )
@@ -970,10 +970,10 @@ def open_twins(base_dir: str | Path, script: str) -> list[ActiveRun]:
 
 def _require_no_open_twin(base_dir: str | Path) -> None:
     """Refuse a measurement while a run of the same script is still open in
-    the area: a low-cost run outlasted the agent's tool limit, went to the
-    background, and the next start resumed into its rows — three runs
-    overlapped and two wrote rows another run had made (reference pilot
-    2026-11-01, task 15). A crashed or completed run holds nothing.
+    the area: a low-cost run that outlasts the agent's tool limit goes to
+    the background, and the next start would resume into its rows —
+    overlapping runs write rows another run made. A crashed or completed
+    run holds nothing.
     Raises SystemExit naming the open run and the wait."""
     script = Path(sys.argv[0]).name if sys.argv[0] else "<interactive>"
     twins = open_twins(base_dir, script)
@@ -1025,8 +1025,8 @@ def _read_index(index: Path) -> tuple[list[str], list[list[str]]]:
         row = line.split("\t")
         if len(row) != len(RUN_INDEX_COLS):
             # the index may be the only trace of a run whose folder is gone
-            # (`indexed_runs`): read short, it hid a measurement (review
-            # 2026-11-03, S2); dropped, the trace is lost
+            # (`indexed_runs`): read short, it would hide a measurement;
+            # dropped, the trace is lost
             raise RunIndexError(
                 f"{index}:{n}: {len(row)} of {len(RUN_INDEX_COLS)} tab-separated "
                 f"columns ({', '.join(RUN_INDEX_COLS)}) — a row cut short or run "

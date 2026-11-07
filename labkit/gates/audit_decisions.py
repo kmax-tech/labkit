@@ -70,8 +70,7 @@ def decision_lines(
     the stored record, never counted in the model's text — each with the
     command that decides it (`--record` named, so a later audit cannot
     shift it), then the READ lines of REPORT apart: printed, not recorded,
-    nothing to decide. Five of six sandbox probes (2026-10-21) numbered the
-    printed lines and decided findings the record does not hold. A finding
+    nothing to decide. A finding
     is offered only the decisions its subject allows
     (`findings.allowed_decisions`): where `limitation` is refused, the line
     in its place says why and names the ways that remain
@@ -85,8 +84,7 @@ def decision_lines(
     else:
         owed = ", ".join(findings.REASON_OWED)
         # decided ones counted apart and shown with their decision: listed
-        # all "to decide", a record decided minutes before read as open
-        # (registered pilot part 1, 60-r3)
+        # all "to decide", a decided record reads as open
         n_open = len(record.open)
         decided = len(record.findings) - n_open
         out.append(
@@ -97,9 +95,9 @@ def decision_lines(
         promised = may_leave_unassessed(area, protocol)
         # the id named with its field: an agent cannot pick `quality-check-2` unnamed
         named = effect_ids_named(area, protocol) if promised else ""
-        # what the route owes and what it does by itself: readers took the
-        # review clause of `stands` for this route too, and named every
-        # criterion an unjudged quality check already voids
+        # what the route owes and what it does by itself: else a reader
+        # takes the review clause of `stands` for this route too, and names
+        # every criterion an unjudged quality check already voids
         unassessed = (
             "limitation --not-assessable <ID>[,<ID>]"
             + (f" (<ID>: {named})" if named else "")
@@ -127,15 +125,15 @@ def decision_lines(
             )
             if f.check and f.grade != "BLOCKER":
                 # a follow-up is shown decided BLOCKERs only: "the follow-up
-                # judges" promised a check that never came, and the WARNING
-                # lapsed undecided (reference pilot 2026-11-01, task 21)
+                # judges" would promise a check that never comes, and the
+                # WARNING would lapse undecided
                 out.append(
                     f"      check asked: {findings.check_order(f.check, f.check_note)} "
                     f"— no follow-up audit judges a {f.grade}; decide it now"
                 )
             elif f.check:
-                # where the decision is made: in the repair case the check went
-                # unwritten and every follow-up judged the repair not assessable
+                # where the decision is made: a check left unwritten has every
+                # follow-up judge the repair not assessable
                 out.append(
                     f"      check owed before `fixed` holds: "
                     f"{findings.check_order(f.check, f.check_note)}; then measure "
@@ -179,9 +177,8 @@ def limitation_line(
     for a BLOCKER (the second auditor's REVIEW command owed) or a WARNING,
     with UNASSESSED — the `--not-assessable` route, None where the protocol
     registers no promise; where F's subject refuses `limitation`, the
-    decisions it allows and the refusal's ways out in its place (the list
-    offered `limitation` for every finding and `--decide` refused it for
-    this one, audit 2026-11-07, S1); "" for a NOTE."""
+    decisions it allows and the refusal's ways out in its place (so the
+    list never offers what `--decide` refuses); "" for a NOTE."""
     refused = findings.subject_refusal(f, "limitation")
     if refused is not None and f.grade in ("BLOCKER", "WARNING"):
         allowed = " / ".join(findings.allowed_decisions(f))
@@ -225,11 +222,9 @@ def read_hints(report: str, area: Path, protocol: Path | None = None) -> ReadHin
     label, names no one field of that protocol (`protocol_check.field_at`:
     none, or several begin with it) — a hint that cannot be placed could lie
     in a registered field, so it is not shown, and the reason is. The
-    auditor's instructions keep reading hints to the result part; printed
-    unfiltered, hints on the question, the terms and the data scope were
-    taken as harmless, the agent rewrote those fields over four rounds, and
-    finalize refused the rewrite 24 minutes later (reference pilot
-    2026-11-01, task 21)."""
+    auditor's instructions keep reading hints to the result part; a hint
+    on the question, the terms or the data scope, printed, is taken as
+    harmless, and the rewrite it invites is one finalize refuses."""
     shown_lines: list[str] = []
     held = 0
     unclear: list[str] = []
@@ -258,10 +253,10 @@ def _in_held_field(
     """Does PLACE of FILE, a protocol of AREA, fall in one of HELD_FIELDS?
     PLACE is a line number, or a field named by its label or the label's
     start (`:Terms` for "Terms of this protocol"), resolved against the
-    protocol's own fields (`protocol_check.field_at`) — an auditor naming
-    the field slipped past a filter that read numbers only (reference pilot
-    2026-11-01, task 60). Raises FieldPlaceError when a label names no one
-    field of the protocol: none, or several begin with it."""
+    protocol's own fields (`protocol_check.field_at`) — an auditor names a
+    field by its label as well as by its line. Raises FieldPlaceError
+    when a label names no one field of the protocol: none, or several
+    begin with it."""
     name = Path(file).name
     if not (name.startswith("PROTOCOL-") and name.endswith(".md")):
         return False
@@ -285,9 +280,9 @@ def decide_shape(argv: list[str]) -> str | None:
     """Why ARGV's `--decide` is not `<n> <status>` followed by its options,
     or None: the words after `--decide` up to the next option are its
     values; not two, or a third word where `--why` belongs, is refused
-    naming the form. A positional reason once surfaced as "unrecognized
-    arguments" and agents dropped what followed (SAB round 1, 2026-10-29).
-    Checked before argparse parses, so a usage error names the reason."""
+    naming the form. Checked before argparse parses, so a usage error
+    names the reason: argparse's "unrecognized arguments" for a positional
+    reason leads an agent to drop what follows."""
     if "--decide" not in argv:
         return None
     after = argv[argv.index("--decide") + 1 :]
@@ -308,10 +303,9 @@ def record_path(area: Path, record: Path) -> Path:
     """RECORD as given when it exists, else the file of that name under
     AREA's audits/ (`repo.given_or_in`) — the gates name a record by its
     file name (`Limitation (audit <record> #N)`, report-check's `--record
-    <name>`), and judge-2 (round on 86e38bc, 2026-10-22) copied the name
-    and was refused with "No such file". FindingsError when neither
-    exists, naming the records the area holds: a guessed name ended in a
-    traceback (registered pilot part 1, 34-r1)."""
+    <name>`), and an agent copies that name. FindingsError when neither
+    exists, naming the records the area holds, so a guessed name is
+    answered with the names, not a traceback."""
     path = given_or_in(record, area / findings.DIR)
     if not path.is_file():
         held = [r.name for r in sorted((area / findings.DIR).glob("*.toml"))]
@@ -674,12 +668,10 @@ def other_alias_way(
     area: Path, mode: str, failed: str, protocol: Path | None = None
 ) -> str:
     """The way on after an audit FAILED with one alias: the same audit with
-    another alias of models.toml, as a command — the refusal said "another
-    alias (--model)" and named none, and `--findings` offered only the
-    handover, so an agent guessed an alias models.toml lacks or handed over
-    a run that passed every other check (registered pilot part 1, 15-r2,
-    15-r3). Without another alias, or without a readable models.toml, says
-    so."""
+    another alias of models.toml, as a command — a way on that names no
+    alias leads an agent to guess one models.toml lacks or to hand over a
+    run that passed every other check. Without another alias, or without a
+    readable models.toml, says so."""
     try:
         others = [a for a in llm.aliases() if a != failed]
     except (OSError, ValueError) as exc:
@@ -813,10 +805,8 @@ def stands_check_hint(area: Path, record: findings.Record, f: findings.Finding) 
     when the run RECORD audited does not carry the key in its metrics.json,
     a `hint:` that the second auditor reads the run, not the reason — a
     reason resting on what the check would show is judged `insufficient`
-    (round 2, t21 r10: "verified: one feature", the count in no run; the
-    same finding with the count recorded was upheld twice) — with what the
-    check asks (`findings.check_order`). "" when F requires no key check,
-    the effect is not `stands`, the record names no run, or the key
+    — with what the check asks (`findings.check_order`). "" when F
+    requires no key check, the effect is not `stands`, the record names no run, or the key
     stands. A hint, never a hold: the decision stands as given, and a
     limitation that rests on something else owes no measurement. Names
     the run's metrics that cannot be read."""
@@ -871,9 +861,8 @@ def repair_hint(
       in the area; a Summary field rewritten after the audit owes no new
       measurement by itself; nothing changed is no repair yet.
 
-    Choosing the action here as well contradicted labkit-next in state
-    after state (review 2026-11-03, M2;
-    docs/notes/2026-11-03-maintainability-repair-plan.md). When the
+    It chooses no action, so it cannot contradict labkit-next
+    (docs/notes/2026-11-03-maintainability-repair-plan.md). When the
     protocol cannot be read, the field is not named and the line says why,
     on the one line."""
     nxt = (

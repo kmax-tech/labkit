@@ -5,10 +5,8 @@ that file, not by the metrics in the area. The stamped measurement script
 names it in `DELIVERABLES`, writes it from the kept rows through
 `write_csv` and registers it with `run.output(...)` before the run closes,
 so outputs.json pins it by path and sha256 and `finalize` holds the file
-in the tree to that record (`run_record_check.output_record_findings`).
-Until then the deliverable was bound to nothing: an injection benchmark
-swapped `pred_results/*.csv` in seven delivered states and no gate
-noticed (docs/usability/2026-10-29-injection-ab4ce6d.md, M7).
+in the tree to that record (`run_record_check.output_record_findings`):
+without the record, a deliverable swapped after the run passes every gate.
 """
 
 from __future__ import annotations
@@ -47,9 +45,8 @@ def render_csv(rows: list[dict[str, object]], columns: tuple[str, ...] = ()) -> 
     odd row), and an empty list is refused — an empty deliverable answers
     nothing. COLUMNS, when given, are the columns the task names in its
     order: a header missing one, carrying another or in another order is
-    refused naming it (`column_gap`) — two agents delivered files with
-    named columns missing, and the evaluation could not read them (SAB
-    pressure pilot, task 34, 2026-10-29). Pure: writes nothing."""
+    refused naming it (`column_gap`) — a file with a named column missing
+    is one the evaluation cannot read. Pure: writes nothing."""
     if not rows:
         raise DeliverableError("no rows — an empty deliverable answers nothing")
     header = list(rows[0])

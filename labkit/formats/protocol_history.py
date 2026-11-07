@@ -84,10 +84,10 @@ def first_repeat_cost(path: Path) -> FirstRepeatCost | None:
     standard reads AND declares one, or None when the file is new to git,
     outside a repo, or no committed version declares it (a placeholder
     committed with the stamp is skipped: lowering from it is a first
-    declaration, not a lowering — review 2026-10-25). Walks the file's commits
+    declaration, not a lowering). Walks the file's commits
     oldest first (`git log --reverse`, `git show` at each) and counts the
-    unreadable ones it passes — a protocol migrated from 0.22 is compared
-    from its migration commit on, and the count says so."""
+    unreadable ones it passes — a migrated protocol is compared from its
+    migration commit on, and the count says so."""
     root = git_root(path)
     if root is None:
         return None
@@ -208,7 +208,7 @@ def repeat_cost_lowered(path: Path, head: protocol_block.Head) -> str | None:
     audit before the run, no freeze; LAB-017 The number of audits follows
     the cost tier), so lowering it is the next way round a gate once `n/a`
     is refused — the same move as rewriting the promises until no check is
-    due (third haiku round on 0.99.0, t5). Exact over git: the head as it
+    due. Exact over git: the head as it
     was first committed against the head now; a legitimate correction says
     why in the protocol. Static evidence, never a blocker."""
     was = first_repeat_cost(path)
@@ -238,8 +238,8 @@ def check_protocol_id(
     """Uniqueness against IDS (`protocol_block.repo_protocol_ids` of the repo) and
     working-tree divergence of the protocol id, each with its grade as data:
     a doubled id blocks, a changed one warns. The grade is never read back
-    from the text, which carries the path (PROTOCOL-WARNING.md turned a
-    doubled id into a warning). Its shape is the head parser's job, an
+    from the text, which carries the path (a PROTOCOL-WARNING.md would turn
+    a doubled id into a warning). Its shape is the head parser's job, an
     unstamped id a must placeholder."""
     if head.id is None:
         return []
@@ -368,8 +368,7 @@ def check_annotation_validity(
 #: the data and what is dropped from it, the unit — held with the head's kind,
 #: `[kept]` and `[reference]` from the first measurement on (`scope_differences`):
 #: every kind writes them before the commit, and a computation has no promise
-#: block to hold instead (round 2 of the pressure design, 2026-10-31,
-#: docs/notes/2026-10-31-scope-frozen.md)
+#: block to hold instead (docs/notes/2026-10-31-scope-frozen.md)
 SCOPE_FIELDS = (
     "Question / hypothesis",
     "Terms of this protocol",
@@ -388,7 +387,7 @@ HELD_FIELDS = tuple(dict.fromkeys(REGISTERED_FIELDS + SCOPE_FIELDS))
 #: the fields no correction in place releases (`correctable`): the question
 #: states the requirement itself, so it stands as registered, a typo
 #: included, and a different question is a protocol of its own
-#: (docs/notes/2026-11-02-registered-field-repair.md, 2026-11-03)
+#: (docs/notes/2026-11-02-registered-field-repair.md)
 UNCORRECTABLE_FIELDS = ("Question / hypothesis",)
 #: what one of UNCORRECTABLE_FIELDS is after the first measurement: the
 #: hold of its change (`registration_hold.correction_way`) and the decision's line
@@ -425,8 +424,8 @@ def scope_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     (`scope_value`), the head's kind, its `[kept]` and its `[reference]` as
     the head writes them. ABSENT where one text has nothing; a head or a `[reference]` that
     does not read is compared as the sentence its error says, so the fields
-    are compared whatever the head held then (round 2, Labor-21 r3: the first
-    measurements ran on a commit whose `[reference]` did not read yet). Pure."""
+    are compared whatever the head held then — a first measurement may have
+    run on a commit whose `[reference]` did not read yet. Pure."""
     out: list[tuple[str, str, str]] = []
     ka, kb = _head_part(old, "kind"), _head_part(new, "kind")
     if ka != kb:
@@ -482,9 +481,7 @@ def registration_differences(old: str, new: str) -> list[tuple[str, str, str]]:
     Values as `protocol_check.field_values` reads them (by `field_name`,
     whitespace folded); `(none)` where one has nothing.
     Pure; raises BlockError or PromiseError on a head or a block that does
-    not read. Why: a successor declaring the changed Exclusions / filters
-    its predecessor was held for was refused (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md)."""
+    not read."""
     scope = scope_differences(old, new)
     out = [d for d in scope if d[0] == "kind"]
     out += promise_differences(old, new)

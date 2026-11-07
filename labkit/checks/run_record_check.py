@@ -84,7 +84,7 @@ def code_since_run(
     area: Path, answering_run: Path
 ) -> tuple[list[GateFinding], list[str]]:
     """(blockers, warnings): the code that produced ANSWERING_RUN's number
-    is not the code here now (audit 2026-10-27, A1). For the run and each
+    is not the code here now. For the run and each
     run it derives from (`runs.lineage`: a re-evaluation rests on
     its parent's rows): its script against the hash the run recorded
     (`script_sha`), and each module the script imports
@@ -389,9 +389,8 @@ def null_lane_findings(answering_run: Path) -> NullLanes:
     """The outputs of ANSWERING_RUN (`runs.read_outputs`, its JSONL files)
     held to their null lane (`NullLanes`): an output with both lanes whose
     null did not move (`null_lane_unmoved`) is named — read from the rows
-    the run kept, not from a check in the editable script: a cold agent
-    deleted the script's own guard before it first ran (SAB-like apply
-    case, 2026-10-27). Raises ValueError on an output that does not read."""
+    the run kept, not from a check in the editable script, which an agent
+    can delete before it first runs. Raises ValueError on an output that does not read."""
     out: list[GateFinding] = []
     examined = 0
     for entry in read_outputs(answering_run) or []:
@@ -497,7 +496,7 @@ def provenance_findings(
         return blockers, warnings, outside
     # The output rows are born after the run, so on every first pass they are
     # untracked by construction: a warning that names the command, not a
-    # blocker that sends the agent round the loop (2026-10-05, five probes).
+    # blocker that sends the agent round the loop.
     # An output that is gone is `output_record_findings`' blocker, on every lane.
     for f in outputs:
         if f.exists() and not _tracked(repo, f):
@@ -558,8 +557,8 @@ def _source_finding(
         return _gone(source, area), None
     # git's half only for bytes that lie in the repository: one outside it
     # (a model directory on scratch, reached directly or by a link) git can
-    # neither track nor ignore, and its refusal named both as ways out
-    # (audit 2026-11-07, S9)
+    # neither track nor ignore, so a refusal naming either as the way out
+    # would not lead out
     beyond = repo is not None and not resolves_under(repo, source)
     # a directory: file by file; ignored files are among the untracked
     untracked = [] if repo is None or beyond else _untracked_files(repo, source)
@@ -623,8 +622,8 @@ def _untracked_files(repo: Path, source: Path) -> list[Path]:
     under it (`provenance.visible_files`) — the files the run's digest and
     row count covered, since the record keeps no list of them. A directory
     is tracked only when every one of them is: `git ls-files --error-unmatch
-    DIR` succeeds once one file under it is (pilot t21: a committed
-    SOURCE.md passed two untracked GeoJSON files). An empty or all-hidden
+    DIR` succeeds once one file under it is (a committed SOURCE.md would
+    pass the untracked data files beside it). An empty or all-hidden
     directory passes — the run read no file of it. A symbolic link under it
     counts as tracked when git holds the link, not its target's content.
     The directory is resolved first and lies in REPO (`_source_finding`
@@ -725,9 +724,7 @@ def output_record_findings(answering_run: Path) -> list[GateFinding]:
     whose file is not the one the run recorded (`output_drift`): the
     number's rows, and a deliverable the run wrote for an external task,
     are pinned to the run by path and sha256 — a file swapped, edited or
-    removed after the run is no longer what the run produced. Seven
-    delivered states had their `pred_results/*.csv` swapped with another
-    state's and no gate noticed (injection benchmark, 2026-10-29). Raises
+    removed after the run is no longer what the run produced. Raises
     ArtefactError when outputs.json does not read."""
     return [
         blocker(
@@ -766,9 +763,7 @@ def called_a_model(answering_run: Path) -> bool:
 def single_draw(area: Path, answering_run: Path) -> str | None:
     """Why the number shows no spread, or None: the run asked a model and
     has no repeat (`runlog` repeat_of). One draw per item cannot show how
-    far the number moves — in the cloud judge probe it moved 10/12 ↔ 11/12
-    between runs, and every audit named it (TODO item 4, 2026-10-14). A
-    warning, never a blocker: whether a spread is owed is the protocol's.
+    far the number moves. A warning, never a blocker: whether a spread is owed is the protocol's.
     A run in the area that cannot say whether it is a draw (unreadable, a
     broken or doubled draw number) is said here, not raised past."""
     if not called_a_model(answering_run):
@@ -789,8 +784,8 @@ def model_provenance_gap(answering_run: Path) -> str | None:
     """Why the run's model cannot be named from its record, or None: its
     metrics show model calls (`llm_retries` recorded, or `model_calls` > 0)
     while no run in its lineage recorded `models_resolved` — the alias was
-    not under `model`/`*_model`, the keys runlog resolves (uniagent areas
-    14–17 recorded it as `judge`; round 15, 2026-10-08). Static evidence:
+    not under `model`/`*_model`, the keys runlog resolves (one recorded as
+    `judge` is not resolved). Static evidence:
     a run without those keys may still have called a model."""
     if not called_a_model(answering_run):
         return None
@@ -816,7 +811,7 @@ def row_provenance_findings(
     it continues (a resumed file, named in outputs.json), or — for a
     derived run — from its derived_from lineage. Rows from any other run
     are a blocker: a file of two measurements. Rows without `_prov` are a
-    note (a Store without `prov`), not proof of anything (2026-10-09). Rows
+    note (a Store without `prov`), not proof of anything. Rows
     of a continued run whose script differs from this run's are a blocker
     too (`_continued_with_other_code`): the number is that code's. A
     broken lineage (`runs.lineage`) is the one blocker: without
@@ -883,9 +878,8 @@ def _continued_with_other_code(
     script (`script_sha`) is not the answering run's, where the rows declare
     that they depend on code (`_instrument` carries `code_sha`, the
     estimator skeleton's): its ROWS were written by other code, and the
-    number counts them as this run's. A fix measured again into the faulty
-    run's file kept every faulty row, and finalize said only "continues"
-    (repair case, 2026-10-28). Rows without it — a model's answers — do not
+    number counts them as this run's: a fix measured again into the faulty
+    run's file keeps every faulty row. Rows without it — a model's answers — do not
     depend on the script: a parser fix re-reads them. A run whose record
     does not read is left to the record checks."""
     own = read_run_config(answering_run)
@@ -925,9 +919,7 @@ def arm_findings(text: str, area: Path, answering_run: Path) -> list[str]:
     fingerprint, alias — `protocol_block.model`) is held to the answering
     run — the profile file exists in the repo, and fingerprint and alias
     stand somewhere in the run's config.json. The table is what a reader of
-    the protocol gets instead of opening the register (2026-10-09: "what
-    are before and after?" was answered 60 lines below the criterion, and
-    the fingerprint nowhere but in the run). No arms, no `[model]`, or a
+    the protocol gets instead of opening the register. No arms, no `[model]`, or a
     head that does not read (the head check names that): nothing claimed,
     nothing checked."""
     out: list[str] = []

@@ -165,11 +165,9 @@ def dependency_pieces(run_dir: Path) -> list[tuple[str, str]]:
     rows (`provenance.BinaryInput`: a predictor, its weights) — as MODE
     analysis shows them: a UTF-8 file of at most DEPENDENCY_SHOW_MAX bytes
     whole while its digest is the one the run recorded; any other named
-    with its digest and why it is not shown. In the repair case
-    (2026-10-28) the follow-up could not confirm a repair against
-    model.json, which no piece showed, and three decision reviews said
-    insufficient. [] for a run without such inputs or a record that does
-    not read (the record checks name that)."""
+    with its digest and why it is not shown — so a repair can be confirmed
+    against the file itself (a model.json). [] for a run without such
+    inputs or a record that does not read (the record checks name that)."""
     try:
         entries = runs.read_data(run_dir) or []
     except runs.ArtefactError:
@@ -216,8 +214,8 @@ class RunShown(NamedTuple):
     """What MODE analysis shows of the answering run, taken once: the
     pieces the prompt renders (`run_rows`) and their digest, which the record
     carries as `shown_sha` and report-check recomputes — a metrics.json or
-    output rows changed after the audit owe a new one (review 2026-10-20:
-    the run id alone could not tell)."""
+    output rows changed after the audit owe a new one (the run id alone
+    cannot tell)."""
 
     pieces: tuple[tuple[str, str], ...]
     sha: str
@@ -260,9 +258,9 @@ def declared_piece(run_dir: Path | None, declared: str | None) -> list[tuple[str
     nothing when the protocol declares none or that very run, else one
     piece naming the run declared. So a record binds a wrong declaration,
     and re-adopting moves the state the next audit follows a finding up in,
-    while the first adoption of the run audited moves nothing (file-check
-    case, 2026-10-28: a BLOCKER on the declared run, fixed by re-adopting,
-    stayed held as fixed in the same state)."""
+    while the first adoption of the run audited moves nothing (without the
+    piece, a BLOCKER on the declared run that re-adopting fixes stays held
+    in an unchanged state)."""
     shown = run_dir.name if run_dir is not None else None
     if declared is None or declared == shown:
         return []

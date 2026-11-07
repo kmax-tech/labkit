@@ -12,7 +12,7 @@ lane scores; `margin` is a lead over the null value the skeleton computes
 skeleton's null-lane accuracy). The one home of the two forms, their
 refusal and the arithmetic, so the two skeletons cannot drift apart. A
 registered value is read as written (`Fraction(str(value))`, 0.25 = 1/4):
-in floats a lane exactly at the bar failed by one ulp. Pure: nothing here
+in floats a lane exactly at the bar would fail by one ulp. Pure: nothing here
 reads or writes a file.
 """
 

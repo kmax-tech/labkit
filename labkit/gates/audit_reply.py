@@ -72,8 +72,7 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
     that finding (`findings.decision_digest`) — labkit attaches the digest,
     the auditor names the finding. The why is the FIX line's text and the
     lines right below it (`fix_block`), kept whole: the evidence an auditor
-    lists under the line is the verdict's ground (pilot B-2, 2026-10-26:
-    five lines, the record held the first). Raises AuditError on a FIX line
+    lists under the line is the verdict's ground. Raises AuditError on a FIX line
     that does not read whole, a block that also names another shown
     finding, a finding the prompt did not show, a verdict outside
     `findings.FIX_VERDICTS`, a second verdict on one finding, and a verdict
@@ -142,8 +141,6 @@ def parse_fixes(text: str, earlier_repairs: Followup) -> list[findings.FixVerdic
 #: the auditor's own words for an area without an earlier decided BLOCKER
 #: (the prompt shows it "none: no earlier decided BLOCKER in this area");
 #: a section line, not a FIX entry and not a remark after the last finding
-#: (task 21, 2026-10-29: two paid audits refused for it, the agent then
-#: changed code and measured again instead of adopting the audited run)
 FIX_NONE = re.compile(LEAD + r"\**FIX(\s+lines?)?\**\s*:\**\s*none\b", re.I)
 
 
@@ -247,9 +244,8 @@ def finding_entries(lines: list[str]) -> list[tuple[str, str]]:
     (`section_line`, or the notes tally NOTES_TALLY); a blank line does not
     end it. Its text is those lines stripped, the blank ones dropped,
     joined by line breaks — the record keeps the finding whole: effect,
-    rule, repair and check included (pilot round 2, t21: a WARNING stored
-    as its first 136 characters). Lines before the first finding and after
-    a section line belong to no finding and are not read, as before.
+    rule, repair and check included. Lines before the first finding and
+    after a section line belong to no finding and are not read.
 
     Raises AuditError (ANSWER_AGAIN) on the one shape that does not read:
     an unindented line that a blank line separates from the last finding
@@ -258,9 +254,8 @@ def finding_entries(lines: list[str]) -> list[tuple[str, str]]:
     remark on the whole audit, and a guess would put a remark in a finding
     or drop part of one. An indented line is the finding's wherever it
     stands: the auditor indented it under the finding, as it indents the
-    finding's bullets (2026-10-29: two paid audits, Haiku and Sonnet,
-    refused for an indented `Effect:` or `· LAB-nnn` paragraph below a
-    blank line inside the last finding's evidence)."""
+    finding's bullets — an indented `Effect:` or `· LAB-nnn` paragraph
+    below a blank line is the last finding's evidence."""
     entries: list[tuple[str, list[str]]] = []
     after_blank = ""  # the current finding's first line below a blank line
     blank = False
@@ -307,9 +302,9 @@ def scope_list(tail: str) -> list[str]:
     for i, line in enumerate(lines):
         if line.strip().startswith("scope:"):
             first = line.strip().removeprefix("scope:").strip()
-            # every entry may repeat the prefix: kept, `scope: x.py` read as a
-            # file named so, and the same file was reported both read and
-            # unlisted (reference pilot 2026-11-01, task 21)
+            # every entry may repeat the prefix: kept, `scope: x.py` would read
+            # as a file named so, and the same file would be reported both
+            # read and unlisted
             rest = [
                 ln.strip().lstrip("-*• ").removeprefix("scope:").strip().strip("`")
                 for ln in lines[i + 1 :]
@@ -323,8 +318,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
     """Where the auditor's scope and the stamp disagree — FILES are the
     stamp's, taken before the call (`audit_prompt.Stamp`). The stamp is what a later
     check recomputes, so a file the auditor read as part of the number but
-    the stamp misses can change unnoticed (review 2026-10-07: the list was
-    asked for and then dropped)."""
+    the stamp misses can change unnoticed."""
     root = layout_root(area)
     # home: sets compared to each other, not a display (repo.shown)
     stamped = {
@@ -344,7 +338,7 @@ def scope_mismatch(area: Path, listed: list[str], files: list[Path]) -> list[str
             else s
         )
     # the protocol is held by the registration and promise digests, not the
-    # stamp: listed as read it is no gap (noise in every audit of 2026-11-01)
+    # stamp: listed as read it is no gap
     protocols = {
         p.resolve().relative_to(root.resolve()).as_posix()
         for p in area_protocols(area)

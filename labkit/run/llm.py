@@ -189,7 +189,6 @@ def identity(alias: str) -> JsonObject:
     Endpoints are excluded: a cluster host can change while serving the
     same weights.
 
-    History: docs/notes/2026-10-23-model-configuration-history.md.
     """
     used = spec(alias)
     return {"backend": used.backend, "model": _answering_model(used)}
@@ -212,7 +211,6 @@ def model_entry(alias: str | None, start: Path) -> str:
     (`alias_tables`); changes no files. Missing aliases, unreadable files
     and invalid TOML return an explanatory sentence.
 
-    History: docs/notes/2026-10-23-model-configuration-history.md.
     """
     if alias is None:
         return "the bound protocol names no [model] alias"
@@ -250,9 +248,8 @@ def audit_alias(fallback: str) -> str:
     """The alias a lab names for its audits: `[audit] model` of `models.toml`,
     else FALLBACK. A round fixes its audit model in the lab's own file, so
     every audit record names the alias that answered; repointing the
-    `opus` alias at another model would have recorded "opus" for it
-    (reference pilot, 2026-11-01). Raises ValueError for an `[audit]` that
-    is no table, a model that is no string, or an alias `[models]` lacks;
+    `opus` alias at another model would record "opus" for it. Raises
+    ValueError for an `[audit]` that is no table, a model that is no string, or an alias `[models]` lacks;
     FileNotFoundError without the file."""
     path = find_models_toml()
     try:
@@ -283,7 +280,7 @@ def _load_spec(alias: str) -> BackendSpec:
         raise ValueError(f"{path}: not TOML ({exc})") from exc
     table, names = alias_tables(str(path), data, alias)
     parsed = parse_spec(alias, table, names, str(path))
-    # Camera-ready gap closed 2026-08-18: the model NAME is not the model.
+    # The model NAME is not the model.
     # "qwen2.5:7b" can mean different weights in three months; the digest
     # pins what actually answered. Best-effort — a run must not die because
     # the tags endpoint hiccups; "unavailable" is honest and visible.
@@ -325,8 +322,8 @@ def _digest_from_tags(tags: dict, model: str) -> str:
         if m.get("name") in want or m.get("model") in want:
             # A proxy (KubeAI's ollama route) prefixes the digest with its
             # algorithm — "sha256:f8ceb…" — where ollama itself sends bare hex.
-            # Cutting twelve characters off the prefixed form left FIVE hex
-            # digits of pin (seen 2026-10-03 against llm.srv.webis.de).
+            # Cutting twelve characters off the prefixed form would leave
+            # FIVE hex digits of pin.
             digest = str(m.get("digest", "")).removeprefix("sha256:")
             return digest[:12] or "unavailable"
     return "unavailable"
@@ -355,8 +352,8 @@ _TRANSIENT = (
 )
 _RETRIES = {"n": 0}
 _RETRIES_LOCK = threading.Lock()
-# network hiccup, model reload, queue, outage — 2026-09-24: two runs died
-# after ~3 min of DNS/SSL failures with the old (10, 45, 120) ladder.
+# network hiccup, model reload, queue, outage — a ladder of ~3 min dies
+# in a run of DNS/SSL failures, so the last steps wait 300 s.
 _BACKOFF = (10, 45, 120, 300, 300)
 
 
@@ -375,9 +372,7 @@ def last_usage() -> Usage:
     """The token counts of this thread's most recent completion — read right
     after `complete` returns, like `last_endpoint`. NO_USAGE before the first
     call and when the backend reported none. labkit-audit prints it beside
-    the prompt size, so every stamp can carry what the audit cost
-    (2026-10-11: 30 transcripts, 7 billion cache-read tokens, and no line
-    anywhere said what one audit cost)."""
+    the prompt size, so every stamp can carry what the audit cost."""
     return getattr(CALL_STATE, "usage", NO_USAGE)
 
 
@@ -386,9 +381,7 @@ def last_thinking() -> str:
     reasoning model wrote before its answer (ollama `thinking`, OpenAI-style
     `reasoning_content`/`reasoning`); "" when the backend returns none. Read
     it right after `complete` returns, like `last_endpoint`: the answer alone
-    says what the model decided, the trace says why (uniagent 2026-10-07: a
-    false framework `yes` could not be explained because only the answer was
-    kept)."""
+    says what the model decided, the trace says why."""
     return getattr(CALL_STATE, "thinking", "")
 
 
@@ -421,7 +414,7 @@ def provenance(alias: str) -> dict:
 
 
 #: the token cap ollama and openai send when the caller names none — a
-#: request without one let gpt-oss generate 3520 tokens at a nominal limit
+#: request without one lets gpt-oss generate past a nominal limit
 #: (tests/test_llm_chat_options.py)
 DEFAULT_MAX_TOKENS = 512
 
@@ -520,7 +513,7 @@ def complete_response(
                 # the server answered, and the answer is about the request:
                 # a wrong model id (404), a missing key (401), a prompt the
                 # server refuses (400) — no retry changes it, and HTTPError
-                # is a URLError (six attempts, 13 min, audit 2026-10-15)
+                # is a URLError (a retry would spend six attempts, 13 min)
                 raise BackendError(
                     f"{alias}: HTTP {exc.code} {exc.reason} — the server refused "
                     f"the request, not the connection; check the alias in "
@@ -533,8 +526,7 @@ def complete_response(
                 # RuntimeError), ollama throws URLError/TimeoutError — no
                 # RuntimeErrors. A caller with "except RuntimeError" is then
                 # correct on one backend and loses its whole batch on the
-                # other (2026-08-14: a DNS hiccup killed a 145-item run after
-                # the switch from haiku to the cluster). One documented type =
+                # other. One documented type =
                 # one thing to catch; the original exception stays attached
                 # via "from exc".
                 if isinstance(exc, BackendError):
@@ -547,7 +539,7 @@ def complete_response(
                 _RETRIES["n"] += 1
             # The backoff must outlive a MODEL LOAD, not just a network
             # hiccup: a 13 GB model takes ~90 s into VRAM, and 5/15 s pauses
-            # all fizzle before that (a run died after 5 of 100).
+            # all fizzle before that.
             wait = _BACKOFF[min(attempt - 1, len(_BACKOFF) - 1)]
             print(
                 f"llm: {type(exc).__name__} on attempt {attempt}/{attempts} "

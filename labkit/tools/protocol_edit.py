@@ -124,8 +124,8 @@ def fill(
     """Return the protocol text with `field`'s placeholder replaced by `value`.
 
     Fields are read by `protocol_check.fields` — the one parser of labels
-    and placeholders; a second one here mis-read a wrapped label as
-    `extremes)` (usability probe 2026-10-07). The label line and its
+    and placeholders; a second one here would mis-read a wrapped label. The
+    label line and its
     continuation lines become one line; everything else stays byte-identical.
     An id the stamp wrote before the placeholder (`[criterion-1] <…>`) stays when
     VALUE names no id; a VALUE with its own ids replaces it.
@@ -170,11 +170,11 @@ HEAD_HINTS: dict[str, str] = {
 }
 #: a `[kept]` value named the way agents write a table's key (`[kept] key`,
 #: `[kept]key` as `[protocol]type` is read, `kept key`, `[kept].unit`): read as
-#: its protocol_block.FILLABLE_HEAD_KEYS label `kept.<value>` (t34-r3, 2026-11-04)
+#: its protocol_block.FILLABLE_HEAD_KEYS label `kept.<value>`
 KEPT_LABEL = re.compile(r"^\[?kept\]?\s*[.\s]?\s*(key|unit)$", re.I)
 #: the head's freeze keys, written together by `set_freeze` (`protocol-fill
 #: --freeze`), never by a fill — named so a fill of them says so instead of
-#: "no field labelled" (audit 2026-10-27, third, I6)
+#: "no field labelled"
 FREEZE_KEYS = ("frozen", "preflight_audit")
 #: a freeze key's line in the TOML head, whatever it holds
 _FREEZE_LINE = {key: re.compile(rf"^\s*{key}\s*=") for key in FREEZE_KEYS}
@@ -213,7 +213,7 @@ def set_freeze(text: str, record: str) -> str:
 #: (`[protocol] type`, `[model] alias`): the table prefix `head_label` drops
 TABLE_PREFIX = re.compile(r"^\[(protocol|model)\]\s*")
 #: head parts `protocol-fill` does not write, by the label an agent gave, and
-#: where they are written instead (round 2: `[reference]` filled as a field)
+#: where they are written instead
 NOT_FILLED: dict[str, str] = {
     "reference": "the head's [reference] table is written by `labkit-init exp <name> "
     "--kind compute --reference VALUE[±TOL]` before the first measurement, or by "
@@ -243,12 +243,10 @@ def head_open(text: str, key: str) -> int | None:
     inside its table only (`[kept]`), so a `key = "<…>"` elsewhere is not it.
 
     The stamp leaves `type` — and `repeat_cost`, when `labkit-init exp` got no
-    `--repeat-cost` — as a placeholder in the head; `--list` named only the prose
-    fields, so an agent filled those, hit the hook's "MISSING (must):
-    [protocol] type" and edited the head by hand (cloud probe, Haiku 5.5,
-    2026-10-13). Read inside the TOML block only (`protocol_block.toml_block_span`):
-    a `type = "<…>"` line in a fenced example was taken for the head
-    (audit 2026-10-15)."""
+    `--repeat-cost` — as a placeholder in the head, so `--list` names them beside
+    the prose fields. Read inside the TOML block only
+    (`protocol_block.toml_block_span`): a `type = "<…>"` line in a fenced
+    example is not the head."""
     if key not in HEAD_CHOICES:
         raise ValueError(
             f"the head's {key!r} is not a choice protocol-fill sets "
@@ -383,7 +381,7 @@ def sentence_lines(text: str) -> dict[str, int]:
     ids come from `promises.parse_block`, in table order; this function
     only counts `[[promise]]` headers and finds each table's sentence key,
     so every valid spelling of the id reads (a comment after it, single
-    quotes, a quoted key dropped the table, review 2026-10-20). Lines are
+    quotes, a quoted key). Lines are
     cut as the fence walker cuts them (`str.splitlines`). An id is missing
     when its table has no one-line sentence key, or when the headers do not
     count the tables (an inline array of tables). Raises
@@ -412,7 +410,7 @@ def open_sentences(text: str) -> list[tuple[int | None, str]]:
     """(line, `<id> sentence`) of every [[promise]] sentence still holding the
     stamp's `<…>`, the line None where `sentence_lines` cannot place it —
     named all the same: the pre-commit refuses each one where the tables
-    are owed (judge probes, 2026-10-20). Raises promises.PromiseError on a
+    are owed. Raises promises.PromiseError on a
     malformed block."""
     block = promises.parse_block(text)
     if block is None:
@@ -426,8 +424,8 @@ def open_sentences(text: str) -> list[tuple[int | None, str]]:
 
 def fill_sentence(text: str, pid: str, value: str, force: bool = False) -> str:
     """Set [[promise]] PID's sentence to VALUE, written by
-    `protocol_block.toml_string` — the escaping an agent got wrong by hand
-    (an unescaped quote, count probe 2026-10-20). The line keeps its key,
+    `protocol_block.toml_string` — the escaping an agent gets wrong by hand
+    (an unescaped quote). The line keeps its key,
     comment and line ending; every other byte stays. Refuses a written
     sentence without force, and a sentence not on one line (edit that by
     hand); reads the block back and raises unless it holds exactly VALUE."""
@@ -470,9 +468,8 @@ def assignments_of(field: str | None, value: list[str]) -> list[tuple[str, str]]
     """The (label, value) pairs a command line asks for: `FIELD VALUE...` is
     one pair, `LABEL=VALUE [LABEL=VALUE ...]` (every word carries `=`; a
     value with spaces is one quoted word) one pair per word. Empty when the
-    line names no value. Why the one-call form: seven cold agents filled six
-    fields in six calls and named it their largest sink (cloud probes,
-    2026-10-13)."""
+    line names no value. Why the one-call form: a fill per call costs one
+    call per field."""
     if not field:
         return []
     words = [field, *value]

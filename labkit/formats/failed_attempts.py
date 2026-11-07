@@ -18,7 +18,7 @@ but the evidence that it tried, next to them:
 
 That file is what `LABKIT_UNFROZEN=1` acknowledges at `high`:
 an audit that could not run, not one nobody ran (`audit_unavailable`, held
-by runlog's freeze gate since 0.99.0). labkit writes it, with the error the
+by runlog's freeze gate). labkit writes it, with the error the
 backend gave; a usage error (an unknown alias, an area that cannot be
 stamped) is not an unavailable audit and leaves none. A record of findings
 and a failed attempt never share a name (`findings.FAILED_SUFFIX`);
@@ -52,8 +52,8 @@ ATTEMPT_TIMEOUT_S = 900
 #: or an answer the requested model did not write whole (`unproven`,
 #: `llm_backends.UnprovenAnswer` — a safety stop, another model). An
 #: unproven attempt ends the auditing of that state with that model
-#: (`stopped_attempt`): each further try costs the same and was stopped
-#: again in the fit probes
+#: (`stopped_attempt`): each further try costs the same and is likely
+#: stopped again
 FAILED_CAUSES = ("unavailable", "unproven")
 
 

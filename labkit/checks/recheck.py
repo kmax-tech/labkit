@@ -3,8 +3,7 @@
     from labkit.checks import recheck
     recheck.holds(area=AREA, out=OUT, recompute=evaluate, note=PROTOCOL)
 
-Three mechanics every area used to re-implement in its `--check`, and two
-cold agents got two of them wrong on the first try (2026-10-05):
+Three mechanics every area's `--check` needs, held here once:
 
 1. **pin** — `out` is the file the chosen run recorded in `outputs.json`
    (runlog keeps a `runs.RECORD_SHA_CHARS`-hex sha256 prefix; the comparison
@@ -41,7 +40,7 @@ from labkit.checks import run_record_check
 
 #: keys labkit writes into metrics.json itself — not evaluate()'s to
 #: reproduce: runlog's duration, llm's retry counter (the stamped evaluate()
-#: records it; a cold agent read this module to learn why --check failed)
+#: records it)
 LABKIT_KEYS = frozenset({"duration_s", "llm_retries"})
 INTENT_KEY = promises.INTENT_KEY
 
@@ -63,10 +62,7 @@ def chosen_run(area: Path, protocol_text: str, run_id: str | None = None) -> Pat
     The choice is `answering_run.bound_answering_run` for the protocol's stamped id,
     the same one finalize and intent-check make; RUN_ID names a run instead,
     which must be completed and bound to that id. Never a repeat draw, named
-    or not (review 2026-10-15: `--from-run <repeat>` wrote its number).
-    Until 0.94.0 this took the area's newest completed run with no look at
-    the binding: in an area holding two protocols `protocol-fill --from-run`
-    wrote the number of a run bound to the other one (audit 2026-10-15).
+    or not.
     """
     try:
         pid = protocol_block.head(protocol_text).id
@@ -141,7 +137,7 @@ def scopes_unchanged(run: Path, area: Path) -> None:
     The run recorded a declared-scope hash per promise (config.json `promises`);
     if a declared region changed since, recomputing with today's code
     agrees or disagrees about a different instrument. Runs without a
-    promise block — and run dirs without config.json, which predate it —
+    promise block — and run dirs without config.json —
     have nothing to compare and pass.
     """
     cfg = runs.read_run_config(run)
@@ -159,7 +155,7 @@ def block_unchanged(run: Path, area: Path) -> None:
 
     A lowered threshold can leave the verdict unchanged by chance — the
     recomputation then agrees and the note looks held, against promises
-    nobody registered before the number (Durchstich 2026-10-06). The bound
+    nobody registered before the number. The bound
     protocol's block must be the one the run recorded.
     """
     cfg = runs.read_run_config(run)
@@ -253,10 +249,9 @@ def _present(number: str, text: str) -> bool:
     """The number as a whole token of the note, sign and exponent included,
     not as a digit run inside another number or a stamp: `3.5` is not in
     `13.57`, `12` is not in `12.7`, `0.5` is not in `-0.5`, `1` and `5`
-    are not in `1e-5` (review 2026-10-20), and `10` is not in the run id
-    `…T10-22-33_ab12` or the date `2026-10-05` — the run id is mandatory
-    in every note, so a count equal to one of its parts passed as cited
-    (audit 2026-10-15). A leading `+` is no sign. A value that is not
+    are not in `1e-5`, and `10` is not in the run id `…T10-22-33_ab12` or
+    the date `2026-10-05` — the run id is mandatory in every note, so a
+    count equal to one of its parts would otherwise pass as cited. A leading `+` is no sign. A value that is not
     finite (`nan`, `inf`, `-inf`) is a whole word of the note, in any
     case, its sign included: the write-back and this check share one
     spelling, so a NaN the run recorded can be cited and proven."""
@@ -278,8 +273,8 @@ def cited(note: Path, numbers: list[str], run_id: str) -> None:
     """Refuse unless the note contains every reported number and cites the run.
 
     A Recorded results line still holding the stamp's placeholder is named as such —
-    "numbers not in PROTOCOL" before the write-back read as a failed check
-    (Haiku 5.5, 2026-10-13); the cure is one command."""
+    "numbers not in PROTOCOL" before the write-back would read as a failed
+    check; the cure is one command."""
     text = note.read_text(encoding="utf-8").replace("−", "-").replace(",", ".")
     missing = sorted({n for n in numbers if not _present(n, text)})
     if missing and ANSWER_OPEN.search(text):
@@ -304,8 +299,8 @@ def verified(
     """pin → scopes → block → agree for one run, no note: (its metrics, the
     keys the recomputation grew). What `holds` checks before the note, and
     what `02_analyze.py --draws` checks for every draw — a draw shown
-    unchecked let an edited repeat file change the flipped items, an edited
-    metrics.json the range (review 2026-10-15). Raises SystemExit on the
+    unchecked lets an edited repeat file change the flipped items, an edited
+    metrics.json the range. Raises SystemExit on the
     first disagreement."""
     pin(run, out)
     scopes_unchanged(run, area)

@@ -24,7 +24,7 @@ _PLACEHOLDER = re.compile(r"<(?!!--)[^<>]{3,}>")
 def readme_placeholders(area: Path) -> list[str]:
     """Lines of the area's README.md still holding a stamped `<…>` placeholder.
     A README that still carries the stamp's blanks tells a reader nothing and
-    looks as if it did (code-navigation round 11). No README: nothing.
+    looks as if it did. No README: nothing.
     Static evidence: the pattern also matches an `<…>` the author wrote in
     prose outside a code span."""
     readme = area / "README.md"
@@ -32,7 +32,7 @@ def readme_placeholders(area: Path) -> list[str]:
         return []
     text = readme.read_text(encoding="utf-8")
     # a `<path>/<id>` inside a code span or a fenced block is an example, not a
-    # blank (cloud probe 2026-10-12, draw 4: a gate line and a reword for nothing)
+    # blank
     scan = re.sub(
         r"```.*?```|`[^`\n]*`",
         lambda m: " " * len(m.group()),
@@ -56,8 +56,7 @@ ROUTE_END = "<!-- /labkit:route -->"
 #: the protocol — which run (`runlog`), which values (`labkit-params`), where
 #: the ids are decided, the proof (CODE-016 The experiment area reconstructs
 #: itself). The README points; it copies no question, answer, run id or
-#: threshold — each has its one home, and a copy went stale within a day
-#: (area 08, 2026-10-08).
+#: threshold — each has its one home, and a copy goes stale.
 ROUTE_STATIONS = (
     "runlog",
     "labkit-params",

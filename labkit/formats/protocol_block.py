@@ -18,8 +18,7 @@ compared with (`reference`):
     report = "REPORT.md"            # optional: the report file, repo-relative, that owes this protocol's result
 
 One parser (`tomllib`), exact keys, typed values: a typo is a loud error
-naming the field, never a silent "not found" — `Cost: second` used to read
-as an undeclared tier and so as `high` (TODO 8). The prose fields a human
+naming the field, never a silent "not found". The prose fields a human
 writes and reads stay Markdown; `protocol_check` holds them by their exact
 template label.
 
@@ -60,7 +59,7 @@ MIGRATION = (
     "without an intent paragraph)"
 )
 TYPES = ("exploratory", "confirmatory")
-#: what the kept number asserts (standard 0.22): a computation judges no
+#: what the kept number asserts: a computation judges no
 #: prediction; a fit judges a model trained or adjusted in this experiment;
 #: an apply judges a model used unchanged — the obligations follow
 #: (`standard_contract.registration_fields`), never the model technology
@@ -194,8 +193,8 @@ def fence_spans(lines: list[str]) -> list[tuple[str, int, int]]:
     walker; `fenced_blocks` is its text form, and the readers that need a
     place (the head's line, the Prompt block to replace) use the spans.
     A fence inside another fence is body, not a block: a verbatim prompt
-    that asks the model for ```toml output is no second head (review
-    2026-10-07). A fence closes with the same character, at least as long,
+    that asks the model for ```toml output is no second head. A fence
+    closes with the same character, at least as long,
     and nothing after it; an unclosed fence runs to the end."""
     out: list[tuple[str, int, int]] = []
     i = 0
@@ -228,10 +227,9 @@ def runs_section(lines: list[str]) -> int | None:
 
 def section_starts(lines: list[str]) -> list[int]:
     """The 0-based indexes of the `## ` headings of a protocol — outside
-    every fence (`fenced_lines`), in order. The one cut into sections: the
-    prose count, the Runs list, the low cut and the stamp's blank-line
-    pass each found the headings themselves, two of them inside fences too
-    (audit 2026-10-23)."""
+    every fence (`fenced_lines`), in order. The one cut into sections for
+    the prose count, the Runs list, the low cut and the stamp's blank-line
+    pass: a `## ` line inside a fence is no heading."""
     fenced = fenced_lines(lines)
     return [
         i
@@ -249,10 +247,9 @@ def section_end(lines: list[str], start: int) -> int:
 def fenced_lines(lines: list[str]) -> set[int]:
     """The 0-based indexes of every line a fence takes — its markers and its
     body, by `fence_spans`. For a reader that walks lines and must skip the
-    fenced ones (a prose count, a label search, a rule scan): until the
-    audit of 2026-10-18 seven readers toggled a flag on ``` by hand, so a
-    `~~~` fence or a ``` nested in a fence turned prose into code and code
-    into prose for them, while the protocol parser read it right."""
+    fenced ones (a prose count, a label search, a rule scan). A flag
+    toggled on ``` by hand would turn prose into code at a `~~~` fence or a
+    ``` nested in a fence, where the protocol parser reads it right."""
     out: set[int] = set()
     for _, start, end in fence_spans(lines):
         out.update(range(start - 1, min(end + 1, len(lines))))
@@ -395,10 +392,10 @@ FILLABLE_HEAD_KEYS: dict[str, tuple[str, tuple[str, ...] | None]] = {
     "repeat_cost": ("repeat_cost", REPEAT_COSTS),
     "kind": ("kind", KINDS),
     "model alias": ("alias", None),  # [model] alias, stamped by --model without a name
-    # [model] number_describes, a MUST of a computation with a model that no
-    # tool could set and `--list` never named (audit 2026-10-27, third, I5)
+    # [model] number_describes, a MUST of a computation with a model: listed
+    # here so a fill can set it and `--list` names it
     "number_describes": ("number_describes", NUMBER_DESCRIBES),
-    # a computation's [kept] (standard 0.24): the key of its kept number and
+    # a computation's [kept]: the key of its kept number and
     # its unit, stamped as placeholders unless `labkit-init exp --kept/--unit`
     # named them; `table.key` reads the key inside that table only
     "kept.key": ("kept.key", None),
@@ -471,8 +468,7 @@ def model(text: str) -> Model | None:
     compared arms as `[model.arms.<arm>]` tables (profile, fingerprint,
     alias) finalize holds to the run — or None without the table: no model,
     a computation or an estimator. The one answer to "is a model named" for the
-    low cut, the registration and `--report` (until 0.100.0 the prose
-    `Model / tool` line, read with a pattern for "n/a", "none" and dashes).
+    low cut, the registration and `--report`.
     `alias` is None while it is still the stamp's placeholder, so is
     `number_describes`. Whether the claim keys fit the kind is
     `protocol_check.kind_gap`'s answer. Raises BlockError on a non-table, an
@@ -536,7 +532,7 @@ def declared_labels(text: str) -> tuple[str, ...] | None:
     return tuple(labels)
 
 
-#: the `[kept]` table of a computation (standard 0.24): the metrics.json key
+#: the `[kept]` table of a computation: the metrics.json key
 #: of its kept number and that number's unit
 #: (docs/notes/2026-11-01-kept-key-in-the-head.md)
 KEPT_KEYS = ("key", "unit")
@@ -694,7 +690,7 @@ def reference(text: str) -> Reference | None:
     true`), and `source`, who states the value — or None without the
     table: a pure computation. Raises BlockError on a non-table, a table
     without `[kept]` beside it (the key compared lives there), an unknown
-    key (`key` among them: it moved to `[kept]` in standard 0.24), a
+    key (`key` among them: the compared key lives in `[kept]`), a
     missing `value` or `relation`, a `value` or `tolerance` that is not a
     finite number (a bool is none), a negative tolerance, a `relation`
     outside RELATIONS, `within` without a tolerance, `at_least` or
@@ -801,9 +797,7 @@ def declared_run(text: str) -> str | None:
     run = "<run_id>"` in the TOML block, written by `protocol-fill
     --from-run` and never typed; report-check holds the protocol to it at
     the stop and the commit. None without a `[result]` table: an
-    exploration that reports nothing (until 0.100.0 the declaration was a
-    run id in the former prose "Answer to the question" line, and a typed
-    `…_final` there passed as a citation). Raises BlockError when the
+    exploration that reports nothing. Raises BlockError when the
     table is not a table, holds a key other than `run`, or `run` is not a
     string in the shape runlog writes (`runs.RUN_ID`)."""
     data = parse_toml_block(text)
@@ -933,7 +927,7 @@ def repo_protocol_ids(start: Path) -> dict[str, list[Path]]:
     """Every protocol id in the repo, mapped to the files carrying it — read
     now, never cached: the caller holds the index for as long as it may
     trust it (`main`: one scan per repo per invocation). A module-level
-    cache kept a duplicate made later in the same process invisible.
+    cache would hide a duplicate made later in the same process.
 
     Uniqueness cannot be settled at the stamp alone: copying a protocol or
     editing the id by hand makes a duplicate long after `labkit-init exp` ran, and
@@ -982,8 +976,7 @@ def head(text: str) -> Head:  # noqa: C901 complexity baseline 2026-10-08
     if standard != STANDARD:
         # A protocol with runs is history: AGENTS.md keeps it at its commit and
         # pin and never converts it; only one not yet run may take the
-        # migration (the refusal offered "update the protocol" to every
-        # protocol alike, against AGENTS.md — review 2026-10-28).
+        # migration.
         raise BlockError(
             f"[protocol] standard = {standard!r}, this labkit reads "
             f"{STANDARD!r} — a protocol with runs is reproduced with the "

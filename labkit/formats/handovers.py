@@ -156,9 +156,7 @@ def evidence(
     answer are left out, and the journal is fingerprinted without its
     report-review lines (`journal_digest`). A registered report owes its
     review once its handover block stands, and the review must not void
-    the handover it completes (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md); any other audit added
-    still does.
+    the handover it completes; any other audit added still does.
 
     Omit only the handover being validated to avoid self-reference.
     Raise HandoverError outside git, for symbolic-link evidence and when
@@ -182,7 +180,7 @@ def evidence(
             held = blobs_now(root, paths)
     except GitError as exc:
         # an unmerged or link entry in the index: a sentence, not a
-        # traceback at the commit (audit 2026-10-27, third, K3)
+        # traceback at the commit
         raise HandoverError(f"{folder}: {exc}") from exc
     out: dict[str, str] = {}
     for p, sha in sorted(held.items()):
@@ -219,11 +217,10 @@ def journal_digest(root: Path, path: Path, sha: str, *, staged: bool) -> str | N
     object stays — raw evidence. The index's journal is read from git
     (`text_at`), the tree's from disk as its bytes; one that is not UTF-8
     names no line, so nothing is left out and its id is SHA. Why one
-    computation: the journal was bound by its blob id and, once the review
-    wrote to it, checked by a digest of another kind, so every handover
-    after an analysis audit was voided by the review it owed (2026-11-03,
-    docs/notes/2026-11-03-handover-journal-binding.md). Raises GitError
-    when git fails."""
+    computation: a journal bound by one kind of id and checked by another
+    voids every handover after an analysis audit once the review it owes
+    writes to the journal (docs/notes/2026-11-03-handover-journal-binding.md).
+    Raises GitError when git fails."""
     try:
         text = (
             (text_at(root, path) or "") if staged else path.read_bytes().decode("utf-8")

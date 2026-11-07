@@ -163,9 +163,8 @@ def _path_under_area(expr: ast.expr, area: Path) -> Path | None:
 def _loads_area_file(node: ast.Call, area: Path) -> bool:
     """Does this loader call name, as a literal path, a file the area's stamp
     covers already (`scope_sha.area_files`)? The stamped 02_analyze.py loads
-    its own 01_measure.py so; warning on it made every fresh area with a
-    model start with a WARNING from labkit's own skeleton (cold Sonnet,
-    2026-10-14). A computed path stays a finding."""
+    its own 01_measure.py so, and a fresh area must not start with a WARNING
+    from labkit's own skeleton. A computed path stays a finding."""
     covered = {f.resolve() for f in area_files(area)}
     return any(
         (target := _path_under_area(arg, area)) is not None
@@ -276,5 +275,5 @@ def stamp_coverage_findings(area: Path, repo: Path) -> list[GateFinding]:
     for path in helpers:
         out += [(str(path), n, f) for n, f in _coverage_in(path, area, repo, own=False)]
     # ast.walk is breadth-first; the reader wants source order (the line on
-    # a tie, as before the findings were data)
+    # a tie)
     return [f for _, _, f in sorted(out, key=lambda t: (t[0], t[1], t[2].line))]

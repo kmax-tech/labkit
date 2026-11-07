@@ -17,9 +17,7 @@ object per line, never rewriting one:
 The model's answer is kept before anything reads it, as
 `audits/answers/<attempt id>.txt`, and the end names it (`"answer":
 "answers/<id>.txt"`) — also when the answer does not read and no record is
-written (second fixed-followup pilot: six answers refused on one field,
-kept only because the pilot's runner passed `--out`). A kept answer
-releases nothing; it is evidence of what the auditor said.
+written. A kept answer releases nothing; it is evidence of what the auditor said.
 
 An attempt is *running* while its process holds the attempt's lock,
 *interrupted* when it started and holds no lock any more without an end
@@ -38,11 +36,9 @@ answer), a file under `audits/` HEAD holds
 that is missing, and a journal that is no longer HEAD's plus new lines —
 blockers, each naming the attempt or the file. A running, interrupted or
 undecidable attempt (started on another host) is named, not held: a
-timeout must not lock the area. Why (sixth haiku round, t3; eighth, t18):
-agents ran `rm audits/*.toml` before a new attempt, and nothing noticed
-that a failed or an earlier record was gone; the reviews joined the
-journal after the ninth (t5 deleted a report review that named two
-claims, and only HEAD would have noticed).
+timeout must not lock the area. Why: an agent may run `rm audits/*.toml`
+before a new attempt, and without the journal nothing notices that a
+failed or an earlier record, or a report review, is gone.
 
 `scope_sha` in a start is the digest of what the attempt was given to
 read: the area's stamp for an audit and a decision review, the
@@ -54,18 +50,16 @@ file name in the area, `protocol`); a review's names neither. With the
 journal's order they tell whether a later audit supersedes a failed
 call (`superseding_record`), which only `labkit-audit --findings` reads.
 
-The journal starts with the attempts made since it was introduced; a
-record older than its journal is named by none, and none is added for it
-afterwards — an entry written later would claim a start nobody saw.
+A record older than its journal is named by no attempt, and none is
+added for it afterwards — an entry written later would claim a start nobody saw.
 
 Every line is also written to a copy outside the working tree, in the
 repository's git directory, one file per branch and area
 (`journal_copy`); the tree check holds the journal to it: a line the copy
 keeps that the journal lacks is a lost attempt, and a file its end names
-that is gone is lost evidence (`copy_gaps`). Why: agents deleted
-`audits/` whole, journal included, before a first commit (ninth haiku
-round t5; first SAB-like draw, 2026-10-27), and then nothing in the tree
-was left to notice. The guarantee is exactly that: an attempt made in
+that is gone is lost evidence (`copy_gaps`). Why: with `audits/` deleted
+whole, journal included, before a first commit, nothing in the tree is
+left to notice. The guarantee is exactly that: an attempt made in
 this repository on a branch, its journal line or files deleted in the
 working tree. Not covered: a detached HEAD (no copy is kept), a fresh
 clone, a deleted git directory, attempts made before the copy existed. A
@@ -237,7 +231,7 @@ def validate_audit_binding(
 
     Review modes bind their inputs separately and need neither field.
     Pure; raises AttemptError naming WHERE and each missing or malformed
-    field. Starts written before audit bindings existed are not migrated.
+    field. A start lacking them is refused, not repaired.
     """
     if mode not in findings.MODES:
         return
@@ -329,7 +323,7 @@ def superseding_record(
     PROTOCOL is the file name in the area, not the head's `id` (a protocol
     without one must be nameable): a file renamed since counts as another
     protocol, and its earlier calls stay named until it is renamed back and
-    audited, or the area is handed over (Max, 2026-10-28).
+    audited, or the area is handed over.
 
     RECORDS are the area's records of findings by file name under audits/;
     one no attempt names supersedes nothing, nor does an earlier one. The
@@ -490,7 +484,7 @@ def _lock_file(area: Path, name: str) -> Path:
 def _is_free(path: Path) -> bool:
     """Is the lock at PATH held by no process (`files.lock_held`: a shared
     probe, so two callers asking at once never see each other as the
-    holder — an exclusive probe did)? A missing lock file is free."""
+    holder, as an exclusive probe would)? A missing lock file is free."""
     try:
         return not lock_held(path)
     except FileNotFoundError:
@@ -508,9 +502,8 @@ def running(area: Path, mode: str | None = None) -> list[Attempt]:
 
 def running_words(a: Attempt) -> str:
     """What an audit under way is, for the views that read the records: a
-    running audit read as "no audit record yet" and "none has run yet", and
-    agents started a second, polled or deleted records (registered pilot
-    part 1: 15, 34, 60)."""
+    running audit read as "no audit record yet" or "none has run yet"
+    invites a second audit, polling or deleted records."""
     return (
         f"a {a.mode} audit is running — attempt {a.id} ({a.model}, started "
         f"{a.started}); its record is written when it ends: wait for it, then "
@@ -559,9 +552,9 @@ def restore_command(
     here: staged when it is still on disk (IN_TREE), checked out when HEAD
     holds it (AT_HEAD), copied from the branch's evidence copy when that
     keeps it (KEPT, `kept_files`); None when nothing keeps it — never a
-    restore that cannot work: a record deleted before it was ever staged
-    was offered `git checkout` and `git add`, and neither could bring it
-    back (fourth SAB-like draw, 2026-10-28). Commands run in the area."""
+    restore that cannot work: for a record deleted before it was ever
+    staged neither `git checkout` nor `git add` brings it back. Commands
+    run in the area."""
     path = f"{DIR}/{rel}"
     if rel in in_tree:
         return f"stage it (`git add {shlex.quote(path)}`)"
@@ -590,7 +583,7 @@ def _git_paths(area: Path, rev: str) -> tuple[set[str], str | None]:
     the index —, relative to it; the journal's text there or None when REV
     holds none) — ({}, None) outside git or before the first commit.
     Raises AttemptError when git cannot read the journal there
-    (`unreadable_journal`): read as "no journal", a cut went unheld.
+    (`unreadable_journal`): read as "no journal", a cut would go unheld.
     RuntimeError when git fails otherwise."""
     root = git_root(area)
     held = None if root is None else files_at(root, area / DIR, rev)
@@ -736,8 +729,7 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
     if staged:
         # the commit carries what is staged; a file the tree's journal or the
         # copy names and neither the index nor the tree holds is gone from it
-        # all the same — a record deleted before it was ever staged passed the
-        # commit (fourth SAB-like draw, 2026-10-28)
+        # all the same, a record deleted before it was ever staged too
         lost_here = unstaged_losses(
             attempts,
             parse_journal(_tree_journal(area), f"{DIR}/{JOURNAL}"),
@@ -780,8 +772,8 @@ def area_gaps(area: Path, *, staged: bool = False) -> Gaps:
             for name in handovers.missing_paths(area, present, staged=staged)
         ]
     except handovers.HandoverError as exc:
-        # raised as AttemptError it replaced every gap found above (audit
-        # 2026-10-27, third, K1)
+        # one blocker beside the gaps found above; raised, it would replace
+        # them
         lost = [str(exc)]
     return Gaps([*found.blockers, *lost_here, *lost], found.notes)
 

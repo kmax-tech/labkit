@@ -31,9 +31,9 @@ grade back from a line's words.
 Every BLOCKER names its way out (`fix`): the step that closes it, as a
 command where one exists, and where the cause may not be fixable, the
 handover. A BLOCKER without one is refused here, and
-`tests/test_ways_out_data.py` holds every site that builds one. Why: the
-ways past the gates came where an agent saw no admissible next step, and a
-held step that named its command was followed
+`tests/test_ways_out_data.py` holds every site that builds one. Why: an
+agent that sees no admissible next step goes past the gate, and a held step
+that names its command is followed
 (docs/notes/2026-10-27-standard-way-out.md).
 """
 
@@ -70,12 +70,11 @@ EVIDENCE_KINDS = (GUARANTEED, STATIC_EVIDENCE)
 
 #: how every line joins its fix to its text — `<what is refused and why>.
 #: Next: <fix>`, the fix a command where one exists; a dotted line gives it
-#: its own ` · Next: ` part (agent-surface plan, step 6)
+#: its own ` · Next: ` part
 WAY_OUT = ". Next: "
 #: what a hold names first while a declared run's code has changed
-#: (`GateFinding.withdraw_first`): why in each hold, not in one note — six
-#: holds that said "measure anew" led past a note below them
-#: (decision-reading probe and file-check case, 2026-10-28)
+#: (`GateFinding.withdraw_first`): why in each hold, not in one note — a
+#: hold that says only "measure anew" leads past a note below it
 WITHDRAW_FIRST = "withdraw the adoption first (`{command}`), then "
 
 
@@ -106,7 +105,7 @@ class GateFinding:
     GUARANTEED, although the finding it names is an agent audit's
     judgement — that judgement keeps its own grade in the record
     (`findings.Finding`). The kind is given at every site, never defaulted:
-    the author of a check says what the check is (audit 2026-10-23, C5).
+    the author of a check says what the check is.
 
     Attributes:
         grade: BLOCKER or WARNING.
@@ -272,8 +271,8 @@ class Findings:
             (report-check's finalize station).
         area: The area as the reader types it; every `AREA_SLOT` in a
             finding taken is replaced by it, shell-quoted, so a named
-            command runs as printed (ninth haiku round: a step naming
-            `<area>` was not taken).
+            command runs as printed (a step naming `<area>` is not
+            taken).
         audit: The audit command's head for that area (`commands.audit_command`
             with no step: the area quoted, `--protocol` where the area holds
             several); every `AUDIT_SLOT` is replaced by it before the plain

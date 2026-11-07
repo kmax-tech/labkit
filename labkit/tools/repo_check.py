@@ -27,10 +27,9 @@ labkit cannot read was written under an older pin, and both keep the
 identifiers they were written with; the line says how many areas it left out.
 
 The three checks it bundles exist on their own (`labkit-hooks check`,
-`python -m labkit.formats.rules refs`, the pin line in `requirements.txt`); what was
-missing was one command that asks all of them, plus the two nobody asked:
-installed against pinned, pinned against the newest tag (2026-10-12: in all
-four active lab repos the installed labkit lagged the pin).
+`python -m labkit.formats.rules refs`, the pin line in `requirements.txt`); this
+one command asks all of them, plus the two none of them asks: installed
+against pinned, pinned against the newest tag.
 """
 
 from __future__ import annotations
@@ -192,7 +191,7 @@ def record_areas(repo: Path) -> list[Path]:
     """The areas `refs` does not read: an area whose protocol is frozen is a
     registration, one whose protocol this labkit cannot read (an older
     standard, a prose head) was written under an older pin — both keep the
-    identifiers they were written with (CHANGELOG 0.82.0)."""
+    identifiers they were written with."""
     out = set()
     for proto in repo_protocols(repo):
         try:

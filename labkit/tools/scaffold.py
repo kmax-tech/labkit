@@ -18,8 +18,9 @@ the package. The lab standard is not
 copied: it comes with the pin (`python -m labkit.formats.rules show LAB-nnn`).
 
 `exp` stamps one self-contained area `experiments/NN-<name>/`: the protocol
-(the pilot part by default; `--report` adds the † fields, now or when the run
-graduates; `--repeat-cost low` stamps the low cut instead; `--report-file
+(the full form with its † fields; `--repeat-cost low` stamps the low cut
+instead, `--report` the full form there too or appends the † fields to an
+existing area when the run graduates; `--report-file
 PATH` registers the report file, repo-relative, that owes the protocol's
 result — `report = "PATH"` in the head, `protocol_block.report_field`), the script
 skeletons the kind calls for (`standard_contract.skeleton`: a computation
@@ -45,8 +46,8 @@ another kind before its first measurement (`change_kind`).
 
 The number `NN` is one above every number an area carries in this tree, in
 `_archiv/`, on every branch this clone knows and in every other worktree
-(`next_experiment_number`): two branches that each counted only their own
-tree handed out one number twice. `numbers` checks that every area carries
+(`next_experiment_number`): two branches that each count only their own
+tree hand out one number twice. `numbers` checks that every area carries
 a number of its own and prints the next free one; with `--staged` it reads
 the index, and the pre-commit and pre-merge-commit hooks run it so, since a
 branch this clone never fetched stays unseen until the merge brings it in.
@@ -220,8 +221,8 @@ def pinned_ref(ref: str | None = None) -> str:
 
     Refuses when the installed metadata and the source checkout disagree: an
     editable install keeps the version of its last `pip install -e` while
-    the templates are read live, and the first re-stamp after the 0.88.7
-    release pinned v0.88.5 under 0.88.7 templates (2026-10-13)."""
+    the templates are read live, so the pin would name an older release
+    than the templates stamped."""
     version = importlib.metadata.version("labkit")
     source = source_version()
     if source is not None and source != version:
@@ -489,7 +490,7 @@ def area_readme(
 
     A computation (SK the compute skeleton, kind compute at every tier) carries no blank:
     its question and contract live in the protocol, and a README placeholder
-    was the one gate line left in the cloud probe (draw 11, 2026-10-13).
+    would be one more gate line to fill.
     PROBE: the lane allows a `--probe` before the run (`Lane.probe_allowed`);
     the State list names it only then, and parser cases only for the prompt
     skeleton, the one with a parser."""
@@ -581,8 +582,8 @@ def explore_next(slug: str) -> str:
     command per kind and the questions that choose among them
     (`KIND_QUESTIONS`) — the kind is not known while exploring, and `exp`
     without `--kind` is refused (`asked_kind`); the repeat cost named too,
-    since without it the stamp took the high form with a placeholder cost
-    (audit 2026-10-27, third, I8)."""
+    since without it the stamp takes the high form with a placeholder
+    cost."""
     commands = "\n".join(
         f"  labkit-init exp {slug} --kind {kind} --repeat-cost low"
         for kind in protocol_block.KINDS
@@ -687,9 +688,9 @@ def script_stamps(
     alias = model if isinstance(model, str) else "TODO-alias"
     tname = area_test_stem(nn, slug) + ".py"
     for tmpl, dest in skeleton.scripts:
-        # `<NN>_<name>` first: the scripts name the area's test file too (the
-        # probe's "paste into tests/test_<NN>_<name>.py" stayed unreplaced,
-        # cloud judge probe 2026-10-14)
+        # `<NN>_<name>` first: the scripts name the area's test file too
+        # ("paste into tests/test_<NN>_<name>.py"), and replacing `<name>`
+        # first would leave its `<NN>_` standing
         text = (
             template(tmpl)
             .replace("<NN>_<name>", tname[len("test_") : -3])
@@ -727,7 +728,7 @@ def stamp_area(
     and the report to print (what was written, then the next steps) — the
     caller prints; `stamp_lab` returns its log the same way. KIND is what
     the kept number asserts (`protocol_block.KINDS`); a new area without it
-    is refused — nothing falls back to a computation (standard 0.22).
+    is refused — nothing falls back to a computation.
     REPORT_FILE registers the report file that owes the protocol's result
     (the head's `report`, relative to ROOT); a new area's stamp only.
     DELIVERABLES and DELIVERABLE_COLUMNS are stamped into the measure
@@ -820,8 +821,8 @@ def stamp_area(
     )
     _point_hooks_at(root)
     # one line, not the route: `labkit-next` computes the next step from the
-    # area's state, and AGENTS.md's loop starts there (the printed six steps
-    # were a second copy of the route, read once and then stale)
+    # area's state, and AGENTS.md's loop starts there (printed steps would
+    # be a second copy of the route, read once and then stale)
     rel = area.relative_to(root)
     return area, (
         f"{'Measurement' if quick else 'Experiment'} -> {area}\n"
@@ -843,8 +844,8 @@ def protocol_stamp(
     reference: protocol_block.Reference | None = None,
     kept: protocol_block.Kept | None = None,
 ) -> str:
-    """The protocol `exp` stamps for these answers: the low cut, or the
-    pilot part — with REPORT the whole — under a fresh id, or PID, with
+    """The protocol `exp` stamps for these answers: the full form, or at
+    low repeat cost without REPORT the low cut — under a fresh id, or PID, with
     REPORT_FILE registered in the head, REFERENCE as its `[reference]`
     table and, for a computation, KEPT as its `[kept]` (None: both
     placeholders). Reads
@@ -871,10 +872,8 @@ def protocol_stamp(
     )  # every written protocol is free of the cut markers
     # the full form carries the † fields from the stamp: the freeze owes the
     # should ones and the adoption the result ones, and a frozen protocol
-    # without them held its agent for 19 minutes (labkit-paper's tassay-r2,
-    # 2026-11-04); the low cut never owes them (REPORT appends them to an
-    # existing area, `promote`). Until 0.109.0 the full form was the pilot
-    # part, the whole only with REPORT.
+    # without them holds its agent; the low cut never owes them (REPORT
+    # appends them to an existing area, `promote`).
     whole = report or not quick
     if whole:
         if skeleton is standard_contract.ESTIMATOR:
@@ -966,7 +965,7 @@ def existing_area(experiments: Path, name: str) -> Path | None:
     slug. Raises `console.Refused`, naming the candidates and how to name
     one, when the typed number names none of them, or several carry the
     slug and no number was typed: taking the first in directory order, or
-    another number's area, was a guess (audit 2026-10-27)."""
+    another number's area, would be a guess."""
     slug = area_slug(name)
     found = areas_named(experiments, slug)
     number = split_area_name(name.strip())[0]
@@ -1410,8 +1409,8 @@ def parse_kept_flags(key: str | None, unit: str | None) -> protocol_block.Kept |
 
 def asked_kind(kind: str | None) -> str:
     """The kind a new area is stamped with — the one asked, held to
-    `protocol_block.KINDS`; nothing falls back to a computation (standard
-    0.22). A computation with `--model` is stamped, not refused: its head
+    `protocol_block.KINDS`; nothing falls back to a computation. A
+    computation with `--model` is stamped, not refused: its head
     says what the number describes (`COMPUTE_CLAIM`). Raises
     `console.Refused` naming the choice."""
     if kind is None:
@@ -1429,7 +1428,7 @@ def asked_kind(kind: str | None) -> str:
 
 def _point_hooks_at(root: Path) -> None:
     """`core.hooksPath = .githooks` where the repo has both: the hook runs
-    only where that setting points at it (2026-10-05)."""
+    only where that setting points at it."""
     if not ((root / ".git").exists() and (root / install_hooks.HOOKS_DIR).is_dir()):
         return
     try:
@@ -1455,8 +1454,8 @@ def blank_before_headings(text: str) -> str:
 
 #: the questions that decide `--kind`, asked in this order; the `--kind`
 #: help and the refusal without `--kind` print this one text. Training
-#: comes first and covers a deliverable of predictions:
-#: an agent told to "train a random forest" called it a cheap computation
+#: comes first and covers a deliverable of predictions: else an agent
+#: told to "train a random forest" calls it a cheap computation
 #: (docs/notes/2026-10-26-kind-choice.md)
 KIND_QUESTIONS = (
     "(1) What does the reported result claim? If it claims how well a model "
@@ -1502,7 +1501,7 @@ def stamped_head(
     """The template with its head tokens replaced: the name once, a fresh
     protocol id (PID when given), COST when asked, KIND always, with MODEL a `[model]`
     table after `preflight_audit` — the alias when --model named one, else
-    its placeholder for `protocol-fill "model alias=…"` (phase 4, 2026-10-21),
+    its placeholder for `protocol-fill "model alias=…"`,
     and for a computation the claim keys (`COMPUTE_CLAIM`) —, with
     REFERENCE the `[reference]` table (`protocol_block.reference_toml`)
     after it, for a computation the `[kept]` table before them
@@ -1567,7 +1566,7 @@ def check_stamped_head(
     as its `[kept]` (None: both placeholders); another kind carries no
     `[kept]`.
     The stamp writes them by replacing template
-    tokens; a token the template no longer carried would leave the
+    tokens; a token missing from the template would leave the
     placeholder without a word."""
     head = protocol_block.head(text)
     if head.id is None:
@@ -1802,7 +1801,7 @@ def main(argv: list[str]) -> int:
         return 0
     # the nearest lab repo above the working directory, as git finds its
     # repo; the directory itself when none, so stamp_area names what it
-    # was asked about (an area directory, cloud judge probe 2026-10-14)
+    # was asked about (an area directory)
     root = (
         a.repo.resolve()
         if a.repo is not None
@@ -1813,7 +1812,7 @@ def main(argv: list[str]) -> int:
         print(report)
         return code
     # before the explore branch returns, or `--explore --change-kind` stamps
-    # the explore file and exits 0 (audit 2026-10-27, C13)
+    # the explore file and exits 0
     if (a.relation or a.reference_source) and not a.reference:
         ap.error("--relation and --reference-source go with --reference VALUE")
     if a.change_kind and (

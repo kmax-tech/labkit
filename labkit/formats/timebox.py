@@ -9,7 +9,7 @@ budget (`over_budget`), before the budget is spent — a refusal with the
 numbers instead of a container killed at its limit. A Timebox that does
 not start with a duration is no error: the field stays prose, and the
 caller says that no projection is made. Pure functions; no file is read
-here. Why and the incident: docs/notes/2026-10-31-fit-budget.md.
+here. Why: docs/notes/2026-10-31-fit-budget.md.
 """
 
 from __future__ import annotations

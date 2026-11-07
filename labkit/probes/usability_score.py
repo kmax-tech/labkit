@@ -151,9 +151,8 @@ def archive(root: Path, transcript: Path, dest: Path) -> list[Path]:
     the bytes depend on the content only), its timeline and the score, as
     `<dest>/<probe>.jsonl.gz`, `.timeline.txt`, `.score.json`. Claude Code
     deletes transcripts after `cleanupPeriodDays` (30 by default), and a
-    transcript is what showed an agent's source reads and detours on
-    2026-10-07. A file already there with other bytes is refused, never
-    overwritten."""
+    transcript is what shows an agent's source reads and detours. A file
+    already there with other bytes is refused, never overwritten."""
     import gzip
 
     dest.mkdir(parents=True, exist_ok=True)
@@ -491,9 +490,7 @@ def score(root: Path, transcript: Path | None = None, agent: str | None = None) 
     `write_score` keeps it as `<dir>.score.json`, `score_rows` shows it.
     Exit 0 when the number holds as the task's (`Score.number_ok`) and the
     run is bound, else 1 — the hidden evaluation and the null condition
-    are shown, they do not change the exit. It
-    computed, wrote and printed in one 193-line body (audit 2026-10-27,
-    third, M4/M7)."""
+    are shown, they do not change the exit."""
     sc, notes = probe_score(root, transcript, agent)
     for note in notes:
         print(f"  {note}")
@@ -521,8 +518,7 @@ def probe_score(
 
     AGENT names the model that drew (`fable-5.1`, `sonnet-5.5`): a cloud
     session leaves no transcript, so the operator states it and the score
-    carries it — twelve score files named the model only in their file name
-    (2026-10-13)."""
+    carries it, not only the score file's name."""
     notes: list[str] = []
     pr = load_probe_run(root)
     probe, run, metrics = pr.probe, pr.run, pr.metrics

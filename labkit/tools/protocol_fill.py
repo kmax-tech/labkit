@@ -1,8 +1,7 @@
 """protocol-fill — fill protocol fields, adopt a run or render recorded results.
 
 Filling protocol fields by full-text replacement fails in rounds: the quoted
-placeholder block never matches exactly (2026-09-09, twice in one day on the
-same protocol — three attempts each until a regex sat). The template stamps
+placeholder block rarely matches exactly. The template stamps
 every field as `- **Label †:** <placeholder>`, so the LABEL is the stable
 handle; this tool matches it, replaces the `<...>` value (multi-line
 placeholders included) and leaves everything else byte-identical. The text
@@ -64,9 +63,8 @@ A field that is already filled is refused without --force — overwriting an
 answer silently is how two truths happen.
 
 `--from-run` is the write-back LAB-041 Generate numbers, don't retype them
-asks for: twelve cold agents (cloud probes 2026-10-12) typed the number into
-three protocol lines by hand, and one `--check` failed on the retyping. The
-lines carry every metric key and value as the run recorded them, and the
+asks for: a number typed by hand into the protocol's lines is one `--check`
+can fail on. The lines carry every metric key and value as the run recorded them, and the
 run_id — exactly what `--check` (`recheck.cited`) holds the protocol to. Labels are matched with the †
 marker and case ignored; an ambiguous label (same label in Summary and a
 section) is refused with the line numbers, disambiguate with --line.
@@ -151,9 +149,8 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     refuses is no weaker kind of result, it is none). The gates at the stop
     and the commit (`report-check --if-reported`) hold the same line to a
     hand-written or later-changed answer. A check that ends in an exception
-    puts BEFORE back too and re-raises: until 0.99.0 only a blocker exit
-    restored the file, and the unchecked declaration stayed (audit
-    2026-10-19, a check script printing a byte no codec reads). Both writes
+    puts BEFORE back too and re-raises, so no unchecked declaration stays.
+    Both writes
     go whole or not at all (`files.write_atomic`): a reader, or the next
     check, sees the protocol as it was or as proposed, never half of
     either; the check is told it holds the proposal (`report_context.PROPOSED`).
@@ -178,7 +175,7 @@ def adopt(protocol: Path, before: str, after: str) -> int:
     files.write_atomic(protocol, before)
     pending.unlink()
     # the discussion owes a report review, which `attempts.begin` refuses
-    # while the area's evidence is gone (pilot t60)
+    # while the area's evidence is gone
     lost = report_hold.lost_evidence(protocol)
     mention = (
         f"a report cannot discuss this run now — {lost.fix}"
@@ -264,9 +261,9 @@ def _write_back(args: argparse.Namespace, text: str) -> int:
 def _name_yours(text: str, area: Path, run: Path) -> None:
     """After an adopted write-back: the after-run fields still open, which
     the author writes (Conclusion: the question's answer in two sentences within
-    the Limitations; Raw output from the rows), and the run's output files — the
-    post hook asked for Raw output only after the commit, and two of three
-    cold agents filled it in a second round (sandbox, 2026-10-21). A field
+    the Limitations; Raw output from the rows), and the run's output files —
+    named now, so the author writes them before the commit, not in a second
+    round. A field
     this protocol does not owe (`not_owed`: Raw output without a model) is
     not named."""
     spared = not_owed(text)
@@ -288,9 +285,8 @@ def _list_open(text: str) -> int:
     """`--list`: every open field, the TOML head's placeholders (`protocol_block.FILLABLE_HEAD_KEYS`)
     and open promise sentences first; then, each under its own line, the fields `--from-run`
     writes and the after-run fields the author writes. Listed among the rest
-    they read as owed before the run: cold agents filled them with "pending
-    run" or "filled after the run", and the write after the run was then
-    refused without --force (cloud 2026-10-14, sandbox 2026-10-21)."""
+    they read as owed before the run, and a "pending run" written into one
+    makes the write after the run refused without --force."""
     sentences: list[tuple[int | None, str]] = [
         (n, f"{label}  (TOML head: this promise in one sentence)")
         for n, label in open_sentences(text)
@@ -487,9 +483,8 @@ def _freeze_file(protocol: Path, text: str, named: str) -> int:
     record) — when the proposed head passes the freeze gate's checks
     (`audit_gaps.freeze_refusals`); else refuse with them, exit 1, the file as
     it was. Exit 2 without a record to name or a head to freeze. The one
-    writer of the freeze: until 0.109.0 the keys were set by hand, and a
-    protocol frozen with its fields open or its audit undecided met the
-    gates one by one (labkit-paper's tassay-r2, 2026-11-04: 19 minutes)."""
+    writer of the freeze, so no protocol is frozen with its fields open or
+    its audit undecided."""
     area = protocol.resolve().parent
     record = named
     try:
@@ -654,7 +649,7 @@ def _withdraw_file(args: argparse.Namespace, text: str) -> int:
     )
     if withdrawn.is_dir() and code_since_run(area, withdrawn)[0] and not measured_now:
         # a code repair not measured yet: the withdrawn run's number came from
-        # other code, so the run that answers is a new one (probe 2026-11-03)
+        # other code, so the run that answers is a new one
         print(
             f"  2. the measuring code changed since {run_id} ran: measure again "
             f"(`{measure_command(area)}`), then "
@@ -735,8 +730,7 @@ def _handover_file(args: argparse.Namespace, text: str) -> int:
         files.write_atomic(report, written)
     except (ValueError, OSError, GitError) as exc:
         # what was written before the failure stays and grants nothing until
-        # all three agree; said, so a rerun is not a surprise (audit
-        # 2026-10-27, third, K8)
+        # all three agree; said, so a rerun is not a surprise
         partly = (
             f" — written before it: {', '.join(done)}; they grant nothing until "
             "the report matches, and a rerun writes a new record beside them"

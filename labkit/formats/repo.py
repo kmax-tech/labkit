@@ -1,10 +1,8 @@
 """repo — where things are: repo root, an area's protocols, git.
 
-Small questions every gate asks, answered once. Before 2026-10-06 they were
-answered five times: each module globbed `PROTOCOL-*.md` itself, three
-functions found the repo root by three different rules, and two private
-`_git` helpers turned EVERY git failure into an empty string — so a git that
-failed to run read as "working tree clean".
+Small questions every gate asks, answered once: an area's protocols, the
+repo root by one rule, and git — a git that fails to run raises, it never
+reads as "working tree clean".
 
 Two git calls, by what a non-zero exit means:
 
@@ -30,7 +28,7 @@ from labkit.formats import console
 
 GIT_TIMEOUT_S = 20
 
-# --- requirement lines: the one grammar of a pin (four spellings before, audit 2026-10-13)
+# --- requirement lines: the one grammar of a pin
 _PKG = r"(?P<name>[A-Za-z0-9][A-Za-z0-9._\-]*)"
 #: `name @ git+<url>@<ref>` — a VCS pin; the ref is optional, a trailing `# comment` allowed
 VCS_REQUIREMENT = re.compile(
@@ -38,7 +36,6 @@ VCS_REQUIREMENT = re.compile(
 )
 #: `-e git+<url>@<ref>#egg=<name>` — how pip freezes an editable VCS install;
 #: in a git worktree pip appends `&subdirectory=<path to the worktree>`
-#: (2026-10-27: every probe staged from a worktree found no labkit line)
 EDITABLE_REQUIREMENT = re.compile(
     rf"^-e\s+git\+(?P<url>[^@\s#]+)@(?P<ref>[^#\s]+)#egg={_PKG}(?:&\S*)?\s*$"
 )
@@ -49,8 +46,7 @@ VERSION_REQUIREMENT = re.compile(rf"^{_PKG}\s*==\s*(?P<version>\d+\.\d+\.\d+)\s*
 
 
 def pip_name(name: str) -> str:
-    """A package name as pip normalises it: lowercase, `_` to `-`. Spelled
-    seven times before (audit 2026-10-15)."""
+    """A package name as pip normalises it: lowercase, `_` to `-`."""
     return name.lower().replace("_", "-")
 
 
@@ -91,11 +87,10 @@ def area_path(arg: str) -> Path:
     bare name as `labkit-init exp` prints it — `01-<name>` or `<name>`
     (`areas_named`) — under `experiments/` of the working directory or of
     its repository. Returns the argument unchanged when nothing matches,
-    so the caller's "no such area" still speaks (2026-10-07: two agents
-    passed `01-docs-per-case` to code-check and were refused). Raises
-    AmbiguousArea naming every candidate when more than one area matches:
-    "no such area" for a name that exists twice sent the reader looking
-    for a missing one (review, 2026-10-20)."""
+    so the caller's "no such area" still speaks. Raises AmbiguousArea
+    naming every candidate when more than one area matches: "no such area"
+    for a name that exists twice would send the reader looking for a
+    missing one."""
     given = Path(arg)
     if given.is_dir() or given.is_absolute() or "/" in arg:
         return given
@@ -115,7 +110,7 @@ def shown(path: Path, base: Path) -> str:
     """PATH as a report line, a bundle header or a refusal names it: relative
     to BASE when it lies below it, else absolute; both resolved first (on
     macOS /var is /private/var, and a comparison of one resolved and one
-    unresolved path found nothing below), `/`-separated. The key a stamp
+    unresolved path finds nothing below), `/`-separated. The key a stamp
     hashes is its own rule (`scope_sha._key`), not a display."""
     p, b = path.resolve(), base.resolve()
     return p.relative_to(b).as_posix() if p.is_relative_to(b) else p.as_posix()
@@ -138,10 +133,7 @@ def no_such_area(area: Path) -> str:
     """The sentence for an area path that is not a directory, the one every
     command refuses with. A relative path resolves against the working
     directory, so the sentence names it and the way back: run from the
-    repository root or give the path from there (2026-10-07: an agent called
-    code-check from inside the area with the repo-relative path and tried
-    four spellings; 2026-10-29: `labkit-audit experiments/01-x --findings`
-    from a subdirectory)."""
+    repository root or give the path from there."""
     if area.is_absolute():
         return (
             f"no such area: {area} — give the area's path or its name "
@@ -173,7 +165,7 @@ def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
     its lines, printed), 2 for no argument, an area name several areas
     carry (`area_path`), another argument, or an area that is no directory
     — each refused with its sentence. The one reading of preflight's and
-    finalize's command line, which each spelled it."""
+    finalize's command line."""
     if not argv or argv[0] in ("-h", "--help"):
         return console.usage(tool, "\n".join(usage), asked=bool(argv))
     try:
@@ -198,7 +190,7 @@ def area_args(tool: str, argv: list[str], usage: list[str]) -> AreaArgs | int:
 
 def split_area_name(name: str) -> tuple[str | None, str]:
     """(number, slug) of an area directory name; (None, name) when it
-    carries no `NN-` prefix. Four regexes said this before (audit 2026-10-15)."""
+    carries no `NN-` prefix."""
     m = AREA_NAME.match(name)
     return (m.group(1), m.group(2)) if m else (None, name)
 
@@ -218,8 +210,7 @@ EXPERIMENTS = "experiments"
 def file_url_path(url: str) -> Path | None:
     """The local path a `file://` URL names — also after `git+`, as pip and
     a requirement pin write it —; None for any other URL. One reading for a
-    lock's ref, an editable install and a pin's source (audit 2026-10-28,
-    H8)."""
+    lock's ref, an editable install and a pin's source."""
     plain = url.removeprefix("git+")
     return Path(plain.removeprefix("file://")) if plain.startswith("file://") else None
 
@@ -242,8 +233,8 @@ def areas_named(experiments: Path, name: str) -> list[Path]:
     (`area_path`, NAME as given) and for the area `labkit-init exp` stamps,
     promotes or restamps (`scaffold.existing_area`, NAME spelled as its
     slug first). [] when EXPERIMENTS is no directory. Read by the grammar,
-    not a glob: `[0-9]*-<name>` also took `02-count-docs` for `docs`
-    (audit 2026-10-27)."""
+    not a glob: `[0-9]*-<name>` would also take `02-count-docs` for
+    `docs`."""
     if not experiments.is_dir():
         return []
     return sorted(
@@ -258,8 +249,7 @@ PROTOCOL_GLOB = "PROTOCOL-*.md"
 PROTOCOL_NAME = re.compile(r"^PROTOCOL-[^/]+\.md$")
 #: directories a repo-wide scan never reads: nothing under them is a living
 #: file of the lab — a protocol copied into `runs/<id>/` or shipped in
-#: `.venv/` is a record or a package, not a second protocol (audit
-#: 2026-10-15: four scans, one of them skipped these, three did not)
+#: `.venv/` is a record or a package, not a second protocol
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__", "runs", "data"})
 #: directories that hold no code of the lab: SKIP_DIRS and an area's
 #: `output/` — what a search for an area's scripts and the copy of a run's
@@ -280,8 +270,7 @@ def repo_protocols(root: Path) -> list[Path]:
 def lab_root(start: Path) -> Path | None:
     """The nearest directory, START or above, holding `models.toml` — where
     a lab repo's layout starts for the scaffolder and the model backend;
-    None when none does. One rule: `labkit-init exp` asked for
-    `experiments/` too and `llm` for `models.toml` alone (audit 2026-10-15)."""
+    None when none does. One rule for both."""
     here = start.resolve()
     for d in (here, *here.parents):
         if (d / "models.toml").is_file():
@@ -294,11 +283,10 @@ def area_protocols(area: Path) -> list[Path]:
     lexicographic — a list, not a first hit.
 
     The series rule gives every follow-up its own `PROTOCOL-s<N>-<slug>.md`,
-    so an area legitimately holds many. Returning `sorted(...)[0]` picked
-    one of them wordlessly, and lexicographic order is not temporal order:
-    in an area running s1..s13 the pick was always s1. A green check against
-    the wrong protocol is worse than no check, so the caller must choose
-    (2026-09-26).
+    so an area legitimately holds many. A first hit would pick one of them
+    wordlessly, and lexicographic order is not temporal order: in an area
+    running s1..s13 it is always s1. A green check against the wrong
+    protocol is worse than no check, so the caller must choose.
     """
     return sorted(area.glob(PROTOCOL_GLOB))
 
@@ -327,15 +315,15 @@ def indexed_protocols(repo: Path) -> list[Path]:
 
 #: the suffix of a report the gates hold (`report_hold.report_files`) and
 #: a handover may write: exactly `.md`, so a handover never writes where
-#: report-check would not look (audit 2026-10-27, third, S3)
+#: report-check would not look
 REPORT_SUFFIX = ".md"
 
 
 def protocol_link(path: Path, state: str) -> str:
     """The refusal of PATH, a protocol that is a symbolic link in STATE
     ("tree" or "index"). A protocol is a regular file: the tree's reader
-    followed a link and the index's read the name it stores, so the stop
-    and the commit judged different text."""
+    follows a link and the index's reads the name it stores, so the stop
+    and the commit would judge different text."""
     return (
         f"{path}: a protocol must be a regular file, not a symbolic link (in the "
         f"{state}) — the stop would read the file it names and the commit the "
@@ -586,9 +574,9 @@ def blobs_then(
     "" when its tree was clean) that touches PATHS applied — read in a
     temporary index, the repository's own index untouched; the blobs land
     in the object store, so `git cat-file blob <id>` restores one. A patch
-    written before TREE_PATCH_ARGS is read as far as it can be: colour
+    not written with TREE_PATCH_ARGS is read as far as it can be: colour
     codes dropped, hunk lengths recounted and a hunk not held to the file's
-    end (stripping cut its last blank context lines), its path prefix taken
+    end (stripping cuts its last blank context lines), its path prefix taken
     as written; a last added line's trailing whitespace the stripping took
     is lost and reads as a change. None for a path that tree
     lacks: untracked when the run started, or not yet there. PATHS lie in
@@ -742,8 +730,8 @@ def status_entries(repo: Path, pathspec: tuple[str, ...] = ()) -> list[tuple[str
     """`git status --porcelain` under REPO (PATHSPEC narrows it), untracked
     files included, as (XY, path) — NUL-separated (`-z`): the text form
     quotes a name with a non-ASCII character
-    (`"notes/messung/gr\303\266\303\237e.md"`), which was then no file and
-    never checked (audit 2026-10-15). A rename or copy comes as its new path
+    (`"notes/messung/gr\303\266\303\237e.md"`), which then names no file
+    and goes unchecked. A rename or copy comes as its new path
     with the old one dropped. Raises RuntimeError when git fails."""
     return [(xy, path) for xy, path, _ in _status_records(repo, pathspec)]
 
@@ -794,7 +782,7 @@ def tree_dirty(repo: Path, *, untracked: bool = True) -> bool:
     --porcelain` names anything)? UNTRACKED counts files git does not know
     — a file nobody committed may have been run —, False counts tracked
     files only. False outside a repository; a git that fails inside one
-    raises GitError (it used to read as clean)."""
+    raises GitError, never reads as clean."""
     args = ["status", "--porcelain", *([] if untracked else ["--untracked-files=no"])]
     return bool(git(args, repo))
 
@@ -902,8 +890,8 @@ def commit_of(repo: Path, ref: str) -> str | None:
     sha; None when it names none. `--verify --quiet`: without them
     rev-parse echoes an unknown ref back on stdout instead of failing
     empty. The one "ref → commit" for the lab-pin check, a lock's ref and a
-    pin's tag (audit 2026-10-27, third, S8). Raises GitError when git cannot
-    run (REPO missing among them)."""
+    pin's tag. Raises GitError when git cannot run (REPO missing among
+    them)."""
     r = git_run(["rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"], repo)
     return r.stdout.strip() if r.returncode == 0 else None
 
@@ -1023,7 +1011,7 @@ def git(args: list[str], cwd: Path, timeout: float = GIT_TIMEOUT_S) -> str | Non
     """git's stripped output; None when `cwd` is not inside a repository.
 
     Any other failure raises GitError with git's own message — an empty
-    string here used to mean "clean" whether or not git had run.
+    string here would read as "clean" whether or not git had run.
     """
     if git_root(cwd) is None:
         return None
@@ -1046,8 +1034,8 @@ def given_or_in(given: Path, directory: Path) -> Path:
     when GIVEN is a bare file name and DIRECTORY holds it, else GIVEN
     unchanged — the caller's refusal names what was typed. The gates print
     a protocol and an audit record by their file name (`preflight <AREA>
-    --protocol PROTOCOL-*.md`, `Limitation (audit <record> #N)`), and the name
-    was refused from the repo root."""
+    --protocol PROTOCOL-*.md`, `Limitation (audit <record> #N)`), so that
+    name works from the repo root too."""
     if given.exists() or given.is_symlink() or given.parent != Path("."):
         return given
     inside = directory / given

@@ -79,9 +79,8 @@ def registration_changes(
     out: restore what was registered and measure again, or register anew.
     Every lane: a bar moved after a result was seen answers no registered
     question at any repeat cost. Run here, after every measurement, and not
-    first at the adoption: three runs and an audit went into a changed
-    registration before report-check named it (fourth SAB-like draw,
-    2026-10-28). The first measurements are every run at each first
+    first at the adoption, so no further run or audit goes into a changed
+    registration before it is named. The first measurements are every run at each first
     position (`answering_run.first_registrations`), not one chosen by name;
     when they recorded different blocks, which one stood cannot be told and
     no run answers a registered question: held too, the ways out a new
@@ -183,14 +182,14 @@ def scope_changes(
     Two texts are held to it, in this order: the protocol as the answering
     run saw it, and the protocol as it stands — a field rewritten after the
     last measurement is a change before any run carries it, and an audit of
-    the first run on the rewritten text would release it otherwise (probe
-    2026-11-02, docs/notes/2026-11-02-registered-field-repair.md). Both
+    the first run on the rewritten text would release it otherwise
+    (docs/notes/2026-11-02-registered-field-repair.md). Both
     comparisons release a field the same way (`released_fields`): a
     correction in place judged `resolved` by a follow-up that covers RUN as
     it stands, the field as RUN saw it and as it stands one text — so a run
     measured again under a corrected field, after a code repair, is
     released by a follow-up on that run, never by the verdict on an earlier
-    one (probe 2026-11-03, the correction then a code fault). A change
+    one. A change
     no correction releases is a BLOCKER naming each field with its old and
     new value and the way out: restore them — and, when a run measured
     under the change, measure again — or register anew. A code change
@@ -202,7 +201,7 @@ def scope_changes(
     back — a first measurement's, the answering run's — is a BLOCKER of its
     own naming the run, git's or the record's reason and the way back
     (`unread_hold`): the comparison could not run, which is no "nothing
-    changed" (side finding 1, docs/notes/2026-11-03-finalize-hold-missing-once.md).
+    changed" (docs/notes/2026-11-03-finalize-hold-missing-once.md).
     Raises RuntimeError when git fails."""
     firsts = [rd for group in first_measurement_groups(area, pid, root) for rd in group]
     others = [rd for rd in firsts if rd.dir.resolve() != run.resolve()]
@@ -216,7 +215,7 @@ def scope_changes(
     except AuditError as exc:
         # whether a follow-up's release still covers the run cannot be told:
         # held as that, never as an unreleased change whose way back would
-        # undo a correction (side finding 2 of the flake note)
+        # undo a correction
         return [
             blocker(
                 f"whether a correction in place releases what the number is about "
@@ -268,7 +267,7 @@ def _scope_held(
                 ]
                 if all(refs):
                     # run B measured under a correction released for an earlier
-                    # run: the follow-up on B judges it again (probe 2026-11-03)
+                    # run: the follow-up on B judges it again
                     fix = (
                         f"the follow-up analysis audit on {run.name} "
                         f"(`{audit_command(area, '--mode', 'analysis', protocol=protocol)}`) "
@@ -310,7 +309,7 @@ def _scope_held(
         # a code repair after the correction: the run that answers was measured
         # by other code, so a new run comes first and its follow-up judges the
         # correction on it — a follow-up of the old run would be held by the
-        # changed code (probe 2026-11-03, the correction then a code fault)
+        # changed code
         declaring = declaring_protocol(protocol, text, run)
         fix = (
             f"the measuring code changed since {run.name} ran: measure again "
@@ -323,8 +322,7 @@ def _scope_held(
         )
     elif all(refs):
         # each held field's correction is decided: the follow-up that judges
-        # it comes first, the way back after it (probe 2026-11-02, smaller
-        # points: three ways, restore first, and no follow-up command)
+        # it comes first, the way back after it
         fix = (
             f"the follow-up analysis audit on the run as it stands "
             f"(`{analysis}`) "
@@ -389,7 +387,7 @@ def declaring_protocol(protocol: Path, text: str, run: Path) -> Path | None:
     hold on RUN withdraws first (`gate.withdrawn_first`); None otherwise,
     and while the declaration is an adoption's proposal under its own
     check (`report_context.pending_adoption`): no adoption stands to
-    withdraw (reference pilot 2026-11-01, task 60)."""
+    withdraw."""
     if protocol_block.declared_run_shown(text) != run.name:
         return None
     return None if pending_adoption(protocol).is_file() else protocol
@@ -420,10 +418,9 @@ def description_added(diffs: list[tuple[str, str, str]]) -> str:
     registered text stands inside the new one. "" when one was rewritten
     or DIFFS is empty. Pure. The hold is the same either way (labkit
     cannot tell a description from a changed population); the clause
-    names where the addition belongs. "512 validation pairs" grew to
-    "512 validation pairs and 512 test pairs", the hold said "restore"
-    alone, and the agents handed over (labkit-paper area 23, sts512 r2
-    and r3, 2026-11-06)."""
+    names where the addition belongs, so "restore" does not stand alone
+    ("512 validation pairs" grown to "512 validation pairs and 512 test
+    pairs")."""
     if not diffs or not all(old != new and old in new for _, old, new in diffs):
         return ""
     return DESCRIPTION_ADDED
@@ -677,8 +674,8 @@ def named_changes(
     the protocol texts both runs saw (`protocol_history.as_measured`,
     `promise_differences`): sentences, keys, constants and scopes together —
     the run records keep sentences only through the block's digest, and a
-    restore told only the constants left a changed sentence that held the
-    next run again (fourth SAB-like draw). Where a text cannot be read back,
+    restore that names only the constants leaves a changed sentence that
+    holds the next run again. Where a text cannot be read back,
     what the records WAS and NOW hold (`promises.snapshot_changes`) and why
     the sentences go unnamed. Raises RuntimeError when git fails."""
     then, why_then = protocol_history.as_measured(protocol, first, root)

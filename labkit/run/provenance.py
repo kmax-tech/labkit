@@ -37,9 +37,8 @@ from labkit.formats.runs import (
 SPLIT_KEYS = ("train", "dev", "test")
 
 
-#: Roles for the leakage check beyond splits (2026-10-05, three audits in
-#: three repos): a control set — anchors, gates, placebos — must share no id
-#: with the measured set, or the gate and the measured arm hold the same
+#: Roles for the leakage check beyond splits: a control set — anchors,
+#: gates, placebos — must share no id with the measured set, or the gate and the measured arm hold the same
 #: data point. Matched on the first `_`/`-` segment of the data key.
 CONTROL_ROLES = (
     "anchor",
@@ -72,9 +71,7 @@ def git_state(cwd: Path, untracked: bool = True) -> str:
     git does not know may have been run. `untracked=False` (the state at the
     end) counts tracked files only — the run's own products (`runs/<id>/`,
     `output/`, `runs.tsv`) are untracked until committed, so every finished
-    run read `+dirty` and the index column said nothing (74 of 74 rows in
-    one lab repo; a cloud agent reported "beae3bf+dirty but the patch is
-    empty", 2026-10-13)."""
+    run would read `+dirty` and the index column would say nothing."""
     rev = repo.head_sha(cwd, short=True)
     if not rev:
         return NO_GIT
@@ -104,16 +101,14 @@ def parse_lock(lock: Path) -> dict[str, str | None]:
 
 # A VCS pin names a ref, not a version — `labkit @ git+file:///...@v0.14.0`.
 # The version comparison in `lock_drift` cannot see it, and counting it as
-# pinned-any hid exactly the package that changes most often (2026-09-15:
-# installed labkit was two minor versions behind the lock, drift said 0 —
-# and the pinned tag did not even exist in the source repo).
+# pinned-any would hide exactly the package that changes most often.
 _VCS_PIN = repo.VCS_REQUIREMENT
 
 
 # An editable install freezes as `-e git+<url>@<commit>#egg=<name>`: pip
-# reads the commit from the source checkout. Unread, it counted as "installed
-# but not in the lock" — a lock written by `pip freeze` seconds earlier in the
-# same venv reported drift on every run (usability probe 2026-10-07, 6 of 6).
+# reads the commit from the source checkout. Unread, it would count as
+# "installed but not in the lock" — a lock written by `pip freeze` seconds
+# earlier in the same venv would report drift on every run.
 _EDITABLE_PIN = repo.EDITABLE_REQUIREMENT
 
 
@@ -138,9 +133,8 @@ def resolve_ref(url: str, ref: str) -> str | None:
 
     A hex ref is its own answer. A tag/branch on a file:// URL is resolved
     against the local repo; an unresolvable ref returns "" — a lock that
-    names a ref which does not exist is uninstallable, and that IS drift
-    (2026-09-15: the lock pinned v0.15.0, the repo's tags stopped at
-    v0.14.0). Remote URLs are not fetched: a check that needs the network
+    names a ref which does not exist is uninstallable, and that IS drift.
+    Remote URLs are not fetched: a check that needs the network
     would fire on every offline run, and a check that always fires is a
     check nobody reads.
     """
@@ -257,9 +251,7 @@ def env_state(cwd: Path) -> str:
     # NEVER .resolve() sys.executable: a venv's python is a symlink to the
     # base interpreter, so resolving it erases the very identity this field
     # records — every venv on the same pyenv base would look identical.
-    # (Same trap that broke accessio's venv switch, 2026-08: it compared
-    # resolved paths and concluded "already inside" for any caller sharing
-    # the base. Use sys.prefix if you need to *test* for a venv.)
+    # Use sys.prefix if you need to *test* for a venv.
     exe = sys.executable
     for d in [cwd.resolve(), *cwd.resolve().parents]:
         lock = d / "requirements.lock"
@@ -290,10 +282,9 @@ def env_state(cwd: Path) -> str:
 def resolve_models(config: dict) -> dict:
     """Alias -> resolved backend spec, for every model-naming config key.
 
-    The alias is a pointer, the config must carry what it pointed to
-    (2026-09-09, logic-epistemic-pairs: 25 run configs recorded only
-    "model": "sonnet"; which weights answered was reconstructable solely by
-    checking models.toml out at the run's commit). Keys considered: "model"
+    The alias is a pointer, the config must carry what it pointed to: a
+    config holding only "model": "sonnet" leaves which weights answered to
+    models.toml at the run's commit. Keys considered: "model"
     and *_model, string values only. Best-effort: a failed resolution is
     recorded as a string, never raised — bookkeeping must not break a run.
     """
@@ -318,10 +309,9 @@ def visible_files(directory: Path) -> list[Path]:
     hides and that is not the interpreter's bytecode (a `__pycache__` part) —
     the files a directory source's digest and row count cover
     (`source_digest`, `_data_rows`), and so the ones finalize holds to git.
-    `.DS_Store` once moved a mean by a whole document (2026-10-05); a run
-    that imported the rule modules shipped in its source wrote `.pyc` there,
-    and its digest never matched the registered one (reference pilot
-    2026-11-01, task 60)."""
+    A `.DS_Store` would move a mean by a whole document; a run that imports
+    modules shipped in its source writes `.pyc` there, and its digest would
+    never match the registered one."""
     return sorted(
         p
         for p in directory.rglob("*")
@@ -340,8 +330,6 @@ def source_digest(path: Path) -> str:
     of each visible file's relative path and content; hidden path components
     are excluded. Adding, removing, renaming or editing a visible file changes
     the digest. Filesystem errors propagate to the caller.
-
-    History: docs/notes/2026-10-23-source-digest-history.md.
     """
     if path.is_dir():
         return tree_digest(
@@ -357,9 +345,6 @@ def source_digest(path: Path) -> str:
 def _data_rows(path: Path) -> int:
     """Count non-empty lines, excluding the ``_meta`` header in .jsonl files;
     for a directory, its visible files.
-
-    Uses a context manager (the old bare ``p.open()`` leaked file handles in
-    tests).
     """
     if path.is_dir():
         return len(visible_files(path))
@@ -393,8 +378,7 @@ def _ids(path: Path) -> set | None:
     if path.suffix != ".jsonl":
         return None
     ids = set()
-    # a line that is not JSON names file and line (audit 2026-10-15), through
-    # the one reader
+    # a line that is not JSON names file and line, through the one reader
     for _, row in jsonl.objects(path.read_text(encoding="utf-8"), str(path)):
         if jsonl.is_meta(row):
             continue
@@ -528,7 +512,7 @@ def snapshot_script(run_dir: Path) -> str:
         body = src.read_bytes()
         write_atomic_bytes(script_copy_path(run_dir, src.suffix), body)
         # the hash of the bytes copied, not of a second read: a save in
-        # between left a record whose hash matched no stored script
+        # between would leave a record whose hash matches no stored script
         return digest(body)
     except OSError:
         return "no-script"
@@ -550,16 +534,15 @@ _SNAPSHOT_CAP = 2 * 1024 * 1024  # a "source file" above 2 MB is data
 def snapshot_untracked_sources(run_dir: Path) -> list[str]:
     """Copy untracked *.py next to an UNTRACKED entry script into the run dir.
 
-    Closes the hole the single-file snapshot left (2026-08-18, Einwand MH):
-    the entry script imports siblings — helper modules in the same scripts/
+    The entry script imports siblings — helper modules in the same scripts/
     folder — and on the FIRST run of a fresh area all of them are untracked:
-    in no commit, in no diff, and (before this) in no copy either.
+    in no commit and in no diff.
 
         uncommitted.patch          tracked drift — what git can see
         source-untracked/          what git cannot see, copied verbatim
 
-    Deliberately narrow (the first draft hoovered output/ and old runs/ into
-    the snapshot the moment the script dir was an area root):
+    Deliberately narrow, so output/ and old runs/ stay out of the snapshot
+    when the script dir is an area root:
 
       * fires ONLY when the entry script itself is untracked — the fresh-area
         case. A tracked entry means the area was committed once; from there,

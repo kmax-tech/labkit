@@ -46,9 +46,9 @@ A full run at `high` needs the preflight record the head names
 the promises as they are now, every finding decided (`audit_gaps.audit_record_gap`,
 held by runlog's freeze gate and by `preflight`; `audit_gaps`); a reported number needs
 an analysis record of code, promises and the answering run as they are
-now (`report-check`). Until 0.97.1 a record named the code only, so a
-promise rewritten after the audit, or a later run under the same code,
-kept the old audit valid (review 2026-10-18). `preflight` reads every
+now (`report-check`); a record of the code alone would keep an audit
+valid for a promise rewritten after it or a later run under the same
+code. `preflight` reads every
 findings file of the area: a finding still `open`
 is a warning before the freeze and a blocker once `frozen = true`
 (LAB-015 Preflight audit before freezing: every finding is decided). A
@@ -57,12 +57,9 @@ it and ends the protocol without a result, and the gates read the handover
 (`handovers.acknowledgement`); open findings a handover elsewhere in the
 repo lists are printed as a reminder and never counted.
 
-Why (uniagent, 2026-10-12, 23 preflight and 21 analysis audits read by
-hand): a finding deferred in area 16 as "its own task" bit in area 17; the
-same finding was accepted three times in three areas; 13 of 44 audit lines
-end in "accepted/dismissed" and what they decided is lost in a 400-character
-protocol line. With the findings as data the unsettled ones stay visible and
-an audit's yield (fixed / limitation / false-positive per class) can be counted
+Why as data: a decision in a protocol line is lost in its prose, while
+the unsettled findings as data stay visible across areas, and an audit's
+yield (fixed / limitation / false-positive per class) can be counted
 instead of read.
 
 The statuses are named by their consequence: `fixed` — the person claims
@@ -79,9 +76,7 @@ follows from what the promise's sentence claims — a threshold on these
 items, or a capability — not from the grade. The protocol carries each as a `Limitation (audit <record> #N)` line
 and a note in Recorded results (`protocol-fill --from-run` writes both from the
 record), and report-check holds them to it (`limit_line`, `answer_note`). Whether the
-named limit is enough stays the audit's question, not this check's
-(judge probe, 2026-10-21: a prompt broader than the gold, kept as a limit, and
-"criterion-1 not met" reported with the limit in the record only).
+named limit is enough stays the audit's question, not this check's.
 
 Reading is loud: an unknown status, a decided status without a reason, a
 file without its `[audit]` table raise FindingsError naming the file and
@@ -154,11 +149,11 @@ EFFECT_FORM = (
 )
 GRADES = ("BLOCKER", "WARNING", "NOTE")
 #: the grammar of an answer line, one home for the audit and both
-#: reviewers (audit 2026-10-27, third): what may stand before its keyword
+#: reviewers: what may stand before its keyword
 #: (indentation, a quote, a bullet, a code mark, a heading's hashes) and the
 #: separator after it — the ` · ` the instructions ask for, or a dash or
-#: colon, which agents write too (audit 2026-10-15: two blockers written as
-#: `BLOCKER — …` parsed as none, and the record read as covered)
+#: colon, which agents write too, so a `BLOCKER — …` line is never parsed
+#: as none and its record read as covered
 LEAD = r"^[\s>*`#-]*"
 SEP = r"(?:·|—|–|:)"
 
@@ -374,7 +369,7 @@ CHECK_FIELD = re.compile(r"·\s*check\s*:")
 #: running to the end of the line — `(<note>)` or `— <note>`. Either may
 #: end the line with a sentence's closing period: a dash note keeps it as
 #: its last character, after the parenthesis it closes the line and is no
-#: part of the note (a whole audit answer was refused for `(…).`)
+#: part of the note
 _CHECK = re.compile(
     r"·\s*check\s*:\s*`?(?P<key>[a-z][a-z0-9_]*|file:[^\s`()]+)`?"
     r"(?:\s*\((?P<paren>.*\S.*)\)\.?|\s+[—–]\s+(?P<dash>\S.*))?\s*$"
@@ -400,13 +395,11 @@ def check_of(text: str) -> tuple[str, str]:
     or ("", "") when it requires none. Only the key is machine-read; the note is kept whole.
     TEXT is the finding whole, all its lines searched: one check per
     finding, closing the line that holds it — the last line, or the first
-    with the finding's bullets below it (two audits were refused whole
-    for that, registered pilot part 1, 34-r3 and 60-r2). Raises
+    with the finding's bullets below it. Raises
     ValueError on a field that does not read and on two
     check fields in one finding, quoting the line that holds the last
     one: a requirement half-read, or one of two, would be one nobody can
-    be held to (second fixed-followup pilot: six records lost to
-    `check: <key> (<note>)` while only the bare key was read)."""
+    be held to."""
     if not CHECK_FIELD.search(text):
         return "", ""
     # the line that holds the last check field, as the refusals quote it
@@ -450,8 +443,7 @@ def subject_refusal(f: Finding, status: str) -> str | None:
     """Why STATUS cannot decide F, by the subject the auditor gave it, or None:
     an `implementation` finding is never closed by `limitation` — the
     number came from code or data that depart from what was registered, and
-    a limit line does not change that (a registered 200-permutation check
-    run as one null draw, docs/notes/2026-11-04-one-explainer-plan.md). Nor
+    a limit line does not change that. Nor
     is an `undetermined` one: a limit line does not settle
     a suspicion — its check runs, the person decides `fixed` (the check
     built and run), and the follow-up judges the value."""
@@ -570,13 +562,12 @@ def check_order(check: str, note: str = "") -> str:
     them and writes it to metrics.json under CHECK, where the recheck
     recomputes it; NOTE, what it must show. A `file:<path>`
     check asks for the file declared as the run's dependency instead. A key alone shows
-    nothing: the follow-up judges the computed value. In the repair case
-    (2026-10-28) the check went unwritten, and every follow-up judged the
-    repair not assessable."""
+    nothing: the follow-up judges the computed value; with the check
+    unwritten, every follow-up judges the repair not assessable."""
     shows = f" ({note})" if note else ""
     if check.startswith(FILE_CHECK):
         # a file's content, not a computed value: shown once the run declares
-        # it (the repair case's model.json, which no audit piece showed)
+        # it, which no other audit piece shows
         path = check.removeprefix(FILE_CHECK)
         return (
             f"declare `{path}`{shows} among the files the run reads as a dependency "
@@ -585,7 +576,7 @@ def check_order(check: str, note: str = "") -> str:
             f"and the analysis audit is shown its content"
         )
     # from the kept rows: the recheck recomputes every metrics key from them
-    # and refuses one computed beside them (check-path case, 2026-10-28)
+    # and refuses one computed beside them
     return (
         f"extend the measuring script so that its kept rows carry what "
         f"`{check}`{shows} needs and `evaluate_rows()` computes it from them, "
@@ -616,10 +607,8 @@ def decision_entails(
     `false-positive`: the finding does not apply to the code and run as
     audited; the reason names the counter-evidence, and a BLOCKER's or a
     carried finding's is held by
-    the review (`false_positive_blocker`, `carried_and_closed`). The old
-    words were misread — `dismissed` for "I will fix it", `deferred` for
-    "no longer relevant", `accepted` for "repaired" (SAB round 1,
-    2026-10-29) —, so each status is named by its consequence.
+    the review (`false_positive_blocker`, `carried_and_closed`). Each
+    status is named by its consequence, so it is not misread as another.
     Raises ValueError on a status that is not decided (DECIDED)."""
     here = Path.cwd()
     review = audit_command(
@@ -635,9 +624,9 @@ def decision_entails(
             f"{owed}; what `fixed` means for this repair, and where its next step is named, is the line below"
         )
     if f.status == "limitation" and f.effect == EFFECT_STANDS:
-        # the review is owed at every repeat cost; agents read a low one as
-        # "no review needed", and a WARNING's line that said "before the
-        # number leaves" was untrue once the adoption let it through
+        # the review is owed at every repeat cost, a low one too; a
+        # WARNING's line does not say "before the number leaves", since the
+        # adoption lets it through
         held = (
             "the number does not leave until a second auditor upholds it"
             if f.grade == "BLOCKER"
@@ -701,8 +690,9 @@ def decision_digest(f: Finding) -> str:
     when there are — which a review and a fix verdict
     bind to (`reviews.Decision.decision_sha`, `FixVerdict.decision_sha`): a
     changed reason, effect or check is another decision, and a verdict on
-    the old one says nothing about it. A finding without a check has the
-    digest it had before checks existed."""
+    the old one says nothing about it. The check joins the digest only
+    when there is one, so a finding without a check keeps its digest and
+    the reviews bound to it."""
     fields = [f.grade, f.text, f.status, f.reason, f.effect]
     if f.check:
         fields += [f.check] + ([f.check_note] if f.check_note else [])
@@ -744,9 +734,7 @@ class AuditedState:
     analysis, the RUN_ID it read (NO_RUN: none) and the SHOWN_SHA of what
     it was shown of that run; both None for preflight. One type for the
     prompt that binds it (`audit_prompt.bound_prompt`), the record (`Record.state`)
-    and every match of the two (`audit_gaps.covering_records`) — the audit matched a
-    record field by field beside `audit_gaps.covering_records` (audit 2026-10-27,
-    third, plan 2)."""
+    and every match of the two (`audit_gaps.covering_records`)."""
 
     scope_sha: str
     block_sha: str
@@ -862,9 +850,9 @@ class OpenFinding:
 
 
 def number_of(record: Record, finding: Finding) -> int:
-    """FINDING's 1-based number in RECORD, found by identity: two equal
-    findings in one record took the first's number by `list.index`, and a
-    printed `--decide` named the wrong one (audit 2026-10-27, third, K5).
+    """FINDING's 1-based number in RECORD, found by identity, not by
+    equality: two equal findings in one record each keep their own number,
+    so a printed `--decide` names the right one.
     Raises ValueError when FINDING is not one of RECORD's."""
     for n, f in enumerate(record.findings, 1):
         if f is finding:
@@ -877,9 +865,7 @@ def open_findings(
 ) -> list[OpenFinding]:
     """Every finding still `open` in RECORDS, in record order — of MODE's
     records only when MODE is given. The one home of the question "is an
-    audit finding still undecided" (audit 2026-10-23, C1: four gates
-    walked the records themselves, each grading differently, and nothing
-    said whether that was meant). What a gate makes of an undecided
+    audit finding still undecided". What a gate makes of an undecided
     finding is that gate's rule; the rules stand side by side here:
 
         gate                         records            an undecided finding is
@@ -945,8 +931,8 @@ def answer_note(limits: list[tuple[str, str]]) -> str:
     """What the Recorded results line says of LIMITS, (label, effect) each:
     one note counting them; the Limitation lines below carry each one whole, and
     which promise one leaves not assessable stands in the line's verdicts
-    (`result_render.verdicts`). Empty for no limits. One note per limit
-    grew the line to three "read within" tails (sandbox, 2026-10-21)."""
+    (`result_render.verdicts`). Empty for no limits. One note for all, so
+    the line does not grow a "read within" tail per limit."""
     if not limits:
         return ""
     n = len(limits)
@@ -956,10 +942,9 @@ def answer_note(limits: list[tuple[str, str]]) -> str:
 def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | None:
     """Why VERDICT counts more blockers or warnings than GRADES lists, or
     None: a record whose counts outrun its tables reads as "nothing open"
-    — covered, decided, frozen (audit 2026-10-15). Notes are not held; an
-    auditor counts them loosely. One answer for the writer and the reader:
-    a person edits the files, so the reader holds the same line (review
-    2026-10-18: `blockers = 2` without a table read as covered)."""
+    — covered, decided, frozen. Notes are not held; an auditor counts
+    them loosely. One answer for the writer and the reader: a person edits
+    the files, so the reader holds the same line."""
     b, w, _ = verdict
     listed = {g: sum(1 for grade in grades if grade == g) for g in GRADES}
     if b > listed["BLOCKER"] or w > listed["WARNING"]:
@@ -973,9 +958,8 @@ def counts_outrun(verdict: tuple[int, int, int], grades: list[str]) -> str | Non
 
 def count_problem(name: str, value: object) -> str | None:
     """Why VALUE is no count of NAME (blockers, warnings, notes), or None: a
-    count is a non-negative integer. One rule for the writer and the reader
-    — `blockers = -1` was written, read and passed the coverage check
-    (review 2026-10-20)."""
+    count is a non-negative integer. One rule for the writer and the reader,
+    so `blockers = -1` is neither written nor read."""
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         return f"{name} = {value!r} is not a non-negative integer"
     return None
@@ -985,9 +969,9 @@ def verdict_disagrees(verdict: tuple[int, int, int], grades: list[str]) -> str |
     """Why VERDICT's blockers and warnings are not exactly the BLOCKER and
     WARNING lines GRADES lists, or None — the one audit result a record and
     an exit code are made from. More lines than counted is a withdrawn
-    finding ("Correction: no finding" under a BLOCKER line): exit 0 while the
-    record kept the blocker open, and the next gate refused the coverage
-    (review 2026-10-20). Notes are not held; an auditor counts them loosely."""
+    finding ("Correction: no finding" under a BLOCKER line), which would
+    exit 0 while the record keeps the blocker open. Notes are not held; an
+    auditor counts them loosely."""
     b, w, _ = verdict
     listed = {g: sum(1 for grade in grades if grade == g) for g in GRADES}
     if b != listed["BLOCKER"] or w != listed["WARNING"]:
@@ -1019,9 +1003,8 @@ def fixed_claim(f: Finding) -> bool:
     (`reviews.claim_digest`). The one rule the gate
     (`report_decisions.review_findings`), the review
     (`decision_review.reviewable`), the follow-up (`followup.release_holds`)
-    and the decision's line (`audit_decisions.repair_hint`) read. Why: a
-    Conclusion BLOCKER decided `fixed` had no release (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md)."""
+    and the decision's line (`audit_decisions.repair_hint`) read, so a
+    Conclusion BLOCKER decided `fixed` has a release."""
     at = f.place
     return (
         f.grade == "BLOCKER"
@@ -1275,8 +1258,7 @@ def create_file(folder: Path, name: str, suffix: str, text: str) -> Path:
     """Write TEXT to `FOLDER/<name><suffix>`, else `<name>-2<suffix>`, … —
     the first name no file holds, taken by exclusive create, so two audits
     finishing in one minute get two files: a check for a free name before
-    a plain write let both take the same one, and one record was lost
-    (review 2026-10-20). Creates FOLDER."""
+    a plain write would let both take the same one. Creates FOLDER."""
     folder.mkdir(exist_ok=True)
     n = 1
     while True:
@@ -1789,9 +1771,8 @@ _WRITTEN_NAME = re.compile(
 
 def written_order(path: Path) -> tuple[str, int, str]:
     """The sort key of a file `create_file` wrote, oldest first: its minute, then
-    its number within the minute as a number. By name, `-2` and `-3` sorted
-    before the minute's first file, and the newest failed attempt read as
-    the oldest (review 2026-10-20). Raises FindingsError for a name of
+    its number within the minute as a number — by name, `-2` and `-3`
+    would sort before the minute's first file. Raises FindingsError for a name of
     another shape: its age cannot be told."""
     m = _WRITTEN_NAME.match(path.name)
     if m is None:
@@ -1923,7 +1904,7 @@ def repo_records(experiments: Path) -> list[tuple[Path, Record]]:
 
 def open_elsewhere(area: Path, experiments: Path) -> list[tuple[Path, Record, Finding]]:
     """Open findings in other areas of the repo — a finding left there as
-    "its own task" may be this area's (uniagent 16 → 17, 2026-10-08)."""
+    "its own task" may be this area's."""
     return [
         (other, rec, f)
         for other, rec in repo_records(experiments)

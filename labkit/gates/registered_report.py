@@ -77,21 +77,18 @@ def report_owed(
     read, a report that is not UTF-8. The ways out name the run the gates
     hold the protocol to (`audit_binding.audited_run`: the newest kept one;
     DECLARED when declared) for the adoption and the discussion, and the
-    handover. Why (pressure pilot 2026-10-29, tasks 34, 15, 60): the hook
-    refused a report citing a run that declares no result, the agents
-    deleted the run id, and the commit passed. Once released, and REVIEW,
+    handover. Why everything else is held: deleting the run id a refusal
+    named must not release the report. Once released, and REVIEW,
     the report owes a clean report review of this state (`review_gap`):
     its prose may still present another run as the result — the block
     shows the adopted number, it cannot tell what the text around it
-    claims (reference pilot 2026-11-01, task 15: an older run's "PASS",
-    no review owed or possible). The progress account: while nothing is
+    claims. The progress account: while nothing is
     adopted, a discussion block of this protocol for the run the gates hold
     it to says what was measured and what is still open; with PROGRESS (the
     commit) it passes — saved, releasing nothing, owing no review yet —,
     without (the stop, a check by hand) it is one blocker naming the next
-    step: the adoption or the handover (labkit-paper area 17, 2026-11-02:
-    five of six timed-out attempts left no report, the report being written
-    last). Before any measurement and without an answering run or adoption,
+    step: the adoption or the handover — so a report is written along the
+    way, not last. Before any measurement and without an answering run or adoption,
     a report draft owes no result block; it can be saved with registration.
     Malformed blocks still hold. Once a measurement exists, the progress,
     result or handover requirements apply."""
@@ -426,10 +423,9 @@ def missing_report(
     commit removes one HEAD holds or the head has adopted a result
     (DECLARED): a run committed before its progress account stays a
     checkpoint. Why: the registered report owes its review (`report_owed`);
-    left unwritten, it owed none, and an agent could end without one
-    (reference pilot 2026-11-01); a report deleted after the adoption passed
-    the commit, report-check and labkit-next (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md). Raises
+    left unwritten, it would owe none, and an agent could end without one;
+    a report deleted after the adoption would otherwise pass the commit,
+    report-check and labkit-next. Raises
     `protocol_block.BlockError` on a head that does not read,
     `runlog.RunIndexError` on a run index that does not read (`has_measured`)."""
     head = protocol_block.head(text)

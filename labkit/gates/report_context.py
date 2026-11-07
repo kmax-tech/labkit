@@ -34,9 +34,8 @@ def pending_adoption(protocol: Path) -> Path:
     """Where an adoption keeps PROTOCOL as it stood before, for as long as
     its proposal stands unchecked in the tree (`protocol_fill.adopt`). The
     file outlives only an adoption cut off during its check — a kill skips
-    every `finally`, and the proposal stayed in the tree as if it had passed
-    (reference pilot, 2026-11-01, task 21: the time limit landed 2.3 min into
-    the check). While it stands, report-check refuses, and the next adoption
+    every `finally`, and the proposal would stay in the tree as if it had
+    passed. While it stands, report-check refuses, and the next adoption
     puts it back first."""
     return protocol.with_name(f".{protocol.name}.before-adoption")
 

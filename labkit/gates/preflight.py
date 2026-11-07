@@ -115,13 +115,13 @@ def area_test_python(repo: Path) -> str:
     """The Python installation that runs an area's tests: the repo's own
     `.venv`, else the one running labkit. The repo's, not the caller's — the
     tests import the repo's dependencies, and a gate run from another venv
-    failed them on a missing package (uniagent, 2026-10-07)."""
+    would fail them on a missing package."""
     own = repo / ".venv" / "bin" / "python"
     return str(own) if own.is_file() else sys.executable
 
 
-#: how long an area's tests may run inside a gate; a hanging test hung the
-#: gate until the hook's own timeout killed it, wordless (audit 2026-10-15)
+#: how long an area's tests may run inside a gate, so a hanging test does
+#: not hang the gate until the hook's own timeout kills it, wordless
 AREA_TEST_TIMEOUT_S = 300.0
 
 
@@ -132,11 +132,10 @@ def area_tests(area: Path, repo: Path) -> AreaTests:
     reported)."""
     # The name the scaffolder stamps: test_<NN>_<name>.py (or test_<name>.py
     # for an unnumbered area), split files as test_<NN>_<name>_<part>.py.
-    # A bare *<name>* glob ran area 09's test for area 08, whose name is a
-    # prefix of 09's (uniagent, 2026-10-07).
+    # A bare *<name>* glob would also run the test of an area whose name
+    # this one's prefixes.
     # `preflight .` passes a relative path whose .name is "" — resolved first,
-    # or the pattern read `tests/test_.py` and the area's test was "none"
-    # (fallacy-dataset-generation, 2026-10-09)
+    # or the pattern would read `tests/test_.py` and find no test
     area = area.resolve()
     nn, name = split_area_name(area.name)
     stem = area_test_stem(nn, name)
@@ -190,7 +189,7 @@ def preflight_area(
     when given, collects what the stations found and is the channel every
     line goes through (`gate.Findings`), as for `finalize_area`: the pre-run
     hook hands over a silent one and reads the blockers as data instead of
-    the printed report (audit 2026-10-27, third, M4).
+    the printed report.
 
     The flow — every condition that decides whether a station runs is in
     this function; one level down is how a station checks, not whether it
@@ -471,8 +470,8 @@ def check_handed_over_elsewhere(
 ) -> None:
     """Station 3, the reminder: every open finding of another area of the
     repo that a handover of that area records (`handovers.handed_over`) —
-    set aside there unresolved, it may be this area's ("its own task",
-    uniagent 16 → 17, 2026-10-08). Told and never counted; an open finding
+    set aside there unresolved, it may be this area's ("its own task").
+    Told and never counted; an open finding
     no handover records is that area's work in progress and not told; a
     record or a handover elsewhere nobody can read warns.
     Closes the station with what RECORDS (this area's) say when nothing is
@@ -569,7 +568,7 @@ def tell_test_run(findings: Findings, tests: AreaTests, failed: str) -> None:
     warning, a failure a blocker naming the files, pytest's last line (the
     counts) and FAILED, the gate's sentence on what no longer holds. The
     tail before it is a note; it reaches no collecting caller, so the
-    counts travel with the blocker (audit 2026-10-23, B1)."""
+    counts travel with the blocker."""
     names = ", ".join(f.name for f in tests.files)
     if tests.state == "ok":
         findings.note(f"  ok — {names}")

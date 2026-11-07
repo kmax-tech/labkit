@@ -9,8 +9,7 @@
                                                      (`gates/report_review`)
 
 The agent audit of LAB-015 Preflight audit before freezing (preflight, before freezing) and LAB-050 Analysis audit before reporting
-(analysis, before a number leaves) as one command — the only runner since
-0.79.0; the Claude subagent copy of the instructions is gone. The
+(analysis, before a number leaves) as one command, the only runner. The
 instructions ship with the package (`experiment-preflight.agent.md`); the
 files they tell the auditor to read are gathered and inlined
 (`audit_prompt`) — the
@@ -22,8 +21,7 @@ LAB-015 Preflight audit before freezing (the scar table, the severity legend),
 LAB-017 The number of audits follows the cost tier,
 LAB-004 Identifiers make the intent addressable,
 LAB-050 Analysis audit before reporting
-— not the whole standard, which cost ~30k tokens per read and was read twice
-per audit in uniagent, 2026-10-10. In MODE analysis the answering run's rows come too:
+— not the whole standard, which costs ~30k tokens per read. In MODE analysis the answering run's rows come too:
 the first 50 and the last 20 lines of every output it registered, numbered,
 and its `metrics.json` — the auditor has no tools, so what it is told to
 look at must be on the page. One call goes through `labkit.run.llm` to the alias
@@ -35,16 +33,15 @@ Exit codes (`AUDIT_EXIT_CONTRACT`, the line --help ends with) are the
 contract, made from one audit result (`audit_reply.parse`): the LAST verdict
 line and the finding lines above it must count the same blockers and
 warnings, else nothing is recorded and the exit is 2 — a finding withdrawn
-in prose below its line left an open blocker in the record behind exit 0
-(review 2026-10-20):
+in prose below its line would leave an open blocker in the record behind
+exit 0:
     0  no blocker and no warning
-    1  findings to decide — a blocker OR a warning (labkit-paper benchmark,
-       2026-10-06: the table-led audit found the positional-join fault only
-       as a WARNING; an audit that passed on warnings would have let it by)
+    1  findings to decide — a blocker OR a warning (an auditor may grade a
+       real fault as a WARNING; an exit 0 on warnings would let it by)
     2  no audit: a missing file, an unreadable report, a backend failure —
        a backend that did not answer leaves `audits/<date>-<mode>-failed.toml`
        (`failed_attempts.write_failed`): the evidence an acknowledged full run's
-       LABKIT_UNFROZEN=1 rests on, since 0.99.0
+       LABKIT_UNFROZEN=1 rests on
 
 The report is printed (and written to --out), and its findings are written
 as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
@@ -56,7 +53,7 @@ sha, counts — to copy from, and what the call cost (`llm.last_usage()`:
 prompt and output tokens, USD where the backend prices it) beside the
 prompt size on stderr.
 
-Mode `clarity` is the other reader (2026-10-09): the code-clarity agent's
+Mode `clarity` is the other reader: the code-clarity agent's
 area mode (`code-clarity.agent.md`) reads README, protocol and the measure
 script the way a newcomer opens them and reports what that reader would
 get wrong — template residue, a term before its definition, a docstring
@@ -148,9 +145,7 @@ def early_for_tier(area: Path, protocol: Path, mode: str) -> list[GateFinding]:
     """One WARNING line when a preflight audit comes before the repeat cost
     asks for it: at `repeat_cost = "low"` the first run is the cheaper probe
     and ONE audit in mode analysis after it covers the preflight rows
-    (LAB-017 The number of audits follows the cost tier). uniagent area 01,
-    2026-10-05: two preflight audits and an analysis audit at low repeat cost, and
-    the protocol itself says one after the first run would have done. A
+    (LAB-017 The number of audits follows the cost tier). A
     head this labkit cannot read says nothing here — protocol-check does."""
     if mode != PREFLIGHT_AUDIT:
         return []
@@ -218,8 +213,7 @@ def _answer_or_record(
     evidence that one was tried — on this code, these promises, with this
     much time — goes next to the records (`failed_attempts.write_failed`) before
     the AuditError that ends the command with exit 2. That file is what a
-    LABKIT_UNFROZEN=1 rests on (second haiku round on 0.98.0:
-    no agent started an audit, and the hatch asked for nothing). A usage
+    LABKIT_UNFROZEN=1 rests on. A usage
     error (an alias models.toml does not know) is not an unavailable audit
     and propagates as it is, so none is written for it.
 
@@ -403,8 +397,9 @@ def main(argv: list[str]) -> int:
         help="seconds for the one call",
     )
     ap.add_argument("--out", type=Path, help="also write the report here")
-    # before argparse: with two values it took `--effect` for the reason and
-    # refused "unrecognized arguments: stands", never naming the reason
+    # before argparse: with two values it would take `--effect` for the
+    # reason and refuse "unrecognized arguments: stands", never naming the
+    # reason
     shape = decide_shape(argv)
     if shape is not None:
         ap.error(shape)
@@ -412,8 +407,8 @@ def main(argv: list[str]) -> int:
     _check_args(ap, args)
     if not args.area.is_dir():
         # before any step: `--findings` from a subdirectory with the
-        # repo-relative path read "no audit record yet", `--review` a
-        # traceback (SAB round 1, 2026-10-29)
+        # repo-relative path would read "no audit record yet", `--review`
+        # end in a traceback
         console.refuse("labkit-audit", no_such_area(args.area))
         return 2
     if args.mode is None:
@@ -451,8 +446,7 @@ def _refuse_undecided(area: Path, bound: BoundPrompt, protocol: Path) -> None:
     """Refuse an analysis audit, before the call, while an earlier analysis
     record of another state holds a BLOCKER undecided: the follow-up is
     shown decided BLOCKERs only, so the call would judge none of them and
-    leave one more audit owed (registered pilot part 1, 60-r3: a third
-    audit, and the limit came during it). Raises AuditError naming each
+    leave one more audit owed. Raises AuditError naming each
     with the command that decides it."""
     records = [r for r in findings.area_records(area) if r.mode == ANALYSIS]
     open_heads = followup.undecided_earlier(records, lambda r: r.state == bound.state)
@@ -525,8 +519,7 @@ def _record(
         return 2
     running.end("record", file=recorded.name)
     # the report only once its record stands: printed before a refused
-    # write, it read as an audit, and the refusal on stderr went unseen
-    # (registered pilot part 1, 60-r2: fixed code on it, never audited again)
+    # write, it would read as an audit, and the refusal on stderr go unseen
     print(report)
     if args.out:
         args.out.write_text(report, encoding="utf-8")
@@ -537,8 +530,8 @@ def _record(
     for gap in scope_mismatch(args.area, listed_scope, bound.stamp.files):
         print(f"scope WARNING: {gap}", file=sys.stderr)
     # last, on stdout after the report: what the person acts on. On stderr
-    # it came out before the buffered report in a pipe, and `| tail` cut it
-    # off (sandbox judge probes, 2026-10-21)
+    # it would come out before the buffered report in a pipe, and `| tail`
+    # cut it off
     print()
     for line in decision_lines(
         findings.read(recorded), args.area, report, args.protocol

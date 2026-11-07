@@ -4,8 +4,7 @@ The three habits every batch script needs and every prototype skips: don't let
 a second process write the same file, don't redo what is already done, and be
 able to say what is missing without re-running anything. Hand-rolling them
 costs ~40 lines each time and gets skipped exactly when it matters — an
-interrupted connection then costs the whole run (2026-08-12: a socket timeout
-killed a scoring run at 49 of 96 items; only the resume made it a non-event).
+interrupted connection then costs the whole run.
 
     import batch
 
@@ -46,9 +45,7 @@ def _parse(text: str, path: Path) -> tuple[list[dict], int | None]:
     """(objects, line number of a torn last line or None). Only the LAST
     non-empty line may be unparseable — a process killed mid-write leaves
     exactly that. Any earlier one is a damaged file, and resuming over it
-    would treat it as done: raises ValueError with file and line (review
-    2026-10-07: a broken line mid-file was skipped and the rows after it
-    kept)."""
+    would treat it as done: raises ValueError with file and line."""
     lines = jsonl.record_lines(text)
     last = max((i for i, ln in enumerate(lines) if ln.strip()), default=-1)
     out, torn = [], None
@@ -112,8 +109,8 @@ def content_sha(value: object) -> str:
 def _key(value: object) -> str:
     """An id as the file stores it (`runs.as_stored`) — the one equality of
     ids: `1`, `true` and `1.0` are three ids. Python's sets and dicts take
-    `True == 1`, and a row with id `true` balanced an input id `1`
-    (review 2026-10-20)."""
+    `True == 1`, so a row with id `true` would otherwise balance an
+    input id `1`."""
     return runs.as_stored(value)
 
 
@@ -148,8 +145,7 @@ class Ledger:
             are not rows).
         missing: input ids without a row, in input order.
         duplicate: ids on more than one row — a set count alone would let
-            a missing item and a doubled one cancel out (2026-10-09,
-            fallacy-dataset-generation, area 01).
+            a missing item and a doubled one cancel out.
         stray: row ids the input does not have.
         unidentified: rows without the id field.
         stale: field -> ids whose row carries another value than the
@@ -252,14 +248,13 @@ def lock_holder_words(lock: Path, holder: str) -> str:
     """What to do about the output lock LOCK whose first line is HOLDER.
     The kernel tells, never the pid: the Store that wrote the line holds
     the file's flock until it ends (`files.lock_held`), so a reused pid, a
-    `python -m` command line and a sandbox without `ps` (pubmedqa50,
-    2026-11-01: a live run's lock deleted twice) change no answer. Held,
+    `python -m` command line and a sandbox without `ps` change no answer. Held,
     whatever the line says — empty, without LOCK_HELD_BY: a process is
     still writing (the writer, or a process it started that inherited the
     lock) — wait, never delete. Free and written on this host with
     LOCK_HELD_BY: the writer ended — the lock is stale. Free otherwise — a
-    line without LOCK_HELD_BY (labkit 0.107.0 or earlier, by hand, or cut
-    short) or another host's, whose flock a shared file system may not
+    line without LOCK_HELD_BY (by hand, by a labkit that writes none, or
+    cut short) or another host's, whose flock a shared file system may not
     carry across hosts — no answer, and no deletion advised. Why:
     docs/notes/2026-11-04-liveness-and-wait.md."""
     fields = holder.split(" · ")
@@ -337,8 +332,8 @@ class Store:
     not `true`, a tuple is its list. The instrument is snapshot at
     construction; the comparison and every row's stamp come from that
     snapshot. An instrument JSON cannot hold raises TypeError at
-    construction. Resume by id alone let a new prompt keep the
-    old prompt's answers (the cloud judge probe's analysis audit, 2026-10-14).
+    construction. Resume by id alone would let a new prompt keep the
+    old prompt's answers.
     """
 
     @property
@@ -365,7 +360,7 @@ class Store:
         try:
             # one snapshot, taken now: the comparison and every row's stamp
             # come from it, so a caller changing an inner dict later changes
-            # neither (a shallow copy shared them, review 2026-10-20)
+            # neither (a shallow copy would share them)
             self._instrument_stored = runs.as_stored(given)
         except TypeError as exc:
             raise TypeError(
@@ -422,9 +417,7 @@ class Store:
         """The output handle, under the lock `__enter__` holds."""
         if self.mode == "produce":
             # A producer REPLACES its file — running it twice must yield the
-            # file of ONE run, never a concatenation (2026-08-19 producer
-            # rule; scar 2026-09-09, area 71: a second producer run appended
-            # 625+528 rows and only --verify caught it). Writes go to a temp
+            # file of ONE run, never a concatenation. Writes go to a temp
             # file; the clean exit renames it over the target atomically, a
             # crash leaves the old file untouched and the temp visible.
             self._fh = self._tmp.open("w", encoding="utf-8")
@@ -555,7 +548,7 @@ class Store:
         """done / missing / stray / duplicate by id, plus who holds the lock.
         No model load. `done` counts distinct ids; an id on two lines is
         named under `duplicate` — a counted set alone would let a missing
-        item and a doubled one cancel out (2026-10-09)."""
+        item and a doubled one cancel out."""
         done = self.records()
         done_ids = {
             _key(r[self.id_key]): r[self.id_key] for r in done if self.id_key in r

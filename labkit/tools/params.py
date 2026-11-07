@@ -2,10 +2,9 @@
 
     labkit-params <AREA> [--run RUN_ID] [--protocol PROTOCOL-*.md]
 
-"Which value held in this run, and where was it decided?" took four files
-(the script's constants, its design object, the run's config.json,
-models.toml) — code-navigation round 13, 2026-10-08: "protocols, measure
-and runs with their configs — where to start". This is the one view, a
+"Which value held in this run, and where was it decided?" otherwise takes
+four files (the script's constants, its design object, the run's
+config.json, models.toml). This is the one view, a
 projection of the canonical sources, never a source itself: the first line
 names the run and the protocol it reads; every row says where the value
 has its home and which tier the claim belongs to.
@@ -103,8 +102,8 @@ def recorded_rows(run_config: dict, run_name: str) -> list[ParamRow]:
     """Every key the run recorded under `config`: certain, and nothing more.
     A resolved model spec under a key other than `model`/`*_model` is
     marked: the run recorded it, but it is not provenance labkit holds
-    (runlog resolves `model` keys into `models_resolved`; uniagent 14–17
-    recorded `judge`)."""
+    (runlog resolves `model` keys into `models_resolved`; a `judge` key,
+    for one, is not resolved)."""
     rows = []
     for key, value in sorted(run_config.items()):
         spec = _looks_like_model_spec(value) and not (
@@ -298,7 +297,7 @@ def render_table(rows: list[ParamRow]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
+def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline
     """Command line: the table for one area's answering run, or a named run."""
     if not argv or argv[0] in ("-h", "--help"):
         lines = [

@@ -11,10 +11,8 @@ right after the purpose (LAB-082 In `notes/messung/`):
     Audit                       design/preflight audit written as a note
 
 The kind is DECLARED, never derived from code mentions: a Referenzkarte can
-name dozens of scripts, a draft can cite a prior area's code (found 2026-09-10
-across 55 notes: 4 notes naming .py files were drafts, the note naming the
-most scripts was a glossary). The checker therefore only verifies presence
-and inconsistency, not classification:
+name dozens of scripts, a draft can cite a prior area's code. The checker
+therefore only verifies presence and inconsistency, not classification:
 
   MUST  meta line present (an italic paragraph after the title; a limitation
         blockquote BEFORE it is fine — the Befundregister reads exactly that)
@@ -34,8 +32,7 @@ Usage:
 Directories are searched for notes/messung/*.md (a path already ending in
 messung/ is taken as the notes dir itself; 00-*.md index files are skipped).
 Exit 1 if any MUST check fails. Patterns follow the protocol-check contract
-doctrine: extend, never move; regression = both lab repos exit 0 after the
-2026-09-10 retro-stamp.
+doctrine: extend, never move.
 """
 
 import re
@@ -60,7 +57,7 @@ DATE = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b")
 # Code evidence for an implemented instrument: a script file, a bare function
 # call in backticks, an experiment-area path, or a protocol reference (the
 # protocol names the scripts; a synthesis note over runs listed in a protocol carries only
-# that — found 2026-09-10, instrument-mal-modellstaerke).
+# that).
 CODE = re.compile(
     r"[\w./-]+\.py\b|experiments/[\w-]+|`\w+\(\)?`"
     r"|PROTOCOL-[\w-]+"

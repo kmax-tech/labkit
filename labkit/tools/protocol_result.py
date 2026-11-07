@@ -47,8 +47,8 @@ def fill_result_run(text: str, run_id: str) -> str:
     naming RUN_ID already leaves the text as it is; one naming another run
     is refused, --force or not: a declaration is withdrawn (`--withdraw`),
     then the run that answers is audited and adopted — an audit made while
-    another run is declared does not cover the new one (file-check case,
-    2026-10-28). Every other byte stays, and the block is read back and
+    another run is declared does not cover the new one. Every other byte
+    stays, and the block is read back and
     must declare exactly RUN_ID. Raises BlockError on a head that does not
     read, ValueError on the refusal or a block without `[protocol]`."""
     current = protocol_block.declared_run(text)
@@ -147,8 +147,8 @@ def from_run(
     declaration that the number is reported, `fill_result_run`), the Recorded results
     line, the Limitation lines and the Runs entry as `runs/<run_id>/metrics.json`
     and the covering records render them (`result_render.rendering`; the
-    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limitation line of a record that covers
-    the run no longer dropped; the Summary's Conclusion stays the author's
+    protocol's answering run, `recheck.chosen_run`, when RUN_ID is None), a Limitation line of a record that no longer covers
+    the run dropped; the Summary's Conclusion stays the author's
     (`WRITTEN_AFTER_RUN`). Returns (text, what was filled, run_id). A filled
     Recorded results is refused without `force`; a `[result]` naming another
     run is refused always (`fill_result_run`: withdraw it first)."""
@@ -278,7 +278,7 @@ def limit_lines(
                 raise ValueError(f"no Recorded results line to write {label!r} under")
             # below Recorded results and the Limitation lines already under it: in
             # record order (inserted right below Recorded results, three limits
-            # read #3, #2, #1 — the final audits, 2026-10-21)
+            # would read #3, #2, #1)
             at = answer.last
             for f in fields(text):
                 if f.line == at + 1 and f.label.startswith(findings.LIMIT_PREFIX):
@@ -294,10 +294,9 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
     from the scripts' `PROMPT` / `PROMPT_<VARIANT>` constants, `PROMPT`
     first, each under a `── NAME ──` line when there are several.
 
-    The block is what `code-check` holds the script to (prompt drift); three
-    of three cold agents wrote it by a Python snippet because the label fill
-    could not reach a code block (re-measure 2026-10-07). Replaces the block
-    that follows the label (within three lines), or inserts one."""
+    The block is what `code-check` holds the script to (prompt drift); the
+    label fill cannot reach a code block. Replaces the block that follows
+    the label (within three lines), or inserts one."""
     if not constants:
         raise ValueError(
             "no PROMPT constant readable in the area's scripts (an f-string "
@@ -319,8 +318,8 @@ def fill_prompts(text: str, constants: dict[str, str]) -> str:
     for j in range(f.last, min(f.last + 3, len(lines))):
         m = protocol_block.FENCE.match(lines[j])
         if m:
-            # the one fence rule (protocol_block.closes): until 0.96.0 a line
-            # merely starting with the marker closed it (audit 2026-10-15)
+            # the one fence rule (protocol_block.closes): a line merely
+            # starting with the marker does not close it
             k = next(
                 (
                     k

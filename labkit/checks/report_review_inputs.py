@@ -3,7 +3,7 @@ names report and protocol, without a model call: the reviewer's prompt is
 rendered from `review_pieces`, the record's fingerprint is taken over it,
 and report-check takes it again to tell whether a review saw the state it
 holds. Model-free, so the release gate reads it without loading a model
-backend (audit 2026-10-27, third, M1).
+backend.
 """
 
 from __future__ import annotations
@@ -152,7 +152,6 @@ def review_pieces(
 
 #: how a setting a measurement's config lacks is shown and compared — not
 #: `null`: a key left out and one set to null can mean different things
-#: (review 2026-11-06, finding 4)
 ABSENT = "absent"
 
 
@@ -171,9 +170,8 @@ def runs_text(
     scalar metrics. The history
     a statement about "the" measurement is held against: a search the
     report does not name shows as runs of one protocol under varying
-    settings, which three rounds of reviews that saw the adopted run alone
-    let pass (docs/notes/2026-11-04-one-explainer-plan.md, "Reading of the
-    spread round"). An unreadable run is a line saying so, never left out."""
+    settings, which a review that sees the adopted run alone lets pass. An
+    unreadable run is a line saying so, never left out."""
     dirs = run_dirs(area)
     bound = [
         rd.config.config

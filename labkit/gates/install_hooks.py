@@ -4,9 +4,7 @@
     labkit-hooks check [REPO]      exit 1 when one is missing or from another labkit
 
 The hooks come with the pinned labkit, so raising the pin and running
-`install` again brings hooks that match the commands they call (2026-10-07;
-before, the scaffolder in the house dotfiles wrote its own copy once, and
-existing repos never got a newer one).
+`install` again brings hooks that match the commands they call.
 
     .githooks/pre-commit     protocol-check on staged protocols; the area
                              numbers in the index (labkit-init numbers
@@ -26,8 +24,8 @@ existing repos never got a newer one).
                              merge it completes on its own, and a merge
                              without a text conflict can still bring a
                              reported number and a changed analysis together
-    git core.hooksPath       set to .githooks (it used to be a manual step
-                             per clone, and the hook silently did nothing)
+    git core.hooksPath       set to .githooks (without it the hook silently
+                             does nothing)
     .claude/settings.json    claude-hook pre-run · post-change · stop
     .codex/hooks.json        codex-hook pre-run · post-change · stop (trust via /hooks)
 
@@ -130,9 +128,7 @@ def pre_merge_commit() -> str:
     checks (`.githooks/pre-commit`) on the merge's index. git runs it,
     never pre-commit, for a merge it completes on its own; a merge without
     a text conflict can still bring a number reported on one branch and
-    its analysis changed on the other together (probed 2026-10-28 on the
-    count walkthrough: the merge went through, report-check on its state
-    exits 1). A merge with conflicts is committed through pre-commit."""
+    its analysis changed on the other together. A merge with conflicts is committed through pre-commit."""
     return f"""#!/bin/sh
 {MARK} {labkit_version()} — reinstall: .venv/bin/labkit-hooks install
 # Escape hatch for a deliberate exception: git merge --no-verify
@@ -190,9 +186,8 @@ CLAUDE_HOOKS: HookEntries = {
 
 
 #: a hook command that calls one of these was written by a labkit install —
-#: this version's or an earlier one (uniagent 2026-10-10: a jq one-liner
-#: running `protocol-check` on every PROTOCOL write survived three installs
-#: and doubled every report beside `claude-hook post-change`). Not every
+#: this version's or an earlier one, so an earlier install's hook never
+#: runs beside this version's and doubles its report. Not every
 #: labkit command (`console.command_names`): a foreign hook that calls
 #: `runlog` is not one an install wrote, and an install must not erase it.
 HOOK_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
@@ -200,8 +195,8 @@ HOOK_COMMANDS = ("claude-hook", "protocol-check", "notes-check")
 
 #: one of labkit's commands as a word of the hook's command line — at the
 #: start, after a space, a `/` or a quote, and not inside a longer name: a
-#: foreign `./bin/my-protocol-checker` was taken for ours and erased by an
-#: install (audit 2026-10-15)
+#: foreign `./bin/my-protocol-checker` is not ours, and an install must not
+#: erase it
 def _hook_command_pattern(commands: tuple[str, ...]) -> re.Pattern[str]:
     """Match an installed command word, including a quoted executable path."""
     return re.compile(
@@ -357,9 +352,9 @@ HOOKS_DIR = ".githooks"
 
 def point_hooks_at(repo: Path) -> None:
     """`git config core.hooksPath .githooks` in REPO: the hook runs only
-    where that setting points at it (2026-10-05). The one place it is set
-    — `labkit-hooks install` and `labkit-init` both call it (audit
-    2026-10-27, third, S9). Raises RuntimeError naming git's refusal."""
+    where that setting points at it. The one place it is set —
+    `labkit-hooks install` and `labkit-init` both call it. Raises
+    RuntimeError naming git's refusal."""
     r = git_run(["config", "core.hooksPath", HOOKS_DIR], repo)
     if r.returncode != 0:
         raise RuntimeError(

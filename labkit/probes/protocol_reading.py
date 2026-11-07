@@ -1,10 +1,10 @@
 """protocol_reading — how well a person can read a protocol, measured four ways.
 
-The checks hold a protocol to its registration; nothing measured whether a
-person can read it. A reader's assessment of uniagent's protocols
-(2026-10-07): strong in content, but about 65 lines of form before the
-first sentence for a person, ids and keys in the summary, results as
-`key value · key value · …` chains. Four measurements, all cheap:
+The checks hold a protocol to its registration; this measures whether a
+person can read it — a protocol strong in content can still put many lines
+of form before the first sentence for a person, ids and keys in the
+summary, results as `key value · key value · …` chains. Four measurements,
+all cheap:
 
 - **form** (mechanical, static evidence — never proof of readability):
   prose lines before the first field, `·` chains of more than two items,
@@ -250,8 +250,7 @@ def score_reader_answer(
 
 # --- the glance: what a reader takes away before stopping -------------------
 #
-# A reader who saw the whole protocol cannot report what it knew at line ten
-# (round 9: a reader claimed the result from lines that held the legend).
+# A reader who saw the whole protocol cannot report what it knew at line ten.
 # The glance reader gets only the first lines of the file, as they are: when
 # the head or form text uses them up, that is the finding. Lines are unfair
 # between writers — one field per long line holds three times the text of a
@@ -361,7 +360,7 @@ def score_glance_answer(
 
 # --- terms: is an unclear term explained where the reader would look? -------
 #
-# Two layers (2026-10-07): a term in the Summary must be plain there — the
+# Two layers: a term in the Summary must be plain there — the
 # Terms field cannot rescue it; a term in the technical part may be
 # explained in Terms or in a glossary note it links. Whether a term OCCURS
 # there is checked here — static evidence, never proof of an explanation;

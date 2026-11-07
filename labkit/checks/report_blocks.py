@@ -42,9 +42,7 @@ here states, and no more:
   protocol and run are blockers. The gate (`report_hold.promotions`)
   holds the undiscussed citation of a protocol's answering run that
   declares no result: at `low` such a report is the promotion without the
-  adoption (sixth haiku round, 2026-10-23, t3 and t18: `--from-run`
-  refused, REPORT.md written from metrics.json by hand, the hook warned and
-  let it pass).
+  adoption.
 - A protocol handed over unresolved stands in a handover block, written
   by `protocol-fill <PROTOCOL> --handover`; its format and its check live
   in `handovers` (the stop and the commit read it), here its lines count
@@ -59,10 +57,9 @@ here states, and no more:
   came from, and a count or median the run never stored has no source here
   at all.
 
-Why (labkit-paper area 09, fifth haiku round, 2026-10-22): the protocol's
-Answer was held exactly, and REPORT.md at the repository root stated
-"28 training samples" (the file has 44) and "median 0.449" (it is 0.284);
-no gate read the file.
+Why: the protocol's Answer is held exactly, but a separate report can
+state a number its run does not hold; without these checks no gate reads
+that file.
 """
 
 from __future__ import annotations
@@ -322,9 +319,9 @@ def blocks_owed(
     that a protocol declares as its result (DECLARING: run id → the
     protocols, each as the report names it) and whose block the report
     does not carry (PRESENT: the protocols of its blocks, as written) —
-    each protocol once, at the first line citing one of its runs. Why
-    (fifth haiku round, 2026-10-22): all three labkit reports retyped the
-    declared number in prose, and 0.103.0 only warned."""
+    each protocol once, at the first line citing one of its runs. Why: a
+    number retyped in prose drifts from the declared one, and a warning
+    alone lets it stand."""
     out: list[tuple[int, str, str]] = []
     named: set[str] = set()
     for n, run_id in cited:
@@ -386,9 +383,8 @@ def cited_gaps(cited: list[tuple[int, str]], known: set[str]) -> list[GateFindin
 #: The why is the report of what stopped the number, on the page beside it.
 #: A false one ("not reported" beside a number read as the result) is a
 #: sentence the report review reads — the gate's blind spot moved onto the
-#: page. Not a prose pattern: a marker the gate reads out of prose fell
-#: apart on the first backtick around the id (eighth haiku round, t3;
-#: docs/notes/2026-10-26-report-run-citations.md).
+#: page. Not a prose pattern: a marker the gate reads out of prose breaks
+#: on a backtick around the id (docs/notes/2026-10-26-report-run-citations.md).
 DISCUSSED = "discussed"
 DISCUSS_OPEN = opener(DISCUSSED)
 DISCUSS_HEAD_END = HEAD_END

@@ -79,7 +79,7 @@ def _hold_names(
     for m in markers or ():
         if m != m.strip():
             # padding defeats the whole-word match: " so " needs a
-            # non-word character outside each space (sandbox, 2026-10-21)
+            # non-word character outside each space
             raise ValueError(
                 f"marker {m!r}: markers match as whole words already — write {m.strip()!r}"
             )

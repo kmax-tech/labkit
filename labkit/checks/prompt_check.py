@@ -33,7 +33,7 @@ PROMPT_NAME = re.compile(r"^PROMPT(_[A-Z0-9_]+)?$")
 def check_parser_fixtures(area: Path, repo: Path) -> list[GateFinding]:
     """Every `parse_*` in the area's scripts is called in some test file under
     the repo's tests/ (`parse_x(…)` or `module.parse_x(…)`). A name in a
-    comment, a string or an import passed until 2026-10-20 and is no call.
+    comment, a string or an import is no call.
     Whether the test asserts on the result is not checked. A test file that
     cannot be parsed is a finding of its own: what it calls cannot be told."""
     scripts = area_files(area, (SCRIPT_GLOB,))
@@ -96,8 +96,7 @@ def _value_of(node: ast.AST, env: dict[str, _Value]) -> _Value | None:  # noqa: 
     keys of a dict or the items of a list/tuple of strings. The stamped
     skeleton builds `PROMPT = "..." + ANSWER_LINE` with
     `ANSWER_LINE = f"... {' or '.join(ANSWERS)}."`; reading literals only
-    made every stamped prompt unreadable, so the drift check never ran
-    (re-measure 2026-10-07, three of three judge agents)."""
+    would leave every stamped prompt unreadable and the drift check idle."""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
     if isinstance(node, ast.Name):
@@ -206,7 +205,7 @@ def check_prompt_drift(area: Path, protocol: Path) -> list[GateFinding]:
     constant: nothing to hold, only the unreadable-constant warnings."""
     consts, unreadable = _prompts(area)
     # A prompt this reader cannot compute is unchecked — said aloud, never a
-    # silent pass (re-measure 2026-10-07: the stamped skeleton's were).
+    # silent pass.
     warnings = [
         coded(
             WARNING,

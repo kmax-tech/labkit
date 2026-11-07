@@ -15,21 +15,17 @@ files, models.toml, the protocol — an unchanged stamp says the CODE is the
 same, not the inputs. Sibling: `promises.declared_scope_sha` is the same idea per
 promise, over its declared scope.
 
-Why a command and not a shell one-liner: the one-liner in the first draft of
-LAB-019 The stamp covers everything that determines the number
-    { cat "$S"; xargs -a "$S" shasum -a 256; ...; } | shasum -a 256
-which on macOS hashed NO file content at all — BSD xargs has no `-a`, and
-under zsh's noclobber the `>` that built the list was refused too. It printed
-a stable-looking 12-hex stamp while a changed anchor file left it untouched
-(2026-09-08). A stamp that cannot go wrong quietly has to be tested code.
+Why a command and not a shell one-liner: a one-liner can hash no file
+content at all (BSD xargs has no `-a`) and still print a stable-looking
+stamp that a changed anchor file leaves untouched. A stamp that cannot go
+wrong quietly has to be tested code.
 
 The hash covers each file's PATH — relative to the repo root, so the working
 directory and the spelling of the area do not move it — and its content
 digest, plus the pin line: adding, removing, renaming or editing a scope file
 all change the stamp. `area_stamp` is the one home of the scope: `scope-sha`,
 `preflight` and `labkit-audit` all call it, so the stamp an audit prints is the
-stamp a later check recomputes (review 2026-10-07: four tools and spellings
-gave four different stamps for one unchanged area).
+stamp a later check recomputes.
 """
 
 from __future__ import annotations
@@ -56,9 +52,7 @@ from labkit.formats.repo import (
 
 class SourceError(ValueError):
     """A file in the stamp's scope that cannot be read as Python; the message
-    names it. A gate reports it as a blocker — until 0.94.0 it was a
-    traceback in preflight and code-check, exit 1 and so not blocking in the
-    pre-run hook (audit 2026-10-15)."""
+    names it. A gate reports it as a blocker."""
 
 
 SCRIPT_GLOB = "scripts/*.py"
@@ -69,9 +63,8 @@ AREA_GLOBS = (SCRIPT_GLOB, ANALYSIS_GLOB)
 def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
     """The area's own code: scripts, then analysis, each sorted by name
     (the order every check and the audit prompt list them in). The one
-    spelling of where an area's code is — code-check, the stage split and
-    the prompt check globbed it by hand (audit 2026-10-23); a check that
-    wants the scripts alone passes `(SCRIPT_GLOB,)`."""
+    spelling of where an area's code is; a check that wants the scripts
+    alone passes `(SCRIPT_GLOB,)`."""
     out: list[Path] = []
     for pat in globs:
         out.extend(sorted(area.glob(pat)))
@@ -79,18 +72,15 @@ def area_files(area: Path, globs: tuple[str, ...] = AREA_GLOBS) -> list[Path]:
 
 
 #: The repo-local roots a script reaches by import: `lib/` (the house
-#: layout) and `src/` (a repo whose own package is the thing measured —
-#: uniagent computes every registered key in src/measure, and with lib/
-#: alone neither the audit stamp nor the key search saw it, 2026-10-07).
+#: layout) and `src/` (a repo whose own package is the thing measured: with
+#: lib/ alone neither the audit stamp nor the key search would see it).
 LOCAL_ROOTS = ("lib", "src")
 
 
 def parse_source(path: Path) -> ast.Module:
     """The syntax tree of a scope file, or SourceError naming the file. The
-    one parse behind every gate that reads code: until the audit of
-    2026-10-18 only the import walk raised SourceError, so without a `lib/`
-    in the repo a broken script reached a bare `ast.parse` in code-check's
-    constant check — a traceback in preflight, exit 1, not blocking."""
+    one parse behind every gate that reads code, so a broken script is a
+    blocker in each of them, never a traceback."""
     try:
         return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     except (SyntaxError, UnicodeDecodeError) as exc:
@@ -153,9 +143,8 @@ def _lib_files(name: str, libdir: Path) -> list[Path]:
     """The files importing dotted `name` executes under `libdir`: the
     module (`a/b.py`, or a package's `a/b/__init__.py`) and the
     `__init__.py` of every package on the way. A name that is no module
-    there (a function, a stdlib module) gives nothing. Before 2026-10-07 a
-    package import took every file of the package, and an area importing
-    `measure.comparison` was charged with `measure/positions.py`."""
+    there (a function, a stdlib module) gives nothing. A package import
+    takes the package's `__init__.py`, not its other files."""
     parts = name.split(".")
     if not parts or not parts[0]:
         return []
@@ -200,9 +189,9 @@ def imported_repo_helpers(area: Path, repo: Path) -> list[Path]:
     repo-local files (under LOCAL_ROOTS) the area's code reaches by
     import, transitively —
     shared anchors and thresholds live there, so they determine the number
-    (LAB-019 The stamp covers everything that determines the number). Review 2026-10-07: `from lib import scoring` and `import
-    lib.scoring` were read as a module `lib`, and a lib module's own imports
-    were not followed; lib/scoring.py changed while the stamp stayed put."""
+    (LAB-019 The stamp covers everything that determines the number).
+    `from lib import scoring` and `import lib.scoring` both reach
+    lib/scoring.py, and a lib module's own imports are followed."""
     return _import_closure(list(area_files(area)), repo)
 
 
@@ -222,8 +211,7 @@ def measured_code_sha(script: Path, repo: Path) -> str:
     each file's path under REPO and its bytes. What a measurement's rows
     depend on beside their inputs — the estimator skeleton's row identity
     (`instrument()`) carries it, so a resume never continues rows another
-    code wrote (repair case, 2026-10-28: a fix measured again kept the
-    faulty rows). Raises SourceError like the stamp, ValueError for a file
+    code wrote. Raises SourceError like the stamp, ValueError for a file
     outside REPO."""
     base = repo.resolve()
     return digest(
@@ -632,7 +620,7 @@ def main(argv: list[str]) -> int:  # noqa: C901 complexity baseline 2026-10-08
             use_pin = False
             i += 1
             continue
-        if Path(a).is_dir():  # `scope-sha <AREA>`, like every other gate (2026-10-05)
+        if Path(a).is_dir():  # `scope-sha <AREA>`, like every other gate
             area = Path(a)
             i += 1
             continue

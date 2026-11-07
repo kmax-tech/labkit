@@ -80,8 +80,8 @@ def run_facts(run_dir: Path) -> RunFacts | None:
     """The `RunFacts` of RUN_DIR, or None for a directory without
     config.json — not a run. An unreadable config.json is a run in state
     `unreadable` with the reason in `why`: it stays in the listing the
-    operator reads instead of vanishing, and it is never chosen (review
-    2026-10-06). `runlog.active` asks liveness."""
+    operator reads instead of vanishing, and it is never chosen.
+    `runlog.active` asks liveness."""
     return _facts(read_run_dir(run_dir))
 
 
@@ -106,7 +106,7 @@ def _repeats(area: Path, run_id: str) -> list[tuple[int, RunDir]]:
     Raises RunConfigError for a run whose config.json cannot be read — it
     cannot say whether it is a draw of RUN_ID, and dropping it would show a
     spread over fewer draws than were taken, or hand its number out again —
-    and for a repeat without an integer `draw` (2026-10-15)."""
+    and for a repeat without an integer `draw`."""
     found: list[tuple[int, RunDir]] = []
     for rd in run_dirs(area):
         if rd.error is not None:
@@ -467,12 +467,11 @@ def newest_with_intent_keys(
     """Among already-eligible runs: (metrics path, newer runs skipped for
     reporting no intent key, whether the chosen one reports any).
 
-    The rule from 2026-09-09 (area 71) unchanged, only its input narrowed:
-    a producer or probe run writes a metrics.json too, and holding the
+    A producer or probe run writes a metrics.json too, and holding the
     promises against THAT file reports every promise as unimplemented.
     When NO candidate reports an intent key, the newest is returned with
     skipped = 0 and reports_intent_keys = False — the caller says so,
-    instead of a probe run passing as the answer (2026-10-09).
+    instead of a probe run passing as the answer.
     """
     skipped = 0
     for facts in reversed(cands):
@@ -491,15 +490,15 @@ def start_second(run_dir: Path) -> str:
 def same_second(a: Path, b: Path) -> bool:
     """Whether two DIFFERENT runs started in the same second — the one rule
     for a tie the run ids cannot break: the answering choice, its
-    unreadable-run guard and `newest_completed` all ask here (until 0.97.1
-    the scorer compared the seconds itself, audit 2026-10-15)."""
+    unreadable-run guard and `newest_completed` all ask here; no caller
+    compares the seconds itself."""
     return a != b and start_second(a) == start_second(b)
 
 
 def _not_older(run_dir: Path, chosen: Path) -> bool:
     """Whether RUN_DIR may have started after CHOSEN: newer by name, or
-    started in the same second — the random suffix orders those by chance
-    (2026-10-15)."""
+    started in the same second — the random suffix orders those by
+    chance."""
     return run_dir.name > chosen.name or same_second(run_dir, chosen)
 
 
@@ -527,8 +526,8 @@ def newer_unreadable(chosen: Path, rest: list[RunFacts]) -> str | None:
     """Why the choice must not stand: a run NEWER than the chosen one, or
     started in the same second, whose config.json cannot be read. Its
     binding is unknowable, so it may be the run that answers — choosing an
-    older one past it is what `runs.read_run_config` says must not happen
-    (review 2026-10-07)."""
+    older one past it is what `runs.read_run_config` says must not
+    happen."""
     bad = [f for f in rest if f.state == UNREADABLE and _not_older(f.dir, chosen)]
     if not bad:
         return None
@@ -543,7 +542,7 @@ def same_second_rival(
     """Why the choice must not stand: another bound run of the same standing
     (reporting an intent key, if the chosen one does) started in the same
     second. The run id carries the second and a random suffix, so which of
-    the two is newest is chance (2026-10-15)."""
+    the two is newest is chance."""
     rivals = [
         f.dir.name
         for f in taken
@@ -605,9 +604,8 @@ class AnsweringRun:
     def explain(self, ids_registered: bool) -> tuple[GateFinding | None, list[str]]:
         """(why no run may answer as a BLOCKER with its way out, or None; the
         lines that say what was looked at) — ONE telling for finalize,
-        intent-check, recheck, params and the audit, which each rendered
-        this four ways with four semantics (audit 2026-10-15); a caller
-        that tells a sentence tells its `message`. A chosen run that
+        intent-check, recheck, params and the audit, so none tells it its
+        own way; a caller that tells a sentence tells its `message`. A chosen run that
         reports no intent key while the protocol registers ids is a blocker
         here, everywhere: a probe or producer run is not an answer."""
         if self.run_dir is None:

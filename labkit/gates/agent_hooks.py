@@ -227,7 +227,7 @@ def _budget(seconds: float) -> Iterator[None]:
     """Raise _OverBudget in the main thread once SECONDS have passed
     (SIGALRM), after ending every process the checks started, at any depth
     (`_end_descendants`: a test runner's own children too — killing only
-    the direct child left them running on their own). The alarm and the
+    the direct child would leave them running on their own). The alarm and the
     previous handler are restored whatever ends the block."""
 
     def ring(signum: int, frame: FrameType | None) -> None:
@@ -285,8 +285,6 @@ def stop(event: dict) -> int:
     # go only on that very state — a tree changed since (content, files
     # added or gone, HEAD) is a new state and holds again. Not "no loop":
     # an agent that changes something after every hold is held again
-    # (three of four held agents ended at the second stop, labkit-paper's
-    # area 20, 2026-11-04)
     session = event.get("session_id")
     held_file = stop_held_file(repo, session) if session else None
     now = state_fingerprint(repo)
@@ -323,7 +321,6 @@ def _stop_checks(repo: Path, event: dict) -> tuple[bool, bool, str]:
     # reported number reopens it as an edit does; and what the session
     # committed — a commit, even past the pre-commit with --no-verify,
     # leaves the tree clean and the delivered state with the blocker
-    # (eighth haiku round, t3)
     in_tree = touched_paths(repo)
     session = committed_in_session(repo, event)
     changed = list(dict.fromkeys(in_tree + session.paths))
@@ -470,10 +467,7 @@ def commit_gates(argv: list[str]) -> int:
     state (`undecided_state`). Each gate tells its own findings; what to do
     is `next`'s step per protocol touched, printed once (`steps_for`), from
     the index the commit carries. Exit 0 when nothing holds, 1 held, 2
-    outside a repository or with arguments (it reads the index itself).
-    Until 0.109.0 the hook ran three commands, and the first,
-    `protocol-check --staged`, told lines of its own and never `next`'s
-    step (the repair probe's base8, 2026-11-05)."""
+    outside a repository or with arguments (it reads the index itself)."""
     if argv:
         console.refuse(
             "claude-hook pre-commit", "takes no arguments: it reads the index"

@@ -71,9 +71,8 @@ def records_of_gone_runs(records: list[Record], known: set[str]) -> list[Record]
     """The analysis RECORDS whose run is not among KNOWN (the run ids the
     area holds now). A record is evidence that the run existed and was
     read; the directory it names is gone. A record of NO_RUN names none.
-    Why (labkit-paper area 09, fifth haiku round, 2026-10-22): t18 deleted
-    two measured runs with `rm -rf runs/…` after their audits, and finalize
-    read the three records left behind as "every finding decided"."""
+    Why: the records of a run deleted after its audit would otherwise read
+    as "every finding decided"."""
     return [
         r
         for r in records
@@ -88,13 +87,9 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
     what the prompt showed of it, recomputed now: a metrics.json or output
     rows changed after the audit owe a new one), every finding of it
     decided. The head names a record by hand; this is what makes
-    "the frozen code was audited" a fact instead of a line (2026-10-14: after
-    fixing the audit's findings a cold agent stamped the new sha, and no
-    audit had seen that code). Its caller is report-check, mode `analysis`;
-    the freeze holds the record its head names instead
-    (`audit_record_gap`: runlog, preflight). Until 0.97.1 only the code was
-    held: a promise rewritten after the audit, or a later run under the same
-    code, kept the old record valid (review 2026-10-18).
+    "the frozen code was audited" a fact instead of a line. Its caller is
+    report-check, mode `analysis`; the freeze holds the record its head
+    names instead (`audit_record_gap`: runlog, preflight).
 
     Raises:
         FindingsError: A findings file of AREA cannot be read.
@@ -141,8 +136,8 @@ def audit_coverage(area: Path, mode: str, now: AuditedState) -> str | None:
             return f"no {mode} audit record covers the area yet — " + running_words(
                 under_way[-1]
             )
-        # before any audit "a change after the audit" spoke of one that
-        # never ran (audit 2026-10-27, third, I12)
+        # with no record yet, "a change after the audit" would speak of an
+        # audit that never ran
         why = (
             "a change after the audit owes a new one" if records else "none has run yet"
         )
@@ -195,13 +190,9 @@ def audit_record_gap(area: Path, name: str, text: str) -> RecordGap | None:
     still open (`findings.decide_ways`), the record restored where it does not
     read (`findings.record_way`). One answer for runlog's freeze gate, `preflight`
     and `protocol-check`; the caller decides what an empty field and
-    `low` mean. Until 0.103.0 the field was a hand-written line (`<date> · scope
-    sha <12 hex> · N findings`) whose sha a regex read and whose record the
-    sha then had to find — the record names its sha itself, so the head
-    names the record (review 2026-10-22). `n/a` passed every gate until
-    0.99.0 (third haiku round, t18: "RF model training does not require
-    external audit"); the refusal names the honest ways and offers no
-    word to write instead."""
+    `low` mean. The record names its sha itself, so the head names the
+    record. The refusal names the honest ways and offers no word to write
+    instead."""
     name = name.strip()
     audit = audit_way(area)
     if not names_preflight_record(name):
@@ -268,8 +259,8 @@ def freeze_refusals(area: Path, text: str, record: str) -> list[str]:
     it open (`audit_record_gap`), and a BLOCKER open in another preflight
     record of the area (what runlog's freeze gate refuses the run on). The
     writer's half of one rule — the gates' readers keep theirs for a head
-    edited by hand (the one-explainer plan, Phase 3's first item: the
-    writer refuses what a gate would later hold). Raises FindingsError
+    edited by hand (the writer refuses what a gate would later hold).
+    Raises FindingsError
     when a record of the area does not read."""
     report = check_fields(text)
     out = [f"{report.head_error}"] if report.head_error else []

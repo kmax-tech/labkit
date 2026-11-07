@@ -43,7 +43,7 @@ The order, the first that applies is the step (`next_step`):
                                    acknowledges is not held). After the
                                    chain's gaps: the chain's order stands
                                    (the way back of a rewritten registration
-                                   before a decision on it, probe 2026-11-02)
+                                   before a decision on it)
     the adoption would leave a   → fill it first (`check_fields` with
       MUST field open                `adopting`: the frozen protocol's †
                                    result fields; `labkit-adopt` would
@@ -162,9 +162,8 @@ def next_step(
     if before is not None:
         return before
     # a run still going comes first, as `runlog --wait` sees it: read as
-    # nothing, an open run sent agents to measure again beside it (reference
-    # pilot 2026-11-01, task 15), a detached start before its record a
-    # second time after it (2026-11-04, case A of the liveness note)
+    # nothing, an open run — or a detached start before its record — would
+    # send an agent to measure again beside it
     from labkit.run.runlog import busy
 
     still = busy(area)
@@ -382,12 +381,9 @@ def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
     handover acknowledges not among them); None when nothing holds. Read
     after report-check's chain: a gap there names its own step first (the
     way back of a rewritten registration before a decision on it), this
-    row catches the holds the chain carries no gap for. The way is the one
-    the stop and the commit printed themselves until 0.108.0: decide by the
-    command, never by editing the record (ninth haiku round, t5, rewrote
-    records field by field); an outdated record stays and is decided too
-    (fourth SAB-like draw: "stale, let me remove"); restore from git; or
-    hand over."""
+    row catches the holds the chain carries no gap for. The way: decide by
+    the command, never by editing the record; an outdated record stays and
+    is decided too; restore from git; or hand over."""
     from labkit.formats import findings
 
     held = undecided_state(layout_root(area), [protocol], staged=staged).blockers
@@ -415,8 +411,8 @@ def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step
     (`handovers.protocol_handed_over`), else None: the review its
     registered report owes once the handover block stands
     (`registered_report.report_owed`, read from the index when STAGED), else nothing — a new attempt is a new
-    registration. It said "nothing" while the commit held the report for
-    its review (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+    registration. The step never says "nothing" while the commit holds the
+    report for its review."""
     from labkit.gates.registered_report import report_owed
 
     if not handovers.protocol_handed_over(area, protocol):
@@ -449,9 +445,8 @@ def _held_step(
       changed since it ran (`report_check.held_declaration`; the later
       holds name its withdrawal first): the withdrawal alone, then
       `labkit-next` again — the holds are read anew against the run that
-      answers after it. The first hold's own way out told an agent who had
-      already measured the repaired code to measure a third time into a
-      renamed output (probe 2026-11-02, case 5).
+      answers after it. The first hold's own way out would send an agent
+      who already measured the repaired code to measure again.
     - a measurement runlog would refuse: the refusal's first step
       (`_refused_measurement`)."""
     first = held[0]
@@ -490,9 +485,9 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
     the check it names, and `--findings` prints the ways out of either. One
     sentence, for the first such finding in record order. "" otherwise, or
     when the
-    records do not read (the undecided row says so). An agent between the
-    auditor's "misdescribed" and the gate's "restore" rewrote the field
-    five times (labkit-paper's t34-r3, 2026-11-04)."""
+    records do not read (the undecided row says so). Without it, an agent
+    between the auditor's "misdescribed" and the gate's "restore" rewrites
+    the field again and again."""
     if first.step is None or first.step.name != RESTORE:
         return ""
     try:
@@ -550,9 +545,7 @@ def _refused_measurement(ctx: "Checked", first: GateFinding) -> Step | None:
     step (`GateFinding.step`, `commands.MEASURE`) before any run answers and
     runlog's start gate would refuse it now
     (`start_check.measurement_refusal`): the refusal's own first step.
-    None otherwise — with a stamped id only, the one a run binds to. It
-    named "measure" over an uncommitted registration, and runlog refused
-    (probe 2026-11-02, docs/notes/2026-11-02-repair-path-probe.md)."""
+    None otherwise — with a stamped id only, the one a run binds to."""
     from labkit.run import start_check
 
     if ctx.run is not None or ctx.head.id is None:
@@ -600,7 +593,7 @@ def _field_step(
     if report.must_holes:
         # a MUST field stamped and never written: protocol-check holds it
         # (PLACEHOLDER ONLY), so the row names it — a should field is one
-        # once frozen (the repair probe's base8, 2026-11-05)
+        # once frozen
         labels = [label for _, label in report.must_holes]
         fill = _fill_line(named, labels[0], absent=False, area=protocol.parent)
         return Step(
@@ -672,9 +665,8 @@ def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
     the adoption's state owes that the state as it stands does not
     (`protocol_check.adoption_owes`, the one answer `--from-run` refuses
     on) — the Conclusion, a frozen protocol's † result fields. None when the
-    adoption owes nothing more. The one state `labkit-next` named a step its
-    command refused (labkit-paper's tassay-r2, 2026-11-04; the repair
-    probe's c8)."""
+    adoption owes nothing more. So `labkit-next` never names an adoption
+    its command refuses."""
     absent, holes = protocol_check.adoption_owes(text)
     if not absent and not holes:
         return None

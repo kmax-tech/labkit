@@ -15,7 +15,7 @@ import json
 from typing import cast
 
 #: who every reader is — a newcomer, not a colleague: a colleague's patience
-#: hid jargon in protocol-reading rounds 7 and 8 (2026-10-07)
+#: hides jargon
 NEWCOMER = (
     "You are a new student who knows basic statistics, but not this lab, "
     "its tools or its words."

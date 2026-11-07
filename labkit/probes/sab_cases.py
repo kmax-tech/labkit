@@ -23,7 +23,7 @@ recounted from its files (`usability.recount`).
     number_within(task, number, expected)   the kept number against the truth or its range
     evaluate(root, task)     (verdict 0|1, detail): the hidden evaluation on pred_results/
 
-Why (2026-10-27): the labkit-paper main round runs six ScienceAgentBench
+Why: the labkit-paper main round runs six ScienceAgentBench
 tasks with known traps; these cases have the same shape at a probe's scale
 (seconds, no network, no benchmark data), so a cold agent can show where
 labkit's commands, gates and hooks break on a realistic task before a
@@ -67,8 +67,7 @@ HRV_TOLERANCE = 0.10
 #: skeleton (fit; apply without a model in the loop) reports [criterion-1] as
 #: `criterion_1_score`, by labkit's contract (intent-check holds every registered id
 #: to its key). Asking for the task's own name (`val_roc_auc`, `agreement`)
-#: measured the harness, not labkit: three draws kept the right number under
-#: `criterion_1_score` and scored "absent" (docs/usability/2026-10-28-sab-cases-haiku-main.md).
+#: would measure the harness, not labkit.
 #: A computation has no criterion; its sheet names the key (`rmssd_ms`).
 CRITERION_KEY = standard_contract.criterion_key(standard_contract.ESTIMATOR)
 CASES = {
@@ -450,15 +449,15 @@ class Meaning:
     """What a case's kept number is, held beside its key: the skeleton's
     SCORE, the labelled ITEMS it is scored over (metrics' `n_items`), and
     the quantity in words (SAID). A key that matches proves the name only;
-    SCORE and ITEMS show whether the number is the task's (2026-10-28:
-    fit-assay's `criterion_1_score` is an out-of-fold AUC over train and val, never
-    an AUC on the validation split alone)."""
+    SCORE and ITEMS show whether the number is the task's (fit-assay's
+    `criterion_1_score` is an out-of-fold AUC over train and val, never an
+    AUC on the validation split alone)."""
 
     score: str
     items: int
     said: str
     #: the words the task sheet names the metric with; a sheet staged
-    #: without them asked for no metric (fit-assay before 2026-10-28)
+    #: without them asked for no metric
     named_as: str
 
 
@@ -495,8 +494,7 @@ def meaning_gap(
     difference, never a number that only looks valid. SHEET, the probe's
     task sheet as staged: one that does not name the metric
     (`Meaning.named_as`) asked for none, and the sentence says so — a
-    SCORE chosen there is the probe's gap, not a disregarded instruction
-    (fit-assay's accuracy in the fourth draw)."""
+    SCORE chosen there is the probe's gap, not a disregarded instruction."""
     m = meaning(task)
     if m is None:
         return None

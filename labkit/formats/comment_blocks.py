@@ -14,9 +14,8 @@ KIND -->`:
 
 The discussion block (`checks.report_blocks`) and the handover block
 (`handovers`) are its kinds; each reads and checks its own head. One
-scanner and one in-place writer: the handover block was a near copy of the
-discussion block's, and the two had already diverged (audit 2026-10-27,
-third, S1).
+scanner and one in-place writer for both, so the two kinds cannot drift
+apart.
 """
 
 from __future__ import annotations

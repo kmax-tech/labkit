@@ -39,9 +39,9 @@ Closing the finding instead — `false-positive`, `fixed`
 not uphold one on that finding: it is under review too
 (`reviews.once_not_upheld`), and the reviewer is asked whether the
 reason shows the finding inapplicable, the fault gone in the files as
-audited, or the task somebody else's; a reason alone releases nothing
-(sixth haiku round, 2026-10-23, t5). The gate: report-check blocks on an
-accepted BLOCKER's `stands` no review upholds, and on a closed contested
+audited, or the task somebody else's; a reason alone releases nothing.
+The gate: report-check blocks on an
+`limitation` BLOCKER's `stands` no review upholds, and on a closed contested
 BLOCKER, and warns on a WARNING's (`report_decisions.review_findings`).
 
 Exit codes: 0 every decision upheld, 1 at least one not upheld, 2 no
@@ -54,7 +54,6 @@ once more — its verdicts count, and it never releases a contested
 decision), the backend did not answer, or a report whose lines and
 closing counts disagree (nothing is recorded).
 
-History: docs/notes/2026-10-23-decision-review-history.md.
 """
 
 from __future__ import annotations
@@ -133,7 +132,7 @@ def reviewable(
     a carried finding (`carries`: a follow-up did not find it resolved) now
     `false-positive` —
     report-check holds it until a review upholds that
-    (`report_decisions.followup_findings`) —, a BLOCKER `dismissed`, its
+    (`report_decisions.followup_findings`) —, a BLOCKER decided `false-positive`, its
     first dismissal too (`findings.false_positive_blocker`), and a BLOCKER
     on the Conclusion decided `fixed` (`findings.fixed_claim`: no follow-up
     audit is shown a repaired claim). `not assessable`
@@ -186,12 +185,10 @@ def decisions_text(
 ) -> str:
     """The decisions of RECORD under review, as the reviewer reads them:
     number, grade, finding text, the status, the reason, the effect
-    (accepted only), the finding's required check with its value in
+    (`limitation` only), the finding's required check with its value in
     METRICS — the run's snapshot the prompt shows — or that it is missing
     (`audit_prompt.required_check_line`), so a reason resting on the check
-    meets what the run records beside it (round 2, t21 r10: "verified: one
-    feature" against a run that never counted them, judged
-    `insufficient`) — and, for a finding closed after a review did not
+    meets what the run records beside it — and, for a finding closed after a review did not
     uphold a decision on it, that earlier verdict with its sentence
     (`reviews.once_not_upheld`), so the reviewer knows what the new
     decision answers to."""
@@ -225,8 +222,7 @@ def measuring_script(
 ) -> list[tuple[str, str]]:
     """The piece the review shows of the script RUN_DIR ran, when no
     finding under review names a code file — a finding placed in the
-    protocol left the reviewer no code (round 2, t34 r1: a Unit finding on
-    band powers, judged without the call that computed them). The script
+    protocol would leave the reviewer no code. The script
     as the run ran it (`run_record_check.script_as_run`): the area's file
     from SNAP when its digest is the one the run recorded, else the run's
     own copy, labelled as such; else one piece saying why none is shown. A
@@ -439,7 +435,7 @@ def review(
             f"decision(s) · {model} · {len(evidence.prompt) // 1000} kB",
         )
         # journaled like an audit: a review deleted before the commit is
-        # noticed by the attempt that names it (ninth haiku round, t5)
+        # noticed by the attempt that names it
         with audit_call.journaled_answer(
             area, REVIEW, model, evidence.scope_sha, evidence.prompt, timeout
         ) as (running, report):

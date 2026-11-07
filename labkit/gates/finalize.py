@@ -37,7 +37,7 @@ each step's condition):
                     checksum and is tracked or ignored by a rule (a directory
                     source: each visible file under it); untracked outputs warn
                     — the two of the three questions the
-                    agent audit kept asking that a machine can answer (LAB-017 The number of audits follows the cost tier, 2026-10-05);
+                    agent audit asks that a machine can answer (LAB-017 The number of audits follows the cost tier);
                     the third, the counted unit, is the protocol's `Unit` field
   6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
                     every tier: a failing test is a blocker (evaluate() lost
@@ -45,8 +45,7 @@ each step's condition):
   7. criterion n    every `criterion_<i>_n` key in metrics.json equals some input
                     count the run recorded (rows of a data= file, lines of
                     an output) — a warning, not a blocker, until the false
-                    alarm rate is known (2026-10-05; the denominator class
-                    was 31 of 171 audit findings)
+                    alarm rate is known
      null lane      an output the run kept with a registered and a null
                     lane: the null answers otherwise on some item, gold
                     included — a blocker (`null_lane_findings`, LAB-034
@@ -71,11 +70,9 @@ each step's condition):
   8. audit findings every finding still `open` in `audits/` (any mode), with
                     its file: a BLOCKER is a blocker, a WARNING a warning — a
                     finding nobody decided is an ignored finding
-                    (LAB-015 Preflight audit before freezing); the benchmark
-                    rounds reported numbers past undecided BLOCKERs (plan
-                    2026-10-17, A3). And every analysis record names a run
-                    the area still holds: a deleted run directory behind a
-                    record is a blocker (fifth haiku round, `rm -rf runs/…`)
+                    (LAB-015 Preflight audit before freezing). And every
+                    analysis record names a run the area still holds: a
+                    deleted run directory behind a record is a blocker
 
 Three grades, decided where each finding is made and summed at the end:
 `Findings.block` (exit 1), `Findings.warn` (counted, exit 0), a plain
@@ -184,15 +181,15 @@ def choose_answering_run(
     `answering_run.bound_answering_run`, ONE choice for every station: the
     adopted run once `[result]` names one, else the newest bound run that
     reports an intent key (intent-check skips a probe, so checking scopes
-    or provenance on the newest run judged the probe while the numbers
-    came from the measurement, review 2026-10-07). A blocker here is the
+    or provenance on the newest run would judge the probe while the numbers
+    come from the measurement). A blocker here is the
     finding, and it carries the runs that were looked at and why none
     answers: a note beside it reaches no caller that collects the findings
-    as data (audit 2026-10-23, B1). Bound runs newer by name than the
+    as data. Bound runs newer by name than the
     adopted one are a static-evidence warning, never a blocker: a run id is
     local time without a zone, so the name orders the runs of one machine
     only — yet on one machine a newer run left out is what choosing among
-    seeds looks like (audit 2026-10-27, A13)."""
+    seeds looks like."""
     area = protocol.parent
     if pid is None:
         findings.block(
@@ -313,9 +310,7 @@ def gone_run_way(area: Path, run_id: str) -> tuple[str, Command]:
     and the handover it names as the finding's step: put it back where
     git holds it, else hand the area over naming the loss, or register
     anew. Measuring again lifts nothing — the record
-    stays and names the gone run; "measure anew" sent agents round that
-    loop until they deleted the next runs (reference pilot 2026-11-01,
-    task 60, both trials)."""
+    stays and names the gone run —, so the way out never offers it."""
     protocols = area_protocols(area)
     protocol = protocols[0] if len(protocols) == 1 else area / "PROTOCOL-<name>.md"
     handover = handover_command(protocol)
@@ -409,8 +404,8 @@ def check_intent_keys_in_metrics(
             f"{shlex.quote(shown(protocol, Path.cwd()))}` holds it alone",
         )
         return
-    # Its findings as data, each a blocker (audit 2026-10-23, B1); its
-    # notes — which run, on what proof — stay notes (follow-up F4).
+    # Its findings as data, each a blocker; its notes — which run, on what
+    # proof — stay notes.
     for line in held.notes:
         findings.note(f"  {line}")
     for finding in held.findings:
@@ -425,8 +420,7 @@ def check_run_code(
     """Station 3, first half: the code that produced the answering run's
     number, and that of every run it derives from, is the code here now
     (`run_record_check.code_since_run`), for every kind — a fix after the
-    run with no new run left the old code's number standing (audit
-    2026-10-27, A1). A module in another repository is a warning. HELD_BY,
+    run with no new run would leave the old code's number standing. A module in another repository is a warning. HELD_BY,
     the protocol that declares the answering run (None: none does), puts
     the withdrawal first in each blocker's way out (`declared_first`)."""
     changed, apart = code_since_run(area, answering_run)
@@ -449,9 +443,8 @@ def check_declared_scopes(
     held_by: Path | None = None,
 ) -> None:
     """Station 3, second half: a promise's declared scope edited after the run: today's code is not
-    the code that produced the number; until 2026-10-06 only recheck saw it
-    (Durchstich). An answering run that recorded no block is a blocker
-    (standard 0.19, `promises.promise_tables_owed`: every reportable run is held to
+    the code that produced the number. An answering run that recorded no block is a blocker
+    (`promises.promise_tables_owed`: every reportable run is held to
     a registration that is data) — it came from a labkit that let it pass,
     or the block was added after the run."""
     cfg = read_run_config(answering_run)
@@ -568,10 +561,10 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
 def check_area_tests(findings: Findings, area: Path) -> None:
     """Station 6: the area's own tests. The resolution check runs again before a number leaves: a later edit
     of evaluate() that mutes the criterion is caught here too — on every
-    tier, low included, where preflight is not owed (2026-10-07). A
+    tier, low included, where preflight is not owed. A
     missing test is no finding here; preflight owes it at the freeze."""
     # the same place preflight looks: a stamped tree before `git init` has
-    # tests/ under its layout root, and git_root found "none" (audit 2026-10-15)
+    # tests/ under its layout root, where git_root finds none
     tests = area_tests(area, layout_root(area))
     if tests.state == "none":
         findings.note(f"  none ({tests.pattern})")

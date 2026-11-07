@@ -55,15 +55,13 @@ def auth_headers(spec: ServedSpec) -> dict[str, str]:
 
 # A dropped connection is not an experiment result. Retrying transport errors
 # belongs in the FAST lane too: a pilot loses just as much work as a scaled run
-# when the cluster hiccups (2026-08-12: a socket timeout killed a scoring run at
-# 49 of 96 items). Retries are COUNTED, never silent — put `llm.retries()` into
+# when the cluster hiccups. Retries are COUNTED, never silent — put `llm.retries()` into
 # your run metrics, so a run that limped is distinguishable from one that flew.
 class BackendError(RuntimeError):
     """A backend refused a call without a diagnosable reason — retryable.
 
-    The claude CLI can exit non-zero with an EMPTY stderr (seen 2026-08-12:
-    two CLI-heavy runs in parallel killed both after hundreds of successful
-    calls). That is a hiccup, not a misconfiguration, and it belongs in the
+    The claude CLI can exit non-zero with an EMPTY stderr, also after
+    hundreds of successful calls. That is a hiccup, not a misconfiguration, and it belongs in the
     retry set. A real misconfiguration still fails — just three times, fast.
     """
 
@@ -72,8 +70,7 @@ class UnprovenAnswer(BackendError):
     """A reply that does not show the requested model as the whole answer's
     writer — another model in it, a safety stop, more than one turn. Not
     retried (`llm.complete`): the request carries it, and each try of an
-    audit costs minutes and a dollar; in two probe rounds the second try was
-    stopped again."""
+    audit costs minutes and a dollar, and a second try is stopped again."""
 
 
 class ReplyError(BackendError):
@@ -81,10 +78,10 @@ class ReplyError(BackendError):
     off mid-object, a field missing or of another type — named with the
     backend and the field. Retryable like any BackendError: an HTML error
     page or a reply cut in transit can be gone on the next try; a server
-    that always answers so fails after the retries, by name. Before, the
-    same replies surfaced as KeyError, AttributeError, TypeError or a
-    JSONDecodeError (a ValueError, which labkit-audit read as an area it
-    could not stamp) far from the reply (review 2026-10-20)."""
+    that always answers so fails after the retries, by name — never as a
+    KeyError, AttributeError, TypeError or JSONDecodeError far from the
+    reply (a ValueError labkit-audit would read as an area it could not
+    stamp)."""
 
 
 def json_reply(raw: str | bytes, where: str) -> JsonObject:
@@ -214,21 +211,20 @@ class Response:
 # files (user + project) into its system prompt. An empty setting-sources
 # list drops all of them while OAuth keeps working (verified CLI 2.1.267;
 # `--system-prompt` does NOT drop CLAUDE.md, an empty CLAUDE_CONFIG_DIR
-# drops the login). 2026-09-23: `language: German` in the operator's
-# settings had 45/432 English scenario prompts answered in German.
+# drops the login): an operator's `language` setting, for one, would
+# change the language of the answers.
 # No tools either: a judgement is an inference, not an agent session. With
 # its read-only tools left on, a long prompt that says "read <file>" can send
 # the CLI off to its cwd instead of answering from the inlined text, and the
-# answer then depends on what lies there (preflight audit of labkit-paper
-# area 03, 2026-10-06). `--tools ""` disables the whole built-in set.
+# answer then depends on what lies there. `--tools ""` disables the whole built-in set.
 CLI_ISOLATION = ["--setting-sources", "", "--tools", ""]
 #: what `input = "prompt"` adds (`llm_specs.CliInput`): `--bare` drops the
 #: environment reminders (cwd, model, date) the CLI puts before the prompt,
 #: and `--system-prompt` replaces its agent system prompt (~27 k characters)
 #: with the caller's own, the empty string for none — what remains is the
 #: CLI's fixed identity line. Thinking goes off through the environment,
-#: the CLI has no flag for it. Checked on CLI 2.1.309 behind a logging proxy
-#: (registered pilot, 2026-11-01): one message, the prompt; system 139
+#: the CLI has no flag for it. Checked on CLI 2.1.309 behind a logging proxy:
+#: one message, the prompt; system 139
 #: characters; `thinking` disabled. `--bare` reads no login, only
 #: ANTHROPIC_API_KEY.
 CLI_PROMPT_ONLY = ["--bare"]
@@ -244,10 +240,8 @@ CLI_PROMPT_ONLY_SENT = (
 
 #: `claude -p` runs from a neutral directory, never from the repo: the CLI
 #: is a harness and reads its cwd (project files, git state) into the
-#: conversation. A cold agent observed answers mentioning "labkit" and
-#: "Python code" for a one-word judgement when called from the repo root,
-#: 3 of 5 times, clean from /tmp (2026-10-05, not reproduced in 7 tries —
-#: a sketch, but the cwd is not part of the instrument either way).
+#: conversation: from the repo root a one-word judgement may mention
+#: "labkit" or "Python code", and the cwd is no part of the instrument.
 _CLI_CWD = tempfile.gettempdir()
 
 
@@ -258,10 +252,9 @@ def _cli_run(
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
     """The one place `claude -p` is spawned: isolated flags, neutral cwd, the
-    prompt on STDIN, ENV over the caller's environment. As an argument the
-    prompt hit Linux's 128 kB cap per argv entry (`OSError: Argument list
-    too long`) — an audit prompt is 200 kB, and only macOS let it through
-    (audit 2026-10-15)."""
+    prompt on STDIN, ENV over the caller's environment. Not as an
+    argument: Linux caps an argv entry at 128 kB (`OSError: Argument list
+    too long`), and an audit prompt is 200 kB."""
     return subprocess.run(
         cmd,
         capture_output=True,
@@ -287,7 +280,7 @@ def cli_version() -> str:
 def pick_endpoint(spec: ServedSpec) -> str:
     """Next endpoint for this call: round-robin over spec['endpoints'].
 
-    A single endpoint behaves exactly as before. With several, each call
+    A single endpoint is chosen every time. With several, each call
     advances the counter — and because `complete()` re-enters here on retry,
     a dropped server naturally fails over to the next one.
     """
@@ -463,9 +456,9 @@ def _cli_provenance(
     model's id stays on the record for text another model wrote, and a part
     reads as the whole. CLI 2.1.285 reported such a reply as
     `subtype = "success"`, `is_error = false`, `num_turns = 2`, both models
-    in `modelUsage`, no `safety_stops` (fit probe on 97e6470). One model in
+    in `modelUsage`, no `safety_stops`. One model in
     two turns is an answer not shown whole — after a safety stop the same
-    model may continue (t18 on CLI 2.1.285), and at the output token limit
+    model may continue (CLI 2.1.285), and at the output token limit
     the CLI resumes it (CLI 2.1.308); the reply's fields do not tell the
     two apart. An error
     (IS_ERROR) without a stop or another model is left to the caller: an
@@ -499,8 +492,8 @@ def _cli_provenance(
         )
     turns = reply_field(body, "num_turns", int, where, required=True)
     if turns != 1:
-        # without tools, the CLI adds a turn after a safety stop (seen at t18,
-        # uncounted) or at its output token limit (probe); `safety_stops = 0`
+        # without tools, the CLI adds a turn after a safety stop (also
+        # uncounted) or at its output token limit; `safety_stops = 0`
         # does not rule out the first — no CLI version is shown to count every
         # stop (docs/notes/2026-10-25-cli-two-turns.md)
         raise UnprovenAnswer(
@@ -513,8 +506,8 @@ def _cli_provenance(
 
 #: how long ollama keeps the model loaded after a call. Without it ollama
 #: evicts the model between two calls (default 5 min) and every call pays a
-#: reload — ~13 GB for gpt-oss; that once drove a run into the timeout after
-#: 5 of 100 items. No caller ever set another value (audit 2026-10-13).
+#: reload — ~13 GB for gpt-oss, enough to drive a run into its timeout.
+#: No caller sets another value.
 OLLAMA_KEEP_ALIVE = "10m"
 
 
@@ -523,11 +516,8 @@ def _ollama_options(
 ) -> dict[str, object]:
     """The `options` of an ollama request, for /api/generate and /api/chat
     alike. `num_predict` is never left out: a completion has no natural end
-    and without a token budget it writes until the context is full (a pilot
-    stalled 12 min on one call; until 2026-08-19 the chat path — the one
-    every experiment takes — set only `temperature`, and a server log showed
-    `n_gen = 3520` at a nominal 2048, the request aborted after almost three
-    minutes, which looked like an overloaded cluster)."""
+    and without a token budget it writes until the context is full —
+    minutes on one call, which looks like an overloaded cluster."""
     options: dict[str, object] = {"num_predict": max_tokens}
     if temperature is not None:
         options["temperature"] = temperature
@@ -603,8 +593,7 @@ def _ollama_usage(body: JsonObject, where: str) -> Usage:
 
 
 #: characters per prompt token above which a prompt counts as cut. Tokenizers
-#: average 3-6 characters per token on English and code (repetitive English
-#: read 5.2 on gpt-oss:20b, leguin, 2026-10-11); a ratio of 10 means
+#: average 3-6 characters per token on English and code; a ratio of 10 means
 #: more than half the prompt never reached the model. Floor, not estimate:
 #: a prompt cut by a third passes — the exact check needs `num_ctx`.
 TRUNCATION_CHARS_PER_TOKEN = 10
@@ -621,8 +610,8 @@ def _check_prompt_fit(spec: OllamaSpec, prompt_chars: int, usage: Usage) -> None
     ollama cuts a prompt longer than its context window and answers what is
     left; nothing in the reply but `prompt_eval_count` shows it. Two tests:
     with `num_ctx` set, a count that reaches the window is a cut (ollama
-    0.23.1 trims to exactly the window and answers with HTTP 200: a
-    25,272-character prompt at num_ctx 2048 read 2,048, leguin, 2026-10-11); without it, a count far below the prompt's
+    0.23.1 trims to exactly the window and answers with HTTP 200); without
+    it, a count far below the prompt's
     length (TRUNCATION_CHARS_PER_TOKEN). A reply without the count (whole
     prompt from cache) cannot be judged and passes.
     """

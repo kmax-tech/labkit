@@ -401,9 +401,8 @@ def render(
             pieces += source.run
             pieces += source.fixes
             # the ways out by cause, so a finding's repair names one of
-            # them: an auditor that proposed a new constant after the first
-            # measurement sent two agents into report-check's refusal
-            # (fourth SAB-like draw, 2026-10-28)
+            # them: a repair proposing a new constant after the first
+            # measurement leads into report-check's refusal
             # the protocol as shown: its block read when the audit stamped
             # it (`promises.block_stamp` raises first), so no PromiseError
             # here; the audit holds one protocol, as `--decide` does
@@ -423,9 +422,8 @@ EARLIER_LABEL = "EARLIER DECIDED BLOCKERS AND CORRECTIONS"
 #: the label of the piece that shows the ways out of a BLOCKER (MODE analysis)
 WAYS_OUT_LABEL = "WAYS OUT OF A BLOCKER"
 #: operating limits of that piece, not thresholds of meaning: past either
-#: the audit refuses, loudly, rather than show a cut list (decided
-#: 2026-10-26 after the follow-up pilots, whose pieces held one entry of
-#: under 2 kB; revisit with the sizes records keep under `followup`)
+#: the audit refuses, loudly, rather than show a cut list (revisit with
+#: the sizes records keep under `followup`)
 EARLIER_MAX_ENTRIES = 40
 EARLIER_MAX_BYTES = 60_000
 
@@ -513,7 +511,7 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
         effect = f" (effect: {f.effect})" if f.effect else ""
         # the recorded subject, not the word in the text: a carried finding a
         # follow-up settled keeps its origin's `undetermined` in its text, and
-        # an auditor judging by it was refused (audit 2026-11-07, S3)
+        # a verdict judged by that word is refused
         entry = (
             f"{e.ref}\n  finding: {f.text}\n  subject: {f.subject}\n"
             f"  decided: {f.status}{effect} — "
@@ -666,9 +664,8 @@ def _field_change(protocol: Path, text: str, f: findings.Finding) -> FieldChange
 
 class Stamp(NamedTuple):
     """The area's stamp as the auditor saw it: taken ONCE, before the call.
-    Until 0.95.0 it was taken after the model answered (up to 900 s later),
-    so a lib module edited meanwhile gave a record whose sha no auditor had
-    read, and the freeze gate took it as covered (audit 2026-10-15)."""
+    Taken after the model answered (up to 900 s later), a lib module edited
+    meanwhile would give a record whose sha no auditor had read."""
 
     sha: str
     files: list[Path]
@@ -681,8 +678,7 @@ class BoundPrompt:
     the STATE the record binds (`findings.AuditedState`: code, promises,
     registration and, in MODE analysis, the run shown and the digest of
     what is shown of it); the INDEXED files (stamped, not read in full);
-    and SHOWN_NOW, the earlier repairs shown (`Followup`). It replaced an
-    8-tuple passed on as ten arguments (audit 2026-10-27, third, M7)."""
+    and SHOWN_NOW, the earlier repairs shown (`Followup`)."""
 
     prompt: str
     stamp: Stamp
@@ -709,8 +705,8 @@ def bound_prompt(mode: str, area: Path, reading: AuditInputs) -> BoundPrompt:
     The reading's file list was taken before the snapshot. After rendering,
     the list, the snapshot and the protocol are taken again; any change
     means the prompt rests on a list or bytes the area no longer has, and
-    the audit is refused (AuditError) — a file added in between stood in
-    the stamp and not in the prompt (review 2026-10-20)."""
+    the audit is refused (AuditError) — a file added in between would stand
+    in the stamp and not in the prompt."""
     protocol = reading.protocol
     text = protocol.read_text(encoding="utf-8")
     snap = area_snapshot(area)

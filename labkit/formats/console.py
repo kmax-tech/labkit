@@ -5,7 +5,6 @@ When a reader closes the pipe early, stdout is redirected to /dev/null
 and the command exits 0; this also prevents a broken pipe on final flush.
 Usage errors and progress go to stderr; findings and results go to stdout.
 
-History: docs/notes/2026-10-23-console-history.md.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ def refuse(tool: str, why: str) -> None:
     the reason, such as an invalid argument, missing file or ambiguous
     protocol. Findings go to stdout through the gate's collector.
 
-    History: docs/notes/2026-10-23-console-history.md.
     """
     print(f"{tool}: {why}", file=sys.stderr)
 
@@ -53,9 +51,9 @@ class Refused(Exception):
     the command that refuses (named, not read off sys.argv, which `-m` and
     a caller's own command change), WHY the reason. `exit_with` prints it
     through `refuse` and exits 2; a main that runs as another gate's station
-    catches it itself. It replaces an exit code returned beside a result
-    (`Path | int`), where the caller had to know that a number meant
-    "already printed"."""
+    catches it itself. A caller gets a result or this exception, never an
+    exit code beside a result (`Path | int`) that means "already
+    printed"."""
 
     def __init__(self, tool: str, why: str) -> None:
         super().__init__(f"{tool}: {why}")

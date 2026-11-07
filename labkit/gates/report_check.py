@@ -51,8 +51,7 @@ delivered — in the tree at the stop, in the index at the commit —: the
 result block of the declared run or the protocol's handover block,
 declared or not (`registered_report.report_owed`, `hold_registered`); a
 report with the run id removed, a run id typed in, or a discussion block
-releases nothing (pressure pilot 2026-10-29: three of six agents deleted
-the run id after the hook refused the citation, and the commit passed).
+releases nothing.
 The protocols registering a file among the paths are selected too
 (`report_hold.registering_protocols`): the report at the repository root
 lies in no area.
@@ -75,8 +74,7 @@ and what a changed declaration reaches: a protocol among them whose
 declaration differs from HEAD's (`newly_declared`) holds every committed
 report citing that run (`committed_reports`, `reached_reports`) — the
 number such a report shows became a declared result in this state, so it
-owes its block now (the two-step commit of the sixth haiku round, t5,
-2026-10-23). An old citation of a run whose declaration did not change
+owes its block now. An old citation of a run whose declaration did not change
 reopens nothing.
 
 `--staged` is the pre-commit's form. The commit holds the index, the
@@ -198,7 +196,7 @@ from labkit.gates.report_decisions import followup_findings, limit_gaps, review_
 from labkit.gates.report_replacement import replacement_gaps
 
 
-#: how long `--check` may take inside the gate (audit 2026-10-15: no limit)
+#: how long `--check` may take inside the gate
 CHECK_TIMEOUT_S = 300.0
 
 
@@ -221,7 +219,7 @@ def check_analysis_script(area: Path, repo: Path) -> str | None:
             capture_output=True,
             text=True,
             errors="replace",  # the tail is quoted, not parsed: a byte no
-            # codec reads must not raise out of the gate (audit 2026-10-19)
+            # codec reads must not raise out of the gate
             timeout=CHECK_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired:
@@ -257,8 +255,8 @@ def freeze_gaps(ctx: Checked, *, repeated: bool) -> list[GateFinding]:
         blocker(f"{name}: {label}", fix=f"write the field; {fields}")
         for label in report.missing_must
     ]
-    # a must field still holding its `<…>` placeholder passed here while
-    # protocol-check and preflight refused it (audit 2026-10-15)
+    # a must field still holding its `<…>` placeholder blocks here as
+    # protocol-check and preflight refuse it
     gaps += [
         blocker(
             f"{name}: line {n}: {label} still a placeholder",
@@ -301,9 +299,7 @@ def registration_gaps(ctx: Checked) -> list[GateFinding]:
     runlog; what stood before the number is what the commit holds. Outside a repository
     a warning, as the provenance station's (`run_record_check.provenance_findings`).
     Empty without a measurement (finalize names the missing run) and
-    without a stamped id. Why (labkit-paper area 09, fifth haiku round,
-    2026-10-22): none of the three labkit agents had committed criterion
-    and quality check before the first measurement."""
+    without a stamped id."""
     if ctx.head.id is None:
         return []
     root = git_root(ctx.protocol)
@@ -442,8 +438,8 @@ def analysis_audit_gap(ctx: Checked) -> GateFinding | None:
     if gap is None:
         return None
     # the way out is a new audit, and `attempts.begin` refuses every attempt
-    # while one of these stands: "none has run yet" and `--mode analysis`
-    # were printed after an audit's record was deleted (pilot t60)
+    # while one of these stands, so the blocker names the loss, never
+    # "none has run yet" or `--mode analysis`
     lost = attempts.evidence_gaps(ctx.area) if not covering else []
     if lost:
         findings_command = audit_command(ctx.area, "--findings", protocol=ctx.protocol)
@@ -582,7 +578,7 @@ def protocol_verdict(
     chain = chain_gaps(ctx, review=review)
     findings.take_all(chain.found)
     # adoption last — an adoption line beside other blockers is the last
-    # step, not the fix (stuck-state probe 2026-10-28)
+    # step, not the fix
     tell_adoption_order(findings)
 
     # 2. summary — 1 with a blocker, otherwise 0
@@ -650,8 +646,8 @@ def report_binding_gaps(ctx: Checked, *, unread: bool) -> list[GateFinding]:
 def finalize_findings(area: Path, protocol: Path) -> list[GateFinding]:
     """Finalize's blockers and warnings, each named here with its prefix
     (`FINALIZE`) — a hook that says "run it to see them" asks for a round
-    trip the agent does not take, and a warning dropped here reached no
-    one who ran report-check, the stop or the commit. finalize runs on a
+    trip the agent does not take, and a warning dropped here would reach
+    no one who ran report-check, the stop or the commit. finalize runs on a
     silent collector (`Findings(tell=None)`): its findings arrive as data
     and its headers and notes reach nothing, so finalize puts every reason
     into the finding itself (the runs it looked at, intent-check's lines,
@@ -683,8 +679,8 @@ def analysis_findings(
     if gap:
         out.append(replace(gap, text=f"analysis audit: {gap.text} ({rule})"))
     # the rendered result section is held here too, named as what it is:
-    # a cold reader took "analysis audit:" on a retyped Recorded results
-    # line for a record problem (reading probe 2026-10-22)
+    # under "analysis audit:" a retyped Recorded results line reads as a
+    # record problem
     if result_section:
         out.extend(
             replace(gap, text=f"result section: {gap.text}") for gap in limit_gaps(ctx)
@@ -859,9 +855,8 @@ def adoption_state(area: Path, protocol: Path, text: str) -> handovers.RunAccoun
     ours = [f for f in rest if f.binding.id == pid or f.state == runs.UNREADABLE]
     measured = [f for f in [*taken, *ours] if is_measurement(f)]
     if not measured:
-        # measured to the end and deleted since: the index keeps them, and a
-        # handover saying "no run of it was measured" hid five deleted runs
-        # (reference pilot 2026-11-01, task 60)
+        # measured to the end and deleted since: the index keeps them, so a
+        # handover never says "no run of it was measured" over deleted runs
         gone = [r for r in indexed_runs(area, pid) if not run_path(area, r).is_dir()]
         if gone:
             return handovers.RunAccount(
@@ -913,10 +908,9 @@ def report_findings(ctx: Checked, *, review: bool = True) -> list[GateFinding]:
     repository where there is one), from the index when the state is the
     index. Not held on the PROPOSED state — the adoption's own check of the
     protocol it is about to write: the result block can only be written
-    after the declaration (`--into`), so holding the report there held the
-    adoption against itself (route probe, 2026-10-29: `--from-run` refused
-    for the missing block, `--into` for the missing declaration); the stop
-    and the commit hold the delivered report. REVIEW: the released report
+    after the declaration (`--into`), so holding the report there would
+    hold the adoption against itself; the stop and the commit hold the
+    delivered report. REVIEW: the released report
     owes a clean report review of its state too (`report_owed`)."""
     if ctx.state == PROPOSED:
         return []
@@ -949,10 +943,9 @@ def adoption_order_note(blockers: list[GateFinding]) -> str | None:
     projections of one (an adoption, or a rewrite of the result section,
     step `commands.RENDER`): adoption runs this check and is refused while any
     of them stands, so they come first. None otherwise — then the adoption
-    line is the way out as printed. Why: printed bare, the adoption line
-    beside an open BLOCKER on that run read as the fix to three of three
-    Haiku readers (docs/usability/2026-10-28-haiku-stuck-reading.md). Read
-    from the steps, never from the words (the one-explainer plan, Phase 2)."""
+    line is the way out as printed. Printed bare, the adoption line beside
+    an open BLOCKER on that run reads as the fix. Read from the steps,
+    never from the words."""
     adoption = [f for f in blockers if f.step is not None and f.step.name == ADOPT]
     other = [
         f for f in blockers if f.step is None or f.step.name not in (ADOPT, RENDER)
@@ -978,8 +971,8 @@ def held_declaration(ctx: Checked, finalized: list[GateFinding]) -> Path | None:
     number no longer holds for the code, the commit hook holds the code to
     it, and an audit made while it stands declared does not cover the next
     run. Not on the PROPOSED state: the adoption's own check sees its
-    proposal declare the run, and "withdraw the adoption first" named an
-    adoption that did not stand (reference pilot 2026-11-01, task 60)."""
+    proposal declare the run, and "withdraw the adoption first" would name
+    an adoption that does not stand."""
     if ctx.state == PROPOSED or ctx.run is None or ctx.declared != ctx.run.name:
         return None
     held = any(f.changed_since is not None for f in finalized)
@@ -1039,9 +1032,8 @@ def reached_by(paths: list[Path], repo: Path, *, staged: bool) -> Touched:
     run the protocol declares) — the index's when STAGED, the tree's
     otherwise. The one reader for the gate (`hold_reported`) and for the
     step printed beside its hold (`next_step.steps_for`): read apart, a
-    protocol the index held and the tree had deleted was held with no step
-    beside it, and so was a report at the root citing an adopted run
-    (workflow check 2026-11-05, finding iv)."""
+    protocol the index holds and the tree deleted, or a report at the root
+    citing an adopted run, would be held with no step beside it."""
     protocols = affected_protocols(paths, repo, staged=staged)
     for p in [
         *registering_protocols(paths, repo, staged=staged),
@@ -1095,8 +1087,7 @@ def hold_reported(
     A protocol among them whose declaration differs from HEAD's
     (`newly_declared`) reaches the committed reports citing that run
     (`committed_reports`): they are held as if changed, since the number
-    they show became a declared result in this very state (the two-step
-    commit of the sixth haiku round, 2026-10-23). A committed report that
+    they show became a declared result in this very state. A committed report that
     discusses a run of an area PATHS touch is held too
     (`discussing_reports`): its review read that area. A protocol whose
     head registers a file among PATHS as its report is held too

@@ -105,8 +105,8 @@ class Lanes:
     parse_answer: Callable[[str], str | None]
     evaluate_rows: Callable[..., dict]  # (rows, config) -> metrics
     # calls in flight at once — the area names it, as its protocol registers
-    # the request discipline: `llm.complete_many` held four, and a protocol's
-    # "one request at a time" ran as four (pubmedqa50, 2026-11-01)
+    # the request discipline: a default here would run a protocol's "one
+    # request at a time" as several
     workers: int
     probe_cases_in: str  # the area test the probe's parser cases are pasted into
     case_classes: Path | None = None
@@ -137,9 +137,8 @@ class Lanes:
         """The one prompt renderer: `--show` prints it, `measure` sends it.
         `{text}` shows the item's TEXT_FIELD; any other `{name}` shows the
         item's field of that name, so a lane can show part of an item — a
-        null lane the context without the question under test (PubMedQA:
-        a placebo shown the research question answered it, registered
-        pilot, 2026-10-31). Raises ValueError for a field the item lacks,
+        null lane the context without the question under test (shown the
+        question, a null lane can answer it). Raises ValueError for a field the item lacks,
         for `gold`, for the job's own keys (id, lane, item_sha) and for a
         placeholder that is no plain name."""
         template = self.prompts[job["lane"]]
@@ -185,8 +184,7 @@ class Lanes:
         pairing is strict — a shorter or longer answer list raises
         ValueError, never a cut. PROV stamps every row (`_prov`). Each line
         is flushed: a run in the background writes to a file, and an
-        unflushed one made a live measurement look dead (pubmedqa50,
-        2026-11-01). Raises ValueError when `workers` is below 1."""
+        unflushed one makes a live measurement look dead. Raises ValueError when `workers` is below 1."""
         if not isinstance(self.workers, int) or self.workers < 1:
             raise ValueError(f"Lanes workers = {self.workers!r}; expected 1 or more")
         with batch.Store(out, prov=prov, instrument=self.instrument(cfg)) as store:
@@ -208,8 +206,8 @@ class Lanes:
     def probe(self, cfg: Any, items: list[dict], n: int) -> list[dict]:
         """N jobs per lane through the real pipeline into a throwaway file,
         and its rows — one case per class when the area names classes. A
-        fresh file each time: resumed, a probe showed an edited item's old
-        answer."""
+        fresh file each time: resumed, a probe would show an edited item's
+        old answer."""
         out = self.out.with_name(self.out.stem + "_probe.jsonl")
         out.unlink(missing_ok=True)
         wanted = (
@@ -237,7 +235,7 @@ class Lanes:
         here: write a new output file. The rows share one instrument —
         whichever it was, so `--eval-only` still reads rows an edited
         models.toml no longer resolves to; two in one file are two
-        measurements (a mixed file balanced, review 2026-10-23)."""
+        measurements."""
         batch.Store(out).ledger(
             jobs, expect={"item_sha": lambda j: j["item_sha"]}
         ).require_complete()
@@ -316,8 +314,8 @@ class Lanes:
             )
         cfg = replace(config, model=args.model)
         if not self.items.is_file():
-            # a missing file read as no items: --show and --probe passed on
-            # nothing (audit 2026-10-27, third, I7)
+            # a missing file would read as no items: --show and --probe
+            # would pass on nothing
             ap.error(
                 f"{self.items}: no prepared items — write them first "
                 "(scripts/00_prepare.py), then show, probe or measure"
@@ -361,10 +359,7 @@ class Lanes:
         protocol's Prompt block does not hold (`prompt_drift`) — the
         registration is the protocol, so the way is the code. A protocol
         without a Prompt block is said aloud and passes: there is nothing to
-        hold the prompt to. pubmedqa50 (registered pilot part 1, r1) sent an
-        answer line and a closing `Answer:` the registration did not have,
-        and only the analysis audit, 16 minutes of measurement later, saw it.
-        Raises SystemExit naming each line."""
+        hold the prompt to. Raises SystemExit naming each line."""
         if self.unregistered_prompt():
             print(
                 f"{self.protocol.name}: no registered Prompt block — the prompts "

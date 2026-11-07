@@ -1,11 +1,10 @@
 """intent-check — do the metrics report every promise the protocol made?
 
-The most frequent blocker class of the first audits (2026-09-08, areas
-62-65) was "registered without implementation": a fork with no branch in
+A promise registered without implementation — a fork with no branch in
 the code, a quality check printed but never compared to its threshold, a
 three-conjunct criterion implemented as one conjunct, gate metrics written
-next to the content numbers the gate was meant to suppress. Reading catches
-this late; a set comparison catches it mechanically.
+next to the content numbers the gate was meant to suppress — is caught late
+by reading; a set comparison catches it mechanically.
 
 The contract (LAB-004 Identifiers make the intent addressable): every registration that promises the
 code something — a verdict, a branch, an abort, a control — carries an id
@@ -87,8 +86,8 @@ class Held:
     chosen and on what proof — told, held against nobody; FINDINGS are the
     guaranteed-tier mismatches, each one a blocker with its way out; SUMMARY
     is the one line of a clean check (empty beside findings). `hold` builds
-    it, `main` prints it, `finalize` collects it as data (audit follow-up
-    2026-10-23, F4: parsed from stdout, every note became a blocker)."""
+    it, `main` prints it, `finalize` collects it as data, so a note never
+    reads as a blocker."""
 
     notes: list[str]
     findings: list[GateFinding]
@@ -98,8 +97,7 @@ class Held:
 class NoRunChosen(console.Refused):
     """No metrics.json chosen for the protocol: no stamped id, or no bound
     run that may answer. The command line adds `METRICS_HINT`; finalize,
-    which has no `--metrics`, shows the reason alone (audit 2026-10-27,
-    third, I12: it passed the hint on)."""
+    which has no `--metrics`, shows the reason alone."""
 
 
 #: the way out only intent-check's own command line offers
@@ -356,12 +354,11 @@ def promised_constant_mismatches(
 
     The script is meant to read its thresholds from the block
     (`promises.constants`). One that keeps its own copy — `min_f1 = 0.5`
-    against 0.6 in the protocol — judged by a threshold nobody registered
-    (Durchstich 2026-10-06). Exact, but only as far as the script records
-    the value in its run config; a copy it never records stays invisible
-    here (0.70.0). Since 0.71.0 a missing constant is a finding too: runlog
-    refuses such a run before mkdir, so a record without it is an old run
-    or a hand-written one.
+    against 0.6 in the protocol — judges by a threshold nobody registered.
+    Exact, but only as far as the script records the value in its run
+    config; a copy it never records stays invisible here. A missing
+    constant is a finding too: runlog refuses such a run before mkdir, so a
+    record without it is an old run or a hand-written one.
     """
     out = []
     for r in promises.constant_records(block, run_config):
@@ -397,9 +394,8 @@ def choose_explicit(
     if not metrics_arg.is_file():
         raise console.Refused("intent-check", f"no such metrics file: {metrics_arg}")
     # An explicit file still has to be a file that MAY answer for this
-    # protocol. Naming one was always a seatbelt, never a proof of
-    # belonging — where the run records a binding, that proof now
-    # exists and is held (2026-09-26).
+    # protocol. Naming one is a seatbelt, never a proof of belonging —
+    # where the run records a binding, that binding is held.
     facts = run_facts(metrics_arg.parent)
     # A run that did not complete has numbers on disk and no finish —
     # "nothing may report it" (protocol-run-binding.md); naming the file
@@ -444,8 +440,8 @@ def choose_bound(protocol: Path, pid: str, text: str) -> tuple[Path, list[str]]:
     `answering_run.bound_answering_run`: the adopted one, else the newest —
     and the lines of its choice to tell the operator (`AnsweringRun.explain`). Raises
     console.Refused when no choice stands, a probe or producer run among
-    them when the protocol registers ids (until 0.96.0 a warning, and every
-    promise then read as unimplemented)."""
+    them when the protocol registers ids (its metrics would read every
+    promise as unimplemented)."""
     choice = bound_answering_run(protocol.parent, pid, adopted_run(text))
     blocker, lines = choice.explain(promises.registers_ids(text))
     if blocker:
@@ -500,23 +496,20 @@ def code_ids(area: Path, suffixed_only: bool = False) -> dict[str, list[str]]:
     what every assembly path has in common.
 
     `suffixed_only` keeps `"quality_check_1_pass"` and drops a bare `"quality_check_65"`. A bare id in
-    the namespace is ambiguous — area 72 named its source sessions `"s65"`,
-    `"s68"`, `"s69"` after the areas they came from, and reading those as
-    unregistered promises produced three findings and no defect (2026-09-10).
+    the namespace is ambiguous — source sessions named `"s65"`, `"s68"`
+    after the areas they came from are no unregistered promises.
     For "registered but absent from the code" every literal counts; for the
     reverse direction only an unmistakable metric key does.
 
     Keyword arguments count too: `r.metrics(criterion_1_pass=acc >= MIN)` reaches
-    metrics.json as `"criterion_1_pass"` without ever being a string literal, and
-    reading literals only reported a correct script as "no script mentions
-    'c1'" — a blocker against correct code (2026-10-06, found in the first
-    promise-block run). Only
+    metrics.json as `"criterion_1_pass"` without ever being a string literal;
+    reading literals only would block correct code. Only
     keyword names in CALLS count, not assignments: a local `criterion_1_pass = …`
     is not yet a reported key. An area file that does not parse keeps its
     literal hits and loses only the keyword half; with a `lib/` or `src/` in
     the repo the import walk needs its syntax tree and raises
     `scope_sha.SourceError` naming it — code-check and preflight report
-    that as one blocker (audit 2026-10-15).
+    that as one blocker.
     """
     hits: dict[str, list[str]] = {}
     for key, where in code_keys(area).items():
@@ -536,17 +529,17 @@ def code_keys(area: Path) -> dict[str, list[str]]:
     The same scan as `code_ids` (string literals, keyword arguments in
     calls), but keeping the whole key: a promise block declares `criterion_1_pass`,
     and `"criterion_1_passed"` in the code answers the id, not the key. Preflight
-    holds the block's keys to this, before any run (Durchstich 2026-10-06:
-    a renamed key surfaced only after the run).
+    holds the block's keys to this, before any run, so a renamed key
+    surfaces before the run rather than after it.
     """
     hits: dict[str, list[str]] = {}
     # The imported repo-local code counts as the area's: a shared helper
-    # under src/ or lib/ may write a registered key, and reading the area's
-    # scripts alone made four promises "absent" (2026-10-07). The house rule
-    # (CODE-016 The experiment area reconstructs itself) now wants every id
-    # literal in the area script, because an id in shared code is counted
-    # for every importing area; the scan stays transitive so a repo that
-    # has not moved yet is held, not waved through.
+    # under src/ or lib/ may write a registered key the area's scripts
+    # alone do not show. The house rule (CODE-016 The experiment area
+    # reconstructs itself) wants every id literal in the area script,
+    # because an id in shared code is counted for every importing area; the
+    # scan stays transitive so a repo that has not moved its ids yet is
+    # held, not waved through.
     root = layout_root(area)
     own = area_files(area)
     for path in own + imported_repo_helpers(area, root):

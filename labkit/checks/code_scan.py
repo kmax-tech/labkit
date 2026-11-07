@@ -29,7 +29,7 @@ from labkit.formats.scope_sha import (
 
 def name_of(node: ast.expr) -> str | None:
     """A bare name's identifier, None for any other expression — the one
-    reader both visitors used to carry (`name_of`, `_var_name`)."""
+    reader every visitor here uses."""
     return node.id if isinstance(node, ast.Name) else None
 
 
@@ -129,9 +129,8 @@ FIELDISH = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 def _harvest(obj: object, out: set[str], depth: int = 0) -> None:
     """Every dict key at every level, lists included.
 
-    Flat top-level harvesting missed both real shapes in the areas: the
-    anchors file keeps its fields inside a `pairs: [...]` list, and reading
-    only the outer keys reported `must_contradict` as unwritten (2026-09-10).
+    A file may keep its fields inside a list (`pairs: [...]`); reading only
+    the outer keys would report them as unwritten.
     Over-approximating the known set is the safe direction — a field too many
     costs a missed finding the model still catches, a field too few costs a
     false blocker that gets the whole check switched off.
@@ -152,13 +151,11 @@ def data_keys(area: Path) -> tuple[set[str], list[str]]:
 
     Every JSON(L) file, not just `data/prepared`: the pipeline is staged, so
     `03_evaluate` legitimately reads fields that `01_generate` invented and
-    that never existed in the prepared data. Holding a consumer against the
-    prepared file alone reported eight blockers in area 64 and found no
-    defect (2026-09-10).
+    that never existed in the prepared data; holding a consumer against the
+    prepared file alone reports false blockers.
 
     Several lines per file, not one: a producer may write a `_meta` header
-    line first, and harvesting only that reports every real field as missing
-    (2026-09-10, area 68).
+    line first, and harvesting only that reports every real field as missing.
     """
     keys: set[str] = set()
     seen: list[str] = []

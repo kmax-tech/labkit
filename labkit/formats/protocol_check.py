@@ -6,8 +6,7 @@ The head — standard, id, type, repeat_cost, frozen, preflight audit — is the
 names the field). The prose fields a human writes are held by their exact
 template label (`FIELDS`): a field is present when a line `- **<label>:**`
 carries it, filled when its value is not a `<…>` placeholder; an explicit
-"n/a — <why>" counts, silence does not (scar 2026-08-13: two freely written
-protocols omitted "Type" and "Model I/O"; each omission caused a bad run).
+"n/a — <why>" counts, silence does not.
 
 What lives here, each stated as its current rule:
 
@@ -88,21 +87,20 @@ LEVELS = ("must", "should", "after", "report")
 
 # The one home of what a protocol owes, by the template's exact labels — a
 # test holds every label to the template, the low cut to its
-# `<!-- l -->` markers and the † marks to the should/report levels. Keyword
-# search over the whole file is gone: a word anywhere satisfied a field
-# (`prompt` in a sentence covered "Model I/O"), and a narrow word failed a
-# filled one (`**Terms:**` against `terms of`).
+# `<!-- l -->` markers and the † marks to the should/report levels. Labels,
+# not keywords: a word anywhere would satisfy a field (`prompt` in a
+# sentence covering "Model I/O"), and a narrow word fail a filled one
+# (`**Terms:**` against `terms of`).
 FIELDS = (
     # Terms first: they precede the question they are asked in (LAB-087 Term before use).
     Field("Terms of this protocol", "must", "l"),
     Field("Question / hypothesis", "must", "l"),
     Field(
         "Inference criterion", "must", "lb"
-    ),  # a computation has no bar to clear (2026-10-12); a fit or an apply has (0.104)
+    ),  # a computation has no bar to clear; a fit or an apply has
     Field("Quality check", "must", "lb"),
     Field("Data / scope", "must", "l"),
-    # read and judged before the measuring run, not just printed (review
-    # 2026-10-21: a class-exclusive cue went unexamined in three judge probes)
+    # read and judged before the measuring run, not just printed
     Field("Data profile", "must", "lm"),
     Field("Model / tool", "must", "lb"),
     Field("Model I/O", "must", needs="instrument"),
@@ -110,8 +108,7 @@ FIELDS = (
     Field("Null condition / anchors", "must", "lb"),
     Field("Exclusions / filters", "must", "l"),
     Field("Unit", "must", "l"),
-    # A reportable run owes these on top (2026-08-18, "pilot light, report
-    # heavy"): missing in all five freely written protocols of Aug 2026.
+    # A reportable run owes these on top ("pilot light, report heavy").
     Field("Problem in one sentence", "should"),
     Field("Why this design", "should"),
     Field("Rival explanations", "should"),
@@ -133,11 +130,9 @@ FIELDS = (
     # Written after the run: before it they cannot exist.
     Field("Recorded results", "after", "l"),
     Field("Raw output", "after", "lm"),  # a prompt+answer pair: only with a model
-    # The Summary for a person, written after the run (2026-10-07)
+    # The Summary for a person, written after the run
     Field("Conclusion", "after", "l"),
-    Field(
-        "Limitations", "after"
-    ),  # at low repeat cost the Summary requires Conclusion (2026-10-12)
+    Field("Limitations", "after"),  # at low repeat cost the Summary requires Conclusion
     Field("Next step", "after"),
     Field("Question", "report"),
     Field("Did", "report"),
@@ -156,8 +151,8 @@ FIELDS = (
 #: by field (so a rewritten question is named as one). The fields written
 #: after the audit (the Summary, Recorded results, the Limitation lines, the run
 #: list) and the reportable run's further fields are not in it, so writing
-#: them leaves the audit standing. Why: a corrected Data / scope could never
-#: be followed up (fifth SAB-like draw, 2026-10-28)
+#: them leaves the audit standing. Why: otherwise a corrected Data / scope
+#: could never be followed up
 REGISTERED_FIELDS = (
     standard_contract.REGISTRATION_FIELDS
     + standard_contract.REGISTRATION_FIELDS_WITH_BAR
@@ -363,8 +358,7 @@ def is_stamp_placeholder_block(body: str) -> bool:
 #: `- <run_id> — <one sentence: …>`: no label, so no field sees it.
 #: A field that points at another area by name only — "wie Bereich 07",
 #: "as in area 07" — with no link: the reader has to go and find it, and
-#: the one sentence that matters is not here (uniagent area 08, 2026-10-07:
-#: five report fields read "wie Bereich 07" and nothing else).
+#: the one sentence that matters is not here.
 BARE_REFERENCE = re.compile(
     r"\b(?:wie|siehe|vgl\.|as in|same as|see)\s+(?:in\s+)?(?:Bereich|area)\s+\d+",
     re.I,
@@ -503,10 +497,8 @@ class FieldLine:
         sub-bullets or an indented paragraph count as its value), or a value
         that still holds one of the stamp's own phrases
         (`holds_stamp_placeholder`): text written before or after a left
-        placeholder read as filled (the Model / tool arm lines, 2026-10-21).
-        A value that merely starts with `<` (`<10% unparsed`) is content
-        (review 2026-10-07: it read as a placeholder, while `TODO` read as
-        filled and let a freeze through); a placeholder the author coins
+        placeholder would otherwise read as filled. A value that merely
+        starts with `<` (`<10% unparsed`) is content; a placeholder the author coins
         (`<fill later>`) inside their own prose is not recognised. The id a
         stamp writes before a placeholder (`[criterion-1] <…>`) is not a value: the
         field is read without it, and an id alone is still a hole.
@@ -532,8 +524,7 @@ def fields(text: str) -> list[FieldLine]:
     wrap onto the next line (`- **Resolution check (ZERO calls, …\n
     extremes):** <…>`); it is read whole. Parsed once per text: the checker
     asks for a protocol's fields from seven places (owed fields, holes,
-    the model, the measure runs, the leftovers, the references), and each
-    parsed the file again (audit 2026-10-13)."""
+    the model, the measure runs, the leftovers, the references)."""
     return list(_parsed_fields(text))
 
 
@@ -591,13 +582,12 @@ def _parsed_fields(text: str) -> tuple[FieldLine, ...]:  # noqa: C901 complexity
         if not m:
             continue
         # The value runs on over indented continuation lines: a bare
-        # `- **Label:**` with the text below is written, not empty (the 25er
-        # protocol writes them that way; reading the first line only made
-        # the registration gate refuse a written registration, review 2026-10-07).
-        # Sub-bullets deeper than the field's own line are its value too, as
-        # the placeholder rule already counts them: read as nothing, a Data /
-        # scope written as a list compared empty in the scope hold and hid
-        # its source digest (reference pilot 2026-11-01, task 21). A deeper
+        # `- **Label:**` with the text below is written, not empty (reading
+        # the first line only, the registration gate would refuse a written
+        # registration). Sub-bullets deeper than the field's own line are its
+        # value too, as the placeholder rule already counts them: read as
+        # nothing, a Data / scope written as a list would compare empty in the
+        # scope hold and hide its source digest. A deeper
         # line that opens a field of its own (`- **registered:**`) ends it.
         own = len(line) - len(line.lstrip())
         parts = [m.group("value")]
@@ -647,8 +637,8 @@ def promise_names(text: str) -> dict[str, str]:
 def named_ids(ids: Iterable[str], names: Mapping[str, str]) -> str:
     """IDS as a message names them, each with its field's name from NAMES
     (`promise_names`): "criterion-1 (inference criterion), quality-check-2 (null
-    condition / anchors)" — an id without a name stands alone. An agent
-    outcome `quality-check-2` alone could not tell which condition it was."""
+    condition / anchors)" — an id without a name stands alone. The id
+    `quality-check-2` alone does not tell which condition it is."""
     return ", ".join(f"{i} ({names[i]})" if i in names else i for i in ids)
 
 
@@ -682,10 +672,7 @@ class FieldReport:
 def model_named(text: str) -> bool:
     """Does the protocol declare a model in the loop — a `[model]` table in
     the head (`protocol_block.model`)? The one answer for the cut, the
-    low registration and `labkit-init --report`. Until 0.100.0 the
-    prose `Model / tool` line decided it, read with a pattern for "n/a",
-    "none" and dashes (audit 2026-10-15: `—` was model-free here and a
-    model there). False for a head that does not read: the head check
+    low registration and `labkit-init --report`. False for a head that does not read: the head check
     names that."""
     try:
         return protocol_block.model(text) is not None
@@ -695,8 +682,8 @@ def model_named(text: str) -> bool:
 
 def bar_owed(f: Field, kind: str | None) -> bool:
     """Does a number of KIND owe `f` as far as its bar decides? Only the "lb"
-    fields depend on it, at every tier: a computation owes no criterion (standard
-    0.22); an undecided kind owes the most, never the least."""
+    fields depend on it, at every tier: a computation owes no criterion; an
+    undecided kind owes the most, never the least."""
     return f.low_cut != "lb" or kind is None or standard_contract.has_bar(kind)
 
 
@@ -704,9 +691,9 @@ def full_owed(f: Field, kind: str | None, model: bool) -> bool:
     """Does the full form owe `f` for a number of KIND, a model named or
     not (MODEL)? A bar field only with a bar (`bar_owed`), a model field
     ("lm") only with a model, a field that `needs` a bar or an instrument
-    only with one — a high computation without a model was asked for its
-    data profile, prompt, instrument and resolution checks (audit
-    2026-10-27, third, I9). An undecided kind owes the most."""
+    only with one — a high computation without a model owes no data
+    profile, prompt, instrument or resolution check. An undecided kind owes
+    the most."""
     if not bar_owed(f, kind):
         return False
     if f.low_cut == "lm" and not model:
@@ -786,10 +773,9 @@ def kind_gap(text: str, head: protocol_block.Head) -> str | None:
     with the model as annotator — the latter names the evidence that the
     annotator suits (`annotation_validity`), the former names none, or the
     claim and the evidence disagree. A fit or an apply judges the model
-    itself, so the claim keys say nothing there. Until the 0.22 rename a
-    computation with a `[model]` table was refused outright: a model in the
-    loop was taken to judge, though a share of model labels judges no
-    prediction (TODO, `compute` plan item 2). Whether a bound protocol is an
+    itself, so the claim keys say nothing there. A computation with a
+    `[model]` table is not refused for it: a share of model labels judges no
+    prediction. Whether a bound protocol is an
     apply with a result is `protocol_history.check_annotation_validity`'s,
     which reads the repo; whether the evidence carries the annotation stays
     the audit's. Loud, never a fallback: a malformed table is the head
@@ -845,13 +831,11 @@ def open_holes(
     """(line, label) of every placeholder still to fill.
 
     At `repeat_cost = "low"` only the cut's fields count: the rest of the full
-    form is not owed there, and listing it buried the one real blocker
-    under 10 to 20 warnings in every correct protocol at low repeat cost (usability
-    probe 2026-10-07, 6 of 6 runs). Fields written after the run count only
-    once the head declares a result — before it they cannot be filled, and
-    every second agent read them as errors in the commit hook (re-measure
-    2026-10-07; until 0.101.0 a run id in the Runs list, minus the words
-    "prepare" and "probe", stood for the run). ADOPTING asks it of the state
+    form is not owed there, and listing it would bury the one real blocker
+    under 10 to 20 warnings in every correct protocol at low repeat cost.
+    Fields written after the run count only once the head declares a result
+    — before it they cannot be filled, and an agent would read them as
+    errors in the commit hook. ADOPTING asks it of the state
     an adoption makes, where the result is declared (`owed`)."""
     lines = fields(text)
     if result_due(text) is None and not adopting:
@@ -877,8 +861,7 @@ def owed(
     result is declared a frozen protocol owes its report fields too —
     ADOPTING asks that question of the state an adoption makes, before it
     is made: what `labkit-next` names before `labkit-adopt`, so the two
-    agree by construction (labkit-paper's tassay-r2, 2026-11-04: next said
-    adopt, adopt refused for these fields). A result adopted or being
+    agree by construction. A result adopted or being
     adopted owes its answer, the Conclusion, at both cuts: the report's
     result block shows it (`report_blocks.block_body`), and the adoption
     refuses without it, leaving the protocol as it was."""
@@ -903,7 +886,7 @@ def kind_registers(kind: str | None, text: str) -> bool:
     """Does a protocol of KIND register promises — the one condition under
     which its [[promise]] tables are owed (`promises.promise_tables_owed`):
     a fit or an apply registers by its kind, a computation only when its
-    prose names an id (`promises.registers_ids`, standard 0.22); an
+    prose names an id (`promises.registers_ids`); an
     undecided kind registers, the most a kind owes."""
     return kind != standard_contract.COMPUTE_KIND or promises.registers_ids(text)
 
@@ -936,8 +919,8 @@ def reference_gap(text: str, head: protocol_block.Head) -> str | None:
 
 def kept_gaps(text: str, head: protocol_block.Head) -> list[str]:
     """What the head owes or refuses of its `[kept]` table by its kind, one
-    entry each, or []: a computation names its kept number there (standard
-    0.24) — the table missing, or a value still the placeholder (`[kept]
+    entry each, or []: a computation names its kept number there — the
+    table missing, or a value still the placeholder (`[kept]
     key`, `[kept] unit`, unfilled fields); a fit or an apply binds its
     answer through its promise keys, so the table is refused there; a
     table that does not read is named by its sentence. Nothing while the
@@ -990,7 +973,7 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
             f"intent ids {', '.join(earlier)}: {promises.EARLIER_IDS_HELP}"
         )
     # Frozen means audited first (LAB-015 Preflight audit before freezing); at low repeat cost nothing freezes, so a
-    # frozen flag there would claim a freeze no gate held (review 2026-10-07).
+    # frozen flag there would claim a freeze no gate held.
     lane = standard_contract.lane(head.repeat_cost)
     if head.frozen and not lane.freeze:
         missing_must.append(
@@ -1003,7 +986,7 @@ def check_fields(text: str, *, adopting: bool = False) -> FieldReport:
         )
     # Whether the tables are owed is decided in ONE place,
     # promises.promise_tables_owed: frozen, or at low repeat cost (every run there is
-    # the full run). No condition repeated here (cold reading 2026-10-09).
+    # the full run). No condition repeated here.
     try:
         tables_gap = promises.promise_tables_owed(
             promises.parse_block(text),
@@ -1041,14 +1024,13 @@ def low_registration_missing(text: str, kind_now: str | None = None) -> list[str
     head (`kind_gap`, `reference_gap`), and a computation's kept number
     named (`kept_gaps`). Returns what is missing — empty means the gate is
     open (LAB-003 No run without an intent paragraph; a computation has no bar to
-    clear, 0.87.1; the kind since standard 0.22). A head that does not read
+    clear). A head that does not read
     is named as such: nothing falls back to a computation.
 
     KIND_NOW, when TEXT is an earlier version of the protocol: the kind it
     declares today. The fields are then owed by that kind, and a TEXT that
     declared another kind misses the kind itself — a fit's criterion added
-    after a computation measured was not registered before that number
-    (review 2026-10-26)."""
+    after a computation measured was not registered before that number."""
     try:
         head = protocol_block.head(text)
     except protocol_block.BlockError as exc:
@@ -1078,8 +1060,7 @@ REGISTRATION_KIND = "kind"
 REGISTRATION_ABSENT = "<absent>"
 #: the key of a computation's `[reference]` in a registration stamp — only
 #: while the head carries one: a stamp without the key is a protocol
-#: without the table, so records written before the table existed drift
-#: nowhere
+#: without the table, so a record that lacks the key drifts nowhere
 REGISTRATION_REFERENCE = "reference"
 #: the key of a computation's `[kept]` in a registration stamp — only while
 #: the head carries one, as REGISTRATION_REFERENCE
@@ -1149,9 +1130,7 @@ def registration_drift(audited: Mapping[str, str], now: Mapping[str, str]) -> li
 
 #: the fields that describe a run that happened — written back after it,
 #: never before: filled while no completed run is bound and the head declares
-#: no `[result] run`, they claim what did not happen (Sonnet t18, v2 and
-#: v3, 2026-10-16: "Did: ran the 81-point grid and labelled the 55 test
-#: molecules", and runs/ held only the preparation)
+#: no `[result] run`, they claim what did not happen
 BEFORE_RUN_CLAIMS = (
     "Recorded results",
     "Raw output",
@@ -1219,8 +1198,7 @@ def reported_claim(text: str) -> list[tuple[str, str]]:
     exactly to them (`result_render.render_gaps`), so the record's
     decision and the run's `shown_sha` bind them already — and
     `protocol-fill --from-run` writes them after the decision, which
-    would make every review stale at the adoption (end-to-end test,
-    2026-10-22)."""
+    would make every review stale at the adoption."""
     return [
         (f.label, f.value.strip())
         for f in fields(text)
@@ -1247,7 +1225,7 @@ def recorded_results_without_run(text: str) -> str | None:
     (report-check holds it at the stop and the commit); an answer without
     it is neither a reported result nor the open field of an exploration —
     it says a number without declaring where it came from. Static evidence:
-    the hint, not a gate (plan 2026-10-19, TODO 2). None for a head that
+    the hint, not a gate. None for a head that
     does not read (the head check names that)."""
     if recorded_results_field(text) is None:
         return None
@@ -1267,8 +1245,7 @@ def recorded_results_without_run(text: str) -> str | None:
 
 #: the fields a declared result makes due; empty is a placeholder or
 #: nothing but dashes. A bare "Label:" at end of line is NOT empty —
-#: multi-line values start on the next line (the 25er protocol writes them
-#: that way; the first version false-alarmed).
+#: multi-line values start on the next line.
 RESULT_FIELDS = tuple(f.label.casefold() for f in FIELDS if f.level == "after")
 
 
@@ -1284,9 +1261,7 @@ def result_due(text: str) -> str | None:
     """The run the head declares (`protocol_block.declared_run`) — from the
     write-back on, the result fields are due (`RESULT_FIELDS`, the report
     fields of a frozen protocol); None while nothing is declared, and for a
-    head that does not read (the head check names that). Until 0.101.0 a
-    run id in the Runs list, minus the words "prepare" and "probe", stood
-    for a measure run and made the result due."""
+    head that does not read (the head check names that)."""
     try:
         return protocol_block.declared_run(text)
     except protocol_block.BlockError:
@@ -1300,8 +1275,7 @@ def adoption_owes(text: str) -> tuple[list[str], list[str]]:
     still a placeholder (`check_fields` with and without `adopting`): the
     Conclusion, and a frozen protocol's † result fields. The one answer
     `labkit-next` names before the adoption and `protocol-fill --from-run`
-    refuses on before its first write, so the two agree by construction
-    (labkit-paper's tassay-r2, 2026-11-04; answer block, 2026-11-06)."""
+    refuses on before its first write, so the two agree by construction."""
     now = check_fields(text)
     then = check_fields(text, adopting=True)
     absent = [f for f in then.missing_must if f not in now.missing_must]
@@ -1339,12 +1313,9 @@ PLACEHOLDER_IN_PROMPT = re.compile(r"\{[^{}]*\}")
 def prompt_blocks(protocol: Path) -> list[str]:
     """Every fenced block under a `Prompt` field, up to the next field at the
     same depth or the next heading — one block per variant is a written
-    form, and reading only the first made a null prompt in a second block
-    look missing (re-measure 2026-10-07: five false blockers in twelve
-    protocols once the check ran). The field is the one label parser's
-    (`fields`), the blocks the one fence walker's
-    (`protocol_block.fence_spans`): until 0.96.0 a second label grammar
-    and a backtick-only fence stood here (audit 2026-10-15)."""
+    form, and reading only the first would make a null prompt in a second
+    block look missing. The field is the one label parser's (`fields`), the
+    blocks the one fence walker's (`protocol_block.fence_spans`)."""
     text = protocol.read_text(encoding="utf-8")
     lines = text.splitlines()
     found = fields(text)

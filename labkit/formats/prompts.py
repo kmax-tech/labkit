@@ -1,9 +1,9 @@
 """prompts — the text an agent is given, joined one way.
 
 Every part an agent reads stands under a `===== <label> =====` line: the
-audit's prompt, both reviewers', the code-check bundle. The join lived in
-`gates/audit.py`, a layer above `checks/code_check.py`, which spelled its
-own (audit 2026-10-28, H3).
+audit's prompt, both reviewers', the code-check bundle. The join lives
+here, below the gates and the checks that both use it, so neither spells
+its own.
 """
 
 from __future__ import annotations

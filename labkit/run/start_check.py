@@ -47,7 +47,7 @@ class _Bound:
     config.json carries ({"id": ..., "path": ...}, both None when unbound),
     `text` and `head` the protocol as read then (None when unbound). The
     freeze gate and the registration check take it instead of reading the
-    file again (three reads and three parses before, audit 2026-10-13)."""
+    file again."""
 
     binding: dict
     text: str | None
@@ -65,7 +65,7 @@ def protocol_binding(base_dir: Path, protocol: str | Path | None) -> _Bound:
 
     The record's shape never varies — `id` and `path` always exist, only
     the values change. A reader never has to tell an absent key from null
-    from an object (2026-09-26).
+    from an object.
 
     `id` is the binding; `path` is relative to the area, for lookup and
     diagnosis, and may go stale. An explicit protocol must lie inside the
@@ -232,7 +232,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
     path = Path(bound.name)
     if bound.binding.get("id") is None:
         # a full run's number must be bound; an unstamped id binds nothing,
-        # and finalize would only say so after the number exists (review 2026-10-07)
+        # and finalize would only say so after the number exists
         return [
             f"{path.name}: the [protocol] id is not stamped — a full run "
             f"needs a bound protocol (`labkit-init exp` stamps it)"
@@ -258,7 +258,7 @@ def _freeze_findings(base_dir: Path, bound: _Bound) -> list[str]:
         ]
     out = twice + _committed_registration(base_dir, bound)
     if head.kind is None:
-        # what the number asserts is decided before it exists (standard 0.22)
+        # what the number asserts is decided before it exists
         out.append(
             f"{path.name}: [protocol] kind is still a placeholder — compute, fit or "
             f"apply (`protocol-fill {path.name} kind=…`)"
@@ -375,7 +375,7 @@ def _audit_unavailable(
 def _audit_line_findings(base_dir: Path, path: Path, line: str, text: str) -> list[str]:
     """Why the head's `preflight_audit` does not cover a full run: empty, or
     what `audit_gaps.audit_record_gap` says of the record it names — none
-    named (`n/a`, refused since 0.99.0), no such record, one of other code
+    named (`n/a` is none), no such record, one of other code
     or another promise block than the area carries now, a finding open —
     each with its way out (`RecordGap.fix`)."""
     if not line:
@@ -440,9 +440,7 @@ def foreground_timeout() -> tuple[float, str] | None:
 
     `LABKIT_FOREGROUND_TIMEOUT_S` names it for any agent, and wins; without
     it, Claude Code (`CLAUDECODE` in the environment) counts as
-    `CLAUDE_CODE_FOREGROUND_S`. Until 2026-10-14 the detach gate asked only
-    for `CLAUDECODE`, so a long run under another agent was not refused and
-    died with that agent's timeout (TODO item 6).
+    `CLAUDE_CODE_FOREGROUND_S`.
 
     Raises:
         SystemExit: The variable is set but not a number >= 0.
@@ -516,11 +514,11 @@ def require_registration(
     full_run: bool,
 ) -> None:
     """Refuse a run that breaks the registration's contract, before any
-    gate that can be acknowledged and before mkdir (standard 0.19): a
+    gate that can be acknowledged and before mkdir: a
     frozen protocol and every full run carry the promises as data
     (`promises.promise_tables_owed`), and a run under a block records every
     registered constant unchanged — otherwise the number is held to a
-    threshold nobody registered (Durchstich 2026-10-06). FULL_RUN means the
+    threshold nobody registered. FULL_RUN means the
     script declares a measurement. An unbound run passes here (the freeze
     gate refuses an unbound full run on its own). Raises SystemExit with
     the reason."""
@@ -557,7 +555,7 @@ def _constants_refusal(block: "promises.PromiseTables", config: dict) -> str | N
     """Why this config may not run under `block`: a registered constant the
     config lacks or carries with another value (type-strict). The guarantee
     behind the record: a run under a block recorded every registered
-    constant unchanged (0.71.0)."""
+    constant unchanged."""
     broken = [r for r in promises.constant_records(block, config) if r.state != "equal"]
     if not broken:
         return None
@@ -576,8 +574,8 @@ def completed_parent(base_dir: Path, key: str, run_id: str, why: str = "") -> Ru
     """The config of RUN_ID, the parent a new run names under KEY
     (`repeat_of`, `derived_from`), or a refusal naming KEY: no completed
     run of this area, or a config that does not read; WHY ends the "no
-    completed run" sentence. The one reading of a parent run for both keys
-    (audit 2026-10-27, third, S4); each caller adds its own check that the
+    completed run" sentence. The one reading of a parent run for both keys;
+    each caller adds its own check that the
     parent is no repeat."""
     parent = run_path(base_dir, run_id)
     try:
@@ -622,7 +620,7 @@ def _derived_parent(base_dir: Path, derived_from: str | None) -> str | None:
         " — a derived run needs a finished parent",
     ).repeat_of
     # a derived run is no repeat and may answer: from a repeat, the
-    # best of several draws would answer through it (2026-10-15)
+    # best of several draws would answer through it
     if drawn_from is not None:
         raise SystemExit(
             with_way_out(
@@ -711,7 +709,7 @@ def require_detached(base_dir: Path, limit: tuple[float, str]) -> None:
 
     The caller decides whether detachment is owed and missing. The harness
     kills the process group at its limit, including the run and its lock.
-    History: docs/notes/2026-10-19-gates-and-run-start.md.
+    Why: docs/notes/2026-10-19-gates-and-run-start.md.
     """
     raise SystemExit(
         with_way_out(

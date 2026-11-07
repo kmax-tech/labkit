@@ -18,12 +18,10 @@ Finding one's way in code (code_navigation):
     usability nav <repo> --questions Q --out P / nav-score ...   "where does the code do X?"
     usability human <repo> --questions Q --out P   a person answers the behaviour questions, timed
 
-Why this exists (2026-10-05): the doctrine grew by scars, every scar added
-a gate, and nobody measured what the whole chain costs for the simplest
-case — one deterministic number, kept. uniagent area 01 needed four days,
-three freezes and three agent audits for a seven-second run. A rule that
-costs more than the error it prevents is a rule to cut, but only a trace
-shows which one; this is the trace.
+Why this exists: every gate adds cost, and this measures what the whole
+chain costs for the simplest case — one deterministic number, kept. A rule
+that costs more than the error it prevents is a rule to cut, but only a
+trace shows which one; this is the trace.
 
 stage
     Stamps a lab repo with labkit's own scaffold (`labkit-init lab`, then
@@ -37,7 +35,7 @@ stage
     task states for a computation is NOT stamped as the head's
     `[reference]` — registering it (`labkit-init exp --reference`, or the
     table by hand before the first measurement) is the agent's, and
-    whether it does is what the probe measures (2026-10-29) — with a
+    whether it does is what the probe measures — with a
     known answer (twelve cases, their input files; the answer is recounted
     from the files at score time, never written down) and TASK.md — the
     task sheet, from `usability-task-<task>.md.template`, with the log
@@ -61,9 +59,8 @@ log
     to the log (`--log`, default `log.md` in the working directory) and then
     runs CMD, whose exit code is the command's. Without CMD it only logs (a
     read or an edit done with a tool). Why: logging by hand, with `date` and
-    `>>`, tempted every cold agent to batch — three draws wrote their first
-    lines after the reads they describe (Haiku H5–H7, 2026-10-13), and the
-    log is the measurement.
+    `>>`, tempts a cold agent to batch — to write lines after the reads they
+    describe — and the log is the measurement.
 
 stage --restamp
     The probe stamped again with this labkit, in place: a fresh stamp with
@@ -75,10 +72,9 @@ stage --restamp
     time. The probe's venv is rebuilt from the stamped pin (or linked with
     `--venv`), so `requirements.lock` and `labkit-check` agree, and the
     change is committed past the hook (the stamped protocol is placeholders
-    by design). The push stays with the operator. Why (2026-10-13): eight
-    re-stamps were done by hand, each from memory, and two sessions
-    reconstructed the recipe differently — one would have copied the task
-    sheet and lost the cloud edits. Refuses a dirty tree and a `--keep`
+    by design). The push stays with the operator. Why: a re-stamp by hand,
+    from memory, reconstructs the recipe differently each time — copying
+    the task sheet loses the cloud edits. Refuses a dirty tree and a `--keep`
     path the stamp does not produce.
 
 score
@@ -178,14 +174,14 @@ TASKS = {
     },
     # a fit: the DILI molecules of labkit-paper area 09 (ScienceAgentBench
     # task 18), handed in at `stage --data` — the operator's file, not the
-    # package's (2026-10-22, the first probe of the fit lane)
+    # package's
     "fit": {
         "area": "dili-forest",
         "metric_key": standard_contract.criterion_key(standard_contract.ESTIMATOR),
         "template": "usability-task-fit.md.template",
     },
     # SAB-like cases, one per kind: a ScienceAgentBench-shaped task with a
-    # known trap and a hidden evaluation (`sab_cases`, 2026-10-27)
+    # known trap and a hidden evaluation (`sab_cases`)
     **{
         c.task: {
             "area": c.task,
@@ -200,17 +196,16 @@ SAB_REPORT = "REPORT.md"
 #: per task, the report file its sheet asks for — registered in the
 #: stamped head as the file that owes the result (`labkit-init exp
 #: --report-file`): the SAB sheet asks for REPORT.md, so a REPORT.md
-#: without the result block or the handover block is held (pressure pilot
-#: 2026-10-29: three of six agents deleted the run id instead); count,
-#: judge and fit ask for the report in the final answer and register none
+#: without the result block or the handover block is held, so deleting the
+#: run id instead does not pass; count, judge and fit ask for the report in the final answer and register none
 TASK_REPORT: dict[str, str | None] = {
     task: SAB_REPORT if task in sab_cases.CASES else None for task in TASKS
 }
 #: (repeat cost, kind, model in the loop) per task: what the house route
 #: stamps for it (`labkit-init exp --repeat-cost low --kind …`, plus `--model`
-#: with a model in the loop). Staged without them, the count got the full
-#: form and the model skeleton and every agent spent its time deleting it
-#: (probe 2026-10-07) — a cost of the staging, not of the route.
+#: with a model in the loop). Staged without them, the count would get the
+#: full form and the model skeleton, and the agent's time would go to
+#: deleting it — a cost of the staging, not of the route.
 TASK_STAMP: dict[str, tuple[str, str, bool]] = {
     "count": ("low", "compute", False),
     "judge": ("low", "apply", True),
@@ -226,15 +221,15 @@ FIT_COLUMNS = ("standardised_smiles", "vDILIConcern")
 LOG_TAGS = ("read", "run", "edit", "unsure", "gate")
 LOG_LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\s*·\s*(\w+)\s*·\s*(.*)$")
 #: a `read` of these is the agent learning the contract from the wrong place
-#: — the area's README card should have sufficed (2026-10-05, four of four read on)
+#: — the area's README card should suffice
 SOURCE_READ = re.compile(
     r"labkit/(\w+/)?\w+\.py"
     r"|labkit[ /](\w+/)?(runlog|recheck|protocol_check|llm|batch|finalize|preflight)"
     r"|labkit/docs/standard|labkit\.(\w+\.)?rules",
     re.I,
 )
-#: The bar: one kept number in this many minutes. Set by hand (2026-10-05),
-#: not derived — the first traces decide whether it is the right one.
+#: The bar: one kept number in this many minutes. Set by hand, not derived
+#: — the traces decide whether it is the right one.
 TARGET_MINUTES = 5
 TOL = 1e-9
 #: the committer of labkit's own commits in a probe repo, given to each
@@ -265,7 +260,7 @@ def _commit(root: Path, title: str, body: str | None = None) -> None:
     """The probe's own commit of what is staged, by PROBE_IDENTITY. It skips the pre-commit
     hook: a freshly stamped protocol is all placeholders by design, and the
     hook is the agent's gate, not the stamper's (`labkit-init exp` sets
-    core.hooksPath, 2026-10-05)."""
+    core.hooksPath)."""
     _sh(
         [
             "git",
@@ -296,10 +291,8 @@ def read_answer(path: Path, who: str) -> str:
 
 def other_requirements(text: str) -> list[str]:
     """The requirement lines of a stamped `requirements.txt` besides labkit —
-    `pytest` since 0.86.0. They go into the probe venv before the lock is
-    frozen: the cloud probe's venv came from requirements.txt, the stamped
-    lock knew only labkit, and runlog reported a drift on the first run
-    (2026-10-12, draws 1 and 2)."""
+    `pytest`. They go into the probe venv before the lock is frozen, so the
+    lock holds them and runlog reports no drift on the first run."""
     return [
         ln.strip()
         for ln in text.splitlines()
@@ -447,9 +440,8 @@ def stamp_flags(
 
 def tier_sentence(repeat_cost: str | None) -> str:
     """The task sheet's sentence on the stamped repeat cost. Without it a cold
-    Sonnet agent, staged at `high`, read "twelve calls take about a
-    minute", set the head to `low` and took the short lane — the probe
-    measured a lane it was not staged for (2026-10-14)."""
+    agent staged at `high` may set the head to `low` and take the short
+    lane — the probe would measure a lane it was not staged for."""
     if repeat_cost is None:
         return "Its protocol head names no repeat cost: setting it is part of the task."
     return (
@@ -462,11 +454,10 @@ def agent_prompt(root: Path) -> str:
     """The prompt a cold agent gets: the repo's AGENTS.md first, the way a
     session started in the repo loads it into context, then the pointer to
     TASK.md. AGENTS.md is the entry file every agent reads; CLAUDE.md is
-    only Claude Code's link to it, and naming it made the probe read as
-    Claude-only to a Codex agent (2026-10-14). Handed only a pointer, every
-    agent fetched the file with `cat` and read all of it before any section
-    marker could steer it — a cost of the probe, not of a real session
-    (re-measure 2026-10-07, rounds 1 to 4)."""
+    only Claude Code's link to it, and naming it would make the probe read
+    as Claude-only to a Codex agent. Handed only a pointer, an agent
+    fetches the file with `cat` and reads all of it before any section
+    marker can steer it — a cost of the probe, not of a real session."""
     entry = root / "AGENTS.md"
     if not entry.is_file():
         raise console.Refused(
@@ -492,10 +483,9 @@ SCRATCH = ".tmp"
 
 
 def probe_scratch(root: Path) -> None:
-    """Make ROOT/.tmp/ and ignore it in ROOT/.gitignore (once). Probes
-    shared `/tmp` and the operator's scratchpad: judge-2 of 2026-10-20 read
-    an earlier probe's audit output there first and wrote its own into the
-    scratchpad. A subagent inherits the operator's environment, so no
+    """Make ROOT/.tmp/ and ignore it in ROOT/.gitignore (once). In a shared
+    `/tmp` or the operator's scratchpad a probe would read an earlier
+    probe's output and write its own there. A subagent inherits the operator's environment, so no
     TMPDIR can be set for it; the prompt names this directory instead, and
     `usability score` lists the paths a probe used outside it."""
     (root / SCRATCH).mkdir(exist_ok=True)
@@ -515,8 +505,7 @@ def labkit_spec_problem(spec: str, *, linked: bool) -> tuple[str, str] | None:
     working tree, and nothing before HEAD is pushed: refused. Linked
     (`--venv`) the probe imports the working tree, which moves under it:
     warned. A probe measures a fixed labkit: a non-editable install of a
-    `git archive` of the commit (2026-10-20: a probe linked to the
-    developer's venv was bound to no commit)."""
+    `git archive` of the commit."""
     if not spec.startswith("-e "):
         return None
     if linked:
@@ -582,7 +571,6 @@ def stage(
     _commit(root, "Scaffold: a probe lab repo for the usability trace")
     # a SAB-like case names its output file and its columns: stamped as the
     # skeleton's deliverable, so the run writes, checks and registers it
-    # (2026-10-29)
     deliverables: tuple[str, ...] = ()
     deliverable_columns: tuple[str, ...] = ()
     if task in sab_cases.CASES:
@@ -621,11 +609,11 @@ def stage(
                 ],
                 root,
             )
-    # The hooks, as a real setup installs them (`labkit-hooks install`, labkit
-    # 0.51): pre-commit with finalize, core.hooksPath, the claude-hook entries.
+    # The hooks, as a real setup installs them (`labkit-hooks install`):
+    # pre-commit with finalize, core.hooksPath, the claude-hook entries.
     _sh([str(root / ".venv" / "bin" / "labkit-hooks"), "install"], root)
     # requirements.lock from the probe venv: runlog warns "env unpinned" without
-    # it and every cold agent stopped to generate one (2026-10-05).
+    # it, and a cold agent would stop to generate one.
     (root / "requirements.lock").write_text(
         _sh([str(root / ".venv" / "bin" / "pip"), "freeze"], root), encoding="utf-8"
     )
@@ -784,8 +772,8 @@ def _probe_venv(root: Path, venv: Path | None, labkit_spec: str) -> None:
 
 def stamped_repeat_cost(flags: list[str]) -> str:
     """The repeat cost a probe's recorded scaffold flags stamped, "unset" when
-    none was named. A probe staged before 0.104.0 recorded `--cost <tier>`;
-    that is refused with the mapping, never read as unset — the comparison
+    none was named. A probe whose flags record `--cost <tier>` (an older
+    labkit's flag) is refused with the mapping, never read as unset — the comparison
     would silently lose its lane."""
     if "--cost" in flags:
         old = (

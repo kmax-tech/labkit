@@ -177,9 +177,9 @@ class _ComparisonVisitor(ast.NodeVisitor):
 def gate_labels(area: Path) -> str:
     """String comparisons in evaluation code — facts, not findings.
 
-    The prompt↔gate scar (LAB-038 What the prompt demands) was the most frequent error class (4× in one
-    area). The mechanics extract what the gate compares against; the agent
-    judges whether it matches the prompt.
+    Whether the gate's labels are the ones the prompt demands (LAB-038 What
+    the prompt demands): the mechanics extract what the gate compares
+    against; the agent judges whether it matches the prompt.
     """
     _producers, consumers = split_stages(area)
     all_entries: list[tuple[str, int, str, str, str]] = []

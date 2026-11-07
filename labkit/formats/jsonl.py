@@ -3,17 +3,15 @@
 JSON Lines separates records by "\\n" and nothing else. `str.splitlines()`
 also breaks at U+2028, U+2029 and U+0085, which `json.dumps(...,
 ensure_ascii=False)` and JavaScript's `JSON.stringify` leave raw inside a
-string: a record holding one was read as two torn lines, and the reader
-called the file damaged (2026-10-23). Every reader of a JSONL text splits
-here; iterating an open file (`for line in fh`) breaks at "\\n" only and
-needs no help.
+string: a record holding one would read as two torn lines, and the file
+as damaged. Every reader of a JSONL text splits here; iterating an open
+file (`for line in fh`) breaks at "\\n" only and needs no help.
 
 `objects` turns the lines into objects, each with its line number, and
 names file and line for one that is not JSON; `data_rows` drops the
-`_meta` header `batch.write_dataset` puts first. Six readers did this
-themselves, each with its own error sentence (audit 2026-10-23); `batch`
-keeps its own loop for the one case that is its own — a torn last line of
-an interrupted write is cut, not refused.
+`_meta` header `batch.write_dataset` puts first. `batch` keeps its own
+loop for the one case that is its own — a torn last line of an
+interrupted write is cut, not refused.
 """
 
 from __future__ import annotations

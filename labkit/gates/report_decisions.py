@@ -101,14 +101,12 @@ def review_findings(ctx: Checked) -> list[GateFinding]:
     finding's: a BLOCKER limitation's `stands` no review upholds — never
     reviewed, rejected, insufficient, contested, or reviewed as another
     decision or claim — is a BLOCKER (a severe finding is not settled by
-    a reason alone; decided 2026-10-22 after the fifth round's replay and
-    the assessment of its fifteen decisions from their sources), an
-    accepted WARNING's a WARNING for now (the release does not yet hang
+    a reason alone), an
+    `limitation` WARNING's a WARNING for now (the release does not yet hang
     on every lesser limit). A finding a review of the record once did not
     uphold (`reviews.once_not_upheld`) and that is now `false-positive`, `fixed`
     (`findings.CLOSING`) is held the same way until a review
-    upholds the new decision: closing it is not settling it (sixth haiku
-    round, 2026-10-23, t5). A BLOCKER dismissed (`first_dismissals`) and
+    upholds the new decision: closing it is not settling it. A BLOCKER decided `false-positive` (`first_dismissals`) and
     one on the Conclusion decided `fixed` (`repaired_claims`) are held as
     well. Empty when no record covers the run
     (`report_check.analysis_audit_gap` names that), and silent on whether the verdict is
@@ -179,8 +177,7 @@ def repaired_claims(
     """A BLOCKER of record R on the Conclusion decided `fixed`
     (`findings.fixed_claim`) that no review among FOUND upholds for the
     claim as it stands — held as a BLOCKER: no follow-up audit is shown a
-    repaired claim, so the decision review judges it (probe 2026-11-02,
-    docs/notes/2026-11-02-repair-path-probe.md). One a review once did not
+    repaired claim, so the decision review judges it. One a review once did not
     uphold is the closing rule's (`review_findings`); each is held once."""
     out: list[GateFinding] = []
     for n, f in enumerate(r.findings, 1):
@@ -251,8 +248,7 @@ def followup_findings(ctx: Checked) -> list[GateFinding]:
     earlier decided BLOCKER is held — no follow-up saw it. Empty without an
     answering run, or when the covering records or the area's records do
     not read (`report_check.analysis_audit_gap` names those); silent on whether a verdict
-    is right: that is the auditor's judgement. Why: the fixed-followup
-    pilots, 2026-10-26."""
+    is right: that is the auditor's judgement."""
     if ctx.run is None:
         return []
     try:
@@ -312,8 +308,7 @@ def _review_step(ctx: Checked, record: findings.Record) -> str:
     """The decision review of RECORD as the next step: the whole command
     with the area as seen from here, and — while the protocol's Conclusion
     is unwritten — the step `--review` refuses without (it judges the
-    claim). A refusal naming `<area>` and no precondition was not followed
-    (ninth haiku round, t3)."""
+    claim), so the step can be followed as printed."""
     command = f"`{audit_command(ctx.area, '--review', '--record', record.path.name, protocol=ctx.protocol)}`"
     if conclusion_written(ctx.text):
         return command

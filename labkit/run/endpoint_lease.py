@@ -2,8 +2,8 @@
 
 A serving endpoint is a GPU slot, not a service. On a swap proxy several
 aliases resolve to the same slot: asking for an alias that is not loaded
-unloads the running model and loads the wanted one (measured 2026-09-08:
-~5 minutes per swap). Two stages against the same endpoint with DIFFERENT
+unloads the running model and loads the wanted one (~5 minutes per
+swap). Two stages against the same endpoint with DIFFERENT
 aliases therefore do not run in parallel — they evict each other, over and
 over.
 
@@ -15,12 +15,10 @@ the wallclock; it arrives in a reported number:
     rule "more than 2 of 96 rounds empty => the parser is the finding"
     counts them
 
-That rule then measures operational noise and calls it parser quality
-(2026-09-08: a judge test fired next to a running probe did exactly this;
-it was filed as an operator slip, which is what a missing interlock looks
-like from the inside).
+That rule then measures operational noise and calls it parser quality,
+and the cause looks like an operator slip, not a missing interlock.
 
-What was mistaken for protection: `batch.Store` takes a lock on the OUTPUT
+What is no protection: `batch.Store` takes a lock on the OUTPUT
 FILE — it says nothing about who is using the model. And "stages stay
 staggered" is a sentence in a protocol and a code comment, i.e. an
 intention. Any second process breaks it: another terminal, another area, a
@@ -39,7 +37,7 @@ it. Ambiguity resolves conservatively: a holder whose liveness cannot be
 decided counts as alive — a wrong refusal costs a message, a wrong
 admission costs the run.
 
-Writing is atomic and serialised (review 2026-10-06). A record is written
+Writing is atomic and serialised. A record is written
 to a temporary name and renamed into place, so a reader never sees half a
 record; check-and-write runs under an `flock` on the endpoint directory, so
 two processes on this machine cannot both pass the check. The re-read after
@@ -95,10 +93,10 @@ def endpoint_dir(endpoint: str) -> str:
 
     The URL is made canonical first (scheme and host in lower case, no
     trailing slash: `HTTP://Host/v1/` is `http://host/v1`), then named by a
-    digest of it, with a readable slug in front. The slug alone was the
-    identity until 2026-10-14: `http://h/a-b` and `http://h/a_b` shared a
-    directory (one slot's lease refused the other), and `Host` and `host`
-    had two (no interlock at all).
+    digest of it, with a readable slug in front. The slug alone is no
+    identity: `http://h/a-b` and `http://h/a_b` would share a directory
+    (one slot's lease refusing the other), and `Host` and `host` would get
+    two (no interlock at all).
     """
     u = urllib.parse.urlsplit(endpoint.strip())
     canonical = urllib.parse.urlunsplit(
@@ -173,8 +171,8 @@ def _locked(d: Path) -> Iterator[None]:
 
 def _order(rec: dict) -> tuple[str, str]:
     """Who came first: the start time, then the record's random token — a
-    total order. On the second alone two writers in the same second each
-    saw the other as no younger and both yielded (review 2026-10-14)."""
+    total order. On the second alone two writers in the same second would
+    each see the other as no younger, and both would yield."""
     return (str(rec.get("started", "")), str(rec.get("token", "")))
 
 

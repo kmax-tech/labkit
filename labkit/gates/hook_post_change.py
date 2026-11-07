@@ -64,8 +64,7 @@ def evidence_areas(repo: Path, entries: list[tuple[str, str]]) -> list[Path]:
 def gone_run_areas(repo: Path) -> list[Path]:
     """The areas of REPO's `experiments/` whose run index lists a run whose
     directory is gone. Deleting an untracked run leaves nothing for git
-    status to name, so `evidence_areas` never saw it: an agent deleted runs/
-    five times without a word (reference pilot 2026-11-01, task 60)."""
+    status to name, so `evidence_areas` does not see it."""
     base = repo / EXPERIMENTS
     if not base.is_dir():
         return []
@@ -141,7 +140,7 @@ def wants_check(path: Path) -> str | None:
         return "protocol"
     parts = path.as_posix().split("/")
     # any `notes/messung/` pair on the way, not the first `notes`: a repo
-    # under an ancestor directory named notes never had its notes checked
+    # under an ancestor directory named notes would go unchecked
     under_messung = any(
         a == "notes" and b == "messung" for a, b in zip(parts, parts[1:])
     )
@@ -172,9 +171,7 @@ def _report_hint(text: str, path: Path, repo: Path) -> str | None:
     for discussing a run while no review of this state names no claim
     (`report_hold.report_review_owed` — the gate's own finding, so the
     hook names the review exactly when the gate holds it and falls silent
-    once a review stands; until 0.107.0 a hint of its own named the review
-    whenever a run was discussed, reviewed or not). None when nothing
-    holds it."""
+    once a review stands). None when nothing holds it."""
     root = repo.resolve()
     link_target = report_hold.refused_link(repo, path, staged=False)
     if link_target is not None:
@@ -294,8 +291,7 @@ def _untold(
         cache[str(path)] = digest
         # from the repo root with the repo-relative path (the hook's cwd is
         # wherever the agent stood): every line the checker tells names
-        # the file as pfad:zeile itself — the hook rewrote the absolute
-        # path in the printed text before (audit 2026-10-27, third, M4)
+        # the file as pfad:zeile itself
         told: list[str] = []
         named = [Path(shown(path, repo))]
         with contextlib.chdir(repo):

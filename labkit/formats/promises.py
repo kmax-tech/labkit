@@ -20,10 +20,9 @@ A branch's sentence lists its outcomes, each `<condition> →
 its outcomes under the promise's key, and intent-check holds it there.
 
 The kind is spelled out so that a person reading a protocol, a report or a
-run's metrics.json needs no legend. The earlier letters (C/A/B, and before
-them K/S/W/N) are not read: a protocol that carries them is refused with a
-sentence (`earlier_ids`) and read with labkit 0.103.0 (C/A/B) or 0.47
-(K/S/W/N). Nothing translates them.
+run's metrics.json needs no legend. The earlier letters (C/A/B, K/S/W/N)
+are not read: a protocol that carries them is refused with a sentence
+naming the labkit that reads them (`earlier_ids`). Nothing translates them.
 
 **The promise block** — promises as data instead of prose. The protocol's
 one fenced ```toml block (`protocol_block.py`; its `[protocol]` table is the
@@ -66,8 +65,7 @@ from labkit.formats import files, protocol_block, runs
 KINDS = ("criterion", "quality-check", "branch")
 #: A constant is named like the config key it is recorded under — lowercase
 #: snake_case, so the name IS the mapping between protocol and run record
-#: (2026-10-08: `min_f1` in the block against `min_f1` in the record would
-#: need a second table nobody checks).
+#: (any other naming would need a second table nobody checks).
 CONSTANT_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 _KIND = "|".join(re.escape(k) for k in KINDS)
 #: the kinds as a metrics key spells them: `quality_check`
@@ -97,15 +95,15 @@ def kind_of(pid: str) -> str:
 
 def registers_ids(text: str) -> bool:
     """Does the protocol's prose name any promise id? A computation at low repeat cost
-    names none and owes no [[promise]] table (0.87.1)."""
+    names none and owes no [[promise]] table."""
     return (
         ID_IN_PROTOCOL.search(text) is not None or EARLIER_ID.search(text) is not None
     )
 
 
-#: an id in the letters earlier labkits read (C/A/B up to 0.103.0, K/S/W/N
-#: up to 0.47) — detected, never read: a protocol carrying them would
-#: otherwise pass every id check with nothing checked
+#: an id in the earlier letters (C/A/B, K/S/W/N) — detected, never read: a
+#: protocol carrying them would otherwise pass every id check with nothing
+#: checked
 EARLIER_ID = re.compile(r"\[([CABKSWN]\d+)\]", re.IGNORECASE)
 #: a metrics key in the id namespace: the bare stem `criterion_1` or
 #: `criterion_1_<suffix>`; group 1 is the stem
@@ -340,9 +338,8 @@ EARLIER_IDS_HELP = (
 
 def key_kind(key: str) -> str | None:
     """The kind a metrics key belongs to — one of KINDS — or None outside
-    the id namespace. The one way to ask "is this a quality-check key":
-    two tools once re-spelled the alphabet and would have gone silent on its
-    next change."""
+    the id namespace. The one way to ask "is this a quality-check key": a
+    tool that re-spells the alphabet goes silent on its next change."""
     m = ID_KEY.match(key)
     return kind_of(id_of_stem(m.group(1))) if m else None
 
@@ -616,11 +613,11 @@ def promise_tables_owed(
     block: PromiseTables | None, *, frozen: bool, full_run: bool, registers: bool = True
 ) -> str | None:
     """Why a protocol owes its [[promise]] tables, or None — the one home of
-    the rule (standard 0.19) for protocol-check, preflight, runlog and
-    finalize. The table:
+    the rule for protocol-check, preflight, runlog and finalize. The
+    table:
 
         registers = False (the prose names no promise id — a
-            computation, 0.87.1) → not owed, frozen or not: it judges no
+            computation) → not owed, frozen or not: it judges no
             prediction, and its stamp carries no table (`protocol_cuts.bar_cut`)
         frozen = true            → owed (the freeze is the registration)
         full_run (runlog run_kind='measurement') → owed
@@ -628,9 +625,7 @@ def promise_tables_owed(
 
     Where the tables are owed, a sentence still holding the stamp's `<…>`
     placeholder is a table not yet written (`placeholder_sentences`): frozen,
-    it registered nothing (cloud judge probe, 2026-10-14: three placeholder
-    sentences frozen, hashed into the run's block digest, passed every gate).
-    An unfrozen pilot may carry them.
+    it registers nothing. An unfrozen pilot may carry them.
 
     "Block" elsewhere (`protocol_block.block_text`, `parse_toml_block`)
     means the whole ```toml block, [protocol] head included; this function
@@ -651,7 +646,7 @@ def promise_tables_owed(
         )
     if not registers:
         # a computation, frozen or a full run: nothing registered, nothing to
-        # hold — its high-cost freeze asked for tables its own stamp removes
+        # hold — a freeze must not ask for tables its own stamp removes
         return None
     because = "frozen = true" if frozen else "a full run is held to the registration"
     return (
@@ -719,8 +714,8 @@ def _function_source(path: Path, name: str) -> str:
     """Source text of the top-level function or class `name` in `path`.
     A name the module binds more than once at the top level (a second
     `def`, an assignment, an import) is refused: Python runs the last
-    binding, and hashing the first `def` let the code that computes the
-    number change under an unmoved stamp (review 2026-10-20)."""
+    binding, and hashing the first `def` would let the code that computes
+    the number change under an unmoved stamp."""
     try:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
@@ -746,7 +741,7 @@ def _function_source(path: Path, name: str) -> str:
     if defs:
         node = defs[0]
         # decorators included: `@cache` → `@retry` can change what the
-        # function does, so it must move the stamp (review 2026-10-07)
+        # function does, so it must move the stamp
         first = min([d.lineno for d in node.decorator_list] + [node.lineno])
         assert node.end_lineno is not None, f"{path}:{name} has no end line"
         return "\n".join(source.splitlines()[first - 1 : node.end_lineno])
@@ -783,9 +778,8 @@ def scope_sources(base: Path, scope: tuple[str, ...]) -> list[tuple[str, bytes]]
 def unmentioned_constants(block: PromiseTables, base: Path) -> list[str]:
     """Static evidence (warns, never blocks): a registered constant that its
     promise's sentence does not name and no file of its declared scope reads
-    as a word — a template leftover (`margin`, `max_empty`, `null_band_items`
-    stood under three Haiku protocols whose sentences never used them,
-    labkit-paper area 09, 2026-10-16) or a knob the promise does not state.
+    as a word — a template leftover (`margin`, `max_empty`, `null_band_items`)
+    or a knob the promise does not state.
     runlog holds the constant to the run's config; this holds it to the
     sentence and the code. One line per constant, naming the promise.
 
@@ -838,7 +832,7 @@ def scope_drift(recorded: dict | None, base: Path) -> list[str]:
         try:
             now = declared_scope_sha(base, tuple(rec["scope"]))
         except PromiseError as exc:
-            # gone or unparsable is a change, not a crash (review 2026-10-07)
+            # gone or unparsable is a change, not a crash
             out.append(f"[{pid}] {rec['declared_scope_sha']} → unreadable now ({exc})")
             continue
         if now != rec["declared_scope_sha"]:

@@ -155,9 +155,9 @@ def owed_cut(text: str) -> str:
     """TEXT, a full-form protocol, without the field items its kind and
     model do not owe (`protocol_check.not_owed`, the rule the checker
     applies) and the template-only items whose instrument it lacks
-    (`STAMP_ONLY_NEEDS`). A high computation without a model was stamped
-    a data profile, a prompt, a render, instrument and resolution check
-    and parser cases it could not have (audit 2026-10-27, third, I9)."""
+    (`STAMP_ONLY_NEEDS`), so a high computation without a model is not
+    stamped a data profile, a prompt, a render, instrument and resolution
+    check and parser cases it cannot have."""
 
     head = protocol_block.head(text)
     model = model_named(text)
@@ -186,16 +186,13 @@ def owed_cut(text: str) -> str:
 def quick_block(tmpl: str, kind: str) -> str:
     """The promise tables of the low cut. A number with a bar (KIND fit
     or apply) keeps them: the measure skeletons read `margin`, `max_empty`
-    and the null band from the block. (Until 0.92 they became a commented
-    hint here, a rule written for the count; once the count lost its tables
-    in 0.87.0 the hint hit only the model case, and every judge area stamped
-    at low repeat cost failed its first run with a TypeError — found by a low-lane
-    probe, 2026-10-15.) For a computation the tables go: it has no bar to clear."""
+    and the null band from the block. For a computation the tables go: it
+    has no bar to clear."""
     if has_bar(kind):
         return tmpl
     # a deterministic computation has no bar to clear: no promise tables, no
-    # criterion — five cold agents each invented a tautological [criterion-1]
-    # (cloud probes 2026-10-12); the number is held by --check and finalize
+    # criterion — a cold agent would invent a tautological [criterion-1];
+    # the number is held by --check and finalize
     return without_promise_tables(tmpl)
 
 
@@ -203,9 +200,9 @@ def without_promise_tables(text: str) -> str:
     """TEXT with every `[[promise]]` table of its TOML block removed, and
     the comment lines right above each; nothing outside the block changes.
     The tables are found by the block's own structure (the fence walker,
-    then table headers), not by a pattern over the text: a pattern took the
-    block's closing fence with the last table, and every count stamped at
-    low repeat cost ended inside its TOML block (count probes, 2026-10-20). Reads
+    then table headers), not by a pattern over the text: a pattern can take
+    the block's closing fence with the last table and leave the protocol
+    inside its TOML block. Reads
     the block back and raises ValueError unless `[protocol]` is unchanged,
     no promise is left and the block is still closed."""
     span = protocol_block.toml_block_span(text)
@@ -252,8 +249,8 @@ PLACEHOLDER_WIDTH = 72  # a one-line hint; the long form is `protocol-check --gu
 
 def short_placeholders(text: str) -> str:
     """Every stamped `<…>` placeholder on one line. The template's placeholders
-    carry the field guide's prose — a third of a cold agent's reading time
-    (cloud probes 2026-10-12, five of five); the stamped protocol keeps the
+    carry the field guide's prose — a large share of a cold agent's reading
+    time; the stamped protocol keeps the
     label and a one-line hint, `protocol-check --guide` the long form.
     Fenced blocks and the TOML head are untouched."""
     out: list[str] = []
@@ -357,12 +354,9 @@ def insert_report_fields(text: str, blocks: ProtocolBlocks) -> tuple[str, int]:
 
 # A protocol that names no model has nothing to parse; --report fills that
 # field when the Model / tool field says so (`protocol_check.model_named`,
-# the one reading of that field). Until 2026-10-17 it also wrote "no seed,
-# repetition spread 0" into Randomness controls and Noise ceiling: "no
-# language model" is not "no source of randomness" — a seeded forest, a
-# fold shuffle and a permutation are ones, and the pilot that got the line
-# (labkit-paper area 09, Sonnet v2 t5) named seed 0 three lines below it
-# while the next round measured a null-AUC spread of 0.116 over ten seeds.
+# the one reading of that field). It writes nothing into Randomness
+# controls and Noise ceiling: "no language model" is not "no source of
+# randomness" — a seeded forest, a fold shuffle and a permutation are ones.
 # Those two fields stay owed: an estimator with a seed owes them.
 DETERMINISTIC_NA = {
     "Parser cases harvested": "n/a — no model, nothing to parse (auto-filled by --report)",
@@ -395,10 +389,9 @@ def auto_fill_deterministic(text: str) -> tuple[str, int]:
     return "\n".join(lines), filled
 
 
-#: What a computation's registration owes, said in the placeholder: three cold
-#: agents (Haiku, 2026-10-13) wrote a Terms sentence for a plain count — "n/a"
-#: was allowed by the check but unsaid by the stamp — and one read
-#: "hypothesis" as an expectation to invent, then reworded it with --force.
+#: What a computation's registration owes, said in the placeholder: "n/a"
+#: for Terms is allowed by the check, so the stamp says so, and a
+#: computation tests no hypothesis, so none is to be invented.
 COMPUTE_PLACEHOLDERS = {
     "Terms of this protocol": '<one line per coined house word — or "n/a — no coinage">',
     "Question / hypothesis": (
@@ -411,9 +404,8 @@ COMPUTE_PLACEHOLDERS = {
 #: as what they are here, the promise sentences in the estimator's words.
 #: No `: `, ` — `, `; ` or ` (` inside a `<…>`: `short_placeholders` cuts there.
 ESTIMATOR_FIELDS = {
-    # a filled value, no `<…>` tail: an "n/a — …" line ending in a hole read
-    # as filled, and protocol-check let the hole through (BERT example on
-    # the branch, 2026-10-18); its parameters and seed are owed in the report
+    # a filled value, no `<…>` tail: an "n/a — …" line ending in a hole
+    # would read as filled and pass protocol-check; its parameters and seed are owed in the report
     # fields Free knobs and Randomness controls (`--report`, criterion-1)
     "Data / scope": "<the source files and the producer script in your words · then the counts protocol-fill --data-counts writes after 00_prepare.py · never typed>",
     "Model / tool": "n/a — no model call; the instrument is the estimator of `make_estimator()` in scripts/01_measure.py",
@@ -421,8 +413,8 @@ ESTIMATOR_FIELDS = {
     "Model I/O": "<in · the feature fields per item · out · one prediction per item, scored out of fold>",
     "Null condition / anchors (in the same run)": "<the same estimator refitted on labels permuted inside each fitting fold, as often as the fit plan of the measurement script says (`null_refits` in the run's config: 2 per fold at low repeat cost, 5 at high) · the mean of their scores expected within null_band of chance, the score of an instrument that learned nothing, which chance_of() in scripts/01_measure.py computes from the gold · the criterion's bar starts from that mean>",
     # filled after the run from its kept rows, owed only with a model
-    # (`protocol_check.not_owed`); --probe's rows are thrown away — the
-    # stamp asked for them here (audit 2026-10-27, third, I11)
+    # (`protocol_check.not_owed`); --probe's rows are thrown away, so the
+    # stamp does not ask for them here
     "Raw output": "<one registered row and one null row per finding, read from the run's kept output>",
     "Render check (ZERO calls, `--show N`)": "n/a — no prompt; `--show N` prints the config and N feature rows",
     "Instrument check (real pipeline, ~10 calls, `--probe N`)": "<`--probe N` · a reduced estimator on N labelled items, both lanes, throwaway · scores read, never reported>",
@@ -431,8 +423,8 @@ ESTIMATOR_FIELDS = {
 
 
 #: the ESTIMATOR_FIELDS values that state no model is called; a fit with
-#: `[model]` keeps the template's own placeholders there — the stamp wrote
-#: "n/a — no model call" beside the alias (audit 2026-10-27, third, I12)
+#: `[model]` keeps the template's own placeholders there, so the stamp
+#: writes no "n/a — no model call" beside the alias
 NO_MODEL_FIELDS = (
     "Model / tool",
     "Prompt (verbatim, per variant)",
@@ -461,7 +453,6 @@ ESTIMATOR_PROMISES = (
 
 #: the promise sentences that read otherwise at apply: the bar and [quality-check-2]'s
 #: target are the exact permutation expectation, not one permuted draw
-#: (null-lane decision, 2026-10-28)
 APPLY_PROMISES = {
     r'sentence = "<the criterion in one sentence:[^"]*"': 'sentence = "<the criterion · the registered lane\'s SCORE is at least the permutation expectation plus margin — or, for a bar the task states, at least at_least, its source named (constants = { at_least = … } in place of margin)>"',
     r'sentence = "<the null condition:[^"]*"': 'sentence = "<the null condition · the permuted-label lane scores within null_band of the permutation expectation, what these predictions reach on average against randomly assigned labels, which permutation_expectation() in scripts/01_measure.py computes exactly>"',
@@ -497,7 +488,7 @@ def _replace_field(lines: list[str], label: str, value: str) -> bool:
 
 #: the prose field that states each stamped promise — its id is written
 #: before the placeholder, because the cut placeholder loses the template's
-#: `[criterion-…]` hint and a cold agent then writes `C1:` (labkit 0.103.0), which no check reads
+#: `[criterion-…]` hint and a cold agent then writes `C1:`, which no check reads
 PROMISE_FIELDS = {
     "Inference criterion": "criterion-1",
     "Quality check": "quality-check-1",

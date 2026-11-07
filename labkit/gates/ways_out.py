@@ -1,7 +1,7 @@
 """ways_out — what a BLOCKER is, the ways out of one by its cause, and the
 handover sentence: the texts the analysis auditor's prompt shows and
 report-check prints in its holds. Model-free, so the release gate reads
-them without loading a model backend (audit 2026-10-27, third, M1); the
+them without loading a model backend; the
 agent guide states the same ways ("When you are stuck", `labkit-next
 --guide`) and `tests/test_ways_out.py` holds both to the same names and
 every command to a real one. The decision list prints none of them: it
@@ -13,29 +13,11 @@ from __future__ import annotations
 from labkit.checks.audit_binding import AuditError
 
 
-#: what a BLOCKER is and what closes it, shown to the analysis auditor: an
-#: agent whose code missed the registered bar moved the bar to the score
-#: (ninth haiku round, t5: 0.75 registered, 0.65 written after the audit).
-#: A route promises only what a gate checks: report-check holds the fields
-#: the kind owes and the kind to the first measurement's commit
-#: (`report_check.registration_gaps`), and the promise block to the
-#: registration the first measurements recorded
-#: (`registration_hold.registration_changes`) — a bar lowered after it and
-#: measured again is held
-#: the ways out of a BLOCKER, by its cause: (name, what to do). Shown to the
-#: analysis auditor (`blocker_routes`, in `audit_prompt`) and stated in the
-#: agent guide ("When you are stuck", `labkit-next --guide`); the decision
-#: list names the guide, not the ways (`audit_decisions.CAUSE_FIRST`).
-#: tests/test_ways_out.py holds guide and list to the same names and every
-#: command to a real one. The repair case (2026-10-27)
-#: took the invalid-registration route for a missed criterion and moved
-#: its bars inside it: the miss comes first, a new registration declares
-#: what it changes (K1–K3, docs/notes/2026-10-27-new-registration-contracts.md).
 #: how a question that cannot be answered leaves the session — the one
 #: sentence the ways out and report-check's holds (K1, K3) print. A run id
 #: in a report reads as that run's number: report-check holds the answering
 #: run of a protocol that declares no result, so a handover names the
-#: protocol (the counter-case of 2026-10-27, tests/test_counter_cases.py)
+#: protocol (tests/test_counter_cases.py)
 HANDOVER = (
     "hand over: `labkit-audit <area> --findings` prints the --decide and "
     "`protocol-fill <PROTOCOL> --handover` commands — the handover leaves no "
@@ -116,6 +98,23 @@ def register_anew(pid: str = "<id>", per: str = "per change") -> str:
 #: states it for a protocol with promises; for one without (a computation)
 #: `blocker_routes` prints NO_PROMISE_ROUTE in its place
 UNJUDGED_PROMISE = "an unjudged promise"
+#: what a BLOCKER is and what closes it, shown to the analysis auditor, so
+#: an agent whose code missed the registered bar does not move the bar to
+#: the score. A route promises only what a gate checks: report-check holds
+#: the fields the kind owes and the kind to the first measurement's commit
+#: (`report_check.registration_gaps`), and the promise block to the
+#: registration the first measurements recorded
+#: (`registration_hold.registration_changes`) — a bar lowered after it and
+#: measured again is held
+#: the ways out of a BLOCKER, by its cause: (name, what to do). Shown to the
+#: analysis auditor (`blocker_routes`, in `audit_prompt`) and stated in the
+#: agent guide ("When you are stuck", `labkit-next --guide`); the decision
+#: list names the guide, not the ways (`audit_decisions.CAUSE_FIRST`).
+#: tests/test_ways_out.py holds guide and list to the same names and every
+#: command to a real one. A missed criterion is reported first, never moved
+#: into the invalid-registration route with its bars; a new registration
+#: declares what it changes (K1–K3,
+#: docs/notes/2026-10-27-new-registration-contracts.md).
 WAYS_OUT = (
     (
         "an implementation error",

@@ -73,7 +73,7 @@ def unreported(text: str, head: protocol_block.Head) -> list[str]:
     those HEAD's protocol owes after the run (`owed_fields`): a model-only
     field (`lm`, Raw output) only with a model named — a computation has no
     prompt+answer pair to show; at low repeat cost only the cut's fields (the
-    Summary requires Conclusion, 2026-10-12)."""
+    Summary requires Conclusion)."""
     lines = fields(text)
     found = {f.name: f for f in lines}
     owed = [
@@ -90,10 +90,9 @@ def unreported(text: str, head: protocol_block.Head) -> list[str]:
     ]
 
 
-# A follow-up registration appended to the SAME protocol — the pattern that
-# grew one file to 649 lines out of three experiments ("Lauf B — ...
-# (deklariert vor dem Lauf)", "Stufe 2 ..."): each such heading is a second
-# question in a one-question file. The series rule (LAB-061 Sub-experiment series carry their number in the name)
+# A follow-up registration appended to the SAME protocol ("Lauf B — ...
+# (deklariert vor dem Lauf)"): each such heading is a second question in a
+# one-question file. The series rule (LAB-061 Sub-experiment series carry their number in the name)
 # gives every follow-up its own PROTOCOL-s<N>-<slug>.md. Warning only.
 SERIES_HEAD = re.compile(
     r"(?im)^##.*\((deklariert|registriert) vor dem( jeweils \w+)? "
@@ -114,13 +113,9 @@ CHANGELOG = re.compile(
 # already unreadable; the per-section budgets sit between the corpus median
 # and its upper quartile, so they flag roughly the top third instead of
 # everything (a warning that fires on every file is background noise).
-# Calibration 2026-09-15, 94 protocols with an Intent section across
-# ~/projects + ~/work: Intent median 25, Q3 38 — but confirmatory protocols
-# (n=59) sit at median 30, because the intent ids moved mandatory
-# registrations INTO Intent; the disciplined confirmatory cluster tops out
-# at 35 prose lines, so the budget sits at that ceiling and still flags the
-# top quarter. Setup as before (median 42, top quartile above 54; only 556
-# of 3344 Setup lines are code blocks — the length is prose, not evidence).
+# Intent holds a confirmatory protocol's mandatory registrations (the intent
+# ids), so its budget sits at the ceiling of a disciplined confirmatory
+# protocol, 35 prose lines. Setup's length is prose, not code blocks.
 # Needs more room? That is a note, and here stands its [[wikilink]].
 SECTION_BUDGET = [
     ("Summary", r"summary|zusammenfassung", 20),
@@ -135,9 +130,8 @@ def prose_lines(text: str) -> list[tuple[str | None, str]]:
     every PROSE line: code fences (rendered examples are the raw-output MUST)
     and table rows (confound profiles, error directions) are not prose.
     Section lines themselves are included. The one count behind the length
-    check and the section budgets — raw-line counting had flagged three
-    registration-dense protocols as journals, one of which never even ran
-    (2026-08-25)."""
+    check and the section budgets, so a registration dense in tables and
+    examples does not read as a journal."""
     out: list[tuple[str | None, str]] = []
     section: str | None = None
     lines = text.splitlines()
@@ -196,9 +190,8 @@ def template_lines(path: Path | None) -> set[str]:
     The preamble — everything before the first `## ` section — is the
     stamped legend (field-id key, standard version, guide pointer). It is
     MEANT to survive filling, so it must not count as "still verbatim
-    template text": counting it flagged every freshly stamped protocol
-    forever and taught people to delete the legend (2026-09-14/15, two
-    sessions of false positives on a correctly filled protocol).
+    template text": counted, it would flag every freshly stamped protocol
+    and invite deleting the legend.
     """
     if path is None or not path.exists():
         return set()
@@ -209,8 +202,8 @@ def template_lines(path: Path | None) -> set[str]:
     starts = set(protocol_block.section_starts(lines))
     for i, line in enumerate(lines):
         # The written protocol carries no cut markers; compared with them,
-        # the stamped Runs line `- <run_id> — <…> <!-- l -->` never matched
-        # its leftover (uniagent area 08, 2026-10-07: frozen and reported).
+        # the stamped Runs line `- <run_id> — <…> <!-- l -->` would never
+        # match its leftover.
         s = HTML_COMMENT.sub("", line).strip()
         if i in starts:
             in_body = True
@@ -401,12 +394,11 @@ def owed_field_lines(
 
 
 def print_contract(protocol: Path | None = None) -> None:
-    """The checker's contract in one screen (2026-10-05: two cold agents
-    learnt the budgets from the pre-commit hook and the field words from
-    the checker's source, four rewrite rounds each). The fields owed and
-    the fill command come first: last, five of six agents found the low cut
-    only after reading the whole list, and none found protocol-fill
-    (2026-10-07). With PROTOCOL, the fields that protocol owes by occasion
+    """The checker's contract in one screen, so the budgets and the field
+    words are read before writing, not learnt from the pre-commit hook or
+    the checker's source. The fields owed and the fill command come first,
+    so the low cut and protocol-fill are found without reading the whole
+    list. With PROTOCOL, the fields that protocol owes by occasion
     (`owed_field_lines`) and the tier table's one row of its repeat_cost,
     kind (the most a kind owes while undecided) and model (`model_named`),
     after a first line naming `labkit-next` for its area — the one next
@@ -512,11 +504,10 @@ def collect_protocols(paths: list[str]) -> list[Path]:
     return files
 
 
-#: prose lines a whole protocol may hold (tables and code excluded). By
-#: 2026-08-20 one had grown to 646 lines because every re-freeze APPENDED its
-#: narrative instead of replacing it — presence was checked, length never.
-#: The condensed version of that same protocol (all fields, all numbers, four
-#: code blocks) has 296 lines; 350 leaves room.
+#: prose lines a whole protocol may hold (tables and code excluded), so a
+#: re-freeze that APPENDS its narrative instead of replacing it shows. A
+#: condensed protocol (all fields, all numbers, four code blocks) fits in
+#: about 300 lines; 350 leaves room.
 PROSE_LINE_BUDGET = 350
 
 
@@ -525,8 +516,7 @@ class FileReport:
     """Everything `protocol-check` decides about one protocol, as data.
     `head_error` set means the head could not be read — nothing else is
     filled. `print_report` is the one rendering; `blocks` the exit code's
-    half. Held as locals of `main`, the findings existed only as printed
-    text and every test read them back from stdout (audit 2026-10-13)."""
+    half. As data, a test reads the findings without parsing stdout."""
 
     path: Path
     head_error: str | None
@@ -572,8 +562,7 @@ class FileReport:
     def clean(self) -> bool:
         """No finding at all — what lets `print_report` say OK. The pilot note
         and the Runs hint are notes, not findings. Every finding counts,
-        also those printed above the OK line (a doubled id stood above "OK
-        — must fields filled", review 2026-10-20)."""
+        also those printed above the OK line."""
         return not (
             self.audit_drift
             or self.id_findings
@@ -599,9 +588,8 @@ class FileReport:
 
     @property
     def musts(self) -> list[str]:
-        """The must findings in one list — repeated last in the report: in a
-        commit hook they sat among 20 warning lines and were missed
-        (usability probe 2026-10-07)."""
+        """The must findings in one list — repeated last in the report, so
+        in a commit hook they are not lost among the warning lines."""
         return (
             list(self.missing_must)
             + [f"{label} (line {n}, placeholder)" for n, label in self.must_holes]
@@ -651,7 +639,7 @@ def check_protocol(
     audit_drift = None
     if frozen and lane.freeze and head.preflight_audit:
         # a warning: after the run, analysis scripts change legitimately;
-        # `n/a` at high repeat cost waives an audit nobody may waive (0.99.0)
+        # `n/a` at high repeat cost waives an audit nobody may waive
         audit_drift = audit_record_gap(path.parent, head.preflight_audit, text)
     field_lines = fields(text)
     missing_should = report.missing_should
@@ -664,8 +652,8 @@ def check_protocol(
         )
         missing_should = []
     # A placeholder is reported as one already, and a comment can never
-    # be "filled" — neither is left-over template text (review 2026-10-07:
-    # a correctly filled protocol at low repeat cost was never clean).
+    # be "filled" — neither is left-over template text, or a correctly
+    # filled protocol at low repeat cost would never be clean.
     in_placeholder = {
         n for f in field_lines if f.placeholder for n in range(f.line, f.last + 1)
     }
@@ -679,17 +667,16 @@ def check_protocol(
         }
     )
     # Before the run the Runs entry is stamped by design: --from-run writes
-    # it. Counted as a leftover, it made every registration read as
-    # unfinished and two cold agents stopped to see whether it blocks
-    # (Haiku H6, H7, 2026-10-13). Frozen, the stamped entry is the scar of
-    # uniagent area 08 and stays a leftover.
+    # it, and counted as a leftover it would make every registration read
+    # as unfinished. Frozen, the stamped entry stays a leftover: a frozen
+    # protocol names its runs.
     runs_stamped = not frozen and any(RUNS_PLACEHOLDER.match(s) for s in left)
     if runs_stamped:
         left = [s for s in left if not RUNS_PLACEHOLDER.match(s)]
     examples = code_blocks(text)
     # "mentions a prompt" means a Prompt FIELD, not the word: the stamped
     # legend says "prompt" in every protocol, and a count protocol cut
-    # without the field was blocked for it (2026-10-05).
+    # without the field must not be blocked for it.
     no_block = not examples and any(
         f.name == "prompt" and not f.value.lower().startswith("n/a")
         for f in field_lines
@@ -736,7 +723,7 @@ def check_protocol(
     )
 
 
-def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  # noqa: C901 one print per finding, in report order (2026-10-13)
+def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  # noqa: C901 one print per finding, in report order
     """The report as `protocol-check` prints it: one line per finding, the
     must findings repeated last."""
     f = r.path
@@ -772,7 +759,7 @@ def print_report(r: FileReport, tell: Callable[[str], None] = print) -> None:  #
     for twice in r.repeated:
         tell(f"{f}: REPEATED (must): {twice}")
     # no `missing (should)` lines: unfrozen they are named in the pilot
-    # note above, frozen or at low repeat cost `owed()` makes them MUST (2026-10-09)
+    # note above, frozen or at low repeat cost `owed()` makes them MUST
     for n, label in r.must_holes:
         tell(f"{f}:{n}: PLACEHOLDER ONLY (must): {label}")
     for n, label in r.soft_holes:
@@ -957,8 +944,8 @@ def main(argv: list[str]) -> int:
         )
         print(EXIT_CONTRACT)
         return 0
-    # `protocol-check PROTOCOL --contract` read the flag as a file name
-    # ("not readable: '--contract'", 2026-10-13): a flag is a flag anywhere.
+    # A flag is a flag anywhere: `protocol-check PROTOCOL --contract` must
+    # not read `--contract` as a file name.
     if "--contract" in argv:
         return _contract([a for a in argv if a != "--contract"])
     staged = "--staged" in argv

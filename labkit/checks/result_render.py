@@ -5,7 +5,7 @@ results opens with the reportable verdict of every registered promise
 (`verdicts`, one derivation for every reader): a quality check
 not assessable — a limitation names it — or not met leaves every
 criterion not assessable, so a criterion's own `True` never reads as a
-pass beside it (the repair case, 2026-10-27, K2). The declared run's other
+pass beside it. The declared run's other
 reported keys follow as recorded values — descriptive; the registered
 promises' keys stay in `metrics.json`, unchanged, and are not repeated as
 values —, a computation's kept number first, named with its unit
@@ -259,7 +259,7 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
     own bound sources (its declared run, its covering records), never from
     the successor's words, its own predecessor before it; `no result
     declared — unresolved` when it declares none, `no verdict — <why>` when
-    its declared run answers no registered question (K3: its first
+    its declared run answers no registered question (its first
     measurements recorded different registrations, or the run recorded
     another block than theirs — a verdict there is no earlier miss or pass
     to put first), `unresolved (<why>)` when its sources do not read or the
@@ -301,8 +301,8 @@ def predecessor_verdict(area: Path, text: str, seen: set[str]) -> str:
 
 
 def _unregistered(protocol: Path, pid: str, run_dir: Path) -> str | None:
-    """Why RUN_DIR, the run PROTOCOL declares, answers no registered question
-    (K3): its first measurements recorded different registrations, or the
+    """Why RUN_DIR, the run PROTOCOL declares, answers no registered question:
+    its first measurements recorded different registrations, or the
     run recorded a block other than the one they recorded. None when it
     holds theirs, or when no block was recorded (another station names
     that). Raises RuntimeError when git fails."""
@@ -361,9 +361,8 @@ def render_gaps(text: str, expected: Rendering) -> list[GateFinding]:
     for label in generated:
         n = labels.count(label)
         if n > 1:
-            # a dict of the fields kept the last line only, and a first line
-            # saying anything passed beside a correct second one (review
-            # 2026-10-22: "no restriction applies" above the record's line)
+            # a dict of the fields would keep the last line only, and a first
+            # line saying anything would pass beside a correct second one
             gaps.append(
                 blocker(
                     f'"{label}" is written {n} times — one generated line per label',

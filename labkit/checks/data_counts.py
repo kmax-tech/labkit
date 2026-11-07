@@ -10,10 +10,8 @@ metrics record them (`item_counts`, written by the estimator skeleton's
 (prepare run <run_id>):` and stands at the field's end; the author's own
 words stand before it.
 
-Why: two cold agents registered counts the data did not hold — 108
-labelled persons for 92, 118/60/60 compounds for 240/80/80 — after a
-prepare script that printed the total alone (fifth SAB-like draw,
-2026-10-28).
+Why: an author who types the counts after a prepare script that prints
+the total alone registers counts the data does not hold.
 """
 
 from __future__ import annotations

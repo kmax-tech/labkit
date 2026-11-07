@@ -36,7 +36,7 @@ def main(argv: list[str]) -> int:
         prog="report-check",
         description=(report_check.__doc__ or "").split("\n\n")[0],
         # the hooks' form is parsed above, before argparse; it is still part
-        # of this command's contract and stands in its --help (audit 2026-10-23, C2)
+        # of this command's contract and stands in its --help
         epilog=(
             "report-check --if-reported [--staged] PATH ...\n"
             "    every protocol of an area a path touches whose head has adopted a\n"

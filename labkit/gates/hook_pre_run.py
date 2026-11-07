@@ -43,8 +43,7 @@ PY_TOKEN = re.compile(r"[\w./~-]+\.py")
 # `.venv/bin/python`, flags between allowed), when it starts a command
 # command (`./x.py`, first in a `shell.segments` command, after
 # `runlog start --`, `nohup`, `time`, `exec`), never when it is merely named (`sed -n 1,5p lib/x.py`, a path in
-# a heredoc): uniagent 2026-10-10, 85 of 272 hook lines in one session said
-# "opens a run" about a lib module someone was reading.
+# a heredoc): a lib module someone reads opens no run.
 INTERPRETER = re.compile(r"(?:^|/)python[\d.]*$")
 
 
@@ -84,8 +83,7 @@ def before_run(script: Path, stop: Path | None) -> tuple[bool, str]:
     other case is a note. Without a blocker the note carries every
     warning as the station told it, then the summary: the summary alone
     counts the warnings, and an open audit finding (`undecided in …`) is
-    one of them. One script per call: `pre_run` held all of this inline
-    (audit 2026-10-27, third, M7)."""
+    one of them. One script per call."""
     area = find_area(script, stop)
     if area is None:
         return False, with_way_out(
@@ -205,8 +203,8 @@ def run_scripts(
     existing; a segment with a throwaway flag (`THROWAWAY_FLAGS`) opens no
     run. Each simple command of the line
     (`shell.segments`) is judged on its own: read as one, `cd AREA && python
-    scripts/01_measure.py` found no script, and one `--probe` freed every
-    command of the line (audit 2026-10-15).
+    scripts/01_measure.py` would find no script, and one `--probe` would
+    free every command of the line.
 
     With require_resolved_scripts, an unresolved relative script raises
     UnresolvedScriptError: Codex omits the tool's workdir, so absence at its session

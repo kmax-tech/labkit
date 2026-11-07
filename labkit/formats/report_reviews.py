@@ -43,10 +43,9 @@ when at least one review that is no `--again` draw saw this very state
 holds the state, an `--again` draw's as well; a later clean review of the
 same state does not outvote it. The way out is a changed input — the
 report, or a source the reader read (a protocol, a decision) — and a
-review of that state. Why (eighth
-haiku round, 2026-10-26, t18): the review was a hint at the commit, the
-agent passed it over, and the discussed run's numbers stayed in the
-report as results.
+review of that state. Why: a review that is only a hint at the commit
+is passed over, and the discussed run's numbers stay in the report as
+results.
 
 Reading is loud: a file without its table, a kind outside KINDS, a count
 that is not the claims' raise ReportReviewError naming the file and the

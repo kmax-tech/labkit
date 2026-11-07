@@ -24,8 +24,8 @@ fingerprint of the inputs it read (`report_reviews`). The call is an
 attempt in the area's journal (`attempts.attempt`, mode `report-review`,
 started on that fingerprint): the answer kept before it is read, the end
 naming the record or why there is none — a review with a claim deleted
-before the commit is named, where before nothing held the state once it
-was gone (ninth haiku round, t5). report-check holds a report with a
+before the commit is named, so the state stays held once the record is
+gone. report-check holds a report with a
 discussion block, and the report a protocol's head registers once it
 carries its result or handover block, until a review of exactly that
 state names no claim (`report_hold.report_review_owed`,
@@ -143,8 +143,8 @@ def parse_claims(report: str, n_lines: int) -> list[ReportClaim]:
     closing count says; every line announcing a claim keeps the form, and
     nothing follows the closing line. Raises AuditError otherwise — a
     reply that disagrees with itself names nothing. A claim of a kind
-    outside `result|contradiction` matched nothing and the reply counted
-    as clean (review 2026-11-06, finding 1)."""
+    outside `result|contradiction` breaks the form: matched by nothing, it
+    would let the reply count as clean."""
     last = audit_reply.last_verdict(VERDICT, report, "the reply", "a review")
     body = (report or "")[: last.start()]
     stray = [
@@ -228,9 +228,9 @@ def review_report(
                 f"({standing.on_state[-1].path.name}) — nothing to do"
             )
             return 0
-        # `attempts.begin` refuses it all the same; its refusal named
-        # `--findings` and the handover, already written in that state, and
-        # not the removal that leads out (pilot of labkit-paper area 15, t60)
+        # `attempts.begin` refuses it all the same, but its refusal names
+        # `--findings` and the handover, already written in that state, not
+        # the removal that leads out
         lost = report_hold.lost_evidence(chosen)
         if lost is not None:
             raise AuditError(
@@ -243,7 +243,7 @@ def review_report(
         )
         # journaled like an audit, started on the inputs' fingerprint: a
         # review with claims deleted before the commit is noticed by the
-        # attempt that names it (ninth haiku round, t5)
+        # attempt that names it
         with audit_call.journaled_answer(
             area, ATTEMPT_MODE, model, whole, prompt, timeout
         ) as (running, reply):
@@ -306,7 +306,8 @@ def state_line(
     claim — this draw's or an earlier one's on the same state — or owed a
     review that is no `--again` draw (the command for REPORT under PROTOCOL
     in AREA). Printed apart from the draw's own claims: a clean `--again`
-    draw on a held state read as released while the commit stayed refused."""
+    draw on a held state would read as released while the commit stays
+    refused."""
     if standing.released:
         return (
             "this state is released (the commit counts the review record "

@@ -24,7 +24,7 @@ from labkit.formats.runs import JsonObject
 #: the prompt as the one message, the caller's system prompt (or none) after
 #: the CLI's fixed identity line, thinking off; it needs ANTHROPIC_API_KEY,
 #: since `--bare` reads no login (`llm_backends.complete_claude_cli`).
-#: Checked on CLI 2.1.309 behind a logging proxy (registered pilot, 2026-11-01).
+#: Checked on CLI 2.1.309 behind a logging proxy.
 CliInput: TypeAlias = Literal["harness", "prompt"]
 CLI_INPUTS: tuple[CliInput, ...] = ("harness", "prompt")
 
@@ -98,8 +98,8 @@ def alias_tables(
     before `parse_spec` reads it: `[models]` a table, the alias's entry a
     table, `[endpoints]` a table of URL strings. Raises KeyError for an
     alias the file lacks, ValueError naming the file and the field for
-    any other shape — a string under `[models]` ended as AttributeError
-    far from the file (review 2026-10-20)."""
+    any other shape — a string under `[models]` would otherwise end as
+    AttributeError far from the file."""
     models = data.get("models", {})
     if not isinstance(models, dict):
         raise ValueError(
@@ -137,8 +137,7 @@ def parse_spec(
     against `[endpoints]` (ENDPOINT_NAMES), literal URLs passed through.
     Raises ValueError naming the field for an unknown backend, a key its
     backend does not read, a value of the wrong type, a served backend
-    without endpoints, and the `endpoint = ...` string form (not read
-    since 0.89.0); KeyError for an endpoint name `[endpoints]` lacks.
+    without endpoints, and the `endpoint = ...` string form; KeyError for an endpoint name `[endpoints]` lacks.
     Every message names SOURCE, the file the table came from."""
     where = f"{source} [models.{alias}]"
     if "endpoint" in table:
@@ -256,7 +255,7 @@ def record(spec: BackendSpec) -> JsonObject:
             if getattr(spec, key) is not None:
                 out[key] = getattr(spec, key)
     if isinstance(spec, ClaudeCliSpec) and spec.input != "harness":
-        # the default stays unrecorded, as runs before the option hold it
+        # the default stays unrecorded: a run's config without the key means it
         out["input"] = spec.input
     if isinstance(spec, OllamaSpec):
         if spec.num_ctx is not None:

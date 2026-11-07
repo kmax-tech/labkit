@@ -1,9 +1,8 @@
 """agent_transcript — what a coding agent did, read from its session transcript.
 
-The usability probe asked the agent to log its own steps; the log is
-self-report — lines get batched, written late, or forgotten, and a file
-read without a log line is invisible (re-measure 2026-10-07: one agent
-reported seven minutes, its log spanned two). The transcript the agent
+An agent's log of its own steps is self-report — lines get batched,
+written late, or forgotten, and a file read without a log line is
+invisible. The transcript the agent
 harness writes is the measurement instead: one JSON record per message,
 each tool call with its input, each result with its output, every record
 with a timestamp.
@@ -24,8 +23,7 @@ Two tiers, as everywhere in labkit:
 - **measured** — wall-clock (first to last record), tool time (call to its
   result), the number of calls, which labkit commands ran, the tokens the
   model calls cost (`Tokens`: output, cache read, the largest context one
-  call read — 2026-10-11: the usability probes averaged 2.9 M cache-read
-  tokens per agent and no score said so);
+  call read);
 - **heuristic** — which files a shell command read (the verbs `cat`, `head`,
   `tail`, `sed`, `less`, `wc`, `nl` and their arguments), and whether a
   result was a refusal (a line `pre-commit: …`, `finalize: N blocker(s)`
@@ -196,7 +194,7 @@ def read_calls(path: Path) -> tuple[list[Call], float, float]:
     kinds that carry calls, results and stamps); every other type is session
     bookkeeping and skipped — `atis-latch`, `last-prompt`, `cost-state`
     (Claude Code 2.1.285), and `api-request-blob`, which carries a `message`
-    hash and no timestamp (a subagent's transcript, 2026-11-04). A `user` or
+    hash and no timestamp (a subagent's transcript). A `user` or
     `assistant` record without a timestamp is refused (`_stamp`)."""
     uses: dict[str, tuple[float, str, str]] = {}
     order: list[str] = []
@@ -300,8 +298,8 @@ def outside_paths(calls: list[Call], root: Path) -> list[str]:
     the paths of file tools and those a shell line names (heuristic). Not
     outside: ROOT and below, its own files beside it (`<root>.log.md`, …),
     the venv its `.venv` links to, and system paths. Static evidence: a
-    shared store the probe's isolation did not cover (judge-2, 2026-10-20,
-    read an earlier probe's `/tmp` file first)."""
+    shared store the probe's isolation did not cover (an earlier probe's
+    `/tmp` file, say)."""
     venv = (root / ".venv").resolve()
     allowed = (f"{root}/", f"{root.parent}/{root.name}.", f"{venv}/")
     out: list[str] = []
@@ -335,7 +333,7 @@ def trace(path: Path, root: Path, source: re.Pattern[str]) -> TranscriptTrace:
     that neither mentions `root` in a call nor carries it as a record's
     `cwd` — the wrong file measures the wrong agent. The working directory
     counts because an agent whose shell starts in the probe may name no
-    path at all (count-2 in the sandbox, 2026-10-21)."""
+    path at all."""
     calls, first, last = read_calls(path)
     in_root = any(r.get("cwd") == str(root) for _, r in records(path))
     if not in_root and not any(str(root) in c.text for c in calls):

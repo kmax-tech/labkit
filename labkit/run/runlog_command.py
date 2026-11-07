@@ -113,9 +113,8 @@ def _print_status(
         if _state_word(r) == BROKE_OFF:
             print(f"    {read_failure(r.dir)} — its process lives on; the run ended")
         if r.state == "unknown":
-            # a live run in a sandbox without `ps` read as a bare "unknown",
-            # and its lock as stale (registered pilot part 1, pubmedqa50-r2);
-            # an output lock answers for itself, by its flock (`batch.Store`)
+            # a live run in a sandbox without `ps` would read as a bare
+            # "unknown", and its lock as stale; an output lock answers for itself, by its flock (`batch.Store`)
             print(
                 f"    pid {pid} exists; whether it still runs {script} cannot be "
                 f"checked here (no `ps`) — treat it as running; an output lock "
@@ -243,11 +242,10 @@ def _wait(
     What it waits for is what is open when it begins and what opens while
     it waits. A failure that stands when it begins beside an open run is
     named once as not waited on, and decides no exit: a start refused by
-    the open run's lock ended the wait at once and hid the run still
+    the open run's lock would end the wait at once and hide the run still
     writing. With nothing open when it begins, a standing failure is the
     area's latest word: exit 2. The waiter only OBSERVES — the run owns its
-    process group and its lock, so a killed waiter is harmless (verified in
-    the detach probe: killing the waiter left run and lock untouched)."""
+    process group and its lock, so a killed waiter is harmless."""
     t0 = time.monotonic()
     apath = Path(area)
     earlier: set[str] | None = None
@@ -433,14 +431,13 @@ def _start(argv: list[str]) -> int:
     3 still starting after S seconds).
 
     AREA is named, not guessed from the command: the default log goes to
-    AREA/output/ and the printed wait command names AREA. Until 0.90.0 the
-    log went to `output/` under the working directory — the repo root when
-    started from there, as the task sheets ask — and a cold agent looked for
-    it in the area (cloud judge probe, 2026-10-14).
+    AREA/output/ and the printed wait command names AREA, so the log lies
+    where an agent looks for it even when started from the repo root, as
+    the task sheets ask.
 
     setsid puts the run in its OWN process group and session: the shell that
     started it — and any tool timeout that kills that shell's group — cannot
-    take the run down with it (scar 2026-08-13). LABKIT_DETACHED=1 tells the
+    take the run down with it. LABKIT_DETACHED=1 tells the
     `run_kind='measurement'` gate inside the script that the detach already happened.
     A supervisor in that session starts the command and keeps its start
     record (`detached`): `runlog AREA` and `--wait` see the command until it
@@ -601,8 +598,8 @@ def main(argv: list[str]) -> int:
         "--notify", action="store_true", help="macOS notification when the wait ends"
     )
     args = ap.parse_args(argv)
-    # a misspelt area read as "no open runs", exit 0 — and `--wait` as
-    # finished (audit 2026-10-15); `reindex` refused it, status did not
+    # a misspelt area would read as "no open runs", exit 0 — and `--wait`
+    # as finished
     try:
         area = repo.area_path(args.area)
     except repo.AmbiguousArea as exc:
@@ -612,8 +609,8 @@ def main(argv: list[str]) -> int:
         console.refuse("runlog", repo.no_such_area(area))
         return 2
     if (area / repo.EXPERIMENTS).is_dir():
-        # the lab root read as an area: "no open runs", and --wait as idle
-        # while a measurement ran (audit 2026-10-27, third, I10)
+        # the lab root would read as an area: "no open runs", and --wait as
+        # idle while a measurement runs
         console.refuse(
             "runlog",
             f"{area} is the lab root, not an experiment area — name the area: "

@@ -11,10 +11,9 @@ record as a *carried* finding (`carried_finding`), open, with the
 original's text, check and note, and `carries = "<record>#<n>"` naming
 the finding it continues. There it is decided like any finding of the
 current state, and one decided limitation renders as a limitation of the current
-result. Why (fixed-followup pilots, 2026-10-26): an earlier decision
-otherwise left the result without trace — a `fixed` with no check, an
-`accepted` limit that the renderer, reading only covering records, no
-longer showed.
+result. Why: an earlier decision would otherwise leave the result without
+trace — a `fixed` with no check, an `accepted` limit that the renderer,
+reading only covering records, would not show.
 
 The chain: a carried finding continues one earlier finding, which may
 itself be carried; following `carries` ends at the *origin*, a finding
@@ -169,8 +168,8 @@ def earlier_corrections(
     (`findings.corrected_field`), in a record that is not of the state
     CURRENT tells — shown to a follow-up audit beside `earlier_blockers`,
     which judges each on the field's change: a description corrected in
-    place is released by that `resolved` alone, at every grade (probe
-    2026-11-02, docs/notes/2026-11-02-registered-field-repair.md). Raises
+    place is released by that `resolved` alone, at every grade
+    (docs/notes/2026-11-02-registered-field-repair.md). Raises
     what `chain` raises."""
     return [
         m
@@ -187,7 +186,7 @@ def undecided_earlier(
     """The heads that are BLOCKERs still open in a record not of the state
     CURRENT tells — what a follow-up audit cannot judge, since it is shown
     decided BLOCKERs only (`earlier_blockers`). An audit run over them
-    followed nothing up and owed one more (registered pilot part 1, 60-r3).
+    would follow nothing up and owe one more.
     Raises what `chain` raises."""
     return [
         m

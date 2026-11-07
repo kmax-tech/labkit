@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """code-check — the mechanical half of the preflight, before the model looks.
 
-The preflight audit (LAB-015 Preflight audit before freezing) used to do three jobs in one
-pass: mechanics, compliance, judgement. The mechanics are the cheap half and
-they do not need a model — an id that no script mentions, a field the
+Of the preflight audit's three jobs (LAB-015 Preflight audit before
+freezing) — mechanics, compliance, judgement — the mechanics are the cheap
+half and they do not need a model: an id that no script mentions, a field the
 analysis reads and no producer writes, a protocol still full of placeholders
 are all decidable from the source. Deciding them here leaves the model the
 one question worth its cost: does the code MEAN what the registration says.
@@ -24,7 +24,7 @@ command:
      key in the intent-id namespace has a registered id (a WARNING).
      Report time has `intent-check` for the metrics; before the run the same
      promise goes unchecked exactly when repairing it is still cheap.
-  1a. **Quality-check keys decide something** (STATIC EVIDENCE, 2026-10-14; with a
+  1a. **Quality-check keys decide something** (STATIC EVIDENCE; with a
      promise block only). A quality-check key the code writes and never
      tests (`if`, `and`, `all()`, …) permits nothing: the criterion verdict is
      reported either way. A test is not proof of a branch, so each finding
@@ -32,24 +32,20 @@ command:
      a script that sets a registered constant's value itself instead of
      reading it from the protocol judges by an unregistered value once the
      two drift.
-  1b. **parser fixtures** (GUARANTEED, 2026-10-05). Every `parse_*` function in
+  1b. **parser fixtures** (GUARANTEED). Every `parse_*` function in
      the area's scripts is called by a test file under the repo's tests/ (a
-     call, not a mention; the assertion is not checked) — five
-     audit findings in three repos were "this parser has no fixture test on
-     real raw answers", and a parser fails silently into a wrong number.
-  1c. **prompt drift** (GUARANTEED, 2026-10-05). The protocol's prompt block
+     call, not a mention; the assertion is not checked) — a parser fails
+     silently into a wrong number.
+  1c. **prompt drift** (GUARANTEED). The protocol's prompt block
      is the `PROMPT` constant, not a transcript of it: every line of the
-     constant without a `{placeholder}` must appear in the block. The most
-     frequent provenance blocker in the audit corpus.
-  1d. **stamp coverage** (STATIC EVIDENCE, 2026-10-12). The audit stamp
+     constant without a `{placeholder}` must appear in the block.
+  1d. **stamp coverage** (STATIC EVIDENCE). The audit stamp
      follows `import` statements into `lib/` and `src/` (`scope_sha`); it
      cannot follow a `sys.path` edit, `importlib`/`runpy`/`exec`, or an
      import that resolves to a repo file outside those roots — another
      area's script, `tools/`. Each is a WARNING naming the line: code that
      determines the number and that no stamp sees (LAB-019 The stamp covers
-     everything that determines the number). Five audits in uniagent
-     (areas 15, 16, 17, 22, 23) found this by reading; the agent should
-     not have to.
+     everything that determines the number).
 
 The following are extracted into the audit bundle but NOT checked by this
 command — an agent reading the bundle judges them:
@@ -81,11 +77,8 @@ Usage:
                                          #  agent to read in one go
 
 Exit code 1 with a blocker, 0 with warnings only or all clear — the gate
-contract, told by `gate.Findings.report` like every gate's (until the
-2026-10-23 audit the closing line was code-check's own and counted the
-kinds by hand): a warning is to read, never a stop. Until 0.97.1
-code-check exited 1 on a warning too, against its own contract (audit
-2026-10-18). 2 on usage errors.
+contract, told by `gate.Findings.report` like every gate's: a warning is
+to read, never a stop. 2 on usage errors.
 """
 
 from __future__ import annotations
@@ -216,7 +209,7 @@ def promise_block_findings(area: Path, protocol: Path, text: str) -> list[GateFi
     the block does not parse, a declared scope names code that is not there
     (runlog refuses the run), a declared key appears nowhere in the code
     (intent-check fails after the run). Exact key, not id: `"criterion_1_passed"`
-    does not answer a promise declaring `criterion_1_pass` (Durchstich 2026-10-06).
+    does not answer a promise declaring `criterion_1_pass`.
     """
     try:
         block = promises.parse_block(text)
@@ -372,10 +365,8 @@ def quality_check_reads(
     A quality check permits the criterion verdict — a criterion judges, a
     quality check permits the verdict (LAB-004 Identifiers make the intent addressable). A key
     that is computed and never read is a label without effect: the
-    criterion is reported whether the condition held or not (Opus audit,
-    probe 11: "[N1] was a label without effect"; class C, 24 findings over
-    six repos). Only a read where a decision is taken counts (`_key_reads`),
-    but a decision on the key is not proof that it withholds the verdict,
+    criterion is reported whether the condition held or not. Only a read
+    where a decision is taken counts (`_key_reads`), but a decision on the key is not proof that it withholds the verdict,
     and a decision in a form this reader does not follow is missed — so
     the finding is a WARNING, and silence means only "decided on
     somewhere". A key the code does not mention at all is the blocker
@@ -433,7 +424,7 @@ def constant_copies(
     The script is meant to read its thresholds from the block
     (`promises.constants`); a literal copy judges by a value nobody
     registered as soon as the two drift, and intent-check sees it only if
-    the run records the value (Durchstich 2026-10-07). A copy under another
+    the run records the value. A copy under another
     name, or a threshold written inline (`mean >= 1.5`), stays invisible
     here — that is the agent audit's question.
     """
@@ -488,18 +479,15 @@ def constant_copies(
 def schema_facts(area: Path) -> str:
     """The field table — facts for the agent, not findings of our own.
 
-    Three calibration rounds (2026-09-10, areas 60-73) failed to make this a
-    checker. Every narrowing removed one false-blocker class and left the
-    next: fields staged into files a later step writes, a `fan_v1.jsonl` that
-    is simply not on disk any more, a consumer that reads across area
-    boundaries (72 reads 71's prepared data). Deciding whether a read is
-    satisfied needs the data FLOW, and that is exactly what a model reads
-    well and a parser does not.
+    Not a checker: deciding whether a read is satisfied needs the data
+    FLOW — fields staged into files a later step writes, a file not
+    on disk, a consumer that reads across area boundaries — and that is
+    exactly what a model reads well and a parser does not; every narrowing
+    of a checker removes one false-blocker class and leaves the next.
 
     So the mechanics stop at the facts: which fields the analysis reads, and
     which keys the area's data rows actually carry. The agent holds them
-    against each other — with the lookup work already done, which is the part
-    that used to cost it minutes of grepping.
+    against each other — with the lookup work already done.
     """
     producers, consumers = split_stages(area)
     known, files = data_keys(area)
@@ -651,7 +639,7 @@ def _arguments(argv: list[str]) -> tuple[Path, Path | None, Path | None]:
 def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> None:
     """What this command did not check, told as a note before the gate's
     summary (the summary and the exit code are `Findings.report`'s, like
-    every gate's — audit 2026-10-23, C4)."""
+    every gate's)."""
     if bundle_to is not None:
         findings.note(
             "schema facts + gate labels extracted into the bundle, for an agent "
@@ -659,7 +647,7 @@ def _not_checked(findings: Findings, protocol: Path, bundle_to: Path | None) -> 
         )
     elif standard_contract.lane(_cost_of(protocol)).registration:
         # only the agent's review is not owed here; the protocol's open
-        # fields are, and the pre-commit holds them (judge probe, 2026-10-20)
+        # fields are, and the pre-commit holds them
         findings.note(
             "schema, gate labels: not checked — the agent's review is not owed "
             "at repeat cost low, the measurement checks the instrument (--bundle "

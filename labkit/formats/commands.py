@@ -74,9 +74,9 @@ class Command:
     """One of labkit's steps as a command: NAME (a key of `COMMAND_KIND`),
     its `kind` from that table, and LINE, the shell line as its builder
     renders it — the one spelling every gate prints. `str()` is the line,
-    so a finding's text embeds a command as before; code that decides
+    so a finding's text embeds a command as its line; code that decides
     (`next_step`, `report_check.adoption_order_note`) reads `name` and
-    `kind`, never the line (the one-explainer plan, Phase 2)."""
+    `kind`, never the line."""
 
     name: str
     line: str
@@ -119,8 +119,8 @@ def withdraw_command(protocol: Path) -> Command:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —
     the way to replace a declaration: withdraw, audit, adopt. Where the
-    head registers a report, `--into` it: without, the report kept the
-    withdrawn run's result block and the commit refused it. A protocol or
+    head registers a report, `--into` it: without, the report keeps the
+    withdrawn run's result block and the commit refuses it. A protocol or
     head that does not read names no report here — the gate reading it
     holds that."""
     try:
@@ -198,8 +198,7 @@ def next_after_run(protocol: Path, run_id: str) -> str:
     accept them: finalize, the analysis audit and its decisions, the
     Conclusion and the report fields (`report_fields_step`), then the
     adoption of RUN_ID — what every skeleton prints at the end of a run.
-    Printing the adoption alone sent agents into its refusal (audit
-    2026-10-27, third, I3)."""
+    Printed alone, the adoption sends an agent into its refusal."""
     area = protocol.parent
     return (
         f"next: finalize {shlex.quote(shown(area, Path.cwd()))} · "
@@ -223,7 +222,7 @@ def into_command(protocol: Path, report: Path) -> Command:
     """The `protocol-fill PROTOCOL --into REPORT` line that writes PROTOCOL's
     result block into REPORT, both as the working directory reaches them
     (`shown`), shell-quoted: a protocol named relative to the report and a
-    report relative to the repo ran from neither (audit 2026-10-27, S2)."""
+    report relative to the repo runs from neither."""
     here = Path.cwd()
     return Command(
         INTO,

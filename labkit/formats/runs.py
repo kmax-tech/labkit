@@ -6,7 +6,6 @@ which runs of an area are complete. Every module that picks, accepts or
 lists a run asks here — recheck, intent-check, finalize, the usability
 scorer, the endpoint lease — without importing the writer (and, through it,
 the LLM backend). Contract: docs/protocol-run-binding.md, "Run completion".
-The incidents behind the rules stated here: docs/notes/2026-11-04-run-record-history.md.
 """
 
 from __future__ import annotations
@@ -46,8 +45,7 @@ def is_alive(pid: object, script: object) -> bool | None:
     can belong to another process days later. So the command line is
     checked for the recorded script name as well. If that cannot be
     decided (no `ps`, no script name), the answer is **None**, not `True`:
-    an "unknown" is usable, a false "running" is not (the incident:
-    docs/notes/2026-11-04-run-record-history.md).
+    an "unknown" is usable, a false "running" is not.
     """
     if not isinstance(pid, int):
         return None
@@ -66,7 +64,7 @@ def is_alive(pid: object, script: object) -> bool | None:
 def runs_script(cmd: str, script: str) -> bool:
     """Does the command line CMD run SCRIPT — as a word of its own or the last
     component of a path (`python /a/01_measure.py --x`)? Not as part of
-    another name: a substring match held a dead run "running" under
+    another name: a substring match would hold a dead run "running" under
     `not_01_measure.py`. A directory with a space in its path still
     matches; the name is bounded, not the path split."""
     return re.search(rf"(?:^|[\s/]){re.escape(script)}(?:\s|$)", cmd) is not None
@@ -178,7 +176,7 @@ def date_minute(when: time.struct_time | None = None) -> str:
 
 
 #: why a run broke off, written by `runlog.run` when the block raises — the
-#: exception's type and message; without it a crashed run showed only that
+#: exception's type and message; without it a crashed run shows only that
 #: it crashed, the reason on stderr alone
 FAILURE_FILE = "failure.json"
 #: the folder under an area that holds its runs, and the file of the values
@@ -272,8 +270,8 @@ RUN_ID = re.compile(
 )
 #: what reads as a run id in prose: RUN_ID's time with any suffix. A cited
 #: token of this shape that is not a RUN_ID names no run runlog wrote —
-#: a gate that saw only RUN_ID saw no citation in `…T12-48-00_final` and
-#: let it through
+#: a gate that sees only RUN_ID sees no citation in `…T12-48-00_final` and
+#: lets it through
 RUN_ID_LIKE = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[\w-]+")
 
 
@@ -297,8 +295,8 @@ def read_run_config(run_dir: Path) -> RunConfig | None:
     when the directory has no config.json.
 
     Unreadable is not absent: a damaged config.json raises RunConfigError
-    naming the file. Skipping it silently made a broken newer run vanish
-    and let an older one be chosen or reported in its place — listings
+    naming the file. Skipping it silently would make a broken newer run
+    vanish and let an older one be chosen or reported in its place — listings
     show it as `corrupt`, choices refuse.
     """
     cfg_file = run_dir / CONFIG_FILE
@@ -351,7 +349,7 @@ class OutputEntry:
     note: str = ""
     rows_from: dict[str, int] = field(
         default_factory=dict[str, int]
-    )  # run_id -> rows (JSONL, 0.72.3)
+    )  # run_id -> rows (JSONL)
     continues: tuple[str, ...] = ()  # runs whose rows this file already held
 
 
@@ -380,8 +378,8 @@ def data_entries(data: JsonObject, where: str) -> list[DataEntry]:
     text, rows a count or null (present); the leakage verdict (LEAKAGE_CHECK_KEY) is
     no input. Raises ArtefactError naming WHERE (the record) and the key on
     any other shape: whether an entry reads is decided here once, which of
-    its fields a check needs stays with that check (audit 2026-11-07, S11:
-    five readers, one turned a missing path into the text "None")."""
+    its fields a check needs stays with that check, so no reader turns a
+    missing path into the text "None"."""
     out: list[DataEntry] = []
     for key, value in data.items():
         if key == LEAKAGE_CHECK_KEY:
@@ -425,10 +423,10 @@ def recorded_path(path: Path, inside: Path) -> str:
     """How a run's record (outputs.json, config.json `data`) writes PATH:
     relative to the root of the repo INSIDE lies in, when PATH lies in that
     repo, so a clone elsewhere reads the same record; absolute only for a file
-    outside the repo. `resolve_recorded` reads it back. Absolute paths broke
-    `02_analyze.py --check` and finalize's source check on every machine but
-    the one that measured; a relative `data=` path was kept relative to
-    whatever the working directory was."""
+    outside the repo. `resolve_recorded` reads it back. An absolute path
+    would break `02_analyze.py --check` and finalize's source check on every
+    machine but the one that measured, a path relative to the working
+    directory in every other directory."""
     root = layout_root(inside).resolve()
     resolved = path.resolve()
     if resolved.is_relative_to(root):
@@ -521,7 +519,7 @@ def as_stored(value: object) -> str:
     of stored values — two are the same only when their texts are, so `1`
     is not `true`, `1` is not `1.0`, a tuple is its list and NaN is NaN.
     Python's `==` takes `True == 1` and `1 == 1.0`, and a checker built on
-    it passed a recomputation of another type. Raises TypeError for a value
+    it would pass a recomputation of another type. Raises TypeError for a value
     JSON cannot hold."""
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
@@ -529,9 +527,9 @@ def as_stored(value: object) -> str:
 def read_metrics(path: Path) -> dict[str, object]:
     """A run's metrics.json as a JSON object. Raises MetricsError naming the
     file when it is unreadable, not JSON, or not an object — a list such as
-    `["criterion_1_pass"]` read as metrics once satisfied the guaranteed
-    intent check. Skipping an unreadable file chose the next older run as
-    if the newer had reported no intent keys."""
+    `["criterion_1_pass"]` read as metrics would satisfy the guaranteed
+    intent check. Skipping an unreadable file would choose the next older
+    run as if the newer had reported no intent keys."""
     try:
         data = _json_of(path, "metrics")
     except ArtefactError as exc:
@@ -545,8 +543,8 @@ def read_metrics(path: Path) -> dict[str, object]:
 
 def _schema_problem(sv: object) -> str | None:
     """Why a record's schema version cannot be read by this package."""
-    # written before labkit 0.21 (when metrics.json alone marked a finish):
-    # 0.89.0 dropped the `legacy` state that listed such a run (CHANGELOG)
+    # no schema_version, or one below 2: a record from when metrics.json
+    # alone marked a finish
     before_schema = "a run of labkit before 0.21 — read it with labkit 0.47"
     if sv is None:
         return f"no schema_version: {before_schema}"
@@ -568,15 +566,15 @@ def _schema_problem(sv: object) -> str | None:
 
 #: labkit's own tables in config.json: each an object or null (`promises`
 #: is null for a protocol without a block). Held on read — a damaged one
-#: read as an empty table let a repeat with an empty config pass as
+#: read as an empty table would let a repeat with an empty config pass as
 #: comparable.
 RECORD_TABLES = ("config", "data", "models_resolved", "promises")
 
 
 def _derived_shape_problem(cfg: JsonObject) -> str | None:
     """`derived_from` null or a run id: the parent is a run of the same
-    runs/ directory, named, never a path — `./<own run>` looped the walk
-    forever and `../../<elsewhere>` left the area."""
+    runs/ directory, named, never a path — `./<own run>` would loop the
+    walk forever and `../../<elsewhere>` would leave the area."""
     parent = cfg.get("derived_from")
     if parent is None or (isinstance(parent, str) and RUN_ID.fullmatch(parent)):
         return None
@@ -587,8 +585,8 @@ def _derived_shape_problem(cfg: JsonObject) -> str | None:
 
 def _repeat_shape_problem(cfg: JsonObject) -> str | None:
     """`repeat_of` null or a run id; `draw` null without it, an integer >= 2
-    with it. A damaged value read as "no repeat" put a repeat back into the
-    answering choice — loud instead."""
+    with it. A damaged value read as "no repeat" would put a repeat back
+    into the answering choice — loud instead."""
     parent, draw = cfg.get("repeat_of"), cfg.get("draw")
     if parent is None:
         return None if draw is None else f"draw = {draw!r} without repeat_of"
@@ -649,9 +647,9 @@ def completion_state(run_dir: Path) -> RunState:
 
     The one question every consumer that picks or accepts a run must ask —
     recheck, a derived run's parent, intent-check's choice, the usability
-    scorer. Asking `metrics.json` alone let an unfinalized v2 run (metrics,
-    no completion record) be rechecked as a kept number and accepted as a
-    parent. A directory without config.json is not a
+    scorer. Asking `metrics.json` alone would let an unfinalized run
+    (metrics, no completion record) be rechecked as a kept number and
+    accepted as a parent. A directory without config.json is not a
     run, and an unreadable config.json is a damaged one: both raise
     RunConfigError — neither may vanish and let an older run be chosen in
     its place.
@@ -666,7 +664,7 @@ def completion_state(run_dir: Path) -> RunState:
 class RunSummary:
     """What a run is, for someone who returns to the area months later —
     the facts a reader otherwise collects from config.json keys and the
-    patch file, and mostly got wrong (the measurement: docs/notes/2026-11-04-run-record-history.md)."""
+    patch file, and often gets wrong."""
 
     run_id: str
     state: RunState  # run_state, liveness not asked
@@ -749,7 +747,7 @@ def binding_of(cfg: JsonObject) -> ProtocolBinding:
 #: type it holds, and whether null is a value the writer writes (a run
 #: without parent, repeat, draw, failed audit, tier or promise block). A
 #: record carries EVERY field — a missing one is no null and no default:
-#: dropping `"unfrozen_ack": true` once made an acknowledged run reportable.
+#: a dropped `"unfrozen_ack": true` would make an acknowledged run reportable.
 #: A key outside the table is refused as well: the
 #: writer is the record's only author. The experiment's own settings live
 #: inside `config` and stay free.
@@ -1013,10 +1011,10 @@ def run_dirs(area: Path) -> list[RunDir]:
     random suffix, and their order among themselves is not their start
     order — no record holds a finer time; the answering-run choice refuses
     such a pair, `answering_run.same_second_rival`), each with its
-    metadata read once. The one walk: listing, index, choice and completion
-    used to walk `runs/` six times and each decided for itself what an
-    unreadable run means. Here it is data — the caller says whether it
-    refuses, reports or skips."""
+    metadata read once. The one walk for listing, index, choice and
+    completion, so none decides for itself what an unreadable run means:
+    here it is data — the caller says whether it refuses, reports or
+    skips."""
     runs = runs_path(area)
     if not runs.is_dir():
         return []

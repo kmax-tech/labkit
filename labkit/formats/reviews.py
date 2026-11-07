@@ -2,10 +2,7 @@
 
 A finding decided `limitation` with the effect `stands` says: the verdicts hold, read
 within this limit (`findings.EFFECT_STANDS`). Whether the reason given
-bears that out was nobody's question (labkit-paper area 09, fifth haiku
-round, 2026-10-22: 28 findings, 15 accepted with no action; t5 accepted
-three BLOCKERs and six WARNINGs with `stands`, six of them with the reason
-"Finding noted"). `labkit-audit AREA --review` hands every such decision of
+bears that out is a second auditor's question: `labkit-audit AREA --review` hands every such decision of
 one record to a cold reviewer with the finding, the reason, the protocol
 (the registered intent and the reported claim), the files the findings
 name and what the audit was shown of the run, and writes the verdicts
@@ -40,9 +37,8 @@ carries a `[[decision]]` for N whose `decision_sha` is the digest of the
 finding as it stands now, says `upheld`, and is no `--again` draw — at
 least one review on that state must be one (`upholding`). A changed
 reason, effect or status makes the review stale, and so does a rewritten
-claim — the wording of the claim is what separates upheld from rejected
-(replay 2026-10-22: the two upheld decisions were the two whose
-Conclusion said no more than what the number is). `rejected` and
+claim — the wording of the claim is what separates upheld from rejected.
+`rejected` and
 `insufficient` never release: the question is whether the reported
 claim stands within the limit, and "the context does not show" is not a
 yes. Every draw on one state counts: once a review of the decision as
@@ -56,16 +52,13 @@ review of this record did not uphold a decision on a finding
 (`once_not_upheld`), a `false-positive` or `fixed` on it owes an
 upholding review of the new decision as well — the reviewer is asked
 whether the reason shows the finding inapplicable, the fault gone in the
-files as audited, or the task truly somebody else's (sixth haiku round,
-2026-10-23, t5: `dismissed` with "insufficient evidence withdrawn" after
-`insufficient` released the state; a filled-in reason is not evidence).
+files as audited, or the task truly somebody else's (a filled-in reason
+is not evidence).
 What is guaranteed is the release condition; whether the verdict is
 right stays the reviewer's judgement, as with every agent audit.
 report-check blocks on a BLOCKER limitation's `stands` nobody upheld and
 warns on a WARNING limitation's, and grades a closed contested finding the
-same way (`report_decisions.review_findings`; decided 2026-10-22 after the
-fifth round's replay, two passes, and the assessment of its fifteen
-decisions from their sources, `docs/usability/2026-10-22-decision-review-*.md`).
+same way (`report_decisions.review_findings`).
 
 Reading is loud: a file without its `[review]` table, a verdict outside
 VERDICTS, counts that are not the decisions' raise ReviewError naming the
@@ -307,9 +300,7 @@ def once_not_upheld(
     Such a finding is contested: a decision made on it since owes an
     upholding review of its own (`upholding`), whatever its status —
     `false-positive` or `fixed` close nothing by themselves
-    (sixth haiku round, 2026-10-23, t5: after `insufficient` the finding
-    was dismissed with "insufficient evidence withdrawn" and the state
-    released; `report_decisions.review_findings` holds it now)."""
+    (`report_decisions.review_findings` holds it)."""
     for r in drawn_on(record, reviews):
         d = r.of(n)
         if d is not None and d.verdict != UPHELD:
@@ -328,10 +319,8 @@ def verdicts_on_state(
     or under another claim. Every draw on one state counts, not the
     newest: a contested decision is settled by deciding again (the reason
     names the evidence, the effect changes, the claim is limited), never
-    by another draw (review 2026-10-22: the newest matching review won,
-    so an unchanged `rejected` could be re-reviewed until an `upheld`
-    came — the borderline baseline decision came back rejected, upheld,
-    upheld and insufficient over four draws)."""
+    by another draw, so an unchanged `rejected` cannot be re-reviewed until
+    an `upheld` comes."""
     return [d for _, d in _on_state(record, n, reviews, text)]
 
 
@@ -381,8 +370,7 @@ def state(record: findings.Record, n: int, reviews: list[Review], text: str) -> 
     did not uphold the finding at another decision or claim
     (`once_not_upheld`), by that verdict: a changed Conclusion or decision
     asks for a new review, and the reader still sees what the last one
-    said (eighth haiku round, t5: after a Conclusion edit a rejected
-    decision showed as plain "not reviewed"). The grade a gate gives it
+    said. The grade a gate gives it
     does not change."""
     verdicts = verdicts_on_state(record, n, reviews, text)
     if not verdicts:

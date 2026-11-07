@@ -20,8 +20,8 @@ from labkit.formats.scope_sha import areas_touched
 class Undecided:
     """What the stop and the commit hold (BLOCKERS) and what a current
     handover let pass (ACKNOWLEDGED: one line per area, the losses it
-    acknowledges) — a pass that names no loss read as "nothing wrong"
-    (audit 2026-10-27, third, K9)."""
+    acknowledges) — a pass that names no loss would read as "nothing
+    wrong"."""
 
     blockers: list[str]
     acknowledged: list[str]
@@ -54,7 +54,7 @@ def undecided_state(
     no audit record and no journal in the state checked or at HEAD — an
     audits/ gone from the tree but committed is a gap: this holds the areas
     the session worked in, not the whole repo
-    (A4, 2026-10-17: a repo's old areas must not block every stop).
+    (a repo's old areas must not block every stop).
     STAGED (the pre-commit): the audit records with their decisions and
     the attempt journal as the index holds them (`attempts.area_integrity`)
     — what the commit carries, not the tree.
