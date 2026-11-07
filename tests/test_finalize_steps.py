@@ -189,6 +189,22 @@ class ReadmePlaceholders(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(readme_check.readme_placeholders(Path(d)), [])
 
+    def test_finalize_tells_a_blank_as_static_evidence(self):
+        # the pattern also matches an `<…>` written on purpose, so the
+        # sentence is an indication, not an exact check
+        with tempfile.TemporaryDirectory() as d:
+            area = Path(d)
+            (area / "README.md").write_text(
+                "# x\n\n**The one question.** <one sentence>\n", encoding="utf-8"
+            )
+            text = head(repeat_cost="low")
+            protocol = area / "PROTOCOL-a.md"
+            protocol.write_text(text, encoding="utf-8")
+            found = Findings(tell=None)
+            finalize.check_open_fields(found, protocol, text, protocol_block.head(text))
+            (blank,) = [f for f in found.found if "stamped placeholder" in f.text]
+            self.assertEqual(blank.evidence_kind, STATIC_EVIDENCE)
+
     def test_angle_brackets_inside_code_spans_are_examples_not_blanks(self):
         with tempfile.TemporaryDirectory() as d:
             area = Path(d)

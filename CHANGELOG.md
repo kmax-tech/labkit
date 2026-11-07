@@ -93,6 +93,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Fixed
 
+- **A README placeholder is told as static evidence.** finalize's
+  warning on a stamped `<…>` left in an area's README carried the
+  guaranteed tier, but it comes from a pattern over prose that also
+  matches an `<…>` the author meant; it is now labelled static evidence
+  and counted as such in the summary.
 - **The decision list offers only the decisions a finding's subject
   allows.** `labkit-audit --findings` (and the list printed after an
   audit) offered a `limitation` route under every BLOCKER and WARNING; for

@@ -1190,9 +1190,10 @@ def check_open_fields(
         )
     stale = readme_placeholders(protocol.parent)
     for line in stale:
+        # a pattern over prose: an `<…>` the author meant is matched too
         findings.warn(
             f"{line} — a stamped placeholder, fill or delete the line",
-            evidence_kind=GUARANTEED,
+            evidence_kind=STATIC_EVIDENCE,
         )
     try:
         route = readme_route(protocol.parent, protocol.name)

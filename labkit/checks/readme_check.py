@@ -24,7 +24,9 @@ _PLACEHOLDER = re.compile(r"<(?!!--)[^<>]{3,}>")
 def readme_placeholders(area: Path) -> list[str]:
     """Lines of the area's README.md still holding a stamped `<…>` placeholder.
     A README that still carries the stamp's blanks tells a reader nothing and
-    looks as if it did (code-navigation round 11). No README: nothing."""
+    looks as if it did (code-navigation round 11). No README: nothing.
+    Static evidence: the pattern also matches an `<…>` the author wrote in
+    prose outside a code span."""
     readme = area / "README.md"
     if not readme.is_file():
         return []
