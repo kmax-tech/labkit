@@ -9,6 +9,11 @@ pins (`requirements.txt` / `requirements.lock`).
 
 ### Breaking
 
+- **`llm._find_models_toml` is gone.** Deprecated in 0.108.0, which
+  named this removal; call `llm.find_models_toml`. A lab's stamped
+  `test-shared-helpers` from before 0.108.0 calls the old name and fails —
+  restamp it or change the one call.
+
 - **Only the `## Runs` section is left out of a protocol's prose budget.**
   `protocol-check` left out any section whose heading held "runs" or
   "Läufe", beside the writer's exact `## Runs`; a protocol with a German

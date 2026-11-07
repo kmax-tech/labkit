@@ -296,9 +296,9 @@ class FindModelsToml(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             llm.find_models_toml()
 
-    def test_the_former_name_still_answers_and_warns(self) -> None:
-        with self.assertWarnsRegex(DeprecationWarning, "find_models_toml"):
-            self.assertEqual(llm._find_models_toml(), self.lab / "models.toml")
+    def test_the_former_name_is_gone(self) -> None:
+        # deprecated in 0.108.0, removed after it (CHANGELOG, Breaking)
+        self.assertFalse(hasattr(llm, "_find_models_toml"))
 
 
 class ModelsToml(unittest.TestCase):

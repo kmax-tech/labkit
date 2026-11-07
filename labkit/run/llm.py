@@ -96,7 +96,6 @@ import time
 import tomllib
 import urllib.error
 import urllib.request
-import warnings
 from pathlib import Path
 from typing import Any
 
@@ -146,19 +145,6 @@ def find_models_toml() -> Path:
     raise FileNotFoundError(
         "models.toml not found (searched upward from script dir and cwd)"
     )
-
-
-def _find_models_toml() -> Path:
-    """The former name of `find_models_toml`, kept one release with a
-    DeprecationWarning (CHANGELOG, "Deprecated"). labkit itself calls the
-    new name: patching this one no longer redirects its lookups."""
-    warnings.warn(
-        "llm._find_models_toml is deprecated and goes in the next release — "
-        "call llm.find_models_toml",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return find_models_toml()
 
 
 _FROZEN: dict[str, BackendSpec] = {}  # alias -> spec, fixed at first use per process
