@@ -21,6 +21,7 @@ from dataclasses import dataclass, replace
 import shlex
 from pathlib import Path
 
+from labkit.formats.commands import checkout_command
 from labkit.formats.commands import register_anew
 from labkit.formats.repo import SKIP_DIRS_AND_OUTPUT
 from labkit.formats.runs import (
@@ -743,7 +744,7 @@ def _gone(f: Path, area: Path) -> GateFinding:
     route Data / scope gives where an ignore rule keeps it outside."""
     return blocker(
         f"{f} is gone — the run's rows cannot be re-derived",
-        fix=f"restore it (`git checkout HEAD -- {shlex.quote(str(f))}` where git "
+        fix=f"restore it (`{checkout_command(f)}` where git "
         f"holds it; else get it again from the source or access route Data / "
         f"scope names), or {measure_anew(area)}",
     )

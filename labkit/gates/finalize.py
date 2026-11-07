@@ -89,6 +89,7 @@ import shlex
 from dataclasses import replace
 from pathlib import Path
 
+from labkit.formats.commands import checkout_command
 from labkit.formats.repo import area_args
 from labkit.formats.commands import gate_command
 from labkit.formats.gate import (
@@ -313,8 +314,9 @@ def gone_run_way(area: Path, run_id: str) -> tuple[str, Command]:
     protocol = protocols[0] if len(protocols) == 1 else area / "PROTOCOL-<name>.md"
     handover = handover_command(protocol)
     return (
-        f"put it back where git holds it (`git checkout HEAD -- "
-        f"{shown(run_path(area, run_id), Path.cwd())}`); else it is lost, and a new run "
+        f"put it back where git holds it "
+        f"(`{checkout_command(shown(run_path(area, run_id), Path.cwd()))}`); "
+        f"else it is lost, and a new run "
         f"does not lift this — hand the area over naming the loss "
         f"(`{handover}`), or {register_anew()}"
     ), handover

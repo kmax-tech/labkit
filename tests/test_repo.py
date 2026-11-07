@@ -691,6 +691,27 @@ class StampedImports(unittest.TestCase):
         )
 
 
+class CheckoutCommand(unittest.TestCase):
+    """Every restore from git a way out names is one line, its path quoted:
+    a path with a space gave an unquoted, broken command."""
+
+    def test_a_path_is_quoted_and_a_placeholder_stays_bare(self):
+        from labkit.formats import commands
+
+        self.assertEqual(
+            str(commands.checkout_command("my area/REPORT.md")),
+            "git checkout HEAD -- 'my area/REPORT.md'",
+        )
+        self.assertEqual(
+            str(commands.checkout_command("<path>")), "git checkout HEAD -- <path>"
+        )
+        self.assertEqual(
+            str(commands.checkout_command("a.md", "abc123")),
+            "git checkout abc123 -- a.md",
+        )
+        self.assertEqual(commands.checkout_command("a.md").name, commands.RESTORE)
+
+
 if __name__ == "__main__":
     unittest.main()
 

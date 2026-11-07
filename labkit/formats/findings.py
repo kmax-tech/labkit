@@ -93,6 +93,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.commands import checkout_command
 from labkit.formats import promises
 from labkit.formats.protocol_block import toml_string as _s
 from labkit.formats.protocol_history import correctable
@@ -1718,7 +1719,7 @@ def _decided_text(path: Path, n: int, decided: Finding) -> str:
         raise FindingsError(
             f"{path}: finding {n} has no `status` and `reason` lines as labkit-audit "
             f"writes them — the record was changed by hand; restore it "
-            f"(`git checkout HEAD -- {path.name}` in its audits/) or audit again"
+            f"(`{checkout_command(path.name)}` in its audits/) or audit again"
         )
 
     def ending(span: tuple[int, int, str, str]) -> str:
@@ -1952,8 +1953,8 @@ def record_way(area: Path, protocol: Path | None = None) -> str:
     (`--findings`) that names what stands and the handover — never a
     record rewritten by hand."""
     return (
-        "restore the record as labkit-audit wrote it (`git checkout HEAD -- "
-        "<record>` where git holds it) or audit again; "
+        f"restore the record as labkit-audit wrote it "
+        f"(`{checkout_command('<record>')}` where git holds it) or audit again; "
         f"`{audit_command(area, '--findings', protocol=protocol)}` names what "
         "stands and the handover"
     )

@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from labkit.formats.commands import checkout_command
 from labkit.gates.report_hold import review_gap
 from labkit.formats.answering_run import bound_runs, first_measurements, is_measurement
 from labkit.formats.runs import UNREADABLE
@@ -449,7 +450,7 @@ def missing_report(
         into = into_command(protocol, report)
         return blocker(
             what,
-            fix=f"restore it (`git checkout HEAD -- {name_r}` where the last commit "
+            fix=f"restore it (`{checkout_command(name_r)}` where the last commit "
             f"holds it), or `{into}` writes its result "
             f"block of {declared} again; then the report review it owes",
             step=into,

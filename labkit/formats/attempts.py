@@ -90,6 +90,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
+from labkit.formats.commands import checkout_command
 from labkit.formats import findings, jsonl
 from labkit.formats import handovers
 from labkit.formats.files import lock_held, write_atomic, write_atomic_bytes
@@ -132,8 +133,9 @@ class AttemptError(ValueError):
 JOURNAL_WAY = (
     "the journal is appended to, never edited — restore it as labkit wrote it: "
     "from its copy in the git directory (`<git dir>/labkit-attempts/<branch>/"
-    "<area>.jsonl`) or as committed (`git checkout HEAD -- <area>/audits/"
-    "attempts.jsonl`)"
+    "<area>.jsonl`) or as committed "
+    # home: not commands.checkout_command — a path with a placeholder inside
+    "(`git checkout HEAD -- <area>/audits/attempts.jsonl`)"
 )
 
 
@@ -559,7 +561,7 @@ def restore_command(
     if rel in in_tree:
         return f"stage it (`git add {shlex.quote(path)}`)"
     if rel in at_head:
-        return f"restore it (`git checkout HEAD -- {shlex.quote(path)}`)"
+        return f"restore it (`{checkout_command(path)}`)"
     if rel in kept:
         folder = shlex.quote(str(Path(path).parent))
         return (

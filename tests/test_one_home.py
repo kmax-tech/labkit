@@ -245,6 +245,9 @@ RULES: list[tuple[str, str, set[str]]] = [
         r"startswith\(\"<\"\)[^\n]*endswith\(\">\"\)",
         {"protocol_block"},
     ),
+    # a restore from git a way out names is one quoted line, so a path with
+    # a space gives a command that runs: `commands.checkout_command`
+    ("a git restore spelled by hand", r"git checkout (?:HEAD|\{)", {"commands"}),
     # a command's refusals and progress lines go through `console.refuse`,
     # `console.progress`
     (
@@ -389,6 +392,7 @@ class OneHome(unittest.TestCase):
             "a refusal or progress line printed by hand": 'print(f"labkit-audit: {exc}", file=sys.stderr)',
             "an area's test file named by hand": 'stem = f"test_{nn}_" + name',
             "a stamp placeholder tested by hand": 'if v.startswith("<") and v.endswith(">"):',
+            "a git restore spelled by hand": 'f"restore it (`git checkout HEAD -- {path}`)"',
             "a head table header spelled by hand": 'H = re.compile(r"^\\s*\\[\\s*result\\s*\\]\\s*$")',
         }
         for what, shape, _ in RULES:

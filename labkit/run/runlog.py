@@ -91,6 +91,7 @@ from pathlib import Path
 from types import TracebackType
 from collections.abc import Iterator
 
+from labkit.formats.commands import checkout_command
 from labkit.formats.runs import as_stored
 from labkit.formats.runs import metrics_path, patch_path, run_path
 from labkit.run import batch, code_repos, detached
@@ -399,7 +400,7 @@ def _repeat_draw(
                 f"runlog: repeat_of={repeat_of!r}: the next draw number cannot be "
                 f"counted — {exc}",
                 "restore the run record the sentence names as runlog wrote it "
-                "(`git checkout HEAD -- <path>` where git holds it)",
+                f"(`{checkout_command('<path>')}` where git holds it)",
             )
         ) from exc
     config = prepared.config
@@ -422,7 +423,7 @@ def _repeat_draw(
             with_way_out(
                 f"runlog: repeat_of={repeat_of!r}: {exc}",
                 "restore the run record the sentence names as runlog wrote it "
-                "(`git checkout HEAD -- <path>` where git holds it)",
+                f"(`{checkout_command('<path>')}` where git holds it)",
             )
         ) from exc
     if differs:

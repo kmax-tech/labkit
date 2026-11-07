@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import NamedTuple
 
+from labkit.formats.commands import checkout_command
 from labkit.formats import digests
 from labkit.formats import (
     audit_gaps,
@@ -43,7 +44,7 @@ ROW_WIDTH = 2000  # a longer row (a trace) is cut, marked, never dropped
 
 #: the way out of a run's metrics.json that does not read: it is the run's own
 _METRICS_AS_WRITTEN = (
-    "restore it as the run wrote it (`git checkout HEAD -- <path>` where git "
+    f"restore it as the run wrote it (`{checkout_command('<path>')}` where git "
     "holds it), or measure anew and audit that run"
 )
 
@@ -111,8 +112,7 @@ def run_rows(area: Path, run_dir: Path | None, why: str) -> list[tuple[str, str]
         if not path.is_file():
             raise AuditError(
                 f"{run_dir.name} registered {entry.path}, which is gone",
-                fix="restore it as the run wrote it (`git checkout HEAD -- <path>` "
-                "where git holds it), or measure anew and audit that run",
+                fix=_METRICS_AS_WRITTEN,
             )
         name = shown(path, repo)
         out.append(rows_excerpt(path, name))

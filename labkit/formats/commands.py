@@ -115,6 +115,18 @@ def adopt_command(protocol: Path, run_id: str = "<run_id>") -> Command:
     return Command(ADOPT, line)
 
 
+def checkout_command(path: str | Path, rev: str = "HEAD") -> Command:
+    """The `git checkout REV -- PATH` line that brings PATH back as REV holds
+    it, PATH shell-quoted — a placeholder (`<path>`) stays as written: the
+    one spelling of every restore from git a way out names."""
+    target = str(path)
+    placeholder = protocol_block.is_stamp_placeholder(target)
+    return Command(
+        RESTORE,
+        f"git checkout {rev} -- {target if placeholder else shlex.quote(target)}",
+    )
+
+
 def withdraw_command(protocol: Path) -> Command:
     """The `protocol-fill … --withdraw` line that withdraws PROTOCOL's result
     declaration, the protocol named as the working directory reaches it —

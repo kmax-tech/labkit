@@ -48,6 +48,7 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from pathlib import Path
 
+from labkit.formats.commands import checkout_command
 from labkit.formats import findings
 from labkit.formats.findings import JOURNAL
 from labkit.formats.gate import GateFinding, blocker, with_way_out
@@ -184,7 +185,7 @@ def told(
     base = _base(area, root)
 
     def checkout(rel: str) -> str:
-        return f"`git checkout {restore} -- {shlex.quote(f'{base}/{rel}')}`"
+        return f"`{checkout_command(f'{base}/{rel}', restore)}`"
 
     out: list[tuple[str, str]] = []
     for rel, what in audits:
@@ -599,7 +600,7 @@ def orphaned_runs(root: Path, since: datetime) -> list[str]:
             f"the tree — commit {commit[:12]} held them, and HEAD no longer "
             "holds that commit (a reset, an amend or a rebase); a run's record "
             "stays as it ran",
-            f"restore it (`git checkout {commit[:12]} -- {shlex.quote(folder)}`)",
+            f"restore it (`{checkout_command(folder, commit[:12])}`)",
         )
         for folder, (commit, gone) in lost.items()
     ]

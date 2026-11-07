@@ -20,6 +20,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
+from labkit.formats.commands import checkout_command
 from labkit.formats import commands
 from labkit.formats.runs import run_path, runs_path
 from labkit.formats.runs import RunKind, parse_run_kind
@@ -586,7 +587,7 @@ def completed_parent(base_dir: Path, key: str, run_id: str, why: str = "") -> Ru
             with_way_out(
                 f"runlog: {key}={run_id!r}: {exc}",
                 "restore the run record the sentence names as runlog wrote it "
-                "(`git checkout HEAD -- <path>` where git holds it)",
+                f"(`{checkout_command('<path>')}` where git holds it)",
             )
         ) from exc
     if pcfg is None:
