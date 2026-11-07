@@ -369,6 +369,9 @@ class Told(unittest.TestCase):
         ctx = self._told()
         self.assertIn(f"run {gone}: its directory is gone — runs.tsv lists it", ctx)
         self.assertNotIn(f"run {CLOSED}: its directory is gone", ctx)
+        # what is lost is told as lost: neither the stop nor the commit holds it
+        self.assertIn("the stop and the commit do not hold it", ctx)
+        self.assertNotIn("the stop and the commit hold what each line names", ctx)
 
     def test_a_decision_and_a_new_run_are_silent(self):
         findings.write_decision(self.record, 1, "limitation", "noted", "stands")

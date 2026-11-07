@@ -112,9 +112,9 @@ def index_problems(area: Path) -> list[str]:
     except RunIndexError as exc:
         return [exc.why]
     return [
-        f"run {r}: its directory is gone — runs.tsv lists it as measured; never delete a "
-        f"run: an audit that read it holds the adoption, and only git, where "
-        f"it holds the run, restores its rows"
+        f"run {r}: its directory is gone — runs.tsv lists it as measured, and its "
+        f"rows are lost; only git, where it holds the run, restores them, and an "
+        f"audit that read it holds the adoption"
         for r in gone
     ]
 
@@ -124,20 +124,23 @@ EVIDENCE_KEY = "evidence:"
 
 
 def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
-    """What the stop and the commit will hold of each of AREAS' evidence,
-    told right after the tool that changed it, once per state (CACHE,
-    updated in place): every integrity problem (`attempts.area_integrity`)
-    and every change git can undo (`evidence.changes`, `evidence.ignored`),
-    as `<area>: <sentence>` with its way out. An area found clean forgets
-    its state, so a later problem of the same text is told again."""
+    """What happened to each of AREAS' evidence, told right after the tool
+    that changed it, once per state (CACHE, updated in place), each line as
+    `<area>: <sentence>` with its way out: what the stop and the commit
+    hold — every integrity problem (`attempts.area_integrity`) and every
+    change git can undo (`evidence.changes`, `evidence.ignored`) — and,
+    apart, what is only lost: a run the index lists whose directory is gone
+    (`index_problems`), which neither holds. An area found clean forgets its
+    state, so a later problem of the same text is told again."""
     out: list[str] = []
     for area in areas:
-        lines = [
+        held = [
             *attempts.area_integrity(area).problems,
             *evidence.changes(area),
             *evidence.ignored(area),
-            *index_problems(area),
         ]
+        lost = index_problems(area)
+        lines = held + lost
         key = f"{EVIDENCE_KEY}{area}"
         if not lines:
             cache.pop(key, None)
@@ -147,12 +150,19 @@ def _untold_evidence(cache: dict, areas: list[Path], repo: Path) -> list[str]:
             continue
         cache[key] = digest
         shown_area = area.resolve().relative_to(repo.resolve()).as_posix()
-        out.append(
-            f"evidence of {shown_area} is gone or changed — restore it now; the "
-            "stop and the commit hold what each line names (a current handover "
-            "acknowledges a loss, never a change git can undo):\n  "
-            + "\n  ".join(f"{shown_area}: {line}" for line in lines)
-        )
+        if held:
+            out.append(
+                f"evidence of {shown_area} is gone or changed — restore it now; the "
+                "stop and the commit hold what each line names (a current handover "
+                "acknowledges a loss, never a change git can undo):\n  "
+                + "\n  ".join(f"{shown_area}: {line}" for line in held)
+            )
+        if lost:
+            out.append(
+                f"a run of {shown_area} is gone — the stop and the commit do not "
+                "hold it, and nothing brings its rows back but git:\n  "
+                + "\n  ".join(f"{shown_area}: {line}" for line in lost)
+            )
     return out
 
 
