@@ -104,8 +104,9 @@ class Lane:
         foreground: A full run may start in an agent's foreground shell:
             it ends within the harness's limit. Elsewhere the detach gate
             refuses it (`runlog.Run`, scar 2026-08-13).
-        provenance: `finalize` holds the run's source frozen in the record
-            and source and output tracked in git — at low repeat cost the machine
+        provenance: `finalize` holds each source to the record's checksum
+            and requires it tracked in git or kept outside by an ignore rule;
+            untracked outputs warn — at low repeat cost the machine
             checks what the audit would otherwise ask every time
             (LAB-017 The number of audits follows the cost tier).
     """

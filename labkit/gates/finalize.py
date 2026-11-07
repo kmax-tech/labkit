@@ -33,9 +33,10 @@ each step's condition):
   3. declared scopes  every declared promise scope unchanged since the run
   4. open fields    protocol fields still holding a placeholder
   5. provenance     at protocol `repeat_cost = "low"` only: the run froze its source
-                    (`data=` in config.json) and every source and output file
-                    is tracked in git (a directory source: each visible file
-                    under it) — the two of the three questions the
+                    (`data=` in config.json), each source matches its recorded
+                    checksum and is tracked or ignored by a rule (a directory
+                    source: each visible file under it); untracked outputs warn
+                    — the two of the three questions the
                     agent audit kept asking that a machine can answer (LAB-017 The number of audits follows the cost tier, 2026-10-05);
                     the third, the counted unit, is the protocol's `Unit` field
   6. area tests     tests/test_<NN>_<name>.py via the repo's interpreter, on
@@ -1238,9 +1239,9 @@ def check_provenance(findings: Findings, area: Path, answering_run: Path) -> Non
         findings.note(f"  {line}")
     if not b and not w:
         findings.note(
-            "  source frozen in the run; source and output tracked in git"
+            "  source frozen in the run; source tracked in git"
             + (" or ignored by a rule" if outside else "")
-            + "; each source's bytes as the run recorded them"
+            + "; output tracked in git; each source's bytes as the run recorded them"
         )
 
 
@@ -1553,7 +1554,7 @@ def finalize_area(
     findings.header(f"open fields: {chosen.name}")
     check_open_fields(findings, chosen, text, head)
 
-    # 5. provenance — where the lane owes it (seconds), and only with a run
+    # 5. provenance — at low repeat cost, and only with a run
     findings.header("provenance")
     if not lane(head.repeat_cost).provenance:
         findings.note(

@@ -1,17 +1,17 @@
 # AGENTS.md — <project>
 
 This repository uses labkit at the version `requirements.lock` pins. Work
-from the repository root. Run each command with the `.venv/bin/` prefix
-if it is not on PATH. Replace `<area>`, `<PROTOCOL>` and `<run_id>` with
-the paths and ids labkit prints. If an area holds several protocols, you
+from the repository root. Use `.venv/bin/` when commands are not on PATH.
+Replace `<area>`, `<PROTOCOL>` and `<run_id>` with printed paths and ids.
+If an area holds several protocols, you
 must pass `--protocol <PROTOCOL>` to every command that accepts it.
 
 ## Six words
 
 | Word | Meaning |
 |---|---|
-| protocol | `experiments/<area>/PROTOCOL-*.md`: the registered question, its data and the bar a number must pass. |
-| run | One measurement under `runs/<run_id>/`, opened by the measurement script through `runlog`. |
+| protocol | `experiments/<area>/PROTOCOL-*.md`: registered question and data; a `fit` or an `apply` also registers an inference criterion. |
+| run | Execution recorded by `runlog` under `runs/<run_id>/`: preparation, probe or measurement. Only measurements supply reported results. |
 | criterion | The registered bar of a `fit` or an `apply` (`criterion-1`). A `compute` has none. |
 | audit | `labkit-audit`: a second model checks code and run against the protocol and records findings. |
 | decision | What you record for each finding: `fixed`, `limitation` or `false-positive`. |
@@ -93,17 +93,19 @@ Choose `kind` by what the reported result claims:
 
 ## Decide each finding
 
-`labkit-audit <area> --findings` prints each open finding with its
-complete decision command. Choose the status by what is true now:
+`labkit-audit <area> --findings` prints findings and decision commands.
+Decide by the completed work:
 
 | Status | When |
 |---|---|
-| `fixed` | You have already removed the named fault from the files. Never for a repair still to come. |
-| `limitation` | The finding is true and you report within it. If this run cannot judge a promise, add `--not-assessable <ID>`. |
+| `fixed` | Confirmed fault: fully repaired, confirmation owed. `undetermined`: required check built and run; the follow-up settles the suspicion. |
+| `limitation` | The finding holds within the reported limit. Refused for `implementation` and `undetermined`. Unjudged promises: `--not-assessable <ID>`. |
 | `false-positive` | The finding does not apply to the code and the run as audited. `--why` must show this from the files: file, line, value. |
 
-The refusals say which decisions need a second auditor's review, with the
-command. A status records a decision, not a proof. If you fixed the
+Subjects: `implementation` (code, data handling or run wrong), `statement`
+(run right, text or claim wrong), `undetermined` (suspicion requiring a check).
+Refusals name required reviews and their commands. A decision is no proof.
+If you fixed the
 measurement code, you must measure again and audit the new run.
 
 ## Claim and adopt

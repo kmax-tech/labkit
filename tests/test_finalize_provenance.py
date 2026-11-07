@@ -154,7 +154,10 @@ class Provenance(unittest.TestCase):
         self._run(SHORT, self._frozen(), commit=True)
         rc, out = self._finalize()
         self.assertEqual(rc, 0, out)
-        self.assertIn("source frozen in the run; source and output tracked", out)
+        self.assertIn(
+            "source frozen in the run; source tracked in git; output tracked in git",
+            out,
+        )
         self.assertIn("each source's bytes as the run recorded them", out)
 
     def test_a_tracked_source_changed_since_the_run_blocks(self):
@@ -261,7 +264,10 @@ class Provenance(unittest.TestCase):
             "recorded",
             out,
         )
-        self.assertIn("tracked in git or ignored by a rule", out)
+        self.assertIn(
+            "source tracked in git or ignored by a rule; output tracked in git",
+            out,
+        )
 
     def test_the_twin_an_ignored_source_with_one_byte_changed_blocks(self):
         (self.repo / ".git" / "info" / "exclude").write_text("data/raw/\n")

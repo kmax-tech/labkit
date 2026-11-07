@@ -48,7 +48,7 @@ in prose below its line left an open blocker in the record behind exit 0
 
 The report is printed (and written to --out), and its findings are written
 as data into the area — `audits/<date>-<mode>.toml`, one `[[finding]]` per
-line, every one `open` (`labkit.formats.findings`); deciding each (fixed / accepted
+line, every one `open` (`labkit.formats.findings`); deciding each (fixed / limitation
 / false-positive, with reason; `audit_decisions`) and stamping the protocol
 field stays with the human (LAB-015 Preflight audit before freezing), and `preflight`
 holds the file to that. The command prints the stamp's facts — date, scope

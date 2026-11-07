@@ -34,6 +34,10 @@ Versuchsdesign, Bewertung und Start bleiben ein eigener Forschungsauftrag. Die b
 
 Diese Punkte haben keinen Platz vor den Aufgaben 1–5. Eine Bedingung nennt, wann sie wieder geprüft werden; sie ist kein Bauauftrag. Ältere Detailbefunde sind im verlinkten Anhang erhalten und dadurch weder bestätigt noch geschlossen.
 
+### Begriffsprüfung — erledigt 2026-11-07
+
+Die [Begriffsprüfung](docs/notes/2026-11-07-terminology-audit.md) hält die korrigierten Widersprüche zwischen Definitionen, Anweisungen und Implementierung fest, einschließlich der drei Textreste im Laborstandard. Die zwei Bedeutungen von `lane` (Ablauf nach Wiederholungskosten und Vergleichsarm) sind jetzt im README unterschieden; eine Umbenennung der Schnittstellen ist damit nicht geplant. Erneut prüfen, wenn neue Begriffe oder geänderte Entscheidungen eingeführt werden; kein zusätzlicher Bauauftrag vor den Aufgaben 1–5.
+
 ### Umfang und Zuständigkeiten vereinfachen
 
 | Aufgabe                                                                           | Auslöser und nächster Schritt                                                                                                                                                                                                                                                                                                                                                                                                                                    |

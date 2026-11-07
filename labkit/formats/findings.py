@@ -65,8 +65,11 @@ protocol line. With the findings as data the unsettled ones stay visible and
 an audit's yield (fixed / limitation / false-positive per class) can be counted
 instead of read.
 
-The statuses are named by their consequence: `fixed` — the fault is
-repaired, a new measurement and a follow-up audit check it; `limitation` — the
+The statuses are named by their consequence: `fixed` — the person claims
+the whole confirmed fault repaired, with confirmation still owed; on an
+`undetermined` finding the required check is built and run, and the
+follow-up audit settles the suspicion from its value, carrying a confirmed
+fault as `implementation` or `statement`; `limitation` — the
 finding is true and the number carries it as a Limitation line; `false-positive`
 — the auditor misread, the reason names the counter-evidence. A `limitation` on
 a BLOCKER or WARNING records its effect (`effect`): `stands` — the

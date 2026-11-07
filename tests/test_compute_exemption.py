@@ -34,8 +34,9 @@ class CountExemption(unittest.TestCase):
         for mode in ("preflight", "analysis"):
             with self.subTest(mode=mode):
                 _, text = audit_prompt.standard_excerpt(mode)
-                self.assertIn('a computation\n  (`kind = "compute"`', text)
-                self.assertIn("owes neither tables nor a\n  success criterion", text)
+                text = " ".join(text.split())
+                self.assertIn('a computation (`kind = "compute"`', text)
+                self.assertIn("owes neither tables nor a success criterion", text)
 
     def test_the_contract_states_it_too(self):
         text = (ROOT / "docs" / "promise-block.md").read_text(encoding="utf-8")

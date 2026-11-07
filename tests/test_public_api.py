@@ -45,7 +45,11 @@ def _section() -> str:
 
 def listed() -> dict[str, str]:
     """Listed name (`llm.complete`) → the signature its row states."""
-    rows = re.findall(r"^\| `([\w.]+)` \| `([^`]+)` \|", _section(), re.M)
+    rows = re.findall(
+        r"^\|[ \t]*`([\w.]+)`[ \t]*\|[ \t]*`([^`]+)`[ \t]*\|",
+        _section(),
+        re.M,
+    )
     out: dict[str, str] = {}
     for name, signature in rows:
         if name in out:
@@ -57,7 +61,7 @@ def listed() -> dict[str, str]:
 def listed_keys() -> dict[str, frozenset[str]]:
     """Backend → the `[models.<alias>]` keys the doc's schema table states."""
     rows = re.findall(
-        r'^\| `\[models\.<alias>\]` with `backend = "([\w-]+)"` \| ([^|]+)\|',
+        r'^\|[ \t]*`\[models\.<alias>\]` with `backend = "([\w-]+)"`[ \t]*\|[ \t]*([^|]+)\|',
         _section(),
         re.M,
     )
