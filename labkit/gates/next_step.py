@@ -71,6 +71,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from labkit.formats.commands import contract_command
 from labkit.formats import (
     evidence,
     findings,
@@ -396,7 +397,7 @@ def _undecided_step(area: Path, protocol: Path, *, staged: bool) -> Step | None:
     return Step(
         f"{named} holds {len(held)} audit BLOCKER(s) nobody decided, or evidence "
         f"gone, changed or unreadable; the first: {held[0]}",
-        f"`labkit-audit {named} --findings` prints the `--decide` command for "
+        f"`{audit_command(area, '--findings', protocol=protocol)}` prints the `--decide` command for "
         f"each open BLOCKER ({findings.DECIDED_LIST}; limitation and "
         "false-positive owe a reason): decide by it, never by rewriting or "
         "deleting the record — one a later change made outdated stays and is "
@@ -425,7 +426,8 @@ def _handed_over(area: Path, protocol: Path, text: str, *, staged: bool) -> Step
     if owed is not None:
         return Step(
             f"{protocol.name} is handed over, and {owed.text}",
-            owed.fix or f"`labkit-audit {area} --report-review <REPORT>`",
+            owed.fix
+            or f"`{audit_command(area, '--report-review', '<REPORT>', protocol=protocol)}`",
             "the commit and the stop: the report's final text is reviewed once",
         )
     return Step(
@@ -682,7 +684,7 @@ def _adoption_owes(protocol: Path, text: str, run: str) -> Step | None:
         f"adopting {run} would owe {len(absent) + len(holes)} field(s) still open: "
         + ", ".join(absent + holes),
         (f"{fill}; " if fill else "")
-        + f"`protocol-check {named} --contract` names what the adoption owes; then "
+        + f"`{contract_command(protocol)}` names what the adoption owes; then "
         "`labkit-next` again",
         "the adoption: labkit-adopt refuses the written result while a field it "
         "owes is open",

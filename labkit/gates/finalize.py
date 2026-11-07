@@ -249,7 +249,7 @@ def undeclared_note(text: str, protocol: Path) -> str | None:
         return None
     return (
         "no result adopted yet ([result]): "
-        f"`labkit-next {shown(protocol.parent, Path.cwd())}` names the step"
+        f"`{gate_command('labkit-next', protocol.parent)}` names the step"
     )
 
 
@@ -663,7 +663,7 @@ def check_reference(
         findings.block(
             f"{protocol.name}: {exc}",
             fix=f"repair the [reference] and [kept] tables as the sentence says; "
-            f"`protocol-check {shlex.quote(shown(protocol, Path.cwd()))}` shows them",
+            f"`{gate_command('protocol-check', protocol)}` shows them",
         )
         return
     try:
