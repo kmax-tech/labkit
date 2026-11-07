@@ -494,7 +494,7 @@ def required_check_line(f: findings.Finding, metrics: dict | None) -> str:
 def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
     """What MODE analysis shows of the earlier decisions: one `(label,
     text)` piece with every earlier decided BLOCKER and correction as
-    `<record>#<n>`, its text, its recorded subject (when it has one), its
+    `<record>#<n>`, its text, its recorded subject, its
     decision (status, reason, effect), for a
     correction the field as first registered and as it reads now, and, when
     the finding requires a check, that metrics.json key with its note and
@@ -514,9 +514,9 @@ def earlier_piece(shown: Followup) -> tuple[tuple[str, str], ...]:
         # the recorded subject, not the word in the text: a carried finding a
         # follow-up settled keeps its origin's `undetermined` in its text, and
         # an auditor judging by it was refused (audit 2026-11-07, S3)
-        subject = f"\n  subject: {f.subject}" if f.subject else ""
         entry = (
-            f"{e.ref}\n  finding: {f.text}{subject}\n  decided: {f.status}{effect} — "
+            f"{e.ref}\n  finding: {f.text}\n  subject: {f.subject}\n"
+            f"  decided: {f.status}{effect} — "
             f"{f.reason or '(no reason given)'}"
         )
         change = shown.changes.get(e.ref)

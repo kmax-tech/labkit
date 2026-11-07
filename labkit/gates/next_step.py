@@ -457,9 +457,9 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
     decision `findings.decision_after_restore` gives — or `fixed` for a
     correction a follow-up audit's `resolved` releases; an `implementation`
     finding is repaired in code or data, an `undetermined` one waits for
-    the check it names, and `--findings` prints the ways out of either. One sentence, for the first such finding in record order that has
-    one; a finding of a record that names no subject gets none and is
-    passed over: no decision follows from the place alone. "" otherwise, or when the
+    the check it names, and `--findings` prints the ways out of either. One
+    sentence, for the first such finding in record order. "" otherwise, or
+    when the
     records do not read (the undecided row says so). An agent between the
     auditor's "misdescribed" and the gate's "restore" rewrote the field
     five times (labkit-paper's t34-r3, 2026-11-04)."""
@@ -489,8 +489,8 @@ def _finding_on_the_field(ctx: "Checked", first: GateFinding) -> str:
                 f"value: `{ways}` prints its ways out"
             )
         decision = findings.decision_after_restore(u.finding)
-        if decision is None:
-            continue  # a record without subjects: no decision from the place
+        # a statement finding: implementation and undetermined returned above
+        assert decision is not None
         status, reason = decision
         decide = decide_command(
             ctx.area,

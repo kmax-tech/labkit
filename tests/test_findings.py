@@ -703,22 +703,22 @@ class Subject(unittest.TestCase):
         assert decision is not None
         self.assertEqual(decision[0], "limitation")
 
-    def test_a_record_without_subjects_reads_and_decides_as_before(self):
+    def test_a_record_without_subjects_does_not_read(self):
+        """A record of labkit 0.112.0 or earlier names no subject; it is
+        read with that version, never decided here without one (audit
+        2026-11-07, S4: it took `limitation` without the finding's cause).
+        The refusal names the version."""
         path = self.record()
         text = path.read_text(encoding="utf-8")
         path.write_text(
-            text.replace('subject = "implementation"\n', "").replace(
-                'subject = "statement"\n', ""
-            ),
-            encoding="utf-8",
+            text.replace('subject = "implementation"\n', ""), encoding="utf-8"
         )
-        rec = findings.read(path)
-        self.assertEqual([f.subject for f in rec.findings], ["", ""])
-        self.assertIsNone(findings.decision_after_restore(rec.findings[1]))
-        after = findings.write_decision(path, 1, "limitation", "old record", "stands")
-        self.assertEqual(after.findings[0].status, "limitation")
+        with self.assertRaisesRegex(
+            findings.FindingsError, r"subject None — .*0\.112\.0 or earlier"
+        ):
+            findings.read(path)
 
-    def test_a_subject_outside_the_two_does_not_read(self):
+    def test_a_subject_outside_the_subjects_does_not_read(self):
         path = self.record()
         text = path.read_text(encoding="utf-8")
         path.write_text(

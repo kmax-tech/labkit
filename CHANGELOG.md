@@ -58,8 +58,10 @@ pins (`requirements.txt` / `requirements.lock`).
   it takes the decision from the subject, and for an implementation
   finding names the `--findings` ways out (until 0.112.0 it composed
   `--decide … limitation` without knowing the cause; area 23 recorded 36
-  `limitation` decisions against 19 and 20 before). A record from 0.112.0
-  or earlier reads, its findings without a subject, and decides as before.
+  `limitation` decisions against 19 and 20 before). A record without
+  subjects — written by 0.112.0 or earlier, the last version that reads
+  it — no longer reads: its findings were decided without their cause, and
+  a run audited then is reproduced with its pinned labkit.
   `findings.LEAD` and `findings.SEP`, the answer-line grammar, moved from
   `audit_reply`.
 - **A suspicion the auditor cannot settle is its own subject,

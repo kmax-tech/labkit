@@ -3457,9 +3457,16 @@ GATE = PILOT2 / "gate"
 
 def as_today(record: bytes) -> bytes:
     """A pilot's record with the decision statuses of labkit 0.103.0
-    (`accepted`, `dismissed`) in today's words (`limitation`, `false-positive`)."""
-    return record.replace(b'status = "accepted"', b'status = "limitation"').replace(
+    (`accepted`, `dismissed`) in today's words (`limitation`, `false-positive`),
+    and each finding given the subject a record names since (`statement`, as
+    `with_subject` gives the archived answers): the archive stays as kept."""
+    today = record.replace(b'status = "accepted"', b'status = "limitation"').replace(
         b'status = "dismissed"', b'status = "false-positive"'
+    )
+    return re.sub(
+        rb'(?m)^(\[\[finding\]\]\ngrade = "[A-Z]+"\n)(?!subject = )',
+        rb'\1subject = "statement"\n',
+        today,
     )
 
 

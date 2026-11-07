@@ -234,7 +234,7 @@ class Finding:
     carries: str = ""
     # SUBJECTS: the auditor's third field, read when the record is written
     # (`subject_of`) and carried with the finding, never set by a decision;
-    # "" in a record written before labkit read it (0.112.0 and earlier)
+    # every record names it (`_auditor_fields`)
     subject: str = ""
 
     @property
@@ -395,9 +395,8 @@ def subject_refusal(f: Finding, status: str) -> str | None:
     an `implementation` finding is never closed by `limitation` — the
     number came from code or data that depart from what was registered, and
     a limit line does not change that (a registered 200-permutation check
-    run as one null draw, docs/notes/2026-11-04-one-explainer-plan.md). A
-    finding of a record written before subjects were read ("") is held to
-    nothing here. Nor is an `undetermined` one: a limit line does not settle
+    run as one null draw, docs/notes/2026-11-04-one-explainer-plan.md). Nor
+    is an `undetermined` one: a limit line does not settle
     a suspicion — its check runs, the person decides `fixed` (the check
     built and run), and the follow-up judges the value."""
     if status != "limitation" or f.subject not in (IMPLEMENTATION, UNDETERMINED):
@@ -467,7 +466,7 @@ def undetermined_fix_problem(judged: Finding, v: FixVerdict) -> str | None:
             return (
                 f"fix verdict on {v.ref}: a subject ({v.subject!r}) only on an "
                 f"`unresolved` verdict on an {UNDETERMINED} finding — {v.ref} is "
-                f"recorded as `{judged.subject or 'no subject'}`: "
+                f"recorded as `{judged.subject}`: "
                 f"`FIX · {v.ref} · unresolved · <why>`"
             )
         return None
@@ -498,9 +497,8 @@ def decision_after_restore(f: Finding) -> tuple[str, str] | None:
     `limitation` for a `statement` finding — the registered text stands,
     and what the finding names is a limit of the claim; None for an
     implementation finding, which is repaired in code or data and measured
-    anew, for an undetermined one, whose check runs first
-    (`subject_refusal`), and for one of a record that names no subject — no
-    decision follows from the place alone."""
+    anew, and for an undetermined one, whose check runs first
+    (`subject_refusal`)."""
     if f.subject != STATEMENT:
         return None
     return (
@@ -1124,12 +1122,17 @@ def _carried_lines(mode: str, carried: tuple[Finding, ...]) -> list[str]:
                 f"a carried finding is a BLOCKER naming `<record>#<n>`: "
                 f"{f.grade} carries {f.carries!r}"
             )
+        if f.subject not in SUBJECTS:
+            raise ValueError(
+                f"a carried finding names its subject, one of "
+                f"{', '.join(SUBJECTS)}: {f.carries} carries {f.subject!r}"
+            )
         lines += [
             "",
             "[[finding]]",
             f"grade = {_s(f.grade)}",
             f"text = {_s(f.text)}",
-            *([f"subject = {_s(f.subject)}"] if f.subject else []),
+            f"subject = {_s(f.subject)}",
             *([f"check = {_s(f.check)}"] if f.check else []),
             *([f"check_note = {_s(f.check_note)}"] if f.check_note else []),
             f"carries = {_s(f.carries)}",
@@ -1335,8 +1338,9 @@ def _finding(path: Path, i: int, row: object) -> Finding:
 def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str]:
     """(check, check_note, subject) of the i-th `[[finding]]` table — the
     fields labkit-audit takes from the auditor's line, never a decision: a
-    metrics key or "", a note only beside a check, and one of SUBJECTS or
-    "" (a record written before subjects were read). Raises FindingsError
+    metrics key or "", a note only beside a check, and one of SUBJECTS —
+    a record without it is one labkit 0.112.0 or earlier wrote, read with
+    that version (the repo's pin), never here. Raises FindingsError
     otherwise (`carries` is read beside them)."""
     check = row.get("check", "")
     if not isinstance(check, str) or (check and not CHECK_KEY.match(check)):
@@ -1349,10 +1353,12 @@ def _auditor_fields(path: Path, i: int, row: dict) -> tuple[str, str, str]:
         raise FindingsError(
             f"{path}: finding {i}: check_note {note!r} — a string, and only with a check"
         )
-    subject = row.get("subject", "")
-    if not isinstance(subject, str) or (subject and subject not in SUBJECTS):
+    subject = row.get("subject")
+    if subject not in SUBJECTS:
         raise FindingsError(
-            f"{path}: finding {i}: subject {subject!r} — one of {', '.join(SUBJECTS)}, or absent"
+            f"{path}: finding {i}: subject {subject!r} — one of {', '.join(SUBJECTS)}; "
+            f"a record without subjects was written by labkit 0.112.0 or earlier "
+            f"and is read with that version"
         )
     problem = undetermined_finding_problem(row["grade"], subject, check, note)
     if problem:
